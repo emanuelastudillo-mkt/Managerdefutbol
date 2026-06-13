@@ -520,25 +520,18 @@
       background: transparent;
     }
 
-    .message-item.important {
-      background: linear-gradient(90deg, rgba(151,38,178,.18), rgba(198,42,88,.11));
-      border-left: 3px solid var(--accent-2);
-      padding-left: 8px;
+    .message-status-dot {
+      width: 15px;
+      height: 15px;
+      justify-self: center;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.22);
+      box-shadow: 0 0 0 4px rgba(255,255,255,.035), 0 5px 12px rgba(0,0,0,.28);
     }
 
-    .message-item.highlight { background: rgba(54,96,173,.13); }
-    .message-avatar {
-      width: 31px;
-      height: 31px;
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      color: #d9dbe6;
-      background: #2a3044;
-      border: 1px solid rgba(255,255,255,.08);
-      font-size: 12px;
-      font-weight: 900;
-    }
+    .message-status-dot.green { background: var(--green); }
+    .message-status-dot.yellow { background: var(--warning); }
+    .message-status-dot.red { background: var(--danger); }
 
     .message-sender { color: #8f93a8; font-size: 9px; }
     .message-title {
@@ -1066,7 +1059,7 @@
   <div id="loginScreen" class="login-screen">
     <section class="login-hero" aria-hidden="true">
       <div class="hero-copy">
-        <span class="eyebrow">Temporada 2026</span>
+        <span class="eyebrow">Temporada actual</span>
         <h1>Tu club.<br>Tu historia.</h1>
         <p>Gestioná el plantel, la economía y el futuro deportivo desde una interfaz compacta inspirada en los grandes managers.</p>
       </div>
@@ -1076,7 +1069,7 @@
       <form id="loginForm" class="login-card" autocomplete="on">
         <div class="brand-lockup">
           <div class="brand-mark">MF</div>
-          <div><strong>Manager de Fútbol</strong><span>Base de datos 2026</span></div>
+          <div><strong>Manager de Fútbol</strong><span>Datos desde Google Sheets</span></div>
         </div>
         <h2>Ingresar al club</h2>
         <p>Usá el usuario y el código asignados en la hoja Usuarios.</p>
@@ -1102,7 +1095,7 @@
       <aside id="sidebar" class="sidebar">
         <div class="brand-lockup">
           <div class="brand-mark">MF</div>
-          <div><strong>Manager de Fútbol</strong><span>Temporada 2026</span></div>
+          <div><strong>Manager de Fútbol</strong><span id="sidebarSeason">Temporada</span></div>
         </div>
 
         <div class="club-mini">
@@ -1140,7 +1133,7 @@
             </div>
           </div>
           <div class="topbar-meta">
-            <span id="seasonPill" class="status-pill">Temporada 2026</span>
+            <span id="seasonPill" class="status-pill">Temporada</span>
             <span id="marketPill" class="status-pill"><span class="status-dot"></span>Mercado abierto</span>
           </div>
         </header>
@@ -1176,6 +1169,9 @@
       dashboard: null,
       clubes: [],
       partidos: [],
+      ligas: [],
+      mensajes: [],
+      noticias: [],
       temporada: null,
       standings: [],
       currentView: 'inicio'
@@ -1284,20 +1280,34 @@
 
     async function loadGameData() {
       const clubId = state.session.club_id;
-      const [dashboardResult, clubsResult, matchesResult, seasonResult] = await Promise.all([
+      const [
+        dashboardResult,
+        clubsResult,
+        matchesResult,
+        seasonResult,
+        leaguesResult,
+        messagesResult,
+        newsResult
+      ] = await Promise.all([
         apiGet({ action: 'club', club_id: clubId }),
         apiGet({ action: 'table', name: 'Clubes' }),
         apiGet({ action: 'table', name: 'Partidos' }),
-        apiGet({ action: 'table', name: 'Temporada' })
+        apiGet({ action: 'table', name: 'Temporada' }),
+        apiGet({ action: 'table', name: 'Ligas' }),
+        apiGetOptionalTable(['Mensajes', 'mensajes']),
+        apiGetOptionalTable(['Noticias', 'noticias'])
       ]);
 
-      [dashboardResult, clubsResult, matchesResult, seasonResult].forEach(result => {
+      [dashboardResult, clubsResult, matchesResult, seasonResult, leaguesResult].forEach(result => {
         if (!result?.ok) throw new Error(result?.error || 'La API devolvió una respuesta inválida.');
       });
 
       state.dashboard = dashboardResult;
       state.clubes = clubsResult.data || [];
       state.partidos = matchesResult.data || [];
+      state.ligas = leaguesResult.data || [];
+      state.mensajes = messagesResult.data || [];
+      state.noticias = newsResult.data || [];
       state.temporada = (seasonResult.data || [])[0] || {};
       state.standings = calculateStandings();
     }
@@ -1305,6 +1315,28 @@
     function apiGet(params) {
       const query = new URLSearchParams(params).toString();
       return fetchJson(`${API_URL}?${query}`);
+    }
+
+    async function apiGetOptional(params) {
+      try {
+        const result = await apiGet(params);
+        return result?.ok ? result : { ok: true, data: [] };
+      } catch (error) {
+        console.warn(`Tabla opcional no disponible: ${params.name}`, error);
+        return { ok: true, data: [] };
+      }
+    }
+
+    async function apiGetOptionalTable(names) {
+      for (const name of names) {
+        try {
+          const result = await apiGet({ action: 'table', name });
+          if (result?.ok) return result;
+        } catch (error) {
+          console.warn(`Tabla opcional no disponible: ${name}`, error);
+        }
+      }
+      return { ok: true, data: [] };
     }
 
     async function fetchJson(url, options = {}) {
@@ -1339,7 +1371,10 @@
       $('#miniCrest').textContent = initials;
       $('#miniClubName').textContent = club.nombre || 'Mi club';
       $('#miniUsername').textContent = state.session.usuario || 'Manager';
-      $('#seasonPill').textContent = `Temporada ${state.temporada.temporada || 2026}`;
+      const seasonLabel = state.temporada.temporada || '—';
+      $('#seasonPill').textContent = `Temporada ${seasonLabel}`;
+      const sidebarSeason = $('#sidebarSeason');
+      if (sidebarSeason) sidebarSeason.textContent = `Temporada ${seasonLabel}`;
 
       const open = String(state.temporada.mercado_abierto || '').toUpperCase() === 'SI';
       $('#marketPill').innerHTML = `<span class="status-dot" style="background:${open ? 'var(--accent)' : 'var(--danger)'}"></span>${open ? 'Mercado abierto' : 'Mercado cerrado'}`;
@@ -1370,52 +1405,83 @@
       const mood = num(d.resumen.estado_animo_promedio);
       const youthCount = num(d.resumen.jugadores_juveniles);
       const employeeCount = num(d.resumen.empleados);
-      const season = state.temporada.temporada || 2026;
+      const season = state.temporada.temporada || '—';
+      const mainLeague = getMainLeague();
+      const leagueName = mainLeague.nombre || 'Liga principal';
+      const opponentName = next
+        ? ((findClub(next.local_id === club.id_club ? next.visitante_id : next.local_id) || {}).nombre || 'su próximo rival')
+        : '';
 
-      const messages = [
+      const fallbackMessages = [
         {
-          icon: 'DT',
+          iconColor: 'yellow',
+          iconLabel: 'Destacado',
           sender: 'Segundo entrenador',
           title: `Informe general del plantel: media ${averageMedia.toFixed(1)}`,
-          time: 'Ahora',
-          className: 'highlight'
+          time: 'Ahora'
         },
         {
-          icon: 'P',
+          iconColor: 'green',
+          iconLabel: 'Normal',
           sender: 'Presidencia',
           title: `Situación institucional de ${club.nombre}`,
-          time: 'Hoy',
-          className: ''
+          time: 'Hoy'
         },
         {
-          icon: 'J',
+          iconColor: 'green',
+          iconLabel: 'Normal',
           sender: 'Director de juveniles',
           title: `${youthCount} jugadores vinculados al equipo juvenil`,
-          time: 'Hoy',
-          className: ''
+          time: 'Hoy'
         },
         {
-          icon: '$',
+          iconColor: mood < 40 ? 'red' : 'green',
+          iconLabel: mood < 40 ? 'Importante' : 'Normal',
           sender: 'Administración',
           title: `Presupuesto disponible: ${currency(club.presupuesto)}`,
-          time: 'Ayer',
-          className: mood < 40 ? 'important' : ''
+          time: 'Ayer'
         },
         {
-          icon: 'H',
+          iconColor: mood <= 30 ? 'red' : mood < 55 ? 'yellow' : 'green',
+          iconLabel: mood <= 30 ? 'Importante' : mood < 55 ? 'Destacado' : 'Normal',
           sender: 'Relación con socios',
           title: `Estado de ánimo de los hinchas: ${number(mood)}%`,
-          time: 'Ayer',
-          className: mood <= 30 ? 'important' : ''
+          time: 'Ayer'
         },
         {
-          icon: 'E',
+          iconColor: 'green',
+          iconLabel: 'Normal',
           sender: 'Secretaría técnica',
           title: `${employeeCount} empleados forman parte de la estructura`,
-          time: '2 días',
-          className: ''
+          time: '2 días'
         }
       ];
+
+      const contentContext = {
+        club: club.nombre || '',
+        usuario: state.session.usuario || '',
+        liga: leagueName,
+        temporada: season,
+        presupuesto: currency(club.presupuesto),
+        posicion: rank || 'sin definir',
+        proximo_rival: opponentName,
+        animo: number(mood),
+        socios: number(d.resumen.socios_equivalentes),
+        jugadores: number(d.resumen.jugadores_principal),
+        juveniles: number(youthCount),
+        empleados: number(employeeCount),
+        media_plantel: averageMedia.toFixed(1)
+      };
+
+      const messages = getPortalMessages(contentContext, fallbackMessages);
+      const activeNews = getPortalNews(contentContext, {
+        kicker: `${leagueName} · Temporada ${season}`,
+        title: `${club.nombre} prepara su próximo desafío`,
+        body: next
+          ? `El equipo se prepara para enfrentar a ${opponentName}. El club ocupa actualmente la posición ${rank || 'sin definir'} de ${leagueName}.`
+          : 'El calendario todavía no tiene un próximo partido programado para el equipo principal.',
+        meta: `Presupuesto ${currency(club.presupuesto)} · Ánimo ${number(mood)}%`
+      });
 
       const calendarMatches = upcoming.slice(0, 7);
       const calendarCells = Array.from({ length: 14 }, (_, index) => {
@@ -1444,8 +1510,8 @@
               <div class="message-list">
                 <div class="message-day">Temporada ${escapeHtml(season)}</div>
                 ${messages.map(message => `
-                  <div class="message-item ${message.className}">
-                    <div class="message-avatar">${escapeHtml(message.icon)}</div>
+                  <div class="message-item">
+                    <div class="message-status-dot ${escapeHtml(message.iconColor)}" role="img" aria-label="${escapeHtml(message.iconLabel)}" title="${escapeHtml(message.iconLabel)}"></div>
                     <div>
                       <div class="message-sender">${escapeHtml(message.sender)}</div>
                       <div class="message-title">${escapeHtml(message.title)}</div>
@@ -1461,12 +1527,10 @@
               <div class="panel-head"><h3>Noticias del club</h3><span class="chip green">Actualizado</span></div>
               <div class="news-card">
                 <div class="news-copy">
-                  <div class="news-kicker">Liga 2 · Temporada ${escapeHtml(season)}</div>
-                  <h2 class="news-title">${escapeHtml(club.nombre)} prepara su próximo desafío</h2>
-                  <p class="news-text">${next
-                    ? `El equipo se prepara para enfrentar a ${escapeHtml((findClub(next.local_id === club.id_club ? next.visitante_id : next.local_id) || {}).nombre || 'su próximo rival')}. El club ocupa actualmente la posición ${rank || 'sin definir'} de la Liga 2.`
-                    : 'El calendario todavía no tiene un próximo partido programado para el equipo principal.'}</p>
-                  <div class="news-meta">Presupuesto ${currency(club.presupuesto)} · Ánimo ${number(mood)}%</div>
+                  <div class="news-kicker">${escapeHtml(activeNews.kicker)}</div>
+                  <h2 class="news-title">${escapeHtml(activeNews.title)}</h2>
+                  <p class="news-text">${escapeHtml(activeNews.body)}</p>
+                  <div class="news-meta">${escapeHtml(activeNews.meta)}</div>
                 </div>
                 <div class="news-badge">${escapeHtml(clubInitials(club.nombre))}</div>
               </div>
@@ -1489,7 +1553,7 @@
               </article>
 
               <article class="panel">
-                <div class="panel-head"><h3>Últimos resultados</h3><span class="chip">Liga 2</span></div>
+                <div class="panel-head"><h3>Últimos resultados</h3><span class="chip">${escapeHtml(leagueName)}</span></div>
                 <div class="mini-fixture-list">
                   ${played.length ? played.slice(0, 3).map(match => {
                     const local = findClub(match.local_id)?.nombre || match.local_id;
@@ -1534,7 +1598,7 @@
             </article>
 
             <article class="panel">
-              <div class="panel-head"><h3>Tabla de posiciones</h3><span class="chip">Liga 2</span></div>
+              <div class="panel-head"><h3>Tabla de posiciones</h3><span class="chip">${escapeHtml(leagueName)}</span></div>
               <div class="panel-body flush">
                 <table class="standings-compact">
                   <thead><tr><th>Pos.</th><th>Equipo</th><th>PJ</th><th>Pts</th></tr></thead>
@@ -1567,6 +1631,8 @@
     function renderClub() {
       const club = state.dashboard.club;
       const youth = state.dashboard.club_juvenil;
+      const mainLeague = getMainLeague();
+      const youthLeague = getYouthLeague();
       $('#view-club').innerHTML = `
         ${sectionHead('Mi club', 'Información institucional y económica de la entidad.')}
         <div class="club-profile">
@@ -1575,7 +1641,7 @@
             <div class="panel-body">
               <div class="definition-list">
                 ${definition('ID del club', club.id_club)}
-                ${definition('Liga', club.liga_id)}
+                ${definition('Liga', mainLeague.nombre || club.liga_id)}
                 ${definition('Reputación', `${number(club.reputacion)}/100`)}
                 ${definition('Historia', `${number(club.historia)}/100`)}
                 ${definition('Capacidad estadio', number(club.estadio))}
@@ -1584,7 +1650,7 @@
             </div>
           </article>
           <article class="panel">
-            <div class="panel-head"><h3>Estructura juvenil</h3><span class="chip">Liga Juvenil</span></div>
+            <div class="panel-head"><h3>Estructura juvenil</h3><span class="chip">${escapeHtml(youthLeague.nombre || 'Liga juvenil')}</span></div>
             <div class="panel-body">
               ${youth ? `<div class="definition-list">
                 ${definition('Equipo', youth.nombre)}
@@ -1650,9 +1716,12 @@
     }
 
     function renderLeague() {
-      const played = state.partidos.filter(m => normalize(m.estado) === 'jugado' && m.liga_id === 'LIG001').length;
+      const mainLeague = getMainLeague();
+      const leagueId = mainLeague.id_liga || state.dashboard.club.liga_id;
+      const leagueName = mainLeague.nombre || 'Liga principal';
+      const played = state.partidos.filter(m => normalize(m.estado) === 'jugado' && m.liga_id === leagueId).length;
       $('#view-liga').innerHTML = `
-        ${sectionHead('Liga 2', `${played} partidos disputados en la temporada.`)}
+        ${sectionHead(leagueName, `${played} partidos disputados en la temporada.`)}
         <div class="table-wrap">
           <table>
             <thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead>
@@ -1708,12 +1777,98 @@
         </article>`;
     }
 
+    function getMainLeague() {
+      const clubLeagueId = state.dashboard?.club?.liga_id || '';
+      return state.ligas.find(league => String(league.id_liga || '') === String(clubLeagueId))
+        || state.ligas.find(league => normalize(league.tipo) === 'principal')
+        || { id_liga: clubLeagueId, nombre: 'Liga principal', tipo: 'Principal' };
+    }
+
+    function getYouthLeague() {
+      const youthLeagueId = state.dashboard?.club_juvenil?.liga_id || '';
+      return state.ligas.find(league => String(league.id_liga || '') === String(youthLeagueId))
+        || state.ligas.find(league => normalize(league.tipo) === 'juvenil')
+        || { id_liga: youthLeagueId, nombre: 'Liga juvenil', tipo: 'Juvenil' };
+    }
+
+    function getPortalMessages(context, fallbackMessages) {
+      const rows = state.mensajes
+        .filter(row => contentRowApplies(row))
+        .sort((a, b) => num(a.orden) - num(b.orden));
+
+      if (!rows.length) return fallbackMessages;
+
+      return rows.slice(0, 12).map(row => {
+        const iconColor = normalizeMessageIcon(row.icono);
+        return {
+          iconColor,
+          iconLabel: messageIconLabel(iconColor),
+          sender: fillTemplate(row.remitente || 'Club', context),
+          title: fillTemplate(row.titulo || '', context),
+          time: fillTemplate(row.momento || 'Hoy', context)
+        };
+      });
+    }
+
+    function getPortalNews(context, fallbackNews) {
+      const row = state.noticias
+        .filter(item => contentRowApplies(item))
+        .sort((a, b) => num(a.orden) - num(b.orden))[0];
+
+      if (!row) return fallbackNews;
+
+      return {
+        kicker: fillTemplate(row.categoria || `${context.liga} · Temporada ${context.temporada}`, context),
+        title: fillTemplate(row.titulo || fallbackNews.title, context),
+        body: fillTemplate(row.cuerpo || row.texto || fallbackNews.body, context),
+        meta: fillTemplate(row.meta || row.fecha || fallbackNews.meta, context)
+      };
+    }
+
+    function contentRowApplies(row) {
+      const active = normalize(row.activo || 'si');
+      if (['no', 'false', '0', 'inactivo'].includes(active)) return false;
+
+      const clubId = String(row.club_id || '').trim();
+      const userId = String(row.usuario_id || '').trim();
+      const leagueId = String(row.liga_id || '').trim();
+      const currentClubId = String(state.dashboard?.club?.id_club || '').trim();
+      const currentUserId = String(state.session?.id_usuario || '').trim();
+      const currentLeagueId = String(getMainLeague().id_liga || '').trim();
+
+      if (clubId && clubId !== currentClubId) return false;
+      if (userId && userId !== currentUserId) return false;
+      if (leagueId && leagueId !== currentLeagueId) return false;
+      return true;
+    }
+
+    function fillTemplate(value, context) {
+      return String(value ?? '').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key) => {
+        return Object.prototype.hasOwnProperty.call(context, key) ? String(context[key]) : '';
+      });
+    }
+
+    function normalizeMessageIcon(value) {
+      const icon = normalize(value);
+      if (['rojo', 'red', 'r', '🔴'].includes(icon)) return 'red';
+      if (['amarillo', 'yellow', 'y', 'a', '🟡'].includes(icon)) return 'yellow';
+      return 'green';
+    }
+
+    function messageIconLabel(color) {
+      if (color === 'red') return 'Importante';
+      if (color === 'yellow') return 'Destacado';
+      return 'Normal';
+    }
+
     function calculateStandings() {
-      const clubs = state.clubes.filter(c => normalize(c.tipo) === 'principal' && c.liga_id === 'LIG001');
+      const mainLeague = getMainLeague();
+      const leagueId = mainLeague.id_liga || state.dashboard?.club?.liga_id;
+      const clubs = state.clubes.filter(c => normalize(c.tipo) === 'principal' && c.liga_id === leagueId);
       const map = new Map(clubs.map(c => [c.id_club, { id: c.id_club, nombre: c.nombre, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 }]));
 
       state.partidos
-        .filter(m => m.liga_id === 'LIG001' && normalize(m.estado) === 'jugado')
+        .filter(m => m.liga_id === leagueId && normalize(m.estado) === 'jugado')
         .forEach(match => {
           const local = map.get(match.local_id);
           const visitor = map.get(match.visitante_id);
@@ -1735,8 +1890,9 @@
 
     function getClubMatches() {
       const id = state.dashboard.club.id_club;
+      const leagueId = getMainLeague().id_liga || state.dashboard.club.liga_id;
       return state.partidos
-        .filter(match => match.liga_id === 'LIG001' && (match.local_id === id || match.visitante_id === id))
+        .filter(match => match.liga_id === leagueId && (match.local_id === id || match.visitante_id === id))
         .sort((a, b) => roundNumber(a.fecha) - roundNumber(b.fecha));
     }
 
@@ -1758,7 +1914,7 @@
         plantel: 'Plantel',
         empleados: 'Empleados',
         juveniles: 'Juveniles',
-        liga: 'Liga 2',
+        liga: getMainLeague().nombre || 'Liga',
         calendario: 'Partidos',
         club: 'Club',
         finanzas: 'Finanzas'

@@ -1404,7 +1404,8 @@
 
     const API_URL = 'https://script.google.com/macros/s/AKfycbwrHTpLcIvkuKujW4Nu_tTTsrByi06aJpyO-e6YyEcyK6SH6SGm2Akif6H39hWVE0HN/exec';
     const SESSION_KEY = 'managerFutbolSessionV1';
-    const REQUEST_TIMEOUT = 30000;
+    const REQUEST_TIMEOUT = 15000;
+    const CLUB_DETAIL_TIMEOUT = 12000;
 
     const state = {
       session: null,
@@ -1420,6 +1421,7 @@
       portalNews: [],
       newsIndex: 0,
       detailCache: new Map(),
+      activeClubRequest: 0,
       currentView: 'inicio'
     };
 
@@ -1580,6 +1582,20 @@
       return fetchJson(`${API_URL}?${query}`);
     }
 
+    function withTimeout(promise, milliseconds, message) {
+      let timer;
+
+      const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(message || 'La solicitud excedió el tiempo de espera.'));
+        }, milliseconds);
+      });
+
+      return Promise.race([promise, timeoutPromise]).finally(() => {
+        clearTimeout(timer);
+      });
+    }
+
     async function apiGetOptional(params) {
       try {
         const result = await apiGet(params);
@@ -1675,6 +1691,50 @@
         ? ((findClub(next.local_id === club.id_club ? next.visitante_id : next.local_id) || {}).nombre || 'su próximo rival')
         : '';
 
+      const fallbackMessages = [
+        {
+          iconColor: 'yellow',
+          iconLabel: 'Destacado',
+          sender: 'Segundo entrenador',
+          title: `Informe general del plantel: media ${averageMedia.toFixed(1)}`,
+          time: 'Ahora'
+        },
+        {
+          iconColor: 'green',
+          iconLabel: 'Normal',
+          sender: 'Presidencia',
+          title: `Situación institucional de ${club.nombre}`,
+          time: 'Hoy'
+        },
+        {
+          iconColor: 'green',
+          iconLabel: 'Normal',
+          sender: 'Director de juveniles',
+          title: `${youthCount} jugadores vinculados al equipo juvenil`,
+          time: 'Hoy'
+        },
+        {
+          iconColor: mood < 40 ? 'red' : 'green',
+          iconLabel: mood < 40 ? 'Importante' : 'Normal',
+          sender: 'Administración',
+          title: `Presupuesto disponible: ${currency(club.presupuesto)}`,
+          time: 'Ayer'
+        },
+        {
+          iconColor: mood <= 30 ? 'red' : mood < 55 ? 'yellow' : 'green',
+          iconLabel: mood <= 30 ? 'Importante' : mood < 55 ? 'Destacado' : 'Normal',
+          sender: 'Relación con socios',
+          title: `Estado de ánimo de los hinchas: ${number(mood)}%`,
+          time: 'Ayer'
+        },
+        {
+          iconColor: 'green',
+          iconLabel: 'Normal',
+          sender: 'Secretaría técnica',
+          title: `${employeeCount} empleados forman parte de la estructura`,
+          time: '2 días'
+        }
+      ];
 
       const contentContext = {
         club: club.nombre || '',
@@ -1692,8 +1752,15 @@
         media_plantel: averageMedia.toFixed(1)
       };
 
-      const messages = getPortalMessages(contentContext);
-      const newsItems = getPortalNewsList(contentContext);
+      const messages = getPortalMessages(contentContext, fallbackMessages);
+      const newsItems = getPortalNewsList(contentContext, {
+        kicker: `${leagueName} · Temporada ${season}`,
+        title: `${club.nombre} prepara su próximo desafío`,
+        body: next
+          ? `El equipo se prepara para enfrentar a ${opponentName}. El club ocupa actualmente la posición ${rank || 'sin definir'} de ${leagueName}.`
+          : 'El calendario todavía no tiene un próximo partido programado para el equipo principal.',
+        meta: `Presupuesto ${currency(club.presupuesto)} · Ánimo ${number(mood)}%`
+      });
       state.portalMessages = messages;
       state.portalNews = newsItems;
       if (state.newsIndex >= newsItems.length) state.newsIndex = 0;
@@ -1719,7 +1786,7 @@
               <div class="panel-head"><h3>Mensajes</h3><span class="chip">${messages.length} nuevos</span></div>
               <div class="message-list">
                 <div class="message-day">Temporada ${escapeHtml(season)}</div>
-                ${messages.length ? messages.map((message, index) => `
+                ${messages.map((message, index) => `
                   <button type="button" class="message-item interactive-row" data-action="open-message" data-index="${index}">
                     <div class="message-status-dot ${escapeHtml(message.iconColor)}" role="img" aria-label="${escapeHtml(message.iconLabel)}" title="${escapeHtml(message.iconLabel)}"></div>
                     <div>
@@ -1727,7 +1794,7 @@
                       <div class="message-title">${escapeHtml(message.title)}</div>
                     </div>
                     <div class="message-time">${escapeHtml(message.time)}</div>
-                  </button>`).join('') : `<button type="button" class="empty-state interactive-surface" data-action="open-info" data-title="Sin mensajes" data-text="No hay mensajes activos aplicables a este usuario, club o liga.">No hay mensajes activos.</button>`}
+                  </button>`).join('')}
               </div>
             </article>
           </div>
@@ -1735,7 +1802,6 @@
           <div class="portal-column">
             <article class="panel">
               <div class="panel-head"><h3>Noticias del club</h3><span class="chip green">Actualizado</span></div>
-              ${activeNews ? `
               <button type="button" class="news-card interactive-surface" data-action="open-news" data-index="${state.newsIndex}">
                 <div class="news-copy">
                   <div class="news-kicker">${escapeHtml(activeNews.kicker)}</div>
@@ -1749,7 +1815,7 @@
                 <button type="button" class="news-nav" data-action="news-prev" aria-label="Noticia anterior">‹</button>
                 <div class="news-dots">${newsItems.map((_, index) => `<button type="button" class="news-dot ${index === state.newsIndex ? 'active' : ''}" data-action="news-go" data-index="${index}" aria-label="Ver noticia ${index + 1}"></button>`).join('')}</div>
                 <button type="button" class="news-nav" data-action="news-next" aria-label="Noticia siguiente">›</button>
-              </div>` : `<button type="button" class="empty-state interactive-surface" data-action="open-info" data-title="Sin noticias" data-text="No hay noticias activas aplicables a este usuario, club o liga.">No hay noticias publicadas.</button>`}
+              </div>
             </article>
 
             <div class="portal-main">
@@ -2006,12 +2072,12 @@
         || { id_liga: youthLeagueId, nombre: 'Liga juvenil', tipo: 'Juvenil' };
     }
 
-    function getPortalMessages(context) {
+    function getPortalMessages(context, fallbackMessages) {
       const rows = state.mensajes
         .filter(row => contentRowApplies(row))
         .sort((a, b) => num(a.orden) - num(b.orden));
 
-      const source = rows.slice(0, 12).map(row => {
+      const source = rows.length ? rows.slice(0, 12).map(row => {
         const iconColor = normalizeMessageIcon(row.icono);
         return {
           id: row.id_mensaje || '',
@@ -2021,24 +2087,24 @@
           title: fillTemplate(row.titulo || '', context),
           time: fillTemplate(row.momento || 'Hoy', context)
         };
-      });
+      }) : fallbackMessages;
 
-      return source.map((item, index) => ({ id: item.id || `mensaje-${index + 1}`, ...item }));
+      return source.map((item, index) => ({ id: item.id || `fallback-${index}`, ...item }));
     }
 
-    function getPortalNewsList(context) {
+    function getPortalNewsList(context, fallbackNews) {
       const rows = state.noticias
         .filter(item => contentRowApplies(item))
         .sort((a, b) => num(a.orden) - num(b.orden));
 
-      if (!rows.length) return [];
+      if (!rows.length) return [{ id: 'fallback-news', ...fallbackNews }];
 
       return rows.slice(0, 12).map(row => ({
         id: row.id_noticia || '',
         kicker: fillTemplate(row.categoria || `${context.liga} · Temporada ${context.temporada}`, context),
-        title: fillTemplate(row.titulo || '', context),
-        body: fillTemplate(row.cuerpo || '', context),
-        meta: fillTemplate(row.meta || '', context)
+        title: fillTemplate(row.titulo || fallbackNews.title, context),
+        body: fillTemplate(row.cuerpo || fallbackNews.body, context),
+        meta: fillTemplate(row.meta || fallbackNews.meta, context)
       }));
     }
 
@@ -2092,7 +2158,6 @@
       if (action === 'open-news') return openNewsDetail(num(target.dataset.index));
       if (action === 'open-match') return openMatchDetail(target.dataset.matchId);
       if (action === 'open-season') return openSeasonDetail();
-      if (action === 'open-info') return openModal({ eyebrow: 'Información', title: target.dataset.title || 'Información', subtitle: '', body: `<p class="modal-copy">${escapeHtml(target.dataset.text || '')}</p>` });
       if (action === 'go-view') return switchView(target.dataset.view || 'inicio');
       if (action === 'news-prev') return changeNews(-1);
       if (action === 'news-next') return changeNews(1);
@@ -2171,53 +2236,114 @@
 
     async function openClubDetail(clubId) {
       if (!clubId) return;
-      modalLoading('Cargando detalles del club');
+
+      const requestId = Date.now();
+      state.activeClubRequest = requestId;
       const cacheKey = `club:${clubId}`;
+      const cached = state.detailCache.get(cacheKey);
+
+      if (cached) {
+        renderClubModal(cached);
+        return;
+      }
+
+      const fallback = buildLocalClubDetail(clubId);
+
+      if (fallback) {
+        renderClubModal(fallback, {
+          loading: true,
+          note: 'Mostrando la información disponible mientras se consultan las estadísticas del club.'
+        });
+      } else {
+        modalLoading('Cargando detalles del club');
+      }
+
       try {
-        let detail = state.detailCache.get(cacheKey);
-        if (!detail) {
-          const result = await apiGet({ action: 'club_detail', club_id: clubId });
-          if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar el club.');
-          detail = result;
-          state.detailCache.set(cacheKey, detail);
+        const result = await withTimeout(
+          apiGet({ action: 'club_detail', club_id: clubId }),
+          CLUB_DETAIL_TIMEOUT,
+          'La ficha del club tardó demasiado en responder.'
+        );
+
+        if (state.activeClubRequest !== requestId) return;
+        if (!result?.ok) {
+          throw new Error(result?.error || 'No se pudo cargar el club.');
         }
-        renderClubModal(detail);
+
+        state.detailCache.set(cacheKey, result);
+        renderClubModal(result);
       } catch (error) {
-        const fallback = buildLocalClubDetail(clubId);
-        if (fallback) renderClubModal(fallback);
-        else updateModal({ title: 'No se pudo abrir el club', subtitle: '', body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>` });
+        if (state.activeClubRequest !== requestId) return;
+
+        if (fallback) {
+          renderClubModal(fallback, {
+            error: humanizeError(error),
+            note: 'Se muestran los datos básicos disponibles. Podés cerrar la ventana y volver a intentarlo.'
+          });
+        } else {
+          updateModal({
+            title: 'No se pudo abrir el club',
+            subtitle: '',
+            body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>`
+          });
+        }
       }
     }
 
     function buildLocalClubDetail(clubId) {
       const club = findClub(clubId);
       if (!club) return null;
+
       const own = clubId === state.dashboard.club.id_club;
       const players = own ? state.dashboard.plantel_principal : [];
       const employees = own ? state.dashboard.empleados : [];
+      const sociosFromClub = num(club.socios_equivalentes);
+      const knownSupporters = sociosFromClub > 0
+        ? Math.round(sociosFromClub / 1767)
+        : null;
+
       return {
         ok: true,
+        partial: !own,
         club,
         resumen: {
-          jugadores: players.length,
-          media_plantel: average(players, 'media'),
-          valor_plantel: sum(players, 'valor'),
-          salario_plantel: sum(players, 'salario'),
-          empleados: employees.length,
-          hinchas_representativos: own ? state.dashboard.resumen.hinchas_representativos : 0,
-          socios_equivalentes: own ? state.dashboard.resumen.socios_equivalentes : 0,
-          estado_animo_promedio: own ? state.dashboard.resumen.estado_animo_promedio : 0
+          jugadores: own ? players.length : null,
+          media_plantel: own ? average(players, 'media') : null,
+          valor_plantel: own ? sum(players, 'valor') : null,
+          salario_plantel: own ? sum(players, 'salario') : null,
+          empleados: own ? employees.length : null,
+          hinchas_representativos: own
+            ? state.dashboard.resumen.hinchas_representativos
+            : knownSupporters,
+          socios_equivalentes: own
+            ? state.dashboard.resumen.socios_equivalentes
+            : (sociosFromClub || null),
+          estado_animo_promedio: own
+            ? state.dashboard.resumen.estado_animo_promedio
+            : null
         },
         jugadores: players,
         empleados
       };
     }
 
-    function renderClubModal(detail) {
+    function renderClubModal(detail, status = {}) {
       const club = detail.club || {};
       const summary = detail.resumen || {};
       const players = detail.jugadores || [];
       const employees = detail.empleados || [];
+      const pendingValue = 'Consultando…';
+      const valueOrPending = (value, formatter) => (
+        value === null || value === undefined || value === ''
+          ? pendingValue
+          : formatter(value)
+      );
+      const statusNotice = status.loading
+        ? `<p class="modal-copy"><strong>Actualizando:</strong> ${escapeHtml(status.note || 'Consultando Google Sheets.')}</p>`
+        : status.error
+          ? `<p class="modal-copy"><strong>No se completó la consulta:</strong> ${escapeHtml(status.error)}<br>${escapeHtml(status.note || '')}</p>`
+          : '';
+
       updateModal({
         eyebrow: getLeagueName(club.liga_id),
         title: club.nombre || 'Club',
@@ -2226,18 +2352,19 @@
           <div class="detail-avatar">${escapeHtml(clubInitials(club.nombre))}</div>
           <div><h3>${escapeHtml(club.nombre || 'Club')}</h3><p>Reputación ${number(club.reputacion)}/100 · Historia ${number(club.historia)}/100</p></div>
         </div>
+        ${statusNotice}
         <div class="detail-grid">
-          ${detailStat('Hinchas', number(summary.hinchas_representativos))}
-          ${detailStat('Socios equivalentes', compact(summary.socios_equivalentes))}
-          ${detailStat('Ánimo', `${number(summary.estado_animo_promedio)}%`)}
-          ${detailStat('Media del plantel', number(summary.media_plantel))}
-          ${detailStat('Jugadores', number(summary.jugadores))}
+          ${detailStat('Hinchas', valueOrPending(summary.hinchas_representativos, number))}
+          ${detailStat('Socios equivalentes', valueOrPending(summary.socios_equivalentes, compact))}
+          ${detailStat('Ánimo', valueOrPending(summary.estado_animo_promedio, value => `${number(value)}%`))}
+          ${detailStat('Media del plantel', valueOrPending(summary.media_plantel, number))}
+          ${detailStat('Jugadores', valueOrPending(summary.jugadores, number))}
           ${detailStat('Presupuesto', currency(club.presupuesto))}
-          ${detailStat('Valor del plantel', currency(summary.valor_plantel))}
-          ${detailStat('Salarios', currency(summary.salario_plantel))}
+          ${detailStat('Valor del plantel', valueOrPending(summary.valor_plantel, currency))}
+          ${detailStat('Salarios', valueOrPending(summary.salario_plantel, currency))}
           ${detailStat('Estadio', number(club.estadio))}
         </div>
-        ${players.length ? `<section class="detail-section"><h4>Jugadores</h4><div class="detail-list">${players.slice().sort((a,b)=>num(b.media)-num(a.media)).slice(0,12).map(player => `<div class="detail-list-item interactive-row" data-action="open-player" data-player-id="${escapeHtml(player.id_jugador)}" role="button" tabindex="0"><div><strong>${escapeHtml(player.nombre)}</strong><br><span>${escapeHtml(player.posicion)} · ${number(player.edad)} años</span></div><span>Media ${number(player.media)}</span></div>`).join('')}</div></section>` : ''}
+        ${players.length ? `<section class="detail-section"><h4>Jugadores destacados</h4><div class="detail-list">${players.slice().sort((a,b)=>num(b.media)-num(a.media)).slice(0,12).map(player => `<div class="detail-list-item interactive-row" data-action="open-player" data-player-id="${escapeHtml(player.id_jugador)}" role="button" tabindex="0"><div><strong>${escapeHtml(player.nombre)}</strong><br><span>${escapeHtml(player.posicion)} · ${number(player.edad)} años</span></div><span>Media ${number(player.media)}</span></div>`).join('')}</div></section>` : ''}
         ${employees.length ? `<section class="detail-section"><h4>Empleados</h4><div class="detail-list">${employees.map(employee => `<div class="detail-list-item interactive-row" data-action="open-employee" data-employee-id="${escapeHtml(employee.id_empleado)}" role="button" tabindex="0"><div><strong>${escapeHtml(employee.nombre)}</strong><br><span>${escapeHtml(employee.rol)}</span></div><span>${currency(employee.salario)}</span></div>`).join('')}</div></section>` : ''}`
       });
     }
@@ -2280,40 +2407,15 @@
       });
     }
 
-    async function openEmployeeDetail(employeeId) {
-      if (!employeeId) return;
-      modalLoading('Cargando ficha del empleado');
-      let employee = (state.dashboard.empleados || []).find(item => String(item.id_empleado) === String(employeeId));
-      let club = employee ? findClub(employee.club_id) : null;
-
-      if (!employee) {
-        for (const detail of state.detailCache.values()) {
-          employee = (detail.empleados || []).find(item => String(item.id_empleado) === String(employeeId));
-          if (employee) {
-            club = detail.club || findClub(employee.club_id);
-            break;
-          }
-        }
-      }
-
-      try {
-        const result = await apiGet({ action: 'employee_detail', employee_id: employeeId });
-        if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar el empleado.');
-        employee = result.empleado;
-        club = result.club;
-      } catch (error) {
-        if (!employee) {
-          updateModal({ title: 'No se pudo abrir el empleado', subtitle: '', body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>` });
-          return;
-        }
-      }
-
-      updateModal({
+    function openEmployeeDetail(employeeId) {
+      const employee = (state.dashboard.empleados || []).find(item => String(item.id_empleado) === String(employeeId));
+      if (!employee) return;
+      openModal({
         eyebrow: employee.rol || 'Empleado',
         title: employee.nombre || 'Empleado',
         subtitle: employee.id_empleado || '',
         body: `<div class="detail-hero"><div class="detail-avatar">${escapeHtml(playerInitials(employee.nombre))}</div><div><h3>${escapeHtml(employee.nombre || '')}</h3><p>${escapeHtml(employee.rol || '')}</p></div></div>
-        <div class="detail-grid">${detailStat('Rol', employee.rol)}${detailStat('Salario', currency(employee.salario))}${detailStat('Estado', employee.estado)}${detailStat('Club', club?.nombre || employee.club_id || 'Libre')}${detailStat('ID', employee.id_empleado)}</div>
+        <div class="detail-grid">${detailStat('Rol', employee.rol)}${detailStat('Salario', currency(employee.salario))}${detailStat('Estado', employee.estado)}${detailStat('Club', state.dashboard.club.nombre)}${detailStat('ID', employee.id_empleado)}</div>
         <section class="detail-section"><h4>Atributos ocultos</h4><p class="modal-copy">Honestidad, manejo de grupo, ambición y riesgo de conflicto permanecen ocultos y se aplican en la simulación.</p></section>`
       });
     }

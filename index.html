@@ -963,6 +963,234 @@
     .toast.error { border-color: rgba(239,87,119,.38); color: #ffbac8; }
     .sidebar-backdrop { display: none; }
 
+    /* Interacciones y ventanas de detalle */
+    .interactive-surface,
+    .interactive-row,
+    .interactive-card,
+    [data-action] {
+      cursor: pointer;
+    }
+
+    .interactive-surface,
+    .interactive-row,
+    .interactive-card {
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+
+    .interactive-surface:hover,
+    .interactive-card:hover {
+      border-color: rgba(211, 75, 232, .48);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+      transform: translateY(-1px);
+    }
+
+    .interactive-row:hover {
+      background: rgba(184, 51, 220, .075);
+    }
+
+    button.message-item,
+    button.news-card,
+    button.portal-kpi,
+    button.status-pill,
+    button.club-mini {
+      width: 100%;
+      color: inherit;
+      text-align: left;
+      font: inherit;
+    }
+
+    button.message-item,
+    button.news-card,
+    button.portal-kpi,
+    button.status-pill,
+    button.club-mini,
+    .row-action-button {
+      border-top: 0;
+      border-left: 0;
+      border-right: 0;
+    }
+
+    button.message-item { border-bottom: 1px solid rgba(151,160,202,.12); }
+    button.news-card { border: 0; }
+    button.portal-kpi { border: 1px solid var(--line); }
+    button.status-pill { width: auto; }
+    button.club-mini { border-top: 0; border-bottom: 0; background: transparent; }
+
+    .interactive-row:focus-visible,
+    .interactive-card:focus-visible,
+    .interactive-surface:focus-visible,
+    [data-action]:focus-visible {
+      outline: 2px solid #d34be8;
+      outline-offset: 2px;
+    }
+
+    .news-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 11px 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .news-dots { display: flex; flex: 1; gap: 5px; }
+    .news-dot {
+      flex: 1;
+      height: 5px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: #272d44;
+      cursor: pointer;
+    }
+    .news-dot.active { background: linear-gradient(90deg, #8659a2, #c474dd); }
+    .news-nav {
+      width: 28px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #12182b;
+      cursor: pointer;
+    }
+
+    .inline-link {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: inherit;
+      text-align: inherit;
+      cursor: pointer;
+    }
+    .inline-link:hover { color: #e58bf8; text-decoration: underline; text-underline-offset: 3px; }
+
+    .modal-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(3, 6, 15, .78);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-card {
+      width: min(780px, 100%);
+      max-height: min(88vh, 900px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      border: 1px solid rgba(151, 160, 202, .36);
+      border-radius: 10px;
+      background: linear-gradient(145deg, #171d33, #0d1325);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .58);
+    }
+
+    .modal-head {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.018);
+    }
+
+    .modal-eyebrow {
+      color: #d96bf0;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .modal-title { margin: 4px 0 0; font-size: 22px; letter-spacing: -.035em; }
+    .modal-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .modal-close {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #11172a;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .modal-close:hover { border-color: rgba(239,87,119,.5); color: #ff9caf; }
+    .modal-body { overflow: auto; padding: 16px; }
+    .modal-copy { margin: 0; color: #d4d3dd; font-size: 13px; line-height: 1.65; white-space: pre-line; }
+    .modal-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+
+    .detail-hero {
+      display: grid;
+      grid-template-columns: 76px minmax(0,1fr);
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(110deg, rgba(184,51,220,.13), rgba(255,255,255,.015));
+    }
+    .detail-avatar {
+      width: 76px;
+      height: 76px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #293966, #11192f);
+      border: 3px solid rgba(255,255,255,.72);
+      box-shadow: 0 0 0 4px rgba(184,51,220,.18);
+      font-size: 22px;
+      font-weight: 950;
+    }
+    .detail-hero h3 { margin: 0; font-size: 24px; letter-spacing: -.035em; }
+    .detail-hero p { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+    .detail-stat {
+      min-width: 0;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255,255,255,.022);
+    }
+    .detail-stat span { display: block; color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+    .detail-stat strong { display: block; margin-top: 6px; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+    .detail-section { margin-top: 14px; }
+    .detail-section h4 { margin: 0 0 8px; color: #dc72f1; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+    .detail-list { display: grid; gap: 6px; }
+    .detail-list-item {
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: rgba(255,255,255,.018);
+    }
+    .detail-list-item:hover { background: rgba(184,51,220,.06); border-color: rgba(211,75,232,.38); }
+    .detail-list-item strong { font-size: 11px; }
+    .detail-list-item span { color: var(--muted); font-size: 9px; }
+    .modal-loading { min-height: 220px; display: grid; place-items: center; color: var(--muted); }
+
+    body.modal-open { overflow: hidden; }
+
+    @media (max-width: 650px) {
+      .modal-layer { padding: 0; align-items: end; }
+      .modal-card { width: 100%; max-height: 92vh; border-radius: 12px 12px 0 0; }
+      .detail-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .detail-hero { grid-template-columns: 58px minmax(0,1fr); }
+      .detail-avatar { width: 58px; height: 58px; font-size: 17px; }
+    }
+
     @media (max-width: 1180px) {
       .sidebar > .brand-lockup div:last-child { display: none; }
       .club-mini { min-width: 150px; max-width: 170px; }
@@ -1098,10 +1326,10 @@
           <div><strong>Manager de Fútbol</strong><span id="sidebarSeason">Temporada</span></div>
         </div>
 
-        <div class="club-mini">
+        <button type="button" class="club-mini interactive-surface" data-action="open-current-club" aria-label="Abrir detalles del club">
           <div id="miniCrest" class="crest-small">--</div>
           <div><strong id="miniClubName">Mi club</strong><span id="miniUsername">Manager</span></div>
-        </div>
+        </button>
 
         <nav class="nav-list" aria-label="Secciones del juego">
           <button class="nav-button active" data-view="inicio"><span class="nav-icon">⌂</span>Portal</button>
@@ -1133,8 +1361,8 @@
             </div>
           </div>
           <div class="topbar-meta">
-            <span id="seasonPill" class="status-pill">Temporada</span>
-            <span id="marketPill" class="status-pill"><span class="status-dot"></span>Mercado abierto</span>
+            <button type="button" id="seasonPill" class="status-pill interactive-surface" data-action="open-season">Temporada</button>
+            <button type="button" id="marketPill" class="status-pill interactive-surface" data-action="open-season"><span class="status-dot"></span>Mercado abierto</button>
           </div>
         </header>
 
@@ -1150,6 +1378,20 @@
         </div>
       </main>
     </div>
+  </div>
+
+  <div id="detailModal" class="modal-layer" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-head">
+        <div>
+          <div id="modalEyebrow" class="modal-eyebrow">Detalle</div>
+          <h2 id="modalTitle" class="modal-title">Información</h2>
+          <p id="modalSubtitle" class="modal-subtitle"></p>
+        </div>
+        <button type="button" class="modal-close" data-action="close-modal" aria-label="Cerrar">×</button>
+      </header>
+      <div id="modalBody" class="modal-body"></div>
+    </section>
   </div>
 
   <div id="loadingScreen" class="loading-screen" hidden>
@@ -1174,6 +1416,10 @@
       noticias: [],
       temporada: null,
       standings: [],
+      portalMessages: [],
+      portalNews: [],
+      newsIndex: 0,
+      detailCache: new Map(),
       currentView: 'inicio'
     };
 
@@ -1194,7 +1440,12 @@
       menuToggle: $('#menuToggle'),
       logoutButton: $('#logoutButton'),
       pageTitle: $('#pageTitle'),
-      toast: $('#toast')
+      toast: $('#toast'),
+      modal: $('#detailModal'),
+      modalEyebrow: $('#modalEyebrow'),
+      modalTitle: $('#modalTitle'),
+      modalSubtitle: $('#modalSubtitle'),
+      modalBody: $('#modalBody')
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -1213,6 +1464,17 @@
       dom.logoutButton.addEventListener('click', logout);
       dom.menuToggle.addEventListener('click', () => toggleSidebar(true));
       dom.sidebarBackdrop.addEventListener('click', () => toggleSidebar(false));
+      document.addEventListener('click', handleActionClick);
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !dom.modal.hidden) closeModal();
+        if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('[role="button"][data-action]')) {
+          event.preventDefault();
+          event.target.click();
+        }
+      });
+      dom.modal.addEventListener('click', event => {
+        if (event.target === dom.modal) closeModal();
+      });
 
       $$('.nav-button').forEach(button => {
         button.addEventListener('click', () => {
@@ -1302,6 +1564,7 @@
         if (!result?.ok) throw new Error(result?.error || 'La API devolvió una respuesta inválida.');
       });
 
+      state.detailCache.clear();
       state.dashboard = dashboardResult;
       state.clubes = clubsResult.data || [];
       state.partidos = matchesResult.data || [];
@@ -1412,50 +1675,6 @@
         ? ((findClub(next.local_id === club.id_club ? next.visitante_id : next.local_id) || {}).nombre || 'su próximo rival')
         : '';
 
-      const fallbackMessages = [
-        {
-          iconColor: 'yellow',
-          iconLabel: 'Destacado',
-          sender: 'Segundo entrenador',
-          title: `Informe general del plantel: media ${averageMedia.toFixed(1)}`,
-          time: 'Ahora'
-        },
-        {
-          iconColor: 'green',
-          iconLabel: 'Normal',
-          sender: 'Presidencia',
-          title: `Situación institucional de ${club.nombre}`,
-          time: 'Hoy'
-        },
-        {
-          iconColor: 'green',
-          iconLabel: 'Normal',
-          sender: 'Director de juveniles',
-          title: `${youthCount} jugadores vinculados al equipo juvenil`,
-          time: 'Hoy'
-        },
-        {
-          iconColor: mood < 40 ? 'red' : 'green',
-          iconLabel: mood < 40 ? 'Importante' : 'Normal',
-          sender: 'Administración',
-          title: `Presupuesto disponible: ${currency(club.presupuesto)}`,
-          time: 'Ayer'
-        },
-        {
-          iconColor: mood <= 30 ? 'red' : mood < 55 ? 'yellow' : 'green',
-          iconLabel: mood <= 30 ? 'Importante' : mood < 55 ? 'Destacado' : 'Normal',
-          sender: 'Relación con socios',
-          title: `Estado de ánimo de los hinchas: ${number(mood)}%`,
-          time: 'Ayer'
-        },
-        {
-          iconColor: 'green',
-          iconLabel: 'Normal',
-          sender: 'Secretaría técnica',
-          title: `${employeeCount} empleados forman parte de la estructura`,
-          time: '2 días'
-        }
-      ];
 
       const contentContext = {
         club: club.nombre || '',
@@ -1473,51 +1692,42 @@
         media_plantel: averageMedia.toFixed(1)
       };
 
-      const messages = getPortalMessages(contentContext, fallbackMessages);
-      const activeNews = getPortalNews(contentContext, {
-        kicker: `${leagueName} · Temporada ${season}`,
-        title: `${club.nombre} prepara su próximo desafío`,
-        body: next
-          ? `El equipo se prepara para enfrentar a ${opponentName}. El club ocupa actualmente la posición ${rank || 'sin definir'} de ${leagueName}.`
-          : 'El calendario todavía no tiene un próximo partido programado para el equipo principal.',
-        meta: `Presupuesto ${currency(club.presupuesto)} · Ánimo ${number(mood)}%`
-      });
+      const messages = getPortalMessages(contentContext);
+      const newsItems = getPortalNewsList(contentContext);
+      state.portalMessages = messages;
+      state.portalNews = newsItems;
+      if (state.newsIndex >= newsItems.length) state.newsIndex = 0;
+      const activeNews = newsItems[state.newsIndex] || newsItems[0];
 
-      const calendarMatches = upcoming.slice(0, 7);
-      const calendarCells = Array.from({ length: 14 }, (_, index) => {
-        const match = calendarMatches[index % Math.max(1, calendarMatches.length)];
-        const hasEvent = index === 3 || index === 9 || (index === 12 && calendarMatches.length > 2);
-        const label = hasEvent && match
-          ? `${findClub(match.local_id)?.nombre || match.local_id} vs ${findClub(match.visitante_id)?.nombre || match.visitante_id}`
-          : 'Entrenamiento';
-        return `<div class="calendar-day${hasEvent ? ' event' : ''}">
-          <strong>${index + 1}</strong>
-          <span>${escapeHtml(label)}</span>
-        </div>`;
-      }).join('');
+      const calendarMatches = upcoming.slice(0, 14);
+      const calendarCells = calendarMatches.length
+        ? calendarMatches.map(match => {
+            const opponentId = match.local_id === club.id_club ? match.visitante_id : match.local_id;
+            const opponent = findClub(opponentId)?.nombre || opponentId;
+            const condition = match.local_id === club.id_club ? 'Local' : 'Visitante';
+            return `<button type="button" class="calendar-day event interactive-row" data-action="open-match" data-match-id="${escapeHtml(match.id_partido || match.fecha)}">
+              <strong>${escapeHtml(match.fecha)}</strong>
+              <span>${escapeHtml(condition)} · ${escapeHtml(opponent)}</span>
+            </button>`;
+          }).join('')
+        : `<button type="button" class="calendar-day interactive-row" data-action="go-view" data-view="calendario"><strong>—</strong><span>Revisar calendario</span></button>`;
 
       $('#view-inicio').innerHTML = `
         <div class="portal-grid">
           <div class="portal-column">
             <article class="panel">
               <div class="panel-head"><h3>Mensajes</h3><span class="chip">${messages.length} nuevos</span></div>
-              <div class="message-tabs">
-                <button class="message-tab active">Todos</button>
-                <button class="message-tab">Nuevos</button>
-                <button class="message-tab">Tareas</button>
-                <button class="message-tab">No leídos</button>
-              </div>
               <div class="message-list">
                 <div class="message-day">Temporada ${escapeHtml(season)}</div>
-                ${messages.map(message => `
-                  <div class="message-item">
+                ${messages.length ? messages.map((message, index) => `
+                  <button type="button" class="message-item interactive-row" data-action="open-message" data-index="${index}">
                     <div class="message-status-dot ${escapeHtml(message.iconColor)}" role="img" aria-label="${escapeHtml(message.iconLabel)}" title="${escapeHtml(message.iconLabel)}"></div>
                     <div>
                       <div class="message-sender">${escapeHtml(message.sender)}</div>
                       <div class="message-title">${escapeHtml(message.title)}</div>
                     </div>
                     <div class="message-time">${escapeHtml(message.time)}</div>
-                  </div>`).join('')}
+                  </button>`).join('') : `<button type="button" class="empty-state interactive-surface" data-action="open-info" data-title="Sin mensajes" data-text="No hay mensajes activos aplicables a este usuario, club o liga.">No hay mensajes activos.</button>`}
               </div>
             </article>
           </div>
@@ -1525,7 +1735,8 @@
           <div class="portal-column">
             <article class="panel">
               <div class="panel-head"><h3>Noticias del club</h3><span class="chip green">Actualizado</span></div>
-              <div class="news-card">
+              ${activeNews ? `
+              <button type="button" class="news-card interactive-surface" data-action="open-news" data-index="${state.newsIndex}">
                 <div class="news-copy">
                   <div class="news-kicker">${escapeHtml(activeNews.kicker)}</div>
                   <h2 class="news-title">${escapeHtml(activeNews.title)}</h2>
@@ -1533,12 +1744,16 @@
                   <div class="news-meta">${escapeHtml(activeNews.meta)}</div>
                 </div>
                 <div class="news-badge">${escapeHtml(clubInitials(club.nombre))}</div>
-              </div>
-              <div class="news-pager"><span></span><span></span><span class="active"></span><span></span><span></span></div>
+              </button>
+              <div class="news-toolbar">
+                <button type="button" class="news-nav" data-action="news-prev" aria-label="Noticia anterior">‹</button>
+                <div class="news-dots">${newsItems.map((_, index) => `<button type="button" class="news-dot ${index === state.newsIndex ? 'active' : ''}" data-action="news-go" data-index="${index}" aria-label="Ver noticia ${index + 1}"></button>`).join('')}</div>
+                <button type="button" class="news-nav" data-action="news-next" aria-label="Noticia siguiente">›</button>
+              </div>` : `<button type="button" class="empty-state interactive-surface" data-action="open-info" data-title="Sin noticias" data-text="No hay noticias activas aplicables a este usuario, club o liga.">No hay noticias publicadas.</button>`}
             </article>
 
             <div class="portal-main">
-              <article class="panel">
+              <article class="panel interactive-card" data-action="open-club" data-club-id="${escapeHtml(next ? (next.local_id === club.id_club ? next.visitante_id : next.local_id) : club.id_club)}" role="button" tabindex="0">
                 <div class="panel-head"><h3>Informe del equipo</h3><span class="chip">${rank || '–'}°</span></div>
                 <div class="panel-body">
                   <div class="mini-report">
@@ -1558,7 +1773,7 @@
                   ${played.length ? played.slice(0, 3).map(match => {
                     const local = findClub(match.local_id)?.nombre || match.local_id;
                     const visitor = findClub(match.visitante_id)?.nombre || match.visitante_id;
-                    return `<div class="mini-fixture">
+                    return `<div class="mini-fixture interactive-row" data-action="open-match" data-match-id="${escapeHtml(match.id_partido || match.fecha)}" role="button" tabindex="0">
                       <span>${escapeHtml(local)} · ${escapeHtml(visitor)}</span>
                       <span class="mini-score">${number(match.goles_local)} - ${number(match.goles_visitante)}</span>
                     </div>`;
@@ -1573,10 +1788,10 @@
             </article>
 
             <div class="portal-kpi-row">
-              <div class="portal-kpi"><span>Presupuesto</span><strong>${currency(club.presupuesto)}</strong></div>
-              <div class="portal-kpi"><span>Plantel</span><strong>${number(d.resumen.jugadores_principal)}</strong></div>
-              <div class="portal-kpi"><span>Socios</span><strong>${compact(d.resumen.socios_equivalentes)}</strong></div>
-              <div class="portal-kpi"><span>Costo salarial</span><strong>${currency(payroll)}</strong></div>
+              <button type="button" class="portal-kpi interactive-card" data-action="go-view" data-view="finanzas"><span>Presupuesto</span><strong>${currency(club.presupuesto)}</strong></button>
+              <button type="button" class="portal-kpi interactive-card" data-action="go-view" data-view="plantel"><span>Plantel</span><strong>${number(d.resumen.jugadores_principal)}</strong></button>
+              <button type="button" class="portal-kpi interactive-card" data-action="open-current-club"><span>Socios</span><strong>${compact(d.resumen.socios_equivalentes)}</strong></button>
+              <button type="button" class="portal-kpi interactive-card" data-action="go-view" data-view="finanzas"><span>Costo salarial</span><strong>${currency(payroll)}</strong></button>
             </div>
           </div>
 
@@ -1588,7 +1803,7 @@
                   const opponentId = match.local_id === club.id_club ? match.visitante_id : match.local_id;
                   const opponent = findClub(opponentId)?.nombre || opponentId;
                   const condition = match.local_id === club.id_club ? 'L' : 'V';
-                  return `<div class="schedule-row">
+                  return `<div class="schedule-row interactive-row" data-action="open-match" data-match-id="${escapeHtml(match.id_partido || match.fecha)}" role="button" tabindex="0">
                     <span class="schedule-date">${escapeHtml(match.fecha)}</span>
                     <span class="schedule-match">${condition} · ${escapeHtml(opponent)}</span>
                     <span class="schedule-status pending">Pend.</span>
@@ -1604,7 +1819,7 @@
                   <thead><tr><th>Pos.</th><th>Equipo</th><th>PJ</th><th>Pts</th></tr></thead>
                   <tbody>
                     ${standingsPreview.map((row, index) => `
-                      <tr class="${row.id === club.id_club ? 'current' : ''}">
+                      <tr class="${row.id === club.id_club ? 'current' : ''} interactive-row" data-action="open-club" data-club-id="${escapeHtml(row.id)}" tabindex="0">
                         <td>${row.pj > 0 ? index + 1 : '–'}</td>
                         <td>${escapeHtml(row.nombre)}</td>
                         <td>${row.pj}</td>
@@ -1615,7 +1830,7 @@
               </div>
             </article>
 
-            <article class="panel">
+            <article class="panel interactive-card" data-action="open-current-club" role="button" tabindex="0">
               <div class="panel-head"><h3>Estado del club</h3><span class="chip ${mood >= 60 ? 'green' : 'yellow'}">${moodLabel(mood)}</span></div>
               <div class="panel-body">
                 ${progress('Media del plantel', averageMedia, 100)}
@@ -1636,7 +1851,7 @@
       $('#view-club').innerHTML = `
         ${sectionHead('Mi club', 'Información institucional y económica de la entidad.')}
         <div class="club-profile">
-          <article class="panel">
+          <article class="panel interactive-card" data-action="open-current-club" role="button" tabindex="0">
             <div class="panel-head"><h3>Perfil institucional</h3><span class="chip green">${escapeHtml(club.tipo)}</span></div>
             <div class="panel-body">
               <div class="definition-list">
@@ -1649,7 +1864,7 @@
               </div>
             </div>
           </article>
-          <article class="panel">
+          <article class="panel interactive-card" data-action="open-club" data-club-id="${escapeHtml(youth?.id_club || club.id_club)}" role="button" tabindex="0">
             <div class="panel-head"><h3>Estructura juvenil</h3><span class="chip">${escapeHtml(youthLeague.nombre || 'Liga juvenil')}</span></div>
             <div class="panel-body">
               ${youth ? `<div class="definition-list">
@@ -1696,7 +1911,7 @@
         ${sectionHead('Empleados', 'Estructura técnica e institucional del club.')}
         <div class="employee-grid">
           ${employees.length ? employees.map(employee => `
-            <article class="employee-card">
+            <article class="employee-card interactive-card" data-action="open-employee" data-employee-id="${escapeHtml(employee.id_empleado)}" role="button" tabindex="0">
               <div class="employee-role">${escapeHtml(employee.rol)}</div>
               <div class="employee-name">${escapeHtml(employee.nombre)}</div>
               <div class="meta-list">
@@ -1726,7 +1941,7 @@
           <table>
             <thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead>
             <tbody>${state.standings.map((row, index) => `
-              <tr${row.id === state.dashboard.club.id_club ? ' style="background:rgba(68,219,131,.07)"' : ''}>
+              <tr class="interactive-row" data-action="open-club" data-club-id="${escapeHtml(row.id)}" tabindex="0"${row.id === state.dashboard.club.id_club ? ' style="background:rgba(68,219,131,.07)"' : ''}>
                 <td><strong>${row.pj > 0 ? index + 1 : '–'}</strong></td><td class="cell-name">${escapeHtml(row.nombre)}</td><td>${row.pj}</td><td>${row.pg}</td><td>${row.pe}</td><td>${row.pp}</td><td>${row.gf}</td><td>${row.gc}</td><td>${signed(row.dg)}</td><td><span class="media-score">${row.pts}</span></td>
               </tr>`).join('')}</tbody>
           </table>
@@ -1742,7 +1957,7 @@
             const local = findClub(match.local_id)?.nombre || match.local_id;
             const visitor = findClub(match.visitante_id)?.nombre || match.visitante_id;
             const played = normalize(match.estado) === 'jugado';
-            return `<div class="fixture-item">
+            return `<div class="fixture-item interactive-card" data-action="open-match" data-match-id="${escapeHtml(match.id_partido || match.fecha)}" role="button" tabindex="0">
               <div class="fixture-round">${escapeHtml(match.fecha)}</div>
               <div class="fixture-teams">${escapeHtml(local)} <span style="color:var(--muted)">vs.</span> ${escapeHtml(visitor)}</div>
               <div class="fixture-result">${played ? `${number(match.goles_local)} – ${number(match.goles_visitante)}` : '<span class="chip">Programado</span>'}</div>
@@ -1791,16 +2006,15 @@
         || { id_liga: youthLeagueId, nombre: 'Liga juvenil', tipo: 'Juvenil' };
     }
 
-    function getPortalMessages(context, fallbackMessages) {
+    function getPortalMessages(context) {
       const rows = state.mensajes
         .filter(row => contentRowApplies(row))
         .sort((a, b) => num(a.orden) - num(b.orden));
 
-      if (!rows.length) return fallbackMessages;
-
-      return rows.slice(0, 12).map(row => {
+      const source = rows.slice(0, 12).map(row => {
         const iconColor = normalizeMessageIcon(row.icono);
         return {
+          id: row.id_mensaje || '',
           iconColor,
           iconLabel: messageIconLabel(iconColor),
           sender: fillTemplate(row.remitente || 'Club', context),
@@ -1808,21 +2022,24 @@
           time: fillTemplate(row.momento || 'Hoy', context)
         };
       });
+
+      return source.map((item, index) => ({ id: item.id || `mensaje-${index + 1}`, ...item }));
     }
 
-    function getPortalNews(context, fallbackNews) {
-      const row = state.noticias
+    function getPortalNewsList(context) {
+      const rows = state.noticias
         .filter(item => contentRowApplies(item))
-        .sort((a, b) => num(a.orden) - num(b.orden))[0];
+        .sort((a, b) => num(a.orden) - num(b.orden));
 
-      if (!row) return fallbackNews;
+      if (!rows.length) return [];
 
-      return {
+      return rows.slice(0, 12).map(row => ({
+        id: row.id_noticia || '',
         kicker: fillTemplate(row.categoria || `${context.liga} · Temporada ${context.temporada}`, context),
-        title: fillTemplate(row.titulo || fallbackNews.title, context),
-        body: fillTemplate(row.cuerpo || row.texto || fallbackNews.body, context),
-        meta: fillTemplate(row.meta || row.fecha || fallbackNews.meta, context)
-      };
+        title: fillTemplate(row.titulo || '', context),
+        body: fillTemplate(row.cuerpo || '', context),
+        meta: fillTemplate(row.meta || '', context)
+      }));
     }
 
     function contentRowApplies(row) {
@@ -1859,6 +2076,286 @@
       if (color === 'red') return 'Importante';
       if (color === 'yellow') return 'Destacado';
       return 'Normal';
+    }
+
+    function handleActionClick(event) {
+      const target = event.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+
+      if (action === 'close-modal') return closeModal();
+      if (action === 'open-current-club') return openClubDetail(state.dashboard.club.id_club);
+      if (action === 'open-club') return openClubDetail(target.dataset.clubId);
+      if (action === 'open-player') return openPlayerDetail(target.dataset.playerId);
+      if (action === 'open-employee') return openEmployeeDetail(target.dataset.employeeId);
+      if (action === 'open-message') return openMessageDetail(num(target.dataset.index));
+      if (action === 'open-news') return openNewsDetail(num(target.dataset.index));
+      if (action === 'open-match') return openMatchDetail(target.dataset.matchId);
+      if (action === 'open-season') return openSeasonDetail();
+      if (action === 'open-info') return openModal({ eyebrow: 'Información', title: target.dataset.title || 'Información', subtitle: '', body: `<p class="modal-copy">${escapeHtml(target.dataset.text || '')}</p>` });
+      if (action === 'go-view') return switchView(target.dataset.view || 'inicio');
+      if (action === 'news-prev') return changeNews(-1);
+      if (action === 'news-next') return changeNews(1);
+      if (action === 'news-go') {
+        state.newsIndex = num(target.dataset.index);
+        return renderHome();
+      }
+    }
+
+    function openModal({ eyebrow = 'Detalle', title = 'Información', subtitle = '', body = '' }) {
+      dom.modalEyebrow.textContent = eyebrow;
+      dom.modalTitle.textContent = title;
+      dom.modalSubtitle.textContent = subtitle;
+      dom.modalBody.innerHTML = body;
+      dom.modal.hidden = false;
+      dom.modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => $('.modal-close', dom.modal)?.focus());
+    }
+
+    function updateModal({ eyebrow, title, subtitle, body }) {
+      if (eyebrow !== undefined) dom.modalEyebrow.textContent = eyebrow;
+      if (title !== undefined) dom.modalTitle.textContent = title;
+      if (subtitle !== undefined) dom.modalSubtitle.textContent = subtitle;
+      if (body !== undefined) dom.modalBody.innerHTML = body;
+    }
+
+    function closeModal() {
+      dom.modal.hidden = true;
+      dom.modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+    }
+
+    function modalLoading(title = 'Cargando información…') {
+      openModal({
+        eyebrow: 'Consulta en Google Sheets',
+        title,
+        subtitle: 'Obteniendo los datos actualizados.',
+        body: '<div class="modal-loading"><div class="loader"></div></div>'
+      });
+    }
+
+    function openMessageDetail(index) {
+      const message = state.portalMessages[index];
+      if (!message) return;
+      openModal({
+        eyebrow: message.iconLabel,
+        title: message.title,
+        subtitle: `${message.sender} · ${message.time}`,
+        body: `<div class="detail-hero">
+          <div class="detail-avatar"><span class="message-status-dot ${escapeHtml(message.iconColor)}"></span></div>
+          <div><h3>${escapeHtml(message.sender)}</h3><p>${escapeHtml(message.time)}</p></div>
+        </div>
+        <p class="modal-copy">${escapeHtml(message.title)}</p>
+        <div class="modal-meta"><span class="chip">${escapeHtml(message.id)}</span><span class="chip ${message.iconColor === 'green' ? 'green' : message.iconColor === 'yellow' ? 'yellow' : ''}">${escapeHtml(message.iconLabel)}</span></div>`
+      });
+    }
+
+    function openNewsDetail(index) {
+      const news = state.portalNews[index];
+      if (!news) return;
+      openModal({
+        eyebrow: news.kicker,
+        title: news.title,
+        subtitle: news.meta,
+        body: `<p class="modal-copy">${escapeHtml(news.body)}</p><div class="modal-meta"><span class="chip">${escapeHtml(news.id)}</span></div>`
+      });
+    }
+
+    function changeNews(direction) {
+      const total = state.portalNews.length;
+      if (!total) return;
+      state.newsIndex = (state.newsIndex + direction + total) % total;
+      renderHome();
+    }
+
+    async function openClubDetail(clubId) {
+      if (!clubId) return;
+      modalLoading('Cargando detalles del club');
+      const cacheKey = `club:${clubId}`;
+      try {
+        let detail = state.detailCache.get(cacheKey);
+        if (!detail) {
+          const result = await apiGet({ action: 'club_detail', club_id: clubId });
+          if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar el club.');
+          detail = result;
+          state.detailCache.set(cacheKey, detail);
+        }
+        renderClubModal(detail);
+      } catch (error) {
+        const fallback = buildLocalClubDetail(clubId);
+        if (fallback) renderClubModal(fallback);
+        else updateModal({ title: 'No se pudo abrir el club', subtitle: '', body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>` });
+      }
+    }
+
+    function buildLocalClubDetail(clubId) {
+      const club = findClub(clubId);
+      if (!club) return null;
+      const own = clubId === state.dashboard.club.id_club;
+      const players = own ? state.dashboard.plantel_principal : [];
+      const employees = own ? state.dashboard.empleados : [];
+      return {
+        ok: true,
+        club,
+        resumen: {
+          jugadores: players.length,
+          media_plantel: average(players, 'media'),
+          valor_plantel: sum(players, 'valor'),
+          salario_plantel: sum(players, 'salario'),
+          empleados: employees.length,
+          hinchas_representativos: own ? state.dashboard.resumen.hinchas_representativos : 0,
+          socios_equivalentes: own ? state.dashboard.resumen.socios_equivalentes : 0,
+          estado_animo_promedio: own ? state.dashboard.resumen.estado_animo_promedio : 0
+        },
+        jugadores: players,
+        empleados
+      };
+    }
+
+    function renderClubModal(detail) {
+      const club = detail.club || {};
+      const summary = detail.resumen || {};
+      const players = detail.jugadores || [];
+      const employees = detail.empleados || [];
+      updateModal({
+        eyebrow: getLeagueName(club.liga_id),
+        title: club.nombre || 'Club',
+        subtitle: `${club.tipo || 'Equipo'} · ${club.id_club || ''}`,
+        body: `<div class="detail-hero">
+          <div class="detail-avatar">${escapeHtml(clubInitials(club.nombre))}</div>
+          <div><h3>${escapeHtml(club.nombre || 'Club')}</h3><p>Reputación ${number(club.reputacion)}/100 · Historia ${number(club.historia)}/100</p></div>
+        </div>
+        <div class="detail-grid">
+          ${detailStat('Hinchas', number(summary.hinchas_representativos))}
+          ${detailStat('Socios equivalentes', compact(summary.socios_equivalentes))}
+          ${detailStat('Ánimo', `${number(summary.estado_animo_promedio)}%`)}
+          ${detailStat('Media del plantel', number(summary.media_plantel))}
+          ${detailStat('Jugadores', number(summary.jugadores))}
+          ${detailStat('Presupuesto', currency(club.presupuesto))}
+          ${detailStat('Valor del plantel', currency(summary.valor_plantel))}
+          ${detailStat('Salarios', currency(summary.salario_plantel))}
+          ${detailStat('Estadio', number(club.estadio))}
+        </div>
+        ${players.length ? `<section class="detail-section"><h4>Jugadores</h4><div class="detail-list">${players.slice().sort((a,b)=>num(b.media)-num(a.media)).slice(0,12).map(player => `<div class="detail-list-item interactive-row" data-action="open-player" data-player-id="${escapeHtml(player.id_jugador)}" role="button" tabindex="0"><div><strong>${escapeHtml(player.nombre)}</strong><br><span>${escapeHtml(player.posicion)} · ${number(player.edad)} años</span></div><span>Media ${number(player.media)}</span></div>`).join('')}</div></section>` : ''}
+        ${employees.length ? `<section class="detail-section"><h4>Empleados</h4><div class="detail-list">${employees.map(employee => `<div class="detail-list-item interactive-row" data-action="open-employee" data-employee-id="${escapeHtml(employee.id_empleado)}" role="button" tabindex="0"><div><strong>${escapeHtml(employee.nombre)}</strong><br><span>${escapeHtml(employee.rol)}</span></div><span>${currency(employee.salario)}</span></div>`).join('')}</div></section>` : ''}`
+      });
+    }
+
+    async function openPlayerDetail(playerId) {
+      if (!playerId) return;
+      modalLoading('Cargando ficha del jugador');
+      const localPlayer = [...(state.dashboard.plantel_principal || []), ...(state.dashboard.plantel_juvenil || [])].find(player => String(player.id_jugador) === String(playerId));
+      try {
+        const result = await apiGet({ action: 'player_detail', player_id: playerId });
+        if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar el jugador.');
+        renderPlayerModal(result.jugador, result.club);
+      } catch (error) {
+        if (localPlayer) renderPlayerModal(localPlayer, findClub(localPlayer.club_id));
+        else updateModal({ title: 'No se pudo abrir el jugador', subtitle: '', body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>` });
+      }
+    }
+
+    function renderPlayerModal(player = {}, club = {}) {
+      updateModal({
+        eyebrow: `${player.posicion || 'Jugador'} · ${club?.nombre || player.club_id || 'Libre'}`,
+        title: player.nombre || 'Jugador',
+        subtitle: player.id_jugador || '',
+        body: `<div class="detail-hero">
+          <div class="detail-avatar">${escapeHtml(playerInitials(player.nombre))}</div>
+          <div><h3>${escapeHtml(player.nombre || 'Jugador')}</h3><p>${escapeHtml(player.posicion || 'Sin posición')} · ${number(player.edad)} años · ${escapeHtml(player.estado || '')}</p></div>
+        </div>
+        <div class="detail-grid">
+          ${detailStat('Media', number(player.media))}
+          ${detailStat('Edad', number(player.edad))}
+          ${detailStat('Posición', player.posicion || '—')}
+          ${detailStat('Valor', currency(player.valor))}
+          ${detailStat('Salario', currency(player.salario))}
+          ${detailStat('Estado', player.estado || '—')}
+          ${detailStat('Equipo', club?.nombre || player.club_id || 'Libre')}
+          ${detailStat('Tipo', player.equipo_tipo || '—')}
+          ${detailStat('ID', player.id_jugador || '—')}
+        </div>
+        <section class="detail-section"><h4>Atributos ocultos</h4><p class="modal-copy">El potencial real, la regularidad, el profesionalismo, la lesionabilidad, la presión y el crecimiento permanecen ocultos y se utilizan en la simulación.</p></section>`
+      });
+    }
+
+    async function openEmployeeDetail(employeeId) {
+      if (!employeeId) return;
+      modalLoading('Cargando ficha del empleado');
+      let employee = (state.dashboard.empleados || []).find(item => String(item.id_empleado) === String(employeeId));
+      let club = employee ? findClub(employee.club_id) : null;
+
+      if (!employee) {
+        for (const detail of state.detailCache.values()) {
+          employee = (detail.empleados || []).find(item => String(item.id_empleado) === String(employeeId));
+          if (employee) {
+            club = detail.club || findClub(employee.club_id);
+            break;
+          }
+        }
+      }
+
+      try {
+        const result = await apiGet({ action: 'employee_detail', employee_id: employeeId });
+        if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar el empleado.');
+        employee = result.empleado;
+        club = result.club;
+      } catch (error) {
+        if (!employee) {
+          updateModal({ title: 'No se pudo abrir el empleado', subtitle: '', body: `<p class="modal-copy">${escapeHtml(humanizeError(error))}</p>` });
+          return;
+        }
+      }
+
+      updateModal({
+        eyebrow: employee.rol || 'Empleado',
+        title: employee.nombre || 'Empleado',
+        subtitle: employee.id_empleado || '',
+        body: `<div class="detail-hero"><div class="detail-avatar">${escapeHtml(playerInitials(employee.nombre))}</div><div><h3>${escapeHtml(employee.nombre || '')}</h3><p>${escapeHtml(employee.rol || '')}</p></div></div>
+        <div class="detail-grid">${detailStat('Rol', employee.rol)}${detailStat('Salario', currency(employee.salario))}${detailStat('Estado', employee.estado)}${detailStat('Club', club?.nombre || employee.club_id || 'Libre')}${detailStat('ID', employee.id_empleado)}</div>
+        <section class="detail-section"><h4>Atributos ocultos</h4><p class="modal-copy">Honestidad, manejo de grupo, ambición y riesgo de conflicto permanecen ocultos y se aplican en la simulación.</p></section>`
+      });
+    }
+
+    function openMatchDetail(matchId) {
+      const match = state.partidos.find(item => String(item.id_partido || item.fecha) === String(matchId));
+      if (!match) return;
+      const local = findClub(match.local_id) || { nombre: match.local_id };
+      const visitor = findClub(match.visitante_id) || { nombre: match.visitante_id };
+      const played = normalize(match.estado) === 'jugado';
+      openModal({
+        eyebrow: `${getLeagueName(match.liga_id)} · ${match.fecha || 'Fecha'}`,
+        title: `${local.nombre} vs. ${visitor.nombre}`,
+        subtitle: played ? 'Partido finalizado' : 'Partido programado',
+        body: `<div class="match-card">
+          <div class="match-team interactive-row" data-action="open-club" data-club-id="${escapeHtml(match.local_id)}" role="button" tabindex="0"><div class="team-badge">${escapeHtml(clubInitials(local.nombre))}</div><span>${escapeHtml(local.nombre)}</span></div>
+          <div class="match-center"><div class="match-round">${escapeHtml(match.fecha || '')}</div><div class="match-vs">${played ? `${number(match.goles_local)}–${number(match.goles_visitante)}` : 'VS'}</div><div class="match-state">${played ? 'FINALIZADO' : 'PROGRAMADO'}</div></div>
+          <div class="match-team interactive-row" data-action="open-club" data-club-id="${escapeHtml(match.visitante_id)}" role="button" tabindex="0"><div class="team-badge">${escapeHtml(clubInitials(visitor.nombre))}</div><span>${escapeHtml(visitor.nombre)}</span></div>
+        </div>`
+      });
+    }
+
+    function openSeasonDetail() {
+      const league = getMainLeague();
+      openModal({
+        eyebrow: league.nombre || 'Competición',
+        title: `Temporada ${state.temporada.temporada || '—'}`,
+        subtitle: String(state.temporada.mercado_abierto || '').toUpperCase() === 'SI' ? 'Mercado abierto' : 'Mercado cerrado',
+        body: `<div class="detail-grid">${detailStat('Fecha actual', state.temporada.fecha_actual || '—')}${detailStat('Fecha de liga', state.temporada.fecha_liga || '—')}${detailStat('Fecha juvenil', state.temporada.fecha_juvenil || '—')}${detailStat('Próximo evento', state.temporada.fecha_proximo_evento || '—')}${detailStat('Equipos', state.standings.length)}${detailStat('Partidos cargados', state.partidos.length)}</div>`
+      });
+    }
+
+    function detailStat(label, value) {
+      return `<div class="detail-stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value ?? '—'))}</strong></div>`;
+    }
+
+    function getLeagueName(leagueId) {
+      return state.ligas.find(league => String(league.id_liga) === String(leagueId))?.nombre || leagueId || 'Liga';
+    }
+
+    function playerInitials(name) {
+      return String(name || 'J').trim().split(/\s+/).slice(0,2).map(part => part.charAt(0).toUpperCase()).join('') || 'J';
     }
 
     function calculateStandings() {
@@ -1961,7 +2458,7 @@
       const local = findClub(match.local_id) || { nombre: match.local_id };
       const visitor = findClub(match.visitante_id) || { nombre: match.visitante_id };
       const played = normalize(match.estado) === 'jugado';
-      return `<div class="match-card">
+      return `<div class="match-card interactive-card" data-action="open-match" data-match-id="${escapeHtml(match.id_partido || match.fecha)}" role="button" tabindex="0">
         <div class="match-team"><div class="team-badge">${clubInitials(local.nombre)}</div><span>${escapeHtml(local.nombre)}</span></div>
         <div class="match-center"><div class="match-round">${escapeHtml(match.fecha)}</div><div class="match-vs">${played ? `${number(match.goles_local)}–${number(match.goles_visitante)}` : 'VS'}</div><div class="match-state">${played ? 'FINALIZADO' : 'PROGRAMADO'}</div></div>
         <div class="match-team"><div class="team-badge">${clubInitials(visitor.nombre)}</div><span>${escapeHtml(visitor.nombre)}</span></div>
@@ -1972,7 +2469,7 @@
       if (!players.length) return emptyState('No se encontraron jugadores con esos filtros.');
       return `<div class="table-wrap"><table>
         <thead><tr><th>Jugador</th><th>Pos.</th><th>Edad</th><th>Media</th><th>Salario</th><th>Valor</th><th>Estado</th>${youth ? '<th>Tipo</th>' : ''}</tr></thead>
-        <tbody>${players.map(player => `<tr>
+        <tbody>${players.map(player => `<tr class="interactive-row" data-action="open-player" data-player-id="${escapeHtml(player.id_jugador)}" tabindex="0">
           <td><div class="cell-name">${escapeHtml(player.nombre)}</div><span style="color:var(--muted);font-size:11px">${escapeHtml(player.id_jugador)}</span></td>
           <td><span class="chip">${escapeHtml(player.posicion)}</span></td>
           <td>${number(player.edad)}</td>
@@ -1985,8 +2482,8 @@
       </table></div>`;
     }
 
-    function statCard(label, value, foot) {
-      return `<article class="stat-card"><span class="stat-label">${escapeHtml(label)}</span><span class="stat-value">${escapeHtml(value)}</span><span class="stat-foot">${escapeHtml(foot)}</span></article>`;
+    function statCard(label, value, foot, action = 'go-view', view = 'finanzas') {
+      return `<article class="stat-card interactive-card" data-action="${escapeHtml(action)}" data-view="${escapeHtml(view)}" role="button" tabindex="0"><span class="stat-label">${escapeHtml(label)}</span><span class="stat-value">${escapeHtml(value)}</span><span class="stat-foot">${escapeHtml(foot)}</span></article>`;
     }
 
     function sectionHead(title, subtitle) {

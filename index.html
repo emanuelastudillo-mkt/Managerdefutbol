@@ -2110,17 +2110,18 @@
 
     function contentRowApplies(row) {
       const active = normalize(row.activo || 'si');
-      if (['no', 'false', '0', 'inactivo'].includes(active)) return false;
+      if (['no', 'false', '0', 'inactivo', 'off'].includes(active)) return false;
 
-      const clubId = String(row.club_id || '').trim();
-      const userId = String(row.usuario_id || '').trim();
-      const leagueId = String(row.liga_id || '').trim();
-      const currentClubId = String(state.dashboard?.club?.id_club || '').trim();
-      const currentUserId = String(state.session?.id_usuario || '').trim();
-      const currentLeagueId = String(getMainLeague().id_liga || '').trim();
+      const clubId = normalize(row.club_id || '');
+      const userId = normalize(row.usuario_id || '');
+      const leagueId = normalize(row.liga_id || '');
+      const currentClubId = normalize(state.dashboard?.club?.id_club || '');
+      const currentUserId = normalize(state.session?.id_usuario || '');
+      const currentUsername = normalize(state.session?.usuario || '');
+      const currentLeagueId = normalize(getMainLeague().id_liga || '');
 
       if (clubId && clubId !== currentClubId) return false;
-      if (userId && userId !== currentUserId) return false;
+      if (userId && userId !== currentUserId && userId !== currentUsername) return false;
       if (leagueId && leagueId !== currentLeagueId) return false;
       return true;
     }
@@ -2332,7 +2333,7 @@
       const summary = detail.resumen || {};
       const players = detail.jugadores || [];
       const employees = detail.empleados || [];
-      const pendingValue = 'Consultando…';
+      const pendingValue = '<span class="muted">Consultando…</span>';
       const valueOrPending = (value, formatter) => (
         value === null || value === undefined || value === ''
           ? pendingValue
@@ -2344,7 +2345,7 @@
           ? `<p class="modal-copy"><strong>No se completó la consulta:</strong> ${escapeHtml(status.error)}<br>${escapeHtml(status.note || '')}</p>`
           : '';
 
-      updateModal({
+      const modalPayload = {
         eyebrow: getLeagueName(club.liga_id),
         title: club.nombre || 'Club',
         subtitle: `${club.tipo || 'Equipo'} · ${club.id_club || ''}`,
@@ -2366,7 +2367,16 @@
         </div>
         ${players.length ? `<section class="detail-section"><h4>Jugadores destacados</h4><div class="detail-list">${players.slice().sort((a,b)=>num(b.media)-num(a.media)).slice(0,12).map(player => `<div class="detail-list-item interactive-row" data-action="open-player" data-player-id="${escapeHtml(player.id_jugador)}" role="button" tabindex="0"><div><strong>${escapeHtml(player.nombre)}</strong><br><span>${escapeHtml(player.posicion)} · ${number(player.edad)} años</span></div><span>Media ${number(player.media)}</span></div>`).join('')}</div></section>` : ''}
         ${employees.length ? `<section class="detail-section"><h4>Empleados</h4><div class="detail-list">${employees.map(employee => `<div class="detail-list-item interactive-row" data-action="open-employee" data-employee-id="${escapeHtml(employee.id_empleado)}" role="button" tabindex="0"><div><strong>${escapeHtml(employee.nombre)}</strong><br><span>${escapeHtml(employee.rol)}</span></div><span>${currency(employee.salario)}</span></div>`).join('')}</div></section>` : ''}`
-      });
+      };
+
+      // La primera versión actualizaba el contenido de una ventana todavía oculta.
+      // Si la ficha no está abierta, se abre; si ya está mostrando datos locales,
+      // se actualiza con la respuesta definitiva de Google Sheets.
+      if (dom.modal.hidden || dom.modal.getAttribute('aria-hidden') === 'true') {
+        openModal(modalPayload);
+      } else {
+        updateModal(modalPayload);
+      }
     }
 
     async function openPlayerDetail(playerId) {

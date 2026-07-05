@@ -1,4 +1,4 @@
-# Fútbol Manager MVP - V1.08
+# Fútbol Manager MVP - V1.12
 
 Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
@@ -6,44 +6,30 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 - HTML + CSS + JavaScript puro.
 - Datos iniciales en `data/seed.json`.
 - Guardado local con **IndexedDB**.
-- Liga simple con 20 clubes y 600 jugadores.
-- Simulación de jornadas y tablas.
-- Plantel clickeable con filtros.
-- Pantalla táctica con cancha visual y arrastre manual.
+- Liga argentina con divisiones configurables.
+- Simulación de jornadas y visualización lenta del partido.
+- Plantel clickeable.
+- Pantalla táctica con pizarra visual y drag & drop.
 - Cambios automáticos.
 - Presupuesto dinámico según resultados.
-- Estado físico de los jugadores con impacto en rendimiento.
-- Lesiones por probabilidad, cansancio acumulado y duración en turnos.
+- Estado físico, lesiones y sanciones.
 
-## Archivos principales
+## Cambios V1.12
+- Se agregó una barra horizontal de **estado físico** en la lista de titulares dentro de Táctica.
+- La barra usa degradado de rojo a verde según el valor físico del jugador.
+- Se eliminó el texto explicativo de mentalidades/anillo debajo de la pizarra.
+- Se ajustó la pizarra táctica para una apariencia más minimalista y con mayor contraste.
+
+## Archivos de esta actualización
+Este paquete de actualización no incluye `pitch-board.png`.
+
+Incluye:
 - `index.html`
 - `style.css`
 - `app.js`
-- `data/seed.json`
-- `assets/pitch-board.png`
-- `img/`
+- `README.md`
 - `VERSION.md`
 
-## Cómo usarlo en GitHub Pages
-1. Crear un repositorio nuevo.
-2. Subir todo el contenido de esta carpeta a la raíz del repositorio.
-3. Ir a **Settings > Pages**.
-4. En **Source**, elegir la rama `main` y carpeta `/root`.
-5. Guardar y abrir la URL publicada.
-
-## Notas de esta versión
-- Se agregó una tabla de lesiones con nombre, probabilidad y turnos fuera.
-- La lesión se calcula al simular el partido.
-- Cada jugador tiene 5% base de probabilidad de lesión.
-- Por cada 5 puntos de cansancio acumulado, la probabilidad sube 1%.
-- La lesión puede ocurrir durante el partido o al final.
-- En pantalla principal se muestran jugadores lesionados, lesión y turnos restantes.
-- En pantalla principal se muestra media general y estado físico general del plantel.
-
-## Siguiente versión sugerida
-V1.09 podría incluir:
-- historial médico por jugador,
-- recuperaciones parciales,
-- cuerpo médico,
-- entrenamiento preventivo,
-- impacto de lesiones según posición.
+## Cómo actualizar
+Subir estos archivos al repositorio reemplazando los existentes.
+No eliminar `assets/pitch-board.png` si lo tenés en el repositorio, aunque esta versión ya mejora la pizarra desde CSS.

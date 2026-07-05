@@ -1,9 +1,10 @@
 const DATA_URL = 'data/seed.json';
+const LEAGUE_DATA_CANDIDATES = ['data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.08';
+const APP_VERSION = 'V1.12';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -59,6 +60,13 @@ const INJURY_TABLE = [
 const BASE_INJURY_CHANCE = 0.05;
 const FATIGUE_INJURY_STEP = 5;
 const FATIGUE_INJURY_BONUS = 0.01;
+const PITCH_CONDITIONS = {
+  'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
+  'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },
+  'Regular': { passDelta:-10, chanceMultiplier:0.80, fatigueBonus:0, injuryBonus:0 },
+  'Muy malo': { passDelta:-20, chanceMultiplier:0.70, fatigueBonus:10, injuryBonus:0.10 },
+  'Injugable': { passDelta:-50, chanceMultiplier:0.50, fatigueBonus:20, injuryBonus:0.30 }
+};
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
   starters:[],
@@ -97,6 +105,8 @@ function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubN
 function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}"><span class="club-dot" style="background:${clubColor(id)}"></span>${escapeHtml(clubName(id))}</button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}"><span class="club-dot" style="background:${clubColor(id)}"></span>${escapeHtml(clubName(id))}</span>`; }
+function clubBadge(id){ const c = seed.clubs.find(x=>x.id===id); const src = c?.crestPath || `img/escudos/${imageSlug(clubName(id))}.png`; return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span>${escapeHtml(clubShort(id))}</span></span>`; }
+function clubAbbrev(id){ return clubBadge(id); }
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
 function playerStatus(playerId){ return game?.playerStatus?.[playerId] || {}; }
@@ -181,8 +191,22 @@ function currentCondition(playerId){
 function fatiguePoints(playerId){
   return clamp(99 - currentCondition(playerId), 0, 99);
 }
-function injuryChanceForPlayer(playerId){
-  return clamp(BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS, 0, 0.35);
+function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
+  const pitch = PITCH_CONDITIONS[pitchCondition] || PITCH_CONDITIONS.Normal;
+  return clamp(BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus, 0, 0.65);
+}
+function isInjured(playerId){
+  const st = playerStatus(playerId);
+  return Boolean(st.injuredThrough !== undefined && game && game.matchdayIndex <= st.injuredThrough);
+}
+function isSuspended(playerId){
+  const st = playerStatus(playerId);
+  return Boolean(st.suspendedThrough !== undefined && game && game.matchdayIndex <= st.suspendedThrough);
+}
+function tacticStatusIcon(playerId){
+  if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';
+  if(isSuspended(playerId)) return '<span class="red-card" title="Suspendido">■</span>';
+  return '<span class="ok">OK</span>';
 }
 function pickInjuryType(){
   const total = INJURY_TABLE.reduce((sum, item) => sum + item.probability, 0);
@@ -213,6 +237,11 @@ function injuryRulesTable(){
 }
 function conditionFactor(playerId){
   return 0.5 + 0.5 * (currentCondition(playerId) / 99);
+}
+function conditionBar(playerId){
+  const value = currentCondition(playerId);
+  const colorClass = value < 50 ? 'low' : value < 75 ? 'mid' : 'high';
+  return `<div class="condition-bar ${colorClass}" title="Estado físico ${value}/99"><span style="width:${clamp(value,0,99)}%"></span><em>${value}/99</em></div>`;
 }
 function matchSkill(p, skillName){
   return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id)), 1, 99);
@@ -432,6 +461,304 @@ function fitnessRingSvg(playerId){
 }
 
 
+
+async function fetchJsonIfExists(url){
+  try{
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) return null;
+    const raw = await res.text();
+    if(!raw.trim()) return null;
+    return JSON.parse(raw);
+  }catch(error){
+    console.warn(`No se pudo cargar ${url}`, error);
+    return null;
+  }
+}
+async function loadInitialSeed(){
+  for(const url of LEAGUE_DATA_CANDIDATES){
+    const leagueJson = await fetchJsonIfExists(url);
+    if(leagueJson){
+      return buildSeedFromLigaArgentina(leagueJson, url);
+    }
+  }
+  const fallback = await fetchJsonIfExists(DATA_URL);
+  if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
+    fallback.meta = { ...(fallback.meta || {}), source:fallback.meta?.source || 'seed.json', signature:seedSignature(fallback) };
+    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldCondition:c.fieldCondition || fieldConditionByPrestige(c.reputation || 60), crestPath:c.crestPath || `img/escudos/${imageSlug(c.name)}.png` }));
+    fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
+    return fallback;
+  }
+  throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
+}
+function buildSeedFromLigaArgentina(raw, sourceUrl){
+  const divisions = extractLeagueDivisions(raw);
+  if(!divisions.length) throw new Error('El JSON de Liga argentina no tiene divisiones o equipos reconocibles.');
+  const normalizedDivisions = divisions.map((division, index) => {
+    const name = normalizeDivisionName(division.name || division.nombre || division.division || `División ${index+1}`);
+    return {
+      id: slugId(name),
+      name,
+      order:index+1,
+      prizeMultiplier: divisionPrizeMultiplier(name, index)
+    };
+  });
+  const clubs = [];
+  const players = [];
+  let clubId = 1;
+  let playerId = 1;
+  divisions.forEach((division, divisionIndex) => {
+    const divInfo = normalizedDivisions[divisionIndex];
+    const teams = normalizeTeamList(division.teams || division.equipos || division.clubes || division.clubs || []);
+    teams.forEach((team, teamIndex) => {
+      const name = teamName(team);
+      if(!name) return;
+      const prestige = teamPrestige(team, divInfo.name, teamIndex, teams.length);
+      const fieldCondition = fieldConditionByPrestige(prestige);
+      const club = {
+        id:clubId,
+        name,
+        short:clubShortFromName(name),
+        city:team.city || team.ciudad || '',
+        reputation:prestige,
+        budget:clubBudgetByPrestige(prestige, divInfo.prizeMultiplier),
+        primaryColor:team.color || team.primaryColor || deterministicColor(name),
+        divisionId:divInfo.id,
+        divisionName:divInfo.name,
+        divisionOrder:divInfo.order,
+        prizeMultiplier:divInfo.prizeMultiplier,
+        fieldCondition,
+        crestPath:team.escudo || team.crestPath || `img/escudos/${imageSlug(name)}.png`
+      };
+      clubs.push(club);
+      const generated = generateClubPlayers(club, prestige, playerId);
+      players.push(...generated);
+      playerId += generated.length;
+      clubId += 1;
+    });
+  });
+  const seedData = {
+    meta:{
+      version:APP_VERSION,
+      source:sourceUrl,
+      generatedAt:new Date().toISOString(),
+      signature:''
+    },
+    divisions:normalizedDivisions,
+    clubs,
+    players,
+    fixtures:generateFixturesForDivisions(clubs, normalizedDivisions)
+  };
+  seedData.meta.signature = seedSignature(seedData);
+  return seedData;
+}
+function extractLeagueDivisions(raw){
+  if(raw && raw['Liga argentina']) raw = raw['Liga argentina'];
+  if(raw && raw['Liga Argentina']) raw = raw['Liga Argentina'];
+  if(Array.isArray(raw)) return raw.map((item, index) => normalizeDivisionObject(item, index));
+  if(Array.isArray(raw.divisiones)) return raw.divisiones.map(normalizeDivisionObject);
+  if(raw.divisiones && typeof raw.divisiones === 'object') return Object.entries(raw.divisiones).map(([name, teams]) => ({ name, teams }));
+  if(Array.isArray(raw.divisions)) return raw.divisions.map(normalizeDivisionObject);
+  if(raw.divisions && typeof raw.divisions === 'object') return Object.entries(raw.divisions).map(([name, teams]) => ({ name, teams }));
+  if(Array.isArray(raw.ligas)) return raw.ligas.map(normalizeDivisionObject);
+  if(Array.isArray(raw.leagues)) return raw.leagues.map(normalizeDivisionObject);
+  const known = ['Liga Profesional','Primera Nacional','Federal A'];
+  const found = [];
+  known.forEach(name => {
+    if(raw[name]) found.push({ name, teams:raw[name] });
+  });
+  if(found.length) return found;
+  const dynamic = Object.entries(raw).filter(([_, value]) => Array.isArray(value));
+  return dynamic.map(([name, teams]) => ({ name, teams }));
+}
+function normalizeDivisionObject(item, index=0){
+  if(Array.isArray(item)) return { name:`División ${index+1}`, teams:item };
+  return {
+    name:item.nombre || item.name || item.division || item.liga || `División ${index+1}`,
+    teams:item.equipos || item.clubes || item.clubs || item.teams || []
+  };
+}
+function normalizeTeamList(list){
+  if(!Array.isArray(list)) return [];
+  return list.map(item => typeof item === 'string' ? { nombre:item } : (item || {}));
+}
+function normalizeDivisionName(name){
+  const cleaned = String(name || '').trim();
+  const lower = cleaned.toLowerCase();
+  if(lower.includes('profesional')) return 'Liga Profesional';
+  if(lower.includes('nacional')) return 'Primera Nacional';
+  if(lower.includes('federal')) return 'Federal A';
+  return cleaned || 'Liga';
+}
+function divisionPrizeMultiplier(name, index=0){
+  const lower = String(name || '').toLowerCase();
+  if(lower.includes('profesional')) return 1;
+  if(lower.includes('nacional')) return 0.30;
+  if(lower.includes('federal')) return 0.15;
+  return index === 0 ? 1 : index === 1 ? 0.30 : 0.15;
+}
+function teamName(team){
+  return String(team.nombre || team.name || team.club || team.equipo || team.team || '').trim();
+}
+function teamPrestige(team, divisionName, index, total){
+  const explicit = Number(team.prestigio ?? team.prestige ?? team.reputacion ?? team.reputation ?? team.media ?? team.rating);
+  if(Number.isFinite(explicit)) return clamp(Math.round(explicit), 20, 99);
+  const multiplier = divisionPrizeMultiplier(divisionName);
+  const tierBase = multiplier === 1 ? 68 : multiplier === 0.30 ? 52 : 38;
+  const tierTop = multiplier === 1 ? 92 : multiplier === 0.30 ? 72 : 58;
+  const rankRatio = total > 1 ? 1 - (index / (total - 1)) : 0.5;
+  const value = tierBase + (tierTop - tierBase) * rankRatio + hashNumber(`${teamName(team)}-${divisionName}`, 7) - 3;
+  return clamp(Math.round(value), 20, 99);
+}
+function fieldConditionByPrestige(prestige){
+  const p = Number(prestige) || 50;
+  if(p >= 82) return 'Excelente';
+  if(p >= 62) return 'Normal';
+  if(p >= 45) return 'Regular';
+  if(p >= 30) return 'Muy malo';
+  return 'Injugable';
+}
+function clubBudgetByPrestige(prestige, prizeMultiplier=1){
+  const base = 7000000 + Math.pow(Number(prestige) || 50, 2) * 18000;
+  return Math.round(base * (0.75 + prizeMultiplier * 0.65));
+}
+function clubShortFromName(name){
+  const words = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean);
+  if(words.length >= 3) return words.slice(0,3).map(w=>w[0]).join('').toUpperCase();
+  if(words.length === 2) return (words[0].slice(0,2) + words[1][0]).toUpperCase();
+  return (words[0] || 'CLU').slice(0,3).toUpperCase();
+}
+function imageSlug(name){
+  return String(name || '').trim().replace(/\s+/g,'_');
+}
+function slugId(name){
+  return String(name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'division';
+}
+function deterministicColor(name){
+  const hue = hashNumber(name, 360);
+  return `hsl(${hue} 70% 42%)`;
+}
+function seedSignature(data){
+  const raw = `${(data.clubs || []).map(c=>c.name).join('|')}::${(data.divisions || []).map(d=>d.name).join('|')}`;
+  return `seed-${hashNumber(raw, 1000000000)}`;
+}
+function generateClubPlayers(club, prestige, startId){
+  const blueprint = [
+    ['POR','POR'], ['POR','POR'],
+    ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'],
+    ['MCD','MID'], ['MC','MID'], ['MC','MID'], ['MCO','MID'], ['ED','MID'], ['EI','MID'], ['MC','MID'], ['MCD','MID'],
+    ['DC','ATT'], ['DC','ATT'], ['ED','ATT'], ['EI','ATT'], ['DC','ATT'], ['EXT','ATT'], ['MCO','ATT']
+  ];
+  return blueprint.map(([position, group], index) => {
+    const id = startId + index;
+    const media = playerBaseMedia(prestige, id, group);
+    const age = group === 'POR' ? Math.floor(rnd(26,39)) : Math.floor(rnd(18,34));
+    const name = generatedPlayerName(id, club.name);
+    const skills = skillsForGroup(group, media, id);
+    const visible = averageGeneratedVisible(position, skills);
+    return {
+      id,
+      name,
+      age,
+      position,
+      clubId:club.id,
+      nationality:generatedNationality(id, club.divisionName),
+      overall:visible,
+      skills,
+      salary:Math.round((45000 + visible * visible * 950) * (club.prizeMultiplier || 1)),
+      value:Math.round((600000 + visible * visible * 16000) * (1 + (club.reputation || 50)/120))
+    };
+  });
+}
+function playerBaseMedia(prestige, id, group){
+  const groupBoost = group === 'POR' ? 1 : group === 'ATT' ? 0 : group === 'MID' ? 0.5 : -0.5;
+  return clamp(Math.round(42 + prestige * 0.48 + groupBoost + hashNumber(`media-${id}`, 13) - 6), 35, 94);
+}
+const FIRST_NAMES = ['Agustín','Mateo','Lautaro','Santiago','Julián','Tomás','Nicolás','Franco','Lucas','Bruno','Facundo','Ezequiel','Ramiro','Iván','Gonzalo','Emiliano','Brian','Thiago','Alan','Pablo','Martín','Leandro'];
+const LAST_NAMES = ['Gómez','Rodríguez','Fernández','López','Martínez','Pérez','García','Sánchez','Romero','Torres','Díaz','Alvarez','Ruiz','Ramírez','Aguirre','Molina','Castro','Silva','Rojas','Vera','Acosta','Morales','Herrera','Medina'];
+function generatedPlayerName(id, clubNameValue){
+  const first = FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-first`, FIRST_NAMES.length)];
+  const last = LAST_NAMES[hashNumber(`${clubNameValue}-${id}-last`, LAST_NAMES.length)];
+  return `${first} ${last}`;
+}
+function generatedNationality(id, divisionName){
+  const pool = ['Argentina','Argentina','Argentina','Argentina','Uruguay','Paraguay','Colombia','Chile','Ecuador','Perú','Bolivia','Brasil'];
+  return pool[hashNumber(`${divisionName}-${id}-nat`, pool.length)];
+}
+function skillValue(base, id, label, offset=0){
+  return clamp(Math.round(base + offset + hashNumber(`${id}-${label}`, 15) - 7), 1, 99);
+}
+function skillsForGroup(group, base, id){
+  const s = {};
+  const set = (name, offset=0) => s[name] = skillValue(base, id, name, offset);
+  ['porteria','entradas','marca','posicionamiento','paseCorto','paseLargo','vision','regate','tecnica','remate','cabezazo','velocidad','aceleracion','fuerza','resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'].forEach(name => set(name, -8));
+  if(group === 'POR'){
+    ['porteria','posicionamiento','serenidad','aceleracion','liderazgo','trabajoEquipo','fuerza','paseLargo','resistencia'].forEach(name => set(name, 5));
+    ['marca','entradas','remate','regate'].forEach(name => set(name, -28));
+  }
+  if(group === 'DEF'){
+    ['marca','entradas','posicionamiento','fuerza'].forEach(name => set(name, 7));
+    ['remate','regate','cabezazo'].forEach(name => set(name, -2));
+    ['paseCorto','paseLargo','vision','velocidad','aceleracion'].forEach(name => set(name, -7));
+    set('porteria', -35);
+  }
+  if(group === 'MID'){
+    ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo'].forEach(name => set(name, 7));
+    ['marca','entradas','remate','regate'].forEach(name => set(name, -1));
+    ['velocidad','aceleracion','cabezazo'].forEach(name => set(name, -8));
+    set('porteria', -35);
+  }
+  if(group === 'ATT'){
+    ['remate','regate','posicionamiento','serenidad'].forEach(name => set(name, 8));
+    ['cabezazo','fuerza'].forEach(name => set(name, 0));
+    ['paseCorto','paseLargo','vision','velocidad','aceleracion','marca','entradas'].forEach(name => set(name, -8));
+    set('porteria', -35);
+  }
+  s.potencial = clamp(s.potencial + 5 + hashNumber(`pot-${id}`, 10), 1, 99);
+  s.disciplina = clamp(s.disciplina + hashNumber(`disc-${id}`, 16) - 8, 1, 99);
+  return s;
+}
+function averageGeneratedVisible(position, skills){
+  const temp = { position, skills, overall:50 };
+  return clamp(Math.round(avg(Object.values(visibleStats(temp)))), 1, 99);
+}
+function generateFixturesForDivisions(clubs, divisions){
+  const schedules = divisions.map(division => roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division));
+  const maxRounds = Math.max(...schedules.map(s => s.length), 0);
+  const fixtures = [];
+  for(let roundIndex=0; roundIndex<maxRounds; roundIndex++){
+    const date = new Date(Date.UTC(2026, 1, 1 + roundIndex * 7));
+    const matches = [];
+    schedules.forEach(schedule => {
+      (schedule[roundIndex] || []).forEach(match => matches.push(match));
+    });
+    fixtures.push({ matchday:roundIndex+1, date:date.toISOString().slice(0,10), matches });
+  }
+  return fixtures;
+}
+function roundRobinSchedule(clubsInDivision, division){
+  const teams = clubsInDivision.slice();
+  if(teams.length % 2 === 1) teams.push(null);
+  const rounds = [];
+  const n = teams.length;
+  if(n < 2) return rounds;
+  let arr = teams.slice();
+  for(let r=0; r<n-1; r++){
+    const matches = [];
+    for(let i=0; i<n/2; i++){
+      const a = arr[i];
+      const b = arr[n-1-i];
+      if(a && b){
+        const home = r % 2 === 0 ? a : b;
+        const away = r % 2 === 0 ? b : a;
+        matches.push({ id:`${division.id}-j${r+1}-${home.id}-${away.id}`, matchday:r+1, divisionId:division.id, divisionName:division.name, homeId:home.id, awayId:away.id, played:false });
+      }
+    }
+    rounds.push(matches);
+    arr = [arr[0], arr[n-1], ...arr.slice(1,n-1)];
+  }
+  return rounds;
+}
+
 async function openDb(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME, 1);
@@ -460,6 +787,11 @@ async function loadLocal(silent=false){
     req.onerror = () => reject(req.error);
   });
   if(saved){
+    const currentSignature = seed?.meta?.signature;
+    if(currentSignature && saved.seedSignature !== currentSignature){
+      if(!silent) showNotice('La base de datos cambió. Creá una nueva partida para usar la Liga argentina.');
+      return false;
+    }
     game = normalizeGame(saved);
     activeTab = 'home';
     renderAll();
@@ -485,9 +817,7 @@ async function resetLocal(){
 
 async function init(){
   try{
-    const res = await fetch(DATA_URL);
-    if(!res.ok) throw new Error('No se pudo cargar data/seed.json');
-    seed = await res.json();
+    seed = await loadInitialSeed();
     fillClubSelect();
     bindEvents();
     startUiTicker();
@@ -495,11 +825,16 @@ async function init(){
     if(!loaded) renderAll();
   }catch(error){
     console.error(error);
-    view.innerHTML = `<div class="empty"><h2>Error de carga</h2><p>${escapeHtml(error.message)}. Subí la carpeta completa a GitHub Pages o ejecutá el proyecto con un servidor local.</p></div>`;
+    view.innerHTML = `<div class="empty"><h2>Error de carga</h2><p>${escapeHtml(error.message)}. Subí <code>data/Liga argentina.json</code> o un <code>data/seed.json</code> válido y ejecutá el proyecto con GitHub Pages o servidor local.</p></div>`;
   }
 }
 function fillClubSelect(){
-  $('clubSelect').innerHTML = seed.clubs.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  $('clubSelect').innerHTML = divisions.map(division => {
+    const clubs = seed.clubs.filter(c => (c.divisionId || 'default') === division.id);
+    if(!clubs.length) return '';
+    return `<optgroup label="${escapeHtml(division.name)}">${clubs.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`;
+  }).join('');
 }
 function bindEvents(){
   $('btnNewGame').addEventListener('click', ()=> newGame(Number($('clubSelect').value)));
@@ -570,6 +905,7 @@ function startUiTicker(){
 function normalizeGame(saved){
   const normalized = {...saved};
   normalized.version = APP_VERSION;
+  normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
@@ -646,6 +982,7 @@ function newGame(selectedClubId){
   const tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
   game = {
     version:APP_VERSION,
+    seedSignature:seed?.meta?.signature || '',
     selectedClubId,
     currentDate: seed.fixtures[0].date,
     matchdayIndex: 0,
@@ -722,7 +1059,9 @@ function renderHome(){
   const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
   const avgFitness = squadFitnessAverage(game.selectedClubId);
   const injuredList = injuredPlayersByClub(game.selectedClubId);
-  const position = sortedStandings().findIndex(s=>s.clubId===game.selectedClubId)+1;
+  const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
+  const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
+  const position = sortedStandings(selectedClub?.divisionId || null).findIndex(s=>s.clubId===game.selectedClubId)+1;
   const lastMatches = game.matchHistory.filter(m=>m.homeId===game.selectedClubId || m.awayId===game.selectedClubId).slice(-5).reverse();
   const problems = game.lastOwnProblems || [];
   const deltaClass = game.lastBudgetDelta > 0 ? 'ok' : game.lastBudgetDelta < 0 ? 'bad' : 'muted';
@@ -747,6 +1086,17 @@ function renderHome(){
       <div class="card"><p class="label">Estado físico general</p><div class="metric">${avgFitness}</div><p class="small muted">sobre 99</p></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
       <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
+    </div>
+    <div class="card own-team-stats-card" style="margin-top:14px">
+      <h3>Estadísticas de mi equipo</h3>
+      <div class="grid cols-6 compact-team-stats">
+        <div><p class="label">Puntos</p><strong>${myStanding.pts}</strong></div>
+        <div><p class="label">Ganados</p><strong>${myStanding.pg}</strong></div>
+        <div><p class="label">Empatados</p><strong>${myStanding.pe}</strong></div>
+        <div><p class="label">Perdidos</p><strong>${myStanding.pp}</strong></div>
+        <div><p class="label">GF</p><strong>${myStanding.gf}</strong></div>
+        <div><p class="label">GC</p><strong>${myStanding.gc}</strong></div>
+      </div>
     </div>
     <div class="card injury-home-card" style="margin-top:14px">
       <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
@@ -807,36 +1157,47 @@ function compactMatch(m){
   const gf = isHome ? m.homeGoals : m.awayGoals;
   const gc = isHome ? m.awayGoals : m.homeGoals;
   const cls = gf > gc ? 'ok' : gf < gc ? 'bad' : 'warn';
-  return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${escapeHtml(clubShort(m.homeId))} ${m.homeGoals} - ${m.awayGoals} ${escapeHtml(clubShort(m.awayId))}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
+  return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${clubBadge(m.homeId)} ${m.homeGoals} - ${m.awayGoals} ${clubBadge(m.awayId)}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
 }
 
 function sortedSquadPlayers(){
   const players = playersByClub(game.selectedClubId).slice();
   const byName = (a,b) => a.name.localeCompare(b.name, 'es');
+  const byNameDesc = (a,b) => b.name.localeCompare(a.name, 'es');
   const byNationality = (a,b) => a.nationality.localeCompare(b.nationality, 'es') || byName(a,b);
-  const byValue = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
+  const byNationalityDesc = (a,b) => b.nationality.localeCompare(a.nationality, 'es') || byName(a,b);
+  const byValueAsc = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
+  const byValueDesc = (a,b) => (b.value || 0) - (a.value || 0) || byName(a,b);
+  const byDorsalAsc = (a,b) => jerseyNumber(a.id) - jerseyNumber(b.id) || byName(a,b);
+  const byDorsalDesc = (a,b) => jerseyNumber(b.id) - jerseyNumber(a.id) || byName(a,b);
+  const byStatusAvailable = (a,b) => Number(isUnavailable(a.id)) - Number(isUnavailable(b.id)) || byName(a,b);
+  const byStatusUnavailable = (a,b) => Number(isUnavailable(b.id)) - Number(isUnavailable(a.id)) || byName(a,b);
   const sorters = {
+    nombre_asc:byName,
+    nombre_desc:byNameDesc,
+    dorsal_asc:byDorsalAsc,
+    dorsal_desc:byDorsalDesc,
     media_desc:(a,b)=>visibleOverall(b)-visibleOverall(a) || byName(a,b),
     media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
-    valor_asc:byValue,
-    valor_desc:(a,b)=>(b.value || 0)-(a.value || 0) || byName(a,b),
+    condicion_desc:(a,b)=>currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
+    condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
+    resistencia_desc:(a,b)=>visibleStats(b).Resistencia-visibleStats(a).Resistencia || byName(a,b),
+    resistencia_asc:(a,b)=>visibleStats(a).Resistencia-visibleStats(b).Resistencia || byName(a,b),
+    estado_disponible:byStatusAvailable,
+    estado_no_disponible:byStatusUnavailable,
+    valor_asc:byValueAsc,
+    valor_desc:byValueDesc,
     nacionalidad_asc:byNationality,
-    nacionalidad_desc:(a,b)=>b.nationality.localeCompare(a.nationality, 'es') || byName(a,b),
-    nombre_asc:byName
+    nacionalidad_desc:byNationalityDesc
   };
   return players.sort(sorters[squadSort] || sorters.media_desc);
 }
+function columnSort(label, options){
+  const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-squad-sort>${opts}</select></div>`;
+}
 function renderSquad(){
   const players = sortedSquadPlayers();
-  const sortOptions = [
-    ['media_desc','Media mayor a menor'],
-    ['media_asc','Media menor a mayor'],
-    ['valor_asc','Valor menor a mayor'],
-    ['valor_desc','Valor mayor a menor'],
-    ['nacionalidad_asc','Nacionalidad A-Z'],
-    ['nacionalidad_desc','Nacionalidad Z-A'],
-    ['nombre_asc','Nombre A-Z']
-  ].map(([value,label])=>`<option value="${value}" ${squadSort===value?'selected':''}>${label}</option>`).join('');
   const rows = players.map(p=>`
     <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
       <td>${faceImg(p, 'photo-thumb')}</td>
@@ -851,10 +1212,25 @@ function renderSquad(){
       <td>${formatMoney(p.value)}</td>
     </tr>`).join('');
   view.innerHTML = `
-    <div class="section-title row"><div><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles.</p></div><div class="sort-box"><label>Ordenar</label><select id="squadSort">${sortOptions}</select></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Dorsal</th><th>Rol</th><th>Nacionalidad</th><th>Media</th><th>Estado físico</th><th>Resistencia</th><th>Estado</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. Los controles de orden están en la cabecera de cada columna.</p></div>
+    <div class="table-wrap"><table class="squad-table"><thead><tr>
+      <th>Foto</th>
+      <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
+      <th>Rol</th>
+      <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
+      <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
+      <th>${columnSort('Valor', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
   `;
-  $('squadSort')?.addEventListener('change', e => { squadSort = e.target.value; renderSquad(); });
+  document.querySelectorAll('[data-squad-sort]').forEach(select => {
+    select.addEventListener('change', e => {
+      if(e.target.value){ squadSort = e.target.value; renderSquad(); }
+    });
+  });
 }
 function playerDragCard(p, extra=''){
   return `<div class="drag-player ${playerGroupClass(p.position)} ${extra}" draggable="true" data-drag-player="${p.id}">
@@ -889,7 +1265,8 @@ function renderTactics(){
     return `<div class="lineup-row ${p && !fit ? 'bad-zone' : ''}">
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
-      <strong>${p ? (fit ? 'OK' : '50%') : '—'}</strong>
+      ${p ? conditionBar(p.id) : '<span></span>'}
+      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : '—'}</strong>
     </div>`;
   }).join('');
   view.innerHTML = `
@@ -897,12 +1274,6 @@ function renderTactics(){
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><button id="autoPickBtn" class="ghost">Autoseleccionar</button></div>
       <div class="pitch-board centered">${pitch}</div>
-      <div class="pitch-legend">
-        <span>${mentalityMarker('posicional')} Posicional</span>
-        <span>${mentalityMarker('ataque')} Ataque</span>
-        <span>${mentalityMarker('defensiva')} Defensiva</span>
-        <span><span class="pill">Anillo</span> Estado físico</span>
-      </div>
     </div>
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">
@@ -955,7 +1326,7 @@ function tacticPlayerRow(p){
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td><strong>${visibleOverall(p)}</strong></td>
     <td>${currentCondition(p.id)}/99</td>
-    <td><span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span></td>
+    <td>${isInjured(p.id) ? tacticStatusIcon(p.id) : `<span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span>`}</td>
     <td><select class="role-select" data-role-player="${p.id}" ${unavailable ? 'disabled' : ''}>
       <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
       <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
@@ -1038,12 +1409,16 @@ function positionOrder(pos){
 }
 
 function renderFixture(){
-  const html = game.fixtures.map(round=>`
-    <div class="card">
-      <div class="row"><h3>Jornada ${round.matchday}</h3><span class="pill">${round.date}</span></div>
-      <div class="grid cols-2">${round.matches.map(matchCard).join('')}</div>
-    </div>`).join('');
-  view.innerHTML = `<div class="section-title"><h2>Calendario</h2><p class="tagline">Los partidos jugados son clickeables para ver estadísticas y eventos.</p></div><div class="stack">${html}</div>`;
+  const html = game.fixtures.map(round=>{
+    const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+    const groups = divisions.map(division => {
+      const matches = round.matches.filter(m => (m.divisionId || seed.clubs.find(c=>c.id===m.homeId)?.divisionId || 'default') === division.id);
+      if(!matches.length) return '';
+      return `<div class="fixture-division-block"><h4>${escapeHtml(division.name)}</h4><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
+    }).join('');
+    return `<div class="card"><div class="row"><h3>Jornada ${round.matchday}</h3><span class="pill">${round.date}</span></div>${groups}</div>`;
+  }).join('');
+  view.innerHTML = `<div class="section-title"><h2>Calendario</h2><p class="tagline">Los partidos jugados son clickeables para ver estadísticas y eventos. Las fechas agrupan las 3 divisiones.</p></div><div class="stack">${html}</div>`;
 }
 function matchCard(m){
   const events = game.matchHistory.find(x=>x.id===m.id);
@@ -1059,11 +1434,15 @@ function matchCard(m){
   </button>`;
 }
 function renderStandings(){
-  const rows = sortedStandings().map((s,i)=>`
-    <tr class="${s.clubId===game.selectedClubId ? 'own-club-row' : ''}">
-      <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
-    </tr>`).join('');
-  view.innerHTML = `<div class="section-title"><h2>Tabla de posiciones</h2></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const blocks = divisions.map(division => {
+    const rows = sortedStandings(division.id).map((s,i)=>`
+      <tr class="${s.clubId===game.selectedClubId ? 'own-club-row' : ''}">
+        <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
+      </tr>`).join('');
+    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3><span class="pill">Premios x${division.prizeMultiplier ?? 1}</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join('');
+  view.innerHTML = `<div class="section-title"><h2>Tabla de posiciones</h2></div><div class="stack">${blocks}</div>`;
 }
 function renderStats(){
   const stats = Object.values(game.playerStats);
@@ -1083,15 +1462,18 @@ function renderStats(){
 }
 function rankList(list,key){
   if(!list.length) return '<p class="muted">Sin datos todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${escapeHtml(clubShort(s.clubId))}</span></span><strong>${s[key]}</strong></div>`; }).join('');
+  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${clubBadge(s.clubId)}</span></span><strong>${s[key]}</strong></div>`; }).join('');
 }
 function cardList(list){
   if(!list.length) return '<p class="muted">Sin tarjetas todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${escapeHtml(clubShort(s.clubId))}</span></span><strong><span class="yellow-card">■</span> ${s.yellow} / <span class="red-card">■</span> ${s.red}</strong></div>`; }).join('');
+  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${clubBadge(s.clubId)}</span></span><strong><span class="yellow-card">■</span> ${s.yellow} / <span class="red-card">■</span> ${s.red}</strong></div>`; }).join('');
 }
-function sortedStandings(){
+function sortedStandings(divisionId=null){
   if(!game) return [];
-  return Object.values(game.standings).sort((a,b)=> b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubName(a.clubId).localeCompare(clubName(b.clubId)) );
+  const allowed = divisionId ? new Set(seed.clubs.filter(c => (c.divisionId || 'default') === divisionId).map(c => c.id)) : null;
+  return Object.values(game.standings)
+    .filter(s => !allowed || allowed.has(s.clubId))
+    .sort((a,b)=> b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubName(a.clubId).localeCompare(clubName(b.clubId)) );
 }
 
 function selectLineup(clubId, tactic){
@@ -1207,14 +1589,17 @@ function applyEconomyResult(match){
   const isHome = match.homeId === game.selectedClubId;
   const gf = isHome ? match.homeGoals : match.awayGoals;
   const gc = isHome ? match.awayGoals : match.homeGoals;
+  const club = seed.clubs.find(c=>c.id===game.selectedClubId);
+  const multiplier = Number.isFinite(club?.prizeMultiplier) ? club.prizeMultiplier : divisionPrizeMultiplier(club?.divisionName || 'Liga Profesional');
   let delta = 0;
   if(gf > gc) delta = Math.round(rnd(300000, 500000));
   else if(gf === gc) delta = Math.round(rnd(100000, 200000));
   else delta = Math.round(rnd(-100000, 50000));
+  delta = Math.round(delta * multiplier);
   game.lastBudgetDelta = delta;
   game.budget = Math.max(0, Math.round((game.budget || 0) + delta));
   game.budgetHistory = game.budgetHistory || [];
-  game.budgetHistory.push({ matchId: match.id, delta, budget: game.budget });
+  game.budgetHistory.push({ matchId: match.id, delta, budget: game.budget, multiplier });
 }
 function applyConditionUpdates(results){
   if(!game.playerCondition) game.playerCondition = {};
@@ -1222,15 +1607,21 @@ function applyConditionUpdates(results){
     if(!Number.isFinite(game.playerCondition[player.id])) game.playerCondition[player.id] = 99;
   });
   const played = new Set();
+  const pitchFatigueByPlayer = new Map();
   results.forEach(match => {
-    (match.playedIdsHome || []).forEach(id => played.add(id));
-    (match.playedIdsAway || []).forEach(id => played.add(id));
+    const extra = pitchEffect(match.matchContext?.pitch || 'Normal').fatigueBonus || 0;
+    (match.playedIdsHome || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
+    (match.playedIdsAway || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
   });
   seed.players.forEach(player => {
     let next = currentCondition(player.id);
-    next += rnd(12,18);
-    if(played.has(player.id)) next -= conditionLossForPlayer(player);
-    else next += rnd(8,10);
+    if(isInjured(player.id)){
+      next -= rnd(2,3);
+    } else {
+      next += rnd(12,18);
+      if(played.has(player.id)) next -= conditionLossForPlayer(player) + (pitchFatigueByPlayer.get(player.id) || 0);
+      else next += rnd(8,10);
+    }
     game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
   });
 }
@@ -1243,8 +1634,8 @@ function getTacticForClub(clubId){
 function simulateMatch(match){
   const home = teamPower(match.homeId, getTacticForClub(match.homeId));
   const away = teamPower(match.awayId, getTacticForClub(match.awayId));
-  const matchStats = makeMatchStats(home, away);
   const matchContext = makeMatchContext(match, home, away);
+  const matchStats = makeMatchStats(home, away, matchContext);
   const homeLambda = expectedGoals(home, away, true, matchStats.home.chances);
   const awayLambda = expectedGoals(away, home, false, matchStats.away.chances);
   const homeGoals = Math.min(poisson(homeLambda), Math.max(0, matchStats.home.chances));
@@ -1254,11 +1645,16 @@ function simulateMatch(match){
   for(let i=0;i<awayGoals;i++) goals.push(makeGoal(match.awayId, away.lineup));
   goals.sort((a,b)=>a.minute-b.minute);
   const cards = [...makeCards(match.homeId, home, matchStats.home.fouls), ...makeCards(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
-  const injuries = [...makeInjuries(match.homeId, home, away), ...makeInjuries(match.awayId, away, home)].sort((a,b)=>a.minute-b.minute);
-  const substitutions = [
+  const injuries = [...makeInjuries(match.homeId, home, away, matchContext), ...makeInjuries(match.awayId, away, home, matchContext)].sort((a,b)=>a.minute-b.minute);
+  const regularSubs = [
     ...makeSubstitutions(match.homeId, getTacticForClub(match.homeId), goals),
     ...makeSubstitutions(match.awayId, getTacticForClub(match.awayId), goals)
-  ].sort((a,b)=>a.minute-b.minute);
+  ];
+  const injurySubs = [
+    ...makeInjurySubstitutions(match.homeId, getTacticForClub(match.homeId), injuries, regularSubs),
+    ...makeInjurySubstitutions(match.awayId, getTacticForClub(match.awayId), injuries, regularSubs)
+  ];
+  const substitutions = [...regularSubs, ...injurySubs].sort((a,b)=>a.minute-b.minute);
   applyResultToTables(match, homeGoals, awayGoals);
   applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
   applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
@@ -1276,31 +1672,39 @@ function expectedGoals(attacking, defending, isHome, chances){
   const chanceFactor = (chances - 5) / 10;
   return clamp(1.02 + attackEdge + midfieldEdge + keeperEdge + repEdge + home + chanceFactor + rnd(-0.12,0.12), 0.12, 3.8);
 }
-function makeMatchStats(home, away){
-  const totalMid = Math.max(1, home.midfield + away.midfield);
-  const homePoss = clamp(Math.round((home.midfield / totalMid) * 100 + rnd(-5,5) + 2), 32, 68);
+function pitchEffect(pitch){
+  return PITCH_CONDITIONS[pitch] || PITCH_CONDITIONS.Normal;
+}
+function makeMatchStats(home, away, context={pitch:'Normal'}){
+  const effect = pitchEffect(context.pitch);
+  const homeMid = clamp(home.midfield + effect.passDelta, 1, 120);
+  const awayMid = clamp(away.midfield + effect.passDelta, 1, 120);
+  const totalMid = Math.max(1, homeMid + awayMid);
+  const homePoss = clamp(Math.round((homeMid / totalMid) * 100 + rnd(-5,5) + 2), 32, 68);
   const awayPoss = 100 - homePoss;
-  const homeAttacks = clamp(Math.round(29 + home.attack/2.8 + home.midfield/5 - away.defense/6 + rnd(-6,7)), 18, 68);
-  const awayAttacks = clamp(Math.round(27 + away.attack/2.8 + away.midfield/5 - home.defense/6 + rnd(-6,7)), 18, 68);
-  const homeChances = clamp(Math.round(homeAttacks * rnd(0.12,0.23) + (home.attack-away.defense)/17), 1, 14);
-  const awayChances = clamp(Math.round(awayAttacks * rnd(0.12,0.23) + (away.attack-home.defense)/17), 1, 14);
+  const homeAttacks = clamp(Math.round(29 + home.attack/2.8 + homeMid/5 - away.defense/6 + rnd(-6,7)), 18, 68);
+  const awayAttacks = clamp(Math.round(27 + away.attack/2.8 + awayMid/5 - home.defense/6 + rnd(-6,7)), 18, 68);
+  const rawHomeChances = Math.round(homeAttacks * rnd(0.12,0.23) + (home.attack-away.defense)/17);
+  const rawAwayChances = Math.round(awayAttacks * rnd(0.12,0.23) + (away.attack-home.defense)/17);
+  const homeChances = clamp(Math.round(rawHomeChances * effect.chanceMultiplier), 1, 14);
+  const awayChances = clamp(Math.round(rawAwayChances * effect.chanceMultiplier), 1, 14);
   const homeFouls = clamp(Math.round(7 + home.aggression/11 + (100-home.discipline)/16 + rnd(-3,4)), 4, 27);
   const awayFouls = clamp(Math.round(7 + away.aggression/11 + (100-away.discipline)/16 + rnd(-3,4)), 4, 27);
   return {
-    home: { attacks:homeAttacks, chances:homeChances, possession:homePoss, fouls:homeFouls },
-    away: { attacks:awayAttacks, chances:awayChances, possession:awayPoss, fouls:awayFouls }
+    home: { attacks:homeAttacks, chances:homeChances, possession:homePoss, fouls:homeFouls, passScore:Math.round(homeMid) },
+    away: { attacks:awayAttacks, chances:awayChances, possession:awayPoss, fouls:awayFouls, passScore:Math.round(awayMid) }
   };
 }
 function makeMatchContext(match, home, away){
   const weatherOptions = ['Soleado', 'Nublado', 'Lluvia leve', 'Lluvia intensa', 'Viento moderado', 'Calor húmedo'];
-  const pitchOptions = ['Muy bueno', 'Bueno', 'Regular', 'Pesado', 'Rápido', 'Irregular'];
   const weather = weatherOptions[hashNumber(`${match.id}-weather-${game?.matchdayIndex || 0}`, weatherOptions.length)];
-  const pitch = pitchOptions[hashNumber(`${match.id}-pitch-${game?.matchdayIndex || 0}`, pitchOptions.length)];
   const homeClub = seed.clubs.find(c=>c.id===match.homeId);
   const awayClub = seed.clubs.find(c=>c.id===match.awayId);
+  const pitch = homeClub?.fieldCondition || fieldConditionByPrestige(homeClub?.reputation || 60);
+  const effect = pitchEffect(pitch);
   const homeFans = Math.max(800, Math.round((homeClub?.reputation || 60) * rnd(210,360)));
   const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * rnd(18,70)));
-  return { weather, pitch, homeFans, awayFans };
+  return { weather, pitch, homeFans, awayFans, pitchEffect:effect };
 }
 function poisson(lambda){
   const L = Math.exp(-lambda);
@@ -1346,11 +1750,11 @@ function makeCards(clubId, power, fouls){
   }
   return cards.sort((a,b)=>a.minute-b.minute);
 }
-function makeInjuries(clubId, ownPower, rivalPower){
+function makeInjuries(clubId, ownPower, rivalPower, context={pitch:'Normal'}){
   const injuries = [];
   const candidates = (ownPower.lineup || []).filter(player => !isUnavailable(player.id));
   candidates.forEach(player => {
-    const chance = injuryChanceForPlayer(player.id);
+    const chance = injuryChanceForPlayer(player.id, context.pitch);
     if(Math.random() < chance){
       const injury = pickInjuryType();
       const matchesOut = Math.floor(rnd(injury.minTurns, injury.maxTurns + 1));
@@ -1396,6 +1800,31 @@ function makeSubstitutions(clubId, tactic, goals){
     }
   }
   return events.slice(0,5);
+}
+function makeInjurySubstitutions(clubId, tactic, injuries, existingSubs=[]){
+  const ownInjuries = (injuries || []).filter(i => i.clubId === clubId && i.phase !== 'final');
+  if(!ownInjuries.length) return [];
+  const starterIds = (tactic?.starters?.length ? tactic.starters : selectLineup(clubId, tactic).map(p=>p.id)).map(Number);
+  const benchIds = (tactic?.bench?.length ? tactic.bench : autoSelectBench(clubId, starterIds).map(p=>p.id)).map(Number);
+  const usedIn = new Set(existingSubs.filter(s=>s.clubId===clubId).map(s=>Number(s.inId)));
+  const alreadyOut = new Set(existingSubs.filter(s=>s.clubId===clubId).map(s=>Number(s.outId)));
+  const events = [];
+  for(const injury of ownInjuries){
+    const outId = Number(injury.playerId);
+    if(alreadyOut.has(outId)) continue;
+    const outPlayer = playerById(outId);
+    const candidate = benchIds
+      .map(id => playerById(id))
+      .filter(p => p && !usedIn.has(p.id) && !isUnavailable(p.id))
+      .sort((a,b)=> (visibleOverall(b) + (outPlayer && playerGroup(a.position)===playerGroup(outPlayer.position) ? 20 : 0)) - (visibleOverall(a) + (outPlayer && playerGroup(a.position)===playerGroup(outPlayer.position) ? 20 : 0)))[0];
+    if(candidate){
+      usedIn.add(candidate.id);
+      alreadyOut.add(outId);
+      events.push({ clubId, outId, inId:candidate.id, minute:injury.minute, trigger:'injury' });
+    }
+    if(existingSubs.filter(s=>s.clubId===clubId).length + events.length >= 5) break;
+  }
+  return events;
 }
 function scoreAtMinute(goals, minute, clubId){
   let gf = 0, gc = 0;
@@ -1547,7 +1976,7 @@ function showMatchRevealModal(match){
         <h3>Contexto del partido</h3>
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
-          <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong></div>
+          <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong><p class="small muted">Pase ${pitchEffect(context.pitch).passDelta >= 0 ? '+' : ''}${pitchEffect(context.pitch).passDelta} · Ocasiones x${pitchEffect(context.pitch).chanceMultiplier}</p></div>
           <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
         </div>
@@ -1620,7 +2049,8 @@ function partialMatchStats(stats, factor){
     attacks: Math.round((stats.attacks || 0) * factor),
     chances: Math.round((stats.chances || 0) * factor),
     possession: stats.possession,
-    fouls: Math.round((stats.fouls || 0) * factor)
+    fouls: Math.round((stats.fouls || 0) * factor),
+    passScore: stats.passScore
   };
 }
 function revealTeamStatsCard(clubId, stats, sideLabel){
@@ -1629,6 +2059,7 @@ function revealTeamStatsCard(clubId, stats, sideLabel){
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
     <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
+    <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
   </div>`;
 }
 function matchRevealEvents(match, minute){
@@ -1644,7 +2075,7 @@ function revealEventLine(event){
     const g = event.data;
     const p = playerById(g.playerId);
     const a = g.assistId ? playerById(g.assistId) : null;
-    return `<div class="stat-rank"><span>${g.minute}' ⚽ ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(g.clubId))}</span></span><strong>${a ? `Asist. ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
+    return `<div class="stat-rank"><span>${g.minute}' ⚽ ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `Asist. ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
   }
   if(event.type === 'card'){
     return cardLine(event.data);
@@ -1671,7 +2102,7 @@ function showMatchModal(matchId){
       <h3>Contexto del partido</h3>
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
-        <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong></div>
+        <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong><p class="small muted">Pase ${pitchEffect(context.pitch).passDelta >= 0 ? '+' : ''}${pitchEffect(context.pitch).passDelta} · Ocasiones x${pitchEffect(context.pitch).chanceMultiplier}</p></div>
         <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
       </div>
@@ -1694,30 +2125,31 @@ function matchStatsCard(clubId, stats, sideLabel){
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
     <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
+    <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
   </div>`;
 }
 function goalLine(g){
   const p = playerById(g.playerId);
   const a = g.assistId ? playerById(g.assistId) : null;
-  return `<div class="stat-rank"><span>${g.minute}' ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(g.clubId))}</span></span><strong>${a ? `Asist. ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'}</strong></div>`;
+  return `<div class="stat-rank"><span>${g.minute}' ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `Asist. ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'}</strong></div>`;
 }
 function cardLine(c){
   const p = playerById(c.playerId);
   const icon = c.type === 'yellow' ? '<span class="yellow-card">■</span>' : c.type === 'secondYellowRed' ? '<span class="yellow-card">■</span><span class="red-card">■</span>' : '<span class="red-card">■</span>';
   const label = c.type === 'yellow' ? 'Amarilla' : c.type === 'secondYellowRed' ? 'Doble amarilla + roja' : 'Roja directa';
-  return `<div class="stat-rank"><span>${c.minute}' ${icon} ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(c.clubId))}</span></span><strong>${label}</strong></div>`;
+  return `<div class="stat-rank"><span>${c.minute}' ${icon} ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(c.clubId)}</span><strong>${label}</strong></div>`;
 }
 function subLine(s){
   const out = playerById(s.outId);
   const inn = playerById(s.inId);
-  const label = SUB_TRIGGERS.find(t=>t.value===s.trigger)?.label || s.trigger;
+  const label = s.trigger === 'injury' ? 'Cambio por lesión' : (SUB_TRIGGERS.find(t=>t.value===s.trigger)?.label || s.trigger);
   return `<div class="stat-rank"><span>${s.minute}' ${escapeHtml(inn?.name || 'Jugador')} por ${escapeHtml(out?.name || 'Jugador')}</span><strong>${escapeHtml(label)}</strong></div>`;
 }
 function injuryLine(i){
   const p = playerById(i.playerId);
   const label = i.injuryLabel || i.name || i.severity || 'Lesión';
   const phase = i.phase === 'final' ? 'al final' : 'durante';
-  return `<div class="stat-rank"><span>${i.minute}' 🩹 ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(i.clubId))}</span></span><strong>${escapeHtml(label)} · ${i.matchesOut} turno(s) · ${phase}</strong></div>`;
+  return `<div class="stat-rank"><span>${i.minute}' 🩹 ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${i.matchesOut} turno(s) · ${phase}</strong></div>`;
 }
 function showClubModal(clubId){
   const club = seed.clubs.find(c => c.id === Number(clubId));

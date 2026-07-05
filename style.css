@@ -315,3 +315,147 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .injury-rules{margin-top:12px;color:var(--muted)}
 .injury-rules summary{cursor:pointer;font-weight:800;color:#fde68a;margin-bottom:10px}
 .injury-rules .table-wrap{margin-top:10px}
+
+/* V1.09: ordenamiento por columna en Plantel */
+.squad-table th{vertical-align:top}
+.th-filter{display:grid;gap:6px;align-items:start;min-width:120px}
+.th-filter span{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#9fb0c9;font-weight:900}
+.th-filter select{
+  margin:0;
+  min-width:118px;
+  padding:7px 9px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+  color:#dbeafe;
+  background:#0b1220;
+}
+.squad-table th:nth-child(1),.squad-table th:nth-child(4){padding-top:18px}
+
+/* V1.10: campo de juego, lesiones y placeholders de escudo */
+.injury-cross{
+  display:inline-grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:8px;
+  background:rgba(239,68,68,.18);
+  color:#fecaca;
+  border:1px solid rgba(239,68,68,.35);
+  font-weight:900;
+}
+.club-badge-placeholder{
+  display:inline-grid;
+  place-items:center;
+  min-width:34px;
+  height:28px;
+  padding:0 6px;
+  border-radius:9px;
+  border:1px dashed rgba(148,163,184,.35);
+  background:rgba(255,255,255,.055);
+  color:#dbeafe;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  vertical-align:middle;
+}
+.club-badge-placeholder span{line-height:1}
+.grid.cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.compact-team-stats>div{
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.12);
+  background:rgba(255,255,255,.03);
+}
+.compact-team-stats strong{font-size:24px;display:block;letter-spacing:-.03em}
+.own-team-stats-card{border-color:rgba(59,130,246,.22)}
+@media (max-width:900px){.grid.cols-6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* V1.11: divisiones, escudos y calendario agrupado */
+.club-badge-placeholder img{
+  width:22px;
+  height:22px;
+  object-fit:contain;
+  display:block;
+}
+.fixture-division-block{margin-top:12px}
+.fixture-division-block h4{margin:0 0 8px;color:#cbd5e1;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.club-modal-head .muted{line-height:1.55}
+
+/* V1.12: pizarra más minimalista y barra de estado físico en titulares */
+.pitch-board{
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(226,232,240,.72) 9.3% 9.9%, transparent 10.2%),
+    linear-gradient(90deg, transparent 49.75%, rgba(226,232,240,.68) 49.85% 50.15%, transparent 50.25%),
+    linear-gradient(90deg, rgba(226,232,240,.62) 0 2px, transparent 2px calc(100% - 2px), rgba(226,232,240,.62) calc(100% - 2px) 100%),
+    linear-gradient(0deg, rgba(226,232,240,.62) 0 2px, transparent 2px calc(100% - 2px), rgba(226,232,240,.62) calc(100% - 2px) 100%),
+    repeating-linear-gradient(90deg,#0b5f36 0 12.5%,#0a4d2d 12.5% 25%);
+  border:1px solid rgba(226,232,240,.28);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.04), 0 18px 55px rgba(0,0,0,.25);
+}
+.pitch-board::before,
+.pitch-board::after{
+  content:'';
+  position:absolute;
+  pointer-events:none;
+  z-index:0;
+}
+.pitch-board::before{
+  left:0;
+  top:28%;
+  width:15%;
+  height:44%;
+  border:2px solid rgba(226,232,240,.58);
+  border-left:0;
+  border-radius:0 14px 14px 0;
+}
+.pitch-board::after{
+  right:0;
+  top:28%;
+  width:15%;
+  height:44%;
+  border:2px solid rgba(226,232,240,.58);
+  border-right:0;
+  border-radius:14px 0 0 14px;
+}
+.pitch-slot{z-index:2}
+.pitch-legend{display:none!important}
+.lineup-row{
+  grid-template-columns:auto minmax(130px,1fr) minmax(180px,1.25fr) auto;
+}
+.condition-bar{
+  position:relative;
+  height:13px;
+  border-radius:999px;
+  background:rgba(15,23,42,.82);
+  border:1px solid rgba(148,163,184,.18);
+  overflow:hidden;
+  min-width:160px;
+}
+.condition-bar span{
+  position:absolute;
+  inset:0 auto 0 0;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#ef4444 0%,#f97316 35%,#facc15 58%,#84cc16 78%,#22c55e 100%);
+  box-shadow:0 0 16px rgba(34,197,94,.18);
+}
+.condition-bar.low span{background:linear-gradient(90deg,#991b1b 0%,#ef4444 75%,#f97316 100%)}
+.condition-bar.mid span{background:linear-gradient(90deg,#ef4444 0%,#facc15 72%,#84cc16 100%)}
+.condition-bar.high span{background:linear-gradient(90deg,#facc15 0%,#84cc16 45%,#22c55e 100%)}
+.condition-bar em{
+  position:absolute;
+  right:7px;
+  top:50%;
+  transform:translateY(-50%);
+  font-style:normal;
+  font-size:10px;
+  font-weight:900;
+  color:#e5edf7;
+  text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+@media (max-width:900px){
+  .lineup-row{grid-template-columns:auto 1fr auto}
+  .condition-bar{grid-column:1 / -1;min-width:0;width:100%}
+}

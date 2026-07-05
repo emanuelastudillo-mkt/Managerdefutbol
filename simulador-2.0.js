@@ -183,7 +183,7 @@
     });
     const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id);
     const hasAssist = Math.random() < 0.72;
-    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','EXT','MCO','MC'].includes(p.position)?25:5)) : null;
+    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','EXT','MCO','MC'].includes(p.position)?25:5)) : null;
     return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute };
   }
   function makeCardsV2(clubId, power, fouls){

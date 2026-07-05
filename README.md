@@ -1,31 +1,19 @@
-# Fútbol Manager MVP - V2.4
+# Fútbol Manager MVP - V2.10
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- Se agrega el nuevo menú lateral **Entrenamiento**.
-- Cada jugador del plantel puede recibir un entrenamiento especializado por turno:
-  - Regenerativo
-  - Masajista
-  - Entrenamiento intenso
-  - Entrenamiento táctico
-  - Día libre
-- Los efectos del entrenamiento se aplican al avanzar el turno.
-- El entrenamiento intenso puede mejorar habilidades clave o comunes del jugador.
-- El entrenamiento táctico puede mejorar la cohesión total del equipo.
-- Se simplifican las opciones de cambios automáticos:
-  - Cambiar a los cansados
-  - Mejores suplentes
-  - Solo cambios por lesión
-- Se prepara guardado local para progresos de entrenamiento y mejoras de habilidades.
+- Al comenzar con un club nuevo, el panel principal muestra el banner de bienvenida.
+- La imagen esperada es `img/principales/banner_bienvenido`.
+- También se agrega fallback automático a `img/principales/banner_bienvenido.jpg` si el navegador no encuentra la ruta sin extensión.
 
 ## Archivos incluidos
 - `index.html`
 - `app.js`
-- `simulador-2.0.js`
 - `style.css`
+- `simulador-2.0.js`
 - `README.md`
 - `VERSION.md`
 
 ## Nota
-Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual si todavía lo usás.
+Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual si lo seguís usando.

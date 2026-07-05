@@ -1089,3 +1089,42 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 }
 .grid.cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media (max-width:900px){.grid.cols-5{grid-template-columns:1fr}}
+
+/* V2.6: cierre de temporada, ascensos/descensos y estadísticas del manager */
+.season-end-card{border-color:rgba(59,130,246,.35);background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(15,23,42,.86))}
+.season-movement-list{margin:12px 0 0;padding-left:18px;color:var(--muted);line-height:1.7}
+.season-end-modal hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.season-end-modal select{width:100%;margin-top:8px}
+
+/* V2.7: mensajes/eventos y mercado */
+.home-message-strip{min-width:0;flex:1}
+.home-messages-summary{padding:2px 0;cursor:default}
+.home-messages-summary.clickable{cursor:pointer}
+.home-messages-summary h2{margin:0 0 8px;font-size:22px}
+.home-messages-summary .tagline{margin:0;max-width:760px}
+.message-list{display:grid;gap:12px}
+.message-card.unread{border-color:rgba(59,130,246,.55);box-shadow:0 0 0 1px rgba(59,130,246,.16)}
+.message-actions{justify-content:flex-start;gap:10px;margin-top:10px}
+.small-btn{padding:8px 12px;font-size:12px}
+.status-card #currentSeason{font-weight:700;color:#dbeafe}
+@media (max-width:900px){.section-title{align-items:flex-start}.home-message-strip{width:100%}}
+
+
+/* V2.8: zonas de tabla, entrenamiento filtrable y finanzas */
+tr.promotion-row td,
+tr.champion-row td{background:rgba(34,197,94,.10)!important;border-bottom-color:rgba(34,197,94,.22)}
+tr.relegation-row td{background:rgba(239,68,68,.10)!important;border-bottom-color:rgba(239,68,68,.24)}
+tr.own-club-row.promotion-row td,
+tr.own-club-row.champion-row td{box-shadow:inset 4px 0 0 rgba(34,197,94,.85)}
+tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
+.training-table .th-filter select{min-width:110px;width:100%;margin-top:6px}
+.compact-team-stats strong.ok{color:#86efac}
+.compact-team-stats strong.bad{color:#fca5a5}
+
+/* V2.9: puntos entrenados visibles en ficha */
+.trained-boost{
+  display:inline-block;
+  margin-left:3px;
+  color:#22c55e;
+  font-weight:900;
+}

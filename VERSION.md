@@ -1,42 +1,25 @@
 # Registro de versión
 
-## Versión: V1.20
+## Versión: V1.21
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** sistema de jugadores, moral y empleados
-
-### Resumen
-Esta versión incorpora moral visible de jugadores y un primer menú de empleados. La moral queda separada de la cohesión de equipo: la moral es visible e individual, la cohesión sigue siendo oculta y colectiva.
+**Tipo de mejora:** ajustes de interfaz, progresión semanal y separación de estadísticas
 
 ### Cambios principales agregados
-- **Moral de jugador** en escala 1 a 99.
-- Barra visual de moral con degradado de **morado a celeste**.
-- La moral se muestra en:
-  - plantel,
-  - táctica,
-  - ficha del jugador.
-- La moral modifica internamente el rendimiento del jugador.
-- Se agregan reglas automáticas de moral post partido:
-  - titular suma moral,
-  - suplente utilizado suma menos,
-  - jugador que no participa pierde moral,
-  - ganar mejora a toda la plantilla,
-  - perder baja la moral, especialmente de los titulares.
-- Nuevo menú lateral: **Empleados**.
-- Nueva acción: **Llamar al psicólogo motivacional**.
-- Costo de la acción: `$500.000`.
-- 90% de probabilidad de éxito.
-- 10% de probabilidad de fracaso.
-- El valor exacto de mejora de moral por charla exitosa no se muestra en pantalla.
-- Se muestra una barra de progreso completada y el resultado de la charla.
+- **Charlas motivacionales:** ahora sólo se pueden realizar una vez y luego quedan bloqueadas por 5 turnos.
+- **Paso de turno:** se oculta el segundero visible y se reemplaza por una barra de progreso semanal.
+- **Días de la semana:** se mantiene la progresión visual Lunes → Martes → Miércoles → Jueves → Viernes → Sábado → Domingo.
+- **Menú lateral:** muestra escudo del club junto al nombre, fecha y jornada.
+- **Estadísticas:** los rankings de jugadores se dividen por división.
+- **Tabla de posiciones:** se elimina la leyenda pública de premios por división.
+- **Pizarra táctica:** se reduce el tamaño del tablero, sin achicar los círculos, nombres ni dorsales de los jugadores.
+- **Distribución táctica:** se ajustan coordenadas para aprovechar mejor ancho y largo de la pizarra y evitar superposiciones.
 
-### Valores que siguen ocultos
+### Información que sigue oculta
+- Coeficientes del estado del campo.
+- Escalas internas de lesiones.
 - Cohesión de equipo.
-- Valor exacto de mejora generada por el psicólogo.
-- Coeficientes internos de impacto de la moral en el rendimiento.
+- Multiplicadores económicos por división.
 
 ### Pendientes sugeridos
-- Agregar más empleados y acciones.
-- Agregar preparador físico.
-- Agregar cuerpo técnico con rasgos.
-- Incorporar instrucciones tácticas según resultado parcial.
-- Avanzar hacia simulación por bloques de 15 minutos.
+- Instrucciones tácticas según resultado parcial: ganando, empatando y perdiendo.
+- Motor por bloques de tiempo para que rojas, lesiones y cambios modifiquen el partido de forma progresiva.

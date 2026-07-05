@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.20';
+const APP_VERSION = 'V1.21';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -12,6 +12,7 @@ const TEAM_COHESION_PLAYER_CHANGE_LOSS = 2;
 const PLAYER_MORALE_START = 60;
 const PSYCHOLOGIST_COST = 500000;
 const PSYCHOLOGIST_SUCCESS_CHANCE = 0.90;
+const PSYCHOLOGIST_COOLDOWN_TURNS = 5;
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -94,6 +95,7 @@ let activeTab = 'home';
 let squadSort = 'media_desc';
 let selectedFixtureDivision = 'all';
 let selectedStandingsDivision = 'all';
+let selectedStatsDivision = 'all';
 let uiTicker = null;
 let matchRevealTimers = [];
 
@@ -442,18 +444,18 @@ function formationLayout(formation){
 function formationCoordinates(formation){
   const layout = formationLayout(formation);
   const rows = [
-    { count:1, x:10 },
-    { count:layout[0], x:24 },
-    { count:layout[1], x:38 },
+    { count:1, x:8 },
+    { count:layout[0], x:22 },
+    { count:layout[1], x:36 },
     { count:layout[2], x:52 },
-    { count:layout[3], x:66 },
-    { count:layout[4], x:80 }
+    { count:layout[3], x:68 },
+    { count:layout[4], x:84 }
   ];
   const coords = [];
   rows.forEach(row=>{
     const count = row.count;
     for(let i=0;i<count;i++){
-      const y = count === 1 ? 50 : 14 + (72 * (i+1)/(count+1));
+      const y = count === 1 ? 50 : 6 + (88 * (i+1)/(count+1));
       coords.push({ x:row.x, y });
     }
   });
@@ -1152,7 +1154,13 @@ function createInitialPlayerStats(){
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
-  $('managerClub').textContent = game ? clubName(game.selectedClubId) : 'Sin partida';
+  if(game){
+    $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
+    $('managerClub').classList.add('side-club-name');
+  }else{
+    $('managerClub').textContent = 'Sin partida';
+    $('managerClub').classList.remove('side-club-name');
+  }
   refreshSidebarDate();
   $('btnSave').disabled = !game;
   if(!game){
@@ -1207,7 +1215,7 @@ function renderHome(){
         <h2>Panel principal</h2>
         <p class="tagline">Versión ${APP_VERSION}. Simulación local, once titular en cancha, cambios automáticos, estado físico y presupuesto dinámico por resultado.</p>
       </div>
-      <button id="advanceBtn" class="primary">Avanzar fecha</button>
+      <div class="advance-control"><button id="advanceBtn" class="primary">Avanzar fecha</button><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
     ${problemBox}
     <div class="card placeholder-main-card home-top-visual">
@@ -1262,11 +1270,26 @@ function updateAdvanceButtonState(){
   let text = 'Domingo · jugar partido';
   let disabled = false;
   if(seasonEnded){ text = 'Temporada finalizada'; disabled = true; }
-  else if(lockLeft > 0){ text = `${currentWeekdayLabel()} · próximo domingo en ${formatClock(lockLeft)}`; disabled = true; }
+  else if(lockLeft > 0){ text = `${currentWeekdayLabel()} · preparando jornada`; disabled = true; }
   else if(game.mustReviewTactics){ text = 'Reemplazar lesionados/suspendidos'; disabled = true; }
   else if(invalid.length){ text = 'Táctica incompleta'; disabled = true; }
   btn.textContent = text;
   btn.disabled = disabled;
+  const progressBox = $('advanceProgressBox');
+  if(progressBox) progressBox.innerHTML = advanceProgressMarkup();
+}
+function advanceProgressPercent(){
+  if(!game) return 0;
+  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  if(lockLeft <= 0) return 100;
+  return clamp(Math.round(((ADVANCE_LOCK_MS - lockLeft) / ADVANCE_LOCK_MS) * 100), 0, 100);
+}
+function advanceProgressMarkup(){
+  if(!game) return '';
+  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  const pct = advanceProgressPercent();
+  const label = lockLeft > 0 ? `${currentWeekdayLabel()} · semana en curso` : 'Domingo · partido disponible';
+  return `<div class="advance-progress"><div class="project-progress"><span style="width:${pct}%"></span></div><p class="small muted">${label}</p></div>`;
 }
 function formatClock(ms){
   const total = Math.ceil(ms/1000);
@@ -1652,7 +1675,7 @@ function renderStandings(){
       <tr class="${s.clubId===game.selectedClubId ? 'own-club-row' : ''}">
         <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
       </tr>`).join('');
-    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3><span class="pill">Premios x${division.prizeMultiplier ?? 1}</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
@@ -1663,20 +1686,30 @@ function renderStandings(){
   $('standingsDivisionFilter')?.addEventListener('change', event => { selectedStandingsDivision = event.target.value; renderStandings(); });
 }
 function renderStats(){
-  const stats = Object.values(game.playerStats);
-  const scorers = stats.filter(s=>s.goals>0).sort((a,b)=>b.goals-a.goals).slice(0,20);
-  const assists = stats.filter(s=>s.assists>0).sort((a,b)=>b.assists-a.assists).slice(0,20);
-  const cards = stats.filter(s=>s.yellow>0 || s.red>0).sort((a,b)=>(b.red*3+b.yellow)-(a.red*3+a.yellow)).slice(0,20);
-  const injuries = stats.filter(s=>s.injuries>0).sort((a,b)=>b.injuries-a.injuries).slice(0,20);
+  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const visibleDivisions = selectedStatsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStatsDivision);
+  const blocks = visibleDivisions.map(division => {
+    const allowedClubs = new Set(seed.clubs.filter(c => (c.divisionId || 'default') === division.id).map(c => c.id));
+    const stats = Object.values(game.playerStats).filter(s => allowedClubs.has(s.clubId));
+    const scorers = stats.filter(s=>s.goals>0).sort((a,b)=>b.goals-a.goals).slice(0,20);
+    const assists = stats.filter(s=>s.assists>0).sort((a,b)=>b.assists-a.assists).slice(0,20);
+    const cards = stats.filter(s=>s.yellow>0 || s.red>0).sort((a,b)=>(b.red*3+b.yellow)-(a.red*3+a.yellow)).slice(0,20);
+    const injuries = stats.filter(s=>s.injuries>0).sort((a,b)=>b.injuries-a.injuries).slice(0,20);
+    return `<div class="card stats-division-block"><h3>${escapeHtml(division.name)}</h3><div class="grid cols-4">
+      <div class="card inner"><h3>Goleadores</h3>${rankList(scorers,'goals')}</div>
+      <div class="card inner"><h3>Asistidores</h3>${rankList(assists,'assists')}</div>
+      <div class="card inner"><h3>Tarjetas</h3>${cardList(cards)}</div>
+      <div class="card inner"><h3>Lesiones</h3>${rankList(injuries,'injuries')}</div>
+    </div></div>`;
+  }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Estadísticas</h2></div>
-    <div class="grid cols-4">
-      <div class="card"><h3>Goleadores</h3>${rankList(scorers,'goals')}</div>
-      <div class="card"><h3>Asistidores</h3>${rankList(assists,'assists')}</div>
-      <div class="card"><h3>Tarjetas</h3>${cardList(cards)}</div>
-      <div class="card"><h3>Lesiones</h3>${rankList(injuries,'injuries')}</div>
+    <div class="row section-title">
+      <div><h2>Estadísticas</h2><p class="tagline">Rankings separados por división.</p></div>
+      ${divisionFilterMarkup('statsDivisionFilter', selectedStatsDivision)}
     </div>
+    <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>
   `;
+  $('statsDivisionFilter')?.addEventListener('change', event => { selectedStatsDivision = event.target.value; renderStats(); });
 }
 function rankList(list,key){
   if(!list.length) return '<p class="muted">Sin datos todavía.</p>';
@@ -1821,7 +1854,7 @@ function applyMentalityBonus(tactic, assigned){
 
 function simulateNextMatchday(){
   if(!game || game.matchdayIndex >= game.fixtures.length) return;
-  if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`Tenés que esperar ${formatClock(game.advanceLockedUntil - Date.now())} para avanzar.`); return; }
+  if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el partido se habilita el domingo.`); return; }
   if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
@@ -1979,6 +2012,9 @@ function applyMoraleUpdates(results){
 }
 function renderEmployees(){
   const last = game.staffActions?.motivationalTalk || null;
+  const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
+  const canCallPsychologist = cooldownLeft <= 0 && (game.budget || 0) >= PSYCHOLOGIST_COST;
+  const cooldownText = cooldownLeft > 0 ? `<p class="small warn">Disponible nuevamente en ${cooldownLeft} turno(s).</p>` : '';
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -1993,7 +2029,8 @@ function renderEmployees(){
         <p class="muted">Convoca una charla para intentar mejorar la moral del plantel.</p>
         <p class="label">Costo</p>
         <div class="metric small">${formatMoney(PSYCHOLOGIST_COST)}</div>
-        <button id="btnMotivationalTalk" class="primary" ${(game.budget || 0) < PSYCHOLOGIST_COST ? 'disabled' : ''}>Llamar al psicólogo motivacional</button>
+        ${cooldownText}
+        <button id="btnMotivationalTalk" class="primary" ${canCallPsychologist ? '' : 'disabled'}>Llamar al psicólogo motivacional</button>
       </div>
       <div class="card staff-card">
         <h3>Estado del plantel</h3>
@@ -2012,6 +2049,9 @@ function moraleTeamBar(clubId){
 }
 function callMotivationalPsychologist(){
   if(!game) return;
+  const last = game.staffActions?.motivationalTalk || null;
+  const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
+  if(cooldownLeft > 0){ showNotice(`La charla motivacional estará disponible en ${cooldownLeft} turno(s).`); return; }
   if((game.budget || 0) < PSYCHOLOGIST_COST){ showNotice('Presupuesto insuficiente para llamar al psicólogo motivacional.'); return; }
   game.budget -= PSYCHOLOGIST_COST;
   game.lastBudgetDelta = -PSYCHOLOGIST_COST;

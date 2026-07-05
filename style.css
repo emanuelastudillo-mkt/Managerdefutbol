@@ -763,3 +763,70 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   .lineup-row{grid-template-columns:auto 1fr auto}
   .lineup-row .morale-bar{grid-column:1 / -1}
 }
+
+/* V1.21: bloqueo de charla, progreso semanal, sidebar y pizarra compacta */
+.side-club-name{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  line-height:1.15;
+}
+.side-club-name .club-badge-placeholder{
+  width:36px;
+  min-width:36px;
+  height:36px;
+  flex:0 0 36px;
+}
+.status-card #currentDate,
+.status-card #currentRound{
+  margin:6px 0 0;
+}
+.advance-control{
+  display:grid;
+  gap:8px;
+  justify-items:end;
+  min-width:260px;
+}
+.advance-control .primary{
+  width:100%;
+  min-width:220px;
+}
+.advance-progress{
+  width:100%;
+  min-width:220px;
+}
+.advance-progress .project-progress{
+  height:10px;
+  margin:0 0 5px;
+}
+.advance-progress p{
+  margin:0;
+  text-align:right;
+}
+.pitch-board.centered{
+  max-width:690px!important;
+}
+.tactic-board-card{
+  gap:10px;
+}
+.pitch-slot{
+  width:66px!important;
+  min-height:66px!important;
+}
+.stats-division-block{
+  display:grid;
+  gap:12px;
+}
+.stats-division-block > h3{
+  margin:0;
+}
+.staff-card button[disabled]{
+  opacity:.55;
+  cursor:not-allowed;
+}
+@media (max-width:900px){
+  .advance-control{justify-items:stretch;min-width:0;width:100%}
+  .advance-progress,.advance-control .primary{min-width:0}
+  .advance-progress p{text-align:left}
+  .pitch-board.centered{max-width:100%!important}
+}

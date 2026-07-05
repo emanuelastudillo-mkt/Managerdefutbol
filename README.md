@@ -1,60 +1,42 @@
-# Fútbol Manager MVP
+# Fútbol Manager MVP - V1.02
 
-Juego de fútbol tipo manager, 100% estático y ejecutado en navegador.
+Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
 ## Incluye
+- HTML + CSS + JavaScript puro.
+- Datos iniciales en `data/seed.json`.
+- Guardado local con **IndexedDB**.
+- Liga simple con 20 clubes y 600 jugadores.
+- Simulación de jornadas y tablas.
+- Plantel clickeable.
+- Pantalla táctica con cancha visual.
+- Cambios automáticos.
+- Presupuesto dinámico según resultados.
 
-- 20 clubes ficticios.
-- 600 jugadores iniciales desde `data/seed.json`.
-- 20 habilidades base por jugador.
-- Stats visibles resumidas: Ataque, Defensa, Pase, Velocidad, Cabezazo, Tiro y Resistencia.
-- Stats ocultas de motor: Agresividad, Genética y Sorpresa.
-- Pantalla de plantel con jugadores clickeables y rombo/radar de estadísticas.
-- Pantalla de táctica para seleccionar 11 titulares y 10 suplentes.
-- Configuración de hasta 5 cambios automáticos.
-- Condiciones de cambio: quitar cansados, entrar ganando, entrar perdiendo o entrar empatando.
-- Cambios automáticos al minuto 45 en un 10% de los casos; el resto entre 60 y 90.
-- Simulación de todos los partidos de la jornada.
-- Partidos clickeables con detalle: ataques, ocasiones, posesión, faltas, tarjetas, goles, cambios y lesiones.
-- Tabla de posiciones.
-- Goleadores, asistidores, tarjetas y lesiones.
-- Lesiones y suspensiones.
-- Bloqueo de 2 minutos antes de avanzar la siguiente fecha.
-- Si el último partido propio tuvo lesionado o expulsado, obliga a revisar la táctica antes de avanzar.
-- Guardado local con IndexedDB.
+## Archivos principales
+- `index.html`
+- `style.css`
+- `app.js`
+- `data/seed.json`
+- `assets/pitch-board.png`
+- `VERSION.md`
 
-## Subir a GitHub Pages
+## Cómo usarlo en GitHub Pages
+1. Crear un repositorio nuevo.
+2. Subir todo el contenido de esta carpeta a la raíz del repositorio.
+3. Ir a **Settings > Pages**.
+4. En **Source**, elegir la rama `main` y carpeta `/root`.
+5. Guardar y abrir la URL publicada.
 
-1. Descomprimir el ZIP.
-2. Subir todo el contenido a la raíz del repositorio.
-3. Ir a `Settings > Pages`.
-4. Elegir rama `main` y carpeta `/root`.
-5. Abrir la URL publicada.
+## Notas de esta versión
+- La media visible del jugador usa sólo stats visibles.
+- Las habilidades ocultas siguen existiendo internamente para la simulación, pero no se muestran.
+- Los titulares se muestran sobre la cancha y su mentalidad se cambia haciendo clic sobre cada círculo.
+- El presupuesto del club del usuario cambia después de cada partido.
 
-## Estructura
-
-```txt
-index.html
-style.css
-app.js
-data/seed.json
-README.md
-```
-
-## Desarrollo local
-
-Por seguridad del navegador, conviene abrirlo con servidor local:
-
-```bash
-python -m http.server 8080
-```
-
-Luego entrar a:
-
-```txt
-http://localhost:8080
-```
-
-## Nota técnica
-
-El bloqueo de avance se controla con la constante `ADVANCE_LOCK_MS` en `app.js`. Por defecto son 120000 milisegundos.
+## Siguiente versión sugerida
+V1.03 podría incluir:
+- sanciones por acumulación de amarillas,
+- pantalla financiera ampliada,
+- historial de presupuesto,
+- más estadísticas por partido.

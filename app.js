@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.22';
+const APP_VERSION = 'V2.25';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -103,13 +103,16 @@ const RETIREMENT_MAX_AGE = 38;
 const SEASON_SALARY_BASE_REDUCTION = 0.05;
 const SEASON_SALARY_MATCH_BONUS = 0.01;
 const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
+const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;
+const SEASON_END_TRANSFER_OFFERS_MIN = 2;
+const SEASON_END_TRANSFER_OFFERS_MAX = 6;
 const SPONSOR_OFFER_MATCH_MIN = 4;
 const SPONSOR_OFFER_MATCH_MAX = 7;
 const SPONSOR_OFFER_COUNT_MIN = 2;
 const SPONSOR_OFFER_COUNT_MAX = 5;
 
 const CLUB_ROSTER_SIZE = 25;
-const PLAYER_GENERATION_RULES_VERSION = 'V1.02';
+const PLAYER_GENERATION_RULES_VERSION = 'V2.23';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
   { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
@@ -128,6 +131,8 @@ const PLAYER_GENERATION_MEDIA_RANGES = [
   { id:'profesional_promedio_bajo', probability:0.50, media_min:43, media_max:67, salaryMultiplier:80000 },
   { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
 ];
+const PLAYER_ECONOMY_SCALE = 0.10;
+const PLAYER_ELITE_MAX_PER_CLUB = 3;
 const PLAYER_CLAUSE_MIN_MULTIPLIER = 6;
 const PLAYER_CLAUSE_AGE_REDUCTION = 10;
 const PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER = { 1:500, 2:450, 3:300 };
@@ -624,15 +629,60 @@ function pickRuleWithAudit(rules, selector, context, seedKey){
   if(under.length) return weightedRulePick(under, `${seedKey}-audit`);
   return weightedRulePick(rules, seedKey);
 }
-function pickMediaRangeWithAudit(context, seedKey){
+function mediaRangeTargetCount(range, targetTotal){
+  const total = Math.max(1, Math.round(Number(targetTotal) || 0));
+  const raw = total * Number(range.probability || 0);
+  if(range.id === 'elite_mundial') return Math.floor(raw);
+  return Math.round(raw);
+}
+function generationDivisionOrder(clubId=0, divisionName=''){
+  if(Number(clubId || 0) > 0 && seed?.clubs?.length){
+    return Math.round(Number(clubDivision(clubId).order || 3));
+  }
+  const lower = String(divisionName || '').toLowerCase();
+  if(lower.includes('profesional') || lower.includes('primera')) return 1;
+  if(lower.includes('nacional') || lower.includes('segunda')) return 2;
+  if(lower.includes('federal') || lower.includes('tercera')) return 3;
+  return 0;
+}
+function mediaRangeAllowedByDivision(range, divisionOrder){
+  const order = Math.round(Number(divisionOrder || 0));
+  if(order === 2 && range.id === 'elite_mundial') return false;
+  if(order >= 3 && (range.id === 'elite_mundial' || range.id === 'estrella')) return false;
+  return true;
+}
+function clubEliteCountInContext(context, clubId){
+  if(!context || Number(clubId || 0) <= 0) return 0;
+  return contextPlayersForGeneration(context).filter(player => Number(player.clubId) === Number(clubId) && mediaRangeIdForOverall(player.overall ?? visibleOverall(player)) === 'elite_mundial').length;
+}
+function pickMediaRangeWithAudit(context, seedKey, constraints={}){
   const preferred = weightedRulePick(PLAYER_GENERATION_MEDIA_RANGES, `${seedKey}-range`);
-  if(!context) return preferred;
-  const under = underTargetRules(PLAYER_GENERATION_MEDIA_RANGES, player => mediaRangeIdForOverall(player.overall ?? visibleOverall(player)), context);
-  if(!under.length || under.some(range => range.id === preferred.id)) return preferred;
+  const divisionOrder = Math.round(Number(constraints.divisionOrder || 0));
+  const clubId = Number(constraints.clubId || 0);
+  const passesHardLimits = (range) => {
+    if(!mediaRangeAllowedByDivision(range, divisionOrder)) return false;
+    if(range.id === 'elite_mundial' && clubId > 0 && clubEliteCountInContext(context, clubId) >= PLAYER_ELITE_MAX_PER_CLUB) return false;
+    return true;
+  };
+  if(!context){
+    return passesHardLimits(preferred) ? preferred : (PLAYER_GENERATION_MEDIA_RANGES.find(passesHardLimits) || PLAYER_GENERATION_MEDIA_RANGES[PLAYER_GENERATION_MEDIA_RANGES.length - 1]);
+  }
+  const players = contextPlayersForGeneration(context);
+  const targetTotal = Math.max(players.length + 1, Number(context.targetTotal || 0));
+  const counts = {};
+  players.forEach(player => {
+    const key = mediaRangeIdForOverall(player.overall ?? visibleOverall(player));
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  const under = PLAYER_GENERATION_MEDIA_RANGES.filter(range => passesHardLimits(range) && (counts[range.id] || 0) < mediaRangeTargetCount(range, targetTotal));
+  const fallbackAllowed = PLAYER_GENERATION_MEDIA_RANGES.filter(passesHardLimits);
+  const fallbackWithoutElite = fallbackAllowed.filter(range => range.id !== 'elite_mundial');
+  const allowed = under.length ? under : (fallbackWithoutElite.length ? fallbackWithoutElite : fallbackAllowed);
+  if(allowed.some(range => range.id === preferred.id)) return preferred;
   const preferredIndex = PLAYER_GENERATION_MEDIA_RANGES.findIndex(range => range.id === preferred.id);
-  const lower = PLAYER_GENERATION_MEDIA_RANGES.slice(preferredIndex + 1).find(range => under.some(item => item.id === range.id));
+  const lower = PLAYER_GENERATION_MEDIA_RANGES.slice(preferredIndex + 1).find(range => allowed.some(item => item.id === range.id));
   if(lower) return lower;
-  return weightedRulePick(under, `${seedKey}-range-fallback`) || preferred;
+  return weightedRulePick(allowed, `${seedKey}-range-fallback`) || PLAYER_GENERATION_MEDIA_RANGES[PLAYER_GENERATION_MEDIA_RANGES.length - 1];
 }
 function pickNationalityForGeneration(id, label, context=null){
   const group = pickRuleWithAudit(PLAYER_GENERATION_NATIONALITY_GROUPS, player => nationalityGroupId(player.nationality), context, `${label}-${id}-nat-group`);
@@ -647,8 +697,8 @@ function pickPositionFromGroup(groupId, id, label){
   const pool = group.positions || ['MC'];
   return pool[hashNumber(`${label}-${id}-pos`, pool.length)];
 }
-function mediaFromGenerationRules(prestige, id, group, context=null, label='player'){
-  const range = pickMediaRangeWithAudit(context, `${label}-${id}-${group}`);
+function mediaFromGenerationRules(prestige, id, group, context=null, label='player', constraints={}){
+  const range = pickMediaRangeWithAudit(context, `${label}-${id}-${group}`, constraints);
   const span = Math.max(1, range.media_max - range.media_min + 1);
   const raw = range.media_min + hashNumber(`${label}-${id}-${group}-media`, span);
   const prestigeBias = Math.round(((Number(prestige) || 50) - 50) / 28);
@@ -656,7 +706,7 @@ function mediaFromGenerationRules(prestige, id, group, context=null, label='play
 }
 function initialAnnualSalaryForMedia(media, factor=1){
   const range = mediaRangeForOverall(media);
-  return Math.max(0, Math.round((Number(media) || 0) * Number(range.salaryMultiplier || 0) * Number(factor || 1)));
+  return Math.max(0, Math.round((Number(media) || 0) * Number(range.salaryMultiplier || 0) * PLAYER_ECONOMY_SCALE * Number(factor || 1)));
 }
 function clauseBaseFromDivisionName(divisionName){
   const lower = String(divisionName || '').toLowerCase();
@@ -699,10 +749,11 @@ function ensurePlayerEconomics(player, salaryFactor=1){
   }
   return player;
 }
-function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false }){
+function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', divisionOrder=null, generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false }){
   const cleanPosition = normalizePlayerPosition(position, id);
   const group = playerRoleGroup(cleanPosition);
-  const media = mediaFromGenerationRules(prestige, id, group, generationContext, nameContext);
+  const generationDivision = Number.isFinite(Number(divisionOrder)) ? Number(divisionOrder) : generationDivisionOrder(clubId, divisionName);
+  const media = mediaFromGenerationRules(prestige, id, group, generationContext, nameContext, { clubId, divisionOrder:generationDivision });
   const skills = skillsForPosition(cleanPosition, media, id);
   const visible = averageGeneratedVisible(cleanPosition, skills);
   const player = {
@@ -1223,6 +1274,7 @@ function generateClubPlayers(club, prestige, startId, generationContext=null){
       prestige,
       nameContext:club.name,
       divisionName:club.divisionName,
+      divisionOrder:club.divisionOrder,
       generationContext,
       salaryFactor:1
     });
@@ -1554,6 +1606,8 @@ function normalizeGame(saved){
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
+  normalized.lastOwnPlayerOffer = normalized.lastOwnPlayerOffer || null;
+  normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();
   normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR); });
@@ -1700,6 +1754,8 @@ function newGame(selectedClubId){
     messages: [],
     marketPlayers: [],
     pendingTransfers: [],
+    lastOwnPlayerOffer: null,
+    seasonEndPlayerOffers: null,
     currentDate: seed.fixtures[0].date,
     matchdayIndex: 0,
     tactic,
@@ -2047,6 +2103,7 @@ function startNextSeason(selectedClubId){
   game.matchHistory = [];
   game.lastOwnProblems = [];
   game.mustReviewTactics = false;
+  game.seasonEndPlayerOffers = null;
   game.advanceLockedUntil = 0;
   game.lastBudgetDelta = 0;
   game.tactic = normalizeTactic(nextClubId, DEFAULT_TACTIC);
@@ -2115,8 +2172,9 @@ function renderAll(){
     renderClubRequirementsWarning();
     return;
   }
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, players:renderWorldPlayers, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
-  renderers[activeTab]();
+  if(activeTab === 'players') activeTab = 'market';
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
+  (renderers[activeTab] || renderers.home)();
 }
 function renderClubRequirementsWarning(){
   const invalid = invalidClubRequirements();
@@ -2418,11 +2476,15 @@ function messageCard(m){
     ${action}
   </div>`;
 }
+function hasPendingTransferOfferForPlayer(playerId){
+  const id = Number(playerId);
+  return (game?.messages || []).some(m => m.action?.type === 'transferOffer' && m.action.status === 'pending' && Number(m.action.playerId) === id);
+}
 function maybeGenerateTransferOffer(match){
   if(!game || !match) return;
   const roll = Math.random();
   if(roll > 0.28) return;
-  const candidates = playersByClub(game.selectedClubId).filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id));
+  const candidates = playersByClub(game.selectedClubId).filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id));
   if(!candidates.length) return;
   candidates.sort((a,b)=>visibleOverall(b)-visibleOverall(a));
   const pool = candidates.slice(0, Math.min(12, candidates.length));
@@ -2437,6 +2499,50 @@ function maybeGenerateTransferOffer(match){
     body:`${foreignClub} ofrece ${formatMoney(amount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. Si aceptás, el jugador se va del club.`,
     action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct }
   });
+}
+function seasonEndOfferScore(player){
+  const st = game?.playerStats?.[player.id] || {};
+  const goals = Number(st.goals || 0);
+  const assists = Number(st.assists || 0);
+  return (visibleOverall(player) * 2) + (goals * 18) + (assists * 14) + hashNumber(`season-end-score-${game?.seasonNumber || 1}-${player.id}`, 9);
+}
+function generateSeasonEndPlayerOffers(){
+  if(!game || !isPostseason()) return [];
+  const season = game.seasonNumber || 1;
+  if(game.seasonEndPlayerOffers?.season === season) return [];
+  const candidates = playersByClub(game.selectedClubId)
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id));
+  if(!candidates.length){
+    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
+    return [];
+  }
+  const stats = game.playerStats || {};
+  const byScore = candidates.slice().sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
+  const byGoals = candidates.slice().sort((a,b)=>Number(stats[b.id]?.goals || 0)-Number(stats[a.id]?.goals || 0) || visibleOverall(b)-visibleOverall(a));
+  const byAssists = candidates.slice().sort((a,b)=>Number(stats[b.id]?.assists || 0)-Number(stats[a.id]?.assists || 0) || visibleOverall(b)-visibleOverall(a));
+  const map = new Map();
+  [...byScore.slice(0,12), ...byGoals.slice(0,8), ...byAssists.slice(0,8)].forEach(p => map.set(p.id, p));
+  const pool = Array.from(map.values()).sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
+  const targetCount = Math.min(pool.length, randomInt(SEASON_END_TRANSFER_OFFERS_MIN, SEASON_END_TRANSFER_OFFERS_MAX));
+  const created = [];
+  for(const player of pool){
+    if(created.length >= targetCount) break;
+    const st = stats[player.id] || {};
+    const productionBonus = clamp((Number(st.goals || 0) + Number(st.assists || 0)) * 2, 0, 15);
+    const pct = clamp(78 + hashNumber(`season-end-pct-${season}-${player.id}-${Date.now()}`, 43) + productionBonus, 78, 125);
+    const amount = Math.round(refreshPlayerClause(player) * pct / 100);
+    const foreignClub = FOREIGN_CLUBS[hashNumber(`season-end-foreign-${season}-${player.id}-${created.length}`, FOREIGN_CLUBS.length)];
+    const msg = pushGameMessage({
+      type:'mercado',
+      priority:'high',
+      title:`Oferta por ${playerLastName(player.name)}`,
+      body:`${foreignClub} acercó una buena oferta de ${formatMoney(amount)} por ${player.name}. Si aceptás, el jugador se va del club.`,
+      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct, origin:'season_end' }
+    });
+    if(msg) created.push(msg);
+  }
+  game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:created.length };
+  return created;
 }
 function acceptTransferOffer(messageId){
   const msg = (game.messages || []).find(m => m.id === messageId);
@@ -3641,6 +3747,7 @@ function simulatePreseasonTurn(){
 }
 
 function simulatePostseasonTurn(){
+  generateSeasonEndPlayerOffers();
   applyTrainingEffects();
   processStadiumProjects();
   processSponsorContracts();
@@ -4445,6 +4552,11 @@ function dismissOwnPlayer(playerId){
 function offerOwnPlayerToClubs(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  if(turnCooldownLeft(game.lastOwnPlayerOffer, OWN_PLAYER_OFFER_COOLDOWN_TURNS) > 0){
+    showNotice('tu asistente está buscando las mejores opciones llamalo luego');
+    return;
+  }
+  game.lastOwnPlayerOffer = turnStamp({ action:'offerOwnPlayer', playerId:player.id });
   const success = Math.random() < 0.85;
   if(!success){
     pushGameMessage({ type:'mercado', title:`Sin ofertas por ${playerLastName(player.name)}`, body:`Se ofreció a ${player.name}, pero ningún club presentó una propuesta formal.`, priority:'normal' });

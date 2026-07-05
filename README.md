@@ -1,27 +1,19 @@
-# Fútbol Manager MVP - V2.22
+# Fútbol Manager MVP — V2.25
 
-Paquete de actualización del proyecto para navegador.
+Versión local para GitHub Pages.
 
-## Cambios de esta versión
-- Se agrega el menú lateral **Primer Equipo**, que agrupa las pestañas internas: Táctica, Plantel y Entrenamiento.
-- Se amplía **Finanzas** con un listado simple del plantel: nombre, nacionalidad abreviada, edad, media general y sueldo anual.
-- Se reorganiza **Mercado** con pestañas: Jugadores libres y Jugadores contratados.
-- Se agregan acciones en la ficha del jugador:
-  - Despedir jugadores propios.
-  - Ofrecer jugadores propios a clubes.
-  - Hacer ofertas por jugadores rivales.
-- Las compras aceptadas quedan pendientes y el jugador se incorpora al plantel en el siguiente turno.
-- Las probabilidades internas de negociación no se muestran en la interfaz.
+## Cambios principales
+- Durante la postemporada se generan ofertas adicionales por jugadores propios.
+- Las ofertas priorizan internamente a mejores jugadores, goleadores y asistidores.
+- Llegan como mensajes normales de mercado, sin mostrar la lógica de probabilidad ni el criterio de selección.
+- Se evita duplicar ofertas pendientes sobre el mismo jugador.
+- Se mantiene el control de 3 turnos para volver a usar `Ofrecer a clubes` manualmente.
 
 ## Archivos incluidos
 - `index.html`
 - `app.js`
 - `style.css`
 - `simulador-2.0.js`
-- `README.md`
-- `VERSION.md`
+- `data/Liga Argentina.json`
 - `data/jugadores.json`
 - `data/sponsors.json`
-
-## Nota
-Este ZIP no incluye `pitch-board.png`.

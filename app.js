@@ -7,7 +7,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.17';
+const APP_VERSION = 'V2.18';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -101,6 +101,32 @@ const RETIREMENT_MAX_AGE = 38;
 const SEASON_SALARY_BASE_REDUCTION = 0.05;
 const SEASON_SALARY_MATCH_BONUS = 0.01;
 const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
+
+const CLUB_ROSTER_SIZE = 25;
+const PLAYER_GENERATION_RULES_VERSION = 'V1.02';
+const PLAYER_GENERATION_NATIONALITY_GROUPS = [
+  { id:'argentinos', probability:0.70, countries:['Argentina'] },
+  { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
+  { id:'resto_del_mundo', probability:0.10, countries:['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana'] }
+];
+const PLAYER_GENERATION_POSITION_GROUPS = [
+  { id:'POR', probability:0.10, positions:['POR'] },
+  { id:'DEF', probability:0.30, positions:['LD','LI','DFC'] },
+  { id:'MID', probability:0.30, positions:['MCD','MC','MCO'] },
+  { id:'ATT', probability:0.30, positions:['ED','EI','DC'] }
+];
+const PLAYER_GENERATION_MEDIA_RANGES = [
+  { id:'elite_mundial', probability:0.03, media_min:92, media_max:99, salaryMultiplier:3000000 },
+  { id:'estrella', probability:0.07, media_min:80, media_max:91, salaryMultiplier:1000000 },
+  { id:'titular_competitivo', probability:0.22, media_min:68, media_max:79, salaryMultiplier:300000 },
+  { id:'profesional_promedio_bajo', probability:0.50, media_min:43, media_max:67, salaryMultiplier:80000 },
+  { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
+];
+const PLAYER_CLAUSE_MIN_MULTIPLIER = 6;
+const PLAYER_CLAUSE_AGE_REDUCTION = 10;
+const PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER = { 1:500, 2:450, 3:300 };
+const FREE_YOUTH_SALARY_FACTOR = 0.55;
+const MARKET_FREE_AGENT_SALARY_FACTOR = 0.75;
 
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
@@ -511,8 +537,9 @@ function roleBadge(position){
 
 function normalizePlayerPosition(position, playerId=0){
   const pos = String(position || '').toUpperCase();
+  const aliases = { ARQ:'POR', CAI:'LI', CAD:'LD', MI:'MC', MD:'MC', SD:'DC', VOL:'MC' };
+  if(aliases[pos]) return aliases[pos];
   if(pos === 'EXT') return (Number(playerId) || 0) % 2 === 0 ? 'ED' : 'EI';
-  if(pos === 'VOL') return 'MC';
   const valid = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
   return valid.includes(pos) ? pos : 'MC';
 }
@@ -526,6 +553,158 @@ function playerRoleGroup(position){
   if(['LD','LI','DFC'].includes(pos)) return 'DEF';
   if(['MCD','MC','MCO'].includes(pos)) return 'MID';
   return 'ATT';
+}
+
+function weightedRulePick(items, seedKey){
+  const list = (items || []).filter(item => Number(item.probability) > 0);
+  if(!list.length) return (items || [])[0] || null;
+  const total = list.reduce((sum,item)=>sum + Number(item.probability || 0), 0);
+  let roll = (hashNumber(seedKey, 1000000) / 1000000) * total;
+  for(const item of list){
+    roll -= Number(item.probability || 0);
+    if(roll <= 0) return item;
+  }
+  return list[list.length - 1];
+}
+function nationalityGroupId(nationality){
+  const nat = String(nationality || '');
+  if(nat === 'Argentina') return 'argentinos';
+  const south = PLAYER_GENERATION_NATIONALITY_GROUPS.find(g=>g.id==='sudamerica')?.countries || [];
+  if(south.includes(nat)) return 'sudamerica';
+  return 'resto_del_mundo';
+}
+function mediaRangeIdForOverall(media){
+  const value = Math.round(Number(media) || 0);
+  return (PLAYER_GENERATION_MEDIA_RANGES.find(range => value >= range.media_min && value <= range.media_max) || PLAYER_GENERATION_MEDIA_RANGES[PLAYER_GENERATION_MEDIA_RANGES.length - 1]).id;
+}
+function mediaRangeForOverall(media){
+  const value = Math.round(Number(media) || 0);
+  return PLAYER_GENERATION_MEDIA_RANGES.find(range => value >= range.media_min && value <= range.media_max) || PLAYER_GENERATION_MEDIA_RANGES[PLAYER_GENERATION_MEDIA_RANGES.length - 1];
+}
+function createPlayerGenerationContext(targetTotal=0, activePlayers=[]){
+  return { targetTotal:Math.max(1, Math.round(Number(targetTotal) || 0)), activePlayers:Array.isArray(activePlayers) ? activePlayers.slice() : [], created:[] };
+}
+function contextPlayersForGeneration(context){
+  if(!context) return [];
+  return (context.activePlayers || []).concat(context.created || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
+}
+function registerGeneratedPlayer(context, player){
+  if(context && player) context.created.push(player);
+}
+function underTargetRules(rules, selector, context){
+  if(!context) return [];
+  const players = contextPlayersForGeneration(context);
+  const targetTotal = Math.max(players.length + 1, Number(context.targetTotal || 0));
+  const counts = {};
+  players.forEach(player => { const key = selector(player); counts[key] = (counts[key] || 0) + 1; });
+  return rules.filter(rule => (counts[rule.id] || 0) < Math.ceil(targetTotal * Number(rule.probability || 0)));
+}
+function pickRuleWithAudit(rules, selector, context, seedKey){
+  const under = underTargetRules(rules, selector, context);
+  if(under.length) return weightedRulePick(under, `${seedKey}-audit`);
+  return weightedRulePick(rules, seedKey);
+}
+function pickMediaRangeWithAudit(context, seedKey){
+  const preferred = weightedRulePick(PLAYER_GENERATION_MEDIA_RANGES, `${seedKey}-range`);
+  if(!context) return preferred;
+  const under = underTargetRules(PLAYER_GENERATION_MEDIA_RANGES, player => mediaRangeIdForOverall(player.overall ?? visibleOverall(player)), context);
+  if(!under.length || under.some(range => range.id === preferred.id)) return preferred;
+  const preferredIndex = PLAYER_GENERATION_MEDIA_RANGES.findIndex(range => range.id === preferred.id);
+  const lower = PLAYER_GENERATION_MEDIA_RANGES.slice(preferredIndex + 1).find(range => under.some(item => item.id === range.id));
+  if(lower) return lower;
+  return weightedRulePick(under, `${seedKey}-range-fallback`) || preferred;
+}
+function pickNationalityForGeneration(id, label, context=null){
+  const group = pickRuleWithAudit(PLAYER_GENERATION_NATIONALITY_GROUPS, player => nationalityGroupId(player.nationality), context, `${label}-${id}-nat-group`);
+  const countries = group?.countries?.length ? group.countries : ['Argentina'];
+  return countries[hashNumber(`${label}-${id}-nat-country`, countries.length)];
+}
+function pickPositionGroupForGeneration(id, label, context=null){
+  return pickRuleWithAudit(PLAYER_GENERATION_POSITION_GROUPS, player => playerRoleGroup(player.position), context, `${label}-${id}-pos-group`)?.id || 'MID';
+}
+function pickPositionFromGroup(groupId, id, label){
+  const group = PLAYER_GENERATION_POSITION_GROUPS.find(item => item.id === groupId) || PLAYER_GENERATION_POSITION_GROUPS[2];
+  const pool = group.positions || ['MC'];
+  return pool[hashNumber(`${label}-${id}-pos`, pool.length)];
+}
+function mediaFromGenerationRules(prestige, id, group, context=null, label='player'){
+  const range = pickMediaRangeWithAudit(context, `${label}-${id}-${group}`);
+  const span = Math.max(1, range.media_max - range.media_min + 1);
+  const raw = range.media_min + hashNumber(`${label}-${id}-${group}-media`, span);
+  const prestigeBias = Math.round(((Number(prestige) || 50) - 50) / 28);
+  return clamp(raw + prestigeBias, range.media_min, range.media_max);
+}
+function initialAnnualSalaryForMedia(media, factor=1){
+  const range = mediaRangeForOverall(media);
+  return Math.max(0, Math.round((Number(media) || 0) * Number(range.salaryMultiplier || 0) * Number(factor || 1)));
+}
+function clauseBaseFromDivisionName(divisionName){
+  const lower = String(divisionName || '').toLowerCase();
+  if(lower.includes('profesional') || lower.includes('primera')) return PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER[1];
+  if(lower.includes('nacional') || lower.includes('segunda')) return PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER[2];
+  return PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER[3];
+}
+function clauseBaseForClub(clubId, divisionName=''){
+  if(Number(clubId || 0) <= 0) return clauseBaseFromDivisionName(divisionName);
+  if(seed?.clubs?.length){
+    const order = Math.round(Number(clubDivision(clubId).order || 3));
+    return PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER[order] || PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER[3];
+  }
+  return clauseBaseFromDivisionName(divisionName);
+}
+function playerClauseFor(player, clubId=player?.clubId, divisionName=''){
+  const salary = Math.max(0, Math.round(Number(player?.salary || 0)));
+  const age = Math.max(15, Math.round(Number(player?.age || 18)));
+  const multiplier = Math.max(PLAYER_CLAUSE_MIN_MULTIPLIER, clauseBaseForClub(clubId, divisionName) - (PLAYER_CLAUSE_AGE_REDUCTION * age));
+  return Math.max(salary * PLAYER_CLAUSE_MIN_MULTIPLIER, Math.round(salary * multiplier));
+}
+function refreshPlayerClause(player){
+  if(!player) return 0;
+  player.clause = playerClauseFor(player, player.clubId);
+  player.value = player.clause;
+  return player.clause;
+}
+function refreshAllPlayerClauses(){
+  (seed?.players || []).forEach(refreshPlayerClause);
+  (game?.marketPlayers || []).forEach(refreshPlayerClause);
+}
+function ensurePlayerEconomics(player, salaryFactor=1){
+  if(!player) return player;
+  const media = Math.max(1, Math.round(Number(player.overall || 0) || visibleOverall(player) || 50));
+  if(!Number.isFinite(Number(player.salary)) || Number(player.salary) <= 0){
+    player.salary = initialAnnualSalaryForMedia(media, salaryFactor);
+  }
+  if(!Number.isFinite(Number(player.clause)) || Number(player.clause) <= 0 || !Number.isFinite(Number(player.value)) || Number(player.value) <= 0){
+    refreshPlayerClause(player);
+  }
+  return player;
+}
+function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false }){
+  const cleanPosition = normalizePlayerPosition(position, id);
+  const group = playerRoleGroup(cleanPosition);
+  const media = mediaFromGenerationRules(prestige, id, group, generationContext, nameContext);
+  const skills = skillsForPosition(cleanPosition, media, id);
+  const visible = averageGeneratedVisible(cleanPosition, skills);
+  const player = {
+    id,
+    name:generatedPlayerName(id, nameContext),
+    age,
+    position:cleanPosition,
+    clubId,
+    freeAgent:Boolean(freeAgent),
+    youthFreeAgent:Boolean(youthFreeAgent),
+    nationality:pickNationalityForGeneration(id, divisionName || nameContext, generationContext),
+    overall:visible,
+    skills,
+    salary:initialAnnualSalaryForMedia(visible, salaryFactor)
+  };
+  player.clause = playerClauseFor(player, clubId, divisionName);
+  player.value = player.clause;
+  registerGeneratedPlayer(generationContext, player);
+  return player;
+}
+function generationRosterBlueprint(){
+  return ['POR','POR','POR','LD','LI','DFC','DFC','DFC','LD','LI','MCD','MCD','MC','MC','MC','MCO','MCO','MCO','ED','EI','ED','EI','DC','DC','DC'];
 }
 function nationalityRegion(nationality){
   const value = String(nationality || '').toLowerCase();
@@ -728,6 +907,7 @@ async function loadInitialSeed(){
     fallback.meta = { ...(fallback.meta || {}), source:fallback.meta?.source || 'seed.json', signature:seedSignature(fallback) };
     fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:c.crestPath || `img/escudos/${imageSlug(c.name)}.png` }));
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
+    fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
     return fallback;
   }
   throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
@@ -744,6 +924,8 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
       prizeMultiplier: divisionPrizeMultiplier(name, index)
     };
   });
+  const totalClubCount = divisions.reduce((sum, division) => sum + normalizeTeamList(division.teams || division.equipos || division.clubes || division.clubs || []).length, 0);
+  const generationContext = createPlayerGenerationContext(totalClubCount * CLUB_ROSTER_SIZE, []);
   const clubs = [];
   const players = [];
   let clubId = 1;
@@ -774,7 +956,7 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
         crestPath:team.escudo || team.crestPath || `img/escudos/${imageSlug(name)}.png`
       };
       clubs.push(club);
-      const generated = generateClubPlayers(club, prestige, playerId);
+      const generated = generateClubPlayers(club, prestige, playerId, generationContext);
       players.push(...generated);
       playerId += generated.length;
       clubId += 1;
@@ -930,32 +1112,23 @@ function seedSignature(data){
   const raw = `${(data.clubs || []).map(c=>c.name).join('|')}::${(data.divisions || []).map(d=>d.name).join('|')}`;
   return `seed-${hashNumber(raw, 1000000000)}`;
 }
-function generateClubPlayers(club, prestige, startId){
-  const blueprint = [
-    ['POR','POR'], ['POR','POR'],
-    ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'],
-    ['MCD','MID'], ['MC','MID'], ['MC','MID'], ['MCO','MID'], ['ED','MID'], ['EI','MID'], ['MC','MID'], ['MCD','MID'],
-    ['DC','ATT'], ['DC','ATT'], ['ED','ATT'], ['EI','ATT'], ['DC','ATT'], ['ED','ATT'], ['MCO','ATT']
-  ];
-  return blueprint.map(([position, group], index) => {
+function generateClubPlayers(club, prestige, startId, generationContext=null){
+  const blueprint = generationRosterBlueprint();
+  return blueprint.map((position, index) => {
     const id = startId + index;
-    const media = playerBaseMedia(prestige, id, group);
+    const group = playerRoleGroup(position);
     const age = group === 'POR' ? 25 + hashNumber(`age-${club.name}-${id}`, 14) : 18 + hashNumber(`age-${club.name}-${id}`, 16);
-    const name = generatedPlayerName(id, club.name);
-    const skills = skillsForPosition(position, media, id);
-    const visible = averageGeneratedVisible(position, skills);
-    return {
+    return generatedPlayerFactory({
       id,
-      name,
-      age,
       position,
       clubId:club.id,
-      nationality:generatedNationality(id, club.divisionName),
-      overall:visible,
-      skills,
-      salary:Math.round((45000 + visible * visible * 950) * (club.prizeMultiplier || 1)),
-      value:Math.round((600000 + visible * visible * 16000) * (1 + (club.reputation || 50)/120))
-    };
+      age,
+      prestige,
+      nameContext:club.name,
+      divisionName:club.divisionName,
+      generationContext,
+      salaryFactor:1
+    });
   });
 }
 function playerBaseMedia(prestige, id, group){
@@ -970,8 +1143,7 @@ function generatedPlayerName(id, clubNameValue){
   return `${first} ${last}`;
 }
 function generatedNationality(id, divisionName){
-  const pool = ['Argentina','Argentina','Argentina','Argentina','Uruguay','Paraguay','Colombia','Chile','Ecuador','Perú','Bolivia','Brasil'];
-  return pool[hashNumber(`${divisionName}-${id}-nat`, pool.length)];
+  return pickNationalityForGeneration(id, divisionName || 'Jugador', null);
 }
 function skillValue(base, id, label, offset=0){
   return clamp(Math.round(base + offset + hashNumber(`${id}-${label}`, 15) - 7), 1, 99);
@@ -1285,7 +1457,8 @@ function normalizeGame(saved){
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();
-  normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); });
+  normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR); });
+  seed.players.forEach(p => ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1));
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
   normalized.fixtures = normalized.fixtures || structuredClone(seed.fixtures);
   normalized.standings = normalized.standings || createInitialStandings();
@@ -1332,6 +1505,7 @@ function ensurePlayerStateForAll(){
   game.trainingPlan = game.trainingPlan || {};
   game.playerStats = game.playerStats || {};
   seed.players.forEach(p => {
+    ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : (p.freeAgent ? MARKET_FREE_AGENT_SALARY_FACTOR : 1));
     if(!Number.isFinite(game.playerCondition[p.id])) game.playerCondition[p.id] = p.freeAgent ? 15 + hashNumber(`free-cond-${p.id}`, 15) : 99;
     if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = p.freeAgent ? 35 + hashNumber(`free-morale-${p.id}`, 55) : PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
@@ -1592,6 +1766,7 @@ function applySeasonSalaryAdjustments(){
     const nextSalary = Math.max(0, Math.round(oldSalary * (1 + pct)));
     const delta = nextSalary - oldSalary;
     player.salary = nextSalary;
+    refreshPlayerClause(player);
     players += 1;
     totalDelta += delta;
     if(delta > 0) increased += 1;
@@ -1641,36 +1816,34 @@ function nextPlayerId(){
   return Math.max(...ids) + 1;
 }
 function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
-  const positions = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
+  const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
+  const generationContext = createPlayerGenerationContext(activePlayers.length + count, activePlayers);
   const players = [];
   let id = nextPlayerId();
   const season = Number(game?.seasonNumber || 1);
   for(let i=0;i<count;i++, id++){
-    const position = positions[hashNumber(`season-youth-pos-${season}-${id}`, positions.length)];
-    const group = position === 'POR' ? 'POR' : ['LD','LI','DFC'].includes(position) ? 'DEF' : ['MCD','MC','MCO'].includes(position) ? 'MID' : 'ATT';
-    const media = clamp(34 + hashNumber(`season-youth-media-${season}-${id}`, 40), 34, 73);
-    const skills = skillsForPosition(position, media, id);
-    const visible = averageGeneratedVisible(position, skills);
-    players.push({
+    const group = pickPositionGroupForGeneration(id, `season-youth-${season}`, generationContext);
+    const position = pickPositionFromGroup(group, id, `season-youth-${season}`);
+    const player = generatedPlayerFactory({
       id,
-      name: generatedPlayerName(id, `Juveniles libres ${season}`),
-      age: 17 + hashNumber(`season-youth-age-${season}-${id}`, 7),
       position,
       clubId:0,
+      age:17 + hashNumber(`season-youth-age-${season}-${id}`, 7),
+      prestige:48,
+      nameContext:`Juveniles libres ${season}`,
+      divisionName:'Juveniles libres',
+      generationContext,
+      salaryFactor:FREE_YOUTH_SALARY_FACTOR,
       freeAgent:true,
-      youthFreeAgent:true,
-      nationality: generatedNationality(id, 'Juveniles libres'),
-      overall:visible,
-      skills,
-      salary:Math.round(18000 + visible * visible * 420),
-      value:Math.round(250000 + visible * visible * 9000)
+      youthFreeAgent:true
     });
+    players.push(player);
   }
   return players;
 }
-function addSeasonYouthFreeAgents(){
+function addSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
   if(!game) return [];
-  const newPlayers = generateSeasonYouthFreeAgents(SEASON_YOUTH_FREE_AGENT_COUNT);
+  const newPlayers = generateSeasonYouthFreeAgents(count);
   game.marketPlayers = (game.marketPlayers || []).concat(newPlayers);
   mergeMarketPlayersIntoSeed(newPlayers);
   newPlayers.forEach(p => {
@@ -1750,8 +1923,10 @@ function applySeasonMovements(){
 }
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
+  const retiredCount = game.seasonTransition?.retirements?.length || 0;
   applySeasonMovements();
   const aging = applyBiSeasonalAging();
+  refreshAllPlayerClauses();
   const nextClubId = Number(selectedClubId || game.selectedClubId);
   game.selectedClubId = nextClubId;
   game.seasonNumber = (game.seasonNumber || 1) + 1;
@@ -1774,7 +1949,7 @@ function startNextSeason(selectedClubId){
   game.lastBudgetDelta = 0;
   game.tactic = normalizeTactic(nextClubId, DEFAULT_TACTIC);
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
-  addSeasonYouthFreeAgents();
+  addSeasonYouthFreeAgents(Math.max(SEASON_YOUTH_FREE_AGENT_COUNT, retiredCount));
   ensurePlayerStateForAll();
   pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
   activeTab = 'home';
@@ -2145,13 +2320,13 @@ function maybeGenerateTransferOffer(match){
   if(!game || !match) return;
   const roll = Math.random();
   if(roll > 0.28) return;
-  const candidates = playersByClub(game.selectedClubId).filter(p => p.value > 0 && !isUnavailable(p.id));
+  const candidates = playersByClub(game.selectedClubId).filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id));
   if(!candidates.length) return;
   candidates.sort((a,b)=>visibleOverall(b)-visibleOverall(a));
   const pool = candidates.slice(0, Math.min(12, candidates.length));
   const player = pool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}`, pool.length)];
   const pct = 20 + hashNumber(`offer-pct-${player.id}-${Date.now()}`, 81);
-  const amount = Math.round((player.value || 0) * pct / 100);
+  const amount = Math.round(refreshPlayerClause(player) * pct / 100);
   const foreignClub = FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)];
   pushGameMessage({
     type:'mercado',
@@ -2193,28 +2368,26 @@ function removePlayerFromCurrentTactic(playerId){
 }
 function generateMarketPlayers(count=50){
   const startId = Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000;
-  const positions = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
+  const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
+  const generationContext = createPlayerGenerationContext(activePlayers.length + count, activePlayers);
   const players = [];
   for(let i=0;i<count;i++){
     const id = startId + i;
-    const position = positions[hashNumber(`market-pos-${id}`, positions.length)];
-    const group = position === 'POR' ? 'POR' : ['LD','LI','DFC'].includes(position) ? 'DEF' : ['MCD','MC','MCO'].includes(position) ? 'MID' : 'ATT';
-    const media = clamp(38 + hashNumber(`market-media-${id}`, 42), 38, 79);
-    const skills = skillsForPosition(position, media, id);
-    const visible = averageGeneratedVisible(position, skills);
-    players.push({
+    const group = pickPositionGroupForGeneration(id, 'market', generationContext);
+    const position = pickPositionFromGroup(group, id, 'market');
+    const player = generatedPlayerFactory({
       id,
-      name: generatedPlayerName(id, 'Mercado Libre'),
-      age: 18 + hashNumber(`market-age-${id}`, 18),
       position,
       clubId:0,
-      freeAgent:true,
-      nationality: generatedNationality(id, 'Mercado'),
-      overall:visible,
-      skills,
-      salary:Math.round(35000 + visible * visible * 900),
-      value:Math.round(400000 + visible * visible * 13000)
+      age:18 + hashNumber(`market-age-${id}`, 18),
+      prestige:52,
+      nameContext:'Mercado Libre',
+      divisionName:'Mercado',
+      generationContext,
+      salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
+      freeAgent:true
     });
+    players.push(player);
   }
   return players;
 }
@@ -2256,7 +2429,8 @@ function hireFreeAgent(playerId){
   game.marketPlayers[idx].freeAgent = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   const player = playerById(playerId);
-  if(player){ player.clubId = game.selectedClubId; player.freeAgent = false; }
+  if(player){ player.clubId = game.selectedClubId; player.freeAgent = false; refreshPlayerClause(player); }
+  refreshPlayerClause(game.marketPlayers[idx]);
   game.playerCondition[playerId] = clamp(game.playerCondition[playerId] || (15 + hashNumber(`free-cond-${playerId}`, 15)), 1, 29);
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
   ensurePlayerStateForAll();
@@ -2366,7 +2540,7 @@ function worldPlayerRow(player){
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${Number(player.age || 0) || '—'}</td>
     <td>${worldPlayerTeamMarkup(player)}</td>
-    <td>${formatMoney(player.value || 0)}</td>
+    <td>${formatMoney(player.clause || player.value || 0)}</td>
     <td>${formatMoney(player.salary || 0)}</td>
     <td>${worldStatCell(player,'Ataque/Salto')}</td>
     <td>${worldStatCell(player,'Defensa')}</td>
@@ -2434,7 +2608,7 @@ function renderSquad(){
       <td>${moraleBar(p.id)}</td>
       <td>${visibleStats(p).Resistencia}</td>
       <td>${availabilityStatusMarkup(p.id)}</td>
-      <td>${formatMoney(p.value)}</td>
+      <td>${formatMoney(p.clause || p.value || 0)}</td>
     </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. Los controles de orden están en la cabecera de cada columna.</p></div>
@@ -2450,7 +2624,7 @@ function renderSquad(){
       <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
       <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
-      <th>${columnSort('Valor', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Cláusula', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
   `;
   document.querySelectorAll('[data-squad-sort]').forEach(select => {
@@ -3849,7 +4023,7 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Estado físico</span><strong>${currentCondition(p.id)}/99</strong></div>
           <div class="stat-rank"><span>Moral</span><strong>${currentMorale(p.id)}/99</strong></div>
           <div class="profile-bar-wrap">${moraleBar(p.id)}</div>
-          <div class="stat-rank"><span>Valor</span><strong>${formatMoney(p.value)}</strong></div>
+          <div class="stat-rank"><span>Cláusula</span><strong>${formatMoney(p.clause || p.value || 0)}</strong></div>
           <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
         </div>
         <div class="card inner"><h3>Temporada</h3>

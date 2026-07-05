@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fútbol Manager MVP V2.0</title>
+  <title>Fútbol Manager MVP V2.2</title>
   <meta name="description" content="MVP de juego manager de fútbol en navegador con datos JSON y guardado local." />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">MVP local · V2.0</p>
+      <p class="eyebrow">MVP local · V2.2</p>
       <h1>Fútbol Manager</h1>
     </div>
     <div class="top-actions">
@@ -22,11 +22,8 @@
 
   <main class="shell">
     <aside class="panel side">
-      <section id="newGameBox" class="new-game">
-        <h2>Nueva partida</h2>
-        <label for="clubSelect">Elegir club</label>
-        <select id="clubSelect"></select>
-        <button id="btnNewGame" class="primary full">Empezar</button>
+      <section id="newGameBox" class="new-game new-game-collapsed">
+        <button id="btnOpenNewGame" class="new-game-toggle" type="button"><span>Nueva partida</span><span aria-hidden="true">▾</span></button>
       </section>
 
       <section class="status-card">

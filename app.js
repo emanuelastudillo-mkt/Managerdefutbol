@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V2.0';
+const APP_VERSION = 'V2.2';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -13,6 +13,8 @@ const PLAYER_MORALE_START = 60;
 const PSYCHOLOGIST_COST = 500000;
 const PSYCHOLOGIST_SUCCESS_CHANCE = 0.90;
 const PSYCHOLOGIST_COOLDOWN_TURNS = 5;
+const KINESIOLOGIST_COST = 1000000;
+const KINESIOLOGIST_FAILURE_CHANCE = 0.20;
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -99,6 +101,7 @@ let selectedStandingsDivision = 'all';
 let selectedStatsDivision = 'all';
 let uiTicker = null;
 let matchRevealTimers = [];
+let newGameModalShown = false;
 
 const $ = (id) => document.getElementById(id);
 const view = $('view');
@@ -236,8 +239,20 @@ function isSuspended(playerId){
 }
 function tacticStatusIcon(playerId){
   if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';
-  if(isSuspended(playerId)) return '<span class="red-card" title="Suspendido">■</span>';
+  if(isSuspended(playerId)) return '<span class="red-card status-red-card" title="Expulsado / suspendido">■</span>';
   return '<span class="ok">OK</span>';
+}
+function availabilityIcons(playerId){
+  const icons = [];
+  if(isInjured(playerId)) icons.push('<span class="injury-cross inline" title="Lesionado">✚</span>');
+  if(isSuspended(playerId)) icons.push('<span class="red-card status-red-card inline" title="Expulsado / suspendido">■</span>');
+  return icons.join('');
+}
+function availabilityStatusMarkup(playerId){
+  const unavailable = isUnavailable(playerId);
+  const icons = availabilityIcons(playerId);
+  if(icons) return `<span class="availability-status ${unavailable ? 'bad' : 'ok'}">${icons}<span>${escapeHtml(statusText(playerId))}</span></span>`;
+  return `<span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(playerId))}</span>`;
 }
 function pickInjuryType(){
   const total = INJURY_TABLE.reduce((sum, item) => sum + item.probability, 0);
@@ -258,6 +273,16 @@ function injuredPlayersByClub(clubId){
     .map(player => ({ player, status:playerStatus(player.id), remaining:turnsRemaining(player.id) }))
     .filter(item => item.remaining > 0)
     .sort((a,b)=>b.remaining-a.remaining || a.player.name.localeCompare(b.player.name));
+}
+function injuredHomeCard(item){
+  const p = item.player;
+  return `<div class="injured-home-player">
+    ${faceImg(p, 'injured-home-face')}
+    <div class="injured-home-info">
+      <button class="linklike" data-player-id="${p.id}">${availabilityIcons(p.id)}${escapeHtml(p.name)}</button>
+      <span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${item.remaining} turno(s) · Fís. ${currentCondition(p.id)}/99</span>
+    </div>
+  </div>`;
 }
 function squadFitnessAverage(clubId){
   const squad = playersByClub(clubId);
@@ -292,6 +317,15 @@ function moraleBar(playerId){
 function squadMoraleAverage(clubId){
   const squad = playersByClub(clubId);
   return Math.round(avg(squad.map(p => currentMorale(p.id)))) || 0;
+}
+function dashboardDonut(label, value, max=100){
+  const cleanMax = Math.max(1, Number(max) || 100);
+  const cleanValue = clamp(Math.round(Number(value) || 0), 0, cleanMax);
+  const deg = Math.round((cleanValue / cleanMax) * 360);
+  return `<div class="dashboard-donut-card card">
+    <div class="donut-chart" style="--value-deg:${deg}deg" aria-label="${escapeHtml(label)} ${cleanValue} de ${cleanMax}"><span>${cleanValue}</span></div>
+    <div><p class="label">${escapeHtml(label)}</p><strong>${cleanValue}/${cleanMax}</strong></div>
+  </div>`;
 }
 function matchSkill(p, skillName){
   return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id) * moraleFactor(p.id)), 1, 99);
@@ -430,11 +464,12 @@ function playerMentality(playerId, tactic = game?.tactic){
 }
 function applyStarterMentalities(tactic){
   const next = { ...(tactic.playerMentalities || {}) };
-  (tactic.starters || []).forEach(id => {
+  (tactic.starters || []).filter(Boolean).forEach(id => {
     if(!MENTALITIES.includes(next[id])) next[id] = 'posicional';
   });
   Object.keys(next).forEach(id => {
-    if(!(tactic.starters || []).includes(Number(id))) delete next[id];
+    const cleanId = Number(id);
+    if(!cleanId || !(tactic.starters || []).includes(cleanId)) delete next[id];
   });
   tactic.playerMentalities = next;
   return tactic;
@@ -934,6 +969,7 @@ async function resetLocal(){
   activeTab = 'home';
   renderAll();
   showNotice('Partida local eliminada.');
+  setTimeout(()=>openNewGameModal(true), 0);
 }
 
 async function init(){
@@ -943,22 +979,30 @@ async function init(){
     bindEvents();
     startUiTicker();
     const loaded = await loadLocal(true);
-    if(!loaded) renderAll();
+    if(!loaded){
+      renderAll();
+      setTimeout(()=>openNewGameModal(true), 0);
+    }
   }catch(error){
     console.error(error);
     view.innerHTML = `<div class="empty"><h2>Error de carga</h2><p>${escapeHtml(error.message)}. Subí <code>data/Liga argentina.json</code> o un <code>data/seed.json</code> válido y ejecutá el proyecto con GitHub Pages o servidor local.</p></div>`;
   }
 }
-function fillClubSelect(){
+function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
-  $('clubSelect').innerHTML = divisions.map(division => {
+  return divisions.map(division => {
     const clubs = seed.clubs.filter(c => (c.divisionId || 'default') === division.id);
     if(!clubs.length) return '';
     return `<optgroup label="${escapeHtml(division.name)}">${clubs.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`;
   }).join('');
 }
+function fillClubSelect(){
+  const select = $('clubSelect');
+  if(select) select.innerHTML = clubSelectOptionsMarkup();
+}
 function bindEvents(){
-  $('btnNewGame').addEventListener('click', ()=> newGame(Number($('clubSelect').value)));
+  $('btnOpenNewGame')?.addEventListener('click', openNewGameModal);
+  $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0)));
   $('btnSave').addEventListener('click', saveLocal);
   $('btnLoad').addEventListener('click', ()=>loadLocal(false));
   $('btnReset').addEventListener('click', resetLocal);
@@ -1071,7 +1115,7 @@ function assignPlayerToStarterSlot(playerId, slotIndex){
   const displaced = starters[slotIndex];
   starters[slotIndex] = playerId;
   if(displaced && displaced !== playerId && bench.length < 10) bench.push(displaced);
-  game.tactic.starters = starters.filter(Boolean);
+  game.tactic.starters = starters.slice(0,11);
   game.tactic.bench = bench.filter(Boolean).slice(0,10);
   game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
   game.tactic = applyStarterMentalities(game.tactic);
@@ -1080,7 +1124,11 @@ function assignPlayerToStarterSlot(playerId, slotIndex){
 }
 function movePlayerToPool(playerId, pool){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
-  game.tactic.starters = game.tactic.starters.filter(id => id !== playerId);
+  const starters = game.tactic.starters.slice(0,11);
+  while(starters.length < 11) starters.push(0);
+  const idx = starters.indexOf(playerId);
+  if(idx >= 0) starters[idx] = 0;
+  game.tactic.starters = starters;
   game.tactic.bench = game.tactic.bench.filter(id => id !== playerId);
   if(pool === 'bench'){
     if(game.tactic.bench.length < 10) game.tactic.bench.push(playerId);
@@ -1095,10 +1143,12 @@ function normalizeTactic(clubId, tactic){
   const base = {...DEFAULT_TACTIC, ...(tactic || {})};
   const squad = playersByClub(clubId);
   const squadIds = new Set(squad.map(p => p.id));
-  let starters = (base.starters || []).map(Number).filter(id => squadIds.has(id));
+  const rawStarters = Array.isArray(base.starters) ? base.starters.map(Number) : [];
+  let starters = rawStarters.length >= 11
+    ? rawStarters.slice(0,11).map(id => squadIds.has(id) ? id : 0)
+    : autoSelectStarters(clubId, base).map(p => p.id);
   let bench = (base.bench || []).map(Number).filter(id => squadIds.has(id) && !starters.includes(id));
-  if(starters.length !== 11){ starters = autoSelectStarters(clubId, base).map(p => p.id); }
-  if(bench.length !== 10){ bench = autoSelectBench(clubId, starters).map(p => p.id); }
+  if(bench.length !== 10){ bench = autoSelectBench(clubId, starters.filter(Boolean)).map(p => p.id); }
   let autoSubs = Array.isArray(base.autoSubs) ? base.autoSubs.slice(0,5) : [];
   autoSubs = autoSubs.map(rule => ({
     outId: Number(rule.outId || 0),
@@ -1141,6 +1191,8 @@ function newGame(selectedClubId){
     lastMatchTactics: {}
   };
   activeTab = 'home';
+  closeModal();
+  newGameModalShown = true;
   renderAll();
   showNotice('Nueva partida creada. Revisá táctica, titulares y mentalidades antes de avanzar.');
 }
@@ -1204,6 +1256,7 @@ function renderHome(){
   const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
   const avgFitness = squadFitnessAverage(game.selectedClubId);
   const avgMorale = squadMoraleAverage(game.selectedClubId);
+  const cohesion = cohesionValue(game.selectedClubId);
   const injuredList = injuredPlayersByClub(game.selectedClubId);
   const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
   const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
@@ -1226,11 +1279,14 @@ function renderHome(){
       <h3>Momento del club</h3>
       <div class="main-visual-placeholder"><strong>Próximamente</strong><span>Aquí se insertará una imagen contextual según el momento del club.</span></div>
     </div>
-    <div class="grid cols-4" style="margin-top:14px">
+    <div class="grid cols-4 dashboard-donut-grid" style="margin-top:14px">
+      ${dashboardDonut('Media general', avgOverall, 99)}
+      ${dashboardDonut('Estado físico', avgFitness, 99)}
+      ${dashboardDonut('Moral', avgMorale, 99)}
+      ${dashboardDonut('Cohesión', cohesion, 100)}
+    </div>
+    <div class="grid cols-3" style="margin-top:14px">
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
-      <div class="card"><p class="label">Media general</p><div class="metric">${avgOverall}</div></div>
-      <div class="card"><p class="label">Estado físico general</p><div class="metric">${avgFitness}</div><p class="small muted">sobre 99</p></div>
-      <div class="card"><p class="label">Moral general</p><div class="metric">${avgMorale}</div><p class="small muted">sobre 99</p></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
       <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
     </div>
@@ -1247,7 +1303,7 @@ function renderHome(){
     </div>
     <div class="card injury-home-card" style="margin-top:14px">
       <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
-      ${injuredList.length ? `<div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Lesión</th><th>Turnos restantes</th><th>Estado físico</th></tr></thead><tbody>${injuredList.map(item => `<tr><td><button class="linklike" data-player-id="${item.player.id}">${escapeHtml(item.player.name)}</button></td><td>${escapeHtml(item.status.injuryLabel || 'Lesión')}</td><td><strong>${item.remaining}</strong></td><td>${currentCondition(item.player.id)}/99</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
+      ${injuredList.length ? `<div class="injured-home-list">${injuredList.map(item => injuredHomeCard(item)).join('')}</div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
     </div>
     <div class="split" style="margin-top:14px">
       <div class="card">
@@ -1390,7 +1446,7 @@ function renderSquad(){
       <td>${conditionBar(p.id)}</td>
       <td>${moraleBar(p.id)}</td>
       <td>${visibleStats(p).Resistencia}</td>
-      <td><span class="${isUnavailable(p.id) ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span></td>
+      <td>${availabilityStatusMarkup(p.id)}</td>
       <td>${formatMoney(p.value)}</td>
     </tr>`).join('');
   view.innerHTML = `
@@ -1416,10 +1472,11 @@ function renderSquad(){
   });
 }
 function playerDragCard(p, extra=''){
-  const injuryIcon = isInjured(p.id) ? '<span class="injury-cross inline" title="Lesionado">✚</span>' : '';
-  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${isInjured(p.id) ? 'injured-card' : ''}" draggable="true" data-drag-player="${p.id}">
+  const statusIcons = availabilityIcons(p.id);
+  const unavailableClass = isUnavailable(p.id) ? 'injured-card' : '';
+  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass}" draggable="true" data-drag-player="${p.id}">
     ${faceImg(p, 'drag-face')}
-    <div><strong>${injuryIcon}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
+    <div><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
   </div>`;
 }
 function renderTactics(){
@@ -1514,7 +1571,7 @@ function tacticPlayerRow(p){
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td><strong>${visibleOverall(p)}</strong></td>
     <td>${currentCondition(p.id)}/99</td>
-    <td>${isInjured(p.id) ? tacticStatusIcon(p.id) : `<span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span>`}</td>
+    <td>${availabilityStatusMarkup(p.id)}</td>
     <td><select class="role-select" data-role-player="${p.id}" ${unavailable ? 'disabled' : ''}>
       <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
       <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
@@ -1592,10 +1649,12 @@ function validateCurrentTactic(showErrors=true){
 }
 function validateTactic(tactic){
   const errors = [];
-  const uniqueStarters = new Set(tactic.starters || []);
-  const uniqueBench = new Set(tactic.bench || []);
-  if(uniqueStarters.size !== 11) errors.push('Necesitás exactamente 11 titulares.');
-  if(uniqueBench.size !== 10) errors.push('Necesitás exactamente 10 suplentes.');
+  const starters = (tactic.starters || []).map(Number).filter(Boolean);
+  const bench = (tactic.bench || []).map(Number).filter(Boolean);
+  const uniqueStarters = new Set(starters);
+  const uniqueBench = new Set(bench);
+  if(starters.length !== 11 || uniqueStarters.size !== 11) errors.push('Necesitás exactamente 11 titulares.');
+  if(bench.length !== 10 || uniqueBench.size !== 10) errors.push('Necesitás exactamente 10 suplentes.');
   const duplicated = [...uniqueStarters].filter(id => uniqueBench.has(id));
   if(duplicated.length) errors.push('Un jugador no puede ser titular y suplente a la vez.');
   const unavailable = [...uniqueStarters, ...uniqueBench].filter(id => isUnavailable(id));
@@ -1629,7 +1688,7 @@ function renderStadium(){
     <div class="row section-title">
       <div>
         <h2>Estadio</h2>
-        <p class="tagline">Estado del campo de ${clubLink(game.selectedClubId)}. Cada partido como local baja el campo entre 5 y 8 puntos.</p>
+        <p class="tagline">Estado del campo de ${escapeHtml(clubName(game.selectedClubId))}. Cada partido como local nuestro campo de juego empeora, dale mantenimiento para evitar lesiones y dificultades para dar pases precisos.</p>
       </div>
       <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
     </div>
@@ -1898,7 +1957,9 @@ function simulateNextMatchday(){
   applyMoraleUpdates(results);
   advanceStadiumAfterMatches(results);
   if(ownResult) applyEconomyResult(ownResult);
-  game.lastOwnProblems = collectOwnProblems(ownResult);
+  const ownProblems = collectOwnProblems(ownResult);
+  removeOwnUnavailableFromTactic(ownProblems);
+  game.lastOwnProblems = ownProblems;
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   game.matchdayIndex += 1;
   game.currentDate = game.fixtures[game.matchdayIndex]?.date || round.date;
@@ -2052,6 +2113,9 @@ function renderEmployees(){
   const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
   const canCallPsychologist = cooldownLeft <= 0 && (game.budget || 0) >= PSYCHOLOGIST_COST;
   const cooldownText = cooldownLeft > 0 ? `<p class="small warn">Disponible nuevamente en ${cooldownLeft} turno(s).</p>` : '';
+  const kinesio = game.staffActions?.kinesiologist || null;
+  const kinesioActive = Boolean(kinesio?.active);
+  const injuredList = injuredPlayersByClub(game.selectedClubId);
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -2075,9 +2139,75 @@ function renderEmployees(){
         <div class="profile-bar-wrap">${moraleTeamBar(game.selectedClubId)}</div>
         ${last ? `<div class="staff-result ${last.success ? 'ok-result' : 'bad-result'}"><div class="project-progress completed"><span style="width:100%"></span></div><strong>${escapeHtml(last.message)}</strong></div>` : '<p class="muted">Sin acciones recientes.</p>'}
       </div>
+      <div class="card staff-card">
+        <h3>Kinesiólogo</h3>
+        <p class="muted">Contratación por temporada completa. Permite tratar lesionados una vez por turno para intentar reducir 1 turno de lesión.</p>
+        <p class="label">Costo</p>
+        <div class="metric small">${formatMoney(KINESIOLOGIST_COST)}</div>
+        ${kinesioActive ? '<span class="pill ok">Contratado</span>' : `<button id="btnHireKinesiologist" class="primary" ${(game.budget || 0) >= KINESIOLOGIST_COST ? '' : 'disabled'}>Contratar kinesiólogo</button>`}
+      </div>
+      <div class="card staff-card">
+        <h3>Tratamientos</h3>
+        ${kinesioActive ? injuredTreatmentList(injuredList) : '<p class="muted">Contratá al kinesiólogo para habilitar tratamientos sobre jugadores lesionados.</p>'}
+      </div>
     </div>
   `;
   $('btnMotivationalTalk')?.addEventListener('click', callMotivationalPsychologist);
+  $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
+  document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
+    btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat)));
+  });
+}
+function injuredTreatmentList(injuredList){
+  if(!injuredList.length) return '<p class="muted">No hay jugadores lesionados para tratar.</p>';
+  return `<div class="injured-treatment-list">${injuredList.map(item => {
+    const treated = wasKinesioTreatedThisTurn(item.player.id);
+    return `<div class="injured-treatment-row">
+      ${faceImg(item.player, 'injured-home-face')}
+      <div><button class="linklike" data-player-id="${item.player.id}">${availabilityIcons(item.player.id)}${escapeHtml(item.player.name)}</button><span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${item.remaining} turno(s)</span></div>
+      <button class="ghost" data-kinesio-treat="${item.player.id}" ${treated ? 'disabled' : ''}>${treated ? 'Tratado este turno' : 'Tratar'}</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+function wasKinesioTreatedThisTurn(playerId){
+  const key = `${game.matchdayIndex}:${playerId}`;
+  return Boolean(game.staffActions?.kinesiologyTreatments?.[key]);
+}
+function hireKinesiologist(){
+  if(!game) return;
+  if(game.staffActions?.kinesiologist?.active){ showNotice('El kinesiólogo ya está contratado.'); return; }
+  if((game.budget || 0) < KINESIOLOGIST_COST){ showNotice('Presupuesto insuficiente para contratar al kinesiólogo.'); return; }
+  game.budget -= KINESIOLOGIST_COST;
+  game.lastBudgetDelta = -KINESIOLOGIST_COST;
+  game.staffActions = game.staffActions || {};
+  game.staffActions.kinesiologist = { active:true, hiredMatchday:game.matchdayIndex };
+  saveLocal(true);
+  showNotice('Kinesiólogo contratado por la temporada completa.');
+  renderEmployees();
+}
+function treatInjuredPlayer(playerId){
+  if(!game?.staffActions?.kinesiologist?.active){ showNotice('Primero tenés que contratar al kinesiólogo.'); return; }
+  if(!isInjured(playerId)){ showNotice('El jugador no está lesionado.'); renderEmployees(); return; }
+  game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
+  const key = `${game.matchdayIndex}:${playerId}`;
+  if(game.staffActions.kinesiologyTreatments[key]){ showNotice('Este jugador ya recibió tratamiento en este turno.'); return; }
+  const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
+  game.staffActions.kinesiologyTreatments[key] = { success, matchdayIndex:game.matchdayIndex };
+  if(success){
+    const st = playerStatus(playerId);
+    const nextThrough = Number(st.injuredThrough) - 1;
+    if(nextThrough < game.matchdayIndex){
+      const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+      game.playerStatus[playerId] = rest;
+    } else {
+      game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
+    }
+    showNotice('Tratamiento exitoso. La recuperación se acortó 1 turno.');
+  } else {
+    showNotice('El tratamiento falló. La lesión no se redujo.');
+  }
+  saveLocal(true);
+  renderEmployees();
 }
 function moraleTeamBar(clubId){
   const value = squadMoraleAverage(clubId);
@@ -2339,6 +2469,26 @@ function collectOwnProblems(result){
   const reds = (result.cards || []).filter(c => c.clubId === ownClub && (c.type === 'red' || c.type === 'secondYellowRed')).map(c => ({ type:'red', playerId:c.playerId }));
   return [...injuries, ...reds];
 }
+function removeOwnUnavailableFromTactic(problems=[]){
+  if(!game?.tactic || !problems.length) return;
+  const ids = new Set(problems.map(p => Number(p.playerId)).filter(Boolean));
+  if(!ids.size) return;
+  const starters = (game.tactic.starters || []).slice(0,11);
+  while(starters.length < 11) starters.push(0);
+  let changed = false;
+  for(let i=0;i<starters.length;i++){
+    if(ids.has(Number(starters[i]))){ starters[i] = 0; changed = true; }
+  }
+  const bench = (game.tactic.bench || []).filter(id => !ids.has(Number(id)));
+  const autoSubs = (game.tactic.autoSubs || []).map(rule => ({
+    ...rule,
+    outId: ids.has(Number(rule.outId)) ? 0 : Number(rule.outId || 0),
+    inId: ids.has(Number(rule.inId)) ? 0 : Number(rule.inId || 0)
+  }));
+  if(changed || bench.length !== (game.tactic.bench || []).length){
+    game.tactic = applyStarterMentalities({ ...game.tactic, starters, bench, autoSubs });
+  }
+}
 
 function showPlayerModal(playerId){
   const p = playerById(playerId);
@@ -2355,7 +2505,7 @@ function showPlayerModal(playerId){
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
             <h2>${escapeHtml(p.name)}</h2>
             <p class="muted">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)} · ${meta.icon} ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
-            <p class="muted">${p.age} años · ${escapeHtml(statusText(p.id))}</p>
+            <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
         </div>
         <div class="radar-wrap">${radarSvg(visible)}</div>
@@ -2534,7 +2684,7 @@ function revealEventLine(event){
     const g = event.data;
     const p = playerById(g.playerId);
     const a = g.assistId ? playerById(g.assistId) : null;
-    return `<div class="stat-rank"><span>${g.minute}' ⚽ ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `Asist. ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
+    return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
   }
   if(event.type === 'card'){
     return cardLine(event.data);
@@ -2590,7 +2740,7 @@ function matchStatsCard(clubId, stats, sideLabel){
 function goalLine(g){
   const p = playerById(g.playerId);
   const a = g.assistId ? playerById(g.assistId) : null;
-  return `<div class="stat-rank"><span>${g.minute}' ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `Asist. ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'}</strong></div>`;
+  return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'}</strong></div>`;
 }
 function cardLine(c){
   const p = playerById(c.playerId);
@@ -2602,13 +2752,13 @@ function subLine(s){
   const out = playerById(s.outId);
   const inn = playerById(s.inId);
   const label = s.trigger === 'injury' ? 'Cambio por lesión' : (SUB_TRIGGERS.find(t=>t.value===s.trigger)?.label || s.trigger);
-  return `<div class="stat-rank"><span>${s.minute}' ${escapeHtml(inn?.name || 'Jugador')} por ${escapeHtml(out?.name || 'Jugador')}</span><strong>${escapeHtml(label)}</strong></div>`;
+  return `<div class="stat-rank event-line"><span>${s.minute}' <span class="event-icon sub">⇄</span> ${escapeHtml(inn?.name || 'Jugador')} por ${escapeHtml(out?.name || 'Jugador')}</span><strong>${escapeHtml(label)}</strong></div>`;
 }
 function injuryLine(i){
   const p = playerById(i.playerId);
   const label = i.injuryLabel || i.name || i.severity || 'Lesión';
   const phase = i.phase === 'final' ? 'al final' : 'durante';
-  return `<div class="stat-rank"><span>${i.minute}' 🩹 ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${i.matchesOut} turno(s) · ${phase}</strong></div>`;
+  return `<div class="stat-rank event-line"><span>${i.minute}' <span class="injury-event-icon">✚</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${phase}</strong></div>`;
 }
 function showClubModal(clubId){
   const club = seed.clubs.find(c => c.id === Number(clubId));
@@ -2700,6 +2850,24 @@ function scoutingPlayerRow(player){
     <td>${cell('Tiro/Potencia')}</td>
     <td>${cell('Resistencia')}</td>
   </tr>`;
+}
+function openNewGameModal(force=false){
+  if(!force && game && newGameModalShown) return;
+  const body = `
+    <div class="new-game-modal">
+      <p class="label">Nueva partida</p>
+      <h2>Elegir club</h2>
+      <p class="muted">Seleccioná el club inicial. Al empezar se crea una partida nueva y se guarda localmente en el navegador.</p>
+      <label for="modalClubSelect">Club</label>
+      <select id="modalClubSelect">${clubSelectOptionsMarkup()}</select>
+      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary">Empezar</button></div>
+    </div>`;
+  openModal(body);
+  $('btnStartNewGameModal')?.addEventListener('click', () => {
+    const selected = Number($('modalClubSelect')?.value || 0);
+    if(selected) newGame(selected);
+  });
+  newGameModalShown = true;
 }
 function openModal(html){
   closeModal();

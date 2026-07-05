@@ -1,52 +1,41 @@
 # Registro de versión
 
-## Versión: V2.0
-**Estado:** motor de simulación separado y ampliado  
-**Tipo de mejora:** cambio estructural del simulador
+## Versión: V2.2
+**Estado:** ajuste funcional de estados médicos, expulsiones y flujo de nueva partida  
+**Tipo de mejora:** interfaz, gestión de lesionados y empleados
 
 ### Resumen
-La versión V2.0 separa el motor de partidos en un archivo dedicado llamado `simulador-2.0.js`. Desde esta versión, la interfaz conserva su lógica general en `app.js`, mientras que el cálculo deportivo principal queda concentrado en el nuevo simulador.
+La versión V2.2 mejora la gestión posterior a lesiones y expulsiones, suma tratamientos mediante kinesiólogo y reorganiza la creación de nueva partida para que no ocupe espacio fijo en el menú lateral.
 
 ### Cambios principales agregados
-- Nuevo archivo `simulador-2.0.js`.
-- `index.html` carga primero el simulador y luego `app.js`.
-- `app.js` delega la simulación activa en `window.Simulator20.simulateMatch()`.
-- El partido se calcula en 6 bloques:
-  - 1-15
-  - 16-30
-  - 31-45
-  - 46-60
-  - 61-75
-  - 76-90
-- Se agregan instrucciones tácticas según resultado parcial:
-  - Ganando
-  - Empatando
-  - Perdiendo
-- Cada instrucción puede usar:
-  - Bajar el ritmo
-  - Normal
-  - Subir ritmo
-- Las instrucciones influyen en ataque, mediocampo, defensa, volumen ofensivo, conversión, faltas y desgaste físico posterior.
-- Se agregan efectos más claros por líneas:
-  - Mediocampistas: posesión y generación de ataques.
-  - Delanteros: conversión de ataques en ocasiones.
-  - Defensores y portero: reducción de ocasiones rivales.
-- La formación afecta internamente el estilo:
-  - más defensores favorecen defensa;
-  - más mediocampistas favorecen posesión;
-  - más delanteros favorecen conversión ofensiva.
-- La moral y la cohesión siguen influyendo internamente en el rendimiento.
-- El estado del campo afecta pase, ocasiones, cansancio y lesiones.
-
-### Valores ocultos
-Siguen ocultos para el usuario:
-- cohesión exacta;
-- coeficientes del campo;
-- multiplicadores de moral;
-- fórmulas de conversión;
-- pesos internos de cada línea.
+- Cuando un jugador propio se lesiona o es expulsado:
+  - se quita automáticamente del once titular;
+  - se elimina de la convocatoria si estaba en banco;
+  - queda como reserva;
+  - su espacio en la pizarra queda vacío para reemplazarlo manualmente.
+- La sección de **Jugadores lesionados** del panel principal ahora muestra:
+  - foto del jugador;
+  - ícono de lesión;
+  - nombre;
+  - tipo de lesión;
+  - turnos restantes;
+  - estado físico.
+- En la pantalla de simulación se agregan íconos para:
+  - gol;
+  - asistencia;
+  - cambio;
+  - lesión.
+- El evento de lesión en la simulación ya no muestra información de turnos de baja.
+- Se agrega el empleado **Kinesiólogo**:
+  - costo de contratación: $1.000.000;
+  - contratación válida por temporada completa;
+  - permite tratar jugadores lesionados una vez por turno;
+  - si el tratamiento tiene éxito, reduce 1 turno de lesión;
+  - el tratamiento puede fallar con 20% de probabilidad.
+- La sección de **Nueva partida** se transforma en acceso minimizado.
+- Al entrar sin partida o usar Reset, la selección de club aparece en una ventana emergente.
 
 ### Pendientes sugeridos
-- Hacer que expulsiones y lesiones afecten el bloque siguiente durante el mismo partido.
-- Hacer que los cambios automáticos modifiquen el rendimiento real desde el minuto en que ocurren.
-- Agregar estilos generales de equipo: presión alta, contraataque, posesión, bloque bajo.
+- Integrar el efecto de cambios y expulsiones dentro del motor por bloques durante el partido.
+- Definir si el kinesiólogo podrá tratar más de un jugador por turno o solo uno total por turno.
+- Reemplazar internamente “disciplina” por conducta de partido calculada.

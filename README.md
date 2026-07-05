@@ -1,17 +1,17 @@
-# Fútbol Manager MVP - V2.0
+# Fútbol Manager MVP - V2.2
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- Se agrega el archivo `simulador-2.0.js` para separar el motor de simulación del resto de la interfaz.
-- El partido pasa a simularse por bloques de 15 minutos.
-- Se incorporan instrucciones de partido: ganando, empatando y perdiendo.
-- Las instrucciones influyen en ritmo, volumen de ataque, defensa, conversión y desgaste físico posterior.
-- El motor pondera cantidad y calidad de mediocampistas para posesión y generación de ataques.
-- El motor pondera cantidad y calidad de delanteros para convertir ataques en ocasiones.
-- El motor pondera defensores y portero para reducir ocasiones rivales.
-- Se incorporan efectos del tipo de formación: defensiva, equilibrada, poblada de medios o ofensiva.
-- Se mantienen como factores internos el estado del campo, la cohesión y la moral del equipo.
+- Si un jugador propio se lesiona o es expulsado, se quita del once titular y queda fuera de la convocatoria, dejando su lugar vacío en la pizarra.
+- La sección de lesionados del panel principal ahora muestra foto del jugador e ícono de lesión.
+- En la simulación se agregan íconos para goles, asistencias, cambios y lesiones.
+- Las lesiones en la ficha de partido ya no muestran los turnos de baja dentro del evento.
+- Se agrega el empleado **Kinesiólogo**.
+- El kinesiólogo cuesta $1.000.000 por temporada y permite intentar reducir una lesión 1 turno por jugador y por turno.
+- El tratamiento del kinesiólogo puede fallar un 20% de las veces.
+- La creación de nueva partida pasa a ventana emergente desde Reset o cuando no hay partida activa.
+- El menú lateral queda minimizado mostrando solo “Nueva partida” y un ícono para abrir.
 
 ## Archivos incluidos
 - `index.html`

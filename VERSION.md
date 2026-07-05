@@ -1,26 +1,35 @@
 # Registro de versión
 
-## Versión: V2.16
+## Versión: V2.17
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** panel principal, roles y turnos extendidos
+**Tipo de mejora:** exploración mundial de jugadores
 
 ### Resumen
-Esta versión mejora el panel principal con jugadores destacados, simplifica la visualización de roles y hace que la pretemporada/postemporada formen parte del total de jornadas útiles de la temporada.
+Esta versión agrega una vista global de jugadores para revisar todos los futbolistas del mundo del juego, incluyendo jugadores de clubes, agentes libres y futbolistas vendidos al exterior.
 
 ### Cambios principales agregados
-- Se agrega el bloque **Tus jugadores destacados** en el panel principal.
-- Se muestran tres perfiles:
-  - **Goleador**, con cantidad de goles.
-  - **Estrella**, con su media general.
-  - **Promesa**, priorizando jóvenes con media superior al promedio del equipo.
-- Se eliminan los iconos de roles en la interfaz.
-- Los puestos se muestran solo con su nomenclatura oficial.
-- El contador de jornada ahora integra:
-  - 10 turnos de pretemporada.
-  - jornadas oficiales de liga.
-  - 5 turnos de postemporada.
-- Los turnos no oficiales procesan los trabajos del estadio, permitiendo avanzar reparaciones y replante del campo.
+- Nuevo menú lateral **Jugadores**.
+- Tabla mundial con:
+  - foto
+  - nombre
+  - posición
+  - edad
+  - equipo / agente libre / exterior
+  - cláusula
+  - sueldo
+- Se agregan columnas de habilidades parcialmente visibles:
+  - Ataque/Salto
+  - Defensa
+  - Pase
+  - Velocidad/Reflejos
+  - Cabezazo/Mando
+  - Tiro/Potencia
+  - Resistencia
+- La mayoría de esas habilidades permanece oculta.
+- El sorteo de visibilidad de habilidades usa el turno global, por lo que cambia también durante pretemporada y postemporada.
+- Se agregan filtros por posición y equipo.
 
 ### Pendientes sugeridos
-- Ajustar mejor los criterios de promesa si el plantel no tiene juveniles destacados.
-- Agregar contratos o cláusulas específicas por edad y rendimiento.
+- Agregar búsqueda por nombre.
+- Agregar scouting avanzado para revelar más datos con costo económico.
+- Incorporar negociación de transferencias desde esta vista.

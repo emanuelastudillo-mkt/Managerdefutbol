@@ -1,15 +1,20 @@
-# Fútbol Manager MVP - V2.16
+# Fútbol Manager MVP - V2.17
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- Panel principal con 3 jugadores destacados del club:
-  - Goleador, con cantidad de goles.
-  - Estrella, con media general.
-  - Promesa, priorizando jugadores jóvenes por encima del promedio del equipo.
-- Los roles de jugadores ya no muestran iconos; solo se muestra la nomenclatura del puesto: `POR`, `LD`, `LI`, `DFC`, `MCD`, `MC`, `MCO`, `ED`, `EI`, `DC`.
-- Los turnos de pretemporada y postemporada se integran al contador total de jornadas de la temporada.
-- Los turnos de pretemporada y postemporada ahora también procesan mantenimientos del estadio, por lo que sirven para completar riego, parcheo o replante del césped.
+- Se agrega el nuevo menú lateral **Jugadores**.
+- La vista muestra todos los jugadores del mundo:
+  - nombre
+  - posición
+  - edad
+  - equipo o agente libre
+  - cláusula
+  - sueldo
+- Se agregan columnas de habilidades parcialmente visibles.
+- La mayor parte de las habilidades queda oculta con guiones.
+- Las habilidades visibles se sortean nuevamente en cada turno usando el registro global de temporada/jornada.
+- Se agregan filtros por posición y equipo.
 
 ## Archivos incluidos
 - `index.html`

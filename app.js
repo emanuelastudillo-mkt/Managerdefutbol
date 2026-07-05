@@ -7,7 +7,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.16';
+const APP_VERSION = 'V2.17';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -116,6 +116,9 @@ let game = null;
 let activeTab = 'home';
 let squadSort = 'media_desc';
 let trainingSort = 'media_desc';
+let worldPlayersSort = 'media_desc';
+let worldPlayersPositionFilter = 'all';
+let worldPlayersClubFilter = 'all';
 let selectedFixtureDivision = 'all';
 let selectedStandingsDivision = 'all';
 let selectedStatsDivision = 'all';
@@ -1835,7 +1838,7 @@ function renderAll(){
     renderClubRequirementsWarning();
     return;
   }
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, players:renderWorldPlayers, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
   renderers[activeTab]();
 }
 function renderClubRequirementsWarning(){
@@ -2315,6 +2318,107 @@ function trainingColumnSort(label, options){
   const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
   return `<div class="th-filter"><span>${label}</span><select data-training-sort>${opts}</select></div>`;
 }
+
+function worldPlayerTeamMarkup(player){
+  const clubId = Number(player.clubId || 0);
+  if(clubId > 0){
+    return `<button class="linklike team-cell" data-club-id="${clubId}">${clubBadge(clubId)}<span>${escapeHtml(clubName(clubId))}</span></button>`;
+  }
+  if(clubId < 0 || player.sold) return '<span class="pill">Exterior</span>';
+  return '<span class="pill">Agente libre</span>';
+}
+function worldPlayersPositionOptions(){
+  const positions = ['all','POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
+  return positions.map(pos => `<option value="${pos}" ${worldPlayersPositionFilter===pos?'selected':''}>${pos==='all'?'Todas':pos}</option>`).join('');
+}
+function worldPlayersClubOptions(){
+  const clubs = (seed.clubs || []).slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  const fixed = [
+    `<option value="all" ${worldPlayersClubFilter==='all'?'selected':''}>Todos</option>`,
+    `<option value="free" ${worldPlayersClubFilter==='free'?'selected':''}>Agentes libres</option>`,
+    `<option value="foreign" ${worldPlayersClubFilter==='foreign'?'selected':''}>Exterior</option>`
+  ];
+  return fixed.concat(clubs.map(c => `<option value="${c.id}" ${String(worldPlayersClubFilter)===String(c.id)?'selected':''}>${escapeHtml(c.name)}</option>`)).join('');
+}
+function worldPlayerFilterList(players){
+  return players.filter(player => {
+    if(worldPlayersPositionFilter !== 'all' && player.position !== worldPlayersPositionFilter) return false;
+    const clubId = Number(player.clubId || 0);
+    if(worldPlayersClubFilter === 'free') return clubId === 0 && !player.sold;
+    if(worldPlayersClubFilter === 'foreign') return clubId < 0 || player.sold;
+    if(worldPlayersClubFilter !== 'all') return clubId === Number(worldPlayersClubFilter);
+    return true;
+  });
+}
+function worldPlayersColumnSort(label, options){
+  const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-world-sort>${opts}</select></div>`;
+}
+function worldStatCell(player, key){
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  return visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
+}
+function worldPlayerRow(player){
+  return `<tr class="${Number(player.clubId || 0) === game.selectedClubId ? 'own-player-row' : ''}">
+    <td>${faceImg(player, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${player.id}"><strong>${escapeHtml(player.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td>${Number(player.age || 0) || '—'}</td>
+    <td>${worldPlayerTeamMarkup(player)}</td>
+    <td>${formatMoney(player.value || 0)}</td>
+    <td>${formatMoney(player.salary || 0)}</td>
+    <td>${worldStatCell(player,'Ataque/Salto')}</td>
+    <td>${worldStatCell(player,'Defensa')}</td>
+    <td>${worldStatCell(player,'Pase')}</td>
+    <td>${worldStatCell(player,'Velocidad/Reflejos')}</td>
+    <td>${worldStatCell(player,'Cabezazo/Mando')}</td>
+    <td>${worldStatCell(player,'Tiro/Potencia')}</td>
+    <td>${worldStatCell(player,'Resistencia')}</td>
+  </tr>`;
+}
+function renderWorldPlayers(){
+  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  ensurePlayerStateForAll();
+  const basePlayers = seed.players.filter(p => !p.retired);
+  const filtered = worldPlayerFilterList(basePlayers);
+  const players = sortPlayersForView(filtered, worldPlayersSort);
+  const rows = players.map(worldPlayerRow).join('');
+  view.innerHTML = `
+    <div class="section-title">
+      <h2>Jugadores</h2>
+      <p class="tagline">Listado mundial. La mayor parte de las habilidades se oculta y vuelve a sortearse en cada turno.</p>
+    </div>
+    <div class="card world-player-filters">
+      <label>Posición<select id="worldPositionFilter">${worldPlayersPositionOptions()}</select></label>
+      <label>Equipo<select id="worldClubFilter">${worldPlayersClubOptions()}</select></label>
+      <span class="pill">${players.length} jugador(es)</span>
+    </div>
+    <div class="table-wrap world-players-wrap"><table class="world-players-table"><thead><tr>
+      <th>Foto</th>
+      <th>${worldPlayersColumnSort('Nombre', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>Pos.</th>
+      <th>${worldPlayersColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th>
+      <th>Equipo</th>
+      <th>${worldPlayersColumnSort('Cláusula', [['valor_desc','Mayor'],['valor_asc','Menor']])}</th>
+      <th>Sueldo</th>
+      <th>Ataque/Salto</th>
+      <th>Defensa</th>
+      <th>Pase</th>
+      <th>Vel./Ref.</th>
+      <th>Cab./Mando</th>
+      <th>Tiro/Pot.</th>
+      <th>Resist.</th>
+    </tr></thead><tbody>${rows || '<tr><td colspan="14" class="muted">No hay jugadores para mostrar.</td></tr>'}</tbody></table></div>`;
+  $('worldPositionFilter')?.addEventListener('change', event => { worldPlayersPositionFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  $('worldClubFilter')?.addEventListener('change', event => { worldPlayersClubFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  document.querySelectorAll('[data-world-sort]').forEach(select => {
+    select.addEventListener('change', () => {
+      if(select.value){ worldPlayersSort = select.value; renderWorldPlayers(); }
+    });
+  });
+}
+
 function renderSquad(){
   const players = sortedSquadPlayers();
   const rows = players.map(p=>`
@@ -4038,10 +4142,15 @@ function clubTacticPreview(formation){
     <div class="club-lines">${layout.map((count,i)=>`<div class="club-line"><strong>${count}</strong><span>${labels[i]}</span></div>`).join('')}</div>
   </div>`;
 }
+function scoutingTurnKey(){
+  if(!game) return 'no-game';
+  return `${game.seasonNumber || 1}-${seasonPhase()}-${currentTurnIndex()}-${currentSeasonTurnNumber()}`;
+}
 function scoutingVisibleKeys(player){
   const keys = Object.keys(scoutingStatMap(player));
-  const count = 2 + hashNumber(`scout-count-${player.id}-${game?.matchdayIndex || 0}`, 2);
-  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${game?.matchdayIndex || 0}-${a}`, 10000) - hashNumber(`scout-${player.id}-${game?.matchdayIndex || 0}-${b}`, 10000));
+  const turnKey = scoutingTurnKey();
+  const count = 2 + hashNumber(`scout-count-${player.id}-${turnKey}`, 2);
+  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${turnKey}-${a}`, 10000) - hashNumber(`scout-${player.id}-${turnKey}-${b}`, 10000));
   return new Set(ordered.slice(0,count));
 }
 function scoutingStatMap(player){

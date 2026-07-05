@@ -1292,3 +1292,13 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
   .value-circle strong{font-size:10px}
   .sponsor-table td:last-child{display:table-cell}
 }
+
+/* V2.22: Primer Equipo, mercado por pestañas y acciones de jugador */
+.subtabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.subtabs button{border:1px solid var(--line);background:rgba(148,163,184,.08);color:var(--muted);border-radius:999px;padding:8px 12px;font-weight:900;cursor:pointer}
+.subtabs button.active,.subtabs button:hover{background:rgba(59,130,246,.18);border-color:rgba(96,165,250,.34);color:#dbeafe}
+.first-team-tabs,.market-tabs{margin-bottom:14px;padding:10px}
+.player-action-card .message-actions{align-items:center}
+.offer-choice-grid .plain{text-align:left;width:100%;border:1px solid var(--line)}
+.offer-choice-grid .plain p{margin:4px 0 0;color:#cbd5e1;font-weight:900}
+@media (max-width:760px){.subtabs button{flex:1}.offer-choice-grid{grid-template-columns:1fr}}

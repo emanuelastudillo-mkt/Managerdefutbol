@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.21';
+const APP_VERSION = 'V2.22';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -152,6 +152,8 @@ let trainingSort = 'media_desc';
 let worldPlayersSort = 'media_desc';
 let worldPlayersPositionFilter = 'all';
 let worldPlayersClubFilter = 'all';
+let marketSubTab = 'free';
+let firstTeamTab = 'tactics';
 let selectedFixtureDivision = 'all';
 let selectedStandingsDivision = 'all';
 let selectedStatsDivision = 'all';
@@ -1551,6 +1553,7 @@ function normalizeGame(saved){
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
+  normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();
   normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR); });
@@ -1696,6 +1699,7 @@ function newGame(selectedClubId){
     managerStats: createInitialManagerStats(),
     messages: [],
     marketPlayers: [],
+    pendingTransfers: [],
     currentDate: seed.fixtures[0].date,
     matchdayIndex: 0,
     tactic,
@@ -2111,7 +2115,7 @@ function renderAll(){
     renderClubRequirementsWarning();
     return;
   }
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, players:renderWorldPlayers, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, players:renderWorldPlayers, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
   renderers[activeTab]();
 }
 function renderClubRequirementsWarning(){
@@ -2500,15 +2504,64 @@ function mergeMarketPlayersIntoSeed(players=[]){
     }
   });
 }
+
+function firstTeamTabsMarkup(current){
+  const tabs = [
+    ['tactics','Táctica'],
+    ['squad','Plantel'],
+    ['training','Entrenamiento']
+  ];
+  return `<div class="card first-team-tabs"><div class="subtabs">${tabs.map(([key,label])=>`<button class="${current===key?'active':''}" data-first-team-tab="${key}">${label}</button>`).join('')}</div></div>`;
+}
+function bindFirstTeamTabs(){
+  document.querySelectorAll('[data-first-team-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      firstTeamTab = btn.dataset.firstTeamTab || 'tactics';
+      renderFirstTeam();
+    });
+  });
+}
+function prependFirstTeamTabs(current){
+  if(activeTab !== 'firstTeam') return;
+  firstTeamTab = current;
+  view.insertAdjacentHTML('afterbegin', firstTeamTabsMarkup(current));
+  bindFirstTeamTabs();
+}
+function renderFirstTeam(){
+  if(firstTeamTab === 'squad') return renderSquad();
+  if(firstTeamTab === 'training') return renderTraining();
+  return renderTactics();
+}
+
+function marketTabsMarkup(){
+  return `<div class="card market-tabs"><div class="subtabs"><button class="${marketSubTab==='free'?'active':''}" data-market-tab="free">Jugadores libres</button><button class="${marketSubTab==='contracted'?'active':''}" data-market-tab="contracted">Jugadores contratados</button></div></div>`;
+}
+function bindMarketTabs(){
+  document.querySelectorAll('[data-market-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      marketSubTab = btn.dataset.marketTab || 'free';
+      renderMarket();
+    });
+  });
+}
+function contractedMarketPlayers(){
+  return seed.players
+    .filter(p => !p.retired && !p.sold && Number(p.clubId || 0) > 0 && Number(p.clubId) !== Number(game.selectedClubId))
+    .slice()
+    .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.name.localeCompare(b.name,'es'));
+}
 function renderMarket(){
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
   ensurePlayerStateForAll();
+  if(marketSubTab !== 'contracted') marketSubTab = 'free';
+  if(marketSubTab === 'contracted') return renderContractedMarket();
   const free = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold).slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a));
   const rows = free.map(p => `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
     <td>${visibleOverall(p)}</td>
     <td>${conditionBar(p.id)}</td>
     <td>${moraleBar(p.id)}</td>
@@ -2516,10 +2569,34 @@ function renderMarket(){
     <td><button class="primary small-btn" data-hire-free-agent="${p.id}">Contratar</button></td>
   </tr>`).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres. Se incorporan sin costo de pase, con sueldo acorde a su calidad y baja forma física inicial.</p></div>
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Media</th><th>Físico</th><th>Moral</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">No quedan jugadores libres.</td></tr>'}</tbody></table></div>`;
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
+    ${marketTabsMarkup()}
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No quedan jugadores libres.</td></tr>'}</tbody></table></div>`;
+  bindMarketTabs();
   document.querySelectorAll('[data-hire-free-agent]').forEach(btn => btn.addEventListener('click', () => hireFreeAgent(Number(btn.dataset.hireFreeAgent))));
 }
+function renderContractedMarket(){
+  const players = contractedMarketPlayers();
+  const rows = players.map(p => `<tr>
+    <td>${faceImg(p, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
+    <td>${clubBadge(p.clubId)} ${escapeHtml(clubName(p.clubId))}</td>
+    <td>${visibleOverall(p)}</td>
+    <td>${formatMoney(p.clause || p.value || 0)}</td>
+    <td>${formatMoney(p.salary || 0)}</td>
+    <td><button class="primary small-btn" data-make-player-offer="${p.id}">Hacer oferta</button></td>
+  </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
+    ${marketTabsMarkup()}
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores contratados para mostrar.</td></tr>'}</tbody></table></div>`;
+  bindMarketTabs();
+  document.querySelectorAll('[data-make-player-offer]').forEach(btn => btn.addEventListener('click', () => openPurchaseOfferModal(Number(btn.dataset.makePlayerOffer))));
+}
+
 function hireFreeAgent(playerId){
   const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
   if(idx < 0) return;
@@ -2725,6 +2802,7 @@ function renderSquad(){
       <th>${columnSort('Cláusula', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
   `;
+  prependFirstTeamTabs('squad');
   document.querySelectorAll('[data-squad-sort]').forEach(select => {
     select.addEventListener('change', e => {
       if(e.target.value){ squadSort = e.target.value; renderSquad(); }
@@ -2801,6 +2879,7 @@ function renderTactics(){
     </div>
     <div class="row sticky-actions"><button id="saveTactic" class="primary">Guardar táctica</button><span id="tacticErrors" class="bad small"></span></div>
   `;
+  prependFirstTeamTabs('tactics');
   $('formation').addEventListener('change', () => {
     const tentative = {...game.tactic, formation:$('formation').value};
     const autoStarters = autoSelectStarters(game.selectedClubId, tentative).map(p=>p.id);
@@ -3493,6 +3572,7 @@ function simulateNextMatchday(){
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   game.matchdayIndex += 1;
   advanceGlobalTurn();
+  processPendingTransfers();
   const regularEnded = game.matchdayIndex >= game.fixtures.length;
   if(regularEnded){
     game.seasonPhase = 'postseason';
@@ -3543,6 +3623,7 @@ function simulatePreseasonTurn(){
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
+  processPendingTransfers();
   if(game.phaseTurn >= PRESEASON_TURNS){
     game.seasonPhase = 'regular';
     game.phaseTurn = 0;
@@ -3565,6 +3646,7 @@ function simulatePostseasonTurn(){
   processSponsorContracts();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
+  processPendingTransfers();
   if(game.phaseTurn >= POSTSEASON_TURNS){
     game.seasonPhase = 'finalizing';
     finalizeSeasonIfNeeded();
@@ -3606,6 +3688,13 @@ function budgetConcept(entry){
   if(entry.matchId) return 'Resultado de partido';
   return 'Movimiento de presupuesto';
 }
+function financeSquadRows(){
+  return playersByClub(game.selectedClubId)
+    .slice()
+    .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.name.localeCompare(b.name,'es'))
+    .map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${nationalityShortMarkup(p.nationality)}</td><td>${Number(p.age || 0) || '—'}</td><td>${visibleOverall(p)}</td><td>${formatMoney(p.salary || 0)}</td></tr>`)
+    .join('');
+}
 function renderFinances(){
   const history = (game.budgetHistory || []).slice().reverse();
   const seasonExpenses = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) < 0).reduce((a,h)=>a+Math.abs(Number(h.delta || 0)),0);
@@ -3617,17 +3706,21 @@ function renderFinances(){
     return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
   }).join('');
   view.innerHTML = `
-    <div class="row section-title"><div><h2>Finanzas</h2><p class="tagline">Detalle del presupuesto y sus movimientos registrados.</p></div></div>
+    <div class="row section-title"><div><h2>Finanzas</h2><p class="tagline">Detalle del presupuesto, sus movimientos registrados y la masa salarial del plantel.</p></div></div>
     <div class="grid cols-4 compact-team-stats">
       <div class="card"><p class="label">Presupuesto actual</p><strong>${formatMoney(game.budget || 0)}</strong></div>
       <div class="card"><p class="label">Ingresos temporada</p><strong class="ok">${formatMoney(seasonIncome)}</strong></div>
       <div class="card"><p class="label">Gastos temporada</p><strong class="bad">${formatMoney(seasonExpenses)}</strong></div>
       <div class="card"><p class="label">Sueldos anuales estimados</p><strong>${formatMoney(salaryTotal)}</strong></div>
     </div>
+    <div class="card" style="margin-top:14px"><h3>Plantel y sueldos</h3>
+      <div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Nac.</th><th>Edad</th><th>Media</th><th>Sueldo anual</th></tr></thead><tbody>${financeSquadRows() || '<tr><td colspan="5" class="muted">No hay jugadores en el plantel.</td></tr>'}</tbody></table></div>
+    </div>
     <div class="card" style="margin-top:14px"><h3>Movimientos</h3>
       <div class="table-wrap"><table><thead><tr><th>Temporada</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div>
     </div>`;
 }
+
 function totalClubSalary(clubId){
   return playersByClub(clubId).reduce((sum,p)=>sum + Math.max(0, Number(p.salary || 0)), 0);
 }
@@ -3858,6 +3951,7 @@ function renderTraining(){
       </tbody></table></div>
     </div>
   `;
+  prependFirstTeamTabs('training');
   document.querySelectorAll('[data-training-sort]').forEach(select => {
     select.addEventListener('change', () => {
       if(select.value){ trainingSort = select.value; renderTraining(); }
@@ -4270,6 +4364,21 @@ function removeOwnUnavailableFromTactic(problems=[]){
   }
 }
 
+function playerModalActionsMarkup(player){
+  const clubId = Number(player.clubId || 0);
+  if(clubId === Number(game.selectedClubId)){
+    return `<div class="card inner player-action-card"><h3>Acciones</h3><div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button></div></div>`;
+  }
+  if(clubId > 0){
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}">Hacer oferta</button></div></div>`;
+  }
+  return '';
+}
+function bindPlayerModalActions(playerId){
+  document.querySelector('[data-dismiss-player]')?.addEventListener('click', () => dismissOwnPlayer(playerId));
+  document.querySelector('[data-offer-own-player]')?.addEventListener('click', () => offerOwnPlayerToClubs(playerId));
+  document.querySelector('[data-make-player-offer]')?.addEventListener('click', () => openPurchaseOfferModal(playerId));
+}
 function showPlayerModal(playerId){
   const p = playerById(playerId);
   if(!p) return;
@@ -4306,10 +4415,146 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Asistencias</span><strong>${stats?.assists || 0}</strong></div>
           <div class="stat-rank"><span>Tarjetas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0} / <span class="red-card">■</span> ${stats?.red || 0}</strong></div>
         </div>
+        ${playerModalActionsMarkup(p)}
       </div>
     </div>`;
   openModal(body);
+  bindPlayerModalActions(playerId);
 }
+
+
+function dismissOwnPlayer(playerId){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  if(!confirm(`Despedir a ${player.name} del plantel?`)) return;
+  removePlayerFromCurrentTactic(player.id);
+  player.clubId = 0;
+  player.freeAgent = true;
+  refreshPlayerClause(player);
+  game.marketPlayers = game.marketPlayers || [];
+  const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
+  const copy = { ...player, clubId:0, freeAgent:true, sold:false };
+  if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
+  else game.marketPlayers.push(copy);
+  pushGameMessage({ type:'mercado', title:'Jugador despedido', body:`${player.name} dejó el club y quedó como agente libre.`, priority:'normal' });
+  closeModal();
+  saveLocal(true);
+  renderAll();
+  showNotice(`${player.name} fue despedido.`);
+}
+function offerOwnPlayerToClubs(playerId){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  const success = Math.random() < 0.85;
+  if(!success){
+    pushGameMessage({ type:'mercado', title:`Sin ofertas por ${playerLastName(player.name)}`, body:`Se ofreció a ${player.name}, pero ningún club presentó una propuesta formal.`, priority:'normal' });
+    closeModal();
+    activeTab = 'messages';
+    saveLocal(true);
+    renderAll();
+    return;
+  }
+  const pct = 35 + hashNumber(`forced-sale-${player.id}-${Date.now()}`, 41); // 35% a 75% de la cláusula
+  const amount = Math.round(refreshPlayerClause(player) * pct / 100);
+  const foreignClub = FOREIGN_CLUBS[hashNumber(`forced-foreign-${player.id}-${Date.now()}`, FOREIGN_CLUBS.length)];
+  pushGameMessage({
+    type:'mercado',
+    priority:'high',
+    title:`Oferta recibida por ${playerLastName(player.name)}`,
+    body:`${foreignClub} acercó una oferta de ${formatMoney(amount)} por ${player.name}. Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.`,
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct }
+  });
+  closeModal();
+  activeTab = 'messages';
+  saveLocal(true);
+  renderAll();
+  showNotice('Llegó una oferta por el jugador.');
+}
+function openPurchaseOfferModal(playerId){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  const clause = refreshPlayerClause(player);
+  const body = `<div class="purchase-offer-modal">
+    <p class="label">Hacer oferta</p>
+    <h2>${escapeHtml(player.name)}</h2>
+    <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
+    <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
+      <button class="card clickable plain" data-submit-player-offer="low"><h3>Ofrecer 50% menos</h3><p>${formatMoney(Math.round(clause * 0.50))}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="mid"><h3>Ofrecer 25% más</h3><p>${formatMoney(Math.round(clause * 0.75))}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="clause"><h3>Ofrecer cláusula</h3><p>${formatMoney(clause)}</p></button>
+    </div>
+  </div>`;
+  openModal(body);
+  document.querySelectorAll('[data-submit-player-offer]').forEach(btn => btn.addEventListener('click', () => submitPurchaseOffer(playerId, btn.dataset.submitPlayerOffer)));
+}
+function purchaseOfferConfig(kind, clause){
+  if(kind === 'low') return { amount:Math.round(clause * 0.50), chance:0.40, fail:'No nos interesa negociar con ratas' };
+  if(kind === 'mid') return { amount:Math.round(clause * 0.75), chance:0.65, fail:'Negociar no es tu fuerte, nos vemos' };
+  return { amount:Math.round(clause), chance:0.90, fail:'el jugador no quiere jugar en tu club' };
+}
+function submitPurchaseOffer(playerId, kind){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  const clause = refreshPlayerClause(player);
+  const cfg = purchaseOfferConfig(kind, clause);
+  if((game.budget || 0) < cfg.amount){
+    showNotice('Presupuesto insuficiente para realizar esta oferta.');
+    return;
+  }
+  const accepted = Math.random() < cfg.chance;
+  if(!accepted){
+    pushGameMessage({ type:'mercado', title:'Oferta rechazada', body:cfg.fail, priority:'normal' });
+    closeModal();
+    activeTab = 'messages';
+    saveLocal(true);
+    renderAll();
+    return;
+  }
+  game.pendingTransfers = Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [];
+  if(game.pendingTransfers.some(t => Number(t.playerId) === Number(player.id) && t.status === 'pending')){
+    showNotice('Ya hay una operación pendiente por este jugador.');
+    return;
+  }
+  recordBudgetChange(-cfg.amount, `Compra acordada de ${player.name}`, { type:'transfer_purchase_pending', playerId:player.id, fromClubId:player.clubId });
+  game.pendingTransfers.push({
+    id:`incoming-${player.id}-${Date.now()}`,
+    playerId:player.id,
+    fromClubId:player.clubId,
+    toClubId:game.selectedClubId,
+    amount:cfg.amount,
+    acceptedTurn:currentTurnIndex(),
+    arrivalTurn:currentTurnIndex() + 1,
+    status:'pending'
+  });
+  pushGameMessage({ type:'mercado', title:'Oferta aceptada', body:`${player.name}: el jugador se pondrá a disposición en breve.`, priority:'high' });
+  closeModal();
+  activeTab = 'messages';
+  saveLocal(true);
+  renderAll();
+  showNotice('Oferta aceptada. El jugador llegará en el próximo turno.');
+}
+function processPendingTransfers(){
+  if(!game) return;
+  game.pendingTransfers = Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [];
+  let changed = false;
+  game.pendingTransfers.forEach(t => {
+    if(t.status !== 'pending') return;
+    if(Number(t.arrivalTurn || 0) > currentTurnIndex()) return;
+    const player = playerById(t.playerId);
+    if(!player){ t.status = 'missing'; changed = true; return; }
+    player.clubId = Number(t.toClubId || game.selectedClubId);
+    player.freeAgent = false;
+    player.sold = false;
+    refreshPlayerClause(player);
+    ensurePlayerStateForAll();
+    if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+    t.status = 'arrived';
+    changed = true;
+    pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.`, priority:'high' });
+  });
+  if(changed) saveLocal(true);
+}
+
 function statPairs(obj, baseObj=null){
   return Object.entries(obj).map(([k,v])=>{
     const base = baseObj ? Number(baseObj[k]) : NaN;

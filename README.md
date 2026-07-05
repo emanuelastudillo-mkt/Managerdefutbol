@@ -1,12 +1,17 @@
-# Fútbol Manager MVP - V2.21
+# Fútbol Manager MVP - V2.22
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- Se simplifica el texto visible de la sección Sponsors en Estadio.
-- Se oculta el contador técnico de partidos hasta la próxima tanda de ofertas.
-- El mensaje sin ofertas ahora queda redactado de forma más natural: invita a ganar partidos para atraer marcas.
-- Se conserva la lógica interna: tandas de 2 a 5 ofertas cada 4 a 7 partidos y pago completo al aceptar.
+- Se agrega el menú lateral **Primer Equipo**, que agrupa las pestañas internas: Táctica, Plantel y Entrenamiento.
+- Se amplía **Finanzas** con un listado simple del plantel: nombre, nacionalidad abreviada, edad, media general y sueldo anual.
+- Se reorganiza **Mercado** con pestañas: Jugadores libres y Jugadores contratados.
+- Se agregan acciones en la ficha del jugador:
+  - Despedir jugadores propios.
+  - Ofrecer jugadores propios a clubes.
+  - Hacer ofertas por jugadores rivales.
+- Las compras aceptadas quedan pendientes y el jugador se incorpora al plantel en el siguiente turno.
+- Las probabilidades internas de negociación no se muestran en la interfaz.
 
 ## Archivos incluidos
 - `index.html`

@@ -1,10 +1,10 @@
 const DATA_URL = 'data/seed.json';
-const LEAGUE_DATA_CANDIDATES = ['data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
+const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.12';
+const APP_VERSION = 'V1.13';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -651,7 +651,7 @@ function generateClubPlayers(club, prestige, startId){
   return blueprint.map(([position, group], index) => {
     const id = startId + index;
     const media = playerBaseMedia(prestige, id, group);
-    const age = group === 'POR' ? Math.floor(rnd(26,39)) : Math.floor(rnd(18,34));
+    const age = group === 'POR' ? 25 + hashNumber(`age-${club.name}-${id}`, 14) : 18 + hashNumber(`age-${club.name}-${id}`, 16);
     const name = generatedPlayerName(id, club.name);
     const skills = skillsForGroup(group, media, id);
     const visible = averageGeneratedVisible(position, skills);
@@ -687,34 +687,58 @@ function generatedNationality(id, divisionName){
 function skillValue(base, id, label, offset=0){
   return clamp(Math.round(base + offset + hashNumber(`${id}-${label}`, 15) - 7), 1, 99);
 }
+function setSkillPack(target, base, id, names, offset){
+  names.forEach(name => { target[name] = skillValue(base, id, name, offset); });
+}
 function skillsForGroup(group, base, id){
   const s = {};
-  const set = (name, offset=0) => s[name] = skillValue(base, id, name, offset);
-  ['porteria','entradas','marca','posicionamiento','paseCorto','paseLargo','vision','regate','tecnica','remate','cabezazo','velocidad','aceleracion','fuerza','resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'].forEach(name => set(name, -8));
+  const all = ['porteria','entradas','marca','posicionamiento','paseCorto','paseLargo','vision','regate','tecnica','remate','cabezazo','velocidad','aceleracion','fuerza','resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'];
+  all.forEach(name => { s[name] = skillValue(base, id, name, -10); });
+
   if(group === 'POR'){
-    ['porteria','posicionamiento','serenidad','aceleracion','liderazgo','trabajoEquipo','fuerza','paseLargo','resistencia'].forEach(name => set(name, 5));
-    ['marca','entradas','remate','regate'].forEach(name => set(name, -28));
+    setSkillPack(s, base, id, ['porteria','posicionamiento','serenidad','aceleracion'], 9);      // defensa y reflejos
+    setSkillPack(s, base, id, ['cabezazo','fuerza'], 5);                                      // salto y potencia
+    setSkillPack(s, base, id, ['liderazgo','trabajoEquipo'], 3);                               // mando
+    setSkillPack(s, base, id, ['paseCorto','paseLargo'], 0);                                   // pase
+    setSkillPack(s, base, id, ['resistencia'], 1);                                            // se cansan menos en el motor
+    setSkillPack(s, base, id, ['marca','entradas','remate','regate','velocidad'], -28);
   }
+
   if(group === 'DEF'){
-    ['marca','entradas','posicionamiento','fuerza'].forEach(name => set(name, 7));
-    ['remate','regate','cabezazo'].forEach(name => set(name, -2));
-    ['paseCorto','paseLargo','vision','velocidad','aceleracion'].forEach(name => set(name, -7));
-    set('porteria', -35);
+    // Habilidad clave: Defensa
+    setSkillPack(s, base, id, ['marca','entradas','posicionamiento','fuerza'], 10);
+    // Habilidades comunes: Ataque y cabezazo
+    setSkillPack(s, base, id, ['remate','regate','cabezazo'], 1);
+    // Habilidades raras: Pase y velocidad
+    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','velocidad','aceleracion'], -8);
+    setSkillPack(s, base, id, ['resistencia','trabajoEquipo','disciplina'], 2);
+    setSkillPack(s, base, id, ['porteria'], -35);
   }
+
   if(group === 'MID'){
-    ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo'].forEach(name => set(name, 7));
-    ['marca','entradas','remate','regate'].forEach(name => set(name, -1));
-    ['velocidad','aceleracion','cabezazo'].forEach(name => set(name, -8));
-    set('porteria', -35);
+    // Habilidad clave: Pase
+    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo'], 10);
+    // Habilidades comunes: Defensa, ataque y tiro
+    setSkillPack(s, base, id, ['marca','entradas','posicionamiento','regate','remate'], 1);
+    // Habilidades raras: Velocidad y cabezazo
+    setSkillPack(s, base, id, ['velocidad','aceleracion','cabezazo'], -8);
+    setSkillPack(s, base, id, ['resistencia','serenidad'], 3);
+    setSkillPack(s, base, id, ['porteria'], -35);
   }
+
   if(group === 'ATT'){
-    ['remate','regate','posicionamiento','serenidad'].forEach(name => set(name, 8));
-    ['cabezazo','fuerza'].forEach(name => set(name, 0));
-    ['paseCorto','paseLargo','vision','velocidad','aceleracion','marca','entradas'].forEach(name => set(name, -8));
-    set('porteria', -35);
+    // Habilidad clave: Ataque
+    setSkillPack(s, base, id, ['remate','regate','posicionamiento','serenidad'], 10);
+    // Habilidades comunes: Tiro y cabezazo
+    setSkillPack(s, base, id, ['cabezazo','fuerza'], 2);
+    // Habilidades raras: Pase, velocidad y defensa
+    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','velocidad','aceleracion','marca','entradas'], -8);
+    setSkillPack(s, base, id, ['resistencia','tecnica'], 2);
+    setSkillPack(s, base, id, ['porteria'], -35);
   }
-  s.potencial = clamp(s.potencial + 5 + hashNumber(`pot-${id}`, 10), 1, 99);
-  s.disciplina = clamp(s.disciplina + hashNumber(`disc-${id}`, 16) - 8, 1, 99);
+
+  s.potencial = clamp(skillValue(base, id, 'potencial', 5 + hashNumber(`pot-${id}`, 8)), 1, 99);
+  s.disciplina = clamp(skillValue(base, id, 'disciplina', hashNumber(`disc-${id}`, 16) - 8), 1, 99);
   return s;
 }
 function averageGeneratedVisible(position, skills){

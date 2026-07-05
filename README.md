@@ -1,35 +1,46 @@
-# Fútbol Manager MVP - V1.12
+# Fútbol Manager MVP - V1.13
 
 Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
-## Incluye
-- HTML + CSS + JavaScript puro.
-- Datos iniciales en `data/seed.json`.
-- Guardado local con **IndexedDB**.
-- Liga argentina con divisiones configurables.
-- Simulación de jornadas y visualización lenta del partido.
-- Plantel clickeable.
-- Pantalla táctica con pizarra visual y drag & drop.
-- Cambios automáticos.
-- Presupuesto dinámico según resultados.
-- Estado físico, lesiones y sanciones.
+## Actualización V1.13
+- Se incorpora `data/Liga Argentina.json` como estructura principal de datos.
+- El juego genera **3 divisiones** desde ese archivo:
+  - Liga Profesional
+  - Primera Nacional
+  - Federal A
+- Se toman los valores de **prestigio/reputation** del JSON para calcular:
+  - media de jugadores
+  - presupuesto inicial del club
+  - estado del campo de juego
+  - multiplicador económico por división
+- Multiplicadores por división:
+  - Liga Profesional: 100%
+  - Primera Nacional: 30%
+  - Federal A: 15%
+- El nombre de escudo esperado sigue esta lógica:
+  - `Boca Juniors` → `img/escudos/Boca_Juniors.png`
+- La creación de jugadores fue ajustada por rol:
+  - Porteros: edad promedio más alta y stats especiales.
+  - Defensas: defensa como habilidad clave; ataque/cabezazo comunes; pase/velocidad raras.
+  - Medios: pase como habilidad clave; defensa/ataque/tiro comunes; velocidad/cabezazo raras.
+  - Delanteros: ataque como habilidad clave; tiro/cabezazo comunes; pase/velocidad/defensa raras.
 
-## Cambios V1.12
-- Se agregó una barra horizontal de **estado físico** en la lista de titulares dentro de Táctica.
-- La barra usa degradado de rojo a verde según el valor físico del jugador.
-- Se eliminó el texto explicativo de mentalidades/anillo debajo de la pizarra.
-- Se ajustó la pizarra táctica para una apariencia más minimalista y con mayor contraste.
-
-## Archivos de esta actualización
-Este paquete de actualización no incluye `pitch-board.png`.
-
-Incluye:
+## Archivos incluidos en este update
 - `index.html`
-- `style.css`
 - `app.js`
 - `README.md`
 - `VERSION.md`
+- `data/Liga Argentina.json`
 
-## Cómo actualizar
-Subir estos archivos al repositorio reemplazando los existentes.
-No eliminar `assets/pitch-board.png` si lo tenés en el repositorio, aunque esta versión ya mejora la pizarra desde CSS.
+No se incluye `pitch-board.png`.
+
+## Instalación
+Subí estos archivos sobre tu repositorio actual, manteniendo las carpetas existentes.
+
+El juego buscará primero:
+
+```txt
+data/Liga Argentina.json
+```
+
+Si ese archivo existe, se usará como fuente principal.

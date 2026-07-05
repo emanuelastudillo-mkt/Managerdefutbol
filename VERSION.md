@@ -1,42 +1,40 @@
 # Registro de versión
 
-## Versión: V1.12
-**Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** visual y UX táctica
+## Versión: V1.13
+**Estado:** actualización de base de datos / generación de planteles  
+**Tipo de mejora:** estructura de liga, clubes y generación de jugadores
 
-### Resumen
-Esta versión ajusta la pantalla de táctica para mejorar la lectura de estado físico, reducir texto innecesario y dar más contraste a la pizarra.
+### Cambios principales
+- Se agrega soporte directo para `data/Liga Argentina.json`.
+- Se cargan 3 divisiones desde el archivo del usuario:
+  - Liga Profesional
+  - Primera Nacional
+  - Federal A
+- Se usan los valores de `reputation` del JSON para generar clubes, presupuestos, estado del campo y planteles.
+- Se ajusta el multiplicador económico por división:
+  - Liga Profesional: x1.00
+  - Primera Nacional: x0.30
+  - Federal A: x0.15
+- Se conserva la lógica de nombres de escudos usando espacios reemplazados por guion bajo.
 
-### Cambios principales agregados
-- Barra horizontal de **estado físico** en cada titular dentro de la pantalla Táctica.
-- Degradado visual de rojo a verde:
-  - rojo en valores bajos,
-  - amarillo/intermedio en valores medios,
-  - verde en valores altos.
-- Valor numérico visible dentro de la barra, por ejemplo `87/99`.
-- Eliminado el bloque de texto bajo la pizarra:
-  - Posicional
-  - Ataque
-  - Defensiva
-  - Anillo / Estado físico
-- Pizarra visual reajustada con CSS:
-  - menos ruido visual,
-  - mayor contraste,
-  - líneas de cancha más claras,
-  - áreas marcadas sin depender de elementos extra.
+### Generación de jugadores
+- Cada club genera 25 jugadores.
+- Cada club conserva como mínimo 2 porteros y más de 16 jugadores.
+- Los porteros tienen una edad promedio superior.
+- Los jugadores se generan con habilidades acordes al prestigio del club.
 
-### Cambios técnicos
-- Se agregó `conditionBar(playerId)` en `app.js`.
-- Se ajustó el layout de `.lineup-row` a cuatro columnas.
-- Se agregó override CSS para ocultar `.pitch-legend`.
-- Se agregó estilo de pizarra minimalista en `style.css`.
+### Reglas por rol
+- **Porteros:** habilidades específicas de arquero, edad promedio más alta.
+- **Defensas:** defensa como habilidad clave; ataque y cabezazo como comunes; pase y velocidad como raras.
+- **Medios:** pase como habilidad clave; defensa, ataque y tiro como comunes; velocidad y cabezazo como raras.
+- **Delanteros:** ataque como habilidad clave; tiro y cabezazo como comunes; pase, velocidad y defensa como raras.
 
-### Archivos modificados
+### Archivos incluidos
 - `index.html`
 - `app.js`
-- `style.css`
 - `README.md`
 - `VERSION.md`
+- `data/Liga Argentina.json`
 
-### Nota
-Este paquete no incluye `pitch-board.png`.
+### Nota técnica
+No se incluye `pitch-board.png` en esta actualización.

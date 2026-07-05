@@ -181,3 +181,8 @@ button.plain{width:100%;background:transparent;color:inherit;text-align:left;bor
   .player-chip-name{font-size:9px;max-width:46px}
   .fitness-ring{width:68px;height:68px;inset:-5px}
 }
+
+/* V1.04: caras por región desde img/faces */
+img.photo-thumb,img.player-photo-placeholder{object-fit:cover;display:block}
+img.photo-thumb{width:42px;height:42px;border-radius:12px}
+img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}

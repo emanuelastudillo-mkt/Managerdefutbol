@@ -1,4 +1,4 @@
-# Fútbol Manager MVP - V1.03
+# Fútbol Manager MVP - V1.04
 
 Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
@@ -13,6 +13,30 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 - Cambios automáticos.
 - Presupuesto dinámico según resultados.
 - Estado físico de los jugadores con impacto en el rendimiento.
+- Caras automáticas por región/nacionalidad desde `img/faces/`.
+
+## Carpetas de imágenes
+El proyecto espera esta estructura:
+
+```txt
+img/
+  escudos/
+  faces/
+  logos/
+  principales/
+```
+
+Para las caras, usar archivos dentro de `img/faces/` con estos nombres:
+
+```txt
+africa (1) ... africa (10)
+America (1) ... America (10)
+Asia (1) ... Asia (10)
+Europa (1) ... Europa (10)
+Otros (1) ... Otros (20)
+```
+
+Extensiones soportadas automáticamente: `.png`, `.jpg`, `.jpeg`, `.webp`.
 
 ## Archivos principales
 - `index.html`
@@ -25,22 +49,12 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 ## Cómo usarlo en GitHub Pages
 1. Crear un repositorio nuevo.
 2. Subir todo el contenido de esta carpeta a la raíz del repositorio.
-3. Ir a **Settings > Pages**.
-4. En **Source**, elegir la rama `main` y carpeta `/root`.
-5. Guardar y abrir la URL publicada.
+3. Cargar las imágenes en `img/faces/`.
+4. Ir a **Settings > Pages**.
+5. En **Source**, elegir la rama `main` y carpeta `/root`.
+6. Guardar y abrir la URL publicada.
 
 ## Notas de esta versión
-- Las formaciones ahora se visualizan con una lógica de 5 secciones de campo más portero.
-- Cada jugador tiene placeholder de foto en plantel y ficha.
-- Se muestran iconos de nacionalidad y rol.
-- Los titulares tienen un anillo de estado físico dividido en 8 tramos.
-- El estado físico afecta el rendimiento de partido.
-- Las tablas resaltan a tu club y a tus jugadores.
-
-## Siguiente versión sugerida
-V2.0 podría incluir:
-- mercado de pases,
-- entrenamientos y evolución,
-- objetivos institucionales,
-- interfaz financiera ampliada,
-- más profundidad de calendario y temporada.
+- Cada jugador recibe una cara fija, elegida de forma pseudoaleatoria según su nacionalidad y región.
+- Las nacionalidades sudamericanas cargadas actualmente usan la región `America`.
+- Si falta una imagen, se muestra el placeholder de jugador.

@@ -3,7 +3,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.03';
+const APP_VERSION = 'V1.04';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -197,6 +197,49 @@ function roleMeta(position){
 function roleBadge(position){
   const meta = roleMeta(position);
   return `${meta.icon} ${meta.code}`;
+}
+function nationalityRegion(nationality){
+  const value = String(nationality || '').toLowerCase();
+  const america = ['argentina','bolivia','brasil','chile','colombia','ecuador','paraguay','perú','peru','uruguay','venezuela','méxico','mexico','estados unidos','canadá','canada','costa rica','panamá','panama'];
+  const europe = ['españa','espana','italia','francia','alemania','portugal','inglaterra','croacia','serbia','polonia','países bajos','paises bajos','holanda','bélgica','belgica','suiza','dinamarca','noruega','suecia'];
+  const africa = ['marruecos','senegal','nigeria','ghana','camerún','camerun','argelia','egipto','costa de marfil','túnez','tunez','sudáfrica','sudafrica'];
+  const asia = ['japón','japon','corea','china','irán','iran','arabia saudita','qatar','australia'];
+  if(america.includes(value)) return 'America';
+  if(europe.includes(value)) return 'Europa';
+  if(africa.includes(value)) return 'africa';
+  if(asia.includes(value)) return 'Asia';
+  return 'Otros';
+}
+function faceMaxForRegion(region){
+  return region === 'Otros' ? 20 : 10;
+}
+function faceBaseForPlayer(player){
+  const region = nationalityRegion(player?.nationality);
+  const index = hashNumber(`face-${player?.id || 0}-${region}`, faceMaxForRegion(region)) + 1;
+  return `img/faces/${region} (${index})`;
+}
+function faceImg(player, className='photo-thumb'){
+  const base = faceBaseForPlayer(player);
+  const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
+  return `<img class="${className}" src="${base}.png" alt="${alt}" data-face-base="${base}" data-face-ext-index="0" onerror="tryNextFaceExt(this)">`;
+}
+function tryNextFaceExt(img){
+  const exts = ['.png','.jpg','.jpeg','.webp'];
+  const index = Number(img.dataset.faceExtIndex || 0) + 1;
+  const base = img.dataset.faceBase;
+  if(base && index < exts.length){
+    img.dataset.faceExtIndex = String(index);
+    img.src = `${base}${exts[index]}`;
+    return;
+  }
+  img.onerror = null;
+  img.replaceWith(fallbackFaceNode(img.className));
+}
+function fallbackFaceNode(className){
+  const node = document.createElement('div');
+  node.className = className || 'photo-thumb';
+  node.textContent = '👤';
+  return node;
 }
 function playerGroup(position){
   return roleMeta(position).group;
@@ -596,7 +639,7 @@ function renderSquad(){
   const players = playersByClub(game.selectedClubId).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || positionOrder(a.position)-positionOrder(b.position));
   const rows = players.map(p=>`
     <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
-      <td><div class="photo-thumb">👤</div></td>
+      <td>${faceImg(p, 'photo-thumb')}</td>
       <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
       <td>#${jerseyNumber(p.id)}</td>
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
@@ -1184,7 +1227,7 @@ function showPlayerModal(playerId){
     <div class="player-modal-grid">
       <div>
         <div class="player-identity-card">
-          <div class="player-photo-placeholder large">👤</div>
+          ${faceImg(p, 'player-photo-placeholder large')}
           <div>
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
             <h2>${escapeHtml(p.name)}</h2>

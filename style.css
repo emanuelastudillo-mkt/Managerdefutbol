@@ -459,3 +459,190 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   .lineup-row{grid-template-columns:auto 1fr auto}
   .condition-bar{grid-column:1 / -1;min-width:0;width:100%}
 }
+
+/* V1.14: escudos junto al nombre y filtros por división */
+.division-filter{min-width:230px;display:grid;gap:6px;align-items:start}
+.division-filter label{margin:0;font-size:11px;color:#9fb0c9}
+.division-filter select{margin:0;min-width:220px}
+.club-link,.club-click{display:inline-flex;align-items:center;gap:10px;font-weight:900;color:#dbeafe;line-height:1.15}
+.club-link span:last-child,.club-click span:last-child{display:inline-block}
+.club-badge-placeholder{
+  display:inline-grid;
+  place-items:center;
+  width:32px;
+  min-width:32px;
+  height:32px;
+  padding:0;
+  border-radius:10px;
+  border:1px solid rgba(148,163,184,.24);
+  background:rgba(255,255,255,.07);
+  color:#dbeafe;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.04em;
+  vertical-align:middle;
+  overflow:hidden;
+  flex:0 0 32px;
+}
+.club-badge-placeholder img{width:28px;height:28px;object-fit:contain;display:block}
+.club-badge-placeholder span{display:none;line-height:1;text-align:center;padding:0 2px}
+.match-line .club-click{justify-content:flex-start}
+.match-line div:last-child .club-click{justify-content:flex-end}
+.club-modal-head h2 .club-badge-placeholder{margin-right:8px}
+@media (max-width:900px){.division-filter,.division-filter select{width:100%;min-width:0}.match-line div:last-child .club-click{justify-content:flex-start}}
+
+/* V1.15: suplentes lesionados visibles y pizarra simplificada */
+.pitch-slot::before,
+.pitch-slot:hover::before{display:none!important;content:none!important}
+.pitch-slot{
+  width:72px;
+  min-height:72px;
+}
+.player-chip,
+.player-chip.gk,
+.player-chip.def,
+.player-chip.mid,
+.player-chip.att{
+  width:62px;
+  height:62px;
+  min-height:62px;
+  padding:7px 6px 12px;
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(51,65,85,.96),rgba(30,41,59,.98));
+  border:1px solid rgba(226,232,240,.22);
+  box-shadow:0 10px 24px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.player-chip:hover{
+  background:linear-gradient(180deg,rgba(71,85,105,.98),rgba(30,41,59,1));
+  border-color:rgba(226,232,240,.34);
+}
+.player-chip.out-zone{
+  box-shadow:0 0 0 2px rgba(239,68,68,.82),0 10px 24px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.jersey-dot{
+  font-size:12px;
+  font-weight:900;
+  color:#f8fafc;
+  line-height:1;
+  letter-spacing:-.02em;
+}
+.player-chip-name{
+  font-size:10px;
+  line-height:1.05;
+  max-width:50px;
+  color:#f8fafc;
+  text-shadow:none;
+}
+.fitness-ring{
+  position:absolute;
+  width:74px;
+  height:74px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  inset:auto;
+  pointer-events:none;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.18));
+}
+.mentality-marker{
+  bottom:-3px;
+  font-size:15px;
+}
+.drag-player strong{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.injury-cross.inline{
+  width:18px;
+  height:18px;
+  min-width:18px;
+  border-radius:6px;
+  font-size:12px;
+}
+.drag-player.injured-card{
+  border-color:rgba(239,68,68,.34);
+  background:linear-gradient(135deg,rgba(239,68,68,.06),rgba(255,255,255,.035));
+}
+@media (max-width:900px){
+  .pitch-slot{width:62px;min-height:62px}
+  .player-chip,
+  .player-chip.gk,
+  .player-chip.def,
+  .player-chip.mid,
+  .player-chip.att{width:54px;height:54px;min-height:54px;padding:6px 4px 10px}
+  .player-chip-name{font-size:9px;max-width:42px}
+  .fitness-ring{width:66px;height:66px}
+}
+
+/* V1.16: módulo Estadio y estado dinámico del campo */
+.field-bar{
+  position:relative;
+  height:18px;
+  border-radius:999px;
+  background:rgba(15,23,42,.88);
+  border:1px solid rgba(148,163,184,.18);
+  overflow:hidden;
+  min-width:180px;
+}
+.field-bar span{
+  position:absolute;
+  inset:0 auto 0 0;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#7f1d1d 0%,#dc2626 22%,#f97316 40%,#facc15 60%,#84cc16 78%,#22c55e 100%);
+  box-shadow:0 0 18px rgba(34,197,94,.15);
+}
+.field-bar.unplayable span{background:linear-gradient(90deg,#450a0a,#991b1b,#dc2626)}
+.field-bar.bad span{background:linear-gradient(90deg,#991b1b,#ef4444,#f97316)}
+.field-bar.regular span{background:linear-gradient(90deg,#dc2626,#f97316,#facc15)}
+.field-bar.normal span{background:linear-gradient(90deg,#f59e0b,#84cc16,#22c55e)}
+.field-bar.excellent span{background:linear-gradient(90deg,#84cc16,#22c55e,#16a34a)}
+.field-bar em{
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-50%);
+  font-style:normal;
+  font-size:11px;
+  font-weight:900;
+  color:#f8fafc;
+  text-shadow:0 1px 2px rgba(0,0,0,.55);
+}
+.stadium-score-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:4px 0 10px}
+.stadium-score-row strong{font-size:34px;letter-spacing:-.04em}
+.field-state.excellent{color:#86efac}.field-state.normal{color:#bbf7d0}.field-state.regular{color:#fde68a}.field-state.bad{color:#fdba74}.field-state.unplayable{color:#fca5a5}
+.stadium-effects>div{
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.12);
+  background:rgba(255,255,255,.03);
+}
+.stadium-effects strong{font-size:24px;display:block;letter-spacing:-.03em}
+.maintenance-option{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.12);
+  background:rgba(255,255,255,.03);
+}
+.maintenance-option strong{display:block;margin-bottom:4px;color:#dbeafe}
+.stadium-progress-card{border-color:rgba(59,130,246,.24);background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(255,255,255,.025))}
+.project-progress{
+  height:14px;
+  border-radius:999px;
+  background:rgba(15,23,42,.88);
+  border:1px solid rgba(148,163,184,.16);
+  overflow:hidden;
+  margin:8px 0 10px;
+}
+.project-progress span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .25s ease;
+}
+@media (max-width:900px){.maintenance-option{grid-template-columns:1fr}.maintenance-option button{width:100%}}

@@ -1,46 +1,29 @@
-# Fútbol Manager MVP - V1.13
+# Fútbol Manager MVP - V1.16
 
-Proyecto estático para navegador listo para subir a **GitHub Pages**.
+Paquete de actualización del proyecto para navegador.
 
-## Actualización V1.13
-- Se incorpora `data/Liga Argentina.json` como estructura principal de datos.
-- El juego genera **3 divisiones** desde ese archivo:
-  - Liga Profesional
-  - Primera Nacional
-  - Federal A
-- Se toman los valores de **prestigio/reputation** del JSON para calcular:
-  - media de jugadores
-  - presupuesto inicial del club
-  - estado del campo de juego
-  - multiplicador económico por división
-- Multiplicadores por división:
-  - Liga Profesional: 100%
-  - Primera Nacional: 30%
-  - Federal A: 15%
-- El nombre de escudo esperado sigue esta lógica:
-  - `Boca Juniors` → `img/escudos/Boca_Juniors.png`
-- La creación de jugadores fue ajustada por rol:
-  - Porteros: edad promedio más alta y stats especiales.
-  - Defensas: defensa como habilidad clave; ataque/cabezazo comunes; pase/velocidad raras.
-  - Medios: pase como habilidad clave; defensa/ataque/tiro comunes; velocidad/cabezazo raras.
-  - Delanteros: ataque como habilidad clave; tiro/cabezazo comunes; pase/velocidad/defensa raras.
+## Cambios de esta versión
+- Nuevo menú lateral **Estadio**.
+- Cada club tiene un estado numérico de campo inicial aleatorio entre 60 y 80.
+- El estado del campo se clasifica así:
+  - Excelente: 90 a 100
+  - Normal: 60 a 89
+  - Regular: 40 a 59
+  - Muy malo: 20 a 39
+  - Injugable: 1 a 19
+- Cada partido como local baja el campo entre 5 y 8 puntos.
+- El estado del campo afecta la simulación con pase, ocasiones, cansancio y probabilidad de lesión.
+- Nueva acción de estadio: **Replantar todo** por $2.000.000.
+- Nueva acción de estadio: **Regar y parchar campo de juego** por $200.000.
+- Se descuenta el costo directamente del presupuesto.
+- Se muestran barras de progreso para trabajos activos.
 
-## Archivos incluidos en este update
+## Archivos incluidos
 - `index.html`
 - `app.js`
+- `style.css`
 - `README.md`
 - `VERSION.md`
-- `data/Liga Argentina.json`
 
-No se incluye `pitch-board.png`.
-
-## Instalación
-Subí estos archivos sobre tu repositorio actual, manteniendo las carpetas existentes.
-
-El juego buscará primero:
-
-```txt
-data/Liga Argentina.json
-```
-
-Si ese archivo existe, se usará como fuente principal.
+## Nota
+Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual.

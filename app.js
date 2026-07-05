@@ -4,7 +4,14 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.17';
+const APP_VERSION = 'V1.20';
+const TEAM_COHESION_START = 50;
+const TEAM_COHESION_MATCH_GAIN = 8;
+const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
+const TEAM_COHESION_PLAYER_CHANGE_LOSS = 2;
+const PLAYER_MORALE_START = 60;
+const PSYCHOLOGIST_COST = 500000;
+const PSYCHOLOGIST_SUCCESS_CHANCE = 0.90;
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -264,8 +271,27 @@ function conditionBar(playerId){
   const colorClass = value < 50 ? 'low' : value < 75 ? 'mid' : 'high';
   return `<div class="condition-bar ${colorClass}" title="Estado físico ${value}/99"><span style="width:${clamp(value,0,99)}%"></span><em>${value}/99</em></div>`;
 }
+
+function currentMorale(playerId){
+  if(!game) return PLAYER_MORALE_START;
+  if(!game.playerMorale) game.playerMorale = {};
+  if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = PLAYER_MORALE_START;
+  return clamp(Math.round(game.playerMorale[playerId]), 1, 99);
+}
+function moraleFactor(playerId){
+  return 0.92 + (currentMorale(playerId) / 99) * 0.16;
+}
+function moraleBar(playerId){
+  const value = currentMorale(playerId);
+  const colorClass = value < 40 ? 'low' : value < 70 ? 'mid' : 'high';
+  return `<div class="morale-bar ${colorClass}" title="Moral ${value}/99"><span style="width:${clamp(value,1,99)}%"></span><em>${value}/99</em></div>`;
+}
+function squadMoraleAverage(clubId){
+  const squad = playersByClub(clubId);
+  return Math.round(avg(squad.map(p => currentMorale(p.id)))) || 0;
+}
 function matchSkill(p, skillName){
-  return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id)), 1, 99);
+  return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id) * moraleFactor(p.id)), 1, 99);
 }
 function jerseyNumber(playerId){
   const p = playerById(playerId);
@@ -1013,7 +1039,13 @@ function normalizeGame(saved){
   normalized.budgetHistory = normalized.budgetHistory || [];
   normalized.playerCondition = normalized.playerCondition || {};
   seed.players.forEach(p => { if(!Number.isFinite(normalized.playerCondition[p.id])) normalized.playerCondition[p.id] = 99; });
+  normalized.playerMorale = normalized.playerMorale || {};
+  seed.players.forEach(p => { if(!Number.isFinite(normalized.playerMorale[p.id])) normalized.playerMorale[p.id] = PLAYER_MORALE_START; });
+  normalized.staffActions = normalized.staffActions || {};
   normalized.stadium = normalized.stadium || createInitialStadiumState();
+  normalized.teamCohesion = normalized.teamCohesion || {};
+  normalized.lastMatchTactics = normalized.lastMatchTactics || {};
+  seed.clubs.forEach(c => { if(!Number.isFinite(normalized.teamCohesion[c.id])) normalized.teamCohesion[c.id] = TEAM_COHESION_START; });
   if(!normalized.stadium.fields) normalized.stadium.fields = {};
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c); });
@@ -1096,7 +1128,11 @@ function newGame(selectedClubId){
     lastBudgetDelta: 0,
     budgetHistory: [],
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
-    stadium: createInitialStadiumState()
+    playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
+    staffActions: {},
+    stadium: createInitialStadiumState(),
+    teamCohesion: Object.fromEntries(seed.clubs.map(c => [c.id, TEAM_COHESION_START])),
+    lastMatchTactics: {}
   };
   activeTab = 'home';
   renderAll();
@@ -1128,7 +1164,7 @@ function renderAll(){
     renderClubRequirementsWarning();
     return;
   }
-  const renderers = { home:renderHome, squad:renderSquad, tactics:renderTactics, stadium:renderStadium, fixture:renderFixture, standings:renderStandings, stats:renderStats };
+  const renderers = { home:renderHome, squad:renderSquad, tactics:renderTactics, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats };
   renderers[activeTab]();
 }
 function renderClubRequirementsWarning(){
@@ -1155,6 +1191,7 @@ function renderHome(){
   const clubPlayers = playersByClub(game.selectedClubId);
   const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
   const avgFitness = squadFitnessAverage(game.selectedClubId);
+  const avgMorale = squadMoraleAverage(game.selectedClubId);
   const injuredList = injuredPlayersByClub(game.selectedClubId);
   const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
   const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
@@ -1181,6 +1218,7 @@ function renderHome(){
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
       <div class="card"><p class="label">Media general</p><div class="metric">${avgOverall}</div></div>
       <div class="card"><p class="label">Estado físico general</p><div class="metric">${avgFitness}</div><p class="small muted">sobre 99</p></div>
+      <div class="card"><p class="label">Moral general</p><div class="metric">${avgMorale}</div><p class="small muted">sobre 99</p></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
       <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
     </div>
@@ -1295,6 +1333,8 @@ function sortedSquadPlayers(){
     media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
     condicion_desc:(a,b)=>currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
     condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
+    moral_desc:(a,b)=>currentMorale(b.id)-currentMorale(a.id) || byName(a,b),
+    moral_asc:(a,b)=>currentMorale(a.id)-currentMorale(b.id) || byName(a,b),
     resistencia_desc:(a,b)=>visibleStats(b).Resistencia-visibleStats(a).Resistencia || byName(a,b),
     resistencia_asc:(a,b)=>visibleStats(a).Resistencia-visibleStats(b).Resistencia || byName(a,b),
     estado_disponible:byStatusAvailable,
@@ -1320,7 +1360,8 @@ function renderSquad(){
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
       <td><span class="pill">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)}</span></td>
       <td><strong>${visibleOverall(p)}</strong></td>
-      <td>${currentCondition(p.id)}/99</td>
+      <td>${conditionBar(p.id)}</td>
+      <td>${moraleBar(p.id)}</td>
       <td>${visibleStats(p).Resistencia}</td>
       <td><span class="${isUnavailable(p.id) ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span></td>
       <td>${formatMoney(p.value)}</td>
@@ -1335,6 +1376,7 @@ function renderSquad(){
       <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
       <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
       <th>${columnSort('Valor', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
@@ -1350,7 +1392,7 @@ function playerDragCard(p, extra=''){
   const injuryIcon = isInjured(p.id) ? '<span class="injury-cross inline" title="Lesionado">✚</span>' : '';
   return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${isInjured(p.id) ? 'injured-card' : ''}" draggable="true" data-drag-player="${p.id}">
     ${faceImg(p, 'drag-face')}
-    <div><strong>${injuryIcon}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · ${currentCondition(p.id)}/99</span></div>
+    <div><strong>${injuryIcon}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
   </div>`;
 }
 function renderTactics(){
@@ -1366,11 +1408,9 @@ function renderTactics(){
   const pitch = pitchSlots(game.tactic).map(slot => {
     const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
     const chip = slot.player ? `
-      <button class="player-chip ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}" draggable="true" data-drag-player="${slot.player.id}" data-toggle-mentality="${slot.player.id}" title="${fit ? 'Zona correcta' : 'Fuera de zona: rinde al 50%'}">
-        ${fitnessRingSvg(slot.player.id)}
+      <button class="player-chip ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}" draggable="true" data-drag-player="${slot.player.id}" title="${fit ? 'Zona correcta' : 'Fuera de zona: rinde al 50%'}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
-        ${mentalityMarker(slot.mentality)}
       </button>` : `<div class="empty-slot ${slotGroup(slot.slot)}"><strong>${slot.slot}</strong><span>Arrastrar</span></div>`;
     return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%" data-drop-slot="${slot.index}">${chip}</div>`;
   }).join('');
@@ -1381,6 +1421,7 @@ function renderTactics(){
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
+      ${p ? moraleBar(p.id) : '<span></span>'}
       <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : '—'}</strong>
     </div>`;
   }).join('');
@@ -1689,6 +1730,46 @@ function bestPlayerForSlot(squad, slot, used){
   };
   return squad.filter(p=>!used.has(p.id)).sort((a,b)=>(effectiveOverall(b)+compatibility(b))-(effectiveOverall(a)+compatibility(a)))[0];
 }
+function ensureTeamCohesion(){
+  if(!game) return;
+  game.teamCohesion = game.teamCohesion || {};
+  game.lastMatchTactics = game.lastMatchTactics || {};
+  seed.clubs.forEach(c => { if(!Number.isFinite(game.teamCohesion[c.id])) game.teamCohesion[c.id] = TEAM_COHESION_START; });
+}
+function cohesionValue(clubId){
+  ensureTeamCohesion();
+  return clamp(Math.round(game?.teamCohesion?.[clubId] ?? TEAM_COHESION_START), 0, 100);
+}
+function cohesionMultiplier(clubId){
+  return clamp(0.90 + (cohesionValue(clubId) / 100) * 0.20, 0.90, 1.10);
+}
+function tacticSignature(tactic){
+  if(!tactic) return '';
+  const normalizeIds = arr => (arr || []).map(Number).filter(Boolean).join(',');
+  const mentality = Object.entries(tactic.playerMentalities || {})
+    .map(([id, mode]) => `${Number(id)}:${mode}`)
+    .sort()
+    .join('|');
+  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality].join('::');
+}
+function applyTacticCohesionPenalty(clubId, tactic){
+  ensureTeamCohesion();
+  const signature = tacticSignature(tactic);
+  const last = game.lastMatchTactics?.[clubId];
+  if(last && last !== signature){
+    game.teamCohesion[clubId] = clamp((game.teamCohesion[clubId] ?? TEAM_COHESION_START) - TEAM_COHESION_TACTIC_CHANGE_LOSS, 0, 100);
+  }
+  game.lastMatchTactics[clubId] = signature;
+}
+function applyMatchCohesionResult(match, substitutions=[], cards=[]){
+  ensureTeamCohesion();
+  [match.homeId, match.awayId].forEach(clubId => {
+    const subCount = (substitutions || []).filter(s => s.clubId === clubId).length;
+    const redCount = (cards || []).filter(c => c.clubId === clubId && (c.type === 'red' || c.type === 'secondYellowRed')).length;
+    const loss = (subCount + redCount) * TEAM_COHESION_PLAYER_CHANGE_LOSS;
+    game.teamCohesion[clubId] = clamp((game.teamCohesion[clubId] ?? TEAM_COHESION_START) + TEAM_COHESION_MATCH_GAIN - loss, 0, 100);
+  });
+}
 function teamPower(clubId, tactic){
   const formation = tactic?.formation || '4-4-2';
   const lineup = selectLineup(clubId, tactic);
@@ -1709,7 +1790,8 @@ function teamPower(clubId, tactic){
   let keeper = gk ? avg([ms(gk,'porteria'),ms(gk,'posicionamiento'),ms(gk,'serenidad')]) : 40;
   const rep = seed.clubs.find(c=>c.id===clubId).reputation;
   const adjust = applyMentalityBonus(tactic || DEFAULT_TACTIC, assigned);
-  return { clubId, lineup, assigned, defense:defense+adjust.defense, midfield:midfield+adjust.midfield, attack:attack+adjust.attack, discipline, stamina, aggression, keeper, reputation:rep };
+  const cohesion = cohesionMultiplier(clubId);
+  return { clubId, lineup, assigned, defense:(defense+adjust.defense)*cohesion, midfield:(midfield+adjust.midfield)*cohesion, attack:(attack+adjust.attack)*cohesion, discipline, stamina:stamina*cohesion, aggression, keeper:keeper*cohesion, reputation:rep };
 }
 function applyMentalityBonus(tactic, assigned){
   const bonus = { attack:0, midfield:0, defense:0 };
@@ -1749,6 +1831,7 @@ function simulateNextMatchday(){
   game.matchHistory.push(...results);
   const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
   applyConditionUpdates(results);
+  applyMoraleUpdates(results);
   advanceStadiumAfterMatches(results);
   if(ownResult) applyEconomyResult(ownResult);
   game.lastOwnProblems = collectOwnProblems(ownResult);
@@ -1863,6 +1946,92 @@ function applyConditionUpdates(results){
     game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
   });
 }
+
+function applyMoraleUpdates(results){
+  if(!game.playerMorale) game.playerMorale = {};
+  seed.players.forEach(player => {
+    if(!Number.isFinite(game.playerMorale[player.id])) game.playerMorale[player.id] = PLAYER_MORALE_START;
+  });
+  const processedClubs = new Set();
+  (results || []).forEach(match => {
+    [
+      { clubId:match.homeId, gf:match.homeGoals, gc:match.awayGoals, starterIds:match.starterIdsHome || [], playedIds:match.playedIdsHome || [] },
+      { clubId:match.awayId, gf:match.awayGoals, gc:match.homeGoals, starterIds:match.starterIdsAway || [], playedIds:match.playedIdsAway || [] }
+    ].forEach(team => {
+      if(!team.clubId || processedClubs.has(`${match.id}-${team.clubId}`)) return;
+      processedClubs.add(`${match.id}-${team.clubId}`);
+      const squad = playersByClub(team.clubId);
+      const starterSet = new Set((team.starterIds || []).map(Number));
+      const playedSet = new Set((team.playedIds || []).map(Number));
+      squad.forEach(player => {
+        let next = currentMorale(player.id);
+        if(starterSet.has(player.id)) next += rnd(3,6);
+        else if(playedSet.has(player.id)) next += rnd(1,2);
+        else next -= 2;
+        if(team.gf > team.gc) next += rnd(1,3);
+        else if(team.gf < team.gc){
+          next -= starterSet.has(player.id) ? rnd(5,8) : rnd(3,4);
+        }
+        game.playerMorale[player.id] = clamp(Math.round(next), 1, 99);
+      });
+    });
+  });
+}
+function renderEmployees(){
+  const last = game.staffActions?.motivationalTalk || null;
+  view.innerHTML = `
+    <div class="row section-title">
+      <div>
+        <h2>Empleados</h2>
+        <p class="tagline">Acciones de apoyo para el plantel. La moral es visible; los valores exactos de mejora no se muestran.</p>
+      </div>
+      <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card staff-card">
+        <h3>Psicólogo motivacional</h3>
+        <p class="muted">Convoca una charla para intentar mejorar la moral del plantel.</p>
+        <p class="label">Costo</p>
+        <div class="metric small">${formatMoney(PSYCHOLOGIST_COST)}</div>
+        <button id="btnMotivationalTalk" class="primary" ${(game.budget || 0) < PSYCHOLOGIST_COST ? 'disabled' : ''}>Llamar al psicólogo motivacional</button>
+      </div>
+      <div class="card staff-card">
+        <h3>Estado del plantel</h3>
+        <div class="stat-rank"><span>Moral media</span><strong>${squadMoraleAverage(game.selectedClubId)}/99</strong></div>
+        <div class="profile-bar-wrap">${moraleTeamBar(game.selectedClubId)}</div>
+        ${last ? `<div class="staff-result ${last.success ? 'ok-result' : 'bad-result'}"><div class="project-progress completed"><span style="width:100%"></span></div><strong>${escapeHtml(last.message)}</strong></div>` : '<p class="muted">Sin acciones recientes.</p>'}
+      </div>
+    </div>
+  `;
+  $('btnMotivationalTalk')?.addEventListener('click', callMotivationalPsychologist);
+}
+function moraleTeamBar(clubId){
+  const value = squadMoraleAverage(clubId);
+  const cls = value < 40 ? 'low' : value < 70 ? 'mid' : 'high';
+  return `<div class="morale-bar ${cls} team-morale-bar" title="Moral media ${value}/99"><span style="width:${clamp(value,1,99)}%"></span><em>${value}/99</em></div>`;
+}
+function callMotivationalPsychologist(){
+  if(!game) return;
+  if((game.budget || 0) < PSYCHOLOGIST_COST){ showNotice('Presupuesto insuficiente para llamar al psicólogo motivacional.'); return; }
+  game.budget -= PSYCHOLOGIST_COST;
+  game.lastBudgetDelta = -PSYCHOLOGIST_COST;
+  const success = Math.random() < PSYCHOLOGIST_SUCCESS_CHANCE;
+  if(success){
+    playersByClub(game.selectedClubId).forEach(player => {
+      game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(18,25)), 1, 99);
+    });
+  }
+  game.staffActions = game.staffActions || {};
+  game.staffActions.motivationalTalk = {
+    success,
+    matchdayIndex: game.matchdayIndex,
+    message: success ? 'La charla motivacional fue un éxito' : 'La charla motivacional fue un fracaso'
+  };
+  saveLocal(true);
+  showNotice(game.staffActions.motivationalTalk.message);
+  renderEmployees();
+}
+
 function getTacticForClub(clubId){
   if(clubId === game.selectedClubId) return game.tactic;
   const club = seed.clubs.find(c=>c.id===clubId);
@@ -1870,8 +2039,12 @@ function getTacticForClub(clubId){
   return { formation, defense:'posicional', midfield:'posicional', attack:'posicional' };
 }
 function simulateMatch(match){
-  const home = teamPower(match.homeId, getTacticForClub(match.homeId));
-  const away = teamPower(match.awayId, getTacticForClub(match.awayId));
+  const homeTactic = getTacticForClub(match.homeId);
+  const awayTactic = getTacticForClub(match.awayId);
+  applyTacticCohesionPenalty(match.homeId, homeTactic);
+  applyTacticCohesionPenalty(match.awayId, awayTactic);
+  const home = teamPower(match.homeId, homeTactic);
+  const away = teamPower(match.awayId, awayTactic);
   const matchContext = makeMatchContext(match, home, away);
   const matchStats = makeMatchStats(home, away, matchContext);
   const homeLambda = expectedGoals(home, away, true, matchStats.home.chances);
@@ -1885,21 +2058,24 @@ function simulateMatch(match){
   const cards = [...makeCards(match.homeId, home, matchStats.home.fouls), ...makeCards(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
   const injuries = [...makeInjuries(match.homeId, home, away, matchContext), ...makeInjuries(match.awayId, away, home, matchContext)].sort((a,b)=>a.minute-b.minute);
   const regularSubs = [
-    ...makeSubstitutions(match.homeId, getTacticForClub(match.homeId), goals),
-    ...makeSubstitutions(match.awayId, getTacticForClub(match.awayId), goals)
+    ...makeSubstitutions(match.homeId, homeTactic, goals),
+    ...makeSubstitutions(match.awayId, awayTactic, goals)
   ];
   const injurySubs = [
-    ...makeInjurySubstitutions(match.homeId, getTacticForClub(match.homeId), injuries, regularSubs),
-    ...makeInjurySubstitutions(match.awayId, getTacticForClub(match.awayId), injuries, regularSubs)
+    ...makeInjurySubstitutions(match.homeId, homeTactic, injuries, regularSubs),
+    ...makeInjurySubstitutions(match.awayId, awayTactic, injuries, regularSubs)
   ];
   const substitutions = [...regularSubs, ...injurySubs].sort((a,b)=>a.minute-b.minute);
+  applyMatchCohesionResult(match, substitutions, cards);
   applyResultToTables(match, homeGoals, awayGoals);
   applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
   applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
   applyAvailability(cards, injuries);
-  const playedIdsHome = [...new Set(home.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
-  const playedIdsAway = [...new Set(away.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
-  return { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, matchContext, playedIdsHome, playedIdsAway };
+  const starterIdsHome = home.lineup.map(p=>p.id);
+  const starterIdsAway = away.lineup.map(p=>p.id);
+  const playedIdsHome = [...new Set(starterIdsHome.concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
+  const playedIdsAway = [...new Set(starterIdsAway.concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
+  return { ...match, played:true, starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, matchContext, playedIdsHome, playedIdsAway };
 }
 function expectedGoals(attacking, defending, isHome, chances){
   const attackEdge = (attacking.attack - defending.defense) / 34;
@@ -2147,6 +2323,8 @@ function showPlayerModal(playerId){
         <div class="card inner"><h3>Perfil</h3>
           <div class="stat-rank"><span>Media</span><strong>${visibleOverall(p)}</strong></div>
           <div class="stat-rank"><span>Estado físico</span><strong>${currentCondition(p.id)}/99</strong></div>
+          <div class="stat-rank"><span>Moral</span><strong>${currentMorale(p.id)}/99</strong></div>
+          <div class="profile-bar-wrap">${moraleBar(p.id)}</div>
           <div class="stat-rank"><span>Valor</span><strong>${formatMoney(p.value)}</strong></div>
           <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
         </div>

@@ -678,3 +678,88 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   margin:0!important;
 }
 .stadium-effects,.injury-rules{display:none!important}
+
+
+/* V1.18: pizarra sin anillos ni marcadores de mentalidad */
+.pitch-board .fitness-ring,
+.pitch-board .mentality-marker{
+  display:none!important;
+}
+.pitch-board .player-chip,
+.pitch-board .player-chip.gk,
+.pitch-board .player-chip.def,
+.pitch-board .player-chip.mid,
+.pitch-board .player-chip.att{
+  width:62px!important;
+  height:62px!important;
+  min-height:62px!important;
+  padding:8px 6px!important;
+  background:linear-gradient(180deg,rgba(51,65,85,.98),rgba(30,41,59,1))!important;
+  border:1px solid rgba(226,232,240,.28)!important;
+  box-shadow:0 10px 24px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+.pitch-board .jersey-dot{
+  font-size:13px!important;
+  font-weight:900!important;
+  color:#f8fafc!important;
+}
+.pitch-board .player-chip-name{
+  font-size:10px!important;
+  font-weight:900!important;
+  color:#f8fafc!important;
+  max-width:52px!important;
+}
+@media (max-width:900px){
+  .pitch-board .player-chip,
+  .pitch-board .player-chip.gk,
+  .pitch-board .player-chip.def,
+  .pitch-board .player-chip.mid,
+  .pitch-board .player-chip.att{width:54px!important;height:54px!important;min-height:54px!important}
+}
+
+
+/* V1.20: moral visible y menú Empleados */
+.morale-bar{
+  position:relative;
+  height:13px;
+  border-radius:999px;
+  background:rgba(15,23,42,.82);
+  border:1px solid rgba(148,163,184,.18);
+  overflow:hidden;
+  min-width:160px;
+}
+.morale-bar span{
+  position:absolute;
+  inset:0 auto 0 0;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#6d28d9 0%,#7c3aed 35%,#38bdf8 100%);
+  box-shadow:0 0 16px rgba(56,189,248,.18);
+}
+.morale-bar.low span{background:linear-gradient(90deg,#3b0764 0%,#6d28d9 100%)}
+.morale-bar.mid span{background:linear-gradient(90deg,#6d28d9 0%,#2563eb 65%,#38bdf8 100%)}
+.morale-bar.high span{background:linear-gradient(90deg,#2563eb 0%,#38bdf8 100%)}
+.morale-bar em{
+  position:absolute;
+  right:7px;
+  top:50%;
+  transform:translateY(-50%);
+  font-style:normal;
+  font-size:10px;
+  font-weight:900;
+  color:#e5edf7;
+  text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+.profile-bar-wrap{margin:8px 0 10px}
+.team-morale-bar{width:100%;min-width:0}
+.staff-card{display:grid;gap:12px;align-content:start}
+.staff-card .primary{width:max-content;max-width:100%}
+.staff-result{display:grid;gap:10px;margin-top:8px;padding:12px;border-radius:16px;border:1px solid rgba(148,163,184,.16);background:rgba(255,255,255,.035)}
+.staff-result.ok-result{border-color:rgba(56,189,248,.28);background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(255,255,255,.025))}
+.staff-result.bad-result{border-color:rgba(239,68,68,.28);background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(255,255,255,.025))}
+.project-progress.completed span{width:100%;background:linear-gradient(90deg,#7c3aed,#38bdf8)}
+.lineup-row{grid-template-columns:auto minmax(130px,1fr) minmax(140px,1fr) minmax(140px,1fr) auto}
+@media (max-width:900px){
+  .morale-bar{min-width:0;width:100%}
+  .lineup-row{grid-template-columns:auto 1fr auto}
+  .lineup-row .morale-bar{grid-column:1 / -1}
+}

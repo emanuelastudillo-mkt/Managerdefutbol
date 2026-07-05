@@ -1,17 +1,23 @@
-# Fútbol Manager MVP - V2.3
+# Fútbol Manager MVP - V2.4
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- Se agregan banners contextuales en el panel principal según lo ocurrido en el último partido propio.
-- Si hubo una lesión leve, intermedia o grave, se muestra la imagen correspondiente desde `img/principales/`.
-- Si no hubo lesionados y el equipo empató o perdió, se muestra el banner de entrenamiento normal.
-- Si no hubo lesionados y el equipo ganó, se muestra el banner de entrenamiento posterior al triunfo.
-- Los jugadores lesionados con menos de 10 turnos restantes ahora pueden ser convocados como suplentes.
-- Un lesionado convocado como suplente queda penalizado internamente al 10% de rendimiento.
-- Los lesionados no pueden ser titulares.
-- Los suspendidos no pueden ser titulares ni suplentes.
-- El banco prioriza jugadores sanos; sólo usa lesionados convocables si hacen falta.
+- Se agrega el nuevo menú lateral **Entrenamiento**.
+- Cada jugador del plantel puede recibir un entrenamiento especializado por turno:
+  - Regenerativo
+  - Masajista
+  - Entrenamiento intenso
+  - Entrenamiento táctico
+  - Día libre
+- Los efectos del entrenamiento se aplican al avanzar el turno.
+- El entrenamiento intenso puede mejorar habilidades clave o comunes del jugador.
+- El entrenamiento táctico puede mejorar la cohesión total del equipo.
+- Se simplifican las opciones de cambios automáticos:
+  - Cambiar a los cansados
+  - Mejores suplentes
+  - Solo cambios por lesión
+- Se prepara guardado local para progresos de entrenamiento y mejoras de habilidades.
 
 ## Archivos incluidos
 - `index.html`
@@ -22,4 +28,4 @@ Paquete de actualización del proyecto para navegador.
 - `VERSION.md`
 
 ## Nota
-Este ZIP **no incluye** `pitch-board.png` ni imágenes de `img/principales/`. Mantené esos archivos en tu repositorio actual.
+Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual si todavía lo usás.

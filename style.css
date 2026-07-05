@@ -1062,3 +1062,30 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 @media (max-width:700px){
   .main-visual-banner{min-height:160px}
 }
+
+
+/* V2.4: entrenamiento individual y cambios simplificados */
+.training-help{padding:16px}
+.training-option-grid{gap:10px}
+.training-option-grid>div{
+  display:grid;
+  gap:4px;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(148,163,184,.12);
+}
+.training-option-grid strong{color:#e2e8f0;font-size:13px}
+.training-option-grid span{color:#94a3b8;font-size:12px;line-height:1.35}
+.training-table td{vertical-align:middle}
+.training-player-cell{display:flex;align-items:center;gap:10px;min-width:220px}
+.training-face{width:38px;height:38px;min-width:38px;border-radius:12px;object-fit:cover;border:1px solid rgba(148,163,184,.18);background:#0f172a}
+.training-table .condition-bar,.training-table .morale-bar{min-width:130px;width:160px}
+.training-table select{min-width:190px;margin:0}
+@media (max-width:900px){
+  .training-option-grid{grid-template-columns:1fr!important}
+  .training-player-cell{min-width:180px}
+  .training-table .condition-bar,.training-table .morale-bar{width:130px;min-width:110px}
+}
+.grid.cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:900px){.grid.cols-5{grid-template-columns:1fr}}

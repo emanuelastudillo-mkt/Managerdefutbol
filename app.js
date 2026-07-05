@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V2.3';
+const APP_VERSION = 'V2.4';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -17,6 +17,14 @@ const KINESIOLOGIST_COST = 1000000;
 const KINESIOLOGIST_FAILURE_CHANCE = 0.20;
 const INJURED_SUB_MAX_TURNS = 9;
 const INJURED_SUB_PENALTY = 0.10;
+const DEFAULT_TRAINING_TYPE = 'regenerative';
+const TRAINING_OPTIONS = [
+  { value:'regenerative', label:'Regenerativo' },
+  { value:'massage', label:'Masajista' },
+  { value:'intense', label:'Entrenamiento intenso' },
+  { value:'tactical', label:'Entrenamiento táctico' },
+  { value:'dayoff', label:'Día libre' }
+];
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -56,10 +64,9 @@ const FORMATION_VISUALS = {
 };
 const MENTALITIES = ['posicional','ataque','defensiva'];
 const SUB_TRIGGERS = [
-  { value:'tired', label:'Quitar cansados' },
-  { value:'winning', label:'Entrar ganando' },
-  { value:'losing', label:'Entrar perdiendo' },
-  { value:'drawing', label:'Entrar empatando' }
+  { value:'tired', label:'Cambiar a los cansados' },
+  { value:'best', label:'Mejores suplentes' },
+  { value:'injuryOnly', label:'Solo cambios por lesión' }
 ];
 const INJURY_TABLE = [
   { name:'Distensión', probability:25, minTurns:2, maxTurns:5 },
@@ -206,7 +213,9 @@ function hashNumber(seedValue, max){
   return Math.abs(h >>> 0) % max;
 }
 function baseSkill(p, skillName){
-  return clamp(Math.round(p.skills?.[skillName] ?? p.overall ?? 50), 1, 99);
+  const base = Math.round(p.skills?.[skillName] ?? p.overall ?? 50);
+  const boost = Number(game?.playerSkillBoosts?.[p.id]?.[skillName] || 0);
+  return clamp(base + boost, 1, 99);
 }
 function hiddenStats(p){
   const aggression = clamp(Math.round(100 - (p.skills.disciplina || 50) + hashNumber(`ag${p.id}`, 18) - 8), 1, 99);
@@ -1150,6 +1159,12 @@ function normalizeGame(saved){
   seed.players.forEach(p => { if(!Number.isFinite(normalized.playerCondition[p.id])) normalized.playerCondition[p.id] = 99; });
   normalized.playerMorale = normalized.playerMorale || {};
   seed.players.forEach(p => { if(!Number.isFinite(normalized.playerMorale[p.id])) normalized.playerMorale[p.id] = PLAYER_MORALE_START; });
+  normalized.playerSkillBoosts = normalized.playerSkillBoosts || {};
+  normalized.trainingPlan = normalized.trainingPlan || {};
+  seed.players.forEach(p => {
+    if(!normalized.playerSkillBoosts[p.id]) normalized.playerSkillBoosts[p.id] = {};
+    if(!trainingOptionByValue(normalized.trainingPlan[p.id])) normalized.trainingPlan[p.id] = DEFAULT_TRAINING_TYPE;
+  });
   normalized.staffActions = normalized.staffActions || {};
   normalized.stadium = normalized.stadium || createInitialStadiumState();
   normalized.teamCohesion = normalized.teamCohesion || {};
@@ -1218,11 +1233,14 @@ function normalizeTactic(clubId, tactic){
   let bench = (base.bench || []).map(Number).filter(id => squadIds.has(id) && !starters.includes(id));
   if(bench.length !== 10){ bench = autoSelectBench(clubId, starters.filter(Boolean)).map(p => p.id); }
   let autoSubs = Array.isArray(base.autoSubs) ? base.autoSubs.slice(0,5) : [];
-  autoSubs = autoSubs.map(rule => ({
-    outId: Number(rule.outId || 0),
-    inId: Number(rule.inId || 0),
-    trigger: SUB_TRIGGERS.some(t => t.value === rule.trigger) ? rule.trigger : 'tired'
-  })).filter(rule => starters.includes(rule.outId) && bench.includes(rule.inId));
+  autoSubs = autoSubs.map(rule => {
+    const legacy = ['winning','losing','drawing'].includes(rule.trigger) ? 'best' : rule.trigger;
+    return {
+      outId: Number(rule.outId || 0),
+      inId: Number(rule.inId || 0),
+      trigger: SUB_TRIGGERS.some(t => t.value === legacy) ? legacy : 'tired'
+    };
+  }).filter(rule => starters.includes(rule.outId) && bench.includes(rule.inId));
   while(autoSubs.length < 5){ autoSubs.push({ outId:0, inId:0, trigger:'tired' }); }
   const matchInstructions = window.Simulator20?.normalizeMatchInstructions
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
@@ -1253,6 +1271,8 @@ function newGame(selectedClubId){
     budgetHistory: [],
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
     playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
+    playerSkillBoosts: Object.fromEntries(seed.players.map(p => [p.id, {}])),
+    trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, DEFAULT_TRAINING_TYPE])),
     staffActions: {},
     stadium: createInitialStadiumState(),
     teamCohesion: Object.fromEntries(seed.clubs.map(c => [c.id, TEAM_COHESION_START])),
@@ -1296,7 +1316,7 @@ function renderAll(){
     renderClubRequirementsWarning();
     return;
   }
-  const renderers = { home:renderHome, squad:renderSquad, tactics:renderTactics, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats };
+  const renderers = { home:renderHome, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats };
   renderers[activeTab]();
 }
 function renderClubRequirementsWarning(){
@@ -1338,7 +1358,7 @@ function renderHome(){
     <div class="row section-title">
       <div>
         <h2>Panel principal</h2>
-        <p class="tagline">Versión ${APP_VERSION}. Simulación local, once titular en cancha, cambios automáticos, estado físico y presupuesto dinámico por resultado.</p>
+        <p class="tagline">Versión ${APP_VERSION}. Simulación local, entrenamiento individual, cambios automáticos, estado físico y presupuesto dinámico por resultado.</p>
       </div>
       <div class="advance-control"><button id="advanceBtn" class="primary">Avanzar fecha</button><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
@@ -1597,7 +1617,7 @@ function renderTactics(){
     </div>
     <div class="card" style="margin-top:14px">
       <h3>Cambios automáticos</h3>
-      <p class="muted small">Cada cambio se ejecuta al minuto 45 en un 10% de los casos. En el resto, se programa entre los minutos 60 y 90.</p>
+      <p class="muted small">Elegí reglas simples: cansados, mejores suplentes o sólo cambios obligados por lesión.</p>
       <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
     </div>
     <div class="card match-instructions-card" style="margin-top:14px">
@@ -1678,7 +1698,7 @@ function autoSubRow(index){
     <span class="rank-num">${index+1}</span>
     <div><label>Sale</label><select data-sub-out="${index}">${starterOpts}</select></div>
     <div><label>Entra</label><select data-sub-in="${index}">${benchOpts}</select></div>
-    <div><label>Condición</label><select data-sub-trigger="${index}">${triggerOpts}</select></div>
+    <div><label>Tipo</label><select data-sub-trigger="${index}">${triggerOpts}</select></div>
   </div>`;
 }
 function saveTacticFromScreen(){
@@ -1911,7 +1931,7 @@ function autoSelectBench(clubId, starterIds){
     .slice(0,10);
 }
 function defaultAutoSubs(starters, bench){
-  return [0,1,2,3,4].map(i => ({ outId: starters[10-i] || 0, inId: bench[i] || 0, trigger: i === 0 ? 'tired' : i === 1 ? 'losing' : i === 2 ? 'winning' : 'drawing' }));
+  return [0,1,2,3,4].map(i => ({ outId: starters[10-i] || 0, inId: bench[i] || 0, trigger: i < 2 ? 'tired' : 'best' }));
 }
 function bestPlayerForSlot(squad, slot, used){
   const compatibility = (p) => {
@@ -2028,6 +2048,7 @@ function simulateNextMatchday(){
   const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
   applyConditionUpdates(results);
   applyMoraleUpdates(results);
+  applyTrainingEffects();
   advanceStadiumAfterMatches(results);
   if(ownResult) applyEconomyResult(ownResult);
   const ownProblems = collectOwnProblems(ownResult);
@@ -2181,6 +2202,116 @@ function applyMoraleUpdates(results){
     });
   });
 }
+
+function trainingOptionByValue(value){
+  return TRAINING_OPTIONS.find(opt => opt.value === value) || null;
+}
+function trainingLabel(value){
+  return trainingOptionByValue(value)?.label || trainingOptionByValue(DEFAULT_TRAINING_TYPE).label;
+}
+function playerTrainingType(playerId){
+  if(!game.trainingPlan) game.trainingPlan = {};
+  if(!trainingOptionByValue(game.trainingPlan[playerId])) game.trainingPlan[playerId] = DEFAULT_TRAINING_TYPE;
+  return game.trainingPlan[playerId];
+}
+function trainingOptionsMarkup(current){
+  return TRAINING_OPTIONS.map(opt => `<option value="${opt.value}" ${current===opt.value?'selected':''}>${opt.label}</option>`).join('');
+}
+function trainableSkillsForPlayer(player){
+  if(player.position === 'POR') return ['porteria','posicionamiento','serenidad','aceleracion','cabezazo','fuerza','liderazgo','trabajoEquipo','paseCorto','paseLargo','resistencia'];
+  if(['LD','LI','DFC'].includes(player.position)) return ['marca','entradas','posicionamiento','fuerza','remate','regate','cabezazo','resistencia','trabajoEquipo'];
+  if(['MCD','MC','MCO','VOL'].includes(player.position)) return ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo','marca','entradas','posicionamiento','regate','remate','resistencia','serenidad'];
+  return ['remate','regate','posicionamiento','serenidad','cabezazo','fuerza','resistencia','tecnica'];
+}
+function improveRandomSkill(player){
+  if(!game.playerSkillBoosts) game.playerSkillBoosts = {};
+  if(!game.playerSkillBoosts[player.id]) game.playerSkillBoosts[player.id] = {};
+  const skills = trainableSkillsForPlayer(player);
+  const skill = skills[hashNumber(`${player.id}-${game.matchdayIndex}-${Math.random()}`, skills.length)];
+  const gain = Math.random() < 0.50 ? 1 : 0;
+  if(gain > 0){
+    game.playerSkillBoosts[player.id][skill] = clamp(Number(game.playerSkillBoosts[player.id][skill] || 0) + gain, 0, 30);
+  }
+  return gain;
+}
+function applyTrainingEffects(){
+  if(!game) return;
+  game.trainingPlan = game.trainingPlan || {};
+  game.playerCondition = game.playerCondition || {};
+  game.playerMorale = game.playerMorale || {};
+  game.playerSkillBoosts = game.playerSkillBoosts || {};
+  let tacticalGain = 0;
+  playersByClub(game.selectedClubId).forEach(player => {
+    const type = playerTrainingType(player.id);
+    if(type === 'regenerative'){
+      game.playerCondition[player.id] = clamp(Math.round(currentCondition(player.id) + rnd(1,3)), 0, 99);
+    } else if(type === 'massage'){
+      game.playerCondition[player.id] = clamp(Math.round(currentCondition(player.id) + rnd(5,8)), 0, 99);
+      game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(2,3)), 1, 99);
+    } else if(type === 'intense'){
+      improveRandomSkill(player);
+      game.playerCondition[player.id] = clamp(Math.round(currentCondition(player.id) - rnd(2,3)), 0, 99);
+      game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) - rnd(5,6)), 1, 99);
+    } else if(type === 'tactical'){
+      tacticalGain += Math.random() < 0.50 ? 1 : 0;
+    } else if(type === 'dayoff'){
+      game.playerCondition[player.id] = clamp(Math.round(currentCondition(player.id) + rnd(1,2)), 0, 99);
+      game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(8,10)), 1, 99);
+    }
+  });
+  if(tacticalGain > 0){
+    ensureTeamCohesion();
+    game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
+  }
+  game.lastTrainingApplied = { matchdayIndex:game.matchdayIndex, tacticalGain };
+}
+function renderTraining(){
+  const squad = playersByClub(game.selectedClubId).slice().sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  view.innerHTML = `
+    <div class="row section-title">
+      <div>
+        <h2>Entrenamiento</h2>
+        <p class="tagline">Asigná un entrenamiento especializado por jugador. Los efectos se aplican al avanzar cada turno.</p>
+      </div>
+      <span class="pill">Cohesión: ${cohesionValue(game.selectedClubId)}/100</span>
+    </div>
+    <div class="card training-help">
+      <div class="grid cols-5 training-option-grid">
+        <div><strong>Regenerativo</strong><span>+ forma física.</span></div>
+        <div><strong>Masajista</strong><span>+ forma física y moral.</span></div>
+        <div><strong>Intenso</strong><span>Puede mejorar habilidad; baja forma y moral.</span></div>
+        <div><strong>Táctico</strong><span>Puede mejorar cohesión total.</span></div>
+        <div><strong>Día libre</strong><span>+ forma física y mucha moral.</span></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="table-wrap"><table class="training-table"><thead><tr><th>Jugador</th><th>Pos.</th><th>Media</th><th>Estado físico</th><th>Moral</th><th>Entrenamiento</th></tr></thead><tbody>
+        ${squad.map(player => trainingPlayerRow(player)).join('')}
+      </tbody></table></div>
+    </div>
+  `;
+  document.querySelectorAll('[data-training-player]').forEach(select => {
+    select.addEventListener('change', () => {
+      const playerId = Number(select.dataset.trainingPlayer);
+      game.trainingPlan = game.trainingPlan || {};
+      game.trainingPlan[playerId] = trainingOptionByValue(select.value) ? select.value : DEFAULT_TRAINING_TYPE;
+      saveLocal(true);
+      showNotice('Entrenamiento actualizado. Se aplicará al avanzar el turno.');
+    });
+  });
+}
+function trainingPlayerRow(player){
+  const type = playerTrainingType(player.id);
+  return `<tr>
+    <td><div class="training-player-cell">${faceImg(player,'training-face')}<button class="linklike" data-player-id="${player.id}">${availabilityIcons(player.id)}${escapeHtml(player.name)}</button></div></td>
+    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td><strong>${visibleOverall(player)}</strong></td>
+    <td>${conditionBar(player.id)}</td>
+    <td>${moraleBar(player.id)}</td>
+    <td><select data-training-player="${player.id}">${trainingOptionsMarkup(type)}</select></td>
+  </tr>`;
+}
+
 function renderEmployees(){
   const last = game.staffActions?.motivationalTalk || null;
   const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
@@ -2448,10 +2579,14 @@ function makeSubstitutions(clubId, tactic, goals){
     const score = scoreAtMinute(goals, minute, clubId);
     const outPlayer = playerById(outId);
     let execute = false;
+    if(rule.trigger === 'injuryOnly') execute = false;
     if(rule.trigger === 'tired') execute = currentCondition(outId) < 68 || effectiveSkill(outPlayer,'resistencia') < 72 || minute >= 75 || Math.random() < 0.35;
-    if(rule.trigger === 'winning') execute = score.gf > score.gc;
-    if(rule.trigger === 'losing') execute = score.gf < score.gc;
-    if(rule.trigger === 'drawing') execute = score.gf === score.gc;
+    if(rule.trigger === 'best'){
+      const inPlayer = playerById(inId);
+      const outValue = outPlayer ? effectiveOverall(outPlayer) * conditionFactor(outId) : 0;
+      const inValue = inPlayer ? benchOverallValue(inPlayer) * conditionFactor(inId) : 0;
+      execute = inValue >= outValue * 0.96 || currentCondition(outId) < 72 || minute >= 75;
+    }
     if(execute){
       onPitch.delete(outId);
       onPitch.add(inId);

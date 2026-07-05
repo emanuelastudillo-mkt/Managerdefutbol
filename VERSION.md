@@ -1,28 +1,33 @@
 # Registro de versión
 
-## Versión: V2.3
-**Estado:** ajuste funcional sobre visual post-partido y convocatoria de lesionados  
-**Tipo de mejora:** interfaz, táctica y reglas médicas
+## Versión: V2.4
+**Estado:** estable para pruebas locales / GitHub Pages  
+**Tipo de mejora:** entrenamiento individual y simplificación táctica
 
 ### Resumen
-La versión V2.3 agrega imágenes contextuales después de cada partido y permite convocar lesionados leves/intermedios al banco para evitar bloqueos por falta de suplentes disponibles.
+Esta versión agrega una nueva sección de entrenamiento para administrar el trabajo específico de cada jugador y simplifica las opciones de cambios automáticos para que sean más claras durante la configuración táctica.
 
 ### Cambios principales agregados
-- Se agrega selección automática de banner contextual en el panel principal según el último partido propio:
-  - lesión de menos de 5 turnos: `banner_noticias_lesion_leve.jpg`;
-  - lesión de más de 10 turnos: `banner_noticia_lesion_intermedia.jpg`;
-  - lesión de más de 25 turnos: `banner_noticia_lesion_grave.jpg`;
-  - sin lesionados y empate/derrota: `banner_entrenamiento_normal.jpg`;
-  - sin lesionados y victoria: `banner_entrenamiento_triunfo.jpg`.
-- Si una lesión queda entre 5 y 10 turnos, se usa el banner de lesión intermedia para no ocultar que hubo lesión.
-- Los jugadores lesionados con menos de 10 turnos restantes pueden ser convocados como suplentes.
-- Los jugadores lesionados convocados como suplentes reciben una penalización interna del 90%.
-- Los lesionados no pueden ser titulares.
-- Los suspendidos no pueden formar parte de la convocatoria.
-- El autoselector de suplentes prioriza jugadores disponibles y deja a los lesionados convocables como recurso de emergencia.
-- Los cambios automáticos y cambios por lesión pueden usar un suplente lesionado convocable si no hay una mejor opción disponible.
+- Nuevo menú lateral **Entrenamiento**.
+- Tabla de entrenamiento con todo el plantel.
+- Selector individual de entrenamiento por jugador.
+- Entrenamientos disponibles:
+  - **Regenerativo:** mejora estado físico cada turno.
+  - **Masajista:** mejora estado físico y moral.
+  - **Entrenamiento intenso:** puede mejorar una habilidad clave o común, pero reduce estado físico y moral.
+  - **Entrenamiento táctico:** puede mejorar la cohesión total del equipo.
+  - **Día libre:** mejora estado físico y moral.
+- Guardado local de la planificación de entrenamiento.
+- Guardado local de mejoras de habilidades mediante entrenamiento intenso.
+- Las mejoras de habilidad influyen en la media visible y en el simulador.
+- Opciones de cambios automáticos simplificadas:
+  - **Cambiar a los cansados**.
+  - **Mejores suplentes**.
+  - **Solo cambios por lesión**.
+- Los cambios antiguos por situación de partido se migran a opciones simples al cargar una partida existente.
 
 ### Pendientes sugeridos
-- Hacer que los cambios modifiquen el rendimiento por bloque dentro del motor de simulación.
-- Definir si un jugador lesionado convocado al banco debe aumentar su riesgo de recaída.
-- Confirmar extensión final del archivo `banner_entrenamiento_triunfo.jpg`.
+- Separar entrenamiento por grupos de trabajo.
+- Agregar historial de entrenamientos recientes.
+- Balancear cuánto impacta el entrenamiento táctico en cohesión.
+- Evaluar costos o límite semanal para masajista y día libre.

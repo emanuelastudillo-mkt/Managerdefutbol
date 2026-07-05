@@ -297,11 +297,13 @@
       ...makeInjurySubstitutions(match.awayId, awayTactic, injuries, regularSubs)
     ];
     const substitutions = [...regularSubs, ...injurySubs].sort((a,b)=>a.minute-b.minute);
-    applyMatchCohesionResult(match, substitutions, cards);
-    applyResultToTables(match, homeGoals, awayGoals);
-    applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
-    applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
-    applyAvailability(cards, injuries);
+    if(!match.friendly){
+      applyMatchCohesionResult(match, substitutions, cards);
+      applyResultToTables(match, homeGoals, awayGoals);
+      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
+      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
+      applyAvailability(cards, injuries);
+    }
     const starterIdsHome = home.lineup.map(p=>p.id);
     const starterIdsAway = away.lineup.map(p=>p.id);
     const playedIdsHome = [...new Set(starterIdsHome.concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];

@@ -4,7 +4,10 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V2.12';
+const PRESEASON_TURNS = 10;
+const POSTSEASON_TURNS = 5;
+const MAX_PRESEASON_FRIENDLIES = 5;
+const APP_VERSION = 'V2.14';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -92,6 +95,11 @@ const PATCH_COST = 200000;
 const PATCH_TURNS = 3;
 const PATCH_GAIN_PER_TURN = 5;
 const MARKET_FREE_AGENT_COUNT = 50;
+const SEASON_YOUTH_FREE_AGENT_COUNT = 20;
+const RETIREMENT_MIN_AGE = 32;
+const RETIREMENT_MAX_AGE = 38;
+const SEASON_SALARY_BASE_REDUCTION = 0.05;
+const SEASON_SALARY_MATCH_BONUS = 0.01;
 const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
 
 const DEFAULT_TACTIC = {
@@ -195,6 +203,35 @@ function injuredSubPenaltyFactor(playerId){
 function benchOverallValue(player){
   return Math.round(effectiveOverall(player) * injuredSubPenaltyFactor(player.id));
 }
+
+function seasonPhase(){
+  return game?.seasonPhase || (game?.seasonFinalized ? 'finalized' : 'regular');
+}
+function isPreseason(){ return seasonPhase() === 'preseason'; }
+function isPostseason(){ return seasonPhase() === 'postseason'; }
+function isRegularSeason(){ return seasonPhase() === 'regular'; }
+function currentTurnIndex(){ return Number.isFinite(game?.globalTurn) ? game.globalTurn : 0; }
+function turnStamp(extra={}){
+  return { globalTurn:currentTurnIndex(), season:game?.seasonNumber || 1, phase:seasonPhase(), phaseTurn:game?.phaseTurn || 0, matchdayIndex:game?.matchdayIndex || 0, ...extra };
+}
+function turnCooldownLeft(last, cooldown){
+  if(!last) return 0;
+  const lastTurn = Number.isFinite(last.globalTurn) ? last.globalTurn : Number(last.absoluteTurn || last.matchdayIndex || 0);
+  return Math.max(0, cooldown - (currentTurnIndex() - lastTurn));
+}
+function advanceGlobalTurn(){
+  if(!game) return;
+  game.globalTurn = currentTurnIndex() + 1;
+}
+function phaseLabel(){
+  if(!game) return '—';
+  if(game.seasonFinalized || seasonPhase() === 'finalized') return 'Temporada finalizada';
+  if(isPreseason()) return `Pretemporada: ${Math.min((game.phaseTurn || 0) + 1, PRESEASON_TURNS)} / ${PRESEASON_TURNS}`;
+  if(isPostseason()) return `Postemporada: ${Math.min((game.phaseTurn || 0) + 1, POSTSEASON_TURNS)} / ${POSTSEASON_TURNS}`;
+  return `Jornada: ${Math.min((game.matchdayIndex || 0) + 1, game.fixtures?.length || seed.fixtures.length)} / ${game.fixtures?.length || seed.fixtures.length}`;
+}
+function preseasonFriendliesPlayed(){ return Number(game?.preseasonFriendliesPlayed || 0); }
+function canPlayPreseasonFriendly(){ return isPreseason() && preseasonFriendliesPlayed() < MAX_PRESEASON_FRIENDLIES; }
 function statusText(playerId){
   if(!game) return 'Disponible';
   const st = playerStatus(playerId);
@@ -1222,6 +1259,11 @@ function normalizeGame(saved){
   normalized.seasonNumber = Number.isFinite(normalized.seasonNumber) ? normalized.seasonNumber : 1;
   normalized.seasonFinalized = Boolean(normalized.seasonFinalized);
   normalized.seasonTransition = normalized.seasonTransition || null;
+  normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
+  normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
+  normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 40 + (normalized.matchdayIndex || 0));
+  normalized.preseasonFriendliesPlayed = Number.isFinite(normalized.preseasonFriendliesPlayed) ? normalized.preseasonFriendliesPlayed : 0;
+  normalized.pendingFriendlyOpponentId = Number.isFinite(normalized.pendingFriendlyOpponentId) ? normalized.pendingFriendlyOpponentId : 0;
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
@@ -1247,6 +1289,9 @@ function normalizeGame(saved){
     if(!trainingOptionByValue(normalized.trainingPlan[p.id])) normalized.trainingPlan[p.id] = DEFAULT_TRAINING_TYPE;
   });
   normalized.staffActions = normalized.staffActions || {};
+  if(normalized.staffActions.motivationalTalk && !Number.isFinite(normalized.staffActions.motivationalTalk.globalTurn)){
+    normalized.staffActions.motivationalTalk.globalTurn = ((Math.max(1, normalized.staffActions.motivationalTalk.season || normalized.seasonNumber || 1) - 1) * 40) + Number(normalized.staffActions.motivationalTalk.matchdayIndex || 0);
+  }
   normalized.stadium = normalized.stadium || createInitialStadiumState();
   normalized.teamCohesion = normalized.teamCohesion || {};
   normalized.lastMatchTactics = normalized.lastMatchTactics || {};
@@ -1356,6 +1401,11 @@ function newGame(selectedClubId){
     seasonNumber: 1,
     seasonFinalized: false,
     seasonTransition: null,
+    seasonPhase: 'preseason',
+    phaseTurn: 0,
+    globalTurn: 0,
+    preseasonFriendliesPlayed: 0,
+    pendingFriendlyOpponentId: 0,
     clubDivisionOverrides: {},
     managerStats: createInitialManagerStats(),
     messages: [],
@@ -1510,6 +1560,114 @@ function applyBiSeasonalAging(){
   });
   return count;
 }
+
+function applySeasonSalaryAdjustments(){
+  if(!game?.playerStats || !seed?.players) return { players:0, increased:0, decreased:0, totalDelta:0, details:[] };
+  let players = 0;
+  let increased = 0;
+  let decreased = 0;
+  let totalDelta = 0;
+  const details = [];
+  seed.players.forEach(player => {
+    if(!player || Number(player.clubId || 0) <= 0 || player.sold) return;
+    const oldSalary = Math.max(0, Math.round(Number(player.salary || 0)));
+    if(oldSalary <= 0) return;
+    const played = Math.max(0, Math.round(Number(game.playerStats[player.id]?.played || 0)));
+    const pct = (played * SEASON_SALARY_MATCH_BONUS) - SEASON_SALARY_BASE_REDUCTION;
+    const nextSalary = Math.max(0, Math.round(oldSalary * (1 + pct)));
+    const delta = nextSalary - oldSalary;
+    player.salary = nextSalary;
+    players += 1;
+    totalDelta += delta;
+    if(delta > 0) increased += 1;
+    if(delta < 0) decreased += 1;
+    if(Number(player.clubId) === Number(game.selectedClubId)){
+      details.push({ playerId:player.id, name:player.name, played, oldSalary, nextSalary, delta, pct });
+    }
+  });
+  return { players, increased, decreased, totalDelta, details };
+}
+function retireSeasonVeterans(){
+  if(!game || !seed?.players) return [];
+  const clubId = Number(game.selectedClubId);
+  const retirees = seed.players
+    .filter(player => Number(player.clubId) === clubId && !player.freeAgent && !player.sold)
+    .filter(player => {
+      const age = Math.round(Number(player.age || 0));
+      return age >= RETIREMENT_MIN_AGE && age <= RETIREMENT_MAX_AGE;
+    })
+    .map(player => ({ id:player.id, name:player.name, age:player.age, position:player.position, salary:player.salary || 0 }));
+  if(!retirees.length) return [];
+  const retiredIds = new Set(retirees.map(p => Number(p.id)));
+  seed.players = seed.players.filter(player => !retiredIds.has(Number(player.id)));
+  game.marketPlayers = (game.marketPlayers || []).filter(player => !retiredIds.has(Number(player.id)));
+  retirees.forEach(player => {
+    removePlayerFromCurrentTactic(player.id);
+    delete game.playerCondition?.[player.id];
+    delete game.playerMorale?.[player.id];
+    delete game.playerSkillBoosts?.[player.id];
+    delete game.trainingPlan?.[player.id];
+    delete game.playerStats?.[player.id];
+    delete game.playerStatus?.[player.id];
+  });
+  const names = retirees.slice(0,5).map(p => `${p.name} (${p.age})`).join(', ');
+  pushGameMessage({
+    type:'plantel',
+    priority:'normal',
+    title:'Retiros al finalizar la temporada',
+    body:`${retirees.length === 1 ? 'Un jugador informó' : `${retirees.length} jugadores informaron`} su retiro del fútbol: ${names}${retirees.length > 5 ? '...' : ''}`
+  });
+  return retirees;
+}
+function nextPlayerId(){
+  const ids = [0]
+    .concat((seed?.players || []).map(p => Number(p.id) || 0))
+    .concat((game?.marketPlayers || []).map(p => Number(p.id) || 0));
+  return Math.max(...ids) + 1;
+}
+function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
+  const positions = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
+  const players = [];
+  let id = nextPlayerId();
+  const season = Number(game?.seasonNumber || 1);
+  for(let i=0;i<count;i++, id++){
+    const position = positions[hashNumber(`season-youth-pos-${season}-${id}`, positions.length)];
+    const group = position === 'POR' ? 'POR' : ['LD','LI','DFC'].includes(position) ? 'DEF' : ['MCD','MC','MCO'].includes(position) ? 'MID' : 'ATT';
+    const media = clamp(34 + hashNumber(`season-youth-media-${season}-${id}`, 40), 34, 73);
+    const skills = skillsForPosition(position, media, id);
+    const visible = averageGeneratedVisible(position, skills);
+    players.push({
+      id,
+      name: generatedPlayerName(id, `Juveniles libres ${season}`),
+      age: 17 + hashNumber(`season-youth-age-${season}-${id}`, 7),
+      position,
+      clubId:0,
+      freeAgent:true,
+      youthFreeAgent:true,
+      nationality: generatedNationality(id, 'Juveniles libres'),
+      overall:visible,
+      skills,
+      salary:Math.round(18000 + visible * visible * 420),
+      value:Math.round(250000 + visible * visible * 9000)
+    });
+  }
+  return players;
+}
+function addSeasonYouthFreeAgents(){
+  if(!game) return [];
+  const newPlayers = generateSeasonYouthFreeAgents(SEASON_YOUTH_FREE_AGENT_COUNT);
+  game.marketPlayers = (game.marketPlayers || []).concat(newPlayers);
+  mergeMarketPlayersIntoSeed(newPlayers);
+  newPlayers.forEach(p => {
+    game.playerCondition[p.id] = clamp(15 + hashNumber(`season-youth-cond-${p.id}`, 15), 1, 29);
+    game.playerMorale[p.id] = clamp(35 + hashNumber(`season-youth-morale-${p.id}`, 55), 1, 99);
+    game.playerSkillBoosts[p.id] = {};
+    game.trainingPlan[p.id] = DEFAULT_TRAINING_TYPE;
+    game.playerStats[p.id] = { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+  });
+  pushGameMessage({ type:'mercado', title:'Nuevos juveniles libres', body:`Aparecieron ${newPlayers.length} jóvenes libres de 17 a 23 años en el mercado, con sueldos más bajos de lo normal.`, priority:'normal' });
+  return newPlayers;
+}
 function finalizeSeasonIfNeeded(){
   if(!game || game.seasonFinalized || game.matchdayIndex < game.fixtures.length) return;
   game.managerStats = normalizeManagerStats(game.managerStats);
@@ -1543,16 +1701,21 @@ function finalizeSeasonIfNeeded(){
     pushGameMessage({ type:'deportivo', priority:'high', title:'Has salido campeón', body:`Felicitaciones: ${clubName(game.selectedClubId)} salió campeón de ${division.name}.`, id:`champion-${game.seasonNumber || 1}-${game.selectedClubId}` });
   }
   const salariesPaid = paySeasonSalaries();
+  const salaryAdjustments = applySeasonSalaryAdjustments();
+  const retirements = retireSeasonVeterans();
   const trainingDecay = decayTrainedSkillBoosts();
   game.seasonTransition = {
     season:game.seasonNumber || 1,
     userRecord:record,
     movements:computeSeasonMovements(),
     salariesPaid,
+    salaryAdjustments,
+    retirements,
     trainingDecay,
     agingApplied: (game.seasonNumber || 1) % 2 === 0
   };
   game.seasonFinalized = true;
+  game.seasonPhase = 'finalized';
   game.seasonEndModalShown = false;
 }
 function applySeasonMovements(){
@@ -1580,6 +1743,10 @@ function startNextSeason(selectedClubId){
   game.seasonFinalized = false;
   game.seasonTransition = null;
   game.seasonEndModalShown = false;
+  game.seasonPhase = 'preseason';
+  game.phaseTurn = 0;
+  game.preseasonFriendliesPlayed = 0;
+  game.pendingFriendlyOpponentId = 0;
   game.matchdayIndex = 0;
   game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList());
   game.currentDate = game.fixtures[0]?.date || game.currentDate;
@@ -1592,6 +1759,7 @@ function startNextSeason(selectedClubId){
   game.lastBudgetDelta = 0;
   game.tactic = normalizeTactic(nextClubId, DEFAULT_TACTIC);
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  addSeasonYouthFreeAgents();
   ensurePlayerStateForAll();
   pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
   activeTab = 'home';
@@ -1603,11 +1771,16 @@ function startNextSeason(selectedClubId){
 function seasonEndPanelMarkup(){
   const record = game?.seasonTransition?.userRecord;
   const movements = game?.seasonTransition?.movements || [];
+  const retirements = game?.seasonTransition?.retirements || [];
+  const salaryAdjustments = game?.seasonTransition?.salaryAdjustments || null;
   const moveRows = movements.map(move => `<li><strong>${escapeHtml(clubName(move.clubId))}</strong>: ${move.type === 'promotion' ? 'asciende' : 'desciende'} a ${escapeHtml(move.toDivisionName)}</li>`).join('');
+  const retirementRows = retirements.map(p => `<li><strong>${escapeHtml(p.name)}</strong> se retiró del fútbol a los ${p.age} años.</li>`).join('');
   return `<div class="card season-end-card">
     <div class="row"><div><p class="label">Fin de temporada</p><h3>${record?.title ? 'Campeón' : `Posición final: ${escapeHtml(record?.label || '—')}`}</h3></div><span class="pill">Temporada ${game.seasonNumber || 1}</span></div>
     <p class="muted">Podés seguir en ${escapeHtml(clubName(game.selectedClubId))} o elegir otro club para la próxima temporada.</p>
     ${game.seasonTransition?.salariesPaid ? `<p class="tagline">Pago anual de sueldos descontado: <strong>${formatMoney(game.seasonTransition.salariesPaid)}</strong>.</p>` : ''}
+    ${salaryAdjustments ? `<p class="tagline">Sueldos ajustados para la próxima temporada según partidos jugados: ${salaryAdjustments.increased || 0} suben, ${salaryAdjustments.decreased || 0} bajan.</p>` : ''}
+    ${retirementRows ? `<ul class="season-movement-list">${retirementRows}</ul>` : ''}
     ${moveRows ? `<ul class="season-movement-list">${moveRows}</ul>` : ''}
     <div class="row" style="margin-top:12px"><button class="primary" data-continue-season>Seguir en este club</button><button class="ghost" data-open-season-modal>Cambiar club</button></div>
   </div>`;
@@ -1672,6 +1845,29 @@ function getNextMatchForSelected(){
   const round = game.fixtures[game.matchdayIndex];
   return round.matches.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
 }
+function turnModePanelMarkup(){
+  if(!game || game.seasonFinalized) return '';
+  if(isPreseason()){
+    const remaining = Math.max(0, MAX_PRESEASON_FRIENDLIES - preseasonFriendliesPlayed());
+    const options = seed.clubs
+      .filter(c => c.id !== game.selectedClubId)
+      .map(c => `<option value="${c.id}" ${Number(game.pendingFriendlyOpponentId || 0)===c.id?'selected':''}>${escapeHtml(c.name)} · ${escapeHtml(clubDivision(c.id).name)}</option>`)
+      .join('');
+    return `<div class="card preseason-card">
+      <div class="row"><div><p class="label">Pretemporada</p><h3>Turno ${(game.phaseTurn || 0) + 1} de ${PRESEASON_TURNS}</h3></div><span class="pill">Amistosos restantes: ${remaining}</span></div>
+      <p class="muted">Usá estos turnos para entrenar, recuperar forma física y preparar el plantel antes del inicio oficial.</p>
+      <div class="grid cols-2" style="margin-top:10px">
+        <div><label for="friendlyOpponentSelect">Amistoso opcional de este turno</label><select id="friendlyOpponentSelect" ${remaining <= 0 ? 'disabled' : ''}><option value="0">Sin amistoso</option>${options}</select></div>
+        <div class="row" style="align-items:end"><button id="btnClearFriendly" class="ghost" ${Number(game.pendingFriendlyOpponentId || 0) ? '' : 'disabled'}>Quitar amistoso</button></div>
+      </div>
+    </div>`;
+  }
+  if(isPostseason()){
+    return `<div class="card preseason-card"><div class="row"><div><p class="label">Postemporada</p><h3>Turno ${(game.phaseTurn || 0) + 1} de ${POSTSEASON_TURNS}</h3></div><span class="pill">Sin partidos oficiales</span></div><p class="muted">Últimos turnos de entrenamiento y recuperación antes del cierre formal de temporada.</p></div>`;
+  }
+  return '';
+}
+
 function renderHome(){
   const next = getNextMatchForSelected();
   const clubPlayers = playersByClub(game.selectedClubId);
@@ -1696,6 +1892,7 @@ function renderHome(){
     </div>
     ${problemBox}
     ${seasonBox}
+    ${turnModePanelMarkup()}
     <div class="card placeholder-main-card home-top-visual">
       <h3>Momento del club</h3>
       ${mainBannerMarkup()}
@@ -1729,7 +1926,7 @@ function renderHome(){
     <div class="split" style="margin-top:14px">
       <div class="card">
         <h3>Próximo partido</h3>
-        ${next ? matchPreview(next) : '<p class="muted">Temporada finalizada.</p>'}
+        ${next ? matchPreview(next) : (isPostseason() ? '<p class="muted">Postemporada en curso. No hay partidos oficiales.</p>' : '<p class="muted">Temporada finalizada.</p>')}
       </div>
       <div class="card">
         <h3>Últimos partidos</h3>
@@ -1742,20 +1939,22 @@ function renderHome(){
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
+  $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
+  $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   updateAdvanceButtonState();
 }
 function updateAdvanceButtonState(){
   const btn = $('advanceBtn');
   if(!btn || !game) return;
   const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
-  const seasonEnded = game.matchdayIndex >= game.fixtures.length;
+  const seasonEnded = game.seasonFinalized || seasonPhase() === 'finalized';
   const invalid = validateCurrentTactic(false);
-  let text = 'Domingo · jugar partido';
+  let text = isPreseason() ? 'Avanzar pretemporada' : isPostseason() ? 'Avanzar postemporada' : 'Domingo · jugar partido';
   let disabled = false;
-  if(seasonEnded){ text = game.seasonFinalized ? 'Temporada finalizada' : 'Finalizar temporada'; disabled = true; }
+  if(seasonEnded){ text = 'Temporada finalizada'; disabled = true; }
   else if(lockLeft > 0){ text = `${currentWeekdayLabel()} · preparando jornada`; disabled = true; }
-  else if(game.mustReviewTactics){ text = 'Reemplazar lesionados/suspendidos'; disabled = true; }
-  else if(invalid.length){ text = 'Táctica incompleta'; disabled = true; }
+  else if(isRegularSeason() && game.mustReviewTactics){ text = 'Reemplazar lesionados/suspendidos'; disabled = true; }
+  else if(isRegularSeason() && invalid.length){ text = 'Táctica incompleta'; disabled = true; }
   btn.textContent = text;
   btn.disabled = disabled;
   const progressBox = $('advanceProgressBox');
@@ -1771,7 +1970,8 @@ function advanceProgressMarkup(){
   if(!game) return '';
   const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
   const pct = advanceProgressPercent();
-  const label = lockLeft > 0 ? `${currentWeekdayLabel()} · semana en curso` : 'Domingo · partido disponible';
+  const ready = isPreseason() ? 'Domingo · turno de pretemporada disponible' : isPostseason() ? 'Domingo · turno de postemporada disponible' : 'Domingo · partido disponible';
+  const label = lockLeft > 0 ? `${currentWeekdayLabel()} · semana en curso` : ready;
   return `<div class="advance-progress"><div class="project-progress"><span style="width:${pct}%"></span></div><p class="small muted">${label}</p></div>`;
 }
 function formatClock(ms){
@@ -1798,7 +1998,7 @@ function refreshSidebarDate(){
   }
   $('currentSeason') && ($('currentSeason').textContent = `Temporada: ${game.seasonNumber || 1}`);
   $('currentDate').textContent = `Día: ${currentWeekdayLabel()} · Fecha: ${game.currentDate}`;
-  $('currentRound').textContent = `Jornada: ${Math.min(game.matchdayIndex+1, seed.fixtures.length)} / ${seed.fixtures.length}`;
+  $('currentRound').textContent = phaseLabel();
 }
 function problemItem(problem){
   const p = playerById(problem.playerId);
@@ -2636,8 +2836,24 @@ function applyMentalityBonus(tactic, assigned){
 }
 
 function simulateNextMatchday(){
-  if(!game || game.matchdayIndex >= game.fixtures.length) return;
-  if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el partido se habilita el domingo.`); return; }
+  if(!game || game.seasonFinalized) return;
+  if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el siguiente turno se habilita el domingo.`); return; }
+  if(isPreseason()){
+    simulatePreseasonTurn();
+    return;
+  }
+  if(isPostseason()){
+    simulatePostseasonTurn();
+    return;
+  }
+  if(game.matchdayIndex >= game.fixtures.length){
+    game.seasonPhase = 'postseason';
+    game.phaseTurn = 0;
+    saveLocal(true);
+    renderAll();
+    showNotice('Comienza la postemporada. Tenés 5 turnos antes del cierre de temporada.');
+    return;
+  }
   if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
@@ -2660,19 +2876,93 @@ function simulateNextMatchday(){
   game.lastOwnProblems = ownProblems;
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   game.matchdayIndex += 1;
-  const seasonJustEnded = game.matchdayIndex >= game.fixtures.length;
-  if(seasonJustEnded) finalizeSeasonIfNeeded();
-  game.currentDate = game.fixtures[game.matchdayIndex]?.date || round.date;
-  game.advanceLockedUntil = seasonJustEnded ? 0 : Date.now() + ADVANCE_LOCK_MS;
+  advanceGlobalTurn();
+  const regularEnded = game.matchdayIndex >= game.fixtures.length;
+  if(regularEnded){
+    game.seasonPhase = 'postseason';
+    game.phaseTurn = 0;
+    game.advanceLockedUntil = 0;
+  } else {
+    game.currentDate = game.fixtures[game.matchdayIndex]?.date || round.date;
+    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+  }
   activeTab = 'home';
   saveLocal(true);
   renderAll();
-  if(ownResult && !game.seasonFinalized) showMatchRevealModal(ownResult);
-  if(game.seasonFinalized) setTimeout(openSeasonEndModal, 0);
+  if(ownResult && !regularEnded) showMatchRevealModal(ownResult);
   if(game.mustReviewTactics){ showNotice('Jornada simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
-  else if(game.seasonFinalized){ showNotice('Temporada finalizada. Podés seguir en tu club o elegir otro equipo.', true); }
+  else if(regularEnded){ showNotice('Terminó la fase regular. Comienzan 5 turnos de postemporada antes del cierre.', true); }
   else { showNotice(`Jornada ${round.matchday} simulada. La semana avanza hasta el próximo domingo.`); }
 }
+
+function simulatePreseasonTurn(){
+  const opponentId = Number(game.pendingFriendlyOpponentId || 0);
+  const canFriendly = opponentId && canPlayPreseasonFriendly();
+  let friendlyResult = null;
+  if(canFriendly){
+    const homeOwn = Math.random() < 0.5;
+    const match = {
+      id:`friendly-t${game.seasonNumber || 1}-${game.phaseTurn || 0}-${game.selectedClubId}-${opponentId}`,
+      friendly:true,
+      matchday:`PRE-${(game.phaseTurn || 0) + 1}`,
+      divisionId:'friendly',
+      divisionName:'Amistoso',
+      date:game.currentDate || '',
+      homeId:homeOwn ? game.selectedClubId : opponentId,
+      awayId:homeOwn ? opponentId : game.selectedClubId,
+      played:false
+    };
+    friendlyResult = simulateMatch(match);
+    friendlyResult.cards = [];
+    friendlyResult.injuries = [];
+    friendlyResult.substitutions = [];
+    game.matchHistory.push(friendlyResult);
+    applyConditionUpdates([friendlyResult]);
+    applyMoraleUpdates([friendlyResult]);
+    game.preseasonFriendliesPlayed = preseasonFriendliesPlayed() + 1;
+  }
+  applyTrainingEffects();
+  game.pendingFriendlyOpponentId = 0;
+  game.phaseTurn = Number(game.phaseTurn || 0) + 1;
+  advanceGlobalTurn();
+  if(game.phaseTurn >= PRESEASON_TURNS){
+    game.seasonPhase = 'regular';
+    game.phaseTurn = 0;
+    game.currentDate = game.fixtures[game.matchdayIndex]?.date || game.currentDate;
+    game.advanceLockedUntil = 0;
+    showNotice('Pretemporada finalizada. Ya está disponible la primera jornada oficial.', true);
+  } else {
+    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Turno de pretemporada aplicado. La semana avanza.', false);
+  }
+  activeTab = 'home';
+  saveLocal(true);
+  renderAll();
+  if(friendlyResult) showMatchRevealModal(friendlyResult);
+}
+
+function simulatePostseasonTurn(){
+  applyTrainingEffects();
+  game.phaseTurn = Number(game.phaseTurn || 0) + 1;
+  advanceGlobalTurn();
+  if(game.phaseTurn >= POSTSEASON_TURNS){
+    game.seasonPhase = 'finalizing';
+    finalizeSeasonIfNeeded();
+    game.advanceLockedUntil = 0;
+    activeTab = 'home';
+    saveLocal(true);
+    renderAll();
+    setTimeout(openSeasonEndModal, 0);
+    showNotice('Postemporada finalizada. Cerró la temporada.', true);
+  } else {
+    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    activeTab = 'home';
+    saveLocal(true);
+    renderAll();
+    showNotice('Turno de postemporada aplicado. La semana avanza.');
+  }
+}
+
 
 function recordBudgetChange(delta, concept, meta={}){
   if(!game) return;
@@ -2920,7 +3210,7 @@ function applyTrainingEffects(){
     ensureTeamCohesion();
     game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
   }
-  game.lastTrainingApplied = { matchdayIndex:game.matchdayIndex, tacticalGain };
+  game.lastTrainingApplied = { ...turnStamp(), tacticalGain };
 }
 function renderTraining(){
   const squad = sortedTrainingPlayers();
@@ -2976,7 +3266,7 @@ function trainingPlayerRow(player){
 
 function renderEmployees(){
   const last = game.staffActions?.motivationalTalk || null;
-  const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
+  const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
   const canCallPsychologist = cooldownLeft <= 0 && (game.budget || 0) >= PSYCHOLOGIST_COST;
   const cooldownText = cooldownLeft > 0 ? `<p class="small warn">Disponible nuevamente en ${cooldownLeft} turno(s).</p>` : '';
   const kinesio = game.staffActions?.kinesiologist || null;
@@ -3036,7 +3326,7 @@ function injuredTreatmentList(injuredList){
   }).join('')}</div>`;
 }
 function wasKinesioTreatedThisTurn(playerId){
-  const key = `${game.matchdayIndex}:${playerId}`;
+  const key = `${currentTurnIndex()}:${playerId}`;
   return Boolean(game.staffActions?.kinesiologyTreatments?.[key]);
 }
 function hireKinesiologist(){
@@ -3045,7 +3335,7 @@ function hireKinesiologist(){
   if((game.budget || 0) < KINESIOLOGIST_COST){ showNotice('Presupuesto insuficiente para contratar al kinesiólogo.'); return; }
   recordBudgetChange(-KINESIOLOGIST_COST, 'Contratación de kinesiólogo', { type:'staff_kinesiologist' });
   game.staffActions = game.staffActions || {};
-  game.staffActions.kinesiologist = { active:true, hiredMatchday:game.matchdayIndex };
+  game.staffActions.kinesiologist = { active:true, ...turnStamp() };
   saveLocal(true);
   showNotice('Kinesiólogo contratado por la temporada completa.');
   renderEmployees();
@@ -3054,10 +3344,10 @@ function treatInjuredPlayer(playerId){
   if(!game?.staffActions?.kinesiologist?.active){ showNotice('Primero tenés que contratar al kinesiólogo.'); return; }
   if(!isInjured(playerId)){ showNotice('El jugador no está lesionado.'); renderEmployees(); return; }
   game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
-  const key = `${game.matchdayIndex}:${playerId}`;
+  const key = `${currentTurnIndex()}:${playerId}`;
   if(game.staffActions.kinesiologyTreatments[key]){ showNotice('Este jugador ya recibió tratamiento en este turno.'); return; }
   const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
-  game.staffActions.kinesiologyTreatments[key] = { success, matchdayIndex:game.matchdayIndex };
+  game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
   if(success){
     const st = playerStatus(playerId);
     const nextThrough = Number(st.injuredThrough) - 1;
@@ -3082,7 +3372,7 @@ function moraleTeamBar(clubId){
 function callMotivationalPsychologist(){
   if(!game) return;
   const last = game.staffActions?.motivationalTalk || null;
-  const cooldownLeft = last ? Math.max(0, PSYCHOLOGIST_COOLDOWN_TURNS - (game.matchdayIndex - (last.matchdayIndex || 0))) : 0;
+  const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
   if(cooldownLeft > 0){ showNotice(`La charla motivacional estará disponible en ${cooldownLeft} turno(s).`); return; }
   if((game.budget || 0) < PSYCHOLOGIST_COST){ showNotice('Presupuesto insuficiente para llamar al psicólogo motivacional.'); return; }
   recordBudgetChange(-PSYCHOLOGIST_COST, 'Psicólogo motivacional', { type:'staff_psychologist' });
@@ -3095,7 +3385,7 @@ function callMotivationalPsychologist(){
   game.staffActions = game.staffActions || {};
   game.staffActions.motivationalTalk = {
     success,
-    matchdayIndex: game.matchdayIndex,
+    ...turnStamp(),
     message: success ? 'La charla motivacional fue un éxito' : 'La charla motivacional fue un fracaso'
   };
   saveLocal(true);

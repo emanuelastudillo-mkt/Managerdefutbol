@@ -1,21 +1,21 @@
-# Fútbol Manager MVP - V2.12
+# Fútbol Manager MVP - V2.14
 
 Paquete de actualización del proyecto para navegador.
 
 ## Cambios de esta versión
-- En la pantalla de Táctica ahora hay dos opciones de autoselección:
-  - **Mejor once**: arma titulares y suplentes priorizando los mejores disponibles para cada rol de la formación, sin considerar moral ni estado físico.
-  - **Mejor condición física**: arma titulares y suplentes priorizando la forma física más alta, aunque eso pueda penalizar el rol o la ubicación en la pizarra.
-- Se mantiene la validación de lesionados y suspendidos: no se fuerzan titulares no disponibles.
-- Los lesionados permitidos para banco siguen pudiendo quedar como suplentes si cumplen la regla vigente.
+- Se corrige el cooldown de la charla motivacional usando un contador interno de turnos globales.
+- El registro de turnos ahora contempla temporada, fase y turno interno para evitar bugs al cambiar de temporada.
+- Se agrega una fase de **pretemporada** de 10 turnos al comenzar cada temporada.
+- Durante la pretemporada se pueden jugar hasta 5 amistosos contra cualquier equipo.
+- Se agrega una fase de **postemporada** de 5 turnos después de la última jornada oficial.
+- Los turnos de pretemporada y postemporada aplican entrenamiento y permiten recuperar/preparar el plantel.
 
 ## Archivos incluidos
 - `index.html`
 - `app.js`
 - `simulador-2.0.js`
-- `style.css`
 - `README.md`
 - `VERSION.md`
 
 ## Nota
-Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual si lo estás usando.
+Este ZIP **no incluye** `pitch-board.png`. Mantené ese archivo en tu repositorio actual si ya lo estás usando.

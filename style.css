@@ -1243,3 +1243,52 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
   align-items:center;
 }
 .own-player-row{background:rgba(34,197,94,.055)}
+
+/* V2.20: indicadores compactos, nacionalidad abreviada y sponsors */
+.value-circle{
+  --value-deg:0deg;
+  width:34px;
+  height:34px;
+  min-width:34px;
+  border-radius:999px;
+  display:inline-grid;
+  place-items:center;
+  position:relative;
+  vertical-align:middle;
+  background:conic-gradient(#64748b var(--value-deg), rgba(148,163,184,.18) 0deg);
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,.18);
+}
+.value-circle::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:999px;
+  background:#0b1220;
+}
+.value-circle strong{
+  position:relative;
+  z-index:1;
+  font-size:11px;
+  line-height:1;
+  color:#e5e7eb;
+  font-weight:900;
+}
+.value-circle.low{background:conic-gradient(#ef4444 var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.value-circle.mid{background:conic-gradient(#f59e0b var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.value-circle.high{background:conic-gradient(#22c55e var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.morale-circle.low{background:conic-gradient(#7c3aed var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.morale-circle.mid{background:conic-gradient(#2563eb var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.morale-circle.high{background:conic-gradient(#38bdf8 var(--value-deg), rgba(148,163,184,.18) 0deg)}
+.lineup-row .value-circle,
+.training-table .value-circle,
+.squad-table .value-circle{margin:auto}
+.nationality-code{font-weight:900;letter-spacing:.05em;min-width:42px;justify-content:center}
+.sponsors-card h4{font-size:13px;margin:12px 0 8px;color:#cbd5e1;text-transform:uppercase;letter-spacing:.06em}
+.sponsor-table td .small{display:block;margin-top:2px}
+.sponsor-table td:last-child{display:flex;gap:6px;flex-wrap:wrap}
+.sponsor-table th,.sponsor-table td{white-space:nowrap}
+@media (max-width:760px){
+  .value-circle{width:30px;height:30px;min-width:30px}
+  .value-circle strong{font-size:10px}
+  .sponsor-table td:last-child{display:table-cell}
+}

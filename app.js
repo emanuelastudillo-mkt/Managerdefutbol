@@ -1,5 +1,6 @@
 const DATA_URL = 'data/seed.json';
 const PLAYERS_DATABASE_URL = 'data/jugadores.json';
+const SPONSORS_DATABASE_URL = 'data/sponsors.json';
 const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
@@ -8,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.19';
+const APP_VERSION = 'V2.20';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -102,6 +103,10 @@ const RETIREMENT_MAX_AGE = 38;
 const SEASON_SALARY_BASE_REDUCTION = 0.05;
 const SEASON_SALARY_MATCH_BONUS = 0.01;
 const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
+const SPONSOR_OFFER_MATCH_MIN = 4;
+const SPONSOR_OFFER_MATCH_MAX = 7;
+const SPONSOR_OFFER_COUNT_MIN = 2;
+const SPONSOR_OFFER_COUNT_MAX = 5;
 
 const CLUB_ROSTER_SIZE = 25;
 const PLAYER_GENERATION_RULES_VERSION = 'V1.02';
@@ -139,6 +144,7 @@ const DEFAULT_TACTIC = {
 };
 
 let seed = null;
+let sponsorsDatabase = null;
 let game = null;
 let activeTab = 'home';
 let squadSort = 'media_desc';
@@ -464,10 +470,14 @@ function injuryRulesTable(){
 function conditionFactor(playerId){
   return 0.5 + 0.5 * (currentCondition(playerId) / 99);
 }
+function compactValueCircle(value, kind, label){
+  const clean = clamp(Math.round(Number(value) || 0), kind === 'morale' ? 1 : 0, 99);
+  const colorClass = clean < 40 ? 'low' : clean < 70 ? 'mid' : 'high';
+  const deg = Math.round((clean / 99) * 360);
+  return `<span class="value-circle ${kind}-circle ${colorClass}" style="--value-deg:${deg}deg" title="${escapeHtml(label)} ${clean}/99"><strong>${clean}</strong></span>`;
+}
 function conditionBar(playerId){
-  const value = currentCondition(playerId);
-  const colorClass = value < 50 ? 'low' : value < 75 ? 'mid' : 'high';
-  return `<div class="condition-bar ${colorClass}" title="Estado físico ${value}/99"><span style="width:${clamp(value,0,99)}%"></span><em>${value}/99</em></div>`;
+  return compactValueCircle(currentCondition(playerId), 'condition', 'Estado físico');
 }
 
 function currentMorale(playerId){
@@ -480,9 +490,7 @@ function moraleFactor(playerId){
   return 0.92 + (currentMorale(playerId) / 99) * 0.16;
 }
 function moraleBar(playerId){
-  const value = currentMorale(playerId);
-  const colorClass = value < 40 ? 'low' : value < 70 ? 'mid' : 'high';
-  return `<div class="morale-bar ${colorClass}" title="Moral ${value}/99"><span style="width:${clamp(value,1,99)}%"></span><em>${value}/99</em></div>`;
+  return compactValueCircle(currentMorale(playerId), 'morale', 'Moral');
 }
 function squadMoraleAverage(clubId){
   const squad = playersByClub(clubId);
@@ -515,9 +523,15 @@ function playerDisplayName(playerId){
   const p = playerById(playerId);
   return p ? `${playerLastName(p.name)} #${jerseyNumber(p.id)}` : 'Jugador';
 }
-function countryFlag(nationality){
-  const flags = { Argentina:'🇦🇷', Bolivia:'🇧🇴', Brasil:'🇧🇷', Chile:'🇨🇱', Colombia:'🇨🇴', Ecuador:'🇪🇨', Paraguay:'🇵🇾', 'Perú':'🇵🇪', Uruguay:'🇺🇾' };
-  return flags[nationality] || '🌐';
+function countryCode(nationality){
+  const map = {
+    Argentina:'ARG', Brasil:'BRA', Uruguay:'URU', Paraguay:'PAR', Chile:'CHI', Bolivia:'BOL', 'Perú':'PER', Ecuador:'ECU', Colombia:'COL', Venezuela:'VEN',
+    España:'ESP', Italia:'ITA', Francia:'FRA', Alemania:'ALE', Portugal:'POR', Inglaterra:'ING', México:'MEX', 'Estados Unidos':'USA', Japón:'JPN', 'Corea del Sur':'KOR', Marruecos:'MAR', Nigeria:'NGA', Ghana:'GHA'
+  };
+  return map[nationality] || String(nationality || '---').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase().padEnd(3,'-');
+}
+function nationalityShortMarkup(nationality){
+  return `<span class="pill nationality-code" title="${escapeHtml(nationality || 'Sin nacionalidad')}">${escapeHtml(countryCode(nationality))}</span>`;
 }
 function roleMeta(position){
   const map = {
@@ -906,6 +920,14 @@ async function loadPlayersDatabase(){
   const players = Array.isArray(raw) ? raw : raw.players;
   if(!Array.isArray(players) || !players.length) return null;
   return { raw, players, source:PLAYERS_DATABASE_URL };
+}
+
+async function loadSponsorsDatabase(){
+  const raw = await fetchJsonIfExists(SPONSORS_DATABASE_URL);
+  if(!raw) return { lugares_sponsor:[], sponsors:[], reglas_calculo:{} };
+  const lugares = Array.isArray(raw.lugares_sponsor) ? raw.lugares_sponsor : [];
+  const sponsors = Array.isArray(raw.sponsors) ? raw.sponsors.filter(sponsor => sponsor && sponsor.activo !== false) : [];
+  return { ...raw, lugares_sponsor:lugares, sponsors, source:SPONSORS_DATABASE_URL };
 }
 function playersDatabaseHash(players=[]){
   const raw = players.map(p => `${p.id}:${p.clubId}:${p.position}:${p.overall}:${p.salary}:${p.clause}`).join('|');
@@ -1412,6 +1434,7 @@ async function resetLocal(){
 async function init(){
   try{
     seed = await loadInitialSeed();
+    sponsorsDatabase = await loadSponsorsDatabase();
     fillClubSelect();
     bindEvents();
     startUiTicker();
@@ -1554,6 +1577,7 @@ function normalizeGame(saved){
     normalized.staffActions.motivationalTalk.globalTurn = ((Math.max(1, normalized.staffActions.motivationalTalk.season || normalized.seasonNumber || 1) - 1) * 40) + Number(normalized.staffActions.motivationalTalk.matchdayIndex || 0);
   }
   normalized.stadium = normalized.stadium || createInitialStadiumState();
+  normalized.sponsors = normalizeSponsorState(normalized.sponsors);
   normalized.teamCohesion = normalized.teamCohesion || {};
   normalized.lastMatchTactics = normalized.lastMatchTactics || {};
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.teamCohesion[c.id])) normalized.teamCohesion[c.id] = TEAM_COHESION_START; });
@@ -1692,6 +1716,7 @@ function newGame(selectedClubId){
     trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, DEFAULT_TRAINING_TYPE])),
     staffActions: {},
     stadium: createInitialStadiumState(),
+    sponsors: createInitialSponsorState(),
     teamCohesion: Object.fromEntries(seed.clubs.map(c => [c.id, TEAM_COHESION_START])),
     lastMatchTactics: {}
   };
@@ -2557,12 +2582,12 @@ function sortedTrainingPlayers(){
   return sortPlayersForView(playersByClub(game.selectedClubId), trainingSort);
 }
 function columnSort(label, options){
-  const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
   return `<div class="th-filter"><span>${label}</span><select data-squad-sort>${opts}</select></div>`;
 }
 
 function trainingColumnSort(label, options){
-  const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
   return `<div class="th-filter"><span>${label}</span><select data-training-sort>${opts}</select></div>`;
 }
 
@@ -2598,7 +2623,7 @@ function worldPlayerFilterList(players){
   });
 }
 function worldPlayersColumnSort(label, options){
-  const opts = ['<option value="">Ordenar</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
   return `<div class="th-filter"><span>${label}</span><select data-world-sort>${opts}</select></div>`;
 }
 function worldStatCell(player, key){
@@ -2675,7 +2700,7 @@ function renderSquad(){
       <td>#${jerseyNumber(p.id)}</td>
       <td>${Number(p.age || 0) || '—'}</td>
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
-      <td><span class="pill">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)}</span></td>
+      <td>${nationalityShortMarkup(p.nationality)}</td>
       <td><strong>${visibleOverall(p)}</strong></td>
       <td>${conditionBar(p.id)}</td>
       <td>${moraleBar(p.id)}</td>
@@ -2927,8 +2952,170 @@ function positionOrder(pos){
 }
 
 
+function randomInt(min,max){
+  return Math.floor(rnd(min, max + 1));
+}
+function createInitialSponsorState(){
+  return { active:[], offers:[], matchesSinceOffer:0, nextOfferAfter:randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX), lastOfferTurn:-1 };
+}
+function normalizeSponsorState(state){
+  const base = createInitialSponsorState();
+  const clean = { ...base, ...(state || {}) };
+  clean.active = Array.isArray(clean.active) ? clean.active : [];
+  clean.offers = Array.isArray(clean.offers) ? clean.offers : [];
+  clean.matchesSinceOffer = Number.isFinite(clean.matchesSinceOffer) ? clean.matchesSinceOffer : 0;
+  clean.nextOfferAfter = Number.isFinite(clean.nextOfferAfter) ? clean.nextOfferAfter : randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
+  clean.lastOfferTurn = Number.isFinite(clean.lastOfferTurn) ? clean.lastOfferTurn : -1;
+  return clean;
+}
+function ensureSponsorState(){
+  if(!game) return;
+  game.sponsors = normalizeSponsorState(game.sponsors);
+}
+function sponsorDivisionMultiplier(){
+  const club = seed.clubs.find(c => c.id === game.selectedClubId) || {};
+  const order = Number(club.divisionOrder || currentClubDivision(game.selectedClubId).order || 1);
+  if(order <= 1) return 10;
+  if(order === 2) return 4;
+  return 1;
+}
+function sponsorPositionBonus(){
+  const division = currentClubDivision(game.selectedClubId);
+  const table = sortedStandings(division.id);
+  const index = table.findIndex(row => row.clubId === game.selectedClubId);
+  if(index < 0 || table.length <= 1) return 0;
+  return ((table.length - (index + 1)) / (table.length - 1)) * 0.20;
+}
+function sponsorMoraleBonus(){
+  return (squadMoraleAverage(game.selectedClubId) / 100) * 0.10;
+}
+function sponsorCohesionBonus(){
+  return (cohesionValue(game.selectedClubId) / 100) * 0.10;
+}
+function sponsorOfferValue(baseSponsor, lugar){
+  const base = Number(baseSponsor?.valor_base_por_turno || 0);
+  const place = Number(lugar?.multiplicador_lugar || 1);
+  const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus());
+  const perTurn = Math.round(base * totalMultiplier);
+  const turns = clamp(Math.round(Number(baseSponsor?.turnos_duracion_oferta || randomInt(3,35))), 3, 35);
+  return { perTurn, turns, total:perTurn * turns };
+}
+function occupiedSponsorPlaces(){
+  ensureSponsorState();
+  return new Set((game.sponsors.active || []).filter(item => Number(item.turnsRemaining || 0) > 0).map(item => item.placeId));
+}
+function sponsorPlaceById(id){
+  return (sponsorsDatabase?.lugares_sponsor || []).find(place => place.id_lugar === id) || null;
+}
+function sponsorBrandById(id){
+  return (sponsorsDatabase?.sponsors || []).find(sponsor => sponsor.id_sponsor === id) || null;
+}
+function generateSponsorOffers(){
+  ensureSponsorState();
+  const lugares = (sponsorsDatabase?.lugares_sponsor || []).filter(place => !occupiedSponsorPlaces().has(place.id_lugar));
+  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
+  if(!lugares.length || !sponsors.length) return [];
+  const count = Math.min(randomInt(SPONSOR_OFFER_COUNT_MIN, SPONSOR_OFFER_COUNT_MAX), lugares.length, sponsors.length);
+  const usedPlaces = new Set();
+  const usedSponsors = new Set();
+  const offers = [];
+  let guard = 0;
+  while(offers.length < count && guard < 200){
+    guard += 1;
+    const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
+    const place = lugares[randomInt(0, lugares.length - 1)];
+    if(!sponsor || !place || usedSponsors.has(sponsor.id_sponsor) || usedPlaces.has(place.id_lugar)) continue;
+    usedSponsors.add(sponsor.id_sponsor);
+    usedPlaces.add(place.id_lugar);
+    const value = sponsorOfferValue(sponsor, place);
+    offers.push({
+      id:`SPON-${game.seasonNumber || 1}-${currentSeasonTurnNumber()}-${sponsor.id_sponsor}-${place.id_lugar}-${hashNumber(String(Math.random()), 100000)}`,
+      sponsorId:sponsor.id_sponsor,
+      sponsorName:sponsor.nombre_marca,
+      category:sponsor.categoria,
+      placeId:place.id_lugar,
+      placeName:place.nombre,
+      placeType:place.tipo,
+      perTurn:value.perTurn,
+      turns:value.turns,
+      total:value.total,
+      createdTurn:currentTurnIndex(),
+      season:game.seasonNumber || 1
+    });
+  }
+  game.sponsors.offers = offers;
+  game.sponsors.matchesSinceOffer = 0;
+  game.sponsors.nextOfferAfter = randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
+  game.sponsors.lastOfferTurn = currentTurnIndex();
+  if(offers.length){
+    pushGameMessage({ type:'finanzas', title:'Nuevas ofertas de sponsors', body:`Llegaron ${offers.length} oferta(s) de patrocinio para el club.`, priority:'normal' });
+  }
+  return offers;
+}
+function advanceSponsorMatchCounter(){
+  ensureSponsorState();
+  game.sponsors.matchesSinceOffer = Number(game.sponsors.matchesSinceOffer || 0) + 1;
+  if(game.sponsors.matchesSinceOffer >= Number(game.sponsors.nextOfferAfter || SPONSOR_OFFER_MATCH_MIN)){
+    generateSponsorOffers();
+  }
+}
+function processSponsorContracts(){
+  ensureSponsorState();
+  game.sponsors.active = (game.sponsors.active || []).map(contract => ({ ...contract, turnsRemaining:Math.max(0, Number(contract.turnsRemaining || 0) - 1) })).filter(contract => Number(contract.turnsRemaining || 0) > 0);
+}
+function acceptSponsorOffer(offerId){
+  ensureSponsorState();
+  const index = game.sponsors.offers.findIndex(offer => offer.id === offerId);
+  if(index < 0) return;
+  const offer = game.sponsors.offers[index];
+  if(occupiedSponsorPlaces().has(offer.placeId)){
+    showNotice('Ese lugar ya está ocupado por otro sponsor.');
+    return;
+  }
+  game.sponsors.offers.splice(index, 1);
+  game.sponsors.active.push({
+    ...offer,
+    acceptedTurn:currentTurnIndex(),
+    turnsRemaining:offer.turns
+  });
+  recordBudgetChange(offer.total, `Sponsor: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor', sponsorId:offer.sponsorId, placeId:offer.placeId });
+  pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(offer.total)} por ${offer.placeName}.`, priority:'normal' });
+  saveLocal(true);
+  showNotice(`Sponsor aceptado: ${offer.sponsorName}.`);
+  renderStadium();
+}
+function rejectSponsorOffer(offerId){
+  ensureSponsorState();
+  game.sponsors.offers = (game.sponsors.offers || []).filter(offer => offer.id !== offerId);
+  saveLocal(true);
+  renderStadium();
+}
+function sponsorOffersMarkup(){
+  ensureSponsorState();
+  const offers = game.sponsors.offers || [];
+  if(!offers.length){
+    return `<p class="muted small">Sin ofertas disponibles. Próxima tanda estimada en ${Math.max(0, Number(game.sponsors.nextOfferAfter || 0) - Number(game.sponsors.matchesSinceOffer || 0))} partido(s).</p>`;
+  }
+  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Turnos</th><th>Por turno</th><th>Pago inmediato</th><th></th></tr></thead><tbody>${offers.map(offer => `<tr>
+    <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
+    <td>${escapeHtml(offer.placeName)}</td>
+    <td>${offer.turns}</td>
+    <td>${formatMoney(offer.perTurn)}</td>
+    <td><strong class="ok">${formatMoney(offer.total)}</strong></td>
+    <td><button class="primary small-btn" data-accept-sponsor="${escapeHtml(offer.id)}">Aceptar</button><button class="ghost small-btn" data-reject-sponsor="${escapeHtml(offer.id)}">Rechazar</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+function activeSponsorsMarkup(){
+  ensureSponsorState();
+  const active = game.sponsors.active || [];
+  if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
+  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Turnos restantes</th><th>Pago recibido</th></tr></thead><tbody>${active.map(item => `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${item.turnsRemaining}</td><td>${formatMoney(item.total || 0)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+
 function renderStadium(){
   ensureStadiumState();
+  ensureSponsorState();
   const club = seed.clubs.find(c=>c.id===game.selectedClubId);
   const score = fieldScoreForClub(game.selectedClubId);
   const label = fieldConditionName(score);
@@ -2969,9 +3156,18 @@ function renderStadium(){
     </div>
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${project.replantingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${project.patchingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
+    <div class="card sponsors-card" style="margin-top:14px">
+      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan tandas de 2 a 5 ofertas cada 4 a 7 partidos. El pago se recibe completo al aceptar.</p></div><span class="pill">${game.sponsors.matchesSinceOffer || 0}/${game.sponsors.nextOfferAfter || 0} partidos</span></div>
+      <h4>Ofertas disponibles</h4>
+      ${sponsorOffersMarkup()}
+      <h4 style="margin-top:14px">Contratos activos</h4>
+      ${activeSponsorsMarkup()}
+    </div>
   `;
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
+  document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
+  document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
 }
 
 function renderFixture(){
@@ -3284,10 +3480,12 @@ function simulateNextMatchday(){
   applyMoraleUpdates(results);
   applyTrainingEffects();
   advanceStadiumAfterMatches(results);
+  processSponsorContracts();
   if(ownResult){
     applyEconomyResult(ownResult);
     updateManagerMatchStats(ownResult);
     maybeGenerateTransferOffer(ownResult);
+    advanceSponsorMatchCounter();
   }
   const ownProblems = collectOwnProblems(ownResult);
   removeOwnUnavailableFromTactic(ownProblems);
@@ -3341,6 +3539,7 @@ function simulatePreseasonTurn(){
   }
   applyTrainingEffects();
   processStadiumProjects();
+  processSponsorContracts();
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
@@ -3363,6 +3562,7 @@ function simulatePreseasonTurn(){
 function simulatePostseasonTurn(){
   applyTrainingEffects();
   processStadiumProjects();
+  processSponsorContracts();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
   if(game.phaseTurn >= POSTSEASON_TURNS){
@@ -3462,6 +3662,7 @@ function advanceStadiumAfterMatches(results){
     }
   });
   processStadiumProjects();
+  processSponsorContracts();
 }
 function processStadiumProjects(){
   ensureStadiumState();
@@ -4083,7 +4284,7 @@ function showPlayerModal(playerId){
           <div>
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
             <h2>${escapeHtml(p.name)}</h2>
-            <p class="muted">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
+            <p class="muted">${escapeHtml(p.nationality || 'Sin nacionalidad')} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
         </div>
@@ -4430,7 +4631,7 @@ function scoutingPlayerRow(player){
   return `<tr>
     <td>${faceImg(player,'photo-thumb')} <strong>${escapeHtml(player.name)}</strong></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
-    <td>${countryFlag(player.nationality)} ${escapeHtml(player.nationality)}</td>
+    <td>${nationalityShortMarkup(player.nationality)}</td>
     <td><strong>${visibleOverall(player)}</strong></td>
     <td>${cell('Ataque/Salto')}</td>
     <td>${cell('Defensa')}</td>

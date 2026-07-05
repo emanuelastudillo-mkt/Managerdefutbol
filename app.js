@@ -3,7 +3,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.06';
+const APP_VERSION = 'V1.08';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -48,6 +48,17 @@ const SUB_TRIGGERS = [
   { value:'losing', label:'Entrar perdiendo' },
   { value:'drawing', label:'Entrar empatando' }
 ];
+const INJURY_TABLE = [
+  { name:'Distensión', probability:25, minTurns:2, maxTurns:5 },
+  { name:'Desgarro', probability:20, minTurns:1, maxTurns:4 },
+  { name:'Esguince', probability:15, minTurns:3, maxTurns:8 },
+  { name:'Rotura', probability:9, minTurns:6, maxTurns:12 },
+  { name:'Fractura', probability:3, minTurns:16, maxTurns:30 },
+  { name:'Contusión', probability:28, minTurns:1, maxTurns:2 }
+];
+const BASE_INJURY_CHANCE = 0.05;
+const FATIGUE_INJURY_STEP = 5;
+const FATIGUE_INJURY_BONUS = 0.01;
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
   starters:[],
@@ -61,6 +72,7 @@ let game = null;
 let activeTab = 'home';
 let squadSort = 'media_desc';
 let uiTicker = null;
+let matchRevealTimers = [];
 
 const $ = (id) => document.getElementById(id);
 const view = $('view');
@@ -97,7 +109,7 @@ function statusText(playerId){
   if(!game) return 'Disponible';
   const st = playerStatus(playerId);
   const parts = [];
-  if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough) parts.push(`Lesionado ${st.injuryLabel || ''}`.trim());
+  if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough) parts.push(`Lesionado: ${st.injuryLabel || 'Lesión'}`.trim());
   if(st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough) parts.push('Suspendido');
   return parts.length ? parts.join(' · ') : 'Disponible';
 }
@@ -165,6 +177,39 @@ function currentCondition(playerId){
   if(!game.playerCondition) game.playerCondition = {};
   if(!Number.isFinite(game.playerCondition[playerId])) game.playerCondition[playerId] = 99;
   return clamp(Math.round(game.playerCondition[playerId]), 0, 99);
+}
+function fatiguePoints(playerId){
+  return clamp(99 - currentCondition(playerId), 0, 99);
+}
+function injuryChanceForPlayer(playerId){
+  return clamp(BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS, 0, 0.35);
+}
+function pickInjuryType(){
+  const total = INJURY_TABLE.reduce((sum, item) => sum + item.probability, 0);
+  let roll = Math.random() * total;
+  for(const item of INJURY_TABLE){
+    roll -= item.probability;
+    if(roll <= 0) return item;
+  }
+  return INJURY_TABLE[INJURY_TABLE.length - 1];
+}
+function turnsRemaining(playerId){
+  const st = playerStatus(playerId);
+  if(st.injuredThrough === undefined || game.matchdayIndex > st.injuredThrough) return 0;
+  return Math.max(1, st.injuredThrough - game.matchdayIndex + 1);
+}
+function injuredPlayersByClub(clubId){
+  return playersByClub(clubId)
+    .map(player => ({ player, status:playerStatus(player.id), remaining:turnsRemaining(player.id) }))
+    .filter(item => item.remaining > 0)
+    .sort((a,b)=>b.remaining-a.remaining || a.player.name.localeCompare(b.player.name));
+}
+function squadFitnessAverage(clubId){
+  const squad = playersByClub(clubId);
+  return Math.round(avg(squad.map(p => currentCondition(p.id)))) || 0;
+}
+function injuryRulesTable(){
+  return INJURY_TABLE.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.probability}%</td><td>${item.minTurns} a ${item.maxTurns}</td></tr>`).join('');
 }
 function conditionFactor(playerId){
   return 0.5 + 0.5 * (currentCondition(playerId) / 99);
@@ -675,6 +720,8 @@ function renderHome(){
   const next = getNextMatchForSelected();
   const clubPlayers = playersByClub(game.selectedClubId);
   const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
+  const avgFitness = squadFitnessAverage(game.selectedClubId);
+  const injuredList = injuredPlayersByClub(game.selectedClubId);
   const position = sortedStandings().findIndex(s=>s.clubId===game.selectedClubId)+1;
   const lastMatches = game.matchHistory.filter(m=>m.homeId===game.selectedClubId || m.awayId===game.selectedClubId).slice(-5).reverse();
   const problems = game.lastOwnProblems || [];
@@ -696,9 +743,15 @@ function renderHome(){
     </div>
     <div class="grid cols-4" style="margin-top:14px">
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
-      <div class="card"><p class="label">Media plantel</p><div class="metric">${avgOverall}</div></div>
+      <div class="card"><p class="label">Media general</p><div class="metric">${avgOverall}</div></div>
+      <div class="card"><p class="label">Estado físico general</p><div class="metric">${avgFitness}</div><p class="small muted">sobre 99</p></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
       <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
+    </div>
+    <div class="card injury-home-card" style="margin-top:14px">
+      <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
+      ${injuredList.length ? `<div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Lesión</th><th>Turnos restantes</th><th>Estado físico</th></tr></thead><tbody>${injuredList.map(item => `<tr><td><button class="linklike" data-player-id="${item.player.id}">${escapeHtml(item.player.name)}</button></td><td>${escapeHtml(item.status.injuryLabel || 'Lesión')}</td><td><strong>${item.remaining}</strong></td><td>${currentCondition(item.player.id)}/99</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
+      <details class="injury-rules"><summary>Ver tabla de lesiones</summary><div class="table-wrap"><table><thead><tr><th>Lesión</th><th>Probabilidad</th><th>Turnos no disponible</th></tr></thead><tbody>${injuryRulesTable()}</tbody></table></div></details>
     </div>
     <div class="split" style="margin-top:14px">
       <div class="card">
@@ -1146,6 +1199,7 @@ function simulateNextMatchday(){
   activeTab = 'home';
   saveLocal(true);
   renderAll();
+  if(ownResult) showMatchRevealModal(ownResult);
   if(game.mustReviewTactics){ showNotice('Jornada simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
   else { showNotice(`Jornada ${round.matchday} simulada. Avance bloqueado por 2 minutos.`); }
 }
@@ -1294,16 +1348,28 @@ function makeCards(clubId, power, fouls){
 }
 function makeInjuries(clubId, ownPower, rivalPower){
   const injuries = [];
-  const baseChance = clamp(0.015 + (rivalPower.aggression - 50) / 900 + (68 - ownPower.stamina) / 850, 0.01, 0.18);
-  if(Math.random() < baseChance){
-    const p = weightedPick(ownPower.lineup, x => (100 - hiddenStats(x).genetics) + (100 - effectiveSkill(x,'resistencia'))/2 + 10);
-    if(p){
-      const severity = Math.random() < 0.16 ? 'grave' : Math.random() < 0.48 ? 'media' : 'leve';
-      const matchesOut = severity === 'grave' ? Math.floor(rnd(3,6)) : severity === 'media' ? Math.floor(rnd(2,4)) : 1;
-      injuries.push({ clubId, playerId:p.id, type:'injury', severity, matchesOut, minute:Math.floor(rnd(12,90)) });
+  const candidates = (ownPower.lineup || []).filter(player => !isUnavailable(player.id));
+  candidates.forEach(player => {
+    const chance = injuryChanceForPlayer(player.id);
+    if(Math.random() < chance){
+      const injury = pickInjuryType();
+      const matchesOut = Math.floor(rnd(injury.minTurns, injury.maxTurns + 1));
+      const duringMatch = Math.random() < 0.72;
+      injuries.push({
+        clubId,
+        playerId:player.id,
+        type:'injury',
+        name:injury.name,
+        injuryLabel:injury.name,
+        probability:injury.probability,
+        chance:Math.round(chance * 100),
+        matchesOut,
+        minute:duringMatch ? Math.floor(rnd(8,89)) : 90,
+        phase:duringMatch ? 'durante' : 'final'
+      });
     }
-  }
-  return injuries;
+  });
+  return injuries.sort((a,b)=>a.minute-b.minute);
 }
 function makeSubstitutions(clubId, tactic, goals){
   if(clubId !== game.selectedClubId || !tactic?.autoSubs?.length) return [];
@@ -1370,8 +1436,14 @@ function applyAvailability(cards, injuries){
     }
   });
   injuries.forEach(i => {
-    const label = i.severity === 'grave' ? 'grave' : i.severity === 'media' ? 'media' : 'leve';
-    game.playerStatus[i.playerId] = { ...playerStatus(i.playerId), injuredThrough: game.matchdayIndex + i.matchesOut, injuryLabel: label };
+    const label = i.injuryLabel || i.name || 'Lesión';
+    game.playerStatus[i.playerId] = {
+      ...playerStatus(i.playerId),
+      injuredThrough: game.matchdayIndex + i.matchesOut,
+      injuryLabel: label,
+      injuryChance: i.chance,
+      injuredAtMatchday: game.matchdayIndex
+    };
   });
 }
 function collectOwnProblems(result){
@@ -1452,6 +1524,138 @@ function radarSvg(stats){
     ${labels}
   </svg>`;
 }
+
+function clearMatchRevealTimers(){
+  matchRevealTimers.forEach(id => clearTimeout(id));
+  matchRevealTimers = [];
+}
+function showMatchRevealModal(match){
+  if(!match) return;
+  const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
+  const html = `
+    <div class="match-reveal-shell">
+      <div class="match-modal-head">
+        <p class="label">Jornada ${match.matchday} · ${match.date}</p>
+        <h2>${clubLink(match.homeId)} <span id="revealScore">0 - 0</span> ${clubLink(match.awayId)}</h2>
+      </div>
+      <div class="reveal-control-row">
+        <div class="reveal-progress"><span id="revealProgressBar"></span></div>
+        <button id="finishMatchReveal" class="primary">Finalizar partido</button>
+      </div>
+      <div id="matchRevealDynamic"></div>
+      <div class="card inner match-context-card">
+        <h3>Contexto del partido</h3>
+        <div class="grid cols-4">
+          <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
+          <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong></div>
+          <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
+          <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
+        </div>
+      </div>
+    </div>`;
+  openModal(html);
+  const stages = matchRevealStages(match);
+  const renderStage = (idx) => renderMatchRevealStage(match, stages[idx], idx, stages.length);
+  renderStage(0);
+  stages.slice(1).forEach((stage, i) => {
+    matchRevealTimers.push(setTimeout(() => renderStage(i + 1), stage.time));
+  });
+  $('finishMatchReveal')?.addEventListener('click', () => {
+    clearMatchRevealTimers();
+    renderStage(stages.length - 1);
+  });
+}
+function matchRevealStages(match){
+  return [
+    { label:'Salida al campo', minute:0, factor:0, time:0, note:'Los equipos ya están en cancha. El partido se simula de una vez, pero la visualización avanza gradualmente.' },
+    { label:'Primeros minutos', minute:18, factor:.22, time:4000, note:'Primer tramo de posesión, ataques iniciales y primeras faltas.' },
+    { label:'Media hora de juego', minute:32, factor:.38, time:8000, note:'El partido empieza a mostrar una tendencia táctica.' },
+    { label:'Entretiempo', minute:45, factor:.52, time:12000, note:'Cierre del primer tiempo. Algunos cambios pueden aparecer desde este punto.' },
+    { label:'Tramo final', minute:75, factor:.78, time:16000, note:'Se definen los momentos de mayor riesgo, tarjetas y posibles lesiones.' },
+    { label:'Final del partido', minute:90, factor:1, time:20000, note:'Resultado final y estadísticas completas.' }
+  ];
+}
+function renderMatchRevealStage(match, stage, index, total){
+  const box = $('matchRevealDynamic');
+  if(!box) return;
+  const homeGoals = match.goals.filter(g => g.clubId === match.homeId && g.minute <= stage.minute).length;
+  const awayGoals = match.goals.filter(g => g.clubId === match.awayId && g.minute <= stage.minute).length;
+  const scoreBox = $('revealScore');
+  if(scoreBox) scoreBox.textContent = `${homeGoals} - ${awayGoals}`;
+  const progress = $('revealProgressBar');
+  if(progress) progress.style.width = `${Math.round((index/(total-1))*100)}%`;
+  const homeStats = partialMatchStats(match.matchStats.home, stage.factor, match.matchStats.home.possession);
+  const awayStats = partialMatchStats(match.matchStats.away, stage.factor, match.matchStats.away.possession);
+  if(stage.factor === 1){
+    homeStats.possession = match.matchStats.home.possession;
+    awayStats.possession = match.matchStats.away.possession;
+  } else {
+    const hPoss = Math.round(50 + (match.matchStats.home.possession - 50) * stage.factor);
+    homeStats.possession = hPoss;
+    awayStats.possession = 100 - hPoss;
+  }
+  const events = matchRevealEvents(match, stage.minute);
+  box.innerHTML = `
+    <div class="card inner reveal-stage-card">
+      <div class="row">
+        <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
+        <span class="pill">${index + 1}/${total}</span>
+      </div>
+      <p class="muted small">${escapeHtml(stage.note)}</p>
+    </div>
+    <div class="match-team-columns reveal-columns">
+      ${revealTeamStatsCard(match.homeId, homeStats, 'Local')}
+      ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante')}
+    </div>
+    <div class="card inner reveal-events-card">
+      <h3>Eventos visibles</h3>
+      ${events.length ? events.map(revealEventLine).join('') : '<p class="muted">Sin eventos relevantes en este tramo.</p>'}
+    </div>
+    ${stage.factor === 1 ? `<div class="row reveal-final-actions"><button class="ghost" data-match-id="${escapeHtml(match.id)}">Ver ficha completa normal</button></div>` : ''}`;
+  const finish = $('finishMatchReveal');
+  if(finish && stage.factor === 1) finish.textContent = 'Partido finalizado';
+}
+function partialMatchStats(stats, factor){
+  return {
+    attacks: Math.round((stats.attacks || 0) * factor),
+    chances: Math.round((stats.chances || 0) * factor),
+    possession: stats.possession,
+    fouls: Math.round((stats.fouls || 0) * factor)
+  };
+}
+function revealTeamStatsCard(clubId, stats, sideLabel){
+  return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
+    <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
+    <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
+    <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
+  </div>`;
+}
+function matchRevealEvents(match, minute){
+  const events = [];
+  (match.goals || []).forEach(g => events.push({ minute:g.minute, type:'goal', data:g }));
+  (match.cards || []).forEach(c => events.push({ minute:c.minute, type:'card', data:c }));
+  (match.injuries || []).forEach(i => events.push({ minute:i.minute, type:'injury', data:i }));
+  (match.substitutions || []).forEach(s => events.push({ minute:s.minute, type:'sub', data:s }));
+  return events.filter(e => e.minute <= minute).sort((a,b)=>a.minute-b.minute);
+}
+function revealEventLine(event){
+  if(event.type === 'goal'){
+    const g = event.data;
+    const p = playerById(g.playerId);
+    const a = g.assistId ? playerById(g.assistId) : null;
+    return `<div class="stat-rank"><span>${g.minute}' ⚽ ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(g.clubId))}</span></span><strong>${a ? `Asist. ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
+  }
+  if(event.type === 'card'){
+    return cardLine(event.data);
+  }
+  if(event.type === 'injury'){
+    return injuryLine(event.data);
+  }
+  const s = event.data;
+  return subLine(s);
+}
+
 function showMatchModal(matchId){
   const match = game.matchHistory.find(m => m.id === matchId);
   if(!match) return;
@@ -1511,7 +1715,9 @@ function subLine(s){
 }
 function injuryLine(i){
   const p = playerById(i.playerId);
-  return `<div class="stat-rank"><span>${i.minute}' ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(i.clubId))}</span></span><strong>${escapeHtml(i.severity)} · ${i.matchesOut} fecha(s)</strong></div>`;
+  const label = i.injuryLabel || i.name || i.severity || 'Lesión';
+  const phase = i.phase === 'final' ? 'al final' : 'durante';
+  return `<div class="stat-rank"><span>${i.minute}' 🩹 ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(i.clubId))}</span></span><strong>${escapeHtml(label)} · ${i.matchesOut} turno(s) · ${phase}</strong></div>`;
 }
 function showClubModal(clubId){
   const club = seed.clubs.find(c => c.id === Number(clubId));
@@ -1612,6 +1818,7 @@ function openModal(html){
   document.body.appendChild(wrapper);
 }
 function closeModal(){
+  clearMatchRevealTimers();
   const root = $('modalRoot');
   if(root) root.remove();
 }

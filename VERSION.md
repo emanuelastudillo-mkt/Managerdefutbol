@@ -1,47 +1,52 @@
 # Registro de versión
 
-## Versión: V1.06
+## Versión: V1.08
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** scouting, navegación y detalle de jornada
+**Tipo de mejora:** sistema médico y gestión de plantel
 
 ### Resumen
-Esta versión agrega clubes clickeables, scouting parcial de plantillas rivales y un detalle de partido más completo con datos contextuales provisorios.
+Esta versión agrega un sistema de lesiones más explícito, con probabilidades, duración en turnos y visualización directa en el panel principal del club.
 
 ### Cambios principales agregados
-- **Detalle de partido ampliado**:
-  - estadísticas en 2 columnas, una por equipo
-  - clima del partido
-  - estado del campo de juego
-  - cantidad de hinchas locales
-  - cantidad de hinchas visitantes
-- **Clubes clickeables** desde tabla, calendario, próximos partidos y detalle de partido.
-- **Modal de club** con:
-  - datos generales
-  - plantilla observada
-  - táctica estimada
-  - sin revelar quiénes son titulares
-- **Scouting parcial de jugadores**:
-  - por cada jugador se muestran sólo 2 o 3 habilidades visibles
-  - el resto se reemplaza con guion
-  - las habilidades reveladas cambian en cada nueva jornada
-- Se mantiene el enfoque de exploración: el usuario debe revisar varias jornadas para conocer mejor a un jugador rival.
+- **Tabla de lesiones** incorporada al juego:
+  - Distensión: 25%, 2 a 5 turnos.
+  - Desgarro: 20%, 1 a 4 turnos.
+  - Esguince: 15%, 3 a 8 turnos.
+  - Rotura: 9%, 6 a 12 turnos.
+  - Fractura: 3%, 16 a 30 turnos.
+  - Contusión: 28%, 1 a 2 turnos.
+- **Probabilidad de lesión por jugador**:
+  - 5% base.
+  - +1% por cada 5 puntos de cansancio acumulado.
+- Las lesiones se ejecutan al simular el partido.
+- La lesión puede ocurrir:
+  - durante el partido,
+  - al final del partido.
+- Las lesiones ahora muestran nombre de lesión, no sólo gravedad genérica.
+- Se informa la lesión en eventos del partido y en el panel principal.
+- Nueva sección en pantalla principal: **Jugadores lesionados**.
+- La sección de lesionados muestra:
+  - jugador,
+  - tipo de lesión,
+  - turnos restantes,
+  - estado físico.
+- Se agregó **Media general del plantel** en el panel principal.
+- Se agregó **Estado físico general del plantel** en el panel principal.
 
-### Cambios que se mantienen
-- Filtros de plantel.
-- Requisitos mínimos de club.
-- Pizarra táctica con arrastre manual.
+### Cambios mantenidos
+- Simulación visual de partido en ventana progresiva.
+- Opción para finalizar partido y ver resultado final.
+- Estadísticas de jornada por equipo en dos columnas.
+- Clima, campo de juego e hinchas locales/visitantes.
+- Clubes clickeables con plantilla y scouting parcial.
+- Táctica con arrastre manual.
 - Penalización por jugador fuera de zona.
-- Estado físico y anillo de cansancio.
-- Stats especiales de portero.
-- Caras por región desde `img/faces/`.
-- Economía por resultado.
-- Bloqueo de avance por 2 minutos.
+- Reglas de plantel mínimo.
 - Guardado local con IndexedDB.
 
 ### Pendientes sugeridos
-- Scouting persistente acumulativo.
-- Informes de ojeadores.
-- Staff técnico.
-- Mercado de pases.
-- Historial completo de partidos y asistencia.
-- Objetivos institucionales.
+- Historial médico completo por jugador.
+- Cuerpo médico y reducción de plazos de recuperación.
+- Lesiones recurrentes.
+- Riesgo por jugar con baja condición física.
+- Entrenamiento preventivo.

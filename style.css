@@ -297,3 +297,21 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .scouting-table th:first-child,.scouting-table td:first-child{text-align:left}
 .club-modal-head h2{display:flex;align-items:center;gap:8px}
 @media (max-width:900px){.match-team-columns,.club-lines{grid-template-columns:1fr}.scouting-table{min-width:980px}}
+
+/* V1.07: visualización lenta de partido */
+.match-reveal-shell{clear:both;display:grid;gap:14px}
+.reveal-control-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:2px}
+.reveal-progress{flex:1;min-width:220px;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(148,163,184,.12)}
+.reveal-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:inherit;transition:width .6s ease}
+.reveal-stage-card{border-color:rgba(59,130,246,.22);background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(255,255,255,.025))}
+.reveal-columns{margin-top:14px}
+.reveal-events-card{margin-top:14px;min-height:120px}
+.reveal-final-actions{justify-content:flex-end;margin-top:12px}
+#revealScore{display:inline-block;min-width:90px;text-align:center;color:#dbeafe}
+@media (max-width:900px){.reveal-control-row{align-items:stretch}.reveal-progress{width:100%}}
+
+/* V1.08: lesiones por turnos y panel médico */
+.injury-home-card{border-color:rgba(245,158,11,.22);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(255,255,255,.025))}
+.injury-rules{margin-top:12px;color:var(--muted)}
+.injury-rules summary{cursor:pointer;font-weight:800;color:#fde68a;margin-bottom:10px}
+.injury-rules .table-wrap{margin-top:10px}

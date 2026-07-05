@@ -1,4 +1,4 @@
-# Fútbol Manager MVP - V1.06
+# Fútbol Manager MVP - V1.08
 
 Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
@@ -9,11 +9,11 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 - Liga simple con 20 clubes y 600 jugadores.
 - Simulación de jornadas y tablas.
 - Plantel clickeable con filtros.
-- Táctica con pizarra, arrastre manual y estado físico.
+- Pantalla táctica con cancha visual y arrastre manual.
 - Cambios automáticos.
 - Presupuesto dinámico según resultados.
-- Caras de jugadores desde `img/faces/` por región.
-- Clubes clickeables con scouting parcial.
+- Estado físico de los jugadores con impacto en rendimiento.
+- Lesiones por probabilidad, cansancio acumulado y duración en turnos.
 
 ## Archivos principales
 - `index.html`
@@ -32,11 +32,18 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 5. Guardar y abrir la URL publicada.
 
 ## Notas de esta versión
-- El detalle de partido ahora muestra dos columnas de estadísticas, una por equipo.
-- Se agregan datos provisorios del partido: clima, estado del campo, hinchas locales y visitantes.
-- Los clubes son clickeables.
-- La ficha de club muestra plantilla y táctica observada sin revelar titulares.
-- El scouting de jugadores rivales revela sólo 2 o 3 habilidades visibles por jornada; las demás se muestran con guion.
+- Se agregó una tabla de lesiones con nombre, probabilidad y turnos fuera.
+- La lesión se calcula al simular el partido.
+- Cada jugador tiene 5% base de probabilidad de lesión.
+- Por cada 5 puntos de cansancio acumulado, la probabilidad sube 1%.
+- La lesión puede ocurrir durante el partido o al final.
+- En pantalla principal se muestran jugadores lesionados, lesión y turnos restantes.
+- En pantalla principal se muestra media general y estado físico general del plantel.
 
 ## Siguiente versión sugerida
-V2.0 podría incluir mercado de pases, entrenamientos, informes de scouting persistentes, staff técnico y objetivos de temporada.
+V1.09 podría incluir:
+- historial médico por jugador,
+- recuperaciones parciales,
+- cuerpo médico,
+- entrenamiento preventivo,
+- impacto de lesiones según posición.

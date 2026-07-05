@@ -3,7 +3,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.04';
+const APP_VERSION = 'V1.06';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -59,6 +59,7 @@ const DEFAULT_TACTIC = {
 let seed = null;
 let game = null;
 let activeTab = 'home';
+let squadSort = 'media_desc';
 let uiTicker = null;
 
 const $ = (id) => document.getElementById(id);
@@ -82,6 +83,8 @@ function formatMoney(value){ return new Intl.NumberFormat('es-AR',{style:'curren
 function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
 function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
 function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
+function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}"><span class="club-dot" style="background:${clubColor(id)}"></span>${escapeHtml(clubName(id))}</button>`; }
+function clubSpan(id){ return `<span class="club-click" data-club-id="${id}"><span class="club-dot" style="background:${clubColor(id)}"></span>${escapeHtml(clubName(id))}</span>`; }
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
 function playerStatus(playerId){ return game?.playerStatus?.[playerId] || {}; }
@@ -121,6 +124,17 @@ function effectiveSkill(p, skillName){
   return clamp(raw + hiddenStats(p).surprise, 1, 99);
 }
 function visibleStats(p){
+  if(p.position === 'POR'){
+    return {
+      Salto: Math.round(avg([baseSkill(p,'cabezazo'), baseSkill(p,'fuerza')])) || p.overall,
+      Defensa: Math.round(avg([baseSkill(p,'porteria'), baseSkill(p,'posicionamiento')])) || p.overall,
+      Pase: Math.round(avg([baseSkill(p,'paseCorto'), baseSkill(p,'paseLargo')])) || p.overall,
+      Reflejos: Math.round(avg([baseSkill(p,'porteria'), baseSkill(p,'serenidad'), baseSkill(p,'aceleracion')])) || p.overall,
+      Mando: Math.round(avg([baseSkill(p,'liderazgo'), baseSkill(p,'trabajoEquipo'), baseSkill(p,'serenidad')])) || p.overall,
+      Potencia: Math.round(avg([baseSkill(p,'fuerza'), baseSkill(p,'paseLargo')])) || p.overall,
+      Resistencia: baseSkill(p,'resistencia')
+    };
+  }
   return {
     Ataque: Math.round(avg([baseSkill(p,'remate'), baseSkill(p,'regate'), baseSkill(p,'posicionamiento')])) || p.overall,
     Defensa: Math.round(avg([baseSkill(p,'marca'), baseSkill(p,'entradas'), baseSkill(p,'posicionamiento')])) || p.overall,
@@ -248,6 +262,36 @@ function playerGroupClass(position){
   const group = playerGroup(position);
   return group === 'gk' ? 'gk' : group === 'def' ? 'def' : group === 'att' ? 'att' : 'mid';
 }
+function slotGroup(slot){
+  if(slot === 'POR') return 'gk';
+  if(['LD','LI','DFC'].includes(slot)) return 'def';
+  if(['MCD','MC','MCO','VOL'].includes(slot)) return 'mid';
+  return 'att';
+}
+function playerFitsSlot(player, slot){
+  return playerGroup(player.position) === slotGroup(slot);
+}
+function zoneFactor(player, slot){
+  return playerFitsSlot(player, slot) ? 1 : 0.5;
+}
+function conditionLossForPlayer(player){
+  const loss = rnd(15,20);
+  return player?.position === 'POR' ? loss * 0.5 : loss;
+}
+function clubRequirementIssues(clubId){
+  const squad = playersByClub(clubId);
+  const keepers = squad.filter(p => p.position === 'POR').length;
+  const issues = [];
+  if(keepers < 2) issues.push(`necesita 2 porteros y tiene ${keepers}`);
+  if(squad.length < 16) issues.push(`necesita 16 jugadores y tiene ${squad.length}`);
+  return issues;
+}
+function invalidClubRequirements(){
+  return seed.clubs.map(c => ({ club:c, issues:clubRequirementIssues(c.id) })).filter(x => x.issues.length);
+}
+function isClubRequirementsBlocking(){
+  return invalidClubRequirements().length > 0;
+}
 function mentalityMarker(mode){
   if(mode === 'ataque') return '<span class="mentality-marker attack" title="Ataque">→</span>';
   if(mode === 'defensiva') return '<span class="mentality-marker defense" title="Defensiva">←</span>';
@@ -316,10 +360,12 @@ function assignPlayersToRoleSequence(players, formation){
   return assigned;
 }
 function pitchSlots(tactic){
-  const starters = (tactic?.starters || []).map(playerById).filter(Boolean);
-  const assigned = assignPlayersToRoleSequence(starters, tactic?.formation || '4-4-2');
+  const slots = FORMATIONS[tactic?.formation] || FORMATIONS['4-4-2'];
   const coords = formationCoordinates(tactic?.formation || '4-4-2');
-  return assigned.map((entry, i) => ({ player: entry.player, slot: entry.slot, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: playerMentality(entry.player.id, tactic) }));
+  return slots.map((slot, i) => {
+    const player = playerById((tactic?.starters || [])[i]);
+    return { player, slot, index:i, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: player ? playerMentality(player.id, tactic) : 'posicional' };
+  });
 }
 function fitnessRingSvg(playerId){
   const condition = currentCondition(playerId);
@@ -424,6 +470,8 @@ function bindEvents(){
   document.addEventListener('click', (event)=>{
     const playerBtn = event.target.closest('[data-player-id]');
     if(playerBtn){ showPlayerModal(Number(playerBtn.dataset.playerId)); return; }
+    const clubBtn = event.target.closest('[data-club-id]');
+    if(clubBtn){ showClubModal(Number(clubBtn.dataset.clubId)); return; }
     const matchBtn = event.target.closest('[data-match-id]');
     if(matchBtn){ showMatchModal(matchBtn.dataset.matchId); return; }
     const mentalityBtn = event.target.closest('[data-toggle-mentality]');
@@ -439,6 +487,31 @@ function bindEvents(){
     }
     const close = event.target.closest('[data-close-modal]');
     if(close || event.target.classList.contains('modal-backdrop')) closeModal();
+  });
+  document.addEventListener('dragstart', (event)=>{
+    const item = event.target.closest('[data-drag-player]');
+    if(item){
+      event.dataTransfer.setData('text/plain', item.dataset.dragPlayer);
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  });
+  document.addEventListener('dragover', (event)=>{
+    if(event.target.closest('[data-drop-slot], [data-drop-pool]')) event.preventDefault();
+  });
+  document.addEventListener('drop', (event)=>{
+    const playerId = Number(event.dataTransfer.getData('text/plain'));
+    if(!playerId || !game) return;
+    const slot = event.target.closest('[data-drop-slot]');
+    const pool = event.target.closest('[data-drop-pool]');
+    if(slot){
+      event.preventDefault();
+      assignPlayerToStarterSlot(playerId, Number(slot.dataset.dropSlot));
+      return;
+    }
+    if(pool){
+      event.preventDefault();
+      movePlayerToPool(playerId, pool.dataset.dropPool);
+    }
   });
   document.addEventListener('keydown', (event)=>{ if(event.key === 'Escape') closeModal(); });
 }
@@ -475,6 +548,36 @@ function normalizeGame(saved){
   return normalized;
 }
 
+function assignPlayerToStarterSlot(playerId, slotIndex){
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  const starters = game.tactic.starters.slice(0,11);
+  while(starters.length < 11) starters.push(0);
+  let bench = game.tactic.bench.slice(0,10).filter(id => id !== playerId);
+  const previousIndex = starters.indexOf(playerId);
+  if(previousIndex >= 0) starters[previousIndex] = 0;
+  const displaced = starters[slotIndex];
+  starters[slotIndex] = playerId;
+  if(displaced && displaced !== playerId && bench.length < 10) bench.push(displaced);
+  game.tactic.starters = starters.filter(Boolean);
+  game.tactic.bench = bench.filter(Boolean).slice(0,10);
+  game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
+  game.tactic = applyStarterMentalities(game.tactic);
+  saveLocal(true);
+  renderTactics();
+}
+function movePlayerToPool(playerId, pool){
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  game.tactic.starters = game.tactic.starters.filter(id => id !== playerId);
+  game.tactic.bench = game.tactic.bench.filter(id => id !== playerId);
+  if(pool === 'bench'){
+    if(game.tactic.bench.length < 10) game.tactic.bench.push(playerId);
+    else showNotice('El banco ya tiene 10 suplentes. El jugador quedó como reserva.');
+  }
+  game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
+  game.tactic = applyStarterMentalities(game.tactic);
+  saveLocal(true);
+  renderTactics();
+}
 function normalizeTactic(clubId, tactic){
   const base = {...DEFAULT_TACTIC, ...(tactic || {})};
   const squad = playersByClub(clubId);
@@ -542,8 +645,26 @@ function renderAll(){
     view.innerHTML = $('emptyState').innerHTML;
     return;
   }
+  if(isClubRequirementsBlocking()){
+    renderClubRequirementsWarning();
+    return;
+  }
   const renderers = { home:renderHome, squad:renderSquad, tactics:renderTactics, fixture:renderFixture, standings:renderStandings, stats:renderStats };
   renderers[activeTab]();
+}
+function renderClubRequirementsWarning(){
+  const invalid = invalidClubRequirements();
+  const rows = invalid.map(item => {
+    const squad = playersByClub(item.club.id);
+    const keepers = squad.filter(p=>p.position==='POR').length;
+    return `<tr><td><strong>${escapeHtml(item.club.name)}</strong></td><td>${squad.length}</td><td>${keepers}</td><td><span class="bad">${escapeHtml(item.issues.join(' · '))}</span></td></tr>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="card blocker requirement-warning">
+      <h2>Advertencia de estructura de planteles</h2>
+      <p>Cada club debe tener como mínimo <strong>2 porteros</strong> y <strong>16 jugadores</strong>. Corregí ` + "`data/seed.json`" + ` antes de continuar.</p>
+      <div class="table-wrap"><table><thead><tr><th>Club</th><th>Jugadores</th><th>Porteros</th><th>Problema</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
 }
 function getNextMatchForSelected(){
   if(!game || game.matchdayIndex >= game.fixtures.length) return null;
@@ -569,7 +690,11 @@ function renderHome(){
       <button id="advanceBtn" class="primary">Avanzar fecha</button>
     </div>
     ${problemBox}
-    <div class="grid cols-4">
+    <div class="card placeholder-main-card home-top-visual">
+      <h3>Momento del club</h3>
+      <div class="main-visual-placeholder"><strong>Próximamente</strong><span>Aquí se insertará una imagen contextual según el momento del club.</span></div>
+    </div>
+    <div class="grid cols-4" style="margin-top:14px">
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
       <div class="card"><p class="label">Media plantel</p><div class="metric">${avgOverall}</div></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
@@ -585,10 +710,7 @@ function renderHome(){
         <div class="timeline">${lastMatches.length ? lastMatches.map(compactMatch).join('') : '<p class="muted">Aún no hay partidos jugados.</p>'}</div>
       </div>
     </div>
-    <div class="card placeholder-main-card" style="margin-top:14px">
-      <h3>Momento del club</h3>
-      <div class="main-visual-placeholder"><strong>Próximamente</strong><span>Aquí se insertará una imagen contextual según el momento del club.</span></div>
-    </div>
+
   `;
   $('advanceBtn')?.addEventListener('click', simulateNextMatchday);
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
@@ -622,9 +744,9 @@ function problemItem(problem){
 }
 function matchPreview(match){
   return `<button class="next-match clickable" data-match-id="${escapeHtml(match.id)}">
-    <div><span class="club-dot" style="background:${clubColor(match.homeId)}"></span><div class="team-name">${escapeHtml(clubName(match.homeId))}</div></div>
+    <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
     <div class="vs">VS<br><span class="small">${escapeHtml(match.date)}</span></div>
-    <div><span class="club-dot" style="background:${clubColor(match.awayId)}"></span><div class="team-name">${escapeHtml(clubName(match.awayId))}</div></div>
+    <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
   </button>`;
 }
 function compactMatch(m){
@@ -635,8 +757,33 @@ function compactMatch(m){
   return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${escapeHtml(clubShort(m.homeId))} ${m.homeGoals} - ${m.awayGoals} ${escapeHtml(clubShort(m.awayId))}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
 }
 
+function sortedSquadPlayers(){
+  const players = playersByClub(game.selectedClubId).slice();
+  const byName = (a,b) => a.name.localeCompare(b.name, 'es');
+  const byNationality = (a,b) => a.nationality.localeCompare(b.nationality, 'es') || byName(a,b);
+  const byValue = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
+  const sorters = {
+    media_desc:(a,b)=>visibleOverall(b)-visibleOverall(a) || byName(a,b),
+    media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
+    valor_asc:byValue,
+    valor_desc:(a,b)=>(b.value || 0)-(a.value || 0) || byName(a,b),
+    nacionalidad_asc:byNationality,
+    nacionalidad_desc:(a,b)=>b.nationality.localeCompare(a.nationality, 'es') || byName(a,b),
+    nombre_asc:byName
+  };
+  return players.sort(sorters[squadSort] || sorters.media_desc);
+}
 function renderSquad(){
-  const players = playersByClub(game.selectedClubId).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || positionOrder(a.position)-positionOrder(b.position));
+  const players = sortedSquadPlayers();
+  const sortOptions = [
+    ['media_desc','Media mayor a menor'],
+    ['media_asc','Media menor a mayor'],
+    ['valor_asc','Valor menor a mayor'],
+    ['valor_desc','Valor mayor a menor'],
+    ['nacionalidad_asc','Nacionalidad A-Z'],
+    ['nacionalidad_desc','Nacionalidad Z-A'],
+    ['nombre_asc','Nombre A-Z']
+  ].map(([value,label])=>`<option value="${value}" ${squadSort===value?'selected':''}>${label}</option>`).join('');
   const rows = players.map(p=>`
     <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
       <td>${faceImg(p, 'photo-thumb')}</td>
@@ -651,63 +798,69 @@ function renderSquad(){
       <td>${formatMoney(p.value)}</td>
     </tr>`).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. También se muestra su rol, nacionalidad y estado físico.</p></div>
+    <div class="section-title row"><div><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles.</p></div><div class="sort-box"><label>Ordenar</label><select id="squadSort">${sortOptions}</select></div></div>
     <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Dorsal</th><th>Rol</th><th>Nacionalidad</th><th>Media</th><th>Estado físico</th><th>Resistencia</th><th>Estado</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table></div>
   `;
+  $('squadSort')?.addEventListener('change', e => { squadSort = e.target.value; renderSquad(); });
+}
+function playerDragCard(p, extra=''){
+  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra}" draggable="true" data-drag-player="${p.id}">
+    ${faceImg(p, 'drag-face')}
+    <div><strong>${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · ${currentCondition(p.id)}/99</span></div>
+  </div>`;
 }
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
-  const players = playersByClub(game.selectedClubId).sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
-  const rows = players.map(p => tacticPlayerRow(p)).join('');
   const starters = game.tactic.starters.map(playerById).filter(Boolean);
   const bench = game.tactic.bench.map(playerById).filter(Boolean);
-  const pitch = pitchSlots(game.tactic).map(slot => `
-      <button class="player-chip ${playerGroupClass(slot.player.position)}" style="left:${slot.x}%; top:${slot.y}%" data-toggle-mentality="${slot.player.id}" title="Cambiar mentalidad de ${escapeHtml(slot.player.name)}">
+  const starterSet = new Set(game.tactic.starters);
+  const benchSet = new Set(game.tactic.bench);
+  const reserves = playersByClub(game.selectedClubId)
+    .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
+    .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  const pitch = pitchSlots(game.tactic).map(slot => {
+    const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
+    const chip = slot.player ? `
+      <button class="player-chip ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}" draggable="true" data-drag-player="${slot.player.id}" data-toggle-mentality="${slot.player.id}" title="${fit ? 'Zona correcta' : 'Fuera de zona: rinde al 50%'}">
         ${fitnessRingSvg(slot.player.id)}
         <span class="jersey-dot">#${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
         ${mentalityMarker(slot.mentality)}
-      </button>`).join('');
+      </button>` : `<div class="empty-slot ${slotGroup(slot.slot)}"><strong>${slot.slot}</strong><span>Arrastrar</span></div>`;
+    return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%" data-drop-slot="${slot.index}">${chip}</div>`;
+  }).join('');
+  const starterList = pitchSlots(game.tactic).map(slot => {
+    const p = slot.player;
+    const fit = p ? playerFitsSlot(p, slot.slot) : false;
+    return `<div class="lineup-row ${p && !fit ? 'bad-zone' : ''}">
+      <span class="pill">${slot.index+1}. ${slot.slot}</span>
+      <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
+      <strong>${p ? (fit ? 'OK' : '50%') : '—'}</strong>
+    </div>`;
+  }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Seleccioná 11 titulares, 10 suplentes y hasta 5 cambios automáticos. En la cancha, hacé clic en cada titular para alternar su mentalidad individual.</p></div>
-    <div class="split tactic-hero">
-      <div class="card">
-        <div class="row"><h3>Cancha táctica</h3><span class="pill">${game.tactic.formation}</span></div>
-        <div class="pitch-board">${pitch}</div>
-        <div class="pitch-legend">
-          <span>${mentalityMarker('posicional')} Posicional</span>
-          <span>${mentalityMarker('ataque')} Ataque</span>
-          <span>${mentalityMarker('defensiva')} Defensiva</span>
-          <span><span class="pill">Anillo</span> Estado físico (8 tramos)</span>
-        </div>
-      </div>
-      <div class="stack">
-        <div class="card placeholder-card">
-          <h3>Reservas visuales</h3>
-          <div class="placeholder-grid">
-            <div class="placeholder-box"><strong>Futura cara jugador</strong><span>Espacio en blanco</span></div>
-            <div class="placeholder-box"><strong>Escudo del club</strong><span>Espacio en blanco</span></div>
-            <div class="placeholder-box"><strong>Logo de la liga</strong><span>Espacio en blanco</span></div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>Configuración base</h3>
-          <div class="form-grid">
-            <div><label>Formación</label><select id="formation">${formationOptions}</select></div>
-            <div><label>Acción rápida</label><button id="autoPickBtn" class="ghost full">Autoseleccionar disponibles</button></div>
-          </div>
-          <div class="squad-summary" style="margin-top:12px">
-            <div><p class="label">Titulares</p><div class="metric">${starters.length}/11</div></div>
-            <div><p class="label">Suplentes</p><div class="metric">${bench.length}/10</div></div>
-            <div><p class="label">Media XI</p><div class="metric">${Math.round(avg(starters.map(visibleOverall))) || '—'}</div></div>
-          </div>
-        </div>
+    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Arrastrá jugadores a los círculos de la pizarra. Si un jugador juega fuera de su zona natural, su rendimiento de partido se penaliza al 50%.</p></div>
+    <div class="card tactic-board-card">
+      <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><button id="autoPickBtn" class="ghost">Autoseleccionar</button></div>
+      <div class="pitch-board centered">${pitch}</div>
+      <div class="pitch-legend">
+        <span>${mentalityMarker('posicional')} Posicional</span>
+        <span>${mentalityMarker('ataque')} Ataque</span>
+        <span>${mentalityMarker('defensiva')} Defensiva</span>
+        <span><span class="pill">Anillo</span> Estado físico</span>
       </div>
     </div>
-    <div class="card" style="margin-top:14px">
-      <div class="row"><h3>Plantel</h3><span class="pill">clic en el nombre para ver estadísticas</span></div>
-      <div class="table-wrap"><table class="tactic-table"><thead><tr><th>Jugador</th><th>Dorsal</th><th>Rol</th><th>Media</th><th>Estado físico</th><th>Estado</th><th>Rol en convocatoria</th><th>Mentalidad</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="grid cols-2 tactic-lists" style="margin-top:14px">
+      <div class="card">
+        <h3>Titulares</h3>
+        <div class="lineup-list">${starterList}</div>
+      </div>
+      <div class="card">
+        <h3>Suplentes / reservas</h3>
+        <div class="drop-pool" data-drop-pool="bench"><h4>Suplentes (${bench.length}/10)</h4><div class="drag-list">${bench.length ? bench.map(p=>playerDragCard(p,'bench-card')).join('') : '<p class="muted small">Arrastrá jugadores acá.</p>'}</div></div>
+        <div class="drop-pool" data-drop-pool="reserve"><h4>Reservas</h4><div class="drag-list">${reserves.length ? reserves.map(p=>playerDragCard(p,'reserve-card')).join('') : '<p class="muted small">Sin reservas.</p>'}</div></div>
+      </div>
     </div>
     <div class="card" style="margin-top:14px">
       <h3>Cambios automáticos</h3>
@@ -724,6 +877,7 @@ function renderTactics(){
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
     game.tactic.formation = tentative.formation;
     game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
     renderTactics();
   });
   $('autoPickBtn').addEventListener('click', () => {
@@ -733,6 +887,7 @@ function renderTactics(){
     game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
     game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
     renderTactics();
   });
   $('saveTactic').addEventListener('click', saveTacticFromScreen);
@@ -775,26 +930,17 @@ function autoSubRow(index){
   </div>`;
 }
 function saveTacticFromScreen(){
-  const starters = [];
-  const bench = [];
-  document.querySelectorAll('[data-role-player]').forEach(select => {
-    const id = Number(select.dataset.rolePlayer);
-    if(select.value === 'starter') starters.push(id);
-    if(select.value === 'bench') bench.push(id);
-  });
-  const mentalities = {};
-  starters.forEach(id => { mentalities[id] = playerMentality(id) || 'posicional'; });
   const autoSubs = [0,1,2,3,4].map(i => ({
     outId: Number(document.querySelector(`[data-sub-out="${i}"]`)?.value || 0),
     inId: Number(document.querySelector(`[data-sub-in="${i}"]`)?.value || 0),
     trigger: document.querySelector(`[data-sub-trigger="${i}"]`)?.value || 'tired'
   }));
   const nextTactic = applyStarterMentalities({
-    formation:$('formation').value,
-    starters,
-    bench,
+    formation:$('formation')?.value || game.tactic.formation,
+    starters:game.tactic.starters.slice(0,11),
+    bench:game.tactic.bench.slice(0,10),
     autoSubs,
-    playerMentalities: mentalities
+    playerMentalities:{ ...(game.tactic.playerMentalities || {}) }
   });
   const errors = validateTactic(nextTactic);
   if(errors.length){
@@ -852,9 +998,9 @@ function matchCard(m){
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
   return `<button class="match-card ${clickable}" ${attr}>
     <div class="match-line">
-      <div><span class="club-dot" style="background:${clubColor(m.homeId)}"></span>${escapeHtml(clubName(m.homeId))}</div>
+      <div>${clubSpan(m.homeId)}</div>
       <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}` : 'vs'}</strong>
-      <div><span class="club-dot" style="background:${clubColor(m.awayId)}"></span>${escapeHtml(clubName(m.awayId))}</div>
+      <div>${clubSpan(m.awayId)}</div>
     </div>
     ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}
   </button>`;
@@ -862,7 +1008,7 @@ function matchCard(m){
 function renderStandings(){
   const rows = sortedStandings().map((s,i)=>`
     <tr class="${s.clubId===game.selectedClubId ? 'own-club-row' : ''}">
-      <td><strong>${i+1}</strong></td><td><span class="club-dot" style="background:${clubColor(s.clubId)}"></span><strong>${escapeHtml(clubName(s.clubId))}</strong></td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
+      <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
     </tr>`).join('');
   view.innerHTML = `<div class="section-title"><h2>Tabla de posiciones</h2></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
@@ -932,41 +1078,48 @@ function bestPlayerForSlot(squad, slot, used){
   return squad.filter(p=>!used.has(p.id)).sort((a,b)=>(effectiveOverall(b)+compatibility(b))-(effectiveOverall(a)+compatibility(a)))[0];
 }
 function teamPower(clubId, tactic){
+  const formation = tactic?.formation || '4-4-2';
   const lineup = selectLineup(clubId, tactic);
-  const defs = lineup.filter(p=>['LD','LI','DFC'].includes(p.position));
-  const mids = lineup.filter(p=>['MCD','MC','MCO','VOL'].includes(p.position));
-  const wings = lineup.filter(p=>['ED','EI','EXT'].includes(p.position));
-  const atts = lineup.filter(p=>['DC'].includes(p.position));
-  const gk = lineup.find(p=>p.position==='POR');
-  let defense = avg(defs.map(p=> avg([matchSkill(p,'marca'),matchSkill(p,'entradas'),matchSkill(p,'posicionamiento'),matchSkill(p,'fuerza')])));
-  let midfield = avg(mids.concat(wings).map(p=> avg([matchSkill(p,'paseCorto'),matchSkill(p,'vision'),matchSkill(p,'tecnica'),matchSkill(p,'trabajoEquipo')])));
-  let attack = avg(atts.concat(wings).map(p=> avg([matchSkill(p,'remate'),matchSkill(p,'regate'),matchSkill(p,'velocidad'),matchSkill(p,'serenidad')])));
+  const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
+  const assigned = lineup.map((player, i) => ({ player, slot:slots[i] || player.position, factor:zoneFactor(player, slots[i] || player.position) }));
+  const bySlotGroup = (group) => assigned.filter(a => slotGroup(a.slot) === group);
+  const ms = (a, skill) => matchSkill(a.player, skill) * a.factor;
+  const defs = bySlotGroup('def');
+  const mids = bySlotGroup('mid');
+  const atts = bySlotGroup('att');
+  const gk = assigned.find(a => a.slot === 'POR');
+  let defense = avg(defs.map(a=> avg([ms(a,'marca'),ms(a,'entradas'),ms(a,'posicionamiento'),ms(a,'fuerza')])));
+  let midfield = avg(mids.map(a=> avg([ms(a,'paseCorto'),ms(a,'vision'),ms(a,'tecnica'),ms(a,'trabajoEquipo')])));
+  let attack = avg(atts.map(a=> avg([ms(a,'remate'),ms(a,'regate'),ms(a,'velocidad'),ms(a,'serenidad')])));
   let discipline = avg(lineup.map(p=>p.skills.disciplina));
   let stamina = avg(lineup.map(p=>matchSkill(p,'resistencia')));
   let aggression = avg(lineup.map(p=>hiddenStats(p).aggression));
-  let keeper = gk ? avg([matchSkill(gk,'porteria'),matchSkill(gk,'posicionamiento'),matchSkill(gk,'serenidad')]) : 40;
+  let keeper = gk ? avg([ms(gk,'porteria'),ms(gk,'posicionamiento'),ms(gk,'serenidad')]) : 40;
   const rep = seed.clubs.find(c=>c.id===clubId).reputation;
-  const adjust = applyMentalityBonus(tactic || DEFAULT_TACTIC, lineup);
-  return { clubId, lineup, defense:defense+adjust.defense, midfield:midfield+adjust.midfield, attack:attack+adjust.attack, discipline, stamina, aggression, keeper, reputation:rep };
+  const adjust = applyMentalityBonus(tactic || DEFAULT_TACTIC, assigned);
+  return { clubId, lineup, assigned, defense:defense+adjust.defense, midfield:midfield+adjust.midfield, attack:attack+adjust.attack, discipline, stamina, aggression, keeper, reputation:rep };
 }
-function applyMentalityBonus(tactic, lineup){
+function applyMentalityBonus(tactic, assigned){
   const bonus = { attack:0, midfield:0, defense:0 };
-  (lineup || []).forEach(player => {
+  (assigned || []).forEach(entry => {
+    const player = entry.player || entry;
+    const group = entry.slot ? slotGroup(entry.slot) : playerGroup(player.position);
     const mode = tactic?.playerMentalities?.[player.id] || 'posicional';
+    const fitFactor = entry.factor ?? 1;
     if(mode === 'ataque'){
-      bonus.attack += ['DC','ED','EI','EXT','MCO'].includes(player.position) ? 2.4 : 1.2;
-      bonus.midfield += ['MC','MCD','MCO','VOL'].includes(player.position) ? 0.5 : 0;
-      bonus.defense -= ['LD','LI','DFC','MCD'].includes(player.position) ? 1.2 : 0.6;
+      bonus.attack += (group === 'att' ? 2.4 : 1.2) * fitFactor;
+      bonus.midfield += group === 'mid' ? 0.5 * fitFactor : 0;
+      bonus.defense -= group === 'def' ? 1.2 : 0.6;
     }
     if(mode === 'defensiva'){
-      bonus.defense += ['LD','LI','DFC','MCD','POR'].includes(player.position) ? 2.4 : 1.2;
-      bonus.midfield += ['MC','MCD','VOL'].includes(player.position) ? 0.5 : 0;
-      bonus.attack -= ['DC','ED','EI','EXT'].includes(player.position) ? 1.1 : 0.4;
+      bonus.defense += (group === 'def' || group === 'gk' ? 2.4 : 1.2) * fitFactor;
+      bonus.midfield += group === 'mid' ? 0.5 * fitFactor : 0;
+      bonus.attack -= group === 'att' ? 1.1 : 0.4;
     }
     if(mode === 'posicional'){
-      bonus.midfield += 0.9;
-      bonus.defense += 0.2;
-      bonus.attack += 0.2;
+      bonus.midfield += 0.9 * fitFactor;
+      bonus.defense += 0.2 * fitFactor;
+      bonus.attack += 0.2 * fitFactor;
     }
   });
   return bonus;
@@ -1022,7 +1175,7 @@ function applyConditionUpdates(results){
   seed.players.forEach(player => {
     let next = currentCondition(player.id);
     next += rnd(12,18);
-    if(played.has(player.id)) next -= rnd(15,20);
+    if(played.has(player.id)) next -= conditionLossForPlayer(player);
     else next += rnd(8,10);
     game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
   });
@@ -1037,6 +1190,7 @@ function simulateMatch(match){
   const home = teamPower(match.homeId, getTacticForClub(match.homeId));
   const away = teamPower(match.awayId, getTacticForClub(match.awayId));
   const matchStats = makeMatchStats(home, away);
+  const matchContext = makeMatchContext(match, home, away);
   const homeLambda = expectedGoals(home, away, true, matchStats.home.chances);
   const awayLambda = expectedGoals(away, home, false, matchStats.away.chances);
   const homeGoals = Math.min(poisson(homeLambda), Math.max(0, matchStats.home.chances));
@@ -1057,7 +1211,7 @@ function simulateMatch(match){
   applyAvailability(cards, injuries);
   const playedIdsHome = [...new Set(home.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
   const playedIdsAway = [...new Set(away.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
-  return { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, playedIdsHome, playedIdsAway };
+  return { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, matchContext, playedIdsHome, playedIdsAway };
 }
 function expectedGoals(attacking, defending, isHome, chances){
   const attackEdge = (attacking.attack - defending.defense) / 34;
@@ -1082,6 +1236,17 @@ function makeMatchStats(home, away){
     home: { attacks:homeAttacks, chances:homeChances, possession:homePoss, fouls:homeFouls },
     away: { attacks:awayAttacks, chances:awayChances, possession:awayPoss, fouls:awayFouls }
   };
+}
+function makeMatchContext(match, home, away){
+  const weatherOptions = ['Soleado', 'Nublado', 'Lluvia leve', 'Lluvia intensa', 'Viento moderado', 'Calor húmedo'];
+  const pitchOptions = ['Muy bueno', 'Bueno', 'Regular', 'Pesado', 'Rápido', 'Irregular'];
+  const weather = weatherOptions[hashNumber(`${match.id}-weather-${game?.matchdayIndex || 0}`, weatherOptions.length)];
+  const pitch = pitchOptions[hashNumber(`${match.id}-pitch-${game?.matchdayIndex || 0}`, pitchOptions.length)];
+  const homeClub = seed.clubs.find(c=>c.id===match.homeId);
+  const awayClub = seed.clubs.find(c=>c.id===match.awayId);
+  const homeFans = Math.max(800, Math.round((homeClub?.reputation || 60) * rnd(210,360)));
+  const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * rnd(18,70)));
+  return { weather, pitch, homeFans, awayFans };
 }
 function poisson(lambda){
   const L = Math.exp(-lambda);
@@ -1292,14 +1457,24 @@ function showMatchModal(matchId){
   if(!match) return;
   const home = clubName(match.homeId);
   const away = clubName(match.awayId);
+  const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
   const body = `
     <div class="match-modal-head">
       <p class="label">Jornada ${match.matchday} · ${match.date}</p>
-      <h2>${escapeHtml(home)} ${match.homeGoals} - ${match.awayGoals} ${escapeHtml(away)}</h2>
+      <h2>${clubLink(match.homeId)} ${match.homeGoals} - ${match.awayGoals} ${clubLink(match.awayId)}</h2>
     </div>
-    <div class="grid cols-2">
-      ${matchStatsCard(match.homeId, match.matchStats.home)}
-      ${matchStatsCard(match.awayId, match.matchStats.away)}
+    <div class="card inner match-context-card">
+      <h3>Contexto del partido</h3>
+      <div class="grid cols-4">
+        <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
+        <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong></div>
+        <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
+        <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
+      </div>
+    </div>
+    <div class="match-team-columns">
+      ${matchStatsCard(match.homeId, match.matchStats.home, 'Local')}
+      ${matchStatsCard(match.awayId, match.matchStats.away, 'Visitante')}
     </div>
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card inner"><h3>Goles</h3>${match.goals.length ? match.goals.map(goalLine).join('') : '<p class="muted">Sin goles.</p>'}</div>
@@ -1309,8 +1484,8 @@ function showMatchModal(matchId){
     </div>`;
   openModal(body);
 }
-function matchStatsCard(clubId, stats){
-  return `<div class="card inner"><h3><span class="club-dot" style="background:${clubColor(clubId)}"></span>${escapeHtml(clubName(clubId))}</h3>
+function matchStatsCard(clubId, stats, sideLabel){
+  return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
     <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
@@ -1337,6 +1512,97 @@ function subLine(s){
 function injuryLine(i){
   const p = playerById(i.playerId);
   return `<div class="stat-rank"><span>${i.minute}' ${escapeHtml(p?.name || 'Jugador')} <span class="pill">${escapeHtml(clubShort(i.clubId))}</span></span><strong>${escapeHtml(i.severity)} · ${i.matchesOut} fecha(s)</strong></div>`;
+}
+function showClubModal(clubId){
+  const club = seed.clubs.find(c => c.id === Number(clubId));
+  if(!club) return;
+  const tactic = getTacticForClub(club.id);
+  const players = playersByClub(club.id).slice().sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  const keepers = players.filter(p=>p.position === 'POR');
+  const fieldPlayers = players.filter(p=>p.position !== 'POR');
+  const rows = players.map(scoutingPlayerRow).join('');
+  const body = `
+    <div class="club-modal-head" style="clear:both">
+      <p class="label">Club observado</p>
+      <h2><span class="club-dot" style="background:${clubColor(club.id)}"></span>${escapeHtml(club.name)}</h2>
+      <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation} · Presupuesto base ${formatMoney(club.budget || 0)}</p>
+    </div>
+    <div class="grid cols-3" style="margin:14px 0">
+      <div class="card inner"><p class="label">Plantel</p><div class="metric">${players.length}</div></div>
+      <div class="card inner"><p class="label">Porteros</p><div class="metric">${keepers.length}</div></div>
+      <div class="card inner"><p class="label">Jugadores de campo</p><div class="metric">${fieldPlayers.length}</div></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card inner">
+        <h3>Táctica observada</h3>
+        <p class="muted small">No se muestran titulares. Sólo la estructura estimada.</p>
+        ${clubTacticPreview(tactic.formation)}
+      </div>
+      <div class="card inner">
+        <h3>Scouting parcial</h3>
+        <p class="muted small">En cada nueva jornada se revelan de forma provisoria 2 o 3 habilidades visibles por jugador. Las demás quedan ocultas con guion.</p>
+      </div>
+    </div>
+    <div class="card inner" style="margin-top:14px">
+      <h3>Plantilla observada</h3>
+      <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+  openModal(body);
+}
+function clubTacticPreview(formation){
+  const layout = formationLayout(formation);
+  const labels = ['Defensa','MCD','Medios','MO','Ataque'];
+  return `<div class="club-tactic-preview">
+    <div class="pill">Formación estimada: ${escapeHtml(formation)}</div>
+    <div class="club-lines">${layout.map((count,i)=>`<div class="club-line"><strong>${count}</strong><span>${labels[i]}</span></div>`).join('')}</div>
+  </div>`;
+}
+function scoutingVisibleKeys(player){
+  const keys = Object.keys(scoutingStatMap(player));
+  const count = 2 + hashNumber(`scout-count-${player.id}-${game?.matchdayIndex || 0}`, 2);
+  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${game?.matchdayIndex || 0}-${a}`, 10000) - hashNumber(`scout-${player.id}-${game?.matchdayIndex || 0}-${b}`, 10000));
+  return new Set(ordered.slice(0,count));
+}
+function scoutingStatMap(player){
+  const stats = visibleStats(player);
+  if(player.position === 'POR'){
+    return {
+      'Ataque/Salto': stats.Salto,
+      'Defensa': stats.Defensa,
+      'Pase': stats.Pase,
+      'Velocidad/Reflejos': stats.Reflejos,
+      'Cabezazo/Mando': stats.Mando,
+      'Tiro/Potencia': stats.Potencia,
+      'Resistencia': stats.Resistencia
+    };
+  }
+  return {
+    'Ataque/Salto': stats.Ataque,
+    'Defensa': stats.Defensa,
+    'Pase': stats.Pase,
+    'Velocidad/Reflejos': stats.Velocidad,
+    'Cabezazo/Mando': stats.Cabezazo,
+    'Tiro/Potencia': stats.Tiro,
+    'Resistencia': stats.Resistencia
+  };
+}
+function scoutingPlayerRow(player){
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  const cell = key => visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
+  return `<tr>
+    <td>${faceImg(player,'photo-thumb')} <strong>${escapeHtml(player.name)}</strong></td>
+    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td>${countryFlag(player.nationality)} ${escapeHtml(player.nationality)}</td>
+    <td><strong>${visibleOverall(player)}</strong></td>
+    <td>${cell('Ataque/Salto')}</td>
+    <td>${cell('Defensa')}</td>
+    <td>${cell('Pase')}</td>
+    <td>${cell('Velocidad/Reflejos')}</td>
+    <td>${cell('Cabezazo/Mando')}</td>
+    <td>${cell('Tiro/Potencia')}</td>
+    <td>${cell('Resistencia')}</td>
+  </tr>`;
 }
 function openModal(html){
   closeModal();

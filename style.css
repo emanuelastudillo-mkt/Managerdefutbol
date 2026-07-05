@@ -186,3 +186,114 @@ button.plain{width:100%;background:transparent;color:inherit;text-align:left;bor
 img.photo-thumb,img.player-photo-placeholder{object-fit:cover;display:block}
 img.photo-thumb{width:42px;height:42px;border-radius:12px}
 img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
+
+/* V1.05: ordenamiento de plantel, drag & drop táctico y requisitos mínimos */
+.sort-box{min-width:240px}
+.sort-box select{margin-bottom:0}
+.requirement-warning{max-width:920px;margin:auto}
+.home-top-visual{margin-bottom:0}
+.tactic-board-card{display:grid;gap:12px}
+.tactic-top-row{align-items:end}
+.formation-box{min-width:180px}
+.formation-box select{margin-bottom:0}
+.pitch-board.centered{max-width:860px;margin:0 auto}
+.pitch-slot{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  width:76px;
+  min-height:76px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+}
+.pitch-slot::before{
+  content:'';
+  position:absolute;
+  inset:-8px;
+  border-radius:999px;
+  border:1px dashed rgba(255,255,255,.24);
+  opacity:.65;
+  pointer-events:none;
+}
+.pitch-slot:hover::before{border-color:rgba(147,197,253,.85);opacity:1}
+.empty-slot{
+  width:58px;
+  min-height:58px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border:2px dashed rgba(255,255,255,.35);
+  background:rgba(15,23,42,.62);
+  color:#dbeafe;
+  padding:4px;
+}
+.empty-slot strong{font-size:12px}.empty-slot span{font-size:9px;color:#cbd5e1}
+.empty-slot.gk{background:rgba(37,99,235,.35)}.empty-slot.def{background:rgba(22,163,74,.32)}.empty-slot.mid{background:rgba(202,138,4,.32)}.empty-slot.att{background:rgba(220,38,38,.32)}
+.player-chip.out-zone{box-shadow:0 0 0 3px rgba(239,68,68,.85),0 10px 22px rgba(0,0,0,.24)}
+.tactic-lists{align-items:start}
+.lineup-list{display:grid;gap:7px}
+.lineup-row{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 10px;
+  border:1px solid rgba(148,163,184,.12);
+  border-radius:13px;
+  background:rgba(255,255,255,.025);
+}
+.lineup-row.bad-zone{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08)}
+.drop-pool{
+  margin-top:10px;
+  padding:12px;
+  border-radius:16px;
+  border:1px dashed rgba(148,163,184,.25);
+  background:rgba(2,6,23,.2);
+  min-height:110px;
+}
+.drop-pool h4{margin:0 0 10px;color:#cbd5e1}
+.drag-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.drag-player{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  padding:8px;
+  border-radius:14px;
+  border:1px solid rgba(148,163,184,.15);
+  background:rgba(255,255,255,.035);
+  cursor:grab;
+}
+.drag-player:active{cursor:grabbing}
+.drag-player.gk{border-color:rgba(191,219,254,.35)}
+.drag-player.def{border-color:rgba(187,247,208,.32)}
+.drag-player.mid{border-color:rgba(254,240,138,.32)}
+.drag-player.att{border-color:rgba(254,202,202,.32)}
+.drag-player strong{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drag-player span{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drag-face{width:36px;height:36px;border-radius:10px;object-fit:cover;border:1px solid rgba(148,163,184,.18)}
+@media (max-width:900px){
+  .pitch-slot{width:62px;min-height:62px}
+  .empty-slot{width:48px;min-height:48px}
+  .drag-list{grid-template-columns:1fr}
+  .tactic-top-row{align-items:stretch}
+  .formation-box{width:100%}
+}
+
+/* V1.06: clubes clickeables, scouting parcial y detalle ampliado de partido */
+.club-link,.club-click{display:inline-flex;align-items:center;gap:6px;font-weight:900;color:#dbeafe}
+.club-click{cursor:pointer}
+.club-click:hover,.club-link:hover{text-decoration:underline}
+.match-team-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.match-context-card{margin-top:14px}
+.team-stat-card{min-height:100%}
+.club-lines{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}
+.club-line{min-height:82px;border:1px solid rgba(148,163,184,.16);border-radius:16px;background:rgba(255,255,255,.035);display:grid;place-items:center;text-align:center;padding:10px}
+.club-line strong{font-size:28px;line-height:1;color:#dbeafe}
+.club-line span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.scouting-table td:first-child{display:flex;align-items:center;gap:10px}
+.scouting-table th,.scouting-table td{text-align:center}
+.scouting-table th:first-child,.scouting-table td:first-child{text-align:left}
+.club-modal-head h2{display:flex;align-items:center;gap:8px}
+@media (max-width:900px){.match-team-columns,.club-lines{grid-template-columns:1fr}.scouting-table{min-width:980px}}

@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.25';
+const APP_VERSION = 'V2.26';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -767,7 +767,9 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
     nationality:pickNationalityForGeneration(id, divisionName || nameContext, generationContext),
     overall:visible,
     skills,
-    salary:initialAnnualSalaryForMedia(visible, salaryFactor)
+    salary:initialAnnualSalaryForMedia(visible, salaryFactor),
+    salaryPaidCount:0,
+    lastSalaryPaidSeason:0
   };
   player.clause = playerClauseFor(player, clubId, divisionName);
   player.value = player.clause;
@@ -2710,7 +2712,15 @@ function hireFreeAgent(playerId){
   game.marketPlayers[idx].freeAgent = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   const player = playerById(playerId);
-  if(player){ player.clubId = game.selectedClubId; player.freeAgent = false; refreshPlayerClause(player); }
+  if(player){
+    player.clubId = game.selectedClubId;
+    player.freeAgent = false;
+    player.salaryPaidCount = 0;
+    player.lastSalaryPaidSeason = 0;
+    refreshPlayerClause(player);
+  }
+  game.marketPlayers[idx].salaryPaidCount = 0;
+  game.marketPlayers[idx].lastSalaryPaidSeason = 0;
   refreshPlayerClause(game.marketPlayers[idx]);
   game.playerCondition[playerId] = clamp(game.playerCondition[playerId] || (15 + hashNumber(`free-cond-${playerId}`, 15)), 1, 29);
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
@@ -2950,6 +2960,7 @@ function renderTactics(){
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
       <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
+      <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
       ${p ? moraleBar(p.id) : '<span></span>'}
       <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : '—'}</strong>
@@ -2964,7 +2975,7 @@ function renderTactics(){
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">
         <h3>Titulares</h3>
-        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span>Edad</span><span>Físico</span><span>Moral</span><span>Estado</span></div>
+        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span>Edad</span><span>Media</span><span>Físico</span><span>Moral</span><span>Estado</span></div>
         <div class="lineup-list">${starterList}</div>
       </div>
       <div class="card">
@@ -3831,9 +3842,20 @@ function renderFinances(){
 function totalClubSalary(clubId){
   return playersByClub(clubId).reduce((sum,p)=>sum + Math.max(0, Number(p.salary || 0)), 0);
 }
+function hasPlayerSalaryPaid(player){
+  return Number(player?.salaryPaidCount || 0) > 0 || Number(player?.lastSalaryPaidSeason || 0) > 0;
+}
+function markClubSalariesPaid(clubId){
+  const season = Number(game?.seasonNumber || 1);
+  playersByClub(clubId).forEach(player => {
+    player.salaryPaidCount = Math.max(0, Number(player.salaryPaidCount || 0)) + 1;
+    player.lastSalaryPaidSeason = season;
+  });
+}
 function paySeasonSalaries(){
   const total = totalClubSalary(game.selectedClubId);
   if(total <= 0) return 0;
+  markClubSalariesPaid(game.selectedClubId);
   recordBudgetChange(-total, `Pago anual de sueldos de ${clubName(game.selectedClubId)}`, { type:'season_salary' });
   return total;
 }
@@ -4537,6 +4559,8 @@ function dismissOwnPlayer(playerId){
   removePlayerFromCurrentTactic(player.id);
   player.clubId = 0;
   player.freeAgent = true;
+  player.salaryPaidCount = 0;
+  player.lastSalaryPaidSeason = 0;
   refreshPlayerClause(player);
   game.marketPlayers = game.marketPlayers || [];
   const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
@@ -4552,6 +4576,10 @@ function dismissOwnPlayer(playerId){
 function offerOwnPlayerToClubs(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  if(!hasPlayerSalaryPaid(player)){
+    showNotice('Primero debemos haberle pagado al menos un sueldo.');
+    return;
+  }
   if(turnCooldownLeft(game.lastOwnPlayerOffer, OWN_PLAYER_OFFER_COOLDOWN_TURNS) > 0){
     showNotice('tu asistente está buscando las mejores opciones llamalo luego');
     return;
@@ -4657,6 +4685,8 @@ function processPendingTransfers(){
     player.clubId = Number(t.toClubId || game.selectedClubId);
     player.freeAgent = false;
     player.sold = false;
+    player.salaryPaidCount = 0;
+    player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
     ensurePlayerStateForAll();
     if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };

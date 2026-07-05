@@ -1142,7 +1142,7 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
 
 /* V2.15: columna edad en táctica */
 .lineup-row{
-  grid-template-columns:auto minmax(130px,1fr) 72px minmax(140px,1fr) minmax(140px,1fr) auto;
+  grid-template-columns:auto minmax(130px,1fr) 72px 56px 70px 70px auto;
 }
 .lineup-row.lineup-head{
   background:rgba(15,23,42,.72);

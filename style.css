@@ -830,3 +830,27 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   .advance-progress p{text-align:left}
   .pitch-board.centered{max-width:100%!important}
 }
+
+/* V2.0: controles de instrucciones de partido */
+.instruction-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.instruction-control{
+  display:grid;
+  gap:6px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.14);
+  background:rgba(255,255,255,.035);
+}
+.instruction-control label{
+  margin:0;
+  color:#cbd5e1;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.instruction-control select{margin:0}
+@media (max-width:900px){.instruction-grid{grid-template-columns:1fr}}

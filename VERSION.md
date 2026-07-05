@@ -1,25 +1,52 @@
 # Registro de versión
 
-## Versión: V1.21
-**Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** ajustes de interfaz, progresión semanal y separación de estadísticas
+## Versión: V2.0
+**Estado:** motor de simulación separado y ampliado  
+**Tipo de mejora:** cambio estructural del simulador
+
+### Resumen
+La versión V2.0 separa el motor de partidos en un archivo dedicado llamado `simulador-2.0.js`. Desde esta versión, la interfaz conserva su lógica general en `app.js`, mientras que el cálculo deportivo principal queda concentrado en el nuevo simulador.
 
 ### Cambios principales agregados
-- **Charlas motivacionales:** ahora sólo se pueden realizar una vez y luego quedan bloqueadas por 5 turnos.
-- **Paso de turno:** se oculta el segundero visible y se reemplaza por una barra de progreso semanal.
-- **Días de la semana:** se mantiene la progresión visual Lunes → Martes → Miércoles → Jueves → Viernes → Sábado → Domingo.
-- **Menú lateral:** muestra escudo del club junto al nombre, fecha y jornada.
-- **Estadísticas:** los rankings de jugadores se dividen por división.
-- **Tabla de posiciones:** se elimina la leyenda pública de premios por división.
-- **Pizarra táctica:** se reduce el tamaño del tablero, sin achicar los círculos, nombres ni dorsales de los jugadores.
-- **Distribución táctica:** se ajustan coordenadas para aprovechar mejor ancho y largo de la pizarra y evitar superposiciones.
+- Nuevo archivo `simulador-2.0.js`.
+- `index.html` carga primero el simulador y luego `app.js`.
+- `app.js` delega la simulación activa en `window.Simulator20.simulateMatch()`.
+- El partido se calcula en 6 bloques:
+  - 1-15
+  - 16-30
+  - 31-45
+  - 46-60
+  - 61-75
+  - 76-90
+- Se agregan instrucciones tácticas según resultado parcial:
+  - Ganando
+  - Empatando
+  - Perdiendo
+- Cada instrucción puede usar:
+  - Bajar el ritmo
+  - Normal
+  - Subir ritmo
+- Las instrucciones influyen en ataque, mediocampo, defensa, volumen ofensivo, conversión, faltas y desgaste físico posterior.
+- Se agregan efectos más claros por líneas:
+  - Mediocampistas: posesión y generación de ataques.
+  - Delanteros: conversión de ataques en ocasiones.
+  - Defensores y portero: reducción de ocasiones rivales.
+- La formación afecta internamente el estilo:
+  - más defensores favorecen defensa;
+  - más mediocampistas favorecen posesión;
+  - más delanteros favorecen conversión ofensiva.
+- La moral y la cohesión siguen influyendo internamente en el rendimiento.
+- El estado del campo afecta pase, ocasiones, cansancio y lesiones.
 
-### Información que sigue oculta
-- Coeficientes del estado del campo.
-- Escalas internas de lesiones.
-- Cohesión de equipo.
-- Multiplicadores económicos por división.
+### Valores ocultos
+Siguen ocultos para el usuario:
+- cohesión exacta;
+- coeficientes del campo;
+- multiplicadores de moral;
+- fórmulas de conversión;
+- pesos internos de cada línea.
 
 ### Pendientes sugeridos
-- Instrucciones tácticas según resultado parcial: ganando, empatando y perdiendo.
-- Motor por bloques de tiempo para que rojas, lesiones y cambios modifiquen el partido de forma progresiva.
+- Hacer que expulsiones y lesiones afecten el bloque siguiente durante el mismo partido.
+- Hacer que los cambios automáticos modifiquen el rendimiento real desde el minuto en que ocurren.
+- Agregar estilos generales de equipo: presión alta, contraataque, posesión, bloque bajo.

@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.21';
+const APP_VERSION = 'V2.0';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -86,7 +86,8 @@ const DEFAULT_TACTIC = {
   starters:[],
   bench:[],
   autoSubs:[],
-  playerMentalities:{}
+  playerMentalities:{},
+  matchInstructions:{winning:'normal',drawing:'normal',losing:'normal'}
 };
 
 let seed = null;
@@ -1105,7 +1106,10 @@ function normalizeTactic(clubId, tactic){
     trigger: SUB_TRIGGERS.some(t => t.value === rule.trigger) ? rule.trigger : 'tired'
   })).filter(rule => starters.includes(rule.outId) && bench.includes(rule.inId));
   while(autoSubs.length < 5){ autoSubs.push({ outId:0, inId:0, trigger:'tired' }); }
-  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(base.playerMentalities || {}) } };
+  const matchInstructions = window.Simulator20?.normalizeMatchInstructions
+    ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
+    : { winning:'normal', drawing:'normal', losing:'normal' };
+  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(base.playerMentalities || {}) }, matchInstructions };
   return applyStarterMentalities(normalized);
 }
 
@@ -1470,6 +1474,11 @@ function renderTactics(){
       <p class="muted small">Cada cambio se ejecuta al minuto 45 en un 10% de los casos. En el resto, se programa entre los minutos 60 y 90.</p>
       <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
     </div>
+    <div class="card match-instructions-card" style="margin-top:14px">
+      <h3>Instrucciones de partido</h3>
+      <p class="muted small">El simulador 2.0 usa estas instrucciones según el resultado parcial del partido.</p>
+      <div class="instruction-grid">${matchInstructionControls()}</div>
+    </div>
     <div class="row sticky-actions"><button id="saveTactic" class="primary">Guardar táctica</button><span id="tacticErrors" class="bad small"></span></div>
   `;
   $('formation').addEventListener('change', () => {
@@ -1514,6 +1523,18 @@ function tacticPlayerRow(p){
     <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityText) : '<span class="muted">Sólo titulares</span>'}</td>
   </tr>`;
 }
+function matchInstructionControls(){
+  const current = window.Simulator20?.normalizeMatchInstructions
+    ? window.Simulator20.normalizeMatchInstructions(game.tactic?.matchInstructions)
+    : { winning:'normal', drawing:'normal', losing:'normal' };
+  const options = window.MATCH_INSTRUCTION_OPTIONS || [
+    { value:'lower', label:'Bajar el ritmo' },
+    { value:'normal', label:'Normal' },
+    { value:'push', label:'Subir ritmo' }
+  ];
+  const row = (key, label) => `<div class="instruction-control"><label>${label}</label><select data-match-instruction="${key}">${options.map(opt=>`<option value="${opt.value}" ${current[key]===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select></div>`;
+  return row('winning','Ganando') + row('drawing','Empatando') + row('losing','Perdiendo');
+}
 function autoSubRow(index){
   const rule = game.tactic.autoSubs[index] || { outId:0, inId:0, trigger:'tired' };
   const starterOpts = [`<option value="0">Sin cambio</option>`].concat(game.tactic.starters.map(id=>{
@@ -1538,12 +1559,18 @@ function saveTacticFromScreen(){
     inId: Number(document.querySelector(`[data-sub-in="${i}"]`)?.value || 0),
     trigger: document.querySelector(`[data-sub-trigger="${i}"]`)?.value || 'tired'
   }));
+  const selectedInstructions = {
+    winning: document.querySelector('[data-match-instruction="winning"]')?.value || 'normal',
+    drawing: document.querySelector('[data-match-instruction="drawing"]')?.value || 'normal',
+    losing: document.querySelector('[data-match-instruction="losing"]')?.value || 'normal'
+  };
   const nextTactic = applyStarterMentalities({
     formation:$('formation')?.value || game.tactic.formation,
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
     autoSubs,
-    playerMentalities:{ ...(game.tactic.playerMentalities || {}) }
+    playerMentalities:{ ...(game.tactic.playerMentalities || {}) },
+    matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions
   });
   const errors = validateTactic(nextTactic);
   if(errors.length){
@@ -1783,7 +1810,11 @@ function tacticSignature(tactic){
     .map(([id, mode]) => `${Number(id)}:${mode}`)
     .sort()
     .join('|');
-  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality].join('::');
+  const instructions = window.Simulator20?.normalizeMatchInstructions
+    ? window.Simulator20.normalizeMatchInstructions(tactic.matchInstructions)
+    : (tactic.matchInstructions || {});
+  const instructionSig = ['winning','drawing','losing'].map(key => `${key}:${instructions[key] || 'normal'}`).join('|');
+  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig].join('::');
 }
 function applyTacticCohesionPenalty(clubId, tactic){
   ensureTeamCohesion();
@@ -1962,10 +1993,15 @@ function applyConditionUpdates(results){
   });
   const played = new Set();
   const pitchFatigueByPlayer = new Map();
+  const instructionConditionByPlayer = new Map();
   results.forEach(match => {
     const extra = pitchEffect(match.matchContext?.pitch || 'Normal').fatigueBonus || 0;
     (match.playedIdsHome || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
     (match.playedIdsAway || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
+    Object.entries(match.instructionConditionDeltas || {}).forEach(([id, delta]) => {
+      const key = Number(id);
+      instructionConditionByPlayer.set(key, (instructionConditionByPlayer.get(key) || 0) + Number(delta || 0));
+    });
   });
   seed.players.forEach(player => {
     let next = currentCondition(player.id);
@@ -1975,6 +2011,7 @@ function applyConditionUpdates(results){
       next += rnd(12,18);
       if(played.has(player.id)) next -= conditionLossForPlayer(player) + (pitchFatigueByPlayer.get(player.id) || 0);
       else next += rnd(8,10);
+      next += instructionConditionByPlayer.get(player.id) || 0;
     }
     game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
   });
@@ -2079,43 +2116,8 @@ function getTacticForClub(clubId){
   return { formation, defense:'posicional', midfield:'posicional', attack:'posicional' };
 }
 function simulateMatch(match){
-  const homeTactic = getTacticForClub(match.homeId);
-  const awayTactic = getTacticForClub(match.awayId);
-  applyTacticCohesionPenalty(match.homeId, homeTactic);
-  applyTacticCohesionPenalty(match.awayId, awayTactic);
-  const home = teamPower(match.homeId, homeTactic);
-  const away = teamPower(match.awayId, awayTactic);
-  const matchContext = makeMatchContext(match, home, away);
-  const matchStats = makeMatchStats(home, away, matchContext);
-  const homeLambda = expectedGoals(home, away, true, matchStats.home.chances);
-  const awayLambda = expectedGoals(away, home, false, matchStats.away.chances);
-  const homeGoals = Math.min(poisson(homeLambda), Math.max(0, matchStats.home.chances));
-  const awayGoals = Math.min(poisson(awayLambda), Math.max(0, matchStats.away.chances));
-  const goals = [];
-  for(let i=0;i<homeGoals;i++) goals.push(makeGoal(match.homeId, home.lineup));
-  for(let i=0;i<awayGoals;i++) goals.push(makeGoal(match.awayId, away.lineup));
-  goals.sort((a,b)=>a.minute-b.minute);
-  const cards = [...makeCards(match.homeId, home, matchStats.home.fouls), ...makeCards(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
-  const injuries = [...makeInjuries(match.homeId, home, away, matchContext), ...makeInjuries(match.awayId, away, home, matchContext)].sort((a,b)=>a.minute-b.minute);
-  const regularSubs = [
-    ...makeSubstitutions(match.homeId, homeTactic, goals),
-    ...makeSubstitutions(match.awayId, awayTactic, goals)
-  ];
-  const injurySubs = [
-    ...makeInjurySubstitutions(match.homeId, homeTactic, injuries, regularSubs),
-    ...makeInjurySubstitutions(match.awayId, awayTactic, injuries, regularSubs)
-  ];
-  const substitutions = [...regularSubs, ...injurySubs].sort((a,b)=>a.minute-b.minute);
-  applyMatchCohesionResult(match, substitutions, cards);
-  applyResultToTables(match, homeGoals, awayGoals);
-  applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
-  applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
-  applyAvailability(cards, injuries);
-  const starterIdsHome = home.lineup.map(p=>p.id);
-  const starterIdsAway = away.lineup.map(p=>p.id);
-  const playedIdsHome = [...new Set(starterIdsHome.concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
-  const playedIdsAway = [...new Set(starterIdsAway.concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
-  return { ...match, played:true, starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, matchContext, playedIdsHome, playedIdsAway };
+  if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);
+  throw new Error('Simulador 2.0 no disponible');
 }
 function expectedGoals(attacking, defending, isHome, chances){
   const attackEdge = (attacking.attack - defending.defense) / 34;

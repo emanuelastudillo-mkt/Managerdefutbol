@@ -1,17 +1,21 @@
 # Registro de versión
 
-## Versión: V2.10
+## Versión: V2.12
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** ajuste visual de inicio de partida
+**Tipo de mejora:** táctica y selección automática
 
 ### Resumen
-Esta versión reemplaza el placeholder inicial del panel principal por un banner de bienvenida cuando el club todavía no jugó partidos.
+Esta versión separa la autoselección táctica en dos criterios distintos: mejor once por rol y mejor condición física.
 
-### Cambios principales agregados
-- Si no existe último partido del club seleccionado, el bloque **Momento del club** intenta mostrar `img/principales/banner_bienvenido`.
-- Si esa ruta no existe, se prueba automáticamente `img/principales/banner_bienvenido.jpg`.
-- Los banners posteriores al primer partido siguen usando la lógica ya definida por resultado y lesiones.
+### Cambios principales
+- Nuevo botón **Mejor once** en Táctica.
+- Nuevo botón **Mejor condición física** en Táctica.
+- **Mejor once** usa la lógica de mejores jugadores disponibles para cada posición de la formación.
+- **Mejor condición física** prioriza jugadores con mayor estado físico, aunque queden fuera de rol y reciban penalización táctica.
+- La selección por condición física también ordena el banco por mejor forma física.
+- Los jugadores suspendidos o lesionados no habilitados no se colocan como titulares.
+- Los lesionados permitidos para banco se mantienen disponibles para suplentes según la regla existente.
 
 ### Pendientes sugeridos
-- Confirmar el nombre/extensión final del archivo de bienvenida en `img/principales/`.
-- Agregar variantes de bienvenida por división o prestigio del club.
+- Revisar si la selección por condición debe forzar siempre al menos un portero o permitir alineaciones totalmente libres.
+- Agregar una advertencia visual cuando la opción por condición física deje muchos jugadores fuera de zona.

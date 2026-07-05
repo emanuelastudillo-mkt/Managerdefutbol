@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V2.10';
+const APP_VERSION = 'V2.12';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -447,15 +447,33 @@ function roleMeta(position){
     MCO:{ code:'MO', name:'Medio ofensivo', icon:'🎯', group:'mid' },
     EI:{ code:'EI', name:'Extremo izquierdo', icon:'⚡', group:'att' },
     ED:{ code:'ED', name:'Extremo derecho', icon:'⚡', group:'att' },
-    EXT:{ code:'EXT', name:'Extremo', icon:'⚡', group:'att' },
     DC:{ code:'DC', name:'Delantero centro', icon:'🎯', group:'att' },
-    VOL:{ code:'VOL', name:'Volante', icon:'⚙️', group:'mid' }
+    VOL:{ code:'MC', name:'Mediocentro', icon:'⚙️', group:'mid' }
   };
   return map[position] || { code:position, name:position, icon:'⚽', group:'mid' };
 }
 function roleBadge(position){
   const meta = roleMeta(position);
   return `${meta.icon} ${meta.code}`;
+}
+
+function normalizePlayerPosition(position, playerId=0){
+  const pos = String(position || '').toUpperCase();
+  if(pos === 'EXT') return (Number(playerId) || 0) % 2 === 0 ? 'ED' : 'EI';
+  if(pos === 'VOL') return 'MC';
+  const valid = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
+  return valid.includes(pos) ? pos : 'MC';
+}
+function normalizeAllPlayerPositions(){
+  if(!seed?.players) return;
+  seed.players.forEach(player => { player.position = normalizePlayerPosition(player.position, player.id); });
+}
+function playerRoleGroup(position){
+  const pos = normalizePlayerPosition(position);
+  if(pos === 'POR') return 'POR';
+  if(['LD','LI','DFC'].includes(pos)) return 'DEF';
+  if(['MCD','MC','MCO'].includes(pos)) return 'MID';
+  return 'ATT';
 }
 function nationalityRegion(nationality){
   const value = String(nationality || '').toLowerCase();
@@ -510,7 +528,7 @@ function playerGroupClass(position){
 function slotGroup(slot){
   if(slot === 'POR') return 'gk';
   if(['LD','LI','DFC'].includes(slot)) return 'def';
-  if(['MCD','MC','MCO','VOL'].includes(slot)) return 'mid';
+  if(['MCD','MC','MCO'].includes(slot)) return 'mid';
   return 'att';
 }
 function playerFitsSlot(player, slot){
@@ -589,8 +607,8 @@ function roleCompatibility(position, slot){
   const near = {
     LD:['LI','DFC'], LI:['LD','DFC'], DFC:['LD','LI'],
     MCD:['MC','VOL'], MC:['MCD','VOL','MCO'], VOL:['MC','MCD','MCO'], MCO:['MC','VOL','ED','EI'],
-    ED:['EI','EXT','DC','MCO'], EI:['ED','EXT','DC','MCO'], EXT:['ED','EI','DC'],
-    DC:['ED','EI','EXT','MCO'], POR:[]
+    ED:['EI','DC','MCO'], EI:['ED','DC','MCO'],
+    DC:['ED','EI','MCO'], POR:[]
   };
   return (near[slot] || []).includes(position) ? 6 : -10;
 }
@@ -865,14 +883,14 @@ function generateClubPlayers(club, prestige, startId){
     ['POR','POR'], ['POR','POR'],
     ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['DFC','DEF'], ['LD','DEF'], ['LI','DEF'], ['DFC','DEF'],
     ['MCD','MID'], ['MC','MID'], ['MC','MID'], ['MCO','MID'], ['ED','MID'], ['EI','MID'], ['MC','MID'], ['MCD','MID'],
-    ['DC','ATT'], ['DC','ATT'], ['ED','ATT'], ['EI','ATT'], ['DC','ATT'], ['EXT','ATT'], ['MCO','ATT']
+    ['DC','ATT'], ['DC','ATT'], ['ED','ATT'], ['EI','ATT'], ['DC','ATT'], ['ED','ATT'], ['MCO','ATT']
   ];
   return blueprint.map(([position, group], index) => {
     const id = startId + index;
     const media = playerBaseMedia(prestige, id, group);
     const age = group === 'POR' ? 25 + hashNumber(`age-${club.name}-${id}`, 14) : 18 + hashNumber(`age-${club.name}-${id}`, 16);
     const name = generatedPlayerName(id, club.name);
-    const skills = skillsForGroup(group, media, id);
+    const skills = skillsForPosition(position, media, id);
     const visible = averageGeneratedVisible(position, skills);
     return {
       id,
@@ -906,59 +924,94 @@ function generatedNationality(id, divisionName){
 function skillValue(base, id, label, offset=0){
   return clamp(Math.round(base + offset + hashNumber(`${id}-${label}`, 15) - 7), 1, 99);
 }
-function setSkillPack(target, base, id, names, offset){
-  names.forEach(name => { target[name] = skillValue(base, id, name, offset); });
+function skillTierValue(base, id, label, tier='common'){
+  const multipliers = { key:1.30, common:1.00, rare:0.65, weak:0.35 };
+  const multiplier = multipliers[tier] ?? multipliers.common;
+  const noise = hashNumber(`${id}-${label}-${tier}`, 13) - 6;
+  return clamp(Math.round(base * multiplier + noise), 1, 99);
 }
-function skillsForGroup(group, base, id){
+function setSkillTier(target, base, id, names, tier){
+  names.forEach(name => { target[name] = skillTierValue(base, id, name, tier); });
+}
+function positionSkillProfile(position){
+  const pos = normalizePlayerPosition(position);
+  const base = {
+    key:[],
+    common:['resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'],
+    rare:[],
+    weak:['porteria']
+  };
+  if(pos === 'POR'){
+    return {
+      key:['porteria','posicionamiento','serenidad','aceleracion'],
+      common:['cabezazo','fuerza','liderazgo','trabajoEquipo','paseCorto','paseLargo','resistencia','disciplina'],
+      rare:['velocidad'],
+      weak:['marca','entradas','remate','regate','tecnica']
+    };
+  }
+  if(['LD','LI','DFC'].includes(pos)){
+    return {
+      key:['marca','entradas','posicionamiento','fuerza'],
+      common:['cabezazo','resistencia','trabajoEquipo','disciplina','liderazgo'],
+      rare:['remate','regate','paseCorto','paseLargo','vision','velocidad','aceleracion','tecnica','serenidad'],
+      weak:['porteria']
+    };
+  }
+  if(pos === 'MCD'){
+    return {
+      key:['marca','entradas','paseCorto','trabajoEquipo','resistencia'],
+      common:['posicionamiento','paseLargo','vision','disciplina','serenidad','fuerza'],
+      rare:['remate','regate','cabezazo','velocidad','aceleracion','tecnica','liderazgo'],
+      weak:['porteria']
+    };
+  }
+  if(pos === 'MC'){
+    return {
+      key:['paseCorto','paseLargo','vision','trabajoEquipo','resistencia'],
+      common:['tecnica','posicionamiento','serenidad','marca','disciplina','liderazgo'],
+      rare:['remate','regate','cabezazo','velocidad','aceleracion','entradas','fuerza'],
+      weak:['porteria']
+    };
+  }
+  if(pos === 'MCO'){
+    return {
+      key:['paseCorto','vision','tecnica','regate','remate'],
+      common:['posicionamiento','serenidad','paseLargo','trabajoEquipo','resistencia'],
+      rare:['marca','entradas','cabezazo','velocidad','aceleracion','fuerza','disciplina','liderazgo'],
+      weak:['porteria']
+    };
+  }
+  if(['ED','EI'].includes(pos)){
+    return {
+      key:['velocidad','aceleracion','regate','tecnica','paseCorto'],
+      common:['remate','vision','posicionamiento','resistencia','serenidad'],
+      rare:['marca','entradas','cabezazo','fuerza','paseLargo','trabajoEquipo','disciplina','liderazgo'],
+      weak:['porteria']
+    };
+  }
+  return {
+    key:['remate','posicionamiento','cabezazo','serenidad'],
+    common:['fuerza','regate','tecnica','velocidad','resistencia'],
+    rare:['paseCorto','paseLargo','vision','marca','entradas','aceleracion','trabajoEquipo','disciplina','liderazgo'],
+    weak:['porteria']
+  };
+}
+function skillsForPosition(position, base, id){
   const s = {};
   const all = ['porteria','entradas','marca','posicionamiento','paseCorto','paseLargo','vision','regate','tecnica','remate','cabezazo','velocidad','aceleracion','fuerza','resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'];
-  all.forEach(name => { s[name] = skillValue(base, id, name, -10); });
-
-  if(group === 'POR'){
-    setSkillPack(s, base, id, ['porteria','posicionamiento','serenidad','aceleracion'], 9);      // defensa y reflejos
-    setSkillPack(s, base, id, ['cabezazo','fuerza'], 5);                                      // salto y potencia
-    setSkillPack(s, base, id, ['liderazgo','trabajoEquipo'], 3);                               // mando
-    setSkillPack(s, base, id, ['paseCorto','paseLargo'], 0);                                   // pase
-    setSkillPack(s, base, id, ['resistencia'], 1);                                            // se cansan menos en el motor
-    setSkillPack(s, base, id, ['marca','entradas','remate','regate','velocidad'], -28);
-  }
-
-  if(group === 'DEF'){
-    // Habilidad clave: Defensa
-    setSkillPack(s, base, id, ['marca','entradas','posicionamiento','fuerza'], 10);
-    // Habilidades comunes: Ataque y cabezazo
-    setSkillPack(s, base, id, ['remate','regate','cabezazo'], 1);
-    // Habilidades raras: Pase y velocidad
-    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','velocidad','aceleracion'], -8);
-    setSkillPack(s, base, id, ['resistencia','trabajoEquipo','disciplina'], 2);
-    setSkillPack(s, base, id, ['porteria'], -35);
-  }
-
-  if(group === 'MID'){
-    // Habilidad clave: Pase
-    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo'], 10);
-    // Habilidades comunes: Defensa, ataque y tiro
-    setSkillPack(s, base, id, ['marca','entradas','posicionamiento','regate','remate'], 1);
-    // Habilidades raras: Velocidad y cabezazo
-    setSkillPack(s, base, id, ['velocidad','aceleracion','cabezazo'], -8);
-    setSkillPack(s, base, id, ['resistencia','serenidad'], 3);
-    setSkillPack(s, base, id, ['porteria'], -35);
-  }
-
-  if(group === 'ATT'){
-    // Habilidad clave: Ataque
-    setSkillPack(s, base, id, ['remate','regate','posicionamiento','serenidad'], 10);
-    // Habilidades comunes: Tiro y cabezazo
-    setSkillPack(s, base, id, ['cabezazo','fuerza'], 2);
-    // Habilidades raras: Pase, velocidad y defensa
-    setSkillPack(s, base, id, ['paseCorto','paseLargo','vision','velocidad','aceleracion','marca','entradas'], -8);
-    setSkillPack(s, base, id, ['resistencia','tecnica'], 2);
-    setSkillPack(s, base, id, ['porteria'], -35);
-  }
-
-  s.potencial = clamp(skillValue(base, id, 'potencial', 5 + hashNumber(`pot-${id}`, 8)), 1, 99);
-  s.disciplina = clamp(skillValue(base, id, 'disciplina', hashNumber(`disc-${id}`, 16) - 8), 1, 99);
+  all.forEach(name => { s[name] = skillTierValue(base, id, name, 'rare'); });
+  const profile = positionSkillProfile(position);
+  setSkillTier(s, base, id, profile.rare || [], 'rare');
+  setSkillTier(s, base, id, profile.common || [], 'common');
+  setSkillTier(s, base, id, profile.key || [], 'key');
+  setSkillTier(s, base, id, profile.weak || [], 'weak');
+  s.potencial = clamp(skillTierValue(base, id, 'potencial', 'common') + hashNumber(`pot-${id}`, 8), 1, 99);
+  s.disciplina = clamp(Math.round((s.disciplina || skillTierValue(base, id, 'disciplina', 'common')) + hashNumber(`disc-${id}`, 9) - 4), 1, 99);
   return s;
+}
+function skillsForGroup(group, base, id){
+  const representative = group === 'POR' ? 'POR' : group === 'DEF' ? 'DFC' : group === 'MID' ? 'MC' : 'DC';
+  return skillsForPosition(representative, base, id);
 }
 function averageGeneratedVisible(position, skills){
   const temp = { position, skills, overall:50 };
@@ -1174,6 +1227,8 @@ function normalizeGame(saved){
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
+  normalizeAllPlayerPositions();
+  normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
   normalized.fixtures = normalized.fixtures || structuredClone(seed.fixtures);
   normalized.standings = normalized.standings || createInitialStandings();
@@ -1210,6 +1265,7 @@ function normalizeGame(saved){
 
 function ensurePlayerStateForAll(){
   if(!game) return;
+  normalizeAllPlayerPositions();
   game.playerCondition = game.playerCondition || {};
   game.playerMorale = game.playerMorale || {};
   game.playerSkillBoosts = game.playerSkillBoosts || {};
@@ -1443,6 +1499,17 @@ function decayTrainedSkillBoosts(){
   });
   return { players, lost, remaining };
 }
+function applyBiSeasonalAging(){
+  if(!game) return 0;
+  const season = Number(game.seasonNumber || 1);
+  if(season % 2 !== 0) return 0;
+  let count = 0;
+  seed.players.forEach(player => {
+    player.age = Math.max(15, Number(player.age || 18) + 1);
+    count += 1;
+  });
+  return count;
+}
 function finalizeSeasonIfNeeded(){
   if(!game || game.seasonFinalized || game.matchdayIndex < game.fixtures.length) return;
   game.managerStats = normalizeManagerStats(game.managerStats);
@@ -1482,7 +1549,8 @@ function finalizeSeasonIfNeeded(){
     userRecord:record,
     movements:computeSeasonMovements(),
     salariesPaid,
-    trainingDecay
+    trainingDecay,
+    agingApplied: (game.seasonNumber || 1) % 2 === 0
   };
   game.seasonFinalized = true;
   game.seasonEndModalShown = false;
@@ -1505,6 +1573,7 @@ function applySeasonMovements(){
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
   applySeasonMovements();
+  const aging = applyBiSeasonalAging();
   const nextClubId = Number(selectedClubId || game.selectedClubId);
   game.selectedClubId = nextClubId;
   game.seasonNumber = (game.seasonNumber || 1) + 1;
@@ -1864,14 +1933,14 @@ function removePlayerFromCurrentTactic(playerId){
 }
 function generateMarketPlayers(count=50){
   const startId = Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000;
-  const positions = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC','EXT'];
+  const positions = ['POR','LD','LI','DFC','MCD','MC','MCO','ED','EI','DC'];
   const players = [];
   for(let i=0;i<count;i++){
     const id = startId + i;
     const position = positions[hashNumber(`market-pos-${id}`, positions.length)];
     const group = position === 'POR' ? 'POR' : ['LD','LI','DFC'].includes(position) ? 'DEF' : ['MCD','MC','MCO'].includes(position) ? 'MID' : 'ATT';
     const media = clamp(38 + hashNumber(`market-media-${id}`, 42), 38, 79);
-    const skills = skillsForGroup(group, media, id);
+    const skills = skillsForPosition(position, media, id);
     const visible = averageGeneratedVisible(position, skills);
     players.push({
       id,
@@ -2064,7 +2133,7 @@ function renderTactics(){
   view.innerHTML = `
     <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Arrastrá jugadores a los círculos de la pizarra. Si un jugador juega fuera de su zona natural, su rendimiento de partido se penaliza al 50%.</p></div>
     <div class="card tactic-board-card">
-      <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><button id="autoPickBtn" class="ghost">Autoseleccionar</button></div>
+      <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="pitch-board centered">${pitch}</div>
     </div>
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
@@ -2101,11 +2170,21 @@ function renderTactics(){
     saveLocal(true);
     renderTactics();
   });
-  $('autoPickBtn').addEventListener('click', () => {
+  $('autoPickBestBtn').addEventListener('click', () => {
     game.tactic.formation = $('formation').value;
     const starters = autoSelectStarters(game.selectedClubId, game.tactic).map(p=>p.id);
     game.tactic.starters = starters;
     game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('autoPickConditionBtn').addEventListener('click', () => {
+    game.tactic.formation = $('formation').value;
+    const starters = autoSelectByBestCondition(game.selectedClubId).map(p=>p.id);
+    game.tactic.starters = starters;
+    game.tactic.bench = autoSelectBenchByBestCondition(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
     game.tactic = applyStarterMentalities(game.tactic);
     saveLocal(true);
@@ -2225,7 +2304,7 @@ function validateTactic(tactic){
   return errors;
 }
 function positionOrder(pos){
-  const order = {POR:1, LD:2, DFC:3, LI:4, MCD:5, MC:6, VOL:7, MCO:8, ED:9, EI:10, EXT:11, DC:12};
+  const order = {POR:1, LD:2, DFC:3, LI:4, MCD:5, MC:6, MCO:7, ED:8, EI:9, DC:10};
   return order[pos] || 99;
 }
 
@@ -2432,13 +2511,29 @@ function autoSelectBench(clubId, starterIds){
     .sort((a,b)=>benchOverallValue(b)-benchOverallValue(a))
     .slice(0,10);
 }
+function conditionSelectionScore(p){
+  return currentCondition(p.id) * 1000 + currentMorale(p.id) * 10 + visibleOverall(p);
+}
+function autoSelectByBestCondition(clubId){
+  return playersByClub(clubId)
+    .filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id))
+    .sort((a,b)=>conditionSelectionScore(b)-conditionSelectionScore(a))
+    .slice(0,11);
+}
+function autoSelectBenchByBestCondition(clubId, starterIds){
+  const starters = new Set(starterIds);
+  return playersByClub(clubId)
+    .filter(p => !starters.has(p.id) && (clubId !== game?.selectedClubId ? !isUnavailable(p.id) : canBeBench(p.id)))
+    .sort((a,b)=>conditionSelectionScore(b)-conditionSelectionScore(a))
+    .slice(0,10);
+}
 function defaultAutoSubs(starters, bench){
   return [0,1,2,3,4].map(i => ({ outId: starters[10-i] || 0, inId: bench[i] || 0, trigger: i < 2 ? 'tired' : 'best' }));
 }
 function bestPlayerForSlot(squad, slot, used){
   const compatibility = (p) => {
     if(p.position === slot) return 14;
-    const groups = { POR:['POR'], DEF:['LD','LI','DFC'], MID:['MCD','MC','MCO','VOL'], WING:['ED','EI','EXT'], ATT:['DC'] };
+    const groups = { POR:['POR'], DEF:['LD','LI','DFC'], MID:['MCD','MC','MCO'], ATT:['ED','EI','DC'] };
     const groupOf = pos => Object.keys(groups).find(k=>groups[k].includes(pos));
     return groupOf(p.position) === groupOf(slot) ? 5 : -8;
   };
@@ -2782,7 +2877,7 @@ function trainingOptionsMarkup(current){
 function trainableSkillsForPlayer(player){
   if(player.position === 'POR') return ['porteria','posicionamiento','serenidad','aceleracion','cabezazo','fuerza','liderazgo','trabajoEquipo','paseCorto','paseLargo','resistencia'];
   if(['LD','LI','DFC'].includes(player.position)) return ['marca','entradas','posicionamiento','fuerza','remate','regate','cabezazo','resistencia','trabajoEquipo'];
-  if(['MCD','MC','MCO','VOL'].includes(player.position)) return ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo','marca','entradas','posicionamiento','regate','remate','resistencia','serenidad'];
+  if(['MCD','MC','MCO'].includes(player.position)) return ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo','marca','entradas','posicionamiento','regate','remate','resistencia','serenidad'];
   return ['remate','regate','posicionamiento','serenidad','cabezazo','fuerza','resistencia','tecnica'];
 }
 function improveRandomSkill(player){
@@ -3078,12 +3173,12 @@ function weightedPick(items, weightFn){
 }
 function makeGoal(clubId, lineup){
   const scorer = weightedPick(lineup, p => {
-    const posBonus = p.position === 'DC' ? 45 : ['ED','EI','EXT','MCO'].includes(p.position) ? 28 : ['MC','MCD','VOL'].includes(p.position) ? 10 : 3;
+    const posBonus = p.position === 'DC' ? 45 : ['ED','EI','MCO'].includes(p.position) ? 28 : ['MC','MCD'].includes(p.position) ? 10 : 3;
     return effectiveSkill(p,'remate') + effectiveSkill(p,'posicionamiento') + posBonus;
   });
   const possibleAssisters = lineup.filter(p=>p.id !== scorer.id);
   const hasAssist = Math.random() < 0.72;
-  const assister = hasAssist ? weightedPick(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','EXT','MCO','MC'].includes(p.position)?25:5)) : null;
+  const assister = hasAssist ? weightedPick(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
   return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute: Math.floor(rnd(2,91)) };
 }
 function makeCards(clubId, power, fouls){

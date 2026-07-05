@@ -178,12 +178,12 @@
   }
   function makeGoalV2(clubId, lineup, minute){
     const scorer = weightedPickV2(lineup, p => {
-      const posBonus = p.position === 'DC' ? 48 : ['ED','EI','EXT','MCO'].includes(p.position) ? 30 : ['MC','MCD','VOL'].includes(p.position) ? 10 : 3;
+      const posBonus = p.position === 'DC' ? 48 : ['ED','EI','MCO'].includes(p.position) ? 30 : ['MC','MCD'].includes(p.position) ? 10 : 3;
       return effectiveSkill(p,'remate') + effectiveSkill(p,'posicionamiento') + currentMorale(p.id) * 0.25 + posBonus;
     });
     const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id);
     const hasAssist = Math.random() < 0.72;
-    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','EXT','MCO','MC'].includes(p.position)?25:5)) : null;
+    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
     return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute };
   }
   function makeCardsV2(clubId, power, fouls){

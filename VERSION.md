@@ -1,36 +1,20 @@
 # Registro de versión
 
-## Versión: V2.20
+## Versión: V2.21
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** UI compacta + sistema inicial de sponsors
+**Tipo de mejora:** ajuste menor de texto en Sponsors
 
 ### Resumen
-Esta versión ajusta tablas y filtros para ocupar menos espacio, normaliza la visualización de nacionalidades y suma un sistema inicial de patrocinadores dentro del menú Estadio.
+Esta versión ajusta la presentación visible de Sponsors dentro del menú Estadio sin cambiar la lógica económica ni la generación de ofertas.
 
 ### Cambios principales agregados
-- Selectores de orden sin la palabra "Ordenar".
-- Indicador circular para estado físico.
-- Indicador circular para moral.
-- Nacionalidad abreviada en tablas con código de 3 letras.
-- Nombre completo del país dentro de la ficha del jugador.
-- Nuevo archivo `data/sponsors.json`.
-- Nueva sección Sponsors dentro de Estadio.
-- Tandas de ofertas cada 4 a 7 partidos.
-- Entre 2 y 5 ofertas por tanda.
-- Pago completo al aceptar la oferta.
-- Registro del ingreso en Finanzas.
-- Contratos activos con turnos restantes.
+- Texto introductorio de Sponsors simplificado.
+- Eliminado de la UI el contador `0/5 partidos`.
+- Mensaje de ofertas vacías reemplazado por una indicación contextual.
+- La lógica de generación de ofertas se mantiene igual.
 
-### Reglas de cálculo de sponsors
-- División 1: x10.
-- División 2: x4.
-- División 3: x1.
-- Bonus por posición en tabla: 0% a 20%.
-- Bonus por moral: 0% a 10%.
-- Bonus por cohesión: 0% a 10%.
-- Multiplicador por lugar del sponsor.
-
-### Pendientes sugeridos
-- Agregar histórico específico de sponsors aceptados y rechazados.
-- Permitir negociar o renovar contratos.
-- Crear restricciones por categoría comercial.
+### Lógica conservada
+- Las tandas siguen llegando cada 4 a 7 partidos.
+- Cada tanda puede traer entre 2 y 5 ofertas.
+- El pago se recibe completo al aceptar.
+- Los contratos activos siguen ocupando lugares de sponsor durante sus turnos.

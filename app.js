@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.20';
+const APP_VERSION = 'V2.21';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -3094,7 +3094,7 @@ function sponsorOffersMarkup(){
   ensureSponsorState();
   const offers = game.sponsors.offers || [];
   if(!offers.length){
-    return `<p class="muted small">Sin ofertas disponibles. Próxima tanda estimada en ${Math.max(0, Number(game.sponsors.nextOfferAfter || 0) - Number(game.sponsors.matchesSinceOffer || 0))} partido(s).</p>`;
+    return `<p class="muted small">Sin ofertas disponibles. Intenta ganar partidos para tentar a las marcas a anunciarse con nosotros.</p>`;
   }
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Turnos</th><th>Por turno</th><th>Pago inmediato</th><th></th></tr></thead><tbody>${offers.map(offer => `<tr>
     <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
@@ -3157,7 +3157,7 @@ function renderStadium(){
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${project.replantingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${project.patchingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
     <div class="card sponsors-card" style="margin-top:14px">
-      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan tandas de 2 a 5 ofertas cada 4 a 7 partidos. El pago se recibe completo al aceptar.</p></div><span class="pill">${game.sponsors.matchesSinceOffer || 0}/${game.sponsors.nextOfferAfter || 0} partidos</span></div>
+      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Cada algunos partidos tendras ofertas publicitarias. El pago se recibe completo al aceptar.</p></div></div>
       <h4>Ofertas disponibles</h4>
       ${sponsorOffersMarkup()}
       <h4 style="margin-top:14px">Contratos activos</h4>

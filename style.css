@@ -128,3 +128,56 @@ button.plain{width:100%;background:transparent;color:inherit;text-align:left;bor
   .player-chip{width:70px;min-height:70px;padding-bottom:15px}
   .player-chip-name{font-size:10px;max-width:56px}
 }
+
+/* V1.03: estado físico, nuevos placeholders, roles y resaltado visual */
+.photo-thumb,.player-photo-placeholder{
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,rgba(59,130,246,.14),rgba(148,163,184,.08));
+  border:1px dashed rgba(148,163,184,.28);
+  color:#dbeafe;
+}
+.photo-thumb{width:42px;height:42px;border-radius:12px;font-size:18px}
+.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px;font-size:42px;flex:0 0 auto}
+.player-identity-card{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.role-pill{font-weight:800}
+.placeholder-main-card h3{margin-bottom:12px}
+.main-visual-placeholder{
+  min-height:170px;
+  border-radius:20px;
+  border:2px dashed rgba(148,163,184,.24);
+  display:grid;
+  place-items:center;
+  text-align:center;
+  background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(34,197,94,.05));
+  padding:16px;
+}
+.main-visual-placeholder strong{display:block;font-size:20px;color:#dbeafe;margin-bottom:8px}
+.main-visual-placeholder span{color:var(--muted);max-width:380px}
+.own-club-row td{background:rgba(34,197,94,.09)!important;border-bottom-color:rgba(34,197,94,.18)}
+.own-player-rank{background:rgba(59,130,246,.08);padding:10px 12px;border-radius:14px}
+.own-player-rank .linklike{color:#bfdbfe}
+.club-pill-own{background:rgba(34,197,94,.16);color:#bbf7d0}
+.player-chip{
+  width:68px;
+  min-height:68px;
+  padding:8px 5px 14px;
+  border-width:2px;
+  overflow:visible;
+}
+.player-chip.gk{background:rgba(37,99,235,.86);border-color:rgba(191,219,254,.8)}
+.player-chip.def{background:rgba(22,163,74,.86);border-color:rgba(187,247,208,.8)}
+.player-chip.mid{background:rgba(202,138,4,.88);border-color:rgba(254,240,138,.85)}
+.player-chip.att{background:rgba(220,38,38,.84);border-color:rgba(254,202,202,.85)}
+.player-chip-name{font-size:10px;max-width:54px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.jersey-dot{font-size:10px;color:#fff}
+.fitness-ring{position:absolute;inset:-5px;width:78px;height:78px;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22))}
+.mentality-marker{bottom:-4px;font-size:16px}
+.mentality-marker.attack{color:#22c55e}
+.mentality-marker.defense{color:#60a5fa}
+.mentality-marker.positional{color:#facc15}
+@media (max-width:900px){
+  .player-chip{width:58px;min-height:58px;padding-bottom:13px}
+  .player-chip-name{font-size:9px;max-width:46px}
+  .fitness-ring{width:68px;height:68px;inset:-5px}
+}

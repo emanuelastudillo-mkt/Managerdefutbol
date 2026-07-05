@@ -3,7 +3,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.02';
+const APP_VERSION = 'V1.03';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -16,6 +16,30 @@ const FORMATIONS = {
   '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','ED','EI','DC'],
   '4-3-1-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
   '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MC','MC','ED','EI','DC']
+};
+const FORMATION_VISUAL_BANDS = {
+  '4-4-2': [4,0,4,0,2],
+  '4-3-3': [4,0,3,0,3],
+  '4-2-3-1': [4,2,0,3,1],
+  '3-5-2': [3,0,5,0,2],
+  '5-3-2': [5,0,3,0,2],
+  '4-1-4-1': [4,1,4,0,1],
+  '3-4-3': [3,0,4,0,3],
+  '4-5-1': [4,0,5,0,1],
+  '4-3-1-2': [4,0,3,1,2],
+  '5-4-1': [5,0,4,0,1]
+};
+const FORMATION_VISUALS = {
+  '4-4-2':[4,0,4,0,2],
+  '4-3-3':[4,0,3,0,3],
+  '4-2-3-1':[4,2,0,3,1],
+  '3-5-2':[3,0,5,0,2],
+  '5-3-2':[5,0,3,0,2],
+  '4-1-4-1':[4,1,4,0,1],
+  '3-4-3':[3,0,4,0,3],
+  '4-5-1':[4,1,2,2,1],
+  '4-3-1-2':[4,0,3,1,2],
+  '5-4-1':[5,0,4,0,1]
 };
 const MENTALITIES = ['posicional','ataque','defensiva'];
 const SUB_TRIGGERS = [
@@ -122,6 +146,18 @@ function effectiveOverall(p){
   };
   return clamp(Math.round(avg(Object.values(simulated))), 1, 99);
 }
+function currentCondition(playerId){
+  if(!game) return 99;
+  if(!game.playerCondition) game.playerCondition = {};
+  if(!Number.isFinite(game.playerCondition[playerId])) game.playerCondition[playerId] = 99;
+  return clamp(Math.round(game.playerCondition[playerId]), 0, 99);
+}
+function conditionFactor(playerId){
+  return 0.5 + 0.5 * (currentCondition(playerId) / 99);
+}
+function matchSkill(p, skillName){
+  return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id)), 1, 99);
+}
 function jerseyNumber(playerId){
   const p = playerById(playerId);
   if(!p) return 0;
@@ -137,8 +173,40 @@ function playerDisplayName(playerId){
   const p = playerById(playerId);
   return p ? `${playerLastName(p.name)} #${jerseyNumber(p.id)}` : 'Jugador';
 }
+function countryFlag(nationality){
+  const flags = { Argentina:'🇦🇷', Bolivia:'🇧🇴', Brasil:'🇧🇷', Chile:'🇨🇱', Colombia:'🇨🇴', Ecuador:'🇪🇨', Paraguay:'🇵🇾', 'Perú':'🇵🇪', Uruguay:'🇺🇾' };
+  return flags[nationality] || '🌐';
+}
+function roleMeta(position){
+  const map = {
+    POR:{ code:'POR', name:'Portero', icon:'🧤', group:'gk' },
+    DFC:{ code:'DFC', name:'Defensa central', icon:'🛡️', group:'def' },
+    LI:{ code:'DFI', name:'Defensa izquierda', icon:'🛡️', group:'def' },
+    LD:{ code:'DFD', name:'Defensa derecha', icon:'🛡️', group:'def' },
+    MCD:{ code:'MDC', name:'Medio defensivo', icon:'⚙️', group:'mid' },
+    MC:{ code:'MC', name:'Mediocentro', icon:'⚙️', group:'mid' },
+    MCO:{ code:'MO', name:'Medio ofensivo', icon:'🎯', group:'mid' },
+    EI:{ code:'EI', name:'Extremo izquierdo', icon:'⚡', group:'att' },
+    ED:{ code:'ED', name:'Extremo derecho', icon:'⚡', group:'att' },
+    EXT:{ code:'EXT', name:'Extremo', icon:'⚡', group:'att' },
+    DC:{ code:'DC', name:'Delantero centro', icon:'🎯', group:'att' },
+    VOL:{ code:'VOL', name:'Volante', icon:'⚙️', group:'mid' }
+  };
+  return map[position] || { code:position, name:position, icon:'⚽', group:'mid' };
+}
+function roleBadge(position){
+  const meta = roleMeta(position);
+  return `${meta.icon} ${meta.code}`;
+}
+function playerGroup(position){
+  return roleMeta(position).group;
+}
+function playerGroupClass(position){
+  const group = playerGroup(position);
+  return group === 'gk' ? 'gk' : group === 'def' ? 'def' : group === 'att' ? 'att' : 'mid';
+}
 function mentalityMarker(mode){
-  if(mode === 'ataque') return '<span class="mentality-marker attack" title="Ataque">↑</span>';
+  if(mode === 'ataque') return '<span class="mentality-marker attack" title="Ataque">→</span>';
   if(mode === 'defensiva') return '<span class="mentality-marker defense" title="Defensiva">←</span>';
   return '<span class="mentality-marker positional" title="Posicional">—</span>';
 }
@@ -160,17 +228,18 @@ function applyStarterMentalities(tactic){
   tactic.playerMentalities = next;
   return tactic;
 }
-function formationGroups(formation){
-  const parts = String(formation || '4-4-2').split('-').map(Number).filter(Boolean);
-  return { defense:parts[0] || 4, midfield:parts[1] || 4, attack:(parts[2] || 2) + parts.slice(3).reduce((a,b)=>a+b,0) };
+function formationLayout(formation){
+  return FORMATION_VISUALS[formation] || [4,0,4,0,2];
 }
 function formationCoordinates(formation){
-  const groups = formationGroups(formation);
+  const layout = formationLayout(formation);
   const rows = [
-    { key:'POR', count:1, x:11 },
-    { key:'defense', count:groups.defense, x:31 },
-    { key:'midfield', count:groups.midfield, x:55 },
-    { key:'attack', count:groups.attack, x:79 }
+    { count:1, x:10 },
+    { count:layout[0], x:24 },
+    { count:layout[1], x:38 },
+    { count:layout[2], x:52 },
+    { count:layout[3], x:66 },
+    { count:layout[4], x:80 }
   ];
   const coords = [];
   rows.forEach(row=>{
@@ -182,10 +251,50 @@ function formationCoordinates(formation){
   });
   return coords;
 }
+function roleCompatibility(position, slot){
+  if(position === slot) return 16;
+  const near = {
+    LD:['LI','DFC'], LI:['LD','DFC'], DFC:['LD','LI'],
+    MCD:['MC','VOL'], MC:['MCD','VOL','MCO'], VOL:['MC','MCD','MCO'], MCO:['MC','VOL','ED','EI'],
+    ED:['EI','EXT','DC','MCO'], EI:['ED','EXT','DC','MCO'], EXT:['ED','EI','DC'],
+    DC:['ED','EI','EXT','MCO'], POR:[]
+  };
+  return (near[slot] || []).includes(position) ? 6 : -10;
+}
+function assignPlayersToRoleSequence(players, formation){
+  const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
+  const remaining = players.slice();
+  const assigned = [];
+  slots.forEach(slot => {
+    remaining.sort((a,b)=>(visibleOverall(b) + roleCompatibility(b.position, slot)) - (visibleOverall(a) + roleCompatibility(a.position, slot)));
+    const pick = remaining.shift();
+    if(pick) assigned.push({ player:pick, slot });
+  });
+  return assigned;
+}
 function pitchSlots(tactic){
   const starters = (tactic?.starters || []).map(playerById).filter(Boolean);
+  const assigned = assignPlayersToRoleSequence(starters, tactic?.formation || '4-4-2');
   const coords = formationCoordinates(tactic?.formation || '4-4-2');
-  return starters.map((player, i) => ({ player, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: playerMentality(player.id, tactic) }));
+  return assigned.map((entry, i) => ({ player: entry.player, slot: entry.slot, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: playerMentality(entry.player.id, tactic) }));
+}
+function fitnessRingSvg(playerId){
+  const condition = currentCondition(playerId);
+  const active = Math.max(0, Math.min(8, Math.ceil(condition / 12.5)));
+  const colors = ['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#16a34a','#15803d'];
+  const cx = 34, cy = 34, r = 31;
+  const segments = [];
+  for(let i=0;i<8;i++){
+    const a0 = (-120 + i * 45) * Math.PI / 180;
+    const a1 = (-120 + i * 45 + 30) * Math.PI / 180;
+    const x1 = cx + Math.cos(a0) * r;
+    const y1 = cy + Math.sin(a0) * r;
+    const x2 = cx + Math.cos(a1) * r;
+    const y2 = cy + Math.sin(a1) * r;
+    const color = i < active ? colors[i] : 'rgba(148,163,184,.22)';
+    segments.push(`<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${color}" stroke-width="4" fill="none" stroke-linecap="round"/>`);
+  }
+  return `<svg class="fitness-ring" viewBox="0 0 68 68" aria-hidden="true">${segments.join('')}</svg>`;
 }
 
 
@@ -312,6 +421,8 @@ function normalizeGame(saved){
   normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
   normalized.lastBudgetDelta = Number.isFinite(normalized.lastBudgetDelta) ? normalized.lastBudgetDelta : 0;
   normalized.budgetHistory = normalized.budgetHistory || [];
+  normalized.playerCondition = normalized.playerCondition || {};
+  seed.players.forEach(p => { if(!Number.isFinite(normalized.playerCondition[p.id])) normalized.playerCondition[p.id] = 99; });
   Object.values(normalized.playerStats).forEach(stat => {
     if(stat.injuries === undefined) stat.injuries = 0;
     if(stat.played === undefined) stat.played = 0;
@@ -358,7 +469,8 @@ function newGame(selectedClubId){
     lastOwnProblems: [],
     budget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     lastBudgetDelta: 0,
-    budgetHistory: []
+    budgetHistory: [],
+    playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99]))
   };
   activeTab = 'home';
   renderAll();
@@ -409,7 +521,7 @@ function renderHome(){
     <div class="row section-title">
       <div>
         <h2>Panel principal</h2>
-        <p class="tagline">Versión ${APP_VERSION}. Simulación local, once titular en cancha, cambios automáticos y presupuesto dinámico por resultado.</p>
+        <p class="tagline">Versión ${APP_VERSION}. Simulación local, once titular en cancha, cambios automáticos, estado físico y presupuesto dinámico por resultado.</p>
       </div>
       <button id="advanceBtn" class="primary">Avanzar fecha</button>
     </div>
@@ -429,6 +541,10 @@ function renderHome(){
         <h3>Últimos partidos</h3>
         <div class="timeline">${lastMatches.length ? lastMatches.map(compactMatch).join('') : '<p class="muted">Aún no hay partidos jugados.</p>'}</div>
       </div>
+    </div>
+    <div class="card placeholder-main-card" style="margin-top:14px">
+      <h3>Momento del club</h3>
+      <div class="main-visual-placeholder"><strong>Próximamente</strong><span>Aquí se insertará una imagen contextual según el momento del club.</span></div>
     </div>
   `;
   $('advanceBtn')?.addEventListener('click', simulateNextMatchday);
@@ -480,19 +596,20 @@ function renderSquad(){
   const players = playersByClub(game.selectedClubId).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || positionOrder(a.position)-positionOrder(b.position));
   const rows = players.map(p=>`
     <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
+      <td><div class="photo-thumb">👤</div></td>
       <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
       <td>#${jerseyNumber(p.id)}</td>
-      <td><span class="pos">${p.position}</span></td>
-      <td>${p.age}</td>
-      <td>${p.nationality}</td>
+      <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+      <td><span class="pill">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)}</span></td>
       <td><strong>${visibleOverall(p)}</strong></td>
+      <td>${currentCondition(p.id)}/99</td>
       <td>${visibleStats(p).Resistencia}</td>
       <td><span class="${isUnavailable(p.id) ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span></td>
       <td>${formatMoney(p.value)}</td>
     </tr>`).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles y las habilidades ocultas no se muestran.</p></div>
-    <div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Dorsal</th><th>Pos</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Resistencia</th><th>Estado</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. También se muestra su rol, nacionalidad y estado físico.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Dorsal</th><th>Rol</th><th>Nacionalidad</th><th>Media</th><th>Estado físico</th><th>Resistencia</th><th>Estado</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table></div>
   `;
 }
 function renderTactics(){
@@ -503,7 +620,8 @@ function renderTactics(){
   const starters = game.tactic.starters.map(playerById).filter(Boolean);
   const bench = game.tactic.bench.map(playerById).filter(Boolean);
   const pitch = pitchSlots(game.tactic).map(slot => `
-      <button class="player-chip" style="left:${slot.x}%; top:${slot.y}%" data-toggle-mentality="${slot.player.id}" title="Cambiar mentalidad de ${escapeHtml(slot.player.name)}">
+      <button class="player-chip ${playerGroupClass(slot.player.position)}" style="left:${slot.x}%; top:${slot.y}%" data-toggle-mentality="${slot.player.id}" title="Cambiar mentalidad de ${escapeHtml(slot.player.name)}">
+        ${fitnessRingSvg(slot.player.id)}
         <span class="jersey-dot">#${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
         ${mentalityMarker(slot.mentality)}
@@ -518,6 +636,7 @@ function renderTactics(){
           <span>${mentalityMarker('posicional')} Posicional</span>
           <span>${mentalityMarker('ataque')} Ataque</span>
           <span>${mentalityMarker('defensiva')} Defensiva</span>
+          <span><span class="pill">Anillo</span> Estado físico (8 tramos)</span>
         </div>
       </div>
       <div class="stack">
@@ -545,7 +664,7 @@ function renderTactics(){
     </div>
     <div class="card" style="margin-top:14px">
       <div class="row"><h3>Plantel</h3><span class="pill">clic en el nombre para ver estadísticas</span></div>
-      <div class="table-wrap"><table class="tactic-table"><thead><tr><th>Jugador</th><th>Dorsal</th><th>Pos</th><th>Media</th><th>Estado</th><th>Rol</th><th>Mentalidad</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="table-wrap"><table class="tactic-table"><thead><tr><th>Jugador</th><th>Dorsal</th><th>Rol</th><th>Media</th><th>Estado físico</th><th>Estado</th><th>Rol en convocatoria</th><th>Mentalidad</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>
     <div class="card" style="margin-top:14px">
       <h3>Cambios automáticos</h3>
@@ -582,8 +701,9 @@ function tacticPlayerRow(p){
   return `<tr class="${unavailable ? 'dim-row' : ''}">
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
     <td>#${jerseyNumber(p.id)}</td>
-    <td><span class="pos">${p.position}</span></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td><strong>${visibleOverall(p)}</strong></td>
+    <td>${currentCondition(p.id)}/99</td>
     <td><span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(p.id))}</span></td>
     <td><select class="role-select" data-role-player="${p.id}" ${unavailable ? 'disabled' : ''}>
       <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
@@ -698,7 +818,7 @@ function matchCard(m){
 }
 function renderStandings(){
   const rows = sortedStandings().map((s,i)=>`
-    <tr>
+    <tr class="${s.clubId===game.selectedClubId ? 'own-club-row' : ''}">
       <td><strong>${i+1}</strong></td><td><span class="club-dot" style="background:${clubColor(s.clubId)}"></span><strong>${escapeHtml(clubName(s.clubId))}</strong></td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
     </tr>`).join('');
   view.innerHTML = `<div class="section-title"><h2>Tabla de posiciones</h2></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -721,11 +841,11 @@ function renderStats(){
 }
 function rankList(list,key){
   if(!list.length) return '<p class="muted">Sin datos todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill">${escapeHtml(clubShort(s.clubId))}</span></span><strong>${s[key]}</strong></div>`; }).join('');
+  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${escapeHtml(clubShort(s.clubId))}</span></span><strong>${s[key]}</strong></div>`; }).join('');
 }
 function cardList(list){
   if(!list.length) return '<p class="muted">Sin tarjetas todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill">${escapeHtml(clubShort(s.clubId))}</span></span><strong><span class="yellow-card">■</span> ${s.yellow} / <span class="red-card">■</span> ${s.red}</strong></div>`; }).join('');
+  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${escapeHtml(clubShort(s.clubId))}</span></span><strong><span class="yellow-card">■</span> ${s.yellow} / <span class="red-card">■</span> ${s.red}</strong></div>`; }).join('');
 }
 function sortedStandings(){
   if(!game) return [];
@@ -775,13 +895,13 @@ function teamPower(clubId, tactic){
   const wings = lineup.filter(p=>['ED','EI','EXT'].includes(p.position));
   const atts = lineup.filter(p=>['DC'].includes(p.position));
   const gk = lineup.find(p=>p.position==='POR');
-  let defense = avg(defs.map(p=> avg([effectiveSkill(p,'marca'),effectiveSkill(p,'entradas'),effectiveSkill(p,'posicionamiento'),effectiveSkill(p,'fuerza')])));
-  let midfield = avg(mids.concat(wings).map(p=> avg([effectiveSkill(p,'paseCorto'),effectiveSkill(p,'vision'),effectiveSkill(p,'tecnica'),effectiveSkill(p,'trabajoEquipo')])));
-  let attack = avg(atts.concat(wings).map(p=> avg([effectiveSkill(p,'remate'),effectiveSkill(p,'regate'),effectiveSkill(p,'velocidad'),effectiveSkill(p,'serenidad')])));
+  let defense = avg(defs.map(p=> avg([matchSkill(p,'marca'),matchSkill(p,'entradas'),matchSkill(p,'posicionamiento'),matchSkill(p,'fuerza')])));
+  let midfield = avg(mids.concat(wings).map(p=> avg([matchSkill(p,'paseCorto'),matchSkill(p,'vision'),matchSkill(p,'tecnica'),matchSkill(p,'trabajoEquipo')])));
+  let attack = avg(atts.concat(wings).map(p=> avg([matchSkill(p,'remate'),matchSkill(p,'regate'),matchSkill(p,'velocidad'),matchSkill(p,'serenidad')])));
   let discipline = avg(lineup.map(p=>p.skills.disciplina));
-  let stamina = avg(lineup.map(p=>effectiveSkill(p,'resistencia')));
+  let stamina = avg(lineup.map(p=>matchSkill(p,'resistencia')));
   let aggression = avg(lineup.map(p=>hiddenStats(p).aggression));
-  let keeper = gk ? avg([effectiveSkill(gk,'porteria'),effectiveSkill(gk,'posicionamiento'),effectiveSkill(gk,'serenidad')]) : 40;
+  let keeper = gk ? avg([matchSkill(gk,'porteria'),matchSkill(gk,'posicionamiento'),matchSkill(gk,'serenidad')]) : 40;
   const rep = seed.clubs.find(c=>c.id===clubId).reputation;
   const adjust = applyMentalityBonus(tactic || DEFAULT_TACTIC, lineup);
   return { clubId, lineup, defense:defense+adjust.defense, midfield:midfield+adjust.midfield, attack:attack+adjust.attack, discipline, stamina, aggression, keeper, reputation:rep };
@@ -820,6 +940,7 @@ function simulateNextMatchday(){
   round.matches.forEach((m,i)=>Object.assign(m, { played:true, homeGoals:results[i].homeGoals, awayGoals:results[i].awayGoals }));
   game.matchHistory.push(...results);
   const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
+  applyConditionUpdates(results);
   if(ownResult) applyEconomyResult(ownResult);
   game.lastOwnProblems = collectOwnProblems(ownResult);
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
@@ -844,6 +965,24 @@ function applyEconomyResult(match){
   game.budget = Math.max(0, Math.round((game.budget || 0) + delta));
   game.budgetHistory = game.budgetHistory || [];
   game.budgetHistory.push({ matchId: match.id, delta, budget: game.budget });
+}
+function applyConditionUpdates(results){
+  if(!game.playerCondition) game.playerCondition = {};
+  seed.players.forEach(player => {
+    if(!Number.isFinite(game.playerCondition[player.id])) game.playerCondition[player.id] = 99;
+  });
+  const played = new Set();
+  results.forEach(match => {
+    (match.playedIdsHome || []).forEach(id => played.add(id));
+    (match.playedIdsAway || []).forEach(id => played.add(id));
+  });
+  seed.players.forEach(player => {
+    let next = currentCondition(player.id);
+    next += rnd(12,18);
+    if(played.has(player.id)) next -= rnd(15,20);
+    else next += rnd(8,10);
+    game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
+  });
 }
 function getTacticForClub(clubId){
   if(clubId === game.selectedClubId) return game.tactic;
@@ -873,7 +1012,9 @@ function simulateMatch(match){
   applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
   applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
   applyAvailability(cards, injuries);
-  return { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats };
+  const playedIdsHome = [...new Set(home.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
+  const playedIdsAway = [...new Set(away.lineup.map(p=>p.id).concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
+  return { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, playedIdsHome, playedIdsAway };
 }
 function expectedGoals(attacking, defending, isHome, chances){
   const attackEdge = (attacking.attack - defending.defense) / 34;
@@ -969,7 +1110,7 @@ function makeSubstitutions(clubId, tactic, goals){
     const score = scoreAtMinute(goals, minute, clubId);
     const outPlayer = playerById(outId);
     let execute = false;
-    if(rule.trigger === 'tired') execute = effectiveSkill(outPlayer,'resistencia') < 72 || minute >= 75 || Math.random() < 0.35;
+    if(rule.trigger === 'tired') execute = currentCondition(outId) < 68 || effectiveSkill(outPlayer,'resistencia') < 72 || minute >= 75 || Math.random() < 0.35;
     if(rule.trigger === 'winning') execute = score.gf > score.gc;
     if(rule.trigger === 'losing') execute = score.gf < score.gc;
     if(rule.trigger === 'drawing') execute = score.gf === score.gc;
@@ -1038,18 +1179,26 @@ function showPlayerModal(playerId){
   if(!p) return;
   const visible = visibleStats(p);
   const stats = game?.playerStats?.[p.id];
+  const meta = roleMeta(p.position);
   const body = `
     <div class="player-modal-grid">
       <div>
-        <p class="label">${escapeHtml(clubName(p.clubId))} · ${escapeHtml(p.position)} · #${jerseyNumber(p.id)}</p>
-        <h2>${escapeHtml(p.name)}</h2>
-        <p class="muted">${p.age} años · ${escapeHtml(p.nationality)} · ${escapeHtml(statusText(p.id))}</p>
+        <div class="player-identity-card">
+          <div class="player-photo-placeholder large">👤</div>
+          <div>
+            <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
+            <h2>${escapeHtml(p.name)}</h2>
+            <p class="muted">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)} · ${meta.icon} ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
+            <p class="muted">${p.age} años · ${escapeHtml(statusText(p.id))}</p>
+          </div>
+        </div>
         <div class="radar-wrap">${radarSvg(visible)}</div>
       </div>
       <div class="stack">
         <div class="card inner"><h3>Stats visibles</h3>${statPairs(visible)}</div>
-        <div class="card inner"><h3>Media y valor</h3>
+        <div class="card inner"><h3>Perfil</h3>
           <div class="stat-rank"><span>Media</span><strong>${visibleOverall(p)}</strong></div>
+          <div class="stat-rank"><span>Estado físico</span><strong>${currentCondition(p.id)}/99</strong></div>
           <div class="stat-rank"><span>Valor</span><strong>${formatMoney(p.value)}</strong></div>
           <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
         </div>

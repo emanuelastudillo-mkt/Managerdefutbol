@@ -1,38 +1,44 @@
 # Registro de versión
 
-## Versión: V1.02
+## Versión: V1.03
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** funcional y visual
+**Tipo de mejora:** funcional, visual y de lógica táctica
 
 ### Resumen
-Esta versión mejora el MVP táctico con una cancha visual interactiva, mentalidad individual por jugador, media visible real basada sólo en stats visibles y una economía simple por resultado.
+Esta versión mejora la visualización táctica, agrega estado físico a los jugadores, incorpora placeholders de foto y mejora la identificación visual de roles, nacionalidades y elementos propios del club del usuario.
 
 ### Cambios principales agregados
-- **Cancha táctica visual** con imagen tipo pizarra.
-- **11 titulares visibles sobre la cancha** con distribución de izquierda a derecha según la formación.
-- Cada titular aparece como **círculo clickeable** con:
-  - apellido
-  - dorsal
-  - mentalidad individual
-- **Mentalidad individual por jugador titular**:
-  - Posicional = guion amarillo
-  - Ataque = flecha verde hacia arriba
-  - Defensiva = flecha azul hacia atrás
-- **Media del jugador corregida**:
-  - ahora es el promedio de las habilidades visibles
-  - ya no se muestra en pantalla el valor afectado por mejoras ocultas
-- **Habilidades ocultas ya no visibles** en la interfaz del jugador.
-- **Espacios reservados** para:
-  - futura cara del jugador
-  - escudo del club
-  - logo de la liga
-- **Economía básica** implementada para el club del usuario:
-  - ganar: +$300.000 a +$500.000
-  - empatar: +$100.000 a +$200.000
-  - perder: -$100.000 a +$50.000
-- Se muestra el **presupuesto actualizado** y el **último balance** en la pantalla principal.
+- **Visualización táctica de formaciones corregida** con lógica de **5 secciones de juego** más portero.
+- Adaptación visual de esquemas como:
+  - 4-3-3 → 4-0-3-0-3
+  - 4-3-1-2 → 4-0-3-1-2
+  - 4-1-4-1 → 4-1-4-0-1
+- **Círculos de jugadores más pequeños** en la cancha táctica.
+- **Colores distintos por línea**:
+  - porteros
+  - defensas
+  - mediocampistas
+  - delanteros
+- **Flecha de ataque corregida**, ahora apunta hacia la derecha.
+- **Anillo de estado físico** alrededor de cada titular:
+  - dividido en 8 segmentos
+  - cada segmento representa 12,5 puntos
+  - colores de rojo a verde
+- **Estado físico implementado**:
+  - impacto directo en el rendimiento de partido
+  - jugar resta entre 15 y 20 puntos
+  - el paso del tiempo recupera entre 12 y 18 puntos
+  - no jugar suma entre 8 y 10 puntos extra
+- **Placeholders de foto** agregados en:
+  - pantalla de plantel
+  - ficha individual del jugador
+- **Iconos de nacionalidad y rol** agregados en plantel y ficha.
+- **Tablas resaltadas** para distinguir fácilmente:
+  - tu club en la tabla
+  - tus jugadores en rankings y estadísticas
+- **Placeholder en pantalla principal** para futura imagen del momento del club.
 
-### Cambios mantenidos de la versión anterior
+### Cambios que se mantienen
 - 11 titulares y 10 suplentes.
 - 5 cambios automáticos.
 - Reglas automáticas:
@@ -40,22 +46,17 @@ Esta versión mejora el MVP táctico con una cancha visual interactiva, mentalid
   - entrar ganando
   - entrar perdiendo
   - entrar empatando
-- 10% de cambios en el entretiempo y el resto entre 60 y 90.
+- 10% de cambios en entretiempo y el resto entre 60 y 90.
 - Partidos clickeables con estadísticas.
 - Bloqueo de 2 minutos para avanzar.
 - Revisión obligatoria si hubo lesionados o expulsados propios.
 - Guardado local con IndexedDB.
-
-### Cambios técnicos
-- Se agregó carpeta `assets/` con la cancha visual.
-- Se añadió `playerMentalities` dentro de la táctica guardada.
-- Se incorporó `budget`, `lastBudgetDelta` y `budgetHistory` al estado del juego.
-- Se separó la lógica de stats visibles y rendimiento oculto para simulación.
+- Economía básica por resultado.
 
 ### Pendientes sugeridos
 - Mercado de pases.
-- Escudos y logos reales/cargables.
-- Cara de jugadores.
-- Lesiones con recuperación detallada.
-- Entrenamiento y evolución.
-- Fin de temporada con premios y objetivos.
+- Escudos reales o cargables.
+- Retratos reales o generados para jugadores.
+- Mayor profundidad de roles y posiciones laterales.
+- Desarrollo de entrenamiento y evolución.
+- Paso a V2.0 con módulos de temporada más completos.

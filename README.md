@@ -1,4 +1,4 @@
-# Fútbol Manager MVP - V1.02
+# Fútbol Manager MVP - V1.03
 
 Proyecto estático para navegador listo para subir a **GitHub Pages**.
 
@@ -12,6 +12,7 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 - Pantalla táctica con cancha visual.
 - Cambios automáticos.
 - Presupuesto dinámico según resultados.
+- Estado físico de los jugadores con impacto en el rendimiento.
 
 ## Archivos principales
 - `index.html`
@@ -29,14 +30,17 @@ Proyecto estático para navegador listo para subir a **GitHub Pages**.
 5. Guardar y abrir la URL publicada.
 
 ## Notas de esta versión
-- La media visible del jugador usa sólo stats visibles.
-- Las habilidades ocultas siguen existiendo internamente para la simulación, pero no se muestran.
-- Los titulares se muestran sobre la cancha y su mentalidad se cambia haciendo clic sobre cada círculo.
-- El presupuesto del club del usuario cambia después de cada partido.
+- Las formaciones ahora se visualizan con una lógica de 5 secciones de campo más portero.
+- Cada jugador tiene placeholder de foto en plantel y ficha.
+- Se muestran iconos de nacionalidad y rol.
+- Los titulares tienen un anillo de estado físico dividido en 8 tramos.
+- El estado físico afecta el rendimiento de partido.
+- Las tablas resaltan a tu club y a tus jugadores.
 
 ## Siguiente versión sugerida
-V1.03 podría incluir:
-- sanciones por acumulación de amarillas,
-- pantalla financiera ampliada,
-- historial de presupuesto,
-- más estadísticas por partido.
+V2.0 podría incluir:
+- mercado de pases,
+- entrenamientos y evolución,
+- objetivos institucionales,
+- interfaz financiera ampliada,
+- más profundidad de calendario y temporada.

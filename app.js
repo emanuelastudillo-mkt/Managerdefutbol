@@ -7,7 +7,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.14';
+const APP_VERSION = 'V2.16';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -223,12 +223,25 @@ function advanceGlobalTurn(){
   if(!game) return;
   game.globalTurn = currentTurnIndex() + 1;
 }
+function totalSeasonTurnCount(){
+  return PRESEASON_TURNS + (game?.fixtures?.length || seed?.fixtures?.length || 0) + POSTSEASON_TURNS;
+}
+function currentSeasonTurnNumber(){
+  if(!game) return 0;
+  const regularCount = game.fixtures?.length || seed?.fixtures?.length || 0;
+  if(game.seasonFinalized || seasonPhase() === 'finalized') return totalSeasonTurnCount();
+  if(isPreseason()) return clamp((game.phaseTurn || 0) + 1, 1, totalSeasonTurnCount());
+  if(isPostseason()) return clamp(PRESEASON_TURNS + regularCount + (game.phaseTurn || 0) + 1, 1, totalSeasonTurnCount());
+  return clamp(PRESEASON_TURNS + (game.matchdayIndex || 0) + 1, 1, totalSeasonTurnCount());
+}
 function phaseLabel(){
   if(!game) return '—';
-  if(game.seasonFinalized || seasonPhase() === 'finalized') return 'Temporada finalizada';
-  if(isPreseason()) return `Pretemporada: ${Math.min((game.phaseTurn || 0) + 1, PRESEASON_TURNS)} / ${PRESEASON_TURNS}`;
-  if(isPostseason()) return `Postemporada: ${Math.min((game.phaseTurn || 0) + 1, POSTSEASON_TURNS)} / ${POSTSEASON_TURNS}`;
-  return `Jornada: ${Math.min((game.matchdayIndex || 0) + 1, game.fixtures?.length || seed.fixtures.length)} / ${game.fixtures?.length || seed.fixtures.length}`;
+  if(game.seasonFinalized || seasonPhase() === 'finalized') return `Jornada total: ${totalSeasonTurnCount()} / ${totalSeasonTurnCount()} · Temporada finalizada`;
+  const total = totalSeasonTurnCount();
+  const current = currentSeasonTurnNumber();
+  if(isPreseason()) return `Jornada total: ${current} / ${total} · Pretemporada ${Math.min((game.phaseTurn || 0) + 1, PRESEASON_TURNS)} / ${PRESEASON_TURNS}`;
+  if(isPostseason()) return `Jornada total: ${current} / ${total} · Postemporada ${Math.min((game.phaseTurn || 0) + 1, POSTSEASON_TURNS)} / ${POSTSEASON_TURNS}`;
+  return `Jornada total: ${current} / ${total} · Liga ${Math.min((game.matchdayIndex || 0) + 1, game.fixtures?.length || seed.fixtures.length)} / ${game.fixtures?.length || seed.fixtures.length}`;
 }
 function preseasonFriendliesPlayed(){ return Number(game?.preseasonFriendliesPlayed || 0); }
 function canPlayPreseasonFriendly(){ return isPreseason() && preseasonFriendliesPlayed() < MAX_PRESEASON_FRIENDLIES; }
@@ -475,23 +488,22 @@ function countryFlag(nationality){
 }
 function roleMeta(position){
   const map = {
-    POR:{ code:'POR', name:'Portero', icon:'🧤', group:'gk' },
-    DFC:{ code:'DFC', name:'Defensa central', icon:'🛡️', group:'def' },
-    LI:{ code:'DFI', name:'Defensa izquierda', icon:'🛡️', group:'def' },
-    LD:{ code:'DFD', name:'Defensa derecha', icon:'🛡️', group:'def' },
-    MCD:{ code:'MDC', name:'Medio defensivo', icon:'⚙️', group:'mid' },
-    MC:{ code:'MC', name:'Mediocentro', icon:'⚙️', group:'mid' },
-    MCO:{ code:'MO', name:'Medio ofensivo', icon:'🎯', group:'mid' },
-    EI:{ code:'EI', name:'Extremo izquierdo', icon:'⚡', group:'att' },
-    ED:{ code:'ED', name:'Extremo derecho', icon:'⚡', group:'att' },
-    DC:{ code:'DC', name:'Delantero centro', icon:'🎯', group:'att' },
-    VOL:{ code:'MC', name:'Mediocentro', icon:'⚙️', group:'mid' }
+    POR:{ code:'POR', name:'Portero', icon:'', group:'gk' },
+    DFC:{ code:'DFC', name:'Defensa central', icon:'', group:'def' },
+    LI:{ code:'LI', name:'Lateral izquierdo', icon:'', group:'def' },
+    LD:{ code:'LD', name:'Lateral derecho', icon:'', group:'def' },
+    MCD:{ code:'MCD', name:'Mediocentro defensivo', icon:'', group:'mid' },
+    MC:{ code:'MC', name:'Mediocentro', icon:'', group:'mid' },
+    MCO:{ code:'MCO', name:'Mediocentro ofensivo', icon:'', group:'mid' },
+    EI:{ code:'EI', name:'Extremo izquierdo', icon:'', group:'att' },
+    ED:{ code:'ED', name:'Extremo derecho', icon:'', group:'att' },
+    DC:{ code:'DC', name:'Delantero centro', icon:'', group:'att' },
+    VOL:{ code:'MC', name:'Mediocentro', icon:'', group:'mid' }
   };
-  return map[position] || { code:position, name:position, icon:'⚽', group:'mid' };
+  return map[position] || { code:position, name:position, icon:'', group:'mid' };
 }
 function roleBadge(position){
-  const meta = roleMeta(position);
-  return `${meta.icon} ${meta.code}`;
+  return roleMeta(position).code;
 }
 
 function normalizePlayerPosition(position, playerId=0){
@@ -1868,6 +1880,41 @@ function turnModePanelMarkup(){
   return '';
 }
 
+function featuredPlayerCard(type, player, label, valueText){
+  if(!player){
+    return `<div class="card featured-player-card empty"><p class="label">${escapeHtml(label)}</p><p class="muted">Sin jugador destacado todavía.</p></div>`;
+  }
+  const stats = game?.playerStats?.[player.id] || {};
+  return `<button class="card featured-player-card clickable" data-player-id="${player.id}" type="button">
+    ${faceImg(player, 'featured-player-face')}
+    <div class="featured-player-info">
+      <span class="featured-badge ${escapeHtml(type)}">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(player.name)}</strong>
+      <span>${roleBadge(player.position)} · ${Number(player.age || 0) || '—'} años</span>
+      <div class="featured-player-meta">
+        <span>Media <b>${visibleOverall(player)}</b></span>
+        ${valueText ? `<span>${valueText}</span>` : ''}
+      </div>
+    </div>
+  </button>`;
+}
+function homeFeaturedPlayers(clubId, teamAverage){
+  const squad = playersByClub(clubId);
+  const stats = game?.playerStats || {};
+  const scorer = squad.slice().sort((a,b)=>(Number(stats[b.id]?.goals || 0) - Number(stats[a.id]?.goals || 0)) || visibleOverall(b)-visibleOverall(a))[0] || null;
+  const star = squad.slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a) || currentMorale(b.id)-currentMorale(a.id))[0] || null;
+  const promisePool = squad.filter(p => Number(p.age || 99) <= 23 && visibleOverall(p) > teamAverage);
+  const promise = (promisePool.length ? promisePool : squad.filter(p => Number(p.age || 99) <= 23)).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.age-b.age)[0] || null;
+  return {
+    scorer,
+    star,
+    promise,
+    scorerText: scorer ? `Goles <b>${Number(stats[scorer.id]?.goals || 0)}</b>` : '',
+    starText: star ? `Media general <b>${visibleOverall(star)}</b>` : '',
+    promiseText: promise ? (visibleOverall(promise) > teamAverage ? `Promedio equipo <b>${teamAverage}</b>` : `En desarrollo`) : ''
+  };
+}
+
 function renderHome(){
   const next = getNextMatchForSelected();
   const clubPlayers = playersByClub(game.selectedClubId);
@@ -1875,6 +1922,7 @@ function renderHome(){
   const avgFitness = squadFitnessAverage(game.selectedClubId);
   const avgMorale = squadMoraleAverage(game.selectedClubId);
   const cohesion = cohesionValue(game.selectedClubId);
+  const featured = homeFeaturedPlayers(game.selectedClubId, avgOverall);
   const injuredList = injuredPlayersByClub(game.selectedClubId);
   const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
   const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
@@ -1902,6 +1950,14 @@ function renderHome(){
       ${dashboardDonut('Estado físico', avgFitness, 99)}
       ${dashboardDonut('Moral', avgMorale, 99)}
       ${dashboardDonut('Cohesión', cohesion, 100)}
+    </div>
+    <div class="card featured-players-panel" style="margin-top:14px">
+      <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
+      <div class="grid cols-3 featured-player-grid">
+        ${featuredPlayerCard('scorer', featured.scorer, 'Goleador', featured.scorerText)}
+        ${featuredPlayerCard('star', featured.star, 'Estrella', featured.starText)}
+        ${featuredPlayerCard('promise', featured.promise, 'Promesa', featured.promiseText)}
+      </div>
     </div>
     <div class="grid cols-3" style="margin-top:14px">
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
@@ -1939,6 +1995,7 @@ function renderHome(){
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
+  document.querySelectorAll('.featured-player-card[data-player-id]').forEach(card => card.addEventListener('click',()=>showPlayerModal(Number(card.dataset.playerId))));
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   updateAdvanceButtonState();
@@ -2177,6 +2234,7 @@ function renderMarket(){
     <td>${faceImg(p, 'photo-thumb')}</td>
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
     <td>${visibleOverall(p)}</td>
     <td>${conditionBar(p.id)}</td>
     <td>${moraleBar(p.id)}</td>
@@ -2185,7 +2243,7 @@ function renderMarket(){
   </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres. Se incorporan sin costo de pase, con sueldo acorde a su calidad y baja forma física inicial.</p></div>
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Media</th><th>Físico</th><th>Moral</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">No quedan jugadores libres.</td></tr>'}</tbody></table></div>`;
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Media</th><th>Físico</th><th>Moral</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">No quedan jugadores libres.</td></tr>'}</tbody></table></div>`;
   document.querySelectorAll('[data-hire-free-agent]').forEach(btn => btn.addEventListener('click', () => hireFreeAgent(Number(btn.dataset.hireFreeAgent))));
 }
 function hireFreeAgent(playerId){
@@ -2212,6 +2270,8 @@ function sortPlayersForView(players, sortKey){
   const byNationalityDesc = (a,b) => b.nationality.localeCompare(a.nationality, 'es') || byName(a,b);
   const byValueAsc = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
   const byValueDesc = (a,b) => (b.value || 0) - (a.value || 0) || byName(a,b);
+  const byAgeAsc = (a,b) => Number(a.age || 0) - Number(b.age || 0) || byName(a,b);
+  const byAgeDesc = (a,b) => Number(b.age || 0) - Number(a.age || 0) || byName(a,b);
   const byDorsalAsc = (a,b) => jerseyNumber(a.id) - jerseyNumber(b.id) || byName(a,b);
   const byDorsalDesc = (a,b) => jerseyNumber(b.id) - jerseyNumber(a.id) || byName(a,b);
   const byStatusAvailable = (a,b) => Number(isUnavailable(a.id)) - Number(isUnavailable(b.id)) || byName(a,b);
@@ -2233,6 +2293,8 @@ function sortPlayersForView(players, sortKey){
     estado_no_disponible:byStatusUnavailable,
     valor_asc:byValueAsc,
     valor_desc:byValueDesc,
+    edad_asc:byAgeAsc,
+    edad_desc:byAgeDesc,
     nacionalidad_asc:byNationality,
     nacionalidad_desc:byNationalityDesc
   };
@@ -2260,6 +2322,7 @@ function renderSquad(){
       <td>${faceImg(p, 'photo-thumb')}</td>
       <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
       <td>#${jerseyNumber(p.id)}</td>
+      <td>${Number(p.age || 0) || '—'}</td>
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
       <td><span class="pill">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)}</span></td>
       <td><strong>${visibleOverall(p)}</strong></td>
@@ -2275,6 +2338,7 @@ function renderSquad(){
       <th>Foto</th>
       <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
       <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
+      <th>${columnSort('Edad', [['edad_asc','Menor a mayor'],['edad_desc','Mayor a menor']])}</th>
       <th>Rol</th>
       <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
@@ -2297,7 +2361,7 @@ function playerDragCard(p, extra=''){
   const playableInjuredClass = canUseInjuredAsSub(p.id) ? 'playable-injured-card' : '';
   return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}" draggable="true" data-drag-player="${p.id}">
     ${faceImg(p, 'drag-face')}
-    <div><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
+    <div><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${Number(p.age || 0) || '—'} años · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
   </div>`;
 }
 function renderTactics(){
@@ -2325,6 +2389,7 @@ function renderTactics(){
     return `<div class="lineup-row ${p && !fit ? 'bad-zone' : ''}">
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
+      <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
       ${p ? moraleBar(p.id) : '<span></span>'}
       <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : '—'}</strong>
@@ -2339,6 +2404,7 @@ function renderTactics(){
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">
         <h3>Titulares</h3>
+        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span>Edad</span><span>Físico</span><span>Moral</span><span>Estado</span></div>
         <div class="lineup-list">${starterList}</div>
       </div>
       <div class="card">
@@ -2401,6 +2467,7 @@ function tacticPlayerRow(p){
   return `<tr class="${unavailable ? 'dim-row' : ''}">
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
     <td>#${jerseyNumber(p.id)}</td>
+    <td>${Number(p.age || 0) || '—'}</td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td><strong>${visibleOverall(p)}</strong></td>
     <td>${currentCondition(p.id)}/99</td>
@@ -2922,6 +2989,7 @@ function simulatePreseasonTurn(){
     game.preseasonFriendliesPlayed = preseasonFriendliesPlayed() + 1;
   }
   applyTrainingEffects();
+  processStadiumProjects();
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
@@ -2943,6 +3011,7 @@ function simulatePreseasonTurn(){
 
 function simulatePostseasonTurn(){
   applyTrainingEffects();
+  processStadiumProjects();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   advanceGlobalTurn();
   if(game.phaseTurn >= POSTSEASON_TURNS){
@@ -3232,7 +3301,7 @@ function renderTraining(){
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>Pos.</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th><th>Entrenamiento</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>Pos.</th><th>${trainingColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th><th>Entrenamiento</th></tr></thead><tbody>
         ${squad.map(player => trainingPlayerRow(player)).join('')}
       </tbody></table></div>
     </div>
@@ -3257,6 +3326,7 @@ function trainingPlayerRow(player){
   return `<tr>
     <td><div class="training-player-cell">${faceImg(player,'training-face')}<button class="linklike" data-player-id="${player.id}">${availabilityIcons(player.id)}${escapeHtml(player.name)}</button></div></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td>${Number(player.age || 0) || '—'}</td>
     <td><strong>${visibleOverall(player)}</strong></td>
     <td>${conditionBar(player.id)}</td>
     <td>${moraleBar(player.id)}</td>
@@ -3662,7 +3732,7 @@ function showPlayerModal(playerId){
           <div>
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
             <h2>${escapeHtml(p.name)}</h2>
-            <p class="muted">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)} · ${meta.icon} ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
+            <p class="muted">${countryFlag(p.nationality)} ${escapeHtml(p.nationality)} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
         </div>

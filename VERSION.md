@@ -1,29 +1,26 @@
 # Registro de versión
 
-## Versión: V2.14
+## Versión: V2.16
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** flujo de temporada y turnos internos
+**Tipo de mejora:** panel principal, roles y turnos extendidos
 
 ### Resumen
-Esta versión corrige el problema de cooldown de la charla motivacional al cambiar de temporada y agrega fases de pretemporada y postemporada para entrenar antes y después de las jornadas oficiales.
+Esta versión mejora el panel principal con jugadores destacados, simplifica la visualización de roles y hace que la pretemporada/postemporada formen parte del total de jornadas útiles de la temporada.
 
 ### Cambios principales agregados
-- Se agrega `globalTurn` como contador interno de turnos.
-- Las acciones de empleados ahora guardan temporada, fase, turno interno y jornada.
-- La charla motivacional se desbloquea correctamente aunque cambie la temporada.
-- Se agrega **pretemporada** de 10 turnos al iniciar una temporada.
-- En pretemporada se pueden jugar hasta **5 partidos amistosos** contra cualquier equipo.
-- Se agrega **postemporada** de 5 turnos después de la última jornada oficial.
-- Los turnos no oficiales aplican entrenamiento y avance semanal sin simular partidos de liga.
-- Los amistosos no modifican la tabla ni las estadísticas oficiales.
-
-### Valores mantenidos
-- Cooldown de charla motivacional: 5 turnos.
-- Costo de charla motivacional: $500.000.
-- Entrenamientos actuales sin cambios.
-- Cierre de temporada, sueldos, retiros y juveniles libres se ejecutan después de la postemporada.
+- Se agrega el bloque **Tus jugadores destacados** en el panel principal.
+- Se muestran tres perfiles:
+  - **Goleador**, con cantidad de goles.
+  - **Estrella**, con su media general.
+  - **Promesa**, priorizando jóvenes con media superior al promedio del equipo.
+- Se eliminan los iconos de roles en la interfaz.
+- Los puestos se muestran solo con su nomenclatura oficial.
+- El contador de jornada ahora integra:
+  - 10 turnos de pretemporada.
+  - jornadas oficiales de liga.
+  - 5 turnos de postemporada.
+- Los turnos no oficiales procesan los trabajos del estadio, permitiendo avanzar reparaciones y replante del campo.
 
 ### Pendientes sugeridos
-- Separar visualmente el historial de amistosos y partidos oficiales.
-- Agregar premios o riesgos propios para amistosos.
-- Agregar calendario específico de pretemporada.
+- Ajustar mejor los criterios de promesa si el plantel no tiene juveniles destacados.
+- Agregar contratos o cláusulas específicas por edad y rendimiento.

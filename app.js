@@ -1,4 +1,5 @@
 const DATA_URL = 'data/seed.json';
+const PLAYERS_DATABASE_URL = 'data/jugadores.json';
 const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
@@ -7,7 +8,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.18';
+const APP_VERSION = 'V2.19';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -338,6 +339,9 @@ function visibleStats(p, skillResolver=baseSkill){
 
 function visibleOverall(p){
   return clamp(Math.round(avg(Object.values(visibleStats(p)))), 1, 99);
+}
+function rawVisibleOverall(p){
+  return clamp(Math.round(avg(Object.values(visibleStats(p, rawVisibleSkill)))), 1, 99);
 }
 function effectiveOverall(p){
   const simulated = {
@@ -895,11 +899,80 @@ async function fetchJsonIfExists(url){
     return null;
   }
 }
+
+async function loadPlayersDatabase(){
+  const raw = await fetchJsonIfExists(PLAYERS_DATABASE_URL);
+  if(!raw) return null;
+  const players = Array.isArray(raw) ? raw : raw.players;
+  if(!Array.isArray(players) || !players.length) return null;
+  return { raw, players, source:PLAYERS_DATABASE_URL };
+}
+function playersDatabaseHash(players=[]){
+  const raw = players.map(p => `${p.id}:${p.clubId}:${p.position}:${p.overall}:${p.salary}:${p.clause}`).join('|');
+  return `players-${hashNumber(raw, 1000000000)}`;
+}
+function normalizeDatabasePlayer(player){
+  const clean = { ...player, id:Number(player.id), clubId:Number(player.clubId || 0), age:Math.max(15, Math.round(Number(player.age || 18))) };
+  clean.position = normalizePlayerPosition(clean.position, clean.id);
+  clean.skills = clean.skills && typeof clean.skills === 'object' ? { ...clean.skills } : skillsForPosition(clean.position, Number(clean.overall || 50), clean.id);
+  clean.overall = rawVisibleOverall({ ...clean, overall:Number(clean.overall || 50) });
+  ensurePlayerEconomics(clean, clean.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : (clean.freeAgent ? MARKET_FREE_AGENT_SALARY_FACTOR : 1));
+  return clean;
+}
+function databaseValidationCounts(players=[]){
+  const media = {};
+  const position = {};
+  const nationality = {};
+  players.forEach(player => {
+    const mediaKey = mediaRangeIdForOverall(rawVisibleOverall(player));
+    const positionKey = playerRoleGroup(player.position);
+    const nationalityKey = nationalityGroupId(player.nationality);
+    media[mediaKey] = (media[mediaKey] || 0) + 1;
+    position[positionKey] = (position[positionKey] || 0) + 1;
+    nationality[nationalityKey] = (nationality[nationalityKey] || 0) + 1;
+  });
+  return { media, position, nationality };
+}
+function applyPlayersDatabase(seedData, database){
+  if(!seedData || !database?.players?.length) return seedData;
+  const validClubIds = new Set((seedData.clubs || []).map(c => Number(c.id)));
+  const normalized = database.players
+    .map(normalizeDatabasePlayer)
+    .filter(player => Number.isFinite(player.id) && (Number(player.clubId) === 0 || validClubIds.has(Number(player.clubId))));
+  if(!normalized.length) return seedData;
+  seedData.players = normalized;
+  seedData.meta = { ...(seedData.meta || {}), playersSource:database.source, playersDatabaseVersion:database.raw?.metadata?.version || 'local', playersDatabaseValidation:database.raw?.validation || databaseValidationCounts(normalized) };
+  seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(normalized)}`;
+  return seedData;
+}
+function applySavedDatabaseSnapshots(saved){
+  const clean = { ...(saved || {}) };
+  if(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length){
+    seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:club.crestPath || `img/escudos/${imageSlug(club.name)}.png` }));
+  }
+  if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
+    seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
+  }
+  delete clean.playersSnapshot;
+  delete clean.clubsSnapshot;
+  delete clean.divisionsSnapshot;
+  return clean;
+}
+function currentSavePayload(){
+  const payload = structuredClone(game);
+  payload.seedSignature = seed?.meta?.signature || payload.seedSignature || '';
+  payload.playersSnapshot = structuredClone(seed?.players || []);
+  payload.clubsSnapshot = structuredClone(seed?.clubs || []);
+  payload.divisionsSnapshot = structuredClone(seed?.divisions || []);
+  return payload;
+}
 async function loadInitialSeed(){
+  const playersDatabase = await loadPlayersDatabase();
   for(const url of LEAGUE_DATA_CANDIDATES){
     const leagueJson = await fetchJsonIfExists(url);
     if(leagueJson){
-      return buildSeedFromLigaArgentina(leagueJson, url);
+      const built = buildSeedFromLigaArgentina(leagueJson, url);
+      return applyPlayersDatabase(built, playersDatabase);
     }
   }
   const fallback = await fetchJsonIfExists(DATA_URL);
@@ -908,7 +981,7 @@ async function loadInitialSeed(){
     fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:c.crestPath || `img/escudos/${imageSlug(c.name)}.png` }));
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
     fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
-    return fallback;
+    return applyPlayersDatabase(fallback, playersDatabase);
   }
   throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
 }
@@ -1292,7 +1365,7 @@ async function saveLocal(silent=false){
   const db = await openDb();
   await new Promise((resolve,reject)=>{
     const tx = db.transaction(DB_STORE, 'readwrite');
-    tx.objectStore(DB_STORE).put(game, SAVE_KEY);
+    tx.objectStore(DB_STORE).put(currentSavePayload(), SAVE_KEY);
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
@@ -1312,7 +1385,7 @@ async function loadLocal(silent=false){
       if(!silent) showNotice('La base de datos cambió. Creá una nueva partida para usar la Liga argentina.');
       return false;
     }
-    game = normalizeGame(saved);
+    game = normalizeGame(applySavedDatabaseSnapshots(saved));
     activeTab = 'home';
     renderAll();
     if(!silent) showNotice('Partida cargada.');

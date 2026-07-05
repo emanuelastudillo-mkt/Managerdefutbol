@@ -1,39 +1,39 @@
 # Registro de versión
 
-## Versión: V2.18
+## Versión: V2.19
 **Estado:** estable para pruebas locales / GitHub Pages  
-**Tipo de mejora:** generación económica y demográfica de jugadores
+**Tipo de mejora:** base inicial fija de jugadores + persistencia local de modificaciones
 
 ### Resumen
-Esta versión adapta lo esencial de las instrucciones de creación de jugadores V1.02 para la base inicial y para los juveniles libres que aparecen al cambiar de temporada.
+Esta versión crea una base inicial real del juego en `data/jugadores.json`, validada contra las proporciones definidas para nacionalidad, posición y media general. La generación aleatoria inicial deja de ser la fuente principal si el archivo existe.
 
 ### Cambios principales agregados
-- Reglas de nacionalidad ponderada:
-  - 70% Argentina.
-  - 20% Sudamérica.
-  - 10% resto del mundo.
-- Reglas de posición compatibles con la pizarra actual:
-  - POR.
-  - LD, LI, DFC.
-  - MCD, MC, MCO.
-  - ED, EI, DC.
-- `EXT` ya no se genera como posición nueva.
-- Si un dato viejo trae `EXT`, se normaliza automáticamente.
-- Distribución de media general por rangos:
-  - 92 a 99.
-  - 80 a 91.
-  - 68 a 79.
-  - 43 a 67.
-  - 19 a 42.
-- Sueldo anual inicial según media y rango.
-- Cláusula de rescisión calculada por sueldo, edad y división.
-- Cláusula mínima: 6 veces el sueldo anual.
-- Auditoría interna de proporciones para orientar la creación de nuevos jugadores.
-- Juveniles libres entre 17 y 23 años generados con las mismas reglas, pero con sueldo reducido.
-- Los juveniles de cambio de temporada compensan retiros manteniendo el mínimo de generación ya existente.
-- Recalculo de cláusulas al iniciar una nueva temporada.
+- Nuevo archivo `data/jugadores.json` con 1.500 jugadores ficticios.
+- Distribución validada de nacionalidades:
+  - 1.050 argentinos.
+  - 300 sudamericanos no argentinos.
+  - 150 resto del mundo.
+- Distribución validada de puestos:
+  - 150 POR.
+  - 450 defensores.
+  - 450 mediocampistas.
+  - 450 atacantes.
+- Distribución validada de medias:
+  - 45 jugadores de 92 a 99.
+  - 105 jugadores de 80 a 91.
+  - 330 jugadores de 68 a 79.
+  - 750 jugadores de 43 a 67.
+  - 270 jugadores de 19 a 42.
+- Control por división para evitar exceso de medias altas en ligas menores.
+- El juego carga la base desde `data/jugadores.json` cuando está disponible.
+- Si no existe el archivo, conserva el sistema de generación anterior como respaldo.
+- Se guarda una copia local del estado de jugadores dentro de la partida en IndexedDB.
+- Las modificaciones posteriores ya no dependen únicamente del archivo inicial: quedan guardadas en el navegador.
+
+### Validación incluida en JSON
+El archivo `data/jugadores.json` contiene un bloque `validation` con conteos esperados y conteos reales.
 
 ### Pendientes sugeridos
-- Agregar informe visual de auditoría de proporciones.
-- Separar valor de mercado y cláusula de rescisión como conceptos independientes.
-- Agregar costo de scouting para revelar más estadísticas en la vista mundial.
+- Crear pantalla interna de auditoría para ver distribución real durante la partida.
+- Agregar exportación/importación de partida completa.
+- Agregar control visual de cuántos jugadores de cada rango hay por división.

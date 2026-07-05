@@ -646,3 +646,35 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   transition:width .25s ease;
 }
 @media (max-width:900px){.maintenance-option{grid-template-columns:1fr}.maintenance-option button{width:100%}}
+
+/* V1.17: escudos limpios, anillo físico alineado y semana simulada */
+.club-badge-placeholder span{display:none!important}
+.club-badge-placeholder img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+.player-chip,
+.player-chip.gk,
+.player-chip.def,
+.player-chip.mid,
+.player-chip.att{
+  position:relative!important;
+  left:auto!important;
+  top:auto!important;
+  transform:none!important;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  overflow:visible;
+}
+.fitness-ring{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  inset:auto!important;
+  margin:0!important;
+}
+.stadium-effects,.injury-rules{display:none!important}

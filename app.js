@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V1.16';
+const APP_VERSION = 'V1.17';
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -112,9 +112,9 @@ function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; 
 function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
 function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
 function clubBadge(id){
-  const c = seed.clubs.find(x=>x.id===id);
-  const src = c?.crestPath || `img/escudos/${imageSlug(clubName(id))}.png`;
-  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span>${escapeHtml(clubShort(id))}</span></span>`;
+  const club = seed.clubs.find(c=>c.id===id) || {};
+  const src = club.crestPath || `img/escudos/${imageSlug(club.name || clubName(id))}.png`;
+  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" onerror="this.style.visibility='hidden'"></span>`;
 }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }
@@ -991,6 +991,7 @@ function bindEvents(){
 function startUiTicker(){
   clearInterval(uiTicker);
   uiTicker = setInterval(()=>{
+    if(game) refreshSidebarDate();
     if(game && activeTab === 'home') updateAdvanceButtonState();
   }, 1000);
 }
@@ -1116,8 +1117,7 @@ function createInitialPlayerStats(){
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
   $('managerClub').textContent = game ? clubName(game.selectedClubId) : 'Sin partida';
-  $('currentDate').textContent = game ? `Fecha: ${game.currentDate}` : 'Fecha: —';
-  $('currentRound').textContent = game ? `Jornada: ${Math.min(game.matchdayIndex+1, seed.fixtures.length)} / ${seed.fixtures.length}` : 'Jornada: —';
+  refreshSidebarDate();
   $('btnSave').disabled = !game;
   if(!game){
     hideNotice();
@@ -1198,7 +1198,6 @@ function renderHome(){
     <div class="card injury-home-card" style="margin-top:14px">
       <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
       ${injuredList.length ? `<div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Lesión</th><th>Turnos restantes</th><th>Estado físico</th></tr></thead><tbody>${injuredList.map(item => `<tr><td><button class="linklike" data-player-id="${item.player.id}">${escapeHtml(item.player.name)}</button></td><td>${escapeHtml(item.status.injuryLabel || 'Lesión')}</td><td><strong>${item.remaining}</strong></td><td>${currentCondition(item.player.id)}/99</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
-      <details class="injury-rules"><summary>Ver tabla de lesiones</summary><div class="table-wrap"><table><thead><tr><th>Lesión</th><th>Probabilidad</th><th>Turnos no disponible</th></tr></thead><tbody>${injuryRulesTable()}</tbody></table></div></details>
     </div>
     <div class="split" style="margin-top:14px">
       <div class="card">
@@ -1222,10 +1221,10 @@ function updateAdvanceButtonState(){
   const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
   const seasonEnded = game.matchdayIndex >= game.fixtures.length;
   const invalid = validateCurrentTactic(false);
-  let text = 'Avanzar fecha';
+  let text = 'Domingo · jugar partido';
   let disabled = false;
   if(seasonEnded){ text = 'Temporada finalizada'; disabled = true; }
-  else if(lockLeft > 0){ text = `Avanzar disponible en ${formatClock(lockLeft)}`; disabled = true; }
+  else if(lockLeft > 0){ text = `${currentWeekdayLabel()} · próximo domingo en ${formatClock(lockLeft)}`; disabled = true; }
   else if(game.mustReviewTactics){ text = 'Reemplazar lesionados/suspendidos'; disabled = true; }
   else if(invalid.length){ text = 'Táctica incompleta'; disabled = true; }
   btn.textContent = text;
@@ -1236,6 +1235,24 @@ function formatClock(ms){
   const m = Math.floor(total/60);
   const s = String(total%60).padStart(2,'0');
   return `${m}:${s}`;
+}
+function currentWeekdayLabel(){
+  if(!game) return '—';
+  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  if(lockLeft <= 0) return 'Domingo';
+  const elapsed = clamp(ADVANCE_LOCK_MS - lockLeft, 0, ADVANCE_LOCK_MS);
+  const days = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const index = clamp(Math.floor(elapsed / (ADVANCE_LOCK_MS / days.length)), 0, days.length - 1);
+  return days[index];
+}
+function refreshSidebarDate(){
+  if(!game){
+    $('currentDate').textContent = 'Fecha: —';
+    $('currentRound').textContent = 'Jornada: —';
+    return;
+  }
+  $('currentDate').textContent = `Día: ${currentWeekdayLabel()} · Fecha: ${game.currentDate}`;
+  $('currentRound').textContent = `Jornada: ${Math.min(game.matchdayIndex+1, seed.fixtures.length)} / ${seed.fixtures.length}`;
 }
 function problemItem(problem){
   const p = playerById(problem.playerId);
@@ -1512,7 +1529,6 @@ function renderStadium(){
   const club = seed.clubs.find(c=>c.id===game.selectedClubId);
   const score = fieldScoreForClub(game.selectedClubId);
   const label = fieldConditionName(score);
-  const effect = pitchEffect(label);
   const project = stadiumProjectForClub(game.selectedClubId);
   const replantActive = project.replantingTurnsLeft > 0;
   const patchActive = project.patchingTurnsLeft > 0;
@@ -1532,12 +1548,7 @@ function renderStadium(){
         <p class="label">Estado actual</p>
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
-        <div class="grid cols-2 stadium-effects" style="margin-top:14px">
-          <div><p class="label">Pase</p><strong>${effect.passDelta > 0 ? '+' : ''}${effect.passDelta}</strong></div>
-          <div><p class="label">Ocasiones</p><strong>${Math.round(effect.chanceMultiplier * 100)}%</strong></div>
-          <div><p class="label">Cansancio extra</p><strong>+${effect.fatigueBonus}</strong></div>
-          <div><p class="label">Lesión extra</p><strong>+${Math.round(effect.injuryBonus * 100)}%</strong></div>
-        </div>
+
       </div>
       <div class="card stadium-card">
         <h3>Mantenimiento</h3>
@@ -1547,24 +1558,14 @@ function renderStadium(){
             <button id="btnReplant" class="primary" ${replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
           </div>
           <div class="maintenance-option">
-            <div><strong>Regar y parchar campo de juego</strong><p class="muted small">Costo ${formatMoney(PATCH_COST)}. Mejora 5 puntos por turno durante 3 turnos.</p></div>
+            <div><strong>Regar y parchar campo de juego</strong><p class="muted small">Costo ${formatMoney(PATCH_COST)}. Mejora el campo durante los próximos 3 turnos.</p></div>
             <button id="btnPatch" class="ghost" ${replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
           </div>
         </div>
       </div>
     </div>
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${project.replantingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
-    ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${project.patchingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">Cada turno activo suma 5 puntos al campo.</p></div>` : ''}
-    <div class="card" style="margin-top:14px">
-      <h3>Escala de estado</h3>
-      <div class="table-wrap"><table><thead><tr><th>Estado</th><th>Rango</th><th>Efecto</th></tr></thead><tbody>
-        <tr><td>Excelente</td><td>90 a 100</td><td>+10 pase, 20% más ocasiones</td></tr>
-        <tr><td>Normal</td><td>60 a 89</td><td>Sin cambios</td></tr>
-        <tr><td>Regular</td><td>40 a 59</td><td>-10 pase, 20% menos ocasiones</td></tr>
-        <tr><td>Muy malo</td><td>20 a 39</td><td>-20 pase, 30% menos ocasiones, +10 cansancio, +10% lesiones</td></tr>
-        <tr><td>Injugable</td><td>1 a 19</td><td>-50 pase, 50% menos ocasiones, +20 cansancio, +30% lesiones</td></tr>
-      </tbody></table></div>
-    </div>
+    ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${project.patchingTurnsLeft} turno(s) restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
   `;
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
@@ -1760,7 +1761,7 @@ function simulateNextMatchday(){
   renderAll();
   if(ownResult) showMatchRevealModal(ownResult);
   if(game.mustReviewTactics){ showNotice('Jornada simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
-  else { showNotice(`Jornada ${round.matchday} simulada. Avance bloqueado por 2 minutos.`); }
+  else { showNotice(`Jornada ${round.matchday} simulada. La semana avanza hasta el próximo domingo.`); }
 }
 function applyEconomyResult(match){
   const isHome = match.homeId === game.selectedClubId;
@@ -2214,7 +2215,7 @@ function showMatchRevealModal(match){
         <h3>Contexto del partido</h3>
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
-          <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong><p class="small muted">Pase ${pitchEffect(context.pitch).passDelta >= 0 ? '+' : ''}${pitchEffect(context.pitch).passDelta} · Ocasiones x${pitchEffect(context.pitch).chanceMultiplier}</p></div>
+          <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong></div>
           <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
         </div>
@@ -2340,7 +2341,7 @@ function showMatchModal(matchId){
       <h3>Contexto del partido</h3>
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
-        <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong><p class="small muted">Pase ${pitchEffect(context.pitch).passDelta >= 0 ? '+' : ''}${pitchEffect(context.pitch).passDelta} · Ocasiones x${pitchEffect(context.pitch).chanceMultiplier}</p></div>
+        <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong></div>
         <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
       </div>

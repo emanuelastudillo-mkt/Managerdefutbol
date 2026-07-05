@@ -4,7 +4,7 @@ const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = 120000;
-const APP_VERSION = 'V2.2';
+const APP_VERSION = 'V2.3';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -15,6 +15,8 @@ const PSYCHOLOGIST_SUCCESS_CHANCE = 0.90;
 const PSYCHOLOGIST_COOLDOWN_TURNS = 5;
 const KINESIOLOGIST_COST = 1000000;
 const KINESIOLOGIST_FAILURE_CHANCE = 0.20;
+const INJURED_SUB_MAX_TURNS = 9;
+const INJURED_SUB_PENALTY = 0.10;
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
@@ -149,11 +151,48 @@ function isUnavailable(playerId){
   const st = playerStatus(playerId);
   return Boolean((st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough) || (st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough));
 }
+function isSuspended(playerId){
+  const st = playerStatus(playerId);
+  return Boolean(st.suspendedThrough !== undefined && game && game.matchdayIndex <= st.suspendedThrough);
+}
+function isInjured(playerId){
+  const st = playerStatus(playerId);
+  return Boolean(st.injuredThrough !== undefined && game && game.matchdayIndex <= st.injuredThrough);
+}
+function turnsRemaining(playerId){
+  const st = playerStatus(playerId);
+  if(st.injuredThrough === undefined || !game || game.matchdayIndex > st.injuredThrough) return 0;
+  return Math.max(1, st.injuredThrough - game.matchdayIndex + 1);
+}
+function canUseInjuredAsSub(playerId){
+  return Boolean(game && isInjured(playerId) && !isSuspended(playerId) && turnsRemaining(playerId) <= INJURED_SUB_MAX_TURNS);
+}
+function canBeStarter(playerId){
+  return Boolean(playerId && !isUnavailable(playerId));
+}
+function canBeBench(playerId){
+  if(!playerId) return false;
+  if(isSuspended(playerId)) return false;
+  if(isInjured(playerId)) return canUseInjuredAsSub(playerId);
+  return true;
+}
+function canEnterMatch(playerId){
+  return canBeBench(playerId) || canBeStarter(playerId);
+}
+function injuredSubPenaltyFactor(playerId){
+  return canUseInjuredAsSub(playerId) ? INJURED_SUB_PENALTY : 1;
+}
+function benchOverallValue(player){
+  return Math.round(effectiveOverall(player) * injuredSubPenaltyFactor(player.id));
+}
 function statusText(playerId){
   if(!game) return 'Disponible';
   const st = playerStatus(playerId);
   const parts = [];
-  if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough) parts.push(`Lesionado: ${st.injuryLabel || 'Lesión'}`.trim());
+  if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough){
+    const subNote = canUseInjuredAsSub(playerId) ? ' · puede ir al banco con penalización' : '';
+    parts.push(`Lesionado: ${st.injuryLabel || 'Lesión'}${subNote}`.trim());
+  }
   if(st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough) parts.push('Suspendido');
   return parts.length ? parts.join(' · ') : 'Disponible';
 }
@@ -229,14 +268,6 @@ function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
   const pitch = PITCH_CONDITIONS[pitchCondition] || PITCH_CONDITIONS.Normal;
   return clamp(BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus, 0, 0.65);
 }
-function isInjured(playerId){
-  const st = playerStatus(playerId);
-  return Boolean(st.injuredThrough !== undefined && game && game.matchdayIndex <= st.injuredThrough);
-}
-function isSuspended(playerId){
-  const st = playerStatus(playerId);
-  return Boolean(st.suspendedThrough !== undefined && game && game.matchdayIndex <= st.suspendedThrough);
-}
 function tacticStatusIcon(playerId){
   if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';
   if(isSuspended(playerId)) return '<span class="red-card status-red-card" title="Expulsado / suspendido">■</span>';
@@ -263,11 +294,6 @@ function pickInjuryType(){
   }
   return INJURY_TABLE[INJURY_TABLE.length - 1];
 }
-function turnsRemaining(playerId){
-  const st = playerStatus(playerId);
-  if(st.injuredThrough === undefined || game.matchdayIndex > st.injuredThrough) return 0;
-  return Math.max(1, st.injuredThrough - game.matchdayIndex + 1);
-}
 function injuredPlayersByClub(clubId){
   return playersByClub(clubId)
     .map(player => ({ player, status:playerStatus(player.id), remaining:turnsRemaining(player.id) }))
@@ -280,7 +306,7 @@ function injuredHomeCard(item){
     ${faceImg(p, 'injured-home-face')}
     <div class="injured-home-info">
       <button class="linklike" data-player-id="${p.id}">${availabilityIcons(p.id)}${escapeHtml(p.name)}</button>
-      <span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${item.remaining} turno(s) · Fís. ${currentCondition(p.id)}/99</span>
+      <span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${item.remaining} turno(s) · Fís. ${currentCondition(p.id)}/99${canUseInjuredAsSub(p.id) ? ' · Banco permitido' : ''}</span>
     </div>
   </div>`;
 }
@@ -288,6 +314,42 @@ function squadFitnessAverage(clubId){
   const squad = playersByClub(clubId);
   return Math.round(avg(squad.map(p => currentCondition(p.id)))) || 0;
 }
+
+function lastOwnMatch(){
+  if(!game?.matchHistory?.length) return null;
+  return game.matchHistory.filter(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId).slice(-1)[0] || null;
+}
+function mainBannerForLastMatch(){
+  const match = lastOwnMatch();
+  if(!match) return null;
+  const ownId = game.selectedClubId;
+  const ownInjuries = (match.injuries || []).filter(i => i.clubId === ownId);
+  if(ownInjuries.some(i => Number(i.matchesOut || 0) > 25)){
+    return { src:'img/principales/banner_noticia_lesion_grave.jpg', label:'Lesión grave en el último partido' };
+  }
+  if(ownInjuries.some(i => Number(i.matchesOut || 0) > 10)){
+    return { src:'img/principales/banner_noticia_lesion_intermedia.jpg', label:'Lesión intermedia en el último partido' };
+  }
+  if(ownInjuries.some(i => Number(i.matchesOut || 0) < 5)){
+    return { src:'img/principales/banner_noticias_lesion_leve.jpg', label:'Lesión leve en el último partido' };
+  }
+  if(ownInjuries.length){
+    return { src:'img/principales/banner_noticia_lesion_intermedia.jpg', label:'Lesión intermedia en el último partido' };
+  }
+  const isHome = match.homeId === ownId;
+  const gf = isHome ? match.homeGoals : match.awayGoals;
+  const gc = isHome ? match.awayGoals : match.homeGoals;
+  if(gf > gc) return { src:'img/principales/banner_entrenamiento_triunfo.jpg', label:'Entrenamiento posterior al triunfo' };
+  return { src:'img/principales/banner_entrenamiento_normal.jpg', label:'Entrenamiento posterior al empate o derrota' };
+}
+function mainBannerMarkup(){
+  const banner = mainBannerForLastMatch();
+  if(!banner){
+    return `<div class="main-visual-placeholder"><strong>Inicio de temporada</strong><span>La imagen contextual aparecerá después del primer partido.</span></div>`;
+  }
+  return `<div class="main-visual-banner"><img src="${escapeHtml(banner.src)}" alt="${escapeHtml(banner.label)}" onerror="this.closest('.main-visual-banner').classList.add('is-missing');this.remove();"><span>${escapeHtml(banner.label)}</span></div>`;
+}
+
 function injuryRulesTable(){
   return INJURY_TABLE.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.probability}%</td><td>${item.minTurns} a ${item.maxTurns}</td></tr>`).join('');
 }
@@ -328,7 +390,7 @@ function dashboardDonut(label, value, max=100){
   </div>`;
 }
 function matchSkill(p, skillName){
-  return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id) * moraleFactor(p.id)), 1, 99);
+  return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id) * moraleFactor(p.id) * injuredSubPenaltyFactor(p.id)), 1, 99);
 }
 function jerseyNumber(playerId){
   const p = playerById(playerId);
@@ -1106,6 +1168,10 @@ function normalizeGame(saved){
 }
 
 function assignPlayerToStarterSlot(playerId, slotIndex){
+  if(!canBeStarter(playerId)){
+    showNotice('Los lesionados no pueden ser titulares. Los de menos de 10 turnos sólo pueden ir al banco.');
+    return;
+  }
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const starters = game.tactic.starters.slice(0,11);
   while(starters.length < 11) starters.push(0);
@@ -1131,7 +1197,9 @@ function movePlayerToPool(playerId, pool){
   game.tactic.starters = starters;
   game.tactic.bench = game.tactic.bench.filter(id => id !== playerId);
   if(pool === 'bench'){
-    if(game.tactic.bench.length < 10) game.tactic.bench.push(playerId);
+    if(!canBeBench(playerId)){
+      showNotice('Sólo se pueden convocar al banco jugadores disponibles o lesionados con menos de 10 turnos de recuperación.');
+    } else if(game.tactic.bench.length < 10) game.tactic.bench.push(playerId);
     else showNotice('El banco ya tiene 10 suplentes. El jugador quedó como reserva.');
   }
   game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
@@ -1277,7 +1345,7 @@ function renderHome(){
     ${problemBox}
     <div class="card placeholder-main-card home-top-visual">
       <h3>Momento del club</h3>
-      <div class="main-visual-placeholder"><strong>Próximamente</strong><span>Aquí se insertará una imagen contextual según el momento del club.</span></div>
+      ${mainBannerMarkup()}
     </div>
     <div class="grid cols-4 dashboard-donut-grid" style="margin-top:14px">
       ${dashboardDonut('Media general', avgOverall, 99)}
@@ -1474,7 +1542,8 @@ function renderSquad(){
 function playerDragCard(p, extra=''){
   const statusIcons = availabilityIcons(p.id);
   const unavailableClass = isUnavailable(p.id) ? 'injured-card' : '';
-  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass}" draggable="true" data-drag-player="${p.id}">
+  const playableInjuredClass = canUseInjuredAsSub(p.id) ? 'playable-injured-card' : '';
+  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}" draggable="true" data-drag-player="${p.id}">
     ${faceImg(p, 'drag-face')}
     <div><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
   </div>`;
@@ -1564,6 +1633,8 @@ function renderTactics(){
 function tacticPlayerRow(p){
   const current = game.tactic.starters.includes(p.id) ? 'starter' : game.tactic.bench.includes(p.id) ? 'bench' : 'reserve';
   const unavailable = isUnavailable(p.id);
+  const benchAllowed = canBeBench(p.id);
+  const roleDisabled = isSuspended(p.id) || (isInjured(p.id) && !benchAllowed);
   const mentalityText = current === 'starter' ? playerMentality(p.id) : '—';
   return `<tr class="${unavailable ? 'dim-row' : ''}">
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
@@ -1572,7 +1643,7 @@ function tacticPlayerRow(p){
     <td><strong>${visibleOverall(p)}</strong></td>
     <td>${currentCondition(p.id)}/99</td>
     <td>${availabilityStatusMarkup(p.id)}</td>
-    <td><select class="role-select" data-role-player="${p.id}" ${unavailable ? 'disabled' : ''}>
+    <td><select class="role-select" data-role-player="${p.id}" ${roleDisabled ? 'disabled' : ''}>
       <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
       <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
       <option value="bench" ${current==='bench'?'selected':''}>Suplente</option>
@@ -1657,8 +1728,10 @@ function validateTactic(tactic){
   if(bench.length !== 10 || uniqueBench.size !== 10) errors.push('Necesitás exactamente 10 suplentes.');
   const duplicated = [...uniqueStarters].filter(id => uniqueBench.has(id));
   if(duplicated.length) errors.push('Un jugador no puede ser titular y suplente a la vez.');
-  const unavailable = [...uniqueStarters, ...uniqueBench].filter(id => isUnavailable(id));
-  if(unavailable.length) errors.push('Hay lesionados o suspendidos en la convocatoria.');
+  const unavailableStarters = [...uniqueStarters].filter(id => !canBeStarter(id));
+  if(unavailableStarters.length) errors.push('Hay lesionados o suspendidos entre los titulares.');
+  const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
+  if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con menos de 10 turnos de recuperación.');
   (tactic.autoSubs || []).forEach((rule, i)=>{
     if(rule.outId || rule.inId){
       if(!uniqueStarters.has(Number(rule.outId))) errors.push(`Cambio ${i+1}: el jugador que sale debe ser titular.`);
@@ -1833,8 +1906,8 @@ function autoSelectStarters(clubId, tactic){
 function autoSelectBench(clubId, starterIds){
   const starters = new Set(starterIds);
   return playersByClub(clubId)
-    .filter(p => !starters.has(p.id) && !isUnavailable(p.id))
-    .sort((a,b)=>effectiveOverall(b)-effectiveOverall(a))
+    .filter(p => !starters.has(p.id) && (clubId !== game?.selectedClubId ? !isUnavailable(p.id) : canBeBench(p.id)))
+    .sort((a,b)=>benchOverallValue(b)-benchOverallValue(a))
     .slice(0,10);
 }
 function defaultAutoSubs(starters, bench){
@@ -2370,7 +2443,7 @@ function makeSubstitutions(clubId, tactic, goals){
   for(const rule of tactic.autoSubs){
     const outId = Number(rule.outId || 0);
     const inId = Number(rule.inId || 0);
-    if(!outId || !inId || !onPitch.has(outId) || alreadyIn.has(inId)) continue;
+    if(!outId || !inId || !onPitch.has(outId) || alreadyIn.has(inId) || !canEnterMatch(inId)) continue;
     const minute = Math.random() < 0.10 ? 45 : Math.floor(rnd(60,91));
     const score = scoreAtMinute(goals, minute, clubId);
     const outPlayer = playerById(outId);
@@ -2383,7 +2456,7 @@ function makeSubstitutions(clubId, tactic, goals){
       onPitch.delete(outId);
       onPitch.add(inId);
       alreadyIn.add(inId);
-      events.push({ clubId, outId, inId, minute, trigger:rule.trigger });
+      events.push({ clubId, outId, inId, minute, trigger:rule.trigger, injuredSubPenalty:canUseInjuredAsSub(inId) });
     }
   }
   return events.slice(0,5);
@@ -2402,12 +2475,12 @@ function makeInjurySubstitutions(clubId, tactic, injuries, existingSubs=[]){
     const outPlayer = playerById(outId);
     const candidate = benchIds
       .map(id => playerById(id))
-      .filter(p => p && !usedIn.has(p.id) && !isUnavailable(p.id))
-      .sort((a,b)=> (visibleOverall(b) + (outPlayer && playerGroup(a.position)===playerGroup(outPlayer.position) ? 20 : 0)) - (visibleOverall(a) + (outPlayer && playerGroup(a.position)===playerGroup(outPlayer.position) ? 20 : 0)))[0];
+      .filter(p => p && !usedIn.has(p.id) && canEnterMatch(p.id))
+      .sort((a,b)=> (benchOverallValue(b) + (outPlayer && playerGroup(b.position)===playerGroup(outPlayer.position) ? 20 : 0)) - (benchOverallValue(a) + (outPlayer && playerGroup(a.position)===playerGroup(outPlayer.position) ? 20 : 0)))[0];
     if(candidate){
       usedIn.add(candidate.id);
       alreadyOut.add(outId);
-      events.push({ clubId, outId, inId:candidate.id, minute:injury.minute, trigger:'injury' });
+      events.push({ clubId, outId, inId:candidate.id, minute:injury.minute, trigger:'injury', injuredSubPenalty:canUseInjuredAsSub(candidate.id) });
     }
     if(existingSubs.filter(s=>s.clubId===clubId).length + events.length >= 5) break;
   }

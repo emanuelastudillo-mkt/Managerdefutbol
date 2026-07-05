@@ -1,41 +1,28 @@
 # Registro de versión
 
-## Versión: V2.2
-**Estado:** ajuste funcional de estados médicos, expulsiones y flujo de nueva partida  
-**Tipo de mejora:** interfaz, gestión de lesionados y empleados
+## Versión: V2.3
+**Estado:** ajuste funcional sobre visual post-partido y convocatoria de lesionados  
+**Tipo de mejora:** interfaz, táctica y reglas médicas
 
 ### Resumen
-La versión V2.2 mejora la gestión posterior a lesiones y expulsiones, suma tratamientos mediante kinesiólogo y reorganiza la creación de nueva partida para que no ocupe espacio fijo en el menú lateral.
+La versión V2.3 agrega imágenes contextuales después de cada partido y permite convocar lesionados leves/intermedios al banco para evitar bloqueos por falta de suplentes disponibles.
 
 ### Cambios principales agregados
-- Cuando un jugador propio se lesiona o es expulsado:
-  - se quita automáticamente del once titular;
-  - se elimina de la convocatoria si estaba en banco;
-  - queda como reserva;
-  - su espacio en la pizarra queda vacío para reemplazarlo manualmente.
-- La sección de **Jugadores lesionados** del panel principal ahora muestra:
-  - foto del jugador;
-  - ícono de lesión;
-  - nombre;
-  - tipo de lesión;
-  - turnos restantes;
-  - estado físico.
-- En la pantalla de simulación se agregan íconos para:
-  - gol;
-  - asistencia;
-  - cambio;
-  - lesión.
-- El evento de lesión en la simulación ya no muestra información de turnos de baja.
-- Se agrega el empleado **Kinesiólogo**:
-  - costo de contratación: $1.000.000;
-  - contratación válida por temporada completa;
-  - permite tratar jugadores lesionados una vez por turno;
-  - si el tratamiento tiene éxito, reduce 1 turno de lesión;
-  - el tratamiento puede fallar con 20% de probabilidad.
-- La sección de **Nueva partida** se transforma en acceso minimizado.
-- Al entrar sin partida o usar Reset, la selección de club aparece en una ventana emergente.
+- Se agrega selección automática de banner contextual en el panel principal según el último partido propio:
+  - lesión de menos de 5 turnos: `banner_noticias_lesion_leve.jpg`;
+  - lesión de más de 10 turnos: `banner_noticia_lesion_intermedia.jpg`;
+  - lesión de más de 25 turnos: `banner_noticia_lesion_grave.jpg`;
+  - sin lesionados y empate/derrota: `banner_entrenamiento_normal.jpg`;
+  - sin lesionados y victoria: `banner_entrenamiento_triunfo.jpg`.
+- Si una lesión queda entre 5 y 10 turnos, se usa el banner de lesión intermedia para no ocultar que hubo lesión.
+- Los jugadores lesionados con menos de 10 turnos restantes pueden ser convocados como suplentes.
+- Los jugadores lesionados convocados como suplentes reciben una penalización interna del 90%.
+- Los lesionados no pueden ser titulares.
+- Los suspendidos no pueden formar parte de la convocatoria.
+- El autoselector de suplentes prioriza jugadores disponibles y deja a los lesionados convocables como recurso de emergencia.
+- Los cambios automáticos y cambios por lesión pueden usar un suplente lesionado convocable si no hay una mejor opción disponible.
 
 ### Pendientes sugeridos
-- Integrar el efecto de cambios y expulsiones dentro del motor por bloques durante el partido.
-- Definir si el kinesiólogo podrá tratar más de un jugador por turno o solo uno total por turno.
-- Reemplazar internamente “disciplina” por conducta de partido calculada.
+- Hacer que los cambios modifiquen el rendimiento por bloque dentro del motor de simulación.
+- Definir si un jugador lesionado convocado al banco debe aumentar su riesgo de recaída.
+- Confirmar extensión final del archivo `banner_entrenamiento_triunfo.jpg`.

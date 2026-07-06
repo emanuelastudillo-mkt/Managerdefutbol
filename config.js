@@ -33,10 +33,10 @@ window.GAME_CONFIG = {
   sponsors: {
     // Multiplica los valores base de data/sponsors.json. 1 mantiene el valor del archivo.
     factorValorBase: 1,
-    partidosMinimosEntreTandas: 4,
-    partidosMaximosEntreTandas: 7,
-    ofertasMinimasPorTanda: 2,
-    ofertasMaximasPorTanda: 5,
+    partidosMinimosEntreTandas: 2,
+    partidosMaximosEntreTandas: 4,
+    ofertasMinimasPorTanda: 1,
+    ofertasMaximasPorTanda: 2,
     ofertasInicialesJornada1: 2
   },
   estadio: {

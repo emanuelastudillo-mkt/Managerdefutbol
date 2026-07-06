@@ -1,15 +1,21 @@
-# Fútbol Manager MVP V2.31
+# Fútbol Manager MVP V2.33
 
 Actualización incremental del manager de fútbol local.
 
-## Cambios V2.31
-- Ajuste visual general de la interfaz para que sea más compacta y delicada.
-- Se redujeron tamaños de tarjetas, tablas, botones, pestañas y espaciados generales.
-- Se refinó la jerarquía de títulos, subtítulos, etiquetas y textos secundarios.
-- Se compactó el menú lateral para ganar área útil en pantalla.
-- Se mantuvo visible la información importante: métricas, tablas, titulares, mercado, finanzas y acciones principales.
-- La transición al avanzar turno ahora dura un poco más de 2 segundos.
-- Los mensajes temporales permanecen al frente de la pantalla.
+## Cambios V2.33
+- Nuevo menú lateral **Academia**.
+- Captación de talentos: cuesta $1.000.000 y entrega un informe en 5 turnos.
+- Cada captación suma entre 5 y 10 juveniles de 8 a 14 años.
+- Los juveniles aparecen con rol amplio: POR, DEF, MED o DEL.
+- Sus habilidades visibles empiezan completamente ocultas.
+- Nuevo empleado: **Preparador de juveniles**, contratado por temporada por $1.000.000.
+- Botón **Consultar juveniles**: desbloquea 1 o 2 habilidades visibles de cualquier juvenil disponible.
+- Las habilidades reveladas quedan acumuladas.
+- Los juveniles cobran $10.000 por turno.
+- Pueden ser despedidos pagando $50.000 de compensación.
+- Los juveniles pueden entrenar Técnica o Resistencia.
+- La academia entrena más rápido que el primer equipo y no aplica pérdida de moral.
+- Desde los 16 años pueden firmar contrato profesional y fijar posición exacta.
 
 ## Base inicial vigente
 - Total jugadores: 1500.

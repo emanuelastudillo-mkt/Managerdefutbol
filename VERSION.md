@@ -1,17 +1,21 @@
-# Versión V2.31
+# Versión V2.33
 
 ## Ajustes principales
 
-### Interfaz
-- Interfaz general más compacta.
-- Menor peso visual en paneles, botones, tablas y tarjetas.
-- Mejor jerarquía entre títulos, etiquetas y datos secundarios.
-- Más espacio útil en pantalla sin ocultar datos relevantes.
-
-### Transición de turno
-- La transición al avanzar turno ahora dura algo más de 2 segundos.
-- El indicador de avance acompaña la duración real de la transición.
-- Los mensajes temporales siguen apareciendo por encima del resto de la interfaz.
+### Academia
+- Nuevo menú lateral **Academia**.
+- Captación de talentos por $1.000.000.
+- Informe de captación disponible luego de 5 turnos.
+- Cada captación crea entre 5 y 10 juveniles.
+- Juveniles generados entre 8 y 14 años, con media interna entre 1 y 40.
+- Distribución aproximada: 80% debajo de 20, 10% entre 20 y 30, 10% entre 30 y 40.
+- Stats visibles inicialmente ocultas.
+- Preparador de juveniles por temporada.
+- Consulta de juveniles desbloquea habilidades visibles acumulables.
+- Costo por juvenil: $10.000 por turno.
+- Baja de academia: $50.000 de compensación.
+- Entrenamientos juveniles: Técnica o Resistencia.
+- Promoción al primer equipo desde los 16 años con selección de posición exacta.
 
 ## Compatibilidad
 - Mantiene guardado local por navegador.

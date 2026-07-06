@@ -1,4 +1,4 @@
-/* V3.05 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+/* V3.06 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
 
 function firstTeamTabsMarkup(current){
   const tabs = [
@@ -130,6 +130,17 @@ function sortPlayersForView(players, sortKey){
   const byAgeDesc = (a,b) => Number(b.age || 0) - Number(a.age || 0) || byName(a,b);
   const byDorsalAsc = (a,b) => jerseyNumber(a.id) - jerseyNumber(b.id) || byName(a,b);
   const byDorsalDesc = (a,b) => jerseyNumber(b.id) - jerseyNumber(a.id) || byName(a,b);
+  const positionRank = (player) => {
+    const group = playerRoleGroup(player.position);
+    return { POR:1, DEF:2, MID:3, ATT:4 }[group] || 99;
+  };
+  const positionVariantRank = (player) => {
+    const pos = normalizePlayerPosition(player.position, player.id);
+    const order = { POR:1, LD:2, LI:3, DFC:4, MCD:5, MC:6, MI:7, MD:8, MCO:9, ED:10, EI:11, DC:12 };
+    return order[pos] || 99;
+  };
+  const byPositionAsc = (a,b) => positionRank(a) - positionRank(b) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
+  const byPositionDesc = (a,b) => positionRank(b) - positionRank(a) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
   const byStatusAvailable = (a,b) => Number(isUnavailable(a.id)) - Number(isUnavailable(b.id)) || byName(a,b);
   const byStatusUnavailable = (a,b) => Number(isUnavailable(b.id)) - Number(isUnavailable(a.id)) || byName(a,b);
   const sorters = {
@@ -137,6 +148,8 @@ function sortPlayersForView(players, sortKey){
     nombre_desc:byNameDesc,
     dorsal_asc:byDorsalAsc,
     dorsal_desc:byDorsalDesc,
+    posicion_asc:byPositionAsc,
+    posicion_desc:byPositionDesc,
     media_desc:(a,b)=>visibleOverall(b)-visibleOverall(a) || byName(a,b),
     media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
     condicion_desc:(a,b)=>currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
@@ -250,7 +263,7 @@ function renderWorldPlayers(){
     <div class="table-wrap world-players-wrap"><table class="world-players-table"><thead><tr>
       <th>Foto</th>
       <th>${worldPlayersColumnSort('Nombre', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
-      <th>Pos.</th>
+      <th>${worldPlayersColumnSort('Pos.', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
       <th>${worldPlayersColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th>
       <th>Equipo</th>
       <th>${worldPlayersColumnSort('Cláusula', [['valor_desc','Mayor'],['valor_asc','Menor']])}</th>
@@ -296,7 +309,7 @@ function renderSquad(){
       <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
       <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
       <th>${columnSort('Edad', [['edad_asc','Menor a mayor'],['edad_desc','Mayor a menor']])}</th>
-      <th>Rol</th>
+      <th>${columnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
       <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>

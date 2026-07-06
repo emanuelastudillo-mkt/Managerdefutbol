@@ -1,8 +1,15 @@
-# Fútbol Manager MVP V3.05
+# Fútbol Manager MVP V3.06
 
-Versión 3.05 del manager de fútbol local. Mantiene la arquitectura modular de V3.01, las mejoras visuales de V3.02, los ajustes de V3.04 y actualiza la pantalla de táctica para reemplazar el arrastre por selección mediante clic.
+Versión 3.06 del manager de fútbol local. Mantiene la arquitectura modular de V3.01, las mejoras visuales de V3.02, los ajustes de V3.04, la táctica por clic de V3.05 y agrega ordenamiento especial para columnas de posición.
 
-## Cambios V3.05
+## Cambios V3.06
+- Se agrega ordenamiento especial para columnas `POS`/`Pos.`.
+- Orden ascendente: `POR → DEF → MED → DEL`.
+- Orden descendente: `DEL → MED → DEF → POR`.
+- El orden agrupa todas las variantes defensivas, mediocampistas y delanteras.
+- Se aplica en `Plantel`, `Entrenamiento` y listado mundial de `Jugadores`.
+
+## Cambios conservados de V3.05
 - La pantalla de táctica ya no usa arrastre de jugadores.
 - Se selecciona un jugador con click y luego se hace click en otro jugador para intercambiar lugares.
 - El intercambio funciona entre pizarra, lista de titulares, suplentes y reservas.

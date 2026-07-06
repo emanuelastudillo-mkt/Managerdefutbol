@@ -1,9 +1,10 @@
-# Características internas de versión · V3.05
+# Características internas de versión · V3.06
 
 ## Tipo de versión
 Versión menor dentro de V3.
 
 ## Último agregado o modificado
+- Ordenamiento especial para columnas `POS`/`Pos.` con orden ascendente `POR → DEF → MED → DEL` y descendente `DEL → MED → DEF → POR`.
 - Pantalla de táctica actualizada: se elimina el arrastre y se implementa intercambio por clic entre pizarra, titulares, suplentes y reservas.
 - Reducción de cláusulas a una décima parte del valor calculado anterior, sin modificar sueldos.
 - Feedback visual de acciones con resultado: carga breve, éxito verde o fallo rojo para tratamientos y charla motivacional.
@@ -30,12 +31,22 @@ Versión menor dentro de V3.
 | Motor fallback | `js/game/11-match-engine.js` | Mantiene los mismos criterios si no carga `simulador-2.0.js`. |
 | Feedback de acciones | `js/core/02-ui-utils.js` + `js/game/10-academy-employees.js` + `style.css` | Agrega animación de carga y resultado visual verde/rojo para acciones que pueden fallar. |
 | Interacción táctica | `js/game/05-state-season.js` | Agrega helpers para localizar, validar e intercambiar jugadores por clic. |
-| Pantalla de táctica | `js/ui/07-render-team-market.js` | Reemplaza elementos arrastrables por botones seleccionables y resalta la selección activa. |
+| Pantalla de táctica y orden POS | `js/ui/07-render-team-market.js` | Reemplaza elementos arrastrables por botones seleccionables, resalta la selección activa y agrega ordenamiento `POR/DEF/MED/DEL` para posición. |
+| Entrenamiento | `js/game/09-simulation-economy-training.js` | Agrega ordenamiento especial para la columna `POS` en la tabla de entrenamiento. |
 | Estilos de táctica | `style.css` | Agrega estados visuales de selección, ayuda contextual y hover para intercambio por clic. |
 
 
 
-## Ajuste táctico V3.05
+## Ajuste de ordenamiento POS V3.06
+- La columna `POS`/`Pos.` ahora puede ordenarse por familia táctica.
+- Ascendente: `POR → DEF → MED → DEL`.
+- Descendente: `DEL → MED → DEF → POR`.
+- `DEF` agrupa LD, LI y DFC.
+- `MED` agrupa MCD, MC, MI, MD y MCO.
+- `DEL` agrupa ED, EI y DC.
+- Se aplica en Plantel, Entrenamiento y Jugadores.
+
+## Ajuste táctico conservado de V3.05
 - La pantalla táctica deja de usar arrastre.
 - El usuario hace click en un jugador para seleccionarlo y luego click en otro para intercambiarlos.
 - El sistema funciona con los mismos jugadores representados en la pizarra, la lista de titulares, suplentes y reservas.

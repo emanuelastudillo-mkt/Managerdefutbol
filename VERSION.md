@@ -1,10 +1,19 @@
-# Versión V3.05
+# Versión V3.06
 
 ## Objetivo de la versión
 
-Actualizar la interacción de la pantalla de táctica. Se elimina el arrastre y se reemplaza por selección mediante clic para intercambiar jugadores entre pizarra, titulares, suplentes y reservas.
+Agregar ordenamiento especial para columnas de posición, respetando el orden deportivo POR, defensores, mediocampistas y delanteros. Se conserva la interacción táctica por clic incorporada en V3.05.
 
 ## Ajustes principales
+
+### Ordenamiento de posición
+- Se agrega ordenamiento para columnas `POS`/`Pos.`.
+- Ascendente: `POR → DEF → MED → DEL`.
+- Descendente: `DEL → MED → DEF → POR`.
+- Las variantes se agrupan dentro de su familia: defensores, mediocampistas y delanteros.
+- Se aplica en `Plantel`, `Entrenamiento` y listado mundial de `Jugadores`.
+
+## Ajustes conservados de V3.05
 
 ### Táctica por clic
 - Se elimina el uso de drag & drop en la pantalla de táctica.

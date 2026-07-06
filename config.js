@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.06',
+  version: 'V3.08',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -24,6 +24,15 @@ window.GAME_CONFIG = {
     jugadoresMinimosPorClub: 18,
     jugadoresInicialesPorClub: 25,
     jugadoresMaximosPorClub: 42,
+    // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
+    reparacionAutomaticaBots: true,
+    botsMinimoPorteros: 2,
+    botsMinimoDefensores: 5,
+    botsMinimoMediocampistas: 5,
+    botsMinimoDelanteros: 3,
+    botsMediaEmergenciaMin: 28,
+    botsMediaEmergenciaMax: 52,
+    botsFactorSueldoEmergencia: 0.35,
     agentesLibresIniciales: 50,
     jovenesLibresPorTemporada: 20
   },

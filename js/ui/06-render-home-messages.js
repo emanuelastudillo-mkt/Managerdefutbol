@@ -1,4 +1,4 @@
-/* V3.04 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
+/* V3.08 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
@@ -16,10 +16,7 @@ function renderAll(){
     view.innerHTML = $('emptyState').innerHTML;
     return;
   }
-  if(isClubRequirementsBlocking()){
-    renderClubRequirementsWarning();
-    return;
-  }
+  repairBotRosters({ reason:'render' });
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances };
   (renderers[activeTab] || renderers.home)();
@@ -34,7 +31,7 @@ function renderClubRequirementsWarning(){
   view.innerHTML = `
     <div class="card blocker requirement-warning">
       <h2>Advertencia de estructura de planteles</h2>
-      <p>Cada club debe tener como mínimo <strong>2 porteros</strong> y <strong>16 jugadores</strong>. Corregí ` + "`data/seed.json`" + ` antes de continuar.</p>
+      <p>Cada club debe tener como mínimo <strong>${MIN_PLAYERS_PER_CLUB} jugadores</strong>, <strong>${BOT_MIN_GOALKEEPERS} porteros</strong>, <strong>${BOT_MIN_DEFENDERS} defensores</strong>, <strong>${BOT_MIN_MIDFIELDERS} mediocampistas</strong> y <strong>${BOT_MIN_ATTACKERS} delanteros</strong>. Los bots se reparan automáticamente; esta advertencia sólo debería quedar para el club del usuario si su plantel queda incompleto.</p>
       <div class="table-wrap"><table><thead><tr><th>Club</th><th>Jugadores</th><th>Porteros</th><th>Problema</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
 }

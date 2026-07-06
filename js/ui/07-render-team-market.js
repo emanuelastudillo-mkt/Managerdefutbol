@@ -1,4 +1,4 @@
-/* V3.06 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+/* V3.08 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
 
 function firstTeamTabsMarkup(current){
   const tabs = [
@@ -72,7 +72,10 @@ function renderMarket(){
 }
 function renderContractedMarket(){
   const players = contractedMarketPlayers();
-  const rows = players.map(p => `<tr>
+  const rows = players.map(p => {
+    const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id);
+    const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
+    return `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
     <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
@@ -82,8 +85,9 @@ function renderContractedMarket(){
     <td>${visibleOverall(p)}</td>
     <td>${formatMoney(p.clause || p.value || 0)}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><button class="primary small-btn" data-make-player-offer="${p.id}">Hacer oferta</button></td>
-  </tr>`).join('');
+    <td><button class="primary small-btn" data-make-player-offer="${p.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></td>
+  </tr>`;
+  }).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
     ${marketTabsMarkup()}

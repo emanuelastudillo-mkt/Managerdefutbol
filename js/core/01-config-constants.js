@@ -1,4 +1,4 @@
-/* V3.06 · Configuración leída desde config.js, constantes generales y estado global. */
+/* V3.08 · Configuración leída desde config.js, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -10,6 +10,13 @@ function configNumber(path, fallback, min=null, max=null){
   if(Number.isFinite(min)) value = Math.max(min, value);
   if(Number.isFinite(max)) value = Math.min(max, value);
   return value;
+}
+function configBoolean(path, fallback=false){
+  const raw = configValue(path, fallback);
+  if(typeof raw === 'boolean') return raw;
+  if(typeof raw === 'string') return !['false','0','no','off'].includes(raw.trim().toLowerCase());
+  if(typeof raw === 'number') return raw !== 0;
+  return Boolean(fallback);
 }
 
 const DATA_URL = configValue('data.seedUrl', 'data/seed.json');
@@ -27,7 +34,7 @@ const ACTION_FEEDBACK_RESULT_MS = configNumber('ui.accionesFeedbackResultadoMs',
 const PRESEASON_TURNS = configNumber('turnos.pretemporada', 10, 0);
 const POSTSEASON_TURNS = configNumber('turnos.postemporada', 5, 0);
 const MAX_PRESEASON_FRIENDLIES = configNumber('turnos.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.06');
+const APP_VERSION = configValue('version', 'V3.08');
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -132,6 +139,15 @@ const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18,
 const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));
 const MAX_PLAYERS_PER_CLUB = Math.max(INITIAL_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMaximosPorClub', 42, 1));
 const CLUB_ROSTER_SIZE = INITIAL_PLAYERS_PER_CLUB;
+const BOT_ROSTER_REPAIR_ENABLED = configBoolean('plantel.reparacionAutomaticaBots', true);
+const BOT_MIN_GOALKEEPERS = configNumber('plantel.botsMinimoPorteros', 2, 1);
+const BOT_MIN_DEFENDERS = configNumber('plantel.botsMinimoDefensores', 5, 0);
+const BOT_MIN_MIDFIELDERS = configNumber('plantel.botsMinimoMediocampistas', 5, 0);
+const BOT_MIN_ATTACKERS = configNumber('plantel.botsMinimoDelanteros', 3, 0);
+const BOT_EMERGENCY_MEDIA_MIN = configNumber('plantel.botsMediaEmergenciaMin', 28, 1, 99);
+const BOT_EMERGENCY_MEDIA_MAX = Math.max(BOT_EMERGENCY_MEDIA_MIN, configNumber('plantel.botsMediaEmergenciaMax', 52, 1, 99));
+const BOT_EMERGENCY_SALARY_FACTOR = configNumber('plantel.botsFactorSueldoEmergencia', 0.35, 0);
+
 const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
 const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 30000, 1000));
 const PLAYER_GENERATION_RULES_VERSION = 'V2.30';

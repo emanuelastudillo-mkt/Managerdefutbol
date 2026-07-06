@@ -1,4 +1,4 @@
-/* V3.04 · Carga de JSON, normalización inicial, persistencia local e inicialización. */
+/* V3.08 · Carga de JSON, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -508,8 +508,10 @@ async function loadLocal(silent=false){
       return false;
     }
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
+    const botRepair = repairBotRosters({ reason:'load_game' });
     activeTab = 'home';
     renderAll();
+    if(botRepair.created || botRepair.converted) saveLocal(true);
     if(!silent) showNotice('Partida cargada.');
     return true;
   }

@@ -1,4 +1,4 @@
-/* V3.04 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
+/* V3.08 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -253,6 +253,7 @@ function setPostseasonTurnSummary(finalized=false){
 
 function simulateNextMatchday(){
   if(!game || game.seasonFinalized) return;
+  repairBotRosters({ reason:'before_turn' });
   if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el siguiente turno se habilita el domingo.`); return; }
   if(isPreseason()){
     simulatePreseasonTurn();

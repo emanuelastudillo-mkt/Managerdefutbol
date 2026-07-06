@@ -1,4 +1,4 @@
-/* V3.06 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
+/* V3.08 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -80,6 +80,7 @@ function normalizeGame(saved){
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
+  normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
   normalized.lastOwnPlayerOffer = normalized.lastOwnPlayerOffer || null;
   normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
@@ -112,6 +113,7 @@ function normalizeGame(saved){
   normalized.sponsors = normalizeSponsorState(normalized.sponsors);
   normalized.teamCohesion = normalized.teamCohesion || {};
   normalized.lastMatchTactics = normalized.lastMatchTactics || {};
+  normalized.botRosterRepairLog = Array.isArray(normalized.botRosterRepairLog) ? normalized.botRosterRepairLog : [];
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.teamCohesion[c.id])) normalized.teamCohesion[c.id] = TEAM_COHESION_START; });
   if(!normalized.stadium.fields) normalized.stadium.fields = {};
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
@@ -345,6 +347,7 @@ function newGame(selectedClubId){
     messages: [],
     marketPlayers: [],
     pendingTransfers: [],
+    rejectedPurchaseOffers: {},
     lastOwnPlayerOffer: null,
     seasonEndPlayerOffers: null,
     currentDate: seed.fixtures[0].date,
@@ -376,6 +379,7 @@ function newGame(selectedClubId){
   game.marketPlayers = generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   ensurePlayerStateForAll();
+  repairBotRosters({ reason:'new_game' });
   generateOpeningSponsorOffers(true);
   pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
   activeTab = 'home';
@@ -700,6 +704,7 @@ function startNextSeason(selectedClubId){
   game.lastTurnSummary = null;
   game.mustReviewTactics = false;
   game.seasonEndPlayerOffers = null;
+  game.rejectedPurchaseOffers = {};
   resetAcademySeasonState();
   game.advanceLockedUntil = 0;
   game.lastBudgetDelta = 0;

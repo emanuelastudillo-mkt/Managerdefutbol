@@ -1,4 +1,4 @@
-/* V3.04 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
+/* V3.08 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
 
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
@@ -673,19 +673,165 @@ function conditionLossForPlayer(player){
   const loss = rnd(15,20);
   return player?.position === 'POR' ? loss * 0.5 : loss;
 }
+function rosterGroupCounts(squad=[]){
+  const counts = { POR:0, DEF:0, MID:0, ATT:0 };
+  (squad || []).forEach(player => {
+    const group = playerRoleGroup(player.position);
+    if(Object.prototype.hasOwnProperty.call(counts, group)) counts[group] += 1;
+  });
+  return counts;
+}
+function minimumRosterRequirements(){
+  return {
+    total:MIN_PLAYERS_PER_CLUB,
+    POR:BOT_MIN_GOALKEEPERS,
+    DEF:BOT_MIN_DEFENDERS,
+    MID:BOT_MIN_MIDFIELDERS,
+    ATT:BOT_MIN_ATTACKERS
+  };
+}
 function clubRequirementIssues(clubId){
   const squad = playersByClub(clubId);
-  const keepers = squad.filter(p => p.position === 'POR').length;
+  const counts = rosterGroupCounts(squad);
+  const req = minimumRosterRequirements();
   const issues = [];
-  if(keepers < 2) issues.push(`necesita 2 porteros y tiene ${keepers}`);
-  if(squad.length < MIN_PLAYERS_PER_CLUB) issues.push(`necesita ${MIN_PLAYERS_PER_CLUB} jugadores y tiene ${squad.length}`);
+  if(squad.length < req.total) issues.push(`necesita ${req.total} jugadores y tiene ${squad.length}`);
+  if(counts.POR < req.POR) issues.push(`necesita ${req.POR} porteros y tiene ${counts.POR}`);
+  if(counts.DEF < req.DEF) issues.push(`necesita ${req.DEF} defensores y tiene ${counts.DEF}`);
+  if(counts.MID < req.MID) issues.push(`necesita ${req.MID} mediocampistas y tiene ${counts.MID}`);
+  if(counts.ATT < req.ATT) issues.push(`necesita ${req.ATT} delanteros y tiene ${counts.ATT}`);
   return issues;
 }
-function invalidClubRequirements(){
-  return seed.clubs.map(c => ({ club:c, issues:clubRequirementIssues(c.id) })).filter(x => x.issues.length);
+function invalidClubRequirements(options={}){
+  const onlySelected = Boolean(options.onlySelected);
+  const clubs = onlySelected && game?.selectedClubId
+    ? seed.clubs.filter(c => Number(c.id) === Number(game.selectedClubId))
+    : seed.clubs;
+  return clubs.map(c => ({ club:c, issues:clubRequirementIssues(c.id) })).filter(x => x.issues.length);
 }
 function isClubRequirementsBlocking(){
-  return invalidClubRequirements().length > 0;
+  // Los bots se reparan automáticamente. La advertencia ya no debe bloquear toda la interfaz.
+  return false;
+}
+function nextEmergencyPlayerId(){
+  const ids = (seed?.players || []).map(p => Number(p.id) || 0);
+  return Math.max(0, ...ids) + 1;
+}
+function emergencyPositionForGroup(group, seedKey=''){
+  const clean = String(group || '').toUpperCase();
+  if(clean === 'POR') return 'POR';
+  if(clean === 'DEF'){
+    const pool = ['DFC','LD','LI'];
+    return pool[hashNumber(`${seedKey}-def`, pool.length)];
+  }
+  if(clean === 'MID'){
+    const pool = ['MC','MCD','MCO','MI','MD'];
+    return pool[hashNumber(`${seedKey}-mid`, pool.length)];
+  }
+  const pool = ['DC','ED','EI'];
+  return pool[hashNumber(`${seedKey}-att`, pool.length)];
+}
+function weakestBotPlayerForConversion(clubId, neededGroup){
+  const req = minimumRosterRequirements();
+  const squad = playersByClub(clubId).filter(p => !p.emergencyLocked);
+  const counts = rosterGroupCounts(squad);
+  const protectedByGroup = { POR:req.POR, DEF:req.DEF, MID:req.MID, ATT:req.ATT };
+  return squad
+    .filter(player => {
+      const group = playerRoleGroup(player.position);
+      if(group === neededGroup) return false;
+      return (counts[group] || 0) > (protectedByGroup[group] || 0);
+    })
+    .sort((a,b)=>visibleOverall(a)-visibleOverall(b))[0] || null;
+}
+function normalizeEmergencyPlayerEconomics(player){
+  const media = clamp(Math.round(Number(player.overall || visibleOverall(player) || BOT_EMERGENCY_MEDIA_MIN)), BOT_EMERGENCY_MEDIA_MIN, BOT_EMERGENCY_MEDIA_MAX);
+  player.overall = media;
+  player.skills = skillsForPosition(player.position, media, player.id);
+  player.salary = initialAnnualSalaryForMedia(media, BOT_EMERGENCY_SALARY_FACTOR);
+  refreshPlayerClause(player);
+  return player;
+}
+function createEmergencyBotPlayer(club, group, report){
+  const id = nextEmergencyPlayerId();
+  const position = emergencyPositionForGroup(group, `${club.id}-${id}`);
+  const media = BOT_EMERGENCY_MEDIA_MIN + hashNumber(`emergency-media-${club.id}-${id}-${group}`, BOT_EMERGENCY_MEDIA_MAX - BOT_EMERGENCY_MEDIA_MIN + 1);
+  const player = generatedPlayerFactory({
+    id,
+    position,
+    clubId:club.id,
+    age:18 + hashNumber(`emergency-age-${club.id}-${id}`, 17),
+    prestige:35,
+    nameContext:`Emergencia ${club.name}`,
+    divisionName:club.divisionName,
+    divisionOrder:club.divisionOrder,
+    generationContext:null,
+    salaryFactor:BOT_EMERGENCY_SALARY_FACTOR,
+    freeAgent:false
+  });
+  player.origin = 'Emergencia bot';
+  player.emergencyBot = true;
+  normalizeEmergencyPlayerEconomics(player);
+  seed.players.push(player);
+  if(report) report.created += 1;
+  ensurePlayerStateForAll();
+  return player;
+}
+function convertWeakBotPlayer(club, group, report){
+  const player = weakestBotPlayerForConversion(club.id, group);
+  if(!player) return null;
+  player.position = emergencyPositionForGroup(group, `${club.id}-${player.id}-convert`);
+  player.origin = player.origin || 'Reconversión de emergencia bot';
+  player.emergencyBot = true;
+  normalizeEmergencyPlayerEconomics(player);
+  if(report) report.converted += 1;
+  return player;
+}
+function addOrConvertEmergencyBotPlayer(club, group, report){
+  const rosterSize = playersByClub(club.id).length;
+  if(rosterSize < MAX_PLAYERS_PER_CLUB) return createEmergencyBotPlayer(club, group, report);
+  return convertWeakBotPlayer(club, group, report) || createEmergencyBotPlayer(club, group, report);
+}
+function repairBotRoster(club, report){
+  if(!club || Number(club.id) === Number(game?.selectedClubId)) return;
+  const req = minimumRosterRequirements();
+  const fillGroup = (group, target) => {
+    let guard = 0;
+    while(rosterGroupCounts(playersByClub(club.id))[group] < target && guard < 20){
+      addOrConvertEmergencyBotPlayer(club, group, report);
+      guard += 1;
+    }
+  };
+  fillGroup('POR', req.POR);
+  fillGroup('DEF', req.DEF);
+  fillGroup('MID', req.MID);
+  fillGroup('ATT', req.ATT);
+  let guard = 0;
+  const extraGroups = ['DEF','MID','ATT','POR'];
+  while(playersByClub(club.id).length < req.total && guard < 30){
+    const group = extraGroups[guard % extraGroups.length];
+    addOrConvertEmergencyBotPlayer(club, group, report);
+    guard += 1;
+  }
+}
+function repairBotRosters(options={}){
+  if(!BOT_ROSTER_REPAIR_ENABLED || !game || !seed?.clubs?.length) return { created:0, converted:0, clubs:0 };
+  const report = { created:0, converted:0, clubs:0, reason:options.reason || 'auto' };
+  seed.clubs.forEach(club => {
+    if(Number(club.id) === Number(game.selectedClubId)) return;
+    const before = clubRequirementIssues(club.id).length;
+    if(before){
+      repairBotRoster(club, report);
+      report.clubs += 1;
+    }
+  });
+  if(report.created || report.converted){
+    ensurePlayerStateForAll();
+    if(game.botRosterRepairLog === undefined) game.botRosterRepairLog = [];
+    game.botRosterRepairLog.push({ ...report, turn:currentTurnIndex(), season:game.seasonNumber || 1, createdAt:Date.now() });
+    game.botRosterRepairLog = game.botRosterRepairLog.slice(-20);
+  }
+  return report;
 }
 function mentalityMarker(mode){
   if(mode === 'ataque') return '<span class="mentality-marker attack" title="Ataque">→</span>';

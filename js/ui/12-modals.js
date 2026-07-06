@@ -1,4 +1,31 @@
-/* V3.04 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.08 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+
+function purchaseOfferRejectionRecord(playerId){
+  if(!game) return null;
+  const rejected = game.rejectedPurchaseOffers || {};
+  return rejected[String(playerId)] || null;
+}
+function isPurchaseOfferBlockedThisSeason(playerId){
+  const record = purchaseOfferRejectionRecord(playerId);
+  return Boolean(record && Number(record.season || 0) === Number(game?.seasonNumber || 1));
+}
+function markPurchaseOfferRejected(playerId, kind, amount){
+  if(!game) return;
+  game.rejectedPurchaseOffers = (game.rejectedPurchaseOffers && typeof game.rejectedPurchaseOffers === 'object' && !Array.isArray(game.rejectedPurchaseOffers)) ? game.rejectedPurchaseOffers : {};
+  game.rejectedPurchaseOffers[String(playerId)] = {
+    playerId:Number(playerId),
+    season:Number(game.seasonNumber || 1),
+    turn:currentTurnIndex(),
+    kind:String(kind || ''),
+    amount:Number(amount || 0),
+    createdAt:Date.now()
+  };
+}
+function purchaseOfferBlockedLabel(playerId){
+  if(!isPurchaseOfferBlockedThisSeason(playerId)) return '';
+  return 'Oferta rechazada hasta la próxima temporada';
+}
+
 
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
@@ -6,7 +33,9 @@ function playerModalActionsMarkup(player){
     return `<div class="card inner player-action-card"><h3>Acciones</h3><div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button></div></div>`;
   }
   if(clubId > 0){
-    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}">Hacer oferta</button></div></div>`;
+    const blocked = isPurchaseOfferBlockedThisSeason(player.id);
+    const label = blocked ? purchaseOfferBlockedLabel(player.id) : 'Hacer oferta';
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
   return '';
 }
@@ -122,6 +151,10 @@ function offerOwnPlayerToClubs(playerId){
 function openPurchaseOfferModal(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  if(isPurchaseOfferBlockedThisSeason(player.id)){
+    showNotice('Este club ya rechazó una oferta por este jugador. Podrás volver a intentarlo la próxima temporada.');
+    return;
+  }
   const clause = refreshPlayerClause(player);
   const body = `<div class="purchase-offer-modal">
     <p class="label">Hacer oferta</p>
@@ -129,7 +162,7 @@ function openPurchaseOfferModal(playerId){
     <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
     <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
       <button class="card clickable plain" data-submit-player-offer="low"><h3>Ofrecer 50% menos</h3><p>${formatMoney(Math.round(clause * 0.50))}</p></button>
-      <button class="card clickable plain" data-submit-player-offer="mid"><h3>Ofrecer 25% más</h3><p>${formatMoney(Math.round(clause * 0.75))}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="mid"><h3>Ofrecer 25% menos</h3><p>${formatMoney(Math.round(clause * 0.75))}</p></button>
       <button class="card clickable plain" data-submit-player-offer="clause"><h3>Ofrecer cláusula</h3><p>${formatMoney(clause)}</p></button>
     </div>
   </div>`;
@@ -153,7 +186,8 @@ function submitPurchaseOffer(playerId, kind){
   }
   const accepted = Math.random() < cfg.chance;
   if(!accepted){
-    pushGameMessage({ type:'mercado', title:'Oferta rechazada', body:cfg.fail, priority:'normal' });
+    markPurchaseOfferRejected(player.id, kind, cfg.amount);
+    pushGameMessage({ type:'mercado', title:'Oferta rechazada', body:`${cfg.fail}. No podremos volver a enviar una oferta por este jugador hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);

@@ -12,7 +12,7 @@ window.GAME_CONFIG = {
   },
   turnos: {
     // Bloqueo entre turnos en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreTurnosMs: 120000,
+    bloqueoEntreTurnosMs: 1000,
     // Duración visual de la transición al avanzar turno.
     transicionAvanceMs: 3400,
     pretemporada: 10,

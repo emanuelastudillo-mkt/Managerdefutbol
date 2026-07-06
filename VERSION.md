@@ -1,24 +1,39 @@
-# Versión V2.33
+# Versión V2.34
 
 ## Ajustes principales
 
-### Academia
-- Nuevo menú lateral **Academia**.
-- Captación de talentos por $1.000.000.
-- Informe de captación disponible luego de 5 turnos.
-- Cada captación crea entre 5 y 10 juveniles.
-- Juveniles generados entre 8 y 14 años, con media interna entre 1 y 40.
-- Distribución aproximada: 80% debajo de 20, 10% entre 20 y 30, 10% entre 30 y 40.
-- Stats visibles inicialmente ocultas.
-- Preparador de juveniles por temporada.
-- Consulta de juveniles desbloquea habilidades visibles acumulables.
-- Costo por juvenil: $10.000 por turno.
-- Baja de academia: $50.000 de compensación.
-- Entrenamientos juveniles: Técnica o Resistencia.
-- Promoción al primer equipo desde los 16 años con selección de posición exacta.
+### Configuración externa
+- Nuevo archivo `config.js`.
+- Permite editar valores generales sin tocar `app.js`.
+- Incluye parámetros de turnos, transición, plantel, economía, sponsors, estadio, empleados, academia y lesiones.
+
+### Limpieza y semántica
+- Se incorporaron helpers de lectura de configuración: `configValue` y `configNumber`.
+- Se centralizó la duración de avisos y transición.
+- Se eliminó una constante duplicada de formaciones visuales que no estaba en uso.
+- Se incorporaron helpers para límite de plantel: conteo de plantel, transferencias pendientes y espacio disponible.
+
+### Plantel
+- El máximo de jugadores por club queda configurable desde `config.js`.
+- La contratación de libres, compras y promoción de juveniles revisan ese límite.
+
+### Validación realizada
+- `node --check app.js`: correcto.
+- `node --check config.js`: correcto.
+- `node --check simulador-2.0.js`: correcto.
+- `data/jugadores.json`: JSON válido.
+- `data/sponsors.json`: JSON válido.
+- `data/Liga Argentina.json`: JSON válido.
+- Base de jugadores: 1500 activos iniciales, 7 elite 92-99.
+- Base de sponsors: 200 sponsors y 20 lugares.
+
+## Observaciones de revisión
+- El archivo `app.js` ya es grande. La mejora clara siguiente sería separar módulos: mercado, academia, sponsors, tácticas, renderizado y persistencia.
+- Hay varias reglas de juego mezcladas con renderizado HTML. Funciona, pero a futuro conviene separar lógica y vista.
+- El límite de plantel ahora se controla en acciones nuevas. Las partidas viejas con planteles ya excedidos no se corrigen automáticamente.
 
 ## Compatibilidad
 - Mantiene guardado local por navegador.
-- Mantiene `data/jugadores.json` de V2.27.
+- Mantiene `data/jugadores.json`.
 - Mantiene `data/sponsors.json`.
 - No incluye `assets/pitch-board.png`.

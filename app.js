@@ -1,27 +1,41 @@
-const DATA_URL = 'data/seed.json';
-const PLAYERS_DATABASE_URL = 'data/jugadores.json';
-const SPONSORS_DATABASE_URL = 'data/sponsors.json';
+const GAME_CONFIG = window.GAME_CONFIG || {};
+function configValue(path, fallback){
+  return String(path || '').split('.').reduce((node, key) => (node && Object.prototype.hasOwnProperty.call(node, key)) ? node[key] : undefined, GAME_CONFIG) ?? fallback;
+}
+function configNumber(path, fallback, min=null, max=null){
+  const raw = Number(configValue(path, fallback));
+  let value = Number.isFinite(raw) ? raw : Number(fallback);
+  if(Number.isFinite(min)) value = Math.max(min, value);
+  if(Number.isFinite(max)) value = Math.min(max, value);
+  return value;
+}
+
+const DATA_URL = configValue('data.seedUrl', 'data/seed.json');
+const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
+const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
-const ADVANCE_LOCK_MS = 120000;
-const PRESEASON_TURNS = 10;
-const POSTSEASON_TURNS = 5;
-const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.33';
+const ADVANCE_LOCK_MS = configNumber('turnos.bloqueoEntreTurnosMs', 120000, 0);
+const TURN_TRANSITION_MS = configNumber('turnos.transicionAvanceMs', 3400, 800);
+const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
+const PRESEASON_TURNS = configNumber('turnos.pretemporada', 10, 0);
+const POSTSEASON_TURNS = configNumber('turnos.postemporada', 5, 0);
+const MAX_PRESEASON_FRIENDLIES = configNumber('turnos.amistososMaximosPretemporada', 5, 0);
+const APP_VERSION = configValue('version', 'V2.34');
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
 const TEAM_COHESION_PLAYER_CHANGE_LOSS = 2;
 const PLAYER_MORALE_START = 60;
-const PSYCHOLOGIST_COST = 500000;
-const PSYCHOLOGIST_SUCCESS_CHANCE = 0.90;
-const PSYCHOLOGIST_COOLDOWN_TURNS = 5;
-const KINESIOLOGIST_COST = 1000000;
-const KINESIOLOGIST_FAILURE_CHANCE = 0.20;
-const INJURED_SUB_MAX_TURNS = 9;
-const INJURED_SUB_PENALTY = 0.10;
+const PSYCHOLOGIST_COST = configNumber('empleados.psicologoCosto', 500000, 0);
+const PSYCHOLOGIST_SUCCESS_CHANCE = configNumber('empleados.psicologoProbabilidadExito', 0.90, 0, 1);
+const PSYCHOLOGIST_COOLDOWN_TURNS = configNumber('empleados.psicologoCooldownTurnos', 5, 0);
+const KINESIOLOGIST_COST = configNumber('empleados.kinesiologoCosto', 1000000, 0);
+const KINESIOLOGIST_FAILURE_CHANCE = configNumber('empleados.kinesiologoProbabilidadFallo', 0.20, 0, 1);
+const INJURED_SUB_MAX_TURNS = configNumber('lesiones.lesionadoSuplenteTurnosMax', 9, 0);
+const INJURED_SUB_PENALTY = configNumber('lesiones.penalizacionLesionadoSuplente', 0.10, 0, 1);
 const DEFAULT_TRAINING_TYPE = 'regenerative';
 const TRAINING_OPTIONS = [
   { value:'regenerative', label:'Regenerativo' },
@@ -42,18 +56,6 @@ const FORMATIONS = {
   '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MC','MC','MCO','DC'],
   '4-3-1-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
   '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MCD','MC','MC','MCO','DC']
-};
-const FORMATION_VISUAL_BANDS = {
-  '4-4-2': [4,0,4,0,2],
-  '4-3-3': [4,0,3,0,3],
-  '4-2-3-1': [4,2,0,3,1],
-  '3-5-2': [3,0,5,0,2],
-  '5-3-2': [5,0,3,0,2],
-  '4-1-4-1': [4,1,4,0,1],
-  '3-4-3': [3,0,4,0,3],
-  '4-5-1': [4,0,5,0,1],
-  '4-3-1-2': [4,0,3,1,2],
-  '5-4-1': [5,0,4,0,1]
 };
 const FORMATION_VISUALS = {
   '4-4-2':[4,0,4,0,2],
@@ -81,9 +83,9 @@ const INJURY_TABLE = [
   { name:'Fractura', probability:3, minTurns:16, maxTurns:30 },
   { name:'Contusión', probability:28, minTurns:1, maxTurns:2 }
 ];
-const BASE_INJURY_CHANCE = 0.05;
-const FATIGUE_INJURY_STEP = 5;
-const FATIGUE_INJURY_BONUS = 0.01;
+const BASE_INJURY_CHANCE = configNumber('lesiones.lesionBase', 0.05, 0, 1);
+const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
+const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);
 const PITCH_CONDITIONS = {
   'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
   'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },
@@ -91,37 +93,39 @@ const PITCH_CONDITIONS = {
   'Muy malo': { passDelta:-20, chanceMultiplier:0.70, fatigueBonus:10, injuryBonus:0.10 },
   'Injugable': { passDelta:-50, chanceMultiplier:0.50, fatigueBonus:20, injuryBonus:0.30 }
 };
-const REPLANT_COST = 2000000;
-const REPLANT_TURNS = 5;
-const PATCH_COST = 200000;
-const PATCH_TURNS = 3;
-const PATCH_GAIN_PER_TURN = 5;
-const MARKET_FREE_AGENT_COUNT = 50;
-const SEASON_YOUTH_FREE_AGENT_COUNT = 20;
+const REPLANT_COST = configNumber('estadio.costoReplantarCesped', 2000000, 0);
+const REPLANT_TURNS = configNumber('estadio.turnosReplantarCesped', 5, 0);
+const PATCH_COST = configNumber('estadio.costoParchearCampo', 200000, 0);
+const PATCH_TURNS = configNumber('estadio.turnosParchearCampo', 3, 0);
+const PATCH_GAIN_PER_TURN = configNumber('estadio.mejoraParchePorTurno', 5, 0, 100);
+const MARKET_FREE_AGENT_COUNT = configNumber('plantel.agentesLibresIniciales', 50, 0);
+const SEASON_YOUTH_FREE_AGENT_COUNT = configNumber('plantel.jovenesLibresPorTemporada', 20, 0);
 const RETIREMENT_MIN_AGE = 32;
 const RETIREMENT_MAX_AGE = 38;
-const SEASON_SALARY_BASE_REDUCTION = 0.05;
-const SEASON_SALARY_MATCH_BONUS = 0.01;
+const SEASON_SALARY_BASE_REDUCTION = configNumber('economia.reduccionBaseSueldoFinTemporada', 0.05, 0, 1);
+const SEASON_SALARY_MATCH_BONUS = configNumber('economia.bonusSueldoPorPartidoJugado', 0.01, 0);
 const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
 const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;
 const SEASON_END_TRANSFER_OFFERS_MIN = 2;
 const SEASON_END_TRANSFER_OFFERS_MAX = 6;
-const SPONSOR_OFFER_MATCH_MIN = 4;
-const SPONSOR_OFFER_MATCH_MAX = 7;
-const SPONSOR_OFFER_COUNT_MIN = 2;
-const SPONSOR_OFFER_COUNT_MAX = 5;
-const SPONSOR_OPENING_OFFER_COUNT = 2;
-const ACADEMY_SCOUTING_COST = 1000000;
-const ACADEMY_SCOUTING_TURNS = 5;
-const ACADEMY_PLAYERS_MIN = 5;
-const ACADEMY_PLAYERS_MAX = 10;
-const ACADEMY_PLAYER_TURN_COST = 10000;
-const ACADEMY_DISMISS_COMPENSATION = 50000;
-const YOUTH_PREPARER_COST = 1000000;
+const SPONSOR_OFFER_MATCH_MIN = configNumber('sponsors.partidosMinimosEntreTandas', 4, 1);
+const SPONSOR_OFFER_MATCH_MAX = Math.max(SPONSOR_OFFER_MATCH_MIN, configNumber('sponsors.partidosMaximosEntreTandas', 7, 1));
+const SPONSOR_OFFER_COUNT_MIN = configNumber('sponsors.ofertasMinimasPorTanda', 2, 1);
+const SPONSOR_OFFER_COUNT_MAX = Math.max(SPONSOR_OFFER_COUNT_MIN, configNumber('sponsors.ofertasMaximasPorTanda', 5, 1));
+const SPONSOR_OPENING_OFFER_COUNT = configNumber('sponsors.ofertasInicialesJornada1', 2, 0);
+const SPONSOR_BASE_VALUE_FACTOR = configNumber('sponsors.factorValorBase', 1, 0);
+const ACADEMY_SCOUTING_COST = configNumber('academia.costoCaptacion', 1000000, 0);
+const ACADEMY_SCOUTING_TURNS = configNumber('academia.turnosCaptacion', 5, 1);
+const ACADEMY_PLAYERS_MIN = configNumber('academia.jugadoresMinimosPorCaptacion', 5, 1);
+const ACADEMY_PLAYERS_MAX = Math.max(ACADEMY_PLAYERS_MIN, configNumber('academia.jugadoresMaximosPorCaptacion', 10, 1));
+const ACADEMY_PLAYER_TURN_COST = configNumber('academia.costoJugadorPorTurno', 10000, 0);
+const ACADEMY_DISMISS_COMPENSATION = configNumber('academia.compensacionDespido', 50000, 0);
+const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1000000, 0);
 const ACADEMY_VISIBLE_STATS_COUNT = 7;
-const ACADEMY_SKILL_GAIN_MULTIPLIER = 3;
+const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 3, 1);
 
-const CLUB_ROSTER_SIZE = 25;
+const MAX_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMaximosPorClub', 25, 1);
+const CLUB_ROSTER_SIZE = MAX_PLAYERS_PER_CLUB;
 const PLAYER_GENERATION_RULES_VERSION = 'V2.30';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
@@ -141,7 +145,7 @@ const PLAYER_GENERATION_MEDIA_RANGES = [
   { id:'profesional_promedio_bajo', probability:0.50, media_min:43, media_max:67, salaryMultiplier:80000 },
   { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
 ];
-const PLAYER_ECONOMY_SCALE = 0.10;
+const PLAYER_ECONOMY_SCALE = configNumber('economia.escalaSueldosYClausulas', 0.10, 0);
 const PLAYER_ELITE_MAX_PER_CLUB = 3;
 const PLAYER_CLAUSE_MIN_MULTIPLIER = 6;
 const PLAYER_CLAUSE_AGE_REDUCTION = 10;
@@ -191,7 +195,7 @@ function showNotice(text, persist=false){
   void box.offsetWidth;
   box.classList.add('notice-pop');
   clearTimeout(showNotice.timer);
-  if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), 5200); }
+  if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), NOTICE_DURATION_MS); }
 }
 function hideNotice(){ $('notice')?.classList.add('hidden'); }
 function showTurnTransition(label='Avanzando turno'){
@@ -200,13 +204,14 @@ function showTurnTransition(label='Avanzando turno'){
   root = document.createElement('div');
   root.id = 'turnTransition';
   root.className = 'turn-transition-backdrop';
+  root.style.setProperty('--turn-transition-ms', `${TURN_TRANSITION_MS}ms`);
   root.innerHTML = `<div class="turn-transition-card"><div class="turn-spinner" aria-hidden="true"></div><strong>${escapeHtml(label)}</strong><span>Actualizando calendario, plantel y economía...</span><div class="turn-transition-bar"><i></i></div></div>`;
   document.body.appendChild(root);
   clearTimeout(showTurnTransition.timer);
   showTurnTransition.timer = setTimeout(()=>{
     root.classList.add('is-exiting');
     setTimeout(()=>root.remove(), 260);
-  }, 2300);
+  }, TURN_TRANSITION_MS);
 }
 function clamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
 function rnd(min,max){ return min + Math.random() * (max-min); }
@@ -234,6 +239,18 @@ function divisionFilterMarkup(id, selected){
 }
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
+function pendingIncomingTransfersCount(clubId=game?.selectedClubId){
+  return (game?.pendingTransfers || []).filter(t => t.status === 'pending' && Number(t.toClubId) === Number(clubId)).length;
+}
+function firstTeamRosterCount(clubId=game?.selectedClubId){
+  return playersByClub(Number(clubId)).length;
+}
+function hasFirstTeamRosterSpace(clubId=game?.selectedClubId, extra=1){
+  return firstTeamRosterCount(clubId) + pendingIncomingTransfersCount(clubId) + Math.max(0, Number(extra) || 0) <= MAX_PLAYERS_PER_CLUB;
+}
+function showRosterLimitNotice(){
+  showNotice(`Plantel completo. Máximo ${MAX_PLAYERS_PER_CLUB} jugadores.`);
+}
 function playerStatus(playerId){ return game?.playerStatus?.[playerId] || {}; }
 function isUnavailable(playerId){
   if(!game) return false;
@@ -2767,6 +2784,7 @@ function renderContractedMarket(){
 function hireFreeAgent(playerId){
   const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
   if(idx < 0) return;
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
   game.marketPlayers[idx].clubId = game.selectedClubId;
   game.marketPlayers[idx].freeAgent = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
@@ -3257,7 +3275,7 @@ function sponsorOfferValue(baseSponsor, lugar){
   const base = Number(baseSponsor?.valor_base_por_turno || 0);
   const place = Number(lugar?.multiplicador_lugar || 1);
   const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus());
-  const perTurn = Math.round(base * totalMultiplier);
+  const perTurn = Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier);
   const turns = clamp(Math.round(Number(baseSponsor?.turnos_duracion_oferta || randomInt(3,35))), 3, 35);
   return { perTurn, turns, total:perTurn * turns };
 }
@@ -4479,6 +4497,7 @@ function promoteAcademyPlayer(playerId, exactPosition){
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
   if(!player) return;
   if(Number(player.age || 0) < 16){ showNotice('El juvenil todavía no tiene edad para firmar contrato profesional.'); return; }
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
   const allowed = academyExactPositions(player.group);
   const position = allowed.includes(exactPosition) ? exactPosition : allowed[0];
   const official = {
@@ -5106,6 +5125,7 @@ function purchaseOfferConfig(kind, clause){
 function submitPurchaseOffer(playerId, kind){
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
   const clause = refreshPlayerClause(player);
   const cfg = purchaseOfferConfig(kind, clause);
   if((game.budget || 0) < cfg.amount){
@@ -5153,6 +5173,11 @@ function processPendingTransfers(){
     if(Number(t.arrivalTurn || 0) > currentTurnIndex()) return;
     const player = playerById(t.playerId);
     if(!player){ t.status = 'missing'; changed = true; return; }
+    if(!hasFirstTeamRosterSpace(Number(t.toClubId || game.selectedClubId), 1)){
+      t.arrivalTurn = currentTurnIndex() + 1;
+      changed = true;
+      return;
+    }
     player.clubId = Number(t.toClubId || game.selectedClubId);
     player.freeAgent = false;
     player.sold = false;

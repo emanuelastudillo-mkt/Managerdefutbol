@@ -1,21 +1,48 @@
-# Fútbol Manager MVP V2.33
+# Fútbol Manager MVP V2.34
 
 Actualización incremental del manager de fútbol local.
 
-## Cambios V2.33
-- Nuevo menú lateral **Academia**.
-- Captación de talentos: cuesta $1.000.000 y entrega un informe en 5 turnos.
-- Cada captación suma entre 5 y 10 juveniles de 8 a 14 años.
-- Los juveniles aparecen con rol amplio: POR, DEF, MED o DEL.
-- Sus habilidades visibles empiezan completamente ocultas.
-- Nuevo empleado: **Preparador de juveniles**, contratado por temporada por $1.000.000.
-- Botón **Consultar juveniles**: desbloquea 1 o 2 habilidades visibles de cualquier juvenil disponible.
-- Las habilidades reveladas quedan acumuladas.
-- Los juveniles cobran $10.000 por turno.
-- Pueden ser despedidos pagando $50.000 de compensación.
-- Los juveniles pueden entrenar Técnica o Resistencia.
-- La academia entrena más rápido que el primer equipo y no aplica pérdida de moral.
-- Desde los 16 años pueden firmar contrato profesional y fijar posición exacta.
+## Cambios V2.34
+- Se agregó `config.js` como archivo editable de configuración general.
+- Se movieron a configuración externa los valores principales:
+  - tiempo de bloqueo entre turnos;
+  - duración visual de la transición de avance;
+  - cantidad de turnos de pretemporada y postemporada;
+  - cantidad máxima de jugadores del primer equipo;
+  - cantidad de agentes libres iniciales y jóvenes libres por temporada;
+  - escala de sueldos y cláusulas;
+  - parámetros de sponsors;
+  - costos de estadio, empleados y academia;
+  - parámetros básicos de lesiones.
+- Se ajustó la transición de avance de turno para usar la duración definida en `config.js`.
+- Se limpió una estructura duplicada de formaciones visuales que ya no se usaba.
+- Se agregaron controles simples de límite de plantel al contratar libres, comprar jugadores o promover juveniles.
+- Se validó sintaxis de `app.js`, `config.js` y `simulador-2.0.js`.
+- Se validaron los JSON principales: jugadores, sponsors y Liga Argentina.
+
+## Archivo de configuración
+Editar:
+
+```txt
+config.js
+```
+
+Ejemplos útiles:
+
+```js
+turnos: {
+  bloqueoEntreTurnosMs: 120000,
+  transicionAvanceMs: 3400
+},
+plantel: {
+  jugadoresMaximosPorClub: 25
+},
+sponsors: {
+  factorValorBase: 1,
+  partidosMinimosEntreTandas: 4,
+  partidosMaximosEntreTandas: 7
+}
+```
 
 ## Base inicial vigente
 - Total jugadores: 1500.
@@ -27,6 +54,7 @@ Actualización incremental del manager de fútbol local.
 
 ## Archivos
 - `index.html`
+- `config.js`
 - `app.js`
 - `style.css`
 - `simulador-2.0.js`

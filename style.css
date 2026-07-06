@@ -1416,7 +1416,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .notice{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:1300;width:min(520px,calc(100vw - 28px));margin:0;padding:11px 14px;border-radius:14px;font-size:13px;box-shadow:0 20px 70px rgba(0,0,0,.38)}
 .turn-transition-backdrop{z-index:1250;background:rgba(2,6,23,.70);backdrop-filter:blur(6px);animation:turnBackdropInV231 .22s ease-out both}.turn-transition-backdrop.is-exiting{animation:turnBackdropOutV231 .34s ease-in both}
 .turn-transition-card{width:min(340px,100%);gap:9px;padding:22px 20px;border-radius:21px;background:linear-gradient(145deg,rgba(15,23,42,.98),rgba(30,41,59,.95));box-shadow:0 28px 90px rgba(0,0,0,.50)}
-.turn-transition-card strong{font-size:19px}.turn-transition-card span{font-size:12px}.turn-spinner{width:36px;height:36px;border-width:3px;animation:turnSpinV231 .9s linear infinite}.turn-transition-bar{height:6px}.turn-transition-bar i{animation:turnBarV231 2.15s ease-out both}
+.turn-transition-card strong{font-size:19px}.turn-transition-card span{font-size:12px}.turn-spinner{width:36px;height:36px;border-width:3px;animation:turnSpinV231 .9s linear infinite}.turn-transition-bar{height:6px}.turn-transition-bar i{animation:turnBarV231 var(--turn-transition-ms, 3400ms) ease-out both}
 @keyframes turnSpinV231{to{transform:rotate(360deg)}}
 @keyframes turnBarV231{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes turnBackdropInV231{from{opacity:0}to{opacity:1}}

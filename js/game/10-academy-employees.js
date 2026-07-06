@@ -1,4 +1,4 @@
-/* V3.04 · Academia, captación, juveniles, empleados y tratamientos. */
+/* V3.03 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
   return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null };
@@ -413,10 +413,10 @@ function renderEmployees(){
       </div>
     </div>
   `;
-  $('btnMotivationalTalk')?.addEventListener('click', (event) => callMotivationalPsychologist(event.currentTarget));
+  $('btnMotivationalTalk')?.addEventListener('click', callMotivationalPsychologist);
   $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
   document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
-    btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat), btn));
+    btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat)));
   });
 }
 function injuredTreatmentList(injuredList){
@@ -445,79 +445,58 @@ function hireKinesiologist(){
   showNotice('Kinesiólogo contratado por la temporada completa.');
   renderEmployees();
 }
-function treatInjuredPlayer(playerId, button=null){
-  const performTreatment = () => {
-    if(!game?.staffActions?.kinesiologist?.active){ return { success:false, message:'Primero tenés que contratar al kinesiólogo.' }; }
-    if(!isInjured(playerId)){ return { success:false, message:'El jugador no está lesionado.', after:renderEmployees }; }
-    game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
-    const key = `${currentTurnIndex()}:${playerId}`;
-    if(game.staffActions.kinesiologyTreatments[key]){ return { success:false, message:'Este jugador ya recibió tratamiento en este turno.' }; }
-    const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
-    game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
-    if(success){
-      const st = playerStatus(playerId);
-      const nextThrough = Number(st.injuredThrough) - 1;
-      if(nextThrough < game.matchdayIndex){
-        const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
-        game.playerStatus[playerId] = rest;
-      } else {
-        game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
-      }
+function treatInjuredPlayer(playerId){
+  if(!game?.staffActions?.kinesiologist?.active){ showNotice('Primero tenés que contratar al kinesiólogo.'); return; }
+  if(!isInjured(playerId)){ showNotice('El jugador no está lesionado.'); renderEmployees(); return; }
+  game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
+  const key = `${currentTurnIndex()}:${playerId}`;
+  if(game.staffActions.kinesiologyTreatments[key]){ showNotice('Este jugador ya recibió tratamiento en este turno.'); return; }
+  const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
+  game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
+  if(success){
+    const st = playerStatus(playerId);
+    const nextThrough = Number(st.injuredThrough) - 1;
+    if(nextThrough < game.matchdayIndex){
+      const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+      game.playerStatus[playerId] = rest;
+    } else {
+      game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
     }
-    saveLocal(true);
-    return {
-      success,
-      buttonLabel: success ? 'Tratamiento realizado' : 'Tratamiento fallido',
-      message: success ? 'Tratamiento exitoso. La recuperación se acortó 1 turno.' : 'El tratamiento falló. La lesión no se redujo.',
-      after:renderEmployees
-    };
-  };
-  return runActionFeedback(button, performTreatment, {
-    loadingLabel:'Tratando...',
-    successLabel:'Tratamiento realizado',
-    failureLabel:'Tratamiento fallido'
-  });
+    showNotice('Tratamiento exitoso. La recuperación se acortó 1 turno.');
+  } else {
+    showNotice('El tratamiento falló. La lesión no se redujo.');
+  }
+  saveLocal(true);
+  renderEmployees();
 }
 function moraleTeamBar(clubId){
   const value = squadMoraleAverage(clubId);
   const cls = value < 40 ? 'low' : value < 70 ? 'mid' : 'high';
   return `<div class="morale-bar ${cls} team-morale-bar" title="Moral media ${value}/99"><span style="width:${clamp(value,1,99)}%"></span><em>${value}/99</em></div>`;
 }
-function callMotivationalPsychologist(button=null){
-  const performTalk = () => {
-    if(!game) return { success:false, message:'No hay partida activa.' };
-    const last = game.staffActions?.motivationalTalk || null;
-    const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
-    if(cooldownLeft > 0){ return { success:false, message:`La charla motivacional estará disponible en ${cooldownLeft} turno(s).` }; }
-    if((game.budget || 0) < PSYCHOLOGIST_COST){ return { success:false, message:'Presupuesto insuficiente para llamar al psicólogo motivacional.' }; }
-    recordBudgetChange(-PSYCHOLOGIST_COST, 'Psicólogo motivacional', { type:'staff_psychologist' });
-    const success = Math.random() < PSYCHOLOGIST_SUCCESS_CHANCE;
-    if(success){
-      playersByClub(game.selectedClubId).forEach(player => {
-        game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(18,25)), 1, 99);
-      });
-    }
-    game.staffActions = game.staffActions || {};
-    game.staffActions.motivationalTalk = {
-      success,
-      ...turnStamp(),
-      message: success ? 'La charla motivacional fue un éxito' : 'La charla motivacional fue un fracaso'
-    };
-    saveLocal(true);
-    return {
-      success,
-      buttonLabel: success ? 'Charla exitosa' : 'Charla fallida',
-      message: game.staffActions.motivationalTalk.message,
-      after:renderEmployees
-    };
+function callMotivationalPsychologist(){
+  if(!game) return;
+  const last = game.staffActions?.motivationalTalk || null;
+  const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
+  if(cooldownLeft > 0){ showNotice(`La charla motivacional estará disponible en ${cooldownLeft} turno(s).`); return; }
+  if((game.budget || 0) < PSYCHOLOGIST_COST){ showNotice('Presupuesto insuficiente para llamar al psicólogo motivacional.'); return; }
+  recordBudgetChange(-PSYCHOLOGIST_COST, 'Psicólogo motivacional', { type:'staff_psychologist' });
+  const success = Math.random() < PSYCHOLOGIST_SUCCESS_CHANCE;
+  if(success){
+    playersByClub(game.selectedClubId).forEach(player => {
+      game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(18,25)), 1, 99);
+    });
+  }
+  game.staffActions = game.staffActions || {};
+  game.staffActions.motivationalTalk = {
+    success,
+    ...turnStamp(),
+    message: success ? 'La charla motivacional fue un éxito' : 'La charla motivacional fue un fracaso'
   };
-  return runActionFeedback(button, performTalk, {
-    loadingLabel:'Convocando charla...',
-    successLabel:'Charla exitosa',
-    failureLabel:'Charla fallida'
-  });
+  saveLocal(true);
+  showNotice(game.staffActions.motivationalTalk.message);
+  renderEmployees();
 }
-
 
 function getTacticForClub(clubId){
   if(clubId === game.selectedClubId) return game.tactic;

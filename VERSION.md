@@ -1,79 +1,43 @@
-# Versión V3.04
+# Versión V3.03
 
 ## Objetivo de la versión
 
-Aplicar ajustes de experiencia y balance menor sobre V3.03: límites de plantel, favicon correcto, simulación visual con más fases, revisión de pesos de goles/tarjetas y reducción de cláusulas sin tocar sueldos.
+Corregir un problema de experiencia durante la simulación visual del partido: el aviso superior informaba lesiones o expulsiones antes de que la visualización llegara al final del encuentro.
 
-## Ajustes principales
+## Ajuste principal
 
-### Límites de plantel
-- Se incorporó un mínimo configurable de `18` jugadores por plantel.
-- Se incorporó un máximo configurable de `42` jugadores por plantel.
-- Con `42/42` jugadores ya no se puede fichar ni subir juveniles al primer equipo.
-- Con el plantel en mínimo, el juego bloquea despidos, ventas aceptadas y ofrecimientos activos que dejarían al club por debajo del mínimo.
-- El tamaño inicial de plantel queda separado en `jugadoresInicialesPorClub`, con valor `25`, para no generar automáticamente 42 jugadores por club.
-
-### Favicon
-- Se reemplazó la referencia `favico.png` por `favicon.png`.
-- Se agregó `?v=3.04` para forzar actualización de caché del navegador.
-- El archivo `favicon.png` debe estar en la carpeta raíz, junto a `index.html`.
-
-### Simulación de partido
-- El motor V2.0 pasa de 6 bloques internos de 15 minutos a 30 bloques de 3 minutos.
-- Ataques, chances, faltas y xG se escalan por duración de bloque para no inflar resultados.
-- La visualización del partido pasa de 6 etapas fijas a 30 fases configurables.
-- Se agregaron las claves `fasesSimulacionPartido` y `duracionSimulacionPartidoMs` en `config.js`.
-- La duración visual base queda en 30 segundos.
-
-### Balance de goleadores y tarjetas
-- Se reforzó el peso de los delanteros en la selección de goleadores.
-- Los delanteros centro y extremos ahora tienen más probabilidad relativa de convertir que mediocampistas y defensores.
-- El arquero queda prácticamente excluido de la selección normal de goleadores.
-- Se redujo fuertemente la probabilidad de tarjetas del arquero.
-- El arquero ya no entra en la selección de roja directa.
-- Se redujo levemente la frecuencia de rojas directas.
-
-
-
-## Ajustes dentro de V3.04
-
-### Cláusulas reducidas
-- Se agregó `economia.escalaClausulas: 0.10` en `config.js`.
-- Las cláusulas calculadas ahora quedan en una décima parte del valor anterior.
-- No se modifican sueldos existentes ni la escala salarial.
-- Las cláusulas se recalculan al normalizar jugadores, por lo que el ajuste también impacta en partidas guardadas compatibles.
-
-### Feedback visual de acciones con resultado
-- Las acciones de empleados que pueden salir bien o fallar ahora muestran una animación de carga al hacer clic.
-- `Tratar` muestra estado de procesamiento y luego resultado verde si fue exitoso o rojo si falló.
-- `Llamar al psicólogo motivacional` muestra estado de procesamiento y luego resultado verde o rojo según la charla.
-- Se conservan los mensajes existentes de éxito/fallo.
-- Se agregaron tiempos configurables en `config.js`: `accionesFeedbackCargaMs` y `accionesFeedbackResultadoMs`.
+### Aviso diferido de lesiones y expulsiones
+- Antes: después de simular internamente la jornada, el juego abría la visualización del partido y al mismo tiempo mostraba arriba el aviso de lesionados o expulsados propios.
+- Ahora: el aviso queda diferido hasta que la visualización llega al minuto final.
+- Si se usa el botón **Finalizar partido**, primero se muestra el resultado final y recién después aparece el aviso.
 
 ## Archivos modificados
 - `config.js`
-- `style.css`
-- `js/core/02-ui-utils.js`
-- `js/game/10-academy-employees.js`
 - `index.html`
-- `simulador-2.0.js`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/11-match-engine.js`
-- `js/ui/06-render-home-messages.js`
+- `js/game/09-simulation-economy-training.js`
 - `js/ui/12-modals.js`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
 
 ## Validación realizada
-- `node --check` correcto en todos los `.js`.
+- `node --check app.js`: correcto.
+- `node --check config.js`: correcto.
+- `node --check simulador-2.0.js`: correcto.
+- `node --check js/core/*.js`: correcto.
+- `node --check js/data/*.js`: correcto.
+- `node --check js/game/*.js`: correcto.
+- `node --check js/ui/*.js`: correcto.
 - `data/jugadores.json`: JSON válido.
 - `data/sponsors.json`: JSON válido.
 - `data/Liga Argentina.json`: JSON válido.
-- Scripts referenciados en `index.html` verificados.
+
+## Observaciones de revisión
+- No se alteró el motor de simulación. El partido sigue calculándose al avanzar la jornada; sólo se cambia cuándo se comunica el aviso al usuario.
+- La mejora protege la ilusión de visualización en vivo sin tocar lesiones, tarjetas, suspensiones ni limpieza automática de táctica.
+- Sigue pendiente una posible mejora futura: que la simulación revele eventos de manera más granular y que ciertas consecuencias administrativas aparezcan como resumen posterior al partido.
 
 ## Compatibilidad
-- Compatible con partidas V3.01, V3.02 y V3.03.
+- Compatible con partidas V3.01 y V3.02.
 - No requiere reiniciar partida.
-- Si una partida guardada ya supera 42 jugadores, el juego no elimina jugadores automáticamente, pero bloquea nuevas incorporaciones hasta volver a estar por debajo del máximo.
+- No requiere cambios en archivos JSON.

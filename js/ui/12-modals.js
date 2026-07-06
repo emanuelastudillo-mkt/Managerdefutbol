@@ -1,4 +1,4 @@
-/* V3.04 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.03 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
@@ -62,7 +62,6 @@ function showPlayerModal(playerId){
 function dismissOwnPlayer(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   if(!confirm(`Despedir a ${player.name} del plantel?`)) return;
   removePlayerFromCurrentTactic(player.id);
   player.clubId = 0;
@@ -84,7 +83,6 @@ function dismissOwnPlayer(playerId){
 function offerOwnPlayerToClubs(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   if(!hasPlayerSalaryPaid(player)){
     showNotice('Primero debemos haberle pagado al menos un sueldo.');
     return;
@@ -300,50 +298,15 @@ function showMatchRevealModal(match, onRevealComplete=null){
     renderStage(stages.length - 1);
   });
 }
-function matchRevealStageLabel(minute, index, total){
-  if(index === 0) return 'Salida al campo';
-  if(index >= total - 1) return 'Final';
-  if(minute === 45) return 'Entretiempo';
-  if(minute < 15) return `Minuto ${minute} · Inicio`;
-  if(minute < 30) return `Minuto ${minute} · Primer tiempo`;
-  if(minute < 45) return `Minuto ${minute} · Antes del descanso`;
-  if(minute < 60) return `Minuto ${minute} · Segundo tiempo`;
-  if(minute < 75) return `Minuto ${minute} · Partido abierto`;
-  return `Minuto ${minute} · Tramo final`;
-}
-function matchRevealStageNote(minute, index, total){
-  if(index === 0) return 'Los equipos salen a la cancha. Todavía no hay eventos revelados.';
-  if(index >= total - 1) return 'Resultado final, estadísticas completas y consecuencias del partido.';
-  if(minute < 15) return 'Primeras posesiones, presión inicial y tanteo táctico.';
-  if(minute < 30) return 'El ritmo empieza a mostrar quién logra progresar mejor.';
-  if(minute < 45) return 'Últimos ataques antes del descanso.';
-  if(minute === 45) return 'Cierre del primer tiempo.';
-  if(minute < 60) return 'Arranque del complemento y primeros ajustes.';
-  if(minute < 75) return 'El partido entra en una zona de mayor desgaste.';
-  return 'Últimos riesgos, cambios y acciones decisivas.';
-}
 function matchRevealStages(match){
-  const total = Math.max(6, Math.round(MATCH_REVEAL_PHASES || 30));
-  const duration = Math.max(6000, Number(MATCH_REVEAL_DURATION_MS || 30000));
-  const stages = [];
-  const usedMinutes = new Set();
-  for(let i=0;i<total;i++){
-    const factor = total <= 1 ? 1 : i / (total - 1);
-    let minute = i === 0 ? 0 : (i === total - 1 ? 90 : Math.round(factor * 90));
-    if(i > 0 && i < total - 1){
-      while(usedMinutes.has(minute) && minute < 89) minute++;
-      minute = clamp(minute, 1, 89);
-    }
-    usedMinutes.add(minute);
-    stages.push({
-      label:matchRevealStageLabel(minute, i, total),
-      minute,
-      factor,
-      time:Math.round(duration * factor),
-      note:matchRevealStageNote(minute, i, total)
-    });
-  }
-  return stages;
+  return [
+    { label:'Salida al campo', minute:0, factor:0, time:0, note:'Inicio de la visualización.' },
+    { label:'Primeros minutos', minute:18, factor:.22, time:4000, note:'Primeras posesiones y ataques.' },
+    { label:'Media hora', minute:32, factor:.38, time:8000, note:'El partido empieza a marcar una tendencia.' },
+    { label:'Entretiempo', minute:45, factor:.52, time:12000, note:'Cierre del primer tiempo.' },
+    { label:'Tramo final', minute:75, factor:.78, time:16000, note:'Últimos riesgos y cambios.' },
+    { label:'Final', minute:90, factor:1, time:20000, note:'Resultado y estadísticas completas.' }
+  ];
 }
 function renderMatchRevealStage(match, stage, index, total){
   const box = $('matchRevealDynamic');

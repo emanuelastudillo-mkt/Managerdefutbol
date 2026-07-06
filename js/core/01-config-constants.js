@@ -1,4 +1,4 @@
-/* V3.04 · Configuración leída desde config.js, constantes generales y estado global. */
+/* V3.03 · Configuración leída desde config.js, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -22,12 +22,10 @@ const SAVE_KEY = 'main';
 const ADVANCE_LOCK_MS = configNumber('turnos.bloqueoEntreTurnosMs', 120000, 0);
 const TURN_TRANSITION_MS = configNumber('turnos.transicionAvanceMs', 3400, 800);
 const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
-const ACTION_FEEDBACK_LOADING_MS = configNumber('ui.accionesFeedbackCargaMs', 750, 250, 3000);
-const ACTION_FEEDBACK_RESULT_MS = configNumber('ui.accionesFeedbackResultadoMs', 900, 300, 4000);
 const PRESEASON_TURNS = configNumber('turnos.pretemporada', 10, 0);
 const POSTSEASON_TURNS = configNumber('turnos.postemporada', 5, 0);
 const MAX_PRESEASON_FRIENDLIES = configNumber('turnos.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.04');
+const APP_VERSION = configValue('version', 'V3.03');
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -128,12 +126,8 @@ const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1
 const ACADEMY_VISIBLE_STATS_COUNT = 7;
 const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 3, 1);
 
-const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
-const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));
-const MAX_PLAYERS_PER_CLUB = Math.max(INITIAL_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMaximosPorClub', 42, 1));
-const CLUB_ROSTER_SIZE = INITIAL_PLAYERS_PER_CLUB;
-const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
-const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 30000, 1000));
+const MAX_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMaximosPorClub', 25, 1);
+const CLUB_ROSTER_SIZE = MAX_PLAYERS_PER_CLUB;
 const PLAYER_GENERATION_RULES_VERSION = 'V2.30';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
@@ -154,7 +148,6 @@ const PLAYER_GENERATION_MEDIA_RANGES = [
   { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
 ];
 const PLAYER_ECONOMY_SCALE = configNumber('economia.escalaSueldosYClausulas', 0.10, 0);
-const PLAYER_CLAUSE_VALUE_SCALE = configNumber('economia.escalaClausulas', 0.10, 0);
 const PLAYER_ELITE_MAX_PER_CLUB = 3;
 const PLAYER_CLAUSE_MIN_MULTIPLIER = 6;
 const PLAYER_CLAUSE_AGE_REDUCTION = 10;

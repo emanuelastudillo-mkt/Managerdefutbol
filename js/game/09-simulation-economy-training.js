@@ -1,4 +1,4 @@
-/* V3.04 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
+/* V3.03 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){

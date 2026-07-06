@@ -1,4 +1,4 @@
-/* V3.04 · Utilidades DOM, formato, avisos y helpers básicos de club. */
+/* V3.03 · Utilidades DOM, formato, avisos y helpers básicos de club. */
 
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
@@ -15,49 +15,6 @@ function showNotice(text, persist=false){
   if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), NOTICE_DURATION_MS); }
 }
 function hideNotice(){ $('notice')?.classList.add('hidden'); }
-
-function runActionFeedback(button, action, options={}){
-  if(!button){
-    const outcome = action?.() || {};
-    if(outcome.message) showNotice(outcome.message, Boolean(outcome.persist));
-    if(typeof outcome.after === 'function') outcome.after(outcome);
-    return outcome;
-  }
-  if(button.disabled || button.dataset.actionBusy === '1') return null;
-  const originalHtml = button.innerHTML;
-  const loadingLabel = options.loadingLabel || 'Procesando...';
-  const successLabel = options.successLabel || 'Acción realizada';
-  const failureLabel = options.failureLabel || 'Acción fallida';
-  button.dataset.actionBusy = '1';
-  button.disabled = true;
-  button.classList.remove('action-success','action-failure');
-  button.classList.add('action-processing');
-  button.innerHTML = `<span class="action-spinner" aria-hidden="true"></span><span>${escapeHtml(loadingLabel)}</span>`;
-  clearTimeout(button._actionFeedbackTimer);
-  button._actionFeedbackTimer = setTimeout(() => {
-    let outcome = null;
-    try{
-      outcome = action?.() || {};
-    }catch(error){
-      console.error(error);
-      outcome = { success:false, message:'La acción falló por un error interno.', after:null };
-    }
-    const success = Boolean(outcome.success);
-    button.classList.remove('action-processing');
-    button.classList.add(success ? 'action-success' : 'action-failure');
-    button.innerHTML = `<span>${escapeHtml(outcome.buttonLabel || (success ? successLabel : failureLabel))}</span>`;
-    if(outcome.message) showNotice(outcome.message, Boolean(outcome.persist));
-    clearTimeout(button._actionFeedbackResultTimer);
-    button._actionFeedbackResultTimer = setTimeout(() => {
-      button.classList.remove('action-success','action-failure');
-      button.innerHTML = originalHtml;
-      button.disabled = false;
-      delete button.dataset.actionBusy;
-      if(typeof outcome.after === 'function') outcome.after(outcome);
-    }, ACTION_FEEDBACK_RESULT_MS);
-  }, ACTION_FEEDBACK_LOADING_MS);
-  return null;
-}
 function showTurnTransition(label='Avanzando turno'){
   let root = $('turnTransition');
   if(root) root.remove();

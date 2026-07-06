@@ -13,10 +13,14 @@
     normal:{ attack:1.00, midfield:1.00, defense:1.00, attacks:1.00, conversion:1.00, foul:1.00 },
     push:{ attack:1.09, midfield:1.03, defense:0.95, attacks:1.12, conversion:1.06, foul:1.10 }
   };
-  const BLOCKS = Array.from({ length:30 }, (_, index) => ({
-    from:index * 3 + 1,
-    to:index === 29 ? 90 : index * 3 + 3
-  }));
+  const BLOCKS = [
+    { from:1, to:15 },
+    { from:16, to:30 },
+    { from:31, to:45 },
+    { from:46, to:60 },
+    { from:61, to:75 },
+    { from:76, to:90 }
+  ];
   const SIM_PITCH_CONDITIONS = {
     'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
     'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },
@@ -28,14 +32,6 @@
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
   function simRnd(min,max){ return min + Math.random() * (max-min); }
-  function probabilisticRoundV2(value){
-    const safe = Math.max(0, Number(value) || 0);
-    const base = Math.floor(safe);
-    return base + (Math.random() < safe - base ? 1 : 0);
-  }
-  function blockDurationFactor(block){
-    return simClamp(((Number(block?.to || 0) - Number(block?.from || 0) + 1) || 15) / 15, 0.05, 1);
-  }
   function normalizeMatchInstructions(instructions){
     const src = instructions || {};
     const valid = new Set(MATCH_INSTRUCTION_OPTIONS.map(o=>o.value));
@@ -119,9 +115,8 @@
     const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * simRnd(18,70)));
     return { weather, pitch, pitchScore, homeFans, awayFans, pitchEffect:effect };
   }
-  function blockStatsForTeam(own, rival, context, ownInstruction, rivalInstruction, isHome, block=null){
+  function blockStatsForTeam(own, rival, context, ownInstruction, rivalInstruction, isHome){
     const effect = pitchEffectV2(context.pitch);
-    const phaseFactor = blockDurationFactor(block);
     const ownInstr = INSTRUCTION_EFFECTS[ownInstruction] || INSTRUCTION_EFFECTS.normal;
     const rivalInstr = INSTRUCTION_EFFECTS[rivalInstruction] || INSTRUCTION_EFFECTS.normal;
     const pitchPass = effect.passDelta;
@@ -133,8 +128,7 @@
     const attackPressure = (own.attack * ownInstr.attack) / 22;
     const defenseBrake = (rival.defense * rivalInstr.defense) / 34;
     const baseAttacks = 3.5 + midfieldAttack + attackPressure - defenseBrake + own.profile.attacks + (possession - 50) / 12 + (isHome ? 0.6 : 0) + simRnd(-1.6,1.9);
-    const fullBlockAttacks = simClamp(baseAttacks * ownInstr.attacks, 0, 13);
-    const attacks = simClamp(probabilisticRoundV2(fullBlockAttacks * phaseFactor), 0, 5);
+    const attacks = simClamp(Math.round(baseAttacks * ownInstr.attacks), 1, 13);
     const forwardCount = Math.max(1, own.counts.att || 1);
     const defenderCount = Math.max(1, rival.counts.def || 1);
     const conversion = simClamp(
@@ -142,12 +136,11 @@
       0.045,
       0.32
     ) * ownInstr.conversion * pitchChance;
-    const fullBlockChances = Math.max(0, fullBlockAttacks * conversion + (own.attack - rival.defense) / 58 + simRnd(-0.35,0.45));
-    const chances = simClamp(probabilisticRoundV2(fullBlockChances * phaseFactor), 0, 3);
+    const rawChances = attacks * conversion + (own.attack - rival.defense) / 58 + simRnd(-0.35,0.45);
+    const chances = simClamp(Math.round(rawChances), 0, 5);
     const xgPerChance = simClamp(0.14 + (own.attackQuality - rival.keeperQuality) / 650 + forwardCount * 0.018 - defenderCount * 0.009, 0.07, 0.38);
-    const xg = simClamp(chances * xgPerChance + (fullBlockAttacks > 8 ? 0.04 * phaseFactor : 0) + (isHome ? 0.03 * phaseFactor : 0), 0, 0.55);
-    const fullBlockFouls = Math.max(0, 1.1 + own.aggression/46 + (100-own.discipline)/62 + (ownInstruction === 'push' ? 0.55 : ownInstruction === 'lower' ? -0.35 : 0) + simRnd(-0.7,0.9));
-    const fouls = simClamp(probabilisticRoundV2(fullBlockFouls * phaseFactor), 0, 3);
+    const xg = simClamp(chances * xgPerChance + (attacks > 8 ? 0.04 : 0) + (isHome ? 0.03 : 0), 0, 1.45);
+    const fouls = simClamp(Math.round((1.1 + own.aggression/46 + (100-own.discipline)/62 + (ownInstruction === 'push' ? 0.55 : ownInstruction === 'lower' ? -0.35 : 0) + simRnd(-0.7,0.9))), 0, 6);
     return { attacks, chances, possession, fouls, passScore:Math.round(effectiveMid), xg };
   }
   function mergeBlockStats(total, block){
@@ -183,43 +176,32 @@
     for(const x of weighted){ r -= x.w; if(r<=0) return x.item; }
     return weighted[0]?.item;
   }
-  function scorerWeightV2(player){
-    if(!player) return 1;
-    if(player.position === 'POR') return 0.35;
-    const posBonus = player.position === 'DC' ? 125 : ['ED','EI'].includes(player.position) ? 88 : player.position === 'MCO' ? 58 : player.position === 'MC' ? 22 : player.position === 'MCD' ? 10 : 5;
-    return effectiveSkill(player,'remate') * 1.35 + effectiveSkill(player,'posicionamiento') * 1.15 + effectiveSkill(player,'serenidad') * 0.45 + currentMorale(player.id) * 0.20 + posBonus;
-  }
-  function cardWeightV2(player){
-    if(!player) return 1;
-    if(player.position === 'POR') return 0.35;
-    const roleBonus = ['DFC','MCD'].includes(player.position) ? 30 : ['LD','LI'].includes(player.position) ? 20 : player.position === 'MC' ? 12 : 6;
-    return hiddenStats(player).aggression * 0.75 + (100 - effectiveSkill(player,'disciplina')) * 0.30 + roleBonus;
-  }
   function makeGoalV2(clubId, lineup, minute){
-    const outfield = (lineup || []).filter(p => p.position !== 'POR');
-    const scorerPool = outfield.length ? outfield : lineup;
-    const scorer = weightedPickV2(scorerPool, scorerWeightV2);
+    const scorer = weightedPickV2(lineup, p => {
+      const posBonus = p.position === 'DC' ? 48 : ['ED','EI','MCO'].includes(p.position) ? 30 : ['MC','MCD'].includes(p.position) ? 10 : 3;
+      return effectiveSkill(p,'remate') + effectiveSkill(p,'posicionamiento') + currentMorale(p.id) * 0.25 + posBonus;
+    });
     const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id);
     const hasAssist = Math.random() < 0.72;
-    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 0.75 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
+    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
     return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute };
   }
   function makeCardsV2(clubId, power, fouls){
     const cards = [];
-    const yellowCount = simClamp(poissonV2(fouls / 7.6), 0, 6);
+    const yellowCount = simClamp(poissonV2(fouls / 7.2), 0, 6);
     const byPlayer = new Map();
     for(let i=0;i<yellowCount;i++){
-      const p = weightedPickV2(power.lineup, cardWeightV2);
+      const p = weightedPickV2(power.lineup, x => hiddenStats(x).aggression + (['DFC','MCD','LD','LI'].includes(x.position)?16:4));
       if(!p) continue;
       const current = byPlayer.get(p.id) || 0;
       byPlayer.set(p.id, current + 1);
       if(current === 0) cards.push({ clubId, playerId:p.id, type:'yellow', minute:Math.floor(simRnd(5,88)) });
       else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(simRnd(35,90)) });
     }
-    const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
-    const directChance = simClamp((power.aggression - 60) / 290, 0.005, 0.13);
+    const directRedCandidates = power.lineup.filter(p => hiddenStats(p).aggression >= 74);
+    const directChance = simClamp((power.aggression - 58) / 210, 0.01, 0.20);
     if(directRedCandidates.length && Math.random() < directChance){
-      const p = weightedPickV2(directRedCandidates, cardWeightV2);
+      const p = weightedPickV2(directRedCandidates, x => hiddenStats(x).aggression + (['DFC','MCD'].includes(x.position)?18:4));
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(20,90)) });
     }
     return cards.sort((a,b)=>a.minute-b.minute);
@@ -290,8 +272,8 @@
     for(const block of BLOCKS){
       const homeInstruction = instructionForScore(homeTactic, homeGoals, awayGoals);
       const awayInstruction = instructionForScore(awayTactic, awayGoals, homeGoals);
-      const h = blockStatsForTeam(home, away, matchContext, homeInstruction, awayInstruction, true, block);
-      const a = blockStatsForTeam(away, home, matchContext, awayInstruction, homeInstruction, false, block);
+      const h = blockStatsForTeam(home, away, matchContext, homeInstruction, awayInstruction, true);
+      const a = blockStatsForTeam(away, home, matchContext, awayInstruction, homeInstruction, false);
       mergeBlockStats(homeTotals, h);
       mergeBlockStats(awayTotals, a);
       const hGoals = Math.min(poissonV2(h.xg), h.chances);

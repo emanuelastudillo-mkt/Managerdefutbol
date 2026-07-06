@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.04',
+  version: 'V3.03',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -20,17 +20,13 @@ window.GAME_CONFIG = {
     amistososMaximosPretemporada: 5
   },
   plantel: {
-    // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
-    jugadoresMinimosPorClub: 18,
-    jugadoresInicialesPorClub: 25,
-    jugadoresMaximosPorClub: 42,
+    // Máximo recomendado de jugadores del primer equipo por club.
+    jugadoresMaximosPorClub: 25,
     agentesLibresIniciales: 50,
     jovenesLibresPorTemporada: 20
   },
   economia: {
     escalaSueldosYClausulas: 0.10,
-    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
-    escalaClausulas: 0.10,
     reduccionBaseSueldoFinTemporada: 0.05,
     bonusSueldoPorPartidoJugado: 0.01
   },
@@ -75,11 +71,6 @@ window.GAME_CONFIG = {
     penalizacionLesionadoSuplente: 0.10
   },
   ui: {
-    duracionAvisoMs: 5200,
-    fasesSimulacionPartido: 30,
-    duracionSimulacionPartidoMs: 30000,
-    // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
-    accionesFeedbackCargaMs: 750,
-    accionesFeedbackResultadoMs: 900
+    duracionAvisoMs: 5200
   }
 };

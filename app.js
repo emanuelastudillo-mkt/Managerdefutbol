@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.27';
+const APP_VERSION = 'V2.29';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -32,16 +32,16 @@ const TRAINING_OPTIONS = [
 ];
 
 const FORMATIONS = {
-  '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','ED','EI','DC','DC'],
+  '4-4-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
   '4-3-3': ['POR','LD','DFC','DFC','LI','MCD','MC','MCO','ED','EI','DC'],
-  '4-2-3-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MCO','ED','EI','DC'],
-  '3-5-2': ['POR','DFC','DFC','DFC','MCD','MC','MC','ED','EI','DC','DC'],
+  '4-2-3-1': ['POR','LD','DFC','DFC','LI','MCD','MC','MCO','ED','EI','DC'],
+  '3-5-2': ['POR','DFC','DFC','DFC','MCD','MCD','MC','MC','MCO','DC','DC'],
   '5-3-2': ['POR','LD','DFC','DFC','DFC','LI','MCD','MC','MCO','DC','DC'],
-  '4-1-4-1': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','ED','EI','DC'],
-  '3-4-3': ['POR','DFC','DFC','DFC','MC','MC','ED','EI','DC','DC','MCO'],
-  '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','ED','EI','DC'],
+  '4-1-4-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MC','MC','MCO','DC'],
+  '3-4-3': ['POR','DFC','DFC','DFC','MCD','MC','MC','MCO','ED','EI','DC'],
+  '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MC','MC','MCO','DC'],
   '4-3-1-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
-  '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MC','MC','ED','EI','DC']
+  '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MCD','MC','MC','MCO','DC']
 };
 const FORMATION_VISUAL_BANDS = {
   '4-4-2': [4,0,4,0,2],
@@ -112,7 +112,7 @@ const SPONSOR_OFFER_COUNT_MIN = 2;
 const SPONSOR_OFFER_COUNT_MAX = 5;
 
 const CLUB_ROSTER_SIZE = 25;
-const PLAYER_GENERATION_RULES_VERSION = 'V2.27';
+const PLAYER_GENERATION_RULES_VERSION = 'V2.29';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
   { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
@@ -174,12 +174,30 @@ function escapeHtml(value){
 }
 function showNotice(text, persist=false){
   const box = $('notice');
+  if(!box) return;
   box.textContent = text;
   box.classList.remove('hidden');
+  box.classList.remove('notice-pop');
+  void box.offsetWidth;
+  box.classList.add('notice-pop');
   clearTimeout(showNotice.timer);
-  if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), 4800); }
+  if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), 5200); }
 }
-function hideNotice(){ $('notice').classList.add('hidden'); }
+function hideNotice(){ $('notice')?.classList.add('hidden'); }
+function showTurnTransition(label='Avanzando turno'){
+  let root = $('turnTransition');
+  if(root) root.remove();
+  root = document.createElement('div');
+  root.id = 'turnTransition';
+  root.className = 'turn-transition-backdrop';
+  root.innerHTML = `<div class="turn-transition-card"><div class="turn-spinner" aria-hidden="true"></div><strong>${escapeHtml(label)}</strong><span>Actualizando calendario, plantel y economía...</span><div class="turn-transition-bar"><i></i></div></div>`;
+  document.body.appendChild(root);
+  clearTimeout(showTurnTransition.timer);
+  showTurnTransition.timer = setTimeout(()=>{
+    root.classList.add('is-exiting');
+    setTimeout(()=>root.remove(), 260);
+  }, 820);
+}
 function clamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
 function rnd(min,max){ return min + Math.random() * (max-min); }
 function avg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
@@ -838,6 +856,17 @@ function slotGroup(slot){
 function playerFitsSlot(player, slot){
   return playerGroup(player.position) === slotGroup(slot);
 }
+function isGoalkeeperSlot(slot){
+  return slot === 'POR';
+}
+function isGoalkeeperPlayer(player){
+  return player?.position === 'POR';
+}
+function canAssignPlayerToSlot(player, slot){
+  if(!player) return false;
+  if(isGoalkeeperSlot(slot)) return isGoalkeeperPlayer(player);
+  return !isGoalkeeperPlayer(player);
+}
 function zoneFactor(player, slot){
   return playerFitsSlot(player, slot) ? 1 : 0.5;
 }
@@ -886,23 +915,29 @@ function applyStarterMentalities(tactic){
 function formationLayout(formation){
   return FORMATION_VISUALS[formation] || [4,0,4,0,2];
 }
+function slotVisualColumn(slot){
+  if(slot === 'POR') return { key:'gk', x:8 };
+  if(['LD','LI','DFC'].includes(slot)) return { key:'def', x:22 };
+  if(slot === 'MCD') return { key:'dm', x:38 };
+  if(slot === 'MC') return { key:'mid', x:52 };
+  if(slot === 'MCO') return { key:'am', x:68 };
+  return { key:'att', x:84 };
+}
 function formationCoordinates(formation){
-  const layout = formationLayout(formation);
-  const rows = [
-    { count:1, x:8 },
-    { count:layout[0], x:22 },
-    { count:layout[1], x:36 },
-    { count:layout[2], x:52 },
-    { count:layout[3], x:68 },
-    { count:layout[4], x:84 }
-  ];
-  const coords = [];
-  rows.forEach(row=>{
-    const count = row.count;
-    for(let i=0;i<count;i++){
-      const y = count === 1 ? 50 : 6 + (88 * (i+1)/(count+1));
-      coords.push({ x:row.x, y });
-    }
+  const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
+  const columns = {};
+  slots.forEach((slot, index) => {
+    const column = slotVisualColumn(slot);
+    if(!columns[column.key]) columns[column.key] = { x:column.x, items:[] };
+    columns[column.key].items.push(index);
+  });
+  const coords = Array(slots.length).fill(null);
+  Object.values(columns).forEach(column => {
+    const count = column.items.length;
+    column.items.forEach((slotIndex, rowIndex) => {
+      const y = count === 1 ? 50 : 6 + (88 * (rowIndex + 1) / (count + 1));
+      coords[slotIndex] = { x:column.x, y };
+    });
   });
   return coords;
 }
@@ -1673,6 +1708,12 @@ function ensurePlayerStateForAll(){
 function assignPlayerToStarterSlot(playerId, slotIndex){
   if(!canBeStarter(playerId)){
     showNotice('Los lesionados no pueden ser titulares. Los de menos de 10 turnos sólo pueden ir al banco.');
+    return;
+  }
+  const player = playerById(playerId);
+  const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[slotIndex];
+  if(!canAssignPlayerToSlot(player, slot)){
+    showNotice(slot === 'POR' ? 'El puesto de portero sólo acepta porteros.' : 'Los porteros sólo pueden ocupar el puesto de portero.');
     return;
   }
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
@@ -3133,6 +3174,11 @@ function validateTactic(tactic){
   if(unavailableStarters.length) errors.push('Hay lesionados o suspendidos entre los titulares.');
   const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
   if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con menos de 10 turnos de recuperación.');
+  const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];
+  slots.forEach((slot, index) => {
+    const player = playerById(starters[index]);
+    if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero.' : 'Un portero no puede jugar como jugador de campo.');
+  });
   (tactic.autoSubs || []).forEach((rule, i)=>{
     if(rule.outId || rule.inId){
       if(!uniqueStarters.has(Number(rule.outId))) errors.push(`Cambio ${i+1}: el jugador que sale debe ser titular.`);
@@ -3525,10 +3571,16 @@ function conditionSelectionScore(p){
   return currentCondition(p.id) * 1000 + currentMorale(p.id) * 10 + visibleOverall(p);
 }
 function autoSelectByBestCondition(clubId){
-  return playersByClub(clubId)
-    .filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id))
-    .sort((a,b)=>conditionSelectionScore(b)-conditionSelectionScore(a))
-    .slice(0,11);
+  const squad = playersByClub(clubId).filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id));
+  const used = new Set();
+  const slots = FORMATIONS[game?.tactic?.formation || DEFAULT_TACTIC.formation] || FORMATIONS['4-4-2'];
+  const lineup = [];
+  for(const slot of slots){
+    const candidates = squad.filter(p => !used.has(p.id) && canAssignPlayerToSlot(p, slot));
+    const pick = candidates.sort((a,b)=>conditionSelectionScore(b)-conditionSelectionScore(a))[0];
+    if(pick){ used.add(pick.id); lineup.push(pick); }
+  }
+  return lineup;
 }
 function autoSelectBenchByBestCondition(clubId, starterIds){
   const starters = new Set(starterIds);
@@ -3542,12 +3594,12 @@ function defaultAutoSubs(starters, bench){
 }
 function bestPlayerForSlot(squad, slot, used){
   const compatibility = (p) => {
-    if(p.position === slot) return 14;
-    const groups = { POR:['POR'], DEF:['LD','LI','DFC'], MID:['MCD','MC','MCO'], ATT:['ED','EI','DC'] };
-    const groupOf = pos => Object.keys(groups).find(k=>groups[k].includes(pos));
-    return groupOf(p.position) === groupOf(slot) ? 5 : -8;
+    if(p.position === slot) return 18;
+    if(playerFitsSlot(p, slot)) return 6;
+    return -999;
   };
-  return squad.filter(p=>!used.has(p.id)).sort((a,b)=>(effectiveOverall(b)+compatibility(b))-(effectiveOverall(a)+compatibility(a)))[0];
+  const candidates = squad.filter(p => !used.has(p.id) && canAssignPlayerToSlot(p, slot) && playerFitsSlot(p, slot));
+  return candidates.sort((a,b)=>(effectiveOverall(b)+compatibility(b))-(effectiveOverall(a)+compatibility(a)))[0] || null;
 }
 function ensureTeamCohesion(){
   if(!game) return;
@@ -3657,6 +3709,7 @@ function simulateNextMatchday(){
     return;
   }
   if(game.matchdayIndex >= game.fixtures.length){
+    showTurnTransition('Cambio de fase');
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
     saveLocal(true);
@@ -3667,6 +3720,7 @@ function simulateNextMatchday(){
   if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
+  showTurnTransition('Avanzando jornada');
   const round = game.fixtures[game.matchdayIndex];
   const results = round.matches.map(match => simulateMatch(match));
   round.matches.forEach((m,i)=>Object.assign(m, { played:true, homeGoals:results[i].homeGoals, awayGoals:results[i].awayGoals }));
@@ -3709,6 +3763,7 @@ function simulateNextMatchday(){
 }
 
 function simulatePreseasonTurn(){
+  showTurnTransition('Avanzando pretemporada');
   const opponentId = Number(game.pendingFriendlyOpponentId || 0);
   const canFriendly = opponentId && canPlayPreseasonFriendly();
   let friendlyResult = null;
@@ -3758,6 +3813,7 @@ function simulatePreseasonTurn(){
 }
 
 function simulatePostseasonTurn(){
+  showTurnTransition('Avanzando postemporada');
   generateSeasonEndPlayerOffers();
   applyTrainingEffects();
   processStadiumProjects();

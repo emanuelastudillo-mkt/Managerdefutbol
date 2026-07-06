@@ -1302,3 +1302,79 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
 .offer-choice-grid .plain{text-align:left;width:100%;border:1px solid var(--line)}
 .offer-choice-grid .plain p{margin:4px 0 0;color:#cbd5e1;font-weight:900}
 @media (max-width:760px){.subtabs button{flex:1}.offer-choice-grid{grid-template-columns:1fr}}
+
+/* V2.28: transición de turno y avisos siempre al frente */
+.notice{
+  position:fixed;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1200;
+  width:min(660px,calc(100vw - 28px));
+  margin:0;
+  box-shadow:0 20px 70px rgba(0,0,0,.45), 0 0 0 1px rgba(147,197,253,.12) inset;
+  text-align:center;
+  font-weight:800;
+  backdrop-filter:blur(14px);
+}
+.notice-pop{animation:noticePopV228 .2s ease-out both}
+@keyframes noticePopV228{
+  from{opacity:0;transform:translate(-50%,-10px) scale(.98)}
+  to{opacity:1;transform:translate(-50%,0) scale(1)}
+}
+.turn-transition-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1100;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(2,6,23,.62);
+  backdrop-filter:blur(5px);
+  pointer-events:none;
+  animation:turnBackdropInV228 .14s ease-out both;
+}
+.turn-transition-backdrop.is-exiting{animation:turnBackdropOutV228 .24s ease-in both}
+.turn-transition-card{
+  width:min(380px,100%);
+  display:grid;
+  justify-items:center;
+  gap:10px;
+  padding:24px 22px;
+  border-radius:24px;
+  border:1px solid rgba(147,197,253,.22);
+  background:linear-gradient(145deg,rgba(17,24,39,.98),rgba(30,41,59,.94));
+  box-shadow:0 30px 100px rgba(0,0,0,.55);
+  text-align:center;
+}
+.turn-transition-card strong{font-size:22px;letter-spacing:-.03em}
+.turn-transition-card span{color:var(--muted);font-size:13px;line-height:1.45}
+.turn-spinner{
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  border:4px solid rgba(147,197,253,.18);
+  border-top-color:#93c5fd;
+  animation:turnSpinV228 .78s linear infinite;
+}
+.turn-transition-bar{
+  width:100%;
+  height:7px;
+  margin-top:5px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.08);
+}
+.turn-transition-bar i{
+  display:block;
+  height:100%;
+  width:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transform-origin:left;
+  animation:turnBarV228 .78s ease-out both;
+}
+@keyframes turnSpinV228{to{transform:rotate(360deg)}}
+@keyframes turnBarV228{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes turnBackdropInV228{from{opacity:0}to{opacity:1}}
+@keyframes turnBackdropOutV228{from{opacity:1}to{opacity:0}}

@@ -1,31 +1,20 @@
-# Versión V2.27
+# Versión V2.29
 
 ## Ajustes principales
 
-### Base inicial de jugadores
-- `data/jugadores.json` fue regenerado con la nueva regla de medias:
-  - Elite mundial: 0,5% teórico, aplicado como máximo seguro.
-  - Estrella: 7%.
-  - Titular competitivo: 24,5%.
-  - Profesional promedio/bajo: 50%.
-  - Bajo nivel: 18%.
+### Pizarra táctica
+- Se corrigió la ubicación visual de los roles en cancha.
+- Los extremos `ED` y `EI` dejan de aparecer como mediocampistas en formaciones donde quedaban mal alineados.
+- Las columnas visuales se calculan por rol: portero, defensa, mediocampo defensivo, mediocampo, mediapunta y ataque.
 
-### Validación aplicada
-- Total: 1500 jugadores.
-- Jugadores 92-99: 7, equivalente a 0,47%.
-- Jugadores 80-91: 105, equivalente a 7%.
-- Jugadores 68-79: 368, equivalente a 24,53%.
-- Jugadores 43-67: 750, equivalente a 50%.
-- Jugadores 19-42: 270, equivalente a 18%.
-
-### Restricciones mantenidas
-- Los jugadores 92-99 sólo aparecen en Primera División.
-- Ningún club arranca con más de 1 jugador 92-99 en la base inicial.
-- Segunda División no inicia con jugadores 92-99.
-- Tercera División no inicia con jugadores 80+.
-- Sueldos y cláusulas siguen al 10% de la escala previa.
+### Autoselección
+- `Mejor once` ahora usa jugadores compatibles con cada slot.
+- El portero siempre debe ser `POR`.
+- Un portero no puede ocupar puestos de campo.
+- Se evita que `Mejor once` arme titulares penalizados por jugar fuera de zona.
+- `Mejor condición física` mantiene su lógica de priorizar estado físico, pero también respeta la regla estricta del portero.
 
 ## Compatibilidad
 - Mantiene guardado local por navegador.
-- Si ya existe una partida guardada, seguirá usando su snapshot local hasta iniciar una nueva partida.
+- Mantiene `data/jugadores.json` de V2.27.
 - No incluye `assets/pitch-board.png`.

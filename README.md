@@ -1,17 +1,17 @@
-# Fútbol Manager MVP V2.27
+# Fútbol Manager MVP V2.29
 
 Actualización incremental del manager de fútbol local.
 
-## Cambios V2.27
-- Se regeneró `data/jugadores.json` con la nueva distribución de medias.
-- Elite mundial baja de 3% a 0,5% teórico, aplicado como máximo seguro: 7 jugadores sobre 1500, equivalente a 0,47%.
-- Titular competitivo sube a 24,5% para compensar la reducción de elite.
-- Se mantiene la auditoría por división: los jugadores 92-99 sólo aparecen en Primera; Tercera no inicia con jugadores 80+.
-- Se mantiene la auditoría por club: como base inicial, ningún club comienza con más de 1 jugador 92-99.
-- Se mantienen sueldos y cláusulas al 10% de la escala previa.
-- Las reglas internas de generación para futuros jóvenes quedan alineadas con la nueva distribución.
+## Cambios V2.29
+- Se corrigió la pizarra táctica para que las posiciones se ubiquen según su rol real.
+- ED, EI y DC quedan tratados como atacantes; MCD, MC y MCO como mediocampistas.
+- Se ajustaron formaciones donde ED/EI estaban funcionando como mediocampistas visuales.
+- El botón **Mejor once** ahora elige jugadores compatibles con cada línea y evita titulares penalizados por fuera de zona.
+- El puesto POR sólo acepta porteros.
+- Los porteros no pueden ser colocados como jugadores de campo.
+- El botón **Mejor condición física** sigue priorizando forma física, pero respeta que el portero sea portero.
 
-## Validación de la base inicial
+## Base inicial vigente
 - Total jugadores: 1500.
 - 92-99: 7 jugadores.
 - 80-91: 105 jugadores.
@@ -28,4 +28,4 @@ Actualización incremental del manager de fútbol local.
 - `data/jugadores.json`
 - `data/sponsors.json`
 
-El guardado de partida sigue funcionando localmente con IndexedDB. Para ver la nueva base en una partida ya creada, hay que iniciar una nueva partida o limpiar el guardado local.
+El guardado de partida sigue funcionando localmente con IndexedDB. Para aplicar correcciones de base en una partida ya creada, conviene iniciar una nueva partida o limpiar el guardado local.

@@ -1,4 +1,4 @@
-/* V3.02 · Configuración leída desde config.js, constantes generales y estado global. */
+/* V3.03 · Configuración leída desde config.js, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -25,7 +25,7 @@ const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
 const PRESEASON_TURNS = configNumber('turnos.pretemporada', 10, 0);
 const POSTSEASON_TURNS = configNumber('turnos.postemporada', 5, 0);
 const MAX_PRESEASON_FRIENDLIES = configNumber('turnos.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.02');
+const APP_VERSION = configValue('version', 'V3.03');
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;

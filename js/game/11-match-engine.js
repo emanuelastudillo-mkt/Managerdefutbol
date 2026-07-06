@@ -1,4 +1,4 @@
-/* V3.02 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
+/* V3.03 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
 
 function simulateMatch(match){
   if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);

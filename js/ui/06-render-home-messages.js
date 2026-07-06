@@ -1,4 +1,4 @@
-/* V3.02 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
+/* V3.03 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));

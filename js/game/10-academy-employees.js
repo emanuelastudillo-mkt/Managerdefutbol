@@ -1,4 +1,4 @@
-/* V3.02 · Academia, captación, juveniles, empleados y tratamientos. */
+/* V3.03 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
   return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null };

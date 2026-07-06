@@ -1,16 +1,20 @@
-# Fútbol Manager MVP V3.02
+# Fútbol Manager MVP V3.03
 
-Versión 3.02 del manager de fútbol local. Esta versión mantiene la separación de archivos de V3.01 y suma una capa visual orientada a experiencia de juego.
+Versión 3.03 del manager de fútbol local. Mantiene la base visual de V3.02 y corrige el aviso superior que anticipaba lesiones o expulsiones durante la simulación visual del partido.
 
-## Cambios V3.02
-- Se actualizó la versión interna y visible a `V3.02`.
-- Se agregó soporte en `index.html` para `favico.png` como favicon.
-- Se reemplazó la entrada del Inicio por una vista tipo **oficina del manager**.
-- Se agregaron alertas visuales accionables para problemas o tareas pendientes.
-- Se agregó un resumen visual del último turno avanzado.
-- Se añadieron barras compactas para media, físico, moral y cohesión dentro del panel principal.
-- Se mantuvo la lógica de juego sin cambios intencionales de balance.
-- Se corrigió una referencia interna de sponsors que apuntaba a un helper inexistente (`currentClubDivision`).
+## Cambios V3.03
+- Se actualizó la versión interna y visible a `V3.03`.
+- El aviso superior de “hay lesionados o expulsados propios” ya no aparece apenas se abre la simulación del partido.
+- El aviso se dispara recién al llegar a la etapa final de la visualización del partido, con una pequeña demora adicional.
+- Si el usuario presiona “Finalizar partido”, el aviso aparece después de mostrar el resultado final, no antes.
+- No se modificó el balance del motor de partido, lesiones, tarjetas, economía ni táctica.
+
+## Cambios conservados de V3.02
+- Pantalla de Inicio tipo oficina del manager.
+- Alertas visuales accionables.
+- Resumen visual del último turno avanzado.
+- Barras compactas de media, físico, moral y cohesión.
+- Soporte para `favico.png` en `index.html`.
 
 ## Cambios conservados de V3.01
 - `app.js` funciona como punto de entrada mínimo.
@@ -80,8 +84,8 @@ sponsors: {
 - Verificación de archivos referenciados en `index.html`.
 
 ## Compatibilidad
-- Mantiene guardado local por navegador con IndexedDB.
+- Compatible con partidas V3.01 y V3.02 guardadas en IndexedDB.
+- No requiere cambios en los JSON de datos.
 - Mantiene `data/jugadores.json`.
 - Mantiene `data/sponsors.json`.
 - Mantiene `data/Liga Argentina.json`.
-- Las partidas guardadas de V3.01 se normalizan y reciben el nuevo campo `lastTurnSummary` sin requerir reiniciar partida.

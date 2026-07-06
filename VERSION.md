@@ -1,46 +1,21 @@
-# Versión V3.02
+# Versión V3.03
 
 ## Objetivo de la versión
 
-Mejorar la experiencia visual del juego sin alterar reglas principales ni balance. La intención es que el Inicio funcione más como una oficina del manager y menos como una suma de tarjetas aisladas.
+Corregir un problema de experiencia durante la simulación visual del partido: el aviso superior informaba lesiones o expulsiones antes de que la visualización llegara al final del encuentro.
 
-## Ajustes principales
+## Ajuste principal
 
-### Oficina del manager
-- Nueva vista superior en Inicio con identidad del club, fase actual, posición, cantidad de jugadores, presupuesto y sponsors activos.
-- Próximo partido integrado en el mismo bloque visual.
-- Botón de avance incorporado al panel principal.
-
-### Alertas visuales accionables
-Se agregaron tarjetas de alerta para:
-- Táctica incompleta o bloqueada.
-- Lesionados.
-- Mensajes nuevos.
-- Ofertas pendientes por jugadores.
-- Ofertas de sponsors disponibles.
-- Captación de academia en curso.
-- Plantel al límite.
-- Presupuesto presionado por masa salarial.
-
-### Resumen del último turno
-- El juego guarda un resumen visual después de avanzar jornada, pretemporada o postemporada.
-- El resumen muestra resultado, economía, academia, sponsors y alertas deportivas si corresponde.
-- Las partidas previas siguen funcionando; si no existe resumen anterior, simplemente no se muestra.
-
-### Favicon
-- `index.html` ahora referencia `favico.png`.
-- El archivo debe estar en la misma carpeta que `index.html`.
+### Aviso diferido de lesiones y expulsiones
+- Antes: después de simular internamente la jornada, el juego abría la visualización del partido y al mismo tiempo mostraba arriba el aviso de lesionados o expulsados propios.
+- Ahora: el aviso queda diferido hasta que la visualización llega al minuto final.
+- Si se usa el botón **Finalizar partido**, primero se muestra el resultado final y recién después aparece el aviso.
 
 ## Archivos modificados
-- `index.html`
 - `config.js`
-- `style.css`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
+- `index.html`
 - `js/game/09-simulation-economy-training.js`
-- `js/ui/06-render-home-messages.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- Comentarios de encabezado actualizados en módulos principales.
+- `js/ui/12-modals.js`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
@@ -58,12 +33,11 @@ Se agregaron tarjetas de alerta para:
 - `data/Liga Argentina.json`: JSON válido.
 
 ## Observaciones de revisión
-- Esta versión es visual y de experiencia. No modifica intencionalmente simulación, economía, mercado ni academia.
-- Se corrigió una referencia interna de sponsors a `currentClubDivision`, reemplazada por el helper existente `clubDivision`.
-- La pantalla Inicio queda más preparada para futuras expansiones: noticias, tareas pendientes, reputación del manager o estado institucional.
-- Sigue pendiente una separación más profunda entre lógica pura y HTML de renderizado.
+- No se alteró el motor de simulación. El partido sigue calculándose al avanzar la jornada; sólo se cambia cuándo se comunica el aviso al usuario.
+- La mejora protege la ilusión de visualización en vivo sin tocar lesiones, tarjetas, suspensiones ni limpieza automática de táctica.
+- Sigue pendiente una posible mejora futura: que la simulación revele eventos de manera más granular y que ciertas consecuencias administrativas aparezcan como resumen posterior al partido.
 
 ## Compatibilidad
-- Compatible con partidas V3.01 guardadas en IndexedDB.
-- No requiere cambios en los JSON de datos.
-- Mantiene la estructura modular creada en V3.01.
+- Compatible con partidas V3.01 y V3.02.
+- No requiere reiniciar partida.
+- No requiere cambios en archivos JSON.

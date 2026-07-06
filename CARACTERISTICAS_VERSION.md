@@ -1,42 +1,32 @@
-# Características internas de versión · V3.02
+# Características internas de versión · V3.03
 
 ## Tipo de versión
-Versión menor dentro de V3: V3.02.
+Versión menor dentro de V3: V3.03.
 
 ## Cambio principal
-Mejora visual de la experiencia del Inicio y del avance de turnos.
+Ajuste de experiencia en la simulación visual de partidos.
 
 ## Último agregado o modificado
-- Se agregó una vista tipo **oficina del manager** en el Inicio.
-- Se agregaron alertas visuales accionables.
-- Se agregó resumen persistente del último turno.
-- Se agregó soporte para `favico.png`.
-- Se actualizó la versión visible e interna a `V3.02`.
-- Se corrigió una referencia interna de sponsors a un helper inexistente.
+- Se retrasó el aviso superior de lesionados o expulsados propios.
+- El aviso ya no se muestra al inicio de la visualización del partido.
+- El aviso aparece recién al llegar al final de la visualización o después de usar **Finalizar partido**.
+- Se actualizó la versión visible e interna a `V3.03`.
 
-## Componentes visuales agregados
-| Componente | Archivo | Función |
+## Componentes modificados
+| Componente | Archivo | Cambio |
 |---|---|---|
-| Oficina del manager | `js/ui/06-render-home-messages.js` | Resume club, fase, presupuesto, posición, sponsors y próximo partido. |
-| Alertas accionables | `js/ui/06-render-home-messages.js` | Muestra bloqueos, avisos y tareas pendientes con navegación directa. |
-| Barras compactas | `js/ui/06-render-home-messages.js` + `style.css` | Representan media, físico, moral y cohesión. |
-| Resumen de turno | `js/game/09-simulation-economy-training.js` + `js/ui/06-render-home-messages.js` | Guarda y muestra qué pasó al avanzar. |
-| Favicon | `index.html` | Referencia `favico.png`. |
-
-## Campos nuevos en partida
-| Campo | Uso |
-|---|---|
-| `lastTurnSummary` | Guarda el resumen visual del último turno avanzado. |
+| Simulación de jornada | `js/game/09-simulation-economy-training.js` | El mensaje final se encapsula como callback diferido. |
+| Modal de partido | `js/ui/12-modals.js` | Acepta una acción `onRevealComplete` y la ejecuta sólo al llegar al final. |
+| Versión visible | `index.html` + `config.js` | Actualización a V3.03. |
 
 ## Compatibilidad
-- Las partidas anteriores se normalizan con `lastTurnSummary: null` si no lo tenían.
-- No se cambia la estructura de jugadores, clubes, sponsors ni fixtures.
-- No se cambian las reglas de simulación de partidos.
+- No cambia estructura de partida.
+- No cambia JSON de datos.
+- No cambia reglas de partido, lesiones, tarjetas ni economía.
 
 ## Riesgos pendientes
-- El render de Inicio sigue en un archivo grande.
-- Las alertas están calculadas en la UI, no en una capa de lógica separada.
-- El resumen de turno usa datos agregados simples; más adelante puede ampliarse con eventos específicos de partido, entrenamiento y finanzas.
+- La simulación todavía se calcula completa antes de mostrarse; la visualización sólo revela el resultado por etapas.
+- En una mejora futura convendría separar el “resultado administrativo posterior al partido” del modal de visualización.
 
 ## Siguiente mejora sugerida
-Crear una sección de **Noticias** con estética de diario deportivo y eventos generados automáticamente por resultados, mercado, lesiones, academia y sponsors.
+Crear una pantalla posterior al partido con secciones separadas: resultado, rendimiento, consecuencias médicas, sanciones y tareas pendientes del manager.

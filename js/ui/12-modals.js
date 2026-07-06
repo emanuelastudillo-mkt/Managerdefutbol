@@ -1,4 +1,4 @@
-/* V3.02 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.03 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
@@ -253,8 +253,9 @@ function clearMatchRevealTimers(){
   matchRevealTimers.forEach(id => clearTimeout(id));
   matchRevealTimers = [];
 }
-function showMatchRevealModal(match){
+function showMatchRevealModal(match, onRevealComplete=null){
   if(!match) return;
+  let revealCompleteNotified = false;
   const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
   const html = `
     <div class="match-reveal-shell">
@@ -279,7 +280,15 @@ function showMatchRevealModal(match){
     </div>`;
   openModal(html);
   const stages = matchRevealStages(match);
-  const renderStage = (idx) => renderMatchRevealStage(match, stages[idx], idx, stages.length);
+  const notifyRevealComplete = () => {
+    if(revealCompleteNotified) return;
+    revealCompleteNotified = true;
+    if(typeof onRevealComplete === 'function') setTimeout(onRevealComplete, 900);
+  };
+  const renderStage = (idx) => {
+    renderMatchRevealStage(match, stages[idx], idx, stages.length);
+    if(idx >= stages.length - 1) notifyRevealComplete();
+  };
   renderStage(0);
   stages.slice(1).forEach((stage, i) => {
     matchRevealTimers.push(setTimeout(() => renderStage(i + 1), stage.time));

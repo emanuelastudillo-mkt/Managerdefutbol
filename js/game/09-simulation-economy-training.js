@@ -1,4 +1,4 @@
-/* V3.02 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
+/* V3.03 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -314,10 +314,13 @@ function simulateNextMatchday(){
   activeTab = 'home';
   saveLocal(true);
   renderAll();
-  if(ownResult && !regularEnded) showMatchRevealModal(ownResult);
-  if(game.mustReviewTactics){ showNotice('Jornada simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
-  else if(regularEnded){ showNotice('Terminó la fase regular. Comienzan 5 turnos de postemporada antes del cierre.', true); }
-  else { showNotice(`Jornada ${round.matchday} simulada. La semana avanza hasta el próximo domingo.`); }
+  const finalNotice = () => {
+    if(game.mustReviewTactics){ showNotice('Jornada simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
+    else if(regularEnded){ showNotice('Terminó la fase regular. Comienzan 5 turnos de postemporada antes del cierre.', true); }
+    else { showNotice(`Jornada ${round.matchday} simulada. La semana avanza hasta el próximo domingo.`); }
+  };
+  if(ownResult && !regularEnded) showMatchRevealModal(ownResult, finalNotice);
+  else finalNotice();
 }
 
 function simulatePreseasonTurn(){

@@ -1,4 +1,4 @@
-/* V3.01 · Sponsors, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/* V3.02 · Sponsors, estadio, calendario, tabla, estadísticas y finanzas visuales. */
 
 function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
@@ -23,13 +23,13 @@ function ensureSponsorState(){
 }
 function sponsorDivisionMultiplier(){
   const club = seed.clubs.find(c => c.id === game.selectedClubId) || {};
-  const order = Number(club.divisionOrder || currentClubDivision(game.selectedClubId).order || 1);
+  const order = Number(club.divisionOrder || clubDivision(game.selectedClubId).order || 1);
   if(order <= 1) return 10;
   if(order === 2) return 4;
   return 1;
 }
 function sponsorPositionBonus(){
-  const division = currentClubDivision(game.selectedClubId);
+  const division = clubDivision(game.selectedClubId);
   const table = sortedStandings(division.id);
   const index = table.findIndex(row => row.clubId === game.selectedClubId);
   if(index < 0 || table.length <= 1) return 0;

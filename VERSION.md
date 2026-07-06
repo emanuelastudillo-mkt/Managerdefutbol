@@ -1,36 +1,49 @@
-# Versión V3.01
+# Versión V3.02
 
 ## Objetivo de la versión
 
-Iniciar la Versión 3 separando el antiguo `app.js` monolítico en archivos más mantenibles, sin introducir cambios intencionales de reglas ni de balance.
+Mejorar la experiencia visual del juego sin alterar reglas principales ni balance. La intención es que el Inicio funcione más como una oficina del manager y menos como una suma de tarjetas aisladas.
 
 ## Ajustes principales
 
-### Separación de `app.js`
-- `app.js` ahora queda como punto de entrada mínimo y ejecuta `init()`.
-- La lógica principal fue movida a la carpeta `js/`.
-- La carga se mantiene con scripts clásicos en `index.html`, no con ES modules, para conservar compatibilidad simple con GitHub Pages y uso local servido por navegador.
+### Oficina del manager
+- Nueva vista superior en Inicio con identidad del club, fase actual, posición, cantidad de jugadores, presupuesto y sponsors activos.
+- Próximo partido integrado en el mismo bloque visual.
+- Botón de avance incorporado al panel principal.
 
-### Nuevos grupos de archivos
-- `js/core/01-config-constants.js`: configuración, constantes y estado global.
-- `js/core/02-ui-utils.js`: utilidades DOM, avisos, formato y helpers básicos.
-- `js/core/03-player-tactics-utils.js`: jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas.
-- `js/data/04-data-storage.js`: carga de JSON, base inicial, normalización y persistencia local.
-- `js/game/05-state-season.js`: eventos generales, nueva partida, normalización, temporadas, ascensos y descensos.
-- `js/ui/06-render-home-messages.js`: render general, inicio, avance de turno, mensajes y ofertas recibidas.
-- `js/ui/07-render-team-market.js`: primer equipo, mercado, plantel, táctica y validación de alineación.
-- `js/game/08-sponsors-stadium-stats.js`: sponsors, estadio, fixture, tabla, estadísticas y vistas financieras.
-- `js/game/09-simulation-economy-training.js`: simulación de turnos, cohesión, economía, moral, estadio y entrenamiento.
-- `js/game/10-academy-employees.js`: academia, captación, juveniles, empleados y tratamientos.
-- `js/game/11-match-engine.js`: motor alternativo de partido, goles, tarjetas, lesiones y estadísticas.
-- `js/ui/12-modals.js`: modales de jugador, club, compra, partido, scouting y nueva partida.
+### Alertas visuales accionables
+Se agregaron tarjetas de alerta para:
+- Táctica incompleta o bloqueada.
+- Lesionados.
+- Mensajes nuevos.
+- Ofertas pendientes por jugadores.
+- Ofertas de sponsors disponibles.
+- Captación de academia en curso.
+- Plantel al límite.
+- Presupuesto presionado por masa salarial.
 
-### Archivos actualizados
-- `index.html`: título, etiqueta de versión y nueva carga ordenada de scripts.
-- `config.js`: versión interna actualizada a `V3.01`.
-- `README.md`: documentación actualizada.
-- `VERSION.md`: documento de versión actualizado.
-- `CARACTERISTICAS_VERSION.md`: nuevo documento interno de características.
+### Resumen del último turno
+- El juego guarda un resumen visual después de avanzar jornada, pretemporada o postemporada.
+- El resumen muestra resultado, economía, academia, sponsors y alertas deportivas si corresponde.
+- Las partidas previas siguen funcionando; si no existe resumen anterior, simplemente no se muestra.
+
+### Favicon
+- `index.html` ahora referencia `favico.png`.
+- El archivo debe estar en la misma carpeta que `index.html`.
+
+## Archivos modificados
+- `index.html`
+- `config.js`
+- `style.css`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/ui/06-render-home-messages.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- Comentarios de encabezado actualizados en módulos principales.
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`
 
 ## Validación realizada
 - `node --check app.js`: correcto.
@@ -43,16 +56,14 @@ Iniciar la Versión 3 separando el antiguo `app.js` monolítico en archivos más
 - `data/jugadores.json`: JSON válido.
 - `data/sponsors.json`: JSON válido.
 - `data/Liga Argentina.json`: JSON válido.
-- Prueba de carga de scripts en contexto controlado: correcta.
 
 ## Observaciones de revisión
-- La separación realizada es estructural y conservadora. No cambia el comportamiento del juego de forma intencional.
-- Todavía hay dependencia global entre archivos. Es aceptable para esta etapa porque evita romper compatibilidad, pero a futuro conviene pasar gradualmente a módulos con export/import.
-- Algunas áreas aún mezclan reglas de juego con HTML renderizado. El siguiente paso recomendable sería separar lógica pura y vista dentro de mercado, academia, sponsors y táctica.
-- Los nombres numerados de archivos ayudan a conservar el orden de carga mientras el proyecto siga usando scripts clásicos.
+- Esta versión es visual y de experiencia. No modifica intencionalmente simulación, economía, mercado ni academia.
+- Se corrigió una referencia interna de sponsors a `currentClubDivision`, reemplazada por el helper existente `clubDivision`.
+- La pantalla Inicio queda más preparada para futuras expansiones: noticias, tareas pendientes, reputación del manager o estado institucional.
+- Sigue pendiente una separación más profunda entre lógica pura y HTML de renderizado.
 
 ## Compatibilidad
-- Mantiene partidas guardadas en IndexedDB.
-- Mantiene la estructura de datos actual.
-- Mantiene el simulador externo `simulador-2.0.js`.
-- Mantiene `config.js` como archivo editable central.
+- Compatible con partidas V3.01 guardadas en IndexedDB.
+- No requiere cambios en los JSON de datos.
+- Mantiene la estructura modular creada en V3.01.

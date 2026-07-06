@@ -1,4 +1,4 @@
-/* V3.01 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
+/* V3.02 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
 
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }

@@ -1,4 +1,4 @@
-/* V3.01 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
+/* V3.02 · Selección automática, cohesión, simulación de turnos, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -154,6 +154,103 @@ function applyMentalityBonus(tactic, assigned){
   return bonus;
 }
 
+
+function ownResultLine(result){
+  if(!result) return '';
+  const home = clubName(result.homeId);
+  const away = clubName(result.awayId);
+  return `${home} ${Number(result.homeGoals || 0)} - ${Number(result.awayGoals || 0)} ${away}`;
+}
+function ownResultTone(result){
+  if(!result) return 'info';
+  const isHome = Number(result.homeId) === Number(game.selectedClubId);
+  const gf = isHome ? Number(result.homeGoals || 0) : Number(result.awayGoals || 0);
+  const gc = isHome ? Number(result.awayGoals || 0) : Number(result.homeGoals || 0);
+  if(gf > gc) return 'ok';
+  if(gf < gc) return 'bad';
+  return 'warn';
+}
+function ownResultLabel(result){
+  const tone = ownResultTone(result);
+  if(tone === 'ok') return 'Victoria';
+  if(tone === 'bad') return 'Derrota';
+  if(tone === 'warn') return 'Empate';
+  return 'Sin partido';
+}
+function activeAcademyScoutingSummary(){
+  const jobs = (game?.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
+  if(!jobs.length) return null;
+  const nextDue = Math.min(...jobs.map(j => Number(j.dueTurn || 0)));
+  const left = Math.max(0, nextDue - currentTurnIndex());
+  return `${jobs.length} captación(es) activa(s), próximo informe en ${left} turno(s).`;
+}
+function turnFinanceSummary(){
+  const delta = Number(game?.lastBudgetDelta || 0);
+  const sign = delta > 0 ? '+' : '';
+  return `${sign}${formatMoney(delta)} · Presupuesto actual ${formatMoney(game?.budget || 0)}`;
+}
+function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded){
+  const items = [];
+  if(ownResult){
+    items.push({ label:ownResultLabel(ownResult), text:ownResultLine(ownResult), tone:ownResultTone(ownResult) });
+  }
+  items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
+  const academy = activeAcademyScoutingSummary();
+  if(academy) items.push({ label:'Academia', text:academy, tone:'info' });
+  const offers = game.sponsors?.offers?.length || 0;
+  if(offers) items.push({ label:'Sponsors', text:`Hay ${offers} oferta(s) de patrocinio disponibles.`, tone:'ok' });
+  if(ownProblems?.length){
+    items.push({ label:'Revisión obligatoria', text:`${ownProblems.length} jugador(es) requieren cambios en la táctica.`, tone:'bad' });
+  }else if(!regularEnded){
+    items.push({ label:'Semana', text:'El club queda preparando la próxima jornada.', tone:'info' });
+  }
+  game.lastTurnSummary = {
+    title: regularEnded ? `Jornada ${round.matchday} · fase regular terminada` : `Jornada ${round.matchday} simulada`,
+    phase:'Liga',
+    result:ownResult ? ownResultLine(ownResult) : '',
+    tone:ownResultTone(ownResult),
+    items,
+    createdAt:Date.now()
+  };
+}
+function setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly){
+  const items = [];
+  if(friendlyResult){
+    items.push({ label:'Amistoso', text:ownResultLine(friendlyResult), tone:ownResultTone(friendlyResult) });
+  }else{
+    items.push({ label:'Entrenamiento', text:'Turno aplicado sin amistoso.', tone:'info' });
+  }
+  items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
+  const academy = activeAcademyScoutingSummary();
+  if(academy) items.push({ label:'Academia', text:academy, tone:'info' });
+  game.lastTurnSummary = {
+    title:`Pretemporada · turno ${Number(game.phaseTurn || 0) || PRESEASON_TURNS}`,
+    phase:'Pretemporada',
+    result:friendlyResult ? ownResultLine(friendlyResult) : (canFriendly ? `Amistoso ante ${clubName(opponentId)}` : ''),
+    tone:friendlyResult ? ownResultTone(friendlyResult) : 'info',
+    items,
+    createdAt:Date.now()
+  };
+}
+function setPostseasonTurnSummary(finalized=false){
+  const items = [
+    { label:'Entrenamiento', text:'Turno de postemporada aplicado.', tone:'info' },
+    { label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' }
+  ];
+  const academy = activeAcademyScoutingSummary();
+  if(academy) items.push({ label:'Academia', text:academy, tone:'info' });
+  const pendingOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
+  if(pendingOffers) items.push({ label:'Mercado', text:`Hay ${pendingOffers} oferta(s) pendientes por jugadores.`, tone:'warn' });
+  game.lastTurnSummary = {
+    title:finalized ? 'Postemporada finalizada' : `Postemporada · turno ${Number(game.phaseTurn || 0)}`,
+    phase:'Postemporada',
+    result:finalized ? 'Cierre de temporada disponible.' : '',
+    tone:finalized ? 'ok' : 'info',
+    items,
+    createdAt:Date.now()
+  };
+}
+
 function simulateNextMatchday(){
   if(!game || game.seasonFinalized) return;
   if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el siguiente turno se habilita el domingo.`); return; }
@@ -177,6 +274,7 @@ function simulateNextMatchday(){
   if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
+  const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition('Avanzando jornada');
   const round = game.fixtures[game.matchdayIndex];
   const results = round.matches.map(match => simulateMatch(match));
@@ -203,6 +301,7 @@ function simulateNextMatchday(){
   processAcademyTurn();
   processPendingTransfers();
   const regularEnded = game.matchdayIndex >= game.fixtures.length;
+  game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(regularEnded){
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
@@ -211,6 +310,7 @@ function simulateNextMatchday(){
     game.currentDate = game.fixtures[game.matchdayIndex]?.date || round.date;
     game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
   }
+  setRegularTurnSummary(round, ownResult, ownProblems, regularEnded);
   activeTab = 'home';
   saveLocal(true);
   renderAll();
@@ -221,6 +321,7 @@ function simulateNextMatchday(){
 }
 
 function simulatePreseasonTurn(){
+  const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition('Avanzando pretemporada');
   const opponentId = Number(game.pendingFriendlyOpponentId || 0);
   const canFriendly = opponentId && canPlayPreseasonFriendly();
@@ -255,6 +356,7 @@ function simulatePreseasonTurn(){
   advanceGlobalTurn();
   processAcademyTurn();
   processPendingTransfers();
+  game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(game.phaseTurn >= PRESEASON_TURNS){
     game.seasonPhase = 'regular';
     game.phaseTurn = 0;
@@ -263,9 +365,11 @@ function simulatePreseasonTurn(){
     if(Number(game.sponsors?.openingOffersSeason || 0) !== Number(game.seasonNumber || 1)){
       generateOpeningSponsorOffers(true);
     }
+    setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice('Pretemporada finalizada. Ya está disponible la primera jornada oficial.', true);
   } else {
     game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Turno de pretemporada aplicado. La semana avanza.', false);
   }
   activeTab = 'home';
@@ -275,6 +379,7 @@ function simulatePreseasonTurn(){
 }
 
 function simulatePostseasonTurn(){
+  const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition('Avanzando postemporada');
   generateSeasonEndPlayerOffers();
   applyTrainingEffects();
@@ -284,10 +389,12 @@ function simulatePostseasonTurn(){
   advanceGlobalTurn();
   processAcademyTurn();
   processPendingTransfers();
+  game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(game.phaseTurn >= POSTSEASON_TURNS){
     game.seasonPhase = 'finalizing';
     finalizeSeasonIfNeeded();
     game.advanceLockedUntil = 0;
+    setPostseasonTurnSummary(true);
     activeTab = 'home';
     saveLocal(true);
     renderAll();
@@ -295,6 +402,7 @@ function simulatePostseasonTurn(){
     showNotice('Postemporada finalizada. Cerró la temporada.', true);
   } else {
     game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    setPostseasonTurnSummary(false);
     activeTab = 'home';
     saveLocal(true);
     renderAll();

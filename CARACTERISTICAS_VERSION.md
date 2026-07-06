@@ -1,51 +1,42 @@
-# Características internas de versión · V3.01
+# Características internas de versión · V3.02
 
 ## Tipo de versión
-Versión mayor inicial: V3.01.
+Versión menor dentro de V3: V3.02.
 
 ## Cambio principal
-Separación de `app.js` en módulos funcionales dentro de la carpeta `js/`.
+Mejora visual de la experiencia del Inicio y del avance de turnos.
 
 ## Último agregado o modificado
-- Se reemplazó el `app.js` monolítico por un punto de entrada mínimo.
-- Se agregaron 12 archivos JavaScript organizados por responsabilidad.
-- Se actualizó `index.html` para cargar cada archivo en un orden estable.
-- Se actualizó la versión visible e interna a `V3.01`.
+- Se agregó una vista tipo **oficina del manager** en el Inicio.
+- Se agregaron alertas visuales accionables.
+- Se agregó resumen persistente del último turno.
+- Se agregó soporte para `favico.png`.
+- Se actualizó la versión visible e interna a `V3.02`.
+- Se corrigió una referencia interna de sponsors a un helper inexistente.
 
-## Módulos creados
-| Archivo | Responsabilidad |
+## Componentes visuales agregados
+| Componente | Archivo | Función |
+|---|---|---|
+| Oficina del manager | `js/ui/06-render-home-messages.js` | Resume club, fase, presupuesto, posición, sponsors y próximo partido. |
+| Alertas accionables | `js/ui/06-render-home-messages.js` | Muestra bloqueos, avisos y tareas pendientes con navegación directa. |
+| Barras compactas | `js/ui/06-render-home-messages.js` + `style.css` | Representan media, físico, moral y cohesión. |
+| Resumen de turno | `js/game/09-simulation-economy-training.js` + `js/ui/06-render-home-messages.js` | Guarda y muestra qué pasó al avanzar. |
+| Favicon | `index.html` | Referencia `favico.png`. |
+
+## Campos nuevos en partida
+| Campo | Uso |
 |---|---|
-| `js/core/01-config-constants.js` | Configuración, constantes y estado global. |
-| `js/core/02-ui-utils.js` | Utilidades visuales y helpers generales. |
-| `js/core/03-player-tactics-utils.js` | Jugadores, habilidades, roles, generación y táctica. |
-| `js/data/04-data-storage.js` | Carga de datos, normalización e IndexedDB. |
-| `js/game/05-state-season.js` | Partida, temporada, ascensos y descensos. |
-| `js/ui/06-render-home-messages.js` | Render general, inicio, mensajes y ofertas de venta. |
-| `js/ui/07-render-team-market.js` | Primer equipo, mercado, plantel y táctica. |
-| `js/game/08-sponsors-stadium-stats.js` | Sponsors, estadio, fixture, tabla y estadísticas. |
-| `js/game/09-simulation-economy-training.js` | Simulación, economía, moral, cohesión y entrenamiento. |
-| `js/game/10-academy-employees.js` | Academia, captación, juveniles y empleados. |
-| `js/game/11-match-engine.js` | Motor de partido alternativo y eventos de partido. |
-| `js/ui/12-modals.js` | Modales y ventanas de detalle. |
+| `lastTurnSummary` | Guarda el resumen visual del último turno avanzado. |
 
-## Decisión técnica
-Se usaron scripts clásicos cargados desde `index.html` en lugar de `type="module"`. Esto reduce riesgo de problemas con variables globales existentes y mantiene la compatibilidad del MVP actual.
-
-## Impacto esperado
-- Código más fácil de revisar.
-- Menor riesgo al tocar una sección específica.
-- Base más ordenada para futuras mejoras.
-- Sin cambio intencional de balance o reglas de juego.
+## Compatibilidad
+- Las partidas anteriores se normalizan con `lastTurnSummary: null` si no lo tenían.
+- No se cambia la estructura de jugadores, clubes, sponsors ni fixtures.
+- No se cambian las reglas de simulación de partidos.
 
 ## Riesgos pendientes
-- Sigue existiendo acoplamiento global entre módulos.
-- No hay pruebas automáticas funcionales completas en navegador.
-- Algunas funciones largas siguen mezclando lógica y HTML.
+- El render de Inicio sigue en un archivo grande.
+- Las alertas están calculadas en la UI, no en una capa de lógica separada.
+- El resumen de turno usa datos agregados simples; más adelante puede ampliarse con eventos específicos de partido, entrenamiento y finanzas.
 
 ## Siguiente mejora sugerida
-Separar por segunda capa los módulos más grandes:
-- `market`: reglas de compra/venta y render de mercado.
-- `academy`: reglas de captación, entrenamiento y render.
-- `sponsors`: generación, aceptación, contratos y render.
-- `tactics`: validación, guardado y render de formación.
-- `match`: simulación pura y presentación del resultado.
+Crear una sección de **Noticias** con estética de diario deportivo y eventos generados automáticamente por resultados, mercado, lesiones, academia y sponsors.

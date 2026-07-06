@@ -1593,3 +1593,51 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .academy-jobs{display:grid;gap:6px;margin-top:8px}
 .academy-rules-card{font-size:12px}
 .small-btn{font-size:12px;padding:6px 9px;min-height:30px}
+
+/* V3.02: experiencia visual de oficina del manager, alertas y resumen de turno */
+.manager-office{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+  gap:14px;
+  margin:0 0 14px;
+}
+.office-main-card,.office-side-card{
+  border:1px solid rgba(148,163,184,.16);
+  border-radius:24px;
+  background:linear-gradient(145deg,rgba(15,23,42,.94),rgba(30,41,59,.76));
+  box-shadow:0 22px 70px rgba(0,0,0,.24);
+  padding:18px;
+}
+.office-main-card{
+  background:
+    radial-gradient(circle at 12% 10%,rgba(59,130,246,.20),transparent 28%),
+    radial-gradient(circle at 90% 12%,rgba(34,197,94,.13),transparent 24%),
+    linear-gradient(145deg,rgba(15,23,42,.96),rgba(30,41,59,.80));
+}
+.office-club-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.office-club-head .club-badge-placeholder{width:58px;height:58px;min-width:58px;border-radius:18px;background:rgba(255,255,255,.08)}
+.office-club-head h2{font-size:clamp(24px,3vw,38px);margin:0 0 4px;letter-spacing:-.04em}
+.office-mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.office-mini-grid>div{min-height:86px;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(255,255,255,.045);padding:12px;display:grid;align-content:center;gap:4px}
+.office-mini-grid span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.office-mini-grid strong{font-size:clamp(18px,2.3vw,26px);letter-spacing:-.04em;line-height:1.05}
+.office-mini-grid em{font-style:normal;font-size:12px;font-weight:800}
+.office-status-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mini-status-row{display:grid;gap:6px;padding:10px 12px;border-radius:16px;border:1px solid rgba(148,163,184,.12);background:rgba(2,6,23,.22)}
+.mini-status-row>div{display:flex;justify-content:space-between;align-items:center;gap:12px}.mini-status-row span{font-size:12px;color:var(--muted);font-weight:800}.mini-status-row strong{font-size:18px}
+.mini-status-row i{display:block;height:8px;border-radius:999px;background:rgba(15,23,42,.88);overflow:hidden}.mini-status-row b{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+.mini-status-row.ok b{background:linear-gradient(90deg,#84cc16,#22c55e)}.mini-status-row.warn b{background:linear-gradient(90deg,#f97316,#facc15)}.mini-status-row.bad b{background:linear-gradient(90deg,#991b1b,#ef4444)}
+.office-side-card{display:grid;gap:14px;align-content:start}.office-next-match .next-match{margin-top:8px}.office-advance{display:grid;gap:8px}.office-advance button{width:100%}
+.empty-office-box{display:grid;gap:5px;border:1px dashed rgba(148,163,184,.22);border-radius:18px;padding:16px;background:rgba(255,255,255,.035)}.empty-office-box span{color:var(--muted);font-size:13px}
+.manager-alert-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.manager-alert{width:100%;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;text-align:left;padding:12px;border-radius:18px;border:1px solid rgba(148,163,184,.14);background:rgba(255,255,255,.04)}
+.manager-alert-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:rgba(148,163,184,.14);font-size:12px;font-weight:950;color:#e5edf7}
+.manager-alert strong{display:block;font-size:13px;margin-bottom:2px}.manager-alert em{display:block;font-style:normal;color:var(--muted);font-size:12px;line-height:1.35}
+.manager-alert.ok{border-color:rgba(34,197,94,.22);background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(255,255,255,.035))}.manager-alert.ok .manager-alert-icon{background:rgba(34,197,94,.18);color:#bbf7d0}
+.manager-alert.warn{border-color:rgba(245,158,11,.26);background:linear-gradient(135deg,rgba(245,158,11,.11),rgba(255,255,255,.035))}.manager-alert.warn .manager-alert-icon{background:rgba(245,158,11,.18);color:#fde68a}
+.manager-alert.bad{border-color:rgba(239,68,68,.32);background:linear-gradient(135deg,rgba(239,68,68,.13),rgba(255,255,255,.035))}.manager-alert.bad .manager-alert-icon{background:rgba(239,68,68,.20);color:#fecaca}
+.manager-alert.info{border-color:rgba(59,130,246,.23);background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(255,255,255,.035))}.manager-alert.info .manager-alert-icon{background:rgba(59,130,246,.18);color:#bfdbfe}
+.turn-summary-card{margin:0 0 14px;border-color:rgba(59,130,246,.22);background:linear-gradient(145deg,rgba(15,23,42,.90),rgba(30,41,59,.65))}.turn-summary-card.ok{border-color:rgba(34,197,94,.26)}.turn-summary-card.warn{border-color:rgba(245,158,11,.28)}.turn-summary-card.bad{border-color:rgba(239,68,68,.30)}
+.turn-result-line{font-size:clamp(20px,2.6vw,32px);font-weight:950;letter-spacing:-.04em;padding:12px 0 8px;color:#f8fafc}.turn-summary-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.turn-summary-item{border:1px solid rgba(148,163,184,.12);border-radius:16px;background:rgba(255,255,255,.035);padding:11px;display:grid;gap:4px}.turn-summary-item strong{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#cbd5e1}.turn-summary-item span{font-size:13px;color:var(--muted);line-height:1.35}.turn-summary-item.ok{border-color:rgba(34,197,94,.22)}.turn-summary-item.warn{border-color:rgba(245,158,11,.24)}.turn-summary-item.bad{border-color:rgba(239,68,68,.27)}.turn-summary-item.info{border-color:rgba(59,130,246,.20)}
+@media (max-width:1100px){.manager-office{grid-template-columns:1fr}.manager-alert-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.turn-summary-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.office-mini-grid,.office-status-bars,.manager-alert-grid,.turn-summary-list{grid-template-columns:1fr}.office-club-head{align-items:flex-start}.office-club-head .club-badge-placeholder{width:46px;height:46px;min-width:46px;border-radius:14px}}

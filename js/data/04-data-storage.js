@@ -1,4 +1,4 @@
-/* V3.01 · Carga de JSON, normalización inicial, persistencia local e inicialización. */
+/* V3.02 · Carga de JSON, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{

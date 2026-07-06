@@ -1,4 +1,4 @@
-/* V3.01 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
+/* V3.02 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
@@ -101,6 +101,108 @@ function homeFeaturedPlayers(clubId, teamAverage){
   };
 }
 
+
+function statusTone(value, good=70, warning=45){
+  const n = Math.round(Number(value) || 0);
+  if(n >= good) return 'ok';
+  if(n >= warning) return 'warn';
+  return 'bad';
+}
+function miniStatusBar(label, value, max=100){
+  const n = clamp(Math.round(Number(value) || 0), 0, max);
+  const pct = max ? clamp(Math.round((n / max) * 100), 0, 100) : 0;
+  return `<div class="mini-status-row ${statusTone(pct)}"><div><span>${escapeHtml(label)}</span><strong>${n}</strong></div><i><b style="width:${pct}%"></b></i></div>`;
+}
+function visualAlertItems(){
+  if(!game) return [];
+  const items = [];
+  const tacticErrors = isRegularSeason() ? validateCurrentTactic(false) : [];
+  const injured = injuredPlayersByClub(game.selectedClubId);
+  const pendingTransferOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
+  const sponsorOffers = game.sponsors?.offers?.length || 0;
+  const scoutingJobs = (game.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
+  const squadCount = playersByClub(game.selectedClubId).length;
+  const salaryPressure = totalClubSalary(game.selectedClubId);
+  if(game.mustReviewTactics){
+    items.push({ tone:'bad', icon:'!', title:'Táctica a revisar', text:'Hay lesionados o suspendidos propios fuera de la convocatoria válida.', tab:'tactics' });
+  }else if(tacticErrors.length){
+    items.push({ tone:'bad', icon:'11', title:'Once incompleto', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
+  }
+  if(injured.length){
+    items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });
+  }
+  const unread = unreadMessagesCount();
+  if(unread){
+    items.push({ tone:'info', icon:'✉', title:`${unread} mensaje(s) nuevo(s)`, text:'Hay eventos pendientes para leer.', tab:'messages' });
+  }
+  if(pendingTransferOffers){
+    items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Podés aceptar o rechazar desde Mensajes.', tab:'messages' });
+  }
+  if(sponsorOffers){
+    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Hay ingresos inmediatos posibles.', tab:'stadium' });
+  }
+  if(scoutingJobs.length){
+    const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));
+    const left = Math.max(0, nextDue - currentTurnIndex());
+    items.push({ tone:'info', icon:'A', title:'Captación en curso', text:`Informe de academia en ${left} turno(s).`, tab:'academy' });
+  }
+  if(squadCount >= MAX_PLAYERS_PER_CLUB){
+    items.push({ tone:'warn', icon:'25', title:'Plantel al límite', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores.`, tab:'firstTeam' });
+  }
+  if(salaryPressure > 0 && (game.budget || 0) < salaryPressure * 0.25){
+    items.push({ tone:'bad', icon:'$', title:'Presupuesto presionado', text:'El presupuesto actual está bajo contra la masa salarial anual.', tab:'finance' });
+  }
+  if(!items.length){
+    items.push({ tone:'ok', icon:'✓', title:'Sin urgencias', text:'No hay bloqueos críticos para el próximo turno.', tab:null });
+  }
+  return items.slice(0,6);
+}
+function visualAlertsMarkup(){
+  const items = visualAlertItems();
+  return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
+}
+function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
+  const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
+  const phase = phaseLabel();
+  const nextBox = next
+    ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
+    : `<div class="office-next-match"><p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
+  return `<div class="manager-office">
+    <div class="office-main-card">
+      <div class="office-club-head">
+        ${clubBadge(game.selectedClubId)}
+        <div><p class="label">Oficina del manager</p><h2>${escapeHtml(clubName(game.selectedClubId))}</h2><p class="tagline">${escapeHtml(phase)} · Jornada ${Number(game.matchdayIndex || 0) + 1}</p></div>
+      </div>
+      <div class="office-mini-grid">
+        <div><span>Posición</span><strong>${position || '—'}°</strong></div>
+        <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
+        <div><span>Presupuesto</span><strong>${formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
+        <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
+      </div>
+      <div class="office-status-bars">
+        ${miniStatusBar('Media', avgOverall, 99)}
+        ${miniStatusBar('Físico', avgFitness, 99)}
+        ${miniStatusBar('Moral', avgMorale, 99)}
+        ${miniStatusBar('Cohesión', cohesion, 100)}
+      </div>
+    </div>
+    <div class="office-side-card">
+      ${nextBox}
+      <div class="advance-control office-advance"><button id="advanceBtn" class="primary">Avanzar fecha</button><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+    </div>
+  </div>`;
+}
+function lastTurnSummaryMarkup(){
+  const summary = game?.lastTurnSummary;
+  if(!summary) return '';
+  const items = Array.isArray(summary.items) ? summary.items.slice(0,5) : [];
+  return `<div class="card turn-summary-card ${escapeHtml(summary.tone || 'info')}">
+    <div class="row"><div><p class="label">Resumen del último turno</p><h3>${escapeHtml(summary.title || 'Último avance')}</h3></div><span class="pill">${escapeHtml(summary.phase || '')}</span></div>
+    ${summary.result ? `<div class="turn-result-line">${escapeHtml(summary.result)}</div>` : ''}
+    <div class="turn-summary-list">${items.map(item => `<div class="turn-summary-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}</strong><span>${escapeHtml(item.text || '')}</span></div>`).join('')}</div>
+  </div>`;
+}
+
 function renderHome(){
   const next = getNextMatchForSelected();
   const clubPlayers = playersByClub(game.selectedClubId);
@@ -120,23 +222,13 @@ function renderHome(){
   const problemBox = problems.length ? `<div class="card blocker"><h3>Revisión obligatoria</h3><p>Hubo lesionados o expulsados propios en el último partido. Entrá a Táctica, reemplazalos y guardá una alineación válida.</p><div class="problem-list">${problems.map(problemItem).join('')}</div><button class="primary" data-go-tactics>Ir a táctica</button></div>` : '';
   const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
   view.innerHTML = `
-    <div class="row section-title">
-      <div class="home-message-strip">${homeMessagesSummary()}</div>
-      <div class="advance-control"><button id="advanceBtn" class="primary">Avanzar fecha</button><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
-    </div>
+    <div class="home-message-strip section-title">${homeMessagesSummary()}</div>
     ${problemBox}
     ${seasonBox}
     ${turnModePanelMarkup()}
-    <div class="card placeholder-main-card home-top-visual">
-      <h3>Momento del club</h3>
-      ${mainBannerMarkup()}
-    </div>
-    <div class="grid cols-4 dashboard-donut-grid" style="margin-top:14px">
-      ${dashboardDonut('Media general', avgOverall, 99)}
-      ${dashboardDonut('Estado físico', avgFitness, 99)}
-      ${dashboardDonut('Moral', avgMorale, 99)}
-      ${dashboardDonut('Cohesión', cohesion, 100)}
-    </div>
+    ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
+    ${visualAlertsMarkup()}
+    ${lastTurnSummaryMarkup()}
     <div class="card featured-players-panel" style="margin-top:14px">
       <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
       <div class="grid cols-3 featured-player-grid">
@@ -182,6 +274,7 @@ function renderHome(){
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
   document.querySelectorAll('.featured-player-card[data-player-id]').forEach(card => card.addEventListener('click',()=>showPlayerModal(Number(card.dataset.playerId))));
+  document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{ activeTab = btn.dataset.goTab; renderAll(); }));
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   updateAdvanceButtonState();

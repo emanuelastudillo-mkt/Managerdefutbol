@@ -1,4 +1,4 @@
-/* V3.01 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
+/* V3.02 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -88,6 +88,7 @@ function normalizeGame(saved){
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
+  normalized.lastTurnSummary = normalized.lastTurnSummary || null;
   normalized.mustReviewTactics = Boolean(normalized.mustReviewTactics);
   normalized.advanceLockedUntil = normalized.advanceLockedUntil || 0;
   normalized.matchHistory = normalized.matchHistory || [];
@@ -272,6 +273,7 @@ function newGame(selectedClubId){
     advanceLockedUntil: 0,
     mustReviewTactics: false,
     lastOwnProblems: [],
+    lastTurnSummary: null,
     budget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     lastBudgetDelta: 0,
     budgetHistory: [],
@@ -610,6 +612,7 @@ function startNextSeason(selectedClubId){
   game.playerStats = createInitialPlayerStats();
   game.matchHistory = [];
   game.lastOwnProblems = [];
+  game.lastTurnSummary = null;
   game.mustReviewTactics = false;
   game.seasonEndPlayerOffers = null;
   resetAcademySeasonState();

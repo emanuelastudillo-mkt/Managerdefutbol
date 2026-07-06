@@ -1,4 +1,4 @@
-/* V3.01 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.02 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);

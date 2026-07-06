@@ -1,18 +1,22 @@
-# Fútbol Manager MVP V3.01
+# Fútbol Manager MVP V3.02
 
-Versión 3 inicial del manager de fútbol local. El cambio principal es la separación del antiguo `app.js` monolítico en archivos organizados por responsabilidad.
+Versión 3.02 del manager de fútbol local. Esta versión mantiene la separación de archivos de V3.01 y suma una capa visual orientada a experiencia de juego.
 
-## Cambios V3.01
-- `app.js` dejó de contener toda la lógica del juego y ahora funciona como punto de entrada mínimo.
-- Se creó la carpeta `js/` con separación por áreas:
-  - `js/core/`: configuración, constantes, utilidades, jugadores y táctica.
-  - `js/data/`: carga de JSON, normalización y guardado local.
-  - `js/game/`: reglas de temporada, sponsors, estadio, economía, entrenamiento, academia, empleados y simulación.
-  - `js/ui/`: renderizado de pantallas, mercado, plantel, táctica y modales.
-- Se actualizó `index.html` para cargar los nuevos archivos en orden compatible con navegador y GitHub Pages.
-- Se actualizó `config.js` a `V3.01`.
-- Se agregó `CARACTERISTICAS_VERSION.md` como documento interno de características de versión.
-- Se mantuvo la compatibilidad con IndexedDB y con los JSON actuales.
+## Cambios V3.02
+- Se actualizó la versión interna y visible a `V3.02`.
+- Se agregó soporte en `index.html` para `favico.png` como favicon.
+- Se reemplazó la entrada del Inicio por una vista tipo **oficina del manager**.
+- Se agregaron alertas visuales accionables para problemas o tareas pendientes.
+- Se agregó un resumen visual del último turno avanzado.
+- Se añadieron barras compactas para media, físico, moral y cohesión dentro del panel principal.
+- Se mantuvo la lógica de juego sin cambios intencionales de balance.
+- Se corrigió una referencia interna de sponsors que apuntaba a un helper inexistente (`currentClubDivision`).
+
+## Cambios conservados de V3.01
+- `app.js` funciona como punto de entrada mínimo.
+- La lógica principal está separada dentro de la carpeta `js/`.
+- La carga se mantiene con scripts clásicos desde `index.html`, compatible con GitHub Pages.
+- Se mantiene compatibilidad con partidas guardadas en IndexedDB.
 
 ## Estructura principal
 ```txt
@@ -70,22 +74,14 @@ sponsors: {
 }
 ```
 
-## Base inicial vigente
-- Total jugadores: 1500.
-- 92-99: 7 jugadores.
-- 80-91: 105 jugadores.
-- 68-79: 368 jugadores.
-- 43-67: 750 jugadores.
-- 19-42: 270 jugadores.
-
 ## Validación realizada
 - Sintaxis JS validada con `node --check` en todos los archivos principales y módulos de `js/`.
 - JSON principales validados: `jugadores.json`, `sponsors.json` y `Liga Argentina.json`.
-- Prueba de carga de scripts sin inicializar partida: correcta.
+- Verificación de archivos referenciados en `index.html`.
 
 ## Compatibilidad
 - Mantiene guardado local por navegador con IndexedDB.
 - Mantiene `data/jugadores.json`.
 - Mantiene `data/sponsors.json`.
 - Mantiene `data/Liga Argentina.json`.
-- No cambia reglas de juego intencionalmente; esta versión prioriza estructura y mantenimiento.
+- Las partidas guardadas de V3.01 se normalizan y reciben el nuevo campo `lastTurnSummary` sin requerir reiniciar partida.

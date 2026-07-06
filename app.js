@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.26';
+const APP_VERSION = 'V2.27';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -112,7 +112,7 @@ const SPONSOR_OFFER_COUNT_MIN = 2;
 const SPONSOR_OFFER_COUNT_MAX = 5;
 
 const CLUB_ROSTER_SIZE = 25;
-const PLAYER_GENERATION_RULES_VERSION = 'V2.23';
+const PLAYER_GENERATION_RULES_VERSION = 'V2.27';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
   { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
@@ -125,9 +125,9 @@ const PLAYER_GENERATION_POSITION_GROUPS = [
   { id:'ATT', probability:0.30, positions:['ED','EI','DC'] }
 ];
 const PLAYER_GENERATION_MEDIA_RANGES = [
-  { id:'elite_mundial', probability:0.03, media_min:92, media_max:99, salaryMultiplier:3000000 },
+  { id:'elite_mundial', probability:0.005, media_min:92, media_max:99, salaryMultiplier:3000000 },
   { id:'estrella', probability:0.07, media_min:80, media_max:91, salaryMultiplier:1000000 },
-  { id:'titular_competitivo', probability:0.22, media_min:68, media_max:79, salaryMultiplier:300000 },
+  { id:'titular_competitivo', probability:0.245, media_min:68, media_max:79, salaryMultiplier:300000 },
   { id:'profesional_promedio_bajo', probability:0.50, media_min:43, media_max:67, salaryMultiplier:80000 },
   { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
 ];

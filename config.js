@@ -61,7 +61,7 @@ window.GAME_CONFIG = {
     jugadoresMaximosPorCaptacion: 10,
     costoJugadorPorTurno: 10000,
     compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 3
+    multiplicadorEntrenamiento: 5
   },
   lesiones: {
     lesionBase: 0.05,

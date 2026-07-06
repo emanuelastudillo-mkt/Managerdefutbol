@@ -1378,3 +1378,47 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
 @keyframes turnBarV228{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes turnBackdropInV228{from{opacity:0}to{opacity:1}}
 @keyframes turnBackdropOutV228{from{opacity:1}to{opacity:0}}
+
+/* V2.31: interfaz más compacta y jerarquía visual refinada */
+:root{
+  --panel:rgba(15,23,42,.86);
+  --panel-2:rgba(17,24,39,.78);
+  --line:rgba(148,163,184,.16);
+  --text:#e8eef8;
+  --muted:#94a3b8;
+  --shadow:0 14px 42px rgba(0,0,0,.22);
+  --radius:18px;
+}
+body{font-size:14px;line-height:1.42;background:radial-gradient(circle at top left,rgba(30,64,175,.34) 0,transparent 30%),linear-gradient(135deg,#07101d,#0b1220 60%,#070d18)}
+.topbar{padding:16px clamp(14px,2.4vw,28px);gap:14px}
+.eyebrow{font-size:10px;letter-spacing:.18em;margin-bottom:3px;color:#9cc7ff}
+h1{font-size:clamp(22px,3vw,34px);letter-spacing:-.045em;font-weight:850}
+h2{font-size:clamp(18px,2vw,24px);letter-spacing:-.035em;font-weight:850;margin-bottom:9px}
+h3{font-size:16px;letter-spacing:-.025em;font-weight:820;margin-bottom:8px}
+p{margin-top:0}.small{font-size:12px}.tagline{font-size:13px;line-height:1.48;max-width:680px}
+.shell{grid-template-columns:260px minmax(0,1fr);gap:14px;padding:0 clamp(14px,2.4vw,28px) 28px}
+.side{padding:13px;top:12px}.view{padding:16px;min-height:620px}.panel{border-radius:var(--radius);box-shadow:var(--shadow);background:var(--panel)}
+.new-game,.status-card{padding:12px;border-radius:15px;margin-bottom:10px;background:rgba(255,255,255,.028)}
+.status-card h2{font-size:18px;margin-bottom:7px}.status-card p{margin:0 0 5px;font-size:12px;color:var(--muted)}
+label,.label{font-size:10px;letter-spacing:.14em;margin-bottom:6px;font-weight:760;color:#9aa8bb}
+.tabs{gap:5px;margin-top:10px}.tabs button{padding:9px 10px;border-radius:11px;font-size:13px;font-weight:740;color:#9eacc0}.tabs button:hover,.tabs button.active{background:rgba(59,130,246,.105);border-color:rgba(59,130,246,.20)}
+.primary,.ghost{border-radius:11px;padding:9px 11px;font-size:13px;font-weight:760}.top-actions{gap:7px}
+select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13px;background:rgba(2,6,23,.68)}
+.grid{gap:10px}.card{padding:12px;border-radius:15px;background:rgba(255,255,255,.028)}.inner{background:rgba(2,6,23,.15)}
+.metric{font-size:24px;letter-spacing:-.045em}.row{gap:8px}.stack{gap:9px}.section-title{margin-bottom:11px}
+.kicker{gap:7px;margin-bottom:10px}.pill{padding:3px 7px;font-size:11px;gap:5px}.pos{font-weight:820}.muted{color:#94a3b8}
+.table-wrap{border-radius:13px}table{min-width:680px}th,td{padding:8px 9px;font-size:12.5px}th{font-size:10px;letter-spacing:.115em;font-weight:780;color:#9aaabe;background:rgba(255,255,255,.032)}
+.photo-thumb,img.photo-thumb{width:34px;height:34px;border-radius:10px;font-size:14px}.player-photo-placeholder.large,img.player-photo-placeholder.large{width:96px;height:96px;border-radius:18px;font-size:34px}
+.next-match{padding:13px;border-radius:16px;gap:10px}.team-name{font-size:18px}.score{font-size:23px}.events{font-size:12px;line-height:1.48;margin-top:7px}
+.match-card{padding:10px 11px;border-radius:13px}.match-line{gap:8px}
+.modal-backdrop{z-index:1200}.modal-panel{border-radius:20px;padding:17px;box-shadow:0 22px 70px rgba(0,0,0,.42)}.modal-close{width:32px;height:32px;font-size:20px}.player-modal-grid{gap:12px}
+.pitch-board{border-radius:16px}.player-chip{width:60px;min-height:60px;padding:7px 4px 12px}.player-chip-name{font-size:9px;max-width:48px}.jersey-dot{font-size:9px}.pitch-slot{width:66px;min-height:66px}.empty-slot{width:52px;height:52px}.fitness-ring{width:70px;height:70px;inset:-5px}
+.notice{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:1300;width:min(520px,calc(100vw - 28px));margin:0;padding:11px 14px;border-radius:14px;font-size:13px;box-shadow:0 20px 70px rgba(0,0,0,.38)}
+.turn-transition-backdrop{z-index:1250;background:rgba(2,6,23,.70);backdrop-filter:blur(6px);animation:turnBackdropInV231 .22s ease-out both}.turn-transition-backdrop.is-exiting{animation:turnBackdropOutV231 .34s ease-in both}
+.turn-transition-card{width:min(340px,100%);gap:9px;padding:22px 20px;border-radius:21px;background:linear-gradient(145deg,rgba(15,23,42,.98),rgba(30,41,59,.95));box-shadow:0 28px 90px rgba(0,0,0,.50)}
+.turn-transition-card strong{font-size:19px}.turn-transition-card span{font-size:12px}.turn-spinner{width:36px;height:36px;border-width:3px;animation:turnSpinV231 .9s linear infinite}.turn-transition-bar{height:6px}.turn-transition-bar i{animation:turnBarV231 2.15s ease-out both}
+@keyframes turnSpinV231{to{transform:rotate(360deg)}}
+@keyframes turnBarV231{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes turnBackdropInV231{from{opacity:0}to{opacity:1}}
+@keyframes turnBackdropOutV231{from{opacity:1}to{opacity:0}}
+@media (max-width:900px){.shell{grid-template-columns:1fr}.topbar{padding:14px}.view{padding:13px}.side{padding:11px}.grid.cols-2,.grid.cols-3,.grid.cols-4,.split,.form-grid{grid-template-columns:1fr}th,td{padding:7px 8px}.player-chip{width:52px;min-height:52px}.fitness-ring{width:62px;height:62px}.notice{top:12px}}

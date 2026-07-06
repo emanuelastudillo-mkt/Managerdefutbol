@@ -1,14 +1,15 @@
-# Fútbol Manager MVP V2.30
+# Fútbol Manager MVP V2.31
 
 Actualización incremental del manager de fútbol local.
 
-## Cambios V2.30
-- Se testeó el flujo de sponsors y se detectó que la tanda inicial de 2 ofertas no se generaba al crear una partida nueva.
-- Nueva partida: ahora genera automáticamente 2 ofertas iniciales de sponsors.
-- Nueva temporada: vuelve a generar automáticamente 2 ofertas iniciales de sponsors.
-- Si una partida vieja llega al inicio de la jornada 1 sin tanda inicial, se corrige y genera las 2 ofertas.
-- Se mantiene la regla de tandas posteriores: entre 2 y 5 ofertas cada 4 a 7 partidos oficiales.
-- Se mantiene el pago completo al aceptar la oferta.
+## Cambios V2.31
+- Ajuste visual general de la interfaz para que sea más compacta y delicada.
+- Se redujeron tamaños de tarjetas, tablas, botones, pestañas y espaciados generales.
+- Se refinó la jerarquía de títulos, subtítulos, etiquetas y textos secundarios.
+- Se compactó el menú lateral para ganar área útil en pantalla.
+- Se mantuvo visible la información importante: métricas, tablas, titulares, mercado, finanzas y acciones principales.
+- La transición al avanzar turno ahora dura un poco más de 2 segundos.
+- Los mensajes temporales permanecen al frente de la pantalla.
 
 ## Base inicial vigente
 - Total jugadores: 1500.
@@ -27,4 +28,4 @@ Actualización incremental del manager de fútbol local.
 - `data/jugadores.json`
 - `data/sponsors.json`
 
-El guardado de partida sigue funcionando localmente con IndexedDB. Para aplicar correcciones de base en una partida ya creada, conviene iniciar una nueva partida o limpiar el guardado local.
+El guardado de partida sigue funcionando localmente con IndexedDB.

@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.30';
+const APP_VERSION = 'V2.31';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -197,7 +197,7 @@ function showTurnTransition(label='Avanzando turno'){
   showTurnTransition.timer = setTimeout(()=>{
     root.classList.add('is-exiting');
     setTimeout(()=>root.remove(), 260);
-  }, 820);
+  }, 2300);
 }
 function clamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
 function rnd(min,max){ return min + Math.random() * (max-min); }

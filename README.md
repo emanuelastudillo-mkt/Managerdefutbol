@@ -1,24 +1,50 @@
-# Fútbol Manager MVP V2.34
+# Fútbol Manager MVP V3.01
 
-Actualización incremental del manager de fútbol local.
+Versión 3 inicial del manager de fútbol local. El cambio principal es la separación del antiguo `app.js` monolítico en archivos organizados por responsabilidad.
 
-## Cambios V2.34
-- Se agregó `config.js` como archivo editable de configuración general.
-- Se movieron a configuración externa los valores principales:
-  - tiempo de bloqueo entre turnos;
-  - duración visual de la transición de avance;
-  - cantidad de turnos de pretemporada y postemporada;
-  - cantidad máxima de jugadores del primer equipo;
-  - cantidad de agentes libres iniciales y jóvenes libres por temporada;
-  - escala de sueldos y cláusulas;
-  - parámetros de sponsors;
-  - costos de estadio, empleados y academia;
-  - parámetros básicos de lesiones.
-- Se ajustó la transición de avance de turno para usar la duración definida en `config.js`.
-- Se limpió una estructura duplicada de formaciones visuales que ya no se usaba.
-- Se agregaron controles simples de límite de plantel al contratar libres, comprar jugadores o promover juveniles.
-- Se validó sintaxis de `app.js`, `config.js` y `simulador-2.0.js`.
-- Se validaron los JSON principales: jugadores, sponsors y Liga Argentina.
+## Cambios V3.01
+- `app.js` dejó de contener toda la lógica del juego y ahora funciona como punto de entrada mínimo.
+- Se creó la carpeta `js/` con separación por áreas:
+  - `js/core/`: configuración, constantes, utilidades, jugadores y táctica.
+  - `js/data/`: carga de JSON, normalización y guardado local.
+  - `js/game/`: reglas de temporada, sponsors, estadio, economía, entrenamiento, academia, empleados y simulación.
+  - `js/ui/`: renderizado de pantallas, mercado, plantel, táctica y modales.
+- Se actualizó `index.html` para cargar los nuevos archivos en orden compatible con navegador y GitHub Pages.
+- Se actualizó `config.js` a `V3.01`.
+- Se agregó `CARACTERISTICAS_VERSION.md` como documento interno de características de versión.
+- Se mantuvo la compatibilidad con IndexedDB y con los JSON actuales.
+
+## Estructura principal
+```txt
+index.html
+config.js
+app.js
+style.css
+simulador-2.0.js
+CARACTERISTICAS_VERSION.md
+VERSION.md
+data/
+  Liga Argentina.json
+  jugadores.json
+  sponsors.json
+js/
+  core/
+    01-config-constants.js
+    02-ui-utils.js
+    03-player-tactics-utils.js
+  data/
+    04-data-storage.js
+  game/
+    05-state-season.js
+    08-sponsors-stadium-stats.js
+    09-simulation-economy-training.js
+    10-academy-employees.js
+    11-match-engine.js
+  ui/
+    06-render-home-messages.js
+    07-render-team-market.js
+    12-modals.js
+```
 
 ## Archivo de configuración
 Editar:
@@ -52,14 +78,14 @@ sponsors: {
 - 43-67: 750 jugadores.
 - 19-42: 270 jugadores.
 
-## Archivos
-- `index.html`
-- `config.js`
-- `app.js`
-- `style.css`
-- `simulador-2.0.js`
-- `data/Liga Argentina.json`
-- `data/jugadores.json`
-- `data/sponsors.json`
+## Validación realizada
+- Sintaxis JS validada con `node --check` en todos los archivos principales y módulos de `js/`.
+- JSON principales validados: `jugadores.json`, `sponsors.json` y `Liga Argentina.json`.
+- Prueba de carga de scripts sin inicializar partida: correcta.
 
-El guardado de partida sigue funcionando localmente con IndexedDB.
+## Compatibilidad
+- Mantiene guardado local por navegador con IndexedDB.
+- Mantiene `data/jugadores.json`.
+- Mantiene `data/sponsors.json`.
+- Mantiene `data/Liga Argentina.json`.
+- No cambia reglas de juego intencionalmente; esta versión prioriza estructura y mantenimiento.

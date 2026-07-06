@@ -215,7 +215,7 @@ function submitPurchaseOffer(playerId, kind){
   activeTab = 'messages';
   saveLocal(true);
   renderAll();
-  showNotice('Oferta aceptada. El jugador llegará en el próximo turno.');
+  showNotice('Oferta aceptada. El jugador llegará el próximo domingo.');
 }
 function processPendingTransfers(){
   if(!game) return;
@@ -296,7 +296,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
   const html = `
     <div class="match-reveal-shell">
       <div class="match-modal-head">
-        <p class="label">Jornada ${match.matchday} · ${match.date}</p>
+        <p class="label">Fecha ${match.matchday} · ${match.date}</p>
         <h2>${clubLink(match.homeId)} <span id="revealScore">0 - 0</span> ${clubLink(match.awayId)}</h2>
       </div>
       <div class="reveal-control-row">
@@ -470,7 +470,7 @@ function showMatchModal(matchId){
   const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
   const body = `
     <div class="match-modal-head">
-      <p class="label">Jornada ${match.matchday} · ${match.date}</p>
+      <p class="label">Fecha ${match.matchday} · ${match.date}</p>
       <h2>${clubLink(match.homeId)} ${match.homeGoals} - ${match.awayGoals} ${clubLink(match.awayId)}</h2>
     </div>
     <div class="card inner match-context-card">
@@ -553,7 +553,7 @@ function showClubModal(clubId){
       </div>
       <div class="card inner">
         <h3>Scouting parcial</h3>
-        <p class="muted small">En cada nueva jornada se revelan de forma provisoria 2 o 3 habilidades visibles por jugador. Las demás quedan ocultas con guion.</p>
+        <p class="muted small">En cada nueva fecha se revelan de forma provisoria 2 o 3 habilidades visibles por jugador. Las demás quedan ocultas con guion.</p>
       </div>
     </div>
     <div class="card inner" style="margin-top:14px">
@@ -624,19 +624,50 @@ function scoutingPlayerRow(player){
 }
 function openNewGameModal(force=false){
   if(!force && game && newGameModalShown) return;
+  const initialCountry = game?.selectedCountry || availableCountries()[0] || 'Argentina';
+  const initialLeague = game?.selectedLeagueId || divisionsByCountry(initialCountry)[0]?.id || 'default';
+  const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
   const body = `
     <div class="new-game-modal">
       <p class="label">Nueva partida</p>
-      <h2>Elegir club</h2>
-      <p class="muted">Seleccioná el club inicial. Al empezar se crea una partida nueva y se guarda localmente en el navegador.</p>
-      <label for="modalClubSelect">Club</label>
-      <select id="modalClubSelect">${clubSelectOptionsMarkup()}</select>
+      <h2>Crear manager</h2>
+      <p class="muted">Cargá tu nombre y elegí el club inicial.</p>
+      <div class="new-game-form-grid">
+        <label for="modalManagerName">Nombre del manager</label>
+        <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
+        <label for="modalCountrySelect">País</label>
+        <select id="modalCountrySelect">${countryOptionsMarkup(initialCountry)}</select>
+        <label for="modalLeagueSelect">Liga</label>
+        <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
+        <label for="modalClubSelect">Equipo</label>
+        <select id="modalClubSelect">${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+      </div>
       <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary">Empezar</button></div>
     </div>`;
   openModal(body);
+  const countrySelect = $('modalCountrySelect');
+  const leagueSelect = $('modalLeagueSelect');
+  const clubSelect = $('modalClubSelect');
+  const syncLeagues = () => {
+    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
+    if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
+    syncClubs();
+  };
+  const syncClubs = () => {
+    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
+    const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
+    if(clubSelect) clubSelect.innerHTML = teamOptionsMarkup(country, league, clubSelect.value);
+  };
+  countrySelect?.addEventListener('change', syncLeagues);
+  leagueSelect?.addEventListener('change', syncClubs);
+  $('modalManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
   $('btnStartNewGameModal')?.addEventListener('click', () => {
-    const selected = Number($('modalClubSelect')?.value || 0);
-    if(selected) newGame(selected);
+    const selected = Number(clubSelect?.value || 0);
+    if(selected) newGame(selected, {
+      managerName:$('modalManagerName')?.value || '',
+      country:countrySelect?.value || '',
+      leagueId:leagueSelect?.value || ''
+    });
   });
   newGameModalShown = true;
 }

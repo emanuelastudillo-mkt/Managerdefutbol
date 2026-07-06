@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "version": "V3.17",
+    "descripcion": "Catálogo de empleados por categoría para Fútbol Manager. Incluye rutas de imagen por puesto y calidad."
+  },
+  "categorias": [
+    {
+      "id": "regular",
+      "nombre": "Regular",
+      "multiplicadorCosto": 1,
+      "multiplicadorRendimiento": 1,
+      "descripcion": "Mantiene el rendimiento estándar."
+    },
+    {
+      "id": "bueno",
+      "nombre": "Bueno",
+      "multiplicadorCosto": 4,
+      "multiplicadorRendimiento": 2,
+      "descripcion": "Duplica el rendimiento de la acción."
+    },
+    {
+      "id": "elite",
+      "nombre": "Elite",
+      "multiplicadorCosto": 50,
+      "multiplicadorRendimiento": 3,
+      "descripcion": "Triplica el rendimiento de la acción."
+    }
+  ],
+  "empleados": [
+    {
+      "id": "psychologist",
+      "nombre": "Psicólogo motivacional",
+      "rol": "Motivación",
+      "costoBase": 500000,
+      "duracion": "temporada",
+      "descripcion": "Permite realizar charlas motivacionales para mejorar la moral del plantel.",
+      "accion": "charla_motivacional",
+      "imagenes": {
+        "regular": "img/empleados/psicologo-regular.webp",
+        "bueno": "img/empleados/psicologo-bueno.webp",
+        "elite": "img/empleados/psicologo-elite.webp"
+      }
+    },
+    {
+      "id": "kinesiologist",
+      "nombre": "Kinesiólogo",
+      "rol": "Recuperación",
+      "costoBase": 1000000,
+      "duracion": "temporada",
+      "descripcion": "Permite tratar lesionados una vez por semana para reducir días de recuperación.",
+      "accion": "tratamiento_lesion",
+      "imagenes": {
+        "regular": "img/empleados/kinesiologo-regular.webp",
+        "bueno": "img/empleados/kinesiologo-bueno.webp",
+        "elite": "img/empleados/kinesiologo-elite.webp"
+      }
+    },
+    {
+      "id": "youth_preparer",
+      "nombre": "Preparador de juveniles",
+      "rol": "Academia",
+      "costoBase": 1000000,
+      "duracion": "temporada",
+      "descripcion": "Permite consultar informes de juveniles y descubrir más habilidades ocultas.",
+      "accion": "informe_juveniles",
+      "imagenes": {
+        "regular": "img/empleados/preparador-juveniles-regular.webp",
+        "bueno": "img/empleados/preparador-juveniles-bueno.webp",
+        "elite": "img/empleados/preparador-juveniles-elite.webp"
+      }
+    }
+  ]
+}

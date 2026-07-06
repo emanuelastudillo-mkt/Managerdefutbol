@@ -1,17 +1,97 @@
-# Fútbol Manager MVP V3.08
+# Fútbol Manager MVP · V3.19
 
-Versión basada en V3.07 con ajuste de mercado.
+## Cambios V3.19
 
-## Cambios V3.08
+- Mercado libre inicial ajustado a 300 jugadores.
+- Libres regulares con media 40 a 62 y edad 19 a 30.
+- Distribución de libres: 10% POR, 35% DEF, 35% MED, 20% DEL.
+- Cada nueva temporada suma 3 jóvenes libres por club, de 17 o 18 años.
+- Los jóvenes libres mantienen la generación normal de calidad, incluida la baja probabilidad de media muy alta.
+- El mercado libre regular se rellena hasta 200 jugadores si queda por debajo.
+- Si supera 200, se eliminan primero libres de 32 años o más.
+- Los libres menores de 32 años se conservan.
+- Los libres también pueden retirarse al final de temporada.
 
-- Corregido el texto de la segunda oferta de compra: ahora dice **Ofrecer 25% menos**.
-- Se mantiene la primera opción como **Ofrecer 50% menos**.
-- Cuando una oferta de compra por un jugador es rechazada, no se puede volver a ofertar por ese mismo jugador hasta la temporada siguiente.
-- El bloqueo se guarda en la partida local y se limpia al iniciar una nueva temporada.
-- En el mercado y en la ficha del jugador, el botón queda deshabilitado si la oferta ya fue rechazada en la temporada actual.
+---
+
+
+## Cambios V3.19
+
+- Cards visuales para empleados contratados.
+- Integración de fotos por puesto y calidad desde `data/empleados.json`.
+- Nueva sección de empleados contratados en Inicio.
+- Cards visuales en Empleados y Academia cuando un empleado está activo.
+- No se muestran multiplicadores ni efectos internos.
+- Barra de progreso de avance centrada, con frases rotativas cada 10 segundos.
+
+## Imágenes de empleados
+
+Colocar las imágenes en:
+
+```txt
+img/empleados/
+```
+
+Nombres esperados:
+
+```txt
+psicologo-regular.webp
+psicologo-bueno.webp
+psicologo-elite.webp
+kinesiologo-regular.webp
+kinesiologo-bueno.webp
+kinesiologo-elite.webp
+preparador-juveniles-regular.webp
+preparador-juveniles-bueno.webp
+preparador-juveniles-elite.webp
+```
+
+Formato recomendado: `.webp`, 512x512 px.
 
 ## Validación
 
-- Scripts JS validados con `node --check`.
-- JSON principales validados.
+- JavaScript validado con `node --check`.
+- JSON validado.
 - ZIP verificado.
+
+## Ajuste V3.19 antes de implementación
+
+La pantalla **Nueva partida** incluye nombre del manager, país, liga y equipo. El nombre se guarda para el ranking online.
+
+El ranking permite subir resultados durante la temporada, con un cooldown de 77 días de juego entre envíos.
+
+## Ajuste V3.19 · Curva de dificultad de habilidades
+
+- El entrenamiento intenso conserva la lógica previa de intento de mejora.
+- Si el entrenamiento define que una habilidad debe subir +1, ahora pasa por una comprobación final.
+- La probabilidad final depende del valor actual de la habilidad:
+  - habilidad 20: 80% de probabilidad final.
+  - habilidad 50: 50% de probabilidad final.
+  - habilidad 80: 20% de probabilidad final.
+- Los sueldos, medias base y tipos de entrenamiento no se modifican.
+- El ajuste vuelve más difícil mejorar jugadores que ya tienen habilidades altas.
+
+## Cambios V3.19 · Mercado libre inicial y renovaciones
+
+- La nueva partida genera 300 jugadores libres iniciales.
+- Los jugadores libres regulares se generan con medias equilibradas entre 40 y 62.
+- Los libres regulares usan edades de 18 a 35 años.
+- Al iniciar una nueva temporada, el mercado libre se limpia y se limita a un máximo de 200 jugadores disponibles.
+- Cada temporada se generan 3 jóvenes libres por club, de 17 o 18 años.
+- Los jóvenes libres de temporada usan las reglas generales de calidad de jugadores, por lo que allí puede aparecer una probabilidad baja de jugadores de nivel muy alto.
+- Si después de agregar jóvenes quedan menos de 200 libres, el juego completa el mercado con jugadores regulares de media 40 a 62.
+- La distribución por posición mantiene la regla general: 10% porteros, 30% defensores, 30% mediocampistas y 30% delanteros.
+
+
+## Ajuste V3.19 · Ranking online
+
+- El envío al ranking ahora espera confirmación real del servicio online antes de guardar el cooldown local.
+- Si el envío falla, no se bloquea el siguiente intento.
+- El ranking online ahora usa lectura/escritura confirmada por callback.
+- El Apps Script acepta lectura y envío desde `doGet`, además de mantener compatibilidad con `doPost`.
+- Se corrige el caso donde el juego mostraba un registro local aunque la hoja no hubiera recibido datos.
+
+
+### Ranking online V3.19
+
+Si el navegador tenía una URL vieja guardada, ahora el juego usa primero la URL configurada en `config.js`. El Apps Script también evita el error `Acción GET no reconocida` ante acciones GET antiguas o incompletas.

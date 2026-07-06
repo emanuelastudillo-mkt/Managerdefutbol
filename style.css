@@ -310,7 +310,7 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 #revealScore{display:inline-block;min-width:90px;text-align:center;color:#dbeafe}
 @media (max-width:900px){.reveal-control-row{align-items:stretch}.reveal-progress{width:100%}}
 
-/* V1.08: lesiones por turnos y panel médico */
+/* V1.08: lesiones por días y panel médico */
 .injury-home-card{border-color:rgba(245,158,11,.22);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(255,255,255,.025))}
 .injury-rules{margin-top:12px;color:var(--muted)}
 .injury-rules summary{cursor:pointer;font-weight:800;color:#fde68a;margin-bottom:10px}
@@ -784,7 +784,7 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .advance-control{
   display:grid;
   gap:8px;
-  justify-items:end;
+  justify-items:center;
   min-width:260px;
 }
 .advance-control .primary{
@@ -797,11 +797,24 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 }
 .advance-progress .project-progress{
   height:10px;
-  margin:0 0 5px;
+  margin:0 0 6px;
 }
 .advance-progress p{
   margin:0;
-  text-align:right;
+  text-align:center;
+}
+.advance-phrase{
+  min-height:18px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.advance-phrase.is-changing{
+  animation:advancePhraseSlide .55s ease both;
+}
+@keyframes advancePhraseSlide{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
 }
 .pitch-board.centered{
   max-width:690px!important;
@@ -1303,7 +1316,7 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
 .offer-choice-grid .plain p{margin:4px 0 0;color:#cbd5e1;font-weight:900}
 @media (max-width:760px){.subtabs button{flex:1}.offer-choice-grid{grid-template-columns:1fr}}
 
-/* V2.28: transición de turno y avisos siempre al frente */
+/* V2.28: transición de avance y avisos siempre al frente */
 .notice{
   position:fixed;
   top:18px;
@@ -1594,7 +1607,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .academy-rules-card{font-size:12px}
 .small-btn{font-size:12px;padding:6px 9px;min-height:30px}
 
-/* V3.02: experiencia visual de oficina del manager, alertas y resumen de turno */
+/* V3.02: experiencia visual de oficina del manager, alertas y resumen de avance */
 .manager-office{
   display:grid;
   grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
@@ -1627,7 +1640,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .mini-status-row>div{display:flex;justify-content:space-between;align-items:center;gap:12px}.mini-status-row span{font-size:12px;color:var(--muted);font-weight:800}.mini-status-row strong{font-size:18px}
 .mini-status-row i{display:block;height:8px;border-radius:999px;background:rgba(15,23,42,.88);overflow:hidden}.mini-status-row b{display:block;height:100%;border-radius:inherit;background:var(--accent)}
 .mini-status-row.ok b{background:linear-gradient(90deg,#84cc16,#22c55e)}.mini-status-row.warn b{background:linear-gradient(90deg,#f97316,#facc15)}.mini-status-row.bad b{background:linear-gradient(90deg,#991b1b,#ef4444)}
-.office-side-card{display:grid;gap:14px;align-content:start}.office-next-match .next-match{margin-top:8px}.office-advance{display:grid;gap:8px}.office-advance button{width:100%}
+.office-side-card{display:grid;gap:14px;align-content:start}.office-next-match .next-match{margin-top:8px}.office-advance{display:grid;gap:8px;justify-self:end;width:min(100%,260px)}.office-advance button{width:100%}
 .empty-office-box{display:grid;gap:5px;border:1px dashed rgba(148,163,184,.22);border-radius:18px;padding:16px;background:rgba(255,255,255,.035)}.empty-office-box span{color:var(--muted);font-size:13px}
 .manager-alert-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
 .manager-alert{width:100%;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;text-align:left;padding:12px;border-radius:18px;border:1px solid rgba(148,163,184,.14);background:rgba(255,255,255,.04)}
@@ -1725,4 +1738,260 @@ button.action-failure{
 }
 .tactic-empty-slot{
   font-family:inherit;
+}
+
+
+
+/* V3.17 · filtros de mercado */
+.market-filters-card{
+  margin:0 0 14px;
+  border-color:rgba(59,130,246,.18);
+  background:linear-gradient(145deg,rgba(15,23,42,.86),rgba(30,41,59,.56));
+}
+.market-filters-head{margin-bottom:10px}
+.market-filter-grid{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(110px,1fr));
+  gap:10px;
+  align-items:end;
+}
+.market-filter-grid label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+}
+.market-filter-grid input,
+.market-filter-grid select{
+  width:100%;
+}
+.market-filter-grid button{
+  min-height:42px;
+}
+@media (max-width:1180px){
+  .market-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media (max-width:700px){
+  .market-filter-grid{grid-template-columns:1fr;}
+}
+
+/* V3.17 · Ranking Online */
+.ranking-layout{
+  display:grid;
+  grid-template-columns:minmax(280px, 0.85fr) minmax(420px, 1.35fr);
+  gap:14px;
+  align-items:start;
+}
+.ranking-submit-card,
+.ranking-config-card,
+.ranking-list-card{
+  margin-bottom:14px;
+}
+.ranking-manager-row,
+.ranking-endpoint-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  margin-top:8px;
+}
+.ranking-manager-row input,
+.ranking-endpoint-row input{
+  width:100%;
+}
+.ranking-preview-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+  margin-top:14px;
+}
+.ranking-preview-grid > div{
+  border:1px solid rgba(148,163,184,.22);
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(15,23,42,.35);
+}
+.ranking-preview-grid span{
+  display:block;
+  font-size:.75rem;
+  opacity:.68;
+  margin-bottom:4px;
+}
+.ranking-preview-grid strong{
+  font-size:.95rem;
+}
+.ranking-sortbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:12px 0;
+}
+.ranking-sort{
+  border:1px solid rgba(148,163,184,.24);
+  background:rgba(15,23,42,.45);
+  color:inherit;
+  border-radius:999px;
+  padding:7px 11px;
+  cursor:pointer;
+}
+.ranking-sort.active{
+  border-color:rgba(34,197,94,.65);
+  background:rgba(34,197,94,.14);
+}
+.ranking-table-wrap table td,
+.ranking-table-wrap table th{
+  white-space:nowrap;
+}
+.ranking-table td:nth-child(2),
+.ranking-table td:nth-child(3){
+  white-space:normal;
+  min-width:120px;
+}
+@media (max-width: 980px){
+  .ranking-layout{
+    grid-template-columns:1fr;
+  }
+  .ranking-manager-row,
+  .ranking-endpoint-row{
+    grid-template-columns:1fr;
+  }
+}
+@media (max-width: 620px){
+  .ranking-preview-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+/* V3.17: plan semanal de entrenamiento compacto */
+.training-summary-row{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}
+.training-calendar-card .row{align-items:center;margin-bottom:10px}
+.training-week-grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:6px;align-items:stretch}
+.training-day-card{border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.46);border-radius:12px;padding:7px;display:grid;gap:6px;min-width:0}
+.training-day-head{display:grid;gap:2px;border-bottom:1px solid rgba(148,163,184,.10);padding-bottom:5px;margin-bottom:1px}
+.training-day-head strong{font-size:12px;color:#f8fafc;line-height:1.1}
+.training-day-head span{font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.training-day-slots{display:grid;gap:4px}
+.training-slot{appearance:none;border:1px solid rgba(148,163,184,.16);border-radius:8px;background:rgba(255,255,255,.035);padding:0;text-align:left;min-width:0;overflow:hidden;cursor:pointer;transition:transform .12s ease,border-color .12s ease,background .12s ease}
+.training-slot:hover{transform:translateY(-1px);border-color:rgba(226,232,240,.28)}
+.training-slot-band{display:block;background:rgba(148,163,184,.22);color:#e5e7eb!important;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.045em;padding:3px 6px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.training-slot strong{display:block;font-size:11px;line-height:1.1;padding:6px 6px 7px;color:var(--training-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.training-tone-regen{--training-accent:#38bdf8;--training-bg:rgba(56,189,248,.12);--training-border:rgba(56,189,248,.30)}
+.training-tone-massage{--training-accent:#22c55e;--training-bg:rgba(34,197,94,.12);--training-border:rgba(34,197,94,.30)}
+.training-tone-intense{--training-accent:#ef4444;--training-bg:rgba(239,68,68,.12);--training-border:rgba(239,68,68,.32)}
+.training-tone-tactical{--training-accent:#a78bfa;--training-bg:rgba(167,139,250,.12);--training-border:rgba(167,139,250,.30)}
+.training-tone-dayoff{--training-accent:#f59e0b;--training-bg:rgba(245,158,11,.12);--training-border:rgba(245,158,11,.30)}
+.training-slot.training-tone-regen,
+.training-slot.training-tone-massage,
+.training-slot.training-tone-intense,
+.training-slot.training-tone-tactical,
+.training-slot.training-tone-dayoff{background:linear-gradient(135deg,var(--training-bg),rgba(15,23,42,.60));border-color:var(--training-border)}
+.training-pill.training-tone-regen,
+.training-pill.training-tone-massage,
+.training-pill.training-tone-intense,
+.training-pill.training-tone-tactical,
+.training-pill.training-tone-dayoff{background:var(--training-bg);border-color:var(--training-border);color:#e5e7eb}
+.training-picker-modal{display:grid;gap:12px;min-width:min(620px,calc(100vw - 48px))}
+.training-picker-modal h2{margin:0}
+.training-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.training-picker-card{appearance:none;border:1px solid var(--training-border);border-radius:14px;background:linear-gradient(135deg,var(--training-bg),rgba(15,23,42,.76));padding:13px;text-align:left;display:grid;gap:5px;color:#e5e7eb;cursor:pointer;transition:transform .12s ease,border-color .12s ease,filter .12s ease}
+.training-picker-card:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.training-picker-card.selected{box-shadow:0 0 0 2px var(--training-accent) inset}
+.training-picker-card strong{color:var(--training-accent);font-size:14px}
+.training-picker-card span{font-size:12px;color:#cbd5e1;line-height:1.35}
+@media (max-width:1500px){.training-week-grid{grid-template-columns:repeat(4,minmax(130px,1fr))}}
+@media (max-width:980px){.training-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-picker-grid{grid-template-columns:1fr}}
+@media (max-width:620px){.training-week-grid{grid-template-columns:1fr}.training-day-card{padding:7px}.training-picker-modal{min-width:0}}
+
+
+/* V3.17: contratación de empleados por categoría */
+.staff-hire-modal{display:grid;gap:14px;min-width:min(720px,calc(100vw - 48px))}
+.staff-hire-modal h2{margin:0}
+.staff-tier-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.staff-tier-card{appearance:none;border:1px solid rgba(148,163,184,.18);border-radius:16px;background:linear-gradient(145deg,rgba(15,23,42,.92),rgba(30,41,59,.72));color:#e5e7eb;text-align:left;padding:14px;display:grid;gap:8px;cursor:pointer;transition:transform .12s ease,border-color .12s ease,filter .12s ease}
+.staff-tier-card:hover{transform:translateY(-1px);border-color:rgba(52,211,153,.50);filter:brightness(1.06)}
+.staff-tier-card:disabled,.staff-tier-card.disabled{opacity:.48;cursor:not-allowed;filter:grayscale(.25)}
+.staff-tier-card strong{font-size:20px;color:#f8fafc;line-height:1.05}
+.staff-tier-card em{font-style:normal;color:#86efac;font-weight:800;font-size:13px}
+.staff-tier-card small{color:#cbd5e1;line-height:1.35}
+.staff-card .pill.ok{margin:4px 0 8px}
+@media (max-width:820px){.staff-tier-grid{grid-template-columns:1fr}.staff-hire-modal{min-width:0}}
+
+/* V3.17: cards visuales de empleados contratados */
+.featured-staff-panel .featured-staff-grid{margin-top:12px;}
+.staff-contract-card{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:118px;
+  padding:12px;
+  border:1px solid rgba(148,163,184,.22);
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(15,23,42,.86),rgba(30,41,59,.72));
+  box-shadow:0 10px 24px rgba(2,6,23,.22);
+}
+.staff-contract-card.mini{
+  min-height:86px;
+  padding:10px;
+  margin:10px 0;
+  border-radius:16px;
+  background:rgba(15,23,42,.72);
+}
+.staff-photo-wrap{
+  width:76px;
+  height:76px;
+  flex:0 0 76px;
+  position:relative;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(15,23,42,.9);
+}
+.staff-contract-card.mini .staff-photo-wrap{
+  width:58px;
+  height:58px;
+  flex-basis:58px;
+  border-radius:14px;
+}
+.staff-employee-photo{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.staff-photo-fallback{
+  width:100%;
+  height:100%;
+  place-items:center;
+  font-weight:900;
+  font-size:1.35rem;
+  color:#dbeafe;
+  background:linear-gradient(135deg,rgba(14,165,233,.35),rgba(22,163,74,.24));
+}
+.staff-contract-info{min-width:0;}
+.staff-contract-info h3{
+  margin:2px 0 8px;
+  font-size:1rem;
+  line-height:1.15;
+}
+.staff-contract-card.mini .staff-contract-info h3{font-size:.95rem;}
+.staff-contract-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.staff-tier-card em{display:none;}
+@media(max-width:760px){
+  .staff-contract-card{min-height:96px;}
+  .staff-photo-wrap{width:64px;height:64px;flex-basis:64px;}
+}
+
+/* V3.17 ajuste: nueva partida con manager, país, liga y equipo */
+.new-game-form-grid{
+  display:grid;
+  gap:8px;
+}
+.new-game-form-grid input,
+.new-game-form-grid select{
+  width:100%;
 }

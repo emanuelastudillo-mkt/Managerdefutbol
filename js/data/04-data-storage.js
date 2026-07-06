@@ -1,4 +1,4 @@
-/* V3.08 · Carga de JSON, normalización inicial, persistencia local e inicialización. */
+/* V3.17 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -28,6 +28,27 @@ async function loadSponsorsDatabase(){
   const sponsors = Array.isArray(raw.sponsors) ? raw.sponsors.filter(sponsor => sponsor && sponsor.activo !== false) : [];
   return { ...raw, lugares_sponsor:lugares, sponsors, source:SPONSORS_DATABASE_URL };
 }
+async function loadEmployeesDatabase(){
+  const raw = await fetchJsonIfExists(EMPLOYEES_DATABASE_URL);
+  const fallback = {
+    categorias:[
+      { id:'regular', nombre:'Regular', multiplicadorCosto:1, multiplicadorRendimiento:1, descripcion:'Mantiene el rendimiento estándar.' },
+      { id:'bueno', nombre:'Bueno', multiplicadorCosto:4, multiplicadorRendimiento:2, descripcion:'Duplica el rendimiento de la acción.' },
+      { id:'elite', nombre:'Elite', multiplicadorCosto:50, multiplicadorRendimiento:3, descripcion:'Triplica el rendimiento de la acción.' }
+    ],
+    empleados:[
+      { id:'psychologist', nombre:'Psicólogo motivacional', rol:'Motivación', costoBase:PSYCHOLOGIST_COST, duracion:'temporada', descripcion:'Permite realizar charlas motivacionales para mejorar la moral del plantel.', accion:'charla_motivacional' },
+      { id:'kinesiologist', nombre:'Kinesiólogo', rol:'Recuperación', costoBase:KINESIOLOGIST_COST, duracion:'temporada', descripcion:'Permite tratar lesionados una vez por semana para reducir días de recuperación.', accion:'tratamiento_lesion' },
+      { id:'youth_preparer', nombre:'Preparador de juveniles', rol:'Academia', costoBase:YOUTH_PREPARER_COST, duracion:'temporada', descripcion:'Permite consultar informes de juveniles y descubrir más habilidades ocultas.', accion:'informe_juveniles' }
+    ],
+    source:'fallback'
+  };
+  const clean = raw && typeof raw === 'object' ? raw : fallback;
+  const categorias = Array.isArray(clean.categorias) && clean.categorias.length ? clean.categorias : fallback.categorias;
+  const empleados = Array.isArray(clean.empleados) && clean.empleados.length ? clean.empleados : fallback.empleados;
+  return { ...clean, categorias, empleados, source:raw ? EMPLOYEES_DATABASE_URL : 'fallback' };
+}
+
 function playersDatabaseHash(players=[]){
   const raw = players.map(p => `${p.id}:${p.clubId}:${p.position}:${p.overall}:${p.salary}:${p.clause}`).join('|');
   return `players-${hashNumber(raw, 1000000000)}`;
@@ -166,7 +187,7 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
     divisions:normalizedDivisions,
     clubs,
     players,
-    fixtures:generateFixturesForDivisions(clubs, normalizedDivisions)
+    fixtures:generateFixturesForDivisions(clubs, normalizedDivisions, { seasonYear:SEASON_START_YEAR })
   };
   seedData.meta.signature = seedSignature(seedData);
   return seedData;
@@ -436,26 +457,32 @@ function averageGeneratedVisible(position, skills){
   const temp = { position, skills, overall:50 };
   return clamp(Math.round(avg(Object.values(visibleStats(temp)))), 1, 99);
 }
-function generateFixturesForDivisions(clubs, divisions){
-  const schedules = divisions.map(division => roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division));
+function sortedSeasonDivisions(divisions){
+  return (divisions || [{ id:'default', name:'Liga única', order:1 }]).slice().sort((a,b)=>(a.order || 0)-(b.order || 0));
+}
+function generateFixturesForDivisions(clubs, divisions, options={}){
+  const seasonYear = Math.round(Number(options.seasonYear || SEASON_START_YEAR));
+  const sortedDivisions = sortedSeasonDivisions(divisions);
+  const schedules = sortedDivisions.map(division => roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division));
   const maxRounds = Math.max(...schedules.map(s => s.length), 0);
+  const firstLeagueDate = leagueStartDateForSeason(seasonYear);
   const fixtures = [];
   for(let roundIndex=0; roundIndex<maxRounds; roundIndex++){
-    const date = new Date(Date.UTC(2026, 1, 1 + roundIndex * 7));
+    const date = addDaysToIsoDate(firstLeagueDate, roundIndex * DAYS_PER_ADVANCE);
     const matches = [];
     schedules.forEach(schedule => {
-      (schedule[roundIndex] || []).forEach(match => matches.push(match));
+      (schedule[roundIndex] || []).forEach(match => matches.push({ ...match, date }));
     });
-    fixtures.push({ matchday:roundIndex+1, date:date.toISOString().slice(0,10), matches });
+    fixtures.push({ matchday:roundIndex+1, date, matches });
   }
   return fixtures;
 }
 function roundRobinSchedule(clubsInDivision, division){
   const teams = clubsInDivision.slice();
   if(teams.length % 2 === 1) teams.push(null);
-  const rounds = [];
+  const firstLeg = [];
   const n = teams.length;
-  if(n < 2) return rounds;
+  if(n < 2) return firstLeg;
   let arr = teams.slice();
   for(let r=0; r<n-1; r++){
     const matches = [];
@@ -465,14 +492,53 @@ function roundRobinSchedule(clubsInDivision, division){
       if(a && b){
         const home = r % 2 === 0 ? a : b;
         const away = r % 2 === 0 ? b : a;
-        matches.push({ id:`${division.id}-j${r+1}-${home.id}-${away.id}`, matchday:r+1, divisionId:division.id, divisionName:division.name, homeId:home.id, awayId:away.id, played:false });
+        matches.push({ id:`${division.id}-j${r+1}-${home.id}-${away.id}`, matchday:r+1, leg:1, divisionId:division.id, divisionName:division.name, homeId:home.id, awayId:away.id, played:false });
       }
     }
-    rounds.push(matches);
+    firstLeg.push(matches);
     arr = [arr[0], arr[n-1], ...arr.slice(1,n-1)];
   }
-  return rounds;
+  if(!SEASON_HOME_AWAY) return firstLeg;
+  const secondLeg = firstLeg.map((matches, roundIndex) => {
+    const matchday = firstLeg.length + roundIndex + 1;
+    return matches.map(match => ({
+      ...match,
+      id:`${division.id}-j${matchday}-${match.awayId}-${match.homeId}`,
+      matchday,
+      leg:2,
+      homeId:match.awayId,
+      awayId:match.homeId,
+      played:false,
+      homeGoals:undefined,
+      awayGoals:undefined
+    }));
+  });
+  return firstLeg.concat(secondLeg);
 }
+function mergePlayedFixturesIntoCalendar(nextFixtures, previousFixtures=[]){
+  const previousById = new Map();
+  (previousFixtures || []).forEach(round => {
+    (round.matches || []).forEach(match => previousById.set(String(match.id), match));
+  });
+  if(!previousById.size) return nextFixtures;
+  return nextFixtures.map(round => ({
+    ...round,
+    matches:(round.matches || []).map(match => {
+      const previous = previousById.get(String(match.id));
+      if(!previous || !previous.played) return match;
+      return { ...match, played:true, homeGoals:previous.homeGoals, awayGoals:previous.awayGoals };
+    })
+  }));
+}
+function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=null){
+  const year = Math.round(Number(seasonYear || 0)) || seasonYearForNumber(seasonNumber || 1);
+  const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year });
+  const current = Array.isArray(existingFixtures) ? existingFixtures : [];
+  const currentYear = String(current?.[0]?.date || '').slice(0,4);
+  const needsCalendar = current.length !== expected.length || currentYear !== String(year) || current.some(round => !validIsoDate(round.date));
+  return needsCalendar ? mergePlayedFixturesIntoCalendar(expected, current) : current;
+}
+
 
 async function openDb(){
   return new Promise((resolve,reject)=>{
@@ -537,6 +603,7 @@ async function init(){
   try{
     seed = await loadInitialSeed();
     sponsorsDatabase = await loadSponsorsDatabase();
+    employeesDatabase = await loadEmployeesDatabase();
     fillClubSelect();
     bindEvents();
     startUiTicker();
@@ -547,6 +614,6 @@ async function init(){
     }
   }catch(error){
     console.error(error);
-    view.innerHTML = `<div class="empty"><h2>Error de carga</h2><p>${escapeHtml(error.message)}. Subí <code>data/Liga argentina.json</code> o un <code>data/seed.json</code> válido y ejecutá el proyecto con GitHub Pages o servidor local.</p></div>`;
+    view.innerHTML = `<div class="empty"><h2>Error de carga</h2><p>No se pudo iniciar el juego. Revisá que la publicación esté completa y volvé a intentar.</p></div>`;
   }
 }

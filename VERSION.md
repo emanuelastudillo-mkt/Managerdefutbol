@@ -1,18 +1,15 @@
-# Versión V2.29
+# Versión V2.30
 
 ## Ajustes principales
 
-### Pizarra táctica
-- Se corrigió la ubicación visual de los roles en cancha.
-- Los extremos `ED` y `EI` dejan de aparecer como mediocampistas en formaciones donde quedaban mal alineados.
-- Las columnas visuales se calculan por rol: portero, defensa, mediocampo defensivo, mediocampo, mediapunta y ataque.
-
-### Autoselección
-- `Mejor once` ahora usa jugadores compatibles con cada slot.
-- El portero siempre debe ser `POR`.
-- Un portero no puede ocupar puestos de campo.
-- Se evita que `Mejor once` arme titulares penalizados por jugar fuera de zona.
-- `Mejor condición física` mantiene su lógica de priorizar estado físico, pero también respeta la regla estricta del portero.
+### Sponsors
+- Se testeó la llegada de ofertas de sponsors.
+- La base de sponsors carga correctamente: 20 lugares y 200 marcas activas.
+- Se corrigió la ausencia de la tanda inicial de 2 ofertas.
+- Al crear partida nueva se generan 2 ofertas iniciales.
+- Al iniciar una nueva temporada se generan 2 ofertas iniciales.
+- Si una partida vieja llega a la jornada 1 sin tanda inicial, se fuerza esa tanda.
+- Las tandas posteriores siguen llegando cada 4 a 7 partidos, con 2 a 5 ofertas.
 
 ## Compatibilidad
 - Mantiene guardado local por navegador.

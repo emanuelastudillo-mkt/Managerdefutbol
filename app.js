@@ -9,7 +9,7 @@ const ADVANCE_LOCK_MS = 120000;
 const PRESEASON_TURNS = 10;
 const POSTSEASON_TURNS = 5;
 const MAX_PRESEASON_FRIENDLIES = 5;
-const APP_VERSION = 'V2.29';
+const APP_VERSION = 'V2.30';
 const TEAM_COHESION_START = 50;
 const TEAM_COHESION_MATCH_GAIN = 8;
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
@@ -110,9 +110,10 @@ const SPONSOR_OFFER_MATCH_MIN = 4;
 const SPONSOR_OFFER_MATCH_MAX = 7;
 const SPONSOR_OFFER_COUNT_MIN = 2;
 const SPONSOR_OFFER_COUNT_MAX = 5;
+const SPONSOR_OPENING_OFFER_COUNT = 2;
 
 const CLUB_ROSTER_SIZE = 25;
-const PLAYER_GENERATION_RULES_VERSION = 'V2.29';
+const PLAYER_GENERATION_RULES_VERSION = 'V2.30';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },
   { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
@@ -1826,6 +1827,7 @@ function newGame(selectedClubId){
   game.marketPlayers = generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   ensurePlayerStateForAll();
+  generateOpeningSponsorOffers(true);
   pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
   activeTab = 'home';
   closeModal();
@@ -2153,6 +2155,7 @@ function startNextSeason(selectedClubId){
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
   addSeasonYouthFreeAgents(Math.max(SEASON_YOUTH_FREE_AGENT_COUNT, retiredCount));
   ensurePlayerStateForAll();
+  generateOpeningSponsorOffers(true);
   pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
   activeTab = 'home';
   closeModal();
@@ -3198,7 +3201,7 @@ function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
 }
 function createInitialSponsorState(){
-  return { active:[], offers:[], matchesSinceOffer:0, nextOfferAfter:randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX), lastOfferTurn:-1 };
+  return { active:[], offers:[], matchesSinceOffer:0, nextOfferAfter:randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX), lastOfferTurn:-1, openingOffersSeason:0 };
 }
 function normalizeSponsorState(state){
   const base = createInitialSponsorState();
@@ -3208,6 +3211,7 @@ function normalizeSponsorState(state){
   clean.matchesSinceOffer = Number.isFinite(clean.matchesSinceOffer) ? clean.matchesSinceOffer : 0;
   clean.nextOfferAfter = Number.isFinite(clean.nextOfferAfter) ? clean.nextOfferAfter : randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
   clean.lastOfferTurn = Number.isFinite(clean.lastOfferTurn) ? clean.lastOfferTurn : -1;
+  clean.openingOffersSeason = Number.isFinite(clean.openingOffersSeason) ? clean.openingOffersSeason : 0;
   return clean;
 }
 function ensureSponsorState(){
@@ -3252,12 +3256,13 @@ function sponsorPlaceById(id){
 function sponsorBrandById(id){
   return (sponsorsDatabase?.sponsors || []).find(sponsor => sponsor.id_sponsor === id) || null;
 }
-function generateSponsorOffers(){
+function generateSponsorOffers(forcedCount=null, options={}){
   ensureSponsorState();
   const lugares = (sponsorsDatabase?.lugares_sponsor || []).filter(place => !occupiedSponsorPlaces().has(place.id_lugar));
   const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
   if(!lugares.length || !sponsors.length) return [];
-  const count = Math.min(randomInt(SPONSOR_OFFER_COUNT_MIN, SPONSOR_OFFER_COUNT_MAX), lugares.length, sponsors.length);
+  const requestedCount = Number.isFinite(Number(forcedCount)) ? Number(forcedCount) : randomInt(SPONSOR_OFFER_COUNT_MIN, SPONSOR_OFFER_COUNT_MAX);
+  const count = Math.min(Math.max(1, Math.round(requestedCount)), lugares.length, sponsors.length);
   const usedPlaces = new Set();
   const usedSponsors = new Set();
   const offers = [];
@@ -3289,8 +3294,28 @@ function generateSponsorOffers(){
   game.sponsors.matchesSinceOffer = 0;
   game.sponsors.nextOfferAfter = randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
   game.sponsors.lastOfferTurn = currentTurnIndex();
+  if(offers.length && options.silent !== true){
+    pushGameMessage({
+      type:'finanzas',
+      title:options.title || 'Nuevas ofertas de sponsors',
+      body:options.body || `Llegaron ${offers.length} oferta(s) de patrocinio para el club.`,
+      priority:options.priority || 'normal'
+    });
+  }
+  return offers;
+}
+function generateOpeningSponsorOffers(force=false){
+  ensureSponsorState();
+  const season = Number(game?.seasonNumber || 1);
+  if(!force && Number(game.sponsors.openingOffersSeason || 0) === season) return game.sponsors.offers || [];
+  const offers = generateSponsorOffers(SPONSOR_OPENING_OFFER_COUNT, {
+    title:'Ofertas iniciales de sponsors',
+    body:'Llegaron 2 ofertas de patrocinio para el inicio de temporada.'
+  });
   if(offers.length){
-    pushGameMessage({ type:'finanzas', title:'Nuevas ofertas de sponsors', body:`Llegaron ${offers.length} oferta(s) de patrocinio para el club.`, priority:'normal' });
+    game.sponsors.openingOffersSeason = season;
+    game.sponsors.matchesSinceOffer = 0;
+    game.sponsors.nextOfferAfter = randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
   }
   return offers;
 }
@@ -3801,6 +3826,9 @@ function simulatePreseasonTurn(){
     game.phaseTurn = 0;
     game.currentDate = game.fixtures[game.matchdayIndex]?.date || game.currentDate;
     game.advanceLockedUntil = 0;
+    if(Number(game.sponsors?.openingOffersSeason || 0) !== Number(game.seasonNumber || 1)){
+      generateOpeningSponsorOffers(true);
+    }
     showNotice('Pretemporada finalizada. Ya está disponible la primera jornada oficial.', true);
   } else {
     game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;

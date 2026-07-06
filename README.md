@@ -1,15 +1,14 @@
-# Fútbol Manager MVP V2.29
+# Fútbol Manager MVP V2.30
 
 Actualización incremental del manager de fútbol local.
 
-## Cambios V2.29
-- Se corrigió la pizarra táctica para que las posiciones se ubiquen según su rol real.
-- ED, EI y DC quedan tratados como atacantes; MCD, MC y MCO como mediocampistas.
-- Se ajustaron formaciones donde ED/EI estaban funcionando como mediocampistas visuales.
-- El botón **Mejor once** ahora elige jugadores compatibles con cada línea y evita titulares penalizados por fuera de zona.
-- El puesto POR sólo acepta porteros.
-- Los porteros no pueden ser colocados como jugadores de campo.
-- El botón **Mejor condición física** sigue priorizando forma física, pero respeta que el portero sea portero.
+## Cambios V2.30
+- Se testeó el flujo de sponsors y se detectó que la tanda inicial de 2 ofertas no se generaba al crear una partida nueva.
+- Nueva partida: ahora genera automáticamente 2 ofertas iniciales de sponsors.
+- Nueva temporada: vuelve a generar automáticamente 2 ofertas iniciales de sponsors.
+- Si una partida vieja llega al inicio de la jornada 1 sin tanda inicial, se corrige y genera las 2 ofertas.
+- Se mantiene la regla de tandas posteriores: entre 2 y 5 ofertas cada 4 a 7 partidos oficiales.
+- Se mantiene el pago completo al aceptar la oferta.
 
 ## Base inicial vigente
 - Total jugadores: 1500.

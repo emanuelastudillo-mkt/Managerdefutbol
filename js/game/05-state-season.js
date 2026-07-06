@@ -1,4 +1,4 @@
-/* V3.03 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
+/* V3.05 · Eventos principales, normalización de partida, nueva partida, temporadas y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -45,31 +45,6 @@ function bindEvents(){
     }
     const close = event.target.closest('[data-close-modal]');
     if(close || event.target.classList.contains('modal-backdrop')) closeModal();
-  });
-  document.addEventListener('dragstart', (event)=>{
-    const item = event.target.closest('[data-drag-player]');
-    if(item){
-      event.dataTransfer.setData('text/plain', item.dataset.dragPlayer);
-      event.dataTransfer.effectAllowed = 'move';
-    }
-  });
-  document.addEventListener('dragover', (event)=>{
-    if(event.target.closest('[data-drop-slot], [data-drop-pool]')) event.preventDefault();
-  });
-  document.addEventListener('drop', (event)=>{
-    const playerId = Number(event.dataTransfer.getData('text/plain'));
-    if(!playerId || !game) return;
-    const slot = event.target.closest('[data-drop-slot]');
-    const pool = event.target.closest('[data-drop-pool]');
-    if(slot){
-      event.preventDefault();
-      assignPlayerToStarterSlot(playerId, Number(slot.dataset.dropSlot));
-      return;
-    }
-    if(pool){
-      event.preventDefault();
-      movePlayerToPool(playerId, pool.dataset.dropPool);
-    }
   });
   document.addEventListener('keydown', (event)=>{ if(event.key === 'Escape') closeModal(); });
 }
@@ -213,6 +188,116 @@ function movePlayerToPool(playerId, pool){
   game.tactic = applyStarterMentalities(game.tactic);
   saveLocal(true);
   renderTactics();
+}
+
+function tacticLocationOfPlayer(playerId){
+  game.tactic = normalizeTactic(game.selectedClubId, game.tactic);
+  const id = Number(playerId || 0);
+  const starterIndex = (game.tactic.starters || []).map(Number).indexOf(id);
+  if(starterIndex >= 0) return { type:'starter', index:starterIndex, playerId:id };
+  const benchIndex = (game.tactic.bench || []).map(Number).indexOf(id);
+  if(benchIndex >= 0) return { type:'bench', index:benchIndex, playerId:id };
+  return { type:'reserve', index:-1, playerId:id };
+}
+function tacticLocationLabel(location){
+  if(!location) return '';
+  if(location.type === 'starter') return `titular ${Number(location.index || 0) + 1}`;
+  if(location.type === 'bench') return `suplente ${Number(location.index || 0) + 1}`;
+  return 'reserva';
+}
+function targetSlotLabel(location){
+  if(!location) return '';
+  if(location.type === 'starter'){
+    const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[location.index] || 'puesto';
+    return `${slot} ${Number(location.index || 0) + 1}`;
+  }
+  return tacticLocationLabel(location);
+}
+function validateTacticPlacement(playerId, location){
+  const id = Number(playerId || 0);
+  if(!id || !location) return '';
+  if(location.type === 'starter'){
+    if(!canBeStarter(id)) return 'Los lesionados no pueden ser titulares. Los de menos de 10 turnos sólo pueden ir al banco.';
+    const player = playerById(id);
+    const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[location.index];
+    if(!canAssignPlayerToSlot(player, slot)) return slot === 'POR' ? 'El puesto de portero sólo acepta porteros.' : 'Los porteros sólo pueden ocupar el puesto de portero.';
+  }
+  if(location.type === 'bench' && !canBeBench(id)) return 'Sólo se pueden convocar al banco jugadores disponibles o lesionados con menos de 10 turnos de recuperación.';
+  return '';
+}
+function setTacticPlayerAt(location, playerId){
+  const id = Number(playerId || 0);
+  if(location.type === 'starter'){
+    while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
+    game.tactic.starters[location.index] = id;
+  } else if(location.type === 'bench'){
+    while(game.tactic.bench.length <= location.index) game.tactic.bench.push(0);
+    game.tactic.bench[location.index] = id;
+  }
+}
+function clearTacticLocation(location){
+  if(!location) return;
+  if(location.type === 'starter'){
+    while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
+    game.tactic.starters[location.index] = 0;
+  } else if(location.type === 'bench'){
+    while(game.tactic.bench.length <= location.index) game.tactic.bench.push(0);
+    game.tactic.bench[location.index] = 0;
+  }
+}
+function removeTacticPlayer(playerId){
+  const id = Number(playerId || 0);
+  game.tactic.starters = (game.tactic.starters || []).map(current => Number(current) === id ? 0 : Number(current || 0)).slice(0,11);
+  while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
+  game.tactic.bench = (game.tactic.bench || []).map(current => Number(current) === id ? 0 : Number(current || 0)).slice(0,10);
+}
+function cleanupTacticAfterClickSwap(){
+  const starterIds = new Set((game.tactic.starters || []).map(Number).filter(Boolean));
+  game.tactic.bench = (game.tactic.bench || [])
+    .map(Number)
+    .filter((id, index, arr) => id && !starterIds.has(id) && arr.indexOf(id) === index)
+    .slice(0,10);
+  game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({
+    ...rule,
+    outId:game.tactic.starters.includes(Number(rule.outId)) ? Number(rule.outId) : 0,
+    inId:game.tactic.bench.includes(Number(rule.inId)) ? Number(rule.inId) : 0
+  }));
+  game.tactic = applyStarterMentalities(game.tactic);
+}
+function swapTacticClickTargets(source, target){
+  if(!game || !source || !target || !source.playerId) return false;
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  const sourcePlayerId = Number(source.playerId || 0);
+  const targetPlayerId = Number(target.playerId || 0);
+  if(sourcePlayerId && targetPlayerId && sourcePlayerId === targetPlayerId){
+    tacticClickSelection = null;
+    renderTactics();
+    return false;
+  }
+  if(source.type === 'reserve' && target.type === 'reserve'){
+    showNotice('Ambos jugadores ya están en reserva. Elegí un titular o suplente para intercambiarlos.');
+    tacticClickSelection = null;
+    renderTactics();
+    return false;
+  }
+  const sourceCurrent = tacticLocationOfPlayer(sourcePlayerId);
+  const targetCurrent = targetPlayerId ? tacticLocationOfPlayer(targetPlayerId) : target;
+  const sourceError = validateTacticPlacement(sourcePlayerId, targetCurrent);
+  if(sourceError){ showNotice(sourceError); return false; }
+  const targetError = targetPlayerId ? validateTacticPlacement(targetPlayerId, sourceCurrent) : '';
+  if(targetError){ showNotice(targetError); return false; }
+  clearTacticLocation(sourceCurrent);
+  clearTacticLocation(targetCurrent);
+  setTacticPlayerAt(targetCurrent, sourcePlayerId);
+  if(targetPlayerId) setTacticPlayerAt(sourceCurrent, targetPlayerId);
+  cleanupTacticAfterClickSwap();
+  saveLocal(true);
+  const sourceName = playerLastName(playerById(sourcePlayerId)?.name || 'Jugador');
+  const targetName = targetPlayerId ? playerLastName(playerById(targetPlayerId)?.name || 'jugador') : targetSlotLabel(targetCurrent);
+  showNotice(`${sourceName} intercambió lugar con ${targetName}. Guardá la táctica para confirmar.`);
+  tacticClickSelection = null;
+  renderTactics();
+  return true;
 }
 function normalizeTactic(clubId, tactic){
   const base = {...DEFAULT_TACTIC, ...(tactic || {})};

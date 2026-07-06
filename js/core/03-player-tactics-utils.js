@@ -1,4 +1,4 @@
-/* V3.03 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
+/* V3.04 · Estado de jugadores, disponibilidad, habilidades, generación, roles y utilidades tácticas. */
 
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
@@ -11,8 +11,14 @@ function firstTeamRosterCount(clubId=game?.selectedClubId){
 function hasFirstTeamRosterSpace(clubId=game?.selectedClubId, extra=1){
   return firstTeamRosterCount(clubId) + pendingIncomingTransfersCount(clubId) + Math.max(0, Number(extra) || 0) <= MAX_PLAYERS_PER_CLUB;
 }
+function hasFirstTeamRosterMinimumAfterRemoval(clubId=game?.selectedClubId, removeCount=1){
+  return firstTeamRosterCount(clubId) - Math.max(0, Number(removeCount) || 0) >= MIN_PLAYERS_PER_CLUB;
+}
 function showRosterLimitNotice(){
   showNotice(`Plantel completo. Máximo ${MAX_PLAYERS_PER_CLUB} jugadores.`);
+}
+function showRosterMinimumNotice(){
+  showNotice(`Plantel mínimo. Debés mantener al menos ${MIN_PLAYERS_PER_CLUB} jugadores.`);
 }
 function playerStatus(playerId){ return game?.playerStatus?.[playerId] || {}; }
 function isUnavailable(playerId){
@@ -536,7 +542,8 @@ function playerClauseFor(player, clubId=player?.clubId, divisionName=''){
   const salary = Math.max(0, Math.round(Number(player?.salary || 0)));
   const age = Math.max(15, Math.round(Number(player?.age || 18)));
   const multiplier = Math.max(PLAYER_CLAUSE_MIN_MULTIPLIER, clauseBaseForClub(clubId, divisionName) - (PLAYER_CLAUSE_AGE_REDUCTION * age));
-  return Math.max(salary * PLAYER_CLAUSE_MIN_MULTIPLIER, Math.round(salary * multiplier));
+  const baseClause = Math.max(salary * PLAYER_CLAUSE_MIN_MULTIPLIER, Math.round(salary * multiplier));
+  return Math.max(0, Math.round(baseClause * PLAYER_CLAUSE_VALUE_SCALE));
 }
 function refreshPlayerClause(player){
   if(!player) return 0;
@@ -554,9 +561,9 @@ function ensurePlayerEconomics(player, salaryFactor=1){
   if(!Number.isFinite(Number(player.salary)) || Number(player.salary) <= 0){
     player.salary = initialAnnualSalaryForMedia(media, salaryFactor);
   }
-  if(!Number.isFinite(Number(player.clause)) || Number(player.clause) <= 0 || !Number.isFinite(Number(player.value)) || Number(player.value) <= 0){
-    refreshPlayerClause(player);
-  }
+  // Las cláusulas se recalculan siempre para que los ajustes de balance impacten
+  // también en partidas guardadas, sin modificar sueldos existentes.
+  refreshPlayerClause(player);
   return player;
 }
 function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', divisionOrder=null, generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false }){
@@ -671,7 +678,7 @@ function clubRequirementIssues(clubId){
   const keepers = squad.filter(p => p.position === 'POR').length;
   const issues = [];
   if(keepers < 2) issues.push(`necesita 2 porteros y tiene ${keepers}`);
-  if(squad.length < 16) issues.push(`necesita 16 jugadores y tiene ${squad.length}`);
+  if(squad.length < MIN_PLAYERS_PER_CLUB) issues.push(`necesita ${MIN_PLAYERS_PER_CLUB} jugadores y tiene ${squad.length}`);
   return issues;
 }
 function invalidClubRequirements(){

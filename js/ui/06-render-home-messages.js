@@ -1,4 +1,4 @@
-/* V3.03 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
+/* V3.04 · Render general, inicio, avance de turno, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
@@ -147,7 +147,9 @@ function visualAlertItems(){
     items.push({ tone:'info', icon:'A', title:'Captación en curso', text:`Informe de academia en ${left} turno(s).`, tab:'academy' });
   }
   if(squadCount >= MAX_PLAYERS_PER_CLUB){
-    items.push({ tone:'warn', icon:'25', title:'Plantel al límite', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores.`, tab:'firstTeam' });
+    items.push({ tone:'warn', icon:'42', title:'Plantel completo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No podés fichar ni subir juveniles.`, tab:'firstTeam' });
+  } else if(squadCount <= MIN_PLAYERS_PER_CLUB){
+    items.push({ tone:'bad', icon:'18', title:'Plantel mínimo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No conviene vender ni despedir.`, tab:'firstTeam' });
   }
   if(salaryPressure > 0 && (game.budget || 0) < salaryPressure * 0.25){
     items.push({ tone:'bad', icon:'$', title:'Presupuesto presionado', text:'El presupuesto actual está bajo contra la masa salarial anual.', tab:'finance' });
@@ -449,6 +451,11 @@ function seasonEndOfferScore(player){
 }
 function generateSeasonEndPlayerOffers(){
   if(!game || !isPostseason()) return [];
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){
+    const season = game.seasonNumber || 1;
+    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
+    return [];
+  }
   const season = game.seasonNumber || 1;
   if(game.seasonEndPlayerOffers?.season === season) return [];
   const candidates = playersByClub(game.selectedClubId)
@@ -490,6 +497,7 @@ function acceptTransferOffer(messageId){
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   recordBudgetChange(msg.action.amount || 0, `Venta de ${player.name}`, { type:'transfer_sale', playerId:player.id });
   player.clubId = -1;
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:-1, sold:true } : p);

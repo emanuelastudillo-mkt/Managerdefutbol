@@ -1,20 +1,35 @@
-# Fútbol Manager MVP V3.03
+# Fútbol Manager MVP V3.05
 
-Versión 3.03 del manager de fútbol local. Mantiene la base visual de V3.02 y corrige el aviso superior que anticipaba lesiones o expulsiones durante la simulación visual del partido.
+Versión 3.05 del manager de fútbol local. Mantiene la arquitectura modular de V3.01, las mejoras visuales de V3.02, los ajustes de V3.04 y actualiza la pantalla de táctica para reemplazar el arrastre por selección mediante clic.
 
-## Cambios V3.03
-- Se actualizó la versión interna y visible a `V3.03`.
-- El aviso superior de “hay lesionados o expulsados propios” ya no aparece apenas se abre la simulación del partido.
-- El aviso se dispara recién al llegar a la etapa final de la visualización del partido, con una pequeña demora adicional.
-- Si el usuario presiona “Finalizar partido”, el aviso aparece después de mostrar el resultado final, no antes.
-- No se modificó el balance del motor de partido, lesiones, tarjetas, economía ni táctica.
+## Cambios V3.05
+- La pantalla de táctica ya no usa arrastre de jugadores.
+- Se selecciona un jugador con click y luego se hace click en otro jugador para intercambiar lugares.
+- El intercambio funciona entre pizarra, lista de titulares, suplentes y reservas.
+- Se puede seleccionar un jugador y hacer click en un puesto vacío de la pizarra para ubicarlo ahí.
+- La selección activa queda resaltada en verde.
+- Se actualizaron los textos de ayuda de la pantalla táctica.
+
+## Cambios conservados de V3.04
+- Plantel mínimo configurable: 18 jugadores.
+- Plantel máximo configurable: 42 jugadores.
+- Tamaño inicial de plantel separado del máximo: 25 jugadores.
+- Bloqueo de fichajes y promociones de juveniles al llegar a 42 jugadores.
+- Bloqueo de ventas/despidos si el club queda por debajo de 18 jugadores.
+- Corrección del favicon: ahora se referencia `favicon.png` desde la raíz.
+- Simulador V2.0 con 30 bloques internos de 3 minutos y visualización con 30 fases configurables.
+- Refuerzo del peso de delanteros como goleadores.
+- Reducción fuerte de expulsiones del portero.
+- Ajuste de cláusulas: se reducen a una décima parte del valor calculado anterior sin modificar sueldos.
+
+## Cambios conservados de V3.03
+- El aviso de lesionados o expulsados aparece después del final de la visualización del partido.
 
 ## Cambios conservados de V3.02
 - Pantalla de Inicio tipo oficina del manager.
 - Alertas visuales accionables.
 - Resumen visual del último turno avanzado.
 - Barras compactas de media, físico, moral y cohesión.
-- Soporte para `favico.png` en `index.html`.
 
 ## Cambios conservados de V3.01
 - `app.js` funciona como punto de entrada mínimo.
@@ -69,7 +84,13 @@ turnos: {
   transicionAvanceMs: 3400
 },
 plantel: {
-  jugadoresMaximosPorClub: 25
+  jugadoresMinimosPorClub: 18,
+  jugadoresInicialesPorClub: 25,
+  jugadoresMaximosPorClub: 42
+},
+economia: {
+  escalaSueldosYClausulas: 0.10,
+  escalaClausulas: 0.10
 },
 sponsors: {
   factorValorBase: 1,
@@ -84,8 +105,23 @@ sponsors: {
 - Verificación de archivos referenciados en `index.html`.
 
 ## Compatibilidad
-- Compatible con partidas V3.01 y V3.02 guardadas en IndexedDB.
+- Compatible con partidas V3.01, V3.02 y V3.03 guardadas en IndexedDB.
 - No requiere cambios en los JSON de datos.
 - Mantiene `data/jugadores.json`.
 - Mantiene `data/sponsors.json`.
 - Mantiene `data/Liga Argentina.json`.
+
+
+## Ajuste conservado V3.04 · Feedback visual de acciones
+
+Las acciones de empleados con resultado incierto ahora muestran una carga breve y luego un color de resultado:
+
+- Verde: acción realizada.
+- Rojo: acción fallida.
+
+Aplica a tratamientos de kinesiólogo y charla motivacional. Los tiempos pueden editarse en `config.js` dentro de `ui.accionesFeedbackCargaMs` y `ui.accionesFeedbackResultadoMs`.
+
+
+## Ajuste conservado V3.04 · Cláusulas reducidas
+
+Las cláusulas se recalculan a una décima parte del valor previo mediante `economia.escalaClausulas: 0.10`. El ajuste no toca sueldos: sólo afecta `clause` y `value` al normalizar jugadores, cargar partidas o generar nuevos jugadores.

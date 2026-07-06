@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.03',
+  version: 'V3.05',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -12,7 +12,7 @@ window.GAME_CONFIG = {
   },
   turnos: {
     // Bloqueo entre turnos en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreTurnosMs: 1000,
+    bloqueoEntreTurnosMs: 120000,
     // Duración visual de la transición al avanzar turno.
     transicionAvanceMs: 3400,
     pretemporada: 10,
@@ -20,23 +20,27 @@ window.GAME_CONFIG = {
     amistososMaximosPretemporada: 5
   },
   plantel: {
-    // Máximo recomendado de jugadores del primer equipo por club.
-    jugadoresMaximosPorClub: 25,
+    // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
+    jugadoresMinimosPorClub: 18,
+    jugadoresInicialesPorClub: 25,
+    jugadoresMaximosPorClub: 42,
     agentesLibresIniciales: 50,
     jovenesLibresPorTemporada: 20
   },
   economia: {
     escalaSueldosYClausulas: 0.10,
+    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
+    escalaClausulas: 0.10,
     reduccionBaseSueldoFinTemporada: 0.05,
     bonusSueldoPorPartidoJugado: 0.01
   },
   sponsors: {
     // Multiplica los valores base de data/sponsors.json. 1 mantiene el valor del archivo.
     factorValorBase: 1,
-    partidosMinimosEntreTandas: 2,
-    partidosMaximosEntreTandas: 4,
-    ofertasMinimasPorTanda: 1,
-    ofertasMaximasPorTanda: 2,
+    partidosMinimosEntreTandas: 4,
+    partidosMaximosEntreTandas: 7,
+    ofertasMinimasPorTanda: 2,
+    ofertasMaximasPorTanda: 5,
     ofertasInicialesJornada1: 2
   },
   estadio: {
@@ -61,7 +65,7 @@ window.GAME_CONFIG = {
     jugadoresMaximosPorCaptacion: 10,
     costoJugadorPorTurno: 10000,
     compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 5
+    multiplicadorEntrenamiento: 3
   },
   lesiones: {
     lesionBase: 0.05,
@@ -71,6 +75,11 @@ window.GAME_CONFIG = {
     penalizacionLesionadoSuplente: 0.10
   },
   ui: {
-    duracionAvisoMs: 5200
+    duracionAvisoMs: 5200,
+    fasesSimulacionPartido: 30,
+    duracionSimulacionPartidoMs: 30000,
+    // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
+    accionesFeedbackCargaMs: 750,
+    accionesFeedbackResultadoMs: 900
   }
 };

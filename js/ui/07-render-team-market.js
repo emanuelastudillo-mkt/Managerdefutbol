@@ -1,4 +1,4 @@
-/* V3.03 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+/* V3.05 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
 
 function firstTeamTabsMarkup(current){
   const tabs = [
@@ -313,15 +313,61 @@ function renderSquad(){
     });
   });
 }
-function playerDragCard(p, extra=''){
+function tacticSelectionClass(playerId){
+  return tacticClickSelection && Number(tacticClickSelection.playerId) === Number(playerId) ? ' tactic-selected' : '';
+}
+function tacticPlayerCard(p, extra='', zone='reserve', index=-1){
   const statusIcons = availabilityIcons(p.id);
   const unavailableClass = isUnavailable(p.id) ? 'injured-card' : '';
   const playableInjuredClass = canUseInjuredAsSub(p.id) ? 'playable-injured-card' : '';
-  return `<div class="drag-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}" draggable="true" data-drag-player="${p.id}">
+  return `<button type="button" class="drag-player tactic-click-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}${tacticSelectionClass(p.id)}" data-tactic-player="${p.id}" data-tactic-zone="${zone}" data-tactic-index="${index}" title="Click para seleccionar o intercambiar">
     ${faceImg(p, 'drag-face')}
-    <div><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${Number(p.age || 0) || '—'} años · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></div>
-  </div>`;
+    <span class="tactic-card-text"><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${Number(p.age || 0) || '—'} años · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></span>
+  </button>`;
 }
+function playerDragCard(p, extra=''){
+  return tacticPlayerCard(p, extra);
+}
+function tacticSelectionHint(){
+  if(!tacticClickSelection?.playerId) return 'Click en un jugador para seleccionarlo. Después hacé click en otro jugador o en un puesto vacío para intercambiar.';
+  const p = playerById(tacticClickSelection.playerId);
+  return `${p ? escapeHtml(playerLastName(p.name)) : 'Jugador'} seleccionado. Hacé click en otro jugador para intercambiar, o volvé a hacer click para cancelar.`;
+}
+function bindTacticClickEvents(){
+  document.querySelectorAll('[data-tactic-player]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const playerId = Number(el.dataset.tacticPlayer || 0);
+      if(!playerId) return;
+      if(!tacticClickSelection){
+        tacticClickSelection = { playerId };
+        renderTactics();
+        return;
+      }
+      if(Number(tacticClickSelection.playerId) === playerId){
+        tacticClickSelection = null;
+        renderTactics();
+        return;
+      }
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), tacticLocationOfPlayer(playerId));
+    });
+  });
+  document.querySelectorAll('[data-tactic-empty-slot]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if(!tacticClickSelection?.playerId){
+        showNotice('Primero seleccioná un jugador y después elegí el puesto vacío.');
+        return;
+      }
+      const index = Number(el.dataset.tacticEmptySlot || -1);
+      if(index < 0) return;
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), { type:'starter', index, playerId:0 });
+    });
+  });
+}
+
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
@@ -335,29 +381,30 @@ function renderTactics(){
   const pitch = pitchSlots(game.tactic).map(slot => {
     const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
     const chip = slot.player ? `
-      <button class="player-chip ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}" draggable="true" data-drag-player="${slot.player.id}" title="${fit ? 'Zona correcta' : 'Fuera de zona: rinde al 50%'}">
+      <button type="button" class="player-chip tactic-click-player ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${fit ? 'Click para seleccionar o intercambiar' : 'Fuera de zona: rinde al 50%'}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
-      </button>` : `<div class="empty-slot ${slotGroup(slot.slot)}"><strong>${slot.slot}</strong><span>Arrastrar</span></div>`;
-    return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%" data-drop-slot="${slot.index}">${chip}</div>`;
+      </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
+    return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
   }).join('');
   const starterList = pitchSlots(game.tactic).map(slot => {
     const p = slot.player;
     const fit = p ? playerFitsSlot(p, slot.slot) : false;
-    return `<div class="lineup-row ${p && !fit ? 'bad-zone' : ''}">
+    return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
-      <span>${p ? `<button class="linklike" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` : '<span class="muted">Vacío</span>'}</span>
+      <span>${p ? `<strong>${escapeHtml(p.name)}</strong>` : '<span class="muted">Vacío</span>'}</span>
       <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
       <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
       ${p ? moraleBar(p.id) : '<span></span>'}
-      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : '—'}</strong>
+      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : 'Click'}</strong>
     </div>`;
   }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Arrastrá jugadores a los círculos de la pizarra. Si un jugador juega fuera de su zona natural, su rendimiento de partido se penaliza al 50%.</p></div>
+    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click en un jugador y luego click en otro para intercambiarlos entre titulares, suplentes, reservas o pizarra. Si juega fuera de zona natural, rinde al 50%.</p></div>
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
+      <div class="tactic-click-help">${tacticSelectionHint()}</div>
       <div class="pitch-board centered">${pitch}</div>
     </div>
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
@@ -368,8 +415,8 @@ function renderTactics(){
       </div>
       <div class="card">
         <h3>Suplentes / reservas</h3>
-        <div class="drop-pool" data-drop-pool="bench"><h4>Suplentes (${bench.length}/10)</h4><div class="drag-list">${bench.length ? bench.map(p=>playerDragCard(p,'bench-card')).join('') : '<p class="muted small">Arrastrá jugadores acá.</p>'}</div></div>
-        <div class="drop-pool" data-drop-pool="reserve"><h4>Reservas</h4><div class="drag-list">${reserves.length ? reserves.map(p=>playerDragCard(p,'reserve-card')).join('') : '<p class="muted small">Sin reservas.</p>'}</div></div>
+        <div class="drop-pool" data-drop-pool="bench"><h4>Suplentes (${bench.length}/10)</h4><div class="drag-list">${bench.length ? bench.map((p,i)=>tacticPlayerCard(p,'bench-card','bench',i)).join('') : '<p class="muted small">Sin suplentes.</p>'}</div></div>
+        <div class="drop-pool" data-drop-pool="reserve"><h4>Reservas</h4><div class="drag-list">${reserves.length ? reserves.map((p,i)=>tacticPlayerCard(p,'reserve-card','reserve',i)).join('') : '<p class="muted small">Sin reservas.</p>'}</div></div>
       </div>
     </div>
     <div class="card" style="margin-top:14px">
@@ -417,6 +464,7 @@ function renderTactics(){
     renderTactics();
   });
   $('saveTactic').addEventListener('click', saveTacticFromScreen);
+  bindTacticClickEvents();
 }
 function tacticPlayerRow(p){
   const current = game.tactic.starters.includes(p.id) ? 'starter' : game.tactic.bench.includes(p.id) ? 'bench' : 'reserve';

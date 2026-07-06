@@ -1,4 +1,4 @@
-/* V3.03 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
+/* V3.04 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
 
 function simulateMatch(match){
   if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);
@@ -62,32 +62,43 @@ function weightedPick(items, weightFn){
   for(const x of weighted){ r -= x.w; if(r<=0) return x.item; }
   return weighted[0]?.item;
 }
+function scorerWeight(player){
+  if(!player) return 1;
+  if(player.position === 'POR') return 0.35;
+  const posBonus = player.position === 'DC' ? 125 : ['ED','EI'].includes(player.position) ? 88 : player.position === 'MCO' ? 58 : player.position === 'MC' ? 22 : player.position === 'MCD' ? 10 : 5;
+  return effectiveSkill(player,'remate') * 1.35 + effectiveSkill(player,'posicionamiento') * 1.15 + effectiveSkill(player,'serenidad') * 0.45 + posBonus;
+}
+function cardWeight(player){
+  if(!player) return 1;
+  if(player.position === 'POR') return 0.35;
+  const roleBonus = ['DFC','MCD'].includes(player.position) ? 30 : ['LD','LI'].includes(player.position) ? 20 : player.position === 'MC' ? 12 : 6;
+  return hiddenStats(player).aggression * 0.75 + (100 - effectiveSkill(player,'disciplina')) * 0.30 + roleBonus;
+}
 function makeGoal(clubId, lineup){
-  const scorer = weightedPick(lineup, p => {
-    const posBonus = p.position === 'DC' ? 45 : ['ED','EI','MCO'].includes(p.position) ? 28 : ['MC','MCD'].includes(p.position) ? 10 : 3;
-    return effectiveSkill(p,'remate') + effectiveSkill(p,'posicionamiento') + posBonus;
-  });
+  const outfield = (lineup || []).filter(p => p.position !== 'POR');
+  const scorerPool = outfield.length ? outfield : lineup;
+  const scorer = weightedPick(scorerPool, scorerWeight);
   const possibleAssisters = lineup.filter(p=>p.id !== scorer.id);
   const hasAssist = Math.random() < 0.72;
-  const assister = hasAssist ? weightedPick(possibleAssisters, p => p.position === 'POR' ? 1 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
+  const assister = hasAssist ? weightedPick(possibleAssisters, p => p.position === 'POR' ? 0.75 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
   return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute: Math.floor(rnd(2,91)) };
 }
 function makeCards(clubId, power, fouls){
   const cards = [];
-  const yellowCount = clamp(poisson(fouls / 7.2), 0, 6);
+  const yellowCount = clamp(poisson(fouls / 7.6), 0, 6);
   const byPlayer = new Map();
   for(let i=0;i<yellowCount;i++){
-    const p = weightedPick(power.lineup, x => hiddenStats(x).aggression + (['DFC','MCD','LD','LI'].includes(x.position)?16:4));
+    const p = weightedPick(power.lineup, cardWeight);
     if(!p) continue;
     const current = byPlayer.get(p.id) || 0;
     byPlayer.set(p.id, current + 1);
     if(current === 0) cards.push({ clubId, playerId:p.id, type:'yellow', minute:Math.floor(rnd(5,88)) });
     else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(rnd(35,90)) });
   }
-  const directRedCandidates = power.lineup.filter(p => hiddenStats(p).aggression >= 74);
-  const directChance = clamp((power.aggression - 58) / 190, 0.01, 0.23);
+  const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
+  const directChance = clamp((power.aggression - 60) / 290, 0.005, 0.13);
   if(directRedCandidates.length && Math.random() < directChance){
-    const p = weightedPick(directRedCandidates, x => hiddenStats(x).aggression + (['DFC','MCD'].includes(x.position)?18:4));
+    const p = weightedPick(directRedCandidates, cardWeight);
     cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(rnd(20,90)) });
   }
   return cards.sort((a,b)=>a.minute-b.minute);

@@ -1,4 +1,4 @@
-/* V3.28 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
+/* V3.39 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento, bots y eventos. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -370,6 +370,7 @@ function simulateNextMatchday(options={}){
   applyConditionUpdates(results);
   applyMoraleUpdates(results);
   applyTrainingEffects();
+  maintainBotBalanceDuringSeason();
   advanceStadiumAfterMatches(results);
   processSponsorContracts();
   if(ownResult){
@@ -441,6 +442,7 @@ function simulatePreseasonTurn(){
     game.preseasonFriendliesPlayed = preseasonFriendliesPlayed() + 1;
   }
   applyTrainingEffects();
+  maintainBotBalanceDuringSeason({ force:true, phase:'preseason' });
   reduceInjuryDurationsByTurns(1);
   registerInjuryRecoveryTurn('preseason');
   processStadiumProjects();

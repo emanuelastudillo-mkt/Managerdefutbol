@@ -1,4 +1,4 @@
-/* V3.28 · Eventos principales, normalización de partida, calendario anual, temporadas y ascensos/descensos. */
+/* V3.39 · Eventos principales, normalización de partida, calendario anual, temporadas, bots y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -216,6 +216,7 @@ function normalizeGame(saved){
   normalized.teamCohesion = normalized.teamCohesion || {};
   normalized.lastMatchTactics = normalized.lastMatchTactics || {};
   normalized.botRosterRepairLog = Array.isArray(normalized.botRosterRepairLog) ? normalized.botRosterRepairLog : [];
+  normalized.botBalanceLog = Array.isArray(normalized.botBalanceLog) ? normalized.botBalanceLog : [];
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.teamCohesion[c.id])) normalized.teamCohesion[c.id] = TEAM_COHESION_START; });
   if(!normalized.stadium.fields) normalized.stadium.fields = {};
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
@@ -1091,12 +1092,208 @@ function repairLegacySeasonStartAvailability(normalized){
   return normalized;
 }
 
+
+function botBalanceDifficultyProfile(){
+  if(BOT_BALANCE_DIFFICULTY === 'dificil' || BOT_BALANCE_DIFFICULTY === 'difícil') return { morale:4, condition:3, cohesion:5, development:1.35, label:'difícil' };
+  if(BOT_BALANCE_DIFFICULTY === 'suave' || BOT_BALANCE_DIFFICULTY === 'facil' || BOT_BALANCE_DIFFICULTY === 'fácil') return { morale:-4, condition:-3, cohesion:-6, development:0.75, label:'suave' };
+  return { morale:0, condition:0, cohesion:0, development:1, label:'normal' };
+}
+function botBalanceRandomOffset(seedValue, spread){
+  const cleanSpread = Math.max(0, Math.round(Number(spread || 0)));
+  if(cleanSpread <= 0) return 0;
+  return hashNumber(seedValue, cleanSpread * 2 + 1) - cleanSpread;
+}
+function botBalanceManagedDivisionId(selectedClubId=game?.selectedClubId){
+  return seed?.clubs?.find(c => Number(c.id) === Number(selectedClubId))?.divisionId || 'default';
+}
+function botBalanceClubIds(selectedClubId=game?.selectedClubId){
+  const ownId = Number(selectedClubId || game?.selectedClubId || 0);
+  const divisionId = botBalanceManagedDivisionId(ownId);
+  return (seed?.clubs || [])
+    .filter(club => Number(club.id) !== ownId)
+    .filter(club => !BOT_BALANCE_ONLY_MANAGER_DIVISION || (club.divisionId || 'default') === divisionId)
+    .map(club => Number(club.id));
+}
+function botBalanceReference(selectedClubId=game?.selectedClubId){
+  const ownSquad = playersByClub(Number(selectedClubId || game?.selectedClubId || 0));
+  return {
+    morale: Math.round(avg(ownSquad.map(p => currentMorale(p.id))) || PLAYER_MORALE_START),
+    condition: Math.round(avg(ownSquad.map(p => currentCondition(p.id))) || 85),
+    cohesion: cohesionValue(Number(selectedClubId || game?.selectedClubId || 0)) || TEAM_COHESION_START
+  };
+}
+function botBalanceRankMap(){
+  const map = {};
+  if(typeof sortedStandings !== 'function') return map;
+  (divisionOrderList() || []).forEach(division => {
+    const table = sortedStandings(division.id) || [];
+    const total = Math.max(1, table.length);
+    table.forEach((row, index) => {
+      const normalized = total <= 1 ? 0 : ((total - 1 - index) / (total - 1));
+      const bonus = Math.round(((normalized - 0.5) * 2) * BOT_BALANCE_POSITION_BONUS_MAX);
+      map[Number(row.clubId)] = {
+        rank:index + 1,
+        total,
+        bonus,
+        divisionId:division.id
+      };
+    });
+  });
+  return map;
+}
+function botBalancePositionBonus(clubId, rankMap={}){
+  return Math.round(Number(rankMap?.[Number(clubId)]?.bonus || 0));
+}
+function botBalanceTargetValue(kind, referenceValue, clubId, rankMap={}, purpose='season_start'){
+  const profile = botBalanceDifficultyProfile();
+  const spread = kind === 'condition' ? BOT_BALANCE_CONDITION_SPREAD : kind === 'cohesion' ? BOT_BALANCE_COHESION_SPREAD : BOT_BALANCE_MORALE_SPREAD;
+  const floor = kind === 'condition' ? BOT_BALANCE_CONDITION_FLOOR : kind === 'cohesion' ? BOT_BALANCE_COHESION_FLOOR : BOT_BALANCE_MORALE_FLOOR;
+  const max = kind === 'cohesion' ? 100 : 99;
+  const profileOffset = Number(profile[kind] || 0);
+  const positionBonus = botBalancePositionBonus(clubId, rankMap);
+  const positionFactor = purpose === 'maintenance' ? 0.45 : 0.75;
+  const random = botBalanceRandomOffset(`bot-balance-${purpose}-${game?.seasonNumber || 1}-${clubId}-${kind}`, spread);
+  return clamp(Math.round(Number(referenceValue || 0) + profileOffset + random + (positionBonus * positionFactor)), floor, max);
+}
+function botBalanceSkillPool(player){
+  if(typeof trainableSkillsForPlayer === 'function') return trainableSkillsForPlayer(player);
+  if(player.position === 'POR') return ['porteria','posicionamiento','serenidad','paseLargo','liderazgo','resistencia'];
+  if(['LD','LI','DFC'].includes(player.position)) return ['marca','entradas','posicionamiento','fuerza','cabezazo','resistencia','trabajoEquipo'];
+  if(['MCD','MC','MCO'].includes(player.position)) return ['paseCorto','paseLargo','vision','tecnica','trabajoEquipo','posicionamiento','resistencia'];
+  return ['remate','regate','posicionamiento','serenidad','cabezazo','fuerza','resistencia','tecnica'];
+}
+function applyBotSeasonDevelopment(clubIds, rankMap={}){
+  if(!BOT_BALANCE_ENABLED || BOT_BALANCE_DEVELOPMENT_CHANCE <= 0) return { players:0, gains:0 };
+  game.playerSkillBoosts = game.playerSkillBoosts || {};
+  const profile = botBalanceDifficultyProfile();
+  let players = 0;
+  let gains = 0;
+  (clubIds || []).forEach(clubId => {
+    const positionBonus = botBalancePositionBonus(clubId, rankMap);
+    const positionScale = BOT_BALANCE_POSITION_BONUS_MAX > 0 ? (positionBonus / BOT_BALANCE_POSITION_BONUS_MAX) : 0;
+    const squad = playersByClub(clubId)
+      .filter(player => !player.freeAgent && !player.retired)
+      .sort((a,b)=> visibleOverall(b) - visibleOverall(a))
+      .slice(0, Math.max(18, Math.min(28, playersByClub(clubId).length)));
+    squad.forEach(player => {
+      const youngBonus = Number(player.age || 0) <= 23 ? 0.05 : 0;
+      const chance = clamp((BOT_BALANCE_DEVELOPMENT_CHANCE + (positionScale * BOT_BALANCE_POSITION_DEVELOPMENT_BONUS) + youngBonus) * profile.development, 0, 0.80);
+      const roll = hashNumber(`bot-development-${game?.seasonNumber || 1}-${clubId}-${player.id}`, 10000) / 10000;
+      if(roll >= chance) return;
+      const gainCount = 1 + (roll < chance * 0.18 ? 1 : 0);
+      const skills = botBalanceSkillPool(player).filter(skill => Number.isFinite(baseSkill(player, skill)) && baseSkill(player, skill) < 98);
+      if(!skills.length) return;
+      if(!game.playerSkillBoosts[player.id]) game.playerSkillBoosts[player.id] = {};
+      let playerGains = 0;
+      for(let i=0; i<gainCount; i++){
+        const skill = skills[hashNumber(`bot-development-skill-${game?.seasonNumber || 1}-${player.id}-${i}`, skills.length)];
+        const current = Math.round(Number(game.playerSkillBoosts[player.id][skill] || 0));
+        if(current >= BOT_BALANCE_MAX_SKILL_BOOST) continue;
+        game.playerSkillBoosts[player.id][skill] = clamp(current + 1, 0, BOT_BALANCE_MAX_SKILL_BOOST);
+        playerGains += 1;
+      }
+      if(playerGains > 0){
+        players += 1;
+        gains += playerGains;
+      }
+    });
+  });
+  return { players, gains };
+}
+function balanceBotsForSeasonStart(selectedClubId=game?.selectedClubId, rankMap={}){
+  if(!game || !BOT_BALANCE_ENABLED || !BOT_BALANCE_ON_SEASON_START) return null;
+  ensurePlayerStateForAll();
+  ensureTeamCohesion();
+  const clubIds = botBalanceClubIds(selectedClubId);
+  const reference = botBalanceReference(selectedClubId);
+  let playersAdjusted = 0;
+  let clubsAdjusted = 0;
+  clubIds.forEach(clubId => {
+    const targetMorale = botBalanceTargetValue('morale', reference.morale, clubId, rankMap, 'season_start');
+    const targetCondition = botBalanceTargetValue('condition', reference.condition, clubId, rankMap, 'season_start');
+    const targetCohesion = botBalanceTargetValue('cohesion', reference.cohesion, clubId, rankMap, 'season_start');
+    game.teamCohesion[clubId] = targetCohesion;
+    const squad = playersByClub(clubId).filter(player => !player.freeAgent && !player.retired);
+    squad.forEach(player => {
+      const moraleVariance = botBalanceRandomOffset(`bot-balance-morale-player-${game?.seasonNumber || 1}-${clubId}-${player.id}`, 4);
+      const conditionVariance = botBalanceRandomOffset(`bot-balance-condition-player-${game?.seasonNumber || 1}-${clubId}-${player.id}`, 4);
+      game.playerMorale[player.id] = clamp(Math.round((currentMorale(player.id) * 0.30) + ((targetMorale + moraleVariance) * 0.70)), 1, 99);
+      game.playerCondition[player.id] = clamp(Math.round((currentCondition(player.id) * 0.25) + ((targetCondition + conditionVariance) * 0.75)), 0, 99);
+      playersAdjusted += 1;
+    });
+    clubsAdjusted += 1;
+  });
+  const development = applyBotSeasonDevelopment(clubIds, rankMap);
+  const summary = {
+    season:game.seasonNumber || 1,
+    date:game.currentDate || '',
+    clubs:clubsAdjusted,
+    players:playersAdjusted,
+    reference,
+    development,
+    difficulty:botBalanceDifficultyProfile().label,
+    createdAt:Date.now()
+  };
+  game.botBalanceLog = Array.isArray(game.botBalanceLog) ? game.botBalanceLog : [];
+  game.botBalanceLog.unshift(summary);
+  game.botBalanceLog = game.botBalanceLog.slice(0, 20);
+  if(clubsAdjusted > 0){
+    pushGameMessage({
+      type:'deportivo',
+      title:'Rivales mejor preparados',
+      body:`La liga ajustó la preparación de ${clubsAdjusted} equipo(s) bot de tu división. Moral, físico y cohesión quedaron cerca de tus valores actuales para sostener la dificultad de la temporada.`,
+      priority:'normal'
+    });
+  }
+  return summary;
+}
+function maintainBotBalanceDuringSeason(options={}){
+  if(!game || !BOT_BALANCE_ENABLED || !BOT_BALANCE_DURING_SEASON) return null;
+  const force = Boolean(options.force);
+  if(!force && isRegularSeason() && ((Number(game.matchdayIndex || 0) + 1) % BOT_BALANCE_MAINTENANCE_INTERVAL_MATCHDAYS !== 0)) return null;
+  if(!force && !isRegularSeason()) return null;
+  ensurePlayerStateForAll();
+  ensureTeamCohesion();
+  const rankMap = botBalanceRankMap();
+  const reference = botBalanceReference(game.selectedClubId);
+  const clubIds = botBalanceClubIds(game.selectedClubId);
+  let playersAdjusted = 0;
+  let clubsAdjusted = 0;
+  clubIds.forEach(clubId => {
+    const targetMorale = botBalanceTargetValue('morale', reference.morale, clubId, rankMap, 'maintenance');
+    const targetCondition = botBalanceTargetValue('condition', reference.condition, clubId, rankMap, 'maintenance');
+    const targetCohesion = botBalanceTargetValue('cohesion', reference.cohesion, clubId, rankMap, 'maintenance');
+    const currentCohesion = cohesionValue(clubId);
+    if(currentCohesion < targetCohesion){
+      game.teamCohesion[clubId] = clamp(Math.round(Math.min(targetCohesion, currentCohesion + BOT_BALANCE_MAINTENANCE_COHESION_GAIN)), 0, 100);
+      clubsAdjusted += 1;
+    }
+    playersByClub(clubId).forEach(player => {
+      if(player.freeAgent || player.retired) return;
+      let changed = false;
+      const cond = currentCondition(player.id);
+      if(cond < targetCondition){
+        game.playerCondition[player.id] = clamp(Math.round(Math.min(targetCondition, cond + BOT_BALANCE_MAINTENANCE_CONDITION_GAIN)), 0, 99);
+        changed = true;
+      }
+      const morale = currentMorale(player.id);
+      if(morale < targetMorale){
+        game.playerMorale[player.id] = clamp(Math.round(Math.min(targetMorale, morale + BOT_BALANCE_MAINTENANCE_MORALE_GAIN)), 1, 99);
+        changed = true;
+      }
+      if(changed) playersAdjusted += 1;
+    });
+  });
+  return { clubs:clubsAdjusted, players:playersAdjusted, reference, forced:force };
+}
+
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = Number(game.selectedClubId || 0);
   const nextClubId = Number(selectedClubId || game.selectedClubId);
   const previousMatchdayIndex = Number(game.matchdayIndex || game.fixtures?.length || 0);
+  const previousBotBalanceRanks = botBalanceRankMap();
   const configuredPostseasonRecovery = postseasonTurnsForCurrentSeason();
   const appliedPostseasonRecovery = injuryRecoveryTurnsRegistered(game.seasonNumber || 1, 'postseason');
   const missingPostseasonRecovery = Math.max(0, configuredPostseasonRecovery - appliedPostseasonRecovery);
@@ -1140,6 +1337,7 @@ function startNextSeason(selectedClubId){
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
   renewFreeAgentMarketForSeason(retiredCount);
   ensurePlayerStateForAll();
+  balanceBotsForSeasonStart(nextClubId, previousBotBalanceRanks);
   generateOpeningSponsorOffers(true);
   pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
   activeTab = 'home';

@@ -1,28 +1,48 @@
-# Características de versión - V3.38
+# Características de versión - V3.39
 
 ## Ajuste aplicado
 
-### Sistema ESPECIAL · Cartas activas visibles
-- Se corrigió un bug por el cual una carta podía desaparecer al activarse.
-- La causa era una normalización interna ejecutada en medio del proceso de activación.
-- Ahora la carta se elimina de reserva, se agrega a cartas activas y se guarda correctamente en `game.special`.
+### Equilibrio competitivo de bots
+- Se agregó un sistema de nivelación para evitar que la segunda temporada se vuelva demasiado fácil.
+- Al iniciar una nueva temporada, los bots de la división del manager ajustan:
+  - moral media;
+  - estado físico;
+  - cohesión de equipo.
+- La referencia es el club manejado, pero con variación y bonus por posición final anterior.
+- La dificultad puede configurarse como `suave`, `normal` o `dificil`.
 
-### Bonus activo
-- El sector de cartas activas ahora se presenta como **Bonus activo**.
-- Las cartas activas quedan visibles en ese sector.
-- Cada carta muestra su bloqueo restante.
-- El botón **Desactivar** queda bloqueado hasta que pasen los 100 días.
+### Mantenimiento durante temporada
+- Cada cierta cantidad de fechas, los bots recuperan parcialmente físico, moral y cohesión si quedaron demasiado por debajo.
+- En pretemporada también se aplica mantenimiento para compensar que el club del jugador entrena varias semanas antes del debut.
 
-### Regla de cartas activas
-- El bloque superior ahora muestra:
-  - total de bonus acumulados activos;
-  - nombre de cada carta activa;
-  - efecto de cada carta;
-  - estado de bloqueo de cada carta.
+### Desarrollo de plantel bot
+- Al cambio de temporada, los jugadores bots pueden recibir mejoras moderadas de habilidades.
+- Los equipos que terminaron mejor posicionados tienen una probabilidad algo mayor de desarrollo.
+
+## Configuración nueva
+
+```js
+equilibrioBots: {
+  activo: true,
+  dificultad: 'normal',
+  soloDivisionManager: true,
+  nivelarAlInicioTemporada: true,
+  mantenerDuranteTemporada: true,
+  intervaloMantenimientoFechas: 2,
+  bonusMaximoPorPosicion: 8,
+  pisoMoral: 55,
+  pisoFisico: 76,
+  pisoCohesion: 50,
+  desarrolloPlantelPorTemporada: 0.18
+}
+```
 
 ## Archivos modificados
-- `js/game/15-especial.js`
-- `style.css`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `index.html`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`

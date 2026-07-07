@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.38',
+  version: 'V3.39',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -23,12 +23,12 @@ window.GAME_CONFIG = {
     // La liga ahora se juega ida y vuelta. Con 20 clubes por división son 38 fechas.
     ligaIdaYVuelta: true,
     // Bloqueo entre avances largos en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 1000,
+    bloqueoEntreAvancesMs: 120000,
     // Bloqueo para el avance de un solo día. 10000 = 10 segundos.
-    bloqueoAvanceDiaMs: 1000,
+    bloqueoAvanceDiaMs: 10000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
-    diasPretemporada: 56,
+    diasPretemporada: 70,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5
@@ -69,11 +69,35 @@ window.GAME_CONFIG = {
   cohesion: {
     // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
-    gananciaPorPartido: 11,
+    gananciaPorPartido: 14,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
     gananciaEntrenamientoTacticoPorCasilla: 1
+  },
+  equilibrioBots: {
+    // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
+    activo: true,
+    // suave | normal | dificil
+    dificultad: 'normal',
+    soloDivisionManager: true,
+    nivelarAlInicioTemporada: true,
+    mantenerDuranteTemporada: true,
+    intervaloMantenimientoFechas: 2,
+    // Los mejores bots de la temporada anterior reciben un plus; los peores, un margen menor.
+    bonusMaximoPorPosicion: 8,
+    pisoMoral: 55,
+    pisoFisico: 76,
+    pisoCohesion: 50,
+    margenMoral: 8,
+    margenFisico: 6,
+    margenCohesion: 10,
+    recuperacionFisicaPorMantenimiento: 8,
+    recuperacionMoralPorMantenimiento: 5,
+    recuperacionCohesionPorMantenimiento: 4,
+    desarrolloPlantelPorTemporada: 0.18,
+    bonusDesarrolloPorPosicion: 0.08,
+    maximoBoostBotPorHabilidad: 18
   },
   economia: {
     escalaSueldosYClausulas: 0.10,
@@ -159,8 +183,8 @@ window.GAME_CONFIG = {
   },
 
   ranking: {
-    // URL publicada para enviar y leer resultados del ranking online. //https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec//Original 
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbznw5miFxEwd3CV5-lSDpf7dP5RGEUzgHvnG12dNXjKEVvDRqdyw3rlq5eFLiS0gbak/exec',
+    // URL publicada para enviar y leer resultados del ranking online.
+    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec',
     // Token simple opcional para restringir envíos.
     token: '',
     resultadosPorPagina: 100,

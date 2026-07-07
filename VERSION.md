@@ -1,8 +1,9 @@
-# Fútbol Manager MVP - V3.38
+# Fútbol Manager MVP - V3.39
 
-## Fix rápido
-- Se corrige la activación de cartas del sistema ESPECIAL.
-- Al activar una carta, ya no desaparece: se mueve a **Bonus activo**.
-- La carta activa queda visible, aplicada y bloqueada durante 100 días.
-- El bloque **Regla de cartas activas** ahora muestra el detalle de bonus activos y cartas fijas.
-- Se mantiene el máximo de 5 cartas activas.
+## Equilibrio de bots
+- Se agrega nivelación automática de equipos bots al iniciar cada temporada.
+- Los rivales de la división del manager ajustan moral, físico y cohesión cerca de los valores del club manejado.
+- Los mejores bots de la temporada anterior reciben un margen competitivo adicional.
+- Durante la temporada y la pretemporada los bots recuperan valores mínimos para no llegar debilitados en exceso.
+- Se agrega progresión moderada de habilidades para planteles bots.
+- Todo queda editable desde `config.js` en el bloque `equilibrioBots`.

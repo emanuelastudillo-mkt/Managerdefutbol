@@ -1,8 +1,18 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.38
+## Versión actual: V3.39
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+
+
+## V3.39
+
+- Equilibrio de bots para sostener la dificultad a partir de la segunda temporada.
+- Los bots de tu división ajustan moral, físico y cohesión cerca de los valores de tu club.
+- Los mejores equipos de la temporada anterior reciben un plus competitivo.
+- Mantenimiento automático durante pretemporada y temporada regular.
+- Progresión moderada de habilidades para jugadores bots.
+- Configurable desde `config.js` en `equilibrioBots`.
 
 
 ## V3.38

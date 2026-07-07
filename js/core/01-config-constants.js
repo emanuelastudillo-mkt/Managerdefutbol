@@ -1,4 +1,4 @@
-/* V3.38 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.39 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -48,7 +48,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.38');
+const APP_VERSION = configValue('version', 'V3.39');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -62,6 +62,25 @@ const TEAM_COHESION_TACTIC_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambio
 const TEAM_COHESION_PLAYER_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioJugador', 1, 0, 100);
 const TEAM_COHESION_TACTICAL_TRAINING_CHANCE = configNumber('cohesion.probabilidadEntrenamientoTacticoPorCasilla', 0.35, 0, 1);
 const TEAM_COHESION_TACTICAL_TRAINING_GAIN = configNumber('cohesion.gananciaEntrenamientoTacticoPorCasilla', 1, 0, 100);
+const BOT_BALANCE_ENABLED = configBoolean('equilibrioBots.activo', true);
+const BOT_BALANCE_DIFFICULTY = String(configValue('equilibrioBots.dificultad', 'normal') || 'normal').trim().toLowerCase();
+const BOT_BALANCE_ONLY_MANAGER_DIVISION = configBoolean('equilibrioBots.soloDivisionManager', true);
+const BOT_BALANCE_ON_SEASON_START = configBoolean('equilibrioBots.nivelarAlInicioTemporada', true);
+const BOT_BALANCE_DURING_SEASON = configBoolean('equilibrioBots.mantenerDuranteTemporada', true);
+const BOT_BALANCE_MAINTENANCE_INTERVAL_MATCHDAYS = Math.max(1, Math.round(configNumber('equilibrioBots.intervaloMantenimientoFechas', 2, 1, 38)));
+const BOT_BALANCE_POSITION_BONUS_MAX = configNumber('equilibrioBots.bonusMaximoPorPosicion', 8, 0, 30);
+const BOT_BALANCE_MORALE_FLOOR = configNumber('equilibrioBots.pisoMoral', 55, 1, 99);
+const BOT_BALANCE_CONDITION_FLOOR = configNumber('equilibrioBots.pisoFisico', 76, 0, 99);
+const BOT_BALANCE_COHESION_FLOOR = configNumber('equilibrioBots.pisoCohesion', 50, 0, 100);
+const BOT_BALANCE_MORALE_SPREAD = Math.round(configNumber('equilibrioBots.margenMoral', 8, 0, 30));
+const BOT_BALANCE_CONDITION_SPREAD = Math.round(configNumber('equilibrioBots.margenFisico', 6, 0, 30));
+const BOT_BALANCE_COHESION_SPREAD = Math.round(configNumber('equilibrioBots.margenCohesion', 10, 0, 30));
+const BOT_BALANCE_MAINTENANCE_CONDITION_GAIN = configNumber('equilibrioBots.recuperacionFisicaPorMantenimiento', 8, 0, 99);
+const BOT_BALANCE_MAINTENANCE_MORALE_GAIN = configNumber('equilibrioBots.recuperacionMoralPorMantenimiento', 5, 0, 99);
+const BOT_BALANCE_MAINTENANCE_COHESION_GAIN = configNumber('equilibrioBots.recuperacionCohesionPorMantenimiento', 4, 0, 100);
+const BOT_BALANCE_DEVELOPMENT_CHANCE = configNumber('equilibrioBots.desarrolloPlantelPorTemporada', 0.18, 0, 1);
+const BOT_BALANCE_POSITION_DEVELOPMENT_BONUS = configNumber('equilibrioBots.bonusDesarrolloPorPosicion', 0.08, 0, 1);
+const BOT_BALANCE_MAX_SKILL_BOOST = configNumber('equilibrioBots.maximoBoostBotPorHabilidad', 18, 0, 30);
 const PLAYER_MORALE_START = 60;
 const PSYCHOLOGIST_COST = configNumber('empleados.psicologoCosto', 500000, 0);
 const PSYCHOLOGIST_SUCCESS_CHANCE = configNumber('empleados.psicologoProbabilidadExito', 0.90, 0, 1);

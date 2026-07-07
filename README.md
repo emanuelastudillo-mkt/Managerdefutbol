@@ -1,10 +1,10 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.28
+## Versión actual: V3.29
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
 
-## Cambios V3.28
+## Cambios V3.29
 
 - Nuevo menú lateral **ESPECIAL**.
 - Sistema de puntos de habilidad ocultos para el manager.
@@ -29,3 +29,8 @@ js/game/15-especial.js
 ## Cómo usar
 
 Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el menú lateral entrar a **ESPECIAL** para abrir sobres, activar cartas, revisar bonus y destruir cartas sobrantes.
+
+
+## V3.29
+
+- Reordenamiento del menú lateral según la estructura solicitada.

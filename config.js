@@ -22,10 +22,10 @@ window.GAME_CONFIG = {
     diaInicioTemporada: 1,
     // La liga ahora se juega ida y vuelta. Con 20 clubes por división son 38 fechas.
     ligaIdaYVuelta: true,
-    // Bloqueo entre avances largos en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 120000,
-    // Bloqueo para el avance de un solo día. 10000 = 10 segundos.
-    bloqueoAvanceDiaMs: 10000,
+    // Bloqueo entre avances largos en milisegundos. 60000 = 1 minutos.
+    bloqueoEntreAvancesMs: 60000,
+    // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
+    bloqueoAvanceDiaMs: 2000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
     diasPretemporada: 70,
@@ -69,7 +69,7 @@ window.GAME_CONFIG = {
   cohesion: {
     // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
-    gananciaPorPartido: 14,
+    gananciaPorPartido: 9,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
@@ -79,16 +79,16 @@ window.GAME_CONFIG = {
     // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
     activo: true,
     // suave | normal | dificil
-    dificultad: 'normal',
+    dificultad: 'dificill',
     soloDivisionManager: true,
     nivelarAlInicioTemporada: true,
     mantenerDuranteTemporada: true,
     intervaloMantenimientoFechas: 2,
     // Los mejores bots de la temporada anterior reciben un plus; los peores, un margen menor.
     bonusMaximoPorPosicion: 8,
-    pisoMoral: 55,
+    pisoMoral: 65,
     pisoFisico: 76,
-    pisoCohesion: 50,
+    pisoCohesion: 70,
     margenMoral: 8,
     margenFisico: 6,
     margenCohesion: 10,
@@ -150,7 +150,7 @@ window.GAME_CONFIG = {
     jugadoresMaximosPorCaptacion: 10,
     costoJugadorPorAvance: 10000,
     compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 3,
+    multiplicadorEntrenamiento: 5,
     juvenilExcepcionalPorTemporada: true,
     edadJuvenilExcepcional: 16,
     mediaJuvenilExcepcionalMin: 12,

@@ -23,12 +23,12 @@ window.GAME_CONFIG = {
     // La liga ahora se juega ida y vuelta. Con 20 clubes por división son 38 fechas.
     ligaIdaYVuelta: true,
     // Bloqueo entre avances largos en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 120000,
+    bloqueoEntreAvancesMs: 1000,
     // Bloqueo para el avance de un solo día. 10000 = 10 segundos.
-    bloqueoAvanceDiaMs: 10000,
+    bloqueoAvanceDiaMs: 1000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
-    diasPretemporada: 70,
+    diasPretemporada: 56,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5

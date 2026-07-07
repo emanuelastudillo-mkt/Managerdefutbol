@@ -1,4 +1,17 @@
-# Fútbol Manager MVP · V3.19
+# Fútbol Manager MVP · V3.20
+
+
+## Cambios V3.20
+
+- Se agrega un **5º entrenamiento diario individual** por jugador.
+- El plan semanal general mantiene los 4 turnos diarios existentes para todo el plantel.
+- Cada jugador ahora puede tener un foco propio: Equilibrado, Recuperación, Físico, Técnico, Defensivo, Ofensivo, Portería, Mental o Descanso.
+- El foco individual se configura desde la tabla de Entrenamiento, con selector por jugador y opción para aplicar un mismo foco a todo el plantel.
+- El quinto entrenamiento se aplica una vez por día en cada avance semanal.
+- La intensidad del entrenamiento individual queda editable desde `config.js`.
+- Las partidas existentes migran automáticamente el viejo `trainingPlan` al nuevo formato individual.
+
+---
 
 ## Cambios V3.19
 

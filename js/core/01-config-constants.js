@@ -1,4 +1,4 @@
-/* V3.18 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.20 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -64,12 +64,24 @@ const KINESIOLOGIST_FAILURE_CHANCE = configNumber('empleados.kinesiologoProbabil
 const INJURED_SUB_MAX_TURNS = Math.ceil(configNumber('lesiones.lesionadoSuplenteDiasMax', 63, 0) / DAYS_PER_ADVANCE);
 const INJURED_SUB_PENALTY = configNumber('lesiones.penalizacionLesionadoSuplente', 0.10, 0, 1);
 const DEFAULT_TRAINING_TYPE = 'regenerative';
+const DEFAULT_INDIVIDUAL_TRAINING_TYPE = 'balanced';
 const TRAINING_OPTIONS = [
   { value:'regenerative', label:'Regenerativo', tone:'regen' },
   { value:'massage', label:'Masajista', tone:'massage' },
   { value:'intense', label:'Entrenamiento intenso', tone:'intense' },
   { value:'tactical', label:'Entrenamiento táctico', tone:'tactical' },
   { value:'dayoff', label:'Turno libre', tone:'dayoff' }
+];
+const TRAINING_INDIVIDUAL_OPTIONS = [
+  { value:'balanced', label:'Equilibrado', tone:'tactical' },
+  { value:'recovery', label:'Recuperación', tone:'regen' },
+  { value:'physical', label:'Físico', tone:'intense' },
+  { value:'technical', label:'Técnico', tone:'massage' },
+  { value:'defensive', label:'Defensivo', tone:'tactical' },
+  { value:'attacking', label:'Ofensivo', tone:'intense' },
+  { value:'goalkeeper', label:'Portería', tone:'regen' },
+  { value:'mental', label:'Mental', tone:'dayoff' },
+  { value:'rest', label:'Descanso', tone:'dayoff' }
 ];
 const TRAINING_DAY_LABELS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const TRAINING_DAY_SLOTS = [
@@ -79,6 +91,9 @@ const TRAINING_DAY_SLOTS = [
   { key:'night', label:'Turno noche' }
 ];
 const TRAINING_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadPorCasilla', 0.50, 0, 2);
+const TRAINING_INDIVIDUAL_ENABLED = configBoolean('entrenamiento.entrenamientoIndividualDiario', true);
+const TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadIndividualPorDia', 0.50, 0, 2);
+const TRAINING_INDIVIDUAL_INITIAL = configValue('entrenamiento.entrenamientoIndividualInicial', DEFAULT_INDIVIDUAL_TRAINING_TYPE);
 const TRAINING_SKILL_CURVE_ENABLED = configValue('entrenamiento.curvaHabilidadActual', true) !== false;
 const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidadMinimaSubidaHabilidad', 0, 0, 1);
 const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial', { pre:'regenerative', morning:'intense', afternoon:'tactical', night:'dayoff' });

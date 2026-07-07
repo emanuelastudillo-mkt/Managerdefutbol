@@ -198,7 +198,7 @@ function normalizeGame(saved){
   normalized.trainingSchedule = normalizeTrainingSchedule(normalized.trainingSchedule);
   seed.players.forEach(p => {
     if(!normalized.playerSkillBoosts[p.id]) normalized.playerSkillBoosts[p.id] = {};
-    if(!trainingOptionByValue(normalized.trainingPlan[p.id])) normalized.trainingPlan[p.id] = DEFAULT_TRAINING_TYPE;
+    normalized.trainingPlan[p.id] = safeIndividualTrainingType(normalized.trainingPlan[p.id]);
   });
   normalized.staffActions = normalized.staffActions || {};
   normalized.staffContracts = normalizeStaffContracts(normalized.staffContracts || {});
@@ -238,7 +238,7 @@ function ensurePlayerStateForAll(){
     if(!Number.isFinite(game.playerCondition[p.id])) game.playerCondition[p.id] = p.freeAgent ? 15 + hashNumber(`free-cond-${p.id}`, 15) : 99;
     if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = p.freeAgent ? 35 + hashNumber(`free-morale-${p.id}`, 55) : PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
-    if(!trainingOptionByValue(game.trainingPlan[p.id])) game.trainingPlan[p.id] = DEFAULT_TRAINING_TYPE;
+    game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
   });
 }
@@ -478,7 +478,7 @@ function newGame(selectedClubId, options={}){
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
     playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
     playerSkillBoosts: Object.fromEntries(seed.players.map(p => [p.id, {}])),
-    trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, DEFAULT_TRAINING_TYPE])),
+    trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL)])),
     trainingSchedule: defaultTrainingSchedule(),
     staffActions: {},
     staffContracts: {},
@@ -751,7 +751,7 @@ function initializeFreePlayerState(players=[]){
     game.playerCondition[p.id] = clamp(15 + hashNumber(`free-cond-${p.id}`, 15), 1, 29);
     game.playerMorale[p.id] = clamp(35 + hashNumber(`free-morale-${p.id}`, 55), 1, 99);
     game.playerSkillBoosts[p.id] = game.playerSkillBoosts[p.id] || {};
-    game.trainingPlan[p.id] = game.trainingPlan[p.id] || DEFAULT_TRAINING_TYPE;
+    game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     game.playerStats[p.id] = game.playerStats[p.id] || { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
   });
 }

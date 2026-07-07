@@ -1,6 +1,55 @@
-# Características internas de versión · V3.19
+# Características internas de versión · V3.20
 
-## Enfoque
+## Enfoque V3.20
+
+Agregar una capa de entrenamiento individual sin eliminar el plan semanal general.
+
+## Regla nueva: 5º entrenamiento diario individual
+
+- El juego conserva los 4 turnos diarios generales del calendario semanal.
+- Se agrega un quinto entrenamiento diario, asignado de forma individual a cada jugador.
+- El quinto entrenamiento no se muestra como una quinta casilla en el calendario general porque no afecta a todo el equipo de forma homogénea.
+- Se configura en la tabla de plantel dentro de Entrenamiento.
+- Se aplica una vez por día a cada jugador durante el avance semanal.
+
+## Focos individuales disponibles
+
+- `balanced`: Equilibrado.
+- `recovery`: Recuperación.
+- `physical`: Físico.
+- `technical`: Técnico.
+- `defensive`: Defensivo.
+- `attacking`: Ofensivo.
+- `goalkeeper`: Portería.
+- `mental`: Mental.
+- `rest`: Descanso.
+
+## Configuración agregada
+
+En `config.js`, bloque `entrenamiento`:
+
+```js
+entrenamientoIndividualDiario: true,
+efectividadIndividualPorDia: 0.50,
+entrenamientoIndividualInicial: 'balanced'
+```
+
+## Archivos modificados en V3.20
+
+- `config.js`
+- `index.html`
+- `style.css`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`
+
+---
+
+## Enfoque anterior
 
 Ajuste de mercado libre inicial y renovación anual de jugadores libres.
 

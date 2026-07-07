@@ -1,6 +1,28 @@
-# Versión V3.19
+# Versión V3.20
 
 ## Tipo de actualización
+
+Entrenamiento y control individual del plantel.
+
+## Cambios principales V3.20
+
+- Se mantiene el plan semanal general de 7 días con 4 turnos diarios.
+- Se suma un quinto entrenamiento diario individual por jugador.
+- Cada jugador puede recibir un foco propio: equilibrio, recuperación, físico, técnica, defensa, ataque, portería, mental o descanso.
+- La pantalla Entrenamiento agrega una columna **5º entrenamiento**.
+- Se agrega un selector masivo para aplicar un mismo foco individual a todo el plantel.
+- El avance semanal aplica 7 sesiones individuales por jugador, una por cada día avanzado.
+- Se agregan parámetros de configuración para activar/desactivar y balancear el quinto entrenamiento.
+
+## Compatibilidad V3.20
+
+- Las partidas existentes se mantienen.
+- El viejo campo `trainingPlan` se reutiliza como plan individual por jugador.
+- Valores antiguos como `regenerative`, `intense`, `tactical` o `dayoff` se convierten automáticamente a focos individuales compatibles.
+
+---
+
+## Tipo de actualización anterior
 
 Balance y generación de mercado libre.
 

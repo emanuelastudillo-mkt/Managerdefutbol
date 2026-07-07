@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.19',
+  version: 'V3.20',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -104,8 +104,12 @@ window.GAME_CONFIG = {
     multiplicadorEntrenamiento: 3
   },
   entrenamiento: {
-    // Cada avance semanal aplica el plan de 7 días con 4 turnos por día.
+    // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
     efectividadPorCasilla: 0.50,
+    // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
+    entrenamientoIndividualDiario: true,
+    efectividadIndividualPorDia: 0.50,
+    entrenamientoIndividualInicial: 'balanced',
     // Curva de dificultad: una habilidad alta reduce la probabilidad final de subir +1.
     // Ejemplo: habilidad 80 => 20% de probabilidad final si ya superó la tirada base.
     curvaHabilidadActual: true,

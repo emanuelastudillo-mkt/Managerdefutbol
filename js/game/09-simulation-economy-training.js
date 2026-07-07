@@ -1,4 +1,4 @@
-/* V3.17 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
+/* V3.20 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -640,13 +640,45 @@ function trainingTone(value){
 function safeTrainingType(value){
   return trainingOptionByValue(value) ? value : DEFAULT_TRAINING_TYPE;
 }
+function trainingIndividualOptionByValue(value){
+  return TRAINING_INDIVIDUAL_OPTIONS.find(opt => opt.value === value) || null;
+}
+function trainingIndividualLegacyMap(value){
+  const map = { regenerative:'balanced', massage:'recovery', intense:'physical', tactical:'balanced', dayoff:'rest' };
+  return map[value] || value;
+}
+function safeIndividualTrainingType(value){
+  const mapped = trainingIndividualLegacyMap(value);
+  if(trainingIndividualOptionByValue(mapped)) return mapped;
+  if(trainingIndividualOptionByValue(TRAINING_INDIVIDUAL_INITIAL)) return TRAINING_INDIVIDUAL_INITIAL;
+  return DEFAULT_INDIVIDUAL_TRAINING_TYPE;
+}
+function individualTrainingLabel(value){
+  return trainingIndividualOptionByValue(value)?.label || trainingIndividualOptionByValue(DEFAULT_INDIVIDUAL_TRAINING_TYPE)?.label || 'Equilibrado';
+}
+function individualTrainingTone(value){
+  return trainingIndividualOptionByValue(value)?.tone || trainingIndividualOptionByValue(DEFAULT_INDIVIDUAL_TRAINING_TYPE)?.tone || 'tactical';
+}
 function playerTrainingType(playerId){
   if(!game.trainingPlan) game.trainingPlan = {};
-  if(!trainingOptionByValue(game.trainingPlan[playerId])) game.trainingPlan[playerId] = DEFAULT_TRAINING_TYPE;
+  game.trainingPlan[playerId] = safeIndividualTrainingType(game.trainingPlan[playerId]);
   return game.trainingPlan[playerId];
 }
 function trainingOptionsMarkup(current){
   return TRAINING_OPTIONS.map(opt => `<option value="${opt.value}" ${current===opt.value?'selected':''}>${opt.label}</option>`).join('');
+}
+function individualTrainingOptionsMarkup(current, includeEmpty=false){
+  const safeCurrent = includeEmpty && !current ? '' : safeIndividualTrainingType(current);
+  const blank = includeEmpty ? `<option value="" ${safeCurrent===''?'selected':''}>Aplicar a todo...</option>` : '';
+  return blank + TRAINING_INDIVIDUAL_OPTIONS.map(opt => `<option value="${opt.value}" ${safeCurrent===opt.value?'selected':''}>${opt.label}</option>`).join('');
+}
+function normalizeIndividualTrainingPlan(plan){
+  const source = plan && typeof plan === 'object' ? plan : {};
+  const normalized = {};
+  (seed?.players || []).forEach(player => {
+    normalized[player.id] = safeIndividualTrainingType(source[player.id] ?? source[String(player.id)]);
+  });
+  return normalized;
 }
 function defaultTrainingSchedule(){
   const schedule = {};
@@ -718,11 +750,12 @@ function trainingSkillFinalChance(player, skill){
   const current = clamp(Math.round(baseSkill(player, skill)), 1, 99);
   return clamp((100 - current) / 100, TRAINING_SKILL_MIN_FINAL_CHANCE, 1);
 }
-function improveRandomSkill(player, chanceScale=1){
+function improveSkillFromPool(player, skills, chanceScale=1){
   if(!game.playerSkillBoosts) game.playerSkillBoosts = {};
   if(!game.playerSkillBoosts[player.id]) game.playerSkillBoosts[player.id] = {};
-  const skills = trainableSkillsForPlayer(player);
-  const skill = skills[hashNumber(`${player.id}-${game.matchdayIndex}-${Math.random()}`, skills.length)];
+  const available = (skills || []).filter(skill => Number.isFinite(baseSkill(player, skill)));
+  if(!available.length) return 0;
+  const skill = available[hashNumber(`${player.id}-${game.matchdayIndex}-${skillRollToken()}`, available.length)];
   const baseChance = clamp(0.50 * Number(chanceScale || 0), 0, 1);
   if(Math.random() >= baseChance) return 0;
   const finalChance = trainingSkillFinalChance(player, skill);
@@ -731,6 +764,24 @@ function improveRandomSkill(player, chanceScale=1){
     game.playerSkillBoosts[player.id][skill] = clamp(Number(game.playerSkillBoosts[player.id][skill] || 0) + gain, 0, 30);
   }
   return gain;
+}
+function skillRollToken(){
+  return `${Date.now()}-${Math.random()}`;
+}
+function improveRandomSkill(player, chanceScale=1){
+  return improveSkillFromPool(player, trainableSkillsForPlayer(player), chanceScale);
+}
+function individualTrainingSkillPool(player, type){
+  const pools = {
+    physical:['resistencia','velocidad','aceleracion','fuerza'],
+    technical:['tecnica','paseCorto','paseLargo','vision','regate'],
+    defensive:['marca','entradas','posicionamiento','fuerza','trabajoEquipo'],
+    attacking:['remate','regate','posicionamiento','serenidad','cabezazo','velocidad'],
+    goalkeeper:['porteria','posicionamiento','serenidad','paseLargo','liderazgo'],
+    mental:['serenidad','disciplina','liderazgo','trabajoEquipo']
+  };
+  if(type === 'goalkeeper' && player.position !== 'POR') return ['posicionamiento','serenidad','paseLargo','liderazgo'];
+  return pools[type] || trainableSkillsForPlayer(player);
 }
 function applyTrainingSessionToPlayer(player, type, scale, conditionDraft, moraleDraft){
   if(type === 'regenerative'){
@@ -747,9 +798,37 @@ function applyTrainingSessionToPlayer(player, type, scale, conditionDraft, moral
     moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(8,10) * scale, 1, 99);
   }
 }
+function applyIndividualTrainingSessionToPlayer(player, type, scale, conditionDraft, moraleDraft){
+  const focus = safeIndividualTrainingType(type);
+  if(focus === 'recovery'){
+    conditionDraft[player.id] = clamp(conditionDraft[player.id] + rnd(1,3) * scale, 0, 99);
+    moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(1,2) * scale, 1, 99);
+    return 0;
+  }
+  if(focus === 'rest'){
+    conditionDraft[player.id] = clamp(conditionDraft[player.id] + rnd(1,2) * scale, 0, 99);
+    moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(3,5) * scale, 1, 99);
+    return 0;
+  }
+  if(focus === 'mental'){
+    const gain = improveSkillFromPool(player, individualTrainingSkillPool(player, focus), scale * 0.75);
+    moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(1,3) * scale, 1, 99);
+    return gain;
+  }
+  if(focus === 'balanced'){
+    const gain = improveRandomSkill(player, scale * 0.75);
+    conditionDraft[player.id] = clamp(conditionDraft[player.id] - rnd(0,1) * scale, 0, 99);
+    return gain;
+  }
+  const gain = improveSkillFromPool(player, individualTrainingSkillPool(player, focus), scale);
+  const hardFocus = focus === 'physical' || focus === 'attacking';
+  conditionDraft[player.id] = clamp(conditionDraft[player.id] - rnd(hardFocus ? 2 : 1, hardFocus ? 3 : 2) * scale, 0, 99);
+  moraleDraft[player.id] = clamp(moraleDraft[player.id] - rnd(1, hardFocus ? 3 : 2) * scale, 1, 99);
+  return gain;
+}
 function applyTrainingEffects(){
   if(!game) return;
-  game.trainingPlan = game.trainingPlan || {};
+  game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
   game.trainingSchedule = normalizeTrainingSchedule(game.trainingSchedule);
   game.playerCondition = game.playerCondition || {};
   game.playerMorale = game.playerMorale || {};
@@ -762,8 +841,11 @@ function applyTrainingEffects(){
     moraleDraft[player.id] = currentMorale(player.id);
   });
   const scale = TRAINING_SLOT_EFFECTIVENESS / Math.max(1, DAYS_PER_ADVANCE);
+  const individualScale = TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS / Math.max(1, DAYS_PER_ADVANCE);
   let tacticalGain = 0;
   let intenseSessions = 0;
+  let individualSessions = 0;
+  let individualSkillGains = 0;
   const slots = trainingScheduleSlots();
   slots.forEach(item => {
     if(item.type === 'tactical'){
@@ -773,6 +855,15 @@ function applyTrainingEffects(){
     if(item.type === 'intense') intenseSessions += 1;
     squad.forEach(player => applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft));
   });
+  if(TRAINING_INDIVIDUAL_ENABLED){
+    for(let day=0; day<Math.max(1, DAYS_PER_ADVANCE); day += 1){
+      squad.forEach(player => {
+        const type = playerTrainingType(player.id);
+        individualSkillGains += applyIndividualTrainingSessionToPlayer(player, type, individualScale, conditionDraft, moraleDraft);
+        individualSessions += 1;
+      });
+    }
+  }
   squad.forEach(player => {
     game.playerCondition[player.id] = clamp(Math.round(conditionDraft[player.id]), 0, 99);
     game.playerMorale[player.id] = clamp(Math.round(moraleDraft[player.id]), 1, 99);
@@ -781,7 +872,7 @@ function applyTrainingEffects(){
     ensureTeamCohesion();
     game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
   }
-  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS };
+  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, individualSessions, individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
 }
 function trainingSlotButtonMarkup(dayIndex, slot, current){
   const option = trainingOptionByValue(current) || trainingOptionByValue(DEFAULT_TRAINING_TYPE);
@@ -853,22 +944,23 @@ function trainingOptionDescription(value){
 function renderTraining(){
   const squad = sortedTrainingPlayers();
   currentTrainingSchedule();
+  game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
   view.innerHTML = `
     <div class="row section-title">
       <div>
         <h2>Entrenamiento</h2>
-        <p class="tagline">Planificá 7 días de trabajo. Cada casilla abre una selección rápida de entrenamiento.</p>
+        <p class="tagline">Planificá 7 días: 4 turnos generales para todo el plantel y un 5º entrenamiento diario individual por jugador.</p>
       </div>
       <span class="pill">Cohesión: ${cohesionValue(game.selectedClubId)}/100</span>
     </div>
     <div class="card training-calendar-card">
-      <div class="row"><h3>Plan semanal</h3><button class="btn ghost small" data-reset-training-week>Restablecer semana</button></div>
+      <div class="row"><h3>Plan semanal general</h3><button class="btn ghost small" data-reset-training-week>Restablecer semana</button></div>
       ${trainingSummaryMarkup()}
       <div class="training-week-grid">${TRAINING_DAY_LABELS.map((label, index) => trainingDayCard(label, index)).join('')}</div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="row"><h3>Estado del plantel</h3><span class="muted">La planificación semanal afecta a todo el primer equipo.</span></div>
-      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>${trainingColumnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th><th>${trainingColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th></tr></thead><tbody>
+      <div class="row training-player-plan-head"><div><h3>Estado del plantel</h3><span class="muted">El entrenamiento individual se aplica una vez por día a cada jugador en el próximo avance.</span></div><select class="training-individual-bulk" data-bulk-player-training>${individualTrainingOptionsMarkup('', true)}</select></div>
+      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>${trainingColumnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th><th>${trainingColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th><th>5º entrenamiento</th></tr></thead><tbody>
         ${squad.map(player => trainingPlayerRow(player)).join('')}
       </tbody></table></div>
     </div>
@@ -884,14 +976,34 @@ function renderTraining(){
       openTrainingPicker(Number(button.dataset.trainingDay), button.dataset.trainingSlot);
     });
   });
+  document.querySelectorAll('[data-player-training]').forEach(select => {
+    select.addEventListener('change', () => {
+      const playerId = Number(select.dataset.playerTraining);
+      game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
+      game.trainingPlan[playerId] = safeIndividualTrainingType(select.value);
+      saveLocal(true);
+      renderTraining();
+      showNotice('Entrenamiento individual actualizado.');
+    });
+  });
+  document.querySelector('[data-bulk-player-training]')?.addEventListener('change', event => {
+    const value = safeIndividualTrainingType(event.target.value);
+    if(!event.target.value) return;
+    game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
+    playersByClub(game.selectedClubId).forEach(player => { game.trainingPlan[player.id] = value; });
+    saveLocal(true);
+    renderTraining();
+    showNotice(`Entrenamiento individual aplicado a todo el plantel: ${individualTrainingLabel(value)}.`);
+  });
   document.querySelector('[data-reset-training-week]')?.addEventListener('click', () => {
     game.trainingSchedule = defaultTrainingSchedule();
     saveLocal(true);
     renderTraining();
-    showNotice('Plan semanal restablecido.');
+    showNotice('Plan semanal general restablecido.');
   });
 }
 function trainingPlayerRow(player){
+  const individual = playerTrainingType(player.id);
   return `<tr>
     <td><div class="training-player-cell">${faceImg(player,'training-face')}<button class="linklike" data-player-id="${player.id}">${availabilityIcons(player.id)}${escapeHtml(player.name)}</button></div></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
@@ -899,6 +1011,7 @@ function trainingPlayerRow(player){
     <td><strong>${visibleOverall(player)}</strong></td>
     <td>${conditionBar(player.id)}</td>
     <td>${moraleBar(player.id)}</td>
+    <td><select class="training-individual-select training-tone-${individualTrainingTone(individual)}" data-player-training="${player.id}">${individualTrainingOptionsMarkup(individual)}</select></td>
   </tr>`;
 }
 

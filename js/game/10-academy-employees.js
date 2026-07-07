@@ -480,7 +480,7 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerCondition[official.id] = 70;
   game.playerMorale[official.id] = PLAYER_MORALE_START;
   game.playerSkillBoosts[official.id] = {};
-  game.trainingPlan[official.id] = DEFAULT_TRAINING_TYPE;
+  game.trainingPlan[official.id] = safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL);
   game.playerStats[official.id] = { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();

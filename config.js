@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.31',
+  version: 'V3.32',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -173,7 +173,7 @@ window.GAME_CONFIG = {
     // Tiempo entre tratamientos cuando se usa "Tratar a todos". Evita que todas las animaciones se disparen a la vez.
     kinesiologoTratamientoProgresivoMs: 650,
     // Tiempo entre cartas al abrir sobres del menú ESPECIAL.
-    especialAperturaCartaMs: 900,
+    especialAperturaCartaMs: 2700,
     frasesProgresoAvanceIntervaloMs: 10000,
     frasesProgresoAvance: [
       'Recogiendo pelotas detrás del arco',

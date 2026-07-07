@@ -1,17 +1,14 @@
-# Características de versión - V3.31
+# Características de versión - V3.32
 
 ## Ajustes sobre ESPECIAL
-- Al abrir un sobre, se descuentan inmediatamente los puntos de habilidad del manager.
-- El gasto queda registrado como movimiento negativo en el historial interno de puntos.
-- Se bloquea la apertura simultánea de sobres para evitar dobles descuentos o aperturas superpuestas.
-- Las cartas mostradas en “Última apertura” ahora son accionables: se pueden activar o destruir igual que desde el inventario.
-- Las cartas activables pueden arrastrarse hasta el bloque de cartas activas.
-- La apertura de sobres ahora muestra cartas progresivamente, una por una.
-- Mientras se revela el sobre, las cartas nuevas no se duplican visualmente en el inventario.
+- Al terminar la apertura, las cartas obtenidas dejan de quedar solamente en el bloque de apertura y pasan al inventario de reserva.
+- Se agregó una reparación defensiva para cartas de última apertura: si una carta no aparece en reserva pero existe en el historial reciente, se recupera antes de activar o destruir.
+- Se triplicó el tiempo entre cartas al abrir sobres.
+- La apertura mantiene la revelación de a una carta por vez y luego limpia el bloque temporal de apertura.
 
-## Configuración nueva
+## Configuración actualizada
 ```js
 ui: {
-  especialAperturaCartaMs: 900
+  especialAperturaCartaMs: 2700
 }
 ```

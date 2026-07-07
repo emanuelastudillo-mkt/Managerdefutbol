@@ -1,6 +1,6 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.31
+## Versión actual: V3.32
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
 
@@ -47,3 +47,10 @@ Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el me
 - Cartas de última apertura activables/destruibles.
 - Apertura de sobres animada carta por carta.
 - Activación de cartas por botón o arrastrando al bloque de cartas activas.
+
+
+## V3.32
+
+- Corrección del pase automático de cartas abiertas hacia reserva.
+- Recuperación defensiva de cartas de última apertura al activar o destruir.
+- Apertura de sobres tres veces más lenta.

@@ -1,8 +1,14 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.34
+## Versión actual: V3.35
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+
+## V3.35
+
+- Corrección bloqueante de arranque: se eliminó el uso prematuro de `clamp()` en constantes de Academia.
+- Nueva partida, Reset y carga inicial vuelven a funcionar.
+
 
 ## V3.34
 

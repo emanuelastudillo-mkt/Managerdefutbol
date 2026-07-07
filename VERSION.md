@@ -1,9 +1,8 @@
-# Fútbol Manager MVP - V3.34
+# Fútbol Manager MVP - V3.35
 
-Corrección crítica sobre V3.33.
+Corrección bloqueante sobre V3.34.
 
 ## Cambio principal
-- Al abrir sobres, las cartas pasan primero a reserva y se guardan antes de iniciar la animación.
-- Al terminar la animación, aparecen en Cartas en reserva / Inventario y pueden activarse o destruirse desde ahí.
-- Se agregó reparación automática de cartas de sobres anteriores que hubieran quedado sólo en historial.
-- Si falla el guardado de la apertura, se revierte el descuento de puntos y no se pierden cartas.
+- Se corrigió el error de arranque causado por usar `clamp()` dentro de `js/core/01-config-constants.js` antes de que esa función estuviera cargada.
+- Nueva partida, reset y carga inicial vuelven a funcionar.
+- Se mantiene el fix anterior del sistema de sobres y reserva.

@@ -1,54 +1,70 @@
-# Características de la versión V3.23
+# Características de la versión V3.24
 
-## Resumen
+La V3.24 agrega una planilla interna de eventos condicionales para que el juego pueda reaccionar a sucesos deportivos sin mezclar toda la lógica dentro del simulador de partidos.
 
-La V3.23 agrega visibilidad del estado del campo en el próximo compromiso y prepara una lógica más estable para equipos bots: sus campos ya no se degradan partido a partido durante la temporada, sino que quedan fijos y se recalculan al inicio de la temporada siguiente según rendimiento.
+## Cambio central
 
-## Cambios funcionales
+Se creó el archivo:
 
-### Próximo compromiso
+```text
+data/eventos.json
+```
 
-- El bloque de próximo partido ahora incluye el estado del campo de juego.
-- El estado se calcula desde el equipo local del partido.
-- Se muestra:
-  - etiqueta del estado del campo;
-  - puntaje sobre 100;
-  - club local dueño del estadio;
-  - indicador de si el campo es dinámico propio o fijo de bot.
+Ese archivo funciona como una planilla editable. Cada evento tiene:
 
-### Campos de equipos bots
+- `id`
+- `activo`
+- `nombre`
+- `fase`
+- `probabilidad`
+- `condiciones`
+- `efectos`
 
-- Los equipos bots reciben un estado de campo al inicio de la temporada.
-- Ese estado no se degrada durante los partidos de liga.
-- El campo de bots se mantiene estable durante toda la temporada.
-- Al cierre anual, el nuevo estado de campo de cada bot se calcula usando su posición final:
-  - mejores posiciones tienden a recibir mejores campos;
-  - peores posiciones tienden a recibir campos peores;
-  - se aplica una pequeña variación determinística para evitar que todos los clubes de una misma zona queden iguales.
+El motor de eventos está en:
 
-### Campo del club manejado
+```text
+js/game/14-eventos.js
+```
 
-- El club manejado conserva la lógica previa.
-- Si juega de local, el campo puede deteriorarse.
-- El usuario puede seguir usando replante o riego/parcheo desde el módulo Estadio.
-- Si el usuario continúa con el mismo club, su campo no se reinicia automáticamente por posición.
-- Si el usuario cambia de club al iniciar temporada, el nuevo club toma el estado calculado por su rendimiento anterior.
+## Eventos incluidos
 
-## Archivos modificados
+### 1. AFA compensa lesiones de visitante
 
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/ui/06-render-home-messages.js`
-- `style.css`
-- `README.md`
-- `VERSION.md`
-- `CARACTERISTICAS_VERSION.md`
+Si el equipo del usuario juega de visitante y sufre más de 3 lesiones, se activa un mensaje de AFA y se acredita una compensación económica.
 
-## Validaciones realizadas
+La compensación equivale a la suma del sueldo de cada jugador lesionado en ese partido.
 
-- Validación de sintaxis JavaScript con `node --check`.
-- Validación de estructura de archivos.
-- Validación de empaquetado ZIP.
+### 2. Apoyo de hinchas por moral baja
+
+Si la moral media del plantel está por debajo de 50, hay 30% de probabilidad de que los hinchas se acerquen al entrenamiento para apoyar al equipo.
+
+Efectos:
+
+- +10 moral para todos los jugadores.
+- +10 cohesión del equipo.
+- +10 forma física para todos los jugadores.
+- Mensaje de la directiva.
+- Mensaje del asistente.
+
+## Registro interno
+
+Se agregó:
+
+```js
+game.eventLog
+```
+
+Esto permite registrar qué eventos se activaron por temporada, turno y partido. Evita duplicados y deja preparada la base para futuras estadísticas de eventos.
+
+## Preparación para futuras versiones
+
+La estructura permite agregar nuevos eventos como:
+
+- protestas de hinchas;
+- sanciones de AFA;
+- premios de la directiva;
+- problemas de vestuario;
+- bonus por racha positiva;
+- caídas de moral por derrotas fuertes;
+- eventos económicos extraordinarios;
+- conflictos con empleados o jugadores.

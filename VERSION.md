@@ -1,41 +1,65 @@
-# Versión V3.23
+# Versión V3.24
 
-## Tipo de actualización
+## Nombre
+Eventos condicionales desde planilla
 
-Ajuste de calendario visual y estado de campos de juego de equipos bots.
+## Base
+V3.23 · Campos bots y próximo compromiso
 
-## Cambios principales V3.23
+## Cambios principales V3.24
 
-- El visor de **Próximo compromiso** ahora muestra el estado del campo de juego donde se disputará el partido.
-- Se muestra el club local, el puntaje del campo y la etiqueta de estado: Excelente, Normal, Regular, Muy malo o Injugable.
-- Los equipos bots ahora tienen un campo de juego fijo durante toda la temporada.
-- El campo de un equipo bot se asigna al inicio de la temporada.
-- Al finalizar una temporada, los bots reciben un campo mejor o peor para la siguiente temporada según su posición final en la tabla.
-- El campo del club manejado por el jugador conserva la lógica dinámica existente: se deteriora al jugar de local y puede mejorarse con mantenimiento.
-- Si el jugador cambia de club al comenzar una nueva temporada, el nuevo club recibe el estado de campo calculado por su rendimiento de la temporada anterior.
+- Se agregó `data/eventos.json` como planilla editable de eventos condicionales.
+- Se agregó el motor `js/game/14-eventos.js` para evaluar eventos después de cada fecha oficial.
+- Se agregó `game.eventLog` para registrar los eventos activados y evitar duplicados en el mismo turno/partido.
+- Se integró la carga de eventos desde `config.js` mediante `data.eventsUrl`.
+- Se agregó un evento AFA por exceso de lesiones de visitante.
+- Se agregó un evento de apoyo de hinchas cuando la moral media del plantel está por debajo de 50.
+- El resumen semanal ahora avisa si se activaron eventos y sugiere revisar Mensajes.
 
-## Nuevos parámetros configurables
+## Evento: AFA por lesiones de visitante
 
-```js
-estadio: {
-  botsCampoFijoPorTemporada: true,
-  botsCampoMinimo: 30,
-  botsCampoMaximo: 95,
-  botsCampoBaseInicial: 58,
-  botsCampoRangoPorPosicion: 42
-}
-```
+Condiciones:
 
-## Compatibilidad
+- Temporada regular.
+- El equipo del usuario juega de visitante.
+- El equipo del usuario sufre más de 3 lesiones en ese partido.
 
-- Compatible con partidas existentes.
-- En partidas ya guardadas, los nuevos estados fijos de bots se consolidan al iniciar la siguiente temporada.
-- No modifica la lógica de mantenimiento del campo propio.
+Efectos:
 
----
+- AFA envía un mensaje de disculpas en nombre del club rival.
+- Se acredita una compensación económica equivalente a la suma del sueldo de los jugadores lesionados.
+- El movimiento queda registrado en Finanzas como compensación por evento.
 
-## Versión anterior: V3.22
+## Evento: Apoyo de hinchas por moral baja
 
-- Se agregó el botón **Tratar a todos** para tratar lesionados de forma masiva.
-- El costo equivale al 1% del sueldo/costo del kinesiólogo contratado.
-- Las animaciones de tratamientos se ejecutan jugador por jugador.
+Condiciones:
+
+- Temporada regular.
+- Moral media del plantel menor a 50.
+- Probabilidad de activación: 30%.
+
+Efectos:
+
+- Moral +10 para todos los jugadores del plantel.
+- Cohesión +10 para el equipo.
+- Forma física +10 para todos los jugadores del plantel.
+- Mensaje de la directiva.
+- Mensaje del asistente con lectura deportiva posterior al entrenamiento.
+
+## Archivos modificados
+
+- `config.js`
+- `index.html`
+- `data/eventos.json`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/14-eventos.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`
+
+## Versión anterior
+
+V3.23 · Campos bots y próximo compromiso

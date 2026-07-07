@@ -1,4 +1,4 @@
-/* V3.23 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
+/* V3.24 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -47,6 +47,15 @@ async function loadEmployeesDatabase(){
   const categorias = Array.isArray(clean.categorias) && clean.categorias.length ? clean.categorias : fallback.categorias;
   const empleados = Array.isArray(clean.empleados) && clean.empleados.length ? clean.empleados : fallback.empleados;
   return { ...clean, categorias, empleados, source:raw ? EMPLOYEES_DATABASE_URL : 'fallback' };
+}
+
+
+async function loadEventsDatabase(){
+  const raw = await fetchJsonIfExists(EVENTS_DATABASE_URL);
+  const fallback = { metadata:{ version:APP_VERSION, source:'fallback' }, eventos:[] };
+  if(!raw || typeof raw !== 'object') return fallback;
+  const eventos = Array.isArray(raw.eventos) ? raw.eventos : (Array.isArray(raw.events) ? raw.events : []);
+  return { ...raw, eventos, source:EVENTS_DATABASE_URL };
 }
 
 function playersDatabaseHash(players=[]){
@@ -662,6 +671,7 @@ async function init(){
     seed = await loadInitialSeed();
     sponsorsDatabase = await loadSponsorsDatabase();
     employeesDatabase = await loadEmployeesDatabase();
+    eventsDatabase = await loadEventsDatabase();
     fillClubSelect();
     bindEvents();
     startUiTicker();

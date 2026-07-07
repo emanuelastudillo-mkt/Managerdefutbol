@@ -1,4 +1,4 @@
-/* V3.23 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
+/* V3.24 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -188,7 +188,7 @@ function turnFinanceSummary(){
   const sign = delta > 0 ? '+' : '';
   return `${sign}${formatMoney(delta)} · Presupuesto actual ${formatMoney(game?.budget || 0)}`;
 }
-function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded){
+function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, triggeredEvents=[]){
   const items = [];
   if(ownResult){
     items.push({ label:ownResultLabel(ownResult), text:ownResultLine(ownResult), tone:ownResultTone(ownResult) });
@@ -196,6 +196,9 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded){
   items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
   const academy = activeAcademyScoutingSummary();
   if(academy) items.push({ label:'Academia', text:academy, tone:'info' });
+  if(triggeredEvents?.length){
+    items.push({ label:'Eventos', text:`${triggeredEvents.length} evento(s) activado(s). Revisá Mensajes.`, tone:'warn' });
+  }
   const offers = game.sponsors?.offers?.length || 0;
   if(offers) items.push({ label:'Sponsors', text:`Hay ${offers} oferta(s) de patrocinio disponibles.`, tone:'ok' });
   if(ownProblems?.length){
@@ -293,6 +296,7 @@ function simulateNextMatchday(){
     maybeGenerateTransferOffer(ownResult);
     advanceSponsorMatchCounter();
   }
+  const triggeredEvents = processGameEventsAfterMatches({ round, results, ownResult });
   const ownProblems = collectOwnProblems(ownResult);
   removeOwnUnavailableFromTactic(ownProblems);
   game.lastOwnProblems = ownProblems;
@@ -312,7 +316,7 @@ function simulateNextMatchday(){
     game.currentDate = game.fixtures[game.matchdayIndex]?.date || addDaysToIsoDate(round.date, DAYS_PER_ADVANCE);
     game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
   }
-  setRegularTurnSummary(round, ownResult, ownProblems, regularEnded);
+  setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, triggeredEvents);
   activeTab = 'home';
   saveLocal(true);
   renderAll();

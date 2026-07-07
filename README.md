@@ -1,79 +1,36 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.23
+## Versión actual: V3.24
 
-### Último cambio
+Esta versión agrega una planilla editable de eventos condicionales mediante `data/eventos.json`.
 
-- El visor de **Próximo compromiso** muestra el estado del campo donde se juega el partido.
-- Los equipos bots tienen campo fijo durante la temporada.
-- Al finalizar la temporada, el estado del campo bot para la temporada siguiente mejora o empeora según la posición final.
-- El campo del club manejado mantiene la lógica dinámica de deterioro y mantenimiento.
+## Cómo usar
 
+Abrir `index.html` desde un servidor local o publicarlo en GitHub Pages. El juego carga la liga, jugadores, sponsors, empleados y eventos desde archivos JSON.
 
-Versión incremental basada en V3.21.
+## Archivos principales
 
-## Cambios V3.22
+- `index.html`: estructura principal.
+- `style.css`: estilos visuales.
+- `config.js`: configuración general editable.
+- `data/Liga Argentina.json`: estructura de ligas y clubes.
+- `data/jugadores.json`: base de jugadores.
+- `data/sponsors.json`: base de sponsors.
+- `data/empleados.json`: base de empleados.
+- `data/eventos.json`: planilla de eventos condicionales.
+- `js/game/14-eventos.js`: motor que interpreta la planilla de eventos.
 
-### Kinesiólogo: horas extras médicas
+## Cambios V3.24
 
-En la pantalla **Empleados > Tratamientos**, cuando el club tiene kinesiólogo contratado y existen jugadores lesionados, ahora aparece un bloque superior con la frase:
+- Planilla editable de eventos en `data/eventos.json`.
+- Motor de eventos condicionales.
+- Registro interno `game.eventLog`.
+- Evento AFA por más de 3 lesiones jugando de visitante.
+- Evento de apoyo de hinchas con moral media menor a 50 y 30% de probabilidad.
+- Efectos sobre presupuesto, moral, cohesión y forma física.
 
-**“Que los médicos hagan horas extras hoy”**
+## Cambios V3.23
 
-Debajo se agrega el botón:
-
-**Tratar a todos**
-
-El botón trata de forma masiva a todos los lesionados pendientes de tratamiento semanal.
-
-## Costo
-
-El uso de este botón cobra al momento el **1% del costo/sueldo del kinesiólogo contratado**.
-
-Ejemplo con la configuración actual:
-
-- Kinesiólogo Regular: $1.000.000 → horas extras $10.000.
-- Kinesiólogo Bueno: $4.000.000 → horas extras $40.000.
-- Kinesiólogo Elite: $50.000.000 → horas extras $500.000.
-
-## Reglas de tratamiento
-
-- Cada jugador puede recibir un solo intento de tratamiento por semana.
-- El tratamiento puede ser exitoso o fallido.
-- Si es exitoso, reduce la recuperación según el rendimiento del kinesiólogo contratado.
-- Si falla, la lesión no se reduce y el jugador queda marcado como tratado esa semana.
-- El botón masivo no repite tratamientos ya realizados.
-
-## Animación progresiva
-
-Al usar **Tratar a todos**, cada jugador se procesa uno por uno:
-
-- se marca el jugador en curso;
-- se espera una pausa configurable;
-- se muestra éxito o fallo;
-- luego avanza al siguiente lesionado.
-
-Esto evita que todas las animaciones se ejecuten simultáneamente.
-
-## Configuración editable
-
-En `config.js`:
-
-```js
-empleados: {
-  kinesiologoHorasExtrasPorcentajeSueldo: 0.01
-},
-ui: {
-  kinesiologoTratamientoProgresivoMs: 650
-}
-```
-
-## Archivos principales modificados
-
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/game/10-academy-employees.js`
-- `style.css`
-- `README.md`
-- `VERSION.md`
-- `CARACTERISTICAS_VERSION.md`
+- Estado del campo visible en Próximo compromiso.
+- Campos bots fijos durante la temporada.
+- Reasignación de estado de campos bots al inicio de la temporada siguiente según posición final.

@@ -159,6 +159,7 @@ function normalizeGame(saved){
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
+  normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
@@ -453,6 +454,7 @@ function newGame(selectedClubId, options={}){
     clubDivisionOverrides: {},
     managerStats: createInitialManagerStats(),
     messages: [],
+    eventLog: [],
     marketPlayers: [],
     pendingTransfers: [],
     rejectedPurchaseOffers: {},

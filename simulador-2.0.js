@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V3.44 jugadorista 70/30 + estrellas
+/* Motor de simulación V2.0 · V3.45 jugadorista 70/30 + estrellas + errores por jugador
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -39,6 +39,9 @@
   const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
   const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
   const SIM_ERROR_GOAL_RATE = simConfigNumber('simulador.probabilidadErrorTerminaEnGol', 0.28, 0, 1);
+  const SIM_GOAL_ERROR_ATTRIBUTION_RATE = simConfigNumber('simulador.probabilidadGolAtribuyeErrorGol', 0.60, 0, 1);
+  const SIM_PLAYER_ERROR_SCALE = simConfigNumber('simulador.escalaRiesgoErrorJugador', 0.72, 0, 2);
+  const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
   const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
 
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
@@ -243,12 +246,37 @@
     const roleBonus = ['DFC','LD','LI'].includes(pos) ? 95 : pos === 'MCD' ? 68 : pos === 'MC' ? 34 : 14;
     return effectiveSkill(player,'marca') * 0.95 + effectiveSkill(player,'entradas') * 0.90 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.28 + roleBonus;
   }
-  function errorPlayerWeightV2(player){
+  function playerErrorSecurityV2(player, clubId){
+    if(!player) return 0.50;
+    const morale = simClamp(Number(currentMorale(player.id) || 0), 0, 100);
+    const condition = simClamp(Number(currentCondition(player.id) || 0), 0, 100);
+    const overall = simClamp(Number(effectiveOverall(player) || player.overall || 0), 0, 100);
+    const cohesion = simClamp(Number(typeof cohesionValue === 'function' ? cohesionValue(clubId || player.clubId) : game?.teamCohesion?.[clubId || player.clubId] || 50), 0, 100);
+    return simClamp((morale + condition + overall + cohesion) / 400, 0, 1);
+  }
+  function playerErrorRiskV2(player, clubId){
+    // Corrección lógica: la fórmula de 0 a 1 se toma como seguridad. El riesgo es el complemento.
+    return simClamp(1 - playerErrorSecurityV2(player, clubId), 0.01, 0.95);
+  }
+  function errorPlayerWeightV2(player, clubId){
     if(!player) return 1;
     const pos = String(player.position || '').toUpperCase();
-    const rolePressure = pos === 'POR' ? 62 : ['DFC','LD','LI'].includes(pos) ? 44 : pos === 'MCD' ? 24 : 10;
-    const safety = effectiveSkill(player,'serenidad') * 0.38 + effectiveSkill(player,'posicionamiento') * 0.34 + effectiveSkill(player,'disciplina') * 0.18 + currentMorale(player.id) * 0.10;
-    return Math.max(1, rolePressure + (95 - safety));
+    const rolePressure = pos === 'POR' ? 58 : ['DFC','LD','LI'].includes(pos) ? 46 : pos === 'MCD' ? 27 : 12;
+    return Math.max(1, rolePressure + playerErrorRiskV2(player, clubId) * 140);
+  }
+  function pickErrorPlayerV2(defending, defendingClubId){
+    const keeper = goalkeeperFromPowerV2(defending);
+    const defenderPool = (defending.lineup || []).filter(p => p.position !== 'POR');
+    return weightedPickV2([keeper].concat(defenderPool).filter(Boolean), p => errorPlayerWeightV2(p, defendingClubId));
+  }
+  function registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, isGoal){
+    if(Number(rivalTotals.errors || 0) >= SIM_MAX_TEAM_ERRORS) return null;
+    const errorPlayer = pickErrorPlayerV2(defending, defendingClubId);
+    const event = { clubId:defendingClubId, playerId:errorPlayer?.id || null, minute, goal:Boolean(isGoal), causedBy:attackingClubId };
+    rivalTotals.errors = Number(rivalTotals.errors || 0) + 1;
+    if(isGoal) rivalTotals.goalErrors = Number(rivalTotals.goalErrors || 0) + 1;
+    incidents.errors.push(event);
+    return event;
   }
   function makeGoalV2(clubId, lineup, minute, details={}){
     const scorer = details.scorer || selectChanceShooterV2({ lineup }, Boolean(details.setPiece));
@@ -304,22 +332,20 @@
     const divisor = Math.max(0.01, collectiveWeight + individualWeight);
     const goalProb = simClamp(((baseGoalProb * collectiveWeight) + (individualGoalProb * individualWeight)) / divisor, 0.018, 0.78);
     const defensiveSafety = keeper ? keeperScore * 0.55 + defenderScore * 0.45 : defenderScore;
+    const errorCandidate = pickErrorPlayerV2(defending, defendingClubId);
+    const playerRisk = SIM_USE_PLAYER_ERROR_FORMULA ? playerErrorRiskV2(errorCandidate, defendingClubId) : simClamp(0.015 + (74 - defensiveSafety) / 1200 + baseGoalProb * 0.035 + (setPiece ? 0.008 : 0), 0.004, 0.12);
     const teamErrors = Number(rivalTotals.errors || 0);
-    const errorChance = teamErrors >= SIM_MAX_TEAM_ERRORS ? 0 : simClamp(0.015 + (74 - defensiveSafety) / 1200 + baseGoalProb * 0.035 + (setPiece ? 0.008 : 0), 0.004, 0.12);
-    const errorHappens = Math.random() < errorChance;
+    const errorChance = teamErrors >= SIM_MAX_TEAM_ERRORS ? 0 : simClamp(playerRisk * SIM_PLAYER_ERROR_SCALE + baseGoalProb * 0.03 + (setPiece ? 0.006 : 0), 0.003, 0.42);
+    const goal = Math.random() < goalProb;
     let errorEvent = null;
     let errorGoal = false;
-    if(errorHappens){
-      const errorPlayer = weightedPickV2([keeper].concat(defenderPool).filter(Boolean), errorPlayerWeightV2);
-      errorGoal = Math.random() < simClamp(SIM_ERROR_GOAL_RATE + baseGoalProb * 0.32 + (individualGoalProb > 0.35 ? 0.05 : 0), 0.04, 0.72);
-      rivalTotals.errors = Number(rivalTotals.errors || 0) + 1;
-      if(errorGoal) rivalTotals.goalErrors = Number(rivalTotals.goalErrors || 0) + 1;
-      errorEvent = { clubId:defendingClubId, playerId:errorPlayer?.id || null, minute, goal:errorGoal, causedBy:attackingClubId };
-      incidents.errors.push(errorEvent);
-    }
-    const goal = errorGoal || Math.random() < goalProb;
     if(goal){
-      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal, errorById:errorEvent?.playerId || null, chanceQuality:goalProb });
+      errorGoal = Math.random() < SIM_GOAL_ERROR_ATTRIBUTION_RATE;
+      if(errorGoal) errorEvent = registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, true);
+      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal:Boolean(errorEvent), errorById:errorEvent?.playerId || null, chanceQuality:goalProb });
+    }
+    if(Math.random() < errorChance){
+      registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, false);
     }
     const saveBase = simClamp((0.28 + (keeperScore - shooterScore) / 240 + baseGoalProb * 0.75) * (keeperStarMul > 1 ? 1 + ((keeperStarMul - 1) * 0.45) : 1), 0.08, 0.88);
     if(keeper && (baseGoalProb >= 0.11 || individualGoalProb >= 0.22) && Math.random() < saveBase){

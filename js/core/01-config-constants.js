@@ -1,4 +1,4 @@
-/* V3.44 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.47 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -58,13 +58,22 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.44');
+const APP_VERSION = configValue('version', 'V3.47');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
 const RANKING_PAGE_SIZE = configNumber('ranking.resultadosPorPagina', 100, 10, 500);
 const RANKING_UPLOAD_COOLDOWN_DAYS = configNumber('ranking.cooldownCargaDias', 77, 0, 366);
 const RANKING_NAME = configValue('ranking.nombreRanking', 'Ranking Online');
+const MANAGER_OBJECTIVE_RAW = configValue('manager.objetivoPuntosPorPartido', null);
+function parseManagerObjectiveValue(raw){
+  if(raw === null || raw === undefined || raw === '') return null;
+  const value = Number(String(raw).replace(',', '.'));
+  if(!Number.isFinite(value) || value < 0.3 || value > 2) return null;
+  return value;
+}
+const MANAGER_OBJECTIVE_PPG = parseManagerObjectiveValue(MANAGER_OBJECTIVE_RAW);
+const MANAGER_OBJECTIVE_MIN_MATCHES = Math.max(1, Math.round(configNumber('manager.partidosMinimosEvaluacionObjetivo', 10, 1, 100)));
 
 const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 50, 0, 100);
 const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 14, 0, 100);
@@ -136,26 +145,26 @@ const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidad
 const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial', { pre:'regenerative', morning:'intense', afternoon:'tactical', night:'dayoff' });
 
 const FORMATIONS = {
-  '4-4-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
-  '4-3-3': ['POR','LD','DFC','DFC','LI','MCD','MC','MCO','ED','EI','DC'],
-  '4-2-3-1': ['POR','LD','DFC','DFC','LI','MCD','MC','MCO','ED','EI','DC'],
-  '3-5-2': ['POR','DFC','DFC','DFC','MCD','MCD','MC','MC','MCO','DC','DC'],
-  '5-3-2': ['POR','LD','DFC','DFC','DFC','LI','MCD','MC','MCO','DC','DC'],
-  '4-1-4-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MC','MC','MCO','DC'],
-  '3-4-3': ['POR','DFC','DFC','DFC','MCD','MC','MC','MCO','ED','EI','DC'],
-  '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MC','MC','MCO','DC'],
-  '4-3-1-2': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','MCO','DC','DC'],
-  '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MCD','MC','MC','MCO','DC']
+  '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','MC','MC','DC','DC'],
+  '4-3-3': ['POR','LD','DFC','DFC','LI','MCD','MC','MC','EI','DC','ED'],
+  '4-2-3-1': ['POR','LD','DFC','DFC','LI','MCD','MCD','MI','MCO','MD','DC'],
+  '3-5-2': ['POR','DFC','DFC','DFC','MCD','MI','MC','MC','MD','DC','DC'],
+  '5-3-2': ['POR','LD','DFC','DFC','DFC','LI','MC','MC','MC','DC','DC'],
+  '4-1-4-1': ['POR','LD','DFC','DFC','LI','MCD','MI','MCO','MCO','MD','DC'],
+  '3-4-3': ['POR','DFC','DFC','DFC','MC','MC','MC','MC','DC','DC','DC'],
+  '4-5-1': ['POR','LD','DFC','DFC','LI','MCD','MI','MC','MC','MD','DC'],
+  '4-3-1-2': ['POR','LD','DFC','DFC','LI','MC','MC','MC','MCO','EI','ED'],
+  '5-4-1': ['POR','LD','DFC','DFC','DFC','LI','MI','MC','MC','MD','DC']
 };
 const FORMATION_VISUALS = {
   '4-4-2':[4,0,4,0,2],
-  '4-3-3':[4,0,3,0,3],
+  '4-3-3':[4,1,2,0,3],
   '4-2-3-1':[4,2,0,3,1],
-  '3-5-2':[3,0,5,0,2],
+  '3-5-2':[3,1,4,0,2],
   '5-3-2':[5,0,3,0,2],
   '4-1-4-1':[4,1,4,0,1],
   '3-4-3':[3,0,4,0,3],
-  '4-5-1':[4,1,2,2,1],
+  '4-5-1':[4,1,4,0,1],
   '4-3-1-2':[4,0,3,1,2],
   '5-4-1':[5,0,4,0,1]
 };
@@ -234,6 +243,11 @@ const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris N
 const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;
 const SEASON_END_TRANSFER_OFFERS_MIN = 2;
 const SEASON_END_TRANSFER_OFFERS_MAX = 6;
+const TRANSFER_AFA_TAX_RATE = configNumber('mercado.impuestoAfaTraspasos', 0.30, 0, 0.95);
+const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPorcentajeClausula', 0.05, 0, 1);
+const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.15, 0, 1));
+const PLAYER_OFFERS_REQUIRE_MATCHES = configBoolean('mercado.ofertasJugadoresRequierenPartidos', true);
+const PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST = configBoolean('mercado.ofertasJugadoresRequierenGolOAsistencia', true);
 const SPONSOR_OFFER_MATCH_MIN = configNumber('sponsors.partidosMinimosEntreTandas', 4, 1);
 const SPONSOR_OFFER_MATCH_MAX = Math.max(SPONSOR_OFFER_MATCH_MIN, configNumber('sponsors.partidosMaximosEntreTandas', 7, 1));
 const SPONSOR_OFFER_COUNT_MIN = configNumber('sponsors.ofertasMinimasPorTanda', 2, 1);

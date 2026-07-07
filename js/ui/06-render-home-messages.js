@@ -1,4 +1,4 @@
-/* V3.44 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
+/* V3.47 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
@@ -21,6 +21,10 @@ function renderAll(){
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(game.gameOver?.active){
+    renderGameOverScreen();
+    return;
+  }
   repairBotRosters({ reason:'render' });
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
@@ -167,6 +171,10 @@ function visualAlertsMarkup(){
 }
 function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
   const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
+  const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
+  const ppg = objectiveInfo.ppg || managerPointsPerGame();
+  const objectiveText = objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—';
+  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Progreso del objetivo</span><strong>${Math.round(objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.progress))}%"></span></div><p>${objectiveInfo.played < objectiveInfo.minMatches ? `Evaluación en ${objectiveInfo.remainingMatches} partido(s) oficial(es).` : (objectiveInfo.ppg > objectiveInfo.objective ? 'Objetivo superado por ahora.' : 'Objetivo no superado.')}</p></div>` : '';
   const phase = phaseLabel();
   const nextBox = next
     ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
@@ -181,8 +189,11 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
         <div><span>Posición</span><strong>${position || '—'}°</strong></div>
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
         <div><span>Presupuesto</span><strong>${formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
+        <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong></div>
+        <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
         <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
       </div>
+      ${objectiveProgress}
       <div class="office-status-bars">
         ${miniStatusBar('Media', avgOverall, 99)}
         ${miniStatusBar('Físico', avgFitness, 99)}
@@ -205,6 +216,50 @@ function lastTurnSummaryMarkup(){
     ${summary.result ? `<div class="turn-result-line">${escapeHtml(summary.result)}</div>` : ''}
     <div class="turn-summary-list">${items.map(item => `<div class="turn-summary-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}</strong><span>${escapeHtml(item.text || '')}</span></div>`).join('')}</div>
   </div>`;
+}
+
+function gameOverStatCard(label, value){
+  return `<div class="card"><p class="label">${escapeHtml(label)}</p><strong>${escapeHtml(String(value ?? '—'))}</strong></div>`;
+}
+function renderGameOverScreen(){
+  const state = game?.gameOver || {};
+  const snapshot = state.snapshot || (typeof gameOverSnapshot === 'function' ? gameOverSnapshot() : {});
+  const ppg = Number(state.ppg || (typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0));
+  const objective = Number(state.objective || MANAGER_OBJECTIVE_PPG || 0);
+  const budget = Number(snapshot.finalBudget || game?.budget || 0);
+  const score = Number(snapshot.managerScore || 0);
+  view.innerHTML = `<div class="game-over-screen">
+    <div class="card game-over-card">
+      <p class="label">Game Over</p>
+      <h1>Fin del ciclo</h1>
+      <p>${escapeHtml(state.reason || 'La directiva decidió terminar la partida por no cumplir el objetivo deportivo.')}</p>
+      <div class="game-over-objective">
+        <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>
+        <div><span>Objetivo</span><strong>${objective ? objective.toFixed(2) : '—'}</strong></div>
+        <div><span>Partidos oficiales</span><strong>${Number(state.matches || snapshot.won + snapshot.drawn + snapshot.lost || 0)}</strong></div>
+      </div>
+      <div class="grid cols-6 compact-team-stats game-over-stats">
+        ${gameOverStatCard('Manager', snapshot.managerName || game?.rankingManagerName || 'Manager')}
+        ${gameOverStatCard('Club', snapshot.club || clubName(game?.selectedClubId))}
+        ${gameOverStatCard('Temporada', snapshot.season || game?.seasonNumber || 1)}
+        ${gameOverStatCard('División', snapshot.division || clubDivision(game?.selectedClubId).name)}
+        ${gameOverStatCard('Posición', snapshot.position ? `${snapshot.position}°` : '—')}
+        ${gameOverStatCard('Puntos ranking', score)}
+        ${gameOverStatCard('PTS', snapshot.points || 0)}
+        ${gameOverStatCard('PG', snapshot.won || 0)}
+        ${gameOverStatCard('PE', snapshot.drawn || 0)}
+        ${gameOverStatCard('PP', snapshot.lost || 0)}
+        ${gameOverStatCard('GF / GC', `${snapshot.goalsFor || 0} / ${snapshot.goalsAgainst || 0}`)}
+        ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
+      </div>
+      <div class="row game-over-actions">
+        <button class="primary" id="btnGameOverNewGame">Empezar nueva partida</button>
+        <button class="ghost" id="btnGameOverReset">Borrar partida local</button>
+      </div>
+    </div>
+  </div>`;
+  $('btnGameOverNewGame')?.addEventListener('click', openNewGameModal);
+  $('btnGameOverReset')?.addEventListener('click', resetLocal);
 }
 
 function renderHome(){
@@ -487,31 +542,79 @@ function hasPendingTransferOfferForPlayer(playerId){
   const id = Number(playerId);
   return (game?.messages || []).some(m => m.action?.type === 'transferOffer' && m.action.status === 'pending' && Number(m.action.playerId) === id);
 }
+function playerSeasonStatsForOffers(player){
+  const st = game?.playerStats?.[player?.id] || {};
+  return {
+    played:Number(st.played || 0),
+    goals:Number(st.goals || 0),
+    assists:Number(st.assists || 0),
+    injuries:Number(st.injuries || 0),
+    red:Number(st.red || 0),
+    goalErrors:Number(st.goalErrors || 0),
+    errors:Number(st.errors || 0),
+    keySaves:Number(st.keySaves || 0)
+  };
+}
+function playerQualifiesForTransferOffers(player){
+  if(!player) return false;
+  const st = playerSeasonStatsForOffers(player);
+  if(PLAYER_OFFERS_REQUIRE_MATCHES && st.played <= 0) return false;
+  if(PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST && (st.goals + st.assists) <= 0) return false;
+  return true;
+}
+function playerOfferPerformanceScore(player){
+  const st = playerSeasonStatsForOffers(player);
+  const production = (st.goals * 24) + (st.assists * 18) + (st.keySaves * 8);
+  const reliabilityPenalty = (st.injuries * 10) + (st.red * 12) + (st.goalErrors * 18) + (st.errors * 4);
+  return Math.max(0, (visibleOverall(player) * 0.35) + (st.played * 2) + production - reliabilityPenalty);
+}
+function playerOfferPercent(player, salt=''){
+  const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.05);
+  const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.15);
+  const minPct = Math.round(minRate * 100);
+  const maxPct = Math.max(minPct, Math.round(maxRate * 100));
+  const span = Math.max(0, maxPct - minPct);
+  const score = playerOfferPerformanceScore(player);
+  const scoreBonus = Math.min(span, Math.floor(score / 45));
+  const noise = span > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, span + 1) : 0;
+  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.45)), minPct, maxPct);
+}
+function buildTransferOfferFinancials(player, pct){
+  const clause = refreshPlayerClause(player);
+  const grossAmount = Math.max(0, Math.round(clause * Number(pct || 0) / 100));
+  const taxAmount = Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0));
+  const netAmount = Math.max(0, grossAmount - taxAmount);
+  return { clause, grossAmount, taxAmount, netAmount };
+}
+function transferOfferBody(foreignClub, player, financials, pct, suffix=''){
+  return `${foreignClub} ofrece ${formatMoney(financials.grossAmount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. AFA retiene ${formatMoney(financials.taxAmount)} en impuestos de traspaso; el club recibiría ${formatMoney(financials.netAmount)} netos.${suffix ? ' ' + suffix : ''}`;
+}
+function managerPointsPerGame(){
+  return typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0;
+}
 function maybeGenerateTransferOffer(match){
   if(!game || !match) return;
   const roll = Math.random();
   if(roll > 0.28) return;
-  const candidates = playersByClub(game.selectedClubId).filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id));
+  const candidates = playersByClub(game.selectedClubId)
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
   if(!candidates.length) return;
-  candidates.sort((a,b)=>visibleOverall(b)-visibleOverall(a));
+  candidates.sort((a,b)=>playerOfferPerformanceScore(b)-playerOfferPerformanceScore(a) || visibleOverall(b)-visibleOverall(a));
   const pool = candidates.slice(0, Math.min(12, candidates.length));
   const player = pool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}`, pool.length)];
-  const pct = 20 + hashNumber(`offer-pct-${player.id}-${Date.now()}`, 81);
-  const amount = Math.round(refreshPlayerClause(player) * pct / 100);
+  const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
+  const financials = buildTransferOfferFinancials(player, pct);
   const foreignClub = FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)];
   pushGameMessage({
     type:'mercado',
     priority:'high',
     title:`Oferta por ${playerLastName(player.name)}`,
-    body:`${foreignClub} ofrece ${formatMoney(amount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. Si aceptás, el jugador se va del club.`,
-    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct }
+    body:transferOfferBody(foreignClub, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct }
   });
 }
 function seasonEndOfferScore(player){
-  const st = game?.playerStats?.[player.id] || {};
-  const goals = Number(st.goals || 0);
-  const assists = Number(st.assists || 0);
-  return (visibleOverall(player) * 2) + (goals * 18) + (assists * 14) + hashNumber(`season-end-score-${game?.seasonNumber || 1}-${player.id}`, 9);
+  return playerOfferPerformanceScore(player) + hashNumber(`season-end-score-${game?.seasonNumber || 1}-${player.id}`, 9);
 }
 function generateSeasonEndPlayerOffers(){
   if(!game || !isPostseason()) return [];
@@ -523,7 +626,7 @@ function generateSeasonEndPlayerOffers(){
   const season = game.seasonNumber || 1;
   if(game.seasonEndPlayerOffers?.season === season) return [];
   const candidates = playersByClub(game.selectedClubId)
-    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id));
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
   if(!candidates.length){
     game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
     return [];
@@ -539,17 +642,15 @@ function generateSeasonEndPlayerOffers(){
   const created = [];
   for(const player of pool){
     if(created.length >= targetCount) break;
-    const st = stats[player.id] || {};
-    const productionBonus = clamp((Number(st.goals || 0) + Number(st.assists || 0)) * 2, 0, 15);
-    const pct = clamp(78 + hashNumber(`season-end-pct-${season}-${player.id}-${Date.now()}`, 43) + productionBonus, 78, 125);
-    const amount = Math.round(refreshPlayerClause(player) * pct / 100);
+    const pct = playerOfferPercent(player, `season-end-${season}-${created.length}-${Date.now()}`);
+    const financials = buildTransferOfferFinancials(player, pct);
     const foreignClub = FOREIGN_CLUBS[hashNumber(`season-end-foreign-${season}-${player.id}-${created.length}`, FOREIGN_CLUBS.length)];
     const msg = pushGameMessage({
       type:'mercado',
       priority:'high',
       title:`Oferta por ${playerLastName(player.name)}`,
-      body:`${foreignClub} acercó una buena oferta de ${formatMoney(amount)} por ${player.name}. Si aceptás, el jugador se va del club.`,
-      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct, origin:'season_end' }
+      body:transferOfferBody(foreignClub, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct, origin:'season_end' }
     });
     if(msg) created.push(msg);
   }
@@ -562,15 +663,21 @@ function acceptTransferOffer(messageId){
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
-  recordBudgetChange(msg.action.amount || 0, `Venta de ${player.name}`, { type:'transfer_sale', playerId:player.id });
+  const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
+  const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
+  const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
+  recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount });
   player.clubId = -1;
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:-1, sold:true } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   msg.action.status = 'accepted';
-  msg.body += ' Oferta aceptada.';
+  msg.action.grossAmount = grossAmount;
+  msg.action.taxAmount = taxAmount;
+  msg.action.netAmount = netAmount;
+  msg.body += ` Oferta aceptada. Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.`;
   saveLocal(true);
-  showNotice(`${player.name} fue vendido por ${formatMoney(msg.action.amount || 0)}.`);
+  showNotice(`${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
   renderMessages();
 }
 function rejectTransferOffer(messageId){

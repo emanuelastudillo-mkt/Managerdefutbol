@@ -81,8 +81,11 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Goles</span><strong>${stats?.goals || 0}</strong></div>
           <div class="stat-rank"><span>Asistencias</span><strong>${stats?.assists || 0}</strong></div>
           <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats?.keySaves || 0}</strong></div>
-          <div class="stat-rank"><span>Errores / de gol</span><strong>${stats?.errors || 0} / ${stats?.goalErrors || 0}</strong></div>
-          <div class="stat-rank"><span>Tarjetas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0} / <span class="red-card">■</span> ${stats?.red || 0}</strong></div>
+          <div class="stat-rank"><span>Lesiones</span><strong>${stats?.injuries || 0}</strong></div>
+          <div class="stat-rank"><span>Expulsiones</span><strong>${stats?.red || 0}</strong></div>
+          <div class="stat-rank"><span>Errores</span><strong>${stats?.errors || 0}</strong></div>
+          <div class="stat-rank"><span>Errores de gol</span><strong>${stats?.goalErrors || 0}</strong></div>
+          <div class="stat-rank"><span>Tarjetas amarillas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0}</strong></div>
         </div>
         ${playerModalActionsMarkup(p)}
       </div>
@@ -123,6 +126,10 @@ function offerOwnPlayerToClubs(playerId){
     showNotice('Primero debemos haberle pagado al menos un sueldo.');
     return;
   }
+  if(typeof playerQualifiesForTransferOffers === 'function' && !playerQualifiesForTransferOffers(player)){
+    showNotice('No hay clubes interesados: necesita partidos jugados y al menos un gol o asistencia oficial.');
+    return;
+  }
   if(turnCooldownLeft(game.lastOwnPlayerOffer, OWN_PLAYER_OFFER_COOLDOWN_TURNS) > 0){
     showNotice('tu asistente está buscando las mejores opciones llamalo luego');
     return;
@@ -137,15 +144,19 @@ function offerOwnPlayerToClubs(playerId){
     renderAll();
     return;
   }
-  const pct = 35 + hashNumber(`forced-sale-${player.id}-${Date.now()}`, 41); // 35% a 75% de la cláusula
-  const amount = Math.round(refreshPlayerClause(player) * pct / 100);
+  const pct = typeof playerOfferPercent === 'function' ? playerOfferPercent(player, `forced-${Date.now()}`) : 15;
+  const financials = typeof buildTransferOfferFinancials === 'function'
+    ? buildTransferOfferFinancials(player, pct)
+    : { grossAmount:Math.round(refreshPlayerClause(player) * pct / 100), taxAmount:0, netAmount:Math.round(refreshPlayerClause(player) * pct / 100) };
   const foreignClub = FOREIGN_CLUBS[hashNumber(`forced-foreign-${player.id}-${Date.now()}`, FOREIGN_CLUBS.length)];
   pushGameMessage({
     type:'mercado',
     priority:'high',
     title:`Oferta recibida por ${playerLastName(player.name)}`,
-    body:`${foreignClub} acercó una oferta de ${formatMoney(amount)} por ${player.name}. Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.`,
-    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount, foreignClub, pct }
+    body:typeof transferOfferBody === 'function'
+      ? transferOfferBody(foreignClub, player, financials, pct, 'Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.')
+      : `${foreignClub} acercó una oferta de ${formatMoney(financials.grossAmount)} por ${player.name}.`,
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct }
   });
   closeModal();
   activeTab = 'messages';

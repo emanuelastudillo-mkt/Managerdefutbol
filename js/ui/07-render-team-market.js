@@ -489,8 +489,10 @@ function renderTactics(){
     .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
   const pitch = pitchSlots(game.tactic).map(slot => {
     const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
+    const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
+    const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
     const chip = slot.player ? `
-      <button type="button" class="player-chip tactic-click-player ${playerGroupClass(slot.player.position)} ${fit ? '' : 'out-zone'}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${fit ? 'Click para seleccionar o intercambiar' : 'Fuera de zona: rinde al 50%'}">
+      <button type="button" class="player-chip tactic-click-player ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
       </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
@@ -506,11 +508,11 @@ function renderTactics(){
       <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
       ${p ? moraleBar(p.id) : '<span></span>'}
-      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : fit ? 'OK' : '50%') : 'Click'}</strong>
+      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
     </div>`;
   }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click en un jugador y luego click en otro para intercambiarlos entre titulares, suplentes, reservas o pizarra. Si juega fuera de zona natural, rinde al 50%.</p></div>
+    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click en un jugador y luego click en otro para intercambiarlos entre titulares, suplentes, reservas o pizarra. Rol exacto: 100%. Rol compatible: 75%. Fuera de zona natural: 50%.</p></div>
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>

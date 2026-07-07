@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.44',
+  version: 'V3.48',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -35,6 +35,12 @@ window.GAME_CONFIG = {
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5
+  },
+  manager: {
+    // Objetivo opcional de puntos por partido. null o vacío = sin objetivo visible. Valores válidos: 0.3 a 2.0.
+    objetivoPuntosPorPartido: null,
+    // Desde esta cantidad de partidos oficiales se evalúa el objetivo. Los amistosos no cuentan.
+    partidosMinimosEvaluacionObjetivo: 10
   },
   plantel: {
     // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
@@ -118,6 +124,15 @@ window.GAME_CONFIG = {
     ofertasMaximasPorTanda: 5,
     ofertasInicialesFecha1: 2
   },
+  mercado: {
+    // Impuesto AFA sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
+    impuestoAfaTraspasos: 0.30,
+    // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
+    ofertaJugadoresMinPorcentajeClausula: 0.05,
+    ofertaJugadoresMaxPorcentajeClausula: 0.15,
+    ofertasJugadoresRequierenPartidos: true,
+    ofertasJugadoresRequierenGolOAsistencia: true
+  },
   estadio: {
     costoReplantarCesped: 2000000,
     diasReplantarCesped: 35,
@@ -184,9 +199,15 @@ window.GAME_CONFIG = {
     pesoIndividual: 0.30,
     // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
     probabilidadPelotaParada: 0.14,
-    // Probabilidad base de que un error defensivo o del arquero termine en gol.
+    // V3.45: los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
+    // El riesgo real de error es 1 - seguridad, para que mejores valores reduzcan errores.
+    formulaErroresJugador: true,
+    escalaRiesgoErrorJugador: 0.72,
+    // Cuando un gol rival ocurre, esta probabilidad lo atribuye también como error de gol a un defensor o arquero.
+    probabilidadGolAtribuyeErrorGol: 0.60,
+    // Probabilidad base anterior mantenida como respaldo si se desactiva formulaErroresJugador.
     probabilidadErrorTerminaEnGol: 0.28,
-    // Máximo de error usado para evitar partidos rotos por errores constantes.
+    // Máximo de errores usado para evitar partidos rotos por errores constantes.
     maximoErroresPorEquipo: 5,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
     estrellasMaximasPorEquipo: 3,

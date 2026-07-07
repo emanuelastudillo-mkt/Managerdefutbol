@@ -1653,7 +1653,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .office-club-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .office-club-head .club-badge-placeholder{width:58px;height:58px;min-width:58px;border-radius:18px;background:rgba(255,255,255,.08)}
 .office-club-head h2{font-size:clamp(24px,3vw,38px);margin:0 0 4px;letter-spacing:-.04em}
-.office-mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.office-mini-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .office-mini-grid>div{min-height:86px;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(255,255,255,.045);padding:12px;display:grid;align-content:center;gap:4px}
 .office-mini-grid span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
 .office-mini-grid strong{font-size:clamp(18px,2.3vw,26px);letter-spacing:-.04em;line-height:1.05}
@@ -1675,7 +1675,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 .manager-alert.info{border-color:rgba(59,130,246,.23);background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(255,255,255,.035))}.manager-alert.info .manager-alert-icon{background:rgba(59,130,246,.18);color:#bfdbfe}
 .turn-summary-card{margin:0 0 14px;border-color:rgba(59,130,246,.22);background:linear-gradient(145deg,rgba(15,23,42,.90),rgba(30,41,59,.65))}.turn-summary-card.ok{border-color:rgba(34,197,94,.26)}.turn-summary-card.warn{border-color:rgba(245,158,11,.28)}.turn-summary-card.bad{border-color:rgba(239,68,68,.30)}
 .turn-result-line{font-size:clamp(20px,2.6vw,32px);font-weight:950;letter-spacing:-.04em;padding:12px 0 8px;color:#f8fafc}.turn-summary-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.turn-summary-item{border:1px solid rgba(148,163,184,.12);border-radius:16px;background:rgba(255,255,255,.035);padding:11px;display:grid;gap:4px}.turn-summary-item strong{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#cbd5e1}.turn-summary-item span{font-size:13px;color:var(--muted);line-height:1.35}.turn-summary-item.ok{border-color:rgba(34,197,94,.22)}.turn-summary-item.warn{border-color:rgba(245,158,11,.24)}.turn-summary-item.bad{border-color:rgba(239,68,68,.27)}.turn-summary-item.info{border-color:rgba(59,130,246,.20)}
-@media (max-width:1100px){.manager-office{grid-template-columns:1fr}.manager-alert-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.turn-summary-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1100px){.manager-office{grid-template-columns:1fr}.office-mini-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.manager-alert-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.turn-summary-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:700px){.office-mini-grid,.office-status-bars,.manager-alert-grid,.turn-summary-list{grid-template-columns:1fr}.office-club-head{align-items:flex-start}.office-club-head .club-badge-placeholder{width:46px;height:46px;min-width:46px;border-radius:14px}}
 
 /* V3.04 ajuste: feedback visual para acciones con resultado */
@@ -2191,3 +2191,27 @@ button.action-failure{
   vertical-align:baseline;
 }
 .small-copy{font-size:.86rem; line-height:1.35;}
+
+
+.manager-objective-progress{margin:0 0 14px;border:1px solid rgba(148,163,184,.16);background:rgba(255,255,255,.035);border-radius:16px;padding:11px 12px;display:grid;gap:7px}
+.manager-objective-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.manager-objective-progress-head strong{color:var(--text);font-size:13px;letter-spacing:0}
+.manager-objective-bar{height:9px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.manager-objective-bar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width .4s ease}
+.manager-objective-progress.ok .manager-objective-bar span{background:linear-gradient(90deg,#22c55e,#84cc16)}
+.manager-objective-progress p{margin:0;color:var(--muted);font-size:12px}
+.game-over-screen{display:grid;place-items:center;min-height:calc(100vh - 160px);padding:18px}
+.game-over-card{max-width:1100px;width:100%;border-color:rgba(239,68,68,.35);background:radial-gradient(circle at top,rgba(239,68,68,.18),rgba(15,23,42,.96) 42%,rgba(15,23,42,.98))}
+.game-over-card h1{font-size:clamp(38px,7vw,82px);line-height:.9;margin:0 0 10px;letter-spacing:-.07em}
+.game-over-objective{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.game-over-objective>div{border:1px solid rgba(255,255,255,.13);border-radius:18px;background:rgba(255,255,255,.055);padding:14px}
+.game-over-objective span{display:block;color:var(--muted);text-transform:uppercase;font-size:11px;font-weight:900;letter-spacing:.08em;margin-bottom:4px}
+.game-over-objective strong{font-size:clamp(26px,4vw,44px);letter-spacing:-.06em}
+.game-over-stats .card{background:rgba(255,255,255,.045)}
+.game-over-stats strong{font-size:16px;word-break:break-word}
+.game-over-actions{margin-top:18px;justify-content:flex-start}
+@media (max-width:800px){.game-over-objective{grid-template-columns:1fr}.game-over-actions{align-items:stretch}.game-over-actions button{width:100%}}
+
+/* V3.48: pizarra táctica y penalización por rol compatible */
+.player-chip.off-role{box-shadow:0 0 0 3px rgba(245,158,11,.82),0 10px 22px rgba(0,0,0,.24)}
+.tactic-lineup-row:not(.bad-zone) strong:last-child{white-space:nowrap}

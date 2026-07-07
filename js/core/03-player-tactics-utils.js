@@ -761,11 +761,50 @@ function playerGroupClass(position){
 function slotGroup(slot){
   if(slot === 'POR') return 'gk';
   if(['LD','LI','DFC'].includes(slot)) return 'def';
-  if(['MCD','MC','MCO'].includes(slot)) return 'mid';
+  if(['MCD','MC','MCO','MI','MD'].includes(slot)) return 'mid';
   return 'att';
 }
+function roleMirrorSide(role){
+  const map = { LD:'LI', LI:'LD', ED:'EI', EI:'ED', MD:'MI', MI:'MD' };
+  return map[role] || '';
+}
+function sideEquivalentRole(playerPosition, slot){
+  const position = String(playerPosition || '').toUpperCase();
+  const target = String(slot || '').toUpperCase();
+  if(position === target) return true;
+  if(roleMirrorSide(position) === target) return true;
+  const widePairs = { ED:['MD'], MD:['ED'], EI:['MI'], MI:['EI'] };
+  return (widePairs[position] || []).includes(target);
+}
 function playerFitsSlot(player, slot){
-  return playerGroup(player.position) === slotGroup(slot);
+  return playerGroup(player.position) === slotGroup(slot) || sideEquivalentRole(player.position, slot);
+}
+function playerExactRoleFitsSlot(player, slot){
+  return String(player?.position || '').toUpperCase() === String(slot || '').toUpperCase();
+}
+function playerTacticFitLevel(player, slot){
+  if(!player) return 'empty';
+  if(playerExactRoleFitsSlot(player, slot)) return 'exact';
+  if(playerFitsSlot(player, slot)) return 'role';
+  return 'zone';
+}
+function playerTacticFitFactor(player, slot){
+  const level = playerTacticFitLevel(player, slot);
+  if(level === 'exact') return 1;
+  if(level === 'role') return 0.75;
+  return 0.5;
+}
+function playerTacticFitLabel(player, slot){
+  const level = playerTacticFitLevel(player, slot);
+  if(level === 'exact') return 'OK';
+  if(level === 'role') return '75%';
+  return '50%';
+}
+function playerTacticFitTitle(player, slot){
+  const level = playerTacticFitLevel(player, slot);
+  if(level === 'exact') return 'Rol exacto: rinde al 100%';
+  if(level === 'role') return 'Fuera de rol exacto, pero compatible: rinde al 75%';
+  return 'Fuera de zona natural: rinde al 50%';
 }
 function isGoalkeeperSlot(slot){
   return slot === 'POR';
@@ -779,7 +818,7 @@ function canAssignPlayerToSlot(player, slot){
   return !isGoalkeeperPlayer(player);
 }
 function zoneFactor(player, slot){
-  return playerFitsSlot(player, slot) ? 1 : 0.5;
+  return playerTacticFitFactor(player, slot);
 }
 function conditionLossForPlayer(player){
   const loss = rnd(15,20);
@@ -973,37 +1012,64 @@ function formationLayout(formation){
   return FORMATION_VISUALS[formation] || [4,0,4,0,2];
 }
 function slotVisualColumn(slot){
-  if(slot === 'POR') return { key:'gk', x:8 };
-  if(['LD','LI','DFC'].includes(slot)) return { key:'def', x:22 };
-  if(slot === 'MCD') return { key:'dm', x:38 };
-  if(slot === 'MC') return { key:'mid', x:52 };
-  if(slot === 'MCO') return { key:'am', x:68 };
-  return { key:'att', x:84 };
+  const map = {
+    POR:{ key:'POR', x:8 },
+    DFC:{ key:'DFC', x:23 }, LD:{ key:'LD', x:23 }, LI:{ key:'LI', x:23 },
+    MCD:{ key:'MCD', x:38 },
+    MC:{ key:'MC', x:52 }, MI:{ key:'MI', x:56 }, MD:{ key:'MD', x:56 },
+    MCO:{ key:'MCO', x:66 },
+    EI:{ key:'EI', x:72 }, ED:{ key:'ED', x:72 },
+    DC:{ key:'DC', x:84 }
+  };
+  return map[slot] || { key:String(slot || 'MC'), x:52 };
+}
+function roleBaseY(slot){
+  const map = {
+    POR:50,
+    LI:18, LD:82,
+    MI:18, MD:82,
+    EI:18, ED:82
+  };
+  return map[slot] || 50;
+}
+function distributedRoleY(slot, count, rowIndex){
+  if(count <= 1) return roleBaseY(slot);
+  const centerRoles = ['DFC','MCD','MC','MCO','DC'];
+  if(centerRoles.includes(slot)){
+    const minY = count >= 4 ? 18 : 28;
+    const maxY = count >= 4 ? 82 : 72;
+    return minY + ((maxY - minY) * rowIndex / Math.max(1, count - 1));
+  }
+  const base = roleBaseY(slot);
+  const spread = Math.min(14, 6 + count * 2);
+  const start = base - spread * (count - 1) / 2;
+  return clamp(start + spread * rowIndex, 10, 90);
 }
 function formationCoordinates(formation){
   const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
-  const columns = {};
+  const roleGroups = {};
   slots.forEach((slot, index) => {
     const column = slotVisualColumn(slot);
-    if(!columns[column.key]) columns[column.key] = { x:column.x, items:[] };
-    columns[column.key].items.push(index);
+    if(!roleGroups[column.key]) roleGroups[column.key] = { slot, x:column.x, items:[] };
+    roleGroups[column.key].items.push(index);
   });
   const coords = Array(slots.length).fill(null);
-  Object.values(columns).forEach(column => {
-    const count = column.items.length;
-    column.items.forEach((slotIndex, rowIndex) => {
-      const y = count === 1 ? 50 : 6 + (88 * (rowIndex + 1) / (count + 1));
-      coords[slotIndex] = { x:column.x, y };
+  Object.values(roleGroups).forEach(group => {
+    const count = group.items.length;
+    group.items.forEach((slotIndex, rowIndex) => {
+      coords[slotIndex] = { x:group.x, y:distributedRoleY(group.slot, count, rowIndex) };
     });
   });
   return coords;
 }
 function roleCompatibility(position, slot){
   if(position === slot) return 16;
+  if(sideEquivalentRole(position, slot)) return 10;
   const near = {
     LD:['LI','DFC'], LI:['LD','DFC'], DFC:['LD','LI'],
-    MCD:['MC','VOL'], MC:['MCD','VOL','MCO'], VOL:['MC','MCD','MCO'], MCO:['MC','VOL','ED','EI'],
-    ED:['EI','DC','MCO'], EI:['ED','DC','MCO'],
+    MCD:['MC','VOL'], MC:['MCD','VOL','MCO','MI','MD'], VOL:['MC','MCD','MCO'], MCO:['MC','VOL'],
+    MI:['EI','MC','MCO','MD'], MD:['ED','MC','MCO','MI'],
+    ED:['MD','EI','DC','MCO'], EI:['MI','ED','DC','MCO'],
     DC:['ED','EI','MCO'], POR:[]
   };
   return (near[slot] || []).includes(position) ? 6 : -10;

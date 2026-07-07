@@ -1,4 +1,4 @@
-/* V3.39 · Eventos principales, normalización de partida, calendario anual, temporadas, bots y ascensos/descensos. */
+/* V3.47 · Eventos principales, normalización de partida, calendario anual, temporadas, bots y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -161,6 +161,7 @@ function normalizeGame(saved){
   normalized.pendingFriendlyOpponentId = Number.isFinite(normalized.pendingFriendlyOpponentId) ? normalized.pendingFriendlyOpponentId : 0;
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
+  normalized.gameOver = normalizeGameOverState(normalized.gameOver);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
   normalized.playerStars = normalizePlayerStarsState(normalized.playerStars || {});
@@ -459,6 +460,7 @@ function newGame(selectedClubId, options={}){
     pendingFriendlyOpponentId: 0,
     clubDivisionOverrides: {},
     managerStats: createInitialManagerStats(),
+    gameOver: null,
     messages: [],
     eventLog: [],
     playerStars: createInitialPlayerStarsState(),
@@ -764,7 +766,98 @@ function normalizeManagerStats(stats){
     titles:Number.isFinite(src.titles) ? src.titles : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0)
   };
 }
+function normalizeGameOverState(state){
+  if(!state || typeof state !== 'object') return null;
+  const active = Boolean(state.active);
+  if(!active) return null;
+  return {
+    active:true,
+    reason:String(state.reason || 'Objetivo deportivo no cumplido'),
+    triggeredAt:state.triggeredAt || new Date().toISOString(),
+    objective:Number(state.objective || 0),
+    ppg:Number(state.ppg || 0),
+    matches:Number(state.matches || 0),
+    snapshot:state.snapshot && typeof state.snapshot === 'object' ? state.snapshot : null
+  };
+}
+function managerObjectiveIsActive(){
+  return Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2;
+}
+function managerOfficialTotals(){
+  return normalizeManagerStats(game?.managerStats).totals;
+}
+function managerCurrentPPG(){
+  const totals = managerOfficialTotals();
+  const played = Number(totals.played || 0);
+  const points = (Number(totals.won || 0) * 3) + Number(totals.drawn || 0);
+  return played > 0 ? points / played : 0;
+}
+function managerObjectiveProgressInfo(){
+  const totals = managerOfficialTotals();
+  const played = Number(totals.played || 0);
+  const ppg = managerCurrentPPG();
+  const objective = managerObjectiveIsActive() ? Number(MANAGER_OBJECTIVE_PPG) : null;
+  const minMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 10);
+  return {
+    active:objective !== null,
+    objective,
+    minMatches,
+    played,
+    ppg,
+    progress:objective ? clamp((ppg / objective) * 100, 0, 140) : 0,
+    remainingMatches:Math.max(0, minMatches - played),
+    failed:objective !== null && played >= minMatches && ppg <= objective
+  };
+}
+function gameOverSnapshot(){
+  if(typeof buildRankingPayload === 'function'){
+    const payload = buildRankingPayload(game?.rankingManagerName || storedManagerName() || 'Manager');
+    if(payload) return payload;
+  }
+  const totals = managerOfficialTotals();
+  const division = clubDivision(game?.selectedClubId);
+  const table = sortedStandings(division.id);
+  const index = table.findIndex(row => Number(row.clubId) === Number(game?.selectedClubId));
+  const row = table[index] || game?.standings?.[game?.selectedClubId] || {};
+  return {
+    managerName:game?.rankingManagerName || storedManagerName() || 'Manager',
+    club:clubName(game?.selectedClubId),
+    season:Number(game?.seasonNumber || 1),
+    division:division.name,
+    position:index >= 0 ? index + 1 : 0,
+    points:Number(row.pts || 0),
+    won:Number(totals.won || 0),
+    drawn:Number(totals.drawn || 0),
+    lost:Number(totals.lost || 0),
+    goalsFor:Number(totals.gf || 0),
+    goalsAgainst:Number(totals.gc || 0),
+    goalDifference:Number(totals.gf || 0) - Number(totals.gc || 0),
+    finalBudget:Number(game?.budget || 0),
+    titles:Number(game?.managerStats?.titles || 0),
+    managerScore:0,
+    saveCode:game?.saveCode || ''
+  };
+}
+function checkManagerObjectiveGameOver(){
+  if(!game || game.gameOver?.active || !managerObjectiveIsActive()) return false;
+  const info = managerObjectiveProgressInfo();
+  if(!info.failed) return false;
+  game.gameOver = {
+    active:true,
+    reason:`Promedio de puntos por partido insuficiente: ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales.`,
+    triggeredAt:new Date().toISOString(),
+    objective:info.objective,
+    ppg:info.ppg,
+    matches:info.played,
+    snapshot:gameOverSnapshot()
+  };
+  game.mustReviewTactics = false;
+  activeTab = 'home';
+  pushGameMessage({ type:'directiva', priority:'high', title:'Game Over', body:'La directiva decidió terminar el ciclo por no alcanzar el promedio mínimo de puntos por partido.', id:`game-over-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
+  return true;
+}
 function updateManagerMatchStats(match){
+  if(match?.friendly) return;
   game.managerStats = normalizeManagerStats(game.managerStats);
   const isHome = match.homeId === game.selectedClubId;
   const gf = isHome ? match.homeGoals : match.awayGoals;
@@ -776,6 +869,7 @@ function updateManagerMatchStats(match){
   if(gf > gc) totals.won += 1;
   else if(gf < gc) totals.lost += 1;
   else totals.drawn += 1;
+  checkManagerObjectiveGameOver();
 }
 function divisionOrderList(){
   return (seed.divisions || [{ id:'default', name:'Liga única', order:1 }]).slice().sort((a,b)=>(a.order || 0)-(b.order || 0));

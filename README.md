@@ -1,6 +1,6 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.44
+## Versión actual: V3.48
 
 Simulador con enfoque jugadorista: 70% fuerza colectiva y 30% impacto individual.
 
@@ -151,3 +151,27 @@ A cambio, los tiempos de recuperación son más largos y configurables desde `co
 ## V3.44 - Estrellas de referencia
 
 Se agrega un sistema de estrellas por rendimiento reciente. Cada club puede tener hasta 3 jugadores referencia. La estrella aparece junto al nombre y aumenta su peso dentro del simulador. Si el jugador cambia de club, pierde la estrella.
+
+
+### V3.48 - Errores por jugador
+
+Se ajustó el simulador para que los errores defensivos y del arquero dependan del jugador implicado, usando moral, físico, media y cohesión del equipo. También se separan mejor las estadísticas internas de lesiones, expulsiones, errores y errores de gol.
+
+
+## V3.48
+
+- Ofertas automáticas de jugadores basadas en estadísticas internas.
+- Filtro de ofertas: partidos oficiales jugados y producción ofensiva mínima.
+- Tope del 15% de cláusula para ofertas recibidas por jugadores.
+- Impuesto AFA del 30% sobre ventas.
+- Promedio de puntos por partido en Oficina del manager.
+
+
+## V3.48
+
+Agrega objetivo opcional de puntos por partido, barra de progreso y Game Over si el promedio no supera el objetivo desde los 10 partidos oficiales.
+
+
+## V3.48 - Pizarra táctica y roles
+
+Se corrigió la distribución visual de las formaciones y se agregó una penalización intermedia para jugadores fuera de su rol exacto: 100% si juega en su rol, 75% si ocupa un rol compatible y 50% si queda fuera de su zona.

@@ -69,7 +69,7 @@ window.GAME_CONFIG = {
   cohesion: {
     // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
-    gananciaPorPartido: 14,
+    gananciaPorPartido: 11,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,

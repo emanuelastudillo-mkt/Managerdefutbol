@@ -1,8 +1,17 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.33
+## Versión actual: V3.34
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+
+## V3.34
+
+- Corrección crítica del sistema de sobres: las cartas se guardan en reserva antes de mostrarse en la animación.
+- Las cartas abiertas ya no quedan atrapadas en “Cartas obtenidas”.
+- Al finalizar la apertura, pasan al inventario y se pueden activar o destruir.
+- Se agregó reparación automática para cartas que hubieran quedado sólo en historial por versiones anteriores.
+- Si el guardado falla, se revierte el gasto de puntos del sobre.
+
 
 ## Cambios V3.31
 

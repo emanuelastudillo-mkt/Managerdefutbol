@@ -1,8 +1,9 @@
-# Fútbol Manager MVP - V3.33
+# Fútbol Manager MVP - V3.34
 
-Ajuste menor sobre V3.32.
+Corrección crítica sobre V3.33.
 
 ## Cambio principal
-- La Academia ahora entrega, una sola vez por temporada, un juvenil excepcional de 16 años al iniciar una captación.
-- Ese juvenil queda disponible de inmediato para entrenar en academia o firmar contrato profesional.
-- Se agregó configuración para activar/desactivar el beneficio y ajustar edad/media inicial.
+- Al abrir sobres, las cartas pasan primero a reserva y se guardan antes de iniciar la animación.
+- Al terminar la animación, aparecen en Cartas en reserva / Inventario y pueden activarse o destruirse desde ahí.
+- Se agregó reparación automática de cartas de sobres anteriores que hubieran quedado sólo en historial.
+- Si falla el guardado de la apertura, se revierte el descuento de puntos y no se pierden cartas.

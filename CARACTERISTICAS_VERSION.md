@@ -1,18 +1,15 @@
-# Características de versión - V3.33
+# Características de versión - V3.34
 
-## Ajustes sobre Academia
-- Al iniciar una captación, si todavía no se usó el beneficio de la temporada, llega inmediatamente 1 juvenil excepcional de 16 años.
-- El juvenil queda en la academia como jugador activo, puede entrenarse normalmente y puede subirse al primer equipo por tener edad suficiente.
-- El beneficio es único por temporada: nuevas captaciones de la misma temporada ya no entregan otro juvenil excepcional.
-- El estado se reinicia al comenzar la siguiente temporada.
-- La carta del jugador muestra una marca visual de “Juvenil excepcional”.
+## Corrección crítica: sobres y reserva
+- Al abrir un sobre, las cartas se agregan inmediatamente a `cartas_reserva`.
+- La partida se guarda antes de iniciar la animación de apertura.
+- La animación sólo revela visualmente las cartas; no es el lugar definitivo del inventario.
+- Al finalizar la apertura, las cartas aparecen en **Cartas en reserva / Inventario**.
+- Desde Inventario se pueden activar o destruir.
+- Durante la animación, los botones de las cartas reveladas quedan reemplazados por el estado “Guardada en reserva” para evitar acciones sobre una vista temporal.
+- Si el guardado falla, se revierten los puntos descontados y no se consume el sobre.
 
-## Configuración agregada
-```js
-academia: {
-  juvenilExcepcionalPorTemporada: true,
-  edadJuvenilExcepcional: 16,
-  mediaJuvenilExcepcionalMin: 12,
-  mediaJuvenilExcepcionalMax: 40
-}
-```
+## Reparación de partidas afectadas
+- Si una partida quedó con cartas en historial pero fuera de reserva, el sistema intenta reconstruir la reserva automáticamente.
+- No duplica cartas ya activas o ya existentes en reserva.
+- No recupera cartas cuyo último estado registrado sea destruida.

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.22',
+  version: 'V3.23',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -92,7 +92,13 @@ window.GAME_CONFIG = {
     diasReplantarCesped: 35,
     costoParchearCampo: 200000,
     diasParchearCampo: 21,
-    mejoraParchePorAvance: 5
+    mejoraParchePorAvance: 5,
+    // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
+    botsCampoFijoPorTemporada: true,
+    botsCampoMinimo: 30,
+    botsCampoMaximo: 95,
+    botsCampoBaseInicial: 58,
+    botsCampoRangoPorPosicion: 42
   },
   empleados: {
     // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.

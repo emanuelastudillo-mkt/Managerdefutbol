@@ -378,6 +378,7 @@ function matchPreview(match){
     <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
     <div class="vs">VS<br><span class="small">${escapeHtml(match.date)}</span></div>
     <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
+    ${matchFieldSummaryMarkup(match)}
   </button>`;
 }
 function compactMatch(m){

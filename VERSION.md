@@ -1,43 +1,41 @@
-# Versión V3.22
+# Versión V3.23
 
 ## Tipo de actualización
 
-Ajuste de empleados médicos y tratamientos masivos.
+Ajuste de calendario visual y estado de campos de juego de equipos bots.
 
-## Cambios principales V3.22
+## Cambios principales V3.23
 
-- Se agrega un botón masivo para tratar a todos los jugadores lesionados pendientes de tratamiento semanal.
-- El bloque muestra la frase: **“Que los médicos hagan horas extras hoy”**.
-- El botón se muestra como **“Tratar a todos”** e informa el costo antes de ejecutarse.
-- El costo se cobra al momento y equivale al **1% del costo/sueldo del kinesiólogo contratado**.
-- El tratamiento masivo respeta la regla existente: cada jugador sólo puede recibir un intento de tratamiento por semana.
-- Las animaciones se ejecutan de forma progresiva jugador por jugador, no todas a la vez.
-- El resultado individual puede ser exitoso o fallido según la probabilidad de fallo del kinesiólogo.
+- El visor de **Próximo compromiso** ahora muestra el estado del campo de juego donde se disputará el partido.
+- Se muestra el club local, el puntaje del campo y la etiqueta de estado: Excelente, Normal, Regular, Muy malo o Injugable.
+- Los equipos bots ahora tienen un campo de juego fijo durante toda la temporada.
+- El campo de un equipo bot se asigna al inicio de la temporada.
+- Al finalizar una temporada, los bots reciben un campo mejor o peor para la siguiente temporada según su posición final en la tabla.
+- El campo del club manejado por el jugador conserva la lógica dinámica existente: se deteriora al jugar de local y puede mejorarse con mantenimiento.
+- Si el jugador cambia de club al comenzar una nueva temporada, el nuevo club recibe el estado de campo calculado por su rendimiento de la temporada anterior.
 
 ## Nuevos parámetros configurables
 
 ```js
-empleados: {
-  kinesiologoHorasExtrasPorcentajeSueldo: 0.01
-},
-ui: {
-  kinesiologoTratamientoProgresivoMs: 650
+estadio: {
+  botsCampoFijoPorTemporada: true,
+  botsCampoMinimo: 30,
+  botsCampoMaximo: 95,
+  botsCampoBaseInicial: 58,
+  botsCampoRangoPorPosicion: 42
 }
 ```
 
 ## Compatibilidad
 
 - Compatible con partidas existentes.
-- No modifica lesiones ya guardadas.
-- No cambia el tratamiento individual existente.
-- El botón masivo sólo aparece si hay kinesiólogo contratado y jugadores lesionados.
+- En partidas ya guardadas, los nuevos estados fijos de bots se consolidan al iniciar la siguiente temporada.
+- No modifica la lógica de mantenimiento del campo propio.
 
 ---
 
-## Versión anterior: V3.21
+## Versión anterior: V3.22
 
-- La cohesión sube más después de los partidos.
-- Los cambios de jugadores y expulsiones castigan menos la cohesión.
-- Cambiar de táctica sigue teniendo coste, pero se reduce levemente.
-- El entrenamiento táctico ahora tiene una probabilidad directa de sumar cohesión por casilla táctica semanal.
-- Se agrega configuración editable para todo el sistema de cohesión.
+- Se agregó el botón **Tratar a todos** para tratar lesionados de forma masiva.
+- El costo equivale al 1% del sueldo/costo del kinesiólogo contratado.
+- Las animaciones de tratamientos se ejecutan jugador por jugador.

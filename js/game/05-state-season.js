@@ -488,6 +488,7 @@ function newGame(selectedClubId, options={}){
     teamCohesion: Object.fromEntries(seed.clubs.map(c => [c.id, TEAM_COHESION_START])),
     lastMatchTactics: {}
   };
+  assignInitialBotFieldStates(selectedClubId);
   game.marketPlayers = generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   ensurePlayerStateForAll();
@@ -906,11 +907,13 @@ function applySeasonMovements(){
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
+  const previousClubId = Number(game.selectedClubId || 0);
+  const nextClubId = Number(selectedClubId || game.selectedClubId);
+  assignBotFieldStatesForNextSeason(nextClubId, previousClubId);
   applySeasonMovements();
   const aging = applySeasonalAging();
   applyAcademyAgingIfNeeded();
   refreshAllPlayerClauses();
-  const nextClubId = Number(selectedClubId || game.selectedClubId);
   game.selectedClubId = nextClubId;
   game.seasonNumber = (game.seasonNumber || 1) + 1;
   game.seasonYear = seasonYearForNumber(game.seasonNumber);

@@ -1,117 +1,54 @@
-# Características internas de versión · V3.22
+# Características de la versión V3.23
 
-## Enfoque V3.22
+## Resumen
 
-Esta versión agrega una acción masiva para tratamientos médicos sin reemplazar la lógica individual existente del kinesiólogo.
+La V3.23 agrega visibilidad del estado del campo en el próximo compromiso y prepara una lógica más estable para equipos bots: sus campos ya no se degradan partido a partido durante la temporada, sino que quedan fijos y se recalculan al inicio de la temporada siguiente según rendimiento.
 
-## Funcionalidad agregada
+## Cambios funcionales
 
-### Botón “Tratar a todos”
+### Próximo compromiso
 
-Ubicación:
+- El bloque de próximo partido ahora incluye el estado del campo de juego.
+- El estado se calcula desde el equipo local del partido.
+- Se muestra:
+  - etiqueta del estado del campo;
+  - puntaje sobre 100;
+  - club local dueño del estadio;
+  - indicador de si el campo es dinámico propio o fijo de bot.
 
-- Pantalla **Empleados**.
-- Card **Tratamientos**.
-- Visible cuando hay kinesiólogo contratado y jugadores lesionados.
+### Campos de equipos bots
 
-Texto superior del bloque:
+- Los equipos bots reciben un estado de campo al inicio de la temporada.
+- Ese estado no se degrada durante los partidos de liga.
+- El campo de bots se mantiene estable durante toda la temporada.
+- Al cierre anual, el nuevo estado de campo de cada bot se calcula usando su posición final:
+  - mejores posiciones tienden a recibir mejores campos;
+  - peores posiciones tienden a recibir campos peores;
+  - se aplica una pequeña variación determinística para evitar que todos los clubes de una misma zona queden iguales.
 
-```txt
-Que los médicos hagan horas extras hoy
-```
+### Campo del club manejado
 
-Botón:
+- El club manejado conserva la lógica previa.
+- Si juega de local, el campo puede deteriorarse.
+- El usuario puede seguir usando replante o riego/parcheo desde el módulo Estadio.
+- Si el usuario continúa con el mismo club, su campo no se reinicia automáticamente por posición.
+- Si el usuario cambia de club al iniciar temporada, el nuevo club toma el estado calculado por su rendimiento anterior.
 
-```txt
-Tratar a todos
-```
-
-## Costo
-
-El costo se calcula desde el contrato vigente del kinesiólogo:
-
-```js
-currentKinesiologistOvertimeCost()
-```
-
-Fórmula:
-
-```js
-costoHorasExtras = costoContratoKinesiologoActual * KINESIOLOGIST_OVERTIME_COST_RATE
-```
-
-Valor por defecto:
-
-```js
-KINESIOLOGIST_OVERTIME_COST_RATE = 0.01
-```
-
-Equivale al 1%.
-
-## Reglas de tratamiento
-
-Se creó una función común:
-
-```js
-applyKinesioTreatment(playerId)
-```
-
-La usan:
-
-- el botón individual **Tratar**;
-- el botón masivo **Tratar a todos**.
-
-Esto evita duplicar la lógica de éxito/fallo, reducción de lesión y marca semanal.
-
-## Animaciones progresivas
-
-El botón masivo ejecuta:
-
-```js
-treatAllInjuredPlayers(button)
-```
-
-La función procesa jugadores en secuencia usando pausas configurables:
-
-```js
-KINESIOLOGIST_BULK_TREATMENT_STEP_MS
-```
-
-Valor por defecto:
-
-```js
-650
-```
-
-Cada fila de jugador puede pasar por los estados visuales:
-
-- `is-processing`
-- `is-success`
-- `is-failure`
-
-## Movimiento económico
-
-Al iniciar el tratamiento masivo se registra un movimiento de presupuesto:
-
-```js
-recordBudgetChange(-cost, 'Horas extras médicas: tratamiento de X lesionado(s)', {...})
-```
-
-El cobro ocurre antes de iniciar la secuencia.
-
-## Compatibilidad
-
-- Compatible con partidas existentes.
-- No requiere migración de datos.
-- Reutiliza `game.staffActions.kinesiologyTreatments`.
-- Respeta `currentTurnIndex()` para impedir tratamientos repetidos en la misma semana.
-
-## Archivos modificados en V3.22
+## Archivos modificados
 
 - `config.js`
 - `js/core/01-config-constants.js`
-- `js/game/10-academy-employees.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/ui/06-render-home-messages.js`
 - `style.css`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
+
+## Validaciones realizadas
+
+- Validación de sintaxis JavaScript con `node --check`.
+- Validación de estructura de archivos.
+- Validación de empaquetado ZIP.

@@ -1,4 +1,4 @@
-/* V3.21 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
+/* V3.23 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -511,6 +511,7 @@ function advanceStadiumAfterMatches(results){
   ensureStadiumState();
   const homePlayed = new Set((results || []).map(match => match.homeId));
   homePlayed.forEach(clubId => {
+    if(BOT_FIELDS_FIXED_BY_SEASON && !isManagedClubField(clubId)) return;
     const project = stadiumProjectForClub(clubId);
     if(project.replantingTurnsLeft > 0){
       game.stadium.fields[clubId] = 30;

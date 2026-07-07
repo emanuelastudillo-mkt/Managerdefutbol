@@ -1,4 +1,14 @@
-# Fútbol Manager MVP · V3.22
+# Fútbol Manager MVP
+
+## Versión actual: V3.23
+
+### Último cambio
+
+- El visor de **Próximo compromiso** muestra el estado del campo donde se juega el partido.
+- Los equipos bots tienen campo fijo durante la temporada.
+- Al finalizar la temporada, el estado del campo bot para la temporada siguiente mejora o empeora según la posición final.
+- El campo del club manejado mantiene la lógica dinámica de deterioro y mantenimiento.
+
 
 Versión incremental basada en V3.21.
 

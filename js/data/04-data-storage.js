@@ -1,4 +1,4 @@
-/* V3.17 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
+/* V3.23 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -276,7 +276,7 @@ function fieldConditionClass(score){
 function createInitialStadiumState(){
   const fields = {};
   seed.clubs.forEach(club => { fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club); });
-  return { fields, projects:{} };
+  return { fields, projects:{}, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
@@ -299,9 +299,67 @@ function stadiumProjectForClub(clubId){
   if(!game.stadium.projects[clubId]) game.stadium.projects[clubId] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
   return game.stadium.projects[clubId];
 }
+function isManagedClubField(clubId, managedClubId=null){
+  return Number(clubId) === Number(managedClubId || game?.selectedClubId || 0);
+}
+function initialBotSeasonFieldScore(club){
+  const reputation = clamp(Number(club?.reputation || 60), 1, 100);
+  const divisionBonus = Math.max(0, 4 - Number(club?.divisionOrder || 1)) * 2;
+  const noise = hashNumber(`bot-field-initial-${club?.id || club?.name || ''}-${game?.seasonNumber || 1}`, 9) - 4;
+  return clamp(Math.round(BOT_FIELD_INITIAL_BASE + (reputation - 50) * 0.25 + divisionBonus + noise), BOT_FIELD_MIN_SCORE, BOT_FIELD_MAX_SCORE);
+}
+function finalPositionBotFieldScore(clubId){
+  const club = seed.clubs.find(c => Number(c.id) === Number(clubId));
+  if(!club) return 60;
+  const table = typeof sortedStandings === 'function' ? sortedStandings(club.divisionId || null) : [];
+  const index = table.findIndex(row => Number(row.clubId) === Number(clubId));
+  if(index < 0 || !table.length) return initialBotSeasonFieldScore(club);
+  const normalizedPosition = table.length <= 1 ? 0.5 : 1 - (index / (table.length - 1));
+  const divisionBonus = Math.max(0, 4 - Number(club.divisionOrder || 1)) * 2;
+  const noise = hashNumber(`bot-field-next-${game?.seasonNumber || 1}-${clubId}`, 7) - 3;
+  const score = BOT_FIELD_MIN_SCORE + normalizedPosition * BOT_FIELD_POSITION_RANGE + divisionBonus + noise;
+  return clamp(Math.round(score), BOT_FIELD_MIN_SCORE, BOT_FIELD_MAX_SCORE);
+}
+function assignInitialBotFieldStates(managedClubId){
+  if(!BOT_FIELDS_FIXED_BY_SEASON || !game?.stadium) return;
+  ensureStadiumState();
+  seed.clubs.forEach(club => {
+    if(isManagedClubField(club.id, managedClubId)) return;
+    game.stadium.fields[club.id] = initialBotSeasonFieldScore(club);
+    game.stadium.projects[club.id] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
+  });
+  game.stadium.botSeasonNumber = Number(game.seasonNumber || 1);
+}
+function assignBotFieldStatesForNextSeason(nextManagedClubId, previousManagedClubId=null){
+  if(!BOT_FIELDS_FIXED_BY_SEASON || !game?.stadium) return;
+  ensureStadiumState();
+  const nextManaged = Number(nextManagedClubId || game.selectedClubId || 0);
+  const previousManaged = Number(previousManagedClubId || game.selectedClubId || 0);
+  seed.clubs.forEach(club => {
+    const clubId = Number(club.id);
+    const sameManagedClubContinues = clubId === nextManaged && clubId === previousManaged;
+    if(sameManagedClubContinues) return;
+    game.stadium.fields[clubId] = finalPositionBotFieldScore(clubId);
+    if(clubId !== nextManaged) game.stadium.projects[clubId] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
+  });
+  game.stadium.botSeasonNumber = Number(game.seasonNumber || 1) + 1;
+}
 function fieldBar(score, label=''){
   const value = clamp(Math.round(score), 1, 100);
   return `<div class="field-bar ${fieldConditionClass(value)}" title="${escapeHtml(label || fieldConditionName(value))} ${value}/100"><span style="width:${value}%"></span><em>${value}/100</em></div>`;
+}
+function matchFieldSummaryMarkup(match){
+  if(!match) return '';
+  const score = fieldScoreForClub(match.homeId);
+  const label = fieldConditionName(score);
+  const homeName = clubName(match.homeId);
+  const isManagedHome = Number(match.homeId) === Number(game?.selectedClubId || 0);
+  const fixedText = isManagedHome ? 'Campo propio dinámico' : 'Campo bot fijo esta temporada';
+  return `<div class="next-match-field ${fieldConditionClass(score)}">
+    <div class="next-match-field-head"><span>Campo de juego</span><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong></div>
+    ${fieldBar(score, label)}
+    <small>${escapeHtml(homeName)} · ${score}/100 · ${escapeHtml(fixedText)}</small>
+  </div>`;
 }
 function clubBudgetByPrestige(prestige, prizeMultiplier=1){
   const base = 7000000 + Math.pow(Number(prestige) || 50, 2) * 18000;

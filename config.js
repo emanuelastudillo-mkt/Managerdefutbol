@@ -159,8 +159,8 @@ window.GAME_CONFIG = {
   },
 
   ranking: {
-    // URL publicada para enviar y leer resultados del ranking online.
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec',
+    // URL publicada para enviar y leer resultados del ranking online. //https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec//Original 
+    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbznw5miFxEwd3CV5-lSDpf7dP5RGEUzgHvnG12dNXjKEVvDRqdyw3rlq5eFLiS0gbak/exec',
     // Token simple opcional para restringir envíos.
     token: '',
     resultadosPorPagina: 100,

@@ -1,4 +1,4 @@
-/* V3.24 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
+/* V3.26 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -111,6 +111,8 @@ function applySavedDatabaseSnapshots(saved){
 }
 function currentSavePayload(){
   const payload = structuredClone(game);
+  delete payload._needsAutosave;
+  delete payload._stadiumFieldsAutoRepaired;
   payload.seedSignature = seed?.meta?.signature || payload.seedSignature || '';
   payload.playersSnapshot = structuredClone(seed?.players || []);
   payload.clubsSnapshot = structuredClone(seed?.clubs || []);
@@ -295,6 +297,7 @@ function ensureStadiumState(){
   seed.clubs.forEach(club => {
     if(!Number.isFinite(game.stadium.fields[club.id])) game.stadium.fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
   });
+  repairInvalidBotFieldStates(game, 'ensure_stadium_state', { message:false });
 }
 function fieldScoreForClub(clubId){
   ensureStadiumState();
@@ -310,6 +313,84 @@ function stadiumProjectForClub(clubId){
 }
 function isManagedClubField(clubId, managedClubId=null){
   return Number(clubId) === Number(managedClubId || game?.selectedClubId || 0);
+}
+function isBotFieldClub(clubId, state=game, managedClubId=null){
+  return Number(clubId) !== Number(managedClubId || state?.selectedClubId || 0);
+}
+function botFieldRecoveryScoreForClub(club, state=game){
+  const season = Number(state?.seasonNumber || game?.seasonNumber || 1);
+  const reputation = clamp(Number(club?.reputation || 60), 1, 100);
+  const divisionBonus = Math.max(0, 4 - Number(club?.divisionOrder || 1)) * 2;
+  const noise = hashNumber(`bot-field-repair-${club?.id || club?.name || ''}-${season}`, 11) - 5;
+  return clamp(Math.round(BOT_FIELD_INITIAL_BASE + (reputation - 50) * 0.30 + divisionBonus + noise), BOT_FIELD_MIN_SCORE, BOT_FIELD_MAX_SCORE);
+}
+function botFieldAudit(state=game){
+  const fields = state?.stadium?.fields || {};
+  const selectedClubId = Number(state?.selectedClubId || 0);
+  const bots = seed.clubs.filter(club => Number(club.id) !== selectedClubId);
+  const invalid = [];
+  const unplayable = [];
+  bots.forEach(club => {
+    const raw = Number(fields[club.id]);
+    const score = Number.isFinite(raw) ? Math.round(raw) : NaN;
+    if(!Number.isFinite(score) || score < BOT_FIELD_MIN_SCORE || score <= BOT_FIELD_INVALID_THRESHOLD) invalid.push({ club, score });
+    if(!Number.isFinite(score) || score < 20) unplayable.push({ club, score });
+  });
+  const massUnplayable = bots.length > 0 && (unplayable.length / bots.length) >= BOT_FIELD_MASS_REPAIR_RATIO;
+  return { bots:bots.length, invalid:invalid.length, unplayable:unplayable.length, massUnplayable, invalidItems:invalid, unplayableItems:unplayable };
+}
+function addBotFieldRepairMessage(targetGame, summary, reason){
+  if(!targetGame || !summary?.repaired) return;
+  targetGame.messages = Array.isArray(targetGame.messages) ? targetGame.messages : [];
+  const key = `bot-field-repair-${targetGame.seasonNumber || 1}-${reason}-${summary.repaired}`;
+  if(targetGame.messages.some(msg => msg.id === key)) return;
+  targetGame.messages.unshift({
+    id:key,
+    turn:targetGame.matchdayIndex || 0,
+    season:targetGame.seasonNumber || 1,
+    date:targetGame.currentDate || '',
+    read:false,
+    priority:'normal',
+    type:'sistema',
+    title:'Campos bots corregidos',
+    body:`Se detectaron ${summary.detected} campo(s) bot con estado inválido o injugable. El sistema regeneró ${summary.repaired} campo(s) con valores de temporada entre ${BOT_FIELD_MIN_SCORE}/100 y ${BOT_FIELD_MAX_SCORE}/100.`,
+    action:null,
+    createdAt:Date.now()
+  });
+}
+function repairInvalidBotFieldStates(targetGame=game, reason='stadium_check', options={}){
+  if(!BOT_FIELDS_FIXED_BY_SEASON || !BOT_FIELD_AUTO_REPAIR_ENABLED || !targetGame?.stadium) return { repaired:0, detected:0, unplayable:0, massUnplayable:false };
+  targetGame.stadium.fields = targetGame.stadium.fields || {};
+  targetGame.stadium.projects = targetGame.stadium.projects || {};
+  const audit = botFieldAudit(targetGame);
+  const repairAllBots = audit.massUnplayable;
+  const selectedClubId = Number(targetGame.selectedClubId || 0);
+  const candidates = repairAllBots
+    ? seed.clubs.filter(club => Number(club.id) !== selectedClubId)
+    : audit.invalidItems.map(item => item.club);
+  let repaired = 0;
+  candidates.forEach(club => {
+    if(!club || Number(club.id) === selectedClubId) return;
+    const nextScore = botFieldRecoveryScoreForClub(club, targetGame);
+    targetGame.stadium.fields[club.id] = nextScore;
+    targetGame.stadium.projects[club.id] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
+    repaired += 1;
+  });
+  if(repaired){
+    targetGame.stadium.lastBotFieldAutoRepair = {
+      season:targetGame.seasonNumber || 1,
+      reason,
+      repaired,
+      detected:audit.invalid,
+      unplayable:audit.unplayable,
+      massUnplayable:audit.massUnplayable,
+      createdAt:Date.now()
+    };
+    targetGame._needsAutosave = true;
+    targetGame._stadiumFieldsAutoRepaired = true;
+    if(options.message !== false) addBotFieldRepairMessage(targetGame, targetGame.stadium.lastBotFieldAutoRepair, reason);
+  }
+  return { repaired, detected:audit.invalid, unplayable:audit.unplayable, massUnplayable:audit.massUnplayable };
 }
 function initialBotSeasonFieldScore(club){
   const reputation = clamp(Number(club?.reputation || 60), 1, 100);
@@ -641,11 +722,24 @@ async function loadLocal(silent=false){
       return false;
     }
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
+    const needsAutosave = Boolean(game._needsAutosave);
+    const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
+    delete game._needsAutosave;
+    delete game._stadiumFieldsAutoRepaired;
     const botRepair = repairBotRosters({ reason:'load_game' });
+    const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
+    const shouldAutosave = botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired;
+    delete game._needsAutosave;
+    delete game._stadiumFieldsAutoRepaired;
     activeTab = 'home';
     renderAll();
-    if(botRepair.created || botRepair.converted) saveLocal(true);
-    if(!silent) showNotice('Partida cargada.');
+    if(shouldAutosave) saveLocal(true);
+    if(!silent){
+      const notice = repairedStadiumFields || stadiumRepair.repaired
+        ? 'Partida cargada. Se corrigieron campos bots inválidos.'
+        : (needsAutosave ? 'Partida cargada. Se corrigió el arrastre de lesiones.' : 'Partida cargada.');
+      showNotice(notice);
+    }
     return true;
   }
   if(!silent) showNotice('No hay partida guardada en este navegador.');

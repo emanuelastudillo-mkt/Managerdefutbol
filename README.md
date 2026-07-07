@@ -1,36 +1,33 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.24
+## Versión actual: V3.26
 
-Esta versión agrega una planilla editable de eventos condicionales mediante `data/eventos.json`.
+Reparación automática de campos bots injugables.
+
+## Cambios V3.26
+
+- Auditoría automática de campos bots.
+- Reparación automática de campos bots por debajo del mínimo configurado.
+- Detección de falla masiva cuando muchos bots están injugables.
+- Botón manual en Estadio: “Reparar campos bots injugables”.
+- Mensaje interno cuando se corrige una partida afectada.
+- Autosave al reparar campos bots durante la carga.
+
+## Configuración relevante
+
+```js
+estadio: {
+  botsCampoFijoPorTemporada: true,
+  botsCampoMinimo: 30,
+  botsCampoMaximo: 95,
+  botsCampoBaseInicial: 58,
+  botsCampoRangoPorPosicion: 42,
+  botsCampoAutoRepararEstadosInvalidos: true,
+  botsCampoUmbralInvalido: 29,
+  botsCampoPorcentajeMasivoInjugable: 0.60
+}
+```
 
 ## Cómo usar
 
-Abrir `index.html` desde un servidor local o publicarlo en GitHub Pages. El juego carga la liga, jugadores, sponsors, empleados y eventos desde archivos JSON.
-
-## Archivos principales
-
-- `index.html`: estructura principal.
-- `style.css`: estilos visuales.
-- `config.js`: configuración general editable.
-- `data/Liga Argentina.json`: estructura de ligas y clubes.
-- `data/jugadores.json`: base de jugadores.
-- `data/sponsors.json`: base de sponsors.
-- `data/empleados.json`: base de empleados.
-- `data/eventos.json`: planilla de eventos condicionales.
-- `js/game/14-eventos.js`: motor que interpreta la planilla de eventos.
-
-## Cambios V3.24
-
-- Planilla editable de eventos en `data/eventos.json`.
-- Motor de eventos condicionales.
-- Registro interno `game.eventLog`.
-- Evento AFA por más de 3 lesiones jugando de visitante.
-- Evento de apoyo de hinchas con moral media menor a 50 y 30% de probabilidad.
-- Efectos sobre presupuesto, moral, cohesión y forma física.
-
-## Cambios V3.23
-
-- Estado del campo visible en Próximo compromiso.
-- Campos bots fijos durante la temporada.
-- Reasignación de estado de campos bots al inicio de la temporada siguiente según posición final.
+Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Si una partida guardada tenía campos bots en 1/100, la corrección se aplica al cargarla. También puede ejecutarse desde la pantalla Estadio.

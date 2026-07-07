@@ -130,6 +130,8 @@ function normalizeGame(saved){
   normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
   normalized.playerStatus = normalized.playerStatus || {};
+  normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
+  normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
   normalized.lastTurnSummary = normalized.lastTurnSummary || null;
   normalized.mustReviewTactics = Boolean(normalized.mustReviewTactics);
@@ -216,12 +218,14 @@ function normalizeGame(saved){
   if(!normalized.stadium.fields) normalized.stadium.fields = {};
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c); });
+  repairInvalidBotFieldStates(normalized, 'normalize_game', { message:true });
   Object.values(normalized.playerStats).forEach(stat => {
     if(stat.injuries === undefined) stat.injuries = 0;
     if(stat.played === undefined) stat.played = 0;
     if(stat.yellow === undefined) stat.yellow = 0;
     if(stat.red === undefined) stat.red = 0;
   });
+  repairLegacySeasonStartAvailability(normalized);
   return normalized;
 }
 
@@ -466,6 +470,8 @@ function newGame(selectedClubId, options={}){
     standings: createInitialStandings(),
     playerStats: createInitialPlayerStats(),
     playerStatus: {},
+    statusRebases: {},
+    injuryRecoveryTurnsBySeason: {},
     matchHistory: [],
     fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1) }),
     advanceLockedUntil: 0,
@@ -906,12 +912,192 @@ function applySeasonMovements(){
   });
   game.clubDivisionOverrides = snapshotClubDivisionOverrides();
 }
+
+function statusObjectIsEmpty(status){
+  return !status || Object.keys(status).length === 0;
+}
+function removeInjuryFieldsFromStatus(status){
+  const clean = { ...(status || {}) };
+  delete clean.injuredThrough;
+  delete clean.injuryLabel;
+  delete clean.injuryChance;
+  delete clean.injuredAtMatchday;
+  delete clean.carriedFromPreviousSeason;
+  delete clean.carriedFromSeason;
+  delete clean.rebasedForSeason;
+  return clean;
+}
+function removeSuspensionFieldsFromStatus(status){
+  const clean = { ...(status || {}) };
+  delete clean.suspendedThrough;
+  return clean;
+}
+function rebaseAvailabilityStatusesForSeasonStart(statuses={}, previousMatchdayIndex=0, injuryRecoveryTurns=0, meta={}){
+  const safePreviousIndex = Math.max(0, Math.round(Number(previousMatchdayIndex) || 0));
+  const safeRecovery = Math.max(0, Math.round(Number(injuryRecoveryTurns) || 0));
+  const nextStatuses = {};
+  const summary = {
+    changed:false,
+    injuriesCleared:0,
+    injuriesCarried:0,
+    suspensionsCleared:0,
+    suspensionsCarried:0
+  };
+  Object.entries(statuses || {}).forEach(([playerId, rawStatus]) => {
+    let status = { ...(rawStatus || {}) };
+    const injuryThrough = Number(status.injuredThrough);
+    if(Number.isFinite(injuryThrough)){
+      const remainingTurns = Math.max(0, Math.round(injuryThrough) - safePreviousIndex + 1);
+      const remainingAfterRecovery = Math.max(0, remainingTurns - safeRecovery);
+      summary.changed = true;
+      if(remainingAfterRecovery <= 0){
+        status = removeInjuryFieldsFromStatus(status);
+        summary.injuriesCleared += 1;
+      } else {
+        status.injuredThrough = remainingAfterRecovery - 1;
+        status.injuredAtMatchday = 0;
+        status.carriedFromPreviousSeason = true;
+        status.carriedFromSeason = meta.previousSeason || status.carriedFromSeason || null;
+        status.rebasedForSeason = meta.nextSeason || null;
+        summary.injuriesCarried += 1;
+      }
+    }
+    const suspendedThrough = Number(status.suspendedThrough);
+    if(Number.isFinite(suspendedThrough)){
+      const remainingSuspension = Math.max(0, Math.round(suspendedThrough) - safePreviousIndex + 1);
+      summary.changed = true;
+      if(remainingSuspension <= 0){
+        status = removeSuspensionFieldsFromStatus(status);
+        summary.suspensionsCleared += 1;
+      } else {
+        status.suspendedThrough = remainingSuspension - 1;
+        summary.suspensionsCarried += 1;
+      }
+    }
+    if(!statusObjectIsEmpty(status)) nextStatuses[playerId] = status;
+  });
+  return { statuses:nextStatuses, summary };
+}
+function reduceInjuryDurationsByTurns(turns=1){
+  if(!game?.playerStatus) return { changed:false, cleared:0, reduced:0 };
+  const amount = Math.max(0, Math.round(Number(turns) || 0));
+  if(amount <= 0) return { changed:false, cleared:0, reduced:0 };
+  const result = { changed:false, cleared:0, reduced:0 };
+  Object.entries(game.playerStatus || {}).forEach(([playerId, rawStatus]) => {
+    let status = { ...(rawStatus || {}) };
+    const injuryThrough = Number(status.injuredThrough);
+    if(!Number.isFinite(injuryThrough)) return;
+    const nextThrough = Math.round(injuryThrough) - amount;
+    result.changed = true;
+    if(nextThrough < Number(game.matchdayIndex || 0)){
+      status = removeInjuryFieldsFromStatus(status);
+      result.cleared += 1;
+    } else {
+      status.injuredThrough = nextThrough;
+      result.reduced += 1;
+    }
+    if(statusObjectIsEmpty(status)) delete game.playerStatus[playerId];
+    else game.playerStatus[playerId] = status;
+  });
+  return result;
+}
+function registerInjuryRecoveryTurn(phase='recovery'){
+  if(!game) return;
+  game.injuryRecoveryTurnsBySeason = game.injuryRecoveryTurnsBySeason || {};
+  const key = `${game.seasonNumber || 1}:${phase}`;
+  game.injuryRecoveryTurnsBySeason[key] = Math.max(0, Math.round(Number(game.injuryRecoveryTurnsBySeason[key] || 0))) + 1;
+}
+function injuryRecoveryTurnsRegistered(seasonNumber=game?.seasonNumber || 1, phase='postseason'){
+  const key = `${seasonNumber || 1}:${phase}`;
+  return Math.max(0, Math.round(Number(game?.injuryRecoveryTurnsBySeason?.[key] || 0)));
+}
+function applySeasonStartAvailabilityRebase(previousMatchdayIndex, extraInjuryRecoveryTurns=0){
+  if(!game) return { changed:false };
+  game.playerStatus = game.playerStatus || {};
+  const nextSeason = (game.seasonNumber || 1) + 1;
+  const rebaseKey = `season-${nextSeason}`;
+  game.statusRebases = game.statusRebases || {};
+  if(game.statusRebases[rebaseKey]) return { changed:false, skipped:true };
+  const result = rebaseAvailabilityStatusesForSeasonStart(game.playerStatus, previousMatchdayIndex, extraInjuryRecoveryTurns, { previousSeason:game.seasonNumber || 1, nextSeason });
+  game.playerStatus = result.statuses;
+  game.statusRebases[rebaseKey] = {
+    previousSeason:game.seasonNumber || 1,
+    nextSeason,
+    previousMatchdayIndex:Math.max(0, Math.round(Number(previousMatchdayIndex) || 0)),
+    extraInjuryRecoveryTurns:Math.max(0, Math.round(Number(extraInjuryRecoveryTurns) || 0)),
+    ...result.summary
+  };
+  if(result.summary.changed){
+    const cleared = result.summary.injuriesCleared;
+    const carried = result.summary.injuriesCarried;
+    pushGameMessage({
+      type:'medico',
+      priority:'normal',
+      title:'Parte médico de inicio de temporada',
+      body:`Se recalcularon las lesiones pendientes al cambiar de temporada. Recuperados: ${cleared}. Siguen en recuperación: ${carried}.`
+    });
+  }
+  return { changed:result.summary.changed, ...result.summary };
+}
+function repairLegacySeasonStartAvailability(normalized){
+  if(!normalized || normalized.seasonPhase !== 'preseason' || Number(normalized.matchdayIndex || 0) !== 0) return normalized;
+  normalized.statusRebases = normalized.statusRebases || {};
+  const key = `legacy-season-start-${normalized.seasonNumber || 1}`;
+  if(normalized.statusRebases[key]) return normalized;
+  const statuses = normalized.playerStatus || {};
+  const hasLegacyCarry = Object.values(statuses).some(status => {
+    const injuredThrough = Number(status?.injuredThrough);
+    const injuredAt = Number(status?.injuredAtMatchday);
+    const suspendedThrough = Number(status?.suspendedThrough);
+    return (Number.isFinite(injuredThrough) && Number.isFinite(injuredAt) && injuredAt > 0 && injuredThrough > 0)
+      || (Number.isFinite(suspendedThrough) && suspendedThrough > 5);
+  });
+  if(!hasLegacyCarry) return normalized;
+  const previousFixtureCount = Math.max(0, Array.isArray(normalized.fixtures) ? normalized.fixtures.length : currentSeasonFixtureCount());
+  const previousSeason = Math.max(1, Math.round(Number(normalized.seasonNumber || 1)) - 1);
+  const postseasonRecovery = postseasonTurnsForSeason(previousSeason, previousFixtureCount);
+  const result = rebaseAvailabilityStatusesForSeasonStart(statuses, previousFixtureCount, postseasonRecovery, { previousSeason, nextSeason:normalized.seasonNumber || 1 });
+  normalized.playerStatus = result.statuses;
+  normalized.statusRebases[key] = {
+    previousSeason,
+    nextSeason:normalized.seasonNumber || 1,
+    previousMatchdayIndex:previousFixtureCount,
+    extraInjuryRecoveryTurns:postseasonRecovery,
+    legacyRepair:true,
+    ...result.summary
+  };
+  if(result.summary.changed){
+    normalized._needsAutosave = true;
+    normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
+    normalized.messages.unshift({
+      id:`legacy-medical-repair-${normalized.seasonNumber || 1}-${Date.now()}`,
+      turn:0,
+      season:normalized.seasonNumber || 1,
+      date:normalized.currentDate || '',
+      read:false,
+      priority:'normal',
+      type:'medico',
+      title:'Parte médico corregido',
+      body:`Se corrigió el arrastre de lesiones al inicio de temporada. Recuperados: ${result.summary.injuriesCleared}. Siguen en recuperación: ${result.summary.injuriesCarried}.`,
+      action:null,
+      createdAt:Date.now()
+    });
+  }
+  return normalized;
+}
+
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = Number(game.selectedClubId || 0);
   const nextClubId = Number(selectedClubId || game.selectedClubId);
+  const previousMatchdayIndex = Number(game.matchdayIndex || game.fixtures?.length || 0);
+  const configuredPostseasonRecovery = postseasonTurnsForCurrentSeason();
+  const appliedPostseasonRecovery = injuryRecoveryTurnsRegistered(game.seasonNumber || 1, 'postseason');
+  const missingPostseasonRecovery = Math.max(0, configuredPostseasonRecovery - appliedPostseasonRecovery);
+  applySeasonStartAvailabilityRebase(previousMatchdayIndex, missingPostseasonRecovery);
   assignBotFieldStatesForNextSeason(nextClubId, previousClubId);
+  repairInvalidBotFieldStates(game, 'season_transition', { message:false });
   applySeasonMovements();
   const aging = applySeasonalAging();
   applyAcademyAgingIfNeeded();

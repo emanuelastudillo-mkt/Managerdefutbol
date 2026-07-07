@@ -1,70 +1,21 @@
-# Características de la versión V3.24
+# Características de la versión V3.26
 
-La V3.24 agrega una planilla interna de eventos condicionales para que el juego pueda reaccionar a sucesos deportivos sin mezclar toda la lógica dentro del simulador de partidos.
+La V3.26 corrige el problema de campos de juego bots que podían quedar masivamente en estado injugable, por ejemplo 1/100, incluso después de iniciar una nueva temporada.
 
-## Cambio central
+## Problema corregido
 
-Se creó el archivo:
+Los equipos bots deben tener un campo fijo durante la temporada, con un mínimo configurado. Si muchos bots aparecen con campo 1/100, eso no representa desgaste normal: es un dato corrupto o mal arrastrado.
 
-```text
-data/eventos.json
-```
+## Solución
 
-Ese archivo funciona como una planilla editable. Cada evento tiene:
+- El juego audita los campos bots automáticamente.
+- Si un bot queda por debajo del mínimo configurado, se regenera su campo.
+- Si más del porcentaje configurado de bots está injugable, se considera falla masiva y se regeneran todos los campos bots.
+- La reparación se guarda al cargar la partida.
+- Se agrega mensaje interno cuando el sistema corrige campos bots.
+- Se agrega una auditoría visible en la pantalla Estadio.
+- Se agrega un botón manual para reparar campos bots injugables.
 
-- `id`
-- `activo`
-- `nombre`
-- `fase`
-- `probabilidad`
-- `condiciones`
-- `efectos`
+## Resultado esperado
 
-El motor de eventos está en:
-
-```text
-js/game/14-eventos.js
-```
-
-## Eventos incluidos
-
-### 1. AFA compensa lesiones de visitante
-
-Si el equipo del usuario juega de visitante y sufre más de 3 lesiones, se activa un mensaje de AFA y se acredita una compensación económica.
-
-La compensación equivale a la suma del sueldo de cada jugador lesionado en ese partido.
-
-### 2. Apoyo de hinchas por moral baja
-
-Si la moral media del plantel está por debajo de 50, hay 30% de probabilidad de que los hinchas se acerquen al entrenamiento para apoyar al equipo.
-
-Efectos:
-
-- +10 moral para todos los jugadores.
-- +10 cohesión del equipo.
-- +10 forma física para todos los jugadores.
-- Mensaje de la directiva.
-- Mensaje del asistente.
-
-## Registro interno
-
-Se agregó:
-
-```js
-game.eventLog
-```
-
-Esto permite registrar qué eventos se activaron por temporada, turno y partido. Evita duplicados y deja preparada la base para futuras estadísticas de eventos.
-
-## Preparación para futuras versiones
-
-La estructura permite agregar nuevos eventos como:
-
-- protestas de hinchas;
-- sanciones de AFA;
-- premios de la directiva;
-- problemas de vestuario;
-- bonus por racha positiva;
-- caídas de moral por derrotas fuertes;
-- eventos económicos extraordinarios;
-- conflictos con empleados o jugadores.
+Al cargar una partida afectada, los campos bots dejan de estar en 1/100 y pasan a valores razonables de temporada. El club manejado no se toca: su campo sigue siendo dinámico y depende del mantenimiento hecho por el jugador.

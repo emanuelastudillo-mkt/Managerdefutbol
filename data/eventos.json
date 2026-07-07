@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "V3.24",
+    "version": "V3.26",
     "descripcion": "Planilla editable de eventos condicionales del manager. Cada evento puede activarse por fase, condición, probabilidad y efectos.",
     "nota": "Los tipos de condición y efecto deben existir en js/game/14-eventos.js. Se pueden activar/desactivar eventos con activo true/false."
   },
@@ -12,12 +12,22 @@
       "fase": "post_matchday",
       "probabilidad": 1,
       "condiciones": [
-        { "tipo": "temporada_regular" },
-        { "tipo": "partido_propio_visitante" },
-        { "tipo": "lesiones_propias_mayor_a", "valor": 3 }
+        {
+          "tipo": "temporada_regular"
+        },
+        {
+          "tipo": "partido_propio_visitante"
+        },
+        {
+          "tipo": "lesiones_propias_mayor_a",
+          "valor": 3
+        }
       ],
       "efectos": [
-        { "tipo": "compensacion_sueldos_lesionados", "concepto": "Compensación AFA por lesiones de visitante" },
+        {
+          "tipo": "compensacion_sueldos_lesionados",
+          "concepto": "Compensación AFA por lesiones de visitante"
+        },
         {
           "tipo": "mensaje",
           "mensajeTipo": "afa",
@@ -32,15 +42,29 @@
       "activo": true,
       "nombre": "Apoyo de hinchas cuando la moral está baja",
       "fase": "post_matchday",
-      "probabilidad": 0.30,
+      "probabilidad": 0.3,
       "condiciones": [
-        { "tipo": "temporada_regular" },
-        { "tipo": "moral_media_menor_a", "valor": 50 }
+        {
+          "tipo": "temporada_regular"
+        },
+        {
+          "tipo": "moral_media_menor_a",
+          "valor": 50
+        }
       ],
       "efectos": [
-        { "tipo": "moral_plantel", "valor": 10 },
-        { "tipo": "cohesion_equipo", "valor": 10 },
-        { "tipo": "forma_plantel", "valor": 10 },
+        {
+          "tipo": "moral_plantel",
+          "valor": 10
+        },
+        {
+          "tipo": "cohesion_equipo",
+          "valor": 10
+        },
+        {
+          "tipo": "forma_plantel",
+          "valor": 10
+        },
         {
           "tipo": "mensaje",
           "mensajeTipo": "directiva",

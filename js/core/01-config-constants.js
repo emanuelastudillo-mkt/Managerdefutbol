@@ -1,4 +1,4 @@
-/* V3.24 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.26 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -45,7 +45,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.24');
+const APP_VERSION = configValue('version', 'V3.26');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -161,6 +161,9 @@ const BOT_FIELD_MIN_SCORE = configNumber('estadio.botsCampoMinimo', 30, 1, 100);
 const BOT_FIELD_MAX_SCORE = Math.max(BOT_FIELD_MIN_SCORE, configNumber('estadio.botsCampoMaximo', 95, 1, 100));
 const BOT_FIELD_INITIAL_BASE = configNumber('estadio.botsCampoBaseInicial', 58, 1, 100);
 const BOT_FIELD_POSITION_RANGE = configNumber('estadio.botsCampoRangoPorPosicion', 42, 0, 100);
+const BOT_FIELD_AUTO_REPAIR_ENABLED = configBoolean('estadio.botsCampoAutoRepararEstadosInvalidos', true);
+const BOT_FIELD_INVALID_THRESHOLD = configNumber('estadio.botsCampoUmbralInvalido', Math.max(1, BOT_FIELD_MIN_SCORE - 1), 1, 100);
+const BOT_FIELD_MASS_REPAIR_RATIO = configNumber('estadio.botsCampoPorcentajeMasivoInjugable', 0.60, 0, 1);
 const MARKET_FREE_AGENT_COUNT = configNumber('plantel.agentesLibresIniciales', 300, 0);
 const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 40, 1, 99);
 const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 62, 1, 99));

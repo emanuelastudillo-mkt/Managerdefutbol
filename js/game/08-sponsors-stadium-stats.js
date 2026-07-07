@@ -183,6 +183,28 @@ function activeSponsorsMarkup(){
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Días restantes</th><th>Pago recibido</th></tr></thead><tbody>${active.map(item => `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.total || 0)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
+function botFieldAuditMarkup(){
+  const audit = botFieldAudit(game);
+  const tone = audit.invalid > 0 || audit.massUnplayable ? 'warn' : 'ok';
+  const detail = audit.massUnplayable
+    ? `Detección masiva: ${audit.unplayable}/${audit.bots} campos bots están injugables.`
+    : `${audit.invalid}/${audit.bots} campos bots por debajo del mínimo configurado.`;
+  return `<div class="card stadium-card bot-field-audit ${tone}" style="margin-top:14px">
+    <div class="row"><div><h3>Auditoría de campos bots</h3><p class="muted small">${escapeHtml(detail)} Mínimo bot: ${BOT_FIELD_MIN_SCORE}/100.</p></div><span class="pill ${tone}">${audit.invalid || audit.unplayable ? 'Revisar' : 'Correcto'}</span></div>
+    <div class="row" style="margin-top:10px"><button id="btnRepairBotFields" class="ghost">Reparar campos bots injugables</button></div>
+  </div>`;
+}
+function repairBotFieldsFromUi(){
+  const result = repairInvalidBotFieldStates(game, 'manual_stadium_audit', { message:true });
+  if(result.repaired){
+    saveLocal(true);
+    renderStadium();
+    showNotice(`Campos bots reparados: ${result.repaired}.`);
+  } else {
+    showNotice('No se detectaron campos bots inválidos.');
+  }
+}
+
 
 function renderStadium(){
   ensureStadiumState();
@@ -227,6 +249,7 @@ function renderStadium(){
     </div>
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${formatDaysFromTurns(project.replantingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${formatDaysFromTurns(project.patchingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
+    ${botFieldAuditMarkup()}
     <div class="card sponsors-card" style="margin-top:14px">
       <div class="row"><div><h3>Sponsors</h3><p class="muted small">Cada algunos partidos tendras ofertas publicitarias. El pago se recibe completo al aceptar.</p></div></div>
       <h4>Ofertas disponibles</h4>
@@ -237,6 +260,7 @@ function renderStadium(){
   `;
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
+  $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);
   document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
   document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
 }

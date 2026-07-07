@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.24',
+  version: 'V3.26',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -99,7 +99,11 @@ window.GAME_CONFIG = {
     botsCampoMinimo: 30,
     botsCampoMaximo: 95,
     botsCampoBaseInicial: 58,
-    botsCampoRangoPorPosicion: 42
+    botsCampoRangoPorPosicion: 42,
+    // Reparación defensiva: si los campos bots quedan debajo del mínimo, se consideran datos corruptos y se regeneran.
+    botsCampoAutoRepararEstadosInvalidos: true,
+    botsCampoUmbralInvalido: 29,
+    botsCampoPorcentajeMasivoInjugable: 0.60
   },
   empleados: {
     // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.

@@ -1,33 +1,30 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.26
+## Versión actual: V3.27
 
-Reparación automática de campos bots injugables.
+Doble avance: día y próximo partido.
 
-## Cambios V3.26
+## Cambios V3.27
 
-- Auditoría automática de campos bots.
-- Reparación automática de campos bots por debajo del mínimo configurado.
-- Detección de falla masiva cuando muchos bots están injugables.
-- Botón manual en Estadio: “Reparar campos bots injugables”.
-- Mensaje interno cuando se corrige una partida afectada.
-- Autosave al reparar campos bots durante la carga.
+- Dos botones de avance en la oficina del manager:
+  - **Avanzar día**
+  - **Ir a próximo partido**
+- El avance diario mueve el calendario sólo 1 día durante la temporada regular.
+- El avance diario tiene cooldown de 10 segundos.
+- El avance hasta próximo partido mantiene cooldown de 120 segundos.
+- La barra de progreso queda debajo de ambos botones y ocupa el ancho conjunto.
+- La barra de progreso usa la duración real del bloqueo activo.
+- Si hay un partido pendiente en el día actual, no se puede seguir avanzando días sin jugarlo.
 
 ## Configuración relevante
 
 ```js
-estadio: {
-  botsCampoFijoPorTemporada: true,
-  botsCampoMinimo: 30,
-  botsCampoMaximo: 95,
-  botsCampoBaseInicial: 58,
-  botsCampoRangoPorPosicion: 42,
-  botsCampoAutoRepararEstadosInvalidos: true,
-  botsCampoUmbralInvalido: 29,
-  botsCampoPorcentajeMasivoInjugable: 0.60
+calendario: {
+  bloqueoEntreAvancesMs: 120000,
+  bloqueoAvanceDiaMs: 10000
 }
 ```
 
 ## Cómo usar
 
-Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Si una partida guardada tenía campos bots en 1/100, la corrección se aplica al cargarla. También puede ejecutarse desde la pantalla Estadio.
+Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Usar **Avanzar día** para pasar jornadas sueltas y **Ir a próximo partido** para disputar el siguiente compromiso.

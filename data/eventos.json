@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "V3.26",
+    "version": "V3.27",
     "descripcion": "Planilla editable de eventos condicionales del manager. Cada evento puede activarse por fase, condición, probabilidad y efectos.",
     "nota": "Los tipos de condición y efecto deben existir en js/game/14-eventos.js. Se pueden activar/desactivar eventos con activo true/false."
   },

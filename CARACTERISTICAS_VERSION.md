@@ -1,21 +1,30 @@
-# Características de la versión V3.26
+# Características de la versión V3.27
 
-La V3.26 corrige el problema de campos de juego bots que podían quedar masivamente en estado injugable, por ejemplo 1/100, incluso después de iniciar una nueva temporada.
+La V3.27 separa el avance del calendario en dos acciones: avance diario corto y avance largo hasta el próximo partido.
 
-## Problema corregido
+## Nuevo flujo de avance
 
-Los equipos bots deben tener un campo fijo durante la temporada, con un mínimo configurado. Si muchos bots aparecen con campo 1/100, eso no representa desgaste normal: es un dato corrupto o mal arrastrado.
+En la oficina del manager ahora aparecen dos botones:
 
-## Solución
+- **Avanzar día**: avanza únicamente 1 día de calendario durante la temporada regular.
+- **Ir a próximo partido**: salta al día del próximo compromiso y simula el partido.
 
-- El juego audita los campos bots automáticamente.
-- Si un bot queda por debajo del mínimo configurado, se regenera su campo.
-- Si más del porcentaje configurado de bots está injugable, se considera falla masiva y se regeneran todos los campos bots.
-- La reparación se guarda al cargar la partida.
-- Se agrega mensaje interno cuando el sistema corrige campos bots.
-- Se agrega una auditoría visible en la pantalla Estadio.
-- Se agrega un botón manual para reparar campos bots injugables.
+## Cooldowns
 
-## Resultado esperado
+- El avance diario tiene bloqueo de **10 segundos**.
+- El avance hasta próximo partido mantiene el bloqueo de **120 segundos**.
+- La barra de progreso se ubica debajo de los dos botones y toma el ancho del bloque completo.
+- La barra mide correctamente el bloqueo activo, sea de 10 o de 120 segundos.
 
-Al cargar una partida afectada, los campos bots dejan de estar en 1/100 y pasan a valores razonables de temporada. El club manejado no se toca: su campo sigue siendo dinámico y depende del mantenimiento hecho por el jugador.
+## Protección contra saltarse partidos
+
+Si el calendario ya llegó al día del partido, el botón **Avanzar día** queda bloqueado y obliga a usar **Ir a próximo partido**. Esto evita que el jugador saltee un compromiso oficial por accidente.
+
+## Configuración editable
+
+```js
+calendario: {
+  bloqueoEntreAvancesMs: 120000,
+  bloqueoAvanceDiaMs: 10000
+}
+```

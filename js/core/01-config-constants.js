@@ -1,4 +1,4 @@
-/* V3.26 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.27 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -35,6 +35,7 @@ const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31)
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
 const SEASON_CALENDAR_VERSION = 'annual-365-home-away-v1';
 const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 120000, 0);
+const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
 const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);
 const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
 const ACTION_FEEDBACK_LOADING_MS = configNumber('ui.accionesFeedbackCargaMs', 750, 250, 3000);
@@ -45,7 +46,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.26');
+const APP_VERSION = configValue('version', 'V3.27');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

@@ -1,4 +1,4 @@
-/* V3.26 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
+/* V3.27 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -253,10 +253,92 @@ function setPostseasonTurnSummary(finalized=false){
   };
 }
 
-function simulateNextMatchday(){
+function advanceLockLeftMs(){
+  return Math.max(0, Number(game?.advanceLockedUntil || 0) - Date.now());
+}
+function isAdvanceLocked(){ return advanceLockLeftMs() > 0; }
+function setAdvanceLock(ms){
+  if(!game) return;
+  const duration = Math.max(0, Math.round(Number(ms) || 0));
+  game.advanceLockDurationMs = duration;
+  game.advanceLockedUntil = duration > 0 ? Date.now() + duration : 0;
+}
+function currentCalendarDate(){
+  if(!game) return '';
+  return validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+}
+function nextRegularRound(){
+  if(!game || !isRegularSeason()) return null;
+  if(game.matchdayIndex >= game.fixtures.length) return null;
+  return game.fixtures[game.matchdayIndex] || null;
+}
+function isCurrentDateBeforeIso(targetIso){
+  const today = currentCalendarDate();
+  return validIsoDate(targetIso) && daysBetweenIsoDates(today, targetIso) > 0;
+}
+function isCurrentDateOnOrAfterIso(targetIso){
+  const today = currentCalendarDate();
+  return validIsoDate(targetIso) && daysBetweenIsoDates(today, targetIso) <= 0;
+}
+function setDailyAdvanceSummary(fromDate, toDate){
+  game.lastTurnSummary = {
+    title:'Avance diario',
+    phase:phaseLabel(),
+    result:`${fromDate || '—'} → ${toDate || '—'}`,
+    tone:'info',
+    items:[
+      { label:'Calendario', text:'El juego avanzó un solo día. No se simuló partido.', tone:'info' },
+      { label:'Próximo compromiso', text:nextRegularRound()?.date ? `Programado para ${nextRegularRound().date}.` : 'Sin partido confirmado.', tone:'info' }
+    ],
+    createdAt:Date.now()
+  };
+}
+function advanceOneDay(){
+  if(!game || game.seasonFinalized) return;
+  repairBotRosters({ reason:'before_day_advance' });
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
+  const fromDate = currentCalendarDate();
+  if(isRegularSeason()){
+    if(game.matchdayIndex >= game.fixtures.length){
+      showNotice('La fase regular ya terminó. Usá el avance largo para pasar a postemporada.');
+      return;
+    }
+    const round = nextRegularRound();
+    if(round?.date && isCurrentDateOnOrAfterIso(round.date)){
+      showNotice('Hay un partido pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
+      return;
+    }
+    let nextDate = addDaysToIsoDate(fromDate, 1);
+    if(round?.date && daysBetweenIsoDates(nextDate, round.date) < 0) nextDate = round.date;
+    game.currentDate = nextDate;
+    setDailyAdvanceSummary(fromDate, nextDate);
+    setAdvanceLock(DAY_ADVANCE_LOCK_MS);
+    activeTab = 'home';
+    saveLocal(true);
+    renderAll();
+    showNotice(round?.date && nextDate === round.date ? 'Llegaste al día del partido.' : 'Avanzaste 1 día.');
+    return;
+  }
+  showNotice('El avance diario está disponible durante la temporada regular. En pretemporada y postemporada usá el avance largo.');
+}
+function goToNextMatch(){
+  if(!game || game.seasonFinalized) return;
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
+  if(isRegularSeason()){
+    const round = nextRegularRound();
+    if(round?.date && isCurrentDateBeforeIso(round.date)){
+      game.currentDate = round.date;
+    }
+    simulateNextMatchday({ advanceLabel:'Yendo al próximo partido' });
+    return;
+  }
+  simulateNextMatchday({ advanceLabel:isPreseason() ? 'Avanzando pretemporada' : 'Avanzando postemporada' });
+}
+
+function simulateNextMatchday(options={}){
   if(!game || game.seasonFinalized) return;
   repairBotRosters({ reason:'before_turn' });
-  if((game.advanceLockedUntil || 0) > Date.now()){ showNotice(`${currentWeekdayLabel()}: el siguiente avance se habilita el domingo.`); return; }
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isPreseason()){
     simulatePreseasonTurn();
     return;
@@ -279,7 +361,7 @@ function simulateNextMatchday(){
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
   const budgetBeforeTurn = Number(game.budget || 0);
-  showTurnTransition('Avanzando 7 días');
+  showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
   const round = game.fixtures[game.matchdayIndex];
   const results = round.matches.map(match => simulateMatch(match));
   round.matches.forEach((m,i)=>Object.assign(m, { played:true, homeGoals:results[i].homeGoals, awayGoals:results[i].awayGoals }));
@@ -311,10 +393,10 @@ function simulateNextMatchday(){
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
-    game.advanceLockedUntil = 0;
+    setAdvanceLock(0);
   } else {
-    game.currentDate = game.fixtures[game.matchdayIndex]?.date || addDaysToIsoDate(round.date, DAYS_PER_ADVANCE);
-    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    game.currentDate = validIsoDate(round.date) ? round.date : currentCalendarDate();
+    setAdvanceLock(ADVANCE_LOCK_MS);
   }
   setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, triggeredEvents);
   activeTab = 'home';
@@ -323,7 +405,7 @@ function simulateNextMatchday(){
   const finalNotice = () => {
     if(game.mustReviewTactics){ showNotice('Fecha simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
-    else { showNotice(`Fecha ${round.matchday} simulada. La semana avanza hasta el próximo domingo.`); }
+    else { showNotice(`Fecha ${round.matchday} simulada. El calendario quedó en el día del partido.`); }
   };
   if(ownResult && !regularEnded) showMatchRevealModal(ownResult, finalNotice);
   else finalNotice();
@@ -373,14 +455,14 @@ function simulatePreseasonTurn(){
     game.seasonPhase = 'regular';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
-    game.advanceLockedUntil = 0;
+    setAdvanceLock(0);
     if(Number(game.sponsors?.openingOffersSeason || 0) !== Number(game.seasonNumber || 1)){
       generateOpeningSponsorOffers(true);
     }
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice('Pretemporada finalizada. Ya está disponible la primera fecha oficial.', true);
   } else {
-    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    setAdvanceLock(ADVANCE_LOCK_MS);
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Semana de pretemporada aplicada.', false);
   }
@@ -409,7 +491,7 @@ function simulatePostseasonTurn(){
     game.seasonPhase = 'finalizing';
     game.currentDate = seasonEndDateForYear(currentSeasonYear());
     finalizeSeasonIfNeeded();
-    game.advanceLockedUntil = 0;
+    setAdvanceLock(0);
     setPostseasonTurnSummary(true);
     activeTab = 'home';
     saveLocal(true);
@@ -417,7 +499,7 @@ function simulatePostseasonTurn(){
     setTimeout(openSeasonEndModal, 0);
     showNotice('Postemporada finalizada. Cerró la temporada.', true);
   } else {
-    game.advanceLockedUntil = Date.now() + ADVANCE_LOCK_MS;
+    setAdvanceLock(ADVANCE_LOCK_MS);
     setPostseasonTurnSummary(false);
     activeTab = 'home';
     saveLocal(true);

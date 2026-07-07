@@ -136,6 +136,7 @@ function normalizeGame(saved){
   normalized.lastTurnSummary = normalized.lastTurnSummary || null;
   normalized.mustReviewTactics = Boolean(normalized.mustReviewTactics);
   normalized.advanceLockedUntil = normalized.advanceLockedUntil || 0;
+  normalized.advanceLockDurationMs = Number.isFinite(Number(normalized.advanceLockDurationMs)) ? Number(normalized.advanceLockDurationMs) : ADVANCE_LOCK_MS;
   normalized.matchHistory = normalized.matchHistory || [];
   normalized.seasonNumber = Number.isFinite(normalized.seasonNumber) ? normalized.seasonNumber : 1;
   normalized.seasonYear = Math.round(Number(normalized.seasonYear || 0)) || seasonYearForNumber(normalized.seasonNumber || 1);
@@ -475,6 +476,7 @@ function newGame(selectedClubId, options={}){
     matchHistory: [],
     fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1) }),
     advanceLockedUntil: 0,
+    advanceLockDurationMs: ADVANCE_LOCK_MS,
     mustReviewTactics: false,
     lastOwnProblems: [],
     lastTurnSummary: null,

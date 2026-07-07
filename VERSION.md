@@ -1,51 +1,46 @@
-# Versión V3.26
+# Versión V3.27
 
 ## Nombre
-Reparación automática de campos bots injugables
+Doble avance: día y próximo partido
 
 ## Base
-V3.25 · Corrección de arrastre de lesiones entre temporadas
+V3.26 · Reparación automática de campos bots injugables
 
-## Cambios principales V3.26
+## Cambios principales V3.27
 
-- Se agregó una auditoría automática de campos de juego de equipos bots.
-- Si un campo bot queda por debajo del mínimo configurado, se considera dato corrupto y se regenera.
-- Si se detecta una situación masiva de campos injugables, el sistema repara todos los campos bots de la temporada.
-- La reparación se ejecuta al cargar partida, al normalizar estado, al consultar estado de estadio y al pasar de temporada.
-- Se agregó un bloque visible en la pantalla Estadio: “Auditoría de campos bots”.
-- Se agregó un botón manual: “Reparar campos bots injugables”.
-- Los campos bots reparados quedan entre el mínimo y máximo configurado para temporada.
-- La partida se autosavea cuando se detecta y corrige el problema al cargar.
+- Se reemplazó el botón único de avance por dos botones:
+  - `Avanzar día`
+  - `Ir a próximo partido`
+- `Avanzar día` mueve el calendario sólo 1 día durante la temporada regular.
+- `Avanzar día` usa un cooldown corto configurable de 10 segundos.
+- `Ir a próximo partido` lleva el calendario al día del próximo compromiso y ejecuta el partido.
+- `Ir a próximo partido` mantiene el cooldown largo de 120 segundos.
+- La barra de progreso queda debajo de ambos botones y ocupa el ancho conjunto del bloque.
+- La barra ahora calcula su progreso usando la duración real del bloqueo activo, no siempre 120 segundos.
+- La fecha lateral ahora muestra el día real del calendario guardado.
+- Si ya hay un partido pendiente en el día actual, el avance diario se bloquea para evitar saltarse el encuentro.
 
 ## Configuración agregada
 
 ```js
-estadio: {
-  botsCampoAutoRepararEstadosInvalidos: true,
-  botsCampoUmbralInvalido: 29,
-  botsCampoPorcentajeMasivoInjugable: 0.60
+calendario: {
+  bloqueoEntreAvancesMs: 120000,
+  bloqueoAvanceDiaMs: 10000
 }
 ```
-
-## Criterio aplicado
-
-Los bots tienen campos fijos por temporada y su mínimo configurado es 30/100. Por lo tanto, un campo bot en 1/100 no se interpreta como desgaste legítimo, sino como estado inválido. La V3.26 lo detecta y lo corrige.
 
 ## Archivos modificados
 
 - `config.js`
-- `index.html`
-- `app.js`
-- `data/eventos.json`
 - `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
 - `js/game/09-simulation-economy-training.js`
+- `js/ui/06-render-home-messages.js`
+- `style.css`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
 
 ## Versión anterior
 
-V3.25 · Corrección de arrastre de lesiones entre temporadas
+V3.26 · Reparación automática de campos bots injugables

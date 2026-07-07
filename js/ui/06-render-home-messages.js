@@ -191,7 +191,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     </div>
     <div class="office-side-card">
       ${nextBox}
-      <div class="advance-control office-advance"><button id="advanceBtn" class="primary">Avanzar 7 días</button><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <div class="advance-control office-advance"><div class="advance-buttons"><button id="advanceDayBtn" class="ghost secondary">Avanzar día</button><button id="advanceMatchBtn" class="primary">Ir a próximo partido</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
   </div>`;
 }
@@ -273,7 +273,8 @@ function renderHome(){
     </div>
 
   `;
-  $('advanceBtn')?.addEventListener('click', simulateNextMatchday);
+  $('advanceDayBtn')?.addEventListener('click', advanceOneDay);
+  $('advanceMatchBtn')?.addEventListener('click', goToNextMatch);
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
@@ -284,19 +285,47 @@ function renderHome(){
   updateAdvanceButtonState();
 }
 function updateAdvanceButtonState(){
-  const btn = $('advanceBtn');
-  if(!btn || !game) return;
-  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  const dayBtn = $('advanceDayBtn');
+  const matchBtn = $('advanceMatchBtn');
+  if((!dayBtn && !matchBtn) || !game) return;
+  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
   const seasonEnded = game.seasonFinalized || seasonPhase() === 'finalized';
   const invalid = validateCurrentTactic(false);
-  let text = isPreseason() ? 'Avanzar 7 días de pretemporada' : isPostseason() ? 'Avanzar 7 días de postemporada' : 'Domingo · jugar partido';
-  let disabled = false;
-  if(seasonEnded){ text = 'Temporada finalizada'; disabled = true; }
-  else if(lockLeft > 0){ text = `${currentWeekdayLabel()} · semana en curso`; disabled = true; }
-  else if(isRegularSeason() && game.mustReviewTactics){ text = 'Reemplazar lesionados/suspendidos'; disabled = true; }
-  else if(isRegularSeason() && invalid.length){ text = 'Táctica incompleta'; disabled = true; }
-  btn.textContent = text;
-  btn.disabled = disabled;
+  const round = typeof nextRegularRound === 'function' ? nextRegularRound() : null;
+  const matchToday = Boolean(isRegularSeason() && round?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(round.date));
+  let dayText = isRegularSeason() ? 'Avanzar día' : 'Avance diario en liga';
+  let matchText = isRegularSeason() ? 'Ir a próximo partido' : isPreseason() ? 'Avanzar pretemporada' : isPostseason() ? 'Avanzar postemporada' : 'Ir a próximo partido';
+  let dayDisabled = false;
+  let matchDisabled = false;
+  if(!isRegularSeason()){
+    dayDisabled = true;
+  }
+  if(seasonEnded){
+    dayText = 'Temporada finalizada';
+    matchText = 'Temporada finalizada';
+    dayDisabled = true;
+    matchDisabled = true;
+  }else if(lockLeft > 0){
+    const left = formatClock(lockLeft);
+    dayText = `Espera ${left}`;
+    matchText = `Espera ${left}`;
+    dayDisabled = true;
+    matchDisabled = true;
+  }else{
+    if(isRegularSeason() && matchToday){
+      dayText = 'Partido pendiente hoy';
+      dayDisabled = true;
+    }
+    if(isRegularSeason() && game.mustReviewTactics){
+      matchText = 'Reemplazar lesionados/suspendidos';
+      matchDisabled = true;
+    }else if(isRegularSeason() && invalid.length){
+      matchText = 'Táctica incompleta';
+      matchDisabled = true;
+    }
+  }
+  if(dayBtn){ dayBtn.textContent = dayText; dayBtn.disabled = dayDisabled; }
+  if(matchBtn){ matchBtn.textContent = matchText; matchBtn.disabled = matchDisabled; }
   updateAdvanceProgressBox();
 }
 function updateAdvanceProgressBox(){
@@ -320,9 +349,10 @@ function updateAdvanceProgressBox(){
 }
 function advanceProgressPercent(){
   if(!game) return 0;
-  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
   if(lockLeft <= 0) return 100;
-  return clamp(Math.round(((ADVANCE_LOCK_MS - lockLeft) / ADVANCE_LOCK_MS) * 100), 0, 100);
+  const duration = Math.max(1, Number(game.advanceLockDurationMs || ADVANCE_LOCK_MS || lockLeft));
+  return clamp(Math.round(((duration - lockLeft) / duration) * 100), 0, 100);
 }
 function advanceProgressMarkup(){
   if(!game) return '';
@@ -348,14 +378,16 @@ function formatClock(ms){
   const s = String(total%60).padStart(2,'0');
   return `${m}:${s}`;
 }
+function weekdayLabelFromIso(iso){
+  if(!validIsoDate(iso)) return '—';
+  const labels = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const date = new Date(`${iso}T00:00:00Z`);
+  return labels[date.getUTCDay()] || '—';
+}
 function currentWeekdayLabel(){
   if(!game) return '—';
-  const lockLeft = Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
-  if(lockLeft <= 0) return 'Domingo';
-  const elapsed = clamp(ADVANCE_LOCK_MS - lockLeft, 0, ADVANCE_LOCK_MS);
-  const days = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const index = clamp(Math.floor(elapsed / (ADVANCE_LOCK_MS / days.length)), 0, days.length - 1);
-  return days[index];
+  const iso = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  return weekdayLabelFromIso(iso);
 }
 function refreshSidebarDate(){
   if(!game){

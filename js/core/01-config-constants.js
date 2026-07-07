@@ -48,7 +48,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.32');
+const APP_VERSION = configValue('version', 'V3.33');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -208,6 +208,10 @@ const ACADEMY_DISMISS_COMPENSATION = configNumber('academia.compensacionDespido'
 const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1000000, 0);
 const ACADEMY_VISIBLE_STATS_COUNT = 7;
 const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 3, 1);
+const ACADEMY_EXCEPTIONAL_YOUTH_ENABLED = configBoolean('academia.juvenilExcepcionalPorTemporada', true);
+const ACADEMY_EXCEPTIONAL_YOUTH_AGE = clamp(Math.round(configNumber('academia.edadJuvenilExcepcional', 16, 8)), 8, 20);
+const ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL = clamp(Math.round(configNumber('academia.mediaJuvenilExcepcionalMin', 12, 1)), 1, 40);
+const ACADEMY_EXCEPTIONAL_YOUTH_MAX_OVERALL = Math.max(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL, clamp(Math.round(configNumber('academia.mediaJuvenilExcepcionalMax', 40, 1)), 1, 40));
 
 const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
 const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));

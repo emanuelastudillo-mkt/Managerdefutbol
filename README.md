@@ -1,6 +1,6 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.32
+## Versión actual: V3.33
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
 
@@ -48,6 +48,12 @@ Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el me
 - Apertura de sobres animada carta por carta.
 - Activación de cartas por botón o arrastrando al bloque de cartas activas.
 
+
+
+## V3.33
+- Academia: al iniciar una captación, una vez por temporada llega un juvenil excepcional de 16 años.
+- Ese juvenil puede entrenarse en academia o firmar contrato profesional de inmediato.
+- Se agregó configuración para edad y rango de media inicial del juvenil excepcional.
 
 ## V3.32
 

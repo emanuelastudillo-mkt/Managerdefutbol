@@ -2111,3 +2111,9 @@ button.action-failure{
 .special-reveal-progress{height:8px;margin-top:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10)}
 .special-reveal-progress div{height:100%;border-radius:999px;background:linear-gradient(90deg, rgba(255,207,87,.55), rgba(255,255,255,.78));transition:width .35s ease}
 @keyframes specialCardReveal{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* V3.33 · Juvenil excepcional de academia */
+.academy-player-card.academy-player-special{
+  border-color: rgba(74, 222, 128, 0.45);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.12), 0 12px 28px rgba(0, 0, 0, 0.18);
+}

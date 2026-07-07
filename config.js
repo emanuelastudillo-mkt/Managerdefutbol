@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.32',
+  version: 'V3.33',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -126,7 +126,11 @@ window.GAME_CONFIG = {
     jugadoresMaximosPorCaptacion: 10,
     costoJugadorPorAvance: 10000,
     compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 3
+    multiplicadorEntrenamiento: 3,
+    juvenilExcepcionalPorTemporada: true,
+    edadJuvenilExcepcional: 16,
+    mediaJuvenilExcepcionalMin: 12,
+    mediaJuvenilExcepcionalMax: 40
   },
   entrenamiento: {
     // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.

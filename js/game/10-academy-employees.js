@@ -1,7 +1,7 @@
-/* V3.22 · Academia, captación, juveniles, empleados y tratamientos. */
+/* V3.33 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, exceptionalYouthGrantedSeason:null };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
@@ -11,6 +11,7 @@ function normalizeAcademyState(state){
   clean.unlockedStats = clean.unlockedStats && typeof clean.unlockedStats === 'object' ? clean.unlockedStats : {};
   clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
   clean.youthPreparer = clean.youthPreparer || null;
+  clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
   return clean;
 }
 
@@ -213,6 +214,7 @@ function resetAcademySeasonState(){
   game.academy = normalizeAcademyState(game.academy);
   if(game.academy.youthPreparer){ game.academy.youthPreparer.active = false; }
   game.academy.lastConsultTurn = null;
+  game.academy.exceptionalYouthGrantedSeason = null;
 }
 function normalizeAcademyPlayer(player){
   if(!player) return null;
@@ -309,9 +311,10 @@ function startAcademyScouting(){
   const count = ACADEMY_PLAYERS_MIN + Math.floor(Math.random() * (ACADEMY_PLAYERS_MAX - ACADEMY_PLAYERS_MIN + 1));
   const job = { id:`cap-${Date.now()}-${Math.round(Math.random()*9999)}`, startedTurn:currentTurnIndex(), dueTurn:currentTurnIndex() + ACADEMY_SCOUTING_TURNS, count, status:'pending' };
   game.academy.scoutingJobs.push(job);
+  const exceptionalYouth = grantSeasonalExceptionalAcademyYouth();
   saveLocal(true);
   renderAcademy();
-  showNotice('Captación iniciada. El informe llegará en 35 días.');
+  showNotice(exceptionalYouth ? `Captación iniciada. Además llegó ${exceptionalYouth.name}, juvenil de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años listo para entrenar o subir.` : 'Captación iniciada. El informe llegará en 35 días.');
 }
 function createAcademyBatch(count){
   const players = [];
@@ -334,6 +337,43 @@ function createAcademyBatch(count){
     }));
   }
   return players;
+}
+
+function createExceptionalAcademyYouth(){
+  const id = nextAcademyPlayerId();
+  const group = academyGroupRoll(id);
+  const span = Math.max(0, ACADEMY_EXCEPTIONAL_YOUTH_MAX_OVERALL - ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL);
+  const overall = clamp(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL + hashNumber(`academy-exceptional-overall-${game?.seasonNumber || 1}-${id}-${Math.random()}`, span + 1), 1, 40);
+  return normalizeAcademyPlayer({
+    id,
+    name:academyName(id),
+    nationality:academyNationality(id),
+    age:ACADEMY_EXCEPTIONAL_YOUTH_AGE,
+    group,
+    overall,
+    skills:academySkillsFor(group, overall, id),
+    status:'academy',
+    exceptional:true,
+    source:'captacion_excepcional_temporada',
+    joinedSeason:game?.seasonNumber || 1,
+    joinedTurn:currentTurnIndex()
+  });
+}
+function grantSeasonalExceptionalAcademyYouth(){
+  if(!game?.academy || !ACADEMY_EXCEPTIONAL_YOUTH_ENABLED) return null;
+  game.academy = normalizeAcademyState(game.academy);
+  const season = Number(game.seasonNumber || 1);
+  if(Number(game.academy.exceptionalYouthGrantedSeason || 0) === season) return null;
+  const player = createExceptionalAcademyYouth();
+  game.academy.players.push(player);
+  game.academy.exceptionalYouthGrantedSeason = season;
+  pushGameMessage({
+    type:'academia',
+    title:'Juvenil excepcional incorporado',
+    body:`La captación dejó una oportunidad inmediata: ${player.name}, ${academyGroupLabel(player.group)}, ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, ya puede entrenarse en academia o firmar contrato profesional.`,
+    priority:'normal'
+  });
+  return player;
 }
 function processAcademyScoutingArrivals(){
   if(!game?.academy) return 0;
@@ -517,8 +557,9 @@ function academyPlayerStatsMarkup(player){
 function academyPlayerCard(player){
   const training = academyTrainingType(player.id);
   const canPromote = Number(player.age || 0) >= 16;
-  return `<div class="card academy-player-card">
-    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><span class="pill">Media oculta</span></div>
+  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional</span>' : '<span class="pill">Media oculta</span>';
+  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''}">
+    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div>${specialPill}</div>
     ${academyPlayerStatsMarkup(player)}
     <div class="row academy-actions">
       <select data-academy-training="${player.id}"><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>
@@ -543,7 +584,7 @@ function renderAcademy(){
       <div class="card"><p class="label">Preparador de juveniles</p>${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<div class="metric small">${staffCostLabel('youth_preparer')}</div><button class="primary" id="btnHireYouthPreparer">Contratar</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);

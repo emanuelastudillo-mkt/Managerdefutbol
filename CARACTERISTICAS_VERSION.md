@@ -1,14 +1,18 @@
-# Características de versión - V3.32
+# Características de versión - V3.33
 
-## Ajustes sobre ESPECIAL
-- Al terminar la apertura, las cartas obtenidas dejan de quedar solamente en el bloque de apertura y pasan al inventario de reserva.
-- Se agregó una reparación defensiva para cartas de última apertura: si una carta no aparece en reserva pero existe en el historial reciente, se recupera antes de activar o destruir.
-- Se triplicó el tiempo entre cartas al abrir sobres.
-- La apertura mantiene la revelación de a una carta por vez y luego limpia el bloque temporal de apertura.
+## Ajustes sobre Academia
+- Al iniciar una captación, si todavía no se usó el beneficio de la temporada, llega inmediatamente 1 juvenil excepcional de 16 años.
+- El juvenil queda en la academia como jugador activo, puede entrenarse normalmente y puede subirse al primer equipo por tener edad suficiente.
+- El beneficio es único por temporada: nuevas captaciones de la misma temporada ya no entregan otro juvenil excepcional.
+- El estado se reinicia al comenzar la siguiente temporada.
+- La carta del jugador muestra una marca visual de “Juvenil excepcional”.
 
-## Configuración actualizada
+## Configuración agregada
 ```js
-ui: {
-  especialAperturaCartaMs: 2700
+academia: {
+  juvenilExcepcionalPorTemporada: true,
+  edadJuvenilExcepcional: 16,
+  mediaJuvenilExcepcionalMin: 12,
+  mediaJuvenilExcepcionalMax: 40
 }
 ```

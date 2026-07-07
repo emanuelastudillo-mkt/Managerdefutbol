@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.39',
+  version: 'V3.40',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -79,7 +79,7 @@ window.GAME_CONFIG = {
     // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
     activo: true,
     // suave | normal | dificil
-    dificultad: 'dificill',
+    dificultad: 'dificil',
     soloDivisionManager: true,
     nivelarAlInicioTemporada: true,
     mantenerDuranteTemporada: true,

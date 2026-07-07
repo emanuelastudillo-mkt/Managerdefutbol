@@ -186,13 +186,16 @@ function activeSponsorsMarkup(){
 
 function botFieldAuditMarkup(){
   const audit = botFieldAudit(game);
-  const tone = audit.invalid > 0 || audit.massUnplayable ? 'warn' : 'ok';
+  const needsPetition = audit.invalid > 0 || audit.massUnplayable;
+  const tone = needsPetition ? 'warn' : 'ok';
   const detail = audit.massUnplayable
-    ? `Detección masiva: ${audit.unplayable}/${audit.bots} campos bots están injugables.`
-    : `${audit.invalid}/${audit.bots} campos bots por debajo del mínimo configurado.`;
+    ? `Varios clubes rivales tienen el campo en condiciones inaceptables. La dirigencia puede pedir que se cumplan las condiciones mínimas antes de los próximos partidos.`
+    : needsPetition
+      ? `Se detectaron ${audit.invalid} estadios rivales por debajo de las condiciones mínimas. La dirigencia puede elevar un reclamo formal.`
+      : `La revisión de estadios rivales no encontró campos en condiciones inaceptables.`;
   return `<div class="card stadium-card bot-field-audit ${tone}" style="margin-top:14px">
-    <div class="row"><div><h3>Auditoría de campos bots</h3><p class="muted small">${escapeHtml(detail)} Mínimo bot: ${BOT_FIELD_MIN_SCORE}/100.</p></div><span class="pill ${tone}">${audit.invalid || audit.unplayable ? 'Revisar' : 'Correcto'}</span></div>
-    <div class="row" style="margin-top:10px"><button id="btnRepairBotFields" class="ghost">Reparar campos bots injugables</button></div>
+    <div class="row"><div><h3>Petitorio a la Federación Argentina</h3><p class="muted small">${escapeHtml(detail)}</p></div><span class="pill ${tone}">${needsPetition ? 'Reclamo disponible' : 'Sin reclamo'}</span></div>
+    <div class="row" style="margin-top:10px"><button id="btnRepairBotFields" class="ghost">Presentar petitorio a la Federación Argentina</button></div>
   </div>`;
 }
 function repairBotFieldsFromUi(){
@@ -200,9 +203,9 @@ function repairBotFieldsFromUi(){
   if(result.repaired){
     saveLocal(true);
     renderStadium();
-    showNotice(`Campos bots reparados: ${result.repaired}.`);
+    showNotice(`La Federación Argentina recibió el petitorio. Campos corregidos: ${result.repaired}.`);
   } else {
-    showNotice('No se detectaron campos bots inválidos.');
+    showNotice('La Federación Argentina no encontró campos rivales fuera de reglamento.');
   }
 }
 

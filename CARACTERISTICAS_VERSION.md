@@ -1,26 +1,17 @@
-# Características de la versión V3.29
+# Características de versión - V3.31
 
-## Ajuste agregado
+## Ajustes sobre ESPECIAL
+- Al abrir un sobre, se descuentan inmediatamente los puntos de habilidad del manager.
+- El gasto queda registrado como movimiento negativo en el historial interno de puntos.
+- Se bloquea la apertura simultánea de sobres para evitar dobles descuentos o aperturas superpuestas.
+- Las cartas mostradas en “Última apertura” ahora son accionables: se pueden activar o destruir igual que desde el inventario.
+- Las cartas activables pueden arrastrarse hasta el bloque de cartas activas.
+- La apertura de sobres ahora muestra cartas progresivamente, una por una.
+- Mientras se revela el sobre, las cartas nuevas no se duplican visualmente en el inventario.
 
-- Reordenamiento del menú lateral.
-
-## Detalle
-
-El menú lateral queda ordenado así:
-
-1. Inicio
-2. Mensajes
-3. ESPECIAL
-4. Primer Equipo
-5. Academia
-6. Empleados
-7. Estadio
-8. Mercado
-9. Finanzas
-10. Calendario
-11. Tabla
-12. Estadísticas
-13. Tus estadísticas
-14. Ranking Online
-
-No se modificó lógica de juego, guardado, simulación ni balance.
+## Configuración nueva
+```js
+ui: {
+  especialAperturaCartaMs: 900
+}
+```

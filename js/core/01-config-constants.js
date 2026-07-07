@@ -1,4 +1,4 @@
-/* V3.43 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.44 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -48,10 +48,17 @@ const KINESIOLOGIST_BULK_TREATMENT_STEP_MS = configNumber('ui.kinesiologoTratami
 const SPECIAL_PACK_REVEAL_STEP_MS = configNumber('ui.especialAperturaCartaMs', 2700, 250, 9000);
 const ADVANCE_STATUS_PHRASE_INTERVAL_MS = configNumber('ui.frasesProgresoAvanceIntervaloMs', 10000, 3000, 60000);
 const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvance', [])) ? configValue('ui.frasesProgresoAvance', []).filter(Boolean).map(String) : [];
+const PLAYER_STARS_MAX_PER_CLUB = configNumber('simulador.estrellasMaximasPorEquipo', 3, 0, 10);
+const PLAYER_STARS_WINDOW_MATCHES = Math.round(configNumber('simulador.estrellasPartidosVentana', 10, 1, 30));
+const PLAYER_STAR_GOAL_MATCHES_REQUIRED = Math.round(configNumber('simulador.estrellaGoleadorPartidosConGol', 3, 1, 30));
+const PLAYER_STAR_KEY_SAVE_MATCHES_REQUIRED = Math.round(configNumber('simulador.estrellaArqueroPartidosConTapadaClave', 3, 1, 30));
+const PLAYER_STAR_MID_ASSISTS_REQUIRED = Math.round(configNumber('simulador.estrellaMediocampistaAsistencias', 3, 1, 50));
+const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferencia', 0.30, 0, 2);
+
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.41');
+const APP_VERSION = configValue('version', 'V3.44');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

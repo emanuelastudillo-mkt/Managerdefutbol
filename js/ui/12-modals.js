@@ -1,4 +1,4 @@
-/* V3.43 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.44 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -57,7 +57,7 @@ function showPlayerModal(playerId){
           ${faceImg(p, 'player-photo-placeholder large')}
           <div>
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
-            <h2>${escapeHtml(p.name)}</h2>
+            <h2>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</h2>
             <p class="muted">${escapeHtml(p.nationality || 'Sin nacionalidad')} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
@@ -75,6 +75,8 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
         </div>
         <div class="card inner"><h3>Temporada</h3>
+          <div class="stat-rank"><span>Estrella</span><strong>${playerStarRecord(p) ? playerStarLabel(playerStarRecord(p).type) : '—'}</strong></div>
+          ${playerStarRecord(p) ? `<p class="muted small-copy">${escapeHtml(playerStarRecord(p).reason || '')}</p>` : ''}
           <div class="stat-rank"><span>Partidos</span><strong>${stats?.played || 0}</strong></div>
           <div class="stat-rank"><span>Goles</span><strong>${stats?.goals || 0}</strong></div>
           <div class="stat-rank"><span>Asistencias</span><strong>${stats?.assists || 0}</strong></div>
@@ -101,6 +103,7 @@ function dismissOwnPlayer(playerId){
   player.salaryPaidCount = 0;
   player.lastSalaryPaidSeason = 0;
   refreshPlayerClause(player);
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   game.marketPlayers = game.marketPlayers || [];
   const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
   const copy = { ...player, clubId:0, freeAgent:true, sold:false };
@@ -240,6 +243,7 @@ function processPendingTransfers(){
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
     ensurePlayerStateForAll();
+    if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
     if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(player) : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
     t.status = 'arrived';
     changed = true;

@@ -1,45 +1,26 @@
-# Características de versión - V3.43
+# Características V3.44
 
-## Ajuste de simulación: enfoque jugadorista
+## Agregado
 
-Se ajustó el motor de partido para que ciertos jugadores tengan más peso real en los momentos decisivos sin eliminar la importancia colectiva del equipo.
+### Estrellas de referencia
+Se incorpora un sistema de reconocimiento deportivo para reforzar el enfoque jugadorista del simulador.
 
-### Balance aplicado
+Condiciones:
+- Goleador: marca goles en al menos 3 de los últimos 10 partidos jugados.
+- Arquero: consigue al menos 1 tapada clave en 3 de los últimos 10 partidos jugados.
+- Mediocampista: suma 3 asistencias dentro de una ventana máxima de 10 partidos.
 
-- 70% fuerza colectiva.
-- 30% impacto individual.
+Reglas:
+- Máximo 3 estrellas por equipo.
+- La estrella se muestra junto al nombre del jugador.
+- Si el jugador cambia de club, la estrella desaparece.
+- La estrella debe volver a ganarse en el nuevo club.
 
-La fuerza colectiva sigue definiendo volumen de ataques, posesión, presión y cantidad de ocasiones. El impacto individual interviene en la resolución de cada ocasión: rematador, defensor implicado y arquero.
+## Impacto en simulación
 
-### Nuevas estadísticas visibles
+Las estrellas aumentan el peso individual del jugador al definir protagonistas de jugadas relevantes:
+- rematadores;
+- asistidores;
+- arqueros en tapadas clave.
 
-- **Tapadas clave POR**: atajadas importantes de los arqueros en ocasiones de alto peligro.
-- **Errores**: fallos defensivos o del arquero que generan peligro.
-- **Errores de gol**: errores que terminan directamente en gol rival.
-
-Estas estadísticas aparecen en:
-
-- visor progresivo del partido;
-- ficha completa del partido;
-- ficha de temporada del jugador.
-
-### Cambios deportivos
-
-- Los delanteros y extremos tienen mucho más peso en goles de jugada.
-- Los mediocampistas ofensivos pueden seguir definiendo partidos.
-- Los defensores tienen menos peso como goleadores de jugada normal.
-- Los defensores mantienen opción real de gol en pelota parada.
-- Los arqueros ahora pueden destacarse por tapadas clave.
-- Los jugadores con baja serenidad, posicionamiento o disciplina pueden cometer más errores.
-
-### Configuración editable
-
-```js
-simulador: {
-  pesoColectivo: 0.70,
-  pesoIndividual: 0.30,
-  probabilidadPelotaParada: 0.14,
-  probabilidadErrorTerminaEnGol: 0.28,
-  maximoErroresPorEquipo: 5
-}
-```
+El balance general del simulador mantiene el enfoque 70% colectivo / 30% individual.

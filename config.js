@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.43',
+  version: 'V3.44',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -187,7 +187,14 @@ window.GAME_CONFIG = {
     // Probabilidad base de que un error defensivo o del arquero termine en gol.
     probabilidadErrorTerminaEnGol: 0.28,
     // Máximo de error usado para evitar partidos rotos por errores constantes.
-    maximoErroresPorEquipo: 5
+    maximoErroresPorEquipo: 5,
+    // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
+    estrellasMaximasPorEquipo: 3,
+    estrellasPartidosVentana: 10,
+    estrellaGoleadorPartidosConGol: 3,
+    estrellaArqueroPartidosConTapadaClave: 3,
+    estrellaMediocampistaAsistencias: 3,
+    estrellaBonusReferencia: 0.30
   },
   lesiones: {
     // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.

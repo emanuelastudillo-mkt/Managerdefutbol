@@ -2178,3 +2178,16 @@ button.action-failure{
 }
 .academy-visibility .label{margin-bottom:3px}
 .academy-visibility p:last-child{margin:2px 0 0}
+
+/* V3.44 · Estrellas de referencia de jugadores */
+.player-star{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-right:4px;
+  color:#f6c94c;
+  text-shadow:0 0 8px rgba(246,201,76,.55);
+  font-size:1.02em;
+  vertical-align:baseline;
+}
+.small-copy{font-size:.86rem; line-height:1.35;}

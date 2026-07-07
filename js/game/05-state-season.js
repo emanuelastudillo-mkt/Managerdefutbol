@@ -163,6 +163,9 @@ function normalizeGame(saved){
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
+  normalized.playerStars = normalizePlayerStarsState(normalized.playerStars || {});
+  normalized.playerImpactWindows = normalizePlayerImpactWindows(normalized.playerImpactWindows || {});
+  syncPlayerStarsWithClubs(normalized);
   normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
@@ -458,6 +461,8 @@ function newGame(selectedClubId, options={}){
     managerStats: createInitialManagerStats(),
     messages: [],
     eventLog: [],
+    playerStars: createInitialPlayerStarsState(),
+    playerImpactWindows: {},
     special: typeof createInitialSpecialState === 'function' ? createInitialSpecialState(managerName) : null,
     marketPlayers: [],
     pendingTransfers: [],
@@ -546,6 +551,203 @@ function createInitialPlayerStats(){
   const obj = {};
   seed.players.forEach(p => obj[p.id] = createEmptyPlayerStat(p));
   return obj;
+}
+
+
+function createInitialPlayerStarsState(){
+  return { byPlayerId:{} };
+}
+function normalizePlayerStarsState(state){
+  const src = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const byPlayerId = src.byPlayerId && typeof src.byPlayerId === 'object' && !Array.isArray(src.byPlayerId) ? src.byPlayerId : src;
+  const out = { byPlayerId:{} };
+  Object.entries(byPlayerId || {}).forEach(([id, rec]) => {
+    if(!rec || typeof rec !== 'object') return;
+    const playerId = Number(rec.playerId || id);
+    const clubId = Number(rec.clubId || 0);
+    if(!Number.isFinite(playerId) || !Number.isFinite(clubId) || !playerId || !clubId) return;
+    out.byPlayerId[playerId] = {
+      playerId,
+      clubId,
+      type:String(rec.type || 'referencia'),
+      reason:String(rec.reason || ''),
+      earnedSeason:Number(rec.earnedSeason || rec.season || game?.seasonNumber || 1),
+      earnedTurn:Number(rec.earnedTurn || rec.turn || 0),
+      earnedDate:rec.earnedDate || rec.date || '',
+      locked:true
+    };
+  });
+  return out;
+}
+function normalizePlayerImpactWindows(windows){
+  const src = windows && typeof windows === 'object' && !Array.isArray(windows) ? windows : {};
+  const out = {};
+  Object.entries(src).forEach(([id, list]) => {
+    const playerId = Number(id);
+    if(!Number.isFinite(playerId) || !Array.isArray(list)) return;
+    out[playerId] = list
+      .filter(item => item && typeof item === 'object')
+      .map(item => ({
+        matchId:String(item.matchId || ''),
+        season:Number(item.season || 0),
+        clubId:Number(item.clubId || 0),
+        goals:Number(item.goals || 0),
+        assists:Number(item.assists || 0),
+        keySaves:Number(item.keySaves || 0),
+        played:Boolean(item.played !== false)
+      }))
+      .filter(item => item.clubId > 0)
+      .slice(-PLAYER_STARS_WINDOW_MATCHES);
+  });
+  return out;
+}
+function syncPlayerStarsWithClubs(targetGame=game){
+  if(!targetGame) return 0;
+  targetGame.playerStars = normalizePlayerStarsState(targetGame.playerStars || {});
+  targetGame.playerImpactWindows = normalizePlayerImpactWindows(targetGame.playerImpactWindows || {});
+  let removed = 0;
+  Object.entries(targetGame.playerStars.byPlayerId).forEach(([id, rec]) => {
+    const player = seed?.players?.find(p => Number(p.id) === Number(id));
+    if(!player || Number(player.clubId || 0) !== Number(rec.clubId || 0)){
+      delete targetGame.playerStars.byPlayerId[id];
+      if(targetGame.playerImpactWindows) delete targetGame.playerImpactWindows[id];
+      removed++;
+    }
+  });
+  return removed;
+}
+function playerStarRecord(playerOrId){
+  if(!game) return null;
+  syncPlayerStarsWithClubs(game);
+  const id = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId);
+  const player = typeof playerOrId === 'object' ? playerOrId : playerById(id);
+  const rec = game.playerStars?.byPlayerId?.[id];
+  if(!rec || !player || Number(player.clubId || 0) !== Number(rec.clubId || 0)) return null;
+  return rec;
+}
+function playerStarLabel(type){
+  const map = { goleador:'Referencia goleadora', arquero:'Arquero decisivo', asistidor:'Cerebro asistidor', referencia:'Jugador referencia' };
+  return map[String(type || '')] || 'Jugador referencia';
+}
+function playerStarMarkup(playerOrId){
+  const rec = playerStarRecord(playerOrId);
+  if(!rec) return '';
+  return `<span class="player-star" title="${escapeHtml(playerStarLabel(rec.type))}">★</span>`;
+}
+function playerNameWithStar(player){
+  return `${playerStarMarkup(player)}${escapeHtml(player?.name || 'Jugador')}`;
+}
+function playerStarReferenceMultiplier(player, action='general'){
+  const rec = playerStarRecord(player);
+  if(!rec) return 1;
+  const type = String(rec.type || 'referencia');
+  const kind = String(action || 'general');
+  let multiplier = 1 + PLAYER_STAR_REFERENCE_BONUS;
+  if((type === 'goleador' && kind === 'goal') || (type === 'arquero' && kind === 'save') || (type === 'asistidor' && kind === 'assist')){
+    multiplier += PLAYER_STAR_REFERENCE_BONUS * 0.35;
+  }
+  return clamp(multiplier, 1, 3);
+}
+function activeStarsForClub(clubId, targetGame=game){
+  if(!targetGame) return [];
+  syncPlayerStarsWithClubs(targetGame);
+  return Object.values(targetGame.playerStars?.byPlayerId || {}).filter(rec => Number(rec.clubId || 0) === Number(clubId || 0));
+}
+function compactStarReason(type, metrics){
+  if(type === 'arquero') return `${metrics.keySaveMatches}/${PLAYER_STARS_WINDOW_MATCHES} partidos con tapada clave`;
+  if(type === 'asistidor') return `${metrics.assists}/${PLAYER_STARS_WINDOW_MATCHES} asistencias recientes`;
+  if(type === 'goleador') return `${metrics.goalMatches}/${PLAYER_STARS_WINDOW_MATCHES} partidos convirtiendo`;
+  return 'Rendimiento destacado';
+}
+function evaluatePlayerStarEligibility(player, window){
+  if(!player || !Array.isArray(window) || !window.length) return null;
+  const recent = window.slice(-PLAYER_STARS_WINDOW_MATCHES).filter(item => Number(item.clubId || 0) === Number(player.clubId || 0));
+  const metrics = {
+    goalMatches:recent.filter(item => Number(item.goals || 0) > 0).length,
+    keySaveMatches:recent.filter(item => Number(item.keySaves || 0) > 0).length,
+    assists:recent.reduce((sum, item) => sum + Number(item.assists || 0), 0)
+  };
+  const group = playerRoleGroup(player.position);
+  if(String(player.position || '').toUpperCase() === 'POR' && metrics.keySaveMatches >= PLAYER_STAR_KEY_SAVE_MATCHES_REQUIRED){
+    return { type:'arquero', metrics };
+  }
+  if(group === 'MID' && metrics.assists >= PLAYER_STAR_MID_ASSISTS_REQUIRED){
+    return { type:'asistidor', metrics };
+  }
+  if(String(player.position || '').toUpperCase() !== 'POR' && metrics.goalMatches >= PLAYER_STAR_GOAL_MATCHES_REQUIRED){
+    return { type:'goleador', metrics };
+  }
+  return null;
+}
+function awardPlayerStar(player, eligibility){
+  if(!game || !player || !eligibility) return false;
+  syncPlayerStarsWithClubs(game);
+  const clubId = Number(player.clubId || 0);
+  if(!clubId) return false;
+  if(game.playerStars?.byPlayerId?.[player.id]) return false;
+  if(activeStarsForClub(clubId).length >= PLAYER_STARS_MAX_PER_CLUB) return false;
+  const reason = compactStarReason(eligibility.type, eligibility.metrics || {});
+  game.playerStars.byPlayerId[player.id] = {
+    playerId:Number(player.id),
+    clubId,
+    type:eligibility.type,
+    reason,
+    earnedSeason:Number(game.seasonNumber || 1),
+    earnedTurn:currentTurnIndex(),
+    earnedDate:game.currentDate || '',
+    locked:true
+  };
+  if(clubId === Number(game.selectedClubId)){
+    pushGameMessage({
+      type:'deportivo',
+      priority:'high',
+      title:`${player.name} ganó una estrella`,
+      body:`${player.name} se convirtió en ${playerStarLabel(eligibility.type).toLowerCase()} del equipo. Motivo: ${reason}. Mientras siga en el club tendrá más peso como referencia del simulador.`
+    });
+  }
+  return true;
+}
+function updatePlayerStarTrackingForMatch(result){
+  if(!game || !result || result.friendly) return;
+  syncPlayerStarsWithClubs(game);
+  game.playerImpactWindows = normalizePlayerImpactWindows(game.playerImpactWindows || {});
+  const goalStats = {};
+  (result.goals || []).forEach(goal => {
+    const scorerId = Number(goal.playerId || 0);
+    const assistId = Number(goal.assistId || 0);
+    if(scorerId){ goalStats[scorerId] = goalStats[scorerId] || { goals:0, assists:0 }; goalStats[scorerId].goals += 1; }
+    if(assistId){ goalStats[assistId] = goalStats[assistId] || { goals:0, assists:0 }; goalStats[assistId].assists += 1; }
+  });
+  const saveStats = {};
+  (result.keySaves || []).forEach(save => {
+    const id = Number(save.playerId || 0);
+    if(!id) return;
+    saveStats[id] = (saveStats[id] || 0) + 1;
+  });
+  const playersBySide = [
+    { clubId:Number(result.homeId || 0), ids:result.playedIdsHome || result.starterIdsHome || [] },
+    { clubId:Number(result.awayId || 0), ids:result.playedIdsAway || result.starterIdsAway || [] }
+  ];
+  playersBySide.forEach(side => {
+    [...new Set((side.ids || []).map(Number).filter(Boolean))].forEach(id => {
+      const player = playerById(id);
+      if(!player || Number(player.clubId || 0) !== side.clubId) return;
+      const key = String(id);
+      const previous = (game.playerImpactWindows[key] || []).filter(item => Number(item.clubId || 0) === side.clubId);
+      previous.push({
+        matchId:String(result.id || `${game.seasonNumber || 1}-${game.matchdayIndex || 0}`),
+        season:Number(game.seasonNumber || 1),
+        clubId:side.clubId,
+        goals:Number(goalStats[id]?.goals || 0),
+        assists:Number(goalStats[id]?.assists || 0),
+        keySaves:Number(saveStats[id] || 0),
+        played:true
+      });
+      game.playerImpactWindows[key] = previous.slice(-PLAYER_STARS_WINDOW_MATCHES);
+      const eligibility = evaluatePlayerStarEligibility(player, game.playerImpactWindows[key]);
+      if(eligibility) awardPlayerStar(player, eligibility);
+    });
+  });
 }
 
 function createInitialManagerStats(){
@@ -1346,6 +1548,9 @@ function startNextSeason(selectedClubId){
   game.currentDate = firstAdvanceDateForSeason(game.seasonYear);
   game.standings = createInitialStandings();
   game.playerStats = createInitialPlayerStats();
+  game.playerStars = normalizePlayerStarsState(game.playerStars || {});
+  game.playerImpactWindows = normalizePlayerImpactWindows(game.playerImpactWindows || {});
+  syncPlayerStarsWithClubs(game);
   game.matchHistory = [];
   game.lastOwnProblems = [];
   game.lastTurnSummary = null;

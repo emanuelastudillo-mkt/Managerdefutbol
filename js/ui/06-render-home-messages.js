@@ -1,4 +1,4 @@
-/* V3.28 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
+/* V3.44 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
 
 function renderAll(){
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
@@ -20,6 +20,7 @@ function renderAll(){
     view.innerHTML = $('emptyState').innerHTML;
     return;
   }
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   repairBotRosters({ reason:'render' });
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
@@ -565,6 +566,7 @@ function acceptTransferOffer(messageId){
   player.clubId = -1;
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:-1, sold:true } : p);
   removePlayerFromCurrentTactic(player.id);
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   msg.action.status = 'accepted';
   msg.body += ' Oferta aceptada.';
   saveLocal(true);

@@ -1,4 +1,4 @@
-/* V3.17 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+/* V3.44 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
 
 function firstTeamTabsMarkup(current){
   const tabs = [
@@ -138,7 +138,7 @@ function renderMarket(){
   const free = freeBase.filter(marketPlayerMatchesFilters);
   const rows = free.map(p => `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
-    <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td>${Number(p.age || 0) || '—'}</td>
     <td>${nationalityShortMarkup(p.nationality)}</td>
@@ -166,7 +166,7 @@ function renderContractedMarket(){
     const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
     return `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
-    <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td>${Number(p.age || 0) || '—'}</td>
     <td>${nationalityShortMarkup(p.nationality)}</td>
@@ -208,6 +208,7 @@ function hireFreeAgent(playerId){
   game.playerCondition[playerId] = clamp(game.playerCondition[playerId] || (15 + hashNumber(`free-cond-${playerId}`, 15)), 1, 29);
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
   ensurePlayerStateForAll();
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} se incorporó al plantel como agente libre.`, priority:'normal' });
   saveLocal(true);
   showNotice(`${player?.name || 'Jugador'} contratado.`);
@@ -323,7 +324,7 @@ function worldStatCell(player, key){
 function worldPlayerRow(player){
   return `<tr class="${Number(player.clubId || 0) === game.selectedClubId ? 'own-player-row' : ''}">
     <td>${faceImg(player, 'photo-thumb')}</td>
-    <td><button class="linklike" data-player-id="${player.id}"><strong>${escapeHtml(player.name)}</strong></button></td>
+    <td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${Number(player.age || 0) || '—'}</td>
     <td>${worldPlayerTeamMarkup(player)}</td>
@@ -385,7 +386,7 @@ function renderSquad(){
   const rows = players.map(p=>`
     <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
       <td>${faceImg(p, 'photo-thumb')}</td>
-      <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
+      <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
       <td>#${jerseyNumber(p.id)}</td>
       <td>${Number(p.age || 0) || '—'}</td>
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
@@ -500,7 +501,7 @@ function renderTactics(){
     const fit = p ? playerFitsSlot(p, slot.slot) : false;
     return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
-      <span>${p ? `<strong>${escapeHtml(p.name)}</strong>` : '<span class="muted">Vacío</span>'}</span>
+      <span>${p ? `<strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong>` : '<span class="muted">Vacío</span>'}</span>
       <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
       <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       ${p ? conditionBar(p.id) : '<span></span>'}
@@ -581,7 +582,7 @@ function tacticPlayerRow(p){
   const roleDisabled = isSuspended(p.id) || (isInjured(p.id) && !benchAllowed);
   const mentalityText = current === 'starter' ? playerMentality(p.id) : '—';
   return `<tr class="${unavailable ? 'dim-row' : ''}">
-    <td><button class="linklike" data-player-id="${p.id}"><strong>${escapeHtml(p.name)}</strong></button></td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
     <td>#${jerseyNumber(p.id)}</td>
     <td>${Number(p.age || 0) || '—'}</td>
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>

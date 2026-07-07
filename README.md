@@ -1,10 +1,10 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.43
+## Versión actual: V3.44
 
 Simulador con enfoque jugadorista: 70% fuerza colectiva y 30% impacto individual.
 
-## V3.43
+## V3.44
 
 - Simulador con balance 70% colectivo / 30% individual.
 - Las ocasiones importantes eligen protagonistas reales: rematador, defensor y arquero.
@@ -146,3 +146,8 @@ Cambios destacados:
 El sistema de lesiones fue rebalanceado. Ahora la probabilidad total de lesión se multiplica por `lesiones.multiplicadorProbabilidad`. Con el valor `0.20`, las lesiones bajan un 80% respecto del cálculo anterior.
 
 A cambio, los tiempos de recuperación son más largos y configurables desde `config.js`, con lesiones graves que pueden llegar hasta 400 días.
+
+
+## V3.44 - Estrellas de referencia
+
+Se agrega un sistema de estrellas por rendimiento reciente. Cada club puede tener hasta 3 jugadores referencia. La estrella aparece junto al nombre y aumenta su peso dentro del simulador. Si el jugador cambia de club, pierde la estrella.

@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.41
+## Versión actual: V3.43
 
-Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+Simulador con enfoque jugadorista: 70% fuerza colectiva y 30% impacto individual.
+
+## V3.43
+
+- Simulador con balance 70% colectivo / 30% individual.
+- Las ocasiones importantes eligen protagonistas reales: rematador, defensor y arquero.
+- Menos goles de defensores en jugadas normales.
+- Defensores con opción de gol más ligada a pelota parada.
+- Nuevas estadísticas: Tapadas clave POR, Errores y Errores de gol.
+- El visualizador progresivo de partido muestra tapadas clave y errores.
+- La ficha completa del partido agrega bloques de tapadas clave y errores.
+- Las fichas de jugador registran tapadas clave, errores y errores de gol.
 
 ## V3.41
 

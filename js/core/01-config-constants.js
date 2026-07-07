@@ -1,4 +1,4 @@
-/* V3.42 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.43 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){

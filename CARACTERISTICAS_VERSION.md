@@ -1,32 +1,45 @@
-# Características de versión - V3.42
+# Características de versión - V3.43
 
-## Ajuste de balance: lesiones
+## Ajuste de simulación: enfoque jugadorista
 
-Se ajustó el sistema de lesiones para que ocurran con mucha menos frecuencia, pero cuando sucedan tengan mayor peso deportivo.
+Se ajustó el motor de partido para que ciertos jugadores tengan más peso real en los momentos decisivos sin eliminar la importancia colectiva del equipo.
 
-### Cambios
+### Balance aplicado
 
-- Probabilidad total de lesión reducida en un 80%.
-- La reducción se aplica sobre la chance completa calculada por el motor: base, fatiga y campo de juego.
-- Las recuperaciones son más largas por tipo de lesión.
-- Las fracturas pueden llegar hasta 400 días configurables desde `config.js`.
+- 70% fuerza colectiva.
+- 30% impacto individual.
 
-### Configuración nueva
+La fuerza colectiva sigue definiendo volumen de ataques, posesión, presión y cantidad de ocasiones. El impacto individual interviene en la resolución de cada ocasión: rematador, defensor implicado y arquero.
+
+### Nuevas estadísticas visibles
+
+- **Tapadas clave POR**: atajadas importantes de los arqueros en ocasiones de alto peligro.
+- **Errores**: fallos defensivos o del arquero que generan peligro.
+- **Errores de gol**: errores que terminan directamente en gol rival.
+
+Estas estadísticas aparecen en:
+
+- visor progresivo del partido;
+- ficha completa del partido;
+- ficha de temporada del jugador.
+
+### Cambios deportivos
+
+- Los delanteros y extremos tienen mucho más peso en goles de jugada.
+- Los mediocampistas ofensivos pueden seguir definiendo partidos.
+- Los defensores tienen menos peso como goleadores de jugada normal.
+- Los defensores mantienen opción real de gol en pelota parada.
+- Los arqueros ahora pueden destacarse por tapadas clave.
+- Los jugadores con baja serenidad, posicionamiento o disciplina pueden cometer más errores.
+
+### Configuración editable
 
 ```js
-lesiones: {
-  multiplicadorProbabilidad: 0.20,
-  contusionMinDias: 7,
-  contusionMaxDias: 21,
-  distensionMinDias: 21,
-  distensionMaxDias: 56,
-  desgarroMinDias: 28,
-  desgarroMaxDias: 84,
-  esguinceMinDias: 35,
-  esguinceMaxDias: 105,
-  roturaMinDias: 90,
-  roturaMaxDias: 210,
-  fracturaMinDias: 180,
-  fracturaMaxDias: 400
+simulador: {
+  pesoColectivo: 0.70,
+  pesoIndividual: 0.30,
+  probabilidadPelotaParada: 0.14,
+  probabilidadErrorTerminaEnGol: 0.28,
+  maximoErroresPorEquipo: 5
 }
 ```

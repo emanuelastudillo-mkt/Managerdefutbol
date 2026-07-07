@@ -222,12 +222,7 @@ function normalizeGame(saved){
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c); });
   repairInvalidBotFieldStates(normalized, 'normalize_game', { message:true });
-  Object.values(normalized.playerStats).forEach(stat => {
-    if(stat.injuries === undefined) stat.injuries = 0;
-    if(stat.played === undefined) stat.played = 0;
-    if(stat.yellow === undefined) stat.yellow = 0;
-    if(stat.red === undefined) stat.red = 0;
-  });
+  Object.values(normalized.playerStats).forEach(stat => normalizePlayerStatRecord(stat));
   repairLegacySeasonStartAvailability(normalized);
   return normalized;
 }
@@ -247,7 +242,8 @@ function ensurePlayerStateForAll(){
     if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = p.freeAgent ? 35 + hashNumber(`free-morale-${p.id}`, 55) : PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
-    if(!game.playerStats[p.id]) game.playerStats[p.id] = { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+    if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
+    normalizePlayerStatRecord(game.playerStats[p.id]);
   });
 }
 
@@ -520,9 +516,35 @@ function createInitialStandings(){
   seed.clubs.forEach(c => obj[c.id] = { clubId:c.id, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, dg:0, pts:0 });
   return obj;
 }
+function createEmptyPlayerStat(player){
+  return {
+    playerId:player.id,
+    clubId:player.clubId,
+    goals:0,
+    assists:0,
+    yellow:0,
+    red:0,
+    played:0,
+    injuries:0,
+    keySaves:0,
+    errors:0,
+    goalErrors:0
+  };
+}
+function normalizePlayerStatRecord(stat){
+  if(!stat) return stat;
+  if(stat.injuries === undefined) stat.injuries = 0;
+  if(stat.played === undefined) stat.played = 0;
+  if(stat.yellow === undefined) stat.yellow = 0;
+  if(stat.red === undefined) stat.red = 0;
+  if(stat.keySaves === undefined) stat.keySaves = 0;
+  if(stat.errors === undefined) stat.errors = 0;
+  if(stat.goalErrors === undefined) stat.goalErrors = 0;
+  return stat;
+}
 function createInitialPlayerStats(){
   const obj = {};
-  seed.players.forEach(p => obj[p.id] = { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 });
+  seed.players.forEach(p => obj[p.id] = createEmptyPlayerStat(p));
   return obj;
 }
 
@@ -766,7 +788,8 @@ function initializeFreePlayerState(players=[]){
     game.playerMorale[p.id] = clamp(35 + hashNumber(`free-morale-${p.id}`, 55), 1, 99);
     game.playerSkillBoosts[p.id] = game.playerSkillBoosts[p.id] || {};
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
-    game.playerStats[p.id] = game.playerStats[p.id] || { playerId:p.id, clubId:p.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+    game.playerStats[p.id] = game.playerStats[p.id] || createEmptyPlayerStat(p);
+    normalizePlayerStatRecord(game.playerStats[p.id]);
   });
 }
 function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){

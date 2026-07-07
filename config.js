@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.42',
+  version: 'V3.43',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -176,6 +176,18 @@ window.GAME_CONFIG = {
       afternoon: 'tactical',
       night: 'dayoff'
     }
+  },
+
+  simulador: {
+    // V3.43: enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
+    pesoColectivo: 0.70,
+    pesoIndividual: 0.30,
+    // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
+    probabilidadPelotaParada: 0.14,
+    // Probabilidad base de que un error defensivo o del arquero termine en gol.
+    probabilidadErrorTerminaEnGol: 0.28,
+    // Máximo de error usado para evitar partidos rotos por errores constantes.
+    maximoErroresPorEquipo: 5
   },
   lesiones: {
     // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.

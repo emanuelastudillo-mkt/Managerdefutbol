@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0
+/* Motor de simulación V2.0 · V3.43 jugadorista 70/30
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -24,6 +24,22 @@
     'Muy malo': { passDelta:-20, chanceMultiplier:0.70, fatigueBonus:10, injuryBonus:0.10 },
     'Injugable': { passDelta:-50, chanceMultiplier:0.50, fatigueBonus:20, injuryBonus:0.30 }
   };
+
+  function simConfigValue(path, fallback){
+    return String(path || '').split('.').reduce((node, key) => (node && Object.prototype.hasOwnProperty.call(node, key)) ? node[key] : undefined, window.GAME_CONFIG || {}) ?? fallback;
+  }
+  function simConfigNumber(path, fallback, min=null, max=null){
+    const raw = Number(simConfigValue(path, fallback));
+    let value = Number.isFinite(raw) ? raw : Number(fallback);
+    if(Number.isFinite(min)) value = Math.max(min, value);
+    if(Number.isFinite(max)) value = Math.min(max, value);
+    return value;
+  }
+  const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.70, 0, 1);
+  const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
+  const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
+  const SIM_ERROR_GOAL_RATE = simConfigNumber('simulador.probabilidadErrorTerminaEnGol', 0.28, 0, 1);
+  const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
 
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
@@ -158,7 +174,7 @@
     total.passScore += block.passScore;
     total.possessionWeighted += block.possession;
   }
-  function emptyStats(){ return { attacks:0, chances:0, possession:50, fouls:0, passScore:0, xg:0, possessionWeighted:0 }; }
+  function emptyStats(){ return { attacks:0, chances:0, possession:50, fouls:0, passScore:0, xg:0, possessionWeighted:0, keySaves:0, errors:0, goalErrors:0 }; }
   function finalizeStats(stats){
     return {
       attacks:simClamp(Math.round(stats.attacks), 1, 75),
@@ -166,7 +182,10 @@
       possession:simClamp(Math.round(stats.possessionWeighted / BLOCKS.length), 20, 80),
       fouls:simClamp(Math.round(stats.fouls), 0, 32),
       passScore:simClamp(Math.round(stats.passScore / BLOCKS.length), 1, 140),
-      xg:Number(stats.xg.toFixed(2))
+      xg:Number(stats.xg.toFixed(2)),
+      keySaves:Math.round(Number(stats.keySaves || 0)),
+      errors:Math.round(Number(stats.errors || 0)),
+      goalErrors:Math.round(Number(stats.goalErrors || 0))
     };
   }
   function poissonV2(lambda){
@@ -183,11 +202,24 @@
     for(const x of weighted){ r -= x.w; if(r<=0) return x.item; }
     return weighted[0]?.item;
   }
-  function scorerWeightV2(player){
+  function playerRoleCodeV2(player){
+    const pos = String(player?.position || '').toUpperCase();
+    if(pos === 'POR') return 'gk';
+    if(['DC','ED','EI'].includes(pos)) return 'att';
+    if(['MCO','MC','MCD'].includes(pos)) return 'mid';
+    return 'def';
+  }
+  function scorerWeightV2(player, setPiece=false){
     if(!player) return 1;
-    if(player.position === 'POR') return 0.35;
-    const posBonus = player.position === 'DC' ? 125 : ['ED','EI'].includes(player.position) ? 88 : player.position === 'MCO' ? 58 : player.position === 'MC' ? 22 : player.position === 'MCD' ? 10 : 5;
-    return effectiveSkill(player,'remate') * 1.35 + effectiveSkill(player,'posicionamiento') * 1.15 + effectiveSkill(player,'serenidad') * 0.45 + currentMorale(player.id) * 0.20 + posBonus;
+    if(player.position === 'POR') return 0.05;
+    const pos = String(player.position || '').toUpperCase();
+    if(setPiece){
+      const setPieceBonus = pos === 'DC' ? 110 : ['DFC','LD','LI'].includes(pos) ? 72 : ['ED','EI','MCO'].includes(pos) ? 46 : ['MC','MCD'].includes(pos) ? 28 : 12;
+      return effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35 + setPieceBonus;
+    }
+    const posBonus = pos === 'DC' ? 160 : ['ED','EI'].includes(pos) ? 118 : pos === 'MCO' ? 72 : pos === 'MC' ? 28 : pos === 'MCD' ? 9 : 2;
+    const rolePenalty = ['DFC','LD','LI'].includes(pos) ? 0.28 : pos === 'MCD' ? 0.55 : 1;
+    return (effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20 + posBonus) * rolePenalty;
   }
   function cardWeightV2(player){
     if(!player) return 1;
@@ -195,14 +227,99 @@
     const roleBonus = ['DFC','MCD'].includes(player.position) ? 30 : ['LD','LI'].includes(player.position) ? 20 : player.position === 'MC' ? 12 : 6;
     return hiddenStats(player).aggression * 0.75 + (100 - effectiveSkill(player,'disciplina')) * 0.30 + roleBonus;
   }
-  function makeGoalV2(clubId, lineup, minute){
-    const outfield = (lineup || []).filter(p => p.position !== 'POR');
-    const scorerPool = outfield.length ? outfield : lineup;
-    const scorer = weightedPickV2(scorerPool, scorerWeightV2);
-    const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id);
-    const hasAssist = Math.random() < 0.72;
-    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => p.position === 'POR' ? 0.75 : effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?25:5)) : null;
-    return { clubId, playerId:scorer.id, assistId:assister?.id || null, minute };
+  function selectChanceShooterV2(power, setPiece=false){
+    const outfield = (power.lineup || []).filter(p => p.position !== 'POR');
+    const scorerPool = outfield.length ? outfield : power.lineup;
+    return weightedPickV2(scorerPool, p => scorerWeightV2(p, setPiece));
+  }
+  function goalkeeperFromPowerV2(power){
+    return (power.lineup || []).find(p => p.position === 'POR') || null;
+  }
+  function defensivePlayerWeightV2(player){
+    if(!player || player.position === 'POR') return 1;
+    const pos = String(player.position || '').toUpperCase();
+    const roleBonus = ['DFC','LD','LI'].includes(pos) ? 95 : pos === 'MCD' ? 68 : pos === 'MC' ? 34 : 14;
+    return effectiveSkill(player,'marca') * 0.95 + effectiveSkill(player,'entradas') * 0.90 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.28 + roleBonus;
+  }
+  function errorPlayerWeightV2(player){
+    if(!player) return 1;
+    const pos = String(player.position || '').toUpperCase();
+    const rolePressure = pos === 'POR' ? 62 : ['DFC','LD','LI'].includes(pos) ? 44 : pos === 'MCD' ? 24 : 10;
+    const safety = effectiveSkill(player,'serenidad') * 0.38 + effectiveSkill(player,'posicionamiento') * 0.34 + effectiveSkill(player,'disciplina') * 0.18 + currentMorale(player.id) * 0.10;
+    return Math.max(1, rolePressure + (95 - safety));
+  }
+  function makeGoalV2(clubId, lineup, minute, details={}){
+    const scorer = details.scorer || selectChanceShooterV2({ lineup }, Boolean(details.setPiece));
+    if(!scorer) return { clubId, playerId:null, assistId:null, minute, setPiece:Boolean(details.setPiece), errorGoal:Boolean(details.errorGoal), errorById:details.errorById || null, chanceQuality:Number(details.chanceQuality || 0) };
+    const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id && p.position !== 'POR');
+    const hasAssist = !details.errorGoal && Math.random() < (details.setPiece ? 0.58 : 0.72);
+    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?30:6)) : null;
+    return {
+      clubId,
+      playerId:scorer.id,
+      assistId:assister?.id || null,
+      minute,
+      setPiece:Boolean(details.setPiece),
+      errorGoal:Boolean(details.errorGoal),
+      errorById:details.errorById || null,
+      chanceQuality:Number(details.chanceQuality || 0)
+    };
+  }
+  function resolveChanceV2(attacking, defending, attackingClubId, defendingClubId, minute, baseGoalProb, homeOrAwayTotals, rivalTotals, incidents){
+    const setPiece = Math.random() < SIM_SET_PIECE_CHANCE;
+    const shooter = selectChanceShooterV2(attacking, setPiece);
+    if(!shooter) return null;
+    const defenderPool = (defending.lineup || []).filter(p => p.position !== 'POR');
+    const defender = weightedPickV2(defenderPool, defensivePlayerWeightV2);
+    const keeper = goalkeeperFromPowerV2(defending);
+    const shooterScore = simAvg([
+      effectiveSkill(shooter,'remate') * 1.15,
+      effectiveSkill(shooter,'posicionamiento'),
+      effectiveSkill(shooter,'serenidad'),
+      setPiece ? effectiveSkill(shooter,'cabezazo') * 1.15 : effectiveSkill(shooter,'regate') * 0.85,
+      currentMorale(shooter.id) * 0.45
+    ]);
+    const defenderScore = defender ? simAvg([
+      effectiveSkill(defender,'marca'),
+      effectiveSkill(defender,'entradas'),
+      effectiveSkill(defender,'posicionamiento'),
+      effectiveSkill(defender,'serenidad') * 0.55
+    ]) : 44;
+    const keeperScore = keeper ? simAvg([
+      effectiveSkill(keeper,'porteria') * 1.35,
+      effectiveSkill(keeper,'posicionamiento'),
+      effectiveSkill(keeper,'serenidad') * 0.85,
+      currentMorale(keeper.id) * 0.35
+    ]) : 38;
+    const individualGoalProb = simClamp(0.16 + (shooterScore - (keeperScore * 0.56 + defenderScore * 0.44)) / 150 + (setPiece ? 0.015 : 0), 0.025, 0.72);
+    const collectiveWeight = simClamp(SIM_TEAM_WEIGHT, 0, 1);
+    const individualWeight = simClamp(SIM_INDIVIDUAL_WEIGHT, 0, 1);
+    const divisor = Math.max(0.01, collectiveWeight + individualWeight);
+    const goalProb = simClamp(((baseGoalProb * collectiveWeight) + (individualGoalProb * individualWeight)) / divisor, 0.018, 0.78);
+    const defensiveSafety = keeper ? keeperScore * 0.55 + defenderScore * 0.45 : defenderScore;
+    const teamErrors = Number(rivalTotals.errors || 0);
+    const errorChance = teamErrors >= SIM_MAX_TEAM_ERRORS ? 0 : simClamp(0.015 + (74 - defensiveSafety) / 1200 + baseGoalProb * 0.035 + (setPiece ? 0.008 : 0), 0.004, 0.12);
+    const errorHappens = Math.random() < errorChance;
+    let errorEvent = null;
+    let errorGoal = false;
+    if(errorHappens){
+      const errorPlayer = weightedPickV2([keeper].concat(defenderPool).filter(Boolean), errorPlayerWeightV2);
+      errorGoal = Math.random() < simClamp(SIM_ERROR_GOAL_RATE + baseGoalProb * 0.32 + (individualGoalProb > 0.35 ? 0.05 : 0), 0.04, 0.72);
+      rivalTotals.errors = Number(rivalTotals.errors || 0) + 1;
+      if(errorGoal) rivalTotals.goalErrors = Number(rivalTotals.goalErrors || 0) + 1;
+      errorEvent = { clubId:defendingClubId, playerId:errorPlayer?.id || null, minute, goal:errorGoal, causedBy:attackingClubId };
+      incidents.errors.push(errorEvent);
+    }
+    const goal = errorGoal || Math.random() < goalProb;
+    if(goal){
+      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal, errorById:errorEvent?.playerId || null, chanceQuality:goalProb });
+    }
+    const saveBase = simClamp(0.28 + (keeperScore - shooterScore) / 240 + baseGoalProb * 0.75, 0.08, 0.82);
+    if(keeper && (baseGoalProb >= 0.11 || individualGoalProb >= 0.22) && Math.random() < saveBase){
+      rivalTotals.keySaves = Number(rivalTotals.keySaves || 0) + 1;
+      incidents.keySaves.push({ clubId:defendingClubId, playerId:keeper.id, minute, chanceById:shooter.id, chanceQuality:Number(goalProb.toFixed(2)) });
+    }
+    return null;
   }
   function makeCardsV2(clubId, power, fouls){
     const cards = [];
@@ -284,6 +401,7 @@
     const matchContext = makeMatchContextV2(match);
     const homeTotals = emptyStats();
     const awayTotals = emptyStats();
+    const incidents = { keySaves:[], errors:[] };
     const goals = [];
     let homeGoals = 0;
     let awayGoals = 0;
@@ -294,10 +412,18 @@
       const a = blockStatsForTeam(away, home, matchContext, awayInstruction, homeInstruction, false, block);
       mergeBlockStats(homeTotals, h);
       mergeBlockStats(awayTotals, a);
-      const hGoals = Math.min(poissonV2(h.xg), h.chances);
-      const aGoals = Math.min(poissonV2(a.xg), a.chances);
-      for(let i=0;i<hGoals;i++) goals.push(makeGoalV2(match.homeId, home.lineup, Math.floor(simRnd(block.from, block.to + 1))));
-      for(let i=0;i<aGoals;i++) goals.push(makeGoalV2(match.awayId, away.lineup, Math.floor(simRnd(block.from, block.to + 1))));
+      let hGoals = 0;
+      let aGoals = 0;
+      const hBaseProb = h.chances > 0 ? simClamp(h.xg / Math.max(1, h.chances), 0.025, 0.70) : 0;
+      const aBaseProb = a.chances > 0 ? simClamp(a.xg / Math.max(1, a.chances), 0.025, 0.70) : 0;
+      for(let i=0;i<h.chances;i++){
+        const goal = resolveChanceV2(home, away, match.homeId, match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, homeTotals, awayTotals, incidents);
+        if(goal){ goals.push(goal); hGoals++; }
+      }
+      for(let i=0;i<a.chances;i++){
+        const goal = resolveChanceV2(away, home, match.awayId, match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, awayTotals, homeTotals, incidents);
+        if(goal){ goals.push(goal); aGoals++; }
+      }
       homeGoals += hGoals;
       awayGoals += aGoals;
     }
@@ -318,8 +444,8 @@
     if(!match.friendly){
       applyMatchCohesionResult(match, substitutions, cards);
       applyResultToTables(match, homeGoals, awayGoals);
-      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries);
-      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries);
+      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
+      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
       applyAvailability(cards, injuries);
     }
     const starterIdsHome = home.lineup.map(p=>p.id);
@@ -330,7 +456,7 @@
       instructionConditionDelta(homeTactic, homeGoals, awayGoals, starterIdsHome),
       instructionConditionDelta(awayTactic, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas };
+    return { ...match, played:true, engine:'simulador-2.0-jugadorista', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

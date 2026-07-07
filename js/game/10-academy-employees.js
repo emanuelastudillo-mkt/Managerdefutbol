@@ -522,7 +522,7 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerMorale[official.id] = PLAYER_MORALE_START;
   game.playerSkillBoosts[official.id] = {};
   game.trainingPlan[official.id] = safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL);
-  game.playerStats[official.id] = { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();
   player.promotedPosition = position;

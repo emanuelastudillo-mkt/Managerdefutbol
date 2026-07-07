@@ -1,4 +1,4 @@
-/* V3.04 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
+/* V3.43 · Motor alternativo de partido, eventos, lesiones, estadísticas y limpieza táctica. */
 
 function simulateMatch(match){
   if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);
@@ -198,7 +198,7 @@ function applyResultToTables(match, hg, ag){
   else { h.pe++; a.pe++; h.pts++; a.pts++; }
   h.dg = h.gf - h.gc; a.dg = a.gf - a.gc;
 }
-function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries){
+function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries, keySaves=[], errors=[]){
   const playedIds = new Set(lineup.map(p => p.id));
   substitutions.filter(s => s.clubId === clubId).forEach(s => playedIds.add(s.inId));
   playedIds.forEach(id => { if(game.playerStats[id]) game.playerStats[id].played++; });
@@ -213,6 +213,15 @@ function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries)
   });
   injuries.filter(i=>i.clubId===clubId).forEach(i=>{
     if(game.playerStats[i.playerId]) game.playerStats[i.playerId].injuries++;
+  });
+  keySaves.filter(s=>s.clubId===clubId).forEach(s=>{
+    if(game.playerStats[s.playerId]) game.playerStats[s.playerId].keySaves = Number(game.playerStats[s.playerId].keySaves || 0) + 1;
+  });
+  errors.filter(e=>e.clubId===clubId).forEach(e=>{
+    if(game.playerStats[e.playerId]){
+      game.playerStats[e.playerId].errors = Number(game.playerStats[e.playerId].errors || 0) + 1;
+      if(e.goal) game.playerStats[e.playerId].goalErrors = Number(game.playerStats[e.playerId].goalErrors || 0) + 1;
+    }
   });
 }
 function applyAvailability(cards, injuries){

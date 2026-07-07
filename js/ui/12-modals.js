@@ -1,4 +1,4 @@
-/* V3.08 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V3.43 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -78,6 +78,8 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Partidos</span><strong>${stats?.played || 0}</strong></div>
           <div class="stat-rank"><span>Goles</span><strong>${stats?.goals || 0}</strong></div>
           <div class="stat-rank"><span>Asistencias</span><strong>${stats?.assists || 0}</strong></div>
+          <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats?.keySaves || 0}</strong></div>
+          <div class="stat-rank"><span>Errores / de gol</span><strong>${stats?.errors || 0} / ${stats?.goalErrors || 0}</strong></div>
           <div class="stat-rank"><span>Tarjetas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0} / <span class="red-card">■</span> ${stats?.red || 0}</strong></div>
         </div>
         ${playerModalActionsMarkup(p)}
@@ -238,7 +240,7 @@ function processPendingTransfers(){
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
     ensurePlayerStateForAll();
-    if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0 };
+    if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(player) : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
     t.status = 'arrived';
     changed = true;
     pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.`, priority:'high' });
@@ -425,13 +427,18 @@ function partialMatchStats(stats, factor){
     chances: Math.round((stats.chances || 0) * factor),
     possession: stats.possession,
     fouls: Math.round((stats.fouls || 0) * factor),
-    passScore: stats.passScore
+    passScore: stats.passScore,
+    keySaves: Math.round((stats.keySaves || 0) * factor),
+    errors: Math.round((stats.errors || 0) * factor),
+    goalErrors: Math.round((stats.goalErrors || 0) * factor)
   };
 }
 function revealTeamStatsCard(clubId, stats, sideLabel){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
     <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
+    <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
     <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
     <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
@@ -443,6 +450,8 @@ function matchRevealEvents(match, minute){
   (match.cards || []).forEach(c => events.push({ minute:c.minute, type:'card', data:c }));
   (match.injuries || []).forEach(i => events.push({ minute:i.minute, type:'injury', data:i }));
   (match.substitutions || []).forEach(s => events.push({ minute:s.minute, type:'sub', data:s }));
+  (match.keySaves || []).forEach(k => events.push({ minute:k.minute, type:'keySave', data:k }));
+  (match.errors || []).forEach(e => events.push({ minute:e.minute, type:'error', data:e }));
   return events.filter(e => e.minute <= minute).sort((a,b)=>a.minute-b.minute);
 }
 function revealEventLine(event){
@@ -450,7 +459,14 @@ function revealEventLine(event){
     const g = event.data;
     const p = playerById(g.playerId);
     const a = g.assistId ? playerById(g.assistId) : null;
-    return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'}</strong></div>`;
+    const detail = g.errorGoal ? 'Error rival' : (g.setPiece ? 'Pelota parada' : (a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(playerLastName(a.name))}` : 'Sin asist.'));
+    return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${detail}</strong></div>`;
+  }
+  if(event.type === 'keySave'){
+    return keySaveLine(event.data);
+  }
+  if(event.type === 'error'){
+    return errorLine(event.data);
   }
   if(event.type === 'card'){
     return cardLine(event.data);
@@ -488,6 +504,8 @@ function showMatchModal(matchId){
     </div>
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card inner"><h3>Goles</h3>${match.goals.length ? match.goals.map(goalLine).join('') : '<p class="muted">Sin goles.</p>'}</div>
+      <div class="card inner"><h3>Tapadas clave POR</h3>${match.keySaves?.length ? match.keySaves.map(keySaveLine).join('') : '<p class="muted">Sin tapadas clave.</p>'}</div>
+      <div class="card inner"><h3>Errores</h3>${match.errors?.length ? match.errors.map(errorLine).join('') : '<p class="muted">Sin errores decisivos.</p>'}</div>
       <div class="card inner"><h3>Amonestados y expulsados</h3>${match.cards.length ? match.cards.map(cardLine).join('') : '<p class="muted">Sin tarjetas.</p>'}</div>
       <div class="card inner"><h3>Cambios automáticos</h3>${match.substitutions?.length ? match.substitutions.map(subLine).join('') : '<p class="muted">Sin cambios automáticos ejecutados.</p>'}</div>
       <div class="card inner"><h3>Lesiones</h3>${match.injuries?.length ? match.injuries.map(injuryLine).join('') : '<p class="muted">Sin lesiones.</p>'}</div>
@@ -498,6 +516,8 @@ function matchStatsCard(clubId, stats, sideLabel){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
     <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
+    <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
     <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
     <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
@@ -506,7 +526,17 @@ function matchStatsCard(clubId, stats, sideLabel){
 function goalLine(g){
   const p = playerById(g.playerId);
   const a = g.assistId ? playerById(g.assistId) : null;
-  return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'}</strong></div>`;
+  const detail = g.errorGoal ? 'Error rival' : (g.setPiece ? 'Pelota parada' : (a ? `<span class="event-icon boot">🥾</span> ${escapeHtml(a.name.split(' ').slice(-1)[0])}` : 'Sin asist.'));
+  return `<div class="stat-rank event-line"><span>${g.minute}' <span class="event-icon ball">⚽</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(g.clubId)}</span><strong>${detail}</strong></div>`;
+}
+function keySaveLine(k){
+  const p = playerById(k.playerId);
+  const shooter = k.chanceById ? playerById(k.chanceById) : null;
+  return `<div class="stat-rank event-line"><span>${k.minute}' 🧤 ${escapeHtml(p?.name || 'Arquero')} ${clubBadge(k.clubId)}</span><strong>${shooter ? `a ${escapeHtml(playerLastName(shooter.name))}` : 'Tapada clave'}</strong></div>`;
+}
+function errorLine(e){
+  const p = playerById(e.playerId);
+  return `<div class="stat-rank event-line"><span>${e.minute}' ⚠️ ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(e.clubId)}</span><strong>${e.goal ? 'Error de gol' : 'Error'}</strong></div>`;
 }
 function cardLine(c){
   const p = playerById(c.playerId);

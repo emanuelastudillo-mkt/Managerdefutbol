@@ -1,39 +1,69 @@
-# Fútbol Manager MVP · V3.21
+# Fútbol Manager MVP · V3.22
 
-## Cambios V3.21
+Versión incremental basada en V3.21.
 
-- Se ajusta el balance de **cohesión de equipo** para que suba con mayor claridad.
-- La ganancia por partido pasa de 8 a 14 puntos base.
-- La pérdida por cambios o expulsiones baja de 2 a 1 punto por evento.
-- La pérdida por cambiar la táctica baja de 10 a 8 puntos.
-- El entrenamiento táctico ahora puede dar cohesión con una probabilidad configurable por casilla, sin quedar tan diluido por el avance semanal.
-- Se agrega el bloque `cohesion` en `config.js` para modificar estos valores sin tocar el motor.
+## Cambios V3.22
 
-## Configuración nueva
+### Kinesiólogo: horas extras médicas
+
+En la pantalla **Empleados > Tratamientos**, cuando el club tiene kinesiólogo contratado y existen jugadores lesionados, ahora aparece un bloque superior con la frase:
+
+**“Que los médicos hagan horas extras hoy”**
+
+Debajo se agrega el botón:
+
+**Tratar a todos**
+
+El botón trata de forma masiva a todos los lesionados pendientes de tratamiento semanal.
+
+## Costo
+
+El uso de este botón cobra al momento el **1% del costo/sueldo del kinesiólogo contratado**.
+
+Ejemplo con la configuración actual:
+
+- Kinesiólogo Regular: $1.000.000 → horas extras $10.000.
+- Kinesiólogo Bueno: $4.000.000 → horas extras $40.000.
+- Kinesiólogo Elite: $50.000.000 → horas extras $500.000.
+
+## Reglas de tratamiento
+
+- Cada jugador puede recibir un solo intento de tratamiento por semana.
+- El tratamiento puede ser exitoso o fallido.
+- Si es exitoso, reduce la recuperación según el rendimiento del kinesiólogo contratado.
+- Si falla, la lesión no se reduce y el jugador queda marcado como tratado esa semana.
+- El botón masivo no repite tratamientos ya realizados.
+
+## Animación progresiva
+
+Al usar **Tratar a todos**, cada jugador se procesa uno por uno:
+
+- se marca el jugador en curso;
+- se espera una pausa configurable;
+- se muestra éxito o fallo;
+- luego avanza al siguiente lesionado.
+
+Esto evita que todas las animaciones se ejecuten simultáneamente.
+
+## Configuración editable
+
+En `config.js`:
 
 ```js
-cohesion: {
-  valorInicial: 50,
-  gananciaPorPartido: 14,
-  perdidaPorCambioTactico: 8,
-  perdidaPorCambioJugador: 1,
-  probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-  gananciaEntrenamientoTacticoPorCasilla: 1
+empleados: {
+  kinesiologoHorasExtrasPorcentajeSueldo: 0.01
+},
+ui: {
+  kinesiologoTratamientoProgresivoMs: 650
 }
 ```
 
-## Cambios V3.20
+## Archivos principales modificados
 
-- Se agrega un **5º entrenamiento diario individual** por jugador.
-- El plan semanal general mantiene los 4 turnos diarios existentes para todo el plantel.
-- Cada jugador puede tener un foco propio: Equilibrado, Recuperación, Físico, Técnico, Defensivo, Ofensivo, Portería, Mental o Descanso.
-- El foco individual se configura desde la tabla de Entrenamiento, con selector por jugador y opción para aplicar un mismo foco a todo el plantel.
-- El quinto entrenamiento se aplica una vez por día en cada avance semanal.
-- La intensidad del entrenamiento individual queda editable desde `config.js`.
-- Las partidas existentes migran automáticamente el viejo `trainingPlan` al nuevo formato individual.
-
-## Validación
-
-- JavaScript validado con `node --check`.
-- JSON validado.
-- ZIP verificado.
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/10-academy-employees.js`
+- `style.css`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`

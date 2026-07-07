@@ -1,52 +1,117 @@
-# Características internas de versión · V3.21
+# Características internas de versión · V3.22
 
-## Enfoque V3.21
+## Enfoque V3.22
 
-Ajustar la curva de cohesión para que el crecimiento del equipo sea más visible y menos castigado por el uso normal de cambios durante los partidos.
+Esta versión agrega una acción masiva para tratamientos médicos sin reemplazar la lógica individual existente del kinesiólogo.
 
-## Cambios de balance
+## Funcionalidad agregada
 
-- `TEAM_COHESION_MATCH_GAIN` ahora se lee desde `config.js` y queda por defecto en **14**.
-- `TEAM_COHESION_PLAYER_CHANGE_LOSS` ahora se lee desde `config.js` y queda por defecto en **1**.
-- `TEAM_COHESION_TACTIC_CHANGE_LOSS` ahora se lee desde `config.js` y queda por defecto en **8**.
-- Se agregan constantes configurables para la cohesión ganada por entrenamiento táctico.
+### Botón “Tratar a todos”
 
-## Motivo del ajuste
+Ubicación:
 
-Con el valor anterior, una victoria o partido normal podía quedar neutralizado por los cambios realizados durante el encuentro. Con cinco sustituciones, el partido podía dar muy poca cohesión o incluso una pérdida neta. El nuevo balance permite que el equipo suba cohesión aunque use cambios normales.
+- Pantalla **Empleados**.
+- Card **Tratamientos**.
+- Visible cuando hay kinesiólogo contratado y jugadores lesionados.
 
-## Configuración agregada
+Texto superior del bloque:
 
-En `config.js`:
-
-```js
-cohesion: {
-  valorInicial: 50,
-  gananciaPorPartido: 14,
-  perdidaPorCambioTactico: 8,
-  perdidaPorCambioJugador: 1,
-  probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-  gananciaEntrenamientoTacticoPorCasilla: 1
-}
+```txt
+Que los médicos hagan horas extras hoy
 ```
 
-## Efecto esperado
+Botón:
 
-- Partido con 5 cambios: antes podía quedar en **-2** de cohesión neta; ahora queda aproximadamente en **+9**.
-- Semana con entrenamiento táctico: puede sumar puntos extra de cohesión según la cantidad de casillas tácticas programadas.
-- Cambiar completamente la táctica todavía penaliza, pero menos que antes.
+```txt
+Tratar a todos
+```
 
-## Archivos modificados en V3.21
+## Costo
+
+El costo se calcula desde el contrato vigente del kinesiólogo:
+
+```js
+currentKinesiologistOvertimeCost()
+```
+
+Fórmula:
+
+```js
+costoHorasExtras = costoContratoKinesiologoActual * KINESIOLOGIST_OVERTIME_COST_RATE
+```
+
+Valor por defecto:
+
+```js
+KINESIOLOGIST_OVERTIME_COST_RATE = 0.01
+```
+
+Equivale al 1%.
+
+## Reglas de tratamiento
+
+Se creó una función común:
+
+```js
+applyKinesioTreatment(playerId)
+```
+
+La usan:
+
+- el botón individual **Tratar**;
+- el botón masivo **Tratar a todos**.
+
+Esto evita duplicar la lógica de éxito/fallo, reducción de lesión y marca semanal.
+
+## Animaciones progresivas
+
+El botón masivo ejecuta:
+
+```js
+treatAllInjuredPlayers(button)
+```
+
+La función procesa jugadores en secuencia usando pausas configurables:
+
+```js
+KINESIOLOGIST_BULK_TREATMENT_STEP_MS
+```
+
+Valor por defecto:
+
+```js
+650
+```
+
+Cada fila de jugador puede pasar por los estados visuales:
+
+- `is-processing`
+- `is-success`
+- `is-failure`
+
+## Movimiento económico
+
+Al iniciar el tratamiento masivo se registra un movimiento de presupuesto:
+
+```js
+recordBudgetChange(-cost, 'Horas extras médicas: tratamiento de X lesionado(s)', {...})
+```
+
+El cobro ocurre antes de iniciar la secuencia.
+
+## Compatibilidad
+
+- Compatible con partidas existentes.
+- No requiere migración de datos.
+- Reutiliza `game.staffActions.kinesiologyTreatments`.
+- Respeta `currentTurnIndex()` para impedir tratamientos repetidos en la misma semana.
+
+## Archivos modificados en V3.22
 
 - `config.js`
 - `js/core/01-config-constants.js`
-- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `style.css`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
-
-## Validación esperada
-
-- Validación sintáctica de JavaScript.
-- Validación de JSON.
-- Verificación de ZIP.

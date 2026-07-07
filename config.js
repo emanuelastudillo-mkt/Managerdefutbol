@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.21',
+  version: 'V3.22',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -101,6 +101,8 @@ window.GAME_CONFIG = {
     psicologoCooldownDias: 35,
     kinesiologoCosto: 1000000,
     kinesiologoProbabilidadFallo: 0.20,
+    // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.
+    kinesiologoHorasExtrasPorcentajeSueldo: 0.01,
     preparadorJuvenilesCosto: 1000000
   },
   academia: {
@@ -154,6 +156,8 @@ window.GAME_CONFIG = {
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,
     accionesFeedbackResultadoMs: 900,
+    // Tiempo entre tratamientos cuando se usa "Tratar a todos". Evita que todas las animaciones se disparen a la vez.
+    kinesiologoTratamientoProgresivoMs: 650,
     frasesProgresoAvanceIntervaloMs: 10000,
     frasesProgresoAvance: [
       'Recogiendo pelotas detrás del arco',

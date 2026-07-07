@@ -1,4 +1,4 @@
-/* V3.17 · Academia, captación, juveniles, empleados y tratamientos. */
+/* V3.22 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
   return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null };
@@ -606,17 +606,32 @@ function renderEmployees(){
   $('btnHirePsychologist')?.addEventListener('click', () => openStaffHireModal('psychologist', renderEmployees));
   $('btnMotivationalTalk')?.addEventListener('click', (event) => callMotivationalPsychologist(event.currentTarget));
   $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
+  $('btnKinesioTreatAll')?.addEventListener('click', (event) => treatAllInjuredPlayers(event.currentTarget));
   document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
     btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat), btn));
   });
 }
 function injuredTreatmentList(injuredList){
   if(!injuredList.length) return '<p class="muted">No hay jugadores lesionados para tratar.</p>';
-  return `<div class="injured-treatment-list">${injuredList.map(item => {
+  const eligible = injuredList.filter(item => !wasKinesioTreatedThisTurn(item.player.id));
+  const overtimeCost = currentKinesiologistOvertimeCost();
+  const insufficientBudget = (game.budget || 0) < overtimeCost;
+  const bulkDisabled = !eligible.length || insufficientBudget;
+  const bulkReason = !eligible.length ? 'Todos los lesionados disponibles ya fueron tratados esta semana.' : insufficientBudget ? 'Presupuesto insuficiente para pagar horas extras.' : 'Se cobra al momento y aplica el mismo intento semanal a cada lesionado pendiente.';
+  return `<div class="kinesio-bulk-card">
+    <p class="label">Que los médicos hagan horas extras hoy</p>
+    <div class="row gap-sm">
+      <button class="primary" id="btnKinesioTreatAll" ${bulkDisabled ? 'disabled' : ''}>Tratar a todos · ${formatMoney(overtimeCost)}</button>
+      <span class="pill">${eligible.length}/${injuredList.length} pendiente(s)</span>
+    </div>
+    <p class="small ${insufficientBudget ? 'warn' : 'muted'}">${escapeHtml(bulkReason)}</p>
+    <div class="kinesio-bulk-progress hidden" id="kinesioBulkProgress"></div>
+  </div>
+  <div class="injured-treatment-list">${injuredList.map(item => {
     const treated = wasKinesioTreatedThisTurn(item.player.id);
-    return `<div class="injured-treatment-row">
+    return `<div class="injured-treatment-row" data-treatment-row="${item.player.id}">
       ${faceImg(item.player, 'injured-home-face')}
-      <div><button class="linklike" data-player-id="${item.player.id}">${availabilityIcons(item.player.id)}${escapeHtml(item.player.name)}</button><span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${formatDaysFromTurns(item.remaining)}</span></div>
+      <div><button class="linklike" data-player-id="${item.player.id}">${availabilityIcons(item.player.id)}${escapeHtml(item.player.name)}</button><span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${formatDaysFromTurns(item.remaining)}</span><span class="treatment-status" data-kinesio-status="${item.player.id}">${treated ? 'Tratado esta semana' : ''}</span></div>
       <button class="ghost" data-kinesio-treat="${item.player.id}" ${treated ? 'disabled' : ''}>${treated ? 'Tratado esta semana' : 'Tratar'}</button>
     </div>`;
   }).join('')}</div>`;
@@ -625,42 +640,128 @@ function wasKinesioTreatedThisTurn(playerId){
   const key = `${currentTurnIndex()}:${playerId}`;
   return Boolean(game.staffActions?.kinesiologyTreatments?.[key]);
 }
+function currentKinesiologistOvertimeCost(){
+  const contract = staffContract('kinesiologist');
+  const reference = Number(contract?.cost || staffHireCost('kinesiologist', contract?.category || 'regular') || staffBaseCost('kinesiologist') || 0);
+  return Math.max(0, Math.round(reference * KINESIOLOGIST_OVERTIME_COST_RATE));
+}
 function hireKinesiologist(){
   openStaffHireModal('kinesiologist', renderEmployees);
 }
+function applyKinesioTreatment(playerId){
+  if(!staffActive('kinesiologist')){ return { success:false, message:'Primero tenés que contratar al kinesiólogo.' }; }
+  if(!isInjured(playerId)){ return { success:false, message:'El jugador no está lesionado.', after:renderEmployees }; }
+  game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
+  const key = `${currentTurnIndex()}:${playerId}`;
+  if(game.staffActions.kinesiologyTreatments[key]){ return { success:false, message:'Este jugador ya recibió tratamiento esta semana.' }; }
+  const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
+  const recoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
+  game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
+  if(success){
+    const st = playerStatus(playerId);
+    const nextThrough = Number(st.injuredThrough) - recoveryReductionTurns;
+    if(nextThrough < game.matchdayIndex){
+      const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+      game.playerStatus[playerId] = rest;
+    } else {
+      game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
+    }
+  }
+  return {
+    success,
+    recoveryReductionTurns,
+    buttonLabel: success ? 'Tratamiento realizado' : 'Tratamiento fallido',
+    message: success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.` : 'El tratamiento falló. La lesión no se redujo.'
+  };
+}
 function treatInjuredPlayer(playerId, button=null){
   const performTreatment = () => {
-    if(!staffActive('kinesiologist')){ return { success:false, message:'Primero tenés que contratar al kinesiólogo.' }; }
-    if(!isInjured(playerId)){ return { success:false, message:'El jugador no está lesionado.', after:renderEmployees }; }
-    game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
-    const key = `${currentTurnIndex()}:${playerId}`;
-    if(game.staffActions.kinesiologyTreatments[key]){ return { success:false, message:'Este jugador ya recibió tratamiento esta semana.' }; }
-    const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
-    game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
-    if(success){
-      const st = playerStatus(playerId);
-      const recoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
-      const nextThrough = Number(st.injuredThrough) - recoveryReductionTurns;
-      if(nextThrough < game.matchdayIndex){
-        const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
-        game.playerStatus[playerId] = rest;
-      } else {
-        game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
-      }
-    }
+    const outcome = applyKinesioTreatment(playerId);
     saveLocal(true);
-    return {
-      success,
-      buttonLabel: success ? 'Tratamiento realizado' : 'Tratamiento fallido',
-      message: success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist'))))}.` : 'El tratamiento falló. La lesión no se redujo.',
-      after:renderEmployees
-    };
+    return { ...outcome, after:renderEmployees };
   };
   return runActionFeedback(button, performTreatment, {
     loadingLabel:'Tratando...',
     successLabel:'Tratamiento realizado',
     failureLabel:'Tratamiento fallido'
   });
+}
+function kinesioDelay(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+function setKinesioTreatmentRowState(playerId, state, label=''){
+  const row = document.querySelector(`[data-treatment-row="${playerId}"]`);
+  const status = document.querySelector(`[data-kinesio-status="${playerId}"]`);
+  const btn = document.querySelector(`[data-kinesio-treat="${playerId}"]`);
+  if(row){
+    row.classList.remove('is-processing','is-success','is-failure');
+    if(state) row.classList.add(`is-${state}`);
+  }
+  if(status) status.textContent = label;
+  if(btn){
+    btn.disabled = true;
+    if(state === 'processing') btn.textContent = 'Tratando...';
+    if(state === 'success') btn.textContent = 'Tratado';
+    if(state === 'failure') btn.textContent = 'Falló';
+  }
+}
+async function treatAllInjuredPlayers(button=null){
+  if(!game) return;
+  if(button && (button.disabled || button.dataset.actionBusy === '1')) return;
+  if(!staffActive('kinesiologist')){ showNotice('Primero tenés que contratar al kinesiólogo.'); return; }
+  const targets = injuredPlayersByClub(game.selectedClubId).filter(item => !wasKinesioTreatedThisTurn(item.player.id));
+  if(!targets.length){ showNotice('No hay lesionados pendientes de tratamiento esta semana.'); return; }
+  const cost = currentKinesiologistOvertimeCost();
+  if((game.budget || 0) < cost){ showNotice(`Presupuesto insuficiente. Necesitás ${formatMoney(cost)} para pagar horas extras médicas.`); return; }
+  recordBudgetChange(-cost, `Horas extras médicas: tratamiento de ${targets.length} lesionado(s)`, { type:'kinesiology_overtime', players:targets.map(item => item.player.id), costRate:KINESIOLOGIST_OVERTIME_COST_RATE });
+  const progress = $('kinesioBulkProgress');
+  if(progress){
+    progress.classList.remove('hidden');
+    progress.innerHTML = `<div class="project-progress"><span style="width:0%"></span></div><strong>Preparando tratamientos...</strong>`;
+  }
+  if(button){
+    button.dataset.actionBusy = '1';
+    button.disabled = true;
+    button.classList.add('action-processing');
+    button.innerHTML = '<span class="action-spinner" aria-hidden="true"></span><span>Tratando plantel...</span>';
+  }
+  document.querySelectorAll('[data-kinesio-treat]').forEach(btn => { btn.disabled = true; });
+  let successes = 0;
+  let failures = 0;
+  for(let index = 0; index < targets.length; index++){
+    const item = targets[index];
+    const playerName = item.player?.name || 'Jugador';
+    setKinesioTreatmentRowState(item.player.id, 'processing', 'Tratamiento en curso...');
+    if(progress){
+      const pct = Math.round((index / targets.length) * 100);
+      progress.innerHTML = `<div class="project-progress"><span style="width:${pct}%"></span></div><strong>Tratando a ${escapeHtml(playerName)} (${index + 1}/${targets.length})</strong>`;
+    }
+    await kinesioDelay(KINESIOLOGIST_BULK_TREATMENT_STEP_MS);
+    const outcome = applyKinesioTreatment(item.player.id);
+    if(outcome.success){
+      successes++;
+      setKinesioTreatmentRowState(item.player.id, 'success', `Éxito · -${formatDaysFromTurns(outcome.recoveryReductionTurns)}`);
+    }else{
+      failures++;
+      setKinesioTreatmentRowState(item.player.id, 'failure', 'Falló · sin reducción');
+    }
+    saveLocal(true);
+    const pct = Math.round(((index + 1) / targets.length) * 100);
+    if(progress){
+      progress.innerHTML = `<div class="project-progress completed"><span style="width:${pct}%"></span></div><strong>${escapeHtml(playerName)}: ${outcome.success ? 'tratamiento exitoso' : 'tratamiento fallido'}</strong>`;
+    }
+    await kinesioDelay(Math.max(250, Math.round(ACTION_FEEDBACK_RESULT_MS * 0.55)));
+  }
+  if(progress){
+    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>Horas extras finalizadas: ${successes} éxito(s), ${failures} fallo(s).</strong>`;
+  }
+  if(button){
+    button.classList.remove('action-processing');
+    button.classList.add('action-success');
+    button.innerHTML = '<span>Tratamientos finalizados</span>';
+  }
+  saveLocal(true);
+  showNotice(`Horas extras médicas finalizadas. Costo: ${formatMoney(cost)}. Éxitos: ${successes}. Fallos: ${failures}.`);
+  await kinesioDelay(Math.max(650, ACTION_FEEDBACK_RESULT_MS));
+  renderEmployees();
 }
 function moraleTeamBar(clubId){
   const value = squadMoraleAverage(clubId);

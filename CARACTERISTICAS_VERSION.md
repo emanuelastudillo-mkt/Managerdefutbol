@@ -1,25 +1,28 @@
-# Características de versión - V3.36
+# Características de versión - V3.38
 
-## Ajuste sistema ESPECIAL
-- Se corrigieron los puntos recuperados al destruir cartas.
-- Destruir cartas inútiles devuelve 5 puntos.
-- Destruir cartas comunes devuelve 20 puntos.
-- Destruir cartas raras devuelve 50 puntos.
-- Destruir cartas legendarias devuelve 1000 puntos.
-- Al destruir una carta, el contador de puntos se ilumina y muestra una animación flotante con la suma.
+## Ajuste aplicado
 
-## Bloqueo de cartas activas
-- Se eliminó el bloqueo global que impedía activar cartas nuevas.
-- Cada carta activada queda fija durante 100 días.
-- Durante esos 100 días no puede desactivarse.
-- Se pueden activar hasta 5 cartas al mismo tiempo.
-- Pasados los 100 días, una carta activa puede desactivarse y volver a reserva.
+### Sistema ESPECIAL · Cartas activas visibles
+- Se corrigió un bug por el cual una carta podía desaparecer al activarse.
+- La causa era una normalización interna ejecutada en medio del proceso de activación.
+- Ahora la carta se elimina de reserva, se agrega a cartas activas y se guarda correctamente en `game.special`.
 
-## Bonus activos
-- Se agregó un bloque de detalle para listar cada carta activa y su bonus.
-- Los bonus siguen apilándose según la configuración del sistema.
+### Bonus activo
+- El sector de cartas activas ahora se presenta como **Bonus activo**.
+- Las cartas activas quedan visibles en ese sector.
+- Cada carta muestra su bloqueo restante.
+- El botón **Desactivar** queda bloqueado hasta que pasen los 100 días.
 
-## Base conservada
-- Se conserva la corrección de arranque de V3.35.
-- Se conserva la corrección de sobres hacia reserva.
-- Se conserva el juvenil excepcional de Academia.
+### Regla de cartas activas
+- El bloque superior ahora muestra:
+  - total de bonus acumulados activos;
+  - nombre de cada carta activa;
+  - efecto de cada carta;
+  - estado de bloqueo de cada carta.
+
+## Archivos modificados
+- `js/game/15-especial.js`
+- `style.css`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`

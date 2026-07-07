@@ -2118,7 +2118,7 @@ button.action-failure{
   box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.12), 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
-/* V3.36 · Animación de puntos y detalle de bonus ESPECIAL */
+/* V3.37 · Animación de puntos y detalle de bonus ESPECIAL */
 .special-points-card{position:relative;overflow:visible}
 .special-points-flash{animation:specialPointsFlash 1.25s ease both;border-color:rgba(255,207,87,.55)!important;box-shadow:0 0 0 1px rgba(255,207,87,.18), 0 0 24px rgba(255,207,87,.22)}
 .special-points-float{position:absolute;right:16px;top:-12px;font-weight:900;font-size:1rem;color:#ffcf57;text-shadow:0 2px 14px rgba(0,0,0,.45);animation:specialPointsFloat 1.35s ease-out both;pointer-events:none}
@@ -2129,3 +2129,11 @@ button.action-failure{
 .special-bonus-list span{display:block;color:var(--muted);font-size:.86rem}
 @keyframes specialPointsFlash{0%{transform:scale(1);background:rgba(255,207,87,.05)}30%{transform:scale(1.025);background:rgba(255,207,87,.16)}100%{transform:scale(1);background:rgba(255,255,255,.055)}}
 @keyframes specialPointsFloat{0%{opacity:0;transform:translateY(8px) scale(.9)}16%{opacity:1;transform:translateY(0) scale(1.05)}100%{opacity:0;transform:translateY(-42px) scale(1)}}
+
+/* V3.38 · Regla de cartas activas con detalle visible */
+.special-active-rules-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.special-active-rules-list>div{padding:10px 12px;border-radius:14px;background:rgba(83,151,255,.08);border:1px solid rgba(83,151,255,.18)}
+.special-active-rules-list strong{display:block;font-size:.95rem;margin-bottom:4px}
+.special-active-rules-list span{display:block;color:var(--muted);font-size:.86rem}
+.special-active-rules-list em{display:inline-block;margin-top:6px;font-style:normal;font-size:.78rem;color:var(--text);opacity:.9}
+.special-bonus-list.compact{margin-top:14px}

@@ -1,4 +1,4 @@
-/* V3.36 · Menú ESPECIAL: bloqueo por carta, puntos por destruir y bonus detallados. */
+/* V3.38 · Menú ESPECIAL: cartas activas persistentes y detalle de bonus activo. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -159,8 +159,10 @@ function specialActiveCardsLockSummary(){
 function specialCardsLockedInfo(){
   return specialActiveCardsLockSummary();
 }
-function lockSpecialCardChanges(card=null){
-  const state = ensureSpecialState();
+function lockSpecialCardChanges(card=null, stateRef=null){
+  // No normalizar acá si venimos de activateSpecialCard(): normalizar en medio de la operación
+  // recrea game.special y puede hacer que la carta activada se pierda antes del guardado.
+  const state = stateRef && typeof stateRef === 'object' ? stateRef : ensureSpecialState();
   if(!state) return;
   const today = specialCurrentDate();
   const lockDays = specialLimits().lockDays;
@@ -185,6 +187,17 @@ function specialActiveBonus(type){
 }
 function specialActiveBonusSummary(){
   return ['sponsors_extra','deterioro_campo','probabilidad_legendaria'].map(type => ({ type, value:specialActiveBonus(type) })).filter(item => item.value > 0);
+}
+function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
+  if(!activeCards.length) return '<p class="muted small">No hay cartas activas. Activá cartas desde la reserva para ver sus bonus acá.</p>';
+  const totals = specialActiveBonusSummary();
+  const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${item.type === 'deterioro_campo' ? '-' : '+'}${item.value}% acumulado</span></div>`).join('')}</div>` : '';
+  const cardsMarkup = `<div class="special-active-rules-list">${activeCards.map(card => {
+    const info = specialCardActiveLockInfo(card);
+    const status = info.locked ? `Fija ${formatDays(info.remaining)}` : 'Lista para desactivar';
+    return `<div><strong>${escapeHtml(card.nombre)}</strong><span>${escapeHtml(specialCardBonusText(card))}</span><em>${escapeHtml(status)}</em></div>`;
+  }).join('')}</div>`;
+  return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}.</p>`;
 }
 function specialActionPoints(actionId){
   const action = specialDatabase().puntos_ocultos?.acciones?.[actionId];
@@ -322,26 +335,58 @@ function recoverSpecialCardToReserve(cardId){
 }
 async function openSpecialPack(packId){
   if(specialPackOpeningInProgress){ showNotice('Ya se está abriendo un sobre.'); return; }
-  const state = ensureSpecialState();
+  let state = ensureSpecialState();
   const pack = specialPackDefinitions().find(item => item.id === packId);
   if(!state || !pack){ showNotice('Sobre no disponible.'); return; }
   const cost = Math.max(0, Math.round(Number(pack.costo_puntos || 0)));
   const count = Math.max(1, Math.round(Number(pack.cantidad_cartas || 1)));
   const limits = specialLimits();
   state.cartas_reserva = Array.isArray(state.cartas_reserva) ? state.cartas_reserva : [];
-  if(state.puntos_habilidad < cost){ showNotice(`Puntos insuficientes. Necesitás ${cost} puntos de habilidad.`); return; }
+  const currentPoints = Math.max(0, Math.round(Number(state.puntos_habilidad || 0)));
+  if(currentPoints < cost){ showNotice(`Puntos insuficientes. Necesitás ${cost} puntos de habilidad.`); return; }
   if(!limits.allowOpenWhenReserveFull && state.cartas_reserva.length + count > limits.reserveMax){
     showNotice(`Reserva llena. Necesitás ${count} espacios libres para abrir este sobre.`);
     return;
   }
 
   specialPackOpeningInProgress = true;
-  const previousPoints = Math.max(0, Math.round(Number(state.puntos_habilidad || 0)));
+  const previousPoints = currentPoints;
   const previousReserveIds = new Set((state.cartas_reserva || []).map(card => String(card.id_carta || '')));
   const previousHistory = (state.historial_ultimas_cartas || []).slice();
   const previousLog = (state.puntos_log || []).slice();
-  const cards = [];
 
+  const rollbackOpening = async (notice='No se pudo completar la apertura. Se devolvieron los puntos.') => {
+    const rollbackState = ensureSpecialState();
+    if(!rollbackState) return;
+    rollbackState.puntos_habilidad = previousPoints;
+    rollbackState.puntos_log = previousLog;
+    rollbackState.historial_ultimas_cartas = previousHistory;
+    rollbackState.cartas_reserva = (rollbackState.cartas_reserva || []).filter(card => previousReserveIds.has(String(card.id_carta || '')));
+    game.special = rollbackState;
+    specialPackOpeningInProgress = false;
+    try{ await saveLocal(true); }catch(err){ console.error(err); }
+    renderSpecial();
+    showNotice(notice);
+  };
+
+  // El costo del sobre se descuenta en el momento de comprarlo, antes de mostrar las cartas.
+  state.puntos_habilidad = Math.max(0, previousPoints - cost);
+  state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
+  state.puntos_log.push({ actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
+  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  game.special = state;
+  specialPointsAnimation = { id:`spend-${Date.now()}-${Math.random()}`, points:-cost };
+  renderSpecial([], { revealCount:0, opening:true, packName:pack.nombre || 'Sobre' });
+
+  try{
+    await saveLocal(true);
+  } catch(err){
+    console.error(err);
+    await rollbackOpening('No se pudo guardar la compra. No se descontaron puntos.');
+    return;
+  }
+
+  const cards = [];
   for(let i=0;i<count;i++){
     const rarity = pickSpecialRarity(pack);
     const pool = specialCardPoolByRarity(rarity);
@@ -354,35 +399,25 @@ async function openSpecialPack(packId){
   }
 
   if(!cards.length){
-    specialPackOpeningInProgress = false;
-    showNotice('No se pudieron generar cartas para este sobre.');
-    renderSpecial();
+    await rollbackOpening('No se pudieron generar cartas para este sobre. Se devolvieron los puntos.');
     return;
   }
 
   const sorted = sortOpenedCards(cards).map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean);
-  state.puntos_habilidad = Math.max(0, previousPoints - cost);
-  state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
-  state.puntos_log.push({ actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
-  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
   const added = ensureSpecialCardsInReserve(sorted);
+  state = ensureSpecialState();
   state.historial_ultimas_cartas = added.concat(state.historial_ultimas_cartas || []).slice(0, 30);
+  game.special = state;
 
   try{
     await saveLocal(true);
   } catch(err){
     console.error(err);
-    state.puntos_habilidad = previousPoints;
-    state.puntos_log = previousLog;
-    state.historial_ultimas_cartas = previousHistory;
-    state.cartas_reserva = (state.cartas_reserva || []).filter(card => previousReserveIds.has(String(card.id_carta || '')));
-    specialPackOpeningInProgress = false;
-    renderSpecial();
-    showNotice('No se pudo guardar la apertura. No se descontaron puntos.');
+    await rollbackOpening('No se pudo guardar la apertura. Se devolvieron los puntos.');
     return;
   }
 
-  showNotice(`${pack.nombre || 'Sobre'} abierto. Se descontaron ${cost} puntos.`);
+  showNotice(`${pack.nombre || 'Sobre'} comprado por ${cost} puntos.`);
   try{
     for(let i=1;i<=added.length;i++){
       renderSpecial(added, { revealCount:i, opening:true, packName:pack.nombre || 'Sobre' });
@@ -390,6 +425,7 @@ async function openSpecialPack(packId){
     }
   } finally {
     specialPackOpeningInProgress = false;
+    specialPointsAnimation = null;
     await saveLocal(true);
     renderSpecial();
     showNotice('Las cartas obtenidas quedaron guardadas en reserva.');
@@ -411,8 +447,10 @@ function activateSpecialCard(cardId){
   if(!limits.allowRepeatedActive && state.cartas_activas.some(active => active.id_base === card.id_base)){ showNotice('Esta carta ya está activa.'); return; }
   state.cartas_reserva.splice(index, 1);
   const activatedCard = { ...card, activa:true, destruida:false };
-  lockSpecialCardChanges(activatedCard);
+  lockSpecialCardChanges(activatedCard, state);
+  state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
+  game.special = state;
   saveLocal(true);
   renderSpecial();
   showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}.`);
@@ -521,19 +559,18 @@ function renderSpecial(opened=[], options={}){
     <div class="row section-title"><div><h2>ESPECIAL</h2><p class="tagline">Sistema de cartas, sobres y bonus acumulables del manager.</p></div></div>
     <div class="grid cols-4 compact-team-stats special-summary">
       <div class="card"><p class="label">Manager</p><strong>${escapeHtml(state.nombre_manager || 'Manager')}</strong></div>
-      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos de habilidad</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">+${Number(pointAnimation.points || 0)}</span>` : ''}</div>
+      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos de habilidad</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
       <div class="card"><p class="label">Cartas activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
     </div>
-    <div class="card special-lock-card ${locked.locked ? 'warn' : 'ok'}"><div class="row"><div><h3>Regla de cartas activas</h3><p class="muted small">Podés activar hasta ${limits.activeMax} cartas. Cada carta activada queda fija durante ${limits.lockDays} días; recién después puede desactivarse para liberar espacio.</p><p class="muted small">${escapeHtml(lockText)}</p></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${locked.locked ? 'Cartas fijas' : 'Cambios disponibles'}</span></div></div>
-    <div class="card special-bonus-detail"><div class="row"><div><p class="label">Bonus activos</p><h3>Detalle de cartas activas</h3></div><span class="pill">${activeBonusCards.length}/${limits.activeMax}</span></div>
-      ${activeBonusCards.length ? `<div class="special-bonus-list">${activeBonusCards.map(card => `<div><strong>${escapeHtml(card.nombre)}</strong><span>${escapeHtml(specialCardBonusText(card))}</span></div>`).join('')}</div>` : '<p class="muted">No hay bonus activos.</p>'}
+    <div class="card special-lock-card ${locked.locked ? 'warn' : 'ok'}"><div class="row"><div><h3>Regla de cartas activas</h3><p class="muted small">Podés activar hasta ${limits.activeMax} cartas. Cada carta activada queda fija durante ${limits.lockDays} días; recién después puede desactivarse para liberar espacio.</p><p class="muted small">${escapeHtml(lockText)}</p></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${locked.locked ? 'Cartas fijas' : 'Cambios disponibles'}</span></div>
+      ${specialActiveRulesDetailMarkup(activeBonusCards, limits)}
     </div>
     <div class="grid cols-3 special-bonus-grid">
       ${bonuses.length ? bonuses.map(item => `<div class="card"><p class="label">${escapeHtml(specialBonusLabel(item.type))}</p><strong>${item.type === 'deterioro_campo' ? '-' : '+'}${item.value}%</strong></div>`).join('') : ''}
     </div>
     ${specialOpenedMarkup(opened, options)}
-    <div class="card special-active-drop" data-special-drop-active="1"><div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill">Máximo ${limits.activeMax}</span></div><p class="muted small">Podés activar cartas con el botón o arrastrándolas hasta este bloque.</p><div class="special-card-grid">${active.length ? active.map(card => specialCardMarkup(card, 'active')).join('') : '<p class="muted">No hay cartas activas.</p>'}</div></div>
+    <div class="card special-active-drop" data-special-drop-active="1"><div class="row"><div><p class="label">Bonus activo</p><h3>Cartas bloqueadas y aplicadas</h3></div><span class="pill">Máximo ${limits.activeMax}</span></div><p class="muted small">Las cartas activadas quedan en este sector durante ${limits.lockDays} días. Podés activar cartas con el botón o arrastrándolas hasta este bloque.</p><div class="special-card-grid">${active.length ? active.map(card => specialCardMarkup(card, 'active')).join('') : '<p class="muted">No hay cartas activas.</p>'}</div></div>
     <div class="card"><div class="row"><div><p class="label">Abrir sobres</p><h3>Sobres disponibles</h3></div><span class="pill">Reserva libre: ${Math.max(0, limits.reserveMax - reserveAll.length)}</span></div><div class="grid cols-3">${packs.length ? packs.map(specialPackMarkup).join('') : '<p class="muted">No hay sobres configurados.</p>'}</div></div>
     <div class="card"><div class="row"><div><p class="label">Cartas en reserva</p><h3>Inventario</h3></div><span class="pill">${reserve.length}/${limits.reserveMax}</span></div><div class="special-card-grid">${reserve.length ? reserve.map(card => specialCardMarkup(card, 'reserve')).join('') : '<p class="muted">No hay cartas en reserva.</p>'}</div></div>
   `;

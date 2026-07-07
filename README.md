@@ -1,11 +1,18 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.36
+## Versión actual: V3.38
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
 
 
-## V3.36
+## V3.38
+
+- Corrección del sistema ESPECIAL: al activar una carta ya no desaparece.
+- La carta activada pasa al sector **Bonus activo**.
+- Las cartas activas quedan visibles y bloqueadas durante 100 días.
+- El bloque **Regla de cartas activas** muestra el detalle de bonus activos, cartas aplicadas y días restantes de bloqueo.
+
+## V3.37
 
 - Ajuste del sistema ESPECIAL.
 - Destruir cartas suma puntos según rareza y muestra animación visual en el contador.

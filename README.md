@@ -1,8 +1,21 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.35
+## Versión actual: V3.36
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+
+
+## V3.36
+
+- Ajuste del sistema ESPECIAL.
+- Destruir cartas suma puntos según rareza y muestra animación visual en el contador.
+- Carta inútil: +5 puntos.
+- Carta común: +20 puntos.
+- Carta rara: +50 puntos.
+- Carta legendaria: +1000 puntos.
+- El bloqueo de 100 días ahora es por carta activa, no un bloqueo global.
+- Se pueden activar hasta 5 cartas; cada una queda fija 100 días antes de poder desactivarse.
+- El bloque Bonus activos muestra el detalle de cada carta activa.
 
 ## V3.35
 

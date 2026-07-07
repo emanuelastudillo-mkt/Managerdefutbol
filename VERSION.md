@@ -1,8 +1,17 @@
-# Fútbol Manager MVP - V3.35
+# Fútbol Manager MVP - V3.36
 
-Corrección bloqueante sobre V3.34.
+Ajuste del sistema **ESPECIAL** sobre V3.35.
 
-## Cambio principal
-- Se corrigió el error de arranque causado por usar `clamp()` dentro de `js/core/01-config-constants.js` antes de que esa función estuviera cargada.
-- Nueva partida, reset y carga inicial vuelven a funcionar.
-- Se mantiene el fix anterior del sistema de sobres y reserva.
+## Cambios principales
+- Destruir cartas ahora devuelve los puntos solicitados por rareza:
+  - Inútil: +5 puntos.
+  - Común: +20 puntos.
+  - Rara: +50 puntos.
+  - Legendaria: +1000 puntos.
+- Al destruir una carta, el contador de puntos se ilumina y aparece una animación flotante con los puntos sumados.
+- Se corrigió la regla de bloqueo de cartas:
+  - activar una carta ya no queda bloqueado por un cooldown global;
+  - cada carta activada queda fija durante 100 días;
+  - recién después puede desactivarse;
+  - se pueden tener hasta 5 cartas activas al mismo tiempo.
+- El bloque **Bonus activos** ahora detalla las cartas activas y el bonus que aporta cada una.

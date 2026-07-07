@@ -66,7 +66,7 @@ async function loadSpecialSkillsDatabase(){
     limites:{ cartas_activas_max:5, cartas_reserva_max:50, dias_bloqueo_cambio_cartas:100, permitir_abrir_sobres_con_reserva_llena:false, permitir_cartas_repetidas_activas:true, bonus_se_apilan:true },
     rareza_orden_visual:['inutil','comun','rara','epica','legendaria'],
     sobres:{},
-    destruir_cartas:{ permitido:true, recuperacion_puntos:{ inutil:5, comun:20, rara:75, epica:250, legendaria:1000 } },
+    destruir_cartas:{ permitido:true, recuperacion_puntos:{ inutil:5, comun:20, rara:50, epica:250, legendaria:1000 } },
     apilamiento_bonus:{},
     cartas_base:[],
     puntos_ocultos:{ moneda:'puntos_habilidad', acciones:{} },

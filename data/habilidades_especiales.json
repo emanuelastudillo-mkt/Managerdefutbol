@@ -145,7 +145,7 @@
     "recuperacion_puntos": {
       "inutil": 5,
       "comun": 20,
-      "rara": 75,
+      "rara": 50,
       "epica": 250,
       "legendaria": 1000
     }

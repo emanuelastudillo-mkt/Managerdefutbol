@@ -4,14 +4,17 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.40',
+  version: 'V3.42',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json'
+    specialSkillsUrl: 'data/habilidades_especiales.json',
+    estadiosUrl: 'data/estadios.json',
+    hinchasUrl: 'data/hinchas.json',
+    instalacionesUrl: 'data/instalaciones.json'
   },
   calendario: {
     // Cada avance equivale a 7 días. El juego sigue avanzando de domingo a domingo.
@@ -175,9 +178,24 @@ window.GAME_CONFIG = {
     }
   },
   lesiones: {
+    // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
+    multiplicadorProbabilidad: 0.20,
     lesionBase: 0.05,
     fatigaPaso: 5,
     fatigaBonus: 0.01,
+    // Duraciones en días. El motor las convierte a turnos según diasPorAvance.
+    contusionMinDias: 7,
+    contusionMaxDias: 21,
+    distensionMinDias: 21,
+    distensionMaxDias: 56,
+    desgarroMinDias: 28,
+    desgarroMaxDias: 84,
+    esguinceMinDias: 35,
+    esguinceMaxDias: 105,
+    roturaMinDias: 90,
+    roturaMaxDias: 210,
+    fracturaMinDias: 180,
+    fracturaMaxDias: 400,
     lesionadoSuplenteDiasMax: 63,
     penalizacionLesionadoSuplente: 0.10
   },

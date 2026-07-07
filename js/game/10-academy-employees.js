@@ -549,6 +549,29 @@ function academyPendingJobsMarkup(){
   if(!jobs.length) return '<p class="muted">No hay captaciones en curso.</p>';
   return `<div class="academy-jobs">${jobs.map(job => `<div class="stat-rank"><span>Captación en curso</span><strong>${formatDays(daysUntilTurn(job.dueTurn || 0))}</strong></div>`).join('')}</div>`;
 }
+function academyVisibleSkillsProgress(player){
+  const stats = academyVisibleStats(player);
+  const labels = Object.keys(stats);
+  const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
+  const total = labels.length || 0;
+  const visible = labels.filter(label => unlocked.has(label)).length;
+  const percent = total ? Math.round((visible / total) * 100) : 0;
+  return { total, visible, percent };
+}
+function academyVisibilityPieMarkup(player){
+  const progress = academyVisibleSkillsProgress(player);
+  const title = progress.total
+    ? `${progress.visible}/${progress.total} habilidades visibles`
+    : 'Sin habilidades para mostrar';
+  return `<div class="academy-visibility" title="${escapeHtml(title)}">
+    <div class="academy-visibility-pie" style="--academy-visible-pct:${progress.percent}"><strong>${progress.percent}%</strong></div>
+    <div>
+      <p class="label">Habilidades visibles</p>
+      <strong>${progress.visible}/${progress.total}</strong>
+      <p class="small muted">Informe descubierto</p>
+    </div>
+  </div>`;
+}
 function academyPlayerStatsMarkup(player){
   const stats = academyVisibleStats(player);
   const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
@@ -560,6 +583,7 @@ function academyPlayerCard(player){
   const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional</span>' : '<span class="pill">Media oculta</span>';
   return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''}">
     <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div>${specialPill}</div>
+    ${academyVisibilityPieMarkup(player)}
     ${academyPlayerStatsMarkup(player)}
     <div class="row academy-actions">
       <select data-academy-training="${player.id}"><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>

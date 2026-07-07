@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-## Versión actual: V3.39
+## Versión actual: V3.41
 
 Menú **ESPECIAL** con cartas, sobres y bonos acumulables.
+
+## V3.41
+
+- Academia: visor circular tipo torta para ver el porcentaje de habilidades reveladas en cada juvenil.
+- El indicador muestra el avance de scouting de habilidades visibles.
+- Nuevos JSON base vacíos para futuras expansiones:
+  - `data/estadios.json`
+  - `data/hinchas.json`
+  - `data/instalaciones.json`
+- Se agregan rutas en `config.js` para esos archivos.
+
 
 
 ## V3.39
@@ -105,3 +116,22 @@ Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el me
 - Corrección del pase automático de cartas abiertas hacia reserva.
 - Recuperación defensiva de cartas de última apertura al activar o destruir.
 - Apertura de sobres tres veces más lenta.
+
+## V3.40 - Config actualizado
+
+Esta versión toma como configuración principal el `config.js` editado por el usuario.
+
+Cambios destacados:
+- cooldown largo de avance: 60 segundos;
+- avance diario: 2 segundos;
+- ganancia de cohesión por partido: 9;
+- equilibrio de bots reforzado con pisos más altos;
+- dificultad de bots corregida a `dificil`.
+
+
+
+## V3.42 - Lesiones menos frecuentes
+
+El sistema de lesiones fue rebalanceado. Ahora la probabilidad total de lesión se multiplica por `lesiones.multiplicadorProbabilidad`. Con el valor `0.20`, las lesiones bajan un 80% respecto del cálculo anterior.
+
+A cambio, los tiempos de recuperación son más largos y configurables desde `config.js`, con lesiones graves que pueden llegar hasta 400 días.

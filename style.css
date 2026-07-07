@@ -2137,3 +2137,44 @@ button.action-failure{
 .special-active-rules-list span{display:block;color:var(--muted);font-size:.86rem}
 .special-active-rules-list em{display:inline-block;margin-top:6px;font-style:normal;font-size:.78rem;color:var(--text);opacity:.9}
 .special-bonus-list.compact{margin-top:14px}
+
+
+/* V3.41 Academia: visor circular de habilidades visibles */
+.academy-visibility{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:10px;
+  padding:10px;
+  border:1px solid rgba(148,163,184,.12);
+  border-radius:16px;
+  background:rgba(2,6,23,.24);
+}
+.academy-visibility-pie{
+  --academy-visible-pct:0;
+  width:64px;
+  height:64px;
+  flex:0 0 64px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  position:relative;
+  background:conic-gradient(var(--accent-2) calc(var(--academy-visible-pct) * 1%), rgba(148,163,184,.18) 0);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 10px 24px rgba(0,0,0,.18);
+}
+.academy-visibility-pie::after{
+  content:'';
+  position:absolute;
+  inset:8px;
+  border-radius:50%;
+  background:var(--panel);
+  border:1px solid rgba(148,163,184,.12);
+}
+.academy-visibility-pie strong{
+  position:relative;
+  z-index:1;
+  font-size:15px;
+  letter-spacing:-.04em;
+}
+.academy-visibility .label{margin-bottom:3px}
+.academy-visibility p:last-child{margin:2px 0 0}

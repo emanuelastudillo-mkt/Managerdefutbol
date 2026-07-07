@@ -1,9 +1,18 @@
-# Fútbol Manager MVP - V3.39
+# Versión V3.42 - Lesiones menos frecuentes y recuperaciones más largas
 
-## Equilibrio de bots
-- Se agrega nivelación automática de equipos bots al iniciar cada temporada.
-- Los rivales de la división del manager ajustan moral, físico y cohesión cerca de los valores del club manejado.
-- Los mejores bots de la temporada anterior reciben un margen competitivo adicional.
-- Durante la temporada y la pretemporada los bots recuperan valores mínimos para no llegar debilitados en exceso.
-- Se agrega progresión moderada de habilidades para planteles bots.
-- Todo queda editable desde `config.js` en el bloque `equilibrioBots`.
+## Cambios principales
+
+- Se redujo un 80% la probabilidad total de lesiones mediante `lesiones.multiplicadorProbabilidad: 0.20`.
+- La reducción afecta lesión base, fatiga y estado del campo.
+- Se aumentaron los tiempos de recuperación por tipo de lesión.
+- Las lesiones más graves pueden llegar hasta 400 días configurables.
+- Se mantuvo editable desde `config.js`.
+
+## Archivos modificados
+
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`

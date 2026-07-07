@@ -1,48 +1,32 @@
-# Características de versión - V3.39
+# Características de versión - V3.42
 
-## Ajuste aplicado
+## Ajuste de balance: lesiones
 
-### Equilibrio competitivo de bots
-- Se agregó un sistema de nivelación para evitar que la segunda temporada se vuelva demasiado fácil.
-- Al iniciar una nueva temporada, los bots de la división del manager ajustan:
-  - moral media;
-  - estado físico;
-  - cohesión de equipo.
-- La referencia es el club manejado, pero con variación y bonus por posición final anterior.
-- La dificultad puede configurarse como `suave`, `normal` o `dificil`.
+Se ajustó el sistema de lesiones para que ocurran con mucha menos frecuencia, pero cuando sucedan tengan mayor peso deportivo.
 
-### Mantenimiento durante temporada
-- Cada cierta cantidad de fechas, los bots recuperan parcialmente físico, moral y cohesión si quedaron demasiado por debajo.
-- En pretemporada también se aplica mantenimiento para compensar que el club del jugador entrena varias semanas antes del debut.
+### Cambios
 
-### Desarrollo de plantel bot
-- Al cambio de temporada, los jugadores bots pueden recibir mejoras moderadas de habilidades.
-- Los equipos que terminaron mejor posicionados tienen una probabilidad algo mayor de desarrollo.
+- Probabilidad total de lesión reducida en un 80%.
+- La reducción se aplica sobre la chance completa calculada por el motor: base, fatiga y campo de juego.
+- Las recuperaciones son más largas por tipo de lesión.
+- Las fracturas pueden llegar hasta 400 días configurables desde `config.js`.
 
-## Configuración nueva
+### Configuración nueva
 
 ```js
-equilibrioBots: {
-  activo: true,
-  dificultad: 'normal',
-  soloDivisionManager: true,
-  nivelarAlInicioTemporada: true,
-  mantenerDuranteTemporada: true,
-  intervaloMantenimientoFechas: 2,
-  bonusMaximoPorPosicion: 8,
-  pisoMoral: 55,
-  pisoFisico: 76,
-  pisoCohesion: 50,
-  desarrolloPlantelPorTemporada: 0.18
+lesiones: {
+  multiplicadorProbabilidad: 0.20,
+  contusionMinDias: 7,
+  contusionMaxDias: 21,
+  distensionMinDias: 21,
+  distensionMaxDias: 56,
+  desgarroMinDias: 28,
+  desgarroMaxDias: 84,
+  esguinceMinDias: 35,
+  esguinceMaxDias: 105,
+  roturaMinDias: 90,
+  roturaMaxDias: 210,
+  fracturaMinDias: 180,
+  fracturaMaxDias: 400
 }
 ```
-
-## Archivos modificados
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `index.html`
-- `README.md`
-- `VERSION.md`
-- `CARACTERISTICAS_VERSION.md`

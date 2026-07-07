@@ -297,7 +297,8 @@ function fatiguePoints(playerId){
 }
 function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
   const pitch = PITCH_CONDITIONS[pitchCondition] || PITCH_CONDITIONS.Normal;
-  return clamp(BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus, 0, 0.65);
+  const rawChance = BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus;
+  return clamp(rawChance * INJURY_CHANCE_MULTIPLIER, 0, 0.65);
 }
 function tacticStatusIcon(playerId){
   if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';

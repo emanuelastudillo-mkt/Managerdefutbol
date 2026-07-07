@@ -1,4 +1,4 @@
-/* V3.39 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.42 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -25,6 +25,9 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
 const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json');
+const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios.json');
+const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas.json');
+const FACILITIES_DATABASE_URL = configValue('data.instalacionesUrl', 'data/instalaciones.json');
 const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
@@ -48,7 +51,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.39');
+const APP_VERSION = configValue('version', 'V3.41');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -155,14 +158,26 @@ const SUB_TRIGGERS = [
   { value:'best', label:'Mejores suplentes' },
   { value:'injuryOnly', label:'Solo cambios por lesión' }
 ];
+function injuryMinTurns(path, fallbackDays){
+  return Math.max(1, Math.ceil(configNumber(path, fallbackDays, 1) / DAYS_PER_ADVANCE));
+}
+function injuryMaxTurns(path, fallbackDays, minTurns=1){
+  return Math.max(minTurns, Math.floor(configNumber(path, fallbackDays, 1) / DAYS_PER_ADVANCE));
+}
+function injuryRule(name, probability, minPath, minDays, maxPath, maxDays){
+  const minTurns = injuryMinTurns(minPath, minDays);
+  const maxTurns = injuryMaxTurns(maxPath, maxDays, minTurns);
+  return { name, probability, minTurns, maxTurns };
+}
 const INJURY_TABLE = [
-  { name:'Distensión', probability:25, minTurns:2, maxTurns:5 },
-  { name:'Desgarro', probability:20, minTurns:1, maxTurns:4 },
-  { name:'Esguince', probability:15, minTurns:3, maxTurns:8 },
-  { name:'Rotura', probability:9, minTurns:6, maxTurns:12 },
-  { name:'Fractura', probability:3, minTurns:16, maxTurns:30 },
-  { name:'Contusión', probability:28, minTurns:1, maxTurns:2 }
+  injuryRule('Distensión', 25, 'lesiones.distensionMinDias', 21, 'lesiones.distensionMaxDias', 56),
+  injuryRule('Desgarro', 20, 'lesiones.desgarroMinDias', 28, 'lesiones.desgarroMaxDias', 84),
+  injuryRule('Esguince', 15, 'lesiones.esguinceMinDias', 35, 'lesiones.esguinceMaxDias', 105),
+  injuryRule('Rotura', 9, 'lesiones.roturaMinDias', 90, 'lesiones.roturaMaxDias', 210),
+  injuryRule('Fractura', 3, 'lesiones.fracturaMinDias', 180, 'lesiones.fracturaMaxDias', 400),
+  injuryRule('Contusión', 28, 'lesiones.contusionMinDias', 7, 'lesiones.contusionMaxDias', 21)
 ];
+const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 1, 0, 2);
 const BASE_INJURY_CHANCE = configNumber('lesiones.lesionBase', 0.05, 0, 1);
 const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
 const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);

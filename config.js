@@ -4,13 +4,14 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.27',
+  version: 'V3.28',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    eventsUrl: 'data/eventos.json'
+    eventsUrl: 'data/eventos.json',
+    specialSkillsUrl: 'data/habilidades_especiales.json'
   },
   calendario: {
     // Cada avance equivale a 7 días. El juego sigue avanzando de domingo a domingo.

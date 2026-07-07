@@ -1,4 +1,4 @@
-/* V3.27 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
+/* V3.28 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento y eventos. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -377,6 +377,7 @@ function simulateNextMatchday(options={}){
     updateManagerMatchStats(ownResult);
     maybeGenerateTransferOffer(ownResult);
     advanceSponsorMatchCounter();
+    if(typeof awardSpecialPointsForOwnMatch === 'function') awardSpecialPointsForOwnMatch(ownResult);
   }
   const triggeredEvents = processGameEventsAfterMatches({ round, results, ownResult });
   const ownProblems = collectOwnProblems(ownResult);
@@ -606,7 +607,10 @@ function advanceStadiumAfterMatches(results){
     if(project.replantingTurnsLeft > 0){
       game.stadium.fields[clubId] = 30;
     } else {
-      game.stadium.fields[clubId] = clamp(Math.round(fieldScoreForClub(clubId) - rnd(5,8)), 1, 100);
+      const rawDeterioration = rnd(5,8);
+      const reductionPct = (typeof specialActiveBonus === 'function' && Number(clubId) === Number(game?.selectedClubId)) ? specialActiveBonus('deterioro_campo') : 0;
+      const adjustedDeterioration = Math.max(0, rawDeterioration * (1 - (clamp(reductionPct, 0, 95) / 100)));
+      game.stadium.fields[clubId] = clamp(Math.round(fieldScoreForClub(clubId) - adjustedDeterioration), 1, 100);
     }
   });
   processStadiumProjects();
@@ -652,6 +656,7 @@ function startPatchingField(){
   if(project.replantingTurnsLeft > 0 || project.patchingTurnsLeft > 0){ showNotice('Ya hay un trabajo de mantenimiento activo en el estadio.'); return; }
   if((game.budget || 0) < PATCH_COST){ showNotice('Presupuesto insuficiente para regar y parchar el campo.'); return; }
   recordBudgetChange(-PATCH_COST, 'Riego y parcheo del campo', { type:'stadium_patch' });
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('regar_o_parchar_campo_de_juego', { type:'stadium_patch' });
   project.patchingTurnsLeft = PATCH_TURNS;
   saveLocal(true);
   showNotice('Riego y parcheo iniciado. El campo mejorará 5 puntos por avance durante 21 días.');

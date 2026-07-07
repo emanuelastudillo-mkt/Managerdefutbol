@@ -1,4 +1,4 @@
-/* V3.17 · Eventos principales, normalización de partida, calendario anual, temporadas y ascensos/descensos. */
+/* V3.28 · Eventos principales, normalización de partida, calendario anual, temporadas y ascensos/descensos. */
 
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
@@ -163,6 +163,7 @@ function normalizeGame(saved){
   normalized.managerStats = normalizeManagerStats(normalized.managerStats);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
+  normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
@@ -460,6 +461,7 @@ function newGame(selectedClubId, options={}){
     managerStats: createInitialManagerStats(),
     messages: [],
     eventLog: [],
+    special: typeof createInitialSpecialState === 'function' ? createInitialSpecialState(managerName) : null,
     marketPlayers: [],
     pendingTransfers: [],
     rejectedPurchaseOffers: {},
@@ -880,6 +882,7 @@ function finalizeSeasonIfNeeded(){
   }
   if(champion){
     pushGameMessage({ type:'deportivo', priority:'high', title:'Has salido campeón', body:`Felicitaciones: ${clubName(game.selectedClubId)} salió campeón de ${division.name}.`, id:`champion-${game.seasonNumber || 1}-${game.selectedClubId}` });
+    if(typeof awardSpecialChampionPoints === 'function') awardSpecialChampionPoints(division);
   }
   const salariesPaid = paySeasonSalaries();
   const salaryAdjustments = applySeasonSalaryAdjustments();

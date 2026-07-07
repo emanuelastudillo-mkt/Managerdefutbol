@@ -1,46 +1,65 @@
-# Versión V3.27
+# Versión V3.28
 
 ## Nombre
-Doble avance: día y próximo partido
+Menú ESPECIAL: cartas, sobres y bonos
 
 ## Base
-V3.26 · Reparación automática de campos bots injugables
+V3.27 · Doble avance: día y próximo partido
 
-## Cambios principales V3.27
+## Cambios principales V3.28
 
-- Se reemplazó el botón único de avance por dos botones:
-  - `Avanzar día`
-  - `Ir a próximo partido`
-- `Avanzar día` mueve el calendario sólo 1 día durante la temporada regular.
-- `Avanzar día` usa un cooldown corto configurable de 10 segundos.
-- `Ir a próximo partido` lleva el calendario al día del próximo compromiso y ejecuta el partido.
-- `Ir a próximo partido` mantiene el cooldown largo de 120 segundos.
-- La barra de progreso queda debajo de ambos botones y ocupa el ancho conjunto del bloque.
-- La barra ahora calcula su progreso usando la duración real del bloqueo activo, no siempre 120 segundos.
-- La fecha lateral ahora muestra el día real del calendario guardado.
-- Si ya hay un partido pendiente en el día actual, el avance diario se bloquea para evitar saltarse el encuentro.
+- Se agrega el menú lateral **ESPECIAL**.
+- Se integra la planilla `data/habilidades_especiales.json` basada en `habilidades_especiales_V1.02.json`.
+- Se agrega estado persistente del manager para:
+  - puntos de habilidad;
+  - cartas activas;
+  - cartas en reserva;
+  - historial de últimas cartas;
+  - bloqueo de cambio de cartas activas.
+- Se agregan sobres común, raro y épico.
+- Se agregan cartas inútiles, comunes, raras, épicas y legendarias.
+- Se permite destruir cartas en reserva para recuperar pocos puntos.
+- Se implementa máximo de 5 cartas activas.
+- Se implementa máximo de 50 cartas en reserva.
+- Se implementa bloqueo de 100 días tras activar o desactivar cartas.
+- Se implementan bonus apilables de:
+  - sponsors extra;
+  - reducción del deterioro del campo;
+  - aumento relativo de probabilidad legendaria.
 
-## Configuración agregada
+## Puntos ocultos integrados
 
-```js
-calendario: {
-  bloqueoEntreAvancesMs: 120000,
-  bloqueoAvanceDiaMs: 10000
-}
-```
+El manager suma puntos de habilidad por:
+
+- ganar partido;
+- empatar partido;
+- salir campeón según división;
+- tratar jugador lesionado;
+- meter más de 5 goles en un partido;
+- regar o parchar el campo de juego;
+- consultar juveniles.
 
 ## Archivos modificados
 
+- `index.html`
 - `config.js`
 - `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
 - `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
 - `js/ui/06-render-home-messages.js`
 - `style.css`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
 
+## Archivos agregados
+
+- `data/habilidades_especiales.json`
+- `js/game/15-especial.js`
+
 ## Versión anterior
 
-V3.26 · Reparación automática de campos bots injugables
+V3.27 · Doble avance: día y próximo partido

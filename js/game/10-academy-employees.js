@@ -423,6 +423,7 @@ function consultAcademyPlayers(){
     revealed.push(`${p?.name || 'Juvenil'}: ${pick.stat}`);
   }
   game.academy.lastConsultTurn = turn;
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('consultar_juveniles', { revealed:revealed.length });
   saveLocal(true);
   renderAcademy();
   showNotice(`Informe recibido: ${revealed.join(' · ')}`);
@@ -657,6 +658,7 @@ function applyKinesioTreatment(playerId){
   const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
   const recoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
   game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId, success });
   if(success){
     const st = playerStatus(playerId);
     const nextThrough = Number(st.injuredThrough) - recoveryReductionTurns;

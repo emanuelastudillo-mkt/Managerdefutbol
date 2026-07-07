@@ -1,4 +1,4 @@
-/* V3.17 · Sponsors, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/* V3.28 · Sponsors, estadio, calendario, tabla, estadísticas y finanzas visuales. */
 
 function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
@@ -44,7 +44,8 @@ function sponsorCohesionBonus(){
 function sponsorOfferValue(baseSponsor, lugar){
   const base = Number(baseSponsor?.valor_base_por_7_dias || 0);
   const place = Number(lugar?.multiplicador_lugar || 1);
-  const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus());
+  const specialBonusPct = typeof specialActiveBonus === 'function' ? specialActiveBonus('sponsors_extra') : 0;
+  const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus()) * (1 + (specialBonusPct / 100));
   const perTurn = Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier);
   const durationDays = Number(baseSponsor?.dias_duracion_oferta || 0);
   const turns = clamp(Math.round(durationDays > 0 ? durationDays / DAYS_PER_ADVANCE : randomInt(3,35)), 3, 35);

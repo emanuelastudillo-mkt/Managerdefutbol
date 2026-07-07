@@ -1,30 +1,64 @@
-# Características de la versión V3.27
+# Características de la versión V3.28
 
-La V3.27 separa el avance del calendario en dos acciones: avance diario corto y avance largo hasta el próximo partido.
+La V3.28 agrega el sistema **ESPECIAL**, con cartas, sobres, puntos ocultos y bonos acumulables para el manager.
 
-## Nuevo flujo de avance
+## Menú ESPECIAL
 
-En la oficina del manager ahora aparecen dos botones:
+El menú lateral ahora incluye la sección **ESPECIAL**. Dentro se muestran:
 
-- **Avanzar día**: avanza únicamente 1 día de calendario durante la temporada regular.
-- **Ir a próximo partido**: salta al día del próximo compromiso y simula el partido.
+- nombre del manager;
+- puntos de habilidad acumulados;
+- cartas activas;
+- cartas en reserva;
+- sobres disponibles;
+- últimas cartas abiertas;
+- bonus activos.
 
-## Cooldowns
+## Puntos ocultos
 
-- El avance diario tiene bloqueo de **10 segundos**.
-- El avance hasta próximo partido mantiene el bloqueo de **120 segundos**.
-- La barra de progreso se ubica debajo de los dos botones y toma el ancho del bloque completo.
-- La barra mide correctamente el bloqueo activo, sea de 10 o de 120 segundos.
+El manager acumula puntos de habilidad sin que el origen se detalle en pantalla. Estos puntos se usan para abrir sobres.
 
-## Protección contra saltarse partidos
+Acciones integradas:
 
-Si el calendario ya llegó al día del partido, el botón **Avanzar día** queda bloqueado y obliga a usar **Ir a próximo partido**. Esto evita que el jugador saltee un compromiso oficial por accidente.
+- ganar partido;
+- empatar partido;
+- salir campeón;
+- tratar lesionados;
+- meter más de 5 goles;
+- regar o parchar el campo;
+- consultar juveniles.
 
-## Configuración editable
+## Cartas y sobres
 
-```js
-calendario: {
-  bloqueoEntreAvancesMs: 120000,
-  bloqueoAvanceDiaMs: 10000
-}
-```
+Se cargan desde `data/habilidades_especiales.json`.
+
+Hay tres sobres:
+
+- Sobre Común;
+- Sobre Raro;
+- Sobre Épico.
+
+Las cartas pueden ser:
+
+- inútiles;
+- comunes;
+- raras;
+- épicas;
+- legendarias.
+
+## Límites
+
+- Máximo de 5 cartas activas.
+- Máximo de 50 cartas en reserva.
+- Las cartas activas pueden repetirse si son instancias distintas.
+- Activar o desactivar una carta bloquea cambios durante 100 días.
+
+## Bonus implementados
+
+- **Sponsors extra**: aumenta el valor de nuevas ofertas de sponsors.
+- **Deterioro de campo**: reduce el deterioro del campo propio cuando se juega de local.
+- **Probabilidad legendaria**: aumenta de forma relativa la probabilidad de cartas legendarias al abrir sobres.
+
+## Destrucción de cartas
+
+Las cartas en reserva pueden destruirse para recuperar puntos según rareza. Las cartas activas no se destruyen: primero deben desactivarse.

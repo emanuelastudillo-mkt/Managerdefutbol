@@ -1,4 +1,4 @@
-/* V3.27 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
+/* V3.28 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -56,6 +56,32 @@ async function loadEventsDatabase(){
   if(!raw || typeof raw !== 'object') return fallback;
   const eventos = Array.isArray(raw.eventos) ? raw.eventos : (Array.isArray(raw.events) ? raw.events : []);
   return { ...raw, eventos, source:EVENTS_DATABASE_URL };
+}
+
+async function loadSpecialSkillsDatabase(){
+  const raw = await fetchJsonIfExists(SPECIAL_SKILLS_DATABASE_URL);
+  const fallback = {
+    version:APP_VERSION,
+    sistema:'habilidades_especiales',
+    limites:{ cartas_activas_max:5, cartas_reserva_max:50, dias_bloqueo_cambio_cartas:100, permitir_abrir_sobres_con_reserva_llena:false, permitir_cartas_repetidas_activas:true, bonus_se_apilan:true },
+    rareza_orden_visual:['inutil','comun','rara','epica','legendaria'],
+    sobres:{},
+    destruir_cartas:{ permitido:true, recuperacion_puntos:{ inutil:5, comun:20, rara:75, epica:250, legendaria:1000 } },
+    apilamiento_bonus:{},
+    cartas_base:[],
+    puntos_ocultos:{ moneda:'puntos_habilidad', acciones:{} },
+    source:'fallback'
+  };
+  if(!raw || typeof raw !== 'object') return fallback;
+  const clean = { ...fallback, ...raw, source:SPECIAL_SKILLS_DATABASE_URL };
+  clean.limites = { ...fallback.limites, ...(raw.limites || {}) };
+  clean.sobres = raw.sobres && typeof raw.sobres === 'object' ? raw.sobres : {};
+  clean.cartas_base = Array.isArray(raw.cartas_base) ? raw.cartas_base : [];
+  clean.puntos_ocultos = raw.puntos_ocultos && typeof raw.puntos_ocultos === 'object' ? raw.puntos_ocultos : fallback.puntos_ocultos;
+  clean.destruir_cartas = raw.destruir_cartas && typeof raw.destruir_cartas === 'object' ? raw.destruir_cartas : fallback.destruir_cartas;
+  clean.apilamiento_bonus = raw.apilamiento_bonus && typeof raw.apilamiento_bonus === 'object' ? raw.apilamiento_bonus : {};
+  clean.rareza_orden_visual = Array.isArray(raw.rareza_orden_visual) ? raw.rareza_orden_visual : fallback.rareza_orden_visual;
+  return clean;
 }
 
 function playersDatabaseHash(players=[]){
@@ -766,6 +792,7 @@ async function init(){
     sponsorsDatabase = await loadSponsorsDatabase();
     employeesDatabase = await loadEmployeesDatabase();
     eventsDatabase = await loadEventsDatabase();
+    specialSkillsDatabase = await loadSpecialSkillsDatabase();
     fillClubSelect();
     bindEvents();
     startUiTicker();

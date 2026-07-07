@@ -2073,3 +2073,32 @@ button.action-failure{
 .next-match-field.regular{border-color:rgba(245,158,11,.24);background:rgba(245,158,11,.06)}
 .next-match-field.bad,
 .next-match-field.unplayable{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.08)}
+
+/* V3.28 · ESPECIAL */
+.special-summary .card strong{font-size:1.35rem}
+.special-lock-card{border-left:4px solid rgba(255,255,255,.18)}
+.special-lock-card.ok{border-left-color:#41d477}
+.special-lock-card.warn{border-left-color:#f3b94e}
+.special-bonus-grid{margin-top:14px;margin-bottom:14px}
+.special-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.special-card{position:relative;display:flex;flex-direction:column;gap:8px;min-height:190px;padding:14px;border-radius:18px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);overflow:hidden}
+.special-card:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:rgba(255,255,255,.18)}
+.special-card h3{margin:0;font-size:1rem}
+.special-card p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.35}
+.special-card strong{margin-top:auto;font-size:.9rem}
+.special-card.active{background:rgba(83,151,255,.10);border-color:rgba(83,151,255,.35)}
+.special-card-actions{margin-top:10px}
+.rarity-inutil:before{background:#777}
+.rarity-comun:before{background:#53d186}
+.rarity-rara:before{background:#5ab7ff}
+.rarity-epica:before{background:#b26dff}
+.rarity-legendaria:before{background:#ffcf57}
+.rarity-pill.rarity-inutil{background:rgba(150,150,150,.14)}
+.rarity-pill.rarity-comun{background:rgba(83,209,134,.16)}
+.rarity-pill.rarity-rara{background:rgba(90,183,255,.16)}
+.rarity-pill.rarity-epica{background:rgba(178,109,255,.16)}
+.rarity-pill.rarity-legendaria{background:rgba(255,207,87,.18)}
+.special-pack-card{display:flex;flex-direction:column;gap:12px}
+.special-opened{border-color:rgba(255,207,87,.25)}
+.gap-xs{gap:6px}
+@media (max-width:720px){.special-card-grid{grid-template-columns:1fr}.special-card{min-height:auto}}

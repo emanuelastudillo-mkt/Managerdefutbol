@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.20',
+  version: 'V3.21',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -61,6 +61,15 @@ window.GAME_CONFIG = {
     jovenesLibresEdadMin: 17,
     jovenesLibresEdadMax: 18,
     jovenesLibresPorTemporada: 0
+  },
+  cohesion: {
+    // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
+    valorInicial: 50,
+    gananciaPorPartido: 14,
+    perdidaPorCambioTactico: 8,
+    perdidaPorCambioJugador: 1,
+    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
+    gananciaEntrenamientoTacticoPorCasilla: 1
   },
   economia: {
     escalaSueldosYClausulas: 0.10,

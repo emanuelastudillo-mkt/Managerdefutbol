@@ -1,4 +1,4 @@
-/* V3.20 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.21 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -43,7 +43,7 @@ const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvanc
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.18');
+const APP_VERSION = configValue('version', 'V3.21');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -51,10 +51,12 @@ const RANKING_PAGE_SIZE = configNumber('ranking.resultadosPorPagina', 100, 10, 5
 const RANKING_UPLOAD_COOLDOWN_DAYS = configNumber('ranking.cooldownCargaDias', 77, 0, 366);
 const RANKING_NAME = configValue('ranking.nombreRanking', 'Ranking Online');
 
-const TEAM_COHESION_START = 50;
-const TEAM_COHESION_MATCH_GAIN = 8;
-const TEAM_COHESION_TACTIC_CHANGE_LOSS = 10;
-const TEAM_COHESION_PLAYER_CHANGE_LOSS = 2;
+const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 50, 0, 100);
+const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 14, 0, 100);
+const TEAM_COHESION_TACTIC_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioTactico', 8, 0, 100);
+const TEAM_COHESION_PLAYER_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioJugador', 1, 0, 100);
+const TEAM_COHESION_TACTICAL_TRAINING_CHANCE = configNumber('cohesion.probabilidadEntrenamientoTacticoPorCasilla', 0.35, 0, 1);
+const TEAM_COHESION_TACTICAL_TRAINING_GAIN = configNumber('cohesion.gananciaEntrenamientoTacticoPorCasilla', 1, 0, 100);
 const PLAYER_MORALE_START = 60;
 const PSYCHOLOGIST_COST = configNumber('empleados.psicologoCosto', 500000, 0);
 const PSYCHOLOGIST_SUCCESS_CHANCE = configNumber('empleados.psicologoProbabilidadExito', 0.90, 0, 1);

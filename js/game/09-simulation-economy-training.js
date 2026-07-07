@@ -1,4 +1,4 @@
-/* V3.20 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
+/* V3.21 · Selección automática, calendario anual, economía, estadio, moral y entrenamiento. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -849,7 +849,7 @@ function applyTrainingEffects(){
   const slots = trainingScheduleSlots();
   slots.forEach(item => {
     if(item.type === 'tactical'){
-      tacticalGain += Math.random() < clamp(0.50 * scale, 0, 1) ? 1 : 0;
+      tacticalGain += Math.random() < TEAM_COHESION_TACTICAL_TRAINING_CHANCE ? TEAM_COHESION_TACTICAL_TRAINING_GAIN : 0;
       return;
     }
     if(item.type === 'intense') intenseSessions += 1;

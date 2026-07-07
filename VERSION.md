@@ -1,10 +1,36 @@
-# Versión V3.20
+# Versión V3.21
 
 ## Tipo de actualización
 
-Entrenamiento y control individual del plantel.
+Balance de cohesión de equipo.
 
-## Cambios principales V3.20
+## Cambios principales V3.21
+
+- La cohesión sube más después de los partidos.
+- Los cambios de jugadores y expulsiones castigan menos la cohesión.
+- Cambiar de táctica sigue teniendo coste, pero se reduce levemente.
+- El entrenamiento táctico ahora tiene una probabilidad directa de sumar cohesión por casilla táctica semanal.
+- Se agrega configuración editable para todo el sistema de cohesión.
+
+## Valores actuales
+
+```js
+gananciaPorPartido: 14,
+perdidaPorCambioTactico: 8,
+perdidaPorCambioJugador: 1,
+probabilidadEntrenamientoTacticoPorCasilla: 0.35,
+gananciaEntrenamientoTacticoPorCasilla: 1
+```
+
+## Compatibilidad
+
+- Compatible con partidas existentes.
+- La cohesión ya guardada de cada club se conserva.
+- Los nuevos valores aplican desde el próximo avance o partido.
+
+---
+
+## Versión anterior: V3.20
 
 - Se mantiene el plan semanal general de 7 días con 4 turnos diarios.
 - Se suma un quinto entrenamiento diario individual por jugador.
@@ -13,60 +39,3 @@ Entrenamiento y control individual del plantel.
 - Se agrega un selector masivo para aplicar un mismo foco individual a todo el plantel.
 - El avance semanal aplica 7 sesiones individuales por jugador, una por cada día avanzado.
 - Se agregan parámetros de configuración para activar/desactivar y balancear el quinto entrenamiento.
-
-## Compatibilidad V3.20
-
-- Las partidas existentes se mantienen.
-- El viejo campo `trainingPlan` se reutiliza como plan individual por jugador.
-- Valores antiguos como `regenerative`, `intense`, `tactical` o `dayoff` se convierten automáticamente a focos individuales compatibles.
-
----
-
-## Tipo de actualización anterior
-
-Balance y generación de mercado libre.
-
-## Cambios principales
-
-- Cantidad inicial de jugadores libres: **300**.
-- Jugadores libres regulares con media entre **40 y 62**.
-- Edad inicial de libres regulares: **19 a 30 años**.
-- Distribución de libres regulares por línea:
-  - 10% porteros
-  - 35% defensores
-  - 35% mediocampistas
-  - 20% delanteros
-- Al iniciar una nueva temporada se crean **3 jóvenes libres por club**.
-- Los jóvenes libres tienen **17 o 18 años**.
-- Los jóvenes libres usan la generación normal de calidad, por lo que conservan la baja probabilidad de salir con media muy alta.
-- El mercado libre regular se rellena hasta un máximo objetivo de **200 libres** cuando queda por debajo.
-- Los libres viejos se limpian sólo si el mercado supera los 200 jugadores.
-- Se conservan los libres menores de **32 años**.
-- Los jugadores libres también pueden retirarse con la misma edad de retiro que el resto.
-
-## Compatibilidad
-
-- Las partidas existentes conservan sus jugadores actuales.
-- Las nuevas reglas se aplican a nuevas partidas y a la renovación del mercado al cambiar de temporada.
-- No se modifican sueldos ni cláusulas por este ajuste.
-
-## Ajustes acumulados dentro de V3.16 que se mantienen
-
-- Cards visuales de empleados contratados.
-- Frases rotativas debajo de la barra de avance.
-- Nueva partida con nombre de manager, país, liga y equipo.
-- Ranking con cooldown de 77 días.
-- Curva de dificultad para subidas de habilidad por entrenamiento.
-
-
-## Ajuste V3.19 · Ranking online
-
-- El envío al ranking ahora espera confirmación real del servicio online antes de guardar el cooldown local.
-- Si el envío falla, no se bloquea el siguiente intento.
-- El ranking online ahora usa lectura/escritura confirmada por callback.
-- El Apps Script acepta lectura y envío desde `doGet`, además de mantener compatibilidad con `doPost`.
-- Se corrige el caso donde el juego mostraba un registro local aunque la hoja no hubiera recibido datos.
-
-
-### V3.19
-- Corrección robusta del ranking online: prioridad de endpoint configurado y Apps Script tolerante a acciones GET antiguas/desconocidas.

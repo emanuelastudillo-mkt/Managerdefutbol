@@ -1,4 +1,4 @@
-/* V3.57 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.64 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -28,6 +28,7 @@ const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/h
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios.json');
 const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas.json');
 const FACILITIES_DATABASE_URL = configValue('data.instalacionesUrl', 'data/instalaciones.json');
+const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
 const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
@@ -365,6 +366,7 @@ let eventsDatabase = null;
 let specialSkillsDatabase = null;
 let stadiumsDatabase = null;
 let fansDatabase = null;
+let matchCommentaryDatabase = null;
 let game = null;
 let activeTab = 'home';
 let squadSort = 'media_desc';

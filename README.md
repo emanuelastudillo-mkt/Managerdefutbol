@@ -260,3 +260,9 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 ## V3.63
 - Prestigio real del manager calculado por experiencia, victorias, objetivos, campeonatos y penalizaciones.
 - Agregado botón Renunciar al club.
+
+
+## V3.64
+- Visor del simulador con relato grande de jugadas destacadas.
+- Simulación visual extendida a 60 fases.
+- Nuevo archivo `data/relatos_partido.json` con frases de relato.

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.57',
+  version: 'V3.64',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -14,7 +14,8 @@ window.GAME_CONFIG = {
     specialSkillsUrl: 'data/habilidades_especiales.json',
     estadiosUrl: 'data/estadios.json',
     hinchasUrl: 'data/hinchas.json',
-    instalacionesUrl: 'data/instalaciones.json'
+    instalacionesUrl: 'data/instalaciones.json',
+    relatosPartidoUrl: 'data/relatos_partido.json'
   },
   calendario: {
     // Cada avance equivale a 7 días. El juego sigue avanzando de domingo a domingo.
@@ -293,8 +294,8 @@ window.GAME_CONFIG = {
   },
   ui: {
     duracionAvisoMs: 5200,
-    fasesSimulacionPartido: 30,
-    duracionSimulacionPartidoMs: 30000,
+    fasesSimulacionPartido: 60,
+    duracionSimulacionPartidoMs: 60000,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,
     accionesFeedbackResultadoMs: 900,

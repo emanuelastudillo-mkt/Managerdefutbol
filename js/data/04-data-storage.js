@@ -1,4 +1,4 @@
-/* V3.57 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización. */
+/* V3.64 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -105,6 +105,17 @@ async function loadFansDatabase(){
   if(!raw || typeof raw !== 'object') return { raw:null, hinchadas:[], source:'fallback' };
   const hinchadas = Array.isArray(raw.hinchadas) ? raw.hinchadas : [];
   return { raw, hinchadas, source:FANS_DATABASE_URL };
+}
+
+async function loadMatchCommentaryDatabase(){
+  const raw = await fetchJsonIfExists(MATCH_COMMENTARY_DATABASE_URL);
+  const fallback = { version:APP_VERSION, sistema:'relatos_partido', categorias:{} };
+  if(!raw || typeof raw !== 'object') return fallback;
+  const categorias = raw.categorias && typeof raw.categorias === 'object' ? raw.categorias : {};
+  Object.keys(categorias).forEach(key => {
+    categorias[key] = Array.isArray(categorias[key]) ? categorias[key].filter(Boolean).map(String) : [];
+  });
+  return { ...raw, categorias, source:MATCH_COMMENTARY_DATABASE_URL };
 }
 function lookupNameKey(name){
   return String(name || '')
@@ -1040,6 +1051,7 @@ async function init(){
     employeesDatabase = await loadEmployeesDatabase();
     eventsDatabase = await loadEventsDatabase();
     specialSkillsDatabase = await loadSpecialSkillsDatabase();
+    matchCommentaryDatabase = await loadMatchCommentaryDatabase();
     fillClubSelect();
     bindEvents();
     startUiTicker();

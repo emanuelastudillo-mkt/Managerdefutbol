@@ -412,8 +412,8 @@ function matchRevealStageNote(minute, index, total){
   return 'Últimos riesgos, cambios y acciones decisivas.';
 }
 function matchRevealStages(match){
-  const total = Math.max(6, Math.round(MATCH_REVEAL_PHASES || 30));
-  const duration = Math.max(6000, Number(MATCH_REVEAL_DURATION_MS || 30000));
+  const total = Math.max(6, Math.round(MATCH_REVEAL_PHASES || 60));
+  const duration = Math.max(6000, Number(MATCH_REVEAL_DURATION_MS || 60000));
   const stages = [];
   const usedMinutes = new Set();
   for(let i=0;i<total;i++){
@@ -432,7 +432,11 @@ function matchRevealStages(match){
       note:matchRevealStageNote(minute, i, total)
     });
   }
-  return stages;
+  return stages.map((stage, index) => ({
+    ...stage,
+    previousMinute:index > 0 ? stages[index - 1].minute : -1,
+    nextMinute:index < stages.length - 1 ? stages[index + 1].minute : 90
+  }));
 }
 function renderMatchRevealStage(match, stage, index, total){
   const box = $('matchRevealDynamic');
@@ -454,7 +458,13 @@ function renderMatchRevealStage(match, stage, index, total){
     awayStats.possession = 100 - hPoss;
   }
   const events = matchRevealEvents(match, stage.minute);
+  const narration = matchRevealNarration(match, stage, index, total);
   box.innerHTML = `
+    <div class="card inner reveal-commentary-card ${escapeHtml(narration.tone || 'ambient')}">
+      <p class="label">Relato de partido</p>
+      <div class="reveal-commentary-text">${escapeHtml(narration.text)}</div>
+      <div class="reveal-commentary-sub">${escapeHtml(narration.sub || '')}</div>
+    </div>
     <div class="card inner reveal-stage-card">
       <div class="row">
         <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
@@ -497,15 +507,85 @@ function revealTeamStatsCard(clubId, stats, sideLabel){
     <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
   </div>`;
 }
-function matchRevealEvents(match, minute){
+function matchRevealAllEvents(match){
   const events = [];
-  (match.goals || []).forEach(g => events.push({ minute:g.minute, type:'goal', data:g }));
-  (match.cards || []).forEach(c => events.push({ minute:c.minute, type:'card', data:c }));
-  (match.injuries || []).forEach(i => events.push({ minute:i.minute, type:'injury', data:i }));
-  (match.substitutions || []).forEach(s => events.push({ minute:s.minute, type:'sub', data:s }));
-  (match.keySaves || []).forEach(k => events.push({ minute:k.minute, type:'keySave', data:k }));
-  (match.errors || []).forEach(e => events.push({ minute:e.minute, type:'error', data:e }));
-  return events.filter(e => e.minute <= minute).sort((a,b)=>a.minute-b.minute);
+  (match.goals || []).forEach(g => events.push({ minute:Number(g.minute || 0), type:'goal', data:g }));
+  (match.cards || []).forEach(c => events.push({ minute:Number(c.minute || 0), type:'card', data:c }));
+  (match.injuries || []).forEach(i => events.push({ minute:Number(i.minute || 0), type:'injury', data:i }));
+  (match.substitutions || []).forEach(s => events.push({ minute:Number(s.minute || 0), type:'sub', data:s }));
+  (match.keySaves || []).forEach(k => events.push({ minute:Number(k.minute || 0), type:'keySave', data:k }));
+  (match.errors || []).forEach(e => events.push({ minute:Number(e.minute || 0), type:'error', data:e }));
+  return events.sort((a,b)=>a.minute-b.minute || eventPriority(a.type)-eventPriority(b.type));
+}
+function eventPriority(type){
+  const order = { goal:1, keySave:2, card:3, error:4, injury:5, sub:6 };
+  return order[type] || 9;
+}
+function matchRevealEvents(match, minute){
+  return matchRevealAllEvents(match).filter(e => e.minute <= minute);
+}
+function matchRevealNarration(match, stage, index, total){
+  if(index === 0) return { tone:'ambient', text:'Ya están los equipos en la cancha. Se acomoda la pelota y empieza a pesar el ambiente.', sub:'Salida al campo' };
+  if(index >= total - 1) return { tone:'final', text:finalMatchNarration(match), sub:'Final del partido' };
+  const all = matchRevealAllEvents(match);
+  const justRevealed = all.filter(e => e.minute <= stage.minute && e.minute > Number(stage.previousMinute || -1));
+  if(justRevealed.length){
+    const event = justRevealed[justRevealed.length - 1];
+    return { tone:`event-${event.type}`, text:matchEventNarration(match, event, 'final'), sub:eventSubLabel(event) };
+  }
+  const warningWindow = Math.max(Number(stage.nextMinute || stage.minute + 2), stage.minute + 2);
+  const incoming = all.find(e => e.minute > stage.minute && e.minute <= warningWindow);
+  if(incoming){
+    return { tone:`warning-${incoming.type}`, text:matchEventNarration(match, incoming, 'before'), sub:'La jugada empieza a tomar temperatura' };
+  }
+  return { tone:'ambient', text:pickRelatoPhrase('ambient', `ambient-${match.id}-${stage.minute}`), sub:stage.note || 'El partido sigue en desarrollo' };
+}
+function finalMatchNarration(match){
+  const h = Number(match.homeGoals || 0), a = Number(match.awayGoals || 0);
+  if(h === a) return `Final en tablas: ${clubName(match.homeId)} ${h} - ${a} ${clubName(match.awayId)}. Nadie pudo quebrar del todo el partido.`;
+  const winner = h > a ? match.homeId : match.awayId;
+  return `Final del partido. Gana ${clubName(winner)} ${h} - ${a} y se lleva una tarde pesada.`;
+}
+function eventSubLabel(event){
+  const labels = { goal:'Jugada destacada · gol', card:'Jugada destacada · tarjeta', keySave:'Jugada destacada · tapada', error:'Jugada destacada · error', injury:'Jugada destacada · lesión', sub:'Cambio automático' };
+  return `${event.minute}' · ${labels[event.type] || 'Jugada destacada'}`;
+}
+function matchEventNarration(match, event, mode='final'){
+  const data = event.data || {};
+  const playerId = data.playerId || data.inId || data.outId || data.chanceById || 0;
+  const player = playerById(playerId);
+  const clubId = Number(data.clubId || data.scoringClubId || data.teamId || 0);
+  const rivalId = clubId === match.homeId ? match.awayId : match.homeId;
+  const map = { goal:'goal', card:'card', keySave:'save', error:'error', injury:'injury', sub:'sub' };
+  const bucket = `${map[event.type] || 'ambient'}_${mode === 'before' ? 'before' : 'final'}`;
+  const fallback = defaultNarrationText(event, mode, player, clubId, rivalId);
+  return applyRelatoTemplate(pickRelatoPhrase(bucket, `${match.id}-${event.type}-${event.minute}-${playerId}-${mode}`, fallback), {
+    player:player?.name || 'el jugador',
+    club:clubName(clubId) || 'su equipo',
+    rival:clubName(rivalId) || 'el rival',
+    minute:event.minute
+  });
+}
+function defaultNarrationText(event, mode, player, clubId, rivalId){
+  const p = player?.name || 'el jugador';
+  const c = clubName(clubId) || 'su equipo';
+  const r = clubName(rivalId) || 'el rival';
+  if(mode === 'before') return `Atención con ${p}, la jugada empieza a ponerse pesada para ${r}.`;
+  if(event.type === 'goal') return `¡Gol de ${p}! ${c} golpea en el minuto ${event.minute}.`;
+  if(event.type === 'card') return `Tarjeta para ${p}. El partido sigue tomando temperatura.`;
+  if(event.type === 'keySave') return `Tapada clave para ${c}. El arquero sostiene a su equipo.`;
+  if(event.type === 'error') return `Error de ${p}. ${c} queda expuesto.`;
+  if(event.type === 'injury') return `Lesión de ${p}. Malas noticias para ${c}.`;
+  return `Cambio en ${c}. El banco busca modificar el partido.`;
+}
+function pickRelatoPhrase(bucket, seedKey, fallback='El partido sigue vivo y cada pelota empieza a pesar más.'){
+  const categorias = matchCommentaryDatabase?.categorias || {};
+  const list = Array.isArray(categorias[bucket]) && categorias[bucket].length ? categorias[bucket] : [];
+  if(!list.length) return fallback;
+  return list[hashNumber(String(seedKey || bucket), list.length)];
+}
+function applyRelatoTemplate(text, data){
+  return String(text || '').replace(/\{(player|club|rival|minute)\}/g, (_, key) => String(data?.[key] ?? ''));
 }
 function revealEventLine(event){
   if(event.type === 'goal'){

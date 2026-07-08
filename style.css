@@ -1500,7 +1500,7 @@ select,input{border-radius:11px;padding:9px 10px;margin-bottom:9px;font-size:13p
 @media (max-width:900px){.shell{grid-template-columns:1fr}.topbar{padding:14px}.view{padding:13px}.side{padding:11px}.grid.cols-2,.grid.cols-3,.grid.cols-4,.split,.form-grid{grid-template-columns:1fr}th,td{padding:7px 8px}.player-chip{width:52px;min-height:52px}.fitness-ring{width:62px;height:62px}.notice{top:12px}}
 
 
-/* V2.32: simulación de partido más compacta y delicada */
+/* V3.64: simulación de partido con relato destacado */
 .modal-panel:has(.match-modal-head){
   width:min(880px,100%);
   padding:15px;
@@ -2389,3 +2389,49 @@ button.action-failure{
 /* V3.63: renuncia y prestigio calculado */
 .resign-club-btn{border-color:rgba(239,68,68,.35)!important;background:rgba(239,68,68,.10)!important;color:#fecaca!important}
 .resign-club-btn:hover{background:rgba(239,68,68,.18)!important}
+
+
+/* V3.64: relato grande del simulador */
+.reveal-commentary-card{
+  position:relative;
+  padding:15px 16px;
+  overflow:hidden;
+  border-color:rgba(250,204,21,.20);
+  background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(30,41,59,.78));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),0 14px 34px rgba(0,0,0,.22);
+}
+.reveal-commentary-card:before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:5px;
+  background:#facc15;
+}
+.reveal-commentary-text{
+  font-size:clamp(20px,3.1vw,34px);
+  line-height:1.12;
+  letter-spacing:-.045em;
+  font-weight:950;
+  color:#f8fafc;
+  text-wrap:balance;
+}
+.reveal-commentary-sub{
+  margin-top:7px;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#bfdbfe;
+}
+.reveal-commentary-card.event-goal:before,.reveal-commentary-card.warning-goal:before{background:#22c55e}
+.reveal-commentary-card.event-card:before,.reveal-commentary-card.warning-card:before{background:#f59e0b}
+.reveal-commentary-card.event-keySave:before,.reveal-commentary-card.warning-keySave:before{background:#38bdf8}
+.reveal-commentary-card.event-error:before,.reveal-commentary-card.warning-error:before{background:#ef4444}
+.reveal-commentary-card.event-injury:before,.reveal-commentary-card.warning-injury:before{background:#f43f5e}
+.reveal-commentary-card.event-sub:before,.reveal-commentary-card.warning-sub:before{background:#a78bfa}
+.reveal-commentary-card.final:before{background:#e5e7eb}
+.reveal-commentary-card.warning-goal,.reveal-commentary-card.warning-card,.reveal-commentary-card.warning-keySave,.reveal-commentary-card.warning-error,.reveal-commentary-card.warning-injury,.reveal-commentary-card.warning-sub{
+  animation:revealPulseV364 .85s ease-in-out infinite alternate;
+}
+@keyframes revealPulseV364{from{border-color:rgba(250,204,21,.14)}to{border-color:rgba(250,204,21,.40)}}
+@media (max-width:900px){.reveal-commentary-card{padding:12px 13px}.reveal-commentary-text{font-size:20px}}

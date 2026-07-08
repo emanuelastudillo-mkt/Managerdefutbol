@@ -1,14 +1,5 @@
 # Manager de Fútbol - README ordenado por versiones
 
-## V3.74 - JSON Argentina/Chile
-
-- Los archivos base de Argentina pasan a llamarse `estadios_argentina.json` y `hinchas_argentina.json`.
-- La configuración por defecto ahora usa esos archivos argentinos renombrados.
-- Se agregó `data/Liga Chile.json` con una liga jugable chilena de 20 clubes importantes.
-- Se agregaron `data/estadios_chile.json` y `data/hinchas_chile.json`.
-- Se agregó `data.leagueUrls` para facilitar cambios futuros de país/liga base desde `config.js`.
-
-
 ## V3.73 - Academia, lesiones juveniles y entrenamiento x3
 
 - Los preparadores de juveniles revelan el triple de habilidades por consulta.
@@ -20,7 +11,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.74
+## Versión actual: V3.72
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

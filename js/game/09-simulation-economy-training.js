@@ -1195,7 +1195,7 @@ function improveSkillFromPool(player, skills, chanceScale=1){
   const available = (skills || []).filter(skill => Number.isFinite(baseSkill(player, skill)));
   if(!available.length) return 0;
   const skill = available[hashNumber(`${player.id}-${game.matchdayIndex}-${skillRollToken()}`, available.length)];
-  const baseChance = clamp(0.50 * Number(chanceScale || 0), 0, 1);
+  const baseChance = clamp(0.50 * Number(chanceScale || 0) * TRAINING_SKILL_GAIN_MULTIPLIER, 0, 1);
   if(Math.random() >= baseChance) return 0;
   const finalChance = trainingSkillFinalChance(player, skill);
   const gain = Math.random() < finalChance ? 1 : 0;

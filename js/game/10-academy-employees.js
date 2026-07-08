@@ -1,7 +1,7 @@
 /* V3.33 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
@@ -12,6 +12,10 @@ function normalizeAcademyState(state){
   clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
   clean.youthPreparer = clean.youthPreparer || null;
   clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
+  clean.lastConsultReveal = clean.lastConsultReveal && typeof clean.lastConsultReveal === 'object' ? clean.lastConsultReveal : null;
+  clean.youthInjurySeason = Number(clean.youthInjurySeason || 0) || null;
+  clean.youthInjuriesTarget = Number.isFinite(Number(clean.youthInjuriesTarget)) ? Math.max(0, Math.round(Number(clean.youthInjuriesTarget))) : null;
+  clean.youthInjuriesCount = Math.max(0, Math.round(Number(clean.youthInjuriesCount || 0)));
   clean.residences = Math.max(0, Math.round(Number(clean.residences || 0)));
   clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
   return clean;
@@ -216,7 +220,26 @@ function resetAcademySeasonState(){
   game.academy = normalizeAcademyState(game.academy);
   if(game.academy.youthPreparer){ game.academy.youthPreparer.active = false; }
   game.academy.lastConsultTurn = null;
+  game.academy.lastConsultReveal = null;
   game.academy.exceptionalYouthGrantedSeason = null;
+  resetAcademyYouthInjurySeason();
+}
+function resetAcademyYouthInjurySeason(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const min = ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON;
+  const max = ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON;
+  const target = max > min ? min + hashNumber(`academy-injury-target-${game.seasonNumber || 1}-${Date.now()}-${Math.random()}`, max - min + 1) : min;
+  game.academy.youthInjurySeason = Number(game.seasonNumber || 1);
+  game.academy.youthInjuriesTarget = target;
+  game.academy.youthInjuriesCount = 0;
+}
+function ensureAcademyYouthInjurySeason(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  if(Number(game.academy.youthInjurySeason || 0) !== Number(game.seasonNumber || 1) || game.academy.youthInjuriesTarget === null){
+    resetAcademyYouthInjurySeason();
+  }
 }
 function normalizeAcademyPlayer(player){
   if(!player) return null;
@@ -226,6 +249,7 @@ function normalizeAcademyPlayer(player){
   const id = Number(player.id || nextAcademyPlayerId());
   const skills = player.skills && typeof player.skills === 'object' ? { ...player.skills } : academySkillsFor(group, overall, id);
   skills.resistencia = clamp(Math.round(Number(skills.resistencia || (1 + hashNumber(`academy-res-${id}`, 9)))), 1, 99);
+  const injuredThroughTurn = Math.max(0, Math.round(Number(player.injuredThroughTurn || 0)));
   return {
     ...player,
     id,
@@ -235,7 +259,12 @@ function normalizeAcademyPlayer(player){
     group,
     overall,
     skills,
-    status:player.status || 'academy'
+    status:player.status || 'academy',
+    injuredThroughTurn,
+    injuryStartTurn:Math.max(0, Math.round(Number(player.injuryStartTurn || 0))),
+    injuryName:injuredThroughTurn > currentTurnIndex() ? (player.injuryName || 'Molestia muscular') : '',
+    injuryTreated:Boolean(player.injuryTreated && injuredThroughTurn > currentTurnIndex()),
+    injuriesSeason:Math.max(0, Math.round(Number(player.injuriesSeason || 0)))
   };
 }
 function normalizeAcademyGroup(group){
@@ -480,6 +509,83 @@ function processAcademyScoutingArrivals(){
   return added;
 }
 
+
+function academyPlayerInjured(player){
+  return Number(player?.injuredThroughTurn || 0) > currentTurnIndex();
+}
+function academyYouthInjuryTurnsLeft(player){
+  return Math.max(0, Math.round(Number(player?.injuredThroughTurn || 0) - currentTurnIndex()));
+}
+function academyYouthInjuryLabel(player){
+  const turns = academyYouthInjuryTurnsLeft(player);
+  if(turns <= 0) return '';
+  return `${player.injuryName || 'Lesión juvenil'} · ${formatDaysFromTurns(turns)}`;
+}
+function clearRecoveredAcademyYouthInjuries(){
+  if(!game?.academy) return 0;
+  let recovered = 0;
+  academyActivePlayers().forEach(player => {
+    if(Number(player.injuredThroughTurn || 0) > 0 && Number(player.injuredThroughTurn || 0) <= currentTurnIndex()){
+      player.injuredThroughTurn = 0;
+      player.injuryStartTurn = 0;
+      player.injuryName = '';
+      player.injuryTreated = false;
+      recovered += 1;
+    }
+  });
+  return recovered;
+}
+function academySeasonProgressRatio(){
+  const total = Math.max(1, (game?.fixtures || []).length || 30);
+  const current = clamp(Number(game?.matchdayIndex || 0), 0, total);
+  return clamp(current / total, 0, 1);
+}
+function processAcademyYouthInjuries(){
+  if(!game?.academy) return 0;
+  ensureAcademyYouthInjurySeason();
+  clearRecoveredAcademyYouthInjuries();
+  const target = Math.max(0, Math.round(Number(game.academy.youthInjuriesTarget || 0)));
+  if(target <= 0) return 0;
+  const count = Math.max(0, Math.round(Number(game.academy.youthInjuriesCount || 0)));
+  if(count >= target) return 0;
+  const progress = academySeasonProgressRatio();
+  const due = Math.min(target, Math.floor((progress * target) + 0.15));
+  const randomPush = Math.random() < 0.06;
+  const forcedEndSeason = progress >= 0.88;
+  if(due <= count && !randomPush && !forcedEndSeason) return 0;
+  const candidates = academyActivePlayers().filter(player => !academyPlayerInjured(player));
+  if(!candidates.length) return 0;
+  const player = candidates[hashNumber(`academy-injury-pick-${game.seasonNumber || 1}-${currentTurnIndex()}-${Math.random()}`, candidates.length)];
+  const names = ['sobrecarga muscular','esguince leve','molestia en la rodilla','contractura fuerte','dolor en el aductor','golpe en el tobillo'];
+  const duration = rnd(ACADEMY_YOUTH_INJURY_MIN_TURNS, ACADEMY_YOUTH_INJURY_MAX_TURNS);
+  player.injuryName = names[hashNumber(`academy-injury-name-${player.id}-${currentTurnIndex()}-${Math.random()}`, names.length)];
+  player.injuryStartTurn = currentTurnIndex();
+  player.injuredThroughTurn = currentTurnIndex() + duration;
+  player.injuryTreated = false;
+  player.injuriesSeason = Math.max(0, Math.round(Number(player.injuriesSeason || 0))) + 1;
+  game.academy.youthInjuriesCount = count + 1;
+  pushGameMessage({ type:'academia', priority:'normal', title:'Juvenil lesionado', body:`${player.name} sufrió ${player.injuryName}. Mientras esté lesionado no entrenará habilidades.` });
+  return 1;
+}
+function treatAcademyYouthInjury(playerId){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
+  if(!player || !academyPlayerInjured(player)){ showNotice('El juvenil no está lesionado.'); return; }
+  if(ACADEMY_YOUTH_INJURY_TREATMENT_COST > 0 && (game.budget || 0) < ACADEMY_YOUTH_INJURY_TREATMENT_COST){ showNotice('Presupuesto insuficiente para tratar al juvenil.'); return; }
+  if(ACADEMY_YOUTH_INJURY_TREATMENT_COST > 0){
+    recordBudgetChange(-ACADEMY_YOUTH_INJURY_TREATMENT_COST, 'Tratamiento lesión juvenil', { type:'academy_youth_injury_treatment', playerId:player.id });
+  }
+  const injuryName = player.injuryName || 'lesión juvenil';
+  player.injuredThroughTurn = 0;
+  player.injuryStartTurn = 0;
+  player.injuryName = '';
+  player.injuryTreated = true;
+  saveLocal(true);
+  renderAcademy();
+  showNotice(`${player.name} fue tratado por ${injuryName} y puede volver a entrenar.`);
+}
+
 function academyTurnSalaryCost(){
   const count = academyActivePlayers().length;
   if(!count) return 0;
@@ -496,6 +602,7 @@ function academyTrainingGainMultiplier(player){
 function applyAcademyTrainingEffects(){
   if(!game?.academy) return;
   academyActivePlayers().forEach(player => {
+    if(academyPlayerInjured(player)) return;
     player.skills = player.skills || academySkillsFor(player.group, player.overall, player.id);
     const type = academyTrainingType(player.id);
     const gainMultiplier = Math.max(1, Math.round(academyTrainingGainMultiplier(player)));
@@ -515,6 +622,7 @@ function processAcademyTurn(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
   processAcademyResidenceRent();
+  processAcademyYouthInjuries();
   academyTurnSalaryCost();
   applyAcademyTrainingEffects();
   const added = processAcademyScoutingArrivals();
@@ -542,7 +650,7 @@ function consultAcademyPlayers(){
   const targets = academyLockedStatTargets();
   if(!targets.length){ showNotice('No quedan habilidades ocultas por desbloquear en la academia.'); return; }
   const baseAmount = 1 + Math.floor(Math.random() * 2);
-  const amount = Math.min(targets.length, Math.max(1, Math.round(baseAmount * staffPerformanceMultiplier('youth_preparer'))));
+  const amount = Math.min(targets.length, Math.max(1, Math.round(baseAmount * staffPerformanceMultiplier('youth_preparer') * ACADEMY_CONSULT_REVEAL_MULTIPLIER)));
   const revealed = [];
   for(let i=0;i<amount;i++){
     const remaining = academyLockedStatTargets();
@@ -554,6 +662,7 @@ function consultAcademyPlayers(){
     revealed.push(`${p?.name || 'Juvenil'}: ${pick.stat}`);
   }
   game.academy.lastConsultTurn = turn;
+  game.academy.lastConsultReveal = { turn, revealed:revealed.slice(0,12), total:revealed.length, createdAt:Date.now() };
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('consultar_juveniles', { revealed:revealed.length });
   saveLocal(true);
   renderAcademy();
@@ -689,17 +798,29 @@ function academyPlayerStatsMarkup(player){
 function academyPlayerCard(player){
   const training = academyTrainingType(player.id);
   const canPromote = Number(player.age || 0) >= 16;
-  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional</span>' : '<span class="pill">Media oculta</span>';
-  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''}">
-    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div>${specialPill}</div>
+  const injured = academyPlayerInjured(player);
+  const injuryLabel = academyYouthInjuryLabel(player);
+  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x20</span>' : '<span class="pill">Media oculta</span>';
+  const injuryPill = injured ? '<span class="pill bad">Lesionado</span>' : '';
+  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''}">
+    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${injuryPill}</div></div>
+    ${injured ? `<div class="academy-injury-alert"><strong>${escapeHtml(injuryLabel)}</strong><span>No entrena habilidades hasta ser tratado o recuperarse.</span></div>` : ''}
     ${academyVisibilityPieMarkup(player)}
     ${academyPlayerStatsMarkup(player)}
     <div class="row academy-actions">
-      <select data-academy-training="${player.id}"><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>
+      <select data-academy-training="${player.id}" ${injured ? 'disabled' : ''}><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>
+      ${injured ? `<button class="primary small-btn" data-treat-academy-injury="${player.id}">Tratar · ${formatMoney(ACADEMY_YOUTH_INJURY_TREATMENT_COST)}</button>` : ''}
       <button class="ghost small-btn" data-dismiss-academy="${player.id}">Despedir</button>
       <button class="primary small-btn" data-promote-academy="${player.id}" ${canPromote ? '' : 'disabled'}>${canPromote ? 'Contrato profesional' : 'Menor de 16'}</button>
     </div>
   </div>`;
+}
+function academyConsultAnimationMarkup(){
+  const info = game?.academy?.lastConsultReveal;
+  if(!info || Number(info.turn || -1) !== currentTurnIndex()) return '';
+  const revealed = Array.isArray(info.revealed) ? info.revealed : [];
+  if(!revealed.length) return '';
+  return `<div class="academy-consult-animation"><div><p class="label">Informe actualizado</p><strong>${Number(info.total || revealed.length)} habilidad(es) revelada(s)</strong></div><div class="academy-consult-revealed">${revealed.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>`;
 }
 function renderAcademy(){
   game.academy = normalizeAcademyState(game.academy);
@@ -731,13 +852,14 @@ function renderAcademy(){
         <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
       </div>
     </div>
+    ${academyConsultAnimationMarkup()}
     <div class="grid cols-3 academy-summary">
       <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>
       <div class="card academy-average-card">${academyAverageVisibilityPieMarkup(active)}</div>
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x20 y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x20 y promovible de inmediato. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
@@ -747,6 +869,7 @@ function renderAcademy(){
   $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);
   document.querySelectorAll('[data-dismiss-academy]').forEach(btn => btn.addEventListener('click', () => dismissAcademyPlayer(Number(btn.dataset.dismissAcademy))));
   document.querySelectorAll('[data-promote-academy]').forEach(btn => btn.addEventListener('click', () => openPromoteAcademyModal(Number(btn.dataset.promoteAcademy))));
+  document.querySelectorAll('[data-treat-academy-injury]').forEach(btn => btn.addEventListener('click', () => treatAcademyYouthInjury(Number(btn.dataset.treatAcademyInjury))));
   document.querySelectorAll('[data-academy-training]').forEach(select => select.addEventListener('change', () => {
     game.academy.trainingPlan[select.dataset.academyTraining] = select.value === 'resistance' ? 'resistance' : 'technical';
     saveLocal(true);

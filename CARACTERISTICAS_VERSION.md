@@ -1,9 +1,10 @@
-# V3.74 - JSON Argentina/Chile
+# V3.73 - Academia, lesiones juveniles y entrenamiento x3
 
-- Se renombraron las rutas base de Argentina a `data/estadios_argentina.json` y `data/hinchas_argentina.json`.
-- `config.js` ahora apunta por defecto a los archivos argentinos renombrados.
-- Se agregó `data/Liga Chile.json` con una liga jugable chilena de 20 clubes importantes.
-- Se agregó `data/estadios_chile.json`.
-- Se agregó `data/hinchas_chile.json`.
-- Se agregó `data.leagueUrls` en `config.js` para poder cambiar el orden de carga de ligas.
+## Cambios
+- Los preparadores de juveniles ahora revelan el triple de habilidades por consulta.
+- Se agregó una animación pequeña al recibir informes juveniles.
+- Los juveniles activos pueden lesionarse entre 1 y 2 veces por temporada.
+- Mientras un juvenil está lesionado no entrena habilidades.
+- Se agregó tratamiento de lesiones juveniles desde la ficha de cada juvenil en Academia.
+- La velocidad de entrenamiento de habilidades de jugadores profesionales se triplicó mediante configuración.
 - README actualizado de más reciente a más antiguo.

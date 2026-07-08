@@ -208,6 +208,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     <div class="office-side-card">
       ${nextBox}
       <div class="advance-control office-advance"><div class="advance-buttons"><button id="advanceDayBtn" class="ghost secondary">Avanzar día</button><button id="advanceMatchBtn" class="primary">Ir a próximo partido</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <button id="resignClubBtn" class="ghost danger full small-btn resign-club-btn" type="button">Renunciar al club</button>
     </div>
   </div>`;
 }
@@ -233,6 +234,7 @@ function renderGameOverScreen(){
   const budget = Number(snapshot.finalBudget || game?.budget || 0);
   const score = Number(snapshot.managerScore || 0);
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : Number(game?.managerStats?.prestige || 0);
+  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const xp = typeof currentManagerExperience === 'function' ? currentManagerExperience() : Number(game?.managerStats?.experience || 0);
   view.innerHTML = `<div class="game-over-screen">
     <div class="card game-over-card">
@@ -247,7 +249,7 @@ function renderGameOverScreen(){
       </div>
       <div class="grid cols-6 compact-team-stats game-over-stats">
         ${gameOverStatCard('Manager', snapshot.managerName || game?.rankingManagerName || 'Manager')}
-        ${gameOverStatCard('Prestigio', prestige)}
+        ${gameOverStatCard('Prestigio', prestigeLabel)}
         ${gameOverStatCard('Experiencia', xp)}
         ${gameOverStatCard('Club saliente', snapshot.club || clubName(game?.selectedClubId))}
         ${gameOverStatCard('Temporada', snapshot.season || game?.seasonNumber || 1)}
@@ -340,6 +342,7 @@ function renderHome(){
   `;
   $('advanceDayBtn')?.addEventListener('click', advanceOneDay);
   $('advanceMatchBtn')?.addEventListener('click', goToNextMatch);
+  $('resignClubBtn')?.addEventListener('click', resignCurrentClub);
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());

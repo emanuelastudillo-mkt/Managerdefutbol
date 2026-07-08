@@ -1,5 +1,14 @@
-# V3.62 - Mejor condición física ajustado
+# V3.63 - Parche prestigio real del manager y renuncia
 
-- El botón **Mejor condición física** ahora prioriza jugadores con condición física de **75 o más**.
-- Dentro de esa prioridad, intenta reducir penalizaciones tácticas: rol exacto primero, rol compatible después y fuera de zona al final.
-- Si no hay suficientes jugadores con +75, completa el once con los mejores disponibles cuidando posición, moral y media.
+## Cambios
+- El prestigio del manager ahora se calcula como suma real de componentes: experiencia, victorias, objetivos, campeonatos y penalizaciones.
+- La experiencia suma prestigio a razón de 0.001 por punto de experiencia.
+- Las victorias históricas aplican prestigio: cada 10 victorias suma 1 punto.
+- Cumplir el objetivo del club suma 5 puntos de prestigio.
+- Ser despedido resta 2 puntos de prestigio.
+- Salir campeón suma prestigio según división: 20 en primera, 10 en segunda, 5 en tercera.
+- Descender o terminar último resta prestigio según división: 10 en primera, 10 en segunda, 5 en tercera.
+- El visor de prestigio ya no incluye el valor artificial de 20 usado para clubes chicos.
+- Los clubes con menos de 20 de prestigio siguen aceptando cualquier manager.
+- Se agregó botón **Renunciar al club** en la Oficina del manager.
+- Tus estadísticas ahora muestra mejor el desglose de experiencia, victorias, objetivos, títulos y penalizaciones.

@@ -81,13 +81,15 @@ const MANAGER_OBJECTIVE_FREEZE_BY_SEASON = configBoolean('manager.congelarEvalua
 const MANAGER_OBJECTIVE_EXTRA_120 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral120', 2, 0, 100)));
 const MANAGER_OBJECTIVE_EXTRA_150 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral150', 5, 0, 100)));
 const MANAGER_OBJECTIVE_EXTRA_190 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral190', 10, 0, 100)));
-const MANAGER_PRESTIGE_INITIAL = Math.round(configNumber('manager.prestigioInicial', 20, 0, 99));
+const MANAGER_PRESTIGE_INITIAL = Math.round(configNumber('manager.prestigioInicial', 0, 0, 99));
 const MANAGER_CLUB_OPEN_PRESTIGE = Math.round(configNumber('manager.prestigioClubLibreMinimo', 20, 0, 99));
 const MANAGER_XP_WIN = Math.round(configNumber('manager.experienciaPorVictoria', 10, 0, 999));
 const MANAGER_XP_DRAW = Math.round(configNumber('manager.experienciaPorEmpate', 3, 0, 999));
 const MANAGER_XP_LOSS = Math.round(configNumber('manager.experienciaPorDerrota', 1, 0, 999));
+const MANAGER_XP_TO_PRESTIGE_RATE = configNumber('manager.experienciaAprestigio', 0.001, 0, 1);
 const MANAGER_PRESTIGE_WINS_STEP = Math.max(1, Math.round(configNumber('manager.victoriasPorPrestigio', 10, 1, 100)));
-const MANAGER_PRESTIGE_OBJECTIVE_REWARD = Math.round(configNumber('manager.prestigioPorObjetivoCumplido', 1, 0, 25));
+const MANAGER_PRESTIGE_OBJECTIVE_REWARD = Math.round(configNumber('manager.prestigioPorObjetivoCumplido', 5, 0, 25));
+const MANAGER_PRESTIGE_DISMISSAL_PENALTY = Math.round(configNumber('manager.prestigioPenalizacionDespido', 2, 0, 25));
 
 const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 50, 0, 100);
 const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 14, 0, 100);

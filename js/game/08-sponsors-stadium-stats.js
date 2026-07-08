@@ -363,7 +363,9 @@ function renderManagerStats(){
   const totals = game.managerStats.totals;
   const seasons = game.managerStats.seasons.slice().sort((a,b)=>(b.season || 0)-(a.season || 0));
   const career = (game.managerStats.careerHistory || []).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  const prestige = Number(game.managerStats.prestige || 0);
+  const breakdown = typeof managerPrestigeBreakdown === 'function' ? managerPrestigeBreakdown(game.managerStats) : { total:Number(game.managerStats.prestige || 0), experiencePrestige:0, winPrestige:0, objectivePrestige:0, championPrestige:0, badSeasonPenalty:0, dismissalPenalty:0 };
+  const prestige = breakdown.total;
+  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const experience = Number(game.managerStats.experience || 0);
   const rows = seasons.map(item => `<tr>
     <td>${item.season}</td>
@@ -385,8 +387,8 @@ function renderManagerStats(){
   </tr>`).join('');
   view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestige}</strong><span class="small muted">Clubes hasta ${prestige}</span></div>
-      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong></div>
+      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Clubes hasta ${prestigeLabel}</span></div>
+      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
       <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>
@@ -394,6 +396,8 @@ function renderManagerStats(){
       <div class="card"><p class="label">GF / GC</p><strong>${totals.gf || 0} / ${totals.gc || 0}</strong></div>
       <div class="card"><p class="label">Títulos obtenidos</p><strong>${game.managerStats.titles || 0}</strong></div>
       <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
+      <div class="card"><p class="label">Objetivos cumplidos</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">+${MANAGER_PRESTIGE_OBJECTIVE_REWARD} c/u</span></div>
+      <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
       <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>

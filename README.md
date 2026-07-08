@@ -255,3 +255,8 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 
 ## V3.62
 - Ajuste del botón Mejor condición física: prioriza jugadores con condición +75 y reduce penalizaciones por fuera de posición.
+
+
+## V3.63
+- Prestigio real del manager calculado por experiencia, victorias, objetivos, campeonatos y penalizaciones.
+- Agregado botón Renunciar al club.

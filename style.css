@@ -2385,3 +2385,7 @@ button.action-failure{
 .compact-finance-table th,.compact-finance-table td{padding:9px 10px;font-size:13px}
 .finance-mini-pill{margin-left:6px;vertical-align:middle;background:rgba(34,197,94,.10);color:#bbf7d0}
 @media (max-width:900px){.finance-category-detail summary{grid-template-columns:1fr auto}.finance-category-detail summary small{grid-column:1/-1;margin-left:20px}}
+
+/* V3.63: renuncia y prestigio calculado */
+.resign-club-btn{border-color:rgba(239,68,68,.35)!important;background:rgba(239,68,68,.10)!important;color:#fecaca!important}
+.resign-club-btn:hover{background:rgba(239,68,68,.18)!important}

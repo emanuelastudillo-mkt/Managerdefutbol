@@ -715,12 +715,13 @@ function openNewGameModal(force=false){
   const initialLeague = game?.selectedLeagueId || divisionsByCountry(initialCountry)[0]?.id || 'default';
   const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague).find(club => managerCanSelectClub(club))?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : MANAGER_PRESTIGE_INITIAL;
+  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const modeLabel = game?.gameOver?.active ? 'Buscar nuevo club' : 'Buscar club';
   const body = `
     <div class="new-game-modal job-search-modal">
       <p class="label">${escapeHtml(modeLabel)}</p>
       <h2>${game?.gameOver?.active ? 'Continuar carrera' : 'Crear manager'}</h2>
-      <p class="muted">Prestigio actual del manager: <strong>${prestige}</strong>. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
+      <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
       ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita si la directiva te despide.</p></div>' : ''}
       <div class="new-game-form-grid">
         <label for="modalManagerName">Nombre del manager</label>

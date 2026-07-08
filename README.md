@@ -1,10 +1,17 @@
 # Manager Fútbol - README
 
-## Versión actual: V3.71
+## Versión actual: V3.72
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 
 ## Historial de actualizaciones
+
+### V3.72 - Cambio de club sin reinicio y juvenil excepcional x20
+- Se corrigieron textos del flujo de cambio de club para evitar referencias a nueva partida.
+- Al estar sin cargo, el botón pasa a indicar continuidad de carrera y firma de contrato.
+- Firmar con otro club mantiene la misma partida, calendario, mundo e historial del manager.
+- Se agregó `academia.multiplicadorEntrenamientoJuvenilExcepcional: 20`.
+- El juvenil excepcional entrena x20; los juveniles normales conservan el multiplicador general de academia.
 
 ### V3.71 - Oferta especial de cláusula y mensajes limpios
 - Se eliminó el mensaje visible de ajuste de preparación de equipos bot.

@@ -809,13 +809,13 @@ function openNewGameModal(force=false){
   const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague).find(club => managerCanSelectClub(club))?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : MANAGER_PRESTIGE_INITIAL;
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
-  const modeLabel = game?.gameOver?.active ? 'Buscar nuevo club' : 'Buscar club';
+  const modeLabel = game?.gameOver?.active ? 'Continuar carrera' : 'Buscar club';
   const body = `
     <div class="new-game-modal job-search-modal">
       <p class="label">${escapeHtml(modeLabel)}</p>
-      <h2>${game?.gameOver?.active ? 'Continuar carrera' : 'Crear manager'}</h2>
-      <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
-      ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita si la directiva te despide.</p></div>' : ''}
+      <h2>${game?.gameOver?.active ? 'Firmar nuevo contrato' : 'Crear manager'}</h2>
+      <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Elegí un club disponible y firmá contrato. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
+      ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita cuando estás sin cargo.</p></div>' : ''}
       <div class="new-game-form-grid">
         <label for="modalManagerName">Nombre del manager</label>
         <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}" ${hasCareer ? 'disabled' : ''}>
@@ -827,7 +827,7 @@ function openNewGameModal(force=false){
         <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
       <div id="modalClubAvailabilityBox" class="job-availability-box">${clubAvailabilityListMarkup(initialCountry, initialLeague)}</div>
-      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Aceptar cargo' : 'Empezar carrera'}</button></div>
+      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
     </div>`;
   openModal(body);
   const countrySelect = $('modalCountrySelect');

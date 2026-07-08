@@ -1220,7 +1220,7 @@ function continueCareerAtClub(selectedClubId, options={}){
   pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
-  showNotice(`Nuevo club: ${newClub.name}. Revisá la táctica antes de avanzar.`);
+  showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);
 }
 function updateManagerMatchStats(match){
   if(match?.friendly) return;

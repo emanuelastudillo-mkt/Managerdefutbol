@@ -303,6 +303,7 @@ const ACADEMY_DISMISS_COMPENSATION = configNumber('academia.compensacionDespido'
 const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1000000, 0);
 const ACADEMY_VISIBLE_STATS_COUNT = 7;
 const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 3, 1);
+const ACADEMY_EXCEPTIONAL_YOUTH_TRAINING_MULTIPLIER = configNumber('academia.multiplicadorEntrenamientoJuvenilExcepcional', 20, 1, 100);
 const ACADEMY_EXCEPTIONAL_YOUTH_ENABLED = configBoolean('academia.juvenilExcepcionalPorTemporada', true);
 const ACADEMY_EXCEPTIONAL_YOUTH_AGE = Math.round(configNumber('academia.edadJuvenilExcepcional', 16, 8, 20));
 const ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL = Math.round(configNumber('academia.mediaJuvenilExcepcionalMin', 12, 1, 40));

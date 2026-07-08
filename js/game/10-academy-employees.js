@@ -490,16 +490,20 @@ function academyTurnSalaryCost(){
 function academyTrainingType(playerId){
   return game?.academy?.trainingPlan?.[playerId] === 'resistance' ? 'resistance' : 'technical';
 }
+function academyTrainingGainMultiplier(player){
+  return player?.exceptional ? ACADEMY_EXCEPTIONAL_YOUTH_TRAINING_MULTIPLIER : ACADEMY_SKILL_GAIN_MULTIPLIER;
+}
 function applyAcademyTrainingEffects(){
   if(!game?.academy) return;
   academyActivePlayers().forEach(player => {
     player.skills = player.skills || academySkillsFor(player.group, player.overall, player.id);
     const type = academyTrainingType(player.id);
+    const gainMultiplier = Math.max(1, Math.round(academyTrainingGainMultiplier(player)));
     if(type === 'resistance'){
-      player.skills.resistencia = clamp(Math.round(Number(player.skills.resistencia || 1) + rnd(3,6)), 1, 99);
+      player.skills.resistencia = clamp(Math.round(Number(player.skills.resistencia || 1) + rnd(3,6) * gainMultiplier), 1, 99);
     } else {
       const skillNames = Object.keys(player.skills).filter(k => k !== 'porteria' || player.group === 'POR');
-      for(let i=0;i<ACADEMY_SKILL_GAIN_MULTIPLIER;i++){
+      for(let i=0;i<gainMultiplier;i++){
         const skill = skillNames[hashNumber(`academy-train-${player.id}-${currentTurnIndex()}-${i}-${Math.random()}`, skillNames.length)];
         player.skills[skill] = clamp(Math.round(Number(player.skills[skill] || 1) + 1), 1, 99);
       }
@@ -733,7 +737,7 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x20 y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);

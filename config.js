@@ -218,6 +218,7 @@ window.GAME_CONFIG = {
     costoJugadorPorAvance: 10000,
     compensacionDespido: 50000,
     multiplicadorEntrenamiento: 5,
+    multiplicadorEntrenamientoJuvenilExcepcional: 20,
     juvenilExcepcionalPorTemporada: true,
     edadJuvenilExcepcional: 16,
     mediaJuvenilExcepcionalMin: 12,

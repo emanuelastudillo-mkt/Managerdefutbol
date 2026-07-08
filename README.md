@@ -240,3 +240,18 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 - Prestigio de clubes variable al final de cada temporada.
 - Botón lateral actualizado a “Buscar club”.
 - Mensajes compactos, ESPECIAL destacado y Reset movido abajo con advertencia.
+
+
+## V3.60
+- En Mensajes, las ofertas muestran el nombre del jugador como enlace clickeable para abrir su ficha antes de aceptar o rechazar.
+- ZIP entregado como parche con sólo archivos modificados.
+
+
+## V3.61
+- Recaudación de entradas visible en el simulador/resumen de partido.
+- Finanzas con gastos por categoría en bloques desplegables.
+- Ingresos por categoría también desplegables para controlar recaudación, sponsors y ventas.
+
+
+## V3.62
+- Ajuste del botón Mejor condición física: prioriza jugadores con condición +75 y reduce penalizaciones por fuera de posición.

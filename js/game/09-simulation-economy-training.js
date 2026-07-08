@@ -24,8 +24,24 @@ function autoSelectBench(clubId, starterIds){
     .sort((a,b)=>benchOverallValue(b)-benchOverallValue(a))
     .slice(0,10);
 }
+const AUTO_CONDITION_PRIORITY_MIN = 75;
 function conditionSelectionScore(p){
-  return currentCondition(p.id) * 1000 + currentMorale(p.id) * 10 + visibleOverall(p);
+  const condition = currentCondition(p.id);
+  const conditionPriority = condition >= AUTO_CONDITION_PRIORITY_MIN ? 1000000 : 0;
+  return conditionPriority + condition * 1000 + currentMorale(p.id) * 10 + visibleOverall(p);
+}
+function conditionFitRank(player, slot){
+  if(!player || !slot) return 0;
+  const level = playerTacticFitLevel(player, slot);
+  if(level === 'exact') return 3;
+  if(level === 'role') return 2;
+  return 1;
+}
+function conditionSelectionScoreForSlot(player, slot){
+  const condition = currentCondition(player.id);
+  const conditionPriority = condition >= AUTO_CONDITION_PRIORITY_MIN ? 1000000 : 0;
+  const fitPriority = conditionFitRank(player, slot) * 100000;
+  return conditionPriority + fitPriority + condition * 1000 + currentMorale(player.id) * 10 + visibleOverall(player);
 }
 function autoSelectByBestCondition(clubId){
   const squad = playersByClub(clubId).filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id));
@@ -34,7 +50,7 @@ function autoSelectByBestCondition(clubId){
   const lineup = [];
   for(const slot of slots){
     const candidates = squad.filter(p => !used.has(p.id) && canAssignPlayerToSlot(p, slot));
-    const pick = candidates.sort((a,b)=>conditionSelectionScore(b)-conditionSelectionScore(a))[0];
+    const pick = candidates.sort((a,b)=>conditionSelectionScoreForSlot(b, slot)-conditionSelectionScoreForSlot(a, slot))[0];
     if(pick){ used.add(pick.id); lineup.push(pick); }
   }
   return lineup;
@@ -202,6 +218,11 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, trig
   const items = [];
   if(ownResult){
     items.push({ label:ownResultLabel(ownResult), text:ownResultLine(ownResult), tone:ownResultTone(ownResult) });
+    const ticketRevenue = Number(ownResult?.matchContext?.ticketRevenue || 0);
+    if(Number(ownResult.homeId) === Number(game.selectedClubId) && ticketRevenue > 0){
+      const totalFans = new Intl.NumberFormat('es-AR').format(Number(ownResult?.matchContext?.totalFans || 0));
+      items.push({ label:'Recaudación de entradas', text:`${formatMoney(ticketRevenue)} por ${totalFans} entradas vendidas.`, tone:'ok' });
+    }
   }
   items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
   const academy = activeAcademyScoutingSummary();
@@ -756,6 +777,88 @@ function budgetConcept(entry){
   if(entry.matchId) return 'Resultado de partido';
   return 'Movimiento de presupuesto';
 }
+function financeCategory(entry){
+  const type = String(entry?.type || '').toLowerCase();
+  const concept = String(entry?.concept || '').toLowerCase();
+  if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
+  if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
+  if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
+  if(type.includes('academy') || concept.includes('academia') || concept.includes('captación') || concept.includes('juvenil')) return 'Academia';
+  if(type.includes('staff') || concept.includes('contratación de')) return 'Empleados';
+  return null;
+}
+function financeBudgetCategory(entry){
+  const type = String(entry?.type || '').toLowerCase();
+  const concept = String(entry?.concept || '').toLowerCase();
+  if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
+  if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
+  if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
+  if(type.includes('academy') || concept.includes('academia') || concept.includes('captación') || concept.includes('juvenil')) return 'Academia';
+  if(type.includes('staff') || concept.includes('contratación de')) return 'Empleados';
+  if(type.includes('kinesiology') || concept.includes('médic') || concept.includes('tratamiento')) return 'Tratamientos médicos';
+  if(type.includes('sponsor') || concept.includes('sponsor')) return 'Sponsors';
+  if(type.includes('event') || concept.includes('evento') || concept.includes('compensación')) return 'Eventos';
+  if(entry?.matchId || concept.includes('partido') || concept.includes('recaudación')) return 'Partidos y entradas';
+  return 'Otros';
+}
+function financeCategoryRows(entries){
+  return (entries || []).map(entry => {
+    const delta = Number(entry.delta || 0);
+    const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
+    const extra = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Entradas ${formatMoney(entry.ticketRevenue)}</span>` : '';
+    return `<tr><td>Fecha ${Number(entry.matchdayIndex || 0) + 1}</td><td>${escapeHtml(budgetConcept(entry))}${extra}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
+  }).join('');
+}
+function financeExpensesByCategoryMarkup(){
+  const season = game.seasonNumber || 1;
+  const expenses = (game.budgetHistory || [])
+    .filter(h => (h.season || season) === season && Number(h.delta || 0) < 0)
+    .slice()
+    .reverse();
+  if(!expenses.length) return `<div class="card finance-category-card"><h3>Gastos por categoría</h3><p class="muted">Todavía no hay gastos registrados esta temporada.</p></div>`;
+  const grouped = expenses.reduce((acc, entry) => {
+    const category = financeBudgetCategory(entry);
+    if(!acc[category]) acc[category] = [];
+    acc[category].push(entry);
+    return acc;
+  }, {});
+  const order = ['Sueldos','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
+  const details = order.filter(category => grouped[category]?.length).map((category, index) => {
+    const entries = grouped[category];
+    const total = entries.reduce((sum, entry) => sum + Math.abs(Number(entry.delta || 0)), 0);
+    return `<details class="finance-category-detail" ${index === 0 ? 'open' : ''}>
+      <summary><span>${escapeHtml(category)}</span><strong class="bad">${formatMoney(total)}</strong><small>${entries.length} mov.</small></summary>
+      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
+    </details>`;
+  }).join('');
+  return `<div class="card finance-category-card"><div class="row"><div><h3>Gastos por categoría</h3><p class="muted small">Secciones minimizables y desplegables de la temporada actual.</p></div><span class="pill bad">${formatMoney(expenses.reduce((sum, entry) => sum + Math.abs(Number(entry.delta || 0)), 0))}</span></div>${details}</div>`;
+}
+function financeIncomeByCategoryMarkup(){
+  const season = game.seasonNumber || 1;
+  const income = (game.budgetHistory || [])
+    .filter(h => (h.season || season) === season && Number(h.delta || 0) > 0)
+    .slice()
+    .reverse();
+  if(!income.length) return '';
+  const grouped = income.reduce((acc, entry) => {
+    const category = financeBudgetCategory(entry);
+    if(!acc[category]) acc[category] = [];
+    acc[category].push(entry);
+    return acc;
+  }, {});
+  const order = ['Partidos y entradas','Sponsors','Mercado','Eventos','Otros'];
+  const details = order.filter(category => grouped[category]?.length).map((category, index) => {
+    const entries = grouped[category];
+    const total = entries.reduce((sum, entry) => sum + Number(entry.delta || 0), 0);
+    return `<details class="finance-category-detail finance-income-detail" ${index === 0 ? 'open' : ''}>
+      <summary><span>${escapeHtml(category)}</span><strong class="ok">${formatMoney(total)}</strong><small>${entries.length} mov.</small></summary>
+      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
+    </details>`;
+  }).join('');
+  return `<div class="card finance-category-card"><div class="row"><div><h3>Ingresos por categoría</h3><p class="muted small">Incluye partidos, sponsors, ventas y recaudación de entradas.</p></div><span class="pill ok">${formatMoney(income.reduce((sum, entry) => sum + Number(entry.delta || 0), 0))}</span></div>${details}</div>`;
+}
 function financeSquadRows(){
   return playersByClub(game.selectedClubId)
     .slice()
@@ -771,7 +874,8 @@ function renderFinances(){
   const rows = history.slice(0,80).map(entry => {
     const delta = Number(entry.delta || 0);
     const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
-    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
+    const ticketText = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Recaudación ${formatMoney(entry.ticketRevenue)}</span>` : '';
+    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}${ticketText}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title"><div><h2>Finanzas</h2><p class="tagline">Detalle del presupuesto, sus movimientos registrados y la masa salarial del plantel.</p></div></div>
@@ -782,6 +886,10 @@ function renderFinances(){
       <div class="card"><p class="label">Sueldos anuales estimados</p><strong>${formatMoney(salaryTotal)}</strong></div>
     </div>
     <div style="margin-top:14px">${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}</div>
+    <div class="grid cols-2 finance-category-grid" style="margin-top:14px">
+      ${financeExpensesByCategoryMarkup()}
+      ${financeIncomeByCategoryMarkup()}
+    </div>
     <div class="card" style="margin-top:14px"><h3>Plantel y sueldos</h3>
       <div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Nac.</th><th>Edad</th><th>Media</th><th>Sueldo anual</th></tr></thead><tbody>${financeSquadRows() || '<tr><td colspan="5" class="muted">No hay jugadores en el plantel.</td></tr>'}</tbody></table></div>
     </div>

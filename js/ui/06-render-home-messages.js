@@ -567,6 +567,29 @@ function messageTypeLabel(type){
   if(!raw) return 'Info';
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
+function messageTransferPlayer(m){
+  if(m?.action?.type !== 'transferOffer') return null;
+  return playerById(Number(m.action.playerId || 0));
+}
+function messagePlayerLink(player, label=null){
+  if(!player) return '';
+  const text = label || player.name || 'Jugador';
+  return `<button type="button" class="linklike message-player-link" data-player-id="${Number(player.id)}" title="Abrir ficha del jugador">${escapeHtml(text)}</button>`;
+}
+function messageTitleHtml(m){
+  const player = messageTransferPlayer(m);
+  if(player) return `Oferta por ${messagePlayerLink(player, playerLastName(player.name))}`;
+  return escapeHtml(m.title);
+}
+function messageBodyHtml(m){
+  const player = messageTransferPlayer(m);
+  const safeBody = escapeHtml(m.body || '');
+  if(!player?.name) return safeBody;
+  const safeName = escapeHtml(player.name);
+  const link = messagePlayerLink(player, player.name);
+  if(safeBody.includes(safeName)) return safeBody.split(safeName).join(link);
+  return `${safeBody} <span class="message-player-inline">Jugador: ${link}</span>`;
+}
 function messageCard(m){
   const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
     ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button><button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
@@ -583,11 +606,11 @@ function messageCard(m){
             <span class="message-date-chip">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</span>
             ${unreadMark}
           </div>
-          <h3>${escapeHtml(m.title)}</h3>
+          <h3>${messageTitleHtml(m)}</h3>
         </div>
         <span class="pill ${m.priority === 'high' ? 'warn' : ''}">${m.priority === 'high' ? 'Importante' : 'Normal'}</span>
       </div>
-      <div class="message-paper"><p>${escapeHtml(m.body)}</p></div>
+      <div class="message-paper"><p>${messageBodyHtml(m)}</p></div>
       ${action}
     </div>
   </div>`;

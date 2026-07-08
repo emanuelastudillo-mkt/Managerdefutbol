@@ -364,6 +364,8 @@ function showMatchRevealModal(match, onRevealComplete=null){
           <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
           <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
+          <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>
+          <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
         </div>
       </div>
     </div>`;
@@ -548,6 +550,8 @@ function showMatchModal(matchId){
         <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
         <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
+        <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>
+        <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
       </div>
     </div>
     <div class="match-team-columns">

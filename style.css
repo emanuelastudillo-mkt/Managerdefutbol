@@ -2362,3 +2362,26 @@ button.action-failure{
 @media (max-width:900px){.club-availability-row{align-items:flex-start;flex-direction:column}.reset-zone{margin-top:14px}.messages-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 .side{display:flex;flex-direction:column;min-height:calc(100vh - 32px)}
 .reset-zone{margin-top:auto}
+
+/* V3.60: jugador clickeable en ofertas de Mensajes */
+.message-player-link{display:inline-flex!important;align-items:center;gap:4px;color:#93c5fd!important;background:rgba(59,130,246,.16)!important;border:1px solid rgba(147,197,253,.24)!important;border-radius:999px!important;padding:2px 8px!important;font-weight:900!important;line-height:1.25;text-decoration:none!important;vertical-align:baseline}
+.message-player-link:hover{background:rgba(59,130,246,.28)!important;border-color:rgba(147,197,253,.42)!important;text-decoration:none!important}
+.message-player-inline{display:inline-flex;align-items:center;gap:6px;margin-left:6px;color:#bfdbfe;font-weight:800}
+.message-card h3 .message-player-link{font-size:inherit;padding:1px 9px!important}
+
+/* V3.61: finanzas por categoria y recaudacion visible */
+.finance-category-grid{align-items:start}
+.finance-category-card{min-height:100%}
+.finance-category-card>h3{margin-bottom:8px}
+.finance-category-detail{border:1px solid rgba(148,163,184,.14);border-radius:16px;background:rgba(255,255,255,.03);overflow:hidden;margin-top:10px}
+.finance-category-detail summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:12px 14px;font-weight:900}
+.finance-category-detail summary::-webkit-details-marker{display:none}
+.finance-category-detail summary:before{content:'▸';color:#93c5fd;font-size:13px;transform:translateY(1px);grid-column:1/2;display:inline-block;margin-right:8px;width:12px}
+.finance-category-detail[open] summary:before{content:'▾'}
+.finance-category-detail summary span{grid-column:1/2;margin-left:20px}
+.finance-category-detail summary small{color:var(--muted);font-weight:800}
+.compact-finance-table{border:0;border-top:1px solid rgba(148,163,184,.12);border-radius:0}
+.compact-finance-table table{min-width:620px}
+.compact-finance-table th,.compact-finance-table td{padding:9px 10px;font-size:13px}
+.finance-mini-pill{margin-left:6px;vertical-align:middle;background:rgba(34,197,94,.10);color:#bbf7d0}
+@media (max-width:900px){.finance-category-detail summary{grid-template-columns:1fr auto}.finance-category-detail summary small{grid-column:1/-1;margin-left:20px}}

@@ -449,6 +449,14 @@ function bindTacticClickEvents(){
       event.stopPropagation();
       const playerId = Number(el.dataset.tacticPlayer || 0);
       if(!playerId) return;
+      if(el.classList.contains('player-chip') && el.dataset.tacticZone === 'starter'){
+        game.tactic = applyStarterMentalities(game.tactic);
+        game.tactic.playerMentalities[playerId] = nextMentality(playerMentality(playerId));
+        tacticClickSelection = null;
+        saveLocal(true);
+        renderTactics();
+        return;
+      }
       if(!tacticClickSelection){
         tacticClickSelection = { playerId };
         renderTactics();
@@ -492,9 +500,10 @@ function renderTactics(){
     const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
     const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
     const chip = slot.player ? `
-      <button type="button" class="player-chip tactic-click-player ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)}">
+      <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(slot.player.id)} ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)} · Click para cambiar estado: ${escapeHtml(mentalityLabel(playerMentality(slot.player.id)))}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
         <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
+        ${mentalityMarker(slot.mentality)}
       </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
     return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
   }).join('');
@@ -512,7 +521,7 @@ function renderTactics(){
     </div>`;
   }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click en un jugador y luego click en otro para intercambiarlos entre titulares, suplentes, reservas o pizarra. Rol exacto: 100%. Rol compatible: 75%. Fuera de zona natural: 50%.</p></div>
+    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click sobre el círculo del jugador en la pizarra para cambiar su estado: muy defensivo, defensivo, normal, ofensivo o muy ofensivo. En las listas podés intercambiar titulares, suplentes y reservas. Rol exacto: 100%. Rol compatible: 75%. Fuera de zona natural: 50%.</p></div>
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
@@ -596,7 +605,7 @@ function tacticPlayerRow(p){
       <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
       <option value="bench" ${current==='bench'?'selected':''}>Suplente</option>
     </select></td>
-    <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityText) : '<span class="muted">Sólo titulares</span>'}</td>
+    <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityLabel(mentalityText)) : '<span class="muted">Sólo titulares</span>'}</td>
   </tr>`;
 }
 function matchInstructionControls(){

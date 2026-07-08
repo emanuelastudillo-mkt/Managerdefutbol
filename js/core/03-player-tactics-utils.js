@@ -984,26 +984,49 @@ function repairBotRosters(options={}){
   }
   return report;
 }
+function normalizeMentality(mode){
+  const value = String(mode || '').trim();
+  const legacy = { posicional:'normal', ataque:'ofensivo', defensiva:'defensivo' };
+  const normalized = legacy[value] || value;
+  return MENTALITIES.includes(normalized) ? normalized : 'normal';
+}
+function mentalityLabel(mode){
+  const labels = {
+    muy_defensivo:'Muy defensivo',
+    defensivo:'Defensivo',
+    normal:'Normal',
+    ofensivo:'Ofensivo',
+    muy_ofensivo:'Muy ofensivo'
+  };
+  return labels[normalizeMentality(mode)] || 'Normal';
+}
 function mentalityMarker(mode){
-  if(mode === 'ataque') return '<span class="mentality-marker attack" title="Ataque">→</span>';
-  if(mode === 'defensiva') return '<span class="mentality-marker defense" title="Defensiva">←</span>';
-  return '<span class="mentality-marker positional" title="Posicional">—</span>';
+  const normalized = normalizeMentality(mode);
+  const meta = {
+    muy_defensivo:{ cls:'very-defense', text:'≪', title:'Muy defensivo' },
+    defensivo:{ cls:'defense', text:'‹', title:'Defensivo' },
+    normal:{ cls:'normal', text:'•', title:'Normal' },
+    ofensivo:{ cls:'attack', text:'›', title:'Ofensivo' },
+    muy_ofensivo:{ cls:'very-attack', text:'≫', title:'Muy ofensivo' }
+  }[normalized];
+  return `<span class="mentality-marker ${meta.cls}" title="${meta.title}">${meta.text}</span>`;
 }
 function nextMentality(current){
-  const idx = MENTALITIES.indexOf(current);
-  return MENTALITIES[(idx + 1) % MENTALITIES.length] || 'posicional';
+  const idx = MENTALITIES.indexOf(normalizeMentality(current));
+  return MENTALITIES[(idx + 1) % MENTALITIES.length] || 'normal';
 }
 function playerMentality(playerId, tactic = game?.tactic){
-  return tactic?.playerMentalities?.[playerId] || 'posicional';
+  return normalizeMentality(tactic?.playerMentalities?.[playerId]);
 }
 function applyStarterMentalities(tactic){
   const next = { ...(tactic.playerMentalities || {}) };
   (tactic.starters || []).filter(Boolean).forEach(id => {
-    if(!MENTALITIES.includes(next[id])) next[id] = 'posicional';
+    next[id] = normalizeMentality(next[id]);
   });
   Object.keys(next).forEach(id => {
     const cleanId = Number(id);
     if(!cleanId || !(tactic.starters || []).includes(cleanId)) delete next[id];
+    else next[id] = normalizeMentality(next[id]);
   });
   tactic.playerMentalities = next;
   return tactic;

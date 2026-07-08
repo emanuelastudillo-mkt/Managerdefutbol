@@ -102,13 +102,22 @@ button.plain{width:100%;background:transparent;color:inherit;text-align:left;bor
   bottom:3px;
   left:50%;
   transform:translateX(-50%);
-  font-size:18px;
+  font-size:20px;
   font-weight:900;
   line-height:1;
+  letter-spacing:-.18em;
+  text-shadow:0 2px 8px rgba(0,0,0,.35);
 }
-.mentality-marker.positional{color:#facc15}
+.mentality-marker.normal{color:#facc15;letter-spacing:0}
 .mentality-marker.attack{color:#22c55e}
-.mentality-marker.defense{color:#60a5fa}
+.mentality-marker.very-attack{color:#00a3ff}
+.mentality-marker.defense{color:#fb923c}
+.mentality-marker.very-defense{color:#ef4444}
+.player-chip.mentality-muy_defensivo{box-shadow:0 0 0 2px rgba(239,68,68,.32),0 10px 22px rgba(0,0,0,.24)}
+.player-chip.mentality-defensivo{box-shadow:0 0 0 2px rgba(251,146,60,.28),0 10px 22px rgba(0,0,0,.24)}
+.player-chip.mentality-normal{box-shadow:0 0 0 2px rgba(250,204,21,.22),0 10px 22px rgba(0,0,0,.24)}
+.player-chip.mentality-ofensivo{box-shadow:0 0 0 2px rgba(34,197,94,.28),0 10px 22px rgba(0,0,0,.24)}
+.player-chip.mentality-muy_ofensivo{box-shadow:0 0 0 2px rgba(0,163,255,.30),0 10px 22px rgba(0,0,0,.24)}
 .pitch-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:13px}
 .placeholder-card h3{margin-bottom:12px}
 .placeholder-grid{display:grid;grid-template-columns:1fr;gap:10px}
@@ -1138,12 +1147,43 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .home-messages-summary.clickable{cursor:pointer}
 .home-messages-summary h2{margin:0 0 8px;font-size:22px}
 .home-messages-summary .tagline{margin:0;max-width:760px}
-.message-list{display:grid;gap:12px}
-.message-card.unread{border-color:rgba(59,130,246,.55);box-shadow:0 0 0 1px rgba(59,130,246,.16)}
-.message-actions{justify-content:flex-start;gap:10px;margin-top:10px}
+.messages-shell{display:grid;gap:14px}
+.messages-toolbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:14px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(59,130,246,.05))}
+.messages-toolbar-item{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.12)}
+.messages-toolbar-item .label{margin-bottom:6px}
+.messages-toolbar-item strong{display:block;font-size:28px;line-height:1;font-weight:900;color:#eaf2ff}
+.messages-toolbar-item span{display:block;margin-top:6px;font-size:13px;color:var(--muted)}
+.message-list{display:grid;gap:14px}
+.message-card{display:grid;grid-template-columns:8px 1fr;gap:0;padding:0;overflow:hidden;background:#f5efdf;color:#1f2937;border-color:rgba(128,103,51,.18);box-shadow:0 10px 26px rgba(0,0,0,.14)}
+.message-card.unread{border-color:rgba(59,130,246,.40);box-shadow:0 0 0 1px rgba(59,130,246,.14),0 12px 28px rgba(0,0,0,.16)}
+.message-card-accent{background:linear-gradient(180deg,#60a5fa,#2563eb)}
+.message-card-main{padding:16px 18px 16px}
+.message-card h3{margin:2px 0 0;font-size:20px;line-height:1.2;color:#111827}
+.message-card .label{color:#6b7280}
+.message-card .pill{background:rgba(15,23,42,.08);color:#334155}
+.message-card .pill.warn{background:rgba(245,158,11,.16);color:#9a6700}
+.message-card-head{align-items:flex-start;gap:12px}
+.message-head-left{min-width:0;flex:1}
+.message-meta-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.message-type-chip,.message-date-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.message-type-chip{background:rgba(15,23,42,.08);color:#1e3a8a}
+.message-date-chip{background:rgba(15,23,42,.05);color:#475569}
+.message-unread-dot{width:10px;height:10px;border-radius:999px;background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.message-paper{margin-top:12px;padding:14px 16px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.70),rgba(255,255,255,.48));border:1px solid rgba(148,163,184,.18)}
+.message-paper p{margin:0;color:#334155;line-height:1.65}
+.message-actions{justify-content:flex-start;gap:10px;margin-top:12px}
+.message-card .ghost{background:rgba(15,23,42,.06);border:1px solid rgba(15,23,42,.12);color:#1f2937}
+.message-card .primary{color:#eff6ff}
+.message-status-pill{margin-top:12px}
+.message-tone-high .message-card-accent{background:linear-gradient(180deg,#f59e0b,#d97706)}
+.message-tone-money .message-card-accent{background:linear-gradient(180deg,#34d399,#059669)}
+.message-tone-sport .message-card-accent{background:linear-gradient(180deg,#60a5fa,#2563eb)}
+.message-tone-alert .message-card-accent{background:linear-gradient(180deg,#f87171,#dc2626)}
+.message-tone-board .message-card-accent{background:linear-gradient(180deg,#a78bfa,#7c3aed)}
+.message-empty-card{background:rgba(255,255,255,.04)}
 .small-btn{padding:8px 12px;font-size:12px}
 .status-card #currentSeason{font-weight:700;color:#dbeafe}
-@media (max-width:900px){.section-title{align-items:flex-start}.home-message-strip{width:100%}}
+@media (max-width:900px){.section-title{align-items:flex-start}.home-message-strip{width:100%}.messages-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.message-card{grid-template-columns:6px 1fr}}
 
 
 /* V2.8: zonas de tabla, entrenamiento filtrable y finanzas */

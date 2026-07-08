@@ -773,11 +773,49 @@ function normalizeManagerStats(stats){
 function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
 }
+function managerObjectiveForClubDivision(clubId){
+  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2) return Number(MANAGER_OBJECTIVE_PPG);
+  const division = clubDivision(clubId || game?.selectedClubId);
+  const order = Math.round(Number(division?.order || 3));
+  if(order <= 1) return Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4);
+  if(order === 2) return Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1);
+  return Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+}
+function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  const normalized = normalizeManagerStats(stats);
+  const generalPpg = ppgFromTotals(normalized.totals || {});
+  const objective = managerObjectiveForClubDivision(clubId);
+  const baseMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5);
+  const extraMatches = managerObjectiveExtraMatches(generalPpg);
+  return {
+    objectivePpg:Number.isFinite(objective) ? objective : null,
+    objectiveBaseMatches:baseMatches,
+    objectiveExtraMatches:extraMatches,
+    objectiveMinMatches:baseMatches + extraMatches,
+    objectiveGeneralPpgAtStart:generalPpg,
+    objectiveSeason:Number(season || 1),
+    objectiveClubId:Number(clubId || 0)
+  };
+}
+function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  const clean = { ...(current || {}) };
+  const needsRefresh = !MANAGER_OBJECTIVE_FREEZE_BY_SEASON
+    || !Number.isFinite(Number(clean.objectiveMinMatches || 0))
+    || !Number.isFinite(Number(clean.objectivePpg || 0))
+    || Number(clean.objectiveSeason || 0) !== Number(season || 1)
+    || Number(clean.objectiveClubId || 0) !== Number(clubId || 0);
+  if(needsRefresh){
+    Object.assign(clean, buildManagerObjectiveSeasonFields(stats, season, clubId));
+  }
+  return clean;
+}
 function ensureManagerCurrentSeasonStats(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const normalized = normalizeManagerStats(stats);
   const current = normalized.currentSeason || {};
   if(Number(current.season || 0) !== Number(season || 1) || Number(current.clubId || 0) !== Number(clubId || 0)){
-    normalized.currentSeason = emptyManagerSeasonStats(season, clubId);
+    normalized.currentSeason = applyManagerObjectiveSeasonFields(emptyManagerSeasonStats(season, clubId), normalized, season, clubId);
+  } else {
+    normalized.currentSeason = applyManagerObjectiveSeasonFields(current, normalized, season, clubId);
   }
   return normalized;
 }
@@ -796,12 +834,7 @@ function normalizeGameOverState(state){
   };
 }
 function managerObjectiveForCurrentDivision(){
-  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2) return Number(MANAGER_OBJECTIVE_PPG);
-  const division = clubDivision(game?.selectedClubId);
-  const order = Math.round(Number(division?.order || 3));
-  if(order <= 1) return Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4);
-  if(order === 2) return Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1);
-  return Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+  return managerObjectiveForClubDivision(game?.selectedClubId);
 }
 function managerObjectiveIsActive(){
   const objective = managerObjectiveForCurrentDivision();
@@ -833,14 +866,14 @@ function managerObjectiveExtraMatches(generalPpg=managerGeneralPPG()){
 }
 function managerObjectiveProgressInfo(){
   const seasonTotals = managerSeasonObjectiveTotals();
-  const generalTotals = managerOfficialTotals();
   const played = Number(seasonTotals.played || 0);
   const ppg = managerCurrentPPG();
-  const generalPpg = ppgFromTotals(generalTotals);
-  const objective = managerObjectiveIsActive() ? managerObjectiveForCurrentDivision() : null;
-  const baseMinMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5);
-  const extraMatches = managerObjectiveExtraMatches(generalPpg);
-  const minMatches = baseMinMatches + extraMatches;
+  const objective = managerObjectiveIsActive() ? Number(seasonTotals.objectivePpg ?? managerObjectiveForCurrentDivision()) : null;
+  const baseMinMatches = Math.max(1, Number(seasonTotals.objectiveBaseMatches || MANAGER_OBJECTIVE_MIN_MATCHES || 5));
+  const extraMatches = Math.max(0, Number(seasonTotals.objectiveExtraMatches || 0));
+  const minMatches = Math.max(baseMinMatches, Number(seasonTotals.objectiveMinMatches || (baseMinMatches + extraMatches)));
+  const generalPpg = Number.isFinite(Number(seasonTotals.objectiveGeneralPpgAtStart)) ? Number(seasonTotals.objectiveGeneralPpgAtStart) : managerGeneralPPG();
+  const confidence = objective ? clamp((ppg / objective) * 100, 0, 140) : 0;
   return {
     active:objective !== null,
     objective,
@@ -850,7 +883,8 @@ function managerObjectiveProgressInfo(){
     played,
     ppg,
     generalPpg,
-    progress:objective ? clamp((ppg / objective) * 100, 0, 140) : 0,
+    progress:confidence,
+    confidence,
     remainingMatches:Math.max(0, minMatches - played),
     failed:objective !== null && played >= minMatches && ppg <= objective
   };
@@ -890,7 +924,7 @@ function checkManagerObjectiveGameOver(){
   if(!info.failed) return false;
   game.gameOver = {
     active:true,
-    reason:`Promedio de puntos por partido insuficiente: ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales de la temporada.`,
+    reason:`La directiva perdió confianza: promedio ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales de la temporada.`,
     triggeredAt:new Date().toISOString(),
     objective:info.objective,
     ppg:info.ppg,
@@ -899,7 +933,7 @@ function checkManagerObjectiveGameOver(){
   };
   game.mustReviewTactics = false;
   activeTab = 'home';
-  pushGameMessage({ type:'directiva', priority:'high', title:'Game Over', body:'La directiva decidió terminar el ciclo por no alcanzar el promedio mínimo de puntos por partido.', id:`game-over-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
+  pushGameMessage({ type:'directiva', priority:'high', title:'Game Over', body:'La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza.', id:`game-over-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
   return true;
 }
 function updateManagerMatchStats(match){

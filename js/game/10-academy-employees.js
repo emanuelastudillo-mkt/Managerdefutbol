@@ -1,7 +1,7 @@
 /* V3.33 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, exceptionalYouthGrantedSeason:null };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
@@ -12,6 +12,8 @@ function normalizeAcademyState(state){
   clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
   clean.youthPreparer = clean.youthPreparer || null;
   clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
+  clean.residences = Math.max(0, Math.round(Number(clean.residences || 0)));
+  clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
   return clean;
 }
 
@@ -262,6 +264,61 @@ function academyActivePlayers(){
   game.academy = normalizeAcademyState(game.academy);
   return game.academy.players.filter(p => p.status === 'academy');
 }
+function academyResidenceCount(){
+  game.academy = normalizeAcademyState(game.academy);
+  return Math.max(0, Math.round(Number(game.academy.residences || 0)));
+}
+function academyCapacity(){
+  return ACADEMY_BASE_CAPACITY + (academyResidenceCount() * ACADEMY_RESIDENCE_CAPACITY);
+}
+function academyAvailableSlots(){
+  return Math.max(0, academyCapacity() - academyActivePlayers().length);
+}
+function academyAverageVisibleSkillsProgress(){
+  const active = academyActivePlayers();
+  if(!active.length) return 0;
+  return Math.round(avg(active.map(player => academyVisibleSkillsProgress(player).percent)));
+}
+function rentAcademyResidence(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const cost = ACADEMY_RESIDENCE_MONTHLY_COST;
+  if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para alquilar una residencia.'); return; }
+  recordBudgetChange(-cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:academyResidenceCount() + 1 });
+  game.academy.residences = academyResidenceCount() + 1;
+  game.academy.residenceLastChargeDate = currentCalendarDate ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  saveLocal(true);
+  renderAcademy();
+  showNotice(`Residencia alquilada. Cupo juvenil: ${academyCapacity()}.`);
+}
+function cancelAcademyResidence(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  if(academyResidenceCount() <= 0){ showNotice('No hay residencias alquiladas para cancelar.'); return; }
+  game.academy.residences = Math.max(0, academyResidenceCount() - 1);
+  if(game.academy.residences <= 0) game.academy.residenceLastChargeDate = null;
+  saveLocal(true);
+  renderAcademy();
+  showNotice(`Se canceló una residencia. Cupo juvenil: ${academyCapacity()}.`);
+}
+function processAcademyResidenceRent(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const residences = academyResidenceCount();
+  if(residences <= 0 || ACADEMY_RESIDENCE_MONTHLY_COST <= 0) return 0;
+  const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  if(!game.academy.residenceLastChargeDate){
+    game.academy.residenceLastChargeDate = today;
+    return 0;
+  }
+  const elapsed = daysBetweenIsoDates(game.academy.residenceLastChargeDate, today);
+  if(elapsed < ACADEMY_RESIDENCE_MONTH_DAYS) return 0;
+  const months = Math.max(1, Math.floor(elapsed / ACADEMY_RESIDENCE_MONTH_DAYS));
+  const total = residences * ACADEMY_RESIDENCE_MONTHLY_COST * months;
+  recordBudgetChange(-total, 'Alquiler mensual de residencias juveniles', { type:'academy_residence_monthly', residences, months });
+  game.academy.residenceLastChargeDate = addDaysToIsoDate(game.academy.residenceLastChargeDate, months * ACADEMY_RESIDENCE_MONTH_DAYS);
+  return total;
+}
 function nextAcademyPlayerId(){
   const ids = [0]
     .concat((seed?.players || []).map(p => Number(p.id) || 0))
@@ -306,6 +363,7 @@ function academyProjectedOverall(player){ return rawVisibleOverall(academyTempPl
 function startAcademyScouting(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
+  if(academyAvailableSlots() <= 0){ showNotice('No hay lugares disponibles en la academia. Alquilá residencias o liberá cupos antes de captar juveniles.'); return; }
   if((game.budget || 0) < ACADEMY_SCOUTING_COST){ showNotice('Presupuesto insuficiente para hacer una captación.'); return; }
   recordBudgetChange(-ACADEMY_SCOUTING_COST, 'Captación de talentos', { type:'academy_scouting_start' });
   const count = ACADEMY_PLAYERS_MIN + Math.floor(Math.random() * (ACADEMY_PLAYERS_MAX - ACADEMY_PLAYERS_MIN + 1));
@@ -364,6 +422,11 @@ function grantSeasonalExceptionalAcademyYouth(){
   game.academy = normalizeAcademyState(game.academy);
   const season = Number(game.seasonNumber || 1);
   if(Number(game.academy.exceptionalYouthGrantedSeason || 0) === season) return null;
+  if(academyAvailableSlots() <= 0){
+    pushGameMessage({ type:'academia', title:'Juvenil excepcional perdido', body:'La captación encontró un juvenil de 16 años, pero no había cupo disponible en la academia.', priority:'normal' });
+    game.academy.exceptionalYouthGrantedSeason = season;
+    return null;
+  }
   const player = createExceptionalAcademyYouth();
   game.academy.players.push(player);
   game.academy.exceptionalYouthGrantedSeason = season;
@@ -379,21 +442,39 @@ function processAcademyScoutingArrivals(){
   if(!game?.academy) return 0;
   game.academy = normalizeAcademyState(game.academy);
   let added = 0;
+  let lost = 0;
   game.academy.scoutingJobs.forEach(job => {
     if(job.status !== 'pending') return;
     if(Number(job.dueTurn || 0) > currentTurnIndex()) return;
-    const batch = createAcademyBatch(clamp(Number(job.count || 0), ACADEMY_PLAYERS_MIN, ACADEMY_PLAYERS_MAX));
+    const requested = clamp(Number(job.count || 0), ACADEMY_PLAYERS_MIN, ACADEMY_PLAYERS_MAX);
+    const available = academyAvailableSlots();
+    if(available <= 0){
+      job.status = 'completed_lost';
+      job.completedTurn = currentTurnIndex();
+      job.lostPlayers = requested;
+      lost += requested;
+      return;
+    }
+    const accepted = Math.min(requested, available);
+    const batch = createAcademyBatch(requested).slice(0, accepted);
     game.academy.players.push(...batch);
-    job.status = 'completed';
+    job.status = accepted >= requested ? 'completed' : 'completed_partial';
     job.completedTurn = currentTurnIndex();
+    job.addedPlayers = batch.length;
+    job.lostPlayers = Math.max(0, requested - batch.length);
     added += batch.length;
+    lost += job.lostPlayers;
   });
-  if(added > 0){
+  if(added > 0 || lost > 0){
     game.academy.lastArrivalTurn = currentTurnIndex();
-    pushGameMessage({ type:'academia', title:'Informe de captación recibido', body:`La academia recibió ${added} juveniles para evaluar.`, priority:'normal' });
+    const parts = [];
+    if(added > 0) parts.push(`La academia recibió ${added} juveniles para evaluar.`);
+    if(lost > 0) parts.push(`${lost} juveniles se perdieron por falta de lugar.`);
+    pushGameMessage({ type:'academia', title:'Informe de captación recibido', body:parts.join(' '), priority:lost > 0 ? 'high' : 'normal' });
   }
   return added;
 }
+
 function academyTurnSalaryCost(){
   const count = academyActivePlayers().length;
   if(!count) return 0;
@@ -424,6 +505,7 @@ function applyAcademyTrainingEffects(){
 function processAcademyTurn(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
+  processAcademyResidenceRent();
   academyTurnSalaryCost();
   applyAcademyTrainingEffects();
   const added = processAcademyScoutingArrivals();
@@ -597,20 +679,32 @@ function renderAcademy(){
   const active = academyActivePlayers();
   const activePreparer = academyYouthPreparerActive();
   const salaryTurn = active.length * ACADEMY_PLAYER_TURN_COST;
+  const residences = academyResidenceCount();
+  const capacity = academyCapacity();
+  const availableSlots = academyAvailableSlots();
+  const avgVisible = academyAverageVisibleSkillsProgress();
+  const scoutingDisabled = availableSlots <= 0;
   view.innerHTML = `
     <div class="row section-title">
       <div><h2>Academia</h2><p class="tagline">Captación, seguimiento y entrenamiento de juveniles antes de firmar contrato profesional.</p></div>
       <div class="pill">Costo por semana: ${formatMoney(salaryTurn)}</div>
     </div>
+    <div class="card academy-residence-card" style="margin-bottom:14px">
+      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Costo mensual por residencia: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)}.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button><span class="muted small">Residencias alquiladas: ${residences}</span></div>
+    </div>
     <div class="grid cols-3 academy-summary">
-      <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}</div><p class="small muted">Stats ocultas hasta consultar informes.</p></div>
-      <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting">Hacer captación de talentos</button></div>
+      <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>
+      <div class="card"><p class="label">Habilidades visibles</p><div class="metric">${avgVisible}%</div><p class="small muted">Promedio de los juveniles activos.</p></div>
+      <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
       <div class="card"><p class="label">Preparador de juveniles</p>${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<div class="metric small">${staffCostLabel('youth_preparer')}</div><button class="primary" id="btnHireYouthPreparer">Contratar</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
+  $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
+  $('btnCancelAcademyResidence')?.addEventListener('click', cancelAcademyResidence);
   $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);
   $('btnHireYouthPreparer')?.addEventListener('click', hireYouthPreparer);
   $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);

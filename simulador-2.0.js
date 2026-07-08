@@ -64,6 +64,21 @@
       losing: valid.has(src.losing) ? src.losing : DEFAULT_MATCH_INSTRUCTIONS.losing
     };
   }
+  function simNormalizeMentality(mode){
+    const value = String(mode || '').trim();
+    const legacy = { posicional:'normal', ataque:'ofensivo', defensiva:'defensivo' };
+    const normalized = legacy[value] || value;
+    return ['muy_defensivo','defensivo','normal','ofensivo','muy_ofensivo'].includes(normalized) ? normalized : 'normal';
+  }
+  function simPlayerMentality(player, tactic){
+    return simNormalizeMentality(tactic?.playerMentalities?.[player?.id]);
+  }
+  function simMentalityAttackMultiplier(player, tactic){
+    return ({ muy_defensivo:0.82, defensivo:0.92, normal:1, ofensivo:1.10, muy_ofensivo:1.22 })[simPlayerMentality(player, tactic)] || 1;
+  }
+  function simMentalityDefenseMultiplier(player, tactic){
+    return ({ muy_defensivo:1.22, defensivo:1.10, normal:1, ofensivo:0.92, muy_ofensivo:0.82 })[simPlayerMentality(player, tactic)] || 1;
+  }
   function pitchEffectV2(pitch){ return SIM_PITCH_CONDITIONS[pitch] || SIM_PITCH_CONDITIONS.Normal; }
   function getTacticForClubV2(clubId){
     if(clubId === game.selectedClubId) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions) };
@@ -212,19 +227,19 @@
     if(['MCO','MC','MCD'].includes(pos)) return 'mid';
     return 'def';
   }
-  function scorerWeightV2(player, setPiece=false){
+  function scorerWeightV2(player, setPiece=false, tactic=null){
     if(!player) return 1;
     if(player.position === 'POR') return 0.05;
     const pos = String(player.position || '').toUpperCase();
     if(setPiece){
       const setPieceBonus = pos === 'DC' ? 110 : ['DFC','LD','LI'].includes(pos) ? 72 : ['ED','EI','MCO'].includes(pos) ? 46 : ['MC','MCD'].includes(pos) ? 28 : 12;
       const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-      return (effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35 + setPieceBonus) * starMul;
+      return (effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35 + setPieceBonus) * starMul * simMentalityAttackMultiplier(player, tactic);
     }
     const posBonus = pos === 'DC' ? 160 : ['ED','EI'].includes(pos) ? 118 : pos === 'MCO' ? 72 : pos === 'MC' ? 28 : pos === 'MCD' ? 9 : 2;
     const rolePenalty = ['DFC','LD','LI'].includes(pos) ? 0.28 : pos === 'MCD' ? 0.55 : 1;
     const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-    return (effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20 + posBonus) * rolePenalty * starMul;
+    return (effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20 + posBonus) * rolePenalty * starMul * simMentalityAttackMultiplier(player, tactic);
   }
   function cardWeightV2(player){
     if(!player) return 1;
@@ -235,16 +250,16 @@
   function selectChanceShooterV2(power, setPiece=false){
     const outfield = (power.lineup || []).filter(p => p.position !== 'POR');
     const scorerPool = outfield.length ? outfield : power.lineup;
-    return weightedPickV2(scorerPool, p => scorerWeightV2(p, setPiece));
+    return weightedPickV2(scorerPool, p => scorerWeightV2(p, setPiece, power.tactic));
   }
   function goalkeeperFromPowerV2(power){
     return (power.lineup || []).find(p => p.position === 'POR') || null;
   }
-  function defensivePlayerWeightV2(player){
+  function defensivePlayerWeightV2(player, tactic=null){
     if(!player || player.position === 'POR') return 1;
     const pos = String(player.position || '').toUpperCase();
     const roleBonus = ['DFC','LD','LI'].includes(pos) ? 95 : pos === 'MCD' ? 68 : pos === 'MC' ? 34 : 14;
-    return effectiveSkill(player,'marca') * 0.95 + effectiveSkill(player,'entradas') * 0.90 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.28 + roleBonus;
+    return (effectiveSkill(player,'marca') * 0.95 + effectiveSkill(player,'entradas') * 0.90 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.28 + roleBonus) * simMentalityDefenseMultiplier(player, tactic);
   }
   function playerErrorSecurityV2(player, clubId){
     if(!player) return 0.50;
@@ -285,7 +300,7 @@
     const hasAssist = !details.errorGoal && Math.random() < (details.setPiece ? 0.58 : 0.72);
     const assister = hasAssist ? weightedPickV2(possibleAssisters, p => {
       const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(p, 'assist') : 1;
-      return (effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?30:6)) * starMul;
+      return (effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?30:6)) * starMul * simMentalityAttackMultiplier(p, details.tactic);
     }) : null;
     return {
       clubId,
@@ -303,7 +318,7 @@
     const shooter = selectChanceShooterV2(attacking, setPiece);
     if(!shooter) return null;
     const defenderPool = (defending.lineup || []).filter(p => p.position !== 'POR');
-    const defender = weightedPickV2(defenderPool, defensivePlayerWeightV2);
+    const defender = weightedPickV2(defenderPool, p => defensivePlayerWeightV2(p, defending.tactic));
     const keeper = goalkeeperFromPowerV2(defending);
     const shooterStarMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(shooter, 'goal') : 1;
     const shooterScore = simAvg([
@@ -325,7 +340,7 @@
       effectiveSkill(keeper,'posicionamiento'),
       effectiveSkill(keeper,'serenidad') * 0.85,
       currentMorale(keeper.id) * 0.35
-    ]) * keeperStarMul : 38;
+    ]) * keeperStarMul * simMentalityDefenseMultiplier(keeper, defending.tactic) : 38;
     const individualGoalProb = simClamp(0.16 + (shooterScore - (keeperScore * 0.56 + defenderScore * 0.44)) / 150 + (setPiece ? 0.015 : 0), 0.025, 0.72);
     const collectiveWeight = simClamp(SIM_TEAM_WEIGHT, 0, 1);
     const individualWeight = simClamp(SIM_INDIVIDUAL_WEIGHT, 0, 1);
@@ -342,7 +357,7 @@
     if(goal){
       errorGoal = Math.random() < SIM_GOAL_ERROR_ATTRIBUTION_RATE;
       if(errorGoal) errorEvent = registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, true);
-      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal:Boolean(errorEvent), errorById:errorEvent?.playerId || null, chanceQuality:goalProb });
+      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal:Boolean(errorEvent), errorById:errorEvent?.playerId || null, chanceQuality:goalProb, tactic:attacking.tactic });
     }
     if(Math.random() < errorChance){
       registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, false);

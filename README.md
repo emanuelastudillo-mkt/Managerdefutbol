@@ -187,3 +187,19 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 - Evaluación inicial a 5 partidos oficiales de temporada.
 - Prórroga por promedio general histórico del manager.
 - El promedio visible en oficina se calcula sobre la temporada actual.
+
+
+## V3.51
+- Confianza de la directiva: objetivo congelado al inicio de temporada y evaluación en los próximos partidos.
+- Residencias de academia: cupo base, alquiler mensual, cancelación y pérdida de juveniles sin lugar.
+- Visor de promedio de habilidades visibles juveniles.
+
+
+## V3.52
+- Mejora visual del menú Mensajes con estilo más claro tipo bandeja de entrada.
+
+
+## V3.53
+- Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
+- Click sobre el círculo del jugador para cambiar estado.
+- Los estados influyen en ataque, asistencia, defensa y tapadas.

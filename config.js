@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.50',
+  version: 'V3.51',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -46,6 +46,8 @@ window.GAME_CONFIG = {
     objetivoDivision3: 0.9,
     // Base de evaluación: la directiva revisa desde los 5 partidos oficiales de la temporada actual.
     partidosMinimosEvaluacionObjetivo: 5,
+    // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
+    congelarEvaluacionObjetivoPorTemporada: true,
     // Prórroga por promedio general histórico del manager.
     bonusPartidosPromedioGeneral120: 2,
     bonusPartidosPromedioGeneral150: 5,
@@ -181,7 +183,10 @@ window.GAME_CONFIG = {
     juvenilExcepcionalPorTemporada: true,
     edadJuvenilExcepcional: 16,
     mediaJuvenilExcepcionalMin: 12,
-    mediaJuvenilExcepcionalMax: 40
+    mediaJuvenilExcepcionalMax: 40,
+    cupoBaseJuveniles: 10,
+    residenciaCuposJuveniles: 20,
+    residenciaCostoMensual: 560000
   },
   entrenamiento: {
     // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.

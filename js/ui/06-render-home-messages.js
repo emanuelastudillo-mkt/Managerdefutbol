@@ -174,8 +174,11 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
   const objectiveText = objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—';
-  const extraText = objectiveInfo.extraMatches > 0 ? ` Incluye ${objectiveInfo.extraMatches} partido(s) extra por promedio general ${objectiveInfo.generalPpg.toFixed(2)}.` : '';
-  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Progreso del objetivo</span><strong>${Math.round(objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.progress))}%"></span></div><p>${objectiveInfo.played < objectiveInfo.minMatches ? `Evaluación en ${objectiveInfo.remainingMatches} partido(s) oficial(es) de temporada.${extraText}` : (objectiveInfo.ppg > objectiveInfo.objective ? 'Objetivo superado por ahora.' : 'Objetivo no superado.')}</p></div>` : '';
+  const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
+  const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
+    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${extraText}`
+    : (objectiveInfo.ppg > objectiveInfo.objective ? 'La confianza de la directiva se sostiene por ahora.' : 'La directiva evalúa despedirte.');
+  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '';
   const phase = phaseLabel();
   const nextBox = next
     ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
@@ -521,22 +524,67 @@ function homeMessagesSummary(){
 }
 function renderMessages(){
   markMessagesRead();
-  const rows = (game.messages || []).map(m => messageCard(m)).join('');
+  const messages = Array.isArray(game.messages) ? game.messages : [];
+  const unread = messages.filter(m => !m.read).length;
+  const pendingOffers = messages.filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
+  const highPriority = messages.filter(m => m.priority === 'high').length;
+  const rows = messages.map(m => messageCard(m)).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Mensajes</h2><p class="tagline">Eventos importantes, ofertas y avisos del club.</p></div>
-    <div class="message-list">${rows || '<div class="card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>`;
+    <div class="section-title"><h2>Mensajes</h2><p class="tagline">Leé más rápido los avisos del club con una vista tipo bandeja de entrada.</p></div>
+    <div class="messages-shell">
+      <div class="messages-toolbar card">
+        <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
+        <div class="messages-toolbar-item"><p class="label">Nuevos</p><strong>${unread}</strong><span>Sin leer</span></div>
+        <div class="messages-toolbar-item"><p class="label">Ofertas</p><strong>${pendingOffers}</strong><span>Pendientes</span></div>
+        <div class="messages-toolbar-item"><p class="label">Importantes</p><strong>${highPriority}</strong><span>Prioridad alta</span></div>
+      </div>
+      <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
+    </div>`;
   document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
   document.querySelectorAll('[data-reject-offer]').forEach(btn => btn.addEventListener('click', () => rejectTransferOffer(btn.dataset.rejectOffer)));
   saveLocal(true);
 }
+function messageIcon(type){
+  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️' };
+  return map[String(type || '').trim()] || '✉️';
+}
+function messageToneClass(type, priority){
+  if(priority === 'high') return 'message-tone-high';
+  const key = String(type || '').toLowerCase();
+  if(['transferoffer','finance'].includes(key)) return 'message-tone-money';
+  if(['evento','noticia'].includes(key)) return 'message-tone-sport';
+  if(['warning'].includes(key)) return 'message-tone-alert';
+  if(['staff','directiva'].includes(key)) return 'message-tone-board';
+  return 'message-tone-info';
+}
+function messageTypeLabel(type){
+  const raw = String(type || 'info').trim();
+  if(!raw) return 'Info';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
 function messageCard(m){
   const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
     ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button><button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
-    : (m.action?.status ? `<span class="pill">${m.action.status === 'accepted' ? 'Aceptada' : 'Rechazada'}</span>` : '');
-  return `<div class="card message-card ${m.read ? '' : 'unread'}">
-    <div class="row"><div><p class="label">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</p><h3>${escapeHtml(m.title)}</h3></div><span class="pill ${m.priority === 'high' ? 'warn' : ''}">${escapeHtml(m.type || 'info')}</span></div>
-    <p>${escapeHtml(m.body)}</p>
-    ${action}
+    : (m.action?.status ? `<span class="pill message-status-pill">${m.action.status === 'accepted' ? 'Aceptada' : 'Rechazada'}</span>` : '');
+  const toneClass = messageToneClass(m.type, m.priority);
+  const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
+  return `<div class="card message-card ${toneClass} ${m.read ? '' : 'unread'}">
+    <div class="message-card-accent"></div>
+    <div class="message-card-main">
+      <div class="row message-card-head">
+        <div class="message-head-left">
+          <div class="message-meta-row">
+            <span class="message-type-chip">${messageIcon(m.type)} ${escapeHtml(messageTypeLabel(m.type || 'info'))}</span>
+            <span class="message-date-chip">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</span>
+            ${unreadMark}
+          </div>
+          <h3>${escapeHtml(m.title)}</h3>
+        </div>
+        <span class="pill ${m.priority === 'high' ? 'warn' : ''}">${m.priority === 'high' ? 'Importante' : 'Normal'}</span>
+      </div>
+      <div class="message-paper"><p>${escapeHtml(m.body)}</p></div>
+      ${action}
+    </div>
   </div>`;
 }
 function hasPendingTransferOfferForPlayer(playerId){

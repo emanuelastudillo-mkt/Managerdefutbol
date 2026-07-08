@@ -133,19 +133,29 @@ function applyMentalityBonus(tactic, assigned){
   (assigned || []).forEach(entry => {
     const player = entry.player || entry;
     const group = entry.slot ? slotGroup(entry.slot) : playerGroup(player.position);
-    const mode = tactic?.playerMentalities?.[player.id] || 'posicional';
+    const mode = typeof normalizeMentality === 'function' ? normalizeMentality(tactic?.playerMentalities?.[player.id]) : (tactic?.playerMentalities?.[player.id] || 'normal');
     const fitFactor = entry.factor ?? 1;
-    if(mode === 'ataque'){
+    if(mode === 'muy_ofensivo'){
+      bonus.attack += (group === 'att' ? 3.8 : 1.9) * fitFactor;
+      bonus.midfield += group === 'mid' ? 0.4 * fitFactor : 0;
+      bonus.defense -= group === 'def' ? 1.9 : 0.9;
+    }
+    if(mode === 'ofensivo'){
       bonus.attack += (group === 'att' ? 2.4 : 1.2) * fitFactor;
       bonus.midfield += group === 'mid' ? 0.5 * fitFactor : 0;
       bonus.defense -= group === 'def' ? 1.2 : 0.6;
     }
-    if(mode === 'defensiva'){
+    if(mode === 'muy_defensivo'){
+      bonus.defense += (group === 'def' || group === 'gk' ? 3.8 : 1.9) * fitFactor;
+      bonus.midfield += group === 'mid' ? 0.4 * fitFactor : 0;
+      bonus.attack -= group === 'att' ? 1.8 : 0.8;
+    }
+    if(mode === 'defensivo'){
       bonus.defense += (group === 'def' || group === 'gk' ? 2.4 : 1.2) * fitFactor;
       bonus.midfield += group === 'mid' ? 0.5 * fitFactor : 0;
       bonus.attack -= group === 'att' ? 1.1 : 0.4;
     }
-    if(mode === 'posicional'){
+    if(mode === 'normal'){
       bonus.midfield += 0.9 * fitFactor;
       bonus.defense += 0.2 * fitFactor;
       bonus.attack += 0.2 * fitFactor;

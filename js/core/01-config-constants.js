@@ -58,7 +58,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.47');
+const APP_VERSION = configValue('version', 'V3.51');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -77,6 +77,7 @@ const MANAGER_OBJECTIVE_DIVISION_1 = configNumber('manager.objetivoDivision1', 1
 const MANAGER_OBJECTIVE_DIVISION_2 = configNumber('manager.objetivoDivision2', 1.1, 0.3, 2);
 const MANAGER_OBJECTIVE_DIVISION_3 = configNumber('manager.objetivoDivision3', 0.9, 0.3, 2);
 const MANAGER_OBJECTIVE_MIN_MATCHES = Math.max(1, Math.round(configNumber('manager.partidosMinimosEvaluacionObjetivo', 5, 1, 100)));
+const MANAGER_OBJECTIVE_FREEZE_BY_SEASON = configBoolean('manager.congelarEvaluacionObjetivoPorTemporada', true);
 const MANAGER_OBJECTIVE_EXTRA_120 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral120', 2, 0, 100)));
 const MANAGER_OBJECTIVE_EXTRA_150 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral150', 5, 0, 100)));
 const MANAGER_OBJECTIVE_EXTRA_190 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral190', 10, 0, 100)));
@@ -174,7 +175,7 @@ const FORMATION_VISUALS = {
   '4-3-1-2':[4,0,3,1,2],
   '5-4-1':[5,0,4,0,1]
 };
-const MENTALITIES = ['posicional','ataque','defensiva'];
+const MENTALITIES = ['muy_defensivo','defensivo','normal','ofensivo','muy_ofensivo'];
 const SUB_TRIGGERS = [
   { value:'tired', label:'Cambiar a los cansados' },
   { value:'best', label:'Mejores suplentes' },
@@ -273,6 +274,10 @@ const ACADEMY_EXCEPTIONAL_YOUTH_ENABLED = configBoolean('academia.juvenilExcepci
 const ACADEMY_EXCEPTIONAL_YOUTH_AGE = Math.round(configNumber('academia.edadJuvenilExcepcional', 16, 8, 20));
 const ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL = Math.round(configNumber('academia.mediaJuvenilExcepcionalMin', 12, 1, 40));
 const ACADEMY_EXCEPTIONAL_YOUTH_MAX_OVERALL = Math.max(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL, Math.round(configNumber('academia.mediaJuvenilExcepcionalMax', 40, 1, 40)));
+const ACADEMY_BASE_CAPACITY = Math.max(0, Math.round(configNumber('academia.cupoBaseJuveniles', 10, 0, 500)));
+const ACADEMY_RESIDENCE_CAPACITY = Math.max(0, Math.round(configNumber('academia.residenciaCuposJuveniles', 20, 0, 500)));
+const ACADEMY_RESIDENCE_MONTHLY_COST = Math.max(0, Math.round(configNumber('academia.residenciaCostoMensual', 560000, 0)));
+const ACADEMY_RESIDENCE_MONTH_DAYS = 30;
 
 const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
 const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));

@@ -1,516 +1,712 @@
-/* Motor de simulación V2.0 · V3.45 jugadorista 70/30 + estrellas + errores por jugador
-   Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
-   Mantiene valores internos ocultos fuera de la interfaz. */
-(function(){
-  const MATCH_INSTRUCTION_OPTIONS = [
+/* V3.44 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+
+function firstTeamTabsMarkup(current){
+  const tabs = [
+    ['tactics','Táctica'],
+    ['squad','Plantel'],
+    ['training','Entrenamiento']
+  ];
+  return `<div class="card first-team-tabs"><div class="subtabs">${tabs.map(([key,label])=>`<button class="${current===key?'active':''}" data-first-team-tab="${key}">${label}</button>`).join('')}</div></div>`;
+}
+function bindFirstTeamTabs(){
+  document.querySelectorAll('[data-first-team-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      firstTeamTab = btn.dataset.firstTeamTab || 'tactics';
+      renderFirstTeam();
+    });
+  });
+}
+function prependFirstTeamTabs(current){
+  if(activeTab !== 'firstTeam') return;
+  firstTeamTab = current;
+  view.insertAdjacentHTML('afterbegin', firstTeamTabsMarkup(current));
+  bindFirstTeamTabs();
+}
+function renderFirstTeam(){
+  if(firstTeamTab === 'squad') return renderSquad();
+  if(firstTeamTab === 'training') return renderTraining();
+  return renderTactics();
+}
+
+function marketTabsMarkup(){
+  return `<div class="card market-tabs"><div class="subtabs"><button class="${marketSubTab==='free'?'active':''}" data-market-tab="free">Jugadores libres</button><button class="${marketSubTab==='contracted'?'active':''}" data-market-tab="contracted">Jugadores contratados</button></div></div>`;
+}
+function bindMarketTabs(){
+  document.querySelectorAll('[data-market-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      marketSubTab = btn.dataset.marketTab || 'free';
+      renderMarket();
+    });
+  });
+}
+function contractedMarketPlayers(){
+  return seed.players
+    .filter(p => !p.retired && !p.sold && Number(p.clubId || 0) > 0 && Number(p.clubId) !== Number(game.selectedClubId))
+    .slice()
+    .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.name.localeCompare(b.name,'es'));
+}
+
+function marketPositionOptions(){
+  const options = [
+    ['all','Todas'],
+    ['POR','POR'],
+    ['DEF','DEF'],
+    ['LD','LD'],
+    ['LI','LI'],
+    ['DFC','DFC'],
+    ['MED','MED'],
+    ['MCD','MCD'],
+    ['MC','MC'],
+    ['MI','MI'],
+    ['MD','MD'],
+    ['MCO','MCO'],
+    ['DEL','DEL'],
+    ['ED','ED'],
+    ['EI','EI'],
+    ['DC','DC']
+  ];
+  return options.map(([value, label]) => `<option value="${value}" ${marketFilters.position===value?'selected':''}>${label}</option>`).join('');
+}
+function marketNumberFilterValue(key){
+  const value = marketFilters?.[key];
+  return value === undefined || value === null ? '' : String(value);
+}
+function marketPlayerPrice(player){
+  return Number(player?.clause || player?.value || 0);
+}
+function marketPlayerMatchesPosition(player){
+  const filter = String(marketFilters.position || 'all').toUpperCase();
+  if(filter === 'ALL') return true;
+  const pos = normalizePlayerPosition(player.position, player.id);
+  const group = playerRoleGroup(pos);
+  if(filter === 'DEF') return group === 'DEF';
+  if(filter === 'MED') return group === 'MID';
+  if(filter === 'DEL') return group === 'ATT';
+  return pos === filter;
+}
+function marketPlayerMatchesFilters(player){
+  const media = visibleOverall(player);
+  const age = Number(player.age || 0);
+  const price = marketPlayerPrice(player);
+  const minMedia = Number(marketFilters.mediaMin || 0);
+  const maxMedia = Number(marketFilters.mediaMax || 0);
+  const minAge = Number(marketFilters.ageMin || 0);
+  const maxAge = Number(marketFilters.ageMax || 0);
+  const maxPrice = Number(marketFilters.priceMax || 0);
+  if(minMedia && media < minMedia) return false;
+  if(maxMedia && media > maxMedia) return false;
+  if(minAge && age < minAge) return false;
+  if(maxAge && age > maxAge) return false;
+  if(maxPrice && price > maxPrice) return false;
+  if(!marketPlayerMatchesPosition(player)) return false;
+  return true;
+}
+function marketFiltersMarkup(total, shown){
+  return `<div class="card market-filters-card">
+    <div class="row market-filters-head"><div><p class="label">Buscar coincidencias</p><h3>Filtros de mercado</h3></div><span class="pill">${shown}/${total} jugador(es)</span></div>
+    <div class="market-filter-grid">
+      <label>Media desde<input data-market-filter="mediaMin" type="number" min="1" max="99" placeholder="Min." value="${escapeHtml(marketNumberFilterValue('mediaMin'))}"></label>
+      <label>Media hasta<input data-market-filter="mediaMax" type="number" min="1" max="99" placeholder="Max." value="${escapeHtml(marketNumberFilterValue('mediaMax'))}"></label>
+      <label>Edad desde<input data-market-filter="ageMin" type="number" min="15" max="45" placeholder="Min." value="${escapeHtml(marketNumberFilterValue('ageMin'))}"></label>
+      <label>Edad hasta<input data-market-filter="ageMax" type="number" min="15" max="45" placeholder="Max." value="${escapeHtml(marketNumberFilterValue('ageMax'))}"></label>
+      <label>Precio hasta<input data-market-filter="priceMax" type="number" min="0" step="100000" placeholder="Máximo" value="${escapeHtml(marketNumberFilterValue('priceMax'))}"></label>
+      <label>Posición<select data-market-filter="position">${marketPositionOptions()}</select></label>
+      <button id="clearMarketFilters" class="ghost" type="button">Limpiar filtros</button>
+    </div>
+  </div>`;
+}
+function bindMarketFilters(){
+  document.querySelectorAll('[data-market-filter]').forEach(input => {
+    input.addEventListener('change', () => {
+      const key = input.dataset.marketFilter;
+      if(!key) return;
+      marketFilters[key] = input.value || (key === 'position' ? 'all' : '');
+      renderMarket();
+    });
+  });
+  $('clearMarketFilters')?.addEventListener('click', () => {
+    marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'', position:'all' };
+    renderMarket();
+  });
+}
+function renderMarket(){
+  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  ensurePlayerStateForAll();
+  if(marketSubTab !== 'contracted') marketSubTab = 'free';
+  if(marketSubTab === 'contracted') return renderContractedMarket();
+  const freeBase = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold).slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a));
+  const free = freeBase.filter(marketPlayerMatchesFilters);
+  const rows = free.map(p => `<tr>
+    <td>${faceImg(p, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
+    <td>${visibleOverall(p)}</td>
+    <td>${conditionBar(p.id)}</td>
+    <td>${moraleBar(p.id)}</td>
+    <td>${formatMoney(marketPlayerPrice(p))}</td>
+    <td>${formatMoney(p.salary || 0)}</td>
+    <td><button class="primary small-btn" data-hire-free-agent="${p.id}">Contratar</button></td>
+  </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
+    ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
+    ${marketFiltersMarkup(freeBase.length, free.length)}
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
+  bindMarketTabs();
+  bindMarketFilters();
+  document.querySelectorAll('[data-hire-free-agent]').forEach(btn => btn.addEventListener('click', () => hireFreeAgent(Number(btn.dataset.hireFreeAgent))));
+}
+function renderContractedMarket(){
+  const basePlayers = contractedMarketPlayers();
+  const players = basePlayers.filter(marketPlayerMatchesFilters);
+  const rows = players.map(p => {
+    const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id);
+    const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
+    return `<tr>
+    <td>${faceImg(p, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
+    <td>${clubBadge(p.clubId)} ${escapeHtml(clubName(p.clubId))}</td>
+    <td>${visibleOverall(p)}</td>
+    <td>${formatMoney(p.clause || p.value || 0)}</td>
+    <td>${formatMoney(p.salary || 0)}</td>
+    <td><button class="primary small-btn" data-make-player-offer="${p.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></td>
+  </tr>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
+    ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
+    ${marketFiltersMarkup(basePlayers.length, players.length)}
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
+  bindMarketTabs();
+  bindMarketFilters();
+  document.querySelectorAll('[data-make-player-offer]').forEach(btn => btn.addEventListener('click', () => openPurchaseOfferModal(Number(btn.dataset.makePlayerOffer))));
+}
+
+function hireFreeAgent(playerId){
+  const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
+  if(idx < 0) return;
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
+  game.marketPlayers[idx].clubId = game.selectedClubId;
+  game.marketPlayers[idx].freeAgent = false;
+  mergeMarketPlayersIntoSeed(game.marketPlayers);
+  const player = playerById(playerId);
+  if(player){
+    player.clubId = game.selectedClubId;
+    player.freeAgent = false;
+    player.salaryPaidCount = 0;
+    player.lastSalaryPaidSeason = 0;
+    refreshPlayerClause(player);
+  }
+  game.marketPlayers[idx].salaryPaidCount = 0;
+  game.marketPlayers[idx].lastSalaryPaidSeason = 0;
+  refreshPlayerClause(game.marketPlayers[idx]);
+  game.playerCondition[playerId] = clamp(game.playerCondition[playerId] || (15 + hashNumber(`free-cond-${playerId}`, 15)), 1, 29);
+  if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
+  ensurePlayerStateForAll();
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} se incorporó al plantel como agente libre.`, priority:'normal' });
+  saveLocal(true);
+  showNotice(`${player?.name || 'Jugador'} contratado.`);
+  renderMarket();
+}
+
+function sortPlayersForView(players, sortKey){
+  const byName = (a,b) => a.name.localeCompare(b.name, 'es');
+  const byNameDesc = (a,b) => b.name.localeCompare(a.name, 'es');
+  const byNationality = (a,b) => a.nationality.localeCompare(b.nationality, 'es') || byName(a,b);
+  const byNationalityDesc = (a,b) => b.nationality.localeCompare(a.nationality, 'es') || byName(a,b);
+  const byValueAsc = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
+  const byValueDesc = (a,b) => (b.value || 0) - (a.value || 0) || byName(a,b);
+  const byAgeAsc = (a,b) => Number(a.age || 0) - Number(b.age || 0) || byName(a,b);
+  const byAgeDesc = (a,b) => Number(b.age || 0) - Number(a.age || 0) || byName(a,b);
+  const byDorsalAsc = (a,b) => jerseyNumber(a.id) - jerseyNumber(b.id) || byName(a,b);
+  const byDorsalDesc = (a,b) => jerseyNumber(b.id) - jerseyNumber(a.id) || byName(a,b);
+  const positionRank = (player) => {
+    const group = playerRoleGroup(player.position);
+    return { POR:1, DEF:2, MID:3, ATT:4 }[group] || 99;
+  };
+  const positionVariantRank = (player) => {
+    const pos = normalizePlayerPosition(player.position, player.id);
+    const order = { POR:1, LD:2, LI:3, DFC:4, MCD:5, MC:6, MI:7, MD:8, MCO:9, ED:10, EI:11, DC:12 };
+    return order[pos] || 99;
+  };
+  const byPositionAsc = (a,b) => positionRank(a) - positionRank(b) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
+  const byPositionDesc = (a,b) => positionRank(b) - positionRank(a) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
+  const byStatusAvailable = (a,b) => Number(isUnavailable(a.id)) - Number(isUnavailable(b.id)) || byName(a,b);
+  const byStatusUnavailable = (a,b) => Number(isUnavailable(b.id)) - Number(isUnavailable(a.id)) || byName(a,b);
+  const sorters = {
+    nombre_asc:byName,
+    nombre_desc:byNameDesc,
+    dorsal_asc:byDorsalAsc,
+    dorsal_desc:byDorsalDesc,
+    posicion_asc:byPositionAsc,
+    posicion_desc:byPositionDesc,
+    media_desc:(a,b)=>visibleOverall(b)-visibleOverall(a) || byName(a,b),
+    media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
+    condicion_desc:(a,b)=>currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
+    condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
+    moral_desc:(a,b)=>currentMorale(b.id)-currentMorale(a.id) || byName(a,b),
+    moral_asc:(a,b)=>currentMorale(a.id)-currentMorale(b.id) || byName(a,b),
+    resistencia_desc:(a,b)=>visibleStats(b).Resistencia-visibleStats(a).Resistencia || byName(a,b),
+    resistencia_asc:(a,b)=>visibleStats(a).Resistencia-visibleStats(b).Resistencia || byName(a,b),
+    estado_disponible:byStatusAvailable,
+    estado_no_disponible:byStatusUnavailable,
+    valor_asc:byValueAsc,
+    valor_desc:byValueDesc,
+    edad_asc:byAgeAsc,
+    edad_desc:byAgeDesc,
+    nacionalidad_asc:byNationality,
+    nacionalidad_desc:byNationalityDesc
+  };
+  return players.slice().sort(sorters[sortKey] || sorters.media_desc);
+}
+function sortedSquadPlayers(){
+  return sortPlayersForView(playersByClub(game.selectedClubId), squadSort);
+}
+function sortedTrainingPlayers(){
+  return sortPlayersForView(playersByClub(game.selectedClubId), trainingSort);
+}
+function columnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-squad-sort>${opts}</select></div>`;
+}
+
+function trainingColumnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-training-sort>${opts}</select></div>`;
+}
+
+function worldPlayerTeamMarkup(player){
+  const clubId = Number(player.clubId || 0);
+  if(clubId > 0){
+    return `<button class="linklike team-cell" data-club-id="${clubId}">${clubBadge(clubId)}<span>${escapeHtml(clubName(clubId))}</span></button>`;
+  }
+  if(clubId < 0 || player.sold) return '<span class="pill">Exterior</span>';
+  return '<span class="pill">Agente libre</span>';
+}
+function worldPlayersPositionOptions(){
+  const positions = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
+  return positions.map(pos => `<option value="${pos}" ${worldPlayersPositionFilter===pos?'selected':''}>${pos==='all'?'Todas':pos}</option>`).join('');
+}
+function worldPlayersClubOptions(){
+  const clubs = (seed.clubs || []).slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  const fixed = [
+    `<option value="all" ${worldPlayersClubFilter==='all'?'selected':''}>Todos</option>`,
+    `<option value="free" ${worldPlayersClubFilter==='free'?'selected':''}>Agentes libres</option>`,
+    `<option value="foreign" ${worldPlayersClubFilter==='foreign'?'selected':''}>Exterior</option>`
+  ];
+  return fixed.concat(clubs.map(c => `<option value="${c.id}" ${String(worldPlayersClubFilter)===String(c.id)?'selected':''}>${escapeHtml(c.name)}</option>`)).join('');
+}
+function worldPlayerFilterList(players){
+  return players.filter(player => {
+    if(worldPlayersPositionFilter !== 'all' && player.position !== worldPlayersPositionFilter) return false;
+    const clubId = Number(player.clubId || 0);
+    if(worldPlayersClubFilter === 'free') return clubId === 0 && !player.sold;
+    if(worldPlayersClubFilter === 'foreign') return clubId < 0 || player.sold;
+    if(worldPlayersClubFilter !== 'all') return clubId === Number(worldPlayersClubFilter);
+    return true;
+  });
+}
+function worldPlayersColumnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-world-sort>${opts}</select></div>`;
+}
+function worldStatCell(player, key){
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  return visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
+}
+function worldPlayerRow(player){
+  return `<tr class="${Number(player.clubId || 0) === game.selectedClubId ? 'own-player-row' : ''}">
+    <td>${faceImg(player, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td>${Number(player.age || 0) || '—'}</td>
+    <td>${worldPlayerTeamMarkup(player)}</td>
+    <td>${formatMoney(player.clause || player.value || 0)}</td>
+    <td>${formatMoney(player.salary || 0)}</td>
+    <td>${worldStatCell(player,'Ataque/Salto')}</td>
+    <td>${worldStatCell(player,'Defensa')}</td>
+    <td>${worldStatCell(player,'Pase')}</td>
+    <td>${worldStatCell(player,'Velocidad/Reflejos')}</td>
+    <td>${worldStatCell(player,'Cabezazo/Mando')}</td>
+    <td>${worldStatCell(player,'Tiro/Potencia')}</td>
+    <td>${worldStatCell(player,'Resistencia')}</td>
+  </tr>`;
+}
+function renderWorldPlayers(){
+  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  ensurePlayerStateForAll();
+  const basePlayers = seed.players.filter(p => !p.retired);
+  const filtered = worldPlayerFilterList(basePlayers);
+  const players = sortPlayersForView(filtered, worldPlayersSort);
+  const rows = players.map(worldPlayerRow).join('');
+  view.innerHTML = `
+    <div class="section-title">
+      <h2>Jugadores</h2>
+      <p class="tagline">Listado mundial. La mayor parte de las habilidades se oculta y vuelve a sortearse en cada semana.</p>
+    </div>
+    <div class="card world-player-filters">
+      <label>Posición<select id="worldPositionFilter">${worldPlayersPositionOptions()}</select></label>
+      <label>Equipo<select id="worldClubFilter">${worldPlayersClubOptions()}</select></label>
+      <span class="pill">${players.length} jugador(es)</span>
+    </div>
+    <div class="table-wrap world-players-wrap"><table class="world-players-table"><thead><tr>
+      <th>Foto</th>
+      <th>${worldPlayersColumnSort('Nombre', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${worldPlayersColumnSort('Pos.', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
+      <th>${worldPlayersColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th>
+      <th>Equipo</th>
+      <th>${worldPlayersColumnSort('Cláusula', [['valor_desc','Mayor'],['valor_asc','Menor']])}</th>
+      <th>Sueldo</th>
+      <th>Ataque/Salto</th>
+      <th>Defensa</th>
+      <th>Pase</th>
+      <th>Vel./Ref.</th>
+      <th>Cab./Mando</th>
+      <th>Tiro/Pot.</th>
+      <th>Resist.</th>
+    </tr></thead><tbody>${rows || '<tr><td colspan="14" class="muted">No hay jugadores para mostrar.</td></tr>'}</tbody></table></div>`;
+  $('worldPositionFilter')?.addEventListener('change', event => { worldPlayersPositionFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  $('worldClubFilter')?.addEventListener('change', event => { worldPlayersClubFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  document.querySelectorAll('[data-world-sort]').forEach(select => {
+    select.addEventListener('change', () => {
+      if(select.value){ worldPlayersSort = select.value; renderWorldPlayers(); }
+    });
+  });
+}
+
+function renderSquad(){
+  const players = sortedSquadPlayers();
+  const rows = players.map(p=>`
+    <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
+      <td>${faceImg(p, 'photo-thumb')}</td>
+      <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
+      <td>#${jerseyNumber(p.id)}</td>
+      <td>${Number(p.age || 0) || '—'}</td>
+      <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+      <td>${nationalityShortMarkup(p.nationality)}</td>
+      <td><strong>${visibleOverall(p)}</strong></td>
+      <td>${conditionBar(p.id)}</td>
+      <td>${moraleBar(p.id)}</td>
+      <td>${visibleStats(p).Resistencia}</td>
+      <td>${availabilityStatusMarkup(p.id)}</td>
+      <td>${formatMoney(p.clause || p.value || 0)}</td>
+    </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. Los controles de orden están en la cabecera de cada columna.</p></div>
+    <div class="table-wrap"><table class="squad-table"><thead><tr>
+      <th>Foto</th>
+      <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
+      <th>${columnSort('Edad', [['edad_asc','Menor a mayor'],['edad_desc','Mayor a menor']])}</th>
+      <th>${columnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
+      <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
+      <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
+      <th>${columnSort('Cláusula', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+  `;
+  prependFirstTeamTabs('squad');
+  document.querySelectorAll('[data-squad-sort]').forEach(select => {
+    select.addEventListener('change', e => {
+      if(e.target.value){ squadSort = e.target.value; renderSquad(); }
+    });
+  });
+}
+function tacticSelectionClass(playerId){
+  return tacticClickSelection && Number(tacticClickSelection.playerId) === Number(playerId) ? ' tactic-selected' : '';
+}
+function tacticPlayerCard(p, extra='', zone='reserve', index=-1){
+  const statusIcons = availabilityIcons(p.id);
+  const unavailableClass = isUnavailable(p.id) ? 'injured-card' : '';
+  const playableInjuredClass = canUseInjuredAsSub(p.id) ? 'playable-injured-card' : '';
+  return `<button type="button" class="drag-player tactic-click-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}${tacticSelectionClass(p.id)}" data-tactic-player="${p.id}" data-tactic-zone="${zone}" data-tactic-index="${index}" title="Click para seleccionar o intercambiar">
+    ${faceImg(p, 'drag-face')}
+    <span class="tactic-card-text"><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span>#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${Number(p.age || 0) || '—'} años · ${visibleOverall(p)} · Fís. ${currentCondition(p.id)}/99 · Mor. ${currentMorale(p.id)}/99</span></span>
+  </button>`;
+}
+function playerDragCard(p, extra=''){
+  return tacticPlayerCard(p, extra);
+}
+function tacticSelectionHint(){
+  if(!tacticClickSelection?.playerId) return 'Click en un jugador para seleccionarlo. Después hacé click en otro jugador o en un puesto vacío para intercambiar.';
+  const p = playerById(tacticClickSelection.playerId);
+  return `${p ? escapeHtml(playerLastName(p.name)) : 'Jugador'} seleccionado. Hacé click en otro jugador para intercambiar, o volvé a hacer click para cancelar.`;
+}
+function bindTacticClickEvents(){
+  document.querySelectorAll('[data-tactic-player]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const playerId = Number(el.dataset.tacticPlayer || 0);
+      if(!playerId) return;
+      if(el.classList.contains('player-chip') && el.dataset.tacticZone === 'starter'){
+        game.tactic = applyStarterMentalities(game.tactic);
+        game.tactic.playerMentalities[playerId] = nextMentality(playerMentality(playerId));
+        tacticClickSelection = null;
+        saveLocal(true);
+        renderTactics();
+        return;
+      }
+      if(!tacticClickSelection){
+        tacticClickSelection = { playerId };
+        renderTactics();
+        return;
+      }
+      if(Number(tacticClickSelection.playerId) === playerId){
+        tacticClickSelection = null;
+        renderTactics();
+        return;
+      }
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), tacticLocationOfPlayer(playerId));
+    });
+  });
+  document.querySelectorAll('[data-tactic-empty-slot]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if(!tacticClickSelection?.playerId){
+        showNotice('Primero seleccioná un jugador y después elegí el puesto vacío.');
+        return;
+      }
+      const index = Number(el.dataset.tacticEmptySlot || -1);
+      if(index < 0) return;
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), { type:'starter', index, playerId:0 });
+    });
+  });
+}
+
+function renderTactics(){
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
+  const starters = game.tactic.starters.map(playerById).filter(Boolean);
+  const bench = game.tactic.bench.map(playerById).filter(Boolean);
+  const starterSet = new Set(game.tactic.starters);
+  const benchSet = new Set(game.tactic.bench);
+  const reserves = playersByClub(game.selectedClubId)
+    .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
+    .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  const pitch = pitchSlots(game.tactic).map(slot => {
+    const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
+    const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
+    const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
+    const chip = slot.player ? `
+      <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(slot.player.id)} ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)} · Click para cambiar estado: ${escapeHtml(mentalityLabel(playerMentality(slot.player.id)))}">
+        <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
+        <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
+        ${mentalityMarker(slot.mentality)}
+      </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
+    return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
+  }).join('');
+  const starterList = pitchSlots(game.tactic).map(slot => {
+    const p = slot.player;
+    const fit = p ? playerFitsSlot(p, slot.slot) : false;
+    return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
+      <span class="pill">${slot.index+1}. ${slot.slot}</span>
+      <span>${p ? `<strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong>` : '<span class="muted">Vacío</span>'}</span>
+      <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
+      <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
+      ${p ? conditionBar(p.id) : '<span></span>'}
+      ${p ? moraleBar(p.id) : '<span></span>'}
+      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
+    </div>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click sobre el círculo del jugador en la pizarra para cambiar su estado: muy defensivo, defensivo, normal, ofensivo o muy ofensivo. En las listas podés intercambiar titulares, suplentes y reservas. Rol exacto: 100%. Rol compatible: 75%. Fuera de zona natural: 50%.</p></div>
+    <div class="card tactic-board-card">
+      <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
+      <div class="tactic-click-help">${tacticSelectionHint()}</div>
+      <div class="pitch-board centered">${pitch}</div>
+    </div>
+    <div class="grid cols-2 tactic-lists" style="margin-top:14px">
+      <div class="card">
+        <h3>Titulares</h3>
+        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span>Edad</span><span>Media</span><span>Físico</span><span>Moral</span><span>Estado</span></div>
+        <div class="lineup-list">${starterList}</div>
+      </div>
+      <div class="card">
+        <h3>Suplentes / reservas</h3>
+        <div class="drop-pool" data-drop-pool="bench"><h4>Suplentes (${bench.length}/10)</h4><div class="drag-list">${bench.length ? bench.map((p,i)=>tacticPlayerCard(p,'bench-card','bench',i)).join('') : '<p class="muted small">Sin suplentes.</p>'}</div></div>
+        <div class="drop-pool" data-drop-pool="reserve"><h4>Reservas</h4><div class="drag-list">${reserves.length ? reserves.map((p,i)=>tacticPlayerCard(p,'reserve-card','reserve',i)).join('') : '<p class="muted small">Sin reservas.</p>'}</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Cambios automáticos</h3>
+      <p class="muted small">Elegí reglas simples: cansados, mejores suplentes o sólo cambios obligados por lesión.</p>
+      <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
+    </div>
+    <div class="card match-instructions-card" style="margin-top:14px">
+      <h3>Instrucciones de partido</h3>
+      <p class="muted small">El simulador 2.0 usa estas instrucciones según el resultado parcial del partido.</p>
+      <div class="instruction-grid">${matchInstructionControls()}</div>
+    </div>
+    <div class="row sticky-actions"><button id="saveTactic" class="primary">Guardar táctica</button><span id="tacticErrors" class="bad small"></span></div>
+  `;
+  prependFirstTeamTabs('tactics');
+  $('formation').addEventListener('change', () => {
+    const tentative = {...game.tactic, formation:$('formation').value};
+    const autoStarters = autoSelectStarters(game.selectedClubId, tentative).map(p=>p.id);
+    game.tactic.starters = autoStarters;
+    game.tactic.bench = autoSelectBench(game.selectedClubId, autoStarters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic.formation = tentative.formation;
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('autoPickBestBtn').addEventListener('click', () => {
+    game.tactic.formation = $('formation').value;
+    const starters = autoSelectStarters(game.selectedClubId, game.tactic).map(p=>p.id);
+    game.tactic.starters = starters;
+    game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('autoPickConditionBtn').addEventListener('click', () => {
+    game.tactic.formation = $('formation').value;
+    const starters = autoSelectByBestCondition(game.selectedClubId).map(p=>p.id);
+    game.tactic.starters = starters;
+    game.tactic.bench = autoSelectBenchByBestCondition(game.selectedClubId, starters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('saveTactic').addEventListener('click', saveTacticFromScreen);
+  bindTacticClickEvents();
+}
+function tacticPlayerRow(p){
+  const current = game.tactic.starters.includes(p.id) ? 'starter' : game.tactic.bench.includes(p.id) ? 'bench' : 'reserve';
+  const unavailable = isUnavailable(p.id);
+  const benchAllowed = canBeBench(p.id);
+  const roleDisabled = isSuspended(p.id) || (isInjured(p.id) && !benchAllowed);
+  const mentalityText = current === 'starter' ? playerMentality(p.id) : '—';
+  return `<tr class="${unavailable ? 'dim-row' : ''}">
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
+    <td>#${jerseyNumber(p.id)}</td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td><strong>${visibleOverall(p)}</strong></td>
+    <td>${currentCondition(p.id)}/99</td>
+    <td>${availabilityStatusMarkup(p.id)}</td>
+    <td><select class="role-select" data-role-player="${p.id}" ${roleDisabled ? 'disabled' : ''}>
+      <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
+      <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
+      <option value="bench" ${current==='bench'?'selected':''}>Suplente</option>
+    </select></td>
+    <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityLabel(mentalityText)) : '<span class="muted">Sólo titulares</span>'}</td>
+  </tr>`;
+}
+function matchInstructionControls(){
+  const current = window.Simulator20?.normalizeMatchInstructions
+    ? window.Simulator20.normalizeMatchInstructions(game.tactic?.matchInstructions)
+    : { winning:'normal', drawing:'normal', losing:'normal' };
+  const options = window.MATCH_INSTRUCTION_OPTIONS || [
     { value:'lower', label:'Bajar el ritmo' },
     { value:'normal', label:'Normal' },
     { value:'push', label:'Subir ritmo' }
   ];
-  const DEFAULT_MATCH_INSTRUCTIONS = { winning:'normal', drawing:'normal', losing:'normal' };
-  const INSTRUCTION_EFFECTS = {
-    lower:{ attack:0.92, midfield:0.96, defense:1.04, attacks:0.90, conversion:0.94, foul:0.88 },
-    normal:{ attack:1.00, midfield:1.00, defense:1.00, attacks:1.00, conversion:1.00, foul:1.00 },
-    push:{ attack:1.09, midfield:1.03, defense:0.95, attacks:1.12, conversion:1.06, foul:1.10 }
-  };
-  const BLOCKS = Array.from({ length:30 }, (_, index) => ({
-    from:index * 3 + 1,
-    to:index === 29 ? 90 : index * 3 + 3
+  const row = (key, label) => `<div class="instruction-control"><label>${label}</label><select data-match-instruction="${key}">${options.map(opt=>`<option value="${opt.value}" ${current[key]===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select></div>`;
+  return row('winning','Ganando') + row('drawing','Empatando') + row('losing','Perdiendo');
+}
+function autoSubRow(index){
+  const rule = game.tactic.autoSubs[index] || { outId:0, inId:0, trigger:'tired' };
+  const starterOpts = [`<option value="0">Sin cambio</option>`].concat(game.tactic.starters.map(id=>{
+    const p = playerById(id);
+    return `<option value="${id}" ${Number(rule.outId)===id?'selected':''}>${escapeHtml(p?.name || 'Jugador')} (${p?.position || ''})</option>`;
+  })).join('');
+  const benchOpts = [`<option value="0">Sin jugador</option>`].concat(game.tactic.bench.map(id=>{
+    const p = playerById(id);
+    return `<option value="${id}" ${Number(rule.inId)===id?'selected':''}>${escapeHtml(p?.name || 'Jugador')} (${p?.position || ''})</option>`;
+  })).join('');
+  const triggerOpts = SUB_TRIGGERS.map(t=>`<option value="${t.value}" ${rule.trigger===t.value?'selected':''}>${t.label}</option>`).join('');
+  return `<div class="autosub-row">
+    <span class="rank-num">${index+1}</span>
+    <div><label>Sale</label><select data-sub-out="${index}">${starterOpts}</select></div>
+    <div><label>Entra</label><select data-sub-in="${index}">${benchOpts}</select></div>
+    <div><label>Tipo</label><select data-sub-trigger="${index}">${triggerOpts}</select></div>
+  </div>`;
+}
+function saveTacticFromScreen(){
+  const autoSubs = [0,1,2,3,4].map(i => ({
+    outId: Number(document.querySelector(`[data-sub-out="${i}"]`)?.value || 0),
+    inId: Number(document.querySelector(`[data-sub-in="${i}"]`)?.value || 0),
+    trigger: document.querySelector(`[data-sub-trigger="${i}"]`)?.value || 'tired'
   }));
-  const SIM_PITCH_CONDITIONS = {
-    'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
-    'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },
-    'Regular': { passDelta:-10, chanceMultiplier:0.80, fatigueBonus:0, injuryBonus:0 },
-    'Muy malo': { passDelta:-20, chanceMultiplier:0.70, fatigueBonus:10, injuryBonus:0.10 },
-    'Injugable': { passDelta:-50, chanceMultiplier:0.50, fatigueBonus:20, injuryBonus:0.30 }
+  const selectedInstructions = {
+    winning: document.querySelector('[data-match-instruction="winning"]')?.value || 'normal',
+    drawing: document.querySelector('[data-match-instruction="drawing"]')?.value || 'normal',
+    losing: document.querySelector('[data-match-instruction="losing"]')?.value || 'normal'
   };
+  const nextTactic = applyStarterMentalities({
+    formation:$('formation')?.value || game.tactic.formation,
+    starters:game.tactic.starters.slice(0,11),
+    bench:game.tactic.bench.slice(0,10),
+    autoSubs,
+    playerMentalities:{ ...(game.tactic.playerMentalities || {}) },
+    matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions
+  });
+  const errors = validateTactic(nextTactic);
+  if(errors.length){
+    $('tacticErrors').textContent = errors.join(' ');
+    showNotice('La táctica no se guardó. Corregí titulares, suplentes o jugadores no disponibles.');
+    return;
+  }
+  game.tactic = nextTactic;
+  game.mustReviewTactics = false;
+  game.lastOwnProblems = [];
+  saveLocal(true);
+  showNotice('Táctica guardada. Ya podés avanzar cuando termine el bloqueo.');
+  renderAll();
+}
+function validateCurrentTactic(showErrors=true){
+  const errors = validateTactic(game.tactic);
+  if(showErrors && errors.length) showNotice(errors.join(' '));
+  return errors;
+}
+function validateTactic(tactic){
+  const errors = [];
+  const starters = (tactic.starters || []).map(Number).filter(Boolean);
+  const bench = (tactic.bench || []).map(Number).filter(Boolean);
+  const uniqueStarters = new Set(starters);
+  const uniqueBench = new Set(bench);
+  if(starters.length !== 11 || uniqueStarters.size !== 11) errors.push('Necesitás exactamente 11 titulares.');
+  if(bench.length !== 10 || uniqueBench.size !== 10) errors.push('Necesitás exactamente 10 suplentes.');
+  const duplicated = [...uniqueStarters].filter(id => uniqueBench.has(id));
+  if(duplicated.length) errors.push('Un jugador no puede ser titular y suplente a la vez.');
+  const unavailableStarters = [...uniqueStarters].filter(id => !canBeStarter(id));
+  if(unavailableStarters.length) errors.push('Hay lesionados o suspendidos entre los titulares.');
+  const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
+  if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con recuperación menor a 70 días.');
+  const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];
+  slots.forEach((slot, index) => {
+    const player = playerById(starters[index]);
+    if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero.' : 'Un portero no puede jugar como jugador de campo.');
+  });
+  (tactic.autoSubs || []).forEach((rule, i)=>{
+    if(rule.outId || rule.inId){
+      if(!uniqueStarters.has(Number(rule.outId))) errors.push(`Cambio ${i+1}: el jugador que sale debe ser titular.`);
+      if(!uniqueBench.has(Number(rule.inId))) errors.push(`Cambio ${i+1}: el jugador que entra debe ser suplente.`);
+      if(Number(rule.outId) === Number(rule.inId)) errors.push(`Cambio ${i+1}: entrada y salida no pueden ser el mismo jugador.`);
+    }
+  });
+  return errors;
+}
+function positionOrder(pos){
+  const order = {POR:1, LD:2, DFC:3, LI:4, MCD:5, MC:6, MCO:7, ED:8, EI:9, DC:10};
+  return order[pos] || 99;
+}
 
-  function simConfigValue(path, fallback){
-    return String(path || '').split('.').reduce((node, key) => (node && Object.prototype.hasOwnProperty.call(node, key)) ? node[key] : undefined, window.GAME_CONFIG || {}) ?? fallback;
-  }
-  function simConfigNumber(path, fallback, min=null, max=null){
-    const raw = Number(simConfigValue(path, fallback));
-    let value = Number.isFinite(raw) ? raw : Number(fallback);
-    if(Number.isFinite(min)) value = Math.max(min, value);
-    if(Number.isFinite(max)) value = Math.min(max, value);
-    return value;
-  }
-  const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.70, 0, 1);
-  const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
-  const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
-  const SIM_ERROR_GOAL_RATE = simConfigNumber('simulador.probabilidadErrorTerminaEnGol', 0.28, 0, 1);
-  const SIM_GOAL_ERROR_ATTRIBUTION_RATE = simConfigNumber('simulador.probabilidadGolAtribuyeErrorGol', 0.60, 0, 1);
-  const SIM_PLAYER_ERROR_SCALE = simConfigNumber('simulador.escalaRiesgoErrorJugador', 0.72, 0, 2);
-  const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
-  const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
-
-  function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
-  function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
-  function simRnd(min,max){ return min + Math.random() * (max-min); }
-  function probabilisticRoundV2(value){
-    const safe = Math.max(0, Number(value) || 0);
-    const base = Math.floor(safe);
-    return base + (Math.random() < safe - base ? 1 : 0);
-  }
-  function blockDurationFactor(block){
-    return simClamp(((Number(block?.to || 0) - Number(block?.from || 0) + 1) || 15) / 15, 0.05, 1);
-  }
-  function normalizeMatchInstructions(instructions){
-    const src = instructions || {};
-    const valid = new Set(MATCH_INSTRUCTION_OPTIONS.map(o=>o.value));
-    return {
-      winning: valid.has(src.winning) ? src.winning : DEFAULT_MATCH_INSTRUCTIONS.winning,
-      drawing: valid.has(src.drawing) ? src.drawing : DEFAULT_MATCH_INSTRUCTIONS.drawing,
-      losing: valid.has(src.losing) ? src.losing : DEFAULT_MATCH_INSTRUCTIONS.losing
-    };
-  }
-  function simNormalizeMentality(mode){
-    const value = String(mode || '').trim();
-    const legacy = { posicional:'normal', ataque:'ofensivo', defensiva:'defensivo' };
-    const normalized = legacy[value] || value;
-    return ['muy_defensivo','defensivo','normal','ofensivo','muy_ofensivo'].includes(normalized) ? normalized : 'normal';
-  }
-  function simPlayerMentality(player, tactic){
-    return simNormalizeMentality(tactic?.playerMentalities?.[player?.id]);
-  }
-  function simMentalityAttackMultiplier(player, tactic){
-    return ({ muy_defensivo:0.82, defensivo:0.92, normal:1, ofensivo:1.10, muy_ofensivo:1.22 })[simPlayerMentality(player, tactic)] || 1;
-  }
-  function simMentalityDefenseMultiplier(player, tactic){
-    return ({ muy_defensivo:1.22, defensivo:1.10, normal:1, ofensivo:0.92, muy_ofensivo:0.82 })[simPlayerMentality(player, tactic)] || 1;
-  }
-  function pitchEffectV2(pitch){ return SIM_PITCH_CONDITIONS[pitch] || SIM_PITCH_CONDITIONS.Normal; }
-  function getTacticForClubV2(clubId){
-    if(clubId === game.selectedClubId) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions) };
-    const club = seed.clubs.find(c=>c.id===clubId) || { reputation:60 };
-    const formation = club.reputation > 74 ? '4-3-3' : club.reputation < 61 ? '5-4-1' : '4-4-2';
-    return { formation, starters:[], bench:[], autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS} };
-  }
-  function instructionForScore(tactic, gf, gc){
-    const instructions = normalizeMatchInstructions(tactic?.matchInstructions);
-    if(gf > gc) return instructions.winning;
-    if(gf < gc) return instructions.losing;
-    return instructions.drawing;
-  }
-  function formationProfile(assigned){
-    const counts = { gk:0, def:0, mid:0, att:0 };
-    (assigned || []).forEach(a => { const g = slotGroup(a.slot); if(counts[g] !== undefined) counts[g]++; });
-    const profile = { defense:0, midfield:0, attack:0, possession:0, attacks:0, conversion:0 };
-    if(counts.def >= 5){ profile.defense += 5; profile.attack -= 3; profile.attacks -= 1; }
-    if(counts.def <= 3){ profile.defense -= 3; profile.attack += 2; profile.attacks += 1; }
-    if(counts.mid >= 5){ profile.midfield += 5; profile.possession += 4; profile.attacks += 2; }
-    if(counts.mid <= 3){ profile.midfield -= 2; profile.possession -= 2; }
-    if(counts.att >= 3){ profile.attack += 5; profile.conversion += 0.035; profile.defense -= 2; }
-    if(counts.att <= 1){ profile.attack -= 3; profile.conversion -= 0.025; profile.defense += 2; }
-    return { counts, profile };
-  }
-  function lineAverage(assigned, group, skillGroups){
-    const items = assigned.filter(a => slotGroup(a.slot) === group);
-    return simAvg(items.map(a => simAvg(skillGroups.map(skill => matchSkill(a.player, skill))) * a.factor));
-  }
-  function teamPowerV2(clubId, tactic){
-    const formation = tactic?.formation || '4-4-2';
-    const lineup = selectLineup(clubId, tactic);
-    const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
-    const assigned = lineup.map((player, i) => ({ player, slot:slots[i] || player.position, factor:zoneFactor(player, slots[i] || player.position) }));
-    const { counts, profile } = formationProfile(assigned);
-    const gk = assigned.find(a => a.slot === 'POR');
-    const defenseQuality = lineAverage(assigned, 'def', ['marca','entradas','posicionamiento','fuerza']);
-    const midfieldQuality = lineAverage(assigned, 'mid', ['paseCorto','vision','tecnica','trabajoEquipo']);
-    const attackQuality = lineAverage(assigned, 'att', ['remate','regate','velocidad','serenidad','posicionamiento']);
-    const keeperQuality = gk ? simAvg(['porteria','posicionamiento','serenidad'].map(skill => matchSkill(gk.player, skill) * gk.factor)) : 38;
-    const adjust = applyMentalityBonus(tactic || {}, assigned);
-    const cohesion = cohesionMultiplier(clubId);
-    const teamMorale = simClamp(0.94 + (squadMoraleAverage(clubId) / 99) * 0.12, 0.94, 1.06);
-    const countBoost = {
-      defense: counts.def * 1.25,
-      midfield: counts.mid * 1.35,
-      attack: counts.att * 1.55
-    };
-    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale;
-    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale;
-    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale;
-    const discipline = simAvg(lineup.map(p=>p.skills.disciplina));
-    const stamina = simAvg(lineup.map(p=>matchSkill(p,'resistencia'))) * cohesion * teamMorale;
-    const aggression = simAvg(lineup.map(p=>hiddenStats(p).aggression));
-    const rep = seed.clubs.find(c=>c.id===clubId)?.reputation || 60;
-    return {
-      clubId, tactic, formation, lineup, assigned, counts, profile:profile,
-      defense, midfield, attack, keeper:keeperQuality * cohesion * teamMorale,
-      defenseQuality, midfieldQuality, attackQuality, keeperQuality,
-      discipline, stamina, aggression, reputation:rep
-    };
-  }
-  function makeMatchContextV2(match){
-    const weatherOptions = ['Soleado', 'Nublado', 'Lluvia leve', 'Lluvia intensa', 'Viento moderado', 'Calor húmedo'];
-    const weather = weatherOptions[hashNumber(`${match.id}-weather-${game?.matchdayIndex || 0}`, weatherOptions.length)];
-    const homeClub = seed.clubs.find(c=>c.id===match.homeId);
-    const awayClub = seed.clubs.find(c=>c.id===match.awayId);
-    const pitchScore = fieldScoreForClub(match.homeId);
-    const pitch = fieldConditionName(pitchScore);
-    const effect = pitchEffectV2(pitch);
-    const homeFans = Math.max(800, Math.round((homeClub?.reputation || 60) * simRnd(210,360)));
-    const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * simRnd(18,70)));
-    return { weather, pitch, pitchScore, homeFans, awayFans, pitchEffect:effect };
-  }
-  function blockStatsForTeam(own, rival, context, ownInstruction, rivalInstruction, isHome, block=null){
-    const effect = pitchEffectV2(context.pitch);
-    const phaseFactor = blockDurationFactor(block);
-    const ownInstr = INSTRUCTION_EFFECTS[ownInstruction] || INSTRUCTION_EFFECTS.normal;
-    const rivalInstr = INSTRUCTION_EFFECTS[rivalInstruction] || INSTRUCTION_EFFECTS.normal;
-    const pitchPass = effect.passDelta;
-    const pitchChance = effect.chanceMultiplier;
-    const effectiveMid = simClamp((own.midfield * ownInstr.midfield) + pitchPass + own.profile.possession, 1, 140);
-    const rivalMid = simClamp((rival.midfield * rivalInstr.midfield) + pitchPass + rival.profile.possession, 1, 140);
-    const possession = simClamp(Math.round((effectiveMid / Math.max(1, effectiveMid + rivalMid)) * 100 + (isHome ? 2 : -1) + simRnd(-4,4)), 28, 72);
-    const midfieldAttack = effectiveMid / 17;
-    const attackPressure = (own.attack * ownInstr.attack) / 22;
-    const defenseBrake = (rival.defense * rivalInstr.defense) / 34;
-    const baseAttacks = 3.5 + midfieldAttack + attackPressure - defenseBrake + own.profile.attacks + (possession - 50) / 12 + (isHome ? 0.6 : 0) + simRnd(-1.6,1.9);
-    const fullBlockAttacks = simClamp(baseAttacks * ownInstr.attacks, 0, 13);
-    const attacks = simClamp(probabilisticRoundV2(fullBlockAttacks * phaseFactor), 0, 5);
-    const forwardCount = Math.max(1, own.counts.att || 1);
-    const defenderCount = Math.max(1, rival.counts.def || 1);
-    const conversion = simClamp(
-      0.105 + (own.attackQuality / 620) + forwardCount * 0.016 + own.profile.conversion - (rival.defenseQuality / 820) - defenderCount * 0.009 - (rival.keeperQuality / 1050),
-      0.045,
-      0.32
-    ) * ownInstr.conversion * pitchChance;
-    const fullBlockChances = Math.max(0, fullBlockAttacks * conversion + (own.attack - rival.defense) / 58 + simRnd(-0.35,0.45));
-    const chances = simClamp(probabilisticRoundV2(fullBlockChances * phaseFactor), 0, 3);
-    const xgPerChance = simClamp(0.14 + (own.attackQuality - rival.keeperQuality) / 650 + forwardCount * 0.018 - defenderCount * 0.009, 0.07, 0.38);
-    const xg = simClamp(chances * xgPerChance + (fullBlockAttacks > 8 ? 0.04 * phaseFactor : 0) + (isHome ? 0.03 * phaseFactor : 0), 0, 0.55);
-    const fullBlockFouls = Math.max(0, 1.1 + own.aggression/46 + (100-own.discipline)/62 + (ownInstruction === 'push' ? 0.55 : ownInstruction === 'lower' ? -0.35 : 0) + simRnd(-0.7,0.9));
-    const fouls = simClamp(probabilisticRoundV2(fullBlockFouls * phaseFactor), 0, 3);
-    return { attacks, chances, possession, fouls, passScore:Math.round(effectiveMid), xg };
-  }
-  function mergeBlockStats(total, block){
-    total.attacks += block.attacks;
-    total.chances += block.chances;
-    total.fouls += block.fouls;
-    total.xg += block.xg;
-    total.passScore += block.passScore;
-    total.possessionWeighted += block.possession;
-  }
-  function emptyStats(){ return { attacks:0, chances:0, possession:50, fouls:0, passScore:0, xg:0, possessionWeighted:0, keySaves:0, errors:0, goalErrors:0 }; }
-  function finalizeStats(stats){
-    return {
-      attacks:simClamp(Math.round(stats.attacks), 1, 75),
-      chances:simClamp(Math.round(stats.chances), 0, 18),
-      possession:simClamp(Math.round(stats.possessionWeighted / BLOCKS.length), 20, 80),
-      fouls:simClamp(Math.round(stats.fouls), 0, 32),
-      passScore:simClamp(Math.round(stats.passScore / BLOCKS.length), 1, 140),
-      xg:Number(stats.xg.toFixed(2)),
-      keySaves:Math.round(Number(stats.keySaves || 0)),
-      errors:Math.round(Number(stats.errors || 0)),
-      goalErrors:Math.round(Number(stats.goalErrors || 0))
-    };
-  }
-  function poissonV2(lambda){
-    const L = Math.exp(-lambda);
-    let k = 0, p = 1;
-    do { k++; p *= Math.random(); } while (p > L);
-    return simClamp(k - 1, 0, 7);
-  }
-  function weightedPickV2(items, weightFn){
-    const safeItems = (items || []).filter(Boolean);
-    const weighted = safeItems.map(item=>({item, w:Math.max(1, weightFn(item))}));
-    const total = weighted.reduce((a,x)=>a+x.w,0);
-    let r = Math.random()*total;
-    for(const x of weighted){ r -= x.w; if(r<=0) return x.item; }
-    return weighted[0]?.item;
-  }
-  function playerRoleCodeV2(player){
-    const pos = String(player?.position || '').toUpperCase();
-    if(pos === 'POR') return 'gk';
-    if(['DC','ED','EI'].includes(pos)) return 'att';
-    if(['MCO','MC','MCD'].includes(pos)) return 'mid';
-    return 'def';
-  }
-  function scorerWeightV2(player, setPiece=false, tactic=null){
-    if(!player) return 1;
-    if(player.position === 'POR') return 0.05;
-    const pos = String(player.position || '').toUpperCase();
-    if(setPiece){
-      const setPieceBonus = pos === 'DC' ? 110 : ['DFC','LD','LI'].includes(pos) ? 72 : ['ED','EI','MCO'].includes(pos) ? 46 : ['MC','MCD'].includes(pos) ? 28 : 12;
-      const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-      return (effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35 + setPieceBonus) * starMul * simMentalityAttackMultiplier(player, tactic);
-    }
-    const posBonus = pos === 'DC' ? 160 : ['ED','EI'].includes(pos) ? 118 : pos === 'MCO' ? 72 : pos === 'MC' ? 28 : pos === 'MCD' ? 9 : 2;
-    const rolePenalty = ['DFC','LD','LI'].includes(pos) ? 0.28 : pos === 'MCD' ? 0.55 : 1;
-    const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-    return (effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20 + posBonus) * rolePenalty * starMul * simMentalityAttackMultiplier(player, tactic);
-  }
-  function cardWeightV2(player){
-    if(!player) return 1;
-    if(player.position === 'POR') return 0.35;
-    const roleBonus = ['DFC','MCD'].includes(player.position) ? 30 : ['LD','LI'].includes(player.position) ? 20 : player.position === 'MC' ? 12 : 6;
-    return hiddenStats(player).aggression * 0.75 + (100 - effectiveSkill(player,'disciplina')) * 0.30 + roleBonus;
-  }
-  function selectChanceShooterV2(power, setPiece=false){
-    const outfield = (power.lineup || []).filter(p => p.position !== 'POR');
-    const scorerPool = outfield.length ? outfield : power.lineup;
-    return weightedPickV2(scorerPool, p => scorerWeightV2(p, setPiece, power.tactic));
-  }
-  function goalkeeperFromPowerV2(power){
-    return (power.lineup || []).find(p => p.position === 'POR') || null;
-  }
-  function defensivePlayerWeightV2(player, tactic=null){
-    if(!player || player.position === 'POR') return 1;
-    const pos = String(player.position || '').toUpperCase();
-    const roleBonus = ['DFC','LD','LI'].includes(pos) ? 95 : pos === 'MCD' ? 68 : pos === 'MC' ? 34 : 14;
-    return (effectiveSkill(player,'marca') * 0.95 + effectiveSkill(player,'entradas') * 0.90 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.28 + roleBonus) * simMentalityDefenseMultiplier(player, tactic);
-  }
-  function playerErrorSecurityV2(player, clubId){
-    if(!player) return 0.50;
-    const morale = simClamp(Number(currentMorale(player.id) || 0), 0, 100);
-    const condition = simClamp(Number(currentCondition(player.id) || 0), 0, 100);
-    const overall = simClamp(Number(effectiveOverall(player) || player.overall || 0), 0, 100);
-    const cohesion = simClamp(Number(typeof cohesionValue === 'function' ? cohesionValue(clubId || player.clubId) : game?.teamCohesion?.[clubId || player.clubId] || 50), 0, 100);
-    return simClamp((morale + condition + overall + cohesion) / 400, 0, 1);
-  }
-  function playerErrorRiskV2(player, clubId){
-    // Corrección lógica: la fórmula de 0 a 1 se toma como seguridad. El riesgo es el complemento.
-    return simClamp(1 - playerErrorSecurityV2(player, clubId), 0.01, 0.95);
-  }
-  function errorPlayerWeightV2(player, clubId){
-    if(!player) return 1;
-    const pos = String(player.position || '').toUpperCase();
-    const rolePressure = pos === 'POR' ? 58 : ['DFC','LD','LI'].includes(pos) ? 46 : pos === 'MCD' ? 27 : 12;
-    return Math.max(1, rolePressure + playerErrorRiskV2(player, clubId) * 140);
-  }
-  function pickErrorPlayerV2(defending, defendingClubId){
-    const keeper = goalkeeperFromPowerV2(defending);
-    const defenderPool = (defending.lineup || []).filter(p => p.position !== 'POR');
-    return weightedPickV2([keeper].concat(defenderPool).filter(Boolean), p => errorPlayerWeightV2(p, defendingClubId));
-  }
-  function registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, isGoal){
-    if(Number(rivalTotals.errors || 0) >= SIM_MAX_TEAM_ERRORS) return null;
-    const errorPlayer = pickErrorPlayerV2(defending, defendingClubId);
-    const event = { clubId:defendingClubId, playerId:errorPlayer?.id || null, minute, goal:Boolean(isGoal), causedBy:attackingClubId };
-    rivalTotals.errors = Number(rivalTotals.errors || 0) + 1;
-    if(isGoal) rivalTotals.goalErrors = Number(rivalTotals.goalErrors || 0) + 1;
-    incidents.errors.push(event);
-    return event;
-  }
-  function makeGoalV2(clubId, lineup, minute, details={}){
-    const scorer = details.scorer || selectChanceShooterV2({ lineup }, Boolean(details.setPiece));
-    if(!scorer) return { clubId, playerId:null, assistId:null, minute, setPiece:Boolean(details.setPiece), errorGoal:Boolean(details.errorGoal), errorById:details.errorById || null, chanceQuality:Number(details.chanceQuality || 0) };
-    const possibleAssisters = lineup.filter(p=>p.id !== scorer?.id && p.position !== 'POR');
-    const hasAssist = !details.errorGoal && Math.random() < (details.setPiece ? 0.58 : 0.72);
-    const assister = hasAssist ? weightedPickV2(possibleAssisters, p => {
-      const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(p, 'assist') : 1;
-      return (effectiveSkill(p,'paseCorto') + effectiveSkill(p,'vision') + (['ED','EI','MCO','MC'].includes(p.position)?30:6)) * starMul * simMentalityAttackMultiplier(p, details.tactic);
-    }) : null;
-    return {
-      clubId,
-      playerId:scorer.id,
-      assistId:assister?.id || null,
-      minute,
-      setPiece:Boolean(details.setPiece),
-      errorGoal:Boolean(details.errorGoal),
-      errorById:details.errorById || null,
-      chanceQuality:Number(details.chanceQuality || 0)
-    };
-  }
-  function resolveChanceV2(attacking, defending, attackingClubId, defendingClubId, minute, baseGoalProb, homeOrAwayTotals, rivalTotals, incidents){
-    const setPiece = Math.random() < SIM_SET_PIECE_CHANCE;
-    const shooter = selectChanceShooterV2(attacking, setPiece);
-    if(!shooter) return null;
-    const defenderPool = (defending.lineup || []).filter(p => p.position !== 'POR');
-    const defender = weightedPickV2(defenderPool, p => defensivePlayerWeightV2(p, defending.tactic));
-    const keeper = goalkeeperFromPowerV2(defending);
-    const shooterStarMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(shooter, 'goal') : 1;
-    const shooterScore = simAvg([
-      effectiveSkill(shooter,'remate') * 1.15,
-      effectiveSkill(shooter,'posicionamiento'),
-      effectiveSkill(shooter,'serenidad'),
-      setPiece ? effectiveSkill(shooter,'cabezazo') * 1.15 : effectiveSkill(shooter,'regate') * 0.85,
-      currentMorale(shooter.id) * 0.45
-    ]) * shooterStarMul;
-    const defenderScore = defender ? simAvg([
-      effectiveSkill(defender,'marca'),
-      effectiveSkill(defender,'entradas'),
-      effectiveSkill(defender,'posicionamiento'),
-      effectiveSkill(defender,'serenidad') * 0.55
-    ]) : 44;
-    const keeperStarMul = keeper && typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(keeper, 'save') : 1;
-    const keeperScore = keeper ? simAvg([
-      effectiveSkill(keeper,'porteria') * 1.35,
-      effectiveSkill(keeper,'posicionamiento'),
-      effectiveSkill(keeper,'serenidad') * 0.85,
-      currentMorale(keeper.id) * 0.35
-    ]) * keeperStarMul * simMentalityDefenseMultiplier(keeper, defending.tactic) : 38;
-    const individualGoalProb = simClamp(0.16 + (shooterScore - (keeperScore * 0.56 + defenderScore * 0.44)) / 150 + (setPiece ? 0.015 : 0), 0.025, 0.72);
-    const collectiveWeight = simClamp(SIM_TEAM_WEIGHT, 0, 1);
-    const individualWeight = simClamp(SIM_INDIVIDUAL_WEIGHT, 0, 1);
-    const divisor = Math.max(0.01, collectiveWeight + individualWeight);
-    const goalProb = simClamp(((baseGoalProb * collectiveWeight) + (individualGoalProb * individualWeight)) / divisor, 0.018, 0.78);
-    const defensiveSafety = keeper ? keeperScore * 0.55 + defenderScore * 0.45 : defenderScore;
-    const errorCandidate = pickErrorPlayerV2(defending, defendingClubId);
-    const playerRisk = SIM_USE_PLAYER_ERROR_FORMULA ? playerErrorRiskV2(errorCandidate, defendingClubId) : simClamp(0.015 + (74 - defensiveSafety) / 1200 + baseGoalProb * 0.035 + (setPiece ? 0.008 : 0), 0.004, 0.12);
-    const teamErrors = Number(rivalTotals.errors || 0);
-    const errorChance = teamErrors >= SIM_MAX_TEAM_ERRORS ? 0 : simClamp(playerRisk * SIM_PLAYER_ERROR_SCALE + baseGoalProb * 0.03 + (setPiece ? 0.006 : 0), 0.003, 0.42);
-    const goal = Math.random() < goalProb;
-    let errorEvent = null;
-    let errorGoal = false;
-    if(goal){
-      errorGoal = Math.random() < SIM_GOAL_ERROR_ATTRIBUTION_RATE;
-      if(errorGoal) errorEvent = registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, true);
-      return makeGoalV2(attackingClubId, attacking.lineup, minute, { scorer:shooter, setPiece, errorGoal:Boolean(errorEvent), errorById:errorEvent?.playerId || null, chanceQuality:goalProb, tactic:attacking.tactic });
-    }
-    if(Math.random() < errorChance){
-      registerErrorEventV2(rivalTotals, incidents, defending, defendingClubId, attackingClubId, minute, false);
-    }
-    const saveBase = simClamp((0.28 + (keeperScore - shooterScore) / 240 + baseGoalProb * 0.75) * (keeperStarMul > 1 ? 1 + ((keeperStarMul - 1) * 0.45) : 1), 0.08, 0.88);
-    if(keeper && (baseGoalProb >= 0.11 || individualGoalProb >= 0.22) && Math.random() < saveBase){
-      rivalTotals.keySaves = Number(rivalTotals.keySaves || 0) + 1;
-      incidents.keySaves.push({ clubId:defendingClubId, playerId:keeper.id, minute, chanceById:shooter.id, chanceQuality:Number(goalProb.toFixed(2)) });
-    }
-    return null;
-  }
-  function makeCardsV2(clubId, power, fouls){
-    const cards = [];
-    const yellowCount = simClamp(poissonV2(fouls / 7.6), 0, 6);
-    const byPlayer = new Map();
-    for(let i=0;i<yellowCount;i++){
-      const p = weightedPickV2(power.lineup, cardWeightV2);
-      if(!p) continue;
-      const current = byPlayer.get(p.id) || 0;
-      byPlayer.set(p.id, current + 1);
-      if(current === 0) cards.push({ clubId, playerId:p.id, type:'yellow', minute:Math.floor(simRnd(5,88)) });
-      else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(simRnd(35,90)) });
-    }
-    const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
-    const directChance = simClamp((power.aggression - 60) / 290, 0.005, 0.13);
-    if(directRedCandidates.length && Math.random() < directChance){
-      const p = weightedPickV2(directRedCandidates, cardWeightV2);
-      cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(20,90)) });
-    }
-    return cards.sort((a,b)=>a.minute-b.minute);
-  }
-  function makeInjuriesV2(clubId, ownPower, context){
-    const injuries = [];
-    const candidates = (ownPower.lineup || []).filter(player => !isUnavailable(player.id));
-    candidates.forEach(player => {
-      const chance = injuryChanceForPlayer(player.id, context.pitch);
-      if(Math.random() < chance){
-        const injury = pickInjuryType();
-        const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
-        const duringMatch = Math.random() < 0.72;
-        injuries.push({
-          clubId,
-          playerId:player.id,
-          type:'injury',
-          name:injury.name,
-          injuryLabel:injury.name,
-          probability:injury.probability,
-          chance:Math.round(chance * 100),
-          matchesOut,
-          minute:duringMatch ? Math.floor(simRnd(8,89)) : 90,
-          phase:duringMatch ? 'durante' : 'final'
-        });
-      }
-    });
-    return injuries.sort((a,b)=>a.minute-b.minute);
-  }
-  function finalResultKey(gf, gc){
-    if(gf > gc) return 'winning';
-    if(gf < gc) return 'losing';
-    return 'drawing';
-  }
-  function instructionConditionDelta(tactic, gf, gc, starterIds){
-    const instructions = normalizeMatchInstructions(tactic?.matchInstructions);
-    const state = finalResultKey(gf, gc);
-    const selected = instructions[state];
-    let delta = 0;
-    if(state === 'winning' && selected === 'lower') delta = 2;
-    if(state === 'winning' && selected === 'push') delta = -5;
-    if(state === 'drawing' && selected === 'lower') delta = 1;
-    if(state === 'drawing' && selected === 'push') delta = -1;
-    if(state === 'losing' && selected === 'lower') delta = 5;
-    if(state === 'losing' && selected === 'push') delta = -5;
-    const result = {};
-    if(delta !== 0) (starterIds || []).forEach(id => result[id] = delta);
-    return result;
-  }
-  function mergeConditionDeltas(...objects){
-    const merged = {};
-    objects.forEach(obj => Object.entries(obj || {}).forEach(([id, delta]) => { merged[id] = (merged[id] || 0) + delta; }));
-    return merged;
-  }
-  function simulateMatch(match){
-    const homeTactic = getTacticForClubV2(match.homeId);
-    const awayTactic = getTacticForClubV2(match.awayId);
-    applyTacticCohesionPenalty(match.homeId, homeTactic);
-    applyTacticCohesionPenalty(match.awayId, awayTactic);
-    const home = teamPowerV2(match.homeId, homeTactic);
-    const away = teamPowerV2(match.awayId, awayTactic);
-    const matchContext = makeMatchContextV2(match);
-    const homeTotals = emptyStats();
-    const awayTotals = emptyStats();
-    const incidents = { keySaves:[], errors:[] };
-    const goals = [];
-    let homeGoals = 0;
-    let awayGoals = 0;
-    for(const block of BLOCKS){
-      const homeInstruction = instructionForScore(homeTactic, homeGoals, awayGoals);
-      const awayInstruction = instructionForScore(awayTactic, awayGoals, homeGoals);
-      const h = blockStatsForTeam(home, away, matchContext, homeInstruction, awayInstruction, true, block);
-      const a = blockStatsForTeam(away, home, matchContext, awayInstruction, homeInstruction, false, block);
-      mergeBlockStats(homeTotals, h);
-      mergeBlockStats(awayTotals, a);
-      let hGoals = 0;
-      let aGoals = 0;
-      const hBaseProb = h.chances > 0 ? simClamp(h.xg / Math.max(1, h.chances), 0.025, 0.70) : 0;
-      const aBaseProb = a.chances > 0 ? simClamp(a.xg / Math.max(1, a.chances), 0.025, 0.70) : 0;
-      for(let i=0;i<h.chances;i++){
-        const goal = resolveChanceV2(home, away, match.homeId, match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, homeTotals, awayTotals, incidents);
-        if(goal){ goals.push(goal); hGoals++; }
-      }
-      for(let i=0;i<a.chances;i++){
-        const goal = resolveChanceV2(away, home, match.awayId, match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, awayTotals, homeTotals, incidents);
-        if(goal){ goals.push(goal); aGoals++; }
-      }
-      homeGoals += hGoals;
-      awayGoals += aGoals;
-    }
-    goals.sort((a,b)=>a.minute-b.minute);
-    const matchStats = { home:finalizeStats(homeTotals), away:finalizeStats(awayTotals) };
-    matchStats.away.possession = 100 - matchStats.home.possession;
-    const cards = [...makeCardsV2(match.homeId, home, matchStats.home.fouls), ...makeCardsV2(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
-    const injuries = [...makeInjuriesV2(match.homeId, home, matchContext), ...makeInjuriesV2(match.awayId, away, matchContext)].sort((a,b)=>a.minute-b.minute);
-    const regularSubs = [
-      ...makeSubstitutions(match.homeId, homeTactic, goals),
-      ...makeSubstitutions(match.awayId, awayTactic, goals)
-    ];
-    const injurySubs = [
-      ...makeInjurySubstitutions(match.homeId, homeTactic, injuries, regularSubs),
-      ...makeInjurySubstitutions(match.awayId, awayTactic, injuries, regularSubs)
-    ];
-    const substitutions = [...regularSubs, ...injurySubs].sort((a,b)=>a.minute-b.minute);
-    const starterIdsHome = home.lineup.map(p=>p.id);
-    const starterIdsAway = away.lineup.map(p=>p.id);
-    const playedIdsHome = [...new Set(starterIdsHome.concat(substitutions.filter(s=>s.clubId===match.homeId).map(s=>s.inId)))];
-    const playedIdsAway = [...new Set(starterIdsAway.concat(substitutions.filter(s=>s.clubId===match.awayId).map(s=>s.inId)))];
-    if(!match.friendly){
-      applyMatchCohesionResult(match, substitutions, cards);
-      applyResultToTables(match, homeGoals, awayGoals);
-      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
-      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
-      applyAvailability(cards, injuries);
-      if(typeof updatePlayerStarTrackingForMatch === 'function'){
-        updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway });
-      }
-    }
-    const instructionConditionDeltas = mergeConditionDeltas(
-      instructionConditionDelta(homeTactic, homeGoals, awayGoals, starterIdsHome),
-      instructionConditionDelta(awayTactic, awayGoals, homeGoals, starterIdsAway)
-    );
-    return { ...match, played:true, engine:'simulador-2.0-jugadorista', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas };
-  }
-
-  window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;
-  window.DEFAULT_MATCH_INSTRUCTIONS = DEFAULT_MATCH_INSTRUCTIONS;
-  window.Simulator20 = { simulateMatch, pitchEffect:pitchEffectV2, normalizeMatchInstructions };
-})();

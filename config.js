@@ -4,16 +4,22 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.71',
+  version: 'V3.74',
   data: {
     seedUrl: 'data/seed.json',
+    // Para cambiar de país/liga base, poner primero el JSON deseado en esta lista.
+    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json'],
     playersUrl: 'data/jugadores.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
     eventsUrl: 'data/eventos.json',
     specialSkillsUrl: 'data/habilidades_especiales.json',
-    estadiosUrl: 'data/estadios.json',
-    hinchasUrl: 'data/hinchas.json',
+    estadiosUrl: 'data/estadios_argentina.json',
+    hinchasUrl: 'data/hinchas_argentina.json',
+    estadiosArgentinaUrl: 'data/estadios_argentina.json',
+    hinchasArgentinaUrl: 'data/hinchas_argentina.json',
+    estadiosChileUrl: 'data/estadios_chile.json',
+    hinchasChileUrl: 'data/hinchas_chile.json',
     instalacionesUrl: 'data/instalaciones.json',
     relatosPartidoUrl: 'data/relatos_partido.json'
   },

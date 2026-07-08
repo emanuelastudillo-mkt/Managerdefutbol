@@ -97,3 +97,12 @@ function divisionOptions(selected='all'){
 function divisionFilterMarkup(id, selected){
   return `<div class="division-filter"><label for="${id}">División</label><select id="${id}">${divisionOptions(selected)}</select></div>`;
 }
+function managerCurrentDivisionId(){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  return club?.divisionId || game?.selectedLeagueId || seed?.divisions?.[0]?.id || 'default';
+}
+function resetManagerDivisionFilterForTab(tab){
+  const divisionId = managerCurrentDivisionId();
+  if(tab === 'standings') selectedStandingsDivision = divisionId;
+  if(tab === 'stats') selectedStatsDivision = divisionId;
+}

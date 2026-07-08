@@ -376,6 +376,10 @@ function matchCard(m){
 }
 function renderStandings(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
+  if(selectedStandingsDivision !== 'all' && !divisions.some(d => d.id === selectedStandingsDivision)){
+    selectedStandingsDivision = managerDivision;
+  }
   const visibleDivisions = selectedStandingsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStandingsDivision);
   const blocks = visibleDivisions.map(division => {
     const tableRows = sortedStandings(division.id);
@@ -458,6 +462,10 @@ function renderManagerStats(){
 
 function renderStats(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
+  if(selectedStatsDivision !== 'all' && !divisions.some(d => d.id === selectedStatsDivision)){
+    selectedStatsDivision = managerDivision;
+  }
   const visibleDivisions = selectedStatsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStatsDivision);
   const blocks = visibleDivisions.map(division => {
     const allowedClubs = new Set(seed.clubs.filter(c => (c.divisionId || 'default') === division.id).map(c => c.id));

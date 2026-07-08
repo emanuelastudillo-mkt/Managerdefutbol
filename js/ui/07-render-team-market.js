@@ -453,7 +453,7 @@ function bindTacticClickEvents(){
       if(!playerId) return;
       if(el.classList.contains('player-chip') && el.dataset.tacticZone === 'starter'){
         game.tactic = applyStarterMentalities(game.tactic);
-        game.tactic.playerMentalities[playerId] = nextMentality(playerMentality(playerId));
+        setPlayerMentality(playerId, nextMentality(playerMentality(playerId)), game.tactic);
         tacticClickSelection = null;
         saveLocal(true);
         renderTactics();
@@ -663,7 +663,7 @@ function saveTacticFromScreen(){
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
     autoSubs,
-    playerMentalities:{ ...(game.tactic.playerMentalities || {}) },
+    playerMentalities:{ ...(game.playerMentalities || {}), ...(game.tactic.playerMentalities || {}) },
     matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions
   });
   const errors = validateTactic(nextTactic);

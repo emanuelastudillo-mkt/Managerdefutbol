@@ -173,6 +173,7 @@ function bindEvents(){
   document.querySelectorAll('.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       activeTab = btn.dataset.tab;
+      if(typeof resetManagerDivisionFilterForTab === 'function') resetManagerDivisionFilterForTab(activeTab);
       renderAll();
     });
   });
@@ -189,7 +190,7 @@ function bindEvents(){
       const playerId = Number(mentalityBtn.dataset.toggleMentality);
       if(game?.tactic?.starters?.includes(playerId)){
         game.tactic = applyStarterMentalities(game.tactic);
-        game.tactic.playerMentalities[playerId] = nextMentality(playerMentality(playerId));
+        setPlayerMentality(playerId, nextMentality(playerMentality(playerId)), game.tactic);
         saveLocal(true);
         renderTactics();
       }
@@ -248,6 +249,14 @@ function normalizeGame(saved){
   normalized.rankingLastUploadGameDate = validIsoDate(normalized.rankingLastUploadGameDate) ? normalized.rankingLastUploadGameDate : '';
   normalized.selectedCountry = normalized.selectedCountry || clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))) || 'Argentina';
   normalized.selectedLeagueId = normalized.selectedLeagueId || (seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))?.divisionId || 'default');
+  normalized.playerMentalities = (normalized.playerMentalities && typeof normalized.playerMentalities === 'object' && !Array.isArray(normalized.playerMentalities)) ? normalized.playerMentalities : {};
+  normalized.playerMentalities = { ...(normalized.tactic?.playerMentalities || {}), ...normalized.playerMentalities };
+  Object.keys(normalized.playerMentalities).forEach(id => {
+    const cleanId = Number(id);
+    if(!cleanId) delete normalized.playerMentalities[id];
+    else normalized.playerMentalities[cleanId] = normalizeMentality(normalized.playerMentalities[id]);
+  });
+  normalized.tactic.playerMentalities = { ...normalized.playerMentalities, ...(normalized.tactic?.playerMentalities || {}) };
   normalized.seasonBudgetStartBySeason = (normalized.seasonBudgetStartBySeason && typeof normalized.seasonBudgetStartBySeason === 'object' && !Array.isArray(normalized.seasonBudgetStartBySeason)) ? normalized.seasonBudgetStartBySeason : {};
   if(!Number.isFinite(Number(normalized.seasonBudgetStartBySeason[normalized.seasonNumber]))){
     normalized.seasonBudgetStartBySeason[normalized.seasonNumber] = deriveSeasonInitialBudgetFromHistory(normalized, normalized.seasonNumber);
@@ -543,7 +552,7 @@ function normalizeTactic(clubId, tactic){
   const matchInstructions = window.Simulator20?.normalizeMatchInstructions
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
     : { winning:'normal', drawing:'normal', losing:'normal' };
-  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(base.playerMentalities || {}) }, matchInstructions };
+  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions };
   return applyStarterMentalities(normalized);
 }
 
@@ -561,6 +570,7 @@ function newGame(selectedClubId, options={}){
     selectedClubId,
     selectedCountry: options.country || clubCountry(selectedClub),
     selectedLeagueId: options.leagueId || selectedClub.divisionId || 'default',
+    playerMentalities: {},
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,

@@ -93,8 +93,10 @@ function cohesionMultiplier(clubId){
 function tacticSignature(tactic){
   if(!tactic) return '';
   const normalizeIds = arr => (arr || []).map(Number).filter(Boolean).join(',');
+  const starterSet = new Set((tactic.starters || []).map(Number).filter(Boolean));
   const mentality = Object.entries(tactic.playerMentalities || {})
-    .map(([id, mode]) => `${Number(id)}:${mode}`)
+    .filter(([id]) => starterSet.has(Number(id)))
+    .map(([id, mode]) => `${Number(id)}:${normalizeMentality(mode)}`)
     .sort()
     .join('|');
   const instructions = window.Simulator20?.normalizeMatchInstructions
@@ -149,7 +151,7 @@ function applyMentalityBonus(tactic, assigned){
   (assigned || []).forEach(entry => {
     const player = entry.player || entry;
     const group = entry.slot ? slotGroup(entry.slot) : playerGroup(player.position);
-    const mode = typeof normalizeMentality === 'function' ? normalizeMentality(tactic?.playerMentalities?.[player.id]) : (tactic?.playerMentalities?.[player.id] || 'normal');
+    const mode = typeof playerMentality === 'function' ? playerMentality(player.id, tactic) : (typeof normalizeMentality === 'function' ? normalizeMentality(tactic?.playerMentalities?.[player.id]) : (tactic?.playerMentalities?.[player.id] || 'normal'));
     const fitFactor = entry.factor ?? 1;
     if(mode === 'muy_ofensivo'){
       bonus.attack += (group === 'att' ? 3.8 : 1.9) * fitFactor;

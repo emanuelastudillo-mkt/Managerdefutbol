@@ -1,293 +1,220 @@
 # Manager Fútbol - README
 
-## Última actualización
+## Versión actual: V3.68
+
+Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
+
+## Historial de actualizaciones
+
+### V3.68 - Liga predeterminada y estados tácticos persistentes
+- Tabla y Estadísticas abren por defecto en la liga donde juega el manager.
+- Los estados individuales del jugador se conservan aunque salga del once, del club o se use Mejor once / Mejor condición física.
+- Sólo el manager puede cambiar esos estados desde la pizarra.
+- README reorganizado de versión más reciente a más antigua.
 
 ### V3.67 - Ampliaciones de estadio
-- Nuevo apartado **Ampliaciones** en Estadio.
+- Nuevo apartado Ampliaciones en Estadio.
 - 60 obras progresivas hasta 120.000 espectadores.
-- Reglas de simultaneidad por capacidad, bloqueo por slot y bloqueo integral.
-- Penalización opcional de asistencia por obras activas: -5% por obra, tope -20%.
-- La capacidad sólo aumenta al finalizar la obra.
+- Reglas de simultaneidad por capacidad, bloqueo por slot y bloqueo Integral.
+- Penalización de asistencia por obras activas: -5% por obra, tope -20%.
+- La capacidad aumenta sólo cuando la obra termina.
+
+### V3.66 - Relato más lento
+- El relato grande del simulador permanece visible durante 2 fases.
+- La simulación mantiene 60 fases.
+
+### V3.65 - Prestigio visual corregido
+- El prestigio del manager se muestra como decimal local para evitar confusión.
+- El visor ya no suma el umbral artificial de 20 puntos.
+- Clubes de prestigio menor a 20 siguen aceptando cualquier manager.
+
+### V3.64 - Relato del simulador
+- Simulador con 60 fases.
+- Bloque grande de Relato de partido.
+- 300 frases en `data/relatos_partido.json`.
+- La lista de acciones se mantiene y el relato anticipa o remata jugadas destacadas.
+
+### V3.63 - Prestigio, experiencia y renuncia
+- Experiencia: ganar +10, empatar +3, perder +1.
+- La experiencia equivale a 0.001 prestigio por punto.
+- Cada 10 victorias suma 1 prestigio.
+- Objetivo cumplido suma 5 prestigio.
+- Despido resta 2.
+- Campeonatos, descensos o último puesto ajustan prestigio según división.
+- Botón Renunciar al club.
+
+### V3.62 - Mejor condición física
+- El botón Mejor condición física prioriza jugadores con condición 75 o más.
+- Reduce penalizaciones por fuera de posición antes de completar el once.
+
+### V3.61 - Finanzas y recaudación
+- El simulador muestra Recaudación de entradas.
+- Finanzas organiza ingresos y gastos por categorías desplegables.
+
+### V3.60 - Ofertas con jugador clickeable
+- En mensajes de ofertas, el nombre del jugador abre su ficha individual.
+
+### V3.59 - Carrera y prestigio de manager
+- El despido ya no reinicia la partida.
+- El manager puede buscar otro club y continuar la carrera.
+- Nueva lógica de prestigio de manager y experiencia.
+- Nueva partida pasa a llamarse Buscar club.
+- Mensajes más compactos, ESPECIAL destacado y reset movido abajo con advertencia.
+
+### V3.58 - Flechas tácticas visibles
+- Estados tácticos visibles dentro de la pizarra: ←←, ←, •, →, →→.
+- Leyenda debajo de la cancha y borde reforzado por estado.
+
+### V3.57 - Hinchadas, estadios y entradas
+- Integración de hinchas y estadios desde JSON.
+- Precio de entradas editable entre $10 y $500.
+- Reserva visitante mínima de 7% a 10%.
+- Visitante puede ocupar hasta 50% si el local no llena.
+- Bonus oculto de localía por diferencia de hinchadas.
+- Hinchas suben o bajan por resultado, tabla y precio de entradas.
+- Recaudación por entradas limitada por capacidad del estadio.
+
+### V3.56 - Mercado, bots y transferibles
+- Casilla Poner transferible en ficha del jugador.
+- Etiqueta EN VENTA junto al nombre.
+- Bots pueden ofertar por jugadores del manager y despedir sobrantes.
+- Protección de estrellas ante ofertas demasiado bajas.
+- Botones de mercado revisados en ficha individual.
+
+### V3.55 - Presupuesto para fichajes
+- Presupuesto autorizado para fichajes separado de la caja general.
+- Máximo absoluto de 50% del presupuesto total.
+- Desbloqueos por rendimiento, ascenso, campeonato y ventas.
+
+### V3.54 - Fix mensajes y residencias
+- Textos de Mensajes adaptados a pantalla oscura.
+- Residencias de Academia corregidas: cada una suma +20 cupos.
+
+### V3.53 - Estados individuales
+- 5 estados por jugador: muy defensivo, defensivo, normal, ofensivo, muy ofensivo.
+- Bonus/penalizaciones simples en ataque y defensa.
+
+### V3.52 - Mensajes visuales
+- Rediseño visual del menú Mensajes como bandeja de entrada.
+
+### V3.51 - Confianza y residencias
+- Progreso del objetivo pasa a Confianza de la directiva.
+- Evaluación congelada al inicio de temporada.
+- Cupos de juveniles con residencias alquilables.
+
+### V3.50 - Objetivo por división
+- Objetivo automático: 3ª 0.9, 2ª 1.1, 1ª 1.4.
+- Evaluación inicial a 5 partidos.
+- Prórroga por promedio general histórico.
+
+### V3.49 - Pizarra y roles
+- DFC y MC más compactos en pizarra.
+- Generación de MI y MD para mediocampistas.
+
+### V3.48 - Pizarra de formaciones
+- 10 formaciones principales.
+- Roles exactos por formación.
+- Penalización: exacto 0%, compatible 25%, fuera de zona 50%.
+
+### V3.47 - Objetivo y Game Over
+- Objetivo de puntos por partido y evaluación de continuidad.
+- Game Over con estadísticas generales.
 
-# Fútbol Manager MVP
+### V3.46 - Ofertas y estadísticas AFA
+- Ofertas automáticas basadas en estadísticas.
+- No hay ofertas por jugadores sin partidos ni producción ofensiva.
+- Tope de oferta al 15% de cláusula.
+- Impuesto AFA del 30% en ventas.
 
-## Versión actual: V3.48
+### V3.45 - Errores por jugador
+- Riesgo de error basado en moral, físico, media y cohesión.
+- Errores de gol atribuidos en goles rivales.
+- Ficha del jugador separa lesiones, expulsiones, errores y amarillas.
 
-Simulador con enfoque jugadorista: 70% fuerza colectiva y 30% impacto individual.
+### V3.44 - Estrellas de referencia
+- Hasta 3 estrellas por equipo.
+- Estrellas por goles, asistencias o tapadas clave.
+- Bonus de referencia en el simulador.
 
-## V3.44
+### V3.43 - Simulador jugadorista
+- 70% colectivo y 30% individual.
+- Rematador, defensor y arquero involucrados en ocasiones.
+- Tapadas clave, errores y errores de gol.
 
-- Simulador con balance 70% colectivo / 30% individual.
-- Las ocasiones importantes eligen protagonistas reales: rematador, defensor y arquero.
-- Menos goles de defensores en jugadas normales.
-- Defensores con opción de gol más ligada a pelota parada.
-- Nuevas estadísticas: Tapadas clave POR, Errores y Errores de gol.
-- El visualizador progresivo de partido muestra tapadas clave y errores.
-- La ficha completa del partido agrega bloques de tapadas clave y errores.
-- Las fichas de jugador registran tapadas clave, errores y errores de gol.
+### V3.42 - Lesiones raras y largas
+- Probabilidad de lesión reducida.
+- Lesiones graves pueden durar hasta 400 días.
 
-## V3.41
+### V3.41 - Academia JSON base
+- Visor circular de habilidades reveladas.
+- JSON base para estadios, hinchas e instalaciones.
 
-- Academia: visor circular tipo torta para ver el porcentaje de habilidades reveladas en cada juvenil.
-- El indicador muestra el avance de scouting de habilidades visibles.
-- Nuevos JSON base vacíos para futuras expansiones:
-  - `data/estadios.json`
-  - `data/hinchas.json`
-  - `data/instalaciones.json`
-- Se agregan rutas en `config.js` para esos archivos.
+### V3.40 - Config actualizado
+- Cooldowns y valores de cohesión ajustados.
+- Equilibrio de bots en dificultad difícil.
 
+### V3.39 - Equilibrio de bots
+- Bots nivelan moral, físico y cohesión para sostener dificultad.
+- Desarrollo moderado de plantel bot.
 
+### V3.38 - Cartas activas visibles
+- Las cartas activadas quedan visibles en Bonus activo.
 
-## V3.39
+### V3.37 - Descuento sobres
+- Correcciones de descuento de puntos al comprar sobres.
 
-- Equilibrio de bots para sostener la dificultad a partir de la segunda temporada.
-- Los bots de tu división ajustan moral, físico y cohesión cerca de los valores de tu club.
-- Los mejores equipos de la temporada anterior reciben un plus competitivo.
-- Mantenimiento automático durante pretemporada y temporada regular.
-- Progresión moderada de habilidades para jugadores bots.
-- Configurable desde `config.js` en `equilibrioBots`.
+### V3.36 - Bloqueo de cartas
+- Bloqueo aplicado luego de activar carta.
 
+### V3.35 - Fix arranque
+- Corrección de error de arranque por uso temprano de `clamp()`.
 
-## V3.38
+### V3.34 - Fix sobres reserva
+- Correcciones de cartas en reserva e inventario.
 
-- Corrección del sistema ESPECIAL: al activar una carta ya no desaparece.
-- La carta activada pasa al sector **Bonus activo**.
-- Las cartas activas quedan visibles y bloqueadas durante 100 días.
-- El bloque **Regla de cartas activas** muestra el detalle de bonus activos, cartas aplicadas y días restantes de bloqueo.
+### V3.33 - Juvenil excepcional
+- Una vez por temporada puede llegar juvenil excepcional de 16 años.
 
-## V3.37
+### V3.32 - Fix reserva / sobres lentos
+- Apertura de sobres y reserva más estable.
 
-- Ajuste del sistema ESPECIAL.
-- Destruir cartas suma puntos según rareza y muestra animación visual en el contador.
-- Carta inútil: +5 puntos.
-- Carta común: +20 puntos.
-- Carta rara: +50 puntos.
-- Carta legendaria: +1000 puntos.
-- El bloqueo de 100 días ahora es por carta activa, no un bloqueo global.
-- Se pueden activar hasta 5 cartas; cada una queda fija 100 días antes de poder desactivarse.
-- El bloque Bonus activos muestra el detalle de cada carta activa.
+### V3.31 - Fix sobres y cartas
+- Correcciones del sistema ESPECIAL.
 
-## V3.35
+### V3.30 - Petitorio Federación
+- Acción narrativa para exigir condiciones mínimas de campos bots.
 
-- Corrección bloqueante de arranque: se eliminó el uso prematuro de `clamp()` en constantes de Academia.
-- Nueva partida, Reset y carga inicial vuelven a funcionar.
+### V3.29 - Menú lateral ordenado
+- Reordenamiento del menú lateral.
 
+### V3.28 - Sistema ESPECIAL
+- Puntos ocultos, sobres, cartas, bonus activos, destrucción e inventario.
 
-## V3.34
+### V3.27 - Avance día / próximo partido
+- Botones separados para avanzar día o ir al próximo partido.
 
-- Corrección crítica del sistema de sobres: las cartas se guardan en reserva antes de mostrarse en la animación.
-- Las cartas abiertas ya no quedan atrapadas en “Cartas obtenidas”.
-- Al finalizar la apertura, pasan al inventario y se pueden activar o destruir.
-- Se agregó reparación automática para cartas que hubieran quedado sólo en historial por versiones anteriores.
-- Si el guardado falla, se revierte el gasto de puntos del sobre.
+### V3.26 - Auditoría de campos bots
+- Reparación automática de campos bots inválidos.
 
+### V3.25 - Fix lesiones de temporada
+- Corrección del arrastre excesivo de lesiones al cambiar temporada.
 
-## Cambios V3.31
+### V3.24 - Eventos condicionales
+- Eventos por lesiones visitantes y apoyo de hinchas con moral baja.
 
-- Nuevo menú lateral **ESPECIAL**.
-- Sistema de puntos de habilidad ocultos para el manager.
-- Sobres común, raro y épico.
-- Cartas inútiles, comunes, raras, épicas y legendarias.
-- Máximo de 5 cartas activas.
-- Máximo de 50 cartas en reserva.
-- Bloqueo de 100 días para cambiar cartas activas.
-- Destrucción de cartas en reserva para recuperar puntos.
-- Bonus apilables aplicados a:
-  - nuevos sponsors;
-  - deterioro del campo propio;
-  - probabilidad de obtener cartas legendarias.
+### V3.23 - Campos bots y próximo compromiso
+- Campo del estadio visible en próximo compromiso.
+- Campos bots fijos por temporada.
 
-## Archivos nuevos
+### V3.22 - Tratar todos
+- Botón de kinesiólogo para tratar todos los lesionados.
 
-```text
-data/habilidades_especiales.json
-js/game/15-especial.js
-```
+### V3.21 - Cohesión ajustada
+- Más ganancia de cohesión por partido y menos castigo por cambios.
 
-## Cómo usar
+### V3.20 - Entrenamiento individual
+- 5º entrenamiento individual diario por jugador.
 
-Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el menú lateral entrar a **ESPECIAL** para abrir sobres, activar cartas, revisar bonus y destruir cartas sobrantes.
+## Nota de entrega
 
-
-## V3.30
-
-- Reordenamiento del menú lateral según la estructura solicitada.
-
-
-## V3.30
-- Ajuste de textos del bloque de campos rivales en Estadio.
-- El botón de reparación ahora aparece como petitorio a la Federación Argentina.
-
-
-## V3.31
-
-- Corrección del descuento de puntos al abrir sobres.
-- Cartas de última apertura activables/destruibles.
-- Apertura de sobres animada carta por carta.
-- Activación de cartas por botón o arrastrando al bloque de cartas activas.
-
-
-
-## V3.33
-- Academia: al iniciar una captación, una vez por temporada llega un juvenil excepcional de 16 años.
-- Ese juvenil puede entrenarse en academia o firmar contrato profesional de inmediato.
-- Se agregó configuración para edad y rango de media inicial del juvenil excepcional.
-
-## V3.32
-
-- Corrección del pase automático de cartas abiertas hacia reserva.
-- Recuperación defensiva de cartas de última apertura al activar o destruir.
-- Apertura de sobres tres veces más lenta.
-
-## V3.40 - Config actualizado
-
-Esta versión toma como configuración principal el `config.js` editado por el usuario.
-
-Cambios destacados:
-- cooldown largo de avance: 60 segundos;
-- avance diario: 2 segundos;
-- ganancia de cohesión por partido: 9;
-- equilibrio de bots reforzado con pisos más altos;
-- dificultad de bots corregida a `dificil`.
-
-
-
-## V3.42 - Lesiones menos frecuentes
-
-El sistema de lesiones fue rebalanceado. Ahora la probabilidad total de lesión se multiplica por `lesiones.multiplicadorProbabilidad`. Con el valor `0.20`, las lesiones bajan un 80% respecto del cálculo anterior.
-
-A cambio, los tiempos de recuperación son más largos y configurables desde `config.js`, con lesiones graves que pueden llegar hasta 400 días.
-
-
-## V3.44 - Estrellas de referencia
-
-Se agrega un sistema de estrellas por rendimiento reciente. Cada club puede tener hasta 3 jugadores referencia. La estrella aparece junto al nombre y aumenta su peso dentro del simulador. Si el jugador cambia de club, pierde la estrella.
-
-
-### V3.48 - Errores por jugador
-
-Se ajustó el simulador para que los errores defensivos y del arquero dependan del jugador implicado, usando moral, físico, media y cohesión del equipo. También se separan mejor las estadísticas internas de lesiones, expulsiones, errores y errores de gol.
-
-
-## V3.48
-
-- Ofertas automáticas de jugadores basadas en estadísticas internas.
-- Filtro de ofertas: partidos oficiales jugados y producción ofensiva mínima.
-- Tope del 15% de cláusula para ofertas recibidas por jugadores.
-- Impuesto AFA del 30% sobre ventas.
-- Promedio de puntos por partido en Oficina del manager.
-
-
-## V3.48
-
-Agrega objetivo opcional de puntos por partido, barra de progreso y Game Over si el promedio no supera el objetivo desde los 10 partidos oficiales.
-
-
-## V3.48 - Pizarra táctica y roles
-
-Se corrigió la distribución visual de las formaciones y se agregó una penalización intermedia para jugadores fuera de su rol exacto: 100% si juega en su rol, 75% si ocupa un rol compatible y 50% si queda fuera de su zona.
-
-
-## V3.49
-- Ajuste visual de pizarra para DFC, MC y DC.
-- Aparición de jugadores MI y MD en generación de planteles y agentes libres.
-
-
-## V3.50
-- Objetivo automático por división.
-- Evaluación inicial a 5 partidos oficiales de temporada.
-- Prórroga por promedio general histórico del manager.
-- El promedio visible en oficina se calcula sobre la temporada actual.
-
-
-## V3.51
-- Confianza de la directiva: objetivo congelado al inicio de temporada y evaluación en los próximos partidos.
-- Residencias de academia: cupo base, alquiler mensual, cancelación y pérdida de juveniles sin lugar.
-- Visor de promedio de habilidades visibles juveniles.
-
-
-## V3.52
-- Mejora visual del menú Mensajes con estilo más claro tipo bandeja de entrada.
-
-
-## V3.53
-- Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
-- Click sobre el círculo del jugador para cambiar estado.
-- Los estados influyen en ataque, asistencia, defensa y tapadas.
-
-
-## V3.54
-- Fix visual de Mensajes: textos claros sobre pantalla oscura.
-- Fix de residencias en Academia: contador y cupos se actualizan correctamente.
-
-
-## V3.55
-- Nuevo presupuesto autorizado para fichajes con tope del 50% del presupuesto total.
-- Base por división y desbloqueos por rendimiento, ascenso, campeonato y ventas.
-- Finanzas y Mercado muestran el presupuesto disponible para fichajes.
-
-
-## V3.56
-- Mercado bot ampliado: ofertas por jugadores del manager, transferibles, veto de directiva para estrellas y despidos de bots.
-- Ficha individual mejorada con botón Contratar en libres, Hacer oferta en contratados y casilla EN VENTA en propios.
-
-
-## V3.57
-- Integración completa de estadios e hinchas base.
-- Hinchadas locales/visitantes con cupo visitante obligatorio y máximo del 50% si el local no llena el estadio.
-- Bonus local oculto por diferencia de hinchadas durante el partido.
-- Crecimiento/caída de hinchas por resultado, posición y precio de entradas.
-- Precio de entradas editable en Estadio, entre $10 y $500.
-
-
-## V3.58
-- Corrección visual de flechas/marcadores de estados individuales en la pizarra táctica.
-- Leyenda visible para muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
-
-## V3.59
-- Despido sin reiniciar partida: el manager puede buscar otro club y continuar la carrera.
-- Nuevo prestigio de manager y puntos de experiencia.
-- Clubes disponibles/no disponibles según prestigio.
-- Prestigio de clubes variable al final de cada temporada.
-- Botón lateral actualizado a “Buscar club”.
-- Mensajes compactos, ESPECIAL destacado y Reset movido abajo con advertencia.
-
-
-## V3.60
-- En Mensajes, las ofertas muestran el nombre del jugador como enlace clickeable para abrir su ficha antes de aceptar o rechazar.
-- ZIP entregado como parche con sólo archivos modificados.
-
-
-## V3.61
-- Recaudación de entradas visible en el simulador/resumen de partido.
-- Finanzas con gastos por categoría en bloques desplegables.
-- Ingresos por categoría también desplegables para controlar recaudación, sponsors y ventas.
-
-
-## V3.62
-- Ajuste del botón Mejor condición física: prioriza jugadores con condición +75 y reduce penalizaciones por fuera de posición.
-
-
-## V3.63
-- Prestigio real del manager calculado por experiencia, victorias, objetivos, campeonatos y penalizaciones.
-- Agregado botón Renunciar al club.
-
-
-
-
-## V3.66 - Relato del simulador más lento
-
-- El relato grande del simulador permanece visible durante más tiempo.
-- Cada frase se mantiene durante 2 fases para mejorar la lectura.
-- La simulación conserva las 60 fases y la lista de eventos visibles.
-
-## V3.65 - Corrección visual del prestigio del manager
-- Se corrigió el formato del prestigio para evitar que 1.078 parezca 1.078 puntos enteros.
-- Se muestra como decimal local: 1,078.
-- El acceso a clubes se muestra con el entero habilitado: clubes hasta prestigio 1.
-- Los clubes con prestigio menor a 20 siguen libres para cualquier manager.
-
-## V3.64
-- Visor del simulador con relato grande de jugadas destacadas.
-- Simulación visual extendida a 60 fases.
-- Nuevo archivo `data/relatos_partido.json` con frases de relato.
+Por defecto, las próximas entregas son parches con sólo los archivos modificados. Pedir **versión completa** para recibir todo el proyecto.

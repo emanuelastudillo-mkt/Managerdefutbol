@@ -1015,18 +1015,48 @@ function nextMentality(current){
   const idx = MENTALITIES.indexOf(normalizeMentality(current));
   return MENTALITIES[(idx + 1) % MENTALITIES.length] || 'normal';
 }
+function ensurePlayerMentalitiesStore(targetGame=game){
+  if(!targetGame) return {};
+  targetGame.playerMentalities = (targetGame.playerMentalities && typeof targetGame.playerMentalities === 'object' && !Array.isArray(targetGame.playerMentalities)) ? targetGame.playerMentalities : {};
+  Object.keys(targetGame.playerMentalities).forEach(id => {
+    const cleanId = Number(id);
+    if(!cleanId) delete targetGame.playerMentalities[id];
+    else targetGame.playerMentalities[cleanId] = normalizeMentality(targetGame.playerMentalities[id]);
+  });
+  return targetGame.playerMentalities;
+}
 function playerMentality(playerId, tactic = game?.tactic){
-  return normalizeMentality(tactic?.playerMentalities?.[playerId]);
+  const id = Number(playerId || 0);
+  const globalStore = game?.playerMentalities || {};
+  return normalizeMentality(globalStore[id] || tactic?.playerMentalities?.[id]);
+}
+function setPlayerMentality(playerId, mode, tactic = game?.tactic){
+  const id = Number(playerId || 0);
+  if(!id) return 'normal';
+  const normalized = normalizeMentality(mode);
+  if(game){
+    const store = ensurePlayerMentalitiesStore(game);
+    store[id] = normalized;
+  }
+  if(tactic){
+    tactic.playerMentalities = (tactic.playerMentalities && typeof tactic.playerMentalities === 'object' && !Array.isArray(tactic.playerMentalities)) ? tactic.playerMentalities : {};
+    tactic.playerMentalities[id] = normalized;
+  }
+  return normalized;
 }
 function applyStarterMentalities(tactic){
+  tactic = tactic || {};
+  const globalStore = game ? ensurePlayerMentalitiesStore(game) : {};
   const next = { ...(tactic.playerMentalities || {}) };
-  (tactic.starters || []).filter(Boolean).forEach(id => {
-    next[id] = normalizeMentality(next[id]);
-  });
   Object.keys(next).forEach(id => {
     const cleanId = Number(id);
-    if(!cleanId || !(tactic.starters || []).includes(cleanId)) delete next[id];
-    else next[id] = normalizeMentality(next[id]);
+    if(!cleanId) delete next[id];
+    else next[cleanId] = normalizeMentality(next[id]);
+  });
+  (tactic.starters || []).filter(Boolean).forEach(id => {
+    const cleanId = Number(id);
+    next[cleanId] = normalizeMentality(globalStore[cleanId] || next[cleanId]);
+    if(game) globalStore[cleanId] = next[cleanId];
   });
   tactic.playerMentalities = next;
   return tactic;

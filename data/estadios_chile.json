@@ -1,8 +1,8 @@
 {
-  "version": "V3.74",
+  "version": "V3.78",
   "pais": "Chile",
   "sistema": "estadios_chile",
-  "descripcion": "Estadios base para la liga jugable chilena de 20 equipos.",
+  "descripcion": "Estadios de la Primera División Chile reestructurada a 18 clubes.",
   "notas": "Capacidades tomadas como base de referencias públicas recientes y redondeadas para balance de juego cuando hay diferencias entre fuentes.",
   "leagues": [
     {
@@ -151,22 +151,6 @@
           "reputation": 60,
           "stadium": "Municipal Luis Navarro Avilés",
           "stadiumCapacity": 3500,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Universidad de Concepción",
-          "city": "Concepción",
-          "reputation": 59,
-          "stadium": "Ester Roa Rebolledo",
-          "stadiumCapacity": 30448,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Deportes Concepción",
-          "city": "Concepción",
-          "reputation": 58,
-          "stadium": "Ester Roa Rebolledo",
-          "stadiumCapacity": 30448,
           "stadiumIsFictional": false
         }
       ]

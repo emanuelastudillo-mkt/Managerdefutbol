@@ -129,22 +129,9 @@
           "stadium": "Ciudad de Vicente López",
           "stadiumCapacity": 28530,
           "stadiumIsFictional": false
-        },
-        {
-          "name": "Unión",
-          "reputation": 72,
-          "stadium": "15 de Abril",
-          "stadiumCapacity": 27500,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Instituto",
-          "reputation": 70,
-          "stadium": "Juan Domingo Perón",
-          "stadiumCapacity": 26535,
-          "stadiumIsFictional": false
         }
-      ]
+      ],
+      "country": "Argentina"
     },
     {
       "name": "Primera Nacional",
@@ -157,10 +144,24 @@
           "stadiumIsFictional": false
         },
         {
+          "name": "Unión",
+          "reputation": 72,
+          "stadium": "15 de Abril",
+          "stadiumCapacity": 27500,
+          "stadiumIsFictional": false
+        },
+        {
           "name": "Independiente Rivadavia",
           "reputation": 72,
           "stadium": "Bautista Gargantini",
           "stadiumCapacity": 24000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Instituto",
+          "reputation": 70,
+          "stadium": "Juan Domingo Perón",
+          "stadiumCapacity": 26535,
           "stadiumIsFictional": false
         },
         {
@@ -261,12 +262,32 @@
           "stadium": "Don León Kolbowski",
           "stadiumCapacity": 9390,
           "stadiumIsFictional": false
+        }
+      ],
+      "country": "Argentina"
+    },
+    {
+      "name": "Federal A",
+      "teams": [
+        {
+          "name": "Acassuso",
+          "reputation": 60,
+          "stadium": "La Quema",
+          "stadiumCapacity": 1800,
+          "stadiumIsFictional": false
         },
         {
           "name": "Temperley",
           "reputation": 55,
           "stadium": "Alfredo Beranger",
           "stadiumCapacity": 18000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Armenio",
+          "reputation": 55,
+          "stadium": "Estadio Armenia",
+          "stadiumCapacity": 8000,
           "stadiumIsFictional": false
         },
         {
@@ -288,25 +309,6 @@
           "reputation": 50,
           "stadium": "23 de Agosto",
           "stadiumCapacity": 23000,
-          "stadiumIsFictional": false
-        }
-      ]
-    },
-    {
-      "name": "Federal A",
-      "teams": [
-        {
-          "name": "Acassuso",
-          "reputation": 60,
-          "stadium": "La Quema",
-          "stadiumCapacity": 1800,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Deportivo Armenio",
-          "reputation": 55,
-          "stadium": "Estadio Armenia",
-          "stadiumCapacity": 8000,
           "stadiumIsFictional": false
         },
         {
@@ -346,37 +348,9 @@
           "stadiumIsFictional": false
         },
         {
-          "name": "Deportivo Rincón",
-          "reputation": 35,
-          "stadium": "Ciudad Deportiva - Rincón de los Sauces",
-          "stadiumCapacity": 500,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "San Martín de Formosa",
-          "reputation": 33,
-          "stadium": "17 de Octubre",
-          "stadiumCapacity": 3000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Ituzaingó",
-          "reputation": 30,
-          "stadium": "Carlos Alberto Sacaan",
-          "stadiumCapacity": 5470,
-          "stadiumIsFictional": false
-        },
-        {
           "name": "Claypole",
           "reputation": 28,
           "stadium": "Rodolfo Vicente Capocasa",
-          "stadiumCapacity": 4000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Ciudad de Bolívar",
-          "reputation": 26,
-          "stadium": "Municipal Eva Perón",
           "stadiumCapacity": 4000,
           "stadiumIsFictional": false
         },
@@ -403,24 +377,10 @@
           "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
         },
         {
-          "name": "Atenas Río Cuarto",
-          "reputation": 18,
-          "stadium": "9 de Julio",
-          "stadiumCapacity": 7000,
-          "stadiumIsFictional": false
-        },
-        {
           "name": "Argentino Monte Maíz",
           "reputation": 16,
           "stadium": "Modesto Marrone",
           "stadiumCapacity": 5500,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Sarmiento La Banda",
-          "reputation": 14,
-          "stadium": "Ciudad de La Banda",
-          "stadiumCapacity": 8000,
           "stadiumIsFictional": false
         },
         {
@@ -437,7 +397,8 @@
           "stadiumCapacity": 24300,
           "stadiumIsFictional": false
         }
-      ]
+      ],
+      "country": "Argentina"
     }
   ]
 }

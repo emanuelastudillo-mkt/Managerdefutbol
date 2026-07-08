@@ -1,8 +1,8 @@
 {
-  "version": "V3.74",
+  "version": "V3.78",
   "pais": "Chile",
-  "descripcion": "Liga jugable ficticia con los 20 equipos chilenos más importantes para el modo manager. No representa necesariamente la nómina oficial vigente de Primera División.",
-  "criterio": "Selección balanceada por historia, convocatoria, actualidad, presencia nacional y utilidad para una liga de 20 clubes.",
+  "descripcion": "Liga jugable chilena reestructurada a 18 clubes importantes.",
+  "criterio": "Selección histórica/jugable de 18 equipos chilenos, no tabla oficial de temporada.",
   "leagues": [
     {
       "name": "Primera División Chile",
@@ -97,16 +97,6 @@
           "name": "Magallanes",
           "city": "San Bernardo",
           "reputation": 60
-        },
-        {
-          "name": "Universidad de Concepción",
-          "city": "Concepción",
-          "reputation": 59
-        },
-        {
-          "name": "Deportes Concepción",
-          "city": "Concepción",
-          "reputation": 58
         }
       ]
     }

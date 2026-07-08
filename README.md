@@ -1,4 +1,14 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.78 - Ligas Argentina/Chile reestructuradas a 18 clubes
+
+- Argentina queda con tres divisiones jugables de 18 equipos: Liga Profesional, Primera Nacional y Federal A.
+- Chile queda con una Primera División de 18 equipos.
+- Se eliminaron de Argentina: Deportivo Rincón, San Martín de Formosa, Atenas Río Cuarto, Sarmiento La Banda, Ituzaingó y Ciudad de Bolívar.
+- Se eliminaron de Chile: Universidad de Concepción y Deportes Concepción.
+- Se sincronizaron `data/Liga Argentina.json`, `data/Liga Chile.json`, estadios e hinchadas.
+- `jugadores.json` fue remapeado para evitar `clubId` desalineados después de reducir la cantidad de clubes.
+- El calendario ida y vuelta ahora queda coherente con 18 clubes por división: 34 fechas.
+
 ## V3.77 - Elegibilidad de clubes por prestigio corregida
 
 - El manager nuevo inicia con prestigio 0 real.
@@ -36,7 +46,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.77
+## Versión actual: V3.78
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

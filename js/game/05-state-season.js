@@ -1,4 +1,4 @@
-/* V3.77 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
+/* V3.78 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));

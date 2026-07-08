@@ -1,19 +1,13 @@
-# V3.77 - Elegibilidad de clubes por prestigio corregida
+# V3.78 - Ligas Argentina/Chile reestructuradas a 18 clubes
 
-- Se corrigió la regla de selección de clubes al iniciar o continuar carrera.
-- Un manager nuevo conserva prestigio real 0.
-- Los clubes con prestigio 20 o menos pueden ser seleccionados por cualquier manager.
-- Los clubes con prestigio 21 o más sólo aceptan managers con prestigio igual o superior al prestigio del club.
-- Se corrigieron textos de interfaz que decían "menor a 20" para reflejar "20 o menos".
-- Se agregaron parámetros editables en `config.js`: `manager.prestigioInicial` y `manager.prestigioClubLibreMinimo`.
-
----
-
-# V3.75 - Ligas simultáneas Argentina + Chile
-
-- El juego ahora carga y combina todos los JSON válidos definidos en `data.leagueUrls`.
-- `Buscar club` permite elegir país, liga y club usando el mismo mundo de partida.
-- Argentina y Chile pueden convivir simultáneamente en la selección de clubes.
-- Se cargan también múltiples JSON de estadios e hinchas mediante `data.estadiosUrls` y `data.hinchasUrls`.
-- Los clubes reciben país propio para filtrar correctamente.
-- Los jugadores generados de ligas sin base de datos específica se conservan.
+- Argentina queda organizada en tres divisiones jugables de 18 equipos: Liga Profesional, Primera Nacional y Federal A.
+- Chile queda organizada en una Primera División jugable de 18 equipos.
+- Se eliminaron de Argentina: Deportivo Rincón, San Martín de Formosa, Atenas Río Cuarto, Sarmiento La Banda, Ituzaingó y Ciudad de Bolívar.
+- Se eliminaron de Chile: Universidad de Concepción y Deportes Concepción.
+- Se movieron clubes argentinos entre divisiones para sostener 18 equipos por categoría:
+  - Unión e Instituto bajan desde Liga Profesional a Primera Nacional.
+  - Temperley, Agropecuario, Atlético Rafaela y Gimnasia de Jujuy bajan desde Primera Nacional a Federal A.
+- Se actualizaron los JSON de estadios e hinchadas argentinos y chilenos.
+- Se mantuvieron sincronizados los alias legacy `data/estadios.json` y `data/hinchas.json` con los datos argentinos.
+- Se remapeó `data/jugadores.json` para que los `clubId` sigan apuntando a los clubes correctos después de pasar de 60 a 54 clubes argentinos.
+- La configuración del calendario documenta 34 fechas para ligas ida y vuelta de 18 clubes.

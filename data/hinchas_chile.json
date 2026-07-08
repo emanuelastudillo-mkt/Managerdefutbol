@@ -1,19 +1,19 @@
 {
-  "version": "V3.74",
+  "version": "V3.78",
   "pais": "Chile",
   "sistema": "hinchas_chile",
-  "descripcion": "Cantidad base de hinchas activos/convocables para la liga jugable chilena de 20 equipos.",
+  "descripcion": "Cantidad base de hinchas activos/convocables para la liga jugable chilena de 18 equipos.",
   "formula": {
     "descripcion": "Se normaliza el prestigio dentro de la liga chilena y se aplica ocupación base entre 58% y 91% de capacidad.",
     "ocupacion_min": 0.58,
     "ocupacion_max": 0.91
   },
   "totales": {
-    "equipos": 20,
-    "hinchas_base_total": 277850,
-    "promedio_hinchas_base": 13892.5,
-    "hinchas_base_min": 2050,
-    "hinchas_base_max": 40900
+    "equipos": 18,
+    "hinchas_base_total": 240000,
+    "promedio_hinchas_base": 13333.33,
+    "hinchas_base_min": 2000,
+    "hinchas_base_max": 40850
   },
   "hinchadas": [
     {
@@ -36,8 +36,8 @@
       "estadio": "Nacional Julio Martínez Prádanos",
       "capacidad_estadio": 46190,
       "estadio_ficticio": false,
-      "hinchas_base": 40900,
-      "ocupacion_base_porcentaje": 88.5,
+      "hinchas_base": 40850,
+      "ocupacion_base_porcentaje": 88.4,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -48,8 +48,8 @@
       "estadio": "Claro Arena",
       "capacidad_estadio": 20249,
       "estadio_ficticio": false,
-      "hinchas_base": 17600,
-      "ocupacion_base_porcentaje": 86.9,
+      "hinchas_base": 17550,
+      "ocupacion_base_porcentaje": 86.7,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -60,8 +60,8 @@
       "estadio": "Zorros del Desierto",
       "capacidad_estadio": 12102,
       "estadio_ficticio": false,
-      "hinchas_base": 9900,
-      "ocupacion_base_porcentaje": 81.8,
+      "hinchas_base": 9850,
+      "ocupacion_base_porcentaje": 81.4,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -72,8 +72,8 @@
       "estadio": "Santa Laura-Universidad SEK",
       "capacidad_estadio": 19887,
       "estadio_ficticio": false,
-      "hinchas_base": 15650,
-      "ocupacion_base_porcentaje": 78.7,
+      "hinchas_base": 15550,
+      "ocupacion_base_porcentaje": 78.2,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -84,8 +84,8 @@
       "estadio": "Elías Figueroa Brander",
       "capacidad_estadio": 20575,
       "estadio_ficticio": false,
-      "hinchas_base": 15900,
-      "ocupacion_base_porcentaje": 77.3,
+      "hinchas_base": 15750,
+      "ocupacion_base_porcentaje": 76.5,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -96,8 +96,8 @@
       "estadio": "Sausalito",
       "capacidad_estadio": 21754,
       "estadio_ficticio": false,
-      "hinchas_base": 16100,
-      "ocupacion_base_porcentaje": 74.0,
+      "hinchas_base": 15900,
+      "ocupacion_base_porcentaje": 73.1,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -108,8 +108,8 @@
       "estadio": "El Teniente",
       "capacidad_estadio": 12476,
       "estadio_ficticio": false,
-      "hinchas_base": 9000,
-      "ocupacion_base_porcentaje": 72.1,
+      "hinchas_base": 8900,
+      "ocupacion_base_porcentaje": 71.3,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -120,8 +120,8 @@
       "estadio": "Municipal de La Cisterna",
       "capacidad_estadio": 8000,
       "estadio_ficticio": false,
-      "hinchas_base": 5650,
-      "ocupacion_base_porcentaje": 70.6,
+      "hinchas_base": 5550,
+      "ocupacion_base_porcentaje": 69.4,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -132,8 +132,8 @@
       "estadio": "Bicentenario de La Florida",
       "capacidad_estadio": 11637,
       "estadio_ficticio": false,
-      "hinchas_base": 8050,
-      "ocupacion_base_porcentaje": 69.2,
+      "hinchas_base": 7900,
+      "ocupacion_base_porcentaje": 67.9,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -144,8 +144,8 @@
       "estadio": "Huachipato-CAP Acero",
       "capacidad_estadio": 10032,
       "estadio_ficticio": false,
-      "hinchas_base": 6750,
-      "ocupacion_base_porcentaje": 67.3,
+      "hinchas_base": 6650,
+      "ocupacion_base_porcentaje": 66.3,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -156,8 +156,8 @@
       "estadio": "Tierra de Campeones",
       "capacidad_estadio": 14430,
       "estadio_ficticio": false,
-      "hinchas_base": 9600,
-      "ocupacion_base_porcentaje": 66.5,
+      "hinchas_base": 9450,
+      "ocupacion_base_porcentaje": 65.5,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -168,8 +168,8 @@
       "estadio": "Francisco Sánchez Rumoroso",
       "capacidad_estadio": 15809,
       "estadio_ficticio": false,
-      "hinchas_base": 10400,
-      "ocupacion_base_porcentaje": 65.8,
+      "hinchas_base": 10200,
+      "ocupacion_base_porcentaje": 64.5,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -180,8 +180,8 @@
       "estadio": "La Portada",
       "capacidad_estadio": 17134,
       "estadio_ficticio": false,
-      "hinchas_base": 11000,
-      "ocupacion_base_porcentaje": 64.2,
+      "hinchas_base": 10800,
+      "ocupacion_base_porcentaje": 63.0,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -192,8 +192,8 @@
       "estadio": "El Cobre",
       "capacidad_estadio": 11240,
       "estadio_ficticio": false,
-      "hinchas_base": 7150,
-      "ocupacion_base_porcentaje": 63.6,
+      "hinchas_base": 6950,
+      "ocupacion_base_porcentaje": 61.8,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -204,8 +204,8 @@
       "estadio": "Nelson Oyarzún Arenas",
       "capacidad_estadio": 11319,
       "estadio_ficticio": false,
-      "hinchas_base": 7100,
-      "ocupacion_base_porcentaje": 62.7,
+      "hinchas_base": 6900,
+      "ocupacion_base_porcentaje": 61.0,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -216,8 +216,8 @@
       "estadio": "Fiscal de Talca",
       "capacidad_estadio": 16070,
       "estadio_ficticio": false,
-      "hinchas_base": 9800,
-      "ocupacion_base_porcentaje": 61.0,
+      "hinchas_base": 9550,
+      "ocupacion_base_porcentaje": 59.4,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     },
     {
@@ -228,34 +228,10 @@
       "estadio": "Municipal Luis Navarro Avilés",
       "capacidad_estadio": 3500,
       "estadio_ficticio": false,
-      "hinchas_base": 2050,
-      "ocupacion_base_porcentaje": 58.6,
-      "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
-    },
-    {
-      "equipo": "Universidad de Concepción",
-      "liga": "Primera División Chile",
-      "pais": "Chile",
-      "prestigio": 59,
-      "estadio": "Ester Roa Rebolledo",
-      "capacidad_estadio": 30448,
-      "estadio_ficticio": false,
-      "hinchas_base": 17900,
-      "ocupacion_base_porcentaje": 58.8,
-      "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
-    },
-    {
-      "equipo": "Deportes Concepción",
-      "liga": "Primera División Chile",
-      "pais": "Chile",
-      "prestigio": 58,
-      "estadio": "Ester Roa Rebolledo",
-      "capacidad_estadio": 30448,
-      "estadio_ficticio": false,
-      "hinchas_base": 17650,
-      "ocupacion_base_porcentaje": 58.0,
+      "hinchas_base": 2000,
+      "ocupacion_base_porcentaje": 57.1,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_relativo_chile"
     }
   ],
-  "notas": "Archivo creado para ampliar el proyecto a Chile. La selección de clubes es jugable/histórica, no una tabla oficial de temporada."
+  "notas": "Archivo actualizado en V3.78. Se eliminaron Universidad de Concepción y Deportes Concepción de la liga jugable chilena."
 }

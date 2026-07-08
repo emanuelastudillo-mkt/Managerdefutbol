@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.77',
+  version: 'V3.78',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
@@ -32,7 +32,7 @@ window.GAME_CONFIG = {
     anioInicial: 2026,
     mesInicioTemporada: 1,
     diaInicioTemporada: 1,
-    // La liga ahora se juega ida y vuelta. Con 20 clubes por división son 38 fechas.
+    // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
     ligaIdaYVuelta: true,
     // Bloqueo entre avances largos en milisegundos. 60000 = 1 minutos.
     bloqueoEntreAvancesMs: 60000,

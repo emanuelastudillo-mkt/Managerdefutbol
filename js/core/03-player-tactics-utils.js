@@ -706,7 +706,7 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
   return player;
 }
 function generationRosterBlueprint(){
-  return ['POR','POR','POR','LD','LI','DFC','DFC','DFC','LD','LI','MCD','MCD','MC','MC','MC','MCO','MCO','MCO','ED','EI','ED','EI','DC','DC','DC'];
+  return ['POR','POR','POR','LD','LI','DFC','DFC','DFC','LD','LI','MCD','MCD','MC','MC','MCO','MCO','MI','MD','ED','EI','ED','EI','DC','DC','DC'];
 }
 function nationalityRegion(nationality){
   const value = String(nationality || '').toLowerCase();
@@ -1034,10 +1034,27 @@ function roleBaseY(slot){
 }
 function distributedRoleY(slot, count, rowIndex){
   if(count <= 1) return roleBaseY(slot);
+  const compactPresets = {
+    DFC:{
+      2:[42,58],
+      3:[36,50,64]
+    },
+    MC:{
+      2:[42,58],
+      3:[36,50,64],
+      4:[30,43,57,70]
+    },
+    DC:{
+      2:[40,60],
+      3:[32,50,68]
+    }
+  };
+  const preset = compactPresets[slot]?.[count];
+  if(preset) return preset[Math.max(0, Math.min(rowIndex, preset.length - 1))];
   const centerRoles = ['DFC','MCD','MC','MCO','DC'];
   if(centerRoles.includes(slot)){
-    const minY = count >= 4 ? 18 : 28;
-    const maxY = count >= 4 ? 82 : 72;
+    const minY = count >= 4 ? 24 : 34;
+    const maxY = count >= 4 ? 76 : 66;
     return minY + ((maxY - minY) * rowIndex / Math.max(1, count - 1));
   }
   const base = roleBaseY(slot);

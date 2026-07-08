@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.48',
+  version: 'V3.50',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -37,10 +37,19 @@ window.GAME_CONFIG = {
     amistososMaximosPretemporada: 5
   },
   manager: {
-    // Objetivo opcional de puntos por partido. null o vacío = sin objetivo visible. Valores válidos: 0.3 a 2.0.
+    // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
+    // Valores válidos: 0.3 a 2.0.
     objetivoPuntosPorPartido: null,
-    // Desde esta cantidad de partidos oficiales se evalúa el objetivo. Los amistosos no cuentan.
-    partidosMinimosEvaluacionObjetivo: 10
+    // Objetivos automáticos por división cuando objetivoPuntosPorPartido queda vacío.
+    objetivoDivision1: 1.4,
+    objetivoDivision2: 1.1,
+    objetivoDivision3: 0.9,
+    // Base de evaluación: la directiva revisa desde los 5 partidos oficiales de la temporada actual.
+    partidosMinimosEvaluacionObjetivo: 5,
+    // Prórroga por promedio general histórico del manager.
+    bonusPartidosPromedioGeneral120: 2,
+    bonusPartidosPromedioGeneral150: 5,
+    bonusPartidosPromedioGeneral190: 10
   },
   plantel: {
     // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.

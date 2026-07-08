@@ -174,7 +174,8 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
   const objectiveText = objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—';
-  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Progreso del objetivo</span><strong>${Math.round(objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.progress))}%"></span></div><p>${objectiveInfo.played < objectiveInfo.minMatches ? `Evaluación en ${objectiveInfo.remainingMatches} partido(s) oficial(es).` : (objectiveInfo.ppg > objectiveInfo.objective ? 'Objetivo superado por ahora.' : 'Objetivo no superado.')}</p></div>` : '';
+  const extraText = objectiveInfo.extraMatches > 0 ? ` Incluye ${objectiveInfo.extraMatches} partido(s) extra por promedio general ${objectiveInfo.generalPpg.toFixed(2)}.` : '';
+  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Progreso del objetivo</span><strong>${Math.round(objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.progress))}%"></span></div><p>${objectiveInfo.played < objectiveInfo.minMatches ? `Evaluación en ${objectiveInfo.remainingMatches} partido(s) oficial(es) de temporada.${extraText}` : (objectiveInfo.ppg > objectiveInfo.objective ? 'Objetivo superado por ahora.' : 'Objetivo no superado.')}</p></div>` : '';
   const phase = phaseLabel();
   const nextBox = next
     ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
@@ -189,7 +190,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
         <div><span>Posición</span><strong>${position || '—'}°</strong></div>
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
         <div><span>Presupuesto</span><strong>${formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
-        <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong></div>
+        <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
         <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
         <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
       </div>

@@ -1,8 +1,14 @@
-# V3.48 - pizarra táctica y roles corregidos
+# V3.50 - Objetivo por división y prórroga por promedio general
 
-- Se corrigió la visualización de formaciones en la pizarra táctica.
-- Las posiciones ahora usan coordenadas fijas por rol: DFC, LD, LI, MCD, MC, MCO, MI, MD, EI, ED y DC.
-- Cuando hay varios jugadores del mismo rol, se distribuyen equilibradamente en la cancha.
-- Se ajustaron las 10 formaciones al detalle definido para cada una.
-- Se agregó penalización intermedia: rol exacto 100%, rol compatible 75%, fuera de zona 50%.
-- La pizarra y la lista de titulares muestran OK, 75% o 50% según encaje táctico.
+## Cambios
+- El promedio usado para el objetivo ahora toma los partidos oficiales de la **temporada actual**, no todo el historial del manager.
+- La barra de objetivo inicial ahora evalúa desde los **5 partidos oficiales**.
+- Se agregaron objetivos automáticos por división:
+  - División 3: 0,9 puntos por partido.
+  - División 2: 1,1 puntos por partido.
+  - División 1: 1,4 puntos por partido.
+- Si el promedio general histórico del manager es alto, la directiva concede partidos extra antes del despido:
+  - Más de 1,2: +2 partidos.
+  - Más de 1,5: +5 partidos.
+  - Más de 1,9: +10 partidos.
+- La oficina del manager ahora aclara que el promedio visible corresponde a la temporada.

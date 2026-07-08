@@ -1,4 +1,4 @@
-/* V3.47 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.50 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -73,7 +73,13 @@ function parseManagerObjectiveValue(raw){
   return value;
 }
 const MANAGER_OBJECTIVE_PPG = parseManagerObjectiveValue(MANAGER_OBJECTIVE_RAW);
-const MANAGER_OBJECTIVE_MIN_MATCHES = Math.max(1, Math.round(configNumber('manager.partidosMinimosEvaluacionObjetivo', 10, 1, 100)));
+const MANAGER_OBJECTIVE_DIVISION_1 = configNumber('manager.objetivoDivision1', 1.4, 0.3, 2);
+const MANAGER_OBJECTIVE_DIVISION_2 = configNumber('manager.objetivoDivision2', 1.1, 0.3, 2);
+const MANAGER_OBJECTIVE_DIVISION_3 = configNumber('manager.objetivoDivision3', 0.9, 0.3, 2);
+const MANAGER_OBJECTIVE_MIN_MATCHES = Math.max(1, Math.round(configNumber('manager.partidosMinimosEvaluacionObjetivo', 5, 1, 100)));
+const MANAGER_OBJECTIVE_EXTRA_120 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral120', 2, 0, 100)));
+const MANAGER_OBJECTIVE_EXTRA_150 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral150', 5, 0, 100)));
+const MANAGER_OBJECTIVE_EXTRA_190 = Math.max(0, Math.round(configNumber('manager.bonusPartidosPromedioGeneral190', 10, 0, 100)));
 
 const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 50, 0, 100);
 const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 14, 0, 100);
@@ -225,7 +231,7 @@ const MARKET_FREE_AGENT_AGE_MAX = Math.max(MARKET_FREE_AGENT_AGE_MIN, configNumb
 const MARKET_FREE_AGENT_POSITION_GROUPS = [
   { id:'POR', probability:configNumber('plantel.agentesLibresPosiciones.POR', 0.10, 0), positions:['POR'] },
   { id:'DEF', probability:configNumber('plantel.agentesLibresPosiciones.DEF', 0.35, 0), positions:['LD','LI','DFC'] },
-  { id:'MID', probability:configNumber('plantel.agentesLibresPosiciones.MED', 0.35, 0), positions:['MCD','MC','MCO'] },
+  { id:'MID', probability:configNumber('plantel.agentesLibresPosiciones.MED', 0.35, 0), positions:['MCD','MC','MC','MCO','MI','MD'] },
   { id:'ATT', probability:configNumber('plantel.agentesLibresPosiciones.DEL', 0.20, 0), positions:['ED','EI','DC'] }
 ];
 const SEASON_FREE_AGENT_MARKET_MAX = configNumber('plantel.agentesLibresMaximosPorTemporada', 200, 0);
@@ -292,7 +298,7 @@ const PLAYER_GENERATION_NATIONALITY_GROUPS = [
 const PLAYER_GENERATION_POSITION_GROUPS = [
   { id:'POR', probability:0.10, positions:['POR'] },
   { id:'DEF', probability:0.30, positions:['LD','LI','DFC'] },
-  { id:'MID', probability:0.30, positions:['MCD','MC','MCO'] },
+  { id:'MID', probability:0.30, positions:['MCD','MC','MC','MCO','MI','MD'] },
   { id:'ATT', probability:0.30, positions:['ED','EI','DC'] }
 ];
 const PLAYER_GENERATION_MEDIA_RANGES = [

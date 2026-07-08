@@ -160,7 +160,7 @@ function normalizeGame(saved){
   normalized.preseasonFriendliesPlayed = Number.isFinite(normalized.preseasonFriendliesPlayed) ? normalized.preseasonFriendliesPlayed : 0;
   normalized.pendingFriendlyOpponentId = Number.isFinite(normalized.pendingFriendlyOpponentId) ? normalized.pendingFriendlyOpponentId : 0;
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
-  normalized.managerStats = normalizeManagerStats(normalized.managerStats);
+  normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
   normalized.gameOver = normalizeGameOverState(normalized.gameOver);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
@@ -459,7 +459,7 @@ function newGame(selectedClubId, options={}){
     preseasonFriendliesPlayed: 0,
     pendingFriendlyOpponentId: 0,
     clubDivisionOverrides: {},
-    managerStats: createInitialManagerStats(),
+    managerStats: ensureManagerCurrentSeasonStats(createInitialManagerStats(), 1, selectedClubId),
     gameOver: null,
     messages: [],
     eventLog: [],
@@ -753,18 +753,33 @@ function updatePlayerStarTrackingForMatch(result){
 }
 
 function createInitialManagerStats(){
-  return { totals:{ played:0, won:0, drawn:0, lost:0, gf:0, gc:0 }, seasons:[], titles:0 };
+  return { totals:{ played:0, won:0, drawn:0, lost:0, gf:0, gc:0 }, currentSeason:{ season:1, clubId:0, played:0, won:0, drawn:0, lost:0, gf:0, gc:0 }, seasons:[], titles:0 };
 }
 function normalizeManagerStats(stats){
   const base = createInitialManagerStats();
   const src = stats || {};
   const totals = { ...base.totals, ...(src.totals || {}) };
-  Object.keys(totals).forEach(key => { totals[key] = Number.isFinite(totals[key]) ? totals[key] : 0; });
+  Object.keys(totals).forEach(key => { totals[key] = Number.isFinite(Number(totals[key])) ? Number(totals[key]) : 0; });
+  const currentRaw = src.currentSeason && typeof src.currentSeason === 'object' ? src.currentSeason : {};
+  const currentSeason = { ...base.currentSeason, ...currentRaw };
+  Object.keys(currentSeason).forEach(key => { currentSeason[key] = Number.isFinite(Number(currentSeason[key])) ? Number(currentSeason[key]) : 0; });
   return {
     totals,
+    currentSeason,
     seasons:Array.isArray(src.seasons) ? src.seasons : [],
-    titles:Number.isFinite(src.titles) ? src.titles : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0)
+    titles:Number.isFinite(Number(src.titles)) ? Number(src.titles) : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0)
   };
+}
+function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
+}
+function ensureManagerCurrentSeasonStats(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  const normalized = normalizeManagerStats(stats);
+  const current = normalized.currentSeason || {};
+  if(Number(current.season || 0) !== Number(season || 1) || Number(current.clubId || 0) !== Number(clubId || 0)){
+    normalized.currentSeason = emptyManagerSeasonStats(season, clubId);
+  }
+  return normalized;
 }
 function normalizeGameOverState(state){
   if(!state || typeof state !== 'object') return null;
@@ -780,30 +795,61 @@ function normalizeGameOverState(state){
     snapshot:state.snapshot && typeof state.snapshot === 'object' ? state.snapshot : null
   };
 }
+function managerObjectiveForCurrentDivision(){
+  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2) return Number(MANAGER_OBJECTIVE_PPG);
+  const division = clubDivision(game?.selectedClubId);
+  const order = Math.round(Number(division?.order || 3));
+  if(order <= 1) return Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4);
+  if(order === 2) return Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1);
+  return Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+}
 function managerObjectiveIsActive(){
-  return Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2;
+  const objective = managerObjectiveForCurrentDivision();
+  return Number.isFinite(objective) && objective >= 0.3 && objective <= 2;
 }
 function managerOfficialTotals(){
   return normalizeManagerStats(game?.managerStats).totals;
 }
-function managerCurrentPPG(){
-  const totals = managerOfficialTotals();
-  const played = Number(totals.played || 0);
-  const points = (Number(totals.won || 0) * 3) + Number(totals.drawn || 0);
+function managerSeasonObjectiveTotals(){
+  game.managerStats = ensureManagerCurrentSeasonStats(game?.managerStats, game?.seasonNumber || 1, game?.selectedClubId || 0);
+  return game.managerStats.currentSeason || emptyManagerSeasonStats(game?.seasonNumber || 1, game?.selectedClubId || 0);
+}
+function ppgFromTotals(totals){
+  const played = Number(totals?.played || 0);
+  const points = (Number(totals?.won || 0) * 3) + Number(totals?.drawn || 0);
   return played > 0 ? points / played : 0;
 }
+function managerGeneralPPG(){
+  return ppgFromTotals(managerOfficialTotals());
+}
+function managerCurrentPPG(){
+  return ppgFromTotals(managerSeasonObjectiveTotals());
+}
+function managerObjectiveExtraMatches(generalPpg=managerGeneralPPG()){
+  if(generalPpg > 1.9) return MANAGER_OBJECTIVE_EXTRA_190;
+  if(generalPpg > 1.5) return MANAGER_OBJECTIVE_EXTRA_150;
+  if(generalPpg > 1.2) return MANAGER_OBJECTIVE_EXTRA_120;
+  return 0;
+}
 function managerObjectiveProgressInfo(){
-  const totals = managerOfficialTotals();
-  const played = Number(totals.played || 0);
+  const seasonTotals = managerSeasonObjectiveTotals();
+  const generalTotals = managerOfficialTotals();
+  const played = Number(seasonTotals.played || 0);
   const ppg = managerCurrentPPG();
-  const objective = managerObjectiveIsActive() ? Number(MANAGER_OBJECTIVE_PPG) : null;
-  const minMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 10);
+  const generalPpg = ppgFromTotals(generalTotals);
+  const objective = managerObjectiveIsActive() ? managerObjectiveForCurrentDivision() : null;
+  const baseMinMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5);
+  const extraMatches = managerObjectiveExtraMatches(generalPpg);
+  const minMatches = baseMinMatches + extraMatches;
   return {
     active:objective !== null,
     objective,
+    baseMinMatches,
+    extraMatches,
     minMatches,
     played,
     ppg,
+    generalPpg,
     progress:objective ? clamp((ppg / objective) * 100, 0, 140) : 0,
     remainingMatches:Math.max(0, minMatches - played),
     failed:objective !== null && played >= minMatches && ppg <= objective
@@ -844,7 +890,7 @@ function checkManagerObjectiveGameOver(){
   if(!info.failed) return false;
   game.gameOver = {
     active:true,
-    reason:`Promedio de puntos por partido insuficiente: ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales.`,
+    reason:`Promedio de puntos por partido insuficiente: ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales de la temporada.`,
     triggeredAt:new Date().toISOString(),
     objective:info.objective,
     ppg:info.ppg,
@@ -863,12 +909,17 @@ function updateManagerMatchStats(match){
   const gf = isHome ? match.homeGoals : match.awayGoals;
   const gc = isHome ? match.awayGoals : match.homeGoals;
   const totals = game.managerStats.totals;
+  const seasonTotals = game.managerStats.currentSeason || emptyManagerSeasonStats(game.seasonNumber || 1, game.selectedClubId || 0);
   totals.played += 1;
   totals.gf += gf;
   totals.gc += gc;
-  if(gf > gc) totals.won += 1;
-  else if(gf < gc) totals.lost += 1;
-  else totals.drawn += 1;
+  seasonTotals.played += 1;
+  seasonTotals.gf += gf;
+  seasonTotals.gc += gc;
+  if(gf > gc){ totals.won += 1; seasonTotals.won += 1; }
+  else if(gf < gc){ totals.lost += 1; seasonTotals.lost += 1; }
+  else { totals.drawn += 1; seasonTotals.drawn += 1; }
+  game.managerStats.currentSeason = seasonTotals;
   checkManagerObjectiveGameOver();
 }
 function divisionOrderList(){
@@ -1625,6 +1676,7 @@ function startNextSeason(selectedClubId){
   refreshAllPlayerClauses();
   game.selectedClubId = nextClubId;
   game.seasonNumber = (game.seasonNumber || 1) + 1;
+  game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
   game.seasonYear = seasonYearForNumber(game.seasonNumber);
   game.calendarVersion = SEASON_CALENDAR_VERSION;
   game.seasonInitialBudget = Math.max(0, Math.round(Number(game.budget || 0)));

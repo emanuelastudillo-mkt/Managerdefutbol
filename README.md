@@ -175,3 +175,15 @@ Agrega objetivo opcional de puntos por partido, barra de progreso y Game Over si
 ## V3.48 - Pizarra táctica y roles
 
 Se corrigió la distribución visual de las formaciones y se agregó una penalización intermedia para jugadores fuera de su rol exacto: 100% si juega en su rol, 75% si ocupa un rol compatible y 50% si queda fuera de su zona.
+
+
+## V3.49
+- Ajuste visual de pizarra para DFC, MC y DC.
+- Aparición de jugadores MI y MD en generación de planteles y agentes libres.
+
+
+## V3.50
+- Objetivo automático por división.
+- Evaluación inicial a 5 partidos oficiales de temporada.
+- Prórroga por promedio general histórico del manager.
+- El promedio visible en oficina se calcula sobre la temporada actual.

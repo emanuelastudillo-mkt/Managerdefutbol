@@ -1,4 +1,14 @@
 # Manager de Fútbol - README ordenado por versiones
+## V4.0 - Auditoría, limpieza y optimización
+
+- Se inicia la numeración V4.0 para las siguientes entregas del proyecto.
+- Se sincronizan versión visible, `VERSION.md`, `config.js` y cache-busting de recursos.
+- Se optimiza la carga inicial: JSON principales en paralelo, cache configurable y omisión de generación temporal de jugadores cuando `data/jugadores.json` ya cubre los clubes.
+- Se elimina una petición fallida del banner inicial usando directamente `banner_bienvenido.jpg`.
+- Se corrigen las rutas de escudos argentinos activos para que apunten directo al archivo existente y reduzcan fallbacks/404.
+- Se eliminan escudos que ya no corresponden a clubes cargados en las ligas actuales.
+- Se agrega `AUDITORIA_V4.0.md` con hallazgos, imágenes removidas, imágenes faltantes y recomendaciones.
+
 ## V3.86 - Modo Fundador
 
 - Se agrega un botón `Modo Fundador` en la pantalla inicial.
@@ -124,7 +134,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.86
+## Versión actual: V4.0
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

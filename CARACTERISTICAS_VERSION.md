@@ -1,3 +1,18 @@
+# V4.0 - Auditoría, limpieza y optimización
+
+- Se adopta V4.0 como nueva numeración del proyecto.
+- Se sincronizó la versión visible de la interfaz, `VERSION.md`, `config.js` y todos los parámetros de cache-busting en `index.html`.
+- Se cambió la carga de JSON a modo cache configurable desde `config.js` con `data.cacheMode`.
+- Se paralelizó la carga de jugadores, estadios, hinchas y ligas para reducir espera inicial.
+- Si `data/jugadores.json` está disponible, el juego evita crear planteles temporales que luego eran descartados.
+- Se mantiene generación automática sólo para clubes sin cobertura en la base de jugadores.
+- Se corrigió el banner inicial para no intentar cargar una ruta sin extensión antes del `.jpg`.
+- Se corrigen las rutas de escudos argentinos activos para que apunten directo al archivo existente y reduzcan fallbacks/404.
+- Se removieron 6 escudos de clubes que ya no están referenciados por ninguna liga activa.
+- Se agregó `AUDITORIA_V4.0.md` con detalle de revisión y recomendaciones.
+
+## Versiones anteriores
+
 # V3.87 - Ranking Online Cloudflare Workers + D1
 
 - Se conectó el menú `Ranking Online` con la API publicada en Cloudflare Workers.
@@ -8,7 +23,6 @@
 - Se mantiene el cálculo local de puntaje manager antes del envío.
 - Se actualizó el cache-busting de los scripts modificados a V3.87.
 
-## Versión anterior
 
 # V3.86 - Modo Fundador
 

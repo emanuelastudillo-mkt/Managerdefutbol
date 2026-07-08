@@ -4,9 +4,11 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.87',
+  version: 'V4.0',
   data: {
     seedUrl: 'data/seed.json',
+    // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
+    cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
     leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     playersUrl: 'data/jugadores.json',

@@ -814,7 +814,7 @@ function openNewGameModal(force=false){
     <div class="new-game-modal job-search-modal">
       <p class="label">${escapeHtml(modeLabel)}</p>
       <h2>${game?.gameOver?.active ? 'Firmar nuevo contrato' : 'Crear manager'}</h2>
-      <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Elegí un club disponible y firmá contrato. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
+      <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Elegí un club disponible y firmá contrato. Los clubes con prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos aceptan cualquier manager.</p>
       ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita cuando estás sin cargo.</p></div>' : ''}
       <div class="new-game-form-grid">
         <label for="modalManagerName">Nombre del manager</label>

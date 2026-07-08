@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.75',
+  version: 'V3.77',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
@@ -46,6 +46,10 @@ window.GAME_CONFIG = {
     amistososMaximosPretemporada: 5
   },
   manager: {
+    // Prestigio inicial del manager. Un manager nuevo arranca en 0.
+    prestigioInicial: 0,
+    // Clubes con este prestigio o menos aceptan cualquier manager, incluso con prestigio 0.
+    prestigioClubLibreMinimo: 20,
     // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
     // Valores válidos: 0.3 a 2.0.
     objetivoPuntosPorPartido: null,

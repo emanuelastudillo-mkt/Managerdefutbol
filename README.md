@@ -1,4 +1,12 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.77 - Elegibilidad de clubes por prestigio corregida
+
+- El manager nuevo inicia con prestigio 0 real.
+- Los clubes con prestigio 20 o menos quedan libres para cualquier manager.
+- Desde prestigio 21 en adelante, el club exige que el prestigio del manager sea igual o superior al prestigio del club.
+- Se evita cualquier lectura visual o lógica que sume el umbral libre de 20 al prestigio real del manager.
+- Se agregaron `manager.prestigioInicial` y `manager.prestigioClubLibreMinimo` a `config.js` para editar la regla desde configuración.
+
 ## V3.75 - Ligas simultáneas Argentina + Chile
 
 - El loader ahora combina todos los archivos válidos de `data.leagueUrls`.
@@ -28,7 +36,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.74
+## Versión actual: V3.77
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 
@@ -88,7 +96,7 @@ Juego de manager de fútbol en HTML/JS local con simulación de partidos, econom
 ### V3.65 - Prestigio visual corregido
 - El prestigio visual anterior usaba decimal local para evitar confusión; desde V3.69 se muestra como entero.
 - El visor ya no suma el umbral artificial de 20 puntos.
-- Clubes de prestigio menor a 20 siguen aceptando cualquier manager.
+- Clubes de prestigio 20 o menos siguen aceptando cualquier manager.
 
 ### V3.64 - Relato del simulador
 - Simulador con 60 fases.

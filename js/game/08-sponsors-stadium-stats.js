@@ -441,7 +441,7 @@ function renderManagerStats(){
   </tr>`).join('');
   view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Clubes hasta prestigio ${prestigeAccess}. Clubes menores a ${MANAGER_CLUB_OPEN_PRESTIGE}: libres.</span></div>
+      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Acceso por carrera: prestigio ${prestigeAccess}. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
       <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${typeof formatManagerPrestigeDecimal === 'function' ? formatManagerPrestigeDecimal(Number(breakdown.experiencePrestige || 0)) : Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>

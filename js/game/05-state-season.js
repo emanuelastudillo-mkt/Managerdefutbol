@@ -1,4 +1,4 @@
-/* V3.47 · Eventos principales, normalización de partida, calendario anual, temporadas, bots y ascensos/descensos. */
+/* V3.77 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -67,8 +67,9 @@ function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige()){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return false;
   const clubPrestige = clubPrestigeValue(club);
-  if(clubPrestige < MANAGER_CLUB_OPEN_PRESTIGE) return true;
-  return clubPrestige <= Number(prestige || 0);
+  const managerPrestige = managerClubAccessPrestige(prestige);
+  if(clubPrestige <= MANAGER_CLUB_OPEN_PRESTIGE) return true;
+  return clubPrestige <= managerPrestige;
 }
 function clubAvailabilityLabel(clubOrId, prestige=currentManagerPrestige()){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -564,7 +565,7 @@ function normalizeTactic(clubId, tactic){
 
 function newGame(selectedClubId, options={}){
   const selectedClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId)) || {};
-  if(!managerCanSelectClub(selectedClub, MANAGER_PRESTIGE_INITIAL)){
+  if(!managerCanSelectClub(selectedClub, currentManagerPrestige())){
     showNotice(`Ese club requiere prestigio ${clubPrestigeValue(selectedClub)}. Tu prestigio actual es ${formatManagerPrestige(currentManagerPrestige())}.`);
     return;
   }

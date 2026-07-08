@@ -1,12 +1,10 @@
-# V3.80 - Bloqueo de recontratación y taquilla por rival
+# V3.81 - Ajuste de prestigio rumano para managers nuevos
 
-- Al renunciar o ser despedido, el club anterior bloquea al manager durante 1 temporada configurable.
-- El bloqueo impide volver inmediatamente al mismo club desde Buscar club, aunque el prestigio del manager alcance el requisito.
-- La búsqueda de club muestra el motivo del bloqueo y la temporada hasta la que dura.
-- Se agrega `manager.temporadasBloqueoRecontratacion` en `config.js`.
-- La recaudación por entradas ahora aumenta según el prestigio del rival.
-- El bonus de asistencia por rival prestigioso es configurable desde `config.js`:
-  - `estadio.bonusAsistenciaPrestigioRivalMaximo`.
-  - `estadio.bonusAsistenciaPrestigioRivalDesde`.
-  - `estadio.bonusAsistenciaPrestigioRivalVisitante`.
-- Los resúmenes y modales de partido muestran el bonus de atracción del rival cuando corresponde.
+- Se bajó el prestigio de 4 clubes rumanos para dejarlos en 20 o menos.
+- Botoșani queda con prestigio 20.
+- Voluntari queda con prestigio 19.
+- Gloria Bistrița queda con prestigio 18.
+- Chindia Târgoviște queda con prestigio 17.
+- Estos clubes quedan disponibles para managers nuevos con prestigio 0 por la regla de clubes libres.
+- Se sincronizaron los valores en Liga Rumania, estadios e hinchadas globales/rumanas.
+- Se recalculó la base de hinchas de esos clubes para mantener coherencia con el nuevo prestigio.

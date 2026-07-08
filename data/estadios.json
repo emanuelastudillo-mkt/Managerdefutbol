@@ -1,5 +1,5 @@
 {
-  "version": "V3.79",
+  "version": "V3.81",
   "pais": "Global",
   "sistema": "estadios_global",
   "descripcion": "Alias global con estadios de todas las ligas jugables cargadas.",
@@ -1489,7 +1489,7 @@
           "name": "Botoșani",
           "city": "Botoșani",
           "country": "Rumania",
-          "reputation": 35,
+          "reputation": 20,
           "stadium": "Municipal Botoșani",
           "stadiumCapacity": 7782,
           "stadiumIsFictional": false
@@ -1498,7 +1498,7 @@
           "name": "Voluntari",
           "city": "Voluntari",
           "country": "Rumania",
-          "reputation": 33,
+          "reputation": 19,
           "stadium": "Anghel Iordănescu",
           "stadiumCapacity": 4600,
           "stadiumIsFictional": false
@@ -1507,7 +1507,7 @@
           "name": "Gloria Bistrița",
           "city": "Bistrița",
           "country": "Rumania",
-          "reputation": 30,
+          "reputation": 18,
           "stadium": "Jean Pădureanu",
           "stadiumCapacity": 7800,
           "stadiumIsFictional": false
@@ -1516,7 +1516,7 @@
           "name": "Chindia Târgoviște",
           "city": "Târgoviște",
           "country": "Rumania",
-          "reputation": 28,
+          "reputation": 17,
           "stadium": "Eugen Popescu",
           "stadiumCapacity": 8400,
           "stadiumIsFictional": false

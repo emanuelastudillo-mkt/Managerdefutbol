@@ -1,5 +1,5 @@
 {
-  "version": "V3.79",
+  "version": "V3.81",
   "pais": "Rumania",
   "descripcion": "Estructura jugable de Rumania con ligas de 18 clubes.",
   "criterio": "Selección histórica/jugable de clubes importantes; no representa tabla oficial de una temporada concreta.",
@@ -96,25 +96,25 @@
         {
           "name": "Botoșani",
           "city": "Botoșani",
-          "reputation": 35,
+          "reputation": 20,
           "primaryColor": "#D71920"
         },
         {
           "name": "Voluntari",
           "city": "Voluntari",
-          "reputation": 33,
+          "reputation": 19,
           "primaryColor": "#7FD3F7"
         },
         {
           "name": "Gloria Bistrița",
           "city": "Bistrița",
-          "reputation": 30,
+          "reputation": 18,
           "primaryColor": "#0057B8"
         },
         {
           "name": "Chindia Târgoviște",
           "city": "Târgoviște",
-          "reputation": 28,
+          "reputation": 17,
           "primaryColor": "#D71920"
         }
       ]

@@ -1154,25 +1154,25 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .messages-toolbar-item strong{display:block;font-size:28px;line-height:1;font-weight:900;color:#eaf2ff}
 .messages-toolbar-item span{display:block;margin-top:6px;font-size:13px;color:var(--muted)}
 .message-list{display:grid;gap:14px}
-.message-card{display:grid;grid-template-columns:8px 1fr;gap:0;padding:0;overflow:hidden;background:#f5efdf;color:#1f2937;border-color:rgba(128,103,51,.18);box-shadow:0 10px 26px rgba(0,0,0,.14)}
-.message-card.unread{border-color:rgba(59,130,246,.40);box-shadow:0 0 0 1px rgba(59,130,246,.14),0 12px 28px rgba(0,0,0,.16)}
+.message-card{display:grid;grid-template-columns:8px 1fr;gap:0;padding:0;overflow:hidden;background:linear-gradient(135deg,rgba(30,41,59,.96),rgba(15,23,42,.92));color:#e5edf7;border-color:rgba(148,163,184,.22);box-shadow:0 10px 26px rgba(0,0,0,.18)}
+.message-card.unread{border-color:rgba(96,165,250,.55);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 12px 28px rgba(0,0,0,.22)}
 .message-card-accent{background:linear-gradient(180deg,#60a5fa,#2563eb)}
 .message-card-main{padding:16px 18px 16px}
-.message-card h3{margin:2px 0 0;font-size:20px;line-height:1.2;color:#111827}
-.message-card .label{color:#6b7280}
-.message-card .pill{background:rgba(15,23,42,.08);color:#334155}
-.message-card .pill.warn{background:rgba(245,158,11,.16);color:#9a6700}
+.message-card h3{margin:2px 0 0;font-size:20px;line-height:1.2;color:#f8fafc}
+.message-card .label{color:#bfdbfe}
+.message-card .pill{background:rgba(255,255,255,.09);color:#e0f2fe}
+.message-card .pill.warn{background:rgba(245,158,11,.18);color:#fde68a}
 .message-card-head{align-items:flex-start;gap:12px}
 .message-head-left{min-width:0;flex:1}
 .message-meta-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .message-type-chip,.message-date-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800}
-.message-type-chip{background:rgba(15,23,42,.08);color:#1e3a8a}
-.message-date-chip{background:rgba(15,23,42,.05);color:#475569}
-.message-unread-dot{width:10px;height:10px;border-radius:999px;background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
-.message-paper{margin-top:12px;padding:14px 16px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.70),rgba(255,255,255,.48));border:1px solid rgba(148,163,184,.18)}
-.message-paper p{margin:0;color:#334155;line-height:1.65}
+.message-type-chip{background:rgba(96,165,250,.16);color:#dbeafe}
+.message-date-chip{background:rgba(255,255,255,.08);color:#cbd5e1}
+.message-unread-dot{width:10px;height:10px;border-radius:999px;background:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.18)}
+.message-paper{margin-top:12px;padding:14px 16px;border-radius:14px;background:rgba(2,6,23,.24);border:1px solid rgba(148,163,184,.16)}
+.message-paper p{margin:0;color:#e2e8f0;line-height:1.65}
 .message-actions{justify-content:flex-start;gap:10px;margin-top:12px}
-.message-card .ghost{background:rgba(15,23,42,.06);border:1px solid rgba(15,23,42,.12);color:#1f2937}
+.message-card .ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#e5edf7}
 .message-card .primary{color:#eff6ff}
 .message-status-pill{margin-top:12px}
 .message-tone-high .message-card-accent{background:linear-gradient(180deg,#f59e0b,#d97706)}
@@ -2255,3 +2255,10 @@ button.action-failure{
 /* V3.48: pizarra táctica y penalización por rol compatible */
 .player-chip.off-role{box-shadow:0 0 0 3px rgba(245,158,11,.82),0 10px 22px rgba(0,0,0,.24)}
 .tactic-lineup-row:not(.bad-zone) strong:last-child{white-space:nowrap}
+
+
+/* V3.54: academia residencias y mensajes */
+.academy-residence-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.academy-residence-stats>div{padding:12px;border-radius:16px;background:rgba(255,255,255,.045);border:1px solid rgba(148,163,184,.12)}
+.academy-residence-stats strong{display:block;font-size:26px;line-height:1;font-weight:900;color:#eaf2ff}
+@media (max-width:700px){.academy-residence-stats{grid-template-columns:1fr}}

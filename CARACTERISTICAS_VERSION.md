@@ -1,14 +1,6 @@
-# V3.53 - Estados individuales de jugador
+# V3.54 - Fix mensajes y residencias
 
-## Cambios
-- Se agregaron 5 estados individuales por titular en la pizarra:
-  - Muy defensivo
-  - Defensivo
-  - Normal
-  - Ofensivo
-  - Muy ofensivo
-- El estado se cambia con click sobre el círculo del jugador en la pizarra.
-- Los estados ofensivos aumentan chances de asistir o convertir, pero penalizan el aporte defensivo.
-- Los estados defensivos mejoran prevención de goles, defensa y tapadas, pero penalizan el aporte ofensivo.
-- El estado normal queda como punto equilibrado.
-- Se migran automáticamente los valores viejos: posicional, ataque y defensiva.
+- Se corrigió el contraste del menú **Mensajes** para que no use textos oscuros sobre la pantalla oscura.
+- Se corrigió el alquiler de residencias en Academia: ahora aumenta correctamente el contador y el cupo total.
+- El alquiler ahora actualiza toda la interfaz después de descontar el dinero.
+- Se agregaron métricas visibles de residencias alquiladas, cupo total y cupos libres.

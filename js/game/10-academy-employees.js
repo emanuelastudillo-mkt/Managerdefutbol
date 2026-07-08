@@ -284,22 +284,27 @@ function rentAcademyResidence(){
   game.academy = normalizeAcademyState(game.academy);
   const cost = ACADEMY_RESIDENCE_MONTHLY_COST;
   if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para alquilar una residencia.'); return; }
-  recordBudgetChange(-cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:academyResidenceCount() + 1 });
-  game.academy.residences = academyResidenceCount() + 1;
-  game.academy.residenceLastChargeDate = currentCalendarDate ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  const currentResidences = academyResidenceCount();
+  const nextResidences = currentResidences + 1;
+  const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  game.academy.residences = nextResidences;
+  game.academy.residenceLastChargeDate = today;
+  recordBudgetChange(-cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:nextResidences });
   saveLocal(true);
-  renderAcademy();
-  showNotice(`Residencia alquilada. Cupo juvenil: ${academyCapacity()}.`);
+  if(typeof renderAll === 'function') renderAll(); else renderAcademy();
+  showNotice(`Residencia alquilada. Residencias: ${nextResidences}. Cupo juvenil: ${academyCapacity()}.`);
 }
 function cancelAcademyResidence(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
-  if(academyResidenceCount() <= 0){ showNotice('No hay residencias alquiladas para cancelar.'); return; }
-  game.academy.residences = Math.max(0, academyResidenceCount() - 1);
+  const currentResidences = academyResidenceCount();
+  if(currentResidences <= 0){ showNotice('No hay residencias alquiladas para cancelar.'); return; }
+  const nextResidences = Math.max(0, currentResidences - 1);
+  game.academy.residences = nextResidences;
   if(game.academy.residences <= 0) game.academy.residenceLastChargeDate = null;
   saveLocal(true);
-  renderAcademy();
-  showNotice(`Se canceló una residencia. Cupo juvenil: ${academyCapacity()}.`);
+  if(typeof renderAll === 'function') renderAll(); else renderAcademy();
+  showNotice(`Se canceló una residencia. Residencias: ${nextResidences}. Cupo juvenil: ${academyCapacity()}.`);
 }
 function processAcademyResidenceRent(){
   if(!game?.academy) return 0;
@@ -691,7 +696,12 @@ function renderAcademy(){
     </div>
     <div class="card academy-residence-card" style="margin-bottom:14px">
       <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Costo mensual por residencia: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)}.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button><span class="muted small">Residencias alquiladas: ${residences}</span></div>
+      <div class="academy-residence-stats">
+        <div><p class="label">Residencias alquiladas</p><strong>${residences}</strong></div>
+        <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
+        <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
     </div>
     <div class="grid cols-3 academy-summary">
       <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>

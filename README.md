@@ -204,7 +204,7 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 - Click sobre el círculo del jugador para cambiar estado.
 - Los estados influyen en ataque, asistencia, defensa y tapadas.
 
-## V3.53
-- Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
-- Click sobre el círculo del jugador para cambiar estado.
-- Los estados influyen en ataque, asistencia, defensa y tapadas.
+
+## V3.54
+- Fix visual de Mensajes: textos claros sobre pantalla oscura.
+- Fix de residencias en Academia: contador y cupos se actualizan correctamente.

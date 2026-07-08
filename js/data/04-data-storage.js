@@ -85,26 +85,49 @@ async function loadSpecialSkillsDatabase(){
 }
 
 
+function uniqueUrlList(list){
+  const raw = Array.isArray(list) ? list : [list];
+  return Array.from(new Set(raw.filter(Boolean).map(String)));
+}
 async function loadStadiumsDatabase(){
-  const raw = await fetchJsonIfExists(STADIUMS_DATABASE_URL);
-  if(!raw || typeof raw !== 'object') return { raw:null, teams:[], source:'fallback' };
+  const urls = uniqueUrlList(STADIUMS_DATABASE_CANDIDATES || STADIUMS_DATABASE_URL);
   const teams = [];
-  const leagues = Array.isArray(raw.leagues) ? raw.leagues : (Array.isArray(raw.ligas) ? raw.ligas : []);
-  leagues.forEach(league => {
-    const leagueName = league?.name || league?.nombre || '';
-    const list = Array.isArray(league?.teams) ? league.teams : (Array.isArray(league?.equipos) ? league.equipos : []);
-    list.forEach(team => {
-      if(!team) return;
-      teams.push({ ...team, league:leagueName });
+  const raws = [];
+  for(const url of urls){
+    const raw = await fetchJsonIfExists(url);
+    if(!raw || typeof raw !== 'object') continue;
+    raws.push({ url, raw });
+    const fileCountry = raw.pais || raw.country || raw.countryName || countryFromSourceUrl(url) || '';
+    const leagues = Array.isArray(raw.leagues) ? raw.leagues : (Array.isArray(raw.ligas) ? raw.ligas : []);
+    leagues.forEach(league => {
+      const leagueName = league?.name || league?.nombre || '';
+      const leagueCountry = league?.country || league?.pais || fileCountry || '';
+      const list = Array.isArray(league?.teams) ? league.teams : (Array.isArray(league?.equipos) ? league.equipos : []);
+      list.forEach(team => {
+        if(!team) return;
+        teams.push({ ...team, league:leagueName, country:team.country || team.pais || leagueCountry });
+      });
     });
-  });
-  return { raw, teams, source:STADIUMS_DATABASE_URL };
+  }
+  if(!raws.length) return { raw:null, teams:[], source:'fallback' };
+  return { raw:{ sources:raws.map(item => item.url), count:raws.length }, teams, source:raws.map(item => item.url).join(', ') };
 }
 async function loadFansDatabase(){
-  const raw = await fetchJsonIfExists(FANS_DATABASE_URL);
-  if(!raw || typeof raw !== 'object') return { raw:null, hinchadas:[], source:'fallback' };
-  const hinchadas = Array.isArray(raw.hinchadas) ? raw.hinchadas : [];
-  return { raw, hinchadas, source:FANS_DATABASE_URL };
+  const urls = uniqueUrlList(FANS_DATABASE_CANDIDATES || FANS_DATABASE_URL);
+  const hinchadas = [];
+  const raws = [];
+  for(const url of urls){
+    const raw = await fetchJsonIfExists(url);
+    if(!raw || typeof raw !== 'object') continue;
+    raws.push({ url, raw });
+    const fileCountry = raw.pais || raw.country || countryFromSourceUrl(url) || '';
+    (Array.isArray(raw.hinchadas) ? raw.hinchadas : []).forEach(item => {
+      if(!item) return;
+      hinchadas.push({ ...item, country:item.country || item.pais || fileCountry });
+    });
+  }
+  if(!raws.length) return { raw:null, hinchadas:[], source:'fallback' };
+  return { raw:{ sources:raws.map(item => item.url), count:raws.length }, hinchadas, source:raws.map(item => item.url).join(', ') };
 }
 
 async function loadMatchCommentaryDatabase(){
@@ -124,11 +147,23 @@ function lookupNameKey(name){
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
+function countryFromSourceUrl(url){
+  const lower = String(url || '').toLowerCase();
+  if(lower.includes('chile')) return 'Chile';
+  if(lower.includes('argentina')) return 'Argentina';
+  return '';
+}
+function countryNameKey(country){
+  return lookupNameKey(country || '');
+}
 function indexByTeamName(list, field='name'){
   const map = new Map();
   (list || []).forEach(item => {
     const key = lookupNameKey(item?.[field]);
-    if(key && !map.has(key)) map.set(key, item);
+    if(!key) return;
+    const country = countryNameKey(item?.country || item?.pais || '');
+    if(country && !map.has(`${country}::${key}`)) map.set(`${country}::${key}`, item);
+    if(!map.has(key)) map.set(key, item);
   });
   return map;
 }
@@ -153,8 +188,9 @@ function applyStadiumAndFansDatabases(seedData, stadiumDb, fanDb){
   const fansIndex = indexByTeamName(fanDb?.hinchadas || [], 'equipo');
   seedData.clubs = seedData.clubs.map(club => {
     const key = lookupNameKey(club.name);
-    const stadium = stadiumIndex.get(key) || null;
-    const fans = fansIndex.get(key) || null;
+    const countryKey = countryNameKey(club.country || club.pais || '');
+    const stadium = stadiumIndex.get(`${countryKey}::${key}`) || stadiumIndex.get(key) || null;
+    const fans = fansIndex.get(`${countryKey}::${key}`) || fansIndex.get(key) || null;
     const stadiumName = stadium?.stadium || fans?.estadio || club.stadiumName || `${club.name} Stadium`;
     const stadiumCapacity = Math.max(500, Math.round(Number(stadium?.stadiumCapacity || fans?.capacidad_estadio || club.stadiumCapacity || fallbackStadiumCapacityForClub(club))));
     const fansBase = Math.max(50, Math.round(Number(fans?.hinchas_base || club.fansBase || fallbackFanBaseForClub(club, stadiumCapacity))));
@@ -212,9 +248,16 @@ function applyPlayersDatabase(seedData, database){
     .map(normalizeDatabasePlayer)
     .filter(player => Number.isFinite(player.id) && (Number(player.clubId) === 0 || validClubIds.has(Number(player.clubId))));
   if(!normalized.length) return seedData;
-  seedData.players = normalized;
-  seedData.meta = { ...(seedData.meta || {}), playersSource:database.source, playersDatabaseVersion:database.raw?.metadata?.version || 'local', playersDatabaseValidation:database.raw?.validation || databaseValidationCounts(normalized) };
-  seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(normalized)}`;
+  const dbClubIds = new Set(normalized.map(player => Number(player.clubId || 0)).filter(Boolean));
+  const dbMaxId = Math.max(0, ...normalized.map(player => Number(player.id || 0)).filter(Number.isFinite));
+  let nextId = dbMaxId + 1;
+  const generatedForUncoveredClubs = (seedData.players || [])
+    .map(normalizeDatabasePlayer)
+    .filter(player => Number(player.clubId || 0) > 0 && validClubIds.has(Number(player.clubId)) && !dbClubIds.has(Number(player.clubId)))
+    .map(player => ensurePlayerEconomics({ ...player, id:nextId++ }));
+  seedData.players = normalized.concat(generatedForUncoveredClubs);
+  seedData.meta = { ...(seedData.meta || {}), playersSource:database.source, playersDatabaseVersion:database.raw?.metadata?.version || 'local', playersDatabaseValidation:database.raw?.validation || databaseValidationCounts(normalized), generatedPlayersKept:generatedForUncoveredClubs.length };
+  seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
   return seedData;
 }
 function applySavedDatabaseSnapshots(saved){
@@ -247,12 +290,17 @@ async function loadInitialSeed(){
   const playersDatabase = await loadPlayersDatabase();
   stadiumsDatabase = await loadStadiumsDatabase();
   fansDatabase = await loadFansDatabase();
+  const leagueSeeds = [];
   for(const url of LEAGUE_DATA_CANDIDATES){
     const leagueJson = await fetchJsonIfExists(url);
     if(leagueJson){
       const built = applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(leagueJson, url), stadiumsDatabase, fansDatabase);
-      return applyPlayersDatabase(built, playersDatabase);
+      leagueSeeds.push(built);
     }
+  }
+  if(leagueSeeds.length){
+    const merged = mergeLeagueSeeds(leagueSeeds);
+    return applyPlayersDatabase(merged, playersDatabase);
   }
   const fallback = await fetchJsonIfExists(DATA_URL);
   if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
@@ -265,14 +313,75 @@ async function loadInitialSeed(){
   }
   throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
 }
+function detectLeagueCountry(raw, sourceUrl=''){
+  if(raw?.pais || raw?.country || raw?.countryName) return String(raw.pais || raw.country || raw.countryName).trim();
+  const divisions = extractLeagueDivisions(raw || {});
+  const fromDivision = divisions.map(d => d.country || d.pais).find(Boolean);
+  if(fromDivision) return String(fromDivision).trim();
+  return countryFromSourceUrl(sourceUrl) || 'Argentina';
+}
+function countryDivisionId(country, name){
+  const countryPart = slugId(country || 'pais');
+  const namePart = slugId(name || 'liga');
+  return `${countryPart}-${namePart}`;
+}
+function mergeLeagueSeeds(seedList){
+  const divisions = [];
+  const clubs = [];
+  const players = [];
+  let nextClubId = 1;
+  let nextPlayerId = 1;
+  const sources = [];
+  (seedList || []).forEach(seedData => {
+    if(!seedData) return;
+    const clubIdMap = new Map();
+    const divisionIds = new Set(divisions.map(d => d.id));
+    (seedData.divisions || []).forEach(division => {
+      if(!divisionIds.has(division.id)){
+        divisions.push({ ...division });
+        divisionIds.add(division.id);
+      }
+    });
+    (seedData.clubs || []).forEach(club => {
+      const newId = nextClubId++;
+      clubIdMap.set(Number(club.id), newId);
+      clubs.push({ ...club, id:newId });
+    });
+    (seedData.players || []).forEach(player => {
+      const oldClubId = Number(player.clubId || 0);
+      const mappedClubId = oldClubId ? clubIdMap.get(oldClubId) : 0;
+      if(oldClubId && !mappedClubId) return;
+      players.push({ ...player, id:nextPlayerId++, clubId:mappedClubId || 0 });
+    });
+    if(seedData.meta?.source) sources.push(seedData.meta.source);
+  });
+  const seedData = {
+    meta:{
+      version:APP_VERSION,
+      source:sources.join(' + ') || 'leagueUrls',
+      combinedSources:sources,
+      generatedAt:new Date().toISOString(),
+      signature:''
+    },
+    divisions:divisions.sort((a,b)=>(a.country || '').localeCompare(b.country || '', 'es', { sensitivity:'base' }) || (a.order || 0)-(b.order || 0)),
+    clubs,
+    players,
+    fixtures:generateFixturesForDivisions(clubs, divisions, { seasonYear:SEASON_START_YEAR })
+  };
+  seedData.meta.signature = seedSignature(seedData);
+  return seedData;
+}
 function buildSeedFromLigaArgentina(raw, sourceUrl){
+  const sourceCountry = detectLeagueCountry(raw, sourceUrl);
   const divisions = extractLeagueDivisions(raw);
-  if(!divisions.length) throw new Error('El JSON de Liga argentina no tiene divisiones o equipos reconocibles.');
+  if(!divisions.length) throw new Error('El JSON de liga no tiene divisiones o equipos reconocibles.');
   const normalizedDivisions = divisions.map((division, index) => {
     const name = normalizeDivisionName(division.name || division.nombre || division.division || `División ${index+1}`);
+    const country = String(division.country || division.pais || sourceCountry || 'Argentina').trim() || 'Argentina';
     return {
-      id: slugId(name),
+      id: countryDivisionId(country, name),
       name,
+      country,
       order:index+1,
       prizeMultiplier: divisionPrizeMultiplier(name, index)
     };
@@ -292,11 +401,13 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
       const prestige = teamPrestige(team, divInfo.name, teamIndex, teams.length);
       const fieldConditionScore = initialFieldScore({ name, id:clubId });
       const fieldCondition = fieldConditionName(fieldConditionScore);
+      const country = divInfo.country || team.country || team.pais || sourceCountry || 'Argentina';
       const club = {
         id:clubId,
         name,
         short:clubShortFromName(name),
         city:team.city || team.ciudad || '',
+        country,
         reputation:prestige,
         budget:clubBudgetByPrestige(prestige, divInfo.prizeMultiplier),
         primaryColor:team.color || team.primaryColor || deterministicColor(name),
@@ -353,6 +464,7 @@ function normalizeDivisionObject(item, index=0){
   if(Array.isArray(item)) return { name:`División ${index+1}`, teams:item };
   return {
     name:item.nombre || item.name || item.division || item.liga || `División ${index+1}`,
+    country:item.country || item.pais || item.countryName || '',
     teams:item.equipos || item.clubes || item.clubs || item.teams || []
   };
 }

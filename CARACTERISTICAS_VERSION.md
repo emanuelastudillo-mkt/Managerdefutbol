@@ -1,9 +1,8 @@
-# V3.74 - JSON Argentina/Chile
+# V3.75 - Ligas simultáneas Argentina + Chile
 
-- Se renombraron las rutas base de Argentina a `data/estadios_argentina.json` y `data/hinchas_argentina.json`.
-- `config.js` ahora apunta por defecto a los archivos argentinos renombrados.
-- Se agregó `data/Liga Chile.json` con una liga jugable chilena de 20 clubes importantes.
-- Se agregó `data/estadios_chile.json`.
-- Se agregó `data/hinchas_chile.json`.
-- Se agregó `data.leagueUrls` en `config.js` para poder cambiar el orden de carga de ligas.
-- README actualizado de más reciente a más antiguo.
+- El juego ahora carga y combina todos los JSON válidos definidos en `data.leagueUrls`.
+- `Buscar club` permite elegir país, liga y club usando el mismo mundo de partida.
+- Argentina y Chile pueden convivir simultáneamente en la selección de clubes.
+- Se cargan también múltiples JSON de estadios e hinchas mediante `data.estadiosUrls` y `data.hinchasUrls`.
+- Los clubes reciben país propio para filtrar correctamente.
+- Los jugadores generados de ligas sin base de datos específica se conservan.

@@ -27,6 +27,16 @@ const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
 const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
 const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas_argentina.json');
+const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
+  STADIUMS_DATABASE_URL,
+  configValue('data.estadiosArgentinaUrl', 'data/estadios_argentina.json'),
+  configValue('data.estadiosChileUrl', 'data/estadios_chile.json')
+]);
+const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
+  FANS_DATABASE_URL,
+  configValue('data.hinchasArgentinaUrl', 'data/hinchas_argentina.json'),
+  configValue('data.hinchasChileUrl', 'data/hinchas_chile.json')
+]);
 const FACILITIES_DATABASE_URL = configValue('data.instalacionesUrl', 'data/instalaciones.json');
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
 const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
@@ -59,7 +69,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.51');
+const APP_VERSION = configValue('version', 'V3.75');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

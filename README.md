@@ -1,4 +1,12 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.75 - Ligas simultáneas Argentina + Chile
+
+- El loader ahora combina todos los archivos válidos de `data.leagueUrls`.
+- `Buscar club` permite filtrar por país, liga y equipo.
+- Argentina y Chile aparecen en el mismo mundo de partida.
+- Se agregan listas múltiples para estadios e hinchas: `data.estadiosUrls` y `data.hinchasUrls`.
+- Los clubes ahora conservan país propio para filtros y futuros sistemas internacionales.
+- Los jugadores generados de ligas sin base de datos propia se conservan.
 
 ## V3.74 - JSON Argentina/Chile
 

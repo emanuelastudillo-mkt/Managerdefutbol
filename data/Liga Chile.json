@@ -1,0 +1,114 @@
+{
+  "version": "V3.74",
+  "pais": "Chile",
+  "descripcion": "Liga jugable ficticia con los 20 equipos chilenos más importantes para el modo manager. No representa necesariamente la nómina oficial vigente de Primera División.",
+  "criterio": "Selección balanceada por historia, convocatoria, actualidad, presencia nacional y utilidad para una liga de 20 clubes.",
+  "leagues": [
+    {
+      "name": "Primera División Chile",
+      "country": "Chile",
+      "teams": [
+        {
+          "name": "Colo-Colo",
+          "city": "Santiago",
+          "reputation": 99
+        },
+        {
+          "name": "Universidad de Chile",
+          "city": "Santiago",
+          "reputation": 96
+        },
+        {
+          "name": "Universidad Católica",
+          "city": "Santiago",
+          "reputation": 94
+        },
+        {
+          "name": "Cobreloa",
+          "city": "Calama",
+          "reputation": 88
+        },
+        {
+          "name": "Unión Española",
+          "city": "Santiago",
+          "reputation": 84
+        },
+        {
+          "name": "Santiago Wanderers",
+          "city": "Valparaíso",
+          "reputation": 82
+        },
+        {
+          "name": "Everton",
+          "city": "Viña del Mar",
+          "reputation": 78
+        },
+        {
+          "name": "O'Higgins",
+          "city": "Rancagua",
+          "reputation": 76
+        },
+        {
+          "name": "Palestino",
+          "city": "Santiago",
+          "reputation": 74
+        },
+        {
+          "name": "Audax Italiano",
+          "city": "Santiago",
+          "reputation": 72
+        },
+        {
+          "name": "Huachipato",
+          "city": "Talcahuano",
+          "reputation": 70
+        },
+        {
+          "name": "Deportes Iquique",
+          "city": "Iquique",
+          "reputation": 69
+        },
+        {
+          "name": "Coquimbo Unido",
+          "city": "Coquimbo",
+          "reputation": 68
+        },
+        {
+          "name": "Deportes La Serena",
+          "city": "La Serena",
+          "reputation": 66
+        },
+        {
+          "name": "Cobresal",
+          "city": "El Salvador",
+          "reputation": 65
+        },
+        {
+          "name": "Ñublense",
+          "city": "Chillán",
+          "reputation": 64
+        },
+        {
+          "name": "Rangers",
+          "city": "Talca",
+          "reputation": 62
+        },
+        {
+          "name": "Magallanes",
+          "city": "San Bernardo",
+          "reputation": 60
+        },
+        {
+          "name": "Universidad de Concepción",
+          "city": "Concepción",
+          "reputation": 59
+        },
+        {
+          "name": "Deportes Concepción",
+          "city": "Concepción",
+          "reputation": 58
+        }
+      ]
+    }
+  ]
+}

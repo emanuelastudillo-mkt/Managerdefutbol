@@ -25,11 +25,11 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
 const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json');
-const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios.json');
-const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas.json');
+const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
+const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas_argentina.json');
 const FACILITIES_DATABASE_URL = configValue('data.instalacionesUrl', 'data/instalaciones.json');
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json'];
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -159,6 +159,7 @@ const TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efect
 const TRAINING_INDIVIDUAL_INITIAL = configValue('entrenamiento.entrenamientoIndividualInicial', DEFAULT_INDIVIDUAL_TRAINING_TYPE);
 const TRAINING_SKILL_CURVE_ENABLED = configValue('entrenamiento.curvaHabilidadActual', true) !== false;
 const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidadMinimaSubidaHabilidad', 0, 0, 1);
+const TRAINING_SKILL_GAIN_MULTIPLIER = configNumber('entrenamiento.multiplicadorSubidaHabilidades', 3, 1, 20);
 const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial', { pre:'regenerative', morning:'intense', afternoon:'tactical', night:'dayoff' });
 
 const FORMATIONS = {
@@ -312,6 +313,12 @@ const ACADEMY_BASE_CAPACITY = Math.max(0, Math.round(configNumber('academia.cupo
 const ACADEMY_RESIDENCE_CAPACITY = Math.max(0, Math.round(configNumber('academia.residenciaCuposJuveniles', 20, 0, 500)));
 const ACADEMY_RESIDENCE_MONTHLY_COST = Math.max(0, Math.round(configNumber('academia.residenciaCostoMensual', 560000, 0)));
 const ACADEMY_RESIDENCE_MONTH_DAYS = 30;
+const ACADEMY_CONSULT_REVEAL_MULTIPLIER = Math.max(1, Math.round(configNumber('academia.multiplicadorConsultaJuveniles', 3, 1, 20)));
+const ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON = Math.max(0, Math.round(configNumber('academia.lesionesJuvenilesMinPorTemporada', 1, 0, 10)));
+const ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON = Math.max(ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON, Math.round(configNumber('academia.lesionesJuvenilesMaxPorTemporada', 2, 0, 10)));
+const ACADEMY_YOUTH_INJURY_MIN_TURNS = Math.max(1, Math.ceil(configNumber('academia.lesionJuvenilDiasMin', 14, 1) / DAYS_PER_ADVANCE));
+const ACADEMY_YOUTH_INJURY_MAX_TURNS = Math.max(ACADEMY_YOUTH_INJURY_MIN_TURNS, Math.ceil(configNumber('academia.lesionJuvenilDiasMax', 42, 1) / DAYS_PER_ADVANCE));
+const ACADEMY_YOUTH_INJURY_TREATMENT_COST = Math.max(0, Math.round(configNumber('academia.costoTratamientoLesionJuvenil', 50000, 0)));
 
 const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
 const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));

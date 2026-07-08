@@ -1,10 +1,9 @@
-# V3.72 - Cambio de club sin reinicio y juvenil excepcional x20
+# V3.74 - JSON Argentina/Chile
 
-## Cambios
-- Se ajustaron los textos del flujo de búsqueda/firma de club para no mencionar nueva partida.
-- Cuando el manager está sin cargo, el flujo queda planteado como continuidad de carrera y firma de contrato.
-- Al firmar con otro club se conserva la misma partida, calendario, mundo e historial.
-- Se agregó `academia.multiplicadorEntrenamientoJuvenilExcepcional` en `config.js`.
-- Valor inicial: 20.
-- El juvenil excepcional entrena x20, separado del multiplicador general de la academia.
+- Se renombraron las rutas base de Argentina a `data/estadios_argentina.json` y `data/hinchas_argentina.json`.
+- `config.js` ahora apunta por defecto a los archivos argentinos renombrados.
+- Se agregó `data/Liga Chile.json` con una liga jugable chilena de 20 clubes importantes.
+- Se agregó `data/estadios_chile.json`.
+- Se agregó `data/hinchas_chile.json`.
+- Se agregó `data.leagueUrls` en `config.js` para poder cambiar el orden de carga de ligas.
 - README actualizado de más reciente a más antiguo.

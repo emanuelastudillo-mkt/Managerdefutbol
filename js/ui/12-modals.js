@@ -803,12 +803,18 @@ function scoutingPlayerRow(player){
     <td>${cell('Resistencia')}</td>
   </tr>`;
 }
-function openNewGameModal(force=false){
+function openNewGameModal(force=false, options={}){
+  if(force && typeof force === 'object'){
+    options = force.target ? {} : force;
+    force = false;
+  }
+  options = options && typeof options === 'object' ? options : {};
+  const requestedClub = options.selectedClubId ? seed?.clubs?.find(club => Number(club.id) === Number(options.selectedClubId)) : null;
   const hasCareer = Boolean(game);
   const canChooseJob = !game || Boolean(game?.gameOver?.active);
-  const initialCountry = game?.selectedCountry || availableCountries()[0] || 'Argentina';
-  const initialLeague = game?.selectedLeagueId || divisionsByCountry(initialCountry)[0]?.id || 'default';
-  const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague).find(club => managerCanSelectClub(club))?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
+  const initialCountry = requestedClub ? clubCountry(requestedClub) : (game?.selectedCountry || availableCountries()[0] || 'Argentina');
+  const initialLeague = requestedClub ? (requestedClub.divisionId || 'default') : (game?.selectedLeagueId || divisionsByCountry(initialCountry)[0]?.id || 'default');
+  const initialClub = requestedClub?.id || game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague).find(club => managerCanSelectClub(club))?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : MANAGER_PRESTIGE_INITIAL;
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const modeLabel = game?.gameOver?.active ? 'Continuar carrera' : 'Buscar club';

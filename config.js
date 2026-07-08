@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.82',
+  version: 'V3.83',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.

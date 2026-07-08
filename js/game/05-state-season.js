@@ -177,17 +177,70 @@ function teamOptionsMarkup(country='Argentina', leagueId='', selectedClubId=0){
     return `<option value="${club.id}" ${Number(club.id)===selected?'selected':''} ${available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
   }).join('');
 }
+function formatPlainNumber(value){
+  return new Intl.NumberFormat('es-AR', { maximumFractionDigits:0 }).format(Math.max(0, Math.round(Number(value || 0))));
+}
+function formatBudgetMillions(value){
+  const millions = Number(value || 0) / 1000000;
+  const digits = millions >= 100 ? 0 : 1;
+  return `$${millions.toLocaleString('es-AR', { maximumFractionDigits:digits })} M`;
+}
+function clubStarterDetails(club){
+  const id = Number(club?.id || 0);
+  return {
+    country:clubCountry(club),
+    league:clubDivision(id).name,
+    capacity:clubStadiumCapacity(id),
+    fans:clubFansBase(id),
+    budget:Number(club?.budget || 0)
+  };
+}
+function availableManagerClubs(prestige=currentManagerPrestige()){
+  return (seed?.clubs || [])
+    .filter(club => managerCanSelectClub(club, prestige))
+    .sort((a,b)=>{
+      const country = clubCountry(a).localeCompare(clubCountry(b), 'es', { sensitivity:'base' });
+      if(country) return country;
+      const div = (a.divisionOrder || 99) - (b.divisionOrder || 99);
+      if(div) return div;
+      const rep = clubPrestigeValue(b) - clubPrestigeValue(a);
+      if(rep) return rep;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    });
+}
+function starterClubCardMarkup(club, options={}){
+  const prestige = Number.isFinite(Number(options.prestige)) ? Number(options.prestige) : currentManagerPrestige();
+  const available = managerCanSelectClub(club, prestige);
+  const details = clubStarterDetails(club);
+  const buttonAttr = options.buttonDataAttr || 'data-job-club';
+  const buttonLabel = options.buttonLabel || 'Elegir club';
+  const compact = Boolean(options.compact);
+  const status = clubAvailabilityLabel(club, prestige);
+  return `<article class="starter-club-card ${available ? 'available' : 'locked'} ${compact ? 'compact' : ''}" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
+    <div class="starter-club-head">
+      ${clubBadge(club.id)}
+      <div>
+        <strong>${escapeHtml(club.name)}</strong>
+        <p class="muted small">${escapeHtml(details.country)} · ${escapeHtml(details.league)}</p>
+      </div>
+      <span class="pill ${available ? 'ok-pill' : 'bad-pill'}">Prestigio ${clubPrestigeValue(club)}</span>
+    </div>
+    <div class="starter-club-meta">
+      <div><span>Capacidad</span><strong>${formatPlainNumber(details.capacity)}</strong></div>
+      <div><span>Hinchas</span><strong>${formatPlainNumber(details.fans)}</strong></div>
+      <div><span>Presupuesto</span><strong>${formatBudgetMillions(details.budget)}</strong></div>
+    </div>
+    <div class="starter-club-actions">
+      <span class="muted small">${escapeHtml(status)}</span>
+      <button type="button" class="primary" ${buttonAttr}="${club.id}" ${available ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
+    </div>
+  </article>`;
+}
 function clubAvailabilityListMarkup(country='Argentina', leagueId=''){
   const clubs = clubsByCountryLeague(country, leagueId);
   const prestige = currentManagerPrestige();
   if(!clubs.length) return '<p class="muted small">No hay clubes para esta liga.</p>';
-  return `<div class="club-availability-list">${clubs.map(club => {
-    const available = managerCanSelectClub(club, prestige);
-    return `<button type="button" class="club-availability-row ${available ? 'available' : 'locked'}" data-job-club="${club.id}" ${available ? '' : 'disabled'}>
-      <span>${clubBadge(club.id)} <strong>${escapeHtml(club.name)}</strong></span>
-      <span class="pill ${available ? 'ok-pill' : 'bad-pill'}">Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(clubAvailabilityLabel(club, prestige))}</span>
-    </button>`;
-  }).join('')}</div>`;
+  return `<div class="club-availability-grid compact">${clubs.map(club => starterClubCardMarkup(club, { prestige, compact:true, buttonDataAttr:'data-job-club', buttonLabel:'Seleccionar' })).join('')}</div>`;
 }
 function storedManagerName(){
   try{ return String(game?.rankingManagerName || localStorage.getItem('fmRankingManagerName') || '').trim(); }

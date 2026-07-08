@@ -1,8 +1,54 @@
 /* V3.47 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
 
+function renderWelcomeScreen(){
+  const prestige = currentManagerPrestige();
+  const prestigeLabel = formatManagerPrestige(prestige);
+  const clubs = availableManagerClubs(prestige);
+  const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
+  const divisionCount = (seed?.divisions || []).length;
+  view.innerHTML = `
+    <section class="welcome-screen">
+      <div class="welcome-hero card">
+        <div>
+          <p class="label">Nueva carrera</p>
+          <h2>Bienvenido a Manager de Fútbol</h2>
+          <p class="tagline">Empezás con prestigio ${escapeHtml(prestigeLabel)}. Elegí un club que acepte tu perfil, armá el plantel, definí la táctica, administrá finanzas, sponsors, estadio, academia, empleados y mercado durante la temporada.</p>
+        </div>
+        <div class="welcome-summary">
+          <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
+          <div><span>Ligas</span><strong>${formatPlainNumber(divisionCount)}</strong></div>
+          <div><span>Clubes disponibles</span><strong>${formatPlainNumber(clubs.length)}</strong></div>
+        </div>
+      </div>
+      <div class="welcome-features">
+        <span>Plantel y táctica</span>
+        <span>Mercado</span>
+        <span>Finanzas y sponsors</span>
+        <span>Estadio e hinchas</span>
+        <span>Academia</span>
+        <span>Empleados</span>
+        <span>Mensajes</span>
+        <span>Sistema ESPECIAL</span>
+      </div>
+      <div class="row welcome-section-title">
+        <div>
+          <p class="label">Clubes que aceptan tu prestigio actual</p>
+          <h3>Opciones disponibles para empezar</h3>
+        </div>
+        <button id="welcomeOpenSearch" class="ghost">Abrir búsqueda completa</button>
+      </div>
+      ${clubs.length ? `<div class="starter-club-grid">${clubs.map(club => starterClubCardMarkup(club, { prestige, buttonDataAttr:'data-welcome-club', buttonLabel:'Empezar' })).join('')}</div>` : '<div class="card"><p class="muted">No hay clubes disponibles con tu prestigio actual.</p></div>'}
+    </section>`;
+  $('welcomeOpenSearch')?.addEventListener('click', () => openNewGameModal(true));
+  document.querySelectorAll('[data-welcome-club]').forEach(button => {
+    button.addEventListener('click', () => openNewGameModal(false, { selectedClubId:Number(button.dataset.welcomeClub || 0) }));
+  });
+}
+
 function renderAll(){
   applySelectedClubTheme(game?.selectedClubId || 0);
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
+
   if(game){
     $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
     $('managerClub').classList.add('side-club-name');
@@ -22,7 +68,7 @@ function renderAll(){
       renderRankingOnline();
       return;
     }
-    view.innerHTML = $('emptyState').innerHTML;
+    renderWelcomeScreen();
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);

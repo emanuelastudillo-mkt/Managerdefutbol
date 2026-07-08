@@ -1,9 +1,8 @@
-# V3.82 - Normalización de ligas y tema visual por club
+# V3.83 - Pantalla inicial con bienvenida y clubes disponibles
 
-- Se normalizaron todos los archivos de liga a una estructura común basada en `leagues > teams`.
-- Cada club ahora define de forma explícita: `name`, `city`, `reputation`, `primaryColor` y `crestPath`.
-- Se preparó la base para futuros escudos personalizados en `img/escudos/` usando la ruta indicada en cada club.
-- El juego ahora toma el `primaryColor` del club elegido y lo aplica como tema visual suave del fondo e interfaz.
-- El color del club respeta la estética oscura actual con una saturación moderada y transiciones sutiles.
-- Se agregaron parámetros de configuración visual en `config.js` para activar o suavizar el tema de club.
-- No se modificó la lógica deportiva ni la estructura de ligas/cupos existente.
+- La pantalla inicial para partidas nuevas ahora muestra una bienvenida general al juego.
+- Se explican de forma breve las áreas principales: plantel, táctica, mercado, finanzas, sponsors, estadio, hinchas, academia, empleados, mensajes y sistema ESPECIAL.
+- Se reemplazó el texto simple inicial por una grilla de clubes disponibles según el prestigio actual del manager.
+- Cada club disponible muestra escudo, país, liga, capacidad de estadio, hinchas base y presupuesto expresado en millones.
+- La búsqueda de club también muestra tarjetas enriquecidas con esos datos dentro del modal de selección.
+- Desde la pantalla inicial se puede abrir la búsqueda completa o preseleccionar un club disponible para iniciar carrera.

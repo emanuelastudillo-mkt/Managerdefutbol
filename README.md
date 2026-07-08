@@ -1,4 +1,12 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.83 - Pantalla inicial con bienvenida y clubes disponibles
+
+- La pantalla inicial para partidas nuevas ahora muestra una bienvenida general al juego.
+- Se resumen las áreas principales: plantel, táctica, mercado, finanzas, sponsors, estadio, hinchas, academia, empleados, mensajes y sistema ESPECIAL.
+- Se reemplaza el texto simple de inicio por una grilla de clubes disponibles según el prestigio actual del manager.
+- Cada tarjeta de club muestra escudo, país, liga, capacidad de estadio, hinchas base y presupuesto en millones.
+- La búsqueda de club también usa tarjetas enriquecidas para comparar opciones antes de firmar contrato.
+
 ## V3.82 - Ligas normalizadas y tema visual por club
 
 - Se normalizaron todos los JSON de liga a una estructura común con `leagues > teams`.
@@ -87,7 +95,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.82
+## Versión actual: V3.83
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

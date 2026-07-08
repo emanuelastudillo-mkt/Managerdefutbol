@@ -1,3 +1,14 @@
+# Manager Fútbol - README
+
+## Última actualización
+
+### V3.67 - Ampliaciones de estadio
+- Nuevo apartado **Ampliaciones** en Estadio.
+- 60 obras progresivas hasta 120.000 espectadores.
+- Reglas de simultaneidad por capacidad, bloqueo por slot y bloqueo integral.
+- Penalización opcional de asistencia por obras activas: -5% por obra, tope -20%.
+- La capacidad sólo aumenta al finalizar la obra.
+
 # Fútbol Manager MVP
 
 ## Versión actual: V3.48

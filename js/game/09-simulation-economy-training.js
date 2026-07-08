@@ -343,6 +343,7 @@ function advanceOneDay(){
     let nextDate = addDaysToIsoDate(fromDate, 1);
     if(round?.date && daysBetweenIsoDates(nextDate, round.date) < 0) nextDate = round.date;
     game.currentDate = nextDate;
+    if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(Math.max(1, Math.abs(daysBetweenIsoDates(fromDate, nextDate)) || 1));
     setDailyAdvanceSummary(fromDate, nextDate);
     setAdvanceLock(DAY_ADVANCE_LOCK_MS);
     activeTab = 'home';
@@ -360,6 +361,8 @@ function goToNextMatch(){
   if(isRegularSeason()){
     const round = nextRegularRound();
     if(round?.date && isCurrentDateBeforeIso(round.date)){
+      const daysToMatch = Math.max(0, Math.abs(daysBetweenIsoDates(currentCalendarDate(), round.date)) || 0);
+      if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(daysToMatch);
       game.currentDate = round.date;
     }
     simulateNextMatchday({ advanceLabel:'Yendo al próximo partido' });
@@ -481,6 +484,7 @@ function simulatePreseasonTurn(){
   maintainBotBalanceDuringSeason({ force:true, phase:'preseason' });
   reduceInjuryDurationsByTurns(1);
   registerInjuryRecoveryTurn('preseason');
+  if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   game.pendingFriendlyOpponentId = 0;
@@ -518,6 +522,7 @@ function simulatePostseasonTurn(){
   applyTrainingEffects();
   reduceInjuryDurationsByTurns(1);
   registerInjuryRecoveryTurn('postseason');
+  if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;

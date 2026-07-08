@@ -361,7 +361,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
           <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong></div>
-          <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
+          <div><p class="label">Capacidad usada</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong>${Number(context.constructionPenalty || 0) > 0 ? `<p class="muted small">Nominal ${new Intl.NumberFormat('es-AR').format(context.nominalCapacity || context.capacity || 0)} · Obras -${context.constructionPenalty}%</p>` : ''}</div>
           <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
           <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>
@@ -640,7 +640,7 @@ function showMatchModal(matchId){
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
         <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong></div>
-        <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
+        <div><p class="label">Capacidad usada</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong>${Number(context.constructionPenalty || 0) > 0 ? `<p class="muted small">Nominal ${new Intl.NumberFormat('es-AR').format(context.nominalCapacity || context.capacity || 0)} · Obras -${context.constructionPenalty}%</p>` : ''}</div>
         <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
         <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>

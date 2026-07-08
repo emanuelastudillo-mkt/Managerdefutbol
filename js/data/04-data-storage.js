@@ -418,7 +418,7 @@ function createInitialStadiumState(){
     fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     ticketPrices[club.id] = TICKET_PRICE_INITIAL;
   });
-  return { fields, projects:{}, ticketPrices, botSeasonNumber:0 };
+  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, expansionProjects:{}, completedExpansions:{}, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
@@ -426,6 +426,9 @@ function ensureStadiumState(){
   if(!game.stadium.fields) game.stadium.fields = {};
   if(!game.stadium.projects) game.stadium.projects = {};
   if(!game.stadium.ticketPrices) game.stadium.ticketPrices = {};
+  if(!game.stadium.capacityOverrides) game.stadium.capacityOverrides = {};
+  if(!game.stadium.expansionProjects) game.stadium.expansionProjects = {};
+  if(!game.stadium.completedExpansions) game.stadium.completedExpansions = {};
   seed.clubs.forEach(club => {
     if(!Number.isFinite(game.stadium.fields[club.id])) game.stadium.fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     if(!Number.isFinite(Number(game.stadium.ticketPrices[club.id]))) game.stadium.ticketPrices[club.id] = TICKET_PRICE_INITIAL;
@@ -446,9 +449,114 @@ function stadiumProjectForClub(clubId){
   return game.stadium.projects[clubId];
 }
 
-function clubStadiumCapacity(clubId){
+function baseStadiumCapacityForClub(clubId){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   return Math.max(500, Math.round(Number(club?.stadiumCapacity || fallbackStadiumCapacityForClub(club || { id:clubId, reputation:50, divisionOrder:3 }))));
+}
+function clubStadiumCapacity(clubId){
+  ensureStadiumState();
+  const override = Number(game?.stadium?.capacityOverrides?.[clubId]);
+  if(Number.isFinite(override) && override > 0) return clamp(Math.round(override), 500, STADIUM_EXPANSION_MAX_CAPACITY);
+  return baseStadiumCapacityForClub(clubId);
+}
+function stadiumExpansionProjectsForClub(clubId){
+  ensureStadiumState();
+  const id = Number(clubId);
+  if(!Array.isArray(game.stadium.expansionProjects[id])) game.stadium.expansionProjects[id] = [];
+  game.stadium.expansionProjects[id] = game.stadium.expansionProjects[id]
+    .filter(project => project && Number(project.daysLeft || 0) > 0)
+    .map(project => ({ ...project, id:Number(project.id), daysLeft:Math.max(0, Math.round(Number(project.daysLeft || 0))), totalDays:Math.max(1, Math.round(Number(project.totalDays || project.days || 1))) }));
+  return game.stadium.expansionProjects[id];
+}
+function completedStadiumExpansionsForClub(clubId){
+  ensureStadiumState();
+  const id = Number(clubId);
+  if(!game.stadium.completedExpansions[id] || typeof game.stadium.completedExpansions[id] !== 'object') game.stadium.completedExpansions[id] = {};
+  return game.stadium.completedExpansions[id];
+}
+function activeStadiumExpansionProjects(clubId){
+  return stadiumExpansionProjectsForClub(clubId).filter(project => Number(project.daysLeft || 0) > 0);
+}
+function maxSimultaneousStadiumWorks(capacity){
+  const cap = Math.round(Number(capacity || 0));
+  if(cap < 5000) return 2;
+  if(cap < 100000) return 3;
+  if(cap < 119000) return 2;
+  return 1;
+}
+function stadiumSlotTokens(slot){
+  return String(slot || '').split(/[\/,+]/).map(s => s.trim()).filter(Boolean);
+}
+function stadiumSlotsConflict(slotA, slotB){
+  const a = stadiumSlotTokens(slotA);
+  const b = stadiumSlotTokens(slotB);
+  if(a.includes('Integral') || b.includes('Integral')) return true;
+  return a.some(token => b.includes(token));
+}
+function stadiumConstructionAttendancePenalty(clubId){
+  const active = activeStadiumExpansionProjects(clubId).length;
+  return clamp(active * STADIUM_EXPANSION_ATTENDANCE_PENALTY_PER_PROJECT, 0, STADIUM_EXPANSION_ATTENDANCE_PENALTY_MAX);
+}
+function availableStadiumExpansionsForClub(clubId){
+  const capacity = clubStadiumCapacity(clubId);
+  const completed = completedStadiumExpansionsForClub(clubId);
+  const activeIds = new Set(activeStadiumExpansionProjects(clubId).map(project => Number(project.id)));
+  return (STADIUM_EXPANSIONS || []).filter(item => !completed[item.id] && !activeIds.has(Number(item.id)) && capacity >= Number(item.minCapacity || 0) && capacity < Number(item.targetCapacity || STADIUM_EXPANSION_MAX_CAPACITY));
+}
+function stadiumExpansionStartStatus(clubId, expansion){
+  const capacity = clubStadiumCapacity(clubId);
+  const active = activeStadiumExpansionProjects(clubId);
+  if(!expansion) return { ok:false, reason:'Obra inválida.' };
+  if(capacity >= STADIUM_EXPANSION_MAX_CAPACITY) return { ok:false, reason:'El estadio ya alcanzó el máximo de 120.000.' };
+  if(capacity < Number(expansion.minCapacity || 0)) return { ok:false, reason:`Requiere ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity || 0)} de capacidad terminada.` };
+  if(capacity >= Number(expansion.targetCapacity || STADIUM_EXPANSION_MAX_CAPACITY)) return { ok:false, reason:'Esta ampliación ya quedó superada por la capacidad actual.' };
+  if(completedStadiumExpansionsForClub(clubId)[expansion.id]) return { ok:false, reason:'Esta obra ya fue realizada.' };
+  if(active.some(project => Number(project.id) === Number(expansion.id))) return { ok:false, reason:'Esta obra ya está en construcción.' };
+  if(active.length >= maxSimultaneousStadiumWorks(capacity)) return { ok:false, reason:`Máximo ${maxSimultaneousStadiumWorks(capacity)} obra(s) simultánea(s) para esta capacidad.` };
+  if(active.some(project => stadiumSlotsConflict(project.slot, expansion.slot))) return { ok:false, reason:'Ya hay una obra activa en ese sector del estadio.' };
+  if((game.budget || 0) < Number(expansion.cost || 0)) return { ok:false, reason:'Presupuesto insuficiente.' };
+  return { ok:true, reason:'' };
+}
+function startStadiumExpansion(expansionId){
+  if(!game?.selectedClubId) return;
+  ensureStadiumState();
+  const clubId = Number(game.selectedClubId);
+  const expansion = (STADIUM_EXPANSIONS || []).find(item => Number(item.id) === Number(expansionId));
+  const status = stadiumExpansionStartStatus(clubId, expansion);
+  if(!status.ok){ showNotice(status.reason); return; }
+  recordBudgetChange(-Number(expansion.cost || 0), `Ampliación estadio: ${expansion.name}`, { type:'stadium_expansion', expansionId:expansion.id, slot:expansion.slot });
+  stadiumExpansionProjectsForClub(clubId).push({ id:expansion.id, name:expansion.name, slot:expansion.slot, capacityGain:expansion.capacityGain, cost:expansion.cost, daysLeft:expansion.days, totalDays:expansion.days });
+  saveLocal(true);
+  showNotice(`Obra iniciada: ${expansion.name}. Duración: ${expansion.days} día(s).`);
+  renderStadium();
+}
+function processStadiumExpansionDays(days=1){
+  if(!game?.stadium?.expansionProjects) return [];
+  const elapsed = Math.max(0, Math.round(Number(days || 0)));
+  if(elapsed <= 0) return [];
+  const completedNow = [];
+  Object.entries(game.stadium.expansionProjects).forEach(([clubIdRaw, projects]) => {
+    const clubId = Number(clubIdRaw);
+    if(!Array.isArray(projects)) return;
+    const remaining = [];
+    projects.forEach(project => {
+      const next = { ...project, daysLeft:Math.max(0, Math.round(Number(project.daysLeft || 0)) - elapsed) };
+      if(next.daysLeft <= 0){
+        const before = clubStadiumCapacity(clubId);
+        const after = clamp(before + Math.round(Number(next.capacityGain || 0)), 500, STADIUM_EXPANSION_MAX_CAPACITY);
+        game.stadium.capacityOverrides[clubId] = after;
+        completedStadiumExpansionsForClub(clubId)[Number(next.id)] = true;
+        completedNow.push({ clubId, project:next, before, after });
+      } else remaining.push(next);
+    });
+    game.stadium.expansionProjects[clubId] = remaining;
+  });
+  completedNow.forEach(done => {
+    if(Number(done.clubId) === Number(game.selectedClubId) && typeof pushGameMessage === 'function'){
+      pushGameMessage({ type:'estadio', title:`Obra finalizada: ${done.project.name}`, body:`La capacidad del estadio aumentó de ${new Intl.NumberFormat('es-AR').format(done.before)} a ${new Intl.NumberFormat('es-AR').format(done.after)} espectadores.`, priority:'normal' });
+    }
+  });
+  return completedNow;
 }
 function clubStadiumName(clubId){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
@@ -519,7 +627,9 @@ function awayFansMinimumRateForMatch(match){
 function attendanceContextForMatch(match){
   ensureFanState();
   ensureStadiumState();
-  const capacity = clubStadiumCapacity(match.homeId);
+  const nominalCapacity = clubStadiumCapacity(match.homeId);
+  const constructionPenalty = stadiumConstructionAttendancePenalty(match.homeId);
+  const capacity = Math.max(0, Math.floor(nominalCapacity * (1 - constructionPenalty)));
   const homeDemand = clubFansCurrent(match.homeId);
   const awayDemand = clubFansCurrent(match.awayId);
   const awayMinRate = awayFansMinimumRateForMatch(match);
@@ -540,6 +650,8 @@ function attendanceContextForMatch(match){
   return {
     stadiumName:clubStadiumName(match.homeId),
     capacity,
+    nominalCapacity,
+    constructionPenalty:Number((constructionPenalty * 100).toFixed(1)),
     homeFans,
     awayFans,
     totalFans,

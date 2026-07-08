@@ -1,7 +1,10 @@
-# V3.66 - Relato del simulador más lento
+# V3.67 - Ampliaciones de estadio
 
-## Cambios
-- El texto grande de **Relato de partido** ahora permanece visible durante más tiempo.
-- Se mantiene cada relato durante 2 fases del simulador.
-- La lista de eventos y el avance del partido siguen funcionando normalmente.
-- Se agregó configuración: `ui.relatoMantenerFases: 2`.
+- Se agregó un apartado de **Ampliaciones** dentro del menú Estadio.
+- Se incorporaron 60 obras progresivas desde 0 hasta 120.000 de capacidad.
+- Se aplican reglas de obras simultáneas por capacidad.
+- No se pueden ejecutar obras del mismo slot al mismo tiempo.
+- Las obras integrales bloquean cualquier otra obra.
+- La capacidad nueva cuenta sólo al terminar la obra.
+- Las obras activas reducen el aforo máximo de partido en 5% por obra, hasta 20%.
+- Se descuentan costos al iniciar obra y se notifica al finalizar.

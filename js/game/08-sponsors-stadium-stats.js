@@ -210,6 +210,50 @@ function repairBotFieldsFromUi(){
 }
 
 
+
+function stadiumExpansionProjectMarkup(project){
+  const total = Math.max(1, Number(project.totalDays || project.daysLeft || 1));
+  const left = Math.max(0, Number(project.daysLeft || 0));
+  const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
+  return `<div class="stadium-expansion-active">
+    <div class="row"><div><strong>${escapeHtml(project.name)}</strong><p class="muted small">Slot ${escapeHtml(project.slot || '—')} · +${new Intl.NumberFormat('es-AR').format(project.capacityGain || 0)} lugares</p></div><span class="pill">${left} día(s)</span></div>
+    <div class="project-progress"><span style="width:${progress}%"></span></div>
+  </div>`;
+}
+function stadiumExpansionCard(expansion){
+  const status = stadiumExpansionStartStatus(game.selectedClubId, expansion);
+  return `<div class="stadium-expansion-option ${status.ok ? '' : 'dim-row'}">
+    <div>
+      <strong>#${expansion.id} · ${escapeHtml(expansion.name)}</strong>
+      <p class="muted small">Desde ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${expansion.days} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
+      <p class="small ${status.ok ? 'ok' : 'muted'}">${status.ok ? `Costo ${formatMoney(expansion.cost)}` : escapeHtml(status.reason)}</p>
+    </div>
+    <button class="primary" data-start-stadium-expansion="${expansion.id}" ${status.ok ? '' : 'disabled'}>Iniciar</button>
+  </div>`;
+}
+function stadiumExpansionsMarkup(){
+  const clubId = game.selectedClubId;
+  const capacity = clubStadiumCapacity(clubId);
+  const baseCapacity = baseStadiumCapacityForClub(clubId);
+  const active = activeStadiumExpansionProjects(clubId);
+  const available = availableStadiumExpansionsForClub(clubId).slice(0, 12);
+  const maxWorks = maxSimultaneousStadiumWorks(capacity);
+  const penalty = stadiumConstructionAttendancePenalty(clubId);
+  const nextLocked = (STADIUM_EXPANSIONS || []).filter(item => capacity < Number(item.minCapacity || 0)).slice(0, 3);
+  return `<div class="card stadium-card stadium-expansions-card" style="margin-top:14px">
+    <div class="row"><div><h3>Ampliaciones</h3><p class="muted small">La capacidad nueva cuenta recién cuando la obra termina. No se pueden repetir slots y las obras integrales bloquean cualquier otra obra.</p></div><span class="pill">${active.length}/${maxWorks} obra(s) activas</span></div>
+    <div class="grid cols-4 stadium-expansion-summary">
+      <div><p class="label">Capacidad base</p><strong>${new Intl.NumberFormat('es-AR').format(baseCapacity)}</strong></div>
+      <div><p class="label">Capacidad actual</p><strong>${new Intl.NumberFormat('es-AR').format(capacity)}</strong></div>
+      <div><p class="label">Máximo</p><strong>${new Intl.NumberFormat('es-AR').format(STADIUM_EXPANSION_MAX_CAPACITY)}</strong></div>
+      <div><p class="label">Penalización asistencia</p><strong class="${penalty > 0 ? 'warn' : ''}">${Math.round(penalty * 100)}%</strong></div>
+    </div>
+    ${active.length ? `<h4>Obras en construcción</h4><div class="stack">${active.map(stadiumExpansionProjectMarkup).join('')}</div>` : '<p class="muted small">No hay obras activas.</p>'}
+    <h4 style="margin-top:14px">Obras disponibles</h4>
+    <div class="stack">${available.length ? available.map(stadiumExpansionCard).join('') : '<p class="muted small">No hay ampliaciones disponibles para la capacidad actual o el estadio llegó al máximo.</p>'}</div>
+    ${nextLocked.length ? `<p class="muted small" style="margin-top:12px">Próximos umbrales: ${nextLocked.map(item => `${escapeHtml(item.name)} desde ${new Intl.NumberFormat('es-AR').format(item.minCapacity)}`).join(' · ')}</p>` : ''}
+  </div>`;
+}
 function renderStadium(){
   ensureStadiumState();
   ensureSponsorState();
@@ -221,6 +265,8 @@ function renderStadium(){
   const currentFans = clubFansCurrent(game.selectedClubId);
   const baseFans = clubFansBase(game.selectedClubId);
   const capacity = clubStadiumCapacity(game.selectedClubId);
+  const constructionPenalty = stadiumConstructionAttendancePenalty(game.selectedClubId);
+  const effectiveCapacity = Math.max(0, Math.floor(capacity * (1 - constructionPenalty)));
   const ticketPrice = ticketPriceForClub(game.selectedClubId);
   const lastFanDelta = Math.round(Number(game?.fans?.clubs?.[game.selectedClubId]?.lastDelta || 0));
   const lastFanClass = lastFanDelta >= 0 ? 'ok' : 'bad';
@@ -242,7 +288,7 @@ function renderStadium(){
         <p class="label">Estado actual</p>
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
-        <p class="muted small">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}</p>
+        <p class="muted small">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
 
       </div>
       <div class="card stadium-card">
@@ -272,6 +318,7 @@ function renderStadium(){
     </div>
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${formatDaysFromTurns(project.replantingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${formatDaysFromTurns(project.patchingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
+    ${stadiumExpansionsMarkup()}
     ${botFieldAuditMarkup()}
     <div class="card sponsors-card" style="margin-top:14px">
       <div class="row"><div><h3>Sponsors</h3><p class="muted small">Cada algunos partidos tendras ofertas publicitarias. El pago se recibe completo al aceptar.</p></div></div>
@@ -290,6 +337,7 @@ function renderStadium(){
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
   $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);
+  document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
   document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
   document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
 }

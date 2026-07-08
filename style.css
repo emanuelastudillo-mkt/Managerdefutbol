@@ -2435,3 +2435,16 @@ button.action-failure{
 }
 @keyframes revealPulseV364{from{border-color:rgba(250,204,21,.14)}to{border-color:rgba(250,204,21,.40)}}
 @media (max-width:900px){.reveal-commentary-card{padding:12px 13px}.reveal-commentary-text{font-size:20px}}
+
+
+/* V3.67: ampliaciones de estadio */
+.stadium-expansions-card h4{margin:16px 0 10px}
+.stadium-expansion-summary{margin:12px 0 14px}
+.stadium-expansion-summary>div{padding:12px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.10)}
+.stadium-expansion-summary strong{font-size:22px;letter-spacing:-.03em}
+.stadium-expansion-option,.stadium-expansion-active{padding:13px 14px;border-radius:16px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.03)}
+.stadium-expansion-option{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.stadium-expansion-option .primary{white-space:nowrap}
+.stadium-expansion-option p{margin:4px 0 0}
+.stadium-expansion-active .project-progress{margin-top:10px}
+@media (max-width:900px){.stadium-expansion-option{align-items:flex-start;flex-direction:column}.stadium-expansion-option .primary{width:100%}}

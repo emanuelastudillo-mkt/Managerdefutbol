@@ -1,3 +1,15 @@
+# V4.01 - Ranking automático obligatorio
+
+- Se bloqueó la carga manual de resultados al ranking online.
+- El menú `Ranking Online` queda como panel de consulta y estado; ya no muestra botón para subir temporada.
+- El ranking se envía automáticamente cuando el manager es despedido.
+- El ranking se envía automáticamente cuando se cierra una temporada.
+- Se agregó control local de envíos por evento para evitar duplicados por temporada, club y tipo de evento.
+- Se registra el estado del envío automático: pendiente, enviado o error.
+- Se mantiene la lectura pública de la tabla online con el botón `Actualizar ranking`.
+
+## Versiones anteriores
+
 # V4.0 - Auditoría, limpieza y optimización
 
 - Se adopta V4.0 como nueva numeración del proyecto.
@@ -10,8 +22,6 @@
 - Se corrigen las rutas de escudos argentinos activos para que apunten directo al archivo existente y reduzcan fallbacks/404.
 - Se removieron 6 escudos de clubes que ya no están referenciados por ninguna liga activa.
 - Se agregó `AUDITORIA_V4.0.md` con detalle de revisión y recomendaciones.
-
-## Versiones anteriores
 
 # V3.87 - Ranking Online Cloudflare Workers + D1
 

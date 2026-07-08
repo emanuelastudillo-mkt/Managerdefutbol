@@ -1,4 +1,4 @@
-/* V3.80 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
+/* V4.01 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos, prestigio y ranking automático. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -1540,6 +1540,7 @@ function checkManagerObjectiveGameOver(){
   activeTab = 'home';
   recordDismissedCareerStep();
   pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:`La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`, id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
+  if(typeof submitRankingAutomatically === 'function') submitRankingAutomatically('dismissal');
   return true;
 }
 function ensureClubBudgetsState(){
@@ -2077,6 +2078,7 @@ function finalizeSeasonIfNeeded(){
   game.seasonFinalized = true;
   game.seasonPhase = 'finalized';
   game.seasonEndModalShown = false;
+  if(typeof submitRankingAutomatically === 'function') submitRankingAutomatically('season_end');
 }
 function applySeasonMovements(){
   const movements = game?.seasonTransition?.movements || [];

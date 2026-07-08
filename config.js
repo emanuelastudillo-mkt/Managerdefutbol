@@ -296,6 +296,7 @@ window.GAME_CONFIG = {
     duracionAvisoMs: 5200,
     fasesSimulacionPartido: 60,
     duracionSimulacionPartidoMs: 60000,
+    relatoMantenerFases: 2,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,
     accionesFeedbackResultadoMs: 900,

@@ -432,11 +432,22 @@ function matchRevealStages(match){
       note:matchRevealStageNote(minute, i, total)
     });
   }
-  return stages.map((stage, index) => ({
+  const withWindows = stages.map((stage, index) => ({
     ...stage,
     previousMinute:index > 0 ? stages[index - 1].minute : -1,
     nextMinute:index < stages.length - 1 ? stages[index + 1].minute : 90
   }));
+  const hold = Math.max(1, Math.round(Number(MATCH_COMMENTARY_HOLD_PHASES || 1)));
+  return withWindows.map((stage, index) => {
+    const narrationIndex = index >= withWindows.length - 1
+      ? index
+      : Math.min(withWindows.length - 2, Math.floor(index / hold) * hold);
+    return {
+      ...stage,
+      narrationIndex,
+      narrationStage:withWindows[narrationIndex]
+    };
+  });
 }
 function renderMatchRevealStage(match, stage, index, total){
   const box = $('matchRevealDynamic');
@@ -458,7 +469,9 @@ function renderMatchRevealStage(match, stage, index, total){
     awayStats.possession = 100 - hPoss;
   }
   const events = matchRevealEvents(match, stage.minute);
-  const narration = matchRevealNarration(match, stage, index, total);
+  const narrationStage = stage.narrationStage || stage;
+  const narrationIndex = Number.isFinite(Number(stage.narrationIndex)) ? Number(stage.narrationIndex) : index;
+  const narration = matchRevealNarration(match, narrationStage, narrationIndex, total);
   box.innerHTML = `
     <div class="card inner reveal-commentary-card ${escapeHtml(narration.tone || 'ambient')}">
       <p class="label">Relato de partido</p>

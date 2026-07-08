@@ -263,6 +263,13 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 
 
 
+
+## V3.66 - Relato del simulador más lento
+
+- El relato grande del simulador permanece visible durante más tiempo.
+- Cada frase se mantiene durante 2 fases para mejorar la lectura.
+- La simulación conserva las 60 fases y la lista de eventos visibles.
+
 ## V3.65 - Corrección visual del prestigio del manager
 - Se corrigió el formato del prestigio para evitar que 1.078 parezca 1.078 puntos enteros.
 - Se muestra como decimal local: 1,078.

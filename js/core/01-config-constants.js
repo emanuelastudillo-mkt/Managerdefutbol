@@ -322,6 +322,7 @@ const BOT_EMERGENCY_SALARY_FACTOR = configNumber('plantel.botsFactorSueldoEmerge
 
 const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
 const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 30000, 1000));
+const MATCH_COMMENTARY_HOLD_PHASES = Math.max(1, Math.min(6, Math.round(configNumber('ui.relatoMantenerFases', 2, 1))));
 const PLAYER_GENERATION_RULES_VERSION = 'V2.30';
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
   { id:'argentinos', probability:0.70, countries:['Argentina'] },

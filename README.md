@@ -1,4 +1,14 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.80 - Bloqueo de recontratación y taquilla por rival
+
+- Si el manager renuncia o es despedido, ese club queda bloqueado durante 1 temporada para evitar el regreso inmediato.
+- El bloqueo se aplica también si el club cumple el requisito de prestigio o está dentro del rango libre de 20 o menos.
+- La búsqueda de club informa el motivo del bloqueo y hasta qué temporada dura.
+- Se agrega `manager.temporadasBloqueoRecontratacion` en `config.js` para modificar la duración.
+- La venta de entradas aumenta cuando el rival tiene mayor prestigio.
+- El aumento se aplica sobre la demanda de público, no sobre el precio manual de la entrada.
+- Se agregan parámetros configurables para el bonus de asistencia por prestigio del rival.
+
 ## V3.79 - Ligas internacionales y prestigio global
 
 - Se agregan cinco ligas jugables nuevas de 18 equipos: Brasil, Inglaterra, España, Italia y Rumania.

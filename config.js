@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.79',
+  version: 'V3.80',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
@@ -60,6 +60,8 @@ window.GAME_CONFIG = {
     prestigioInicial: 0,
     // Clubes con este prestigio o menos aceptan cualquier manager, incluso con prestigio 0.
     prestigioClubLibreMinimo: 20,
+    // Al renunciar o ser despedido, el club bloquea al manager por esta cantidad de temporadas.
+    temporadasBloqueoRecontratacion: 1,
     // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
     // Valores válidos: 0.3 a 2.0.
     objetivoPuntosPorPartido: null,
@@ -218,6 +220,12 @@ window.GAME_CONFIG = {
     posicionTablaPaso: 0.001,
     posicionTablaGananciaMaxima: 0.005,
     precioEntradaEfectoMaximo: 0.01,
+    // Aumento de demanda de entradas por prestigio del rival. 0.35 = hasta +35% de público potencial.
+    bonusAsistenciaPrestigioRivalMaximo: 0.35,
+    // Desde este prestigio del rival empieza a notarse el aumento de interés por el partido.
+    bonusAsistenciaPrestigioRivalDesde: 20,
+    // Proporción del bonus que también empuja demanda visitante/neutral.
+    bonusAsistenciaPrestigioRivalVisitante: 0.50,
     // Multiplica la duración base de las ampliaciones de estadio. Ejemplo: 1 día base x 30 = 30 días reales de obra.
     multiplicadorDiasObras: 30
   },

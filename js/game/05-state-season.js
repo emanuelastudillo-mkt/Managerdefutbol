@@ -1,4 +1,4 @@
-/* V3.78 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
+/* V3.80 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos y prestigio de carrera. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -63,9 +63,46 @@ function currentManagerPrestige(){
 function currentManagerExperience(){
   return Math.max(0, Math.round(Number(game?.managerStats?.experience || 0)));
 }
-function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige()){
+function managerClubRehireBlockInfo(clubOrId){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
+  const clubId = Number(club?.id || clubOrId || 0);
+  if(!clubId || !game?.gameOver?.active || MANAGER_REHIRE_BLOCK_SEASONS <= 0) return { blocked:false };
+  const currentSeason = Math.max(1, Number(game?.seasonNumber || 1));
+  const history = Array.isArray(game?.managerStats?.careerHistory) ? game.managerStats.careerHistory : [];
+  const leaves = history
+    .filter(item => Number(item.clubId || 0) === clubId && ['dismissal','resignation'].includes(String(item.type || '')))
+    .map(item => ({
+      type:String(item.type || ''),
+      season:Math.max(1, Number(item.season || 1)),
+      clubName:String(item.clubName || club?.name || 'este club')
+    }))
+    .sort((a,b) => Number(b.season || 0) - Number(a.season || 0));
+  const last = leaves[0];
+  if(!last) return { blocked:false };
+  const untilSeason = Math.max(1, Number(last.season || 1)) + MANAGER_REHIRE_BLOCK_SEASONS;
+  if(currentSeason <= untilSeason){
+    return {
+      blocked:true,
+      clubId,
+      clubName:last.clubName,
+      type:last.type,
+      leftSeason:Number(last.season || 1),
+      untilSeason,
+      availableSeason:untilSeason + 1
+    };
+  }
+  return { blocked:false };
+}
+function managerClubRehireBlockLabel(clubOrId){
+  const info = managerClubRehireBlockInfo(clubOrId);
+  if(!info.blocked) return '';
+  const cause = info.type === 'resignation' ? 'renuncia' : 'despido';
+  return `Bloqueado por ${cause} hasta temporada ${info.untilSeason}`;
+}
+function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), options={}){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return false;
+  if(options.ignoreRehireBlock !== true && managerClubRehireBlockInfo(club).blocked) return false;
   const clubPrestige = clubPrestigeValue(club);
   const managerPrestige = managerClubAccessPrestige(prestige);
   if(clubPrestige <= MANAGER_CLUB_OPEN_PRESTIGE) return true;
@@ -74,6 +111,8 @@ function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige()){
 function clubAvailabilityLabel(clubOrId, prestige=currentManagerPrestige()){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return 'No disponible';
+  const blockLabel = managerClubRehireBlockLabel(club);
+  if(blockLabel) return blockLabel;
   const clubPrestige = clubPrestigeValue(club);
   if(managerCanSelectClub(club, prestige)) return 'Disponible';
   return `Requiere prestigio ${clubPrestige}`;
@@ -133,7 +172,8 @@ function teamOptionsMarkup(country='Argentina', leagueId='', selectedClubId=0){
   const selected = clubs.some(club => Number(club.id) === Number(selectedClubId) && managerCanSelectClub(club, prestige)) ? Number(selectedClubId) : Number(firstAvailable?.id || 0);
   return clubs.map(club => {
     const available = managerCanSelectClub(club, prestige);
-    const label = `${club.name} · Prestigio ${clubPrestigeValue(club)}${available ? '' : ' · No disponible'}`;
+    const status = clubAvailabilityLabel(club, prestige);
+    const label = `${club.name} · Prestigio ${clubPrestigeValue(club)} · ${status}`;
     return `<option value="${club.id}" ${Number(club.id)===selected?'selected':''} ${available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
   }).join('');
 }
@@ -1198,6 +1238,12 @@ function continueCareerAtClub(selectedClubId, options={}){
   if(!game?.gameOver?.active){ showNotice('Sólo podés buscar otro club cuando estás sin cargo.'); return; }
   const newClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
   if(!newClub){ showNotice('Club no encontrado.'); return; }
+  const rehireBlock = managerClubRehireBlockInfo(newClub);
+  if(rehireBlock.blocked){
+    const cause = rehireBlock.type === 'resignation' ? 'renuncia' : 'despido';
+    showNotice(`${newClub.name} no acepta tu regreso todavía: bloqueo por ${cause} hasta la temporada ${rehireBlock.untilSeason}.`);
+    return;
+  }
   if(!managerCanSelectClub(newClub, currentManagerPrestige())){
     showNotice(`Ese club requiere prestigio ${clubPrestigeValue(newClub)}. Tu prestigio actual es ${formatManagerPrestige(currentManagerPrestige())}.`);
     return;

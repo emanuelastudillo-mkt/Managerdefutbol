@@ -366,6 +366,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
           <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>
           <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
+          ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Atracción rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
         </div>
       </div>
     </div>`;
@@ -645,6 +646,7 @@ function showMatchModal(matchId){
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
         <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong></div>
         <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
+        ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Atracción rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
       </div>
     </div>
     <div class="match-team-columns">
@@ -860,6 +862,12 @@ function openNewGameModal(force=false){
     const selected = Number(clubSelect?.value || 0);
     if(!selected) return;
     const selectedClub = seed.clubs.find(c => Number(c.id) === selected);
+    const rehireBlock = typeof managerClubRehireBlockInfo === 'function' ? managerClubRehireBlockInfo(selectedClub) : { blocked:false };
+    if(rehireBlock.blocked){
+      const cause = rehireBlock.type === 'resignation' ? 'renuncia' : 'despido';
+      showNotice(`${selectedClub.name} no acepta tu regreso todavía: bloqueo por ${cause} hasta la temporada ${rehireBlock.untilSeason}.`);
+      return;
+    }
     if(!managerCanSelectClub(selectedClub, currentManagerPrestige())){
       showNotice(`Ese club requiere prestigio ${clubPrestigeValue(selectedClub)}.`);
       return;

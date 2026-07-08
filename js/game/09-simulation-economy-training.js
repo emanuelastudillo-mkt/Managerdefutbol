@@ -223,7 +223,9 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, trig
     const ticketRevenue = Number(ownResult?.matchContext?.ticketRevenue || 0);
     if(Number(ownResult.homeId) === Number(game.selectedClubId) && ticketRevenue > 0){
       const totalFans = new Intl.NumberFormat('es-AR').format(Number(ownResult?.matchContext?.totalFans || 0));
-      items.push({ label:'Recaudación de entradas', text:`${formatMoney(ticketRevenue)} por ${totalFans} entradas vendidas.`, tone:'ok' });
+      const rivalBonus = Number(ownResult?.matchContext?.rivalPrestigeAttendanceBonusPct || 0);
+      const bonusText = rivalBonus > 0 ? ` · rival +${rivalBonus}%` : '';
+      items.push({ label:'Recaudación de entradas', text:`${formatMoney(ticketRevenue)} por ${totalFans} entradas vendidas${bonusText}.`, tone:'ok' });
     }
   }
   items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
@@ -939,7 +941,15 @@ function applyEconomyResult(match){
   const ticketRevenue = isHome ? Math.round(Number(match?.matchContext?.ticketRevenue || 0)) : 0;
   const totalDelta = delta + ticketRevenue;
   const concept = ticketRevenue > 0 ? 'Resultado de partido + recaudación de entradas' : 'Resultado de partido';
-  recordBudgetChange(totalDelta, concept, { matchId: match.id, multiplier, ticketRevenue, ticketPrice:match?.matchContext?.ticketPrice || 0 });
+  recordBudgetChange(totalDelta, concept, {
+    matchId: match.id,
+    multiplier,
+    ticketRevenue,
+    ticketPrice:match?.matchContext?.ticketPrice || 0,
+    totalFans:match?.matchContext?.totalFans || 0,
+    rivalPrestige:match?.matchContext?.rivalPrestige || 0,
+    rivalPrestigeAttendanceBonusPct:match?.matchContext?.rivalPrestigeAttendanceBonusPct || 0
+  });
 }
 function advanceStadiumAfterMatches(results){
   ensureStadiumState();

@@ -776,14 +776,26 @@ function awayFansMinimumRateForMatch(match){
   const pct = AWAY_FANS_MIN_RATE + (hashNumber(`${match?.id || ''}-away-section`, 1000) / 999) * range;
   return clamp(pct, 0, AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE);
 }
+function rivalPrestigeAttendanceBonusInfo(rivalClubId){
+  const prestige = typeof clubPrestigeValue === 'function'
+    ? clubPrestigeValue(rivalClubId)
+    : clamp(Math.round(Number(seed?.clubs?.find(c => Number(c.id) === Number(rivalClubId))?.reputation || 0)), 1, 99);
+  const span = Math.max(1, 99 - Number(RIVAL_PRESTIGE_ATTENDANCE_START || 0));
+  const progress = clamp((prestige - Number(RIVAL_PRESTIGE_ATTENDANCE_START || 0)) / span, 0, 1);
+  const rate = clamp(progress * Number(RIVAL_PRESTIGE_ATTENDANCE_MAX_RATE || 0), 0, 2);
+  return { prestige, rate, pct:Math.round(rate * 100) };
+}
 function attendanceContextForMatch(match){
   ensureFanState();
   ensureStadiumState();
   const nominalCapacity = clubStadiumCapacity(match.homeId);
   const constructionPenalty = stadiumConstructionAttendancePenalty(match.homeId);
   const capacity = Math.max(0, Math.floor(nominalCapacity * (1 - constructionPenalty)));
-  const homeDemand = clubFansCurrent(match.homeId);
-  const awayDemand = clubFansCurrent(match.awayId);
+  const homeDemandBase = clubFansCurrent(match.homeId);
+  const awayDemandBase = clubFansCurrent(match.awayId);
+  const rivalPrestigeBonus = rivalPrestigeAttendanceBonusInfo(match.awayId);
+  const homeDemand = Math.round(homeDemandBase * (1 + rivalPrestigeBonus.rate));
+  const awayDemand = Math.round(awayDemandBase * (1 + (rivalPrestigeBonus.rate * RIVAL_PRESTIGE_AWAY_DEMAND_SHARE)));
   const awayMinRate = awayFansMinimumRateForMatch(match);
   const awayReservedMinimum = Math.round(capacity * awayMinRate);
   const awayMax = Math.round(capacity * AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE);
@@ -812,7 +824,14 @@ function attendanceContextForMatch(match){
     awayMax,
     homeCrowdBonus,
     ticketPrice,
-    ticketRevenue
+    ticketRevenue,
+    homeDemandBase,
+    awayDemandBase,
+    homeDemand,
+    awayDemand,
+    rivalPrestige:Number(rivalPrestigeBonus.prestige || 0),
+    rivalPrestigeAttendanceBonusRate:Number(rivalPrestigeBonus.rate || 0),
+    rivalPrestigeAttendanceBonusPct:Number(rivalPrestigeBonus.pct || 0)
   };
 }
 function fanTableRateForPosition(position){

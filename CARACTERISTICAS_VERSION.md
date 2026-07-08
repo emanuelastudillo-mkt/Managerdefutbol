@@ -1,7 +1,8 @@
-# V3.84 - Parche de prueba de prestigio Chile
+# V3.85 - Búsqueda simple y tarjetas compactas
 
-- Se ajustó Magallanes, el club chileno de menor prestigio, de 35 a 18 de prestigio.
-- Magallanes queda disponible para managers nuevos con prestigio 0 por la regla de clubes libres de 20 o menos.
-- Se sincronizó el cambio en Liga Chile, estadios e hinchadas chilenas/globales.
-- Se ajustó su base de hinchas a 700 para mantener coherencia con el nuevo prestigio bajo.
-- Se mantuvo la estructura de 18 clubes en la Primera División Chile.
+- La búsqueda completa de clubes vuelve a mostrarse como lista simple mediante selectores.
+- Se elimina de la búsqueda completa la grilla con escudo, país, liga, estadio, hinchas y presupuesto.
+- La pantalla inicial conserva tarjetas informativas de clubes disponibles, pero ahora son más compactas.
+- Las tarjetas iniciales muestran escudo, país, liga, capacidad, hinchas, presupuesto y prestigio en menos espacio.
+- Se mejora la carga de escudos con rutas alternativas: `crestPath`, slug en minúsculas, formato `.webp`, nombres heredados y carpeta `IMG/ESCUDOS`.
+- Si un escudo no existe, el juego prueba rutas alternativas antes de ocultar la imagen.

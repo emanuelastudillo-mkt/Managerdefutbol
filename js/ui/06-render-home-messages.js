@@ -37,7 +37,7 @@ function renderWelcomeScreen(){
         </div>
         <button id="welcomeOpenSearch" class="ghost">Abrir búsqueda completa</button>
       </div>
-      ${clubs.length ? `<div class="starter-club-grid">${clubs.map(club => starterClubCardMarkup(club, { prestige, buttonDataAttr:'data-welcome-club', buttonLabel:'Empezar' })).join('')}</div>` : '<div class="card"><p class="muted">No hay clubes disponibles con tu prestigio actual.</p></div>'}
+      ${clubs.length ? `<div class="starter-club-grid">${clubs.map(club => starterClubCardMarkup(club, { prestige, compact:true, buttonDataAttr:'data-welcome-club', buttonLabel:'Empezar' })).join('')}</div>` : '<div class="card"><p class="muted">No hay clubes disponibles con tu prestigio actual.</p></div>'}
     </section>`;
   $('welcomeOpenSearch')?.addEventListener('click', () => openNewGameModal(true));
   document.querySelectorAll('[data-welcome-club]').forEach(button => {

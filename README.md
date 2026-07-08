@@ -1,4 +1,13 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.85 - Búsqueda simple y tarjetas compactas
+
+- La búsqueda completa de clubes vuelve a funcionar como lista simple con país, liga y equipo.
+- Se elimina de la búsqueda completa la grilla de tarjetas detalladas para ahorrar espacio.
+- La pantalla inicial mantiene las tarjetas de clubes disponibles, pero ahora son más compactas.
+- Las tarjetas de inicio conservan escudo, país, liga, capacidad de estadio, hinchas, presupuesto y prestigio.
+- Se mejora la conexión con escudos usando rutas alternativas cuando `crestPath` no encuentra la imagen.
+- El sistema prueba `img/escudos/`, `.png`, `.webp`, nombres heredados y también `IMG/ESCUDOS/`.
+
 ## V3.84 - Parche de prueba de prestigio Chile
 
 - Se ajustó Magallanes, el club chileno de menor prestigio, de 35 a 18.
@@ -102,7 +111,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.84
+## Versión actual: V3.85
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

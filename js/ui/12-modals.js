@@ -834,22 +834,13 @@ function openNewGameModal(force=false, options={}){
         <label for="modalClubSelect">Equipo</label>
         <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
-      <div id="modalClubAvailabilityBox" class="job-availability-box">${clubAvailabilityListMarkup(initialCountry, initialLeague)}</div>
       <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
     </div>`;
   openModal(body);
   const countrySelect = $('modalCountrySelect');
   const leagueSelect = $('modalLeagueSelect');
   const clubSelect = $('modalClubSelect');
-  const availabilityBox = $('modalClubAvailabilityBox');
-  const syncAvailability = () => {
-    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
-    const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
-    if(availabilityBox) availabilityBox.innerHTML = clubAvailabilityListMarkup(country, league);
-    document.querySelectorAll('[data-job-club]').forEach(btn => btn.addEventListener('click', () => {
-      if(clubSelect) clubSelect.value = btn.dataset.jobClub;
-    }));
-  };
+  const syncAvailability = () => {};
   const syncLeagues = () => {
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
@@ -859,7 +850,6 @@ function openNewGameModal(force=false, options={}){
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
     if(clubSelect) clubSelect.innerHTML = teamOptionsMarkup(country, league, clubSelect.value);
-    syncAvailability();
   };
   countrySelect?.addEventListener('change', syncLeagues);
   leagueSelect?.addEventListener('change', syncClubs);
@@ -888,7 +878,6 @@ function openNewGameModal(force=false, options={}){
       leagueId:leagueSelect?.value || ''
     });
   });
-  syncAvailability();
   newGameModalShown = true;
 }
 function openModal(html){

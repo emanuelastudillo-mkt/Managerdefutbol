@@ -216,7 +216,24 @@ function starterClubCardMarkup(club, options={}){
   const buttonLabel = options.buttonLabel || 'Elegir club';
   const compact = Boolean(options.compact);
   const status = clubAvailabilityLabel(club, prestige);
-  return `<article class="starter-club-card ${available ? 'available' : 'locked'} ${compact ? 'compact' : ''}" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
+  if(compact){
+    return `<article class="starter-club-card ${available ? 'available' : 'locked'} compact" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
+      <div class="starter-club-head compact">
+        ${clubBadge(club.id)}
+        <div>
+          <strong>${escapeHtml(club.name)}</strong>
+          <p class="starter-club-line">${escapeHtml(details.country)} · ${escapeHtml(details.league)}</p>
+          <p class="starter-club-line starter-club-stats"><span>Est. ${formatPlainNumber(details.capacity)}</span><span>Hin. ${formatPlainNumber(details.fans)}</span><span>${formatBudgetMillions(details.budget)}</span></p>
+        </div>
+        <span class="pill ok-pill">P ${clubPrestigeValue(club)}</span>
+      </div>
+      <div class="starter-club-actions compact">
+        <span class="muted small">${escapeHtml(status)}</span>
+        <button type="button" class="primary" ${buttonAttr}="${club.id}" ${available ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
+      </div>
+    </article>`;
+  }
+  return `<article class="starter-club-card ${available ? 'available' : 'locked'}" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
     <div class="starter-club-head">
       ${clubBadge(club.id)}
       <div>
@@ -240,7 +257,10 @@ function clubAvailabilityListMarkup(country='Argentina', leagueId=''){
   const clubs = clubsByCountryLeague(country, leagueId);
   const prestige = currentManagerPrestige();
   if(!clubs.length) return '<p class="muted small">No hay clubes para esta liga.</p>';
-  return `<div class="club-availability-grid compact">${clubs.map(club => starterClubCardMarkup(club, { prestige, compact:true, buttonDataAttr:'data-job-club', buttonLabel:'Seleccionar' })).join('')}</div>`;
+  return `<div class="job-club-list">${clubs.map(club => {
+    const available = managerCanSelectClub(club, prestige);
+    return `<button type="button" class="job-club-list-row ${available ? '' : 'locked'}" data-job-club="${club.id}" ${available ? '' : 'disabled'}><strong>${escapeHtml(club.name)}</strong><span>Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(clubAvailabilityLabel(club, prestige))}</span></button>`;
+  }).join('')}</div>`;
 }
 function storedManagerName(){
   try{ return String(game?.rankingManagerName || localStorage.getItem('fmRankingManagerName') || '').trim(); }

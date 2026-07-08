@@ -171,10 +171,63 @@ function applySelectedClubTheme(clubId=game?.selectedClubId || 0){
   root.style.setProperty('--club-theme-bg-opacity', String(configNumber('ui.temaClubFondoOpacidad', 0.18, 0, 0.4)));
   root.style.setProperty('--club-theme-panel-opacity', String(configNumber('ui.temaClubPanelOpacidad', 0.05, 0, 0.2)));
 }
+function encodeAssetPath(path){
+  const raw = String(path || '').trim();
+  if(!raw || /^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+  return raw.split('/').map(segment => encodeURIComponent(segment)).join('/');
+}
+function clubAssetSlug(name){
+  return String(name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'club';
+}
+function legacyEscudoSlug(name){
+  return String(name || '').trim().replace(/\s+/g,'_').replace(/[^\x00-\x7F]/g, ch => `#U${ch.charCodeAt(0).toString(16).padStart(4,'0')}`);
+}
+function uniqueBadgePaths(paths){
+  const seen = new Set();
+  return paths.filter(path => {
+    const clean = String(path || '').trim();
+    if(!clean || seen.has(clean)) return false;
+    seen.add(clean);
+    return true;
+  });
+}
+function clubBadgeSrcCandidates(club){
+  const name = club?.name || '';
+  const slug = clubAssetSlug(name);
+  const underscore = typeof imageSlug === 'function' ? imageSlug(name) : String(name || '').trim().replace(/\s+/g,'_');
+  const legacy = legacyEscudoSlug(name);
+  return uniqueBadgePaths([
+    club?.crestPath,
+    `img/escudos/${slug}.png`,
+    `img/escudos/${slug}.webp`,
+    `img/escudos/${underscore}.png`,
+    `img/escudos/${underscore}.webp`,
+    `img/escudos/${legacy}.png`,
+    `img/escudos/${legacy}.webp`,
+    `IMG/ESCUDOS/${slug}.png`,
+    `IMG/ESCUDOS/${slug}.webp`
+  ]).map(encodeAssetPath);
+}
+function nextClubBadgeSrc(img){
+  if(!img) return;
+  let paths = [];
+  try{ paths = JSON.parse(img.dataset.fallbackSrcs || '[]'); }catch(_){ paths = []; }
+  const current = Math.max(0, Number(img.dataset.fallbackIndex || 0));
+  const next = current + 1;
+  if(next < paths.length){
+    img.dataset.fallbackIndex = String(next);
+    img.src = paths[next];
+    return;
+  }
+  img.onerror = null;
+  img.style.visibility = 'hidden';
+}
 function clubBadge(id){
   const club = seed.clubs.find(c=>c.id===id) || {};
-  const src = club.crestPath || `img/escudos/${imageSlug(club.name || clubName(id))}.png`;
-  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" onerror="this.style.visibility='hidden'"></span>`;
+  const paths = clubBadgeSrcCandidates(club);
+  const src = paths[0] || '';
+  const fallbackJson = escapeHtml(JSON.stringify(paths));
+  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" data-fallback-index="0" data-fallback-srcs='${fallbackJson}' onerror="nextClubBadgeSrc(this)"></span>`;
 }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }

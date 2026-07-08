@@ -30,6 +30,15 @@ function renderWelcomeScreen(){
         <span>Mensajes</span>
         <span>Sistema ESPECIAL</span>
       </div>
+      <div class="founder-mode-card card">
+        <div>
+          <p class="label">Modo alternativo</p>
+          <h3>Fundar tu propio club</h3>
+          <p class="muted">Empezás sin jugadores, sin dinero, con estadio de capacidad 0, prestigio 10 y 500 hinchas. No tendrás objetivos de directiva ni despidos, pero deberás construir todo desde Mercado, Estadio y Finanzas.</p>
+          <p class="warn small"><strong>Modo no recomendado para tu primera partida.</strong></p>
+        </div>
+        <button id="welcomeFounderMode" class="primary" type="button">Modo Fundador</button>
+      </div>
       <div class="row welcome-section-title">
         <div>
           <p class="label">Clubes que aceptan tu prestigio actual</p>
@@ -40,6 +49,7 @@ function renderWelcomeScreen(){
       ${clubs.length ? `<div class="starter-club-grid">${clubs.map(club => starterClubCardMarkup(club, { prestige, compact:true, buttonDataAttr:'data-welcome-club', buttonLabel:'Empezar' })).join('')}</div>` : '<div class="card"><p class="muted">No hay clubes disponibles con tu prestigio actual.</p></div>'}
     </section>`;
   $('welcomeOpenSearch')?.addEventListener('click', () => openNewGameModal(true));
+  $('welcomeFounderMode')?.addEventListener('click', () => openFounderModeModal());
   document.querySelectorAll('[data-welcome-club]').forEach(button => {
     button.addEventListener('click', () => openNewGameModal(false, { selectedClubId:Number(button.dataset.welcomeClub || 0) }));
   });
@@ -47,6 +57,7 @@ function renderWelcomeScreen(){
 
 function renderAll(){
   applySelectedClubTheme(game?.selectedClubId || 0);
+  if(game && currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
   document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
 
   if(game){
@@ -224,12 +235,15 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
-  const objectiveText = objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—';
+  const founderMode = currentGameIsFounderMode();
+  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—');
   const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
   const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
     ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${extraText}`
     : (objectiveInfo.ppg > objectiveInfo.objective ? 'La confianza de la directiva se sostiene por ahora.' : 'La directiva evalúa despedirte.');
-  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '';
+  const objectiveProgress = founderMode
+    ? founderGoalProgressMarkup()
+    : (objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');
   const phase = phaseLabel();
   const nextBox = next
     ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`

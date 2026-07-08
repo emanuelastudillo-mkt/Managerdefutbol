@@ -2738,3 +2738,8 @@ th{
   .starter-club-actions.compact{align-items:center;flex-direction:row}
   .starter-club-actions.compact .primary{width:auto}
 }
+
+/* V3.86 · Modo Fundador */
+.founder-mode-card{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;margin:14px 0;border-color:rgba(245,158,11,.24);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(var(--club-rgb),.04),rgba(255,255,255,.025))}
+.founder-mode-card h3{margin:.1rem 0 .35rem}.founder-mode-card p{margin:.25rem 0}.founder-warning{border-color:rgba(245,158,11,.36);background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(255,255,255,.025));margin:12px 0}.founder-preview{margin-top:12px}.founder-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.founder-preview-grid div{padding:10px;border:1px solid rgba(148,163,184,.12);border-radius:14px;background:rgba(255,255,255,.035)}.founder-preview-grid span{display:block;color:var(--muted);font-size:12px}.founder-preview-grid strong{display:block;margin-top:2px}.founder-goal-progress{border-color:rgba(245,158,11,.28);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(var(--club-rgb),.05))}.founder-goal-progress .manager-objective-bar span{background:linear-gradient(90deg,#f59e0b,var(--accent))}
+@media (max-width:760px){.founder-mode-card{grid-template-columns:1fr}.founder-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

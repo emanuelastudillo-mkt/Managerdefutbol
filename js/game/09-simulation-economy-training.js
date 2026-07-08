@@ -717,9 +717,10 @@ function updateTransferBudgetPerformanceUnlocks(){
   const played = Number(current.played || 0);
   if(played <= 0) return false;
   const ppg = ppgFromTotals(current);
-  const objective = Number(current.objectivePpg || managerObjectiveForClubDivision(game.selectedClubId));
+  const rawObjective = Number.isFinite(Number(current.objectivePpg)) ? Number(current.objectivePpg) : managerObjectiveForClubDivision(game.selectedClubId);
+  const objective = Number.isFinite(Number(rawObjective)) ? Number(rawObjective) : null;
   let changed = false;
-  if(Number.isFinite(objective) && ppg > objective){
+  if(!currentGameIsFounderMode() && Number.isFinite(objective) && ppg > objective){
     changed = unlockTransferBudgetRate('objective', cfg.unlockObjective, 'La directiva libera presupuesto', `El promedio de puntos superó el objetivo (${ppg.toFixed(2)} / ${objective.toFixed(2)}). Se habilitó ${transferBudgetPercentLabel(cfg.unlockObjective)} adicional para fichajes.`) || changed;
   }
   if(ppg > 1.5){

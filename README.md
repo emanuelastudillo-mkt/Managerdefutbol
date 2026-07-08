@@ -1,4 +1,17 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.86 - Modo Fundador
+
+- Se agrega un botón `Modo Fundador` en la pantalla inicial.
+- El modo fundador permite crear un club propio desde cero y no se recomienda para la primera partida.
+- El club creado reemplaza a un club bot de bajo prestigio en la división más baja del país elegido para mantener ligas de 18 equipos.
+- El club propio inicia con 0 jugadores, $0, estadio de capacidad 0, prestigio 10 y 500 hinchas.
+- Los jugadores del club reemplazado pasan al mercado como jugadores libres normales.
+- El sistema refuerza automáticamente la cantidad de jugadores libres normales por posiciones para que el modo sea jugable sin regalar plantel.
+- El club fundado no tiene objetivos de directiva y no puede despedir al manager.
+- Se agrega un sistema de metas fundadoras con barra de progreso, importancia y mensajes al completar hitos.
+- Las metas se activan de forma secuencial para evitar que algunos hitos se cumplan antes de estar activos.
+- El sistema entra en bucle con nuevas metas de victorias, hinchas, capacidad y ascensos/campeonatos.
+
 ## V3.85 - Búsqueda simple y tarjetas compactas
 
 - La búsqueda completa de clubes vuelve a funcionar como lista simple con país, liga y equipo.
@@ -111,7 +124,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.85
+## Versión actual: V3.86
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

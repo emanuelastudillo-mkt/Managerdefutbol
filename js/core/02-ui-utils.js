@@ -78,6 +78,9 @@ function rnd(min,max){ return min + Math.random() * (max-min); }
 function avg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
 function formatMoney(value){ return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(value); }
 function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
+function isFoundedClub(club){ return Boolean(club?.isFoundedClub || club?.founderClub || club?.modoFundador); }
+function isFoundedClubId(clubId){ return isFoundedClub(seed?.clubs?.find(c => Number(c.id) === Number(clubId))); }
+function currentGameIsFounderMode(state=game){ return Boolean(state?.founderMode || isFoundedClubId(state?.selectedClubId)); }
 function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
 function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
 

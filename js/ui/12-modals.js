@@ -803,6 +803,64 @@ function scoutingPlayerRow(player){
     <td>${cell('Resistencia')}</td>
   </tr>`;
 }
+function openFounderModeModal(){
+  if(!founderModeEnabled()){
+    showNotice('El modo fundador está desactivado en la configuración.');
+    return;
+  }
+  if(game && !game.gameOver?.active){
+    showNotice('El modo fundador sólo se puede iniciar sin una partida activa.');
+    return;
+  }
+  const country = availableCountries()[0] || 'Argentina';
+  const body = `
+    <div class="new-game-modal founder-modal">
+      <p class="label">Modo Fundador</p>
+      <h2>Fundar tu propio club</h2>
+      <p class="muted">Vas a reemplazar a un club bot de bajo prestigio en la división más baja del país elegido. Tu club empieza sin jugadores, sin dinero, con estadio de capacidad 0, prestigio ${FOUNDER_CLUB_REPUTATION} y ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas.</p>
+      <div class="card blocker founder-warning"><strong>Modo no recomendado para tu primera partida.</strong><p class="muted small">No tendrás objetivos de directiva ni despidos, pero deberás contratar jugadores libres, conseguir ingresos y construir el estadio desde cero.</p></div>
+      <div class="new-game-form-grid">
+        <label for="founderManagerName">Nombre del manager</label>
+        <input id="founderManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
+        <label for="founderClubName">Nombre del club</label>
+        <input id="founderClubName" maxlength="42" placeholder="Ej: Club Atlético Los Fundadores">
+        <label for="founderCity">Ciudad</label>
+        <input id="founderCity" maxlength="42" placeholder="Ej: Villa Celina">
+        <label for="founderCountry">País inicial</label>
+        <select id="founderCountry">${countryOptionsMarkup(country)}</select>
+        <label for="founderPrimaryColor">Color principal</label>
+        <input id="founderPrimaryColor" type="color" value="#3b82f6">
+      </div>
+      <div class="founder-preview card">
+        <p class="label">Condiciones iniciales</p>
+        <div class="founder-preview-grid">
+          <div><span>Plantel</span><strong>0 jugadores</strong></div>
+          <div><span>Presupuesto</span><strong>$0</strong></div>
+          <div><span>Estadio</span><strong>0 lugares</strong></div>
+          <div><span>Hinchas</span><strong>${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)}</strong></div>
+          <div><span>Prestigio club</span><strong>${FOUNDER_CLUB_REPUTATION}</strong></div>
+          <div><span>Directiva</span><strong>Sin objetivos</strong></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px"><button id="btnCreateFounderClub" class="primary">Fundar club</button></div>
+    </div>`;
+  openModal(body);
+  $('founderManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
+  $('btnCreateFounderClub')?.addEventListener('click', () => {
+    const clubName = String($('founderClubName')?.value || '').trim();
+    if(clubName.length < 3){ showNotice('Ingresá un nombre de club de al menos 3 caracteres.'); return; }
+    const city = String($('founderCity')?.value || '').trim();
+    if(city.length < 2){ showNotice('Ingresá una ciudad para el club.'); return; }
+    createFounderGame({
+      managerName:$('founderManagerName')?.value || '',
+      clubName,
+      city,
+      country:$('founderCountry')?.value || country,
+      primaryColor:$('founderPrimaryColor')?.value || '#3b82f6'
+    });
+  });
+}
+
 function openNewGameModal(force=false, options={}){
   if(force && typeof force === 'object'){
     options = force.target ? {} : force;

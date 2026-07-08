@@ -568,12 +568,14 @@ function stadiumProjectForClub(clubId){
 
 function baseStadiumCapacityForClub(clubId){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  if(isFoundedClub(club) && Number.isFinite(Number(club?.stadiumCapacity))) return clamp(Math.round(Number(club.stadiumCapacity)), 0, STADIUM_EXPANSION_MAX_CAPACITY);
   return Math.max(500, Math.round(Number(club?.stadiumCapacity || fallbackStadiumCapacityForClub(club || { id:clubId, reputation:50, divisionOrder:3 }))));
 }
 function clubStadiumCapacity(clubId){
   ensureStadiumState();
+  const founded = isFoundedClubId(clubId);
   const override = Number(game?.stadium?.capacityOverrides?.[clubId]);
-  if(Number.isFinite(override) && override > 0) return clamp(Math.round(override), 500, STADIUM_EXPANSION_MAX_CAPACITY);
+  if(Number.isFinite(override) && (override > 0 || founded)) return clamp(Math.round(override), founded ? 0 : 500, STADIUM_EXPANSION_MAX_CAPACITY);
   return baseStadiumCapacityForClub(clubId);
 }
 function stadiumExpansionBaseById(expansionId){

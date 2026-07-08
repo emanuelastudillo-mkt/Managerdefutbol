@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.85',
+  version: 'V3.86',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
@@ -54,6 +54,19 @@ window.GAME_CONFIG = {
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5
+  },
+  modoFundador: {
+    activo: true,
+    prestigioClubInicial: 10,
+    presupuestoInicial: 0,
+    capacidadEstadioInicial: 0,
+    hinchasIniciales: 500,
+    campoInicial: 30,
+    libresMinimosTotales: 80,
+    libresMinimosPorteros: 8,
+    libresMinimosDefensores: 20,
+    libresMinimosMediocampistas: 24,
+    libresMinimosDelanteros: 16
   },
   manager: {
     // Prestigio inicial del manager. Un manager nuevo arranca en 0.

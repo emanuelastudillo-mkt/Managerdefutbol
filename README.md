@@ -1,920 +1,221 @@
-/* V3.47 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
+# Fútbol Manager MVP
 
-function renderAll(){
-  document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
-  if(game){
-    $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
-    $('managerClub').classList.add('side-club-name');
-  }else{
-    $('managerClub').textContent = 'Sin partida';
-    $('managerClub').classList.remove('side-club-name');
-  }
-  refreshSidebarDate();
-  $('btnSave').disabled = !game;
-  if(!game){
-    hideNotice();
-    if(activeTab === 'ranking' && typeof renderRankingOnline === 'function'){
-      renderRankingOnline();
-      return;
-    }
-    view.innerHTML = $('emptyState').innerHTML;
-    return;
-  }
-  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  if(game.gameOver?.active){
-    renderGameOverScreen();
-    return;
-  }
-  repairBotRosters({ reason:'render' });
-  if(activeTab === 'players') activeTab = 'market';
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
-  (renderers[activeTab] || renderers.home)();
-}
-function renderClubRequirementsWarning(){
-  const invalid = invalidClubRequirements();
-  const rows = invalid.map(item => {
-    const squad = playersByClub(item.club.id);
-    const keepers = squad.filter(p=>p.position==='POR').length;
-    return `<tr><td><strong>${escapeHtml(item.club.name)}</strong></td><td>${squad.length}</td><td>${keepers}</td><td><span class="bad">${escapeHtml(item.issues.join(' · '))}</span></td></tr>`;
-  }).join('');
-  view.innerHTML = `
-    <div class="card blocker requirement-warning">
-      <h2>Advertencia de estructura de planteles</h2>
-      <p>Cada club debe tener como mínimo <strong>${MIN_PLAYERS_PER_CLUB} jugadores</strong>, <strong>${BOT_MIN_GOALKEEPERS} porteros</strong>, <strong>${BOT_MIN_DEFENDERS} defensores</strong>, <strong>${BOT_MIN_MIDFIELDERS} mediocampistas</strong> y <strong>${BOT_MIN_ATTACKERS} delanteros</strong>. Los bots se reparan automáticamente; esta advertencia sólo debería quedar para el club del usuario si su plantel queda incompleto.</p>
-      <div class="table-wrap"><table><thead><tr><th>Club</th><th>Jugadores</th><th>Porteros</th><th>Problema</th></tr></thead><tbody>${rows}</tbody></table></div>
-    </div>`;
-}
-function getNextMatchForSelected(){
-  if(!game || game.matchdayIndex >= game.fixtures.length) return null;
-  const round = game.fixtures[game.matchdayIndex];
-  return round.matches.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
-}
-function turnModePanelMarkup(){
-  if(!game || game.seasonFinalized) return '';
-  if(isPreseason()){
-    const remaining = Math.max(0, MAX_PRESEASON_FRIENDLIES - preseasonFriendliesPlayed());
-    const options = seed.clubs
-      .filter(c => c.id !== game.selectedClubId)
-      .map(c => `<option value="${c.id}" ${Number(game.pendingFriendlyOpponentId || 0)===c.id?'selected':''}>${escapeHtml(c.name)} · ${escapeHtml(clubDivision(c.id).name)}</option>`)
-      .join('');
-    return `<div class="card preseason-card">
-      <div class="row"><div><p class="label">Pretemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn || 0, PRESEASON_TURNS)}</h3></div><span class="pill">Amistosos restantes: ${remaining}</span></div>
-      <p class="muted">Usá estos días para entrenar, recuperar forma física y preparar el plantel antes del inicio oficial.</p>
-      <div class="grid cols-2" style="margin-top:10px">
-        <div><label for="friendlyOpponentSelect">Amistoso opcional de esta semana</label><select id="friendlyOpponentSelect" ${remaining <= 0 ? 'disabled' : ''}><option value="0">Sin amistoso</option>${options}</select></div>
-        <div class="row" style="align-items:end"><button id="btnClearFriendly" class="ghost" ${Number(game.pendingFriendlyOpponentId || 0) ? '' : 'disabled'}>Quitar amistoso</button></div>
-      </div>
-    </div>`;
-  }
-  if(isPostseason()){
-    return `<div class="card preseason-card"><div class="row"><div><p class="label">Postemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn || 0, postseasonTurnsForCurrentSeason())}</h3></div><span class="pill">Sin partidos oficiales</span></div><p class="muted">Últimos días del año para entrenamiento y recuperación antes del cierre formal de temporada.</p></div>`;
-  }
-  return '';
-}
+## Versión actual: V3.48
 
-function featuredPlayerCard(type, player, label, valueText){
-  if(!player){
-    return `<div class="card featured-player-card empty"><p class="label">${escapeHtml(label)}</p><p class="muted">Sin jugador destacado todavía.</p></div>`;
-  }
-  const stats = game?.playerStats?.[player.id] || {};
-  return `<button class="card featured-player-card clickable" data-player-id="${player.id}" type="button">
-    ${faceImg(player, 'featured-player-face')}
-    <div class="featured-player-info">
-      <span class="featured-badge ${escapeHtml(type)}">${escapeHtml(label)}</span>
-      <strong>${escapeHtml(player.name)}</strong>
-      <span>${roleBadge(player.position)} · ${Number(player.age || 0) || '—'} años</span>
-      <div class="featured-player-meta">
-        <span>Media <b>${visibleOverall(player)}</b></span>
-        ${valueText ? `<span>${valueText}</span>` : ''}
-      </div>
-    </div>
-  </button>`;
-}
-function homeFeaturedPlayers(clubId, teamAverage){
-  const squad = playersByClub(clubId);
-  const stats = game?.playerStats || {};
-  const scorer = squad.slice().sort((a,b)=>(Number(stats[b.id]?.goals || 0) - Number(stats[a.id]?.goals || 0)) || visibleOverall(b)-visibleOverall(a))[0] || null;
-  const star = squad.slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a) || currentMorale(b.id)-currentMorale(a.id))[0] || null;
-  const promisePool = squad.filter(p => Number(p.age || 99) <= 23 && visibleOverall(p) > teamAverage);
-  const promise = (promisePool.length ? promisePool : squad.filter(p => Number(p.age || 99) <= 23)).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.age-b.age)[0] || null;
-  return {
-    scorer,
-    star,
-    promise,
-    scorerText: scorer ? `Goles <b>${Number(stats[scorer.id]?.goals || 0)}</b>` : '',
-    starText: star ? `Media general <b>${visibleOverall(star)}</b>` : '',
-    promiseText: promise ? (visibleOverall(promise) > teamAverage ? `Promedio equipo <b>${teamAverage}</b>` : `En desarrollo`) : ''
-  };
-}
+Simulador con enfoque jugadorista: 70% fuerza colectiva y 30% impacto individual.
+
+## V3.44
+
+- Simulador con balance 70% colectivo / 30% individual.
+- Las ocasiones importantes eligen protagonistas reales: rematador, defensor y arquero.
+- Menos goles de defensores en jugadas normales.
+- Defensores con opción de gol más ligada a pelota parada.
+- Nuevas estadísticas: Tapadas clave POR, Errores y Errores de gol.
+- El visualizador progresivo de partido muestra tapadas clave y errores.
+- La ficha completa del partido agrega bloques de tapadas clave y errores.
+- Las fichas de jugador registran tapadas clave, errores y errores de gol.
+
+## V3.41
+
+- Academia: visor circular tipo torta para ver el porcentaje de habilidades reveladas en cada juvenil.
+- El indicador muestra el avance de scouting de habilidades visibles.
+- Nuevos JSON base vacíos para futuras expansiones:
+  - `data/estadios.json`
+  - `data/hinchas.json`
+  - `data/instalaciones.json`
+- Se agregan rutas en `config.js` para esos archivos.
 
 
-function statusTone(value, good=70, warning=45){
-  const n = Math.round(Number(value) || 0);
-  if(n >= good) return 'ok';
-  if(n >= warning) return 'warn';
-  return 'bad';
-}
-function miniStatusBar(label, value, max=100){
-  const n = clamp(Math.round(Number(value) || 0), 0, max);
-  const pct = max ? clamp(Math.round((n / max) * 100), 0, 100) : 0;
-  return `<div class="mini-status-row ${statusTone(pct)}"><div><span>${escapeHtml(label)}</span><strong>${n}</strong></div><i><b style="width:${pct}%"></b></i></div>`;
-}
-function visualAlertItems(){
-  if(!game) return [];
-  const items = [];
-  const tacticErrors = isRegularSeason() ? validateCurrentTactic(false) : [];
-  const injured = injuredPlayersByClub(game.selectedClubId);
-  const pendingTransferOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
-  const sponsorOffers = game.sponsors?.offers?.length || 0;
-  const scoutingJobs = (game.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
-  const squadCount = playersByClub(game.selectedClubId).length;
-  const salaryPressure = totalClubSalary(game.selectedClubId);
-  if(game.mustReviewTactics){
-    items.push({ tone:'bad', icon:'!', title:'Táctica a revisar', text:'Hay lesionados o suspendidos propios fuera de la convocatoria válida.', tab:'tactics' });
-  }else if(tacticErrors.length){
-    items.push({ tone:'bad', icon:'11', title:'Once incompleto', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
-  }
-  if(injured.length){
-    items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });
-  }
-  const unread = unreadMessagesCount();
-  if(unread){
-    items.push({ tone:'info', icon:'✉', title:`${unread} mensaje(s) nuevo(s)`, text:'Hay eventos pendientes para leer.', tab:'messages' });
-  }
-  if(pendingTransferOffers){
-    items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Podés aceptar o rechazar desde Mensajes.', tab:'messages' });
-  }
-  if(sponsorOffers){
-    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Hay ingresos inmediatos posibles.', tab:'stadium' });
-  }
-  if(scoutingJobs.length){
-    const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));
-    const left = daysUntilTurn(nextDue);
-    items.push({ tone:'info', icon:'A', title:'Captación en curso', text:`Informe de academia en ${formatDays(left)}.`, tab:'academy' });
-  }
-  if(squadCount >= MAX_PLAYERS_PER_CLUB){
-    items.push({ tone:'warn', icon:'42', title:'Plantel completo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No podés fichar ni subir juveniles.`, tab:'firstTeam' });
-  } else if(squadCount <= MIN_PLAYERS_PER_CLUB){
-    items.push({ tone:'bad', icon:'18', title:'Plantel mínimo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No conviene vender ni despedir.`, tab:'firstTeam' });
-  }
-  if(salaryPressure > 0 && (game.budget || 0) < salaryPressure * 0.25){
-    items.push({ tone:'bad', icon:'$', title:'Presupuesto presionado', text:'El presupuesto actual está bajo contra la masa salarial anual.', tab:'finance' });
-  }
-  if(!items.length){
-    items.push({ tone:'ok', icon:'✓', title:'Sin urgencias', text:'No hay bloqueos críticos para el próximo avance.', tab:null });
-  }
-  return items.slice(0,6);
-}
-function visualAlertsMarkup(){
-  const items = visualAlertItems();
-  return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
-}
-function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
-  const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
-  const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
-  const ppg = objectiveInfo.ppg || managerPointsPerGame();
-  const objectiveText = objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—';
-  const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
-  const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
-    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${extraText}`
-    : (objectiveInfo.ppg > objectiveInfo.objective ? 'La confianza de la directiva se sostiene por ahora.' : 'La directiva evalúa despedirte.');
-  const objectiveProgress = objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '';
-  const phase = phaseLabel();
-  const nextBox = next
-    ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
-    : `<div class="office-next-match"><p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
-  return `<div class="manager-office">
-    <div class="office-main-card">
-      <div class="office-club-head">
-        ${clubBadge(game.selectedClubId)}
-        <div><p class="label">Oficina del manager</p><h2>${escapeHtml(clubName(game.selectedClubId))}</h2><p class="tagline">${escapeHtml(phase)} · Fecha de liga ${Math.min(Number(game.matchdayIndex || 0) + 1, game.fixtures?.length || 0)}</p></div>
-      </div>
-      <div class="office-mini-grid">
-        <div><span>Posición</span><strong>${position || '—'}°</strong></div>
-        <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
-        <div><span>Presupuesto</span><strong>${formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
-        <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
-        <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
-        <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
-      </div>
-      ${objectiveProgress}
-      <div class="office-status-bars">
-        ${miniStatusBar('Media', avgOverall, 99)}
-        ${miniStatusBar('Físico', avgFitness, 99)}
-        ${miniStatusBar('Moral', avgMorale, 99)}
-        ${miniStatusBar('Cohesión', cohesion, 100)}
-      </div>
-    </div>
-    <div class="office-side-card">
-      ${nextBox}
-      <div class="advance-control office-advance"><div class="advance-buttons"><button id="advanceDayBtn" class="ghost secondary">Avanzar día</button><button id="advanceMatchBtn" class="primary">Ir a próximo partido</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
-    </div>
-  </div>`;
-}
-function lastTurnSummaryMarkup(){
-  const summary = game?.lastTurnSummary;
-  if(!summary) return '';
-  const items = Array.isArray(summary.items) ? summary.items.slice(0,5) : [];
-  return `<div class="card turn-summary-card ${escapeHtml(summary.tone || 'info')}">
-    <div class="row"><div><p class="label">Resumen del último avance</p><h3>${escapeHtml(summary.title || 'Último avance')}</h3></div><span class="pill">${escapeHtml(summary.phase || '')}</span></div>
-    ${summary.result ? `<div class="turn-result-line">${escapeHtml(summary.result)}</div>` : ''}
-    <div class="turn-summary-list">${items.map(item => `<div class="turn-summary-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}</strong><span>${escapeHtml(item.text || '')}</span></div>`).join('')}</div>
-  </div>`;
-}
 
-function gameOverStatCard(label, value){
-  return `<div class="card"><p class="label">${escapeHtml(label)}</p><strong>${escapeHtml(String(value ?? '—'))}</strong></div>`;
-}
-function renderGameOverScreen(){
-  const state = game?.gameOver || {};
-  const snapshot = state.snapshot || (typeof gameOverSnapshot === 'function' ? gameOverSnapshot() : {});
-  const ppg = Number(state.ppg || (typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0));
-  const objective = Number(state.objective || MANAGER_OBJECTIVE_PPG || 0);
-  const budget = Number(snapshot.finalBudget || game?.budget || 0);
-  const score = Number(snapshot.managerScore || 0);
-  view.innerHTML = `<div class="game-over-screen">
-    <div class="card game-over-card">
-      <p class="label">Game Over</p>
-      <h1>Fin del ciclo</h1>
-      <p>${escapeHtml(state.reason || 'La directiva decidió terminar la partida por no cumplir el objetivo deportivo.')}</p>
-      <div class="game-over-objective">
-        <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>
-        <div><span>Objetivo</span><strong>${objective ? objective.toFixed(2) : '—'}</strong></div>
-        <div><span>Partidos oficiales</span><strong>${Number(state.matches || snapshot.won + snapshot.drawn + snapshot.lost || 0)}</strong></div>
-      </div>
-      <div class="grid cols-6 compact-team-stats game-over-stats">
-        ${gameOverStatCard('Manager', snapshot.managerName || game?.rankingManagerName || 'Manager')}
-        ${gameOverStatCard('Club', snapshot.club || clubName(game?.selectedClubId))}
-        ${gameOverStatCard('Temporada', snapshot.season || game?.seasonNumber || 1)}
-        ${gameOverStatCard('División', snapshot.division || clubDivision(game?.selectedClubId).name)}
-        ${gameOverStatCard('Posición', snapshot.position ? `${snapshot.position}°` : '—')}
-        ${gameOverStatCard('Puntos ranking', score)}
-        ${gameOverStatCard('PTS', snapshot.points || 0)}
-        ${gameOverStatCard('PG', snapshot.won || 0)}
-        ${gameOverStatCard('PE', snapshot.drawn || 0)}
-        ${gameOverStatCard('PP', snapshot.lost || 0)}
-        ${gameOverStatCard('GF / GC', `${snapshot.goalsFor || 0} / ${snapshot.goalsAgainst || 0}`)}
-        ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
-      </div>
-      <div class="row game-over-actions">
-        <button class="primary" id="btnGameOverNewGame">Empezar nueva partida</button>
-        <button class="ghost" id="btnGameOverReset">Borrar partida local</button>
-      </div>
-    </div>
-  </div>`;
-  $('btnGameOverNewGame')?.addEventListener('click', openNewGameModal);
-  $('btnGameOverReset')?.addEventListener('click', resetLocal);
-}
+## V3.39
 
-function renderHome(){
-  const next = getNextMatchForSelected();
-  const clubPlayers = playersByClub(game.selectedClubId);
-  const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
-  const avgFitness = squadFitnessAverage(game.selectedClubId);
-  const avgMorale = squadMoraleAverage(game.selectedClubId);
-  const cohesion = cohesionValue(game.selectedClubId);
-  const featured = homeFeaturedPlayers(game.selectedClubId, avgOverall);
-  const injuredList = injuredPlayersByClub(game.selectedClubId);
-  const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
-  const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
-  const position = sortedStandings(selectedClub?.divisionId || null).findIndex(s=>s.clubId===game.selectedClubId)+1;
-  const lastMatches = game.matchHistory.filter(m=>m.homeId===game.selectedClubId || m.awayId===game.selectedClubId).slice(-5).reverse();
-  const problems = game.lastOwnProblems || [];
-  const deltaClass = game.lastBudgetDelta > 0 ? 'ok' : game.lastBudgetDelta < 0 ? 'bad' : 'muted';
-  const deltaText = game.lastBudgetDelta ? `${game.lastBudgetDelta > 0 ? '+' : ''}${formatMoney(game.lastBudgetDelta)}` : '—';
-  const problemBox = problems.length ? `<div class="card blocker"><h3>Revisión obligatoria</h3><p>Hubo lesionados o expulsados propios en el último partido. Entrá a Táctica, reemplazalos y guardá una alineación válida.</p><div class="problem-list">${problems.map(problemItem).join('')}</div><button class="primary" data-go-tactics>Ir a táctica</button></div>` : '';
-  const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
-  view.innerHTML = `
-    <div class="home-message-strip section-title">${homeMessagesSummary()}</div>
-    ${problemBox}
-    ${seasonBox}
-    ${turnModePanelMarkup()}
-    ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
-    ${visualAlertsMarkup()}
-    ${lastTurnSummaryMarkup()}
-    <div class="card featured-players-panel" style="margin-top:14px">
-      <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
-      <div class="grid cols-3 featured-player-grid">
-        ${featuredPlayerCard('scorer', featured.scorer, 'Goleador', featured.scorerText)}
-        ${featuredPlayerCard('star', featured.star, 'Estrella', featured.starText)}
-        ${featuredPlayerCard('promise', featured.promise, 'Promesa', featured.promiseText)}
-      </div>
-    </div>
-    ${typeof staffContractsPanelMarkup === 'function' ? staffContractsPanelMarkup() : ''}
-    <div class="grid cols-3" style="margin-top:14px">
-      <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
-      <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
-      <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
-    </div>
-    <div class="card own-team-stats-card" style="margin-top:14px">
-      <h3>Estadísticas de mi equipo</h3>
-      <div class="grid cols-6 compact-team-stats">
-        <div><p class="label">Puntos</p><strong>${myStanding.pts}</strong></div>
-        <div><p class="label">Ganados</p><strong>${myStanding.pg}</strong></div>
-        <div><p class="label">Empatados</p><strong>${myStanding.pe}</strong></div>
-        <div><p class="label">Perdidos</p><strong>${myStanding.pp}</strong></div>
-        <div><p class="label">GF</p><strong>${myStanding.gf}</strong></div>
-        <div><p class="label">GC</p><strong>${myStanding.gc}</strong></div>
-      </div>
-    </div>
-    <div class="card injury-home-card" style="margin-top:14px">
-      <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
-      ${injuredList.length ? `<div class="injured-home-list">${injuredList.map(item => injuredHomeCard(item)).join('')}</div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
-    </div>
-    <div class="split" style="margin-top:14px">
-      <div class="card">
-        <h3>Próximo partido</h3>
-        ${next ? matchPreview(next) : (isPostseason() ? '<p class="muted">Postemporada en curso. No hay partidos oficiales.</p>' : '<p class="muted">Temporada finalizada.</p>')}
-      </div>
-      <div class="card">
-        <h3>Últimos partidos</h3>
-        <div class="timeline">${lastMatches.length ? lastMatches.map(compactMatch).join('') : '<p class="muted">Aún no hay partidos jugados.</p>'}</div>
-      </div>
-    </div>
-
-  `;
-  $('advanceDayBtn')?.addEventListener('click', advanceOneDay);
-  $('advanceMatchBtn')?.addEventListener('click', goToNextMatch);
-  document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
-  document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
-  document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
-  document.querySelectorAll('.featured-player-card[data-player-id]').forEach(card => card.addEventListener('click',()=>showPlayerModal(Number(card.dataset.playerId))));
-  document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{ activeTab = btn.dataset.goTab; renderAll(); }));
-  $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
-  $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
-  updateAdvanceButtonState();
-}
-function updateAdvanceButtonState(){
-  const dayBtn = $('advanceDayBtn');
-  const matchBtn = $('advanceMatchBtn');
-  if((!dayBtn && !matchBtn) || !game) return;
-  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
-  const seasonEnded = game.seasonFinalized || seasonPhase() === 'finalized';
-  const invalid = validateCurrentTactic(false);
-  const round = typeof nextRegularRound === 'function' ? nextRegularRound() : null;
-  const matchToday = Boolean(isRegularSeason() && round?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(round.date));
-  let dayText = isRegularSeason() ? 'Avanzar día' : 'Avance diario en liga';
-  let matchText = isRegularSeason() ? 'Ir a próximo partido' : isPreseason() ? 'Avanzar pretemporada' : isPostseason() ? 'Avanzar postemporada' : 'Ir a próximo partido';
-  let dayDisabled = false;
-  let matchDisabled = false;
-  if(!isRegularSeason()){
-    dayDisabled = true;
-  }
-  if(seasonEnded){
-    dayText = 'Temporada finalizada';
-    matchText = 'Temporada finalizada';
-    dayDisabled = true;
-    matchDisabled = true;
-  }else if(lockLeft > 0){
-    const left = formatClock(lockLeft);
-    dayText = `Espera ${left}`;
-    matchText = `Espera ${left}`;
-    dayDisabled = true;
-    matchDisabled = true;
-  }else{
-    if(isRegularSeason() && matchToday){
-      dayText = 'Partido pendiente hoy';
-      dayDisabled = true;
-    }
-    if(isRegularSeason() && game.mustReviewTactics){
-      matchText = 'Reemplazar lesionados/suspendidos';
-      matchDisabled = true;
-    }else if(isRegularSeason() && invalid.length){
-      matchText = 'Táctica incompleta';
-      matchDisabled = true;
-    }
-  }
-  if(dayBtn){ dayBtn.textContent = dayText; dayBtn.disabled = dayDisabled; }
-  if(matchBtn){ matchBtn.textContent = matchText; matchBtn.disabled = matchDisabled; }
-  updateAdvanceProgressBox();
-}
-function updateAdvanceProgressBox(){
-  const progressBox = $('advanceProgressBox');
-  if(!progressBox) return;
-  if(!progressBox.querySelector('[data-advance-progress-fill]')){
-    progressBox.innerHTML = advanceProgressMarkup();
-  }
-  const fill = progressBox.querySelector('[data-advance-progress-fill]');
-  if(fill) fill.style.width = `${advanceProgressPercent()}%`;
-  const phraseEl = progressBox.querySelector('[data-advance-phrase]');
-  if(phraseEl){
-    const phrase = advanceStatusPhrase();
-    if(phraseEl.textContent !== phrase){
-      phraseEl.textContent = phrase;
-      phraseEl.classList.remove('is-changing');
-      void phraseEl.offsetWidth;
-      phraseEl.classList.add('is-changing');
-    }
-  }
-}
-function advanceProgressPercent(){
-  if(!game) return 0;
-  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
-  if(lockLeft <= 0) return 100;
-  const duration = Math.max(1, Number(game.advanceLockDurationMs || ADVANCE_LOCK_MS || lockLeft));
-  return clamp(Math.round(((duration - lockLeft) / duration) * 100), 0, 100);
-}
-function advanceProgressMarkup(){
-  if(!game) return '';
-  const pct = advanceProgressPercent();
-  return `<div class="advance-progress"><div class="project-progress"><span data-advance-progress-fill style="width:${pct}%"></span></div><p class="small muted advance-phrase" data-advance-phrase>${escapeHtml(advanceStatusPhrase())}</p></div>`;
-}
-function advanceStatusPhrase(){
-  const fallback = ['Revisando planillas de entrenamiento'];
-  const phrases = (Array.isArray(ADVANCE_STATUS_PHRASES) && ADVANCE_STATUS_PHRASES.length) ? ADVANCE_STATUS_PHRASES : fallback;
-  const now = Date.now();
-  const currentSlot = Math.floor(now / ADVANCE_STATUS_PHRASE_INTERVAL_MS);
-  if(!window.__fmAdvancePhraseState || window.__fmAdvancePhraseState.slot !== currentSlot){
-    const previous = window.__fmAdvancePhraseState?.index;
-    let index = Math.floor(Math.random() * phrases.length);
-    if(phrases.length > 1 && index === previous) index = (index + 1) % phrases.length;
-    window.__fmAdvancePhraseState = { slot: currentSlot, index };
-  }
-  return phrases[window.__fmAdvancePhraseState.index] || fallback[0];
-}
-function formatClock(ms){
-  const total = Math.ceil(ms/1000);
-  const m = Math.floor(total/60);
-  const s = String(total%60).padStart(2,'0');
-  return `${m}:${s}`;
-}
-function weekdayLabelFromIso(iso){
-  if(!validIsoDate(iso)) return '—';
-  const labels = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const date = new Date(`${iso}T00:00:00Z`);
-  return labels[date.getUTCDay()] || '—';
-}
-function currentWeekdayLabel(){
-  if(!game) return '—';
-  const iso = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
-  return weekdayLabelFromIso(iso);
-}
-function refreshSidebarDate(){
-  if(!game){
-    $('currentSeason') && ($('currentSeason').textContent = 'Temporada: —');
-    $('currentDate').textContent = 'Fecha: —';
-    $('currentRound').textContent = 'Calendario: —';
-    return;
-  }
-  $('currentSeason') && ($('currentSeason').textContent = `Temporada: ${game.seasonNumber || 1}`);
-  $('currentDate').textContent = `Día: ${currentWeekdayLabel()} · Fecha: ${game.currentDate}`;
-  $('currentRound').textContent = phaseLabel();
-}
-function problemItem(problem){
-  const p = playerById(problem.playerId);
-  const type = problem.type === 'injury' ? 'Lesión' : 'Expulsión';
-  return `<span class="pill ${problem.type === 'injury' ? 'warn' : 'bad'}">${type}: ${escapeHtml(p?.name || 'Jugador')}</span>`;
-}
-function matchPreview(match){
-  return `<button class="next-match clickable" data-match-id="${escapeHtml(match.id)}">
-    <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
-    <div class="vs">VS<br><span class="small">${escapeHtml(match.date)}</span></div>
-    <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
-    ${matchFieldSummaryMarkup(match)}
-  </button>`;
-}
-function compactMatch(m){
-  const isHome = m.homeId === game.selectedClubId;
-  const gf = isHome ? m.homeGoals : m.awayGoals;
-  const gc = isHome ? m.awayGoals : m.homeGoals;
-  const cls = gf > gc ? 'ok' : gf < gc ? 'bad' : 'warn';
-  return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${clubBadge(m.homeId)} ${m.homeGoals} - ${m.awayGoals} ${clubBadge(m.awayId)}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
-}
+- Equilibrio de bots para sostener la dificultad a partir de la segunda temporada.
+- Los bots de tu división ajustan moral, físico y cohesión cerca de los valores de tu club.
+- Los mejores equipos de la temporada anterior reciben un plus competitivo.
+- Mantenimiento automático durante pretemporada y temporada regular.
+- Progresión moderada de habilidades para jugadores bots.
+- Configurable desde `config.js` en `equilibrioBots`.
 
 
-function unreadMessagesCount(){
-  return (game?.messages || []).filter(m => !m.read).length;
-}
-function pushGameMessage(message){
-  if(!game) return null;
-  game.messages = Array.isArray(game.messages) ? game.messages : [];
-  const item = {
-    id: message.id || `msg-${Date.now()}-${hashNumber(`${message.title || ''}-${game.messages.length}-${Math.random()}`, 1000000)}`,
-    turn: game.matchdayIndex || 0,
-    season: game.seasonNumber || 1,
-    date: game.currentDate || '',
-    read: false,
-    priority: message.priority || 'normal',
-    type: message.type || 'info',
-    title: message.title || 'Mensaje',
-    body: message.body || '',
-    action: message.action || null,
-    createdAt: Date.now()
-  };
-  game.messages.unshift(item);
-  return item;
-}
-function markMessagesRead(){
-  if(!game?.messages) return;
-  game.messages.forEach(m => { m.read = true; });
-}
-function latestMessages(limit=3){
-  return (game?.messages || []).slice(0, limit);
-}
-function homeMessagesSummary(){
-  const items = latestMessages(3);
-  const count = unreadMessagesCount();
-  if(!items.length){
-    return `<div class="home-messages-summary"><p class="label">Mensajes / eventos</p><h2>Sin mensajes nuevos</h2><p class="tagline">Los avisos deportivos, ofertas y eventos del club aparecerán acá.</p></div>`;
-  }
-  return `<div class="home-messages-summary clickable" data-open-messages>
-    <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(items[0].title)}</h2></div>${count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>'}</div>
-    <p class="tagline">${escapeHtml(items[0].body)}</p>
-  </div>`;
-}
-function renderMessages(){
-  markMessagesRead();
-  const messages = Array.isArray(game.messages) ? game.messages : [];
-  const unread = messages.filter(m => !m.read).length;
-  const pendingOffers = messages.filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
-  const highPriority = messages.filter(m => m.priority === 'high').length;
-  const rows = messages.map(m => messageCard(m)).join('');
-  view.innerHTML = `
-    <div class="section-title"><h2>Mensajes</h2><p class="tagline">Leé más rápido los avisos del club con una vista tipo bandeja de entrada.</p></div>
-    <div class="messages-shell">
-      <div class="messages-toolbar card">
-        <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
-        <div class="messages-toolbar-item"><p class="label">Nuevos</p><strong>${unread}</strong><span>Sin leer</span></div>
-        <div class="messages-toolbar-item"><p class="label">Ofertas</p><strong>${pendingOffers}</strong><span>Pendientes</span></div>
-        <div class="messages-toolbar-item"><p class="label">Importantes</p><strong>${highPriority}</strong><span>Prioridad alta</span></div>
-      </div>
-      <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
-    </div>`;
-  document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
-  document.querySelectorAll('[data-reject-offer]').forEach(btn => btn.addEventListener('click', () => rejectTransferOffer(btn.dataset.rejectOffer)));
-  saveLocal(true);
-}
-function messageIcon(type){
-  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️' };
-  return map[String(type || '').trim()] || '✉️';
-}
-function messageToneClass(type, priority){
-  if(priority === 'high') return 'message-tone-high';
-  const key = String(type || '').toLowerCase();
-  if(['transferoffer','finance'].includes(key)) return 'message-tone-money';
-  if(['evento','noticia'].includes(key)) return 'message-tone-sport';
-  if(['warning'].includes(key)) return 'message-tone-alert';
-  if(['staff','directiva'].includes(key)) return 'message-tone-board';
-  return 'message-tone-info';
-}
-function messageTypeLabel(type){
-  const raw = String(type || 'info').trim();
-  if(!raw) return 'Info';
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-function messageCard(m){
-  const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
-    ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button><button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
-    : (m.action?.status ? `<span class="pill message-status-pill">${m.action.status === 'accepted' ? 'Aceptada' : m.action.status === 'blocked_by_board' ? 'Bloqueada por directiva' : 'Rechazada'}</span>` : '');
-  const toneClass = messageToneClass(m.type, m.priority);
-  const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
-  return `<div class="card message-card ${toneClass} ${m.read ? '' : 'unread'}">
-    <div class="message-card-accent"></div>
-    <div class="message-card-main">
-      <div class="row message-card-head">
-        <div class="message-head-left">
-          <div class="message-meta-row">
-            <span class="message-type-chip">${messageIcon(m.type)} ${escapeHtml(messageTypeLabel(m.type || 'info'))}</span>
-            <span class="message-date-chip">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</span>
-            ${unreadMark}
-          </div>
-          <h3>${escapeHtml(m.title)}</h3>
-        </div>
-        <span class="pill ${m.priority === 'high' ? 'warn' : ''}">${m.priority === 'high' ? 'Importante' : 'Normal'}</span>
-      </div>
-      <div class="message-paper"><p>${escapeHtml(m.body)}</p></div>
-      ${action}
-    </div>
-  </div>`;
-}
-function hasPendingTransferOfferForPlayer(playerId){
-  const id = Number(playerId);
-  return (game?.messages || []).some(m => m.action?.type === 'transferOffer' && m.action.status === 'pending' && Number(m.action.playerId) === id);
-}
-function playerSeasonStatsForOffers(player){
-  const st = game?.playerStats?.[player?.id] || {};
-  return {
-    played:Number(st.played || 0),
-    goals:Number(st.goals || 0),
-    assists:Number(st.assists || 0),
-    injuries:Number(st.injuries || 0),
-    red:Number(st.red || 0),
-    goalErrors:Number(st.goalErrors || 0),
-    errors:Number(st.errors || 0),
-    keySaves:Number(st.keySaves || 0)
-  };
-}
-function playerQualifiesForTransferOffers(player){
-  if(!player) return false;
-  const st = playerSeasonStatsForOffers(player);
-  const played = Number(st.played || 0);
-  const directProduction = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
-  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
-  const young = Number(player.age || 99) <= 23;
-  const goodYoungProfile = young && visibleOverall(player) >= 58 && played >= 2;
-  const transferListed = Boolean(player.transferListed);
-  if(isStar && played > 0) return true;
-  if(goodYoungProfile && directProduction > 0) return true;
-  if(transferListed && hasPlayerSalaryPaid(player) && played > 0) return true;
-  if(PLAYER_OFFERS_REQUIRE_MATCHES && played <= 0) return false;
-  if(PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST && (st.goals + st.assists) <= 0) return false;
-  return true;
-}
-function playerOfferProfile(player){
-  const st = playerSeasonStatsForOffers(player);
-  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
-  const young = Number(player.age || 99) <= 23;
-  const production = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
-  if(isStar) return 'star';
-  if(young && visibleOverall(player) >= 58 && (production > 0 || Number(st.played || 0) >= 5)) return 'young_good';
-  if(Boolean(player.transferListed)) return 'transfer_listed';
-  return 'standard';
-}
-function playerOfferPerformanceScore(player){
-  const st = playerSeasonStatsForOffers(player);
-  const profile = playerOfferProfile(player);
-  const production = (st.goals * 24) + (st.assists * 18) + (st.keySaves * 14);
-  const youthBonus = Number(player.age || 99) <= 21 ? 22 : Number(player.age || 99) <= 23 ? 12 : 0;
-  const starBonus = profile === 'star' ? 55 : 0;
-  const listedPenalty = profile === 'transfer_listed' ? 18 : 0;
-  const reliabilityPenalty = (st.injuries * 10) + (st.red * 12) + (st.goalErrors * 18) + (st.errors * 4);
-  return Math.max(0, (visibleOverall(player) * 0.42) + (st.played * 2) + production + youthBonus + starBonus - listedPenalty - reliabilityPenalty);
-}
-function playerOfferRange(player){
-  const profile = playerOfferProfile(player);
-  if(profile === 'star') return { min:35, max:60 };
-  if(profile === 'young_good') return { min:18, max:35 };
-  if(profile === 'transfer_listed') return { min:6, max:18 };
-  const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.05);
-  const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.15);
-  return { min:Math.round(minRate * 100), max:Math.max(Math.round(minRate * 100), Math.round(maxRate * 100)) };
-}
-function playerOfferPercent(player, salt=''){
-  const range = playerOfferRange(player);
-  const minPct = Math.max(1, Math.round(range.min || 5));
-  const maxPct = Math.max(minPct, Math.round(range.max || 15));
-  const span = Math.max(0, maxPct - minPct);
-  const score = playerOfferPerformanceScore(player);
-  const scoreBonus = Math.min(span, Math.floor(score / 42));
-  const noise = span > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, span + 1) : 0;
-  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.55)), minPct, maxPct);
-}
-function buildTransferOfferFinancials(player, pct){
-  const clause = refreshPlayerClause(player);
-  const grossAmount = Math.max(0, Math.round(clause * Number(pct || 0) / 100));
-  const taxAmount = Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0));
-  const netAmount = Math.max(0, grossAmount - taxAmount);
-  return { clause, grossAmount, taxAmount, netAmount };
-}
-function transferOfferBody(foreignClub, player, financials, pct, suffix=''){
-  return `${foreignClub} ofrece ${formatMoney(financials.grossAmount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. AFA retiene ${formatMoney(financials.taxAmount)} en impuestos de traspaso; el club recibiría ${formatMoney(financials.netAmount)} netos.${suffix ? ' ' + suffix : ''}`;
-}
-function managerPointsPerGame(){
-  return typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0;
-}
-function botTransferOfferClub(player){
-  const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
-  if(!clubs.length) return { name:FOREIGN_CLUBS[0] || 'Club interesado', id:-1 };
-  const sameDivision = clubs.filter(c => String(c.divisionId || '') === String(seed.clubs.find(x => Number(x.id) === Number(game?.selectedClubId))?.divisionId || ''));
-  const pool = sameDivision.length ? sameDivision : clubs;
-  const club = pool[hashNumber(`bot-offer-club-${player.id}-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}`, pool.length)];
-  return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
-}
-function maybeGenerateTransferOffer(match){
-  if(!game || !match) return;
-  const ownPlayers = playersByClub(game.selectedClubId);
-  const listedCount = ownPlayers.filter(p => Boolean(p.transferListed)).length;
-  const chance = clamp(Number(BOT_TRANSFER_OFFER_BASE_CHANCE || 0.28) + Math.min(Number(BOT_TRANSFER_LISTED_EXTRA_CHANCE || 0.22), listedCount * 0.045), 0, 0.72);
-  if(Math.random() > chance) return;
-  const candidates = ownPlayers
-    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
-  if(!candidates.length) return;
-  candidates.sort((a,b)=>{
-    const listedDelta = Number(Boolean(b.transferListed)) - Number(Boolean(a.transferListed));
-    if(listedDelta) return listedDelta;
-    return playerOfferPerformanceScore(b)-playerOfferPerformanceScore(a) || visibleOverall(b)-visibleOverall(a);
-  });
-  const listedPool = candidates.filter(p => Boolean(p.transferListed));
-  const basePool = listedPool.length && Math.random() < 0.70 ? listedPool : candidates.slice(0, Math.min(14, candidates.length));
-  const player = basePool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}-${Date.now()}`, basePool.length)];
-  const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
-  const financials = buildTransferOfferFinancials(player, pct);
-  const source = Math.random() < 0.78 ? botTransferOfferClub(player) : { name:FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)], id:-1 };
-  const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás, el jugador se va del club.';
-  pushGameMessage({
-    type:'mercado',
-    priority:'high',
-    title:`Oferta por ${playerLastName(player.name)}`,
-    body:transferOfferBody(source.name, player, financials, pct, note),
-    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct }
-  });
-}
-function seasonEndOfferScore(player){
-  return playerOfferPerformanceScore(player) + hashNumber(`season-end-score-${game?.seasonNumber || 1}-${player.id}`, 9);
-}
-function generateSeasonEndPlayerOffers(){
-  if(!game || !isPostseason()) return [];
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){
-    const season = game.seasonNumber || 1;
-    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
-    return [];
-  }
-  const season = game.seasonNumber || 1;
-  if(game.seasonEndPlayerOffers?.season === season) return [];
-  const candidates = playersByClub(game.selectedClubId)
-    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
-  if(!candidates.length){
-    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
-    return [];
-  }
-  const stats = game.playerStats || {};
-  const byScore = candidates.slice().sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
-  const byGoals = candidates.slice().sort((a,b)=>Number(stats[b.id]?.goals || 0)-Number(stats[a.id]?.goals || 0) || visibleOverall(b)-visibleOverall(a));
-  const byAssists = candidates.slice().sort((a,b)=>Number(stats[b.id]?.assists || 0)-Number(stats[a.id]?.assists || 0) || visibleOverall(b)-visibleOverall(a));
-  const map = new Map();
-  [...byScore.slice(0,12), ...byGoals.slice(0,8), ...byAssists.slice(0,8)].forEach(p => map.set(p.id, p));
-  const pool = Array.from(map.values()).sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
-  const targetCount = Math.min(pool.length, randomInt(SEASON_END_TRANSFER_OFFERS_MIN, SEASON_END_TRANSFER_OFFERS_MAX));
-  const created = [];
-  for(const player of pool){
-    if(created.length >= targetCount) break;
-    const pct = playerOfferPercent(player, `season-end-${season}-${created.length}-${Date.now()}`);
-    const financials = buildTransferOfferFinancials(player, pct);
-    const foreignClub = FOREIGN_CLUBS[hashNumber(`season-end-foreign-${season}-${player.id}-${created.length}`, FOREIGN_CLUBS.length)];
-    const msg = pushGameMessage({
-      type:'mercado',
-      priority:'high',
-      title:`Oferta por ${playerLastName(player.name)}`,
-      body:transferOfferBody(foreignClub, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
-      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct, origin:'season_end' }
-    });
-    if(msg) created.push(msg);
-  }
-  game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:created.length };
-  return created;
-}
-function acceptTransferOffer(messageId){
-  const msg = (game.messages || []).find(m => m.id === messageId);
-  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
-  const player = playerById(msg.action.playerId);
-  if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
-  const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
-  const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
-  const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
-  const pct = Number(msg.action.pct || 0);
-  if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
-    msg.action.status = 'blocked_by_board';
-    msg.body += ` La directiva bloqueó la venta porque es un jugador muy importante para el club. Para una estrella exige una oferta superior al ${STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT}% de su cláusula.`;
-    saveLocal(true);
-    showNotice('La directiva bloqueó la venta porque es un jugador muy importante para el club.');
-    renderMessages();
-    return;
-  }
-  recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount });
-  const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
-  const destinationClubId = Number(msg.action.sourceClubId || -1);
-  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
-  player.transferListed = false;
-  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, sold:destinationClubId > 0 ? false : true } : p);
-  removePlayerFromCurrentTactic(player.id);
-  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  msg.action.status = 'accepted';
-  msg.action.grossAmount = grossAmount;
-  msg.action.taxAmount = taxAmount;
-  msg.action.netAmount = netAmount;
-  msg.body += ` Oferta aceptada. Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
-  saveLocal(true);
-  showNotice(`${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
-  renderMessages();
-}
-function rejectTransferOffer(messageId){
-  const msg = (game.messages || []).find(m => m.id === messageId);
-  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
-  msg.action.status = 'rejected';
-  saveLocal(true);
-  renderMessages();
-}
-function removePlayerFromCurrentTactic(playerId){
-  if(!game?.tactic) return;
-  const id = Number(playerId);
-  const starters = (game.tactic.starters || []).map(x => Number(x) === id ? 0 : x);
-  const bench = (game.tactic.bench || []).filter(x => Number(x) !== id);
-  const autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:Number(rule.outId)===id?0:rule.outId, inId:Number(rule.inId)===id?0:rule.inId}));
-  game.tactic = applyStarterMentalities({ ...game.tactic, starters, bench, autoSubs });
-}
+## V3.38
+
+- Corrección del sistema ESPECIAL: al activar una carta ya no desaparece.
+- La carta activada pasa al sector **Bonus activo**.
+- Las cartas activas quedan visibles y bloqueadas durante 100 días.
+- El bloque **Regla de cartas activas** muestra el detalle de bonus activos, cartas aplicadas y días restantes de bloqueo.
+
+## V3.37
+
+- Ajuste del sistema ESPECIAL.
+- Destruir cartas suma puntos según rareza y muestra animación visual en el contador.
+- Carta inútil: +5 puntos.
+- Carta común: +20 puntos.
+- Carta rara: +50 puntos.
+- Carta legendaria: +1000 puntos.
+- El bloqueo de 100 días ahora es por carta activa, no un bloqueo global.
+- Se pueden activar hasta 5 cartas; cada una queda fija 100 días antes de poder desactivarse.
+- El bloque Bonus activos muestra el detalle de cada carta activa.
+
+## V3.35
+
+- Corrección bloqueante de arranque: se eliminó el uso prematuro de `clamp()` en constantes de Academia.
+- Nueva partida, Reset y carga inicial vuelven a funcionar.
 
 
-function canBotDismissPlayer(player){
-  if(!player || Number(player.clubId || 0) === Number(game?.selectedClubId)) return false;
-  if(player.emergencyLocked || player.emergencyBot) return false;
-  const clubId = Number(player.clubId || 0);
-  const squad = playersByClub(clubId);
-  if(squad.length <= Math.max(MIN_PLAYERS_PER_CLUB, 20)) return false;
-  const group = playerRoleGroup(player.position);
-  const counts = rosterGroupCounts(squad);
-  const req = minimumRosterRequirements();
-  return (counts[group] || 0) > (req[group] || 0) + 1;
-}
-function processBotDismissals(){
-  if(!game || !seed?.clubs?.length) return 0;
-  if(Math.random() > Number(BOT_DISMISS_CHECK_CHANCE || 0.38)) return 0;
-  let dismissed = 0;
-  seed.clubs.forEach(club => {
-    if(Number(club.id) === Number(game.selectedClubId)) return;
-    const squad = playersByClub(club.id).filter(canBotDismissPlayer).sort((a,b)=>visibleOverall(a)-visibleOverall(b) || Number(b.age||0)-Number(a.age||0));
-    const maxCuts = playersByClub(club.id).length > MAX_PLAYERS_PER_CLUB ? 2 : 1;
-    for(let i=0; i<Math.min(maxCuts, squad.length); i++){
-      const player = squad[i];
-      if(hashNumber(`bot-dismiss-${game.seasonNumber}-${game.matchdayIndex}-${club.id}-${player.id}`, 100) > 42) continue;
-      player.clubId = 0;
-      player.freeAgent = true;
-      player.transferListed = false;
-      player.salaryPaidCount = 0;
-      player.lastSalaryPaidSeason = 0;
-      refreshPlayerClause(player);
-      game.marketPlayers = game.marketPlayers || [];
-      const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
-      const copy = { ...player, clubId:0, freeAgent:true, sold:false, transferListed:false };
-      if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
-      else game.marketPlayers.push(copy);
-      dismissed += 1;
-    }
-  });
-  if(dismissed && typeof repairBotRosters === 'function') repairBotRosters({ reason:'bot_dismissals' });
-  return dismissed;
-}
+## V3.34
 
-function buildBalancedFreeAgentPositionGroups(count, label='market'){
-  const total = Math.max(0, Math.round(Number(count) || 0));
-  if(total <= 0) return [];
-  const rules = (Array.isArray(MARKET_FREE_AGENT_POSITION_GROUPS) && MARKET_FREE_AGENT_POSITION_GROUPS.length)
-    ? MARKET_FREE_AGENT_POSITION_GROUPS
-    : PLAYER_GENERATION_POSITION_GROUPS;
-  const weighted = rules.map(rule => ({ ...rule, probability:Math.max(0, Number(rule.probability || 0)) }));
-  const weightTotal = weighted.reduce((acc, rule) => acc + rule.probability, 0) || 1;
-  const quotas = weighted.map(rule => {
-    const exact = total * (rule.probability || 0) / weightTotal;
-    return { rule, exact, count:Math.floor(exact), rest:exact - Math.floor(exact) };
-  });
-  let assigned = quotas.reduce((acc, item) => acc + item.count, 0);
-  quotas.slice().sort((a,b) => b.rest - a.rest || String(a.rule.id).localeCompare(String(b.rule.id))).forEach(item => {
-    if(assigned < total){ item.count += 1; assigned += 1; }
-  });
-  const groups = [];
-  quotas.forEach(item => { for(let i=0;i<item.count;i++) groups.push(item.rule.id); });
-  return groups.sort((a,b) => hashNumber(`${label}-${a}-pos-order`, 100000) - hashNumber(`${label}-${b}-pos-order`, 100000));
-}
-function pickFreeAgentPositionFromGroup(groupId, id, label){
-  const rules = (Array.isArray(MARKET_FREE_AGENT_POSITION_GROUPS) && MARKET_FREE_AGENT_POSITION_GROUPS.length)
-    ? MARKET_FREE_AGENT_POSITION_GROUPS
-    : PLAYER_GENERATION_POSITION_GROUPS;
-  const group = rules.find(item => item.id === groupId) || PLAYER_GENERATION_POSITION_GROUPS.find(item => item.id === groupId) || PLAYER_GENERATION_POSITION_GROUPS[2];
-  const pool = group.positions || ['MC'];
-  return pool[hashNumber(`${label}-${id}-free-pos`, pool.length)];
-}
+- Corrección crítica del sistema de sobres: las cartas se guardan en reserva antes de mostrarse en la animación.
+- Las cartas abiertas ya no quedan atrapadas en “Cartas obtenidas”.
+- Al finalizar la apertura, pasan al inventario y se pueden activar o destruir.
+- Se agregó reparación automática para cartas que hubieran quedado sólo en historial por versiones anteriores.
+- Si el guardado falla, se revierte el gasto de puntos del sobre.
 
-function generateMarketPlayers(count=50, options={}){
-  const startId = Number.isFinite(Number(options.startId))
-    ? Math.max(1, Math.round(Number(options.startId)))
-    : Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000;
-  const label = options.label || 'market';
-  const nameContext = options.nameContext || 'Mercado Libre';
-  const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
-  const generationContext = createPlayerGenerationContext(activePlayers.length + count, activePlayers);
-  const balancedGroups = buildBalancedFreeAgentPositionGroups(count, label);
-  const players = [];
-  for(let i=0;i<count;i++){
-    const id = startId + i;
-    const group = balancedGroups[i] || pickPositionGroupForGeneration(id, label, generationContext);
-    const position = pickFreeAgentPositionFromGroup(group, id, label);
-    const player = generatedPlayerFactory({
-      id,
-      position,
-      clubId:0,
-      age:MARKET_FREE_AGENT_AGE_MIN + hashNumber(`${label}-age-${id}`, Math.max(1, MARKET_FREE_AGENT_AGE_MAX - MARKET_FREE_AGENT_AGE_MIN + 1)),
-      prestige:52,
-      nameContext,
-      divisionName:'Mercado',
-      generationContext,
-      salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
-      freeAgent:true,
-      mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
-      mediaMax:MARKET_FREE_AGENT_MEDIA_MAX
-    });
-    players.push(player);
-  }
-  return players;
-}
-function mergeMarketPlayersIntoSeed(players=[]){
-  if(!seed?.players) return;
-  const existing = new Set(seed.players.map(p => Number(p.id)));
-  players.forEach(p => {
-    if(!existing.has(Number(p.id))){ seed.players.push(p); existing.add(Number(p.id)); }
-    else {
-      const idx = seed.players.findIndex(x => Number(x.id) === Number(p.id));
-      if(idx >= 0) seed.players[idx] = { ...seed.players[idx], ...p };
-    }
-  });
-}
 
+## Cambios V3.31
+
+- Nuevo menú lateral **ESPECIAL**.
+- Sistema de puntos de habilidad ocultos para el manager.
+- Sobres común, raro y épico.
+- Cartas inútiles, comunes, raras, épicas y legendarias.
+- Máximo de 5 cartas activas.
+- Máximo de 50 cartas en reserva.
+- Bloqueo de 100 días para cambiar cartas activas.
+- Destrucción de cartas en reserva para recuperar puntos.
+- Bonus apilables aplicados a:
+  - nuevos sponsors;
+  - deterioro del campo propio;
+  - probabilidad de obtener cartas legendarias.
+
+## Archivos nuevos
+
+```text
+data/habilidades_especiales.json
+js/game/15-especial.js
+```
+
+## Cómo usar
+
+Abrir `index.html` en navegador o subir el contenido a GitHub Pages. Desde el menú lateral entrar a **ESPECIAL** para abrir sobres, activar cartas, revisar bonus y destruir cartas sobrantes.
+
+
+## V3.30
+
+- Reordenamiento del menú lateral según la estructura solicitada.
+
+
+## V3.30
+- Ajuste de textos del bloque de campos rivales en Estadio.
+- El botón de reparación ahora aparece como petitorio a la Federación Argentina.
+
+
+## V3.31
+
+- Corrección del descuento de puntos al abrir sobres.
+- Cartas de última apertura activables/destruibles.
+- Apertura de sobres animada carta por carta.
+- Activación de cartas por botón o arrastrando al bloque de cartas activas.
+
+
+
+## V3.33
+- Academia: al iniciar una captación, una vez por temporada llega un juvenil excepcional de 16 años.
+- Ese juvenil puede entrenarse en academia o firmar contrato profesional de inmediato.
+- Se agregó configuración para edad y rango de media inicial del juvenil excepcional.
+
+## V3.32
+
+- Corrección del pase automático de cartas abiertas hacia reserva.
+- Recuperación defensiva de cartas de última apertura al activar o destruir.
+- Apertura de sobres tres veces más lenta.
+
+## V3.40 - Config actualizado
+
+Esta versión toma como configuración principal el `config.js` editado por el usuario.
+
+Cambios destacados:
+- cooldown largo de avance: 60 segundos;
+- avance diario: 2 segundos;
+- ganancia de cohesión por partido: 9;
+- equilibrio de bots reforzado con pisos más altos;
+- dificultad de bots corregida a `dificil`.
+
+
+
+## V3.42 - Lesiones menos frecuentes
+
+El sistema de lesiones fue rebalanceado. Ahora la probabilidad total de lesión se multiplica por `lesiones.multiplicadorProbabilidad`. Con el valor `0.20`, las lesiones bajan un 80% respecto del cálculo anterior.
+
+A cambio, los tiempos de recuperación son más largos y configurables desde `config.js`, con lesiones graves que pueden llegar hasta 400 días.
+
+
+## V3.44 - Estrellas de referencia
+
+Se agrega un sistema de estrellas por rendimiento reciente. Cada club puede tener hasta 3 jugadores referencia. La estrella aparece junto al nombre y aumenta su peso dentro del simulador. Si el jugador cambia de club, pierde la estrella.
+
+
+### V3.48 - Errores por jugador
+
+Se ajustó el simulador para que los errores defensivos y del arquero dependan del jugador implicado, usando moral, físico, media y cohesión del equipo. También se separan mejor las estadísticas internas de lesiones, expulsiones, errores y errores de gol.
+
+
+## V3.48
+
+- Ofertas automáticas de jugadores basadas en estadísticas internas.
+- Filtro de ofertas: partidos oficiales jugados y producción ofensiva mínima.
+- Tope del 15% de cláusula para ofertas recibidas por jugadores.
+- Impuesto AFA del 30% sobre ventas.
+- Promedio de puntos por partido en Oficina del manager.
+
+
+## V3.48
+
+Agrega objetivo opcional de puntos por partido, barra de progreso y Game Over si el promedio no supera el objetivo desde los 10 partidos oficiales.
+
+
+## V3.48 - Pizarra táctica y roles
+
+Se corrigió la distribución visual de las formaciones y se agregó una penalización intermedia para jugadores fuera de su rol exacto: 100% si juega en su rol, 75% si ocupa un rol compatible y 50% si queda fuera de su zona.
+
+
+## V3.49
+- Ajuste visual de pizarra para DFC, MC y DC.
+- Aparición de jugadores MI y MD en generación de planteles y agentes libres.
+
+
+## V3.50
+- Objetivo automático por división.
+- Evaluación inicial a 5 partidos oficiales de temporada.
+- Prórroga por promedio general histórico del manager.
+- El promedio visible en oficina se calcula sobre la temporada actual.
+
+
+## V3.51
+- Confianza de la directiva: objetivo congelado al inicio de temporada y evaluación en los próximos partidos.
+- Residencias de academia: cupo base, alquiler mensual, cancelación y pérdida de juveniles sin lugar.
+- Visor de promedio de habilidades visibles juveniles.
+
+
+## V3.52
+- Mejora visual del menú Mensajes con estilo más claro tipo bandeja de entrada.
+
+
+## V3.53
+- Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
+- Click sobre el círculo del jugador para cambiar estado.
+- Los estados influyen en ataque, asistencia, defensa y tapadas.
+
+
+## V3.54
+- Fix visual de Mensajes: textos claros sobre pantalla oscura.
+- Fix de residencias en Academia: contador y cupos se actualizan correctamente.
+
+
+## V3.55
+- Nuevo presupuesto autorizado para fichajes con tope del 50% del presupuesto total.
+- Base por división y desbloqueos por rendimiento, ascenso, campeonato y ventas.
+- Finanzas y Mercado muestran el presupuesto disponible para fichajes.
+
+
+## V3.56
+- Mercado bot ampliado: ofertas por jugadores del manager, transferibles, veto de directiva para estrellas y despidos de bots.
+- Ficha individual mejorada con botón Contratar en libres, Hacer oferta en contratados y casilla EN VENTA en propios.

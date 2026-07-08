@@ -1,8 +1,13 @@
-# V3.68 - Tabla/estadísticas por liga del manager y estados tácticos persistentes
+# V3.69 - Mini ajustes de interfaz
 
-- Los menús **Tabla** y **Estadísticas** abren por defecto en la liga donde juega actualmente el manager.
-- Los filtros siguen permitiendo cambiar de división manualmente durante la consulta.
-- Los estados individuales de táctica se guardan por jugador y ya no se eliminan al salir del once.
-- **Mejor once** y **Mejor condición física** ya no resetean los estados: sólo el manager los cambia al hacer click sobre el círculo del jugador.
-- Los estados se conservan aunque el jugador salga del equipo o el manager cambie de club.
-- README actualizado con historial ordenado de más reciente a más antiguo.
+## Cambios
+- Prestigio del manager mostrado como entero.
+- Botón Renunciar movido arriba junto a Guardar/Cargar, con confirmación.
+- Columnas centradas en lista de titulares de Táctica.
+- Plantel más compacto y con barra horizontal superior.
+- Preparador de juveniles arriba en Academia.
+- Promedio de habilidades visibles de Academia con gráfico circular.
+- Ficha de jugador más compacta y acciones arriba.
+- Mercado limitado a 20 resultados iniciales con botón Ver más.
+- Finanzas con categorías más compactas.
+- README actualizado de más reciente a más antiguo.

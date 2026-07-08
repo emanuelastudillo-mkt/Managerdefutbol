@@ -11,6 +11,10 @@ function renderAll(){
   }
   refreshSidebarDate();
   $('btnSave').disabled = !game;
+  if($('topResignClubBtn')){
+    $('topResignClubBtn').disabled = !game || game.gameOver?.active;
+    $('topResignClubBtn').classList.toggle('hidden', !game || game.gameOver?.active);
+  }
   if(!game){
     hideNotice();
     if(activeTab === 'ranking' && typeof renderRankingOnline === 'function'){
@@ -208,7 +212,6 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     <div class="office-side-card">
       ${nextBox}
       <div class="advance-control office-advance"><div class="advance-buttons"><button id="advanceDayBtn" class="ghost secondary">Avanzar día</button><button id="advanceMatchBtn" class="primary">Ir a próximo partido</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
-      <button id="resignClubBtn" class="ghost danger full small-btn resign-club-btn" type="button">Renunciar al club</button>
     </div>
   </div>`;
 }
@@ -342,7 +345,6 @@ function renderHome(){
   `;
   $('advanceDayBtn')?.addEventListener('click', advanceOneDay);
   $('advanceMatchBtn')?.addEventListener('click', goToNextMatch);
-  $('resignClubBtn')?.addEventListener('click', resignCurrentClub);
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());

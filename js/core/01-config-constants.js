@@ -442,6 +442,7 @@ let worldPlayersPositionFilter = 'all';
 let worldPlayersClubFilter = 'all';
 let marketSubTab = 'free';
 let marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'', position:'all' };
+let marketVisibleLimit = 20;
 let firstTeamTab = 'tactics';
 let selectedFixtureDivision = 'all';
 let selectedStandingsDivision = 'all';

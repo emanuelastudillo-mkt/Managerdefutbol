@@ -1,10 +1,21 @@
 # Manager Fútbol - README
 
-## Versión actual: V3.68
+## Versión actual: V3.69
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 
 ## Historial de actualizaciones
+
+### V3.69 - Mini ajustes de interfaz
+- El prestigio del manager se muestra como valor entero.
+- Renunciar al club se movió arriba junto a Guardar y Cargar, con confirmación previa.
+- En Táctica, las columnas Edad, Media, Físico, Moral y Estado se centran; Pos. y Jugador quedan alineadas a la izquierda.
+- En Plantel se compactó la tabla y se agregó barra horizontal superior.
+- En Academia, el preparador de juveniles y Consultar juveniles quedan arriba.
+- El promedio de habilidades visibles de juveniles usa el mismo gráfico circular de los informes.
+- La ficha de jugador es más compacta y muestra las acciones arriba.
+- Mercado carga sólo los mejores 20 jugadores coincidentes y permite Ver más de a 20.
+- Finanzas muestra categorías más compactas.
 
 ### V3.68 - Liga predeterminada y estados tácticos persistentes
 - Tabla y Estadísticas abren por defecto en la liga donde juega el manager.
@@ -24,7 +35,7 @@ Juego de manager de fútbol en HTML/JS local con simulación de partidos, econom
 - La simulación mantiene 60 fases.
 
 ### V3.65 - Prestigio visual corregido
-- El prestigio del manager se muestra como decimal local para evitar confusión.
+- El prestigio visual anterior usaba decimal local para evitar confusión; desde V3.69 se muestra como entero.
 - El visor ya no suma el umbral artificial de 20 puntos.
 - Clubes de prestigio menor a 20 siguen aceptando cualquier manager.
 

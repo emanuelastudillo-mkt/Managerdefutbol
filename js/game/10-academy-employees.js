@@ -659,6 +659,24 @@ function academyVisibilityPieMarkup(player){
     </div>
   </div>`;
 }
+function academyAverageVisibilityPieMarkup(activePlayers){
+  const players = Array.isArray(activePlayers) ? activePlayers : [];
+  if(!players.length){
+    return `<div class="academy-visibility academy-visibility-average"><div class="academy-visibility-pie" style="--academy-visible-pct:0"><strong>0%</strong></div><div><p class="label">Habilidades visibles</p><strong>Sin juveniles</strong><p class="small muted">Promedio activo</p></div></div>`;
+  }
+  const progress = players.map(player => academyVisibleSkillsProgress(player));
+  const avgPercent = Math.round(avg(progress.map(item => item.percent)) || 0);
+  const totalVisible = progress.reduce((sum, item) => sum + Number(item.visible || 0), 0);
+  const totalStats = progress.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  return `<div class="academy-visibility academy-visibility-average" title="${totalVisible}/${totalStats} habilidades visibles">
+    <div class="academy-visibility-pie" style="--academy-visible-pct:${avgPercent}"><strong>${avgPercent}%</strong></div>
+    <div>
+      <p class="label">Habilidades visibles</p>
+      <strong>${totalVisible}/${totalStats}</strong>
+      <p class="small muted">Promedio de juveniles activos</p>
+    </div>
+  </div>`;
+}
 function academyPlayerStatsMarkup(player){
   const stats = academyVisibleStats(player);
   const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
@@ -703,11 +721,16 @@ function renderAcademy(){
       </div>
       <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
     </div>
+    <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
+      <div class="row">
+        <div><p class="label">Preparador de juveniles</p><h3>Informe de juveniles</h3><p class="muted small">Contratá al preparador para consultar y revelar habilidades de los juveniles activos.</p></div>
+        <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
+      </div>
+    </div>
     <div class="grid cols-3 academy-summary">
       <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>
-      <div class="card"><p class="label">Habilidades visibles</p><div class="metric">${avgVisible}%</div><p class="small muted">Promedio de los juveniles activos.</p></div>
+      <div class="card academy-average-card">${academyAverageVisibilityPieMarkup(active)}</div>
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
-      <div class="card"><p class="label">Preparador de juveniles</p>${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<div class="metric small">${staffCostLabel('youth_preparer')}</div><button class="primary" id="btnHireYouthPreparer">Contratar</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
     <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable y promovible de inmediato. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>

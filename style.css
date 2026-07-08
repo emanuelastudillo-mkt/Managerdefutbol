@@ -2448,3 +2448,70 @@ button.action-failure{
 .stadium-expansion-option p{margin:4px 0 0}
 .stadium-expansion-active .project-progress{margin-top:10px}
 @media (max-width:900px){.stadium-expansion-option{align-items:flex-start;flex-direction:column}.stadium-expansion-option .primary{width:100%}}
+
+/* V3.69: mini ajustes UI */
+.top-actions-compact{align-items:center}
+.top-resign-club-btn{border-color:rgba(239,68,68,.38)!important;background:rgba(239,68,68,.12)!important;color:#fecaca!important;padding:8px 11px}
+.top-resign-club-btn.hidden{display:none!important}
+
+/* Táctica: columnas centradas excepto Pos. y Jugador */
+.lineup-row .lineup-center-cell{display:flex;align-items:center;justify-content:center;text-align:center;min-width:0}
+.lineup-row .lineup-center-cell .condition-bar,
+.lineup-row .lineup-center-cell .morale-bar{margin:0 auto;width:100%}
+.lineup-row.lineup-head .lineup-center-cell{justify-content:center}
+
+/* Plantel más compacto + scroll horizontal superior */
+.squad-table-wrap{margin-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.squad-scroll-top{height:15px;overflow-x:auto;overflow-y:hidden;border:1px solid rgba(148,163,184,.14);border-bottom:0;border-radius:16px 16px 0 0;background:rgba(2,6,23,.28)}
+.squad-scroll-top>div{height:1px}
+.squad-table{font-size:12px;min-width:930px}
+.squad-table th,.squad-table td{padding:6px 7px}
+.squad-table .photo-thumb{width:34px;height:34px;border-radius:10px;font-size:15px}
+.squad-table .pill{padding:3px 6px;font-size:11px}
+.squad-table .condition-bar,.squad-table .morale-bar{min-width:82px}
+.squad-table .th-filter{min-width:88px;gap:4px}
+.squad-table .th-filter span{font-size:10px;letter-spacing:.06em}
+.squad-table .th-filter select{min-width:86px;padding:5px 7px;font-size:11px;border-radius:8px}
+
+/* Academia: preparador superior y promedio visual */
+.academy-youth-preparer-card{border-color:rgba(34,197,94,.18);background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(255,255,255,.025))}
+.academy-preparer-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.academy-average-card{display:grid;align-content:center}
+.academy-visibility-average{margin:0;background:rgba(2,6,23,.18)}
+.academy-average-card .academy-visibility{height:100%}
+
+/* Ficha individual compacta */
+.player-modal-compact{display:grid;gap:10px}
+.player-modal-compact .player-action-card{order:-1;padding:10px 12px;border-radius:14px}
+.player-modal-compact .player-action-card h3{font-size:16px;margin-bottom:6px}
+.player-modal-compact .message-actions{margin-top:7px;gap:7px}
+.player-modal-compact .message-actions button{padding:8px 10px;font-size:12px;border-radius:10px}
+.player-modal-compact .transfer-toggle-row{font-size:12px;margin:4px 0}
+.player-modal-compact .player-modal-grid{grid-template-columns:minmax(220px,.78fr) minmax(300px,1.22fr);gap:10px}
+.player-modal-compact .player-identity-card{gap:10px}
+.player-modal-compact .player-photo-placeholder.large{width:88px;height:88px;border-radius:17px;font-size:31px}
+.player-modal-compact .player-modal-title{font-size:clamp(20px,3vw,30px);margin-bottom:6px}
+.player-modal-compact .muted{font-size:12px;line-height:1.35}
+.player-modal-compact .radar-wrap{padding:6px;margin-top:8px;border-radius:15px}
+.player-modal-compact .radar{width:min(100%,270px)}
+.player-modal-compact .card.inner{padding:10px 12px;border-radius:14px}
+.player-modal-compact .card.inner h3{font-size:15px;margin-bottom:8px}
+.player-modal-compact .stat-rank{padding:6px 0;font-size:12px}
+.player-modal-compact .profile-bar-wrap{margin:6px 0}
+@media (max-width:900px){.player-modal-compact .player-modal-grid{grid-template-columns:1fr}.academy-preparer-actions{justify-content:flex-start}.squad-table{min-width:880px}}
+
+/* Mercado compacto y paginado */
+.market-limit-note{margin:-4px 0 8px}
+.market-more-row{margin-top:10px;justify-content:center;border:1px dashed rgba(148,163,184,.18);border-radius:14px;padding:10px;background:rgba(255,255,255,.025)}
+.market-more-row button{padding:8px 12px}
+
+/* Finanzas: categorías más compactas */
+.finance-category-grid{gap:9px}
+.finance-category-card{padding:11px;border-radius:14px}
+.finance-category-card>h3{font-size:16px;margin-bottom:5px}
+.finance-category-detail{border-radius:12px;margin-top:7px}
+.finance-category-detail summary{padding:8px 10px;gap:7px;font-size:12px;grid-template-columns:1fr auto}
+.finance-category-detail summary:before{font-size:11px;margin-right:5px;width:9px}
+.finance-category-detail summary span{margin-left:15px}
+.finance-category-detail summary small{font-size:11px}
+.compact-finance-table th,.compact-finance-table td{padding:6px 8px;font-size:12px}

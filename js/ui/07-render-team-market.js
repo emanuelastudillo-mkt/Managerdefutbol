@@ -121,11 +121,30 @@ function bindMarketFilters(){
       const key = input.dataset.marketFilter;
       if(!key) return;
       marketFilters[key] = input.value || (key === 'position' ? 'all' : '');
+      marketVisibleLimit = 20;
       renderMarket();
     });
   });
   $('clearMarketFilters')?.addEventListener('click', () => {
     marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'', position:'all' };
+    marketVisibleLimit = 20;
+    renderMarket();
+  });
+}
+function marketHasActiveFilters(){
+  return Boolean(Number(marketFilters.mediaMin || 0) || Number(marketFilters.mediaMax || 0) || Number(marketFilters.ageMin || 0) || Number(marketFilters.ageMax || 0) || Number(marketFilters.priceMax || 0) || String(marketFilters.position || 'all') !== 'all');
+}
+function marketVisiblePlayers(players){
+  const limit = Math.max(20, Number(marketVisibleLimit || 20));
+  return players.slice(0, limit);
+}
+function marketMoreButtonMarkup(total, shown){
+  if(shown >= total) return '';
+  return `<div class="row market-more-row"><button id="marketLoadMoreBtn" class="ghost" type="button">Ver más</button><span class="small muted">Mostrando ${shown} de ${total}. Se agregan 20 jugadores por vez.</span></div>`;
+}
+function bindMarketMoreButton(){
+  $('marketLoadMoreBtn')?.addEventListener('click', () => {
+    marketVisibleLimit = Math.max(20, Number(marketVisibleLimit || 20)) + 20;
     renderMarket();
   });
 }
@@ -135,7 +154,8 @@ function renderMarket(){
   if(marketSubTab !== 'contracted') marketSubTab = 'free';
   if(marketSubTab === 'contracted') return renderContractedMarket();
   const freeBase = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold).slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a));
-  const free = freeBase.filter(marketPlayerMatchesFilters);
+  const freeFiltered = freeBase.filter(marketPlayerMatchesFilters);
+  const free = marketVisiblePlayers(freeFiltered);
   const rows = free.map(p => `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
     <td><button class="linklike" data-player-id="${p.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong></button></td>
@@ -153,15 +173,19 @@ function renderMarket(){
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
-    ${marketFiltersMarkup(freeBase.length, free.length)}
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
+    ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
+    <div class="market-limit-note small muted">Se muestran los mejores ${free.length} jugador(es) que coinciden con el filtro.</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    ${marketMoreButtonMarkup(freeFiltered.length, free.length)}`;
   bindMarketTabs();
   bindMarketFilters();
+  bindMarketMoreButton();
   document.querySelectorAll('[data-hire-free-agent]').forEach(btn => btn.addEventListener('click', () => hireFreeAgent(Number(btn.dataset.hireFreeAgent))));
 }
 function renderContractedMarket(){
   const basePlayers = contractedMarketPlayers();
-  const players = basePlayers.filter(marketPlayerMatchesFilters);
+  const filteredPlayers = basePlayers.filter(marketPlayerMatchesFilters);
+  const players = marketVisiblePlayers(filteredPlayers);
   const rows = players.map(p => {
     const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id);
     const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
@@ -182,10 +206,13 @@ function renderContractedMarket(){
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
-    ${marketFiltersMarkup(basePlayers.length, players.length)}
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
+    ${marketFiltersMarkup(basePlayers.length, filteredPlayers.length)}
+    <div class="market-limit-note small muted">Se muestran los mejores ${players.length} jugador(es) que coinciden con el filtro.</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    ${marketMoreButtonMarkup(filteredPlayers.length, players.length)}`;
   bindMarketTabs();
   bindMarketFilters();
+  bindMarketMoreButton();
   document.querySelectorAll('[data-make-player-offer]').forEach(btn => btn.addEventListener('click', () => openPurchaseOfferModal(Number(btn.dataset.makePlayerOffer))));
 }
 
@@ -402,7 +429,8 @@ function renderSquad(){
     </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. Los controles de orden están en la cabecera de cada columna.</p></div>
-    <div class="table-wrap"><table class="squad-table"><thead><tr>
+    <div class="squad-scroll-top" id="squadScrollTop"><div></div></div>
+    <div class="table-wrap squad-table-wrap" id="squadTableWrap"><table class="squad-table"><thead><tr>
       <th>Foto</th>
       <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
       <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
@@ -422,6 +450,28 @@ function renderSquad(){
     select.addEventListener('change', e => {
       if(e.target.value){ squadSort = e.target.value; renderSquad(); }
     });
+  });
+  bindSquadTopScrollbar();
+}
+function bindSquadTopScrollbar(){
+  const top = $('squadScrollTop');
+  const wrap = $('squadTableWrap');
+  const table = wrap?.querySelector('table');
+  if(!top || !wrap || !table) return;
+  const inner = top.querySelector('div');
+  if(inner) inner.style.width = `${table.scrollWidth}px`;
+  let syncing = false;
+  top.addEventListener('scroll', () => {
+    if(syncing) return;
+    syncing = true;
+    wrap.scrollLeft = top.scrollLeft;
+    syncing = false;
+  });
+  wrap.addEventListener('scroll', () => {
+    if(syncing) return;
+    syncing = true;
+    top.scrollLeft = wrap.scrollLeft;
+    syncing = false;
   });
 }
 function tacticSelectionClass(playerId){
@@ -515,11 +565,11 @@ function renderTactics(){
     return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</strong>` : '<span class="muted">Vacío</span>'}</span>
-      <span class="age-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
-      <span>${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
-      ${p ? conditionBar(p.id) : '<span></span>'}
-      ${p ? moraleBar(p.id) : '<span></span>'}
-      <strong>${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
+      <span class="age-cell lineup-center-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
+      <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
+      <span class="lineup-center-cell">${p ? conditionBar(p.id) : ''}</span>
+      <span class="lineup-center-cell">${p ? moraleBar(p.id) : ''}</span>
+      <strong class="lineup-center-cell">${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
     </div>`;
   }).join('');
   view.innerHTML = `
@@ -539,7 +589,7 @@ function renderTactics(){
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">
         <h3>Titulares</h3>
-        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span>Edad</span><span>Media</span><span>Físico</span><span>Moral</span><span>Estado</span></div>
+        <div class="lineup-row lineup-head"><span>Pos.</span><span>Jugador</span><span class="lineup-center-cell">Edad</span><span class="lineup-center-cell">Media</span><span class="lineup-center-cell">Físico</span><span class="lineup-center-cell">Moral</span><span class="lineup-center-cell">Estado</span></div>
         <div class="lineup-list">${starterList}</div>
       </div>
       <div class="card">

@@ -59,7 +59,8 @@ function showPlayerModal(playerId){
   const visible = visibleStats(p);
   const stats = game?.playerStats?.[p.id];
   const meta = roleMeta(p.position);
-  const body = `
+  const body = `<div class="player-modal-compact">
+    ${playerModalActionsMarkup(p)}
     <div class="player-modal-grid">
       <div>
         <div class="player-identity-card">
@@ -96,9 +97,8 @@ function showPlayerModal(playerId){
           <div class="stat-rank"><span>Errores de gol</span><strong>${stats?.goalErrors || 0}</strong></div>
           <div class="stat-rank"><span>Tarjetas amarillas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0}</strong></div>
         </div>
-        ${playerModalActionsMarkup(p)}
       </div>
-    </div>`;
+    </div></div>`;
   openModal(body);
   bindPlayerModalActions(playerId);
 }

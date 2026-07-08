@@ -45,9 +45,12 @@ function managerPrestigeBreakdown(stats=game?.managerStats){
   return { total, adjustments, experience, experiencePrestige, wins, winPrestige, objectivePrestige, championPrestige, badSeasonPenalty, dismissalPenalty };
 }
 function formatManagerPrestige(value=currentManagerPrestige()){
-  const n = Number(value || 0);
-  const decimals = n >= 10 ? 2 : 3;
-  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+  const n = Math.max(0, Math.floor(Number(value || 0)));
+  return n.toLocaleString('es-AR', { maximumFractionDigits:0 });
+}
+function formatManagerPrestigeDecimal(value=0){
+  const n = Math.max(0, Number(value || 0));
+  return n.toLocaleString('es-AR', { minimumFractionDigits:0, maximumFractionDigits:3 });
 }
 function managerClubAccessPrestige(value=currentManagerPrestige()){
   const n = Number(value || 0);
@@ -169,6 +172,7 @@ function bindEvents(){
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnSave').addEventListener('click', saveLocal);
   $('btnLoad').addEventListener('click', ()=>loadLocal(false));
+  $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
   $('btnReset')?.addEventListener('click', confirmResetLocal);
   document.querySelectorAll('.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{

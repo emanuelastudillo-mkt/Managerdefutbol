@@ -382,8 +382,10 @@ function simulateNextMatchday(options={}){
   const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
   applyConditionUpdates(results);
   applyMoraleUpdates(results);
+  if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
   applyTrainingEffects();
   maintainBotBalanceDuringSeason();
+  if(typeof processBotDismissals === 'function') processBotDismissals();
   advanceStadiumAfterMatches(results);
   processSponsorContracts();
   if(ownResult){
@@ -541,6 +543,213 @@ function recordBudgetChange(delta, concept, meta={}){
     ...meta
   });
 }
+
+function transferBudgetConfig(){
+  return {
+    active:configBoolean('mercado.presupuestoFichajesActivo', true),
+    maxRate:configNumber('mercado.presupuestoFichajesMaximoPorcentaje', 0.50, 0, 1),
+    baseD3:configNumber('mercado.presupuestoFichajesDivision3', 0.25, 0, 1),
+    baseD2:configNumber('mercado.presupuestoFichajesDivision2', 0.35, 0, 1),
+    baseD1:configNumber('mercado.presupuestoFichajesDivision1', 0.40, 0, 1),
+    unlockObjective:configNumber('mercado.desbloqueoSuperarObjetivo', 0.05, 0, 1),
+    unlockPpg15:configNumber('mercado.desbloqueoPromedio15', 0.05, 0, 1),
+    unlockPpg19:configNumber('mercado.desbloqueoPromedio19', 0.10, 0, 1),
+    unlockPromotion:configNumber('mercado.desbloqueoAscenso', 0.10, 0, 1),
+    unlockChampion:configNumber('mercado.desbloqueoCampeon', 0.15, 0, 1),
+    saleUnlockedRate:configNumber('mercado.porcentajeVentaLiberadoFichajes', 0.70, 0, 1)
+  };
+}
+function transferBudgetBaseRateForClub(clubId){
+  const cfg = transferBudgetConfig();
+  const division = clubDivision(clubId || game?.selectedClubId);
+  const order = Math.round(Number(division?.order || 3));
+  if(order <= 1) return Math.min(cfg.maxRate, cfg.baseD1);
+  if(order === 2) return Math.min(cfg.maxRate, cfg.baseD2);
+  return Math.min(cfg.maxRate, cfg.baseD3);
+}
+function transferBudgetDefaultUnlocks(){
+  return { objective:false, ppg15:false, ppg19:false, promotion:false, champion:false };
+}
+function createTransferBudgetState(clubId=game?.selectedClubId, season=game?.seasonNumber || 1, startingExtraRate=0){
+  const cfg = transferBudgetConfig();
+  const baseRate = transferBudgetBaseRateForClub(clubId);
+  const extra = Math.max(0, Number(startingExtraRate || 0));
+  return {
+    active:cfg.active,
+    season:Number(season || 1),
+    clubId:Number(clubId || 0),
+    baseRate,
+    unlockedRate:Math.min(cfg.maxRate, extra),
+    extraUnlockedAmount:0,
+    spent:0,
+    unlocks:transferBudgetDefaultUnlocks(),
+    history:[]
+  };
+}
+function normalizeTransferBudgetState(state, sourceGame=game){
+  const season = Number(sourceGame?.seasonNumber || 1);
+  const clubId = Number(sourceGame?.selectedClubId || 0);
+  const cfg = transferBudgetConfig();
+  const src = state && typeof state === 'object' && !Array.isArray(state) ? state : createTransferBudgetState(clubId, season, 0);
+  const needsNewSeason = Number(src.season || 0) !== season || Number(src.clubId || 0) !== clubId;
+  if(needsNewSeason){
+    return createTransferBudgetState(clubId, season, 0);
+  }
+  const baseRate = Number.isFinite(Number(src.baseRate)) ? Number(src.baseRate) : transferBudgetBaseRateForClub(clubId);
+  const unlockedRate = Math.max(0, Number(src.unlockedRate || 0));
+  return {
+    active:cfg.active,
+    season,
+    clubId,
+    baseRate:Math.min(cfg.maxRate, Math.max(0, baseRate)),
+    unlockedRate:Math.min(cfg.maxRate, unlockedRate),
+    extraUnlockedAmount:Math.max(0, Math.round(Number(src.extraUnlockedAmount || 0))),
+    spent:Math.max(0, Math.round(Number(src.spent || 0))),
+    unlocks:{ ...transferBudgetDefaultUnlocks(), ...(src.unlocks || {}) },
+    history:Array.isArray(src.history) ? src.history.slice(-80) : []
+  };
+}
+function ensureTransferBudgetState(){
+  if(!game) return null;
+  game.transferBudget = normalizeTransferBudgetState(game.transferBudget, game);
+  return game.transferBudget;
+}
+function transferBudgetRate(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return 1;
+  const state = ensureTransferBudgetState();
+  return clamp((Number(state?.baseRate || 0) + Number(state?.unlockedRate || 0)), 0, cfg.maxRate);
+}
+function transferBudgetMaximum(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return Math.max(0, Math.round(Number(game?.budget || 0)));
+  return Math.max(0, Math.round(Number(game?.budget || 0) * cfg.maxRate));
+}
+function transferBudgetAuthorizedGross(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return Math.max(0, Math.round(Number(game?.budget || 0)));
+  const state = ensureTransferBudgetState();
+  const rateAmount = Math.round(Number(game?.budget || 0) * transferBudgetRate());
+  const extra = Math.round(Number(state?.extraUnlockedAmount || 0));
+  return Math.min(transferBudgetMaximum(), Math.max(0, rateAmount + extra));
+}
+function transferBudgetAvailable(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return Math.max(0, Math.round(Number(game?.budget || 0)));
+  const state = ensureTransferBudgetState();
+  return Math.max(0, Math.min(Number(game?.budget || 0), transferBudgetAuthorizedGross() - Math.round(Number(state?.spent || 0))));
+}
+function transferBudgetLockedAmount(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return 0;
+  return Math.max(0, Math.round(Number(game?.budget || 0) - transferBudgetAvailable()));
+}
+function transferBudgetPercentLabel(value){
+  return `${Math.round(Number(value || 0) * 100)}%`;
+}
+function transferBudgetAddHistory(type, text, amount=0, rate=0){
+  const state = ensureTransferBudgetState();
+  if(!state) return;
+  state.history = Array.isArray(state.history) ? state.history : [];
+  state.history.push({
+    season:Number(game?.seasonNumber || 1),
+    date:game?.currentDate || '',
+    type:String(type || 'budget'),
+    text:String(text || ''),
+    amount:Math.round(Number(amount || 0)),
+    rate:Number(rate || 0),
+    createdAt:Date.now()
+  });
+  state.history = state.history.slice(-80);
+}
+function unlockTransferBudgetRate(key, rate, title, body){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active) return false;
+  const state = ensureTransferBudgetState();
+  if(!state || state.unlocks?.[key]) return false;
+  const current = Number(state.baseRate || 0) + Number(state.unlockedRate || 0);
+  const add = Math.max(0, Math.min(Number(rate || 0), Math.max(0, cfg.maxRate - current)));
+  state.unlocks[key] = true;
+  if(add > 0){
+    state.unlockedRate = Math.min(cfg.maxRate, Number(state.unlockedRate || 0) + add);
+    transferBudgetAddHistory('unlock', title || 'Presupuesto liberado', 0, add);
+    pushGameMessage({ type:'directiva', priority:'normal', title:title || 'Presupuesto de fichajes liberado', body:body || `La directiva liberó ${transferBudgetPercentLabel(add)} adicional para fichajes.` });
+    return true;
+  }
+  return false;
+}
+function updateTransferBudgetPerformanceUnlocks(){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active || !game) return false;
+  const stats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
+  game.managerStats = stats;
+  const current = stats.currentSeason || {};
+  const played = Number(current.played || 0);
+  if(played <= 0) return false;
+  const ppg = ppgFromTotals(current);
+  const objective = Number(current.objectivePpg || managerObjectiveForClubDivision(game.selectedClubId));
+  let changed = false;
+  if(Number.isFinite(objective) && ppg > objective){
+    changed = unlockTransferBudgetRate('objective', cfg.unlockObjective, 'La directiva libera presupuesto', `El promedio de puntos superó el objetivo (${ppg.toFixed(2)} / ${objective.toFixed(2)}). Se habilitó ${transferBudgetPercentLabel(cfg.unlockObjective)} adicional para fichajes.`) || changed;
+  }
+  if(ppg > 1.5){
+    changed = unlockTransferBudgetRate('ppg15', cfg.unlockPpg15, 'Buen rendimiento deportivo', `El promedio de puntos de la temporada superó 1,5. La directiva habilitó ${transferBudgetPercentLabel(cfg.unlockPpg15)} adicional para fichajes.`) || changed;
+  }
+  if(ppg > 1.9){
+    changed = unlockTransferBudgetRate('ppg19', cfg.unlockPpg19, 'Rendimiento sobresaliente', `El promedio de puntos de la temporada superó 1,9. La directiva habilitó ${transferBudgetPercentLabel(cfg.unlockPpg19)} adicional para fichajes.`) || changed;
+  }
+  return changed;
+}
+function spendTransferBudget(amount, concept='Fichaje'){
+  const state = ensureTransferBudgetState();
+  const safe = Math.max(0, Math.round(Number(amount || 0)));
+  if(!state || safe <= 0) return;
+  state.spent = Math.max(0, Math.round(Number(state.spent || 0) + safe));
+  transferBudgetAddHistory('spend', concept, safe, 0);
+}
+function unlockTransferBudgetFromSale(netAmount){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active || !game) return 0;
+  const state = ensureTransferBudgetState();
+  const amount = Math.max(0, Math.round(Number(netAmount || 0) * cfg.saleUnlockedRate));
+  if(amount <= 0) return 0;
+  state.extraUnlockedAmount = Math.max(0, Math.round(Number(state.extraUnlockedAmount || 0) + amount));
+  transferBudgetAddHistory('sale_unlock', 'Venta liberada para fichajes', amount, 0);
+  return amount;
+}
+function queueNextSeasonTransferBudgetUnlock(key, rate, reason){
+  const cfg = transferBudgetConfig();
+  if(!cfg.active || !game) return 0;
+  const safeRate = Math.max(0, Number(rate || 0));
+  if(safeRate <= 0) return 0;
+  game.nextSeasonTransferBudgetUnlock = game.nextSeasonTransferBudgetUnlock || { rate:0, reasons:[] };
+  if(game.nextSeasonTransferBudgetUnlock.reasons?.some(r => r.key === key)) return 0;
+  game.nextSeasonTransferBudgetUnlock.rate = Math.max(0, Number(game.nextSeasonTransferBudgetUnlock.rate || 0) + safeRate);
+  game.nextSeasonTransferBudgetUnlock.reasons = Array.isArray(game.nextSeasonTransferBudgetUnlock.reasons) ? game.nextSeasonTransferBudgetUnlock.reasons : [];
+  game.nextSeasonTransferBudgetUnlock.reasons.push({ key, rate:safeRate, reason:String(reason || '') });
+  return safeRate;
+}
+function consumeNextSeasonTransferBudgetUnlock(){
+  const queued = game?.nextSeasonTransferBudgetUnlock && typeof game.nextSeasonTransferBudgetUnlock === 'object' ? game.nextSeasonTransferBudgetUnlock : null;
+  const rate = Math.max(0, Number(queued?.rate || 0));
+  game.nextSeasonTransferBudgetUnlock = null;
+  return { rate, reasons:Array.isArray(queued?.reasons) ? queued.reasons : [] };
+}
+function transferBudgetSummaryMarkup(){
+  const cfg = transferBudgetConfig();
+  const state = ensureTransferBudgetState();
+  if(!cfg.active || !state) return '';
+  const budget = Math.max(0, Math.round(Number(game?.budget || 0)));
+  const available = transferBudgetAvailable();
+  const max = transferBudgetMaximum();
+  const rate = transferBudgetRate();
+  const progress = max > 0 ? clamp(Math.round((available / max) * 100), 0, 100) : 0;
+  return `<div class="card transfer-budget-card">
+    <div class="row"><div><p class="label">Presupuesto para fichajes</p><h3>${formatMoney(available)}</h3></div><span class="pill">${transferBudgetPercentLabel(rate)} / ${transferBudgetPercentLabel(cfg.maxRate)}</span></div>
+    <div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div>
+    <p class="muted small">Presupuesto total: ${formatMoney(budget)} · Autorizado bruto: ${formatMoney(transferBudgetAuthorizedGross())} · Usado esta temporada: ${formatMoney(state.spent || 0)} · Bloqueado para fichajes: ${formatMoney(transferBudgetLockedAmount())}</p>
+  </div>`;
+}
 function budgetConcept(entry){
   if(entry.concept) return entry.concept;
   if(entry.type === 'season_salary') return 'Pago anual de sueldos';
@@ -572,6 +781,7 @@ function renderFinances(){
       <div class="card"><p class="label">Gastos temporada</p><strong class="bad">${formatMoney(seasonExpenses)}</strong></div>
       <div class="card"><p class="label">Sueldos anuales estimados</p><strong>${formatMoney(salaryTotal)}</strong></div>
     </div>
+    <div style="margin-top:14px">${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}</div>
     <div class="card" style="margin-top:14px"><h3>Plantel y sueldos</h3>
       <div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Nac.</th><th>Edad</th><th>Media</th><th>Sueldo anual</th></tr></thead><tbody>${financeSquadRows() || '<tr><td colspan="5" class="muted">No hay jugadores en el plantel.</td></tr>'}</tbody></table></div>
     </div>
@@ -611,7 +821,10 @@ function applyEconomyResult(match){
   else if(gf === gc) delta = Math.round(rnd(100000, 200000));
   else delta = Math.round(rnd(-100000, 50000));
   delta = Math.round(delta * multiplier);
-  recordBudgetChange(delta, 'Resultado de partido', { matchId: match.id, multiplier });
+  const ticketRevenue = isHome ? Math.round(Number(match?.matchContext?.ticketRevenue || 0)) : 0;
+  const totalDelta = delta + ticketRevenue;
+  const concept = ticketRevenue > 0 ? 'Resultado de partido + recaudación de entradas' : 'Resultado de partido';
+  recordBudgetChange(totalDelta, concept, { matchId: match.id, multiplier, ticketRevenue, ticketPrice:match?.matchContext?.ticketPrice || 0 });
 }
 function advanceStadiumAfterMatches(results){
   ensureStadiumState();

@@ -1,8 +1,443 @@
 {
-  "version": "V3.41",
-  "sistema": "estadios",
-  "descripcion": "Archivo reservado para futuras características de estadios.",
-  "estadios": [],
-  "caracteristicas": [],
-  "notas": "Vacío por el momento."
+  "leagues": [
+    {
+      "name": "Liga Profesional",
+      "teams": [
+        {
+          "name": "River Plate",
+          "reputation": 92,
+          "stadium": "Mâs Monumental",
+          "stadiumCapacity": 85018,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Boca Juniors",
+          "reputation": 99,
+          "stadium": "Alberto J. Armando",
+          "stadiumCapacity": 54000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Racing Club",
+          "reputation": 90,
+          "stadium": "Presidente Perón",
+          "stadiumCapacity": 55000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Independiente",
+          "reputation": 89,
+          "stadium": "Libertadores de América - Ricardo Enrique Bochini",
+          "stadiumCapacity": 48069,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "San Lorenzo",
+          "reputation": 87,
+          "stadium": "Pedro Bidegain",
+          "stadiumCapacity": 47964,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Estudiantes",
+          "reputation": 85,
+          "stadium": "Jorge Luis Hirschi",
+          "stadiumCapacity": 30018,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Vélez",
+          "reputation": 84,
+          "stadium": "José Amalfitani",
+          "stadiumCapacity": 49747,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Rosario",
+          "reputation": 83,
+          "stadium": "Gigante de Arroyito",
+          "stadiumCapacity": 51000,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Interpretado como Rosario Central."
+        },
+        {
+          "name": "Newell's",
+          "reputation": 82,
+          "stadium": "Marcelo Bielsa",
+          "stadiumCapacity": 42000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Talleres",
+          "reputation": 81,
+          "stadium": "Francisco Cabasés - La Boutique",
+          "stadiumCapacity": 18000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Huracán",
+          "reputation": 80,
+          "stadium": "Tomás Adolfo Ducó",
+          "stadiumCapacity": 48314,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Lanús",
+          "reputation": 79,
+          "stadium": "Ciudad de Lanús - Néstor Díaz Pérez",
+          "stadiumCapacity": 47027,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Belgrano",
+          "reputation": 78,
+          "stadium": "Julio César Villagra",
+          "stadiumCapacity": 34830,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gimnasia",
+          "reputation": 77,
+          "stadium": "Juan Carmelo Zerillo",
+          "stadiumCapacity": 21500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Defensa",
+          "reputation": 76,
+          "stadium": "Norberto Tito Tomaghello",
+          "stadiumCapacity": 20000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Banfield",
+          "reputation": 75,
+          "stadium": "Florencio Sola",
+          "stadiumCapacity": 34901,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atlético Tucumán",
+          "reputation": 74,
+          "stadium": "Monumental José Fierro",
+          "stadiumCapacity": 32700,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Platense",
+          "reputation": 73,
+          "stadium": "Ciudad de Vicente López",
+          "stadiumCapacity": 28530,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Unión",
+          "reputation": 72,
+          "stadium": "15 de Abril",
+          "stadiumCapacity": 27500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Instituto",
+          "reputation": 70,
+          "stadium": "Juan Domingo Perón",
+          "stadiumCapacity": 26535,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Primera Nacional",
+      "teams": [
+        {
+          "name": "Tigre",
+          "reputation": 75,
+          "stadium": "José Dellagiovanna",
+          "stadiumCapacity": 26282,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Independiente Rivadavia",
+          "reputation": 72,
+          "stadium": "Bautista Gargantini",
+          "stadiumCapacity": 24000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "San Martín Tucumán",
+          "reputation": 70,
+          "stadium": "La Ciudadela",
+          "stadiumCapacity": 25000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Barracas",
+          "reputation": 68,
+          "stadium": "Claudio Chiqui Tapia",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Godoy Cruz",
+          "reputation": 67,
+          "stadium": "Feliciano Gambarte",
+          "stadiumCapacity": 21000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Argentinos",
+          "reputation": 66,
+          "stadium": "Diego Armando Maradona",
+          "stadiumCapacity": 26000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Central Córdoba SdE",
+          "reputation": 65,
+          "stadium": "Alfredo Terrera",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Aldosivi",
+          "reputation": 64,
+          "stadium": "Puerto Tiburón",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": true,
+          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
+        },
+        {
+          "name": "Sarmiento",
+          "reputation": 63,
+          "stadium": "Eva Perón",
+          "stadiumCapacity": 22000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "San Martín San Juan",
+          "reputation": 62,
+          "stadium": "Ingeniero Hilario Sánchez",
+          "stadiumCapacity": 19000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Riestra",
+          "reputation": 61,
+          "stadium": "Guillermo Laza",
+          "stadiumCapacity": 8740,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Morón",
+          "reputation": 60,
+          "stadium": "Nuevo Francisco Urbano",
+          "stadiumCapacity": 32000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Maipú",
+          "reputation": 59,
+          "stadium": "Omar Higinio Sperdutti",
+          "stadiumCapacity": 9260,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Madryn",
+          "reputation": 58,
+          "stadium": "Abel Sastre",
+          "stadiumCapacity": 8000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Olimpo",
+          "reputation": 57,
+          "stadium": "Roberto Natalio Carminatti",
+          "stadiumCapacity": 20000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atlanta",
+          "reputation": 56,
+          "stadium": "Don León Kolbowski",
+          "stadiumCapacity": 9390,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Temperley",
+          "reputation": 55,
+          "stadium": "Alfredo Beranger",
+          "stadiumCapacity": 18000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Agropecuario",
+          "reputation": 53,
+          "stadium": "Ofelia Rosenzuaig",
+          "stadiumCapacity": 8000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atlético Rafaela",
+          "reputation": 52,
+          "stadium": "Nuevo Monumental",
+          "stadiumCapacity": 20000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gimnasia de Jujuy",
+          "reputation": 50,
+          "stadium": "23 de Agosto",
+          "stadiumCapacity": 23000,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Federal A",
+      "teams": [
+        {
+          "name": "Acassuso",
+          "reputation": 60,
+          "stadium": "La Quema",
+          "stadiumCapacity": 1800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Armenio",
+          "reputation": 55,
+          "stadium": "Estadio Armenia",
+          "stadiumCapacity": 8000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Midland",
+          "reputation": 50,
+          "stadium": "Ciudad de Libertad",
+          "stadiumCapacity": 11000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Tristan Suárez",
+          "reputation": 45,
+          "stadium": "20 de Octubre",
+          "stadiumCapacity": 7500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Real Pilar",
+          "reputation": 42,
+          "stadium": "Real de Pilar",
+          "stadiumCapacity": 6000,
+          "stadiumIsFictional": true,
+          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
+        },
+        {
+          "name": "Camioneros",
+          "reputation": 40,
+          "stadium": "Hugo Moyano",
+          "stadiumCapacity": 5000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Chaco For Ever",
+          "reputation": 38,
+          "stadium": "Juan Alberto García",
+          "stadiumCapacity": 25000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Rincón",
+          "reputation": 35,
+          "stadium": "Ciudad Deportiva - Rincón de los Sauces",
+          "stadiumCapacity": 500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "San Martín de Formosa",
+          "reputation": 33,
+          "stadium": "17 de Octubre",
+          "stadiumCapacity": 3000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Ituzaingó",
+          "reputation": 30,
+          "stadium": "Carlos Alberto Sacaan",
+          "stadiumCapacity": 5470,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Claypole",
+          "reputation": 28,
+          "stadium": "Rodolfo Vicente Capocasa",
+          "stadiumCapacity": 4000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Ciudad de Bolívar",
+          "reputation": 26,
+          "stadium": "Municipal Eva Perón",
+          "stadiumCapacity": 4000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "San Miguel",
+          "reputation": 24,
+          "stadium": "Malvinas Argentinas",
+          "stadiumCapacity": 11544,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Argentino Merlo",
+          "reputation": 22,
+          "stadium": "Juan Carlos Brieva",
+          "stadiumCapacity": 11000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sportivo Barracas",
+          "reputation": 20,
+          "stadium": "Barracas Sur",
+          "stadiumCapacity": 3500,
+          "stadiumIsFictional": true,
+          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
+        },
+        {
+          "name": "Atenas Río Cuarto",
+          "reputation": 18,
+          "stadium": "9 de Julio",
+          "stadiumCapacity": 7000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Argentino Monte Maíz",
+          "reputation": 16,
+          "stadium": "Modesto Marrone",
+          "stadiumCapacity": 5500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sarmiento La Banda",
+          "reputation": 14,
+          "stadium": "Ciudad de La Banda",
+          "stadiumCapacity": 8000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sportivo Belgrano",
+          "reputation": 12,
+          "stadium": "Juan Pablo Francia",
+          "stadiumCapacity": 15000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gimnasia y Tiro",
+          "reputation": 10,
+          "stadium": "El Gigante del Norte",
+          "stadiumCapacity": 24300,
+          "stadiumIsFictional": false
+        }
+      ]
+    }
+  ]
 }

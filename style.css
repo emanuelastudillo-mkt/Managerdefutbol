@@ -2262,3 +2262,63 @@ button.action-failure{
 .academy-residence-stats>div{padding:12px;border-radius:16px;background:rgba(255,255,255,.045);border:1px solid rgba(148,163,184,.12)}
 .academy-residence-stats strong{display:block;font-size:26px;line-height:1;font-weight:900;color:#eaf2ff}
 @media (max-width:700px){.academy-residence-stats{grid-template-columns:1fr}}
+
+
+/* V3.55: presupuesto de fichajes */
+.transfer-budget-card{border-color:rgba(59,130,246,.24);background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(34,197,94,.045))}
+.transfer-budget-card h3{margin:0;font-size:26px}
+.transfer-budget-bar{margin:12px 0 8px;height:10px}
+
+
+/* V3.56: transferibles y ficha de jugador */
+.transfer-listed-badge{display:inline-flex;align-items:center;margin-left:7px;padding:3px 7px;border-radius:999px;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.38);color:#fcd34d;font-size:10px;font-weight:900;letter-spacing:.08em;vertical-align:middle}
+.player-modal-title .transfer-listed-badge{font-size:11px;transform:translateY(-2px)}
+.transfer-toggle-row{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;color:var(--text);font-size:14px;margin:8px 0 4px;font-weight:800}
+.transfer-toggle-row input{width:auto;margin:0;accent-color:#f59e0b}
+.player-action-card{border-color:rgba(245,158,11,.16)}
+
+
+/* V3.58: indicadores visibles para estados individuales de pizarra */
+.pitch-board .mentality-marker{
+  display:flex!important;
+  position:absolute!important;
+  left:auto!important;
+  right:-9px!important;
+  top:-9px!important;
+  bottom:auto!important;
+  transform:none!important;
+  z-index:7!important;
+  width:34px!important;
+  height:34px!important;
+  border-radius:999px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:17px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  letter-spacing:-.16em!important;
+  color:#f8fafc!important;
+  border:2px solid rgba(255,255,255,.86)!important;
+  box-shadow:0 6px 14px rgba(2,6,23,.42)!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.35)!important;
+  pointer-events:none!important;
+}
+.pitch-board .mentality-marker.normal{letter-spacing:0!important;background:#eab308!important;color:#111827!important}
+.pitch-board .mentality-marker.attack{background:#16a34a!important}
+.pitch-board .mentality-marker.very-attack{background:#0284c7!important}
+.pitch-board .mentality-marker.defense{background:#ea580c!important}
+.pitch-board .mentality-marker.very-defense{background:#dc2626!important}
+.pitch-board .mentality-marker-symbol{display:block;transform:translateX(-1px)}
+.pitch-board .mentality-marker.normal .mentality-marker-symbol{transform:none;font-size:20px}
+.pitch-board .player-chip.mentality-muy_defensivo{border:2px solid rgba(248,113,113,.98)!important;box-shadow:0 0 0 3px rgba(239,68,68,.22),0 10px 24px rgba(2,6,23,.34)!important}
+.pitch-board .player-chip.mentality-defensivo{border:2px solid rgba(251,146,60,.98)!important;box-shadow:0 0 0 3px rgba(251,146,60,.18),0 10px 24px rgba(2,6,23,.34)!important}
+.pitch-board .player-chip.mentality-normal{border:2px solid rgba(250,204,21,.92)!important;box-shadow:0 0 0 3px rgba(250,204,21,.14),0 10px 24px rgba(2,6,23,.34)!important}
+.pitch-board .player-chip.mentality-ofensivo{border:2px solid rgba(74,222,128,.98)!important;box-shadow:0 0 0 3px rgba(34,197,94,.18),0 10px 24px rgba(2,6,23,.34)!important}
+.pitch-board .player-chip.mentality-muy_ofensivo{border:2px solid rgba(56,189,248,.98)!important;box-shadow:0 0 0 3px rgba(14,165,233,.20),0 10px 24px rgba(2,6,23,.34)!important}
+.tactic-state-legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:14px;background:rgba(15,23,42,.54);border:1px solid rgba(148,163,184,.14)}
+.tactic-state-legend span{display:inline-flex;align-items:center;gap:8px;color:#dbeafe;font-size:12px;font-weight:800;white-space:nowrap}
+.tactic-state-legend .mentality-marker{display:inline-flex!important;position:static!important;transform:none!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:24px!important;height:24px!important;font-size:12px!important;border-width:1px!important;box-shadow:none!important;letter-spacing:-.12em!important}
+.tactic-state-legend .mentality-marker.normal{letter-spacing:0!important}
+@media (max-width:900px){
+  .pitch-board .mentality-marker{right:-7px!important;top:-7px!important;width:28px!important;height:28px!important;font-size:14px!important}
+}

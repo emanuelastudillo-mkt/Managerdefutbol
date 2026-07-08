@@ -1,4 +1,4 @@
-/* V3.28 · Carga de JSON, calendario anual, normalización inicial, persistencia local e inicialización. */
+/* V3.57 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -84,6 +84,90 @@ async function loadSpecialSkillsDatabase(){
   return clean;
 }
 
+
+async function loadStadiumsDatabase(){
+  const raw = await fetchJsonIfExists(STADIUMS_DATABASE_URL);
+  if(!raw || typeof raw !== 'object') return { raw:null, teams:[], source:'fallback' };
+  const teams = [];
+  const leagues = Array.isArray(raw.leagues) ? raw.leagues : (Array.isArray(raw.ligas) ? raw.ligas : []);
+  leagues.forEach(league => {
+    const leagueName = league?.name || league?.nombre || '';
+    const list = Array.isArray(league?.teams) ? league.teams : (Array.isArray(league?.equipos) ? league.equipos : []);
+    list.forEach(team => {
+      if(!team) return;
+      teams.push({ ...team, league:leagueName });
+    });
+  });
+  return { raw, teams, source:STADIUMS_DATABASE_URL };
+}
+async function loadFansDatabase(){
+  const raw = await fetchJsonIfExists(FANS_DATABASE_URL);
+  if(!raw || typeof raw !== 'object') return { raw:null, hinchadas:[], source:'fallback' };
+  const hinchadas = Array.isArray(raw.hinchadas) ? raw.hinchadas : [];
+  return { raw, hinchadas, source:FANS_DATABASE_URL };
+}
+function lookupNameKey(name){
+  return String(name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+function indexByTeamName(list, field='name'){
+  const map = new Map();
+  (list || []).forEach(item => {
+    const key = lookupNameKey(item?.[field]);
+    if(key && !map.has(key)) map.set(key, item);
+  });
+  return map;
+}
+function fallbackStadiumCapacityForClub(club){
+  const reputation = Number(club?.reputation || 50);
+  const order = Number(club?.divisionOrder || 3);
+  const base = order === 1 ? 26000 : order === 2 ? 14000 : 6500;
+  return Math.max(500, Math.round(base + reputation * (order === 1 ? 380 : order === 2 ? 180 : 80)));
+}
+function fallbackFanBaseForClub(club, capacity=null){
+  const cap = Math.max(500, Math.round(Number(capacity || club?.stadiumCapacity || fallbackStadiumCapacityForClub(club))));
+  const order = Number(club?.divisionOrder || 3);
+  const reputation = clamp(Number(club?.reputation || 50), 1, 99);
+  const minPct = order === 1 ? 0.70 : order === 2 ? 0.50 : 0.25;
+  const maxPct = order === 1 ? 0.90 : order === 2 ? 0.74 : 0.56;
+  const pct = minPct + (reputation / 99) * (maxPct - minPct);
+  return Math.max(50, Math.floor(cap * pct));
+}
+function applyStadiumAndFansDatabases(seedData, stadiumDb, fanDb){
+  if(!seedData?.clubs?.length) return seedData;
+  const stadiumIndex = indexByTeamName(stadiumDb?.teams || [], 'name');
+  const fansIndex = indexByTeamName(fanDb?.hinchadas || [], 'equipo');
+  seedData.clubs = seedData.clubs.map(club => {
+    const key = lookupNameKey(club.name);
+    const stadium = stadiumIndex.get(key) || null;
+    const fans = fansIndex.get(key) || null;
+    const stadiumName = stadium?.stadium || fans?.estadio || club.stadiumName || `${club.name} Stadium`;
+    const stadiumCapacity = Math.max(500, Math.round(Number(stadium?.stadiumCapacity || fans?.capacidad_estadio || club.stadiumCapacity || fallbackStadiumCapacityForClub(club))));
+    const fansBase = Math.max(50, Math.round(Number(fans?.hinchas_base || club.fansBase || fallbackFanBaseForClub(club, stadiumCapacity))));
+    return {
+      ...club,
+      stadiumName,
+      stadiumCapacity,
+      stadiumIsFictional:Boolean(stadium?.stadiumIsFictional ?? fans?.estadio_ficticio ?? club.stadiumIsFictional ?? false),
+      stadiumNote:stadium?.stadiumNote || fans?.nota_estadio || club.stadiumNote || '',
+      fansBase,
+      fansInitial:fansBase
+    };
+  });
+  seedData.meta = {
+    ...(seedData.meta || {}),
+    stadiumsSource:stadiumDb?.source || 'fallback',
+    fansSource:fanDb?.source || 'fallback',
+    fansVersion:fanDb?.raw?.version || '',
+    stadiumsApplied:true
+  };
+  seedData.meta.signature = seedSignature(seedData);
+  return seedData;
+}
+
 function playersDatabaseHash(players=[]){
   const raw = players.map(p => `${p.id}:${p.clubId}:${p.position}:${p.overall}:${p.salary}:${p.clause}`).join('|');
   return `players-${hashNumber(raw, 1000000000)}`;
@@ -147,10 +231,12 @@ function currentSavePayload(){
 }
 async function loadInitialSeed(){
   const playersDatabase = await loadPlayersDatabase();
+  stadiumsDatabase = await loadStadiumsDatabase();
+  fansDatabase = await loadFansDatabase();
   for(const url of LEAGUE_DATA_CANDIDATES){
     const leagueJson = await fetchJsonIfExists(url);
     if(leagueJson){
-      const built = buildSeedFromLigaArgentina(leagueJson, url);
+      const built = applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(leagueJson, url), stadiumsDatabase, fansDatabase);
       return applyPlayersDatabase(built, playersDatabase);
     }
   }
@@ -160,7 +246,8 @@ async function loadInitialSeed(){
     fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:c.crestPath || `img/escudos/${imageSlug(c.name)}.png` }));
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
     fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
-    return applyPlayersDatabase(fallback, playersDatabase);
+    const withStadiums = applyStadiumAndFansDatabases(fallback, stadiumsDatabase, fansDatabase);
+    return applyPlayersDatabase(withStadiums, playersDatabase);
   }
   throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
 }
@@ -312,16 +399,23 @@ function fieldConditionClass(score){
 }
 function createInitialStadiumState(){
   const fields = {};
-  seed.clubs.forEach(club => { fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club); });
-  return { fields, projects:{}, botSeasonNumber:0 };
+  const ticketPrices = {};
+  seed.clubs.forEach(club => {
+    fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
+    ticketPrices[club.id] = TICKET_PRICE_INITIAL;
+  });
+  return { fields, projects:{}, ticketPrices, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
   if(!game.stadium) game.stadium = createInitialStadiumState();
   if(!game.stadium.fields) game.stadium.fields = {};
   if(!game.stadium.projects) game.stadium.projects = {};
+  if(!game.stadium.ticketPrices) game.stadium.ticketPrices = {};
   seed.clubs.forEach(club => {
     if(!Number.isFinite(game.stadium.fields[club.id])) game.stadium.fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
+    if(!Number.isFinite(Number(game.stadium.ticketPrices[club.id]))) game.stadium.ticketPrices[club.id] = TICKET_PRICE_INITIAL;
+    game.stadium.ticketPrices[club.id] = clamp(Math.round(Number(game.stadium.ticketPrices[club.id])), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
   });
   repairInvalidBotFieldStates(game, 'ensure_stadium_state', { message:false });
 }
@@ -337,6 +431,156 @@ function stadiumProjectForClub(clubId){
   if(!game.stadium.projects[clubId]) game.stadium.projects[clubId] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
   return game.stadium.projects[clubId];
 }
+
+function clubStadiumCapacity(clubId){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  return Math.max(500, Math.round(Number(club?.stadiumCapacity || fallbackStadiumCapacityForClub(club || { id:clubId, reputation:50, divisionOrder:3 }))));
+}
+function clubStadiumName(clubId){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  return club?.stadiumName || `${club?.name || 'Club'} Stadium`;
+}
+function clubFansBase(clubId){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  return Math.max(50, Math.round(Number(club?.fansBase || fallbackFanBaseForClub(club || { id:clubId, reputation:50, divisionOrder:3 }, clubStadiumCapacity(clubId)))));
+}
+function createInitialFanState(){
+  const clubs = {};
+  seed.clubs.forEach(club => {
+    const base = clubFansBase(club.id);
+    clubs[club.id] = { base, current:base, lastDelta:0, lastReason:'Base inicial' };
+  });
+  return { clubs, history:[] };
+}
+function ensureFanState(targetGame=game){
+  if(!targetGame) return;
+  targetGame.fans = targetGame.fans && typeof targetGame.fans === 'object' && !Array.isArray(targetGame.fans) ? targetGame.fans : createInitialFanState();
+  targetGame.fans.clubs = targetGame.fans.clubs && typeof targetGame.fans.clubs === 'object' && !Array.isArray(targetGame.fans.clubs) ? targetGame.fans.clubs : {};
+  targetGame.fans.history = Array.isArray(targetGame.fans.history) ? targetGame.fans.history : [];
+  seed.clubs.forEach(club => {
+    const base = clubFansBase(club.id);
+    const row = targetGame.fans.clubs[club.id] || {};
+    const current = Number.isFinite(Number(row.current)) ? Math.max(0, Math.round(Number(row.current))) : base;
+    targetGame.fans.clubs[club.id] = { base:Number.isFinite(Number(row.base)) ? Math.round(Number(row.base)) : base, current, lastDelta:Math.round(Number(row.lastDelta || 0)), lastReason:row.lastReason || '' };
+  });
+}
+function clubFansCurrent(clubId){
+  ensureFanState();
+  return Math.max(0, Math.round(Number(game?.fans?.clubs?.[clubId]?.current || clubFansBase(clubId))));
+}
+function setClubFansCurrent(clubId, value, reason=''){
+  ensureFanState();
+  const id = Number(clubId);
+  const previous = clubFansCurrent(id);
+  const current = Math.max(0, Math.round(Number(value || 0)));
+  const row = game.fans.clubs[id] || { base:clubFansBase(id) };
+  game.fans.clubs[id] = { ...row, current, lastDelta:current - previous, lastReason:String(reason || '') };
+  return current - previous;
+}
+function ticketPriceForClub(clubId){
+  ensureStadiumState();
+  return clamp(Math.round(Number(game?.stadium?.ticketPrices?.[clubId] ?? TICKET_PRICE_INITIAL)), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
+}
+function setTicketPriceForClub(clubId, value){
+  ensureStadiumState();
+  const price = clamp(Math.round(Number(value || TICKET_PRICE_INITIAL)), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
+  game.stadium.ticketPrices[clubId] = price;
+  return price;
+}
+function priceRatio(price){
+  if(TICKET_PRICE_MAX <= TICKET_PRICE_MIN) return 0;
+  return clamp((Number(price || TICKET_PRICE_INITIAL) - TICKET_PRICE_MIN) / (TICKET_PRICE_MAX - TICKET_PRICE_MIN), 0, 1);
+}
+function ticketLossShieldRate(price){
+  return (1 - priceRatio(price)) * TICKET_PRICE_MAX_EFFECT_RATE;
+}
+function ticketGainBlockRate(price){
+  return priceRatio(price) * TICKET_PRICE_MAX_EFFECT_RATE;
+}
+function awayFansMinimumRateForMatch(match){
+  const range = Math.max(0, AWAY_FANS_MAX_RATE - AWAY_FANS_MIN_RATE);
+  const pct = AWAY_FANS_MIN_RATE + (hashNumber(`${match?.id || ''}-away-section`, 1000) / 999) * range;
+  return clamp(pct, 0, AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE);
+}
+function attendanceContextForMatch(match){
+  ensureFanState();
+  ensureStadiumState();
+  const capacity = clubStadiumCapacity(match.homeId);
+  const homeDemand = clubFansCurrent(match.homeId);
+  const awayDemand = clubFansCurrent(match.awayId);
+  const awayMinRate = awayFansMinimumRateForMatch(match);
+  const awayReservedMinimum = Math.round(capacity * awayMinRate);
+  const awayMax = Math.round(capacity * AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE);
+  const awayBase = Math.min(awayDemand, awayReservedMinimum);
+  const homeAfterMinimum = Math.min(homeDemand, Math.max(0, capacity - awayReservedMinimum));
+  const emptyAfterHome = Math.max(0, capacity - awayReservedMinimum - homeAfterMinimum);
+  const awayExtra = Math.min(Math.max(0, awayDemand - awayBase), emptyAfterHome, Math.max(0, awayMax - awayBase));
+  const awayFans = Math.max(0, Math.round(awayBase + awayExtra));
+  const homeFans = Math.max(0, Math.round(Math.min(homeDemand, Math.max(0, capacity - Math.max(awayReservedMinimum, awayFans)))));
+  const totalFans = Math.min(capacity, homeFans + awayFans);
+  const ratioBonus = awayFans > 0 ? Math.floor(homeFans / Math.max(1, awayFans)) : HOME_CROWD_BONUS_MAX;
+  const diffBonus = Math.floor(Math.max(0, homeFans - awayFans) / HOME_CROWD_FANS_PER_BONUS_POINT);
+  const homeCrowdBonus = clamp(Math.max(ratioBonus, diffBonus), 0, HOME_CROWD_BONUS_MAX);
+  const ticketPrice = ticketPriceForClub(match.homeId);
+  const ticketRevenue = Math.round(totalFans * ticketPrice);
+  return {
+    stadiumName:clubStadiumName(match.homeId),
+    capacity,
+    homeFans,
+    awayFans,
+    totalFans,
+    awayReservedMinimum,
+    awaySectionRate:Number((awayMinRate * 100).toFixed(1)),
+    awayMax,
+    homeCrowdBonus,
+    ticketPrice,
+    ticketRevenue
+  };
+}
+function fanTableRateForPosition(position){
+  const raw = (FAN_TABLE_NEUTRAL_POSITION - Number(position || FAN_TABLE_NEUTRAL_POSITION)) * FAN_TABLE_POSITION_STEP;
+  return clamp(raw, -0.01, FAN_TABLE_MAX_GAIN_RATE);
+}
+function clubPositionInStandings(clubId){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  const divisionId = club?.divisionId || 'default';
+  const list = typeof sortedStandings === 'function' ? sortedStandings(divisionId) : [];
+  const index = list.findIndex(row => Number(row.clubId) === Number(clubId));
+  return index >= 0 ? index + 1 : FAN_TABLE_NEUTRAL_POSITION;
+}
+function applyFanChangeForClub(clubId, resultKey){
+  ensureFanState();
+  const current = clubFansCurrent(clubId);
+  const base = clubFansBase(clubId);
+  const price = ticketPriceForClub(clubId);
+  let resultDelta = 0;
+  if(resultKey === 'win') resultDelta = base * FAN_WIN_BASE_RATE;
+  if(resultKey === 'loss') resultDelta = -current * FAN_LOSS_CURRENT_RATE;
+  const position = clubPositionInStandings(clubId);
+  let positionDelta = current * fanTableRateForPosition(position);
+  if(positionDelta < 0){
+    positionDelta = Math.min(0, positionDelta + current * ticketLossShieldRate(price));
+  }
+  let totalDelta = resultDelta + positionDelta;
+  if(totalDelta > 0){
+    totalDelta = Math.max(0, totalDelta - current * ticketGainBlockRate(price));
+  }
+  const rounded = Math.round(totalDelta);
+  const applied = setClubFansCurrent(clubId, Math.max(0, current + rounded), `Resultado ${resultKey}. Posición ${position}. Entrada ${formatMoney(price)}.`);
+  game.fans.history.push({ season:game.seasonNumber || 1, matchday:game.matchdayIndex || 0, date:game.currentDate || '', clubId:Number(clubId), result:resultKey, position, ticketPrice:price, delta:applied, current:clubFansCurrent(clubId) });
+  game.fans.history = game.fans.history.slice(-240);
+  return applied;
+}
+function applyFanChangesAfterMatches(results=[]){
+  ensureFanState();
+  (results || []).forEach(match => {
+    const homeResult = match.homeGoals > match.awayGoals ? 'win' : match.homeGoals < match.awayGoals ? 'loss' : 'draw';
+    const awayResult = match.awayGoals > match.homeGoals ? 'win' : match.awayGoals < match.homeGoals ? 'loss' : 'draw';
+    applyFanChangeForClub(match.homeId, homeResult);
+    applyFanChangeForClub(match.awayId, awayResult);
+  });
+}
+
 function isManagedClubField(clubId, managedClubId=null){
   return Number(clubId) === Number(managedClubId || game?.selectedClubId || 0);
 }

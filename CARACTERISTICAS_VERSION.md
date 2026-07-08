@@ -1,6 +1,11 @@
-# V3.54 - Fix mensajes y residencias
+# V3.58 - Flechas visibles de estados tácticos
 
-- Se corrigió el contraste del menú **Mensajes** para que no use textos oscuros sobre la pantalla oscura.
-- Se corrigió el alquiler de residencias en Academia: ahora aumenta correctamente el contador y el cupo total.
-- El alquiler ahora actualiza toda la interfaz después de descontar el dinero.
-- Se agregaron métricas visibles de residencias alquiladas, cupo total y cupos libres.
+- Se corrigió el ocultamiento visual de los indicadores de estado individual en la pizarra.
+- Ahora cada círculo muestra una marca visible:
+  - ←← Muy defensivo
+  - ← Defensivo
+  - • Normal
+  - → Ofensivo
+  - →→ Muy ofensivo
+- Se agregó una leyenda debajo de la cancha.
+- El borde del círculo también cambia según el estado.

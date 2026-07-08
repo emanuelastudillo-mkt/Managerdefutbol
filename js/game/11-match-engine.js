@@ -44,9 +44,10 @@ function makeMatchContext(match, home, away){
   const pitchScore = fieldScoreForClub(match.homeId);
   const pitch = fieldConditionName(pitchScore);
   const effect = pitchEffect(pitch);
-  const homeFans = Math.max(800, Math.round((homeClub?.reputation || 60) * rnd(210,360)));
-  const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * rnd(18,70)));
-  return { weather, pitch, pitchScore, homeFans, awayFans, pitchEffect:effect };
+  const attendance = typeof attendanceContextForMatch === 'function'
+    ? attendanceContextForMatch(match)
+    : { homeFans:Math.max(800, Math.round((homeClub?.reputation || 60) * rnd(210,360))), awayFans:Math.max(120, Math.round((awayClub?.reputation || 60) * rnd(18,70))), totalFans:0, capacity:0, homeCrowdBonus:0, ticketPrice:0, ticketRevenue:0 };
+  return { weather, pitch, pitchScore, ...attendance, pitchEffect:effect };
 }
 function poisson(lambda){
   const L = Math.exp(-lambda);

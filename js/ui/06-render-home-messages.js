@@ -565,7 +565,7 @@ function messageTypeLabel(type){
 function messageCard(m){
   const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
     ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button><button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
-    : (m.action?.status ? `<span class="pill message-status-pill">${m.action.status === 'accepted' ? 'Aceptada' : 'Rechazada'}</span>` : '');
+    : (m.action?.status ? `<span class="pill message-status-pill">${m.action.status === 'accepted' ? 'Aceptada' : m.action.status === 'blocked_by_board' ? 'Bloqueada por directiva' : 'Rechazada'}</span>` : '');
   const toneClass = messageToneClass(m.type, m.priority);
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
   return `<div class="card message-card ${toneClass} ${m.read ? '' : 'unread'}">
@@ -607,26 +607,57 @@ function playerSeasonStatsForOffers(player){
 function playerQualifiesForTransferOffers(player){
   if(!player) return false;
   const st = playerSeasonStatsForOffers(player);
-  if(PLAYER_OFFERS_REQUIRE_MATCHES && st.played <= 0) return false;
+  const played = Number(st.played || 0);
+  const directProduction = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
+  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
+  const young = Number(player.age || 99) <= 23;
+  const goodYoungProfile = young && visibleOverall(player) >= 58 && played >= 2;
+  const transferListed = Boolean(player.transferListed);
+  if(isStar && played > 0) return true;
+  if(goodYoungProfile && directProduction > 0) return true;
+  if(transferListed && hasPlayerSalaryPaid(player) && played > 0) return true;
+  if(PLAYER_OFFERS_REQUIRE_MATCHES && played <= 0) return false;
   if(PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST && (st.goals + st.assists) <= 0) return false;
   return true;
 }
+function playerOfferProfile(player){
+  const st = playerSeasonStatsForOffers(player);
+  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
+  const young = Number(player.age || 99) <= 23;
+  const production = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
+  if(isStar) return 'star';
+  if(young && visibleOverall(player) >= 58 && (production > 0 || Number(st.played || 0) >= 5)) return 'young_good';
+  if(Boolean(player.transferListed)) return 'transfer_listed';
+  return 'standard';
+}
 function playerOfferPerformanceScore(player){
   const st = playerSeasonStatsForOffers(player);
-  const production = (st.goals * 24) + (st.assists * 18) + (st.keySaves * 8);
+  const profile = playerOfferProfile(player);
+  const production = (st.goals * 24) + (st.assists * 18) + (st.keySaves * 14);
+  const youthBonus = Number(player.age || 99) <= 21 ? 22 : Number(player.age || 99) <= 23 ? 12 : 0;
+  const starBonus = profile === 'star' ? 55 : 0;
+  const listedPenalty = profile === 'transfer_listed' ? 18 : 0;
   const reliabilityPenalty = (st.injuries * 10) + (st.red * 12) + (st.goalErrors * 18) + (st.errors * 4);
-  return Math.max(0, (visibleOverall(player) * 0.35) + (st.played * 2) + production - reliabilityPenalty);
+  return Math.max(0, (visibleOverall(player) * 0.42) + (st.played * 2) + production + youthBonus + starBonus - listedPenalty - reliabilityPenalty);
 }
-function playerOfferPercent(player, salt=''){
+function playerOfferRange(player){
+  const profile = playerOfferProfile(player);
+  if(profile === 'star') return { min:35, max:60 };
+  if(profile === 'young_good') return { min:18, max:35 };
+  if(profile === 'transfer_listed') return { min:6, max:18 };
   const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.05);
   const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.15);
-  const minPct = Math.round(minRate * 100);
-  const maxPct = Math.max(minPct, Math.round(maxRate * 100));
+  return { min:Math.round(minRate * 100), max:Math.max(Math.round(minRate * 100), Math.round(maxRate * 100)) };
+}
+function playerOfferPercent(player, salt=''){
+  const range = playerOfferRange(player);
+  const minPct = Math.max(1, Math.round(range.min || 5));
+  const maxPct = Math.max(minPct, Math.round(range.max || 15));
   const span = Math.max(0, maxPct - minPct);
   const score = playerOfferPerformanceScore(player);
-  const scoreBonus = Math.min(span, Math.floor(score / 45));
+  const scoreBonus = Math.min(span, Math.floor(score / 42));
   const noise = span > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, span + 1) : 0;
-  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.45)), minPct, maxPct);
+  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.55)), minPct, maxPct);
 }
 function buildTransferOfferFinancials(player, pct){
   const clause = refreshPlayerClause(player);
@@ -641,25 +672,41 @@ function transferOfferBody(foreignClub, player, financials, pct, suffix=''){
 function managerPointsPerGame(){
   return typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0;
 }
+function botTransferOfferClub(player){
+  const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
+  if(!clubs.length) return { name:FOREIGN_CLUBS[0] || 'Club interesado', id:-1 };
+  const sameDivision = clubs.filter(c => String(c.divisionId || '') === String(seed.clubs.find(x => Number(x.id) === Number(game?.selectedClubId))?.divisionId || ''));
+  const pool = sameDivision.length ? sameDivision : clubs;
+  const club = pool[hashNumber(`bot-offer-club-${player.id}-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}`, pool.length)];
+  return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
+}
 function maybeGenerateTransferOffer(match){
   if(!game || !match) return;
-  const roll = Math.random();
-  if(roll > 0.28) return;
-  const candidates = playersByClub(game.selectedClubId)
+  const ownPlayers = playersByClub(game.selectedClubId);
+  const listedCount = ownPlayers.filter(p => Boolean(p.transferListed)).length;
+  const chance = clamp(Number(BOT_TRANSFER_OFFER_BASE_CHANCE || 0.28) + Math.min(Number(BOT_TRANSFER_LISTED_EXTRA_CHANCE || 0.22), listedCount * 0.045), 0, 0.72);
+  if(Math.random() > chance) return;
+  const candidates = ownPlayers
     .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
   if(!candidates.length) return;
-  candidates.sort((a,b)=>playerOfferPerformanceScore(b)-playerOfferPerformanceScore(a) || visibleOverall(b)-visibleOverall(a));
-  const pool = candidates.slice(0, Math.min(12, candidates.length));
-  const player = pool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}`, pool.length)];
+  candidates.sort((a,b)=>{
+    const listedDelta = Number(Boolean(b.transferListed)) - Number(Boolean(a.transferListed));
+    if(listedDelta) return listedDelta;
+    return playerOfferPerformanceScore(b)-playerOfferPerformanceScore(a) || visibleOverall(b)-visibleOverall(a);
+  });
+  const listedPool = candidates.filter(p => Boolean(p.transferListed));
+  const basePool = listedPool.length && Math.random() < 0.70 ? listedPool : candidates.slice(0, Math.min(14, candidates.length));
+  const player = basePool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}-${Date.now()}`, basePool.length)];
   const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
   const financials = buildTransferOfferFinancials(player, pct);
-  const foreignClub = FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)];
+  const source = Math.random() < 0.78 ? botTransferOfferClub(player) : { name:FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)], id:-1 };
+  const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás, el jugador se va del club.';
   pushGameMessage({
     type:'mercado',
     priority:'high',
     title:`Oferta por ${playerLastName(player.name)}`,
-    body:transferOfferBody(foreignClub, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
-    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct }
+    body:transferOfferBody(source.name, player, financials, pct, note),
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct }
   });
 }
 function seasonEndOfferScore(player){
@@ -715,16 +762,28 @@ function acceptTransferOffer(messageId){
   const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
   const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
   const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
+  const pct = Number(msg.action.pct || 0);
+  if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
+    msg.action.status = 'blocked_by_board';
+    msg.body += ` La directiva bloqueó la venta porque es un jugador muy importante para el club. Para una estrella exige una oferta superior al ${STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT}% de su cláusula.`;
+    saveLocal(true);
+    showNotice('La directiva bloqueó la venta porque es un jugador muy importante para el club.');
+    renderMessages();
+    return;
+  }
   recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount });
-  player.clubId = -1;
-  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:-1, sold:true } : p);
+  const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
+  const destinationClubId = Number(msg.action.sourceClubId || -1);
+  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
+  player.transferListed = false;
+  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, sold:destinationClubId > 0 ? false : true } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   msg.action.status = 'accepted';
   msg.action.grossAmount = grossAmount;
   msg.action.taxAmount = taxAmount;
   msg.action.netAmount = netAmount;
-  msg.body += ` Oferta aceptada. Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.`;
+  msg.body += ` Oferta aceptada. Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
   saveLocal(true);
   showNotice(`${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
   renderMessages();
@@ -743,6 +802,47 @@ function removePlayerFromCurrentTactic(playerId){
   const bench = (game.tactic.bench || []).filter(x => Number(x) !== id);
   const autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:Number(rule.outId)===id?0:rule.outId, inId:Number(rule.inId)===id?0:rule.inId}));
   game.tactic = applyStarterMentalities({ ...game.tactic, starters, bench, autoSubs });
+}
+
+
+function canBotDismissPlayer(player){
+  if(!player || Number(player.clubId || 0) === Number(game?.selectedClubId)) return false;
+  if(player.emergencyLocked || player.emergencyBot) return false;
+  const clubId = Number(player.clubId || 0);
+  const squad = playersByClub(clubId);
+  if(squad.length <= Math.max(MIN_PLAYERS_PER_CLUB, 20)) return false;
+  const group = playerRoleGroup(player.position);
+  const counts = rosterGroupCounts(squad);
+  const req = minimumRosterRequirements();
+  return (counts[group] || 0) > (req[group] || 0) + 1;
+}
+function processBotDismissals(){
+  if(!game || !seed?.clubs?.length) return 0;
+  if(Math.random() > Number(BOT_DISMISS_CHECK_CHANCE || 0.38)) return 0;
+  let dismissed = 0;
+  seed.clubs.forEach(club => {
+    if(Number(club.id) === Number(game.selectedClubId)) return;
+    const squad = playersByClub(club.id).filter(canBotDismissPlayer).sort((a,b)=>visibleOverall(a)-visibleOverall(b) || Number(b.age||0)-Number(a.age||0));
+    const maxCuts = playersByClub(club.id).length > MAX_PLAYERS_PER_CLUB ? 2 : 1;
+    for(let i=0; i<Math.min(maxCuts, squad.length); i++){
+      const player = squad[i];
+      if(hashNumber(`bot-dismiss-${game.seasonNumber}-${game.matchdayIndex}-${club.id}-${player.id}`, 100) > 42) continue;
+      player.clubId = 0;
+      player.freeAgent = true;
+      player.transferListed = false;
+      player.salaryPaidCount = 0;
+      player.lastSalaryPaidSeason = 0;
+      refreshPlayerClause(player);
+      game.marketPlayers = game.marketPlayers || [];
+      const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
+      const copy = { ...player, clubId:0, freeAgent:true, sold:false, transferListed:false };
+      if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
+      else game.marketPlayers.push(copy);
+      dismissed += 1;
+    }
+  });
+  if(dismissed && typeof repairBotRosters === 'function') repairBotRosters({ reason:'bot_dismissals' });
+  return dismissed;
 }
 
 function buildBalancedFreeAgentPositionGroups(count, label='market'){

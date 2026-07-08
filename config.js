@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.51',
+  version: 'V3.57',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -142,7 +142,20 @@ window.GAME_CONFIG = {
     ofertaJugadoresMinPorcentajeClausula: 0.05,
     ofertaJugadoresMaxPorcentajeClausula: 0.15,
     ofertasJugadoresRequierenPartidos: true,
-    ofertasJugadoresRequierenGolOAsistencia: true
+    ofertasJugadoresRequierenGolOAsistencia: true,
+
+    // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
+    presupuestoFichajesActivo: true,
+    presupuestoFichajesMaximoPorcentaje: 0.50,
+    presupuestoFichajesDivision3: 0.25,
+    presupuestoFichajesDivision2: 0.35,
+    presupuestoFichajesDivision1: 0.40,
+    desbloqueoSuperarObjetivo: 0.05,
+    desbloqueoPromedio15: 0.05,
+    desbloqueoPromedio19: 0.10,
+    desbloqueoAscenso: 0.10,
+    desbloqueoCampeon: 0.15,
+    porcentajeVentaLiberadoFichajes: 0.70
   },
   estadio: {
     costoReplantarCesped: 2000000,
@@ -159,7 +172,22 @@ window.GAME_CONFIG = {
     // Reparación defensiva: si los campos bots quedan debajo del mínimo, se consideran datos corruptos y se regeneran.
     botsCampoAutoRepararEstadosInvalidos: true,
     botsCampoUmbralInvalido: 29,
-    botsCampoPorcentajeMasivoInjugable: 0.60
+    botsCampoPorcentajeMasivoInjugable: 0.60,
+    // Entradas, hinchadas y ventaja local.
+    precioEntradaInicial: 100,
+    precioEntradaMinimo: 10,
+    precioEntradaMaximo: 500,
+    porcentajeVisitanteMinimo: 0.07,
+    porcentajeVisitanteMaximo: 0.10,
+    porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
+    hinchasPorPuntoBonusLocal: 1000,
+    bonusLocalMaximo: 50,
+    gananciaHinchasPorVictoriaBase: 0.001,
+    perdidaHinchasPorDerrotaActual: 0.005,
+    posicionTablaPuntoNeutro: 10,
+    posicionTablaPaso: 0.001,
+    posicionTablaGananciaMaxima: 0.005,
+    precioEntradaEfectoMaximo: 0.01
   },
   empleados: {
     // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.

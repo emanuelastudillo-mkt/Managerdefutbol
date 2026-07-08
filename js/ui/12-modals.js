@@ -30,19 +30,28 @@ function purchaseOfferBlockedLabel(playerId){
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
   if(clubId === Number(game.selectedClubId)){
-    return `<div class="card inner player-action-card"><h3>Acciones</h3><div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button></div></div>`;
+    const checked = player.transferListed ? 'checked' : '';
+    return `<div class="card inner player-action-card"><h3>Acciones</h3>
+      <label class="transfer-toggle-row"><input type="checkbox" data-toggle-transfer-listed="${player.id}" ${checked}> <span>Poner transferible</span></label>
+      <p class="muted small">Los transferibles reciben más ofertas, pero suelen ser más baratas.</p>
+      <div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button></div></div>`;
   }
   if(clubId > 0){
     const blocked = isPurchaseOfferBlockedThisSeason(player.id);
     const label = blocked ? purchaseOfferBlockedLabel(player.id) : 'Hacer oferta';
     return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
+  if(clubId === 0 && !player.sold){
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}">Contratar</button></div></div>`;
+  }
   return '';
 }
 function bindPlayerModalActions(playerId){
-  document.querySelector('[data-dismiss-player]')?.addEventListener('click', () => dismissOwnPlayer(playerId));
-  document.querySelector('[data-offer-own-player]')?.addEventListener('click', () => offerOwnPlayerToClubs(playerId));
-  document.querySelector('[data-make-player-offer]')?.addEventListener('click', () => openPurchaseOfferModal(playerId));
+  document.querySelector('[data-dismiss-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); dismissOwnPlayer(playerId); });
+  document.querySelector('[data-offer-own-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); offerOwnPlayerToClubs(playerId); });
+  document.querySelector('[data-make-player-offer]')?.addEventListener('click', (ev) => { ev.stopPropagation(); openPurchaseOfferModal(playerId); });
+  document.querySelector('[data-hire-free-agent-modal]')?.addEventListener('click', (ev) => { ev.stopPropagation(); if(typeof hireFreeAgent === 'function'){ hireFreeAgent(playerId); closeModal(); activeTab='firstTeam'; renderAll(); } });
+  document.querySelector('[data-toggle-transfer-listed]')?.addEventListener('change', (ev) => { ev.stopPropagation(); toggleTransferListed(playerId, ev.target.checked); });
 }
 function showPlayerModal(playerId){
   const p = playerById(playerId);
@@ -57,7 +66,7 @@ function showPlayerModal(playerId){
           ${faceImg(p, 'player-photo-placeholder large')}
           <div>
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
-            <h2>${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</h2>
+            <h2 class="player-modal-title">${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</h2>
             <p class="muted">${escapeHtml(p.nationality || 'Sin nacionalidad')} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
@@ -95,6 +104,17 @@ function showPlayerModal(playerId){
 }
 
 
+function toggleTransferListed(playerId, value){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  player.transferListed = Boolean(value);
+  game.marketPlayers = (game.marketPlayers || []).map(p => Number(p.id) === Number(player.id) ? { ...p, transferListed:player.transferListed } : p);
+  saveLocal(true);
+  showNotice(player.transferListed ? `${player.name} fue marcado EN VENTA.` : `${player.name} dejó de figurar EN VENTA.`);
+  showPlayerModal(playerId);
+}
+
+
 function dismissOwnPlayer(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
@@ -127,7 +147,7 @@ function offerOwnPlayerToClubs(playerId){
     return;
   }
   if(typeof playerQualifiesForTransferOffers === 'function' && !playerQualifiesForTransferOffers(player)){
-    showNotice('No hay clubes interesados: necesita partidos jugados y al menos un gol o asistencia oficial.');
+    showNotice('No hay clubes interesados: necesita partidos jugados, rendimiento visible o estar en venta con sueldo ya pagado.');
     return;
   }
   if(turnCooldownLeft(game.lastOwnPlayerOffer, OWN_PLAYER_OFFER_COOLDOWN_TURNS) > 0){
@@ -148,7 +168,8 @@ function offerOwnPlayerToClubs(playerId){
   const financials = typeof buildTransferOfferFinancials === 'function'
     ? buildTransferOfferFinancials(player, pct)
     : { grossAmount:Math.round(refreshPlayerClause(player) * pct / 100), taxAmount:0, netAmount:Math.round(refreshPlayerClause(player) * pct / 100) };
-  const foreignClub = FOREIGN_CLUBS[hashNumber(`forced-foreign-${player.id}-${Date.now()}`, FOREIGN_CLUBS.length)];
+  const source = typeof botTransferOfferClub === 'function' ? botTransferOfferClub(player) : { name:FOREIGN_CLUBS[hashNumber(`forced-foreign-${player.id}-${Date.now()}`, FOREIGN_CLUBS.length)], id:-1 };
+  const foreignClub = source.name;
   pushGameMessage({
     type:'mercado',
     priority:'high',
@@ -156,7 +177,7 @@ function offerOwnPlayerToClubs(playerId){
     body:typeof transferOfferBody === 'function'
       ? transferOfferBody(foreignClub, player, financials, pct, 'Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.')
       : `${foreignClub} acercó una oferta de ${formatMoney(financials.grossAmount)} por ${player.name}.`,
-    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct }
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, sourceClubId:source.id, pct }
   });
   closeModal();
   activeTab = 'messages';
@@ -172,15 +193,23 @@ function openPurchaseOfferModal(playerId){
     return;
   }
   const clause = refreshPlayerClause(player);
+  const transferAvailable = typeof transferBudgetAvailable === 'function' ? transferBudgetAvailable() : Number(game.budget || 0);
+  const offerLow = Math.round(clause * 0.50);
+  const offerMid = Math.round(clause * 0.75);
+  const offerClause = Math.round(clause);
+  const disabledAttrs = amount => amount > transferAvailable ? 'disabled' : '';
+  const budgetNote = typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : `<div class="card"><p class="label">Presupuesto disponible</p><strong>${formatMoney(game.budget || 0)}</strong></div>`;
   const body = `<div class="purchase-offer-modal">
     <p class="label">Hacer oferta</p>
     <h2>${escapeHtml(player.name)}</h2>
     <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
+    <div style="margin-top:12px">${budgetNote}</div>
     <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
-      <button class="card clickable plain" data-submit-player-offer="low"><h3>Ofrecer 50% menos</h3><p>${formatMoney(Math.round(clause * 0.50))}</p></button>
-      <button class="card clickable plain" data-submit-player-offer="mid"><h3>Ofrecer 25% menos</h3><p>${formatMoney(Math.round(clause * 0.75))}</p></button>
-      <button class="card clickable plain" data-submit-player-offer="clause"><h3>Ofrecer cláusula</h3><p>${formatMoney(clause)}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="low" ${disabledAttrs(offerLow)}><h3>Ofrecer 50% menos</h3><p>${formatMoney(offerLow)}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="mid" ${disabledAttrs(offerMid)}><h3>Ofrecer 25% menos</h3><p>${formatMoney(offerMid)}</p></button>
+      <button class="card clickable plain" data-submit-player-offer="clause" ${disabledAttrs(offerClause)}><h3>Ofrecer cláusula</h3><p>${formatMoney(offerClause)}</p></button>
     </div>
+    <p class="muted small" style="margin-top:10px">Los botones se bloquean si superan el presupuesto autorizado para fichajes.</p>
   </div>`;
   openModal(body);
   document.querySelectorAll('[data-submit-player-offer]').forEach(btn => btn.addEventListener('click', () => submitPurchaseOffer(playerId, btn.dataset.submitPlayerOffer)));
@@ -197,7 +226,12 @@ function submitPurchaseOffer(playerId, kind){
   const clause = refreshPlayerClause(player);
   const cfg = purchaseOfferConfig(kind, clause);
   if((game.budget || 0) < cfg.amount){
-    showNotice('Presupuesto insuficiente para realizar esta oferta.');
+    showNotice('Presupuesto total insuficiente para realizar esta oferta.');
+    return;
+  }
+  const transferAvailable = typeof transferBudgetAvailable === 'function' ? transferBudgetAvailable() : Number(game.budget || 0);
+  if(transferAvailable < cfg.amount){
+    showNotice(`La directiva sólo autorizó ${formatMoney(transferAvailable)} para fichajes en este momento.`);
     return;
   }
   const accepted = Math.random() < cfg.chance;
@@ -215,6 +249,7 @@ function submitPurchaseOffer(playerId, kind){
     showNotice('Ya hay una operación pendiente por este jugador.');
     return;
   }
+  if(typeof spendTransferBudget === 'function') spendTransferBudget(cfg.amount, `Compra de ${player.name}`);
   recordBudgetChange(-cfg.amount, `Compra acordada de ${player.name}`, { type:'transfer_purchase_pending', playerId:player.id, fromClubId:player.clubId });
   game.pendingTransfers.push({
     id:`incoming-${player.id}-${Date.now()}`,
@@ -326,6 +361,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
           <div><p class="label">Campo</p><strong>${escapeHtml(context.pitch)}</strong></div>
+          <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
           <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
           <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
         </div>
@@ -509,6 +545,7 @@ function showMatchModal(matchId){
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
         <div><p class="label">Campo de juego</p><strong>${escapeHtml(context.pitch)}</strong></div>
+        <div><p class="label">Capacidad</p><strong>${new Intl.NumberFormat('es-AR').format(context.capacity || 0)}</strong></div>
         <div><p class="label">Hinchas locales</p><strong>${new Intl.NumberFormat('es-AR').format(context.homeFans || 0)}</strong></div>
         <div><p class="label">Hinchas visitantes</p><strong>${new Intl.NumberFormat('es-AR').format(context.awayFans || 0)}</strong></div>
       </div>

@@ -1003,13 +1003,13 @@ function mentalityLabel(mode){
 function mentalityMarker(mode){
   const normalized = normalizeMentality(mode);
   const meta = {
-    muy_defensivo:{ cls:'very-defense', text:'≪', title:'Muy defensivo' },
-    defensivo:{ cls:'defense', text:'‹', title:'Defensivo' },
+    muy_defensivo:{ cls:'very-defense', text:'←←', title:'Muy defensivo' },
+    defensivo:{ cls:'defense', text:'←', title:'Defensivo' },
     normal:{ cls:'normal', text:'•', title:'Normal' },
-    ofensivo:{ cls:'attack', text:'›', title:'Ofensivo' },
-    muy_ofensivo:{ cls:'very-attack', text:'≫', title:'Muy ofensivo' }
-  }[normalized];
-  return `<span class="mentality-marker ${meta.cls}" title="${meta.title}">${meta.text}</span>`;
+    ofensivo:{ cls:'attack', text:'→', title:'Ofensivo' },
+    muy_ofensivo:{ cls:'very-attack', text:'→→', title:'Muy ofensivo' }
+  }[normalized] || { cls:'normal', text:'•', title:'Normal' };
+  return `<span class="mentality-marker ${meta.cls}" title="${meta.title}" aria-label="${meta.title}"><span class="mentality-marker-symbol">${meta.text}</span></span>`;
 }
 function nextMentality(current){
   const idx = MENTALITIES.indexOf(normalizeMentality(current));

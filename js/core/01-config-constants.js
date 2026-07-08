@@ -1,4 +1,4 @@
-/* V3.50 · Configuración, calendario anual, constantes generales y estado global. */
+/* V3.57 · Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -224,6 +224,20 @@ const BOT_FIELD_POSITION_RANGE = configNumber('estadio.botsCampoRangoPorPosicion
 const BOT_FIELD_AUTO_REPAIR_ENABLED = configBoolean('estadio.botsCampoAutoRepararEstadosInvalidos', true);
 const BOT_FIELD_INVALID_THRESHOLD = configNumber('estadio.botsCampoUmbralInvalido', Math.max(1, BOT_FIELD_MIN_SCORE - 1), 1, 100);
 const BOT_FIELD_MASS_REPAIR_RATIO = configNumber('estadio.botsCampoPorcentajeMasivoInjugable', 0.60, 0, 1);
+const TICKET_PRICE_MIN = Math.round(configNumber('estadio.precioEntradaMinimo', 10, 1, 1000000));
+const TICKET_PRICE_MAX = Math.max(TICKET_PRICE_MIN, Math.round(configNumber('estadio.precioEntradaMaximo', 500, TICKET_PRICE_MIN, 1000000)));
+const TICKET_PRICE_INITIAL = Math.max(TICKET_PRICE_MIN, Math.min(TICKET_PRICE_MAX, Math.round(configNumber('estadio.precioEntradaInicial', 100, TICKET_PRICE_MIN, TICKET_PRICE_MAX))));
+const AWAY_FANS_MIN_RATE = configNumber('estadio.porcentajeVisitanteMinimo', 0.07, 0, 0.50);
+const AWAY_FANS_MAX_RATE = Math.max(AWAY_FANS_MIN_RATE, configNumber('estadio.porcentajeVisitanteMaximo', 0.10, 0, 0.50));
+const AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE = Math.max(AWAY_FANS_MAX_RATE, configNumber('estadio.porcentajeVisitanteMaximoConFaltanteLocal', 0.50, 0, 0.80));
+const HOME_CROWD_FANS_PER_BONUS_POINT = Math.max(1, Math.round(configNumber('estadio.hinchasPorPuntoBonusLocal', 1000, 1, 1000000)));
+const HOME_CROWD_BONUS_MAX = Math.round(configNumber('estadio.bonusLocalMaximo', 50, 0, 99));
+const FAN_WIN_BASE_RATE = configNumber('estadio.gananciaHinchasPorVictoriaBase', 0.001, 0, 1);
+const FAN_LOSS_CURRENT_RATE = configNumber('estadio.perdidaHinchasPorDerrotaActual', 0.005, 0, 1);
+const FAN_TABLE_NEUTRAL_POSITION = Math.round(configNumber('estadio.posicionTablaPuntoNeutro', 10, 1, 100));
+const FAN_TABLE_POSITION_STEP = configNumber('estadio.posicionTablaPaso', 0.001, 0, 1);
+const FAN_TABLE_MAX_GAIN_RATE = configNumber('estadio.posicionTablaGananciaMaxima', 0.005, 0, 1);
+const TICKET_PRICE_MAX_EFFECT_RATE = configNumber('estadio.precioEntradaEfectoMaximo', 0.01, 0, 1);
 const MARKET_FREE_AGENT_COUNT = configNumber('plantel.agentesLibresIniciales', 300, 0);
 const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 40, 1, 99);
 const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 62, 1, 99));
@@ -255,6 +269,10 @@ const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPor
 const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.15, 0, 1));
 const PLAYER_OFFERS_REQUIRE_MATCHES = configBoolean('mercado.ofertasJugadoresRequierenPartidos', true);
 const PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST = configBoolean('mercado.ofertasJugadoresRequierenGolOAsistencia', true);
+const STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT = configNumber('mercado.ofertaMinimaEstrellaParaVentaPct', 40, 0, 100);
+const BOT_TRANSFER_OFFER_BASE_CHANCE = configNumber('mercado.probabilidadOfertaBotBase', 0.28, 0, 1);
+const BOT_TRANSFER_LISTED_EXTRA_CHANCE = configNumber('mercado.probabilidadExtraTransferible', 0.22, 0, 1);
+const BOT_DISMISS_CHECK_CHANCE = configNumber('mercado.probabilidadBotsDespidosPorFecha', 0.38, 0, 1);
 const SPONSOR_OFFER_MATCH_MIN = configNumber('sponsors.partidosMinimosEntreTandas', 4, 1);
 const SPONSOR_OFFER_MATCH_MAX = Math.max(SPONSOR_OFFER_MATCH_MIN, configNumber('sponsors.partidosMaximosEntreTandas', 7, 1));
 const SPONSOR_OFFER_COUNT_MIN = configNumber('sponsors.ofertasMinimasPorTanda', 2, 1);
@@ -336,6 +354,8 @@ let sponsorsDatabase = null;
 let employeesDatabase = null;
 let eventsDatabase = null;
 let specialSkillsDatabase = null;
+let stadiumsDatabase = null;
+let fansDatabase = null;
 let game = null;
 let activeTab = 'home';
 let squadSort = 'media_desc';

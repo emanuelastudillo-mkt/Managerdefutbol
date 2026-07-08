@@ -208,3 +208,27 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 ## V3.54
 - Fix visual de Mensajes: textos claros sobre pantalla oscura.
 - Fix de residencias en Academia: contador y cupos se actualizan correctamente.
+
+
+## V3.55
+- Nuevo presupuesto autorizado para fichajes con tope del 50% del presupuesto total.
+- Base por división y desbloqueos por rendimiento, ascenso, campeonato y ventas.
+- Finanzas y Mercado muestran el presupuesto disponible para fichajes.
+
+
+## V3.56
+- Mercado bot ampliado: ofertas por jugadores del manager, transferibles, veto de directiva para estrellas y despidos de bots.
+- Ficha individual mejorada con botón Contratar en libres, Hacer oferta en contratados y casilla EN VENTA en propios.
+
+
+## V3.57
+- Integración completa de estadios e hinchas base.
+- Hinchadas locales/visitantes con cupo visitante obligatorio y máximo del 50% si el local no llena el estadio.
+- Bonus local oculto por diferencia de hinchadas durante el partido.
+- Crecimiento/caída de hinchas por resultado, posición y precio de entradas.
+- Precio de entradas editable en Estadio, entre $10 y $500.
+
+
+## V3.58
+- Corrección visual de flechas/marcadores de estados individuales en la pizarra táctica.
+- Leyenda visible para muy defensivo, defensivo, normal, ofensivo y muy ofensivo.

@@ -217,6 +217,13 @@ function renderStadium(){
   const score = fieldScoreForClub(game.selectedClubId);
   const label = fieldConditionName(score);
   const project = stadiumProjectForClub(game.selectedClubId);
+  ensureFanState();
+  const currentFans = clubFansCurrent(game.selectedClubId);
+  const baseFans = clubFansBase(game.selectedClubId);
+  const capacity = clubStadiumCapacity(game.selectedClubId);
+  const ticketPrice = ticketPriceForClub(game.selectedClubId);
+  const lastFanDelta = Math.round(Number(game?.fans?.clubs?.[game.selectedClubId]?.lastDelta || 0));
+  const lastFanClass = lastFanDelta >= 0 ? 'ok' : 'bad';
   const replantActive = project.replantingTurnsLeft > 0;
   const patchActive = project.patchingTurnsLeft > 0;
   const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
@@ -235,7 +242,19 @@ function renderStadium(){
         <p class="label">Estado actual</p>
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
+        <p class="muted small">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}</p>
 
+      </div>
+      <div class="card stadium-card">
+        <h3>Hinchada y entradas</h3>
+        <div class="grid cols-3">
+          <div><p class="label">Hinchas actuales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
+          <div><p class="label">Base</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
+          <div><p class="label">Último cambio</p><strong class="${lastFanClass}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
+        </div>
+        <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
+        <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
+        <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. Entradas baratas protegen caídas por mala posición; entradas caras limitan el crecimiento de hinchas.</p>
       </div>
       <div class="card stadium-card">
         <h3>Mantenimiento</h3>
@@ -262,6 +281,12 @@ function renderStadium(){
       ${activeSponsorsMarkup()}
     </div>
   `;
+  $('ticketPriceInput')?.addEventListener('change', event => {
+    const price = setTicketPriceForClub(game.selectedClubId, event.target.value);
+    saveLocal(true);
+    renderStadium();
+    showNotice(`Precio de entrada actualizado a ${formatMoney(price)}.`);
+  });
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
   $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);

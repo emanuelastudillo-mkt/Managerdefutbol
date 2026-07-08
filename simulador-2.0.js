@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V3.45 jugadorista 70/30 + estrellas + errores por jugador
+/* Motor de simulación V2.0 · V3.57 jugadorista + ventaja local por hinchada
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -108,7 +108,7 @@
     const items = assigned.filter(a => slotGroup(a.slot) === group);
     return simAvg(items.map(a => simAvg(skillGroups.map(skill => matchSkill(a.player, skill))) * a.factor));
   }
-  function teamPowerV2(clubId, tactic){
+  function teamPowerV2(clubId, tactic, options={}){
     const formation = tactic?.formation || '4-4-2';
     const lineup = selectLineup(clubId, tactic);
     const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
@@ -120,23 +120,33 @@
     const attackQuality = lineAverage(assigned, 'att', ['remate','regate','velocidad','serenidad','posicionamiento']);
     const keeperQuality = gk ? simAvg(['porteria','posicionamiento','serenidad'].map(skill => matchSkill(gk.player, skill) * gk.factor)) : 38;
     const adjust = applyMentalityBonus(tactic || {}, assigned);
-    const cohesion = cohesionMultiplier(clubId);
-    const teamMorale = simClamp(0.94 + (squadMoraleAverage(clubId) / 99) * 0.12, 0.94, 1.06);
+    const crowdBonus = simClamp(Math.round(Number(options.crowdBonus || 0)), 0, 99);
+    const cohesionRaw = typeof cohesionValue === 'function' ? cohesionValue(clubId) : Number(game?.teamCohesion?.[clubId] || 50);
+    const boostedCohesionRaw = simClamp(cohesionRaw + crowdBonus, 0, 100);
+    const cohesion = boostedCohesionRaw <= 30
+      ? simClamp(0.50 + (boostedCohesionRaw / 30) * 0.20, 0.50, 0.70)
+      : boostedCohesionRaw <= 50
+        ? simClamp(0.70 + ((boostedCohesionRaw - 30) / 20) * 0.30, 0.70, 1.00)
+        : simClamp(1.00 + ((boostedCohesionRaw - 50) / 50) * 0.20, 1.00, 1.20);
+    const boostedMorale = simClamp(squadMoraleAverage(clubId) + crowdBonus, 1, 99);
+    const teamMorale = simClamp(0.94 + (boostedMorale / 99) * 0.12, 0.94, 1.06);
+    const crowdConditionMultiplier = 1 + (crowdBonus / 99) * 0.08;
     const countBoost = {
       defense: counts.def * 1.25,
       midfield: counts.mid * 1.35,
       attack: counts.att * 1.55
     };
-    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale;
-    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale;
-    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale;
+    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale * crowdConditionMultiplier;
+    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale * crowdConditionMultiplier;
+    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale * crowdConditionMultiplier;
     const discipline = simAvg(lineup.map(p=>p.skills.disciplina));
-    const stamina = simAvg(lineup.map(p=>matchSkill(p,'resistencia'))) * cohesion * teamMorale;
+    const stamina = simAvg(lineup.map(p=>matchSkill(p,'resistencia'))) * cohesion * teamMorale * crowdConditionMultiplier;
     const aggression = simAvg(lineup.map(p=>hiddenStats(p).aggression));
     const rep = seed.clubs.find(c=>c.id===clubId)?.reputation || 60;
     return {
       clubId, tactic, formation, lineup, assigned, counts, profile:profile,
-      defense, midfield, attack, keeper:keeperQuality * cohesion * teamMorale,
+      defense, midfield, attack, keeper:keeperQuality * cohesion * teamMorale * crowdConditionMultiplier,
+      crowdBonus,
       defenseQuality, midfieldQuality, attackQuality, keeperQuality,
       discipline, stamina, aggression, reputation:rep
     };
@@ -149,9 +159,10 @@
     const pitchScore = fieldScoreForClub(match.homeId);
     const pitch = fieldConditionName(pitchScore);
     const effect = pitchEffectV2(pitch);
-    const homeFans = Math.max(800, Math.round((homeClub?.reputation || 60) * simRnd(210,360)));
-    const awayFans = Math.max(120, Math.round((awayClub?.reputation || 60) * simRnd(18,70)));
-    return { weather, pitch, pitchScore, homeFans, awayFans, pitchEffect:effect };
+    const attendance = typeof attendanceContextForMatch === 'function'
+      ? attendanceContextForMatch(match)
+      : { homeFans:Math.max(800, Math.round((homeClub?.reputation || 60) * simRnd(210,360))), awayFans:Math.max(120, Math.round((awayClub?.reputation || 60) * simRnd(18,70))), totalFans:0, capacity:0, homeCrowdBonus:0, ticketPrice:0, ticketRevenue:0 };
+    return { weather, pitch, pitchScore, ...attendance, pitchEffect:effect };
   }
   function blockStatsForTeam(own, rival, context, ownInstruction, rivalInstruction, isHome, block=null){
     const effect = pitchEffectV2(context.pitch);
@@ -444,9 +455,9 @@
     const awayTactic = getTacticForClubV2(match.awayId);
     applyTacticCohesionPenalty(match.homeId, homeTactic);
     applyTacticCohesionPenalty(match.awayId, awayTactic);
-    const home = teamPowerV2(match.homeId, homeTactic);
-    const away = teamPowerV2(match.awayId, awayTactic);
     const matchContext = makeMatchContextV2(match);
+    const home = teamPowerV2(match.homeId, homeTactic, { crowdBonus:matchContext.homeCrowdBonus || 0 });
+    const away = teamPowerV2(match.awayId, awayTactic, { crowdBonus:0 });
     const homeTotals = emptyStats();
     const awayTotals = emptyStats();
     const incidents = { keySaves:[], errors:[] };

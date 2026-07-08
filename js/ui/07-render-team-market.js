@@ -152,6 +152,7 @@ function renderMarket(){
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
     ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(freeBase.length, free.length)}
     <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
   bindMarketTabs();
@@ -180,6 +181,7 @@ function renderContractedMarket(){
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
     ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(basePlayers.length, players.length)}
     <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>`;
   bindMarketTabs();
@@ -526,6 +528,13 @@ function renderTactics(){
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
       <div class="pitch-board centered">${pitch}</div>
+      <div class="tactic-state-legend">
+        <span>${mentalityMarker('muy_defensivo')} Muy defensivo</span>
+        <span>${mentalityMarker('defensivo')} Defensivo</span>
+        <span>${mentalityMarker('normal')} Normal</span>
+        <span>${mentalityMarker('ofensivo')} Ofensivo</span>
+        <span>${mentalityMarker('muy_ofensivo')} Muy ofensivo</span>
+      </div>
     </div>
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">

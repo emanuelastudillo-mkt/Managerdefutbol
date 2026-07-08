@@ -362,24 +362,44 @@ function renderManagerStats(){
   game.managerStats = normalizeManagerStats(game.managerStats);
   const totals = game.managerStats.totals;
   const seasons = game.managerStats.seasons.slice().sort((a,b)=>(b.season || 0)-(a.season || 0));
+  const career = (game.managerStats.careerHistory || []).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const prestige = Number(game.managerStats.prestige || 0);
+  const experience = Number(game.managerStats.experience || 0);
   const rows = seasons.map(item => `<tr>
     <td>${item.season}</td>
     <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
     <td>${escapeHtml(item.divisionName || '—')}</td>
     <td><strong>${escapeHtml(item.label || (item.position === 1 ? 'Campeón' : `${item.position || '—'}°`))}</strong></td>
+    <td>${item.objectiveAchieved ? '<span class="ok">Sí</span>' : '<span class="muted">No</span>'}</td>
+    <td>${Number(item.ppg || 0).toFixed(2)}</td>
     <td>${item.pts || 0}</td><td>${item.pg || 0}</td><td>${item.pe || 0}</td><td>${item.pp || 0}</td><td>${item.gf || 0}</td><td>${item.gc || 0}</td>
   </tr>`).join('');
-  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado del manager.</p></div></div>
+  const careerRows = career.map(item => `<tr>
+    <td>${item.season || '—'}</td>
+    <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
+    <td>${escapeHtml(item.divisionName || '—')}</td>
+    <td>${item.position ? `${item.position}°` : '—'}</td>
+    <td>${item.played || 0}</td>
+    <td>${Number(item.ppg || 0).toFixed(2)}</td>
+    <td>${escapeHtml(item.type === 'dismissal' ? 'Despido' : item.type || 'Cambio')}</td>
+  </tr>`).join('');
+  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
+      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestige}</strong><span class="small muted">Clubes hasta ${prestige}</span></div>
+      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong></div>
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
       <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>
       <div class="card"><p class="label">Perdidos</p><strong>${totals.lost || 0}</strong></div>
       <div class="card"><p class="label">GF / GC</p><strong>${totals.gf || 0} / ${totals.gc || 0}</strong></div>
       <div class="card"><p class="label">Títulos obtenidos</p><strong>${game.managerStats.titles || 0}</strong></div>
+      <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
-      <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Carrera laboral</h3>
+      <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>PJ</th><th>PPG</th><th>Evento</th></tr></thead><tbody>${careerRows || '<tr><td colspan="7" class="muted">Sin cambios de club todavía.</td></tr>'}</tbody></table></div>
     </div>`;
 }
 

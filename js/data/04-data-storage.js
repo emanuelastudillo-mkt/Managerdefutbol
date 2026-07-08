@@ -220,6 +220,9 @@ function applySavedDatabaseSnapshots(saved){
   return clean;
 }
 function currentSavePayload(){
+  if(game?.clubBudgets && Number.isFinite(Number(game.selectedClubId))){
+    game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
+  }
   const payload = structuredClone(game);
   delete payload._needsAutosave;
   delete payload._stadiumFieldsAutoRepaired;

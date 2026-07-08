@@ -232,3 +232,11 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 ## V3.58
 - Corrección visual de flechas/marcadores de estados individuales en la pizarra táctica.
 - Leyenda visible para muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
+
+## V3.59
+- Despido sin reiniciar partida: el manager puede buscar otro club y continuar la carrera.
+- Nuevo prestigio de manager y puntos de experiencia.
+- Clubes disponibles/no disponibles según prestigio.
+- Prestigio de clubes variable al final de cada temporada.
+- Botón lateral actualizado a “Buscar club”.
+- Mensajes compactos, ESPECIAL destacado y Reset movido abajo con advertencia.

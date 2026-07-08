@@ -1,11 +1,42 @@
 /* V3.47 · Eventos principales, normalización de partida, calendario anual, temporadas, bots y ascensos/descensos. */
 
+function clubPrestigeValue(clubOrId){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
+  const value = Number(club?.managerPrestige ?? club?.reputation ?? club?.prestigio ?? club?.prestige ?? 0);
+  return clamp(Math.round(Number.isFinite(value) ? value : 0), 1, 99);
+}
+function currentManagerPrestige(){
+  if(game?.managerStats) return clamp(Math.round(Number(game.managerStats.prestige ?? MANAGER_PRESTIGE_INITIAL)), 0, 99);
+  return clamp(Math.round(Number(MANAGER_PRESTIGE_INITIAL || 20)), 0, 99);
+}
+function currentManagerExperience(){
+  return Math.max(0, Math.round(Number(game?.managerStats?.experience || 0)));
+}
+function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige()){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
+  if(!club) return false;
+  const clubPrestige = clubPrestigeValue(club);
+  if(clubPrestige < MANAGER_CLUB_OPEN_PRESTIGE) return true;
+  return clubPrestige <= Number(prestige || 0);
+}
+function clubAvailabilityLabel(clubOrId, prestige=currentManagerPrestige()){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
+  if(!club) return 'No disponible';
+  const clubPrestige = clubPrestigeValue(club);
+  if(managerCanSelectClub(club, prestige)) return 'Disponible';
+  return `Requiere prestigio ${clubPrestige}`;
+}
 function clubSelectOptionsMarkup(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const prestige = currentManagerPrestige();
   return divisions.map(division => {
     const clubs = seed.clubs.filter(c => (c.divisionId || 'default') === division.id);
     if(!clubs.length) return '';
-    return `<optgroup label="${escapeHtml(division.name)}">${clubs.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`;
+    return `<optgroup label="${escapeHtml(division.name)}">${clubs.map(c => {
+      const available = managerCanSelectClub(c, prestige);
+      const label = `${c.name} · Prestigio ${clubPrestigeValue(c)}${available ? '' : ' · No disponible'}`;
+      return `<option value="${c.id}" ${available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
+    }).join('')}</optgroup>`;
   }).join('');
 }
 
@@ -45,8 +76,26 @@ function clubsByCountryLeague(country='Argentina', leagueId=''){
 }
 function teamOptionsMarkup(country='Argentina', leagueId='', selectedClubId=0){
   const clubs = clubsByCountryLeague(country, leagueId);
-  const selected = clubs.some(club => Number(club.id) === Number(selectedClubId)) ? Number(selectedClubId) : Number(clubs[0]?.id || 0);
-  return clubs.map(club => `<option value="${club.id}" ${Number(club.id)===selected?'selected':''}>${escapeHtml(club.name)}</option>`).join('');
+  const prestige = currentManagerPrestige();
+  const firstAvailable = clubs.find(club => managerCanSelectClub(club, prestige)) || clubs[0];
+  const selected = clubs.some(club => Number(club.id) === Number(selectedClubId) && managerCanSelectClub(club, prestige)) ? Number(selectedClubId) : Number(firstAvailable?.id || 0);
+  return clubs.map(club => {
+    const available = managerCanSelectClub(club, prestige);
+    const label = `${club.name} · Prestigio ${clubPrestigeValue(club)}${available ? '' : ' · No disponible'}`;
+    return `<option value="${club.id}" ${Number(club.id)===selected?'selected':''} ${available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
+  }).join('');
+}
+function clubAvailabilityListMarkup(country='Argentina', leagueId=''){
+  const clubs = clubsByCountryLeague(country, leagueId);
+  const prestige = currentManagerPrestige();
+  if(!clubs.length) return '<p class="muted small">No hay clubes para esta liga.</p>';
+  return `<div class="club-availability-list">${clubs.map(club => {
+    const available = managerCanSelectClub(club, prestige);
+    return `<button type="button" class="club-availability-row ${available ? 'available' : 'locked'}" data-job-club="${club.id}" ${available ? '' : 'disabled'}>
+      <span>${clubBadge(club.id)} <strong>${escapeHtml(club.name)}</strong></span>
+      <span class="pill ${available ? 'ok-pill' : 'bad-pill'}">Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(clubAvailabilityLabel(club, prestige))}</span>
+    </button>`;
+  }).join('')}</div>`;
 }
 function storedManagerName(){
   try{ return String(game?.rankingManagerName || localStorage.getItem('fmRankingManagerName') || '').trim(); }
@@ -63,12 +112,16 @@ function fillClubSelect(){
   const select = $('clubSelect');
   if(select) select.innerHTML = clubSelectOptionsMarkup();
 }
+function confirmResetLocal(){
+  const ok = window.confirm('Vas a borrar la partida local guardada en este navegador. Esta acción no se puede deshacer.');
+  if(ok) resetLocal();
+}
 function bindEvents(){
   $('btnOpenNewGame')?.addEventListener('click', openNewGameModal);
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnSave').addEventListener('click', saveLocal);
   $('btnLoad').addEventListener('click', ()=>loadLocal(false));
-  $('btnReset').addEventListener('click', resetLocal);
+  $('btnReset')?.addEventListener('click', confirmResetLocal);
   document.querySelectorAll('.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       activeTab = btn.dataset.tab;
@@ -195,7 +248,10 @@ function normalizeGame(saved){
   normalized.calendarVersion = SEASON_CALENDAR_VERSION;
   normalized.standings = normalized.standings || createInitialStandings();
   normalized.playerStats = normalized.playerStats || createInitialPlayerStats();
-  normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
+  normalized.clubBudgets = (normalized.clubBudgets && typeof normalized.clubBudgets === 'object' && !Array.isArray(normalized.clubBudgets)) ? normalized.clubBudgets : {};
+  seed.clubs.forEach(c => { if(!Number.isFinite(Number(normalized.clubBudgets[c.id]))) normalized.clubBudgets[c.id] = Math.round(Number(c.budget || 0)); });
+  normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (Number(normalized.clubBudgets[normalized.selectedClubId]) || seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
+  normalized.clubBudgets[normalized.selectedClubId] = Math.round(Number(normalized.budget || 0));
   normalized.lastBudgetDelta = Number.isFinite(normalized.lastBudgetDelta) ? normalized.lastBudgetDelta : 0;
   normalized.budgetHistory = normalized.budgetHistory || [];
   normalized.transferBudget = typeof normalizeTransferBudgetState === 'function' ? normalizeTransferBudgetState(normalized.transferBudget, normalized) : (normalized.transferBudget || null);
@@ -445,6 +501,10 @@ function normalizeTactic(clubId, tactic){
 
 function newGame(selectedClubId, options={}){
   const selectedClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId)) || {};
+  if(!managerCanSelectClub(selectedClub, MANAGER_PRESTIGE_INITIAL)){
+    showNotice(`Ese club requiere prestigio ${clubPrestigeValue(selectedClub)}. Tu prestigio inicial es ${MANAGER_PRESTIGE_INITIAL}.`);
+    return;
+  }
   const managerName = persistManagerName(options.managerName || storedManagerName());
   const tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
   game = {
@@ -495,6 +555,7 @@ function newGame(selectedClubId, options={}){
     mustReviewTactics: false,
     lastOwnProblems: [],
     lastTurnSummary: null,
+    clubBudgets: Object.fromEntries(seed.clubs.map(c => [c.id, Math.round(Number(c.budget || 0))])),
     budget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     seasonInitialBudget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     seasonBudgetStartBySeason: { 1: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0 },
@@ -527,7 +588,7 @@ function newGame(selectedClubId, options={}){
   closeModal();
   newGameModalShown = true;
   renderAll();
-  showNotice('Nueva partida creada. Revisá táctica, titulares y mentalidades antes de avanzar.');
+  showNotice('Carrera creada. Revisá táctica, titulares y mentalidades antes de avanzar.');
 }
 
 function createInitialStandings(){
@@ -772,7 +833,17 @@ function updatePlayerStarTrackingForMatch(result){
 }
 
 function createInitialManagerStats(){
-  return { totals:{ played:0, won:0, drawn:0, lost:0, gf:0, gc:0 }, currentSeason:{ season:1, clubId:0, played:0, won:0, drawn:0, lost:0, gf:0, gc:0 }, seasons:[], titles:0 };
+  return {
+    totals:{ played:0, won:0, drawn:0, lost:0, gf:0, gc:0 },
+    currentSeason:{ season:1, clubId:0, played:0, won:0, drawn:0, lost:0, gf:0, gc:0 },
+    seasons:[],
+    titles:0,
+    experience:0,
+    prestige:MANAGER_PRESTIGE_INITIAL,
+    prestigeWinMilestones:0,
+    objectivePrestigeAwards:[],
+    careerHistory:[]
+  };
 }
 function normalizeManagerStats(stats){
   const base = createInitialManagerStats();
@@ -782,12 +853,45 @@ function normalizeManagerStats(stats){
   const currentRaw = src.currentSeason && typeof src.currentSeason === 'object' ? src.currentSeason : {};
   const currentSeason = { ...base.currentSeason, ...currentRaw };
   Object.keys(currentSeason).forEach(key => { currentSeason[key] = Number.isFinite(Number(currentSeason[key])) ? Number(currentSeason[key]) : 0; });
+  const prestigeWinMilestones = Math.max(0, Math.round(Number(src.prestigeWinMilestones || 0)));
+  const experience = Math.max(0, Math.round(Number(src.experience || 0)));
+  const prestige = clamp(Math.round(Number(src.prestige ?? MANAGER_PRESTIGE_INITIAL)), 0, 99);
   return {
     totals,
     currentSeason,
     seasons:Array.isArray(src.seasons) ? src.seasons : [],
-    titles:Number.isFinite(Number(src.titles)) ? Number(src.titles) : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0)
+    titles:Number.isFinite(Number(src.titles)) ? Number(src.titles) : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0),
+    experience,
+    prestige,
+    prestigeWinMilestones,
+    objectivePrestigeAwards:Array.isArray(src.objectivePrestigeAwards) ? src.objectivePrestigeAwards : [],
+    careerHistory:Array.isArray(src.careerHistory) ? src.careerHistory : []
   };
+}
+function addManagerPrestige(points, reason=''){
+  if(!game?.managerStats || Number(points || 0) <= 0) return 0;
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  const old = Number(game.managerStats.prestige || 0);
+  const next = clamp(old + Math.round(Number(points || 0)), 0, 99);
+  game.managerStats.prestige = next;
+  const gained = next - old;
+  if(gained > 0 && reason){
+    pushGameMessage({ type:'directiva', priority:'normal', title:'Prestigio de manager aumentado', body:`${reason}. Prestigio actual: ${next}.`, id:`manager-prestige-${game.seasonNumber || 1}-${game.globalTurn || 0}-${reason}` });
+  }
+  return gained;
+}
+function updateManagerPrestigeFromWins(){
+  if(!game?.managerStats) return 0;
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  const wins = Math.max(0, Math.round(Number(game.managerStats.totals?.won || 0)));
+  const step = Math.max(1, Number(MANAGER_PRESTIGE_WINS_STEP || 10));
+  const milestones = Math.floor(wins / step);
+  const current = Math.max(0, Math.round(Number(game.managerStats.prestigeWinMilestones || 0)));
+  if(milestones <= current) return 0;
+  const diff = milestones - current;
+  game.managerStats.prestigeWinMilestones = milestones;
+  addManagerPrestige(diff, `${wins} victorias acumuladas`);
+  return diff;
 }
 function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
@@ -952,8 +1056,75 @@ function checkManagerObjectiveGameOver(){
   };
   game.mustReviewTactics = false;
   activeTab = 'home';
-  pushGameMessage({ type:'directiva', priority:'high', title:'Game Over', body:'La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza.', id:`game-over-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
+  pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:'La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. Podés buscar otro club sin reiniciar el mundo de la partida.', id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
   return true;
+}
+function ensureClubBudgetsState(){
+  if(!game) return {};
+  game.clubBudgets = (game.clubBudgets && typeof game.clubBudgets === 'object' && !Array.isArray(game.clubBudgets)) ? game.clubBudgets : {};
+  seed.clubs.forEach(c => { if(!Number.isFinite(Number(game.clubBudgets[c.id]))) game.clubBudgets[c.id] = Math.round(Number(c.budget || 0)); });
+  if(Number.isFinite(Number(game.selectedClubId))) game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || game.clubBudgets[game.selectedClubId] || 0));
+  return game.clubBudgets;
+}
+function budgetForCareerClub(clubId){
+  ensureClubBudgetsState();
+  return Math.max(0, Math.round(Number(game?.clubBudgets?.[clubId] ?? seed.clubs.find(c => Number(c.id) === Number(clubId))?.budget ?? 0)));
+}
+function recordDismissedCareerStep(){
+  if(!game?.managerStats || !game?.gameOver?.active) return;
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  const key = `${game.gameOver.triggeredAt || ''}-${game.selectedClubId}`;
+  if(game.managerStats.careerHistory.some(item => item.key === key)) return;
+  const division = clubDivision(game.selectedClubId);
+  const table = sortedStandings(division.id);
+  const position = table.findIndex(row => Number(row.clubId) === Number(game.selectedClubId)) + 1;
+  const season = managerSeasonObjectiveTotals();
+  game.managerStats.careerHistory.push({
+    key,
+    type:'dismissal',
+    season:Number(game.seasonNumber || 1),
+    clubId:Number(game.selectedClubId || 0),
+    clubName:clubName(game.selectedClubId),
+    divisionName:division.name,
+    position:position || 0,
+    played:Number(season.played || 0),
+    won:Number(season.won || 0),
+    drawn:Number(season.drawn || 0),
+    lost:Number(season.lost || 0),
+    ppg:ppgFromTotals(season),
+    reason:game.gameOver.reason || 'Despido por objetivo no cumplido',
+    date:game.currentDate || '',
+    createdAt:new Date().toISOString()
+  });
+}
+function continueCareerAtClub(selectedClubId, options={}){
+  if(!game?.gameOver?.active){ showNotice('Sólo podés buscar otro club cuando estás sin cargo.'); return; }
+  const newClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
+  if(!newClub){ showNotice('Club no encontrado.'); return; }
+  if(!managerCanSelectClub(newClub, currentManagerPrestige())){
+    showNotice(`Ese club requiere prestigio ${clubPrestigeValue(newClub)}. Tu prestigio actual es ${currentManagerPrestige()}.`);
+    return;
+  }
+  ensureClubBudgetsState();
+  recordDismissedCareerStep();
+  game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
+  game.selectedClubId = Number(newClub.id);
+  game.selectedCountry = clubCountry(newClub);
+  game.selectedLeagueId = newClub.divisionId || 'default';
+  game.budget = budgetForCareerClub(newClub.id);
+  game.seasonInitialBudget = Math.round(Number(game.budget || 0));
+  game.lastBudgetDelta = 0;
+  game.tactic = normalizeTactic(newClub.id, DEFAULT_TACTIC);
+  game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
+  game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(newClub.id, game.seasonNumber || 1, 0) : game.transferBudget;
+  game.gameOver = null;
+  game.mustReviewTactics = true;
+  activeTab = 'home';
+  closeModal();
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  saveLocal(true);
+  renderAll();
+  showNotice(`Nuevo club: ${newClub.name}. Revisá la táctica antes de avanzar.`);
 }
 function updateManagerMatchStats(match){
   if(match?.friendly) return;
@@ -969,10 +1140,13 @@ function updateManagerMatchStats(match){
   seasonTotals.played += 1;
   seasonTotals.gf += gf;
   seasonTotals.gc += gc;
-  if(gf > gc){ totals.won += 1; seasonTotals.won += 1; }
-  else if(gf < gc){ totals.lost += 1; seasonTotals.lost += 1; }
-  else { totals.drawn += 1; seasonTotals.drawn += 1; }
+  let xpGain = MANAGER_XP_DRAW;
+  if(gf > gc){ totals.won += 1; seasonTotals.won += 1; xpGain = MANAGER_XP_WIN; }
+  else if(gf < gc){ totals.lost += 1; seasonTotals.lost += 1; xpGain = MANAGER_XP_LOSS; }
+  else { totals.drawn += 1; seasonTotals.drawn += 1; xpGain = MANAGER_XP_DRAW; }
+  game.managerStats.experience = Math.max(0, Math.round(Number(game.managerStats.experience || 0))) + Math.max(0, Math.round(Number(xpGain || 0)));
   game.managerStats.currentSeason = seasonTotals;
+  updateManagerPrestigeFromWins();
   if(typeof updateTransferBudgetPerformanceUnlocks === 'function') updateTransferBudgetPerformanceUnlocks();
   checkManagerObjectiveGameOver();
 }
@@ -1276,6 +1450,35 @@ function renewFreeAgentMarketForSeason(retiredCount=0){
   }
   return { removed:finalPruned, youth:youth.concat(legacyExtra), regular };
 }
+function clubSeasonPrestigeDeltaByPosition(position){
+  const pos = Math.max(1, Math.round(Number(position || 0)));
+  if(pos >= 1 && pos <= 5) return 2;
+  if(pos >= 6 && pos <= 10) return 1;
+  if(pos >= 11 && pos <= 15) return -1;
+  if(pos >= 16 && pos <= 20) return -2;
+  return 0;
+}
+function updateClubPrestigeAfterSeason(){
+  if(!game || !seed?.clubs) return [];
+  const changes = [];
+  divisionOrderList().forEach(division => {
+    const multiplier = Math.max(1, Math.round(Number(division.order || 1)));
+    sortedStandings(division.id).forEach((row, index) => {
+      const club = seed.clubs.find(c => Number(c.id) === Number(row.clubId));
+      if(!club) return;
+      const position = index + 1;
+      const rawDelta = clubSeasonPrestigeDeltaByPosition(position);
+      const delta = rawDelta * multiplier;
+      if(delta === 0) return;
+      const oldValue = clubPrestigeValue(club);
+      const next = clamp(oldValue + delta, 1, 99);
+      club.reputation = next;
+      club.managerPrestige = next;
+      changes.push({ clubId:club.id, clubName:club.name, divisionId:division.id, divisionName:division.name, position, oldValue, next, delta:next-oldValue });
+    });
+  });
+  return changes;
+}
 function finalizeSeasonIfNeeded(){
   if(!game || game.seasonFinalized || game.matchdayIndex < game.fixtures.length) return;
   game.managerStats = normalizeManagerStats(game.managerStats);
@@ -1302,13 +1505,26 @@ function finalizeSeasonIfNeeded(){
     title:champion
   };
   if(!game.managerStats.seasons.some(s => s.season === record.season)){
+    const objective = managerObjectiveForClubDivision(game.selectedClubId);
+    const seasonPpg = ppgFromTotals(game.managerStats.currentSeason || record);
+    record.objectivePpg = objective;
+    record.objectiveAchieved = Number.isFinite(Number(objective)) && seasonPpg >= Number(objective);
+    record.ppg = seasonPpg;
     game.managerStats.seasons.push(record);
     if(champion) game.managerStats.titles += 1;
+    if(record.objectiveAchieved && MANAGER_PRESTIGE_OBJECTIVE_REWARD > 0){
+      const awardKey = `${record.season}-${record.clubId}`;
+      if(!game.managerStats.objectivePrestigeAwards.includes(awardKey)){
+        game.managerStats.objectivePrestigeAwards.push(awardKey);
+        addManagerPrestige(MANAGER_PRESTIGE_OBJECTIVE_REWARD, `Objetivo cumplido con ${record.clubName}`);
+      }
+    }
   }
   if(champion){
     pushGameMessage({ type:'deportivo', priority:'high', title:'Has salido campeón', body:`Felicitaciones: ${clubName(game.selectedClubId)} salió campeón de ${division.name}.`, id:`champion-${game.seasonNumber || 1}-${game.selectedClubId}` });
     if(typeof awardSpecialChampionPoints === 'function') awardSpecialChampionPoints(division);
   }
+  const prestigeChanges = updateClubPrestigeAfterSeason();
   const movements = computeSeasonMovements();
   const promoted = movements.some(move => move.type === 'promotion' && Number(move.clubId) === Number(game.selectedClubId));
   if(typeof queueNextSeasonTransferBudgetUnlock === 'function'){
@@ -1327,6 +1543,7 @@ function finalizeSeasonIfNeeded(){
     salaryAdjustments,
     retirements,
     trainingDecay,
+    prestigeChanges,
     agingApplied: true
   };
   game.seasonFinalized = true;

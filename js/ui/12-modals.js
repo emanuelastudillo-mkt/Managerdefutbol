@@ -705,31 +705,45 @@ function scoutingPlayerRow(player){
   </tr>`;
 }
 function openNewGameModal(force=false){
-  if(!force && game && newGameModalShown) return;
+  const hasCareer = Boolean(game);
+  const canChooseJob = !game || Boolean(game?.gameOver?.active);
   const initialCountry = game?.selectedCountry || availableCountries()[0] || 'Argentina';
   const initialLeague = game?.selectedLeagueId || divisionsByCountry(initialCountry)[0]?.id || 'default';
-  const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
+  const initialClub = game?.selectedClubId || clubsByCountryLeague(initialCountry, initialLeague).find(club => managerCanSelectClub(club))?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
+  const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : MANAGER_PRESTIGE_INITIAL;
+  const modeLabel = game?.gameOver?.active ? 'Buscar nuevo club' : 'Buscar club';
   const body = `
-    <div class="new-game-modal">
-      <p class="label">Nueva partida</p>
-      <h2>Crear manager</h2>
-      <p class="muted">Cargá tu nombre y elegí el club inicial.</p>
+    <div class="new-game-modal job-search-modal">
+      <p class="label">${escapeHtml(modeLabel)}</p>
+      <h2>${game?.gameOver?.active ? 'Continuar carrera' : 'Crear manager'}</h2>
+      <p class="muted">Prestigio actual del manager: <strong>${prestige}</strong>. Los clubes con prestigio menor a ${MANAGER_CLUB_OPEN_PRESTIGE} aceptan cualquier manager.</p>
+      ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita si la directiva te despide.</p></div>' : ''}
       <div class="new-game-form-grid">
         <label for="modalManagerName">Nombre del manager</label>
-        <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
+        <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}" ${hasCareer ? 'disabled' : ''}>
         <label for="modalCountrySelect">País</label>
         <select id="modalCountrySelect">${countryOptionsMarkup(initialCountry)}</select>
         <label for="modalLeagueSelect">Liga</label>
         <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
         <label for="modalClubSelect">Equipo</label>
-        <select id="modalClubSelect">${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+        <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
-      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary">Empezar</button></div>
+      <div id="modalClubAvailabilityBox" class="job-availability-box">${clubAvailabilityListMarkup(initialCountry, initialLeague)}</div>
+      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Aceptar cargo' : 'Empezar carrera'}</button></div>
     </div>`;
   openModal(body);
   const countrySelect = $('modalCountrySelect');
   const leagueSelect = $('modalLeagueSelect');
   const clubSelect = $('modalClubSelect');
+  const availabilityBox = $('modalClubAvailabilityBox');
+  const syncAvailability = () => {
+    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
+    const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
+    if(availabilityBox) availabilityBox.innerHTML = clubAvailabilityListMarkup(country, league);
+    document.querySelectorAll('[data-job-club]').forEach(btn => btn.addEventListener('click', () => {
+      if(clubSelect) clubSelect.value = btn.dataset.jobClub;
+    }));
+  };
   const syncLeagues = () => {
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
@@ -739,18 +753,30 @@ function openNewGameModal(force=false){
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
     if(clubSelect) clubSelect.innerHTML = teamOptionsMarkup(country, league, clubSelect.value);
+    syncAvailability();
   };
   countrySelect?.addEventListener('change', syncLeagues);
   leagueSelect?.addEventListener('change', syncClubs);
   $('modalManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
   $('btnStartNewGameModal')?.addEventListener('click', () => {
     const selected = Number(clubSelect?.value || 0);
-    if(selected) newGame(selected, {
+    if(!selected) return;
+    const selectedClub = seed.clubs.find(c => Number(c.id) === selected);
+    if(!managerCanSelectClub(selectedClub, currentManagerPrestige())){
+      showNotice(`Ese club requiere prestigio ${clubPrestigeValue(selectedClub)}.`);
+      return;
+    }
+    if(game?.gameOver?.active) continueCareerAtClub(selected, {
+      country:countrySelect?.value || '',
+      leagueId:leagueSelect?.value || ''
+    });
+    else if(!game) newGame(selected, {
       managerName:$('modalManagerName')?.value || '',
       country:countrySelect?.value || '',
       leagueId:leagueSelect?.value || ''
     });
   });
+  syncAvailability();
   newGameModalShown = true;
 }
 function openModal(html){

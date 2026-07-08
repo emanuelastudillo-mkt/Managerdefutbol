@@ -2322,3 +2322,43 @@ button.action-failure{
 @media (max-width:900px){
   .pitch-board .mentality-marker{right:-7px!important;top:-7px!important;width:28px!important;height:28px!important;font-size:14px!important}
 }
+
+
+/* V3.59: carrera persistente, buscar club y ajustes compactos */
+.top-actions-compact{gap:8px}
+.top-actions-compact .small-btn{padding:8px 11px;font-size:12px;border-radius:11px}
+.reset-zone{margin-top:26px;padding-top:16px;border-top:1px solid rgba(148,163,184,.14)}
+.reset-bottom-btn{width:100%;margin-top:8px;border-color:rgba(239,68,68,.38)!important;background:rgba(127,29,29,.26)!important;color:#fecaca!important}
+.reset-bottom-btn:hover{background:rgba(185,28,28,.34)!important}
+.tabs button[data-tab="special"]{background:linear-gradient(135deg,rgba(168,85,247,.20),rgba(245,158,11,.10));border-color:rgba(168,85,247,.28);color:#f5d0fe}
+.tabs button[data-tab="special"].active,.tabs button[data-tab="special"]:hover{background:linear-gradient(135deg,rgba(168,85,247,.34),rgba(245,158,11,.18));border-color:rgba(216,180,254,.50);color:#fff7ed;box-shadow:0 0 0 1px rgba(168,85,247,.16)}
+.compact-section-title{margin-bottom:10px}
+.compact-section-title .tagline{font-size:13px;line-height:1.35;margin:0}
+.messages-shell{gap:8px}
+.messages-toolbar{gap:8px!important;padding:8px!important}
+.messages-toolbar-item{padding:8px 10px!important;border-radius:12px!important}
+.messages-toolbar-item .label{margin-bottom:2px;font-size:10px}
+.messages-toolbar-item strong{font-size:20px!important}
+.messages-toolbar-item span{margin-top:2px!important;font-size:11px!important}
+.message-list{gap:8px!important}
+.message-card{grid-template-columns:5px 1fr!important}
+.message-card-main{padding:10px 12px!important}
+.message-card h3{font-size:16px!important;margin:0!important}
+.message-card-head{gap:8px!important}
+.message-meta-row{margin-bottom:4px!important;gap:5px!important}
+.message-type-chip,.message-date-chip{padding:3px 7px!important;font-size:10px!important}
+.message-paper{margin-top:8px!important;padding:8px 10px!important;border-radius:10px!important}
+.message-paper p{line-height:1.42!important;font-size:13px!important}
+.message-actions{margin-top:8px!important}
+.job-search-modal{max-width:720px}
+.job-search-modal .blocker{padding:10px 12px;margin:8px 0}
+.job-availability-box{margin-top:12px;max-height:280px;overflow:auto;border:1px solid rgba(148,163,184,.14);border-radius:16px;background:rgba(2,6,23,.18)}
+.club-availability-list{display:grid;gap:6px;padding:8px}
+.club-availability-row{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.12);text-align:left}
+.club-availability-row.available:hover{background:rgba(59,130,246,.10);border-color:rgba(96,165,250,.34)}
+.club-availability-row.locked{opacity:.58;cursor:not-allowed;background:rgba(15,23,42,.34)}
+.ok-pill{background:rgba(34,197,94,.14)!important;color:#bbf7d0!important}.bad-pill{background:rgba(239,68,68,.12)!important;color:#fecaca!important}
+.manager-prestige-card{border-color:rgba(168,85,247,.30);background:linear-gradient(135deg,rgba(168,85,247,.13),rgba(59,130,246,.06))}
+@media (max-width:900px){.club-availability-row{align-items:flex-start;flex-direction:column}.reset-zone{margin-top:14px}.messages-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+.side{display:flex;flex-direction:column;min-height:calc(100vh - 32px)}
+.reset-zone{margin-top:auto}

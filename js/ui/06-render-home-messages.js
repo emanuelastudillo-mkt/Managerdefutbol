@@ -232,11 +232,14 @@ function renderGameOverScreen(){
   const objective = Number(state.objective || MANAGER_OBJECTIVE_PPG || 0);
   const budget = Number(snapshot.finalBudget || game?.budget || 0);
   const score = Number(snapshot.managerScore || 0);
+  const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : Number(game?.managerStats?.prestige || 0);
+  const xp = typeof currentManagerExperience === 'function' ? currentManagerExperience() : Number(game?.managerStats?.experience || 0);
   view.innerHTML = `<div class="game-over-screen">
     <div class="card game-over-card">
-      <p class="label">Game Over</p>
-      <h1>Fin del ciclo</h1>
-      <p>${escapeHtml(state.reason || 'La directiva decidió terminar la partida por no cumplir el objetivo deportivo.')}</p>
+      <p class="label">Sin club</p>
+      <h1>La directiva te despidió</h1>
+      <p>${escapeHtml(state.reason || 'La directiva decidió terminar tu ciclo por no cumplir el objetivo deportivo.')}</p>
+      <p class="muted small">La partida no se reinicia. El mundo sigue igual y podés buscar otro club disponible según tu prestigio.</p>
       <div class="game-over-objective">
         <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>
         <div><span>Objetivo</span><strong>${objective ? objective.toFixed(2) : '—'}</strong></div>
@@ -244,7 +247,9 @@ function renderGameOverScreen(){
       </div>
       <div class="grid cols-6 compact-team-stats game-over-stats">
         ${gameOverStatCard('Manager', snapshot.managerName || game?.rankingManagerName || 'Manager')}
-        ${gameOverStatCard('Club', snapshot.club || clubName(game?.selectedClubId))}
+        ${gameOverStatCard('Prestigio', prestige)}
+        ${gameOverStatCard('Experiencia', xp)}
+        ${gameOverStatCard('Club saliente', snapshot.club || clubName(game?.selectedClubId))}
         ${gameOverStatCard('Temporada', snapshot.season || game?.seasonNumber || 1)}
         ${gameOverStatCard('División', snapshot.division || clubDivision(game?.selectedClubId).name)}
         ${gameOverStatCard('Posición', snapshot.position ? `${snapshot.position}°` : '—')}
@@ -257,13 +262,13 @@ function renderGameOverScreen(){
         ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
       </div>
       <div class="row game-over-actions">
-        <button class="primary" id="btnGameOverNewGame">Empezar nueva partida</button>
-        <button class="ghost" id="btnGameOverReset">Borrar partida local</button>
+        <button class="primary" id="btnGameOverNewGame">Buscar otro club</button>
+        <button class="ghost" id="btnGameOverSave">Guardar carrera</button>
       </div>
     </div>
   </div>`;
-  $('btnGameOverNewGame')?.addEventListener('click', openNewGameModal);
-  $('btnGameOverReset')?.addEventListener('click', resetLocal);
+  $('btnGameOverNewGame')?.addEventListener('click', () => openNewGameModal(true));
+  $('btnGameOverSave')?.addEventListener('click', saveLocal);
 }
 
 function renderHome(){
@@ -530,7 +535,7 @@ function renderMessages(){
   const highPriority = messages.filter(m => m.priority === 'high').length;
   const rows = messages.map(m => messageCard(m)).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Mensajes</h2><p class="tagline">Leé más rápido los avisos del club con una vista tipo bandeja de entrada.</p></div>
+    <div class="section-title compact-section-title"><h2>Mensajes</h2><p class="tagline">Bandeja compacta de avisos del club.</p></div>
     <div class="messages-shell">
       <div class="messages-toolbar card">
         <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>

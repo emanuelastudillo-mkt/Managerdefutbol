@@ -305,7 +305,7 @@ function setDailyAdvanceSummary(fromDate, toDate){
 }
 function advanceOneDay(){
   if(!game || game.seasonFinalized) return;
-  if(game.gameOver?.active){ showNotice('Game Over. Empezá una nueva partida para continuar.'); return; }
+  if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   repairBotRosters({ reason:'before_day_advance' });
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   const fromDate = currentCalendarDate();
@@ -334,7 +334,7 @@ function advanceOneDay(){
 }
 function goToNextMatch(){
   if(!game || game.seasonFinalized) return;
-  if(game.gameOver?.active){ showNotice('Game Over. Empezá una nueva partida para continuar.'); return; }
+  if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isRegularSeason()){
     const round = nextRegularRound();
@@ -349,7 +349,7 @@ function goToNextMatch(){
 
 function simulateNextMatchday(options={}){
   if(!game || game.seasonFinalized) return;
-  if(game.gameOver?.active){ showNotice('Game Over. Empezá una nueva partida para continuar.'); return; }
+  if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   repairBotRosters({ reason:'before_turn' });
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isPreseason()){

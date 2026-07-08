@@ -203,3 +203,8 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 - Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
 - Click sobre el círculo del jugador para cambiar estado.
 - Los estados influyen en ataque, asistencia, defensa y tapadas.
+
+## V3.53
+- Estados individuales de jugador en pizarra: muy defensivo, defensivo, normal, ofensivo y muy ofensivo.
+- Click sobre el círculo del jugador para cambiar estado.
+- Los estados influyen en ataque, asistencia, defensa y tapadas.

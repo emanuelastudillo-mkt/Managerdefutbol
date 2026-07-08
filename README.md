@@ -1,4 +1,13 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.82 - Ligas normalizadas y tema visual por club
+
+- Se normalizaron todos los JSON de liga a una estructura común con `leagues > teams`.
+- Cada club queda definido con `name`, `city`, `reputation`, `primaryColor` y `crestPath`.
+- Esto deja preparada la base para agregar escudos nuevos en `img/escudos/` respetando la ruta declarada en cada club.
+- El juego ahora aplica el color principal del club como tema visual suave del fondo y de varios componentes de interfaz.
+- La ambientación conserva la estética oscura y evita saturación excesiva mediante un suavizado del color.
+- Se agregan opciones en `config.js` para activar o ajustar la intensidad del tema visual por club.
+
 ## V3.81 - Ajuste de prestigio rumano para managers nuevos
 
 - Se bajó el prestigio de 4 clubes rumanos para dejarlos en 20 o menos.
@@ -78,7 +87,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.81
+## Versión actual: V3.82
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

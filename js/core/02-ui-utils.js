@@ -80,6 +80,97 @@ function formatMoney(value){ return new Intl.NumberFormat('es-AR',{style:'curren
 function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
 function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
 function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
+
+function defaultClubTheme(){
+  return { base:[59,130,246], accent:[96,165,250], accent2:[125,211,252] };
+}
+function clampColorChannel(value){ return Math.max(0, Math.min(255, Math.round(Number(value) || 0))); }
+function parseCssColorToRgb(input){
+  const value = String(input || '').trim();
+  if(!value) return null;
+  let match = value.match(/^#([0-9a-f]{3})$/i);
+  if(match){
+    const hex = match[1].split('').map(ch => ch + ch).join('');
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  match = value.match(/^#([0-9a-f]{6})$/i);
+  if(match){
+    const hex = match[1];
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  match = value.match(/^rgba?\(([^)]+)\)$/i);
+  if(match){
+    const parts = match[1].split(',').map(part => Number(part.trim()));
+    if(parts.length >= 3 && parts.every((part, index) => index > 2 || Number.isFinite(part))){
+      return parts.slice(0,3).map(clampColorChannel);
+    }
+  }
+  match = value.match(/^hsla?\(([^)]+)\)$/i);
+  if(match){
+    const parts = match[1].replace(/\//g, ',').split(',').map(part => part.trim());
+    if(parts.length >= 3){
+      const h = Number(parts[0]);
+      const s = Number(String(parts[1]).replace('%','')) / 100;
+      const l = Number(String(parts[2]).replace('%','')) / 100;
+      if(Number.isFinite(h) && Number.isFinite(s) && Number.isFinite(l)){
+        const hue = (((h % 360) + 360) % 360) / 360;
+        if(s === 0){
+          const gray = clampColorChannel(l * 255);
+          return [gray, gray, gray];
+        }
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        const hueToRgb = t => {
+          let value = t;
+          if(value < 0) value += 1;
+          if(value > 1) value -= 1;
+          if(value < 1/6) return p + (q - p) * 6 * value;
+          if(value < 1/2) return q;
+          if(value < 2/3) return p + (q - p) * (2/3 - value) * 6;
+          return p;
+        };
+        return [hueToRgb(hue + 1/3), hueToRgb(hue), hueToRgb(hue - 1/3)].map(channel => clampColorChannel(channel * 255));
+      }
+    }
+  }
+  return null;
+}
+function mixRgb(colorA, colorB, ratio=0.5){
+  const weight = Math.max(0, Math.min(1, Number(ratio) || 0));
+  return [0,1,2].map(index => clampColorChannel((colorA[index] * (1 - weight)) + (colorB[index] * weight)));
+}
+function rgbToCss(rgb){ return `rgb(${rgb.map(clampColorChannel).join(', ')})`; }
+function rgbChannels(rgb){ return rgb.map(clampColorChannel).join(', '); }
+function rgbLuminance(rgb){
+  const [r,g,b] = rgb.map(channel => channel / 255);
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+}
+function buildClubThemeFromColor(inputColor){
+  const defaults = defaultClubTheme();
+  const baseSource = parseCssColorToRgb(inputColor) || defaults.base;
+  const smoothRatio = configNumber('ui.temaClubAcentoSuavizado', 0.18, 0, 0.65);
+  let base = mixRgb(baseSource, defaults.base, smoothRatio);
+  if(rgbLuminance(base) > 0.86) base = mixRgb(base, defaults.base, 0.34);
+  const accent = mixRgb(base, [255,255,255], 0.12);
+  const accent2 = mixRgb(base, [148,163,184], 0.26);
+  return { base, accent, accent2 };
+}
+function applySelectedClubTheme(clubId=game?.selectedClubId || 0){
+  const root = document.documentElement;
+  if(!root) return;
+  const defaults = defaultClubTheme();
+  const enabled = configBoolean('ui.temaClubActivo', true);
+  const theme = (!enabled || !seed?.clubs?.length)
+    ? defaults
+    : buildClubThemeFromColor(seed.clubs.find(c => Number(c.id) === Number(clubId))?.primaryColor || rgbToCss(defaults.base));
+  root.style.setProperty('--club-rgb', rgbChannels(theme.base));
+  root.style.setProperty('--club-accent-rgb', rgbChannels(theme.accent));
+  root.style.setProperty('--club-accent-2-rgb', rgbChannels(theme.accent2));
+  root.style.setProperty('--accent', rgbToCss(theme.accent));
+  root.style.setProperty('--accent-2', rgbToCss(theme.accent2));
+  root.style.setProperty('--club-theme-bg-opacity', String(configNumber('ui.temaClubFondoOpacidad', 0.18, 0, 0.4)));
+  root.style.setProperty('--club-theme-panel-opacity', String(configNumber('ui.temaClubPanelOpacidad', 0.05, 0, 0.2)));
+}
 function clubBadge(id){
   const club = seed.clubs.find(c=>c.id===id) || {};
   const src = club.crestPath || `img/escudos/${imageSlug(club.name || clubName(id))}.png`;

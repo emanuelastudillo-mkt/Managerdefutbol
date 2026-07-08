@@ -208,14 +208,3 @@ Se corrigió la distribución visual de las formaciones y se agregó una penaliz
 ## V3.54
 - Fix visual de Mensajes: textos claros sobre pantalla oscura.
 - Fix de residencias en Academia: contador y cupos se actualizan correctamente.
-
-
-## V3.55
-- Nuevo presupuesto autorizado para fichajes con tope del 50% del presupuesto total.
-- Base por división y desbloqueos por rendimiento, ascenso, campeonato y ventas.
-- Finanzas y Mercado muestran el presupuesto disponible para fichajes.
-
-
-## V3.56
-- Mercado bot ampliado: ofertas por jugadores del manager, transferibles, veto de directiva para estrellas y despidos de bots.
-- Ficha individual mejorada con botón Contratar en libres, Hacer oferta en contratados y casilla EN VENTA en propios.

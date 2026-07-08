@@ -2262,17 +2262,3 @@ button.action-failure{
 .academy-residence-stats>div{padding:12px;border-radius:16px;background:rgba(255,255,255,.045);border:1px solid rgba(148,163,184,.12)}
 .academy-residence-stats strong{display:block;font-size:26px;line-height:1;font-weight:900;color:#eaf2ff}
 @media (max-width:700px){.academy-residence-stats{grid-template-columns:1fr}}
-
-
-/* V3.55: presupuesto de fichajes */
-.transfer-budget-card{border-color:rgba(59,130,246,.24);background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(34,197,94,.045))}
-.transfer-budget-card h3{margin:0;font-size:26px}
-.transfer-budget-bar{margin:12px 0 8px;height:10px}
-
-
-/* V3.56: transferibles y ficha de jugador */
-.transfer-listed-badge{display:inline-flex;align-items:center;margin-left:7px;padding:3px 7px;border-radius:999px;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.38);color:#fcd34d;font-size:10px;font-weight:900;letter-spacing:.08em;vertical-align:middle}
-.player-modal-title .transfer-listed-badge{font-size:11px;transform:translateY(-2px)}
-.transfer-toggle-row{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;color:var(--text);font-size:14px;margin:8px 0 4px;font-weight:800}
-.transfer-toggle-row input{width:auto;margin:0;accent-color:#f59e0b}
-.player-action-card{border-color:rgba(245,158,11,.16)}

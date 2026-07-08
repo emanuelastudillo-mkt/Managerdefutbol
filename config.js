@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.56',
+  version: 'V3.51',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -142,20 +142,7 @@ window.GAME_CONFIG = {
     ofertaJugadoresMinPorcentajeClausula: 0.05,
     ofertaJugadoresMaxPorcentajeClausula: 0.15,
     ofertasJugadoresRequierenPartidos: true,
-    ofertasJugadoresRequierenGolOAsistencia: true,
-
-    // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
-    presupuestoFichajesActivo: true,
-    presupuestoFichajesMaximoPorcentaje: 0.50,
-    presupuestoFichajesDivision3: 0.25,
-    presupuestoFichajesDivision2: 0.35,
-    presupuestoFichajesDivision1: 0.40,
-    desbloqueoSuperarObjetivo: 0.05,
-    desbloqueoPromedio15: 0.05,
-    desbloqueoPromedio19: 0.10,
-    desbloqueoAscenso: 0.10,
-    desbloqueoCampeon: 0.15,
-    porcentajeVentaLiberadoFichajes: 0.70
+    ofertasJugadoresRequierenGolOAsistencia: true
   },
   estadio: {
     costoReplantarCesped: 2000000,

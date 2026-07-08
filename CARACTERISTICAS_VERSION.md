@@ -1,13 +1,6 @@
-# V3.56 - Mercado bot, transferibles y ficha de jugador
+# V3.54 - Fix mensajes y residencias
 
-## Cambios
-- Se revisaron las condiciones de ofertas recibidas por jugadores propios.
-- Las estrellas del equipo y jugadores jóvenes con buen rendimiento pueden recibir ofertas mejores.
-- Si se intenta aceptar una oferta menor al 40% de cláusula por una estrella, la directiva bloquea la venta.
-- Las ofertas pueden llegar desde clubes bots, no sólo desde clubes externos.
-- Los jugadores marcados como transferibles tienen más probabilidad de recibir ofertas, pero suelen ser ofertas más baratas.
-- En la ficha individual se agregó la casilla **Poner transferible**.
-- Los jugadores transferibles muestran etiqueta **EN VENTA** junto al nombre.
-- En fichas de agentes libres se agregó el botón **Contratar**.
-- Se ajustó el botón **Hacer oferta** en fichas de jugadores contratados.
-- Los bots pueden despedir jugadores sobrantes sin romper la estructura mínima del plantel.
+- Se corrigió el contraste del menú **Mensajes** para que no use textos oscuros sobre la pantalla oscura.
+- Se corrigió el alquiler de residencias en Academia: ahora aumenta correctamente el contador y el cupo total.
+- El alquiler ahora actualiza toda la interfaz después de descontar el dinero.
+- Se agregaron métricas visibles de residencias alquiladas, cupo total y cupos libres.

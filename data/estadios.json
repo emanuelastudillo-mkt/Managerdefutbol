@@ -1,5 +1,5 @@
 {
-  "version": "V3.81",
+  "version": "V3.84",
   "pais": "Global",
   "sistema": "estadios_global",
   "descripcion": "Alias global con estadios de todas las ligas jugables cargadas.",
@@ -676,7 +676,7 @@
           "name": "Magallanes",
           "city": "Santiago",
           "country": "Chile",
-          "reputation": 35,
+          "reputation": 18,
           "stadium": "Municipal de San Bernardo",
           "stadiumCapacity": 3500,
           "stadiumIsFictional": false

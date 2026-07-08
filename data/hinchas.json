@@ -1,12 +1,12 @@
 {
-  "version": "V3.81",
+  "version": "V3.84",
   "pais": "Global",
   "sistema": "hinchas_global",
   "descripcion": "Alias global con hinchadas de todas las ligas jugables cargadas.",
   "totales": {
     "equipos": 162,
-    "hinchas_base_total": 3850600,
-    "promedio_hinchas_base": 23769.14,
+    "hinchas_base_total": 3849800,
+    "promedio_hinchas_base": 23764.2,
     "hinchas_base_min": 300,
     "hinchas_base_max": 93500
   },
@@ -874,12 +874,12 @@
       "equipo": "Magallanes",
       "liga": "Primera División Chile",
       "pais": "Chile",
-      "prestigio": 35,
+      "prestigio": 18,
       "estadio": "Municipal de San Bernardo",
       "capacidad_estadio": 3500,
       "estadio_ficticio": false,
-      "hinchas_base": 1500,
-      "ocupacion_base_porcentaje": 45.0,
+      "hinchas_base": 700,
+      "ocupacion_base_porcentaje": 20.0,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_y_liga"
     },
     {

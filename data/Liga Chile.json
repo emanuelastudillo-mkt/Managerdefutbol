@@ -1,5 +1,5 @@
 {
-  "version": "V3.82",
+  "version": "V3.84",
   "pais": "Chile",
   "descripcion": "Estructura jugable de Chile con 1 liga de 18 clubes.",
   "criterio": "Formato normalizado para el juego: cada club incluye nombre, ciudad, prestigio, color principal y ruta de escudo.",
@@ -131,7 +131,7 @@
         {
           "name": "Magallanes",
           "city": "Santiago",
-          "reputation": 35,
+          "reputation": 18,
           "primaryColor": "#66B3FF",
           "crestPath": "img/escudos/magallanes.png"
         }

@@ -1,5 +1,5 @@
 {
-  "version": "V3.79",
+  "version": "V3.84",
   "pais": "Chile",
   "sistema": "hinchas_chile",
   "descripcion": "Cantidad base de hinchas por equipo en Chile, calculada desde prestigio global, capacidad de estadio y liga.",
@@ -51,9 +51,9 @@
   },
   "totales": {
     "equipos": 18,
-    "hinchas_base_total": 212600,
-    "promedio_hinchas_base": 11811.11,
-    "hinchas_base_min": 1500,
+    "hinchas_base_total": 211800,
+    "promedio_hinchas_base": 11766.67,
+    "hinchas_base_min": 700,
     "hinchas_base_max": 39400
   },
   "hinchadas": [
@@ -266,12 +266,12 @@
       "equipo": "Magallanes",
       "liga": "Primera División Chile",
       "pais": "Chile",
-      "prestigio": 35,
+      "prestigio": 18,
       "estadio": "Municipal de San Bernardo",
       "capacidad_estadio": 3500,
       "estadio_ficticio": false,
-      "hinchas_base": 1500,
-      "ocupacion_base_porcentaje": 45.0,
+      "hinchas_base": 700,
+      "ocupacion_base_porcentaje": 20.0,
       "criterio": "capacidad_estadio * porcentaje_por_prestigio_y_liga"
     }
   ],

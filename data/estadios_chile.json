@@ -1,5 +1,5 @@
 {
-  "version": "V3.79",
+  "version": "V3.84",
   "pais": "Chile",
   "sistema": "estadios_chile",
   "descripcion": "Estadios base para clubes de Chile.",
@@ -170,7 +170,7 @@
           "name": "Magallanes",
           "city": "Santiago",
           "country": "Chile",
-          "reputation": 35,
+          "reputation": 18,
           "stadium": "Municipal de San Bernardo",
           "stadiumCapacity": 3500,
           "stadiumIsFictional": false

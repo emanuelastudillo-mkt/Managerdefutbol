@@ -1,4 +1,11 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.84 - Parche de prueba de prestigio Chile
+
+- Se ajustó Magallanes, el club chileno de menor prestigio, de 35 a 18.
+- El club queda disponible para managers nuevos con prestigio 0.
+- Se sincronizaron `data/Liga Chile.json`, `data/estadios_chile.json`, `data/hinchas_chile.json`, `data/estadios.json` y `data/hinchas.json`.
+- Se ajustó su base de hinchas a 700 para sostener coherencia con el nuevo prestigio.
+
 ## V3.83 - Pantalla inicial con bienvenida y clubes disponibles
 
 - La pantalla inicial para partidas nuevas ahora muestra una bienvenida general al juego.
@@ -95,7 +102,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.83
+## Versión actual: V3.84
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

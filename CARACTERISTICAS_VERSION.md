@@ -1,8 +1,7 @@
-# V3.83 - Pantalla inicial con bienvenida y clubes disponibles
+# V3.84 - Parche de prueba de prestigio Chile
 
-- La pantalla inicial para partidas nuevas ahora muestra una bienvenida general al juego.
-- Se explican de forma breve las áreas principales: plantel, táctica, mercado, finanzas, sponsors, estadio, hinchas, academia, empleados, mensajes y sistema ESPECIAL.
-- Se reemplazó el texto simple inicial por una grilla de clubes disponibles según el prestigio actual del manager.
-- Cada club disponible muestra escudo, país, liga, capacidad de estadio, hinchas base y presupuesto expresado en millones.
-- La búsqueda de club también muestra tarjetas enriquecidas con esos datos dentro del modal de selección.
-- Desde la pantalla inicial se puede abrir la búsqueda completa o preseleccionar un club disponible para iniciar carrera.
+- Se ajustó Magallanes, el club chileno de menor prestigio, de 35 a 18 de prestigio.
+- Magallanes queda disponible para managers nuevos con prestigio 0 por la regla de clubes libres de 20 o menos.
+- Se sincronizó el cambio en Liga Chile, estadios e hinchadas chilenas/globales.
+- Se ajustó su base de hinchas a 700 para mantener coherencia con el nuevo prestigio bajo.
+- Se mantuvo la estructura de 18 clubes en la Primera División Chile.

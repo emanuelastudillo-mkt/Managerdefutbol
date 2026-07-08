@@ -277,6 +277,8 @@ function normalizeGame(saved){
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
   normalized.gameOver = normalizeGameOverState(normalized.gameOver);
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
+  normalized.messages = normalized.messages.filter(msg => !String(msg?.body || '').includes('La liga ajustó la preparación de'));
+  normalized.specialClauseOffers = (normalized.specialClauseOffers && typeof normalized.specialClauseOffers === 'object' && !Array.isArray(normalized.specialClauseOffers)) ? normalized.specialClauseOffers : null;
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
   normalized.playerStars = normalizePlayerStarsState(normalized.playerStars || {});
   normalized.playerImpactWindows = normalizePlayerImpactWindows(normalized.playerImpactWindows || {});
@@ -602,6 +604,7 @@ function newGame(selectedClubId, options={}){
     rejectedPurchaseOffers: {},
     lastOwnPlayerOffer: null,
     seasonEndPlayerOffers: null,
+    specialClauseOffers: null,
     currentDate: firstAdvanceDateForSeason(seasonYearForNumber(1)),
     matchdayIndex: 0,
     tactic,
@@ -1987,14 +1990,6 @@ function balanceBotsForSeasonStart(selectedClubId=game?.selectedClubId, rankMap=
   game.botBalanceLog = Array.isArray(game.botBalanceLog) ? game.botBalanceLog : [];
   game.botBalanceLog.unshift(summary);
   game.botBalanceLog = game.botBalanceLog.slice(0, 20);
-  if(clubsAdjusted > 0){
-    pushGameMessage({
-      type:'deportivo',
-      title:'Rivales mejor preparados',
-      body:`La liga ajustó la preparación de ${clubsAdjusted} equipo(s) bot de tu división. Moral, físico y cohesión quedaron cerca de tus valores actuales para sostener la dificultad de la temporada.`,
-      priority:'normal'
-    });
-  }
   return summary;
 }
 function maintainBotBalanceDuringSeason(options={}){

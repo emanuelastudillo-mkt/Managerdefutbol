@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.64',
+  version: 'V3.71',
   data: {
     seedUrl: 'data/seed.json',
     playersUrl: 'data/jugadores.json',
@@ -156,7 +156,14 @@ window.GAME_CONFIG = {
     desbloqueoPromedio19: 0.10,
     desbloqueoAscenso: 0.10,
     desbloqueoCampeon: 0.15,
-    porcentajeVentaLiberadoFichajes: 0.70
+    porcentajeVentaLiberadoFichajes: 0.70,
+
+    // Oferta especial de cláusula: entre 1 y 2 veces en las últimas fechas, un club de la misma liga puede pagar la cláusula de uno de los 3 mejores jugadores del plantel.
+    ofertaClausulaEspecialActiva: true,
+    ofertaClausulaEspecialFechasFinales: 10,
+    ofertaClausulaEspecialMinPorTemporada: 1,
+    ofertaClausulaEspecialMaxPorTemporada: 2,
+    ofertaClausulaEspecialTopJugadores: 3
   },
   estadio: {
     costoReplantarCesped: 2000000,

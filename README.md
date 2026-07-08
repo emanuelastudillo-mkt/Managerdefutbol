@@ -1,10 +1,19 @@
 # Manager Fútbol - README
 
-## Versión actual: V3.70
+## Versión actual: V3.71
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 
 ## Historial de actualizaciones
+
+### V3.71 - Oferta especial de cláusula y mensajes limpios
+- Se eliminó el mensaje visible de ajuste de preparación de equipos bot.
+- En las últimas 10 fechas puede aparecer entre 1 y 2 ofertas especiales de cláusula.
+- La oferta especial llega desde un club de la misma liga por uno de los 3 jugadores con mayor media del plantel.
+- El club interesado ofrece el 100% de la cláusula.
+- Se puede aceptar la venta o intentar convencer al jugador de quedarse.
+- Convencer puede fallar con probabilidad igual a posición actual en liga x2.
+- Se agregaron 5 variantes de mensaje cuando el jugador acepta quedarse y 5 cuando decide irse.
 
 ### V3.70 - Duración de obras de estadio configurable
 - Se agregó `estadio.multiplicadorDiasObras` en `config.js`.

@@ -551,6 +551,7 @@ function renderMessages(){
       <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
     </div>`;
   document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
+  document.querySelectorAll('[data-convince-player]').forEach(btn => btn.addEventListener('click', () => convinceSpecialClausePlayer(btn.dataset.convincePlayer)));
   document.querySelectorAll('[data-reject-offer]').forEach(btn => btn.addEventListener('click', () => rejectTransferOffer(btn.dataset.rejectOffer)));
   saveLocal(true);
 }
@@ -595,10 +596,21 @@ function messageBodyHtml(m){
   if(safeBody.includes(safeName)) return safeBody.split(safeName).join(link);
   return `${safeBody} <span class="message-player-inline">Jugador: ${link}</span>`;
 }
+function transferOfferStatusLabel(status){
+  const map = {
+    accepted:'Aceptada',
+    rejected:'Rechazada',
+    blocked_by_board:'Bloqueada por directiva',
+    convinced:'Jugador convencido',
+    forced_sale:'Venta ejecutada'
+  };
+  return map[status] || String(status || 'Cerrada');
+}
 function messageCard(m){
+  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && m.action?.origin === 'special_clause';
   const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
-    ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button><button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
-    : (m.action?.status ? `<span class="pill message-status-pill">${m.action.status === 'accepted' ? 'Aceptada' : m.action.status === 'blocked_by_board' ? 'Bloqueada por directiva' : 'Rechazada'}</span>` : '');
+    ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : ''}<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
+    : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '');
   const toneClass = messageToneClass(m.type, m.priority);
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
   return `<div class="card message-card ${toneClass} ${m.read ? '' : 'unread'}">
@@ -713,8 +725,81 @@ function botTransferOfferClub(player){
   const club = pool[hashNumber(`bot-offer-club-${player.id}-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}`, pool.length)];
   return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
 }
+
+function currentManagerLeaguePosition(){
+  const divisionId = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId))?.divisionId || null;
+  const table = typeof sortedStandings === 'function' ? sortedStandings(divisionId) : [];
+  const index = table.findIndex(row => Number(row.clubId) === Number(game?.selectedClubId));
+  return index >= 0 ? index + 1 : 20;
+}
+function specialClauseOfferScheduleState(){
+  if(!game || !SPECIAL_CLAUSE_OFFER_ENABLED) return null;
+  const season = Number(game.seasonNumber || 1);
+  const clubId = Number(game.selectedClubId || 0);
+  const total = Number(game.fixtures?.length || 0);
+  if(!clubId || total <= 0) return null;
+  const start = Math.max(0, total - Number(SPECIAL_CLAUSE_OFFER_LAST_MATCHDAYS || 10));
+  const minCount = Number(SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON || 1);
+  const maxCount = Math.max(minCount, Number(SPECIAL_CLAUSE_OFFER_MAX_PER_SEASON || 2));
+  const targetCount = Math.max(0, Math.min(maxCount, minCount + hashNumber(`special-clause-count-${season}-${clubId}`, Math.max(1, maxCount - minCount + 1))));
+  const candidates = [];
+  for(let i=start; i<total; i++) candidates.push(i);
+  candidates.sort((a,b)=>hashNumber(`special-clause-date-${season}-${clubId}-${a}`, 100000)-hashNumber(`special-clause-date-${season}-${clubId}-${b}`, 100000));
+  const scheduled = candidates.slice(0, targetCount).sort((a,b)=>a-b);
+  const state = game.specialClauseOffers;
+  if(!state || Number(state.season || 0) !== season || Number(state.clubId || 0) !== clubId){
+    game.specialClauseOffers = { season, clubId, targetCount, scheduled, generated:[], skipped:[] };
+  }else{
+    game.specialClauseOffers.targetCount = Number.isFinite(Number(state.targetCount)) ? Number(state.targetCount) : targetCount;
+    game.specialClauseOffers.scheduled = Array.isArray(state.scheduled) && state.scheduled.length ? state.scheduled : scheduled;
+    game.specialClauseOffers.generated = Array.isArray(state.generated) ? state.generated : [];
+    game.specialClauseOffers.skipped = Array.isArray(state.skipped) ? state.skipped : [];
+  }
+  return game.specialClauseOffers;
+}
+function sameLeagueClauseOfferClub(player){
+  const selectedClub = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId) && String(c.divisionId || '') === String(selectedClub?.divisionId || ''));
+  const pool = clubs.length ? clubs : (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
+  if(!pool.length) return { name:'Club interesado', id:-1 };
+  const club = pool[hashNumber(`special-clause-club-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}-${player?.id || 0}`, pool.length)];
+  return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
+}
+function maybeGenerateSpecialClauseOffer(match){
+  if(!game || !match || !SPECIAL_CLAUSE_OFFER_ENABLED || !isRegularSeason()) return null;
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)) return null;
+  const state = specialClauseOfferScheduleState();
+  if(!state) return null;
+  const matchday = Number(game.matchdayIndex || 0);
+  const scheduled = Array.isArray(state.scheduled) ? state.scheduled.map(Number) : [];
+  const generated = Array.isArray(state.generated) ? state.generated.map(Number) : [];
+  const skipped = Array.isArray(state.skipped) ? state.skipped.map(Number) : [];
+  if(!scheduled.includes(matchday) || generated.includes(matchday) || skipped.includes(matchday)) return null;
+  const topPlayers = playersByClub(game.selectedClubId)
+    .filter(p => playerClauseFor(p) > 0 && !hasPendingTransferOfferForPlayer(p.id))
+    .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || refreshPlayerClause(b)-refreshPlayerClause(a) || a.age-b.age)
+    .slice(0, Math.max(1, Number(SPECIAL_CLAUSE_OFFER_TOP_PLAYERS || 3)));
+  if(!topPlayers.length){
+    state.skipped.push(matchday);
+    return null;
+  }
+  const player = topPlayers[hashNumber(`special-clause-player-${state.season}-${state.clubId}-${matchday}`, topPlayers.length)];
+  const source = sameLeagueClauseOfferClub(player);
+  const financials = buildTransferOfferFinancials(player, 100);
+  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. AFA retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse.`;
+  const msg = pushGameMessage({
+    type:'mercado',
+    priority:'high',
+    title:`Oferta de cláusula por ${playerLastName(player.name)}`,
+    body,
+    action:{ type:'transferOffer', status:'pending', origin:'special_clause', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct:100, canConvince:true }
+  });
+  state.generated.push(matchday);
+  return msg;
+}
 function maybeGenerateTransferOffer(match){
   if(!game || !match) return;
+  maybeGenerateSpecialClauseOffer(match);
   const ownPlayers = playersByClub(game.selectedClubId);
   const listedCount = ownPlayers.filter(p => Boolean(p.transferListed)).length;
   const chance = clamp(Number(BOT_TRANSFER_OFFER_BASE_CHANCE || 0.28) + Math.min(Number(BOT_TRANSFER_LISTED_EXTRA_CHANCE || 0.22), listedCount * 0.045), 0, 0.72);
@@ -786,15 +871,34 @@ function generateSeasonEndPlayerOffers(){
   game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:created.length };
   return created;
 }
+function completeTransferSaleFromMessage(msg, player, options={}){
+  const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
+  const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
+  const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
+  recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, origin:msg.action.origin || 'offer' });
+  const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
+  const destinationClubId = Number(msg.action.sourceClubId || -1);
+  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
+  player.transferListed = false;
+  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, sold:destinationClubId > 0 ? false : true } : p);
+  removePlayerFromCurrentTactic(player.id);
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  msg.action.status = options.status || 'accepted';
+  msg.action.grossAmount = grossAmount;
+  msg.action.taxAmount = taxAmount;
+  msg.action.netAmount = netAmount;
+  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
+  msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
+  saveLocal(true);
+  showNotice(options.notice || `${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
+  renderMessages();
+}
 function acceptTransferOffer(messageId){
   const msg = (game.messages || []).find(m => m.id === messageId);
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
-  const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
-  const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
-  const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
   const pct = Number(msg.action.pct || 0);
   if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
     msg.action.status = 'blocked_by_board';
@@ -804,21 +908,49 @@ function acceptTransferOffer(messageId){
     renderMessages();
     return;
   }
-  recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount });
-  const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
-  const destinationClubId = Number(msg.action.sourceClubId || -1);
-  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
-  player.transferListed = false;
-  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, sold:destinationClubId > 0 ? false : true } : p);
-  removePlayerFromCurrentTactic(player.id);
-  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  msg.action.status = 'accepted';
-  msg.action.grossAmount = grossAmount;
-  msg.action.taxAmount = taxAmount;
-  msg.action.netAmount = netAmount;
-  msg.body += ` Oferta aceptada. Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
+  completeTransferSaleFromMessage(msg, player);
+}
+function specialClauseStayMessages(player, managerName){
+  return [
+    `Estaba esperando que me llamaras, ${managerName}. No quiero irme. Sé que el club necesita el dinero, pero quiero quedarme a pelear por cosas grandes. Nos vemos en el entrenamiento.`,
+    `Gracias por hablar conmigo, ${managerName}. La oferta era fuerte, pero este club todavía tiene algo pendiente conmigo. Me quedo.`,
+    `Me llamó el otro club, sí, pero necesitaba escuchar al mío. Si vos me querés acá, me quedo a competir. Nos vemos mañana en la práctica, ${managerName}.`,
+    `No voy a negar que la cláusula me hizo pensar, ${managerName}. Pero quiero ser importante acá. Guardá la lapicera, todavía no firmo nada afuera.`,
+    `Tenía miedo de que el club quisiera venderme sin decirme nada. Si me pedís que me quede, me quedo. Quiero pelearla con esta camiseta, ${managerName}.`
+  ];
+}
+function specialClauseLeaveMessages(player, managerName){
+  return [
+    `${managerName}, el rendimiento del equipo no es lo que esperaba y tengo mejores aspiraciones. Me da felicidad saber que el club recibe un buen dinero por mi venta. Te agradezco y me voy.`,
+    `Míster, lo pensé mucho. El equipo no está en el lugar donde imaginaba competir y siento que esta oportunidad no la puedo dejar pasar. Gracias por todo; me voy tranquilo porque al club le entra una suma importante.`,
+    `${managerName}, me cuesta decirlo, pero necesito otro desafío. El presente deportivo no acompaña mis objetivos. Ojalá este dinero ayude al club. Gracias por intentarlo.`,
+    `Te escuché, pero ya tomé una decisión. Quiero competir por objetivos más altos y hoy siento que acá no los tengo cerca. Me voy agradecido y con la tranquilidad de dejarle dinero al club.`,
+    `Aprecio que me hayas llamado, ${managerName}. Pero la propuesta es importante y el rendimiento del equipo no coincide con mis aspiraciones. Me voy con respeto y gratitud.`
+  ];
+}
+function convinceSpecialClausePlayer(messageId){
+  const msg = (game.messages || []).find(m => m.id === messageId);
+  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending' || msg.action.origin !== 'special_clause') return;
+  const player = playerById(msg.action.playerId);
+  if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  const position = currentManagerLeaguePosition();
+  const failureChance = clamp((Number(position || 20) * 2) / 100, 0.02, 0.95);
+  const managerName = game?.rankingManagerName || storedManagerName() || 'Manager';
+  const roll = Math.random();
+  if(roll < failureChance){
+    const variants = specialClauseLeaveMessages(player, managerName);
+    const text = variants[hashNumber(`special-clause-leave-${player.id}-${Date.now()}`, variants.length)];
+    completeTransferSaleFromMessage(msg, player, { status:'forced_sale', bodyPrefix:text, notice:`${player.name} decidió irse. La cláusula fue ejecutada.` });
+    return;
+  }
+  const variants = specialClauseStayMessages(player, managerName);
+  const text = variants[hashNumber(`special-clause-stay-${player.id}-${Date.now()}`, variants.length)];
+  msg.action.status = 'convinced';
+  msg.body += ` ${text}`;
+  game.playerMorale[player.id] = clamp(currentMorale(player.id) + 4, 1, 99);
   saveLocal(true);
-  showNotice(`${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
+  showNotice(`${player.name} aceptó quedarse en el club.`);
   renderMessages();
 }
 function rejectTransferOffer(messageId){

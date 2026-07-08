@@ -1,421 +1,199 @@
-/*
-  Configuración editable del juego.
-  Cambiar estos valores no requiere tocar app.js.
-  Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
-*/
-window.GAME_CONFIG = {
-  version: 'V3.81',
-  data: {
-    seedUrl: 'data/seed.json',
-    // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
-    playersUrl: 'data/jugadores.json',
-    sponsorsUrl: 'data/sponsors.json',
-    employeesUrl: 'data/empleados.json',
-    eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json',
-    estadiosUrl: 'data/estadios_argentina.json',
-    hinchasUrl: 'data/hinchas_argentina.json',
-    estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
-    hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
-    estadiosArgentinaUrl: 'data/estadios_argentina.json',
-    hinchasArgentinaUrl: 'data/hinchas_argentina.json',
-    estadiosChileUrl: 'data/estadios_chile.json',
-    hinchasChileUrl: 'data/hinchas_chile.json',
-    estadiosBrasilUrl: 'data/estadios_brasil.json',
-    hinchasBrasilUrl: 'data/hinchas_brasil.json',
-    estadiosInglaterraUrl: 'data/estadios_inglaterra.json',
-    hinchasInglaterraUrl: 'data/hinchas_inglaterra.json',
-    estadiosEspanaUrl: 'data/estadios_espana.json',
-    hinchasEspanaUrl: 'data/hinchas_espana.json',
-    estadiosItaliaUrl: 'data/estadios_italia.json',
-    hinchasItaliaUrl: 'data/hinchas_italia.json',
-    estadiosRumaniaUrl: 'data/estadios_rumania.json',
-    hinchasRumaniaUrl: 'data/hinchas_rumania.json',
-    instalacionesUrl: 'data/instalaciones.json',
-    relatosPartidoUrl: 'data/relatos_partido.json'
-  },
-  calendario: {
-    // Cada avance equivale a 7 días. El juego sigue avanzando de domingo a domingo.
-    diasPorAvance: 7,
-    // Año inicial del calendario. Cada temporada usa un año calendario completo y respeta años bisiestos.
-    anioInicial: 2026,
-    mesInicioTemporada: 1,
-    diaInicioTemporada: 1,
-    // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
-    ligaIdaYVuelta: true,
-    // Bloqueo entre avances largos en milisegundos. 60000 = 1 minutos.
-    bloqueoEntreAvancesMs: 60000,
-    // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
-    bloqueoAvanceDiaMs: 2000,
-    // Duración visual de la transición al avanzar días.
-    transicionAvanceMs: 3400,
-    diasPretemporada: 70,
-    // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
-    diasPostemporada: 0,
-    amistososMaximosPretemporada: 5
-  },
-  manager: {
-    // Prestigio inicial del manager. Un manager nuevo arranca en 0.
-    prestigioInicial: 0,
-    // Clubes con este prestigio o menos aceptan cualquier manager, incluso con prestigio 0.
-    prestigioClubLibreMinimo: 20,
-    // Al renunciar o ser despedido, el club bloquea al manager por esta cantidad de temporadas.
-    temporadasBloqueoRecontratacion: 1,
-    // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
-    // Valores válidos: 0.3 a 2.0.
-    objetivoPuntosPorPartido: null,
-    // Objetivos automáticos por división cuando objetivoPuntosPorPartido queda vacío.
-    objetivoDivision1: 1.4,
-    objetivoDivision2: 1.1,
-    objetivoDivision3: 0.9,
-    // Base de evaluación: la directiva revisa desde los 5 partidos oficiales de la temporada actual.
-    partidosMinimosEvaluacionObjetivo: 5,
-    // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
-    congelarEvaluacionObjetivoPorTemporada: true,
-    // Prórroga por promedio general histórico del manager.
-    bonusPartidosPromedioGeneral120: 2,
-    bonusPartidosPromedioGeneral150: 5,
-    bonusPartidosPromedioGeneral190: 10
-  },
-  plantel: {
-    // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
-    jugadoresMinimosPorClub: 18,
-    jugadoresInicialesPorClub: 25,
-    jugadoresMaximosPorClub: 42,
-    // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
-    reparacionAutomaticaBots: true,
-    botsMinimoPorteros: 2,
-    botsMinimoDefensores: 5,
-    botsMinimoMediocampistas: 5,
-    botsMinimoDelanteros: 3,
-    botsMediaEmergenciaMin: 28,
-    botsMediaEmergenciaMax: 52,
-    botsFactorSueldoEmergencia: 0.35,
-    agentesLibresIniciales: 300,
-    agentesLibresMediaMin: 40,
-    agentesLibresMediaMax: 62,
-    agentesLibresEdadMin: 19,
-    agentesLibresEdadMax: 30,
-    agentesLibresMaximosPorTemporada: 200,
-    agentesLibresPosiciones: {
-      POR: 0.10,
-      DEF: 0.35,
-      MED: 0.35,
-      DEL: 0.20
-    },
-    rellenarLibresHastaMaximoPorTemporada: true,
-    limpiarLibresViejosAlCambiarTemporada: true,
-    jovenesLibresNuevosPorEquipoTemporada: 3,
-    jovenesLibresEdadMin: 17,
-    jovenesLibresEdadMax: 18,
-    jovenesLibresPorTemporada: 0
-  },
-  cohesion: {
-    // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
-    valorInicial: 50,
-    gananciaPorPartido: 9,
-    perdidaPorCambioTactico: 8,
-    perdidaPorCambioJugador: 1,
-    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-    gananciaEntrenamientoTacticoPorCasilla: 1
-  },
-  equilibrioBots: {
-    // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
-    activo: true,
-    // suave | normal | dificil
-    dificultad: 'dificil',
-    soloDivisionManager: true,
-    nivelarAlInicioTemporada: true,
-    mantenerDuranteTemporada: true,
-    intervaloMantenimientoFechas: 2,
-    // Los mejores bots de la temporada anterior reciben un plus; los peores, un margen menor.
-    bonusMaximoPorPosicion: 8,
-    pisoMoral: 65,
-    pisoFisico: 76,
-    pisoCohesion: 70,
-    margenMoral: 8,
-    margenFisico: 6,
-    margenCohesion: 10,
-    recuperacionFisicaPorMantenimiento: 8,
-    recuperacionMoralPorMantenimiento: 5,
-    recuperacionCohesionPorMantenimiento: 4,
-    desarrolloPlantelPorTemporada: 0.18,
-    bonusDesarrolloPorPosicion: 0.08,
-    maximoBoostBotPorHabilidad: 18
-  },
-  economia: {
-    escalaSueldosYClausulas: 0.10,
-    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
-    escalaClausulas: 0.10,
-    reduccionBaseSueldoFinTemporada: 0.05,
-    bonusSueldoPorPartidoJugado: 0.01
-  },
-  sponsors: {
-    // Multiplica los valores base de data/sponsors.json. 1 mantiene el valor del archivo.
-    factorValorBase: 1,
-    partidosMinimosEntreTandas: 4,
-    partidosMaximosEntreTandas: 7,
-    ofertasMinimasPorTanda: 2,
-    ofertasMaximasPorTanda: 5,
-    ofertasInicialesFecha1: 2
-  },
-  mercado: {
-    // Impuesto AFA sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
-    impuestoAfaTraspasos: 0.30,
-    // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
-    ofertaJugadoresMinPorcentajeClausula: 0.05,
-    ofertaJugadoresMaxPorcentajeClausula: 0.15,
-    ofertasJugadoresRequierenPartidos: true,
-    ofertasJugadoresRequierenGolOAsistencia: true,
+/* V3.17 · Utilidades DOM, formato, avisos, transición de avance y helpers básicos de club. */
 
-    // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
-    presupuestoFichajesActivo: true,
-    presupuestoFichajesMaximoPorcentaje: 0.50,
-    presupuestoFichajesDivision3: 0.25,
-    presupuestoFichajesDivision2: 0.35,
-    presupuestoFichajesDivision1: 0.40,
-    desbloqueoSuperarObjetivo: 0.05,
-    desbloqueoPromedio15: 0.05,
-    desbloqueoPromedio19: 0.10,
-    desbloqueoAscenso: 0.10,
-    desbloqueoCampeon: 0.15,
-    porcentajeVentaLiberadoFichajes: 0.70,
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+function showNotice(text, persist=false){
+  const box = $('notice');
+  if(!box) return;
+  box.textContent = text;
+  box.classList.remove('hidden');
+  box.classList.remove('notice-pop');
+  void box.offsetWidth;
+  box.classList.add('notice-pop');
+  clearTimeout(showNotice.timer);
+  if(!persist){ showNotice.timer = setTimeout(() => box.classList.add('hidden'), NOTICE_DURATION_MS); }
+}
+function hideNotice(){ $('notice')?.classList.add('hidden'); }
 
-    // Oferta especial de cláusula: entre 1 y 2 veces en las últimas fechas, un club de la misma liga puede pagar la cláusula de uno de los 3 mejores jugadores del plantel.
-    ofertaClausulaEspecialActiva: true,
-    ofertaClausulaEspecialFechasFinales: 10,
-    ofertaClausulaEspecialMinPorTemporada: 1,
-    ofertaClausulaEspecialMaxPorTemporada: 2,
-    ofertaClausulaEspecialTopJugadores: 3
-  },
-  estadio: {
-    costoReplantarCesped: 2000000,
-    diasReplantarCesped: 35,
-    costoParchearCampo: 200000,
-    diasParchearCampo: 21,
-    mejoraParchePorAvance: 5,
-    // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
-    botsCampoFijoPorTemporada: true,
-    botsCampoMinimo: 30,
-    botsCampoMaximo: 95,
-    botsCampoBaseInicial: 58,
-    botsCampoRangoPorPosicion: 42,
-    // Reparación defensiva: si los campos bots quedan debajo del mínimo, se consideran datos corruptos y se regeneran.
-    botsCampoAutoRepararEstadosInvalidos: true,
-    botsCampoUmbralInvalido: 29,
-    botsCampoPorcentajeMasivoInjugable: 0.60,
-    // Entradas, hinchadas y ventaja local.
-    precioEntradaInicial: 100,
-    precioEntradaMinimo: 10,
-    precioEntradaMaximo: 500,
-    porcentajeVisitanteMinimo: 0.07,
-    porcentajeVisitanteMaximo: 0.10,
-    porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
-    hinchasPorPuntoBonusLocal: 1000,
-    bonusLocalMaximo: 50,
-    gananciaHinchasPorVictoriaBase: 0.001,
-    perdidaHinchasPorDerrotaActual: 0.005,
-    posicionTablaPuntoNeutro: 10,
-    posicionTablaPaso: 0.001,
-    posicionTablaGananciaMaxima: 0.005,
-    precioEntradaEfectoMaximo: 0.01,
-    // Aumento de demanda de entradas por prestigio del rival. 0.35 = hasta +35% de público potencial.
-    bonusAsistenciaPrestigioRivalMaximo: 0.35,
-    // Desde este prestigio del rival empieza a notarse el aumento de interés por el partido.
-    bonusAsistenciaPrestigioRivalDesde: 20,
-    // Proporción del bonus que también empuja demanda visitante/neutral.
-    bonusAsistenciaPrestigioRivalVisitante: 0.50,
-    // Multiplica la duración base de las ampliaciones de estadio. Ejemplo: 1 día base x 30 = 30 días reales de obra.
-    multiplicadorDiasObras: 30
-  },
-  empleados: {
-    // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.
-    psicologoCosto: 500000,
-    psicologoProbabilidadExito: 0.90,
-    psicologoCooldownDias: 35,
-    kinesiologoCosto: 1000000,
-    kinesiologoProbabilidadFallo: 0.20,
-    // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.
-    kinesiologoHorasExtrasPorcentajeSueldo: 0.01,
-    preparadorJuvenilesCosto: 1000000
-  },
-  academia: {
-    costoCaptacion: 1000000,
-    diasCaptacion: 35,
-    jugadoresMinimosPorCaptacion: 5,
-    jugadoresMaximosPorCaptacion: 10,
-    costoJugadorPorAvance: 10000,
-    compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 5,
-    multiplicadorEntrenamientoJuvenilExcepcional: 20,
-    juvenilExcepcionalPorTemporada: true,
-    edadJuvenilExcepcional: 16,
-    mediaJuvenilExcepcionalMin: 12,
-    mediaJuvenilExcepcionalMax: 40,
-    cupoBaseJuveniles: 10,
-    residenciaCuposJuveniles: 20,
-    residenciaCostoMensual: 560000,
-    // Triplica la cantidad de habilidades reveladas por informe del preparador.
-    multiplicadorConsultaJuveniles: 3,
-    // Lesiones juveniles por temporada. Mientras están lesionados no entrenan.
-    lesionesJuvenilesMinPorTemporada: 1,
-    lesionesJuvenilesMaxPorTemporada: 2,
-    lesionJuvenilDiasMin: 14,
-    lesionJuvenilDiasMax: 42,
-    costoTratamientoLesionJuvenil: 50000
-  },
-  entrenamiento: {
-    // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
-    efectividadPorCasilla: 0.50,
-    // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
-    entrenamientoIndividualDiario: true,
-    efectividadIndividualPorDia: 0.50,
-    entrenamientoIndividualInicial: 'balanced',
-    // Curva de dificultad: una habilidad alta reduce la probabilidad final de subir +1.
-    // Ejemplo: habilidad 80 => 20% de probabilidad final si ya superó la tirada base.
-    curvaHabilidadActual: true,
-    probabilidadMinimaSubidaHabilidad: 0,
-    // Multiplicador directo de velocidad para subir habilidades de jugadores profesionales.
-    multiplicadorSubidaHabilidades: 3,
-    planSemanalInicial: {
-      pre: 'regenerative',
-      morning: 'intense',
-      afternoon: 'tactical',
-      night: 'dayoff'
-    }
-  },
-
-  simulador: {
-    // V3.43: enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
-    pesoColectivo: 0.70,
-    pesoIndividual: 0.30,
-    // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
-    probabilidadPelotaParada: 0.14,
-    // V3.45: los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
-    // El riesgo real de error es 1 - seguridad, para que mejores valores reduzcan errores.
-    formulaErroresJugador: true,
-    escalaRiesgoErrorJugador: 0.72,
-    // Cuando un gol rival ocurre, esta probabilidad lo atribuye también como error de gol a un defensor o arquero.
-    probabilidadGolAtribuyeErrorGol: 0.60,
-    // Probabilidad base anterior mantenida como respaldo si se desactiva formulaErroresJugador.
-    probabilidadErrorTerminaEnGol: 0.28,
-    // Máximo de errores usado para evitar partidos rotos por errores constantes.
-    maximoErroresPorEquipo: 5,
-    // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
-    estrellasMaximasPorEquipo: 3,
-    estrellasPartidosVentana: 10,
-    estrellaGoleadorPartidosConGol: 3,
-    estrellaArqueroPartidosConTapadaClave: 3,
-    estrellaMediocampistaAsistencias: 3,
-    estrellaBonusReferencia: 0.30
-  },
-  lesiones: {
-    // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
-    multiplicadorProbabilidad: 0.20,
-    lesionBase: 0.05,
-    fatigaPaso: 5,
-    fatigaBonus: 0.01,
-    // Duraciones en días. El motor las convierte a turnos según diasPorAvance.
-    contusionMinDias: 7,
-    contusionMaxDias: 21,
-    distensionMinDias: 21,
-    distensionMaxDias: 56,
-    desgarroMinDias: 28,
-    desgarroMaxDias: 84,
-    esguinceMinDias: 35,
-    esguinceMaxDias: 105,
-    roturaMinDias: 90,
-    roturaMaxDias: 210,
-    fracturaMinDias: 180,
-    fracturaMaxDias: 400,
-    lesionadoSuplenteDiasMax: 63,
-    penalizacionLesionadoSuplente: 0.10
-  },
-
-  ranking: {
-    // URL publicada para enviar y leer resultados del ranking online.
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec',
-    // Token simple opcional para restringir envíos.
-    token: '',
-    resultadosPorPagina: 100,
-    cooldownCargaDias: 77,
-    nombreRanking: 'Ranking Online'
-  },
-  ui: {
-    duracionAvisoMs: 5200,
-    fasesSimulacionPartido: 60,
-    duracionSimulacionPartidoMs: 60000,
-    relatoMantenerFases: 2,
-    // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
-    accionesFeedbackCargaMs: 750,
-    accionesFeedbackResultadoMs: 900,
-    // Tiempo entre tratamientos cuando se usa "Tratar a todos". Evita que todas las animaciones se disparen a la vez.
-    kinesiologoTratamientoProgresivoMs: 650,
-    // Tiempo entre cartas al abrir sobres del menú ESPECIAL.
-    especialAperturaCartaMs: 2700,
-    frasesProgresoAvanceIntervaloMs: 10000,
-    frasesProgresoAvance: [
-      'Recogiendo pelotas detrás del arco',
-      'Regando el césped por sectores',
-      'Midiendo la humedad del campo',
-      'Marcando las líneas laterales',
-      'Revisando redes de los arcos',
-      'Ajustando los banderines del córner',
-      'Ordenando conos de entrenamiento',
-      'Contando pecheras disponibles',
-      'Lavando botines embarrados',
-      'Secando guantes de arquero',
-      'Pesando pelotas oficiales',
-      'Inflando pelotas a presión reglamentaria',
-      'Verificando tapones de botines',
-      'Revisando vendas y tobilleras',
-      'Controlando hielo en la enfermería',
-      'Preparando bebidas isotónicas',
-      'Cortando cinta deportiva',
-      'Limpiando pizarras tácticas',
-      'Acomodando bancos de suplentes',
-      'Revisando planillas de cambios',
-      'Calculando desgaste del césped',
-      'Separando camisetas por talle',
-      'Chequeando números de dorsales',
-      'Probando silbatos del árbitro',
-      'Revisando iluminación del estadio',
-      'Calibrando GPS de entrenamiento',
-      'Registrando cargas musculares',
-      'Controlando peso post-entrenamiento',
-      'Analizando pisadas en el barro',
-      'Ordenando pelotas por estado útil',
-      'Aceitando bicicletas del gimnasio',
-      'Recogiendo basura del estadio',
-      'Visitando a padres de los talentos',
-      'Filtrando rumores a la prensa',
-      'Revisando cerraduras del vestuario',
-      'Cambiando focos del túnel',
-      'Contando bidones de agua',
-      'Limpiando bancos de suplentes',
-      'Ordenando medias por talle',
-      'Revisando contratos vencidos',
-      'Llamando representantes insistentes',
-      'Separando pelotas pinchadas',
-      'Desinfectando colchonetas del gimnasio',
-      'Ajustando cintas de correr',
-      'Imprimiendo planillas de entrenamiento',
-      'Revisando permisos de juveniles',
-      'Actualizando fichas médicas',
-      'Controlando botiquines del estadio',
-      'Pintando números en los conos',
-      'Reparando redes de entrenamiento',
-      'Barriendo tierra de los accesos',
-      'Acomodando vallas publicitarias',
-      'Verificando micrófonos de conferencia',
-      'Revisando cámaras del estadio',
-      'Cargando videos del último partido',
-      'Buscando camisetas extraviadas',
-      'Probando parlantes de la cancha',
-      'Revisando carnets de socios',
-      'Coordinando traslado de juveniles',
-      'Archivando quejas de hinchas'
-    ]
+function runActionFeedback(button, action, options={}){
+  if(!button){
+    const outcome = action?.() || {};
+    if(outcome.message) showNotice(outcome.message, Boolean(outcome.persist));
+    if(typeof outcome.after === 'function') outcome.after(outcome);
+    return outcome;
   }
-};
+  if(button.disabled || button.dataset.actionBusy === '1') return null;
+  const originalHtml = button.innerHTML;
+  const loadingLabel = options.loadingLabel || 'Procesando...';
+  const successLabel = options.successLabel || 'Acción realizada';
+  const failureLabel = options.failureLabel || 'Acción fallida';
+  button.dataset.actionBusy = '1';
+  button.disabled = true;
+  button.classList.remove('action-success','action-failure');
+  button.classList.add('action-processing');
+  button.innerHTML = `<span class="action-spinner" aria-hidden="true"></span><span>${escapeHtml(loadingLabel)}</span>`;
+  clearTimeout(button._actionFeedbackTimer);
+  button._actionFeedbackTimer = setTimeout(() => {
+    let outcome = null;
+    try{
+      outcome = action?.() || {};
+    }catch(error){
+      console.error(error);
+      outcome = { success:false, message:'La acción falló por un error interno.', after:null };
+    }
+    const success = Boolean(outcome.success);
+    button.classList.remove('action-processing');
+    button.classList.add(success ? 'action-success' : 'action-failure');
+    button.innerHTML = `<span>${escapeHtml(outcome.buttonLabel || (success ? successLabel : failureLabel))}</span>`;
+    if(outcome.message) showNotice(outcome.message, Boolean(outcome.persist));
+    clearTimeout(button._actionFeedbackResultTimer);
+    button._actionFeedbackResultTimer = setTimeout(() => {
+      button.classList.remove('action-success','action-failure');
+      button.innerHTML = originalHtml;
+      button.disabled = false;
+      delete button.dataset.actionBusy;
+      if(typeof outcome.after === 'function') outcome.after(outcome);
+    }, ACTION_FEEDBACK_RESULT_MS);
+  }, ACTION_FEEDBACK_LOADING_MS);
+  return null;
+}
+function showTurnTransition(label='Avanzando días'){
+  let root = $('turnTransition');
+  if(root) root.remove();
+  root = document.createElement('div');
+  root.id = 'turnTransition';
+  root.className = 'turn-transition-backdrop';
+  root.style.setProperty('--turn-transition-ms', `${TURN_TRANSITION_MS}ms`);
+  root.innerHTML = `<div class="turn-transition-card"><div class="turn-spinner" aria-hidden="true"></div><strong>${escapeHtml(label)}</strong><span>Actualizando calendario, plantel y economía...</span><div class="turn-transition-bar"><i></i></div></div>`;
+  document.body.appendChild(root);
+  clearTimeout(showTurnTransition.timer);
+  showTurnTransition.timer = setTimeout(()=>{
+    root.classList.add('is-exiting');
+    setTimeout(()=>root.remove(), 260);
+  }, TURN_TRANSITION_MS);
+}
+function clamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
+function rnd(min,max){ return min + Math.random() * (max-min); }
+function avg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
+function formatMoney(value){ return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(value); }
+function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
+function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
+function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
+
+function defaultClubTheme(){
+  return { base:[59,130,246], accent:[96,165,250], accent2:[125,211,252] };
+}
+function clampColorChannel(value){ return Math.max(0, Math.min(255, Math.round(Number(value) || 0))); }
+function parseCssColorToRgb(input){
+  const value = String(input || '').trim();
+  if(!value) return null;
+  let match = value.match(/^#([0-9a-f]{3})$/i);
+  if(match){
+    const hex = match[1].split('').map(ch => ch + ch).join('');
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  match = value.match(/^#([0-9a-f]{6})$/i);
+  if(match){
+    const hex = match[1];
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  match = value.match(/^rgba?\(([^)]+)\)$/i);
+  if(match){
+    const parts = match[1].split(',').map(part => Number(part.trim()));
+    if(parts.length >= 3 && parts.every((part, index) => index > 2 || Number.isFinite(part))){
+      return parts.slice(0,3).map(clampColorChannel);
+    }
+  }
+  match = value.match(/^hsla?\(([^)]+)\)$/i);
+  if(match){
+    const parts = match[1].replace(/\//g, ',').split(',').map(part => part.trim());
+    if(parts.length >= 3){
+      const h = Number(parts[0]);
+      const s = Number(String(parts[1]).replace('%','')) / 100;
+      const l = Number(String(parts[2]).replace('%','')) / 100;
+      if(Number.isFinite(h) && Number.isFinite(s) && Number.isFinite(l)){
+        const hue = (((h % 360) + 360) % 360) / 360;
+        if(s === 0){
+          const gray = clampColorChannel(l * 255);
+          return [gray, gray, gray];
+        }
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        const hueToRgb = t => {
+          let value = t;
+          if(value < 0) value += 1;
+          if(value > 1) value -= 1;
+          if(value < 1/6) return p + (q - p) * 6 * value;
+          if(value < 1/2) return q;
+          if(value < 2/3) return p + (q - p) * (2/3 - value) * 6;
+          return p;
+        };
+        return [hueToRgb(hue + 1/3), hueToRgb(hue), hueToRgb(hue - 1/3)].map(channel => clampColorChannel(channel * 255));
+      }
+    }
+  }
+  return null;
+}
+function mixRgb(colorA, colorB, ratio=0.5){
+  const weight = Math.max(0, Math.min(1, Number(ratio) || 0));
+  return [0,1,2].map(index => clampColorChannel((colorA[index] * (1 - weight)) + (colorB[index] * weight)));
+}
+function rgbToCss(rgb){ return `rgb(${rgb.map(clampColorChannel).join(', ')})`; }
+function rgbChannels(rgb){ return rgb.map(clampColorChannel).join(', '); }
+function rgbLuminance(rgb){
+  const [r,g,b] = rgb.map(channel => channel / 255);
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+}
+function buildClubThemeFromColor(inputColor){
+  const defaults = defaultClubTheme();
+  const baseSource = parseCssColorToRgb(inputColor) || defaults.base;
+  const smoothRatio = configNumber('ui.temaClubAcentoSuavizado', 0.18, 0, 0.65);
+  let base = mixRgb(baseSource, defaults.base, smoothRatio);
+  if(rgbLuminance(base) > 0.86) base = mixRgb(base, defaults.base, 0.34);
+  const accent = mixRgb(base, [255,255,255], 0.12);
+  const accent2 = mixRgb(base, [148,163,184], 0.26);
+  return { base, accent, accent2 };
+}
+function applySelectedClubTheme(clubId=game?.selectedClubId || 0){
+  const root = document.documentElement;
+  if(!root) return;
+  const defaults = defaultClubTheme();
+  const enabled = configBoolean('ui.temaClubActivo', true);
+  const theme = (!enabled || !seed?.clubs?.length)
+    ? defaults
+    : buildClubThemeFromColor(seed.clubs.find(c => Number(c.id) === Number(clubId))?.primaryColor || rgbToCss(defaults.base));
+  root.style.setProperty('--club-rgb', rgbChannels(theme.base));
+  root.style.setProperty('--club-accent-rgb', rgbChannels(theme.accent));
+  root.style.setProperty('--club-accent-2-rgb', rgbChannels(theme.accent2));
+  root.style.setProperty('--accent', rgbToCss(theme.accent));
+  root.style.setProperty('--accent-2', rgbToCss(theme.accent2));
+  root.style.setProperty('--club-theme-bg-opacity', String(configNumber('ui.temaClubFondoOpacidad', 0.18, 0, 0.4)));
+  root.style.setProperty('--club-theme-panel-opacity', String(configNumber('ui.temaClubPanelOpacidad', 0.05, 0, 0.2)));
+}
+function clubBadge(id){
+  const club = seed.clubs.find(c=>c.id===id) || {};
+  const src = club.crestPath || `img/escudos/${imageSlug(club.name || clubName(id))}.png`;
+  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" onerror="this.style.visibility='hidden'"></span>`;
+}
+function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
+function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }
+function clubAbbrev(id){ return clubBadge(id); }
+function divisionOptions(selected='all'){
+  const divisions = seed?.divisions || [{ id:'default', name:'Liga única' }];
+  return [`<option value="all" ${selected==='all'?'selected':''}>Todas las divisiones</option>`]
+    .concat(divisions.map(d => `<option value="${escapeHtml(d.id)}" ${selected===d.id?'selected':''}>${escapeHtml(d.name)}</option>`))
+    .join('');
+}
+function divisionFilterMarkup(id, selected){
+  return `<div class="division-filter"><label for="${id}">División</label><select id="${id}">${divisionOptions(selected)}</select></div>`;
+}
+function managerCurrentDivisionId(){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  return club?.divisionId || game?.selectedLeagueId || seed?.divisions?.[0]?.id || 'default';
+}
+function resetManagerDivisionFilterForTab(tab){
+  const divisionId = managerCurrentDivisionId();
+  if(tab === 'standings') selectedStandingsDivision = divisionId;
+  if(tab === 'stats') selectedStatsDivision = divisionId;
+}

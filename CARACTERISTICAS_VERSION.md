@@ -1,13 +1,7 @@
-# V3.69 - Mini ajustes de interfaz
+# V3.70 - Duración configurable de ampliaciones de estadio
 
-## Cambios
-- Prestigio del manager mostrado como entero.
-- Botón Renunciar movido arriba junto a Guardar/Cargar, con confirmación.
-- Columnas centradas en lista de titulares de Táctica.
-- Plantel más compacto y con barra horizontal superior.
-- Preparador de juveniles arriba en Academia.
-- Promedio de habilidades visibles de Academia con gráfico circular.
-- Ficha de jugador más compacta y acciones arriba.
-- Mercado limitado a 20 resultados iniciales con botón Ver más.
-- Finanzas con categorías más compactas.
-- README actualizado de más reciente a más antiguo.
+- Se agregó `estadio.multiplicadorDiasObras` en `config.js`.
+- Valor inicial: `30`.
+- Las ampliaciones de estadio ahora duran 30 veces más que la tabla base.
+- El listado de obras muestra la duración ya multiplicada.
+- Las obras activas de partidas anteriores se normalizan al nuevo multiplicador conservando el porcentaje aproximado de avance.

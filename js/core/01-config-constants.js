@@ -386,6 +386,7 @@ const STADIUM_EXPANSIONS = [
   { id:60, minCapacity:119000, name:'Última optimización de aforo', capacityGain:1000, targetCapacity:120000, cost:1900000000, days:50, slot:'Integral' }
 ];
 const STADIUM_EXPANSION_MAX_CAPACITY = 120000;
+const STADIUM_EXPANSION_DAYS_MULTIPLIER = Math.max(1, configNumber('estadio.multiplicadorDiasObras', 30, 1, 365));
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_PER_PROJECT = configNumber('estadio.penalizacionAsistenciaPorObraActiva', 0.05, 0, 0.50);
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_MAX = configNumber('estadio.penalizacionAsistenciaObrasMaxima', 0.20, 0, 0.80);
 const PLAYER_GENERATION_RULES_VERSION = 'V2.30';

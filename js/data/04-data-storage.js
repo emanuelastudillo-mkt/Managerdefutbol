@@ -459,13 +459,47 @@ function clubStadiumCapacity(clubId){
   if(Number.isFinite(override) && override > 0) return clamp(Math.round(override), 500, STADIUM_EXPANSION_MAX_CAPACITY);
   return baseStadiumCapacityForClub(clubId);
 }
+function stadiumExpansionBaseById(expansionId){
+  return (STADIUM_EXPANSIONS || []).find(item => Number(item.id) === Number(expansionId));
+}
+function stadiumExpansionDurationDays(expansion){
+  const baseDays = Math.max(1, Math.round(Number(expansion?.days || 1)));
+  return Math.max(1, Math.round(baseDays * STADIUM_EXPANSION_DAYS_MULTIPLIER));
+}
+function normalizeStadiumExpansionProject(project){
+  const expansion = stadiumExpansionBaseById(project?.id);
+  const multiplier = Math.max(1, Number(STADIUM_EXPANSION_DAYS_MULTIPLIER || 1));
+  const targetTotal = stadiumExpansionDurationDays(expansion || project || { days:project?.totalDays || project?.daysLeft || 1 });
+  const currentTotal = Math.max(1, Math.round(Number(project?.totalDays || project?.days || expansion?.days || 1)));
+  const currentLeft = Math.max(0, Math.round(Number(project?.daysLeft || 0)));
+  const appliedMultiplier = Number(project?.durationMultiplierApplied || 0);
+  let totalDays = currentTotal;
+  let daysLeft = currentLeft;
+  if(appliedMultiplier !== multiplier){
+    const remainingRatio = currentLeft > 0 ? clamp(currentLeft / currentTotal, 0, 1) : 0;
+    totalDays = targetTotal;
+    daysLeft = Math.max(1, Math.ceil(targetTotal * remainingRatio));
+  }
+  return {
+    ...project,
+    id:Number(project.id),
+    name:project.name || expansion?.name || 'Obra de estadio',
+    slot:project.slot || expansion?.slot || 'General',
+    capacityGain:Math.round(Number(project.capacityGain ?? expansion?.capacityGain ?? 0)),
+    cost:Number(project.cost ?? expansion?.cost ?? 0),
+    daysLeft,
+    totalDays,
+    baseDays:Math.max(1, Math.round(Number(project.baseDays || expansion?.days || currentTotal || 1))),
+    durationMultiplierApplied:multiplier
+  };
+}
 function stadiumExpansionProjectsForClub(clubId){
   ensureStadiumState();
   const id = Number(clubId);
   if(!Array.isArray(game.stadium.expansionProjects[id])) game.stadium.expansionProjects[id] = [];
   game.stadium.expansionProjects[id] = game.stadium.expansionProjects[id]
     .filter(project => project && Number(project.daysLeft || 0) > 0)
-    .map(project => ({ ...project, id:Number(project.id), daysLeft:Math.max(0, Math.round(Number(project.daysLeft || 0))), totalDays:Math.max(1, Math.round(Number(project.totalDays || project.days || 1))) }));
+    .map(project => normalizeStadiumExpansionProject(project));
   return game.stadium.expansionProjects[id];
 }
 function completedStadiumExpansionsForClub(clubId){
@@ -524,10 +558,11 @@ function startStadiumExpansion(expansionId){
   const expansion = (STADIUM_EXPANSIONS || []).find(item => Number(item.id) === Number(expansionId));
   const status = stadiumExpansionStartStatus(clubId, expansion);
   if(!status.ok){ showNotice(status.reason); return; }
+  const durationDays = stadiumExpansionDurationDays(expansion);
   recordBudgetChange(-Number(expansion.cost || 0), `Ampliación estadio: ${expansion.name}`, { type:'stadium_expansion', expansionId:expansion.id, slot:expansion.slot });
-  stadiumExpansionProjectsForClub(clubId).push({ id:expansion.id, name:expansion.name, slot:expansion.slot, capacityGain:expansion.capacityGain, cost:expansion.cost, daysLeft:expansion.days, totalDays:expansion.days });
+  stadiumExpansionProjectsForClub(clubId).push({ id:expansion.id, name:expansion.name, slot:expansion.slot, capacityGain:expansion.capacityGain, cost:expansion.cost, daysLeft:durationDays, totalDays:durationDays, baseDays:expansion.days, durationMultiplierApplied:STADIUM_EXPANSION_DAYS_MULTIPLIER });
   saveLocal(true);
-  showNotice(`Obra iniciada: ${expansion.name}. Duración: ${expansion.days} día(s).`);
+  showNotice(`Obra iniciada: ${expansion.name}. Duración: ${durationDays} día(s).`);
   renderStadium();
 }
 function processStadiumExpansionDays(days=1){

@@ -188,7 +188,9 @@ window.GAME_CONFIG = {
     posicionTablaPuntoNeutro: 10,
     posicionTablaPaso: 0.001,
     posicionTablaGananciaMaxima: 0.005,
-    precioEntradaEfectoMaximo: 0.01
+    precioEntradaEfectoMaximo: 0.01,
+    // Multiplica la duración base de las ampliaciones de estadio. Ejemplo: 1 día base x 30 = 30 días reales de obra.
+    multiplicadorDiasObras: 30
   },
   empleados: {
     // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.

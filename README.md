@@ -1,10 +1,17 @@
 # Manager Fútbol - README
 
-## Versión actual: V3.69
+## Versión actual: V3.70
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 
 ## Historial de actualizaciones
+
+### V3.70 - Duración de obras de estadio configurable
+- Se agregó `estadio.multiplicadorDiasObras` en `config.js`.
+- Valor inicial: x30.
+- Las ampliaciones del estadio ahora tardan 30 veces más que su duración base.
+- El listado de Ampliaciones muestra la duración final ya multiplicada.
+- Las obras activas antiguas se normalizan al nuevo multiplicador conservando el avance aproximado.
 
 ### V3.69 - Mini ajustes de interfaz
 - El prestigio del manager se muestra como valor entero.

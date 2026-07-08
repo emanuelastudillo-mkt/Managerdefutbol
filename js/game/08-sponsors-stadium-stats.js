@@ -222,10 +222,11 @@ function stadiumExpansionProjectMarkup(project){
 }
 function stadiumExpansionCard(expansion){
   const status = stadiumExpansionStartStatus(game.selectedClubId, expansion);
+  const durationDays = typeof stadiumExpansionDurationDays === 'function' ? stadiumExpansionDurationDays(expansion) : Number(expansion.days || 1);
   return `<div class="stadium-expansion-option ${status.ok ? '' : 'dim-row'}">
     <div>
       <strong>#${expansion.id} · ${escapeHtml(expansion.name)}</strong>
-      <p class="muted small">Desde ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${expansion.days} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
+      <p class="muted small">Desde ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${durationDays} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
       <p class="small ${status.ok ? 'ok' : 'muted'}">${status.ok ? `Costo ${formatMoney(expansion.cost)}` : escapeHtml(status.reason)}</p>
     </div>
     <button class="primary" data-start-stadium-expansion="${expansion.id}" ${status.ok ? '' : 'disabled'}>Iniciar</button>
@@ -241,7 +242,7 @@ function stadiumExpansionsMarkup(){
   const penalty = stadiumConstructionAttendancePenalty(clubId);
   const nextLocked = (STADIUM_EXPANSIONS || []).filter(item => capacity < Number(item.minCapacity || 0)).slice(0, 3);
   return `<div class="card stadium-card stadium-expansions-card" style="margin-top:14px">
-    <div class="row"><div><h3>Ampliaciones</h3><p class="muted small">La capacidad nueva cuenta recién cuando la obra termina. No se pueden repetir slots y las obras integrales bloquean cualquier otra obra.</p></div><span class="pill">${active.length}/${maxWorks} obra(s) activas</span></div>
+    <div class="row"><div><h3>Ampliaciones</h3><p class="muted small">La capacidad nueva cuenta recién cuando la obra termina. No se pueden repetir slots y las obras integrales bloquean cualquier otra obra. Duración configurada: x${STADIUM_EXPANSION_DAYS_MULTIPLIER} sobre la tabla base.</p></div><span class="pill">${active.length}/${maxWorks} obra(s) activas</span></div>
     <div class="grid cols-4 stadium-expansion-summary">
       <div><p class="label">Capacidad base</p><strong>${new Intl.NumberFormat('es-AR').format(baseCapacity)}</strong></div>
       <div><p class="label">Capacidad actual</p><strong>${new Intl.NumberFormat('es-AR').format(capacity)}</strong></div>

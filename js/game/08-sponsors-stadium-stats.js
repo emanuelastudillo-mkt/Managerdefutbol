@@ -366,6 +366,7 @@ function renderManagerStats(){
   const breakdown = typeof managerPrestigeBreakdown === 'function' ? managerPrestigeBreakdown(game.managerStats) : { total:Number(game.managerStats.prestige || 0), experiencePrestige:0, winPrestige:0, objectivePrestige:0, championPrestige:0, badSeasonPenalty:0, dismissalPenalty:0 };
   const prestige = breakdown.total;
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
+  const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
   const experience = Number(game.managerStats.experience || 0);
   const rows = seasons.map(item => `<tr>
     <td>${item.season}</td>
@@ -387,8 +388,8 @@ function renderManagerStats(){
   </tr>`).join('');
   view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Clubes hasta ${prestigeLabel}</span></div>
-      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
+      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Clubes hasta prestigio ${prestigeAccess}. Clubes menores a ${MANAGER_CLUB_OPEN_PRESTIGE}: libres.</span></div>
+      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${formatManagerPrestige ? formatManagerPrestige(Number(breakdown.experiencePrestige || 0)) : Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
       <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>

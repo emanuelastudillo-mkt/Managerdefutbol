@@ -1,8 +1,8 @@
-# V3.64 - Relato mejorado del simulador
+# V3.65 - Corrección visual del prestigio del manager
 
 ## Cambios
-- El visor progresivo del partido ahora usa 60 fases.
-- Se agregó un bloque grande de **Relato de partido** para jugadas destacadas.
-- El relato anticipa acciones cercanas y luego muestra la resolución final.
-- Se agregó `data/relatos_partido.json` con frases estilo relator argentino para goles, tarjetas, tapadas, errores, lesiones, cambios y momentos sin evento.
-- Se mantiene la lista de eventos visibles como antes.
+- Se corrigió el visor de prestigio para que use formato decimal local y no parezca un número de miles.
+- El prestigio 1.078 ahora se muestra como 1,078.
+- El texto de clubes disponibles ahora usa el prestigio entero habilitado: por ejemplo, clubes hasta prestigio 1.
+- Se aclara que los clubes con prestigio menor a 20 siguen libres para cualquier manager.
+- La comparación interna sigue usando el valor decimal real, sin sumar el valor artificial de 20.

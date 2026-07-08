@@ -46,8 +46,12 @@ function managerPrestigeBreakdown(stats=game?.managerStats){
 }
 function formatManagerPrestige(value=currentManagerPrestige()){
   const n = Number(value || 0);
-  if(n >= 10) return n.toFixed(2).replace(/\.?0+$/,'');
-  return n.toFixed(3).replace(/\.?0+$/,'');
+  const decimals = n >= 10 ? 2 : 3;
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+}
+function managerClubAccessPrestige(value=currentManagerPrestige()){
+  const n = Number(value || 0);
+  return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
 }
 function currentManagerPrestige(){
   if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;

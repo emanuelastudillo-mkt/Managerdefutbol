@@ -69,7 +69,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V3.75');
+const APP_VERSION = configValue('version', 'V3.76');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -330,8 +330,9 @@ const ACADEMY_YOUTH_INJURY_MIN_TURNS = Math.max(1, Math.ceil(configNumber('acade
 const ACADEMY_YOUTH_INJURY_MAX_TURNS = Math.max(ACADEMY_YOUTH_INJURY_MIN_TURNS, Math.ceil(configNumber('academia.lesionJuvenilDiasMax', 42, 1) / DAYS_PER_ADVANCE));
 const ACADEMY_YOUTH_INJURY_TREATMENT_COST = Math.max(0, Math.round(configNumber('academia.costoTratamientoLesionJuvenil', 50000, 0)));
 
-const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
-const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));
+const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 20, 1);
+const MIN_EXISTING_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMinimosExistentesPorEquipo', 20, 1));
+const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_EXISTING_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 20, 1));
 const MAX_PLAYERS_PER_CLUB = Math.max(INITIAL_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMaximosPorClub', 42, 1));
 const CLUB_ROSTER_SIZE = INITIAL_PLAYERS_PER_CLUB;
 const BOT_ROSTER_REPAIR_ENABLED = configBoolean('plantel.reparacionAutomaticaBots', true);
@@ -412,11 +413,18 @@ const STADIUM_EXPANSION_MAX_CAPACITY = 120000;
 const STADIUM_EXPANSION_DAYS_MULTIPLIER = Math.max(1, configNumber('estadio.multiplicadorDiasObras', 30, 1, 365));
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_PER_PROJECT = configNumber('estadio.penalizacionAsistenciaPorObraActiva', 0.05, 0, 0.50);
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_MAX = configNumber('estadio.penalizacionAsistenciaObrasMaxima', 0.20, 0, 0.80);
-const PLAYER_GENERATION_RULES_VERSION = 'V2.30';
+const PLAYER_GENERATION_RULES_VERSION = 'V2.31';
+const SOUTH_AMERICAN_NATIONALITIES = Array.isArray(configValue('plantel.nacionalidades.sudamericaPaises', []))
+  ? configValue('plantel.nacionalidades.sudamericaPaises', []).filter(Boolean).map(String)
+  : ['Argentina','Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'];
+const WORLD_NATIONALITIES = Array.isArray(configValue('plantel.nacionalidades.restoDelMundoPaises', []))
+  ? configValue('plantel.nacionalidades.restoDelMundoPaises', []).filter(Boolean).map(String)
+  : ['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana'];
+const PLAYER_NATIONALITY_BY_COUNTRY = configValue('plantel.nacionalidades.porPais', {}) || {};
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
-  { id:'argentinos', probability:0.70, countries:['Argentina'] },
-  { id:'sudamerica', probability:0.20, countries:['Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'] },
-  { id:'resto_del_mundo', probability:0.10, countries:['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana'] }
+  { id:'local', probability:configNumber('plantel.nacionalidades.local', 0.70, 0, 1), countries:['Argentina'] },
+  { id:'sudamerica', probability:configNumber('plantel.nacionalidades.sudamerica', 0.20, 0, 1), countries:SOUTH_AMERICAN_NATIONALITIES },
+  { id:'resto_del_mundo', probability:configNumber('plantel.nacionalidades.restoDelMundo', 0.10, 0, 1), countries:WORLD_NATIONALITIES }
 ];
 const PLAYER_GENERATION_POSITION_GROUPS = [
   { id:'POR', probability:0.10, positions:['POR'] },

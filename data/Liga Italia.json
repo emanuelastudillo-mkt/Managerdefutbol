@@ -1,0 +1,123 @@
+{
+  "version": "V3.79",
+  "pais": "Italia",
+  "descripcion": "Estructura jugable de Italia con ligas de 18 clubes.",
+  "criterio": "Selección histórica/jugable de clubes importantes; no representa tabla oficial de una temporada concreta.",
+  "escala_prestigio": "Global: 99 élite mundial, 70-84 grandes regionales/europeos fuertes, 20 o menos clubes libres para managers nuevos.",
+  "leagues": [
+    {
+      "name": "Serie A Italia",
+      "country": "Italia",
+      "teams": [
+        {
+          "name": "Juventus",
+          "city": "Turín",
+          "reputation": 91,
+          "primaryColor": "#111111"
+        },
+        {
+          "name": "Inter",
+          "city": "Milán",
+          "reputation": 90,
+          "primaryColor": "#0057B8"
+        },
+        {
+          "name": "Milan",
+          "city": "Milán",
+          "reputation": 89,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Napoli",
+          "city": "Nápoles",
+          "reputation": 88,
+          "primaryColor": "#66B3FF"
+        },
+        {
+          "name": "Roma",
+          "city": "Roma",
+          "reputation": 84,
+          "primaryColor": "#8E1F2F"
+        },
+        {
+          "name": "Lazio",
+          "city": "Roma",
+          "reputation": 82,
+          "primaryColor": "#66B3FF"
+        },
+        {
+          "name": "Atalanta",
+          "city": "Bérgamo",
+          "reputation": 81,
+          "primaryColor": "#0057B8"
+        },
+        {
+          "name": "Fiorentina",
+          "city": "Florencia",
+          "reputation": 79,
+          "primaryColor": "#5F259F"
+        },
+        {
+          "name": "Torino",
+          "city": "Turín",
+          "reputation": 75,
+          "primaryColor": "#7B003A"
+        },
+        {
+          "name": "Bologna",
+          "city": "Bolonia",
+          "reputation": 75,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Genoa",
+          "city": "Génova",
+          "reputation": 72,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Sampdoria",
+          "city": "Génova",
+          "reputation": 70,
+          "primaryColor": "#0057B8"
+        },
+        {
+          "name": "Parma",
+          "city": "Parma",
+          "reputation": 68,
+          "primaryColor": "#F5D328"
+        },
+        {
+          "name": "Udinese",
+          "city": "Udine",
+          "reputation": 67,
+          "primaryColor": "#111111"
+        },
+        {
+          "name": "Palermo",
+          "city": "Palermo",
+          "reputation": 66,
+          "primaryColor": "#E6A1C2"
+        },
+        {
+          "name": "Cagliari",
+          "city": "Cagliari",
+          "reputation": 65,
+          "primaryColor": "#003A70"
+        },
+        {
+          "name": "Hellas Verona",
+          "city": "Verona",
+          "reputation": 64,
+          "primaryColor": "#003A70"
+        },
+        {
+          "name": "Sassuolo",
+          "city": "Sassuolo",
+          "reputation": 63,
+          "primaryColor": "#008542"
+        }
+      ]
+    }
+  ]
+}

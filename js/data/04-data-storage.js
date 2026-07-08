@@ -151,6 +151,11 @@ function countryFromSourceUrl(url){
   const lower = String(url || '').toLowerCase();
   if(lower.includes('chile')) return 'Chile';
   if(lower.includes('argentina')) return 'Argentina';
+  if(lower.includes('brasil') || lower.includes('brazil')) return 'Brasil';
+  if(lower.includes('inglaterra') || lower.includes('england')) return 'Inglaterra';
+  if(lower.includes('espana') || lower.includes('españa') || lower.includes('spain')) return 'España';
+  if(lower.includes('italia') || lower.includes('italy')) return 'Italia';
+  if(lower.includes('rumania') || lower.includes('romania')) return 'Rumania';
   return '';
 }
 function countryNameKey(country){

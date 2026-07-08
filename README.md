@@ -1,4 +1,16 @@
 # Manager de Fútbol - README ordenado por versiones
+## V3.79 - Ligas internacionales y prestigio global
+
+- Se agregan cinco ligas jugables nuevas de 18 equipos: Brasil, Inglaterra, España, Italia y Rumania.
+- El mundo jugable pasa a 162 clubes: Argentina 54, Chile 18, Brasil 18, Inglaterra 18, España 18, Italia 18 y Rumania 18.
+- Se reescala el prestigio de clubes de forma global: Real Madrid, Barcelona, Manchester City, Liverpool y otros gigantes europeos quedan como referencia superior.
+- Boca, River, Flamengo, Palmeiras y otros grandes sudamericanos conservan peso alto regional, pero quedan por debajo de la élite europea.
+- Se mantienen clubes de prestigio 20 o menos para que un manager nuevo con prestigio 0 pueda iniciar carrera.
+- Se agregan JSON de liga, estadios e hinchadas para cada país nuevo.
+- `data/estadios.json` y `data/hinchas.json` pasan a funcionar como alias globales con todos los países.
+- `data/jugadores.json` se regenera con 25 jugadores por cada uno de los 162 clubes.
+- `config.js` queda actualizado para cargar todos los países desde `data.leagueUrls`, `data.estadiosUrls` y `data.hinchasUrls`.
+
 ## V3.78 - Ligas Argentina/Chile reestructuradas a 18 clubes
 
 - Argentina queda con tres divisiones jugables de 18 equipos: Liga Profesional, Primera Nacional y Federal A.
@@ -46,7 +58,7 @@
 
 # Manager Fútbol - README
 
-## Versión actual: V3.78
+## Versión actual: V3.79
 
 Juego de manager de fútbol en HTML/JS local con simulación de partidos, economía, mercado, academia, estadio, hinchadas, carrera del manager y sistema ESPECIAL.
 

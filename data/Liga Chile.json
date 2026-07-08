@@ -1,8 +1,9 @@
 {
-  "version": "V3.78",
+  "version": "V3.79",
   "pais": "Chile",
-  "descripcion": "Liga jugable chilena reestructurada a 18 clubes importantes.",
-  "criterio": "Selección histórica/jugable de 18 equipos chilenos, no tabla oficial de temporada.",
+  "descripcion": "Estructura jugable de Chile con ligas de 18 clubes.",
+  "criterio": "Selección histórica/jugable de clubes importantes; no representa tabla oficial de una temporada concreta.",
+  "escala_prestigio": "Global: 99 élite mundial, 70-84 grandes regionales/europeos fuertes, 20 o menos clubes libres para managers nuevos.",
   "leagues": [
     {
       "name": "Primera División Chile",
@@ -11,92 +12,110 @@
         {
           "name": "Colo-Colo",
           "city": "Santiago",
-          "reputation": 99
+          "reputation": 68,
+          "primaryColor": "#FFFFFF"
         },
         {
           "name": "Universidad de Chile",
           "city": "Santiago",
-          "reputation": 96
+          "reputation": 65,
+          "primaryColor": "#0033A0"
         },
         {
           "name": "Universidad Católica",
           "city": "Santiago",
-          "reputation": 94
+          "reputation": 64,
+          "primaryColor": "#0057A6"
         },
         {
           "name": "Cobreloa",
           "city": "Calama",
-          "reputation": 88
+          "reputation": 57,
+          "primaryColor": "#F28C28"
         },
         {
           "name": "Unión Española",
           "city": "Santiago",
-          "reputation": 84
+          "reputation": 52,
+          "primaryColor": "#D71920"
         },
         {
           "name": "Santiago Wanderers",
           "city": "Valparaíso",
-          "reputation": 82
+          "reputation": 51,
+          "primaryColor": "#008542"
         },
         {
           "name": "Everton",
           "city": "Viña del Mar",
-          "reputation": 78
+          "reputation": 49,
+          "primaryColor": "#003A70"
         },
         {
           "name": "O'Higgins",
           "city": "Rancagua",
-          "reputation": 76
+          "reputation": 48,
+          "primaryColor": "#66B3FF"
         },
         {
           "name": "Palestino",
           "city": "Santiago",
-          "reputation": 74
+          "reputation": 47,
+          "primaryColor": "#008542"
         },
         {
           "name": "Audax Italiano",
-          "city": "Santiago",
-          "reputation": 72
+          "city": "La Florida",
+          "reputation": 45,
+          "primaryColor": "#008542"
         },
         {
           "name": "Huachipato",
           "city": "Talcahuano",
-          "reputation": 70
+          "reputation": 44,
+          "primaryColor": "#111111"
         },
         {
           "name": "Deportes Iquique",
           "city": "Iquique",
-          "reputation": 69
+          "reputation": 42,
+          "primaryColor": "#66B3FF"
         },
         {
           "name": "Coquimbo Unido",
           "city": "Coquimbo",
-          "reputation": 68
-        },
-        {
-          "name": "Deportes La Serena",
-          "city": "La Serena",
-          "reputation": 66
+          "reputation": 41,
+          "primaryColor": "#F5D328"
         },
         {
           "name": "Cobresal",
           "city": "El Salvador",
-          "reputation": 65
+          "reputation": 39,
+          "primaryColor": "#F28C28"
+        },
+        {
+          "name": "Deportes La Serena",
+          "city": "La Serena",
+          "reputation": 38,
+          "primaryColor": "#D71920"
         },
         {
           "name": "Ñublense",
           "city": "Chillán",
-          "reputation": 64
+          "reputation": 37,
+          "primaryColor": "#D71920"
         },
         {
           "name": "Rangers",
           "city": "Talca",
-          "reputation": 62
+          "reputation": 36,
+          "primaryColor": "#D71920"
         },
         {
           "name": "Magallanes",
-          "city": "San Bernardo",
-          "reputation": 60
+          "city": "Santiago",
+          "reputation": 35,
+          "primaryColor": "#66B3FF"
         }
       ]
     }

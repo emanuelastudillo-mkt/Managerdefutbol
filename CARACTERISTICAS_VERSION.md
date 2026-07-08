@@ -1,13 +1,19 @@
-# V3.78 - Ligas Argentina/Chile reestructuradas a 18 clubes
+# V3.79 - Ligas internacionales y prestigio global
 
-- Argentina queda organizada en tres divisiones jugables de 18 equipos: Liga Profesional, Primera Nacional y Federal A.
-- Chile queda organizada en una Primera División jugable de 18 equipos.
-- Se eliminaron de Argentina: Deportivo Rincón, San Martín de Formosa, Atenas Río Cuarto, Sarmiento La Banda, Ituzaingó y Ciudad de Bolívar.
-- Se eliminaron de Chile: Universidad de Concepción y Deportes Concepción.
-- Se movieron clubes argentinos entre divisiones para sostener 18 equipos por categoría:
-  - Unión e Instituto bajan desde Liga Profesional a Primera Nacional.
-  - Temperley, Agropecuario, Atlético Rafaela y Gimnasia de Jujuy bajan desde Primera Nacional a Federal A.
-- Se actualizaron los JSON de estadios e hinchadas argentinos y chilenos.
-- Se mantuvieron sincronizados los alias legacy `data/estadios.json` y `data/hinchas.json` con los datos argentinos.
-- Se remapeó `data/jugadores.json` para que los `clubId` sigan apuntando a los clubes correctos después de pasar de 60 a 54 clubes argentinos.
-- La configuración del calendario documenta 34 fechas para ligas ida y vuelta de 18 clubes.
+- Se agregaron cinco ligas jugables nuevas, todas con 18 equipos:
+  - Brasil: `data/Liga Brasil.json`.
+  - Inglaterra: `data/Liga Inglaterra.json`.
+  - España: `data/Liga Espana.json`.
+  - Italia: `data/Liga Italia.json`.
+  - Rumania: `data/Liga Rumania.json`.
+- El mundo jugable queda con 162 clubes: 54 argentinos, 18 chilenos y 90 internacionales nuevos.
+- Se actualizó `config.js` para cargar todas las ligas, estadios e hinchadas desde `data.leagueUrls`, `data.estadiosUrls` y `data.hinchasUrls`.
+- Se creó un JSON de estadios y un JSON de hinchadas para cada país nuevo.
+- Se actualizaron los alias globales `data/estadios.json` y `data/hinchas.json` con todos los países.
+- Se reescaló el prestigio de clubes de forma global:
+  - Real Madrid queda como referencia máxima junto a la élite europea.
+  - Barcelona, Manchester City, Liverpool, Manchester United, Atlético Madrid, Juventus, Inter, Milan y Napoli quedan en el rango alto mundial.
+  - Boca, River, Flamengo, Palmeiras y otros grandes sudamericanos quedan por debajo de la élite europea, pero por encima del resto regional.
+  - Se mantienen clubes de prestigio 20 o menos para que un manager nuevo con prestigio 0 tenga opciones iniciales.
+- Se regeneró `data/jugadores.json` con 25 jugadores por club para los 162 clubes cargados.
+- Se ajustó el detector de país por URL para Brasil, Inglaterra, España, Italia y Rumania.

@@ -4,11 +4,11 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.78',
+  version: 'V3.79',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json'],
+    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     playersUrl: 'data/jugadores.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
@@ -16,12 +16,22 @@ window.GAME_CONFIG = {
     specialSkillsUrl: 'data/habilidades_especiales.json',
     estadiosUrl: 'data/estadios_argentina.json',
     hinchasUrl: 'data/hinchas_argentina.json',
-    estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json'],
-    hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json'],
+    estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
+    hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
     estadiosArgentinaUrl: 'data/estadios_argentina.json',
     hinchasArgentinaUrl: 'data/hinchas_argentina.json',
     estadiosChileUrl: 'data/estadios_chile.json',
     hinchasChileUrl: 'data/hinchas_chile.json',
+    estadiosBrasilUrl: 'data/estadios_brasil.json',
+    hinchasBrasilUrl: 'data/hinchas_brasil.json',
+    estadiosInglaterraUrl: 'data/estadios_inglaterra.json',
+    hinchasInglaterraUrl: 'data/hinchas_inglaterra.json',
+    estadiosEspanaUrl: 'data/estadios_espana.json',
+    hinchasEspanaUrl: 'data/hinchas_espana.json',
+    estadiosItaliaUrl: 'data/estadios_italia.json',
+    hinchasItaliaUrl: 'data/hinchas_italia.json',
+    estadiosRumaniaUrl: 'data/estadios_rumania.json',
+    hinchasRumaniaUrl: 'data/hinchas_rumania.json',
     instalacionesUrl: 'data/instalaciones.json',
     relatosPartidoUrl: 'data/relatos_partido.json'
   },

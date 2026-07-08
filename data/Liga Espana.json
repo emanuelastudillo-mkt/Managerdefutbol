@@ -1,0 +1,123 @@
+{
+  "version": "V3.79",
+  "pais": "España",
+  "descripcion": "Estructura jugable de España con ligas de 18 clubes.",
+  "criterio": "Selección histórica/jugable de clubes importantes; no representa tabla oficial de una temporada concreta.",
+  "escala_prestigio": "Global: 99 élite mundial, 70-84 grandes regionales/europeos fuertes, 20 o menos clubes libres para managers nuevos.",
+  "leagues": [
+    {
+      "name": "LaLiga España",
+      "country": "España",
+      "teams": [
+        {
+          "name": "Real Madrid",
+          "city": "Madrid",
+          "reputation": 99,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Barcelona",
+          "city": "Barcelona",
+          "reputation": 97,
+          "primaryColor": "#A50044"
+        },
+        {
+          "name": "Atlético Madrid",
+          "city": "Madrid",
+          "reputation": 92,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Sevilla",
+          "city": "Sevilla",
+          "reputation": 82,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Valencia",
+          "city": "Valencia",
+          "reputation": 80,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Athletic Club",
+          "city": "Bilbao",
+          "reputation": 79,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Real Betis",
+          "city": "Sevilla",
+          "reputation": 78,
+          "primaryColor": "#008542"
+        },
+        {
+          "name": "Villarreal",
+          "city": "Villarreal",
+          "reputation": 77,
+          "primaryColor": "#F5D328"
+        },
+        {
+          "name": "Real Sociedad",
+          "city": "San Sebastián",
+          "reputation": 77,
+          "primaryColor": "#005BAC"
+        },
+        {
+          "name": "Celta",
+          "city": "Vigo",
+          "reputation": 70,
+          "primaryColor": "#66B3FF"
+        },
+        {
+          "name": "Espanyol",
+          "city": "Barcelona",
+          "reputation": 69,
+          "primaryColor": "#005BAC"
+        },
+        {
+          "name": "Deportivo La Coruña",
+          "city": "A Coruña",
+          "reputation": 67,
+          "primaryColor": "#005BAC"
+        },
+        {
+          "name": "Mallorca",
+          "city": "Palma",
+          "reputation": 66,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Osasuna",
+          "city": "Pamplona",
+          "reputation": 66,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Zaragoza",
+          "city": "Zaragoza",
+          "reputation": 65,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Sporting Gijón",
+          "city": "Gijón",
+          "reputation": 64,
+          "primaryColor": "#D71920"
+        },
+        {
+          "name": "Getafe",
+          "city": "Getafe",
+          "reputation": 63,
+          "primaryColor": "#005BAC"
+        },
+        {
+          "name": "Rayo Vallecano",
+          "city": "Madrid",
+          "reputation": 62,
+          "primaryColor": "#FFFFFF"
+        }
+      ]
+    }
+  ]
+}

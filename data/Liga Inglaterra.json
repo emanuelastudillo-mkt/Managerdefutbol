@@ -1,0 +1,123 @@
+{
+  "version": "V3.79",
+  "pais": "Inglaterra",
+  "descripcion": "Estructura jugable de Inglaterra con ligas de 18 clubes.",
+  "criterio": "Selección histórica/jugable de clubes importantes; no representa tabla oficial de una temporada concreta.",
+  "escala_prestigio": "Global: 99 élite mundial, 70-84 grandes regionales/europeos fuertes, 20 o menos clubes libres para managers nuevos.",
+  "leagues": [
+    {
+      "name": "Premier League",
+      "country": "Inglaterra",
+      "teams": [
+        {
+          "name": "Manchester City",
+          "city": "Manchester",
+          "reputation": 96,
+          "primaryColor": "#6CABDD"
+        },
+        {
+          "name": "Liverpool",
+          "city": "Liverpool",
+          "reputation": 95,
+          "primaryColor": "#C8102E"
+        },
+        {
+          "name": "Manchester United",
+          "city": "Manchester",
+          "reputation": 92,
+          "primaryColor": "#DA291C"
+        },
+        {
+          "name": "Arsenal",
+          "city": "Londres",
+          "reputation": 91,
+          "primaryColor": "#EF0107"
+        },
+        {
+          "name": "Chelsea",
+          "city": "Londres",
+          "reputation": 90,
+          "primaryColor": "#034694"
+        },
+        {
+          "name": "Tottenham",
+          "city": "Londres",
+          "reputation": 88,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Newcastle United",
+          "city": "Newcastle upon Tyne",
+          "reputation": 84,
+          "primaryColor": "#111111"
+        },
+        {
+          "name": "Aston Villa",
+          "city": "Birmingham",
+          "reputation": 82,
+          "primaryColor": "#95BFE5"
+        },
+        {
+          "name": "Everton",
+          "city": "Liverpool",
+          "reputation": 78,
+          "primaryColor": "#003399"
+        },
+        {
+          "name": "West Ham",
+          "city": "Londres",
+          "reputation": 77,
+          "primaryColor": "#7A263A"
+        },
+        {
+          "name": "Nottingham Forest",
+          "city": "Nottingham",
+          "reputation": 76,
+          "primaryColor": "#DD0000"
+        },
+        {
+          "name": "Leeds United",
+          "city": "Leeds",
+          "reputation": 74,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Leicester City",
+          "city": "Leicester",
+          "reputation": 73,
+          "primaryColor": "#003090"
+        },
+        {
+          "name": "Brighton",
+          "city": "Brighton and Hove",
+          "reputation": 73,
+          "primaryColor": "#0057B8"
+        },
+        {
+          "name": "Wolverhampton",
+          "city": "Wolverhampton",
+          "reputation": 72,
+          "primaryColor": "#FDB913"
+        },
+        {
+          "name": "Crystal Palace",
+          "city": "Londres",
+          "reputation": 70,
+          "primaryColor": "#1B458F"
+        },
+        {
+          "name": "Fulham",
+          "city": "Londres",
+          "reputation": 69,
+          "primaryColor": "#FFFFFF"
+        },
+        {
+          "name": "Sunderland",
+          "city": "Sunderland",
+          "reputation": 67,
+          "primaryColor": "#D71920"
+        }
+      ]
+    }
+  ]
+}

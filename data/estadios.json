@@ -1,60 +1,81 @@
 {
+  "version": "V3.79",
+  "pais": "Global",
+  "sistema": "estadios_global",
+  "descripcion": "Alias global con estadios de todas las ligas jugables cargadas.",
   "leagues": [
     {
       "name": "Liga Profesional",
+      "country": "Argentina",
       "teams": [
         {
-          "name": "River Plate",
-          "reputation": 92,
-          "stadium": "Mâs Monumental",
-          "stadiumCapacity": 85018,
-          "stadiumIsFictional": false
-        },
-        {
           "name": "Boca Juniors",
-          "reputation": 99,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 80,
           "stadium": "Alberto J. Armando",
           "stadiumCapacity": 54000,
           "stadiumIsFictional": false
         },
         {
+          "name": "River Plate",
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 79,
+          "stadium": "Mâs Monumental",
+          "stadiumCapacity": 85018,
+          "stadiumIsFictional": false
+        },
+        {
           "name": "Racing Club",
-          "reputation": 90,
+          "city": "Avellaneda",
+          "country": "Argentina",
+          "reputation": 70,
           "stadium": "Presidente Perón",
           "stadiumCapacity": 55000,
           "stadiumIsFictional": false
         },
         {
           "name": "Independiente",
-          "reputation": 89,
+          "city": "Avellaneda",
+          "country": "Argentina",
+          "reputation": 69,
           "stadium": "Libertadores de América - Ricardo Enrique Bochini",
           "stadiumCapacity": 48069,
           "stadiumIsFictional": false
         },
         {
           "name": "San Lorenzo",
-          "reputation": 87,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 67,
           "stadium": "Pedro Bidegain",
           "stadiumCapacity": 47964,
           "stadiumIsFictional": false
         },
         {
           "name": "Estudiantes",
-          "reputation": 85,
+          "city": "La Plata",
+          "country": "Argentina",
+          "reputation": 66,
           "stadium": "Jorge Luis Hirschi",
           "stadiumCapacity": 30018,
           "stadiumIsFictional": false
         },
         {
           "name": "Vélez",
-          "reputation": 84,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 64,
           "stadium": "José Amalfitani",
           "stadiumCapacity": 49747,
           "stadiumIsFictional": false
         },
         {
           "name": "Rosario",
-          "reputation": 83,
+          "city": "Rosario",
+          "country": "Argentina",
+          "reputation": 63,
           "stadium": "Gigante de Arroyito",
           "stadiumCapacity": 51000,
           "stadiumIsFictional": false,
@@ -62,343 +83,1445 @@
         },
         {
           "name": "Newell's",
-          "reputation": 82,
+          "city": "Rosario",
+          "country": "Argentina",
+          "reputation": 61,
           "stadium": "Marcelo Bielsa",
           "stadiumCapacity": 42000,
           "stadiumIsFictional": false
         },
         {
           "name": "Talleres",
-          "reputation": 81,
-          "stadium": "Francisco Cabasés - La Boutique",
-          "stadiumCapacity": 18000,
-          "stadiumIsFictional": false
+          "city": "Córdoba",
+          "country": "Argentina",
+          "reputation": 62,
+          "stadium": "Mario Alberto Kempes",
+          "stadiumCapacity": 57000,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Usa estadio provincial como escenario principal jugable."
         },
         {
           "name": "Huracán",
-          "reputation": 80,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 58,
           "stadium": "Tomás Adolfo Ducó",
           "stadiumCapacity": 48314,
           "stadiumIsFictional": false
         },
         {
           "name": "Lanús",
-          "reputation": 79,
+          "city": "Lanús",
+          "country": "Argentina",
+          "reputation": 57,
           "stadium": "Ciudad de Lanús - Néstor Díaz Pérez",
           "stadiumCapacity": 47027,
           "stadiumIsFictional": false
         },
         {
           "name": "Belgrano",
-          "reputation": 78,
+          "city": "Córdoba",
+          "country": "Argentina",
+          "reputation": 56,
           "stadium": "Julio César Villagra",
-          "stadiumCapacity": 34830,
+          "stadiumCapacity": 30500,
           "stadiumIsFictional": false
         },
         {
           "name": "Gimnasia",
-          "reputation": 77,
+          "city": "La Plata",
+          "country": "Argentina",
+          "reputation": 54,
           "stadium": "Juan Carmelo Zerillo",
           "stadiumCapacity": 21500,
           "stadiumIsFictional": false
         },
         {
           "name": "Defensa",
-          "reputation": 76,
-          "stadium": "Norberto Tito Tomaghello",
+          "city": "Florencio Varela",
+          "country": "Argentina",
+          "reputation": 53,
+          "stadium": "Norberto Tomaghello",
           "stadiumCapacity": 20000,
           "stadiumIsFictional": false
         },
         {
           "name": "Banfield",
-          "reputation": 75,
+          "city": "Banfield",
+          "country": "Argentina",
+          "reputation": 52,
           "stadium": "Florencio Sola",
           "stadiumCapacity": 34901,
           "stadiumIsFictional": false
         },
         {
           "name": "Atlético Tucumán",
-          "reputation": 74,
+          "city": "San Miguel de Tucumán",
+          "country": "Argentina",
+          "reputation": 50,
           "stadium": "Monumental José Fierro",
-          "stadiumCapacity": 32700,
+          "stadiumCapacity": 35200,
           "stadiumIsFictional": false
         },
         {
           "name": "Platense",
-          "reputation": 73,
+          "city": "Vicente López",
+          "country": "Argentina",
+          "reputation": 49,
           "stadium": "Ciudad de Vicente López",
-          "stadiumCapacity": 28530,
+          "stadiumCapacity": 31000,
           "stadiumIsFictional": false
         }
-      ],
-      "country": "Argentina"
+      ]
     },
     {
       "name": "Primera Nacional",
+      "country": "Argentina",
       "teams": [
         {
+          "name": "Argentinos",
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 55,
+          "stadium": "Diego Armando Maradona",
+          "stadiumCapacity": 26000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Godoy Cruz",
+          "city": "Mendoza",
+          "country": "Argentina",
+          "reputation": 54,
+          "stadium": "Malvinas Argentinas",
+          "stadiumCapacity": 42000,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Usa estadio provincial como escenario principal jugable."
+        },
+        {
           "name": "Tigre",
-          "reputation": 75,
+          "city": "Victoria",
+          "country": "Argentina",
+          "reputation": 47,
           "stadium": "José Dellagiovanna",
           "stadiumCapacity": 26282,
           "stadiumIsFictional": false
         },
         {
           "name": "Unión",
-          "reputation": 72,
+          "city": "Santa Fe",
+          "country": "Argentina",
+          "reputation": 48,
           "stadium": "15 de Abril",
-          "stadiumCapacity": 27500,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Independiente Rivadavia",
-          "reputation": 72,
-          "stadium": "Bautista Gargantini",
-          "stadiumCapacity": 24000,
+          "stadiumCapacity": 28000,
           "stadiumIsFictional": false
         },
         {
           "name": "Instituto",
-          "reputation": 70,
+          "city": "Córdoba",
+          "country": "Argentina",
+          "reputation": 46,
           "stadium": "Juan Domingo Perón",
           "stadiumCapacity": 26535,
           "stadiumIsFictional": false
         },
         {
           "name": "San Martín Tucumán",
-          "reputation": 70,
+          "city": "San Miguel de Tucumán",
+          "country": "Argentina",
+          "reputation": 45,
           "stadium": "La Ciudadela",
-          "stadiumCapacity": 25000,
+          "stadiumCapacity": 30500,
           "stadiumIsFictional": false
         },
         {
           "name": "Barracas",
-          "reputation": 68,
-          "stadium": "Claudio Chiqui Tapia",
-          "stadiumCapacity": 12000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Godoy Cruz",
-          "reputation": 67,
-          "stadium": "Feliciano Gambarte",
-          "stadiumCapacity": 21000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Argentinos",
-          "reputation": 66,
-          "stadium": "Diego Armando Maradona",
-          "stadiumCapacity": 26000,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 40,
+          "stadium": "Claudio Fabián Tapia",
+          "stadiumCapacity": 4400,
           "stadiumIsFictional": false
         },
         {
           "name": "Central Córdoba SdE",
-          "reputation": 65,
-          "stadium": "Alfredo Terrera",
-          "stadiumCapacity": 12000,
+          "city": "Santiago del Estero",
+          "country": "Argentina",
+          "reputation": 42,
+          "stadium": "Único Madre de Ciudades",
+          "stadiumCapacity": 30000,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Usa estadio provincial como escenario principal jugable."
+        },
+        {
+          "name": "Independiente Rivadavia",
+          "city": "Mendoza",
+          "country": "Argentina",
+          "reputation": 43,
+          "stadium": "Bautista Gargantini",
+          "stadiumCapacity": 24000,
           "stadiumIsFictional": false
         },
         {
           "name": "Aldosivi",
-          "reputation": 64,
-          "stadium": "Puerto Tiburón",
-          "stadiumCapacity": 12000,
-          "stadiumIsFictional": true,
-          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
+          "city": "Mar del Plata",
+          "country": "Argentina",
+          "reputation": 39,
+          "stadium": "José María Minella",
+          "stadiumCapacity": 35354,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Usa estadio municipal como escenario principal jugable."
         },
         {
           "name": "Sarmiento",
-          "reputation": 63,
+          "city": "Junín",
+          "country": "Argentina",
+          "reputation": 38,
           "stadium": "Eva Perón",
           "stadiumCapacity": 22000,
           "stadiumIsFictional": false
         },
         {
           "name": "San Martín San Juan",
-          "reputation": 62,
-          "stadium": "Ingeniero Hilario Sánchez",
+          "city": "San Juan",
+          "country": "Argentina",
+          "reputation": 37,
+          "stadium": "Hilario Sánchez",
           "stadiumCapacity": 19000,
           "stadiumIsFictional": false
         },
         {
           "name": "Riestra",
-          "reputation": 61,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 36,
           "stadium": "Guillermo Laza",
-          "stadiumCapacity": 8740,
+          "stadiumCapacity": 3000,
           "stadiumIsFictional": false
         },
         {
           "name": "Morón",
-          "reputation": 60,
+          "city": "Morón",
+          "country": "Argentina",
+          "reputation": 35,
           "stadium": "Nuevo Francisco Urbano",
           "stadiumCapacity": 32000,
           "stadiumIsFictional": false
         },
         {
           "name": "Deportivo Maipú",
-          "reputation": 59,
+          "city": "Maipú",
+          "country": "Argentina",
+          "reputation": 34,
           "stadium": "Omar Higinio Sperdutti",
-          "stadiumCapacity": 9260,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Deportivo Madryn",
-          "reputation": 58,
-          "stadium": "Abel Sastre",
           "stadiumCapacity": 8000,
           "stadiumIsFictional": false
         },
         {
+          "name": "Deportivo Madryn",
+          "city": "Puerto Madryn",
+          "country": "Argentina",
+          "reputation": 33,
+          "stadium": "Abel Sastre",
+          "stadiumCapacity": 6000,
+          "stadiumIsFictional": false
+        },
+        {
           "name": "Olimpo",
-          "reputation": 57,
+          "city": "Bahía Blanca",
+          "country": "Argentina",
+          "reputation": 36,
           "stadium": "Roberto Natalio Carminatti",
           "stadiumCapacity": 20000,
           "stadiumIsFictional": false
         },
         {
           "name": "Atlanta",
-          "reputation": 56,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 34,
           "stadium": "Don León Kolbowski",
-          "stadiumCapacity": 9390,
+          "stadiumCapacity": 14000,
           "stadiumIsFictional": false
         }
-      ],
-      "country": "Argentina"
+      ]
     },
     {
       "name": "Federal A",
+      "country": "Argentina",
       "teams": [
         {
-          "name": "Acassuso",
-          "reputation": 60,
-          "stadium": "La Quema",
-          "stadiumCapacity": 1800,
-          "stadiumIsFictional": false
-        },
-        {
           "name": "Temperley",
-          "reputation": 55,
+          "city": "Temperley",
+          "country": "Argentina",
+          "reputation": 30,
           "stadium": "Alfredo Beranger",
-          "stadiumCapacity": 18000,
+          "stadiumCapacity": 24000,
           "stadiumIsFictional": false
         },
         {
-          "name": "Deportivo Armenio",
-          "reputation": 55,
-          "stadium": "Estadio Armenia",
-          "stadiumCapacity": 8000,
+          "name": "Atlético Rafaela",
+          "city": "Rafaela",
+          "country": "Argentina",
+          "reputation": 29,
+          "stadium": "Nuevo Monumental",
+          "stadiumCapacity": 20500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gimnasia de Jujuy",
+          "city": "San Salvador de Jujuy",
+          "country": "Argentina",
+          "reputation": 28,
+          "stadium": "23 de Agosto",
+          "stadiumCapacity": 24000,
           "stadiumIsFictional": false
         },
         {
           "name": "Agropecuario",
-          "reputation": 53,
+          "city": "Carlos Casares",
+          "country": "Argentina",
+          "reputation": 26,
           "stadium": "Ofelia Rosenzuaig",
           "stadiumCapacity": 8000,
           "stadiumIsFictional": false
         },
         {
-          "name": "Atlético Rafaela",
-          "reputation": 52,
-          "stadium": "Nuevo Monumental",
-          "stadiumCapacity": 20000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "Gimnasia de Jujuy",
-          "reputation": 50,
-          "stadium": "23 de Agosto",
+          "name": "Chaco For Ever",
+          "city": "Resistencia",
+          "country": "Argentina",
+          "reputation": 25,
+          "stadium": "Juan Alberto García",
           "stadiumCapacity": 23000,
           "stadiumIsFictional": false
         },
         {
-          "name": "Midland",
-          "reputation": 50,
-          "stadium": "Ciudad de Libertad",
-          "stadiumCapacity": 11000,
+          "name": "San Miguel",
+          "city": "San Miguel",
+          "country": "Argentina",
+          "reputation": 24,
+          "stadium": "Malvinas Argentinas de Los Polvorines",
+          "stadiumCapacity": 6800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gimnasia y Tiro",
+          "city": "Salta",
+          "country": "Argentina",
+          "reputation": 22,
+          "stadium": "Gigante del Norte",
+          "stadiumCapacity": 24300,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Acassuso",
+          "city": "San Isidro",
+          "country": "Argentina",
+          "reputation": 20,
+          "stadium": "La Quema",
+          "stadiumCapacity": 800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sportivo Belgrano",
+          "city": "San Francisco",
+          "country": "Argentina",
+          "reputation": 20,
+          "stadium": "Oscar C. Boero",
+          "stadiumCapacity": 9200,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo Armenio",
+          "city": "Ingeniero Maschwitz",
+          "country": "Argentina",
+          "reputation": 19,
+          "stadium": "República de Armenia",
+          "stadiumCapacity": 10500,
           "stadiumIsFictional": false
         },
         {
           "name": "Tristan Suárez",
-          "reputation": 45,
+          "city": "Tristán Suárez",
+          "country": "Argentina",
+          "reputation": 19,
           "stadium": "20 de Octubre",
-          "stadiumCapacity": 7500,
+          "stadiumCapacity": 15000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Midland",
+          "city": "Libertad",
+          "country": "Argentina",
+          "reputation": 18,
+          "stadium": "Ciudad de Libertad",
+          "stadiumCapacity": 6000,
           "stadiumIsFictional": false
         },
         {
           "name": "Real Pilar",
-          "reputation": 42,
-          "stadium": "Real de Pilar",
-          "stadiumCapacity": 6000,
-          "stadiumIsFictional": true,
-          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
-        },
-        {
-          "name": "Camioneros",
-          "reputation": 40,
-          "stadium": "Hugo Moyano",
-          "stadiumCapacity": 5000,
+          "city": "Pilar",
+          "country": "Argentina",
+          "reputation": 18,
+          "stadium": "Carlos Barraza",
+          "stadiumCapacity": 10000,
           "stadiumIsFictional": false
         },
         {
-          "name": "Chaco For Ever",
-          "reputation": 38,
-          "stadium": "Juan Alberto García",
-          "stadiumCapacity": 25000,
+          "name": "Camioneros",
+          "city": "Esteban Echeverría",
+          "country": "Argentina",
+          "reputation": 17,
+          "stadium": "Hugo Moyano",
+          "stadiumCapacity": 7000,
           "stadiumIsFictional": false
         },
         {
           "name": "Claypole",
-          "reputation": 28,
+          "city": "Claypole",
+          "country": "Argentina",
+          "reputation": 17,
           "stadium": "Rodolfo Vicente Capocasa",
-          "stadiumCapacity": 4000,
-          "stadiumIsFictional": false
-        },
-        {
-          "name": "San Miguel",
-          "reputation": 24,
-          "stadium": "Malvinas Argentinas",
-          "stadiumCapacity": 11544,
+          "stadiumCapacity": 6000,
           "stadiumIsFictional": false
         },
         {
           "name": "Argentino Merlo",
-          "reputation": 22,
+          "city": "Merlo",
+          "country": "Argentina",
+          "reputation": 16,
           "stadium": "Juan Carlos Brieva",
           "stadiumCapacity": 11000,
           "stadiumIsFictional": false
         },
         {
           "name": "Sportivo Barracas",
-          "reputation": 20,
-          "stadium": "Barracas Sur",
-          "stadiumCapacity": 3500,
+          "city": "Buenos Aires",
+          "country": "Argentina",
+          "reputation": 15,
+          "stadium": "Nuevo Barracas Central",
+          "stadiumCapacity": 5000,
           "stadiumIsFictional": true,
-          "stadiumNote": "Nombre inventado para el juego por falta de estadio propio claro."
+          "stadiumNote": "Estadio ficticio de baja capacidad para balance jugable."
         },
         {
           "name": "Argentino Monte Maíz",
-          "reputation": 16,
+          "city": "Monte Maíz",
+          "country": "Argentina",
+          "reputation": 15,
           "stadium": "Modesto Marrone",
           "stadiumCapacity": 5500,
           "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Primera División Chile",
+      "country": "Chile",
+      "teams": [
+        {
+          "name": "Colo-Colo",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 68,
+          "stadium": "Monumental David Arellano",
+          "stadiumCapacity": 47000,
+          "stadiumIsFictional": false
         },
         {
-          "name": "Sportivo Belgrano",
-          "reputation": 12,
-          "stadium": "Juan Pablo Francia",
+          "name": "Universidad de Chile",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 65,
+          "stadium": "Nacional Julio Martínez Prádanos",
+          "stadiumCapacity": 48665,
+          "stadiumIsFictional": false,
+          "stadiumNote": "Usa estadio nacional como escenario principal jugable."
+        },
+        {
+          "name": "Universidad Católica",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 64,
+          "stadium": "San Carlos de Apoquindo",
+          "stadiumCapacity": 20000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Cobreloa",
+          "city": "Calama",
+          "country": "Chile",
+          "reputation": 57,
+          "stadium": "Zorros del Desierto",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Unión Española",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 52,
+          "stadium": "Santa Laura",
+          "stadiumCapacity": 19887,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Santiago Wanderers",
+          "city": "Valparaíso",
+          "country": "Chile",
+          "reputation": 51,
+          "stadium": "Elías Figueroa Brander",
+          "stadiumCapacity": 21000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Everton",
+          "city": "Viña del Mar",
+          "country": "Chile",
+          "reputation": 49,
+          "stadium": "Sausalito",
+          "stadiumCapacity": 23000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "O'Higgins",
+          "city": "Rancagua",
+          "country": "Chile",
+          "reputation": 48,
+          "stadium": "El Teniente",
+          "stadiumCapacity": 14450,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Palestino",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 47,
+          "stadium": "Municipal de La Cisterna",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Audax Italiano",
+          "city": "La Florida",
+          "country": "Chile",
+          "reputation": 45,
+          "stadium": "Bicentenario de La Florida",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Huachipato",
+          "city": "Talcahuano",
+          "country": "Chile",
+          "reputation": 44,
+          "stadium": "CAP",
+          "stadiumCapacity": 10500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportes Iquique",
+          "city": "Iquique",
+          "country": "Chile",
+          "reputation": 42,
+          "stadium": "Tierra de Campeones",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Coquimbo Unido",
+          "city": "Coquimbo",
+          "country": "Chile",
+          "reputation": 41,
+          "stadium": "Francisco Sánchez Rumoroso",
+          "stadiumCapacity": 18750,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Cobresal",
+          "city": "El Salvador",
+          "country": "Chile",
+          "reputation": 39,
+          "stadium": "El Cobre",
+          "stadiumCapacity": 11240,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportes La Serena",
+          "city": "La Serena",
+          "country": "Chile",
+          "reputation": 38,
+          "stadium": "La Portada",
+          "stadiumCapacity": 18000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Ñublense",
+          "city": "Chillán",
+          "country": "Chile",
+          "reputation": 37,
+          "stadium": "Nelson Oyarzún",
+          "stadiumCapacity": 12000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Rangers",
+          "city": "Talca",
+          "country": "Chile",
+          "reputation": 36,
+          "stadium": "Fiscal de Talca",
+          "stadiumCapacity": 8200,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Magallanes",
+          "city": "Santiago",
+          "country": "Chile",
+          "reputation": 35,
+          "stadium": "Municipal de San Bernardo",
+          "stadiumCapacity": 3500,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Brasileirão",
+      "country": "Brasil",
+      "teams": [
+        {
+          "name": "Flamengo",
+          "city": "Rio de Janeiro",
+          "country": "Brasil",
+          "reputation": 84,
+          "stadium": "Maracanã",
+          "stadiumCapacity": 78838,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Palmeiras",
+          "city": "São Paulo",
+          "country": "Brasil",
+          "reputation": 83,
+          "stadium": "Allianz Parque",
+          "stadiumCapacity": 43713,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Corinthians",
+          "city": "São Paulo",
+          "country": "Brasil",
+          "reputation": 81,
+          "stadium": "Neo Química Arena",
+          "stadiumCapacity": 49205,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "São Paulo",
+          "city": "São Paulo",
+          "country": "Brasil",
+          "reputation": 80,
+          "stadium": "Morumbi",
+          "stadiumCapacity": 66795,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Santos",
+          "city": "Santos",
+          "country": "Brasil",
+          "reputation": 78,
+          "stadium": "Vila Belmiro",
+          "stadiumCapacity": 16068,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Grêmio",
+          "city": "Porto Alegre",
+          "country": "Brasil",
+          "reputation": 77,
+          "stadium": "Arena do Grêmio",
+          "stadiumCapacity": 55662,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Internacional",
+          "city": "Porto Alegre",
+          "country": "Brasil",
+          "reputation": 76,
+          "stadium": "Beira-Rio",
+          "stadiumCapacity": 50842,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atlético Mineiro",
+          "city": "Belo Horizonte",
+          "country": "Brasil",
+          "reputation": 76,
+          "stadium": "Arena MRV",
+          "stadiumCapacity": 46000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Cruzeiro",
+          "city": "Belo Horizonte",
+          "country": "Brasil",
+          "reputation": 75,
+          "stadium": "Mineirão",
+          "stadiumCapacity": 61846,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Fluminense",
+          "city": "Rio de Janeiro",
+          "country": "Brasil",
+          "reputation": 74,
+          "stadium": "Maracanã",
+          "stadiumCapacity": 78838,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Botafogo",
+          "city": "Rio de Janeiro",
+          "country": "Brasil",
+          "reputation": 74,
+          "stadium": "Nilton Santos",
+          "stadiumCapacity": 44661,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Vasco da Gama",
+          "city": "Rio de Janeiro",
+          "country": "Brasil",
+          "reputation": 73,
+          "stadium": "São Januário",
+          "stadiumCapacity": 21880,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Athletico Paranaense",
+          "city": "Curitiba",
+          "country": "Brasil",
+          "reputation": 70,
+          "stadium": "Ligga Arena",
+          "stadiumCapacity": 42372,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Bahia",
+          "city": "Salvador",
+          "country": "Brasil",
+          "reputation": 68,
+          "stadium": "Arena Fonte Nova",
+          "stadiumCapacity": 47907,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Fortaleza",
+          "city": "Fortaleza",
+          "country": "Brasil",
+          "reputation": 67,
+          "stadium": "Castelão",
+          "stadiumCapacity": 63903,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sport Recife",
+          "city": "Recife",
+          "country": "Brasil",
+          "reputation": 64,
+          "stadium": "Ilha do Retiro",
+          "stadiumCapacity": 32983,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Vitória",
+          "city": "Salvador",
+          "country": "Brasil",
+          "reputation": 62,
+          "stadium": "Barradão",
+          "stadiumCapacity": 30000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Ceará",
+          "city": "Fortaleza",
+          "country": "Brasil",
+          "reputation": 61,
+          "stadium": "Castelão",
+          "stadiumCapacity": 63903,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Premier League",
+      "country": "Inglaterra",
+      "teams": [
+        {
+          "name": "Manchester City",
+          "city": "Manchester",
+          "country": "Inglaterra",
+          "reputation": 96,
+          "stadium": "Etihad Stadium",
+          "stadiumCapacity": 53400,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Liverpool",
+          "city": "Liverpool",
+          "country": "Inglaterra",
+          "reputation": 95,
+          "stadium": "Anfield",
+          "stadiumCapacity": 61276,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Manchester United",
+          "city": "Manchester",
+          "country": "Inglaterra",
+          "reputation": 92,
+          "stadium": "Old Trafford",
+          "stadiumCapacity": 74310,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Arsenal",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 91,
+          "stadium": "Emirates Stadium",
+          "stadiumCapacity": 60704,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Chelsea",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 90,
+          "stadium": "Stamford Bridge",
+          "stadiumCapacity": 40173,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Tottenham",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 88,
+          "stadium": "Tottenham Hotspur Stadium",
+          "stadiumCapacity": 62850,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Newcastle United",
+          "city": "Newcastle upon Tyne",
+          "country": "Inglaterra",
+          "reputation": 84,
+          "stadium": "St James' Park",
+          "stadiumCapacity": 52305,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Aston Villa",
+          "city": "Birmingham",
+          "country": "Inglaterra",
+          "reputation": 82,
+          "stadium": "Villa Park",
+          "stadiumCapacity": 42657,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Everton",
+          "city": "Liverpool",
+          "country": "Inglaterra",
+          "reputation": 78,
+          "stadium": "Everton Stadium",
+          "stadiumCapacity": 52888,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "West Ham",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 77,
+          "stadium": "London Stadium",
+          "stadiumCapacity": 62500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Nottingham Forest",
+          "city": "Nottingham",
+          "country": "Inglaterra",
+          "reputation": 76,
+          "stadium": "City Ground",
+          "stadiumCapacity": 30445,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Leeds United",
+          "city": "Leeds",
+          "country": "Inglaterra",
+          "reputation": 74,
+          "stadium": "Elland Road",
+          "stadiumCapacity": 37792,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Leicester City",
+          "city": "Leicester",
+          "country": "Inglaterra",
+          "reputation": 73,
+          "stadium": "King Power Stadium",
+          "stadiumCapacity": 32262,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Brighton",
+          "city": "Brighton and Hove",
+          "country": "Inglaterra",
+          "reputation": 73,
+          "stadium": "American Express Stadium",
+          "stadiumCapacity": 31800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Wolverhampton",
+          "city": "Wolverhampton",
+          "country": "Inglaterra",
+          "reputation": 72,
+          "stadium": "Molineux",
+          "stadiumCapacity": 32050,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Crystal Palace",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 70,
+          "stadium": "Selhurst Park",
+          "stadiumCapacity": 25486,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Fulham",
+          "city": "Londres",
+          "country": "Inglaterra",
+          "reputation": 69,
+          "stadium": "Craven Cottage",
+          "stadiumCapacity": 29000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sunderland",
+          "city": "Sunderland",
+          "country": "Inglaterra",
+          "reputation": 67,
+          "stadium": "Stadium of Light",
+          "stadiumCapacity": 49000,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "LaLiga España",
+      "country": "España",
+      "teams": [
+        {
+          "name": "Real Madrid",
+          "city": "Madrid",
+          "country": "España",
+          "reputation": 99,
+          "stadium": "Santiago Bernabéu",
+          "stadiumCapacity": 83000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Barcelona",
+          "city": "Barcelona",
+          "country": "España",
+          "reputation": 97,
+          "stadium": "Camp Nou",
+          "stadiumCapacity": 99354,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atlético Madrid",
+          "city": "Madrid",
+          "country": "España",
+          "reputation": 92,
+          "stadium": "Metropolitano",
+          "stadiumCapacity": 70460,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sevilla",
+          "city": "Sevilla",
+          "country": "España",
+          "reputation": 82,
+          "stadium": "Ramón Sánchez-Pizjuán",
+          "stadiumCapacity": 43883,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Valencia",
+          "city": "Valencia",
+          "country": "España",
+          "reputation": 80,
+          "stadium": "Mestalla",
+          "stadiumCapacity": 48600,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Athletic Club",
+          "city": "Bilbao",
+          "country": "España",
+          "reputation": 79,
+          "stadium": "San Mamés",
+          "stadiumCapacity": 53331,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Real Betis",
+          "city": "Sevilla",
+          "country": "España",
+          "reputation": 78,
+          "stadium": "Benito Villamarín",
+          "stadiumCapacity": 60721,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Villarreal",
+          "city": "Villarreal",
+          "country": "España",
+          "reputation": 77,
+          "stadium": "Estadio de la Cerámica",
+          "stadiumCapacity": 23500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Real Sociedad",
+          "city": "San Sebastián",
+          "country": "España",
+          "reputation": 77,
+          "stadium": "Reale Arena",
+          "stadiumCapacity": 39500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Celta",
+          "city": "Vigo",
+          "country": "España",
+          "reputation": 70,
+          "stadium": "Balaídos",
+          "stadiumCapacity": 29000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Espanyol",
+          "city": "Barcelona",
+          "country": "España",
+          "reputation": 69,
+          "stadium": "Stage Front Stadium",
+          "stadiumCapacity": 40500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Deportivo La Coruña",
+          "city": "A Coruña",
+          "country": "España",
+          "reputation": 67,
+          "stadium": "Riazor",
+          "stadiumCapacity": 32912,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Mallorca",
+          "city": "Palma",
+          "country": "España",
+          "reputation": 66,
+          "stadium": "Son Moix",
+          "stadiumCapacity": 23142,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Osasuna",
+          "city": "Pamplona",
+          "country": "España",
+          "reputation": 66,
+          "stadium": "El Sadar",
+          "stadiumCapacity": 23516,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Zaragoza",
+          "city": "Zaragoza",
+          "country": "España",
+          "reputation": 65,
+          "stadium": "La Romareda",
+          "stadiumCapacity": 34596,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sporting Gijón",
+          "city": "Gijón",
+          "country": "España",
+          "reputation": 64,
+          "stadium": "El Molinón",
+          "stadiumCapacity": 30000,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Getafe",
+          "city": "Getafe",
+          "country": "España",
+          "reputation": 63,
+          "stadium": "Coliseum",
+          "stadiumCapacity": 16800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Rayo Vallecano",
+          "city": "Madrid",
+          "country": "España",
+          "reputation": 62,
+          "stadium": "Campo de Fútbol de Vallecas",
+          "stadiumCapacity": 14708,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "Serie A Italia",
+      "country": "Italia",
+      "teams": [
+        {
+          "name": "Juventus",
+          "city": "Turín",
+          "country": "Italia",
+          "reputation": 91,
+          "stadium": "Allianz Stadium",
+          "stadiumCapacity": 41507,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Inter",
+          "city": "Milán",
+          "country": "Italia",
+          "reputation": 90,
+          "stadium": "San Siro",
+          "stadiumCapacity": 75817,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Milan",
+          "city": "Milán",
+          "country": "Italia",
+          "reputation": 89,
+          "stadium": "San Siro",
+          "stadiumCapacity": 75817,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Napoli",
+          "city": "Nápoles",
+          "country": "Italia",
+          "reputation": 88,
+          "stadium": "Diego Armando Maradona",
+          "stadiumCapacity": 54726,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Roma",
+          "city": "Roma",
+          "country": "Italia",
+          "reputation": 84,
+          "stadium": "Olimpico",
+          "stadiumCapacity": 70634,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Lazio",
+          "city": "Roma",
+          "country": "Italia",
+          "reputation": 82,
+          "stadium": "Olimpico",
+          "stadiumCapacity": 70634,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Atalanta",
+          "city": "Bérgamo",
+          "country": "Italia",
+          "reputation": 81,
+          "stadium": "Gewiss Stadium",
+          "stadiumCapacity": 24950,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Fiorentina",
+          "city": "Florencia",
+          "country": "Italia",
+          "reputation": 79,
+          "stadium": "Artemio Franchi",
+          "stadiumCapacity": 43147,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Torino",
+          "city": "Turín",
+          "country": "Italia",
+          "reputation": 75,
+          "stadium": "Olimpico Grande Torino",
+          "stadiumCapacity": 27994,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Bologna",
+          "city": "Bolonia",
+          "country": "Italia",
+          "reputation": 75,
+          "stadium": "Renato Dall'Ara",
+          "stadiumCapacity": 36532,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Genoa",
+          "city": "Génova",
+          "country": "Italia",
+          "reputation": 72,
+          "stadium": "Luigi Ferraris",
+          "stadiumCapacity": 36599,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sampdoria",
+          "city": "Génova",
+          "country": "Italia",
+          "reputation": 70,
+          "stadium": "Luigi Ferraris",
+          "stadiumCapacity": 36599,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Parma",
+          "city": "Parma",
+          "country": "Italia",
+          "reputation": 68,
+          "stadium": "Ennio Tardini",
+          "stadiumCapacity": 22352,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Udinese",
+          "city": "Udine",
+          "country": "Italia",
+          "reputation": 67,
+          "stadium": "Bluenergy Stadium",
+          "stadiumCapacity": 25144,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Palermo",
+          "city": "Palermo",
+          "country": "Italia",
+          "reputation": 66,
+          "stadium": "Renzo Barbera",
+          "stadiumCapacity": 36365,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Cagliari",
+          "city": "Cagliari",
+          "country": "Italia",
+          "reputation": 65,
+          "stadium": "Unipol Domus",
+          "stadiumCapacity": 16416,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Hellas Verona",
+          "city": "Verona",
+          "country": "Italia",
+          "reputation": 64,
+          "stadium": "Marcantonio Bentegodi",
+          "stadiumCapacity": 39211,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sassuolo",
+          "city": "Sassuolo",
+          "country": "Italia",
+          "reputation": 63,
+          "stadium": "Mapei Stadium",
+          "stadiumCapacity": 21584,
+          "stadiumIsFictional": false
+        }
+      ]
+    },
+    {
+      "name": "SuperLiga Rumania",
+      "country": "Rumania",
+      "teams": [
+        {
+          "name": "FCSB",
+          "city": "Bucarest",
+          "country": "Rumania",
+          "reputation": 58,
+          "stadium": "Arena Națională",
+          "stadiumCapacity": 55634,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "CFR Cluj",
+          "city": "Cluj-Napoca",
+          "country": "Rumania",
+          "reputation": 56,
+          "stadium": "Dr. Constantin Rădulescu",
+          "stadiumCapacity": 23500,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Universitatea Craiova",
+          "city": "Craiova",
+          "country": "Rumania",
+          "reputation": 54,
+          "stadium": "Ion Oblemenco",
+          "stadiumCapacity": 30983,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Dinamo București",
+          "city": "Bucarest",
+          "country": "Rumania",
+          "reputation": 52,
+          "stadium": "Arcul de Triumf",
+          "stadiumCapacity": 8207,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Rapid București",
+          "city": "Bucarest",
+          "country": "Rumania",
+          "reputation": 52,
+          "stadium": "Giulești",
+          "stadiumCapacity": 14047,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Farul Constanța",
+          "city": "Constanța",
+          "country": "Rumania",
+          "reputation": 49,
+          "stadium": "Central Academia Gheorghe Hagi",
+          "stadiumCapacity": 4554,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Petrolul Ploiești",
+          "city": "Ploiești",
+          "country": "Rumania",
+          "reputation": 47,
+          "stadium": "Ilie Oană",
+          "stadiumCapacity": 15073,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "UTA Arad",
+          "city": "Arad",
+          "country": "Rumania",
+          "reputation": 45,
+          "stadium": "Francisc von Neuman",
+          "stadiumCapacity": 12700,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Sepsi OSK",
+          "city": "Sfântu Gheorghe",
+          "country": "Rumania",
+          "reputation": 44,
+          "stadium": "Sepsi Arena",
+          "stadiumCapacity": 8400,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Hermannstadt",
+          "city": "Sibiu",
+          "country": "Rumania",
+          "reputation": 42,
+          "stadium": "Municipal Sibiu",
+          "stadiumCapacity": 12900,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Universitatea Cluj",
+          "city": "Cluj-Napoca",
+          "country": "Rumania",
+          "reputation": 42,
+          "stadium": "Cluj Arena",
+          "stadiumCapacity": 30335,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Oțelul Galați",
+          "city": "Galați",
+          "country": "Rumania",
+          "reputation": 40,
+          "stadium": "Oțelul",
+          "stadiumCapacity": 13630,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "FC Argeș",
+          "city": "Pitești",
+          "country": "Rumania",
+          "reputation": 39,
+          "stadium": "Nicolae Dobrin",
           "stadiumCapacity": 15000,
           "stadiumIsFictional": false
         },
         {
-          "name": "Gimnasia y Tiro",
-          "reputation": 10,
-          "stadium": "El Gigante del Norte",
-          "stadiumCapacity": 24300,
+          "name": "Poli Iași",
+          "city": "Iași",
+          "country": "Rumania",
+          "reputation": 37,
+          "stadium": "Emil Alexandrescu",
+          "stadiumCapacity": 11390,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Botoșani",
+          "city": "Botoșani",
+          "country": "Rumania",
+          "reputation": 35,
+          "stadium": "Municipal Botoșani",
+          "stadiumCapacity": 7782,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Voluntari",
+          "city": "Voluntari",
+          "country": "Rumania",
+          "reputation": 33,
+          "stadium": "Anghel Iordănescu",
+          "stadiumCapacity": 4600,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Gloria Bistrița",
+          "city": "Bistrița",
+          "country": "Rumania",
+          "reputation": 30,
+          "stadium": "Jean Pădureanu",
+          "stadiumCapacity": 7800,
+          "stadiumIsFictional": false
+        },
+        {
+          "name": "Chindia Târgoviște",
+          "city": "Târgoviște",
+          "country": "Rumania",
+          "reputation": 28,
+          "stadium": "Eugen Popescu",
+          "stadiumCapacity": 8400,
           "stadiumIsFictional": false
         }
-      ],
-      "country": "Argentina"
+      ]
     }
   ]
 }

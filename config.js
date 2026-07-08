@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V3.86',
+  version: 'V3.87',
   data: {
     seedUrl: 'data/seed.json',
     // El juego carga y combina todos los JSON válidos de esta lista.
@@ -348,7 +348,7 @@ window.GAME_CONFIG = {
 
   ranking: {
     // URL publicada para enviar y leer resultados del ranking online.
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxNVzyk9F1Bj5qGZ-xeH5i1XCLF8Z1UdCV7ppSIGmh6haaM_JfjBaCqo7SzZCsoSLZh/exec',
+    appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
     // Token simple opcional para restringir envíos.
     token: '',
     resultadosPorPagina: 100,

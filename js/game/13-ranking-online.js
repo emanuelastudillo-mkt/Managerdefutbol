@@ -1,4 +1,4 @@
-/* V3.19 · Ranking online robusto contra endpoints guardados y acciones GET antiguas. */
+/* V3.87 · Ranking online conectado a Cloudflare Workers + D1. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -41,9 +41,9 @@ function rankingCooldownText(info=rankingUploadCooldownInfo()){
 }
 
 function normalizeRankingEndpoint(url){
-  const clean = String(url || '').trim();
-  if(!clean) return '';
-  return /^https:\/\/script\.google\.com\//.test(clean) || /^https:\/\/script\.googleusercontent\.com\//.test(clean) ? clean : clean;
+  const configured = String(url || '').trim().replace(/\/+$/, '');
+  if(configured) return configured;
+  return 'https://rankingdemanagers.emanuelastudillo.workers.dev';
 }
 function rankingSubmissionKey(payload){
   return `${payload.saveCode || 'FM'}-T${payload.season || 1}`;
@@ -163,7 +163,40 @@ function rankingValue(row, ...keys){
   }
   return '';
 }
+
+function rankingApiRowToGameRow(row){
+  if(!row) return row;
+  const mapped = { ...row };
+  mapped.managerName = rankingValue(row, 'managerName', 'manager_name', 'manager');
+  mapped.club = rankingValue(row, 'club', 'club_name', 'club_usado');
+  mapped.division = rankingValue(row, 'division', 'division_name');
+  mapped.season = rankingValue(row, 'season', 'temporada');
+  mapped.points = rankingValue(row, 'matchPoints', 'match_points', 'pts', 'puntos', 'points');
+  mapped.managerScore = rankingValue(row, 'managerScore', 'manager_score', 'puntaje_manager', 'points');
+  mapped.initialBudget = rankingValue(row, 'initialBudget', 'initial_budget', 'presupuesto_inicial');
+  mapped.finalBudget = rankingValue(row, 'finalBudget', 'final_budget', 'presupuesto_final');
+  mapped.budgetVariation = rankingValue(row, 'budgetVariation', 'budget_variation', 'variacion_presupuesto');
+  mapped.titles = rankingValue(row, 'titles', 'titulos');
+  mapped.submittedAt = rankingValue(row, 'submittedAt', 'submitted_at', 'created_at', 'fecha_envio');
+  mapped.saveCode = rankingValue(row, 'saveCode', 'save_code', 'codigo_partida');
+  mapped.version = rankingValue(row, 'version', 'game_version');
+  return mapped;
+}
+function rankingPayloadToApiBody(payload){
+  return {
+    manager_name: payload.managerName,
+    club_name: payload.club,
+    season: payload.season,
+    division: payload.division,
+    points: payload.managerScore,
+    titles: payload.titles,
+    initial_budget: payload.initialBudget,
+    final_budget: payload.finalBudget,
+    game_version: payload.version || APP_VERSION
+  };
+}
 function normalizeRankingRow(row){
+  row = rankingApiRowToGameRow(row);
   const normalized = {
     managerName: String(rankingValue(row, 'managerName', 'Nombre del manager', 'nombre_manager', 'manager') || '').trim(),
     club: String(rankingValue(row, 'club', 'Club usado', 'club_usado') || '').trim(),
@@ -185,6 +218,7 @@ function normalizeRankingRow(row){
     saveCode: String(rankingValue(row, 'saveCode', 'Código de partida', 'codigo_partida') || '').trim(),
     managerScore: Number(rankingValue(row, 'managerScore', 'Puntaje manager', 'puntaje_manager') || 0)
   };
+  if(!normalized.budgetVariation && normalized.finalBudget && normalized.initialBudget) normalized.budgetVariation = normalized.finalBudget - normalized.initialBudget;
   if(!normalized.managerScore) normalized.managerScore = calculateManagerScore(normalized);
   return normalized;
 }
@@ -320,7 +354,7 @@ function submitCurrentSeasonToRanking(){
   if(error){ showNotice(error); return; }
   const button = $('submitRankingSeason');
   if(button){ button.disabled = true; button.textContent = 'Enviando...'; }
-  submitRankingViaJsonp(endpoint, { action:'submit', token:RANKING_TOKEN || '', payload }, {
+  submitRankingToCloudflare(endpoint, payload, {
     onSuccess: () => {
       game.rankingUploads = game.rankingUploads || {};
       game.rankingUploads[payload.submissionKey] = { submittedAt:payload.submittedAt, gameDate:payload.gameDate, managerName, managerScore:payload.managerScore };
@@ -336,59 +370,22 @@ function submitCurrentSeasonToRanking(){
     }
   });
 }
-function postRankingViaHiddenForm(endpoint, body){
-  const iframeName = `fmRankingSubmit_${Date.now()}`;
-  const iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = endpoint;
-  form.target = iframeName;
-  form.style.display = 'none';
-  Object.entries({ action:body.action, token:body.token || '', payload:JSON.stringify(body.payload || {}) }).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = String(value ?? '');
-    form.appendChild(input);
-  });
-  document.body.appendChild(iframe);
-  document.body.appendChild(form);
-  try{ form.submit(); }
-  finally{
-    setTimeout(()=>{ form.remove(); iframe.remove(); }, 6000);
-  }
-}
-
-function submitRankingViaJsonp(endpoint, body, handlers={}){
-  const callbackName = `fmRankingSubmitCallback_${Date.now()}_${hashNumber(Math.random(), 100000)}`.replace(/\W/g,'_');
-  const script = document.createElement('script');
-  const sep = endpoint.includes('?') ? '&' : '?';
-  const payloadText = JSON.stringify(body.payload || {});
-  const timer = setTimeout(() => {
-    cleanup();
-    handlers.onError?.('No se pudo confirmar el envío del ranking. Revisá la publicación del ranking online.');
-  }, 15000);
-  function cleanup(){
-    clearTimeout(timer);
-    try{ delete window[callbackName]; }catch(_){ window[callbackName] = undefined; }
-    script.remove();
-  }
-  window[callbackName] = (response) => {
-    cleanup();
-    if(response && response.ok){
-      handlers.onSuccess?.(response);
-      return;
+function submitRankingToCloudflare(endpoint, payload, handlers={}){
+  fetch(`${endpoint}/ranking`, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify(rankingPayloadToApiBody(payload))
+  })
+  .then(async response => {
+    const data = await response.json().catch(() => ({}));
+    if(!response.ok || data.ok === false){
+      throw new Error(data.error || `Error HTTP ${response.status}`);
     }
-    handlers.onError?.(response?.error || 'El ranking rechazó el envío.');
-  };
-  script.onerror = () => {
-    cleanup();
-    handlers.onError?.('Error al conectar con el ranking online.');
-  };
-  script.src = `${endpoint}${sep}action=${encodeURIComponent(body.action || 'submit')}&token=${encodeURIComponent(body.token || '')}&payload=${encodeURIComponent(payloadText)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-  document.body.appendChild(script);
+    handlers.onSuccess?.(data);
+  })
+  .catch(error => {
+    handlers.onError?.(error?.message || 'Error al conectar con el ranking online.');
+  });
 }
 function loadRankingOnline(silent=false){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
@@ -397,39 +394,23 @@ function loadRankingOnline(silent=false){
   if(rankingLoading) return;
   rankingLoading = true;
   if(status) status.textContent = 'Cargando ranking online...';
-  const callbackName = `fmRankingCallback_${Date.now()}_${hashNumber(Math.random(), 100000)}`.replace(/\W/g,'_');
-  const script = document.createElement('script');
-  const sep = endpoint.includes('?') ? '&' : '?';
-  const timer = setTimeout(() => {
-    cleanup();
-    if(status) status.textContent = 'No se pudo leer el ranking online. Probá de nuevo más tarde.';
-    if(!silent) showNotice('No se pudo cargar el ranking online.');
-  }, 10000);
-  function cleanup(){
-    rankingLoading = false;
-    clearTimeout(timer);
-    try{ delete window[callbackName]; }catch(_){ window[callbackName] = undefined; }
-    script.remove();
-  }
-  window[callbackName] = (response) => {
-    if(!response || response.ok === false){
-      cleanup();
+  fetch(`${endpoint}/ranking?limit=${encodeURIComponent(RANKING_PAGE_SIZE)}`)
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if(!response.ok || data.ok === false){
+        throw new Error(data.error || `Error HTTP ${response.status}`);
+      }
+      const rows = Array.isArray(data.ranking) ? data.ranking : Array.isArray(data.rows) ? data.rows : [];
+      rankingRowsCache = rows.map(normalizeRankingRow).filter(row => row.managerName || row.club || row.saveCode);
+      const box = $('rankingTableBox');
+      if(box) box.innerHTML = rankingRowsTable(rankingRowsCache);
+      if(status) status.textContent = `${rankingRowsCache.length} registro(s) cargado(s).`;
+    })
+    .catch(error => {
       if(status) status.textContent = 'No se pudo leer el ranking online.';
-      if(!silent) showNotice(response?.error || 'No se pudo cargar el ranking online.');
-      return;
-    }
-    const rows = Array.isArray(response?.rows) ? response.rows : Array.isArray(response) ? response : [];
-    rankingRowsCache = rows.map(normalizeRankingRow).filter(row => row.managerName || row.club || row.saveCode);
-    const box = $('rankingTableBox');
-    if(box) box.innerHTML = rankingRowsTable(rankingRowsCache);
-    if(status) status.textContent = `${rankingRowsCache.length} registro(s) cargado(s).`;
-    cleanup();
-  };
-  script.onerror = () => {
-    cleanup();
-    if(status) status.textContent = 'Error al leer el ranking online.';
-    if(!silent) showNotice('Error al leer el ranking online.');
-  };
-  script.src = `${endpoint}${sep}action=list&limit=${encodeURIComponent(RANKING_PAGE_SIZE)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-  document.body.appendChild(script);
+      if(!silent) showNotice(error?.message || 'No se pudo cargar el ranking online.');
+    })
+    .finally(() => {
+      rankingLoading = false;
+    });
 }

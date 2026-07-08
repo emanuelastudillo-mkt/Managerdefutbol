@@ -1,3 +1,15 @@
+# V3.87 - Ranking Online Cloudflare Workers + D1
+
+- Se conectó el menú `Ranking Online` con la API publicada en Cloudflare Workers.
+- El envío de resultados ahora usa `POST /ranking` con JSON contra el Worker `rankingdemanagers`.
+- La lectura de tabla online ahora usa `GET /ranking?limit=...` y consume la respuesta de D1.
+- Se configuró la URL pública `https://rankingdemanagers.emanuelastudillo.workers.dev`.
+- Se adaptó la normalización de filas para aceptar campos de Cloudflare/D1 en formato snake_case.
+- Se mantiene el cálculo local de puntaje manager antes del envío.
+- Se actualizó el cache-busting de los scripts modificados a V3.87.
+
+## Versión anterior
+
 # V3.86 - Modo Fundador
 
 - Se agregó el botón `Modo Fundador` en la pantalla inicial.

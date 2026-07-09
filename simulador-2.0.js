@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.11 simulación viva con tablero táctico
+/* Motor de simulación V2.0 · V5.12 simulación viva compacta con fatiga y cambios bot
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -23,7 +23,7 @@
     label:`${index + 1}'`
   }));
   const LIVE_MANAGER_INSTRUCTIONS = [
-    { value:'none', label:'Sin instrucciones', desc:'No aplica bonus ni penalización en el próximo minuto.' },
+    { value:'none', label:'Sin instrucciones', desc:'Sin bonus ni penalización.' },
     { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
     { value:'huevos', label:'PONGAN HUEVO!!!', desc:'Aporta +5 de forma física efectiva durante el bloque.' },
     { value:'hold_result', label:'Cuidar el resultado', desc:'Bono de posesión y control.' },
@@ -271,25 +271,33 @@
     const boostedMorale = simClamp(squadMoraleAverage(clubId) + crowdBonus, 1, 99);
     const teamMorale = simClamp(0.94 + (boostedMorale / 99) * 0.12, 0.94, 1.06);
     const crowdConditionMultiplier = 1 + (crowdBonus / 99) * 0.08;
+    const conditionResolver = typeof options.conditionResolver === 'function' ? options.conditionResolver : (id => currentCondition(id));
+    const liveConditionAvg = simAvg(lineup.map(p => {
+      const resolved = Number(conditionResolver(p.id));
+      const fallback = Number(currentCondition(p.id));
+      return simClamp(Number.isFinite(resolved) ? resolved : (Number.isFinite(fallback) ? fallback : 75), 1, 100);
+    }));
+    const conditionPower = simClamp(0.82 + (liveConditionAvg / 100) * 0.22, 0.70, 1.04);
     const countBoost = {
       defense: counts.def * 1.25,
       midfield: counts.mid * 1.35,
       attack: counts.att * 1.55
     };
     const styleEffects = buildSectorStyleEffectsV2(tactic, assigned);
-    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale * crowdConditionMultiplier;
-    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale * crowdConditionMultiplier;
-    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale * crowdConditionMultiplier;
+    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
+    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
+    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
     const discipline = simAvg(lineup.map(p=>p.skills.disciplina));
     const stamina = simAvg(lineup.map(p=>matchSkill(p,'resistencia'))) * cohesion * teamMorale * crowdConditionMultiplier;
     const aggression = simAvg(lineup.map(p=>hiddenStats(p).aggression));
     const rep = seed.clubs.find(c=>c.id===clubId)?.reputation || 60;
     return {
       clubId, tactic, formation, lineup, assigned, counts, profile:profile,
-      defense, midfield, attack, keeper:keeperQuality * cohesion * teamMorale * crowdConditionMultiplier,
+      defense, midfield, attack, keeper:keeperQuality * cohesion * teamMorale * crowdConditionMultiplier * conditionPower,
       crowdBonus,
       defenseQuality, midfieldQuality, attackQuality, keeperQuality,
       styleEffects,
+      conditionAvg:liveConditionAvg,
       discipline, stamina, aggression, reputation:rep
     };
   }
@@ -683,6 +691,13 @@
     }else{
       next.bench = next.bench.map(id => Number(id || 0)).filter(Boolean);
     }
+    if(next.bench.length < 10 && typeof autoSelectBench === 'function'){
+      const exclude = starterIds.concat(next.bench);
+      autoSelectBench(clubId, exclude).map(p => Number(p.id)).forEach(id => {
+        if(id && !starterIds.includes(id) && !next.bench.includes(id) && next.bench.length < 10) next.bench.push(id);
+      });
+    }
+    next.bench = next.bench.filter(id => id && !starterIds.includes(id)).slice(0, 10);
     next.autoSubs = [];
     next.matchInstructions = normalizeMatchInstructions(next.matchInstructions);
     next.sectorStyles = normalizeSectorStylesV2(next.sectorStyles);
@@ -757,6 +772,90 @@
     liveSetTacticForClub(session, clubId, tactic);
     return true;
   }
+  function liveBaseCondition(playerId){
+    try{ return simClamp(Number(currentCondition(playerId) || 75), 1, 100); }
+    catch(_){ return 75; }
+  }
+  function liveHiddenValue(player, keys, fallback=50){
+    try{
+      const h = typeof hiddenStats === 'function' ? hiddenStats(player) : {};
+      for(const key of keys){
+        const value = Number(h?.[key]);
+        if(Number.isFinite(value)) return simClamp(value, 1, 99);
+      }
+    }catch(_){ /* noop */ }
+    return fallback;
+  }
+  function liveEffectiveCondition(session, playerId){
+    const id = Number(playerId || 0);
+    const delta = Number(session?.liveConditionDeltas?.[id] || 0) + Number(session?.instructionConditionDeltas?.[id] || 0);
+    return simClamp(Math.round(liveBaseCondition(id) + delta), 1, 100);
+  }
+  function liveFatiguePerMinute(player, instruction='none'){
+    if(!player) return 0.10;
+    const resistance = simClamp(Number(typeof matchSkill === 'function' ? matchSkill(player, 'resistencia') : effectiveSkill(player, 'resistencia')) || 55, 1, 99);
+    const genetics = liveHiddenValue(player, ['genetics','genetica','genética','genetic','growth','gen'], 50);
+    const pos = String(player.position || '').toUpperCase();
+    const posLoad = pos === 'POR' ? 0.55 : (['MC','MCD','MCO','MI','MD','LD','LI','ED','EI'].includes(pos) ? 1.08 : 1.00);
+    const instructionLoad = ({ all_attack:0.045, huevos:0.035, hold_result:-0.010, all_defense:0.000, push:0.025, lower:-0.018 })[instruction] || 0;
+    const base = 0.055 + (100 - resistance) * 0.0018 + (100 - genetics) * 0.0012;
+    return simClamp((base + instructionLoad) * posLoad, 0.035, 0.36);
+  }
+  function applyLiveMinuteFatigue(session, clubId, instruction='none'){
+    if(!session) return;
+    session.liveConditionDeltas = session.liveConditionDeltas || {};
+    const tactic = liveTacticForClub(session, clubId);
+    (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      const player = playerById(id);
+      if(!player) return;
+      session.liveConditionDeltas[id] = Number(session.liveConditionDeltas[id] || 0) - liveFatiguePerMinute(player, instruction);
+    });
+  }
+  function liveUsedSubCount(session, clubId){ return (liveEnsureSubBucket(session, clubId) || []).length; }
+  function maybeBotAutoSubstitution(session, clubId, minute){
+    const ownId = Number(game?.selectedClubId || 0);
+    if(!session || Number(clubId) === ownId || liveUsedSubCount(session, clubId) >= 3) return [];
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic?.starters?.length || !tactic?.bench?.length) return [];
+    const slots = liveFormationSlots(tactic.formation || '4-4-2');
+    const scoreFor = Number(clubId) === Number(session.match.homeId)
+      ? { own:session.homeGoals, rival:session.awayGoals }
+      : { own:session.awayGoals, rival:session.homeGoals };
+    const losing = scoreFor.own < scoreFor.rival;
+    const winning = scoreFor.own > scoreFor.rival;
+    const usedIn = new Set((session.usedIns[String(clubId)] || []).map(Number));
+    const candidates = tactic.starters.map((id, index) => {
+      const player = playerById(id);
+      const slot = slots[index] || player?.position || 'MC';
+      if(!player) return { id:0, index, need:999, slot, condition:0, fit:0 };
+      const condition = liveEffectiveCondition(session, id);
+      const fit = Math.round(Number(zoneFactor(player, slot) || 0.65) * 100);
+      let need = (100 - condition) * 1.05 + (100 - fit) * 0.42;
+      if(minute >= 58 && condition <= 64) need += 40;
+      if(minute >= 70 && condition <= 72) need += 24;
+      if(losing && minute >= 68 && ['DC','ED','EI','MCO'].includes(slot)) need += 14;
+      if(winning && minute >= 72 && ['DFC','LD','LI','MCD'].includes(slot)) need += 12;
+      return { id:Number(id), index, need, slot, condition, fit };
+    }).sort((a,b)=>b.need-a.need);
+    const chosenOut = candidates[0];
+    if(!chosenOut || chosenOut.need < 48) return [];
+    const bench = (tactic.bench || []).map(id => playerById(id)).filter(Boolean).filter(p => !usedIn.has(Number(p.id)) && (typeof canEnterMatch !== 'function' || canEnterMatch(p.id)));
+    if(!bench.length) return [];
+    let best = null;
+    let bestScore = -99999;
+    bench.forEach(player => {
+      const condition = liveEffectiveCondition(session, player.id);
+      let score = livePlayerSlotScore(player, chosenOut.slot) + condition * 0.38;
+      const pos = String(player.position || '').toUpperCase();
+      if(losing && minute >= 68 && ['DC','ED','EI','MCO'].includes(pos)) score += 18;
+      if(winning && minute >= 72 && ['DFC','LD','LI','MCD'].includes(pos)) score += 14;
+      if(condition < 48) score -= 55;
+      if(score > bestScore){ bestScore = score; best = player; }
+    });
+    if(!best) return [];
+    return applyLiveSubstitutions(session, clubId, [{ outId:chosenOut.id, inId:best.id, trigger:'bot', manual:false }], Math.max(1, minute));
+  }
+
   function livePlayedSet(session, clubId){
     return liveSideKey(session, clubId) === 'home' ? session.playedIdsHome : session.playedIdsAway;
   }
@@ -790,7 +889,7 @@
       session.usedIns[String(clubId)].push(inId);
       session.usedOuts[String(clubId)].push(outId);
       livePlayedSet(session, clubId).add(inId);
-      const event = { clubId, outId, inId, minute, trigger:'manual', manual:true };
+      const event = { clubId, outId, inId, minute, trigger:raw?.trigger || 'manual', manual:raw?.manual !== false };
       events.push(event);
       session.substitutions.push(event);
     }
@@ -882,8 +981,9 @@
     };
   }
   function livePowerPair(session){
-    const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0 });
-    const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0 });
+    const conditionResolver = id => liveEffectiveCondition(session, id);
+    const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0, conditionResolver });
+    const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0, conditionResolver });
     return { home, away };
   }
   function createLiveMatchSession(match){
@@ -920,6 +1020,7 @@
       usedOuts:{},
       yellowByPlayer:{},
       instructionConditionDeltas:{},
+      liveConditionDeltas:{},
       instructionLog:[],
       finished:false
     };
@@ -939,6 +1040,8 @@
     const ownId = Number(game?.selectedClubId || 0);
     const instruction = liveNormalizeInstruction(options.instruction);
     applyLiveSubstitutions(session, ownId, options.substitutions || [], Math.max(1, block.from));
+    maybeBotAutoSubstitution(session, session.match.homeId, Math.max(1, block.from));
+    maybeBotAutoSubstitution(session, session.match.awayId, Math.max(1, block.from));
     let { home, away } = livePowerPair(session);
     if(Number(session.match.homeId) === ownId) home = applyLiveInstructionToPower(home, instruction);
     if(Number(session.match.awayId) === ownId) away = applyLiveInstructionToPower(away, instruction);
@@ -975,6 +1078,10 @@
       session.injuries.push(injury);
       removePlayerFromLiveTactic(session, injury.clubId, injury.playerId);
     });
+    const homeAppliedInstruction = Number(session.match.homeId) === ownId ? instruction : homeInstruction;
+    const awayAppliedInstruction = Number(session.match.awayId) === ownId ? instruction : awayInstruction;
+    applyLiveMinuteFatigue(session, session.match.homeId, homeAppliedInstruction);
+    applyLiveMinuteFatigue(session, session.match.awayId, awayAppliedInstruction);
     addLiveInstructionCondition(session, ownId, instruction);
     session.instructionLog.push({ minute:block.from, to:block.to, instruction, label:liveInstructionLabel(instruction) });
     session.currentMinute = block.to;
@@ -988,12 +1095,12 @@
     return (tactic?.starters || []).map((id, index) => {
       const player = playerById(id);
       const role = slots[index] || player?.position || '—';
-      return player ? { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) } : null;
+      return player ? { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id) } : null;
     }).filter(Boolean);
   }
   function livePublicBench(session, clubId){
     const tactic = liveTacticForClub(session, clubId);
-    return (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) }));
+    return (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, role:player.position, overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:100 }));
   }
   function liveStatsSnapshot(session){
     const home = liveCurrentStats(session.homeTotals, session.blockIndex);
@@ -1018,12 +1125,16 @@
       instructionLog:session.instructionLog.slice(),
       homeLineup:livePublicLineup(session, session.match.homeId),
       awayLineup:livePublicLineup(session, session.match.awayId),
+      homeBench:livePublicBench(session, session.match.homeId),
+      awayBench:livePublicBench(session, session.match.awayId),
       ownBench:livePublicBench(session, game?.selectedClubId || 0),
       homeFormation:session.homeTactic?.formation || '4-4-2',
       awayFormation:session.awayTactic?.formation || '4-4-2',
       ownFormation:liveTacticForClub(session, game?.selectedClubId || 0)?.formation || '4-4-2',
       availableFormations:liveFormationKeys(),
       usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
+      usedSubsHome:(session.usedSubs[String(session.match.homeId)] || []).length,
+      usedSubsAway:(session.usedSubs[String(session.match.awayId)] || []).length,
       maxSubs:3,
       matchStats:liveStatsSnapshot(session),
       matchContext:session.matchContext,
@@ -1052,7 +1163,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-tactico-v5.11',
+      engine:'simulador-vivo-tactico-v5.12',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,

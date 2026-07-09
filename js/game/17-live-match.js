@@ -1,4 +1,4 @@
-/* V5.11 · Simulación viva minuto a minuto con tablero táctico, cambios por clic e instrucciones activables. */
+/* V5.12 · Simulación viva minuto a minuto con UI horizontal compacta, estadísticas comparativas y listas simétricas. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -14,9 +14,7 @@
     return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value ?? '').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
   }
   function fmtNumber(value){ return new Intl.NumberFormat('es-AR').format(Number(value || 0)); }
-  function lastName(name){
-    return typeof playerLastName === 'function' ? playerLastName(name) : String(name || 'Jugador').trim().split(/\s+/).slice(-1)[0];
-  }
+  function lastName(name){ return typeof playerLastName === 'function' ? playerLastName(name) : String(name || 'Jugador').trim().split(/\s+/).slice(-1)[0]; }
   function liveClubName(id){ return typeof clubName === 'function' ? clubName(id) : `Club ${id}`; }
   function liveBadge(id){ return typeof clubBadge === 'function' ? clubBadge(id) : ''; }
   function ownClubId(){ return Number(game?.selectedClubId || 0); }
@@ -25,21 +23,19 @@
     if(!liveState?.match || !own) return 'home';
     return Number(liveState.match.homeId) === own ? 'home' : 'away';
   }
-  function currentOwnLineup(){ return ownSide() === 'home' ? (liveState?.homeLineup || []) : (liveState?.awayLineup || []); }
-  function rivalLineup(){ return ownSide() === 'home' ? (liveState?.awayLineup || []) : (liveState?.homeLineup || []); }
-  function rivalClubId(){ return ownSide() === 'home' ? liveState?.match?.awayId : liveState?.match?.homeId; }
+  function sideClubId(side){ return side === 'home' ? liveState?.match?.homeId : liveState?.match?.awayId; }
+  function sideLineup(side){ return side === 'home' ? (liveState?.homeLineup || []) : (liveState?.awayLineup || []); }
+  function sideBench(side){ return side === 'home' ? (liveState?.homeBench || []) : (liveState?.awayBench || []); }
+  function currentOwnLineup(){ return sideLineup(ownSide()); }
   function ownFormation(){ return liveState?.ownFormation || (ownSide() === 'home' ? liveState?.homeFormation : liveState?.awayFormation) || '4-4-2'; }
+  function sideFormation(side){ return side === 'home' ? (liveState?.homeFormation || '4-4-2') : (liveState?.awayFormation || '4-4-2'); }
   function eventPlayerLabel(id, full=false){
     const player = typeof playerById === 'function' ? playerById(id) : null;
     const name = player?.name || player?.nombre || 'Jugador';
     return full ? name : lastName(name);
   }
-  function liveShowNotice(message, error=false){
-    if(typeof showNotice === 'function') showNotice(message, error);
-  }
-  function liveConfirm(message){
-    return typeof window.confirm === 'function' ? window.confirm(message) : true;
-  }
+  function liveShowNotice(message, error=false){ if(typeof showNotice === 'function') showNotice(message, error); }
+  function liveConfirm(message){ return typeof window.confirm === 'function' ? window.confirm(message) : true; }
   function liveEvents(){
     const events = [];
     (liveState?.goals || []).forEach(g => {
@@ -59,6 +55,18 @@
   }
   function eventOrder(type){ return ({ goal:1, red:2, injury:3, yellow:4, save:5, error:6, sub:7 })[type] || 9; }
   function eventIcon(type){ return ({ goal:'⚽', yellow:'🟨', red:'🟥', injury:'✚', sub:'⇄', save:'🧤', error:'⚠️' })[type] || '•'; }
+  function narrationFallback(event, player, club, rival){
+    const p = player?.name || 'el jugador';
+    if(event.type === 'goal') return `¡Gol de ${p}! ${club} golpea en el minuto ${event.minute}.`;
+    if(event.type === 'save') return `Tapada clave para ${club}. El arquero sostiene el resultado.`;
+    if(event.type === 'error') return `Error de ${p}. ${club} queda comprometido ante ${rival}.`;
+    if(event.type === 'injury') return `Lesión de ${p}. Malas noticias para ${club}.`;
+    if(event.type === 'sub') return `${club} mueve el banco y busca ajustar el partido.`;
+    if(event.type === 'red') return `Expulsión para ${p}. El partido cambia de forma inmediata.`;
+    if(event.type === 'yellow') return `Amonestado ${p}. El margen de error empieza a achicarse.`;
+    return 'El partido sigue vivo.';
+  }
+  function applyTemplateSafe(text, data){ return String(text || '').replace(/\{([a-zA-Z_]+)\}/g, (_, key) => String(data?.[key] ?? '')); }
   function liveNarration(events){
     const minute = Number(liveState?.minute || 0);
     const fresh = events.filter(ev => Number(ev.minute || 0) === minute).slice(-1)[0];
@@ -88,68 +96,84 @@
     const text = leader === 'ninguno' ? 'El partido está parejo y todavía no aparece una ventaja clara.' : `${leader} empieza a inclinar la cancha.`;
     return { tone:'ambient', title:`Minuto ${minute}'`, text, sub:minute < 45 ? 'Primer tiempo en desarrollo.' : 'Segundo tiempo en desarrollo.' };
   }
-  function narrationFallback(event, player, club, rival){
-    const p = player?.name || 'el jugador';
-    if(event.type === 'goal') return `¡Gol de ${p}! ${club} golpea en el minuto ${event.minute}.`;
-    if(event.type === 'save') return `Tapada clave para ${club}. El arquero sostiene el resultado.`;
-    if(event.type === 'error') return `Error de ${p}. ${club} queda comprometido ante ${rival}.`;
-    if(event.type === 'injury') return `Lesión de ${p}. Malas noticias para ${club}.`;
-    if(event.type === 'sub') return `${club} mueve el banco y busca ajustar el partido.`;
-    if(event.type === 'red') return `Expulsión para ${p}. El partido cambia de forma inmediata.`;
-    if(event.type === 'yellow') return `Amonestado ${p}. El margen de error empieza a achicarse.`;
-    return 'El partido sigue vivo.';
+  function meterClass(value){ const n = Number(value || 0); return n >= 76 ? 'ok' : n >= 55 ? 'warn' : 'bad'; }
+  function fitClass(value){ const n = Number(value || 0); return n >= 90 ? 'ok' : n >= 74 ? 'warn' : 'bad'; }
+  function remainingSubstitutions(){ return Math.max(0, Number(liveState?.maxSubs || 3) - Number(liveState?.usedSubs || 0) - livePendingSubstitutions.length); }
+  function pendingOutIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.outId))); }
+  function pendingInIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.inId))); }
+  function availabilityTag(player, inField, isOwn){
+    if(!isOwn) return '';
+    if(inField && pendingOutIds().has(Number(player.id))) return '<span class="live-row-tag warn">SALE</span>';
+    if(!inField && pendingInIds().has(Number(player.id))) return '<span class="live-row-tag ok">ENTRA</span>';
+    return '';
   }
-  function applyTemplateSafe(text, data){ return String(text || '').replace(/\{([a-zA-Z_]+)\}/g, (_, key) => String(data?.[key] ?? '')); }
-  function meterClass(value){
-    const n = Number(value || 0);
-    return n >= 76 ? 'ok' : n >= 55 ? 'warn' : 'bad';
-  }
-  function fitClass(value){
-    const n = Number(value || 0);
-    return n >= 90 ? 'ok' : n >= 74 ? 'warn' : 'bad';
-  }
-  function playerMiniRow(player, isOwn=false){
-    const condition = Math.round(Number(player.condition || 0));
+  function playerListRow(player, side, inField=true, isOwn=false){
+    const id = Number(player.id || 0);
+    const selected = isOwn && (inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id);
+    const disabled = isOwn && (inField ? pendingOutIds().has(id) : pendingInIds().has(id));
+    const cond = Math.round(Number(player.condition || 0));
     const morale = Math.round(Number(player.morale || 0));
-    const fit = Math.round(Number(player.fit || 100));
-    return `<div class="live-player-row ${isOwn ? 'own' : ''}">
-      <span class="live-player-name">${ehtml(lastName(player.name))}</span>
-      <span class="live-player-role">${ehtml(player.role || player.position || '—')}</span>
-      <strong>${Math.round(Number(player.overall || 0))}</strong>
-      <span class="live-meter ${meterClass(condition)}">${condition}</span>
-      <span class="live-meter ${meterClass(morale)}">${morale}</span>
-      <span class="live-meter ${fitClass(fit)}">${fit}</span>
-    </div>`;
+    const fit = Math.round(Number(player.fit || (inField ? 100 : 0)));
+    const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${isOwn ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
+    const attr = isOwn ? (inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`) : '';
+    const tag = availabilityTag(player, inField, isOwn);
+    const body = `<span class="num">${inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'}</span><strong>${ehtml(lastName(player.name))}</strong><span>${ehtml(player.role || player.position || '—')}</span><b>${Math.round(Number(player.overall || 0))}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>${tag}`;
+    return isOwn ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
   }
-  function lineupCard(title, clubId, list, isOwn=false){
-    return `<div class="card inner live-lineup-card">
-      <div class="live-lineup-title"><span>${liveBadge(clubId)}</span><strong>${ehtml(title)}</strong></div>
-      <div class="live-lineup-head"><span>Apellido</span><span>Rol</span><span>MED</span><span>Fís.</span><span>Moral</span><span>Rol%</span></div>
-      <div class="live-lineup-list">${(list || []).map(p => playerMiniRow(p, isOwn)).join('') || '<p class="muted small">Sin jugadores en cancha.</p>'}</div>
-    </div>`;
+  function formationSelect(){
+    const current = ownFormation();
+    const formations = Array.isArray(liveState?.availableFormations) && liveState.availableFormations.length ? liveState.availableFormations : ['4-4-2','4-3-3','4-2-3-1','3-5-2','5-3-2','4-1-4-1','3-4-3','4-5-1','4-3-1-2','5-4-1'];
+    return `<select id="liveFormationSelect" ${liveState?.finished ? 'disabled' : ''}>${formations.map(f => `<option value="${ehtml(f)}" ${f === current ? 'selected' : ''}>${ehtml(f)}</option>`).join('')}</select>`;
   }
-  function statMini(label, value, suffix=''){
-    return `<div class="live-stat-mini"><span>${ehtml(label)}</span><strong>${ehtml(value)}${ehtml(suffix)}</strong></div>`;
-  }
-  function liveStatsCard(title, clubId, stats={}, side='home'){
-    return `<div class="card inner live-stats-card ${side}">
-      <div class="live-stats-title"><span>${liveBadge(clubId)}</span><strong>${ehtml(title)}</strong></div>
-      <div class="live-stat-grid">
-        ${statMini('Ataques', stats.attacks ?? 0)}
-        ${statMini('Ocasiones', stats.chances ?? 0)}
-        ${statMini('xG', Number(stats.xg || 0).toFixed(2))}
-        ${statMini('Posesión', stats.possession ?? 50, '%')}
-        ${statMini('Faltas', stats.fouls ?? 0)}
-        ${statMini('Tapadas', stats.keySaves ?? 0)}
-        ${statMini('Errores', `${stats.errors ?? 0}/${stats.goalErrors ?? 0}`)}
-        ${statMini('Pases', stats.passScore || '—')}
+  function liveTeamPanel(side){
+    const clubId = sideClubId(side);
+    const isOwn = Number(clubId) === ownClubId();
+    const lineup = sideLineup(side);
+    const bench = sideBench(side);
+    const used = side === 'home' ? Number(liveState?.usedSubsHome || 0) : Number(liveState?.usedSubsAway || 0);
+    const selectedHint = isOwn
+      ? (liveSelectedStarterId ? `Sale ${eventPlayerLabel(liveSelectedStarterId)} · elegí suplente o titular para reacomodar.` : (liveSelectedBenchId ? `Entra ${eventPlayerLabel(liveSelectedBenchId)} · elegí titular que sale.` : 'Titular + suplente = cambio. Titular + titular = reacomodar.'))
+      : `${used} cambios usados · el bot decide cambios automáticos.`;
+    return `<section class="card inner live-team-panel ${isOwn ? 'own' : 'bot'} ${side}">
+      <div class="live-team-head">
+        <div><p class="label">${side === 'home' ? 'Local' : 'Visitante'} ${isOwn ? '· tu equipo' : '· bot'}</p><h3>${liveBadge(clubId)} ${ehtml(liveClubName(clubId))}</h3></div>
+        <div class="live-formation-control"><span>Formación</span>${isOwn ? formationSelect() : `<strong>${ehtml(sideFormation(side))}</strong>`}</div>
       </div>
-    </div>`;
+      <p class="muted small live-selected-hint">${ehtml(selectedHint)}</p>
+      <div class="live-list-head"><span>N°</span><span>Jugador</span><span>Rol</span><span>MED</span><span>Fís</span><span>Mor</span><span>Rol%</span></div>
+      <div class="live-team-list starters">${lineup.map(p => playerListRow(p, side, true, isOwn)).join('') || '<p class="muted small">Sin titulares.</p>'}</div>
+      <div class="live-bench-title compact"><strong>Banco</strong><span>${bench.length} suplentes · ${used}/3 cambios</span></div>
+      <div class="live-team-list bench">${bench.map(p => playerListRow(p, side, false, isOwn)).join('') || '<p class="muted small">Sin suplentes disponibles.</p>'}</div>
+      ${isOwn ? `<div class="live-pending-box"><div class="live-bench-title compact"><strong>Pendientes</strong><span>${remainingSubstitutions()} cambios restantes</span></div>${pendingSubstitutionList()}</div>` : ''}
+    </section>`;
   }
-  function possessionStrip(){
-    const h = Math.max(0, Math.min(100, Number(liveState?.matchStats?.home?.possession || 50)));
-    const a = 100 - h;
-    return `<div class="live-possession-strip" style="--home-pos:${h}%"><span>${liveBadge(liveState.match.homeId)} ${h}%</span><span>${a}% ${liveBadge(liveState.match.awayId)}</span></div>`;
+  function compareValue(value, type){
+    if(type === 'xg') return Number(value || 0).toFixed(2).replace('.', ',');
+    if(type === 'pct') return `${Math.round(Number(value || 0))}%`;
+    return String(Math.round(Number(value || 0)));
+  }
+  function compareStatRow(label, left, right, type='num'){
+    const l = Number(left || 0);
+    const r = Number(right || 0);
+    const total = Math.max(1, l + r);
+    const lp = type === 'pct' ? simClampUi(l, 0, 100) : Math.round((l / total) * 100);
+    const rp = type === 'pct' ? simClampUi(r, 0, 100) : Math.round((r / total) * 100);
+    return `<div class="live-compare-row" style="--left:${lp}%;--right:${rp}%"><p>${ehtml(label)}</p><div class="live-compare-values"><strong>${ehtml(compareValue(left, type))}</strong><span class="bar left"><i></i></span><span class="bar right"><i></i></span><strong>${ehtml(compareValue(right, type))}</strong></div></div>`;
+  }
+  function simClampUi(value,min,max){ return Math.max(min, Math.min(max, Number(value || 0))); }
+  function compareStatsCard(){
+    const match = liveState.match || {};
+    const h = liveState.matchStats?.home || {};
+    const a = liveState.matchStats?.away || {};
+    const awayPoss = Number(a.possession ?? (100 - Number(h.possession || 50)));
+    return `<div class="card inner live-compare-card">
+      <div class="live-compare-top"><span>${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</span><b>Estadísticas del partido</b><span>${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</span></div>
+      ${compareStatRow('Disparos', h.attacks || 0, a.attacks || 0)}
+      ${compareStatRow('Tiros a puerta', h.chances || 0, a.chances || 0)}
+      ${compareStatRow('xG', h.xg || 0, a.xg || 0, 'xg')}
+      ${compareStatRow('Faltas', h.fouls || 0, a.fouls || 0)}
+      ${compareStatRow('Posesión', h.possession || 50, awayPoss, 'pct')}
+    </div>`;
   }
   function minuteRail(events){
     const eventMinutes = new Map();
@@ -162,73 +186,16 @@
       return `<span class="${cls} ${type ? `has-event ${ehtml(type)}` : ''}" title="${minute}'${type ? ` · ${type}` : ''}"></span>`;
     }).join('')}</div>`;
   }
-  function remainingSubstitutions(){
-    return Math.max(0, Number(liveState?.maxSubs || 3) - Number(liveState?.usedSubs || 0) - livePendingSubstitutions.length);
-  }
-  function pendingOutIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.outId))); }
-  function pendingInIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.inId))); }
-  function availabilityBadge(player, inField){
-    if(inField && pendingOutIds().has(Number(player.id))) return '<span class="live-card-tag warn">SALE</span>';
-    if(!inField && pendingInIds().has(Number(player.id))) return '<span class="live-card-tag ok">ENTRA</span>';
-    return '';
-  }
-  function playerTacticalCard(player, inField=true){
-    const id = Number(player.id || 0);
-    const selected = inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id;
-    const disabled = inField ? pendingOutIds().has(id) : pendingInIds().has(id);
-    const cond = Math.round(Number(player.condition || 0));
-    const morale = Math.round(Number(player.morale || 0));
-    const fit = Math.round(Number(player.fit || (inField ? 100 : 0)));
-    const attr = inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`;
-    return `<button type="button" class="live-tactical-player ${inField ? 'field' : 'bench'} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}" ${attr} ${disabled ? 'disabled' : ''}>
-      <span class="live-tactical-name">${ehtml(lastName(player.name))}</span>
-      <span class="live-tactical-meta"><b>${Math.round(Number(player.overall || 0))}</b> ${ehtml(player.role || player.position || '—')}</span>
-      <span class="live-tactical-bars"><i class="${meterClass(cond)}">F${cond}</i><i class="${meterClass(morale)}">M${morale}</i>${inField ? `<i class="${fitClass(fit)}">R${fit}</i>` : ''}</span>
-      ${availabilityBadge(player, inField)}
-    </button>`;
-  }
-  function formationSelect(){
-    const current = ownFormation();
-    const formations = Array.isArray(liveState?.availableFormations) && liveState.availableFormations.length ? liveState.availableFormations : ['4-4-2','4-3-3','4-2-3-1','3-5-2','5-3-2','4-1-4-1','3-4-3','4-5-1','4-3-1-2','5-4-1'];
-    return `<select id="liveFormationSelect" ${liveState?.finished ? 'disabled' : ''}>${formations.map(f => `<option value="${ehtml(f)}" ${f === current ? 'selected' : ''}>${ehtml(f)}</option>`).join('')}</select>`;
-  }
   function instructionButtons(){
     const options = Array.isArray(window.LIVE_MANAGER_INSTRUCTIONS) ? window.LIVE_MANAGER_INSTRUCTIONS : [];
-    return `<div class="live-instruction-buttons">${options.map(opt => `<button type="button" data-live-instruction="${ehtml(opt.value)}" class="${opt.value === liveSelectedInstruction ? 'active' : ''}" title="${ehtml(opt.desc || '')}"><strong>${ehtml(opt.label)}</strong><span>${ehtml(opt.desc || '')}</span></button>`).join('')}</div>`;
+    return `<div class="live-instruction-buttons compact">${options.map(opt => `<button type="button" data-live-instruction="${ehtml(opt.value)}" class="${opt.value === liveSelectedInstruction ? 'active' : ''}"><strong>${ehtml(opt.label)}</strong></button>`).join('')}</div>`;
   }
   function pendingSubstitutionList(){
     if(!livePendingSubstitutions.length) return '<p class="muted small">Sin cambios pendientes.</p>';
     return `<div class="live-pending-subs">${livePendingSubstitutions.map((s, index) => `<div><span>Próx. minuto</span><strong>Entra ${ehtml(eventPlayerLabel(s.inId))} · Sale ${ehtml(eventPlayerLabel(s.outId))}</strong><button type="button" data-live-remove-pending-sub="${index}" class="ghost mini">Quitar</button></div>`).join('')}</div>`;
   }
-  function ownTacticalBoard(){
-    const own = ownClubId();
-    const lineup = currentOwnLineup();
-    const bench = liveState?.ownBench || [];
-    const selectedHint = liveSelectedStarterId
-      ? `Seleccionado sale: ${eventPlayerLabel(liveSelectedStarterId)}. Elegí un suplente para cambiar o un titular para reacomodar.`
-      : (liveSelectedBenchId ? `Seleccionado entra: ${eventPlayerLabel(liveSelectedBenchId)}. Elegí el titular que sale.` : 'Click titular + suplente para cambiar. Click titular + titular para reacomodar roles.');
-    return `<section class="card inner live-tactical-board">
-      <div class="live-tactical-top">
-        <div><p class="label">Tu equipo · ${lineup.length + bench.length} disponibles</p><h3>${liveBadge(own)} ${ehtml(liveClubName(own))}</h3></div>
-        <div class="live-formation-control"><span>Formación</span>${formationSelect()}</div>
-      </div>
-      <p class="muted small live-selected-hint">${ehtml(selectedHint)}</p>
-      <div class="live-pitch-board">
-        ${(lineup || []).map(p => playerTacticalCard(p, true)).join('')}
-      </div>
-      <div class="live-bench-board">
-        <div class="live-bench-title"><strong>Banco</strong><span>${bench.length} suplentes</span></div>
-        <div class="live-bench-list">${bench.map(p => playerTacticalCard(p, false)).join('') || '<p class="muted small">Sin suplentes disponibles.</p>'}</div>
-      </div>
-      <div class="live-pending-box">
-        <div class="live-bench-title"><strong>Cambios</strong><span>${Number(liveState.usedSubs || 0)} usados · ${remainingSubstitutions()} restantes</span></div>
-        ${pendingSubstitutionList()}
-      </div>
-    </section>`;
-  }
   function liveManagerPanel(){
-    return `<div class="card inner live-manager-panel">
-      <div class="live-card-head"><h3>Instrucciones</h3><span class="pill">${livePaused ? 'Pausado' : 'Auto'}</span></div>
+    return `<div class="card inner live-bottom-controls">
       ${instructionButtons()}
       <div class="live-action-row">
         <button id="livePauseBtn" class="ghost">${livePaused ? 'Auto' : 'Pausar'}</button>
@@ -248,20 +215,16 @@
     const nextBlock = liveState.nextBlock;
     const events = liveEvents();
     const narration = liveNarration(events);
-    const recentEvents = events.slice().reverse().slice(0, 14);
-    const hStats = liveState.matchStats?.home || {};
-    const aStats = liveState.matchStats?.away || {};
-    const html = `<div class="live-match-shell live-v511">
+    const recentEvents = events.slice().reverse().slice(0, 11);
+    const html = `<div class="live-match-shell live-v512">
       <div class="match-modal-head live-match-head">
         <div class="live-head-left"><p class="label">${match.friendly ? 'Simulación viva · Amistoso' : 'Simulación viva · Fecha'} ${ehtml(match.matchday || '—')} · ${ehtml(match.date || '')}</p><h2>${liveBadge(match.homeId)} ${ehtml(homeTitle)} <span class="live-score">${Number(liveState.homeGoals || 0)} - ${Number(liveState.awayGoals || 0)}</span> ${ehtml(awayTitle)} ${liveBadge(match.awayId)}</h2></div>
         <div class="live-head-right"><strong>${currentMinute}'</strong><span>Fase ${Math.max(1,currentMinute)} / ${totalPhases}</span><small>${nextBlock ? `Siguiente: ${nextBlock.label}` : 'Finalizado'}</small></div>
       </div>
       <div class="live-progress"><span style="width:${progress}%"></span></div>
       ${minuteRail(events)}
-      <div class="live-v511-grid">
-        <section class="live-left-stack">
-          ${ownTacticalBoard()}
-        </section>
+      <div class="live-v512-grid">
+        ${liveTeamPanel('home')}
         <section class="live-center-stack">
           <div class="card inner live-commentary-card ${ehtml(narration.tone || 'ambient')}">
             <p class="label">Relato en vivo</p>
@@ -269,11 +232,7 @@
             <div class="live-commentary-text">${ehtml(narration.text)}</div>
             <div class="live-commentary-sub">${ehtml(narration.sub || '')}</div>
           </div>
-          ${possessionStrip()}
-          <div class="live-stats-pair">
-            ${liveStatsCard(homeTitle, match.homeId, hStats, 'home')}
-            ${liveStatsCard(awayTitle, match.awayId, aStats, 'away')}
-          </div>
+          ${compareStatsCard()}
           <div class="card inner live-events-card">
             <div class="live-card-head"><h3>Eventos</h3><span class="muted small">últimos arriba</span></div>
             <div class="live-events-list">${recentEvents.length ? recentEvents.map(ev => `<div class="live-event ${ehtml(ev.type)}"><span>${ev.minute}'</span><i>${eventIcon(ev.type)}</i>${liveBadge(ev.clubId)}<strong>${ehtml(ev.text)}</strong></div>`).join('') : '<p class="muted small">Todavía no hay eventos relevantes.</p>'}</div>
@@ -285,23 +244,17 @@
             <div><span>Recaudación</span><strong class="ok">${typeof formatMoney === 'function' ? formatMoney(liveState.matchContext?.ticketRevenue || 0) : (liveState.matchContext?.ticketRevenue || 0)}</strong></div>
           </div>
         </section>
-        <section class="live-right-stack">
-          ${liveManagerPanel()}
-          ${lineupCard(liveClubName(rivalClubId()), rivalClubId(), rivalLineup(), false)}
-        </section>
+        ${liveTeamPanel('away')}
       </div>
+      ${liveManagerPanel()}
     </div>`;
     const root = document.querySelector('#liveMatchRoot');
     if(root) root.innerHTML = html;
     bindLiveControls();
   }
-  function resetLiveSelections(){
-    liveSelectedStarterId = 0;
-    liveSelectedBenchId = 0;
-  }
+  function resetLiveSelections(){ liveSelectedStarterId = 0; liveSelectedBenchId = 0; }
   function queueSubstitution(outId, inId){
-    outId = Number(outId || 0);
-    inId = Number(inId || 0);
+    outId = Number(outId || 0); inId = Number(inId || 0);
     if(!outId || !inId || outId === inId) return;
     if(remainingSubstitutions() <= 0){ liveShowNotice('Ya no quedan cambios disponibles.', true); return; }
     if(pendingOutIds().has(outId) || pendingInIds().has(inId)){ liveShowNotice('Ese cambio ya está pendiente.', true); return; }
@@ -313,13 +266,11 @@
     renderLiveMatch();
   }
   function swapStarters(aId, bId){
-    aId = Number(aId || 0);
-    bId = Number(bId || 0);
+    aId = Number(aId || 0); bId = Number(bId || 0);
     if(!aId || !bId || aId === bId) return;
     const lineup = currentOwnLineup();
     const order = lineup.map(p => Number(p.id));
-    const a = order.indexOf(aId);
-    const b = order.indexOf(bId);
+    const a = order.indexOf(aId); const b = order.indexOf(bId);
     if(a < 0 || b < 0) return;
     const msg = `Reacomodar roles\n\n${eventPlayerLabel(aId, true)} cambia su rol con ${eventPlayerLabel(bId, true)}.`;
     if(!liveConfirm(msg)) return;
@@ -335,34 +286,22 @@
     if(!liveSession || liveState?.finished) return;
     const substitutions = livePendingSubstitutions.slice();
     const result = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
-    if(result?.played){
-      liveState = window.Simulator20.livePublicState(liveSession);
-      liveState.finished = true;
-    }else{
-      liveState = result || window.Simulator20.livePublicState(liveSession);
-    }
+    if(result?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; }
+    else{ liveState = result || window.Simulator20.livePublicState(liveSession); }
     if(substitutions.length) livePendingSubstitutions = [];
     resetLiveSelections();
     renderLiveMatch();
   }
   function bindLiveControls(){
-    document.querySelectorAll('[data-live-instruction]').forEach(btn => btn.addEventListener('click', () => {
-      liveSelectedInstruction = btn.getAttribute('data-live-instruction') || 'none';
-      renderLiveMatch();
-    }));
+    document.querySelectorAll('[data-live-instruction]').forEach(btn => btn.addEventListener('click', () => { liveSelectedInstruction = btn.getAttribute('data-live-instruction') || 'none'; renderLiveMatch(); }));
     document.querySelector('#liveFormationSelect')?.addEventListener('change', (ev) => {
       const value = ev.target.value;
       if(!value || value === ownFormation()) return;
-      if(!liveConfirm(`Cambiar formación a ${value}.\n\nEl cuerpo técnico reacomodará automáticamente a los titulares para reducir penalizaciones por rol.`)){
-        ev.target.value = ownFormation();
-        return;
-      }
+      if(!liveConfirm(`Cambiar formación a ${value}.\n\nEl cuerpo técnico reacomodará automáticamente a los titulares para reducir penalizaciones por rol.`)){ ev.target.value = ownFormation(); return; }
       const ok = window.Simulator20?.applyLiveFormation?.(liveSession, ownClubId(), value);
       if(!ok){ liveShowNotice('No se pudo cambiar la formación.', true); return; }
       liveState = window.Simulator20.livePublicState(liveSession);
-      resetLiveSelections();
-      liveShowNotice(`Formación cambiada a ${value}.`, false);
-      renderLiveMatch();
+      resetLiveSelections(); liveShowNotice(`Formación cambiada a ${value}.`, false); renderLiveMatch();
     });
     document.querySelectorAll('[data-live-starter-id]').forEach(btn => btn.addEventListener('click', () => {
       const id = Number(btn.getAttribute('data-live-starter-id') || 0);
@@ -370,8 +309,7 @@
       if(liveSelectedBenchId){ queueSubstitution(id, liveSelectedBenchId); return; }
       if(liveSelectedStarterId && liveSelectedStarterId !== id){ swapStarters(liveSelectedStarterId, id); return; }
       liveSelectedStarterId = liveSelectedStarterId === id ? 0 : id;
-      liveSelectedBenchId = 0;
-      renderLiveMatch();
+      liveSelectedBenchId = 0; renderLiveMatch();
     }));
     document.querySelectorAll('[data-live-bench-id]').forEach(btn => btn.addEventListener('click', () => {
       const id = Number(btn.getAttribute('data-live-bench-id') || 0);
@@ -379,57 +317,34 @@
       if(remainingSubstitutions() <= 0){ liveShowNotice('Ya no quedan cambios disponibles.', true); return; }
       if(liveSelectedStarterId){ queueSubstitution(liveSelectedStarterId, id); return; }
       liveSelectedBenchId = liveSelectedBenchId === id ? 0 : id;
-      liveSelectedStarterId = 0;
-      renderLiveMatch();
+      liveSelectedStarterId = 0; renderLiveMatch();
     }));
     document.querySelectorAll('[data-live-remove-pending-sub]').forEach(btn => btn.addEventListener('click', () => {
       const index = Number(btn.getAttribute('data-live-remove-pending-sub') || -1);
       if(index >= 0) livePendingSubstitutions.splice(index, 1);
-      resetLiveSelections();
-      renderLiveMatch();
+      resetLiveSelections(); renderLiveMatch();
     }));
-    document.querySelector('#liveNextBlockBtn')?.addEventListener('click', () => {
-      livePaused = true;
-      clearTimeout(liveAutoTimer);
-      simulateNextBlockFromUi();
-    });
-    document.querySelector('#livePauseBtn')?.addEventListener('click', () => {
-      livePaused = !livePaused;
-      if(!livePaused) runAutoMode();
-      renderLiveMatch();
-    });
+    document.querySelector('#liveNextBlockBtn')?.addEventListener('click', () => { livePaused = true; clearTimeout(liveAutoTimer); simulateNextBlockFromUi(); });
+    document.querySelector('#livePauseBtn')?.addEventListener('click', () => { livePaused = !livePaused; if(!livePaused) runAutoMode(); renderLiveMatch(); });
     document.querySelector('#liveFinishBtn')?.addEventListener('click', () => {
       if(!liveSession?.result) return;
       window.__liveMatchCloseLocked = false;
       const result = liveSession.result;
       closeModal();
       if(typeof liveOptions?.onComplete === 'function') liveOptions.onComplete(result);
-      liveSession = null;
-      liveOptions = null;
-      liveState = null;
-      livePaused = true;
-      liveSelectedInstruction = 'none';
-      livePendingSubstitutions = [];
-      resetLiveSelections();
-      clearTimeout(liveAutoTimer);
+      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = [];
+      resetLiveSelections(); clearTimeout(liveAutoTimer);
     });
   }
   function runAutoMode(){
     clearTimeout(liveAutoTimer);
     if(livePaused || !liveSession || liveState?.finished) return;
-    liveAutoTimer = setTimeout(() => {
-      simulateNextBlockFromUi();
-      runAutoMode();
-    }, 420);
+    liveAutoTimer = setTimeout(() => { simulateNextBlockFromUi(); runAutoMode(); }, 420);
   }
   function start(match, options={}){
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;
     clearTimeout(liveAutoTimer);
-    liveOptions = options || {};
-    livePaused = true;
-    liveSelectedInstruction = 'none';
-    livePendingSubstitutions = [];
-    resetLiveSelections();
+    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; resetLiveSelections();
     liveSession = window.Simulator20.createLiveMatchSession(match);
     liveState = window.Simulator20.livePublicState(liveSession);
     window.__liveMatchCloseLocked = false;

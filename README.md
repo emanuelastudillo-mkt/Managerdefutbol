@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.31 - Reglas de juveniles y límites de crecimiento**
+**V4.32 - Entrenamientos guardados e histórico de tablas**
 
 ## Historial de versiones
+
+### V4.32 - Entrenamientos guardados e histórico de tablas
+
+- Agregados 3 espacios para guardar planes de entrenamiento semanales.
+- Cada plan puede tener nombre personalizado al guardarse.
+- Cada espacio permite cargar el plan semanal guardado.
+- El guardado incluye los 7 días de entrenamiento general y el 5º entrenamiento individual de los jugadores actuales.
+- Al cargar un plan, los entrenamientos individuales solo se aplican a jugadores que todavía estén en el club.
+- La tabla de posiciones ahora guarda histórico al cierre de temporada.
+- En `Tabla de posiciones` se agrega selector de año a la izquierda del selector de división.
+- Las temporadas anteriores pueden revisarse sin alterar la tabla actual.
 
 ### V4.31 - Reglas de juveniles y límites de crecimiento
 

@@ -416,15 +416,57 @@ function matchCard(m){
     ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}
   </button>`;
 }
+
+function standingsHistoryEntries(){
+  const history = typeof normalizeStandingsHistoryState === 'function' ? normalizeStandingsHistoryState(game?.standingsHistory || {}) : (game?.standingsHistory || { seasons:[] });
+  return Array.isArray(history.seasons) ? history.seasons.slice().sort((a,b)=>Number(b.year || 0)-Number(a.year || 0)) : [];
+}
+function currentStandingsYearKey(){
+  return `current-${Number(game?.seasonYear || seasonYearForNumber?.(game?.seasonNumber || 1) || new Date().getFullYear())}`;
+}
+function standingsYearOptionsMarkup(selected){
+  const currentYear = Number(game?.seasonYear || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(game?.seasonNumber || 1) : new Date().getFullYear()));
+  const currentKey = currentStandingsYearKey();
+  const opts = [`<option value="${escapeHtml(currentKey)}" ${selected === currentKey || selected === 'current' ? 'selected' : ''}>${currentYear} · actual</option>`];
+  standingsHistoryEntries().forEach(entry => {
+    const key = `history-${Number(entry.season || 0)}-${Number(entry.year || 0)}`;
+    opts.push(`<option value="${escapeHtml(key)}" ${selected === key ? 'selected' : ''}>${Number(entry.year || 0)} · Temp. ${Number(entry.season || 0)}</option>`);
+  });
+  return `<div class="division-filter standings-year-filter"><label for="standingsYearFilter">Año</label><select id="standingsYearFilter">${opts.join('')}</select></div>`;
+}
+function selectedStandingsHistoryEntry(){
+  const selected = String(selectedStandingsYear || 'current');
+  if(!selected.startsWith('history-')) return null;
+  const parts = selected.split('-');
+  const season = Number(parts[1] || 0);
+  const year = Number(parts[2] || 0);
+  return standingsHistoryEntries().find(entry => Number(entry.season || 0) === season && Number(entry.year || 0) === year) || null;
+}
+function standingsRowsForDisplay(divisionId){
+  const historical = selectedStandingsHistoryEntry();
+  if(historical){
+    return Array.isArray(historical.divisions?.[divisionId]) ? historical.divisions[divisionId].slice().sort((a,b)=>Number(a.position || 999)-Number(b.position || 999)) : [];
+  }
+  return sortedStandings(divisionId);
+}
+function standingsDisplaySubtitle(){
+  const historical = selectedStandingsHistoryEntry();
+  if(!historical) return '';
+  return `<p class="muted small">Tabla histórica guardada al cierre de la temporada ${Number(historical.season || 0)}.</p>`;
+}
+
 function renderStandings(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
+  const currentKey = currentStandingsYearKey();
+  const validYearKeys = new Set([currentKey, 'current', ...standingsHistoryEntries().map(entry => `history-${Number(entry.season || 0)}-${Number(entry.year || 0)}`)]);
+  if(!validYearKeys.has(String(selectedStandingsYear || 'current'))) selectedStandingsYear = currentKey;
   if(selectedStandingsDivision !== 'all' && !divisions.some(d => d.id === selectedStandingsDivision)){
     selectedStandingsDivision = managerDivision;
   }
   const visibleDivisions = selectedStandingsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStandingsDivision);
   const blocks = visibleDivisions.map(division => {
-    const tableRows = sortedStandings(division.id);
+    const tableRows = standingsRowsForDisplay(division.id);
     const rows = tableRows.map((s,i)=>{
       const statusClass = standingsStatusClass(division.id, i, tableRows.length);
       const ownClass = s.clubId===game.selectedClubId ? 'own-club-row' : '';
@@ -436,10 +478,11 @@ function renderStandings(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Tabla de posiciones</h2></div>
-      ${divisionFilterMarkup('standingsDivisionFilter', selectedStandingsDivision)}
+      <div><h2>Tabla de posiciones</h2>${standingsDisplaySubtitle()}</div>
+      <div class="row filters-row">${standingsYearOptionsMarkup(selectedStandingsYear)}${divisionFilterMarkup('standingsDivisionFilter', selectedStandingsDivision)}</div>
     </div>
     <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>`;
+  $('standingsYearFilter')?.addEventListener('change', event => { selectedStandingsYear = event.target.value; renderStandings(); });
   $('standingsDivisionFilter')?.addEventListener('change', event => { selectedStandingsDivision = event.target.value; renderStandings(); });
 }
 

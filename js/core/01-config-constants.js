@@ -591,6 +591,7 @@ const SCOUTING_CHIEF_TYPES = (() => {
 })();
 
 const TACTIC_SAVE_SLOT_COUNT = 3;
+const TRAINING_SAVE_SLOT_COUNT = 3;
 
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
@@ -624,6 +625,7 @@ let firstTeamTab = 'tactics';
 let selectedFixtureDivision = 'all';
 let fixtureViewMode = 'mine';
 let selectedStandingsDivision = 'all';
+let selectedStandingsYear = 'current';
 let selectedStatsDivision = 'all';
 let uiTicker = null;
 let matchRevealTimers = [];

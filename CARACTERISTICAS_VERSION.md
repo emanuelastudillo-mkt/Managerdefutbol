@@ -1,18 +1,16 @@
-# Características V4.31 - Reglas de juveniles y límites de crecimiento
+# Características V4.32 - Entrenamientos guardados e histórico de tablas
 
 ## Cambios
 
-- Los juveniles generados por captación ahora nacen entre 12 y 16 años.
-- Se limita la media máxima inicial con la fórmula: `30 + (edad - 12 + 3)`.
-- Los juveniles normales pueden subir como máximo entre 7 y 11 puntos de media por temporada.
-- El juvenil excepcional conserva entrenamiento x5, pero su crecimiento máximo de media por temporada queda entre 15 y 20 puntos.
-- Cada juvenil guarda su techo de crecimiento por temporada.
-- El entrenamiento de academia deja de aumentar habilidades si el jugador ya alcanzó su techo anual de media.
-- Con 17 años el juvenil queda marcado como `Última temporada`.
-- Al cambiar temporada, los juveniles de 17 años que no firmaron contrato profesional desaparecen de la academia.
-- Se agrega advertencia visual en la tarjeta del juvenil de 17 años.
-- La tarjeta de academia muestra el progreso `crecimiento de media esta temporada`.
+- Se agregan 3 espacios para guardar planes de entrenamiento.
+- Al guardar un plan se pide un nombre personalizado.
+- Cada plan guarda el esquema semanal completo de 7 días.
+- También guarda el entrenamiento individual de los jugadores actuales del club.
+- Al cargar un plan, los jugadores que ya no estén en el club se ignoran y no rompen el plan.
+- La tabla de posiciones ahora registra un histórico al finalizar cada temporada.
+- El menú de tablas suma selector de año a la izquierda del selector de división.
+- Se puede alternar entre la tabla actual y temporadas cerradas anteriores.
 
 ## Motivo
 
-La academia necesitaba límites claros para evitar subidas excesivas con el calendario diario y para convertir los 17 años en una decisión real: firmar contrato profesional o perder al juvenil al final de la temporada.
+El calendario diario hace que el entrenamiento semanal se use con más frecuencia. Guardar presets evita reconstruir planes manualmente. El histórico de tablas permite revisar temporadas pasadas sin depender del ranking online ni de capturas externas.

@@ -2236,6 +2236,38 @@ function trainingOptionDescription(value){
   if(value === 'dayoff') return '+ forma física y mucha moral.';
   return 'Entrenamiento semanal.';
 }
+
+function savedTrainingPlansPanelMarkup(){
+  const maxSlots = Number.isFinite(Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3)) ? Number(TRAINING_SAVE_SLOT_COUNT) : 3;
+  const slots = [];
+  for(let i=1; i<=maxSlots; i++){
+    const info = typeof trainingPlanSlotStatus === 'function' ? trainingPlanSlotStatus(i) : { exists:false, label:'Vacío', details:'Sin plan semanal guardado.' };
+    slots.push(`<div class="saved-tactic-slot saved-training-slot ${info.exists ? 'filled' : 'empty'}">
+      <div><strong>${escapeHtml(info.exists ? info.label : `Entrenamiento ${i}`)}</strong><span>${escapeHtml(info.exists ? `Espacio ${i}` : 'Vacío')}</span><em>${escapeHtml(info.details)}</em></div>
+      <div class="saved-tactic-actions">
+        <button type="button" class="ghost" data-save-training-plan-slot="${i}">Guardar ${i}</button>
+        <button type="button" class="primary" data-load-training-plan-slot="${i}" ${info.exists ? '' : 'disabled'}>Cargar ${i}</button>
+      </div>
+    </div>`);
+  }
+  return `<div class="card saved-tactics-card saved-training-card" style="margin-top:14px">
+    <div class="row"><div><h3>Entrenamientos guardados</h3><p class="muted small">Guardá hasta 3 planes semanales con nombre personalizado. Incluye turnos generales de los 7 días y el 5º entrenamiento individual de los jugadores actuales.</p></div></div>
+    <div class="saved-tactics-grid">${slots.join('')}</div>
+  </div>`;
+}
+function bindSavedTrainingPlanButtons(){
+  document.querySelectorAll('[data-save-training-plan-slot]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(typeof saveCurrentTrainingPlanSlot === 'function') saveCurrentTrainingPlanSlot(Number(btn.dataset.saveTrainingPlanSlot || 1));
+    });
+  });
+  document.querySelectorAll('[data-load-training-plan-slot]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(typeof loadSavedTrainingPlanSlot === 'function') loadSavedTrainingPlanSlot(Number(btn.dataset.loadTrainingPlanSlot || 1));
+    });
+  });
+}
+
 function renderTraining(){
   const squad = sortedTrainingPlayers();
   currentTrainingSchedule();
@@ -2248,6 +2280,7 @@ function renderTraining(){
       </div>
       <span class="pill">Cohesión: ${cohesionValue(game.selectedClubId)}/100</span>
     </div>
+    ${savedTrainingPlansPanelMarkup()}
     <div class="card training-calendar-card">
       <div class="row"><h3>Plan semanal general</h3><button class="btn ghost small" data-reset-training-week>Restablecer semana</button></div>
       ${trainingSummaryMarkup()}
@@ -2261,6 +2294,7 @@ function renderTraining(){
     </div>
   `;
   prependFirstTeamTabs('training');
+  bindSavedTrainingPlanButtons();
   document.querySelectorAll('[data-training-sort]').forEach(select => {
     select.addEventListener('change', () => {
       if(select.value){ trainingSort = select.value; renderTraining(); }

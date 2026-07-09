@@ -1238,6 +1238,139 @@ function loadSavedTacticSlot(slot){
   return true;
 }
 
+
+function normalizeSavedTrainingPlansState(src){
+  const maxSlots = Number.isFinite(Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3)) ? Number(TRAINING_SAVE_SLOT_COUNT) : 3;
+  const rawSlots = src && typeof src === 'object' && !Array.isArray(src) ? (src.slots || src) : {};
+  const slots = {};
+  for(let i=1; i<=maxSlots; i++){
+    const raw = rawSlots[i] || rawSlots[String(i)] || null;
+    if(!raw || typeof raw !== 'object') continue;
+    const rawPlan = (raw.trainingPlan && typeof raw.trainingPlan === 'object' && !Array.isArray(raw.trainingPlan)) ? raw.trainingPlan : {};
+    const plan = {};
+    Object.entries(rawPlan).forEach(([id, value]) => {
+      const cleanId = Number(id || 0);
+      if(cleanId) plan[cleanId] = safeIndividualTrainingType(value);
+    });
+    slots[i] = {
+      slot:i,
+      name:String(raw.name || `Entrenamiento ${i}`),
+      savedAt:String(raw.savedAt || ''),
+      clubId:Number(raw.clubId || 0),
+      clubName:String(raw.clubName || ''),
+      trainingSchedule:normalizeTrainingSchedule(raw.trainingSchedule),
+      trainingPlan:plan
+    };
+  }
+  return { slots };
+}
+function savedTrainingPlanSlot(slot){
+  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game?.savedTrainingPlans || {});
+  return game.savedTrainingPlans.slots?.[Number(slot || 0)] || null;
+}
+function trainingPlanSlotStatus(slot){
+  const saved = savedTrainingPlanSlot(slot);
+  if(!saved) return { exists:false, label:'Vacío', details:'Sin plan semanal guardado.' };
+  const schedule = normalizeTrainingSchedule(saved.trainingSchedule);
+  const counts = {};
+  schedule.forEach(day => Object.values(day || {}).forEach(value => { const key = safeTrainingType(value); counts[key] = Number(counts[key] || 0) + 1; }));
+  const summary = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([key,count]) => `${trainingOptionByValue(key)?.label || key}: ${count}`).join(' · ');
+  const individualCount = Object.keys(saved.trainingPlan || {}).length;
+  return { exists:true, label:saved.name || `Entrenamiento ${slot}`, details:`${summary || 'Plan semanal'} · ${individualCount} individuales` };
+}
+function snapshotCurrentTrainingPlanForSlot(slot, name){
+  const schedule = normalizeTrainingSchedule(game.trainingSchedule);
+  const squadIds = new Set(playersByClub(game.selectedClubId).map(p => Number(p.id)));
+  const plan = {};
+  Object.entries(game.trainingPlan || {}).forEach(([id, value]) => {
+    const cleanId = Number(id || 0);
+    if(cleanId && squadIds.has(cleanId)) plan[cleanId] = safeIndividualTrainingType(value);
+  });
+  return {
+    slot:Number(slot || 0),
+    name:String(name || `Entrenamiento ${Number(slot || 0)}`),
+    savedAt:new Date().toISOString(),
+    clubId:Number(game.selectedClubId || 0),
+    clubName:clubName(game.selectedClubId),
+    trainingSchedule:schedule,
+    trainingPlan:plan
+  };
+}
+function saveCurrentTrainingPlanSlot(slot){
+  if(!game) return false;
+  const cleanSlot = Math.max(1, Math.min(Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3), Math.round(Number(slot || 1))));
+  const previous = savedTrainingPlanSlot(cleanSlot);
+  const suggested = previous?.name || `Entrenamiento ${cleanSlot}`;
+  const name = window.prompt ? window.prompt('Nombre del plan de entrenamiento:', suggested) : suggested;
+  if(name === null) return false;
+  const cleanName = String(name || suggested).trim().slice(0,40) || suggested;
+  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
+  game.savedTrainingPlans.slots[cleanSlot] = snapshotCurrentTrainingPlanForSlot(cleanSlot, cleanName);
+  saveLocal(true);
+  showNotice(`${cleanName} guardado.`);
+  if(typeof renderTraining === 'function') renderTraining();
+  return true;
+}
+function loadSavedTrainingPlanSlot(slot){
+  if(!game) return false;
+  const saved = savedTrainingPlanSlot(slot);
+  if(!saved){ showNotice(`No hay plan guardado en el espacio ${slot}.`); return false; }
+  game.trainingSchedule = normalizeTrainingSchedule(saved.trainingSchedule);
+  game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan || {});
+  const squadIds = new Set(playersByClub(game.selectedClubId).map(p => Number(p.id)));
+  let applied = 0;
+  Object.entries(saved.trainingPlan || {}).forEach(([id, value]) => {
+    const cleanId = Number(id || 0);
+    if(cleanId && squadIds.has(cleanId)){
+      game.trainingPlan[cleanId] = safeIndividualTrainingType(value);
+      applied += 1;
+    }
+  });
+  saveLocal(true);
+  showNotice(`${saved.name || `Entrenamiento ${slot}`} cargado. Individuales aplicados: ${applied}.`);
+  if(typeof renderTraining === 'function') renderTraining();
+  return true;
+}
+function normalizeStandingsHistoryState(src){
+  const obj = (src && typeof src === 'object' && !Array.isArray(src)) ? src : {};
+  const seasons = Array.isArray(obj.seasons) ? obj.seasons : [];
+  const clean = seasons.map(item => {
+    const divisions = {};
+    Object.entries(item?.divisions || {}).forEach(([divisionId, rows]) => {
+      if(!Array.isArray(rows)) return;
+      divisions[divisionId] = rows.map(row => ({
+        clubId:Number(row.clubId || 0),
+        pj:Number(row.pj || 0), pg:Number(row.pg || 0), pe:Number(row.pe || 0), pp:Number(row.pp || 0),
+        gf:Number(row.gf || 0), gc:Number(row.gc || 0), dg:Number(row.dg || 0), pts:Number(row.pts || 0),
+        position:Number(row.position || 0)
+      })).filter(row => row.clubId);
+    });
+    return { season:Number(item?.season || 0), year:Number(item?.year || 0), createdAt:String(item?.createdAt || ''), divisions };
+  }).filter(item => item.season && item.year && item.divisions && Object.keys(item.divisions).length);
+  return { seasons:clean };
+}
+function snapshotStandingsHistoryForCurrentSeason(){
+  if(!game || !seed?.divisions?.length) return false;
+  game.standingsHistory = normalizeStandingsHistoryState(game.standingsHistory || {});
+  const season = Number(game.seasonNumber || 1);
+  const year = Number(game.seasonYear || seasonYearForNumber(season));
+  const divisions = {};
+  (seed.divisions || []).forEach(division => {
+    const rows = sortedStandings(division.id).map((row,index) => ({
+      clubId:Number(row.clubId || 0),
+      pj:Number(row.pj || 0), pg:Number(row.pg || 0), pe:Number(row.pe || 0), pp:Number(row.pp || 0),
+      gf:Number(row.gf || 0), gc:Number(row.gc || 0), dg:Number(row.dg || 0), pts:Number(row.pts || 0),
+      position:index + 1
+    }));
+    divisions[division.id] = rows;
+  });
+  const entry = { season, year, createdAt:new Date().toISOString(), divisions };
+  game.standingsHistory.seasons = (game.standingsHistory.seasons || []).filter(item => !(Number(item.season) === season || Number(item.year) === year));
+  game.standingsHistory.seasons.push(entry);
+  game.standingsHistory.seasons.sort((a,b)=>Number(b.year || 0)-Number(a.year || 0));
+  return true;
+}
+
 function deriveSeasonInitialBudgetFromHistory(saved, season){
   const history = Array.isArray(saved?.budgetHistory) ? saved.budgetHistory : [];
   const currentSeason = Number(season || saved?.seasonNumber || 1);
@@ -1257,6 +1390,8 @@ function normalizeGame(saved){
   normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
   normalized.savedTactics = normalizeSavedTacticsState(normalized.savedTactics || {});
+  normalized.savedTrainingPlans = normalizeSavedTrainingPlansState(normalized.savedTrainingPlans || {});
+  normalized.standingsHistory = normalizeStandingsHistoryState(normalized.standingsHistory || {});
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
   normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
@@ -1639,6 +1774,8 @@ function newGame(selectedClubId, options={}){
     selectedLeagueId: options.leagueId || selectedClub.divisionId || 'default',
     playerMentalities: {},
     savedTactics: normalizeSavedTacticsState({}),
+    savedTrainingPlans: normalizeSavedTrainingPlansState({}),
+    standingsHistory: normalizeStandingsHistoryState({}),
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -3139,6 +3276,7 @@ function finalizeSeasonIfNeeded(){
   if(record.managerPrestigeBadSeasonPenalty > 0){
     pushGameMessage({ type:'directiva', priority:'high', title:'Prestigio de manager reducido', body:`Descender o terminar último resta ${record.managerPrestigeBadSeasonPenalty} puntos de prestigio de manager.`, id:`bad-season-prestige-${game.seasonNumber || 1}-${game.selectedClubId}` });
   }
+  snapshotStandingsHistoryForCurrentSeason();
   const prestigeChanges = updateClubPrestigeAfterSeason();
   const movements = movementsPreview;
   const promoted = movements.some(move => move.type === 'promotion' && Number(move.clubId) === Number(game.selectedClubId));

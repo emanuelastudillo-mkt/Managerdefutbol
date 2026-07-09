@@ -1,18 +1,16 @@
-# Características V4.34 - Corrección calendario, préstamos y cartas
+# Características V5.01 - Limpieza de auditoría y Everton por país
 
 ## Cambios
 
-- Corregido el pago semanal de cuotas de préstamos.
-- El préstamo activo ahora conserva `lastPaymentDate`, `nextPaymentDate` y el progreso de cuotas al normalizar la partida.
-- Se reemplaza la lógica frágil de `daysSincePayment` por vencimientos por fecha.
-- Si la partida avanza varios días, las cuotas vencidas se cobran por orden hasta ponerse al día.
-- El panel del banco muestra la próxima fecha de cuota.
-- Corregido el bloqueo de cartas activas que podía mostrar valores anómalos como 337 días.
-- Las cartas activas ahora tienen bloqueo por turno absoluto además de fecha.
-- El bloqueo visible queda limitado al máximo configurado de cartas activas.
-- Agregada protección contra retrocesos de calendario mediante `lastCalendarDate`.
-- El cambio de temporada mantiene lógica de avance: la nueva temporada empieza después del cierre anterior y no como reinicio hacia atrás.
+- Se separaron los escudos de Everton por país con rutas `everton-chi.png` y `everton-eng.png`.
+- Se agregó compatibilidad para partidas guardadas que todavía tengan `everton.png`.
+- Se corrigieron las 13 rutas argentinas con acentos para que vuelvan a coincidir con los nombres reales `#U00xx` incluidos en el ZIP.
+- Se mantiene fallback visual a `everton.png` mientras no existan los dos PNG nuevos.
+- Se optimizó el arranque con partida guardada: si hay snapshots completos, no se carga `data/jugadores.json` al iniciar.
+- Se permite cargar partidas con snapshots aunque cambie la firma de la base por ajustes menores de datos.
+- Se recarga la base completa después de resetear partida para evitar heredar datos de una partida anterior.
+- Se documentaron archivos candidatos a eliminación en versión completa: escudos huérfanos y JSON legacy de estadios/hinchas.
 
 ## Motivo
 
-El problema de préstamos venía de una normalización que descartaba el contador interno de días sin pago. El problema de cartas venía de depender solo de fechas visibles cuando el cambio de temporada podía recalcular el calendario como si fuera un reinicio. Esta versión endurece ambos sistemas para que usen referencias persistentes y no retrocedan.
+V5.01 aplica los ajustes pendientes detectados en la auditoría V5.00 sin cambiar reglas deportivas, economía ni simulación. El objetivo principal es reducir contradicciones visuales, mejorar la carga con partidas existentes y dejar una lista clara de archivos removibles para una próxima versión completa.

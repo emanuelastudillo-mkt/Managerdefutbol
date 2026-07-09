@@ -1,8 +1,8 @@
-/* V3.64 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización. */
+/* V5.01 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
 
 async function fetchJsonIfExists(url){
   try{
-    const res = await fetch(url, { cache:'no-store' });
+    const res = await fetch(url, { cache:DATA_CACHE_MODE });
     if(!res.ok) return null;
     const raw = await res.text();
     if(!raw.trim()) return null;
@@ -93,9 +93,9 @@ async function loadStadiumsDatabase(){
   const urls = uniqueUrlList(STADIUMS_DATABASE_CANDIDATES || STADIUMS_DATABASE_URL);
   const teams = [];
   const raws = [];
-  for(const url of urls){
-    const raw = await fetchJsonIfExists(url);
-    if(!raw || typeof raw !== 'object') continue;
+  const loaded = await Promise.all(urls.map(async url => ({ url, raw:await fetchJsonIfExists(url) })));
+  loaded.forEach(({ url, raw }) => {
+    if(!raw || typeof raw !== 'object') return;
     raws.push({ url, raw });
     const fileCountry = raw.pais || raw.country || raw.countryName || countryFromSourceUrl(url) || '';
     const leagues = Array.isArray(raw.leagues) ? raw.leagues : (Array.isArray(raw.ligas) ? raw.ligas : []);
@@ -108,7 +108,7 @@ async function loadStadiumsDatabase(){
         teams.push({ ...team, league:leagueName, country:team.country || team.pais || leagueCountry });
       });
     });
-  }
+  });
   if(!raws.length) return { raw:null, teams:[], source:'fallback' };
   return { raw:{ sources:raws.map(item => item.url), count:raws.length }, teams, source:raws.map(item => item.url).join(', ') };
 }
@@ -116,16 +116,16 @@ async function loadFansDatabase(){
   const urls = uniqueUrlList(FANS_DATABASE_CANDIDATES || FANS_DATABASE_URL);
   const hinchadas = [];
   const raws = [];
-  for(const url of urls){
-    const raw = await fetchJsonIfExists(url);
-    if(!raw || typeof raw !== 'object') continue;
+  const loaded = await Promise.all(urls.map(async url => ({ url, raw:await fetchJsonIfExists(url) })));
+  loaded.forEach(({ url, raw }) => {
+    if(!raw || typeof raw !== 'object') return;
     raws.push({ url, raw });
     const fileCountry = raw.pais || raw.country || countryFromSourceUrl(url) || '';
     (Array.isArray(raw.hinchadas) ? raw.hinchadas : []).forEach(item => {
       if(!item) return;
       hinchadas.push({ ...item, country:item.country || item.pais || fileCountry });
     });
-  }
+  });
   if(!raws.length) return { raw:null, hinchadas:[], source:'fallback' };
   return { raw:{ sources:raws.map(item => item.url), count:raws.length }, hinchadas, source:raws.map(item => item.url).join(', ') };
 }
@@ -146,6 +146,21 @@ function lookupNameKey(name){
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+function normalizeLegacyAssetMarkerEncoding(path){
+  if(path === null || path === undefined) return path;
+  return String(path).replace(/%23U([0-9a-fA-F]{4})/g, '#U$1');
+}
+function normalizeClubCrestPath(club, rawPath){
+  const fallback = `img/escudos/${imageSlug(club?.name || '')}.png`;
+  const cleanPath = normalizeLegacyAssetMarkerEncoding(rawPath || fallback);
+  const clubKey = lookupNameKey(club?.name || '');
+  const countryKey = countryNameKey(club?.country || club?.pais || '');
+  if(clubKey === 'everton' && String(cleanPath || '').endsWith('/everton.png')){
+    if(countryKey === 'chile') return 'img/escudos/everton-chi.png';
+    if(countryKey === 'inglaterra' || countryKey === 'england') return 'img/escudos/everton-eng.png';
+  }
+  return cleanPath;
 }
 function countryFromSourceUrl(url){
   const lower = String(url || '').toLowerCase();
@@ -295,7 +310,7 @@ function applySavedDatabaseSnapshots(saved){
   preserveBaseClubDivisionIntegrityMap();
   const clean = { ...(saved || {}) };
   if(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length){
-    seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:club.crestPath || `img/escudos/${imageSlug(club.name)}.png` }));
+    seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:normalizeClubCrestPath(club, club.crestPath) }));
   }
   if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
     seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
@@ -318,18 +333,19 @@ function currentSavePayload(){
   payload.divisionsSnapshot = structuredClone(seed?.divisions || []);
   return payload;
 }
-async function loadInitialSeed(){
-  const playersDatabase = await loadPlayersDatabase();
-  stadiumsDatabase = await loadStadiumsDatabase();
-  fansDatabase = await loadFansDatabase();
-  const leagueSeeds = [];
-  for(const url of LEAGUE_DATA_CANDIDATES){
-    const leagueJson = await fetchJsonIfExists(url);
-    if(leagueJson){
-      const built = applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(leagueJson, url), stadiumsDatabase, fansDatabase);
-      leagueSeeds.push(built);
-    }
-  }
+async function loadInitialSeed(options={}){
+  const skipPlayersDatabase = Boolean(options?.skipPlayersDatabase);
+  const [playersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
+    skipPlayersDatabase ? Promise.resolve(null) : loadPlayersDatabase(),
+    loadStadiumsDatabase(),
+    loadFansDatabase()
+  ]);
+  stadiumsDatabase = loadedStadiumsDatabase;
+  fansDatabase = loadedFansDatabase;
+  const loadedLeagues = await Promise.all(LEAGUE_DATA_CANDIDATES.map(async url => ({ url, leagueJson:await fetchJsonIfExists(url) })));
+  const leagueSeeds = loadedLeagues
+    .filter(item => item.leagueJson)
+    .map(item => applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(item.leagueJson, item.url), stadiumsDatabase, fansDatabase));
   if(leagueSeeds.length){
     const merged = mergeLeagueSeeds(leagueSeeds);
     return applyPlayersDatabase(merged, playersDatabase);
@@ -337,13 +353,13 @@ async function loadInitialSeed(){
   const fallback = await fetchJsonIfExists(DATA_URL);
   if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
     fallback.meta = { ...(fallback.meta || {}), source:fallback.meta?.source || 'seed.json', signature:seedSignature(fallback) };
-    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:c.crestPath || `img/escudos/${imageSlug(c.name)}.png` }));
+    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:normalizeClubCrestPath(c, c.crestPath) }));
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
     fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
     const withStadiums = applyStadiumAndFansDatabases(fallback, stadiumsDatabase, fansDatabase);
     return applyPlayersDatabase(withStadiums, playersDatabase);
   }
-  throw new Error('No se pudo cargar data/Liga argentina.json ni un data/seed.json válido');
+  throw new Error('No se pudo cargar ningún JSON de liga ni un data/seed.json válido');
 }
 function detectLeagueCountry(raw, sourceUrl=''){
   if(raw?.pais || raw?.country || raw?.countryName) return String(raw.pais || raw.country || raw.countryName).trim();
@@ -449,7 +465,7 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
         prizeMultiplier:divInfo.prizeMultiplier,
         fieldConditionScore,
         fieldCondition,
-        crestPath:team.escudo || team.crestPath || `img/escudos/${imageSlug(name)}.png`
+        crestPath:normalizeClubCrestPath({ name, country }, team.escudo || team.crestPath)
       };
       clubs.push(club);
       const generated = generateClubPlayers(club, prestige, playerId, generationContext);
@@ -1373,6 +1389,18 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
 }
 
 
+function savedHasDatabaseSnapshots(saved){
+  return Boolean(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length && Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length);
+}
+async function readLocalSaveRecord(){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(SAVE_KEY);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
 async function openDb(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME, 1);
@@ -1393,18 +1421,15 @@ async function saveLocal(silent=false){
   if(!silent) showNotice('Partida guardada en este navegador.');
 }
 async function loadLocal(silent=false){
-  const db = await openDb();
-  const saved = await new Promise((resolve,reject)=>{
-    const tx = db.transaction(DB_STORE, 'readonly');
-    const req = tx.objectStore(DB_STORE).get(SAVE_KEY);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  const saved = await readLocalSaveRecord();
   if(saved){
     const currentSignature = seed?.meta?.signature;
-    if(currentSignature && saved.seedSignature !== currentSignature){
-      if(!silent) showNotice('La base de datos cambió. Creá una nueva partida para usar la Liga argentina.');
+    if(currentSignature && saved.seedSignature !== currentSignature && !savedHasDatabaseSnapshots(saved)){
+      if(!silent) showNotice('La base de datos cambió y la partida guardada no tiene snapshots suficientes. Creá una nueva partida para usar la base actual.');
       return false;
+    }
+    if(currentSignature && saved.seedSignature !== currentSignature){
+      saved._needsAutosave = true;
     }
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
     const needsAutosave = Boolean(game._needsAutosave);
@@ -1439,6 +1464,8 @@ async function resetLocal(){
     tx.onerror = () => reject(tx.error);
   });
   game = null;
+  seed = await loadInitialSeed({ skipPlayersDatabase:false });
+  fillClubSelect();
   activeTab = 'home';
   renderAll();
   showNotice('Partida local eliminada.');
@@ -1447,17 +1474,31 @@ async function resetLocal(){
 
 async function init(){
   try{
-    seed = await loadInitialSeed();
-    sponsorsDatabase = await loadSponsorsDatabase();
-    employeesDatabase = await loadEmployeesDatabase();
-    eventsDatabase = await loadEventsDatabase();
-    specialSkillsDatabase = await loadSpecialSkillsDatabase();
-    matchCommentaryDatabase = await loadMatchCommentaryDatabase();
+    const savedRecord = await readLocalSaveRecord().catch(() => null);
+    const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
+    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedMatchCommentary] = await Promise.all([
+      loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
+      loadSponsorsDatabase(),
+      loadEmployeesDatabase(),
+      loadEventsDatabase(),
+      loadSpecialSkillsDatabase(),
+      loadMatchCommentaryDatabase()
+    ]);
+    seed = loadedSeed;
+    sponsorsDatabase = loadedSponsors;
+    employeesDatabase = loadedEmployees;
+    eventsDatabase = loadedEvents;
+    specialSkillsDatabase = loadedSpecialSkills;
+    matchCommentaryDatabase = loadedMatchCommentary;
     fillClubSelect();
     bindEvents();
     startUiTicker();
     const loaded = await loadLocal(true);
     if(!loaded){
+      if(useSavedSnapshots){
+        seed = await loadInitialSeed({ skipPlayersDatabase:false });
+        fillClubSelect();
+      }
       renderAll();
       setTimeout(()=>openNewGameModal(true), 0);
     }

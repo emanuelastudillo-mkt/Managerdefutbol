@@ -2149,7 +2149,10 @@ function snapshotClubDivisionOverrides(){
 }
 function playoffRoundMatchdayLabel(index){
   const regularCount = regularFixtureLength();
-  return Number(index || 0) > regularCount ? `Promoción ${Number(index || 0) - regularCount}` : `Fecha ${Number(index || 0)}`;
+  const relative = Number(index || 0) - regularCount;
+  if(relative === 1) return 'Playoffs IDA';
+  if(relative === 2) return 'Playoffs VUELTA';
+  return Number(index || 0) > regularCount ? `Playoffs ${relative}` : `Fecha ${Number(index || 0)}`;
 }
 function isPromotionPlayoffMatch(match){
   return Boolean(match?.playoff || match?.promotionPlayoff || match?.playoffTieId);
@@ -2241,7 +2244,11 @@ function playoffFixtureMatch(tie, leg, date, matchday){
     playoff:true,
     promotionPlayoff:true,
     playoffTieId:tie.id,
-    playoffStage:Number(leg) === 1 ? 'Ida' : 'Vuelta',
+    playoffStage:Number(leg) === 1 ? 'IDA' : 'VUELTA',
+    upperDivisionId:tie.upperDivisionId,
+    upperDivisionName:tie.upperDivisionName,
+    lowerDivisionId:tie.lowerDivisionId,
+    lowerDivisionName:tie.lowerDivisionName,
     divisionId:tie.upperDivisionId,
     divisionName:`Promoción ${tie.upperDivisionName}`,
     date,
@@ -2292,8 +2299,8 @@ function createArgentinePromotionPlayoffsIfNeeded(){
     startDate:firstLegDate,
     endDate:firstLegDate,
     playoffRound:true,
-    playoffStage:'Ida',
-    title:'Promoción Argentina · Ida',
+    playoffStage:'IDA',
+    title:'Playoffs IDA',
     matches:firstLegMatches
   });
   game.fixtures.push({
@@ -2302,8 +2309,8 @@ function createArgentinePromotionPlayoffsIfNeeded(){
     startDate:secondLegDate,
     endDate:secondLegDate,
     playoffRound:true,
-    playoffStage:'Vuelta',
-    title:'Promoción Argentina · Vuelta',
+    playoffStage:'VUELTA',
+    title:'Playoffs VUELTA',
     matches:secondLegMatches
   });
   game.argentinaPlayoffs = { season, created:true, regularFixtureCount:regularCount, firstLegDate, secondLegDate, ties };
@@ -2311,7 +2318,7 @@ function createArgentinePromotionPlayoffsIfNeeded(){
     type:'deportivo',
     priority:'high',
     title:'Playoffs de promoción creados',
-    body:'Terminó la liga argentina. Se agregaron cruces ida y vuelta de promoción entre Primera/Segunda y Segunda/Tercera. En empate global conserva la categoría el club de la división superior.',
+    body:'Terminó la liga argentina. Se agregaron Playoffs IDA y Playoffs VUELTA entre Primera/Segunda y Segunda/Tercera. Asciende quien haga más goles en el global; si empatan, cada club permanece en su liga actual.',
     id:`arg-playoffs-${season}`
   });
   return true;

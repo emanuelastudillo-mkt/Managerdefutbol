@@ -456,6 +456,29 @@ function simulateDueMatchesUntil(targetDate, options={}){
   }
   return results;
 }
+function processNonOwnResultsAfterSimulation(results=[]){
+  const list = Array.isArray(results) ? results.filter(Boolean) : [];
+  if(!list.length) return 0;
+  if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(list);
+  if(typeof processBotDismissals === 'function') processBotDismissals();
+  advanceStadiumAfterMatches(list);
+  return list.length;
+}
+function simulateNonOwnDueBeforeOwnMatch(targetDate, source='before_own_match'){
+  if(!validIsoDate(targetDate)) return [];
+  const results = simulateDueMatchesUntil(targetDate, { includeOwn:false });
+  processNonOwnResultsAfterSimulation(results);
+  if(results.length){
+    game.lastBotPreSimulation = {
+      source,
+      date:targetDate,
+      count:results.length,
+      season:game.seasonNumber || 1,
+      createdAt:Date.now()
+    };
+  }
+  return results;
+}
 function advanceOneDay(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
@@ -474,6 +497,14 @@ function advanceOneDay(){
     }
     const ownInfo = nextOwnMatchInfo();
     if(ownInfo?.date && isCurrentDateOnOrAfterIso(ownInfo.date)){
+      const sameDayBotResults = simulateNonOwnDueBeforeOwnMatch(currentCalendarDate(), 'same_day_before_own_notice');
+      if(sameDayBotResults.length){
+        setDailyAdvanceSummary(currentCalendarDate(), currentCalendarDate(), sameDayBotResults.length);
+        saveLocal(true);
+        renderAll();
+        showNotice(`Se simularon ${sameDayBotResults.length} partido(s) del mismo día. Ahora podés jugar tu partido.`);
+        return;
+      }
       showNotice('Hay un partido propio pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
       return;
     }
@@ -486,11 +517,7 @@ function advanceOneDay(){
     }
     game.currentDate = nextDate;
     const botResults = simulateDueMatchesUntil(nextDate, { includeOwn:false });
-    if(botResults.length){
-      if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(botResults);
-      if(typeof processBotDismissals === 'function') processBotDismissals();
-      advanceStadiumAfterMatches(botResults);
-    }
+    processNonOwnResultsAfterSimulation(botResults);
     if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(Math.max(1, Math.abs(daysBetweenIsoDates(fromDate, nextDate)) || 1));
     let regularEnded = game.matchdayIndex >= game.fixtures.length;
     const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
@@ -579,6 +606,7 @@ function simulateNextMatchday(options={}){
     showNotice('No quedan partidos pendientes. Comienza la postemporada.');
     return;
   }
+  const preOwnBotResults = ownInfo ? simulateNonOwnDueBeforeOwnMatch(targetDate, 'before_own_match_click') : [];
   const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
   const fromRoundIndex = Number(game.matchdayIndex || 0);
@@ -604,9 +632,7 @@ function simulateNextMatchday(options={}){
     advanceSponsorMatchCounter();
     if(typeof awardSpecialPointsForOwnMatch === 'function') awardSpecialPointsForOwnMatch(ownResult);
   } else {
-    if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
-    if(typeof processBotDismissals === 'function') processBotDismissals();
-    advanceStadiumAfterMatches(results);
+    processNonOwnResultsAfterSimulation(results);
   }
   const summaryRound = game.fixtures[fromRoundIndex] || ownInfo?.round || pendingInfo?.round || { matchday:'—', date:targetDate, matches:[] };
   const triggeredEvents = ownResult ? processGameEventsAfterMatches({ round:summaryRound, results, ownResult }) : [];
@@ -641,7 +667,7 @@ function simulateNextMatchday(options={}){
     if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
     else if(playoffCreated){ showNotice('Terminó la liga regular y se creó el calendario de playoffs de promoción.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
-    else if(ownResult){ showNotice(`Partido propio simulado. Además se procesaron ${Math.max(0, results.length - 1)} partido(s) del calendario.`); }
+    else if(ownResult){ showNotice(`Partido propio simulado. Antes se procesaron ${preOwnBotResults.length} partido(s) del mismo día o pendientes.`); }
     else { showNotice(`Se simularon ${results.length} partido(s) de calendario.`); }
   };
   if(ownResult && !regularEnded) showMatchRevealModal(ownResult, finalNotice);

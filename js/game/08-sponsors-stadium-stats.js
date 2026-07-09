@@ -343,6 +343,33 @@ function renderStadium(){
   document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
 }
 
+function promotionPlayoffTieForMatch(match){
+  const tieId = String(match?.playoffTieId || '');
+  if(!tieId) return null;
+  const ties = game?.argentinaPlayoffs?.ties;
+  return Array.isArray(ties) ? ties.find(tie => String(tie.id) === tieId) || null : null;
+}
+function matchVisibleInFixtureDivision(match, division){
+  if(!match || !division) return false;
+  const divisionId = String(division.id || '');
+  const directDivisionId = String(match.divisionId || seed.clubs.find(c=>c.id===match.homeId)?.divisionId || 'default');
+  if(directDivisionId === divisionId) return true;
+  if(match.promotionPlayoff || match.playoffTieId){
+    if(String(match.upperDivisionId || '') === divisionId || String(match.lowerDivisionId || '') === divisionId) return true;
+    const tie = promotionPlayoffTieForMatch(match);
+    if(tie && (String(tie.upperDivisionId || '') === divisionId || String(tie.lowerDivisionId || '') === divisionId)) return true;
+  }
+  return false;
+}
+function fixtureRoundTitle(round){
+  if(round?.playoffRound || round?.matches?.some(m => m?.promotionPlayoff)){
+    const stage = String(round.playoffStage || round.matches?.find(m => m?.promotionPlayoff)?.playoffStage || '').toUpperCase();
+    if(stage.includes('VUELTA')) return 'Playoffs VUELTA';
+    if(stage.includes('IDA')) return 'Playoffs IDA';
+  }
+  return round?.title || (typeof playoffRoundMatchdayLabel === 'function' ? playoffRoundMatchdayLabel(round?.matchday) : `Fecha ${round?.matchday || ''}`);
+}
+
 function renderFixture(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const ownClubId = Number(game?.selectedClubId || 0);
@@ -352,14 +379,14 @@ function renderFixture(){
     if(showMine){
       const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
       if(!matches.length) return '';
-      return `<div class="card own-fixture-round"><div class="row"><h3>${escapeHtml(round.title || (typeof playoffRoundMatchdayLabel === 'function' ? playoffRoundMatchdayLabel(round.matchday) : `Fecha ${round.matchday}`))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
+      return `<div class="card own-fixture-round"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
     }
     const groups = visibleDivisions.map(division => {
-      const matches = round.matches.filter(m => (m.divisionId || seed.clubs.find(c=>c.id===m.homeId)?.divisionId || 'default') === division.id);
+      const matches = round.matches.filter(m => matchVisibleInFixtureDivision(m, division));
       if(!matches.length) return '';
       return `<div class="fixture-division-block"><h4>${escapeHtml(division.name)}</h4><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
     }).join('');
-    return `<div class="card"><div class="row"><h3>${escapeHtml(round.title || (typeof playoffRoundMatchdayLabel === 'function' ? playoffRoundMatchdayLabel(round.matchday) : `Fecha ${round.matchday}`))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
+    return `<div class="card"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
   }).filter(Boolean).join('');
   view.innerHTML = `
     <div class="row section-title fixture-title-row">
@@ -377,8 +404,10 @@ function matchCard(m){
   const events = game.matchHistory.find(x=>x.id===m.id);
   const clickable = m.played ? 'clickable' : '';
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
+  const playoffNote = m.promotionPlayoff ? `<div class="match-date-line playoff-note">${escapeHtml(`Playoffs ${String(m.playoffStage || '').toUpperCase() || ''}`.trim())} · mismo partido en ambas ligas</div>` : '';
   return `<button class="match-card ${clickable}" ${attr}>
     <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
+    ${playoffNote}
     <div class="match-line">
       <div>${clubSpan(m.homeId)}</div>
       <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}` : 'vs'}</strong>

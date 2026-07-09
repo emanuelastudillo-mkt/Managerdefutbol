@@ -1,8 +1,17 @@
 # Fútbol Manager MVP
 
-**V4.16 - Simulador completo, libres y tratamientos juveniles**
+**V4.17 - Simulación previa y playoffs visibles por liga**
 
 ## Historial de versiones
+
+### V4.17 - Simulación previa y playoffs visibles por liga
+- Al usar `Ir a próximo partido`, el juego simula primero los partidos bot del mismo día o pendientes hasta esa fecha.
+- El partido propio queda más aislado para evitar que el simulador visual mezcle carga de otros partidos.
+- `Avanzar día` también puede limpiar partidos bot del mismo día antes de avisar que hay partido propio pendiente.
+- Los playoffs argentinos se muestran como `Playoffs IDA` y `Playoffs VUELTA` en vez de fechas 35 y 36.
+- Los cruces de promoción aparecen en el calendario de las dos ligas implicadas.
+- El partido de promoción sigue siendo uno solo: conserva el mismo `match.id`, resultado e historial aunque se vea en ambas ligas.
+- Se aclara la regla de promoción: asciende quien haga más goles en el global; si empatan, cada club queda en su liga actual.
 
 ### V4.16 - Simulador completo, libres y tratamientos juveniles
 - Se agregan nuevas frases finales de partido para que el último relato sea menos repetitivo.

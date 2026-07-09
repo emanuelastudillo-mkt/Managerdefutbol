@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V3.57 jugadorista + ventaja local por hinchada
+/* Motor de simulación V2.0 · V4.03 jugadorista + ventaja local por hinchada
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -182,13 +182,15 @@
     const attacks = simClamp(probabilisticRoundV2(fullBlockAttacks * phaseFactor), 0, 5);
     const forwardCount = Math.max(1, own.counts.att || 1);
     const defenderCount = Math.max(1, rival.counts.def || 1);
-    const conversion = simClamp(
-      0.105 + (own.attackQuality / 620) + forwardCount * 0.016 + own.profile.conversion - (rival.defenseQuality / 820) - defenderCount * 0.009 - (rival.keeperQuality / 1050),
-      0.045,
-      0.32
+    const chanceRate = simClamp(
+      0.220 + (own.attackQuality - rival.defenseQuality) / 500 + forwardCount * 0.022 + own.profile.conversion - defenderCount * 0.004 - (rival.keeperQuality / 2600),
+      0.10,
+      0.42
     ) * ownInstr.conversion * pitchChance;
-    const fullBlockChances = Math.max(0, fullBlockAttacks * conversion + (own.attack - rival.defense) / 58 + simRnd(-0.35,0.45));
-    const chances = simClamp(probabilisticRoundV2(fullBlockChances * phaseFactor), 0, 3);
+    const pressureEdge = (own.attack - rival.defense) / 155;
+    const chanceNoise = simRnd(-0.08,0.12) * phaseFactor;
+    const expectedChances = Math.max(0, attacks * chanceRate + pressureEdge * phaseFactor + chanceNoise);
+    const chances = simClamp(probabilisticRoundV2(expectedChances), 0, 3);
     const xgPerChance = simClamp(0.14 + (own.attackQuality - rival.keeperQuality) / 650 + forwardCount * 0.018 - defenderCount * 0.009, 0.07, 0.38);
     const xg = simClamp(chances * xgPerChance + (fullBlockAttacks > 8 ? 0.04 * phaseFactor : 0) + (isHome ? 0.03 * phaseFactor : 0), 0, 0.55);
     const fullBlockFouls = Math.max(0, 1.1 + own.aggression/46 + (100-own.discipline)/62 + (ownInstruction === 'push' ? 0.55 : ownInstruction === 'lower' ? -0.35 : 0) + simRnd(-0.7,0.9));

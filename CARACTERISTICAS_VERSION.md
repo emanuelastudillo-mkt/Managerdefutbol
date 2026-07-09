@@ -1,3 +1,13 @@
+# V4.03 - Corrección de empates masivos en bots
+
+- Se corrigió el cálculo interno de ocasiones de gol del simulador.
+- El problema detectado hacía que los partidos bot vs bot generaran casi siempre 0 chances y terminaran 0-0.
+- La tabla de posiciones no era el origen del bug: los puntos reflejaban correctamente los empates generados por el motor.
+- Se ajustó la conversión de ataques a chances usando los ataques reales del bloque, evitando que las ocasiones queden casi anuladas.
+- No se modifica la estructura de guardado ni se reinician partidas existentes.
+
+## Versiones anteriores
+
 # V4.02 - Ajustes visuales de inicio y estadio
 
 - Se achicó el texto de las tarjetas compactas de clubes disponibles al iniciar partida.
@@ -7,8 +17,6 @@
 - Se cambió `Último cambio` por `Nuevos socios`.
 - En `Campo de juego`, se agrandó la línea de nombre del estadio y capacidad.
 - No se modificaron motores, simulación, ranking, guardado ni reglas de partida.
-
-## Versiones anteriores
 
 # V4.01 - Ranking automático obligatorio
 

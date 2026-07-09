@@ -1,25 +1,10 @@
-# V4.20 - Rechazo de ofertas por media y prestigio
+# Características V4.21 - Temporada segura por país
 
-## Cambios
-
-- Los jugadores libres ya no aceptan sólo por prestigio directo del club.
-- La aceptación se calcula con la diferencia entre media del jugador y prestigio del club ofertante.
-- La misma fórmula se aplica a jugadores contratados de otros clubes.
-- Si el jugador rechaza, queda bloqueado para ese club hasta la próxima temporada.
-- El mercado muestra la probabilidad estimada de aceptación de cada jugador.
-- En jugadores contratados, las ofertas bajas todavía pueden ser rechazadas por el club vendedor; si pasan esa negociación, el jugador decide con la nueva curva.
-
-## Fórmula aplicada
-
-- Diferencia = media del jugador - prestigio del club ofertante.
-- Diferencia -30: 95% aceptación.
-- Diferencia 0: 80% aceptación.
-- Diferencia 30: 20% aceptación.
-- Diferencia 50: 3% aceptación.
-- Diferencia 70: 1% aceptación.
-- Diferencia 100: 0.5% aceptación.
-
-## Seguridad
-
-- No se modifica calendario, economía, simulador ni estructura de clubes.
-- Los bloqueos de rechazo existentes siguen funcionando por temporada.
+- Corrección estructural del cierre de temporada para impedir ascensos/descensos entre países distintos.
+- Los movimientos de temporada ahora se calculan por país.
+- Argentina mantiene sus reglas propias de ascenso, descenso y playoffs.
+- Países con una sola división ya no generan ascensos/descensos ficticios contra otra liga.
+- Los overrides de división inválidos o cruzados por país se ignoran o reparan hacia una división válida del país del club.
+- El verificador puede regenerar calendarios cruzados cuando esos partidos todavía no fueron jugados.
+- Si hay partidos cruzados ya jugados, se informan como no reparables automáticamente para no borrar resultados.
+- El inicio de nueva temporada vuelve a validar la estructura antes de crear el fixture.

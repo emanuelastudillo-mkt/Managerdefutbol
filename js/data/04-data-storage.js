@@ -1322,6 +1322,34 @@ function mergePlayedFixturesIntoCalendar(nextFixtures, previousFixtures=[]){
     })
   }));
 }
+function fixtureDataCountryKey(value){
+  return normalizeScheduleText(String(value || '').trim() || 'argentina');
+}
+function fixtureDataClubCountry(club){
+  if(!club) return '';
+  return fixtureDataCountryKey(typeof clubCountry === 'function' ? clubCountry(club) : (club.country || club.pais || 'Argentina'));
+}
+function fixtureDataDivisionCountry(division){
+  return fixtureDataCountryKey(division?.country || division?.pais || '');
+}
+function fixtureDataCrossCountryIssues(fixtures=[]){
+  const clubsById = Object.fromEntries((seed?.clubs || []).map(club => [Number(club.id), club]));
+  const divisionsById = Object.fromEntries((seed?.divisions || []).map(division => [String(division.id || 'default'), division]));
+  const issues = [];
+  (fixtures || []).forEach((round, roundIndex) => {
+    (round.matches || []).forEach(match => {
+      const home = clubsById[Number(match.homeId)];
+      const away = clubsById[Number(match.awayId)];
+      const division = divisionsById[String(match.divisionId || home?.divisionId || '')];
+      if(!home || !away || !division) return;
+      const country = fixtureDataDivisionCountry(division);
+      if(country && (fixtureDataClubCountry(home) !== country || fixtureDataClubCountry(away) !== country)){
+        issues.push({ id:match.id, played:Boolean(match.played), roundIndex, divisionId:division.id });
+      }
+    });
+  });
+  return issues;
+}
 function fixtureRoundIsPlayoff(round){
   return Boolean(round?.playoffRound || (round?.matches || []).some(match => match?.playoff));
 }
@@ -1331,12 +1359,15 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
   const current = Array.isArray(existingFixtures) ? existingFixtures : [];
   const playoffRounds = current.filter(fixtureRoundIsPlayoff);
   const regularCurrent = current.filter(round => !fixtureRoundIsPlayoff(round));
+  const fixtureCountryIssues = fixtureDataCrossCountryIssues(regularCurrent);
+  const hasOnlyUnplayedCrossCountryFixtures = fixtureCountryIssues.length > 0 && !fixtureCountryIssues.some(item => item.played);
   const currentYear = String(regularCurrent?.[0]?.date || current?.[0]?.date || '').slice(0,4);
   const needsCalendar = regularCurrent.length !== expected.length
     || currentYear !== String(year)
     || regularCurrent.some((round, index) => expected[index] && round.date !== expected[index].date)
     || regularCurrent.some(round => !validIsoDate(round.date))
-    || regularCurrent.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')));
+    || regularCurrent.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')))
+    || hasOnlyUnplayedCrossCountryFixtures;
   const normalizedRegular = needsCalendar ? mergePlayedFixturesIntoCalendar(expected, regularCurrent) : regularCurrent;
   return normalizedRegular.concat(playoffRounds);
 }

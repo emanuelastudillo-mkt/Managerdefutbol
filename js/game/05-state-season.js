@@ -600,6 +600,72 @@ function setClubIntegrityDivision(club, target){
   club.prizeMultiplier = target.prizeMultiplier ?? divisionPrizeMultiplier(target.name, (target.order || 1)-1);
   return changed;
 }
+
+function fixtureMatchCountryIssue(match, divisionsById=integrityDivisionById()){
+  if(!match) return null;
+  const home = (seed?.clubs || []).find(club => Number(club.id) === Number(match.homeId));
+  const away = (seed?.clubs || []).find(club => Number(club.id) === Number(match.awayId));
+  if(!home || !away) return { matchId:match.id, issue:'club_inexistente', homeId:match.homeId, awayId:match.awayId, played:Boolean(match.played) };
+  const division = divisionsById[String(match.divisionId || home.divisionId || '')];
+  if(!division) return null;
+  const divCountry = divisionCountryKey(division);
+  if(divCountry && (clubCountryKeyForIntegrity(home) !== divCountry || clubCountryKeyForIntegrity(away) !== divCountry)){
+    return { matchId:match.id, issue:'fixture_pais_cruzado', division:division.name, home:home.name, away:away.name, played:Boolean(match.played) };
+  }
+  return null;
+}
+function fixtureCountryIssues(){
+  const divisionsById = integrityDivisionById();
+  const issues = [];
+  (game?.fixtures || []).forEach((round, roundIndex) => {
+    (round.matches || []).forEach(match => {
+      const issue = fixtureMatchCountryIssue(match, divisionsById);
+      if(issue) issues.push({ ...issue, roundIndex, matchday:round.matchday || roundIndex + 1, roundTitle:round.title || '' });
+    });
+  });
+  return issues;
+}
+function repairCrossCountryClubAssignments(options={}){
+  if(!seed?.clubs?.length || !seed?.divisions?.length) return { repaired:0 };
+  const restoreNativeIfNeeded = options.restoreNativeIfNeeded !== false;
+  const divisionsById = integrityDivisionById();
+  let repaired = 0;
+  (seed.clubs || []).forEach(club => {
+    const currentDivision = divisionsById[String(club.divisionId || 'default')];
+    const countryMismatch = currentDivision && clubCountryKeyForIntegrity(club) !== divisionCountryKey(currentDivision);
+    const invalidDivision = !currentDivision;
+    if(!invalidDivision && !countryMismatch && !restoreNativeIfNeeded) return;
+    if(!invalidDivision && !countryMismatch && restoreNativeIfNeeded){
+      const native = baseClubDivisionEntry(club);
+      if(!native?.divisionId || String(native.divisionId) === String(club.divisionId || '')) return;
+      const nativeDivision = divisionsById[String(native.divisionId || '')];
+      if(!nativeDivision || divisionCountryKey(nativeDivision) !== clubCountryKeyForIntegrity(club)) return;
+      if(setClubIntegrityDivision(club, nativeDivision)) repaired += 1;
+      return;
+    }
+    const target = nativeTargetDivisionForClub(club, currentDivision);
+    if(!target) return;
+    if(setClubIntegrityDivision(club, target)) repaired += 1;
+  });
+  return { repaired };
+}
+function rebuildSafeSeasonFixturesAfterStructureRepair(){
+  if(!game || !Array.isArray(game.fixtures)) return { rebuilt:false, reason:'sin_calendario', blockedPlayedCross:0 };
+  const issues = fixtureCountryIssues();
+  const playedCross = issues.filter(item => item.played);
+  if(playedCross.length) return { rebuilt:false, reason:'hay_partidos_cruzados_jugados', blockedPlayedCross:playedCross.length, issues };
+  if(!issues.length) return { rebuilt:false, reason:'sin_partidos_cruzados', blockedPlayedCross:0, issues };
+  if(typeof generateFixturesForDivisions !== 'function') return { rebuilt:false, reason:'generador_no_disponible', blockedPlayedCross:0, issues };
+  const nextRegular = generateFixturesForDivisions(seed.clubs || [], divisionOrderList(), { seasonYear:game.seasonYear || seasonYearForNumber(game.seasonNumber || 1) });
+  const previousRegular = (game.fixtures || []).filter(round => !isPromotionPlayoffRound(round));
+  const previousPlayoffs = (game.fixtures || []).filter(isPromotionPlayoffRound);
+  const mergedRegular = typeof mergePlayedFixturesIntoCalendar === 'function'
+    ? mergePlayedFixturesIntoCalendar(nextRegular, previousRegular)
+    : nextRegular;
+  game.fixtures = mergedRegular.concat(previousPlayoffs);
+  game.calendarVersion = `${SEASON_CALENDAR_VERSION}-country-safe`;
+  return { rebuilt:true, reason:'calendario_regenerado', fixed:issues.length, blockedPlayedCross:0, issues };
+}
 function divisionCountIntegrityRows(){
   return (seed?.divisions || []).map(division => {
     const expected = expectedDivisionTeamCount(division);
@@ -780,26 +846,18 @@ function inspectGameIntegrity(){
     result.ok = false;
     result.issues.push({ type:'invalid_standings', severity:'medium', title:'Tabla con clubes inexistentes', detail:`Hay ${invalidStandingIds.length} entradas de tabla de clubes inexistentes.`, samples:invalidStandingIds.slice(0,8) });
   }
-  const fixtureIssues = [];
-  (game?.fixtures || []).forEach(round => {
-    (round.matches || []).forEach(match => {
-      const home = seed.clubs.find(club => Number(club.id) === Number(match.homeId));
-      const away = seed.clubs.find(club => Number(club.id) === Number(match.awayId));
-      if(!home || !away){
-        fixtureIssues.push({ matchId:match.id, issue:'club_inexistente', homeId:match.homeId, awayId:match.awayId });
-        return;
-      }
-      const division = divisionsById[String(match.divisionId || home.divisionId || '')];
-      if(!division) return;
-      const divCountry = divisionCountryKey(division);
-      if(divCountry && (clubCountryKeyForIntegrity(home) !== divCountry || clubCountryKeyForIntegrity(away) !== divCountry)){
-        fixtureIssues.push({ matchId:match.id, issue:'fixture_pais_cruzado', division:division.name, home:home.name, away:away.name });
-      }
-    });
-  });
+  const fixtureIssues = fixtureCountryIssues();
   if(fixtureIssues.length){
+    const playedFixtureIssues = fixtureIssues.filter(item => item.played);
+    const unplayedFixtureIssues = fixtureIssues.filter(item => !item.played);
     result.ok = false;
-    result.warnings.push({ type:'fixture_cross_country', severity:'medium', title:'Calendario con partidos cruzados', detail:`Hay ${fixtureIssues.length} partidos cuyo país no coincide con la división del fixture. No se reparan automáticamente para no romper resultados o fechas ya jugadas.`, samples:fixtureIssues.slice(0,8) });
+    const detail = playedFixtureIssues.length
+      ? `Hay ${fixtureIssues.length} partidos cuyo país no coincide con la división del fixture. ${playedFixtureIssues.length} ya fueron jugados y no se reconstruyen automáticamente para no borrar resultados.`
+      : `Hay ${fixtureIssues.length} partidos cuyo país no coincide con la división del fixture. Como no están jugados, pueden regenerarse de forma segura.`;
+    result.warnings.push({ type:'fixture_cross_country', severity:'medium', title:'Calendario con partidos cruzados', detail, samples:fixtureIssues.slice(0,8) });
+    if(unplayedFixtureIssues.length && !playedFixtureIssues.length){
+      result.repairables.push({ type:'rebuild_cross_country_fixtures', title:'Regenerar calendario no jugado para quitar partidos cruzados', count:unplayedFixtureIssues.length, items:unplayedFixtureIssues });
+    }
   }
   const freeCap = Number(typeof MARKET_FREE_AGENT_HARD_MAX !== 'undefined' ? MARKET_FREE_AGENT_HARD_MAX : 300);
   if(result.stats.freeAgents > freeCap){
@@ -842,7 +900,7 @@ function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
   const body = `<div class="integrity-modal">
     <p class="eyebrow">Verificador de estructura</p>
     <h2>${escapeHtml(stateLabel)}</h2>
-    <p class="muted">Este chequeo no reinicia la partida, no reconstruye calendario y no borra resultados. La reparación segura reasigna clubes que quedaron en una liga de otro país, completa divisiones con cupos incorrectos y regenera el mapa de divisiones guardado.</p>
+    <p class="muted">Este chequeo no reinicia la partida y no borra resultados. La reparación segura reasigna clubes que quedaron en una liga de otro país, completa divisiones con cupos incorrectos, regenera el mapa de divisiones guardado y puede reconstruir calendarios cruzados solo si esos partidos todavía no fueron jugados.</p>
     ${repaired ? '<div class="notice-inline good">Reparación segura aplicada y partida guardada.</div>' : ''}
     <div class="integrity-summary-grid">
       <div><span>Clubes</span><strong>${Number(result.stats?.clubs || 0)}</strong></div>
@@ -870,14 +928,9 @@ async function applySafeGameIntegrityRepairs(){
   const before = inspectGameIntegrity();
   const divisionsById = integrityDivisionById();
   let repaired = 0;
-  (seed?.clubs || []).forEach(club => {
-    const currentDivision = divisionsById[String(club.divisionId || 'default')];
-    const needsRepair = !currentDivision || clubCountryKeyForIntegrity(club) !== divisionCountryKey(currentDivision);
-    if(!needsRepair) return;
-    const target = nativeTargetDivisionForClub(club, currentDivision);
-    if(!target) return;
-    if(setClubIntegrityDivision(club, target)) repaired += 1;
-  });
+  let fixturesRebuilt = 0;
+  const countryRepair = repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
+  repaired += Number(countryRepair.repaired || 0);
 
   let countPlan = buildDivisionCountRepairPlan();
   let guard = 0;
@@ -886,6 +939,7 @@ async function applySafeGameIntegrityRepairs(){
       const club = (seed?.clubs || []).find(club => Number(club.id) === Number(item.clubId));
       const target = divisionsById[String(item.toDivisionId || '')];
       if(!club || !target) return;
+      if(divisionCountryKey(target) !== clubCountryKeyForIntegrity(club)) return;
       if(setClubIntegrityDivision(club, target)) repaired += 1;
     });
     const nextPlan = buildDivisionCountRepairPlan();
@@ -904,20 +958,30 @@ async function applySafeGameIntegrityRepairs(){
     });
   }
 
+  const fixtureRepair = rebuildSafeSeasonFixturesAfterStructureRepair();
+  if(fixtureRepair.rebuilt) fixturesRebuilt = Number(fixtureRepair.fixed || 0);
+
   if(game){
     game.clubDivisionOverrides = snapshotClubDivisionOverrides();
     const selectedClub = seed.clubs.find(club => Number(club.id) === Number(game.selectedClubId));
     if(selectedClub) game.selectedLeagueId = selectedClub.divisionId || game.selectedLeagueId;
   }
-  if(repaired > 0 && typeof saveLocal === 'function'){
+  if((repaired > 0 || fixturesRebuilt > 0) && typeof saveLocal === 'function'){
     await saveLocal(true);
   }
-  if(repaired > 0 && typeof renderAll === 'function') renderAll();
+  if((repaired > 0 || fixturesRebuilt > 0) && typeof renderAll === 'function') renderAll();
   const after = inspectGameIntegrity();
   after.repairedCount = repaired;
+  after.fixturesRebuiltCount = fixturesRebuilt;
   after.previousIssues = before.issues || [];
-  if(repaired > 0) showNotice(`Verificación: ${repaired} movimiento(s) de estructura aplicados.`, false);
-  else showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
+  if(repaired > 0 || fixturesRebuilt > 0){
+    const parts = [];
+    if(repaired > 0) parts.push(`${repaired} movimiento(s) de estructura`);
+    if(fixturesRebuilt > 0) parts.push(`${fixturesRebuilt} partido(s) de calendario regenerados`);
+    showNotice(`Verificación: ${parts.join(' y ')} aplicados.`, false);
+  }else{
+    showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
+  }
   return after;
 }
 
@@ -2282,13 +2346,18 @@ function applyClubDivisionOverrides(overrides={}){
   const byId = Object.fromEntries(divisions.map(d => [d.id, d]));
   seed.clubs.forEach(club => {
     const override = overrides[club.id];
-    if(!override) return;
-    const division = byId[override.divisionId] || divisions.find(d => d.name === override.divisionName);
+    const currentDivision = byId[club.divisionId] || divisions.find(d => d.name === club.divisionName);
+    let division = currentDivision || null;
+    if(override){
+      division = byId[override.divisionId] || divisions.find(d => d.name === override.divisionName) || division;
+    }
+    const clubCountry = clubCountryKeyForIntegrity(club);
+    const divisionCountry = division ? divisionCountryKey(division) : '';
+    if(!division || (clubCountry && divisionCountry && clubCountry !== divisionCountry)){
+      division = nativeTargetDivisionForClub(club, currentDivision || division);
+    }
     if(!division) return;
-    club.divisionId = division.id;
-    club.divisionName = division.name;
-    club.divisionOrder = division.order;
-    club.prizeMultiplier = division.prizeMultiplier ?? divisionPrizeMultiplier(division.name, (division.order || 1)-1);
+    setClubIntegrityDivision(club, division);
   });
 }
 function snapshotClubDivisionOverrides(){
@@ -2539,27 +2608,49 @@ function computeArgentinaSeasonMovements(){
 function divisionUsesArgentinaRules(division){
   return normalizeScheduleText(division?.country || '') === 'argentina' && [1,2,3].includes(Number(division?.order || 0));
 }
+function divisionCountryGroupsForSeason(){
+  const groups = new Map();
+  (seed?.divisions || []).forEach(division => {
+    const country = divisionCountryKey(division);
+    if(!country) return;
+    if(!groups.has(country)) groups.set(country, []);
+    groups.get(country).push(division);
+  });
+  return Array.from(groups.entries()).map(([country, divisions]) => ({
+    country,
+    divisions:divisions.slice().sort((a,b)=>(a.order || 0)-(b.order || 0))
+  }));
+}
 function computeSeasonMovements(){
-  const divisions = divisionOrderList();
   const movements = [];
-  if(argentinaDivisions().length >= 3){
-    computeArgentinaSeasonMovements().forEach(move => addUniqueMovement(movements, move));
-  }
-  for(let i=1; i<divisions.length; i++){
-    const upper = divisions[i-1];
-    const lower = divisions[i];
-    if(divisionUsesArgentinaRules(upper) || divisionUsesArgentinaRules(lower)) continue;
-    const lowerTable = sortedStandings(lower.id);
-    const upperTable = sortedStandings(upper.id);
-    const lowerChampion = lowerTable[0];
-    const upperLast = upperTable[upperTable.length - 1];
-    if(lowerChampion){
-      addUniqueMovement(movements, movementRecord('promotion', lowerChampion.clubId, lower, upper, 'Campeón'));
+  let argentinaHandled = false;
+  divisionCountryGroupsForSeason().forEach(group => {
+    const isArgentinaGroup = group.country === 'argentina';
+    if(isArgentinaGroup){
+      if(!argentinaHandled && argentinaDivisions().length >= 3){
+        computeArgentinaSeasonMovements().forEach(move => addUniqueMovement(movements, move));
+      }
+      argentinaHandled = true;
+      return;
     }
-    if(upperLast){
-      addUniqueMovement(movements, movementRecord('relegation', upperLast.clubId, upper, lower, 'Descenso'));
+    const divisions = group.divisions || [];
+    if(divisions.length < 2) return;
+    for(let i=1; i<divisions.length; i++){
+      const upper = divisions[i-1];
+      const lower = divisions[i];
+      if(divisionCountryKey(upper) !== divisionCountryKey(lower)) continue;
+      const lowerTable = sortedStandings(lower.id);
+      const upperTable = sortedStandings(upper.id);
+      const lowerChampion = lowerTable[0];
+      const upperLast = upperTable[upperTable.length - 1];
+      if(lowerChampion){
+        addUniqueMovement(movements, movementRecord('promotion', lowerChampion.clubId, lower, upper, 'Campeón'));
+      }
+      if(upperLast){
+        addUniqueMovement(movements, movementRecord('relegation', upperLast.clubId, upper, lower, 'Descenso'));
+      }
     }
-  }
+  });
   return movements;
 }
 function argentineStandingStatusClass(divisionId, index, total){
@@ -2895,6 +2986,8 @@ function updateClubPrestigeAfterSeason(){
 }
 function finalizeSeasonIfNeeded(){
   if(!game || game.seasonFinalized || game.matchdayIndex < game.fixtures.length) return;
+  repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
+  game.clubDivisionOverrides = snapshotClubDivisionOverrides();
   game.managerStats = normalizeManagerStats(game.managerStats);
   const division = clubDivision(game.selectedClubId);
   const table = sortedStandings(division.id);
@@ -2984,14 +3077,18 @@ function applySeasonMovements(){
   const divisions = divisionOrderList();
   const byId = Object.fromEntries(divisions.map(d => [d.id, d]));
   movements.forEach(move => {
-    const club = seed.clubs.find(c => c.id === move.clubId);
+    const club = seed.clubs.find(c => Number(c.id) === Number(move.clubId));
+    const from = byId[move.fromDivisionId];
     const target = byId[move.toDivisionId];
     if(!club || !target) return;
-    club.divisionId = target.id;
-    club.divisionName = target.name;
-    club.divisionOrder = target.order;
-    club.prizeMultiplier = target.prizeMultiplier ?? divisionPrizeMultiplier(target.name, (target.order || 1)-1);
+    const clubCountry = clubCountryKeyForIntegrity(club);
+    const targetCountry = divisionCountryKey(target);
+    const fromCountry = from ? divisionCountryKey(from) : clubCountry;
+    if(clubCountry && targetCountry && clubCountry !== targetCountry) return;
+    if(from && fromCountry && targetCountry && fromCountry !== targetCountry) return;
+    setClubIntegrityDivision(club, target);
   });
+  repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
   game.clubDivisionOverrides = snapshotClubDivisionOverrides();
 }
 
@@ -3369,6 +3466,8 @@ function startNextSeason(selectedClubId){
   assignBotFieldStatesForNextSeason(nextClubId, previousClubId);
   repairInvalidBotFieldStates(game, 'season_transition', { message:false });
   applySeasonMovements();
+  repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
+  game.clubDivisionOverrides = snapshotClubDivisionOverrides();
   const aging = applySeasonalAging();
   applyAcademyAgingIfNeeded();
   refreshAllPlayerClauses();

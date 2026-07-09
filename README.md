@@ -1,8 +1,18 @@
 # Fútbol Manager MVP
 
-**V4.20 - Rechazo de ofertas por media y prestigio**
+**V4.21 - Temporada segura por país**
 
 ## Historial de versiones
+
+### V4.21 - Temporada segura por país
+- Se corrige el origen del cruce de clubes entre países al cambiar de temporada.
+- Los ascensos y descensos generales ahora se calculan por país, no con una escalera global de divisiones.
+- Argentina conserva su sistema especial: Primera, Segunda, Tercera y playoffs de promoción.
+- Las ligas de país único, como Chile, Brasil, España, Inglaterra, Italia y Rumania, ya no se conectan entre sí al cerrar temporada.
+- Los overrides de división que manden un club a otro país se ignoran o se reparan hacia una división válida del país del club.
+- El verificador agrega reparación de calendario: si los partidos cruzados todavía no fueron jugados, regenera el fixture seguro.
+- Si hay partidos cruzados ya jugados, el verificador los marca pero no los borra para evitar pérdida de resultados.
+- Al iniciar una nueva temporada, el juego vuelve a validar clubes/divisiones antes de generar el calendario.
 
 ### V4.20 - Rechazo de ofertas por media y prestigio
 - Se reemplaza la aceptación simple de jugadores libres por una curva basada en diferencia entre media del jugador y prestigio del club ofertante.

@@ -48,7 +48,45 @@ const SEASON_START_YEAR = configNumber('calendario.anioInicial', 2026, 1900, 220
 const SEASON_START_MONTH = configNumber('calendario.mesInicioTemporada', 1, 1, 12);
 const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31);
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
-const SEASON_CALENDAR_VERSION = 'annual-365-home-away-v1';
+const FAST_BOT_SIMULATION_ENABLED = configBoolean('calendario.simulacionRapidaBots', true);
+const LEAGUE_MATCH_DAY_RULES = Array.isArray(configValue('calendario.diasPorLiga', [])) ? configValue('calendario.diasPorLiga', []) : [];
+function normalizeScheduleText(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+function leagueRuleMatchesDivision(rule, division={}){
+  const country = normalizeScheduleText(division.country || division.pais || '');
+  const name = normalizeScheduleText(division.name || division.nombre || '');
+  const order = Math.round(Number(division.order || division.orden || 0));
+  const ruleCountries = Array.isArray(rule?.paises || rule?.countries) ? (rule.paises || rule.countries).map(normalizeScheduleText) : [];
+  const ruleNames = Array.isArray(rule?.ligas || rule?.leagues || rule?.divisiones) ? (rule.ligas || rule.leagues || rule.divisiones).map(normalizeScheduleText) : [];
+  const ruleOrders = Array.isArray(rule?.ordenes || rule?.orders) ? (rule.ordenes || rule.orders).map(v => Math.round(Number(v))) : [];
+  if(ruleCountries.length && !ruleCountries.includes(country)) return false;
+  if(ruleNames.length && !ruleNames.some(item => item && name.includes(item))) return false;
+  if(ruleOrders.length && !ruleOrders.includes(order)) return false;
+  return true;
+}
+function divisionWeekendOffsetDays(division={}){
+  const rule = LEAGUE_MATCH_DAY_RULES.find(item => leagueRuleMatchesDivision(item, division));
+  if(rule && Number.isFinite(Number(rule.offset))) return Math.max(-6, Math.min(6, Math.round(Number(rule.offset))));
+  const country = normalizeScheduleText(division.country || division.pais || '');
+  const order = Math.round(Number(division.order || division.orden || 1));
+  if(['espana','italia','inglaterra','rumania'].includes(country)) return -2;
+  if(country === 'argentina' && order > 1) return -1;
+  return 0;
+}
+function matchDateForDivisionRound(baseDate, division={}){
+  return typeof addDaysToIsoDate === 'function' ? addDaysToIsoDate(baseDate, divisionWeekendOffsetDays(division)) : baseDate;
+}
+function matchDateLabel(date){
+  if(!validIsoDate(date)) return date || '';
+  const day = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(`${date}T00:00:00Z`).getUTCDay()] || '';
+  return `${day} ${date}`;
+}
+const SEASON_CALENDAR_VERSION = 'annual-365-home-away-weekend-split-v2';
 const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 120000, 0);
 const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
 const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.05',
+  version: 'V4.06',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -46,8 +46,19 @@ window.GAME_CONFIG = {
     diaInicioTemporada: 1,
     // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
     ligaIdaYVuelta: true,
-    // Bloqueo entre avances largos en milisegundos. 60000 = 1 minutos.
-    bloqueoEntreAvancesMs: 60000,
+    // Distribución de partidos por días para no simular todas las ligas juntas.
+    // offset: -2 = viernes, -1 = sábado, 0 = domingo respecto de la fecha base de cada jornada.
+    diasPorLiga: [
+      { paises:['España','Italia','Inglaterra','Rumania'], offset:-2 },
+      { paises:['Argentina'], ordenes:[2,3], offset:-1 },
+      { paises:['Chile','Brasil'], offset:0 },
+      { paises:['Argentina'], ordenes:[1], offset:0 }
+    ],
+    // Los partidos sin manager usan simulación rápida para reducir bloqueos.
+    simulacionRapidaBots: true,
+
+    // Bloqueo entre partidos propios en milisegundos. 120000 = 2 minutos.
+    bloqueoEntreAvancesMs: 120000,
     // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
     bloqueoAvanceDiaMs: 2000,
     // Duración visual de la transición al avanzar días.

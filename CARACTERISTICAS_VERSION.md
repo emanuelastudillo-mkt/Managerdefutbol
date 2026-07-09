@@ -1,22 +1,17 @@
-# V4.05 - Ranking automático y limpieza al cambiar de club
+# V4.06 - Optimización de simulación y calendario por días
 
 ## Cambios principales
 
-- Se corrige el envío automático del ranking para Cloudflare Workers.
-- El envío automático prueba primero la ruta `/records` y mantiene `/ranking` como alternativa.
-- La lectura del ranking mantiene `/ranking` y agrega `/records` como ruta alternativa.
-- Si `config.js > ranking.token` tiene un token, se envía también como encabezado `Authorization: Bearer`.
-- Al tomar un nuevo club después de un despido o renuncia, se limpian estados vinculados al club anterior:
-  - empleados contratados;
-  - acciones de staff;
-  - cooldown de charla motivacional;
-  - tratamientos de kinesiólogo ya usados;
-  - preparador de juveniles;
-  - consultas de academia en curso;
-  - ofertas pendientes;
-  - préstamo bancario activo;
-  - sponsors activos y ofertas de sponsors.
-- El nuevo club empieza sin arrastrar contratos ni cooldowns del club anterior.
+- Se agrega simulación rápida para partidos bot vs bot.
+- Los partidos del manager siguen usando el simulador completo.
+- Se distribuyen las ligas por día dentro de cada jornada:
+  - Viernes: España, Italia, Inglaterra y Rumania.
+  - Sábado: segunda y tercera argentina.
+  - Domingo: Chile, Brasil y primera argentina.
+- El avance diario puede simular partidos de otras ligas sin ejecutar el partido propio.
+- Si el partido propio está en cooldown, el juego permite avanzar días que no tengan partido propio pendiente.
+- El calendario ahora muestra la fecha específica de cada partido.
+- Se regenera el calendario de partidas existentes manteniendo resultados ya jugados.
 
 ## Archivos modificados
 
@@ -25,15 +20,20 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
-- `js/game/05-state-season.js`
-- `js/game/13-ranking-online.js`
+- `style.css`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/ui/06-render-home-messages.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
-- Sintaxis validada en todos los archivos `.js` modificados.
-- No se modificaron estructura de datos global, calendario, simulador de partidos ni generación de jugadores.
+- Sintaxis validada en todos los archivos `.js`.
 
 ## Nota
 
-- Si el Worker mantiene autenticación obligatoria para subir récords, hace falta pegar el token vigente en `config.js > ranking.token` o guardarlo en `localStorage` como `fmRankingAuthToken`.
+- Los partidos bot vs bot pasan a ser menos detallados internamente para priorizar rendimiento.
+- El partido del manager conserva el detalle completo.

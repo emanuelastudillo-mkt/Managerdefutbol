@@ -352,14 +352,14 @@ function renderFixture(){
     if(showMine){
       const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
       if(!matches.length) return '';
-      return `<div class="card own-fixture-round"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
+      return `<div class="card own-fixture-round"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
     }
     const groups = visibleDivisions.map(division => {
       const matches = round.matches.filter(m => (m.divisionId || seed.clubs.find(c=>c.id===m.homeId)?.divisionId || 'default') === division.id);
       if(!matches.length) return '';
       return `<div class="fixture-division-block"><h4>${escapeHtml(division.name)}</h4><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
     }).join('');
-    return `<div class="card"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
+    return `<div class="card"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
   }).filter(Boolean).join('');
   view.innerHTML = `
     <div class="row section-title fixture-title-row">
@@ -378,6 +378,7 @@ function matchCard(m){
   const clickable = m.played ? 'clickable' : '';
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
   return `<button class="match-card ${clickable}" ${attr}>
+    <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
     <div class="match-line">
       <div>${clubSpan(m.homeId)}</div>
       <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}` : 'vs'}</strong>

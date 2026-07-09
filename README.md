@@ -2,9 +2,24 @@
 
 ## Versión actual
 
-**V4.05 - Ranking automático y limpieza al cambiar de club**
+**V4.06 - Optimización de simulación y calendario por días**
 
 ## Historial de versiones
+
+### V4.06 - Optimización de simulación y calendario por días
+
+- Se reduce la carga al simular partidos: los partidos sin participación del manager usan un simulador rápido de bots.
+- El partido propio mantiene el simulador completo con eventos, lesiones, tarjetas, estadísticas y consecuencias del plantel.
+- El calendario de cada jornada se divide por días:
+  - Viernes: España, Italia, Inglaterra y Rumania.
+  - Sábado: segunda y tercera división argentina.
+  - Domingo: Chile, Brasil y primera división argentina.
+- El avance ya no necesita resolver todas las ligas con el motor completo en el mismo bloque.
+- El botón `Avanzar día` puede procesar partidos de otras ligas sin jugar el partido propio.
+- Durante el bloqueo posterior al partido propio, se permite avanzar días sin partido propio para procesar calendario de bots.
+- El calendario muestra la fecha específica de cada partido dentro de la jornada.
+- Se mantiene compatibilidad con partidas guardadas: el calendario se regenera conservando partidos ya jugados.
+- Se cambia la versión de calendario interno para forzar la corrección de fechas escalonadas.
 
 ### V4.05 - Ranking automático y limpieza al cambiar de club
 

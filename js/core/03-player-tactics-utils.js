@@ -140,15 +140,48 @@ function seasonDayFromDate(iso, year=currentSeasonYear()){
   const raw = daysBetweenIsoDates(start, validIsoDate(iso) ? iso : start) + 1;
   return clamp(raw, 1, daysInSeasonYear(year));
 }
+function nextUnplayedMatchDateForClub(state=game, clubId=null){
+  if(!state || !Array.isArray(state.fixtures)) return '';
+  const ownId = Number(clubId || state.selectedClubId || 0);
+  if(!ownId) return '';
+  for(let roundIndex=Math.max(0, Number(state.matchdayIndex || 0)); roundIndex<state.fixtures.length; roundIndex++){
+    const round = state.fixtures[roundIndex];
+    const match = (round.matches || []).find(m => !m.played && (Number(m.homeId) === ownId || Number(m.awayId) === ownId));
+    if(match) return validIsoDate(match.date) ? match.date : (round.date || '');
+  }
+  return '';
+}
+function nextUnplayedMatchDate(state=game){
+  if(!state || !Array.isArray(state.fixtures)) return '';
+  let found = '';
+  for(let roundIndex=Math.max(0, Number(state.matchdayIndex || 0)); roundIndex<state.fixtures.length; roundIndex++){
+    const round = state.fixtures[roundIndex];
+    (round.matches || []).forEach(match => {
+      if(match.played) return;
+      const date = validIsoDate(match.date) ? match.date : (round.date || '');
+      if(validIsoDate(date) && (!found || daysBetweenIsoDates(found, date) < 0)) found = date;
+    });
+    if(found) return found;
+  }
+  return '';
+}
+function lastFixtureMatchDate(state=game){
+  const fixtures = state?.fixtures || [];
+  for(let i=fixtures.length-1; i>=0; i--){
+    const dates = (fixtures[i].matches || []).map(m => validIsoDate(m.date) ? m.date : fixtures[i].date).filter(validIsoDate);
+    if(dates.length){ const sortedDates = dates.sort((a,b)=>daysBetweenIsoDates(b,a)); return sortedDates[sortedDates.length - 1]; }
+    if(validIsoDate(fixtures[i].date)) return fixtures[i].date;
+  }
+  return '';
+}
 function dateForSeasonState(state=game){
   const year = Math.round(Number(state?.seasonYear || 0)) || seasonYearForNumber(state?.seasonNumber || 1);
   if(!state) return firstAdvanceDateForSeason(year);
   if(state.seasonFinalized || state.seasonPhase === 'finalized') return seasonEndDateForYear(year);
-  if(state.seasonPhase === 'regular') return state.fixtures?.[state.matchdayIndex || 0]?.date || leagueStartDateForSeason(year);
+  if(state.seasonPhase === 'regular') return nextUnplayedMatchDateForClub(state, state.selectedClubId) || nextUnplayedMatchDate(state) || state.fixtures?.[state.matchdayIndex || 0]?.date || leagueStartDateForSeason(year);
   if(state.seasonPhase === 'postseason'){
-    const afterLastRound = state.fixtures?.length
-      ? addDaysToIsoDate(state.fixtures[state.fixtures.length - 1].date, DAYS_PER_ADVANCE)
-      : leagueStartDateForSeason(year);
+    const lastMatchDate = lastFixtureMatchDate(state);
+    const afterLastRound = lastMatchDate ? addDaysToIsoDate(lastMatchDate, DAYS_PER_ADVANCE) : leagueStartDateForSeason(year);
     return addDaysToIsoDate(afterLastRound, Math.max(0, Number(state.phaseTurn || 0)) * DAYS_PER_ADVANCE);
   }
   if(state.seasonPhase === 'preseason'){

@@ -315,47 +315,196 @@ function isCurrentDateOnOrAfterIso(targetIso){
   const today = currentCalendarDate();
   return validIsoDate(targetIso) && daysBetweenIsoDates(today, targetIso) <= 0;
 }
-function setDailyAdvanceSummary(fromDate, toDate){
+function setDailyAdvanceSummary(fromDate, toDate, simulatedCount=0){
   game.lastTurnSummary = {
     title:'Avance diario',
     phase:phaseLabel(),
     result:`${fromDate || '—'} → ${toDate || '—'}`,
     tone:'info',
     items:[
-      { label:'Calendario', text:'El juego avanzó un solo día. No se simuló partido.', tone:'info' },
-      { label:'Próximo compromiso', text:nextRegularRound()?.date ? `Programado para ${nextRegularRound().date}.` : 'Sin partido confirmado.', tone:'info' }
+      { label:'Calendario', text:simulatedCount > 0 ? `Se simularon ${simulatedCount} partido(s) de otras ligas programados para la fecha.` : 'El juego avanzó un solo día. No se simuló partido propio.', tone:simulatedCount > 0 ? 'ok' : 'info' },
+      { label:'Próximo compromiso', text:nextOwnMatchInfo()?.date ? `Programado para ${nextOwnMatchInfo().date}.` : 'Sin partido confirmado.', tone:'info' }
     ],
     createdAt:Date.now()
   };
+}
+function ownClubInMatch(match){
+  const ownId = Number(game?.selectedClubId || 0);
+  return ownId && (Number(match?.homeId) === ownId || Number(match?.awayId) === ownId);
+}
+function scheduledDateForMatch(match, round=null){
+  return validIsoDate(match?.date) ? match.date : (validIsoDate(round?.date) ? round.date : currentCalendarDate());
+}
+function nextOwnMatchInfo(){
+  if(!game || !isRegularSeason()) return null;
+  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+    const round = game.fixtures[roundIndex];
+    const match = (round.matches || []).find(m => !m.played && ownClubInMatch(m));
+    if(match) return { roundIndex, round, match, date:scheduledDateForMatch(match, round) };
+  }
+  return null;
+}
+function nextPendingMatchInfo(){
+  if(!game || !isRegularSeason()) return null;
+  let found = null;
+  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+    const round = game.fixtures[roundIndex];
+    (round.matches || []).forEach(match => {
+      if(match.played) return;
+      const date = scheduledDateForMatch(match, round);
+      if(!found || daysBetweenIsoDates(found.date, date) < 0) found = { roundIndex, round, match, date };
+    });
+    if(found) return found;
+  }
+  return null;
+}
+function hasOwnMatchDueOnOrBefore(date){
+  if(!validIsoDate(date) || !game?.fixtures) return false;
+  return game.fixtures.some(round => (round.matches || []).some(match => !match.played && ownClubInMatch(match) && daysBetweenIsoDates(scheduledDateForMatch(match, round), date) >= 0));
+}
+function collectDueMatchesUntil(targetDate, options={}){
+  if(!validIsoDate(targetDate) || !game?.fixtures) return [];
+  const includeOwn = options.includeOwn !== false;
+  const collected = [];
+  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+    const round = game.fixtures[roundIndex];
+    (round.matches || []).forEach(match => {
+      if(match.played) return;
+      if(!includeOwn && ownClubInMatch(match)) return;
+      const date = scheduledDateForMatch(match, round);
+      if(validIsoDate(date) && daysBetweenIsoDates(date, targetDate) >= 0){
+        collected.push({ roundIndex, round, match, date });
+      }
+    });
+  }
+  return collected.sort((a,b)=>daysBetweenIsoDates(b.date, a.date) || a.roundIndex-b.roundIndex || String(a.match.id).localeCompare(String(b.match.id)));
+}
+function currentRoundIsComplete(index=game?.matchdayIndex || 0){
+  const round = game?.fixtures?.[index];
+  return !!round && (round.matches || []).every(match => match.played);
+}
+function advanceCompletedRegularRounds(){
+  if(!game?.fixtures) return;
+  while(game.matchdayIndex < game.fixtures.length && currentRoundIsComplete(game.matchdayIndex)){
+    game.matchdayIndex += 1;
+  }
+}
+function quickBotPoisson(lambda){
+  const safe = Math.max(0.02, Number(lambda) || 0.02);
+  const limit = Math.exp(-safe);
+  let k = 0;
+  let p = 1;
+  do { k++; p *= Math.random(); } while(p > limit && k < 10);
+  return clamp(k - 1, 0, 8);
+}
+function quickClubRating(clubId){
+  const club = seed.clubs.find(c => Number(c.id) === Number(clubId)) || { reputation:50 };
+  const squad = playersByClub(clubId).slice().sort((a,b)=>effectiveOverall(b)-effectiveOverall(a)).slice(0, 14);
+  const top = squad.slice(0, 11);
+  const squadAvg = top.length ? avg(top.map(effectiveOverall)) : Number(club.reputation || 50);
+  const morale = squad.length ? avg(squad.map(p => currentMorale(p.id))) : 50;
+  const condition = squad.length ? avg(squad.map(p => currentCondition(p.id))) : 70;
+  const cohesion = typeof cohesionValue === 'function' ? cohesionValue(clubId) : Number(game?.teamCohesion?.[clubId] || 50);
+  return squadAvg * 0.62 + Number(club.reputation || 50) * 0.22 + morale * 0.08 + condition * 0.04 + cohesion * 0.04;
+}
+function quickSimulateBotMatch(match){
+  const homeRating = quickClubRating(match.homeId);
+  const awayRating = quickClubRating(match.awayId);
+  const context = typeof attendanceContextForMatch === 'function'
+    ? { weather:'Normal', pitch:fieldConditionName(fieldScoreForClub(match.homeId)), pitchScore:fieldScoreForClub(match.homeId), ...attendanceContextForMatch(match) }
+    : { weather:'Normal', pitch:'Normal', pitchScore:70, totalFans:0, homeCrowdBonus:0 };
+  const crowdEdge = Number(context.homeCrowdBonus || 0) / 22;
+  const pitchPenalty = (pitchEffect(context.pitch).chanceMultiplier || 1) - 1;
+  const edge = (homeRating - awayRating) / 28;
+  let homeXg = clamp(1.20 + edge + 0.18 + crowdEdge + pitchPenalty + rnd(-0.20, 0.25), 0.15, 4.40);
+  let awayXg = clamp(1.05 - edge * 0.86 + pitchPenalty + rnd(-0.20, 0.24), 0.12, 4.10);
+  let homeGoals = quickBotPoisson(homeXg);
+  let awayGoals = quickBotPoisson(awayXg);
+  if(homeGoals === 0 && awayGoals === 0 && Math.random() < 0.38){
+    if(Math.random() < clamp(0.50 + edge * 0.18, 0.25, 0.75)) homeGoals = 1;
+    else awayGoals = 1;
+  }
+  const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + 3 + rnd(-7,7)), 31, 69);
+  const awayPoss = 100 - homePoss;
+  const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), 1, 18);
+  const awayChances = clamp(Math.round(awayXg * rnd(4.0, 6.5)), 1, 18);
+  const matchStats = {
+    home:{ attacks:clamp(Math.round(24 + homeChances * 3 + rnd(-5,7)), 12, 78), chances:homeChances, possession:homePoss, fouls:clamp(Math.round(rnd(6,17)), 2, 30), passScore:clamp(Math.round(homeRating + rnd(-8,10)), 1, 140), xg:Number(homeXg.toFixed(2)), keySaves:0, errors:0, goalErrors:0 },
+    away:{ attacks:clamp(Math.round(22 + awayChances * 3 + rnd(-5,7)), 12, 78), chances:awayChances, possession:awayPoss, fouls:clamp(Math.round(rnd(6,17)), 2, 30), passScore:clamp(Math.round(awayRating + rnd(-8,10)), 1, 140), xg:Number(awayXg.toFixed(2)), keySaves:0, errors:0, goalErrors:0 }
+  };
+  if(!match.friendly) applyResultToTables(match, homeGoals, awayGoals);
+  return { ...match, played:true, engine:'bot-rapido-v4.06', homeGoals, awayGoals, goals:[], cards:[], injuries:[], substitutions:[], keySaves:[], errors:[], matchStats, matchContext:context, starterIdsHome:[], starterIdsAway:[], playedIdsHome:[], playedIdsAway:[], instructionConditionDeltas:{} };
+}
+function simulateScheduledMatch(match){
+  if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
+  return simulateMatch(match);
+}
+function markScheduledResult(item, result){
+  Object.assign(item.match, { played:true, homeGoals:result.homeGoals, awayGoals:result.awayGoals, date:item.date });
+}
+function simulateDueMatchesUntil(targetDate, options={}){
+  const due = collectDueMatchesUntil(targetDate, options);
+  const results = [];
+  due.forEach(item => {
+    const result = simulateScheduledMatch(item.match);
+    markScheduledResult(item, result);
+    results.push(result);
+  });
+  if(results.length){
+    game.matchHistory.push(...results);
+    advanceCompletedRegularRounds();
+  }
+  return results;
 }
 function advanceOneDay(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   repairBotRosters({ reason:'before_day_advance' });
-  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   const fromDate = currentCalendarDate();
   if(isRegularSeason()){
     if(game.matchdayIndex >= game.fixtures.length){
       showNotice('La fase regular ya terminó. Usá el avance largo para pasar a postemporada.');
       return;
     }
-    const round = nextRegularRound();
-    if(round?.date && isCurrentDateOnOrAfterIso(round.date)){
-      showNotice('Hay un partido pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
+    const ownInfo = nextOwnMatchInfo();
+    if(ownInfo?.date && isCurrentDateOnOrAfterIso(ownInfo.date)){
+      showNotice('Hay un partido propio pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
       return;
     }
     let nextDate = addDaysToIsoDate(fromDate, 1);
-    if(round?.date && daysBetweenIsoDates(nextDate, round.date) < 0) nextDate = round.date;
+    const nextTarget = ownInfo?.date || nextPendingMatchInfo()?.date || nextRegularRound()?.date;
+    if(nextTarget && daysBetweenIsoDates(nextDate, nextTarget) < 0) nextDate = nextTarget;
+    if(isAdvanceLocked() && hasOwnMatchDueOnOrBefore(nextDate)){
+      showNotice(`El próximo partido propio sigue bloqueado por ${formatClock(advanceLockLeftMs())}. Podés avanzar otros días sin partido propio.`);
+      return;
+    }
     game.currentDate = nextDate;
+    const botResults = simulateDueMatchesUntil(nextDate, { includeOwn:false });
+    if(botResults.length){
+      if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(botResults);
+      if(typeof processBotDismissals === 'function') processBotDismissals();
+      advanceStadiumAfterMatches(botResults);
+    }
     if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(Math.max(1, Math.abs(daysBetweenIsoDates(fromDate, nextDate)) || 1));
-    setDailyAdvanceSummary(fromDate, nextDate);
-    setAdvanceLock(DAY_ADVANCE_LOCK_MS);
+    const regularEnded = game.matchdayIndex >= game.fixtures.length;
+    if(regularEnded){
+      game.seasonPhase = 'postseason';
+      game.phaseTurn = 0;
+      game.currentDate = dateForSeasonState(game);
+      setAdvanceLock(0);
+    } else if(!isAdvanceLocked()){
+      setAdvanceLock(DAY_ADVANCE_LOCK_MS);
+    }
+    setDailyAdvanceSummary(fromDate, nextDate, botResults.length);
     activeTab = 'home';
     saveLocal(true);
     renderAll();
-    showNotice(round?.date && nextDate === round.date ? 'Llegaste al día del partido.' : 'Avanzaste 1 día.');
+    if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
+    else if(botResults.length) showNotice(`Avanzaste al ${nextDate}. Se simularon ${botResults.length} partido(s) de otras ligas.`);
+    else showNotice(nextTarget && nextDate === nextTarget ? 'Llegaste al día del próximo evento.' : 'Avanzaste 1 día.');
     return;
   }
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   showNotice('El avance diario está disponible durante la temporada regular. En pretemporada y postemporada usá el avance largo.');
 }
 function goToNextMatch(){
@@ -363,11 +512,12 @@ function goToNextMatch(){
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isRegularSeason()){
-    const round = nextRegularRound();
-    if(round?.date && isCurrentDateBeforeIso(round.date)){
-      const daysToMatch = Math.max(0, Math.abs(daysBetweenIsoDates(currentCalendarDate(), round.date)) || 0);
+    const ownInfo = nextOwnMatchInfo();
+    const targetDate = ownInfo?.date || nextPendingMatchInfo()?.date;
+    if(targetDate && isCurrentDateBeforeIso(targetDate)){
+      const daysToMatch = Math.max(0, Math.abs(daysBetweenIsoDates(currentCalendarDate(), targetDate)) || 0);
       if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(daysToMatch);
-      game.currentDate = round.date;
+      game.currentDate = targetDate;
     }
     simulateNextMatchday({ advanceLabel:'Yendo al próximo partido' });
     return;
@@ -401,38 +551,59 @@ function simulateNextMatchday(options={}){
   if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
+  const ownInfo = nextOwnMatchInfo();
+  const pendingInfo = nextPendingMatchInfo();
+  const targetDate = ownInfo?.date || pendingInfo?.date;
+  if(!targetDate){
+    game.matchdayIndex = game.fixtures.length;
+    game.seasonPhase = 'postseason';
+    game.phaseTurn = 0;
+    game.currentDate = dateForSeasonState(game);
+    saveLocal(true);
+    renderAll();
+    showNotice('No quedan partidos pendientes. Comienza la postemporada.');
+    return;
+  }
   const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
-  const round = game.fixtures[game.matchdayIndex];
-  const results = round.matches.map(match => simulateMatch(match));
-  round.matches.forEach((m,i)=>Object.assign(m, { played:true, homeGoals:results[i].homeGoals, awayGoals:results[i].awayGoals }));
-  game.matchHistory.push(...results);
-  const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
-  applyConditionUpdates(results);
-  applyMoraleUpdates(results);
-  if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
-  applyTrainingEffects();
-  maintainBotBalanceDuringSeason();
-  if(typeof processBotDismissals === 'function') processBotDismissals();
-  advanceStadiumAfterMatches(results);
-  processSponsorContracts();
-  processBankLoanWeeklyPayment();
+  const fromRoundIndex = Number(game.matchdayIndex || 0);
+  const results = simulateDueMatchesUntil(targetDate, { includeOwn:true });
+  const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId) || null;
+  if(!results.length){
+    showNotice('No había partidos pendientes para simular en esta fecha.');
+    return;
+  }
   if(ownResult){
+    applyConditionUpdates(results);
+    applyMoraleUpdates(results);
+    if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
+    applyTrainingEffects();
+    maintainBotBalanceDuringSeason();
+    if(typeof processBotDismissals === 'function') processBotDismissals();
+    advanceStadiumAfterMatches(results);
+    processSponsorContracts();
+    processBankLoanWeeklyPayment();
     applyEconomyResult(ownResult);
     updateManagerMatchStats(ownResult);
     maybeGenerateTransferOffer(ownResult);
     advanceSponsorMatchCounter();
     if(typeof awardSpecialPointsForOwnMatch === 'function') awardSpecialPointsForOwnMatch(ownResult);
+  } else {
+    if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
+    if(typeof processBotDismissals === 'function') processBotDismissals();
+    advanceStadiumAfterMatches(results);
   }
-  const triggeredEvents = processGameEventsAfterMatches({ round, results, ownResult });
-  const ownProblems = collectOwnProblems(ownResult);
-  removeOwnUnavailableFromTactic(ownProblems);
-  game.lastOwnProblems = ownProblems;
-  game.mustReviewTactics = game.lastOwnProblems.length > 0;
-  game.matchdayIndex += 1;
-  advanceGlobalTurn();
-  processAcademyTurn();
-  processPendingTransfers();
+  const summaryRound = game.fixtures[fromRoundIndex] || ownInfo?.round || pendingInfo?.round || { matchday:'—', date:targetDate, matches:[] };
+  const triggeredEvents = ownResult ? processGameEventsAfterMatches({ round:summaryRound, results, ownResult }) : [];
+  const ownProblems = ownResult ? collectOwnProblems(ownResult) : [];
+  if(ownResult){
+    removeOwnUnavailableFromTactic(ownProblems);
+    game.lastOwnProblems = ownProblems;
+    game.mustReviewTactics = game.lastOwnProblems.length > 0;
+    advanceGlobalTurn();
+    processAcademyTurn();
+    processPendingTransfers();
+  }
   const regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(regularEnded){
@@ -441,17 +612,19 @@ function simulateNextMatchday(options={}){
     game.currentDate = dateForSeasonState(game);
     setAdvanceLock(0);
   } else {
-    game.currentDate = validIsoDate(round.date) ? round.date : currentCalendarDate();
-    setAdvanceLock(ADVANCE_LOCK_MS);
+    game.currentDate = targetDate;
+    setAdvanceLock(ownResult ? ADVANCE_LOCK_MS : DAY_ADVANCE_LOCK_MS);
   }
-  setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, triggeredEvents);
+  if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded, triggeredEvents);
+  else setDailyAdvanceSummary(currentCalendarDate(), targetDate, results.length);
   activeTab = 'home';
   saveLocal(true);
   renderAll();
   const finalNotice = () => {
-    if(game.mustReviewTactics){ showNotice('Fecha simulada. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
+    if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
-    else { showNotice(`Fecha ${round.matchday} simulada. El calendario quedó en el día del partido.`); }
+    else if(ownResult){ showNotice(`Partido propio simulado. Además se procesaron ${Math.max(0, results.length - 1)} partido(s) del calendario.`); }
+    else { showNotice(`Se simularon ${results.length} partido(s) de calendario.`); }
   };
   if(ownResult && !regularEnded) showMatchRevealModal(ownResult, finalNotice);
   else finalNotice();

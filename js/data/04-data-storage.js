@@ -1181,17 +1181,23 @@ function sortedSeasonDivisions(divisions){
 function generateFixturesForDivisions(clubs, divisions, options={}){
   const seasonYear = Math.round(Number(options.seasonYear || SEASON_START_YEAR));
   const sortedDivisions = sortedSeasonDivisions(divisions);
-  const schedules = sortedDivisions.map(division => roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division));
-  const maxRounds = Math.max(...schedules.map(s => s.length), 0);
+  const schedules = sortedDivisions.map(division => ({
+    division,
+    rounds:roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division)
+  }));
+  const maxRounds = Math.max(...schedules.map(s => s.rounds.length), 0);
   const firstLeagueDate = leagueStartDateForSeason(seasonYear);
   const fixtures = [];
   for(let roundIndex=0; roundIndex<maxRounds; roundIndex++){
     const date = addDaysToIsoDate(firstLeagueDate, roundIndex * DAYS_PER_ADVANCE);
     const matches = [];
     schedules.forEach(schedule => {
-      (schedule[roundIndex] || []).forEach(match => matches.push({ ...match, date }));
+      const matchDate = matchDateForDivisionRound(date, schedule.division);
+      (schedule.rounds[roundIndex] || []).forEach(match => matches.push({ ...match, date:matchDate, roundDate:date }));
     });
-    fixtures.push({ matchday:roundIndex+1, date, matches });
+    matches.sort((a,b)=>daysBetweenIsoDates(b.date || date, a.date || date) || String(a.divisionName || '').localeCompare(String(b.divisionName || ''), 'es', { sensitivity:'base' }));
+    const dates = [...new Set(matches.map(match => match.date).filter(validIsoDate))].sort((a,b)=>daysBetweenIsoDates(b,a));
+    fixtures.push({ matchday:roundIndex+1, date, startDate:dates[0] || date, endDate:dates[dates.length-1] || date, matches });
   }
   return fixtures;
 }
@@ -1253,7 +1259,10 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
   const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year });
   const current = Array.isArray(existingFixtures) ? existingFixtures : [];
   const currentYear = String(current?.[0]?.date || '').slice(0,4);
-  const needsCalendar = current.length !== expected.length || currentYear !== String(year) || current.some(round => !validIsoDate(round.date));
+  const needsCalendar = current.length !== expected.length
+    || currentYear !== String(year)
+    || current.some(round => !validIsoDate(round.date))
+    || current.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')));
   return needsCalendar ? mergePlayedFixturesIntoCalendar(expected, current) : current;
 }
 

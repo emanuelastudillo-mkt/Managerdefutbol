@@ -108,8 +108,13 @@ function renderClubRequirementsWarning(){
 }
 function getNextMatchForSelected(){
   if(!game || game.matchdayIndex >= game.fixtures.length) return null;
-  const round = game.fixtures[game.matchdayIndex];
-  return round.matches.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId);
+  if(typeof nextOwnMatchInfo === 'function') return nextOwnMatchInfo()?.match || null;
+  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+    const round = game.fixtures[roundIndex];
+    const match = (round.matches || []).find(m => !m.played && (m.homeId === game.selectedClubId || m.awayId === game.selectedClubId));
+    if(match) return match;
+  }
+  return null;
 }
 function turnModePanelMarkup(){
   if(!game || game.seasonFinalized) return '';
@@ -438,9 +443,11 @@ function updateAdvanceButtonState(){
     matchDisabled = true;
   }else if(lockLeft > 0){
     const left = formatClock(lockLeft);
-    dayText = `Espera ${left}`;
+    const nextDate = typeof addDaysToIsoDate === 'function' && typeof currentCalendarDate === 'function' ? addDaysToIsoDate(currentCalendarDate(), 1) : '';
+    const ownDueNextDay = typeof hasOwnMatchDueOnOrBefore === 'function' ? hasOwnMatchDueOnOrBefore(nextDate) : true;
+    dayText = ownDueNextDay ? `Espera ${left}` : 'Avanzar día';
     matchText = `Espera ${left}`;
-    dayDisabled = true;
+    dayDisabled = ownDueNextDay;
     matchDisabled = true;
   }else{
     if(isRegularSeason() && matchToday){
@@ -539,7 +546,7 @@ function problemItem(problem){
 function matchPreview(match){
   return `<button class="next-match clickable" data-match-id="${escapeHtml(match.id)}">
     <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
-    <div class="vs">VS<br><span class="small">${escapeHtml(match.date)}</span></div>
+    <div class="vs">VS<br><span class="small">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(match.date) : match.date)}</span></div>
     <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
     ${matchFieldSummaryMarkup(match)}
   </button>`;

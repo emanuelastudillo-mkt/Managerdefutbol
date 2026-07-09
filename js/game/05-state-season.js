@@ -1,4 +1,4 @@
-/* V4.01 · Eventos principales, normalización de partida, calendario anual, temporadas, bots, ascensos/descensos, prestigio y ranking automático. */
+/* V4.05 · Eventos, carrera, ranking automático y limpieza de estado al cambiar de club. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -1602,6 +1602,39 @@ function recordDismissedCareerStep(){
   });
   game.managerStats = normalizeManagerStats(game.managerStats);
 }
+function resetClubSpecificCareerStateForNewClub(newClubId){
+  if(!game) return;
+  game.staffActions = {};
+  game.staffContracts = {};
+  if(game.academy && typeof normalizeAcademyState === 'function'){
+    game.academy = normalizeAcademyState(game.academy);
+    if(game.academy.youthPreparer) game.academy.youthPreparer = { ...game.academy.youthPreparer, active:false };
+    game.academy.lastConsultTurn = null;
+    game.academy.lastConsultReveal = null;
+    game.academy.scoutingJobs = [];
+  }
+  game.lastOwnPlayerOffer = null;
+  game.pendingTransfers = [];
+  game.rejectedPurchaseOffers = {};
+  game.specialClauseOffers = null;
+  if(typeof createBankLoanState === 'function'){
+    game.bankLoan = createBankLoanState(game.seasonNumber || 1);
+  }else{
+    game.bankLoan = null;
+  }
+  if(typeof createInitialSponsorState === 'function'){
+    game.sponsors = createInitialSponsorState();
+  }else if(typeof normalizeSponsorState === 'function'){
+    game.sponsors = normalizeSponsorState({});
+  }else{
+    game.sponsors = {};
+  }
+  game.playerMentalities = {};
+  if(game.tactic){
+    game.tactic = typeof applyStarterMentalities === 'function' ? applyStarterMentalities({ ...game.tactic, playerMentalities:{} }) : { ...game.tactic, playerMentalities:{} };
+  }
+}
+
 function resignCurrentClub(){
   if(!game || game.gameOver?.active) return;
   const ok = window.confirm('Vas a renunciar al club actual. La partida no se reinicia, pero quedarás sin cargo hasta buscar otro club.');
@@ -1650,11 +1683,12 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.tactic = normalizeTactic(newClub.id, DEFAULT_TACTIC);
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(newClub.id, game.seasonNumber || 1, 0) : game.transferBudget;
+  resetClubSpecificCareerStateForNewClub(newClub.id);
   game.gameOver = null;
   game.mustReviewTactics = true;
   activeTab = 'home';
   closeModal();
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

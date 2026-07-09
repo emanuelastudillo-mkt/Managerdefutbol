@@ -1,4 +1,4 @@
-/* V4.01 · Ranking online sólo automático: cierre de temporada o despido. */
+/* V4.05 · Ranking automático con rutas Cloudflare robustas y lectura compatible. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -37,6 +37,47 @@ function normalizeRankingEndpoint(url){
   const configured = String(url || '').trim().replace(/\/+$/, '');
   if(configured) return configured;
   return 'https://rankingdemanagers.emanuelastudillo.workers.dev';
+}
+function rankingConfiguredPaths(kind){
+  const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
+  const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
+  const fallback = kind === 'submit' ? ['records','ranking'] : ['ranking','records'];
+  const source = Array.isArray(raw) && raw.length ? raw : fallback;
+  const seen = new Set();
+  return source
+    .map(path => String(path || '').trim().replace(/^\/+|\/+$/g, ''))
+    .filter(path => {
+      if(seen.has(path)) return false;
+      seen.add(path);
+      return true;
+    });
+}
+function rankingApiUrl(endpoint, path, query=''){
+  const base = normalizeRankingEndpoint(endpoint);
+  const cleanPath = String(path || '').trim().replace(/^\/+|\/+$/g, '');
+  const suffix = cleanPath ? `/${cleanPath}` : '';
+  return `${base}${suffix}${query || ''}`;
+}
+function rankingStoredAuthToken(){
+  const configured = String(RANKING_TOKEN || '').trim();
+  if(configured) return configured;
+  try{
+    return String(localStorage.getItem('fmRankingAuthToken') || localStorage.getItem('fmRankingToken') || localStorage.getItem('rankingToken') || '').trim();
+  }catch(_){ return ''; }
+}
+function rankingRequestHeaders(json=true){
+  const headers = json ? { 'Content-Type':'application/json' } : {};
+  const token = rankingStoredAuthToken();
+  if(token){
+    headers.Authorization = /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`;
+  }
+  return headers;
+}
+function rankingResponseErrorMessage(data, response, fallback='Error al conectar con el ranking online.'){
+  return String(data?.error || data?.message || data?.detail || (response ? `Error HTTP ${response.status}` : fallback) || fallback);
+}
+function rankingIsRouteMissing(message, response){
+  return Number(response?.status || 0) === 404 || /ruta no encontrada|route not found|not found|no encontrado/i.test(String(message || ''));
 }
 const RANKING_AUTO_EVENT_LABELS = {
   season_end:'Temporada finalizada',
@@ -436,47 +477,71 @@ function submitRankingAutomatically(eventType='season_end', options={}){
   });
   return true;
 }
-function submitRankingToCloudflare(endpoint, payload, handlers={}){
-  fetch(`${endpoint}/ranking`, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body:JSON.stringify(rankingPayloadToApiBody(payload))
-  })
-  .then(async response => {
-    const data = await response.json().catch(() => ({}));
-    if(!response.ok || data.ok === false){
-      throw new Error(data.error || `Error HTTP ${response.status}`);
+async function submitRankingToCloudflare(endpoint, payload, handlers={}){
+  const paths = rankingConfiguredPaths('submit');
+  const body = JSON.stringify(rankingPayloadToApiBody(payload));
+  let lastMessage = '';
+  for(let i = 0; i < paths.length; i++){
+    const path = paths[i];
+    try{
+      const response = await fetch(rankingApiUrl(endpoint, path), {
+        method:'POST',
+        headers:rankingRequestHeaders(true),
+        body
+      });
+      const data = await response.json().catch(() => ({}));
+      if(!response.ok || data.ok === false){
+        const message = rankingResponseErrorMessage(data, response);
+        lastMessage = message;
+        if(rankingIsRouteMissing(message, response) && i < paths.length - 1) continue;
+        throw new Error(message);
+      }
+      handlers.onSuccess?.(data);
+      return;
+    }catch(error){
+      lastMessage = error?.message || lastMessage || 'Error al conectar con el ranking online.';
+      if(rankingIsRouteMissing(lastMessage) && i < paths.length - 1) continue;
+      handlers.onError?.(lastMessage);
+      return;
     }
-    handlers.onSuccess?.(data);
-  })
-  .catch(error => {
-    handlers.onError?.(error?.message || 'Error al conectar con el ranking online.');
-  });
+  }
+  handlers.onError?.(lastMessage || 'No se encontró una ruta válida para subir el ranking.');
 }
-function loadRankingOnline(silent=false){
+async function loadRankingOnline(silent=false){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
   const status = $('rankingStatus');
   if(!endpoint){ if(status) status.textContent = 'Ranking online no disponible por el momento.'; return; }
   if(rankingLoading) return;
   rankingLoading = true;
   if(status) status.textContent = 'Cargando ranking online...';
-  fetch(`${endpoint}/ranking?limit=${encodeURIComponent(RANKING_PAGE_SIZE)}`)
-    .then(async response => {
+  let lastMessage = '';
+  try{
+    const paths = rankingConfiguredPaths('read');
+    for(let i = 0; i < paths.length; i++){
+      const path = paths[i];
+      const response = await fetch(rankingApiUrl(endpoint, path, `?limit=${encodeURIComponent(RANKING_PAGE_SIZE)}`), {
+        method:'GET',
+        headers:rankingRequestHeaders(false)
+      });
       const data = await response.json().catch(() => ({}));
       if(!response.ok || data.ok === false){
-        throw new Error(data.error || `Error HTTP ${response.status}`);
+        const message = rankingResponseErrorMessage(data, response);
+        lastMessage = message;
+        if(rankingIsRouteMissing(message, response) && i < paths.length - 1) continue;
+        throw new Error(message);
       }
-      const rows = Array.isArray(data.ranking) ? data.ranking : Array.isArray(data.rows) ? data.rows : [];
+      const rows = Array.isArray(data.ranking) ? data.ranking : Array.isArray(data.rows) ? data.rows : Array.isArray(data.records) ? data.records : [];
       rankingRowsCache = rows.map(normalizeRankingRow).filter(row => row.managerName || row.club || row.saveCode);
       const box = $('rankingTableBox');
       if(box) box.innerHTML = rankingRowsTable(rankingRowsCache);
       if(status) status.textContent = `${rankingRowsCache.length} registro(s) cargado(s).`;
-    })
-    .catch(error => {
-      if(status) status.textContent = 'No se pudo leer el ranking online.';
-      if(!silent) showNotice(error?.message || 'No se pudo cargar el ranking online.');
-    })
-    .finally(() => {
-      rankingLoading = false;
-    });
+      return;
+    }
+    throw new Error(lastMessage || 'No se encontró una ruta válida para leer el ranking.');
+  }catch(error){
+    if(status) status.textContent = 'No se pudo leer el ranking online.';
+    if(!silent) showNotice(error?.message || 'No se pudo cargar el ranking online.');
+  }finally{
+    rankingLoading = false;
+  }
 }

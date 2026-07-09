@@ -2,9 +2,20 @@
 
 ## Versión actual
 
-**V4.04 - Ajustes varios de finanzas, jugadores libres, juveniles y calendario**
+**V4.05 - Ranking automático y limpieza al cambiar de club**
 
 ## Historial de versiones
+
+### V4.05 - Ranking automático y limpieza al cambiar de club
+
+- Se corrige el envío automático del ranking para el Worker online.
+- El envío automático ya no depende solamente de `/ranking`; ahora prueba primero `/records` y deja `/ranking` como alternativa.
+- La lectura del ranking mantiene `/ranking` y agrega `/records` como alternativa.
+- Si el Worker exige autenticación, el valor de `config.js > ranking.token` se envía como `Authorization: Bearer`.
+- Al tomar un nuevo club después de despido o renuncia, se limpian empleados y cooldowns del club anterior.
+- Se reinician acciones de staff como charla motivacional, tratamientos semanales de kinesiólogo y preparador de juveniles.
+- También se limpian estados de club que no deberían viajar con el manager: sponsors, préstamo bancario activo, ofertas pendientes y captaciones pendientes de academia.
+- No se modificó el simulador de partidos, calendario, ranking de lectura ni generación de jugadores.
 
 ### V4.04 - Ajustes varios de finanzas, jugadores libres, juveniles y calendario
 

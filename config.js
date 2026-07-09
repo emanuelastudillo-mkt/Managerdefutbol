@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.04',
+  version: 'V4.05',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -388,8 +388,12 @@ window.GAME_CONFIG = {
   ranking: {
     // URL publicada para enviar y leer resultados del ranking online.
     appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
-    // Token simple opcional para restringir envíos.
+    // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
     token: '',
+    // Rutas compatibles con el Worker. El envío prueba primero /records y luego /ranking.
+    submitPaths: ['records','ranking'],
+    // La lectura mantiene primero /ranking y usa /records como alternativa.
+    readPaths: ['ranking','records'],
     resultadosPorPagina: 100,
     cooldownCargaDias: 77,
     nombreRanking: 'Ranking Online'

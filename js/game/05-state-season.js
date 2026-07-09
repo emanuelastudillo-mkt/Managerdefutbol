@@ -1606,12 +1606,10 @@ function resetClubSpecificCareerStateForNewClub(newClubId){
   if(!game) return;
   game.staffActions = {};
   game.staffContracts = {};
-  if(game.academy && typeof normalizeAcademyState === 'function'){
-    game.academy = normalizeAcademyState(game.academy);
-    if(game.academy.youthPreparer) game.academy.youthPreparer = { ...game.academy.youthPreparer, active:false };
-    game.academy.lastConsultTurn = null;
-    game.academy.lastConsultReveal = null;
-    game.academy.scoutingJobs = [];
+  if(typeof createInitialAcademyState === 'function'){
+    game.academy = createInitialAcademyState();
+  }else{
+    game.academy = { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
   }
   game.lastOwnPlayerOffer = null;
   game.pendingTransfers = [];
@@ -1688,7 +1686,7 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.mustReviewTactics = true;
   activeTab = 'home';
   closeModal();
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

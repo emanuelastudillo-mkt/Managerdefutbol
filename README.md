@@ -2,10 +2,20 @@
 
 ## Versión actual
 
-**V4.07 - Federaciones en ofertas de traspaso**
+**V4.08 - Academia al cambiar de club y ranking público**
 
 ## Historial de versiones
 
+
+### V4.08 - Academia al cambiar de club y ranking público
+
+- Al tomar un nuevo club después de despido o renuncia, la academia se vacía por completo.
+- Los juveniles de la academia anterior desaparecen y no viajan con el manager.
+- También se eliminan captaciones pendientes, habilidades desbloqueadas, planes de entrenamiento juvenil, residencias y lesiones juveniles asociadas a la academia anterior.
+- El nuevo club empieza con academia vacía.
+- En `Ranking Online` se elimina el bloque de `Carga automática`.
+- La pantalla de ranking queda sólo como tabla online de lectura.
+- Se mantienen los filtros actuales y se muestran hasta 100 resultados.
 
 ### V4.07 - Federaciones en ofertas de traspaso
 

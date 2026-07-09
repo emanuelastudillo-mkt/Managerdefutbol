@@ -1,20 +1,14 @@
-# V4.07 - Federaciones en ofertas de traspaso
+# V4.08 - Academia al cambiar de club y ranking público
 
 ## Cambios principales
 
-- Los mensajes de ofertas de jugadores ahora muestran la federación correspondiente a la liga o país del club comprador.
-- Se reemplaza el texto fijo `AFA retiene` por una sigla dinámica.
-- Federaciones configuradas:
-  - Argentina: AFA.
-  - Chile: ANFP.
-  - Brasil: CBF.
-  - Inglaterra: FA.
-  - España: RFEF.
-  - Italia: FIGC.
-  - Rumania: FRF.
-- Los clubes externos genéricos usan una sigla coherente cuando puede inferirse por el nombre.
-- Al aceptar una venta, el resumen de ingreso neto también muestra la federación correspondiente.
-- La configuración editable queda en `config.js > mercado.federacionesTraspaso`.
+- Al firmar con otro club después de un despido o una renuncia, la academia se reinicia completa.
+- Los juveniles de la academia del club anterior desaparecen.
+- El nuevo club no hereda juveniles, captaciones pendientes, informes desbloqueados, planes de entrenamiento, residencias ni lesiones juveniles del club anterior.
+- En la pantalla `Ranking Online` se elimina el bloque de `Carga automática`.
+- El ranking queda como pantalla de consulta pública únicamente.
+- Se conservan los filtros actuales de la tabla.
+- La lectura del ranking mantiene hasta 100 resultados.
 
 ## Archivos modificados
 
@@ -23,9 +17,8 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
-- `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/12-modals.js`
+- `js/game/05-state-season.js`
+- `js/game/13-ranking-online.js`
 
 ## Validaciones
 
@@ -34,4 +27,4 @@
 
 ## Nota
 
-- España queda como `RFEF`, no `REFF`.
+- No se modificó el simulador de partidos, calendario, mercado ni economía.

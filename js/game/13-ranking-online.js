@@ -1,4 +1,4 @@
-/* V4.05 · Ranking automático con rutas Cloudflare robustas y lectura compatible. */
+/* V4.08 · Ranking online en modo tabla pública. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -389,15 +389,11 @@ function rankingSubmitPanelMarkup(payload, endpoint){
 }
 function renderRankingOnline(){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const payload = game ? buildRankingPayload(rankingStoredManagerName() || storedManagerName() || 'Manager', { eventType: game?.seasonFinalized ? 'season_end' : 'season_snapshot' }) : null;
-  view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Tabla comunitaria. Los resultados se envían automáticamente al terminar temporada o al ser despedido.</p></div>
-    <div class="ranking-layout">
-      <div>${rankingSubmitPanelMarkup(payload, endpoint)}</div>
-      <div class="card ranking-list-card">
-        <div class="row"><div><p class="label">Lectura pública</p><h3>Tabla online</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
-        <div id="rankingStatus" class="small muted">${endpoint ? 'Listo para cargar registros.' : 'Ranking online no disponible por el momento.'}</div>
-        <div id="rankingTableBox">${rankingRowsTable(rankingRowsCache)}</div>
-      </div>
+  view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Tabla comunitaria online. Se muestran hasta ${RANKING_PAGE_SIZE} registros con los filtros actuales.</p></div>
+    <div class="card ranking-list-card">
+      <div class="row"><div><p class="label">Lectura pública</p><h3>Tabla online</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
+      <div id="rankingStatus" class="small muted">${endpoint ? `Listo para cargar hasta ${RANKING_PAGE_SIZE} registros.` : 'Ranking online no disponible por el momento.'}</div>
+      <div id="rankingTableBox">${rankingRowsTable(rankingRowsCache)}</div>
     </div>`;
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
   document.querySelectorAll('[data-ranking-sort]').forEach(btn => btn.addEventListener('click', () => {

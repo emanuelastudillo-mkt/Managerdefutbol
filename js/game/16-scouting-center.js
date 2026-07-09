@@ -1,4 +1,4 @@
-/* V5.03 · Centro de Ojeo: ojeo propio, habilidades ocultas e informes acumulativos. */
+/* V5.04 · Centro de Ojeo: única fuente de habilidades externas e informes ocultos. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -188,7 +188,13 @@ function scoutingRevealOneSkill(){
     if(hidden.length) candidates.push({ player, hidden, report });
   });
   if(!candidates.length) return false;
-  candidates.sort((a,b)=>Number(a.report.visibleSkills?.length || 0)-Number(b.report.visibleSkills?.length || 0) || a.player.name.localeCompare(b.player.name));
+  candidates.sort((a,b)=>{
+    const ownDelta = Number(scoutingIsOwnPlayer(b.player)) - Number(scoutingIsOwnPlayer(a.player));
+    if(ownDelta) return ownDelta;
+    const hiddenDelta = Number(a.hidden.length || 0) - Number(b.hidden.length || 0);
+    if(hiddenDelta) return hiddenDelta;
+    return a.player.name.localeCompare(b.player.name, 'es');
+  });
   const pick = candidates[hashNumber(`scout-pick-${game.currentDate}-${currentTurnIndex()}-${Math.random()}`, candidates.length)];
   const key = pick.hidden[hashNumber(`scout-skill-${pick.player.id}-${game.currentDate}-${Math.random()}`, pick.hidden.length)];
   pick.report.visibleSkills = Array.from(new Set([...(pick.report.visibleSkills || []), key]));
@@ -325,7 +331,7 @@ function renderScoutingCenter(){
       <div class="row"><div><h3>Oficinas y ojeadores</h3><p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados. Oficina: ${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes. Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día.</p></div></div>
       <div class="row message-actions"><button class="primary" data-rent-scouting-office ${state.offices >= maxOffices ? 'disabled' : ''}>Alquilar oficina</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Las habilidades ocultas se revelan como informe permanente.</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
+    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Fuera del Centro de Ojeo no se revelan habilidades externas.</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
   document.querySelectorAll('[data-hire-scouting-chief]').forEach(btn => btn.addEventListener('click', () => hireScoutingChief(btn.dataset.hireScoutingChief)));
   document.querySelector('[data-rent-scouting-office]')?.addEventListener('click', rentScoutingOffice);
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);

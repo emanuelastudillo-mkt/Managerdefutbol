@@ -3347,3 +3347,23 @@ th{
 .force-season-modal .protected-grid strong{font-size:1.05rem}
 .scouting-known-grid .stat-rank span{font-size:.72rem;line-height:1.15}
 .scouting-known-grid .stat-rank strong{font-variant-numeric:tabular-nums}
+
+/* V5.04 · Intransferibles y ojeo por informe */
+.untransferable-badge{
+  display:inline-flex;
+  align-items:center;
+  margin-left:6px;
+  padding:2px 6px;
+  border-radius:999px;
+  border:1px solid rgba(248,113,113,.35);
+  background:rgba(248,113,113,.12);
+  color:#fecaca;
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.04em;
+  vertical-align:middle;
+}
+.untransferable-toggle-row input{accent-color:#ef4444}
+.scouted-hidden-card{margin-top:12px;border-color:rgba(34,197,94,.18);background:rgba(34,197,94,.04)}
+.scouted-hidden-card .label{letter-spacing:.08em}
+.scouted-hidden-card .stat-rank strong{font-variant-numeric:tabular-nums}

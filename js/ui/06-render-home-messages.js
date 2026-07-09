@@ -703,6 +703,7 @@ function transferOfferStatusLabel(status){
     accepted:'Aceptada',
     rejected:'Rechazada',
     blocked_by_board:'Bloqueada por directiva',
+    auto_rejected_intransferible:'Rechazada: intransferible',
     convinced:'Jugador convencido',
     forced_sale:'Venta ejecutada'
   };
@@ -945,7 +946,7 @@ function maybeGenerateTransferOffer(match){
   const chance = clamp(Number(BOT_TRANSFER_OFFER_BASE_CHANCE || 0.28) + Math.min(Number(BOT_TRANSFER_LISTED_EXTRA_CHANCE || 0.22), listedCount * 0.045), 0, 0.72);
   if(Math.random() > chance) return;
   const candidates = ownPlayers
-    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && !isPlayerUntransferable(p) && playerQualifiesForTransferOffers(p));
   if(!candidates.length) return;
   candidates.sort((a,b)=>{
     const listedDelta = Number(Boolean(b.transferListed)) - Number(Boolean(a.transferListed));
@@ -980,7 +981,7 @@ function generateSeasonEndPlayerOffers(){
   const season = game.seasonNumber || 1;
   if(game.seasonEndPlayerOffers?.season === season) return [];
   const candidates = playersByClub(game.selectedClubId)
-    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && playerQualifiesForTransferOffers(p));
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && !isPlayerUntransferable(p) && playerQualifiesForTransferOffers(p));
   if(!candidates.length){
     game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
     return [];
@@ -1021,7 +1022,8 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   const destinationClubId = Number(msg.action.sourceClubId || -1);
   player.clubId = destinationClubId > 0 ? destinationClubId : -1;
   player.transferListed = false;
-  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, sold:destinationClubId > 0 ? false : true } : p);
+  player.intransferible = false;
+  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   msg.action.status = options.status || 'accepted';
@@ -1040,8 +1042,16 @@ function acceptTransferOffer(messageId){
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   const pct = Number(msg.action.pct || 0);
+  if(isPlayerUntransferable(player) && pct < 100){
+    msg.action.status = 'auto_rejected_intransferible';
+    msg.body += ` Oferta rechazada automáticamente: ${player.name} está marcado como intransferible y sólo se aceptan propuestas por la cláusula completa.`;
+    saveLocal(true);
+    showNotice('Oferta rechazada automáticamente: jugador intransferible.');
+    renderMessages();
+    return;
+  }
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
     msg.action.status = 'blocked_by_board';
     msg.body += ` La directiva bloqueó la venta porque es un jugador muy importante para el club. Para una estrella exige una oferta superior al ${STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT}% de su cláusula.`;

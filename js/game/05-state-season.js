@@ -1638,6 +1638,8 @@ function normalizeGame(saved){
   normalized.marketPlayers.forEach((p, index) => {
     p.position = normalizePlayerPosition(p.position, p.id);
     p.transferListed = Boolean(p.transferListed);
+    p.intransferible = Boolean(p.intransferible);
+    if(p.intransferible) p.transferListed = false;
     if(Number(p.clubId || 0) === 0 || p.freeAgent){
       p.nationality = freeAgentNationalityForIndex(index, `market-normalized-${normalized.seasonNumber || 1}`);
       p.freeAgent = true;
@@ -1647,7 +1649,7 @@ function normalizeGame(saved){
   normalized.marketPlayers = pruneFreeAgentMarketArrayToHardMax(normalized.marketPlayers, MARKET_FREE_AGENT_HARD_MAX);
   syncSeedFreeAgentCleanup(normalized.marketPlayers);
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
-  seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
+  seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); p.intransferible = Boolean(p.intransferible); if(p.intransferible) p.transferListed = false; ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
   const previousCalendarVersion = normalized.calendarVersion;
   const previousFixtureCount = Array.isArray(normalized.fixtures) ? normalized.fixtures.length : 0;
@@ -2194,11 +2196,18 @@ function isTransferListedPlayer(playerOrId){
   const player = typeof playerOrId === 'object' ? playerOrId : playerById(playerOrId);
   return Boolean(player?.transferListed);
 }
+function isPlayerUntransferable(playerOrId){
+  const player = typeof playerOrId === 'object' ? playerOrId : playerById(playerOrId);
+  return Boolean(player?.intransferible);
+}
 function transferListedMarkup(playerOrId){
   return isTransferListedPlayer(playerOrId) ? '<span class="transfer-listed-badge" title="Jugador transferible">EN VENTA</span>' : '';
 }
+function untransferableMarkup(playerOrId){
+  return isPlayerUntransferable(playerOrId) ? '<span class="untransferable-badge" title="Sólo se escuchan ofertas por cláusula completa">INTRANSFERIBLE</span>' : '';
+}
 function playerNameWithStar(player){
-  return `${playerStarMarkup(player)}${escapeHtml(player?.name || 'Jugador')}${transferListedMarkup(player)}`;
+  return `${playerStarMarkup(player)}${escapeHtml(player?.name || 'Jugador')}${transferListedMarkup(player)}${untransferableMarkup(player)}`;
 }
 function playerStarReferenceMultiplier(player, action='general'){
   const rec = playerStarRecord(player);

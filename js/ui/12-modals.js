@@ -1,4 +1,4 @@
-/* V5.03 · Modales de jugador, club, compra, partido, scouting propio y nueva partida. */
+/* V5.04 · Modales de jugador, intransferibles y scouting exclusivamente por informe. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -44,12 +44,10 @@ function playerScoutingWeekKey(){
 }
 function scoutedVisibleKeySet(player){
   const map = scoutingStatMap(player);
-  const keys = Object.keys(map);
-  if(!playerRequiresScouting(player)) return new Set(keys);
-  const turnKey = playerScoutingWeekKey();
-  const count = 2 + hashNumber(`scout-count-${player.id}-${turnKey}`, 2);
-  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${turnKey}-${a}`, 10000) - hashNumber(`scout-${player.id}-${turnKey}-${b}`, 10000));
-  const visible = new Set(ordered.slice(0,count));
+  const visible = new Set();
+  if(!playerRequiresScouting(player)){
+    Object.keys(map).forEach(key => visible.add(key));
+  }
   if(typeof scoutingKnownSet === 'function'){
     scoutingKnownSet(player.id).forEach(key => visible.add(key));
   }
@@ -90,23 +88,58 @@ function scoutedStatsMarkup(player){
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
     return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${shown ? value : '—'}</strong>${shown && Number(raw) !== Number(value) ? `<small class="muted">base ${raw}</small>` : ''}</div>`;
   }).join('');
-  const note = playerRequiresScouting(player) ? '<p class="muted small">Scouting semanal: algunas habilidades cambian de visibles cada semana. Mirarlo en distintas semanas revela mejor el perfil.</p>' : '';
+  const note = playerRequiresScouting(player) ? '<p class="muted small">Sólo se muestran datos guardados en el Centro de Ojeo. Sin informe, la habilidad queda oculta.</p>' : '';
   return `${rows}${note}`;
 }
 function scoutedRadarMarkup(player){
   if(!playerRequiresScouting(player)) return radarSvg(visibleStats(player));
-  return '<div class="scouting-radar-placeholder"><strong>Scouting incompleto</strong><span>Las habilidades completas están ocultas.</span></div>';
+  const map = scoutingStatMap(player);
+  const known = scoutedVisibleKeySet(player);
+  const allVisibleKnown = Object.keys(map).length > 0 && Object.keys(map).every(key => known.has(key));
+  if(allVisibleKnown) return radarSvg(visibleStats(player));
+  return '<div class="scouting-radar-placeholder"><strong>Sin informe completo</strong><span>El radar se activa cuando el Centro de Ojeo revela todas las habilidades visibles.</span></div>';
+}
+
+function scoutedHiddenStatsCardMarkup(player){
+  if(!player || typeof scoutingHiddenStatMap !== 'function' || typeof scoutingKnownSet !== 'function') return '';
+  const hidden = scoutingHiddenStatMap(player);
+  const keys = Object.keys(hidden || {});
+  if(!keys.length) return '';
+  const known = scoutingKnownSet(player.id);
+  const revealed = keys.filter(key => known.has(key));
+  if(!revealed.length) return '';
+  const rows = keys.map(key => {
+    const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${known.has(key) ? hidden[key] : '—'}</strong></div>`;
+  }).join('');
+  return `<div class="card inner scouted-hidden-card"><p class="label ok">OJEADO POR TU EQUIPO</p><h3>Habilidades ocultas</h3>${rows}</div>`;
+}
+
+function markPendingTransferOffersRejectedForUntransferable(player){
+  if(!game || !player) return 0;
+  let count = 0;
+  (game.messages || []).forEach(msg => {
+    if(msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
+    if(Number(msg.action.playerId || 0) !== Number(player.id || 0)) return;
+    if(Number(msg.action.pct || 0) >= 100) return;
+    msg.action.status = 'auto_rejected_intransferible';
+    msg.body += ` Oferta rechazada automáticamente: ${player.name} fue marcado como intransferible y sólo se aceptan propuestas por la cláusula completa.`;
+    count += 1;
+  });
+  return count;
 }
 
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
   if(clubId === Number(game.selectedClubId)){
     const checked = player.transferListed ? 'checked' : '';
+    const locked = player.intransferible ? 'checked' : '';
     const inScouting = Array.isArray(game?.scoutingCenter?.listedPlayerIds) && game.scoutingCenter.listedPlayerIds.map(Number).includes(Number(player.id));
     return `<div class="card inner player-action-card"><h3>Acciones</h3>
-      <label class="transfer-toggle-row"><input type="checkbox" data-toggle-transfer-listed="${player.id}" ${checked}> <span>Poner transferible</span></label>
-      <p class="muted small">Los transferibles reciben más ofertas, pero suelen ser más baratas. El ojeo propio revela sólo las habilidades ocultas porque las visibles ya son conocidas.</p>
-      <div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button><button class="ghost" data-add-scouting-player="${player.id}">${inScouting ? 'En Centro de Ojeo' : 'Ojear ocultas'}</button></div></div>`;
+      <label class="transfer-toggle-row"><input type="checkbox" data-toggle-transfer-listed="${player.id}" ${checked} ${player.intransferible ? 'disabled' : ''}> <span>Poner transferible</span></label>
+      <label class="transfer-toggle-row untransferable-toggle-row"><input type="checkbox" data-toggle-untransferable="${player.id}" ${locked}> <span>Intransferible</span></label>
+      <p class="muted small">Intransferible bloquea ofertas inferiores a la cláusula completa. El ojeo propio revela sólo las habilidades ocultas porque las visibles ya son conocidas.</p>
+      <div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}" ${player.intransferible ? 'disabled title="Marcado como intransferible"' : ''}>Ofrecer a clubes</button><button class="ghost" data-add-scouting-player="${player.id}">${inScouting ? 'En Centro de Ojeo' : 'Ojear ocultas'}</button></div></div>`;
   }
   if(clubId > 0){
     const blocked = isPurchaseOfferBlockedThisSeason(player.id);
@@ -126,6 +159,7 @@ function bindPlayerModalActions(playerId){
   document.querySelector('[data-make-player-offer]')?.addEventListener('click', (ev) => { ev.stopPropagation(); openPurchaseOfferModal(playerId); });
   document.querySelector('[data-hire-free-agent-modal]')?.addEventListener('click', (ev) => { ev.stopPropagation(); if(typeof hireFreeAgent === 'function'){ hireFreeAgent(playerId); closeModal(); activeTab='firstTeam'; renderAll(); } });
   document.querySelector('[data-toggle-transfer-listed]')?.addEventListener('change', (ev) => { ev.stopPropagation(); toggleTransferListed(playerId, ev.target.checked); });
+  document.querySelector('[data-toggle-untransferable]')?.addEventListener('change', (ev) => { ev.stopPropagation(); toggleUntransferablePlayer(playerId, ev.target.checked); });
   document.querySelector('[data-add-scouting-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); if(typeof addPlayerToScoutingCenter === 'function') addPlayerToScoutingCenter(playerId); });
 }
 function showPlayerModal(playerId){
@@ -149,9 +183,10 @@ function showPlayerModal(playerId){
           </div>
         </div>
         <div class="radar-wrap">${scoutedRadarMarkup(p)}</div>
+        ${scoutedHiddenStatsCardMarkup(p)}
       </div>
       <div class="stack">
-        <div class="card inner"><h3>${needsScouting ? 'Scouting visible' : 'Stats visibles'}</h3>${scoutedStatsMarkup(p)}</div>
+        <div class="card inner"><h3>${needsScouting ? 'Informe de ojeo' : 'Stats visibles'}</h3>${scoutedStatsMarkup(p)}</div>
         <div class="card inner"><h3>Perfil</h3>
           <div class="stat-rank"><span>Media</span><strong>${scoutedOverallLabel(p)}</strong></div>
           <div class="stat-rank"><span>Estado físico</span>${scoutedPhysicalLabel(p)}</div>
@@ -185,9 +220,21 @@ function toggleTransferListed(playerId, value){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   player.transferListed = Boolean(value);
-  game.marketPlayers = (game.marketPlayers || []).map(p => Number(p.id) === Number(player.id) ? { ...p, transferListed:player.transferListed } : p);
+  if(player.transferListed) player.intransferible = false;
+  game.marketPlayers = (game.marketPlayers || []).map(p => Number(p.id) === Number(player.id) ? { ...p, transferListed:player.transferListed, intransferible:player.intransferible } : p);
   saveLocal(true);
   showNotice(player.transferListed ? `${player.name} fue marcado EN VENTA.` : `${player.name} dejó de figurar EN VENTA.`);
+  showPlayerModal(playerId);
+}
+function toggleUntransferablePlayer(playerId, value){
+  const player = playerById(playerId);
+  if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
+  player.intransferible = Boolean(value);
+  if(player.intransferible) player.transferListed = false;
+  const rejected = player.intransferible ? markPendingTransferOffersRejectedForUntransferable(player) : 0;
+  game.marketPlayers = (game.marketPlayers || []).map(p => Number(p.id) === Number(player.id) ? { ...p, transferListed:player.transferListed, intransferible:player.intransferible } : p);
+  saveLocal(true);
+  showNotice(player.intransferible ? `${player.name} fue marcado INTRANSFERIBLE.${rejected ? ` Ofertas inferiores rechazadas: ${rejected}.` : ''}` : `${player.name} dejó de ser intransferible.`);
   showPlayerModal(playerId);
 }
 
@@ -200,13 +247,15 @@ function dismissOwnPlayer(playerId){
   removePlayerFromCurrentTactic(player.id);
   player.clubId = 0;
   player.freeAgent = true;
+  player.transferListed = false;
+  player.intransferible = false;
   player.salaryPaidCount = 0;
   player.lastSalaryPaidSeason = 0;
   refreshPlayerClause(player);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
   game.marketPlayers = game.marketPlayers || [];
   const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
-  const copy = { ...player, clubId:0, freeAgent:true, sold:false };
+  const copy = { ...player, clubId:0, freeAgent:true, transferListed:false, intransferible:false, sold:false };
   if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
   else game.marketPlayers.push(copy);
   pushGameMessage({ type:'mercado', title:'Jugador despedido', body:`${player.name} dejó el club y quedó como agente libre.`, priority:'normal' });
@@ -219,6 +268,10 @@ function offerOwnPlayerToClubs(playerId){
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  if(player.intransferible){
+    showNotice('Este jugador está marcado como intransferible. Sólo se aceptan ofertas por cláusula completa.');
+    return;
+  }
   if(!hasPlayerSalaryPaid(player)){
     showNotice('Primero debemos haberle pagado al menos un sueldo.');
     return;
@@ -279,7 +332,7 @@ function openPurchaseOfferModal(playerId){
   const body = `<div class="purchase-offer-modal">
     <p class="label">Hacer oferta</p>
     <h2>${escapeHtml(player.name)}</h2>
-    <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
+    <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · Media ojeada ${typeof scoutedOverallLabel === 'function' ? scoutedOverallLabel(player) : '<span class="muted">—</span>'} · Cláusula ${formatMoney(clause)}</p>
     <p class="small muted">Interés del jugador: <strong>oculto</strong>. Puede aceptar o rechazar según su media real y el prestigio del club. Si rechaza, queda bloqueado para tu club hasta la próxima temporada.</p>
     <div style="margin-top:12px">${budgetNote}</div>
     <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
@@ -374,6 +427,8 @@ function processPendingTransfers(){
     player.clubId = Number(t.toClubId || game.selectedClubId);
     player.freeAgent = false;
     player.sold = false;
+    player.transferListed = false;
+    player.intransferible = false;
     player.salaryPaidCount = 0;
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
@@ -988,13 +1043,13 @@ function showClubModal(clubId){
         ${clubTacticPreview(tactic.formation)}
       </div>
       <div class="card inner">
-        <h3>Scouting parcial</h3>
-        <p class="muted small">En cada nueva fecha se revelan de forma provisoria 2 o 3 habilidades visibles por jugador. Las demás quedan ocultas con guion.</p>
+        <h3>Informe de ojeo</h3>
+        <p class="muted small">No se revelan habilidades por abrir la ficha del club. Sólo aparecen datos ya trabajados por tu Centro de Ojeo.</p>
       </div>
     </div>
     <div class="card inner" style="margin-top:14px">
       <h3>Plantilla observada</h3>
-      <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media ojeada</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
   openModal(body);
 }
@@ -1057,7 +1112,7 @@ function scoutingPlayerRow(player){
     <td>${faceImg(player,'photo-thumb')} <strong>${escapeHtml(player.name)}</strong></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${nationalityShortMarkup(player.nationality)}</td>
-    <td><strong>${visibleOverall(player)}</strong></td>
+    <td>${typeof scoutedOverallLabel === 'function' ? scoutedOverallLabel(player) : '<span class="muted">—</span>'}</td>
     <td>${cell('Ataque/Salto')}</td>
     <td>${cell('Defensa')}</td>
     <td>${cell('Pase')}</td>

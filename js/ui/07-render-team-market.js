@@ -150,7 +150,7 @@ function marketScoutedMoraleCell(player){
   return '<span class="muted">—</span>';
 }
 function marketScoutingHintText(){
-  return 'Las estadísticas de jugadores libres y contratados están ocultas. El scouting semanal muestra sólo algunas habilidades; mirarlos distintas semanas ayuda a perfilar mejor al jugador.';
+  return 'Las estadísticas de jugadores libres y contratados están ocultas. Sólo aparecen habilidades reveladas por el Centro de Ojeo.';
 }
 function freeAgentOfferRecord(playerId){
   if(!game) return null;
@@ -340,11 +340,15 @@ function hireFreeAgent(playerId){
   }
   game.marketPlayers[idx].clubId = game.selectedClubId;
   game.marketPlayers[idx].freeAgent = false;
+  game.marketPlayers[idx].transferListed = false;
+  game.marketPlayers[idx].intransferible = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   const player = playerById(playerId);
   if(player){
     player.clubId = game.selectedClubId;
     player.freeAgent = false;
+    player.transferListed = false;
+    player.intransferible = false;
     player.salaryPaidCount = 0;
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
@@ -496,7 +500,7 @@ function renderWorldPlayers(){
   view.innerHTML = `
     <div class="section-title">
       <h2>Jugadores</h2>
-      <p class="tagline">Listado mundial. La mayor parte de las habilidades se oculta y vuelve a sortearse en cada semana.</p>
+      <p class="tagline">Listado mundial. Las habilidades externas sólo aparecen si fueron reveladas por el Centro de Ojeo.</p>
     </div>
     <div class="card world-player-filters">
       <label>Posición<select id="worldPositionFilter">${worldPlayersPositionOptions()}</select></label>

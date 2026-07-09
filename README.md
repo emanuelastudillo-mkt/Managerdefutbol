@@ -1,8 +1,23 @@
 # Fútbol Manager MVP
 
-**V5.03 - Scouting de ocultas y ojeo propio**
+**V5.04 - Intransferibles y ojeo como única fuente**
 
 ## Historial de versiones
+
+### V5.04 - Intransferibles y ojeo como única fuente
+
+- Agregada casilla `Intransferible` en la ficha de jugadores propios.
+- Al marcar un jugador como intransferible se desactiva `Poner transferible` y se bloquea el ofrecimiento activo a clubes.
+- Los jugadores intransferibles sólo quedan abiertos a ofertas por cláusula completa.
+- Las ofertas pendientes inferiores a la cláusula se rechazan automáticamente al activar la casilla.
+- Si una oferta vieja inferior a cláusula queda pendiente en una partida existente, también se bloquea al intentar aceptarla.
+- Las ofertas automáticas normales y de fin de temporada ya no seleccionan jugadores intransferibles.
+- Las ofertas especiales por cláusula completa se mantienen.
+- Debajo del gráfico de habilidades se agrega la tarjeta `OJEADO POR TU EQUIPO` cuando hay ocultas reveladas.
+- La tarjeta muestra `Agresividad`, `Genética` y `Factor sorpresa` según el informe del Centro de Ojeo.
+- Eliminado el scouting provisorio anterior: abrir fichas de jugadores, clubes o listados ya no revela habilidades externas por semana.
+- La única información visible de jugadores externos ahora es la que fue revelada y guardada por el Centro de Ojeo.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.04.
 
 ### V5.03 - Scouting de ocultas y ojeo propio
 

@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.25
+V5.26
 
 ## Último cambio
 
-Cambio de texto del botón **Ver partido** a **Dirigir partido** antes de iniciar la simulación.
+Ajuste de desgaste, reducción de tarjetas, suspensión por cinco expulsiones y limpieza de textos en Tácticas.

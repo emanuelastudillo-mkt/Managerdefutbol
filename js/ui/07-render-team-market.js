@@ -674,7 +674,7 @@ function savedTacticsPanelMarkup(){
     </div>`);
   }
   return `<div class="card saved-tactics-card" style="margin-top:14px">
-    <div class="row"><div><h3>Tácticas personalizadas</h3><p class="muted small">Guardá hasta 3 tácticas con formación, titulares, suplentes, mentalidad e instrucciones zonales. Al cargar, si un jugador está lesionado o ya no está en el club, queda el hueco.</p></div></div>
+    <div class="row"><div><h3>Tácticas personalizadas</h3></div></div>
     <div class="saved-tactics-grid">${slots.join('')}</div>
   </div>`;
 }
@@ -705,11 +705,11 @@ function tacticSectorSkillVisors(){
     return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.remate ?? 0), Number(p.skills?.cabezazo ?? 0)])))), 0, 99);
   };
   const rows = [
-    { key:'defense', label:'Defensas titulares', value:stat(groupPlayers.defense, 'defense'), detail:'Defensa promedio / defensores' },
-    { key:'midfield', label:'Medios titulares', value:stat(groupPlayers.midfield, 'midfield'), detail:'Pase promedio / medios' },
-    { key:'attack', label:'Delanteros titulares', value:stat(groupPlayers.attack, 'attack'), detail:'Tiro + cabezazo / delanteros' }
+    { key:'defense', label:'Defensas titulares', value:stat(groupPlayers.defense, 'defense'), detail:'' },
+    { key:'midfield', label:'Medios titulares', value:stat(groupPlayers.midfield, 'midfield'), detail:'' },
+    { key:'attack', label:'Delanteros titulares', value:stat(groupPlayers.attack, 'attack'), detail:'' }
   ];
-  return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div><small class="muted">${escapeHtml(row.detail)}</small></div>`).join('')}</div>`;
+  return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div>${row.detail ? `<small class="muted">${escapeHtml(row.detail)}</small>` : ''}</div>`).join('')}</div>`;
 }
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
@@ -747,16 +747,11 @@ function renderTactics(){
     </div>`;
   }).join('');
   view.innerHTML = `
-    <div class="section-title"><h2>Táctica y convocatoria</h2><p class="tagline">Click sobre el círculo del jugador en la pizarra para cambiar su estado: muy defensivo, defensivo, normal, ofensivo o muy ofensivo. En las listas podés intercambiar titulares, suplentes y reservas. Rol exacto: 100%. Rol compatible: 75%. Fuera de zona natural: 50%.</p></div>
+    <div class="section-title"><h2>Táctica y convocatoria</h2></div>
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
       <div class="tactic-board-layout">
-        <aside class="tactic-board-side tactic-board-left">
-          <h3>Visores del equipo</h3>
-          <p class="muted small">Promedios de habilidades clave de titulares por sector. Sustituyen a las antiguas instrucciones de partido.</p>
-          ${tacticSectorSkillVisors()}
-        </aside>
         <div class="pitch-board-wrap">
           <div class="pitch-board centered">${pitch}</div>
           <div class="tactic-state-legend">
@@ -861,9 +856,9 @@ function sectorStyleControls(){
     { value:'repliegue', label:'Repliegue', tone:'regen' }
   ];
   const descriptions = {
-    defense:'Defensa: presión, salida y protección del área.',
-    midfield:'Medios: ritmo, posesión y generación.',
-    attack:'Delanteros: presión, movilidad y finalización.'
+    defense:'',
+    midfield:'',
+    attack:''
   };
   const row = (key, label) => {
     const selected = current[key] || 'posicional';
@@ -871,7 +866,7 @@ function sectorStyleControls(){
     return `<div class="sector-style-control training-tone-${selectedOption?.tone || 'tactical'}">
       <label>${label}</label>
       <select class="training-individual-select training-tone-${selectedOption?.tone || 'tactical'}" data-sector-style="${key}">${options.map(opt=>`<option value="${opt.value}" ${selected===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select>
-      <span>${escapeHtml(descriptions[key] || '')}</span>
+      ${descriptions[key] ? `<span>${escapeHtml(descriptions[key] || '')}</span>` : ''}
     </div>`;
   };
   return row('defense','Defensa') + row('midfield','Medios') + row('attack','Delanteros');

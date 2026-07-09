@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.25',
+  version: 'V5.26',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -408,8 +408,8 @@ window.GAME_CONFIG = {
     desgaste: {
       activo: true,
       maximo: 98,
-      desgasteMinPartido: 1,
-      desgasteMaxPartido: 3,
+      desgasteMinPartido: 2,
+      desgasteMaxPartido: 4,
       desgastePorTurnoIntenso: 1,
       recuperacionPorTurnoMasajista: 1
     }
@@ -433,6 +433,10 @@ window.GAME_CONFIG = {
     maximoErroresPorEquipo: 5,
     // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
     fatigaVivaMultiplicador: 2,
+    // V5.26: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
+    multiplicadorTarjetas: 0.50,
+    // V5.26: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
+    rojasDerrotaDefault: 5,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
     estrellasMaximasPorEquipo: 3,
     estrellasPartidosVentana: 10,
@@ -443,8 +447,8 @@ window.GAME_CONFIG = {
     // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
-    desgastePartidoMin: 24,
-    desgastePartidoMax: 45,
+    desgastePartidoMin: 25,
+    desgastePartidoMax: 46,
     factorDesgasteArquero: 0.5
   },
 

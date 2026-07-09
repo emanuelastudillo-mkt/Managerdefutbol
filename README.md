@@ -1,3 +1,12 @@
+# Historial de versiones
+
+## V5.26 - Desgaste, tarjetas y limpieza táctica
+
+- Aumenta en 1 punto el desgaste de partido.
+- Reduce al 50% las tarjetas generadas por el simulador.
+- Agrega suspensión automática por 5 expulsiones de un mismo equipo, con derrota 0-3.
+- Elimina textos explicativos redundantes del apartado Tácticas.
+
 # Fútbol Manager MVP
 
 ## V5.25 - Texto dirigir partido

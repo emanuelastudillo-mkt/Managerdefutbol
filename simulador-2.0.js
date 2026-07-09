@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.23 lesiones fantasma y reemplazos bot
+/* Motor de simulación V2.0 · V5.26 desgaste, tarjetas y suspensión
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -81,6 +81,8 @@
   const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
   const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
   const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
+  const SIM_CARD_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorTarjetas', 0.5, 0, 2);
+  const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
   const LIVE_BOT_SUB_MINUTES = [45, 60, 70, 78, 84];
   const LIVE_BOT_INJURY_SUB_ENABLED = true;
 
@@ -91,6 +93,36 @@
     const safe = Math.max(0, Number(value) || 0);
     const base = Math.floor(safe);
     return base + (Math.random() < safe - base ? 1 : 0);
+  }
+  function isRedCardType(type){
+    return ['red','secondYellowRed'].includes(String(type || ''));
+  }
+  function redCardsForClub(cards, clubId){
+    return (Array.isArray(cards) ? cards : []).filter(card => Number(card.clubId) === Number(clubId) && isRedCardType(card.type)).length;
+  }
+  function defaultLossByRedCards(cards, homeId, awayId){
+    const homeReds = redCardsForClub(cards, homeId);
+    const awayReds = redCardsForClub(cards, awayId);
+    if(homeReds < SIM_DEFAULT_LOSS_RED_CARDS && awayReds < SIM_DEFAULT_LOSS_RED_CARDS) return null;
+    if(homeReds >= SIM_DEFAULT_LOSS_RED_CARDS && awayReds >= SIM_DEFAULT_LOSS_RED_CARDS){
+      const homeFifth = (cards || []).filter(card => Number(card.clubId) === Number(homeId) && isRedCardType(card.type)).sort((a,b)=>Number(a.minute || 0)-Number(b.minute || 0))[SIM_DEFAULT_LOSS_RED_CARDS - 1];
+      const awayFifth = (cards || []).filter(card => Number(card.clubId) === Number(awayId) && isRedCardType(card.type)).sort((a,b)=>Number(a.minute || 0)-Number(b.minute || 0))[SIM_DEFAULT_LOSS_RED_CARDS - 1];
+      if(Number(awayFifth?.minute || 999) < Number(homeFifth?.minute || 999)) return { offenderClubId:awayId, winnerClubId:homeId, homeGoals:3, awayGoals:0, homeReds, awayReds, minute:Number(awayFifth?.minute || 90) };
+    }
+    if(homeReds >= SIM_DEFAULT_LOSS_RED_CARDS) return { offenderClubId:homeId, winnerClubId:awayId, homeGoals:0, awayGoals:3, homeReds, awayReds, minute:Number((cards || []).filter(card => Number(card.clubId) === Number(homeId) && isRedCardType(card.type)).sort((a,b)=>Number(a.minute || 0)-Number(b.minute || 0))[SIM_DEFAULT_LOSS_RED_CARDS - 1]?.minute || 90) };
+    return { offenderClubId:awayId, winnerClubId:homeId, homeGoals:3, awayGoals:0, homeReds, awayReds, minute:Number((cards || []).filter(card => Number(card.clubId) === Number(awayId) && isRedCardType(card.type)).sort((a,b)=>Number(a.minute || 0)-Number(b.minute || 0))[SIM_DEFAULT_LOSS_RED_CARDS - 1]?.minute || 90) };
+  }
+  function applyDefaultLossToLiveSession(session, defaultLoss){
+    if(!session || !defaultLoss) return false;
+    session.suspended = true;
+    session.defaultLoss = { ...defaultLoss, reason:'Cinco expulsiones' };
+    session.homeGoals = Number(defaultLoss.homeGoals || 0);
+    session.awayGoals = Number(defaultLoss.awayGoals || 0);
+    session.currentMinute = Number(defaultLoss.minute || session.currentMinute || 90);
+    session.instructionLog = Array.isArray(session.instructionLog) ? session.instructionLog : [];
+    session.instructionLog.push({ minute:session.currentMinute, to:session.currentMinute, instruction:'suspended', label:'Partido suspendido por expulsiones' });
+    session.blockIndex = Array.isArray(session.blocks) ? session.blocks.length : session.blockIndex;
+    return true;
   }
   function blockDurationFactor(block){
     return simClamp(((Number(block?.to || 0) - Number(block?.from || 0) + 1) || 15) / 15, 0.05, 1);
@@ -579,7 +611,7 @@
   }
   function makeCardsV2(clubId, power, fouls){
     const cards = [];
-    const yellowCount = simClamp(poissonV2(fouls / 7.6), 0, 6);
+    const yellowCount = simClamp(poissonV2((fouls * SIM_CARD_RATE_MULTIPLIER) / 7.6), 0, 6);
     const byPlayer = new Map();
     for(let i=0;i<yellowCount;i++){
       const p = weightedPickV2(power.lineup, cardWeightV2);
@@ -590,7 +622,7 @@
       else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(simRnd(35,90)) });
     }
     const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
-    const directChance = simClamp((power.aggression - 60) / 290, 0.005, 0.13);
+    const directChance = simClamp(((power.aggression - 60) / 290) * SIM_CARD_RATE_MULTIPLIER, 0.001, 0.13);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(20,90)) });
@@ -1155,7 +1187,7 @@
     const cards = [];
     const locallySent = new Set();
     const eligibleLineup = (power.lineup || []).filter(p => p && !liveIsUnavailableForPlay(session, p.id));
-    const yellowCount = simClamp(probabilisticRoundV2(Math.max(0, Number(fouls || 0)) / 3.4), 0, 2);
+    const yellowCount = simClamp(probabilisticRoundV2((Math.max(0, Number(fouls || 0)) * SIM_CARD_RATE_MULTIPLIER) / 3.4), 0, 2);
     session.yellowByPlayer = session.yellowByPlayer || {};
     for(let i=0;i<yellowCount;i++){
       const p = weightedPickV2(eligibleLineup.filter(item => !locallySent.has(Number(item.id))), cardWeightV2);
@@ -1170,7 +1202,7 @@
       }else cards.push({ clubId, playerId:p.id, type:'yellow', minute });
     }
     const directRedCandidates = eligibleLineup.filter(p => !locallySent.has(Number(p.id)) && p.position !== 'POR' && hiddenStats(p).aggression >= 78);
-    const directChance = simClamp((power.aggression - 62) / 900, 0.001, 0.045);
+    const directChance = simClamp(((power.aggression - 62) / 900) * SIM_CARD_RATE_MULTIPLIER, 0.0005, 0.045);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(block.from, block.to + 1)) });
@@ -1342,8 +1374,13 @@
     ].sort((x,y)=>x.minute-y.minute);
     cards.forEach(card => {
       session.cards.push(card);
-      if(['red','secondYellowRed'].includes(String(card.type || ''))) removePlayerFromLiveTactic(session, card.clubId, card.playerId, 'red');
+      if(isRedCardType(card.type)) removePlayerFromLiveTactic(session, card.clubId, card.playerId, 'red');
     });
+    const defaultLoss = defaultLossByRedCards(session.cards, session.match.homeId, session.match.awayId);
+    if(defaultLoss){
+      applyDefaultLossToLiveSession(session, defaultLoss);
+      return finishLiveMatchSession(session);
+    }
     const injuries = friendlyNoSanctions ? [] : [
       ...liveInjuriesForBlock(session, session.match.homeId, home, session.matchContext, block),
       ...liveInjuriesForBlock(session, session.match.awayId, away, session.matchContext, block)
@@ -1526,7 +1563,9 @@
       playedIdsHome,
       playedIdsAway,
       instructionConditionDeltas:session.instructionConditionDeltas,
-      liveBlocks:session.instructionLog
+      liveBlocks:session.instructionLog,
+      suspended:Boolean(session.suspended),
+      defaultLoss:session.defaultLoss || null
     };
     if(!result.friendly){
       applyMatchCohesionResult(result, result.substitutions, result.cards);
@@ -1579,7 +1618,12 @@
     const matchStats = { home:finalizeStats(homeTotals), away:finalizeStats(awayTotals) };
     matchStats.away.possession = 100 - matchStats.home.possession;
     const cards = [...makeCardsV2(match.homeId, home, matchStats.home.fouls), ...makeCardsV2(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
-    const injuries = [...makeInjuriesV2(match.homeId, home, matchContext), ...makeInjuriesV2(match.awayId, away, matchContext)].sort((a,b)=>a.minute-b.minute);
+    const defaultLoss = defaultLossByRedCards(cards, match.homeId, match.awayId);
+    if(defaultLoss){
+      homeGoals = Number(defaultLoss.homeGoals || 0);
+      awayGoals = Number(defaultLoss.awayGoals || 0);
+    }
+    const injuries = defaultLoss ? [] : [...makeInjuriesV2(match.homeId, home, matchContext), ...makeInjuriesV2(match.awayId, away, matchContext)].sort((a,b)=>a.minute-b.minute);
     const regularSubs = [
       ...makeSubstitutions(match.homeId, homeTactic, goals),
       ...makeSubstitutions(match.awayId, awayTactic, goals)
@@ -1609,7 +1653,7 @@
       sectorStyleConditionDelta(home, starterIdsHome),
       sectorStyleConditionDelta(away, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0-jugadorista', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas };
+    return { ...match, played:true, engine:'simulador-2.0-jugadorista', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.17',
+  version: 'V5.18',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -431,6 +431,8 @@ window.GAME_CONFIG = {
     probabilidadErrorTerminaEnGol: 0.28,
     // Máximo de errores usado para evitar partidos rotos por errores constantes.
     maximoErroresPorEquipo: 5,
+    // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
+    fatigaVivaMultiplicador: 2,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
     estrellasMaximasPorEquipo: 3,
     estrellasPartidosVentana: 10,

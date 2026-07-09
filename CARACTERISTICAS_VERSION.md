@@ -1,25 +1,17 @@
-# Características de la versión V5.17
+# Características de la versión V5.18
 
-## Simulador vivo más compacto
+## Fatiga reforzada
 
-- Se redujo aproximadamente 10% la tipografía de listas de jugadores y eventos.
-- Se achicaron paddings, alto de filas y espacios verticales para aprovechar mejor pantallas horizontales.
-- Las listas de titulares, banco y eventos mantienen scroll propio para evitar que la parte inferior del simulador quede cortada.
+- La pérdida de estado físico del simulador vivo se duplica para ambos equipos.
+- La fatiga sigue considerando resistencia, genética, posición e instrucción activa.
+- Se agrega `GAME_CONFIG.simulador.fatigaVivaMultiplicador` para poder ajustar el multiplicador sin tocar el motor.
 
-## Entretiempo con fases de descanso
+## Cambios bot más agresivos
 
-- El partido vivo ahora se divide en 105 fases:
-  - 45 fases del primer tiempo.
-  - 15 fases de descanso.
-  - 45 fases del segundo tiempo.
-- Al llegar a los 45 minutos, el modo automático se pausa y permite pensar cambios, formación o instrucciones.
-- Durante el descanso no se generan goles, tarjetas, lesiones ni estadísticas nuevas.
-
-## Recuperación física
-
-- En cada fase de descanso, los jugadores en cancha recuperan algo de estado físico.
-- La recuperación depende de resistencia, genética y posición.
-- La recuperación sólo compensa desgaste del partido: no supera el estado físico inicial de cada jugador.
+- El bot intenta utilizar mejor los 3 cambios disponibles.
+- Prioriza sacar jugadores cansados, con mal puntaje o con bajo encaje de rol.
+- Evalúa cambios en ventanas más claras: entretiempo, 60, 70, 78 y 84 minutos.
+- El resultado parcial influye en el tipo de suplente elegido: más ofensivo si pierde, más conservador si gana.
 
 ## Compatibilidad
 

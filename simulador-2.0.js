@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.17 simulación viva compacta con descanso, recuperación y pausa de entretiempo
+/* Motor de simulación V2.0 · V5.18 simulación viva con fatiga reforzada y cambios bot
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -80,6 +80,8 @@
   const SIM_PLAYER_ERROR_SCALE = simConfigNumber('simulador.escalaRiesgoErrorJugador', 0.72, 0, 2);
   const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
   const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
+  const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
+  const LIVE_BOT_SUB_MINUTES = [45, 60, 70, 78, 84];
 
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
@@ -824,7 +826,7 @@
     const posLoad = pos === 'POR' ? 0.55 : (['MC','MCD','MCO','MI','MD','LD','LI','ED','EI'].includes(pos) ? 1.08 : 1.00);
     const instructionLoad = ({ all_attack:0.045, huevos:0.035, hold_result:-0.010, all_defense:0.000, push:0.025, lower:-0.018 })[instruction] || 0;
     const base = 0.055 + (100 - resistance) * 0.0018 + (100 - genetics) * 0.0012;
-    return simClamp((base + instructionLoad) * posLoad, 0.035, 0.36);
+    return simClamp((base + instructionLoad) * posLoad * LIVE_FATIGUE_MULTIPLIER, 0.07, 0.72);
   }
   function applyLiveMinuteFatigue(session, clubId, instruction='none'){
     if(!session) return;
@@ -872,9 +874,74 @@
     return session?.finished ? 'final' : 'second';
   }
   function liveUsedSubCount(session, clubId){ return (liveEnsureSubBucket(session, clubId) || []).length; }
+  function liveEventSummaryForPlayer(session, playerId){
+    const id = Number(playerId || 0);
+    const summary = { goals:0, assists:0, yellow:0, red:0, injuries:0, saves:0, errors:0, goalErrors:0 };
+    if(!id || !session) return summary;
+    (session.goals || []).forEach(goal => {
+      if(Number(goal.scorerId) === id) summary.goals += 1;
+      if(Number(goal.assistId) === id) summary.assists += 1;
+    });
+    (session.cards || []).forEach(card => {
+      if(Number(card.playerId) !== id) return;
+      if(String(card.type || '') === 'yellow') summary.yellow += 1;
+      if(['red','secondYellowRed'].includes(String(card.type || ''))) summary.red += 1;
+    });
+    (session.injuries || []).forEach(injury => { if(Number(injury.playerId) === id) summary.injuries += 1; });
+    (session.keySaves || []).forEach(save => { if(Number(save.goalkeeperId || save.playerId) === id) summary.saves += 1; });
+    (session.errors || []).forEach(error => {
+      if(Number(error.playerId) !== id) return;
+      summary.errors += 1;
+      if(error.goal) summary.goalErrors += 1;
+    });
+    return summary;
+  }
+  function liveBotPlayerRating(session, clubId, playerId, slot){
+    const player = playerById(playerId);
+    if(!player) return 4.0;
+    const condition = liveEffectiveCondition(session, playerId);
+    const fit = Math.round(Number(zoneFactor(player, slot || player.position) || 0.65) * 100);
+    const overall = Number(effectiveOverall(player) || 0);
+    const morale = Number(currentMorale(playerId) || 50);
+    const events = liveEventSummaryForPlayer(session, playerId);
+    const scoreFor = Number(clubId) === Number(session.match.homeId)
+      ? { own:session.homeGoals, rival:session.awayGoals }
+      : { own:session.awayGoals, rival:session.homeGoals };
+    let rating = 6.05 + (overall - 62) * 0.012 + (morale - 55) * 0.006 + (condition - 70) * 0.006 + (fit - 78) * 0.005;
+    rating += events.goals * 0.80 + events.assists * 0.45 + events.saves * 0.22;
+    rating -= events.yellow * 0.20 + events.red * 1.15 + events.errors * 0.35 + events.goalErrors * 0.50 + events.injuries * 0.25;
+    rating += simClamp(scoreFor.own - scoreFor.rival, -3, 3) * 0.08;
+    return simClamp(rating, 3.0, 10.0);
+  }
+  function liveBotSubPressure(session, minute, usedCount){
+    if(usedCount >= 3) return 999;
+    if(minute < 45) return 999;
+    if(minute >= 84) return usedCount < 3 ? 18 : 999;
+    if(minute >= 78) return usedCount < 3 ? 24 : 999;
+    if(minute >= 70) return usedCount < 2 ? 34 : 52;
+    if(minute >= 60) return usedCount < 1 ? 42 : 62;
+    if(minute >= 45) return usedCount < 1 ? 54 : 999;
+    return 999;
+  }
+  function liveBenchRolePriorityForBot(player, targetSlot, losing, winning, minute){
+    const pos = String(player?.position || '').toUpperCase();
+    let bonus = 0;
+    if(losing && minute >= 60){
+      if(['DC','ED','EI','MCO'].includes(pos)) bonus += 22;
+      if(['DFC','LD','LI','POR'].includes(pos)) bonus -= 8;
+    }
+    if(winning && minute >= 68){
+      if(['DFC','LD','LI','MCD','MC'].includes(pos)) bonus += 18;
+      if(['DC','ED','EI'].includes(pos)) bonus -= 4;
+    }
+    if(pos === String(targetSlot || '').toUpperCase()) bonus += 10;
+    return bonus;
+  }
   function maybeBotAutoSubstitution(session, clubId, minute){
     const ownId = Number(game?.selectedClubId || 0);
-    if(!session || Number(clubId) === ownId || liveUsedSubCount(session, clubId) >= 3) return [];
+    if(!session || Number(clubId) === ownId) return [];
+    const usedCount = liveUsedSubCount(session, clubId);
+    if(usedCount >= 3) return [];
     const tactic = liveTacticForClub(session, clubId);
     if(!tactic?.starters?.length || !tactic?.bench?.length) return [];
     const slots = liveFormationSlots(tactic.formation || '4-4-2');
@@ -884,32 +951,44 @@
     const losing = scoreFor.own < scoreFor.rival;
     const winning = scoreFor.own > scoreFor.rival;
     const usedIn = new Set((session.usedIns[String(clubId)] || []).map(Number));
+    const usedOut = new Set((session.usedOuts[String(clubId)] || []).map(Number));
+    const subPressure = liveBotSubPressure(session, minute, usedCount);
+    const triggerMinute = LIVE_BOT_SUB_MINUTES.some(mark => Math.abs(Number(minute || 0) - mark) <= 0);
     const candidates = tactic.starters.map((id, index) => {
       const player = playerById(id);
       const slot = slots[index] || player?.position || 'MC';
-      if(!player) return { id:0, index, need:999, slot, condition:0, fit:0 };
+      if(!player) return { id:0, index, need:999, slot, condition:0, fit:0, rating:3.0 };
       const condition = liveEffectiveCondition(session, id);
       const fit = Math.round(Number(zoneFactor(player, slot) || 0.65) * 100);
-      let need = (100 - condition) * 1.05 + (100 - fit) * 0.42;
-      if(minute >= 58 && condition <= 64) need += 40;
-      if(minute >= 70 && condition <= 72) need += 24;
-      if(losing && minute >= 68 && ['DC','ED','EI','MCO'].includes(slot)) need += 14;
-      if(winning && minute >= 72 && ['DFC','LD','LI','MCD'].includes(slot)) need += 12;
-      return { id:Number(id), index, need, slot, condition, fit };
+      const rating = liveBotPlayerRating(session, clubId, id, slot);
+      let need = (100 - condition) * 1.35 + (100 - fit) * 0.52 + Math.max(0, 6.4 - rating) * 17;
+      if(minute >= 45 && condition <= 72) need += 18;
+      if(minute >= 58 && condition <= 76) need += 28;
+      if(minute >= 70 && condition <= 80) need += 22;
+      if(rating <= 5.9 && minute >= 55) need += 26;
+      if(rating <= 5.5 && minute >= 45) need += 22;
+      if(losing && minute >= 60 && ['DFC','LD','LI','MCD'].includes(slot)) need += 10;
+      if(losing && minute >= 68 && ['DC','ED','EI','MCO'].includes(slot)) need -= 8;
+      if(winning && minute >= 70 && ['DC','ED','EI','MCO'].includes(slot)) need += 12;
+      if(usedOut.has(Number(id))) need -= 999;
+      return { id:Number(id), index, need, slot, condition, fit, rating };
     }).sort((a,b)=>b.need-a.need);
     const chosenOut = candidates[0];
-    if(!chosenOut || chosenOut.need < 48) return [];
+    if(!chosenOut || !chosenOut.id) return [];
+    const threshold = triggerMinute ? Math.min(subPressure, 58) : subPressure;
+    if(chosenOut.need < threshold) return [];
     const bench = (tactic.bench || []).map(id => playerById(id)).filter(Boolean).filter(p => !usedIn.has(Number(p.id)) && (typeof canEnterMatch !== 'function' || canEnterMatch(p.id)));
     if(!bench.length) return [];
     let best = null;
     let bestScore = -99999;
     bench.forEach(player => {
       const condition = liveEffectiveCondition(session, player.id);
-      let score = livePlayerSlotScore(player, chosenOut.slot) + condition * 0.38;
+      let score = livePlayerSlotScore(player, chosenOut.slot) + condition * 0.55 + liveBenchRolePriorityForBot(player, chosenOut.slot, losing, winning, minute);
       const pos = String(player.position || '').toUpperCase();
       if(losing && minute >= 68 && ['DC','ED','EI','MCO'].includes(pos)) score += 18;
-      if(winning && minute >= 72 && ['DFC','LD','LI','MCD'].includes(pos)) score += 14;
-      if(condition < 48) score -= 55;
+      if(winning && minute >= 72 && ['DFC','LD','LI','MCD','MC'].includes(pos)) score += 14;
+      if(condition < 45) score -= 70;
+      if(condition < 60) score -= 20;
       if(score > bestScore){ bestScore = score; best = player; }
     });
     if(!best) return [];
@@ -1101,8 +1180,13 @@
     const instruction = liveNormalizeInstruction(options.instruction);
     const minuteForActions = Math.max(1, Number(block.matchMinute || block.from || 1));
     applyLiveSubstitutions(session, ownId, options.substitutions || [], minuteForActions);
-    maybeBotAutoSubstitution(session, session.match.homeId, minuteForActions);
-    maybeBotAutoSubstitution(session, session.match.awayId, minuteForActions);
+    for(let i=0;i<3;i++){
+      const beforeHome = liveUsedSubCount(session, session.match.homeId);
+      const beforeAway = liveUsedSubCount(session, session.match.awayId);
+      maybeBotAutoSubstitution(session, session.match.homeId, minuteForActions);
+      maybeBotAutoSubstitution(session, session.match.awayId, minuteForActions);
+      if(beforeHome === liveUsedSubCount(session, session.match.homeId) && beforeAway === liveUsedSubCount(session, session.match.awayId)) break;
+    }
     if(block.playable === false || block.period === 'break'){
       const homeRecovered = applyLiveRestRecovery(session, session.match.homeId);
       const awayRecovered = applyLiveRestRecovery(session, session.match.awayId);

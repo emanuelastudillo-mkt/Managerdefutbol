@@ -2,6 +2,20 @@
 
 ## Historial de versiones
 
+### V5.18 - Fatiga reforzada y cambios bot
+
+- Duplicada la pérdida de estado físico por minuto en el simulador vivo para ambos equipos.
+- La fatiga sigue dependiendo de resistencia, genética, posición e instrucción activa.
+- Agregado parámetro editable `GAME_CONFIG.simulador.fatigaVivaMultiplicador: 2`.
+- El bot ahora intenta usar con más decisión los 3 cambios disponibles.
+- La lógica de cambios bot prioriza jugadores cansados, con mal puntaje, mal ubicados o afectados por el resultado parcial.
+- El bot evalúa ventanas de cambio en entretiempo, 60, 70, 78 y 84 minutos.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.18.
+
+# Fútbol Manager MVP
+
+## Historial de versiones
+
 ### V5.17 - Simulador compacto con descanso real
 
 - El simulador vivo reduce tipografía, alto de filas y espacios verticales en listas de jugadores y eventos para evitar cortes en pantalla horizontal.

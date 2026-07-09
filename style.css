@@ -3653,3 +3653,23 @@ th{
     max-width:100%;
   }
 }
+
+/* V5.23 · lesiones fantasma en simulador vivo */
+.live-list-row.injured-ghost{
+  border-color:rgba(250,204,21,.36);
+  background:linear-gradient(90deg,rgba(113,63,18,.24),rgba(15,23,42,.66));
+}
+.live-list-row.injured-ghost .num,
+.live-list-row.injured-ghost strong{color:#fde68a}
+.live-row-tag.injury{
+  color:#fde68a;
+  background:rgba(250,204,21,.16);
+  border:1px solid rgba(250,204,21,.32);
+}
+.live-board-circle.ghost{
+  border-color:rgba(250,204,21,.46);
+  background:linear-gradient(180deg,rgba(113,63,18,.28),rgba(15,23,42,.70));
+  color:#fde68a;
+}
+.live-board-circle.ghost .role{color:#fde68a}
+.live-board-circle.ghost small{color:#fef3c7}

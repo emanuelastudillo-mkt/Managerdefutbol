@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.19 táctica viva, expulsados reales e instrucciones ajustadas
+/* Motor de simulación V2.0 · V5.23 lesiones fantasma y reemplazos bot
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -82,6 +82,7 @@
   const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
   const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
   const LIVE_BOT_SUB_MINUTES = [45, 60, 70, 78, 84];
+  const LIVE_BOT_INJURY_SUB_ENABLED = true;
 
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
@@ -279,8 +280,9 @@
     const formation = tactic?.formation || '4-4-2';
     const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
     const sentOffIds = options?.sentOffIds instanceof Set ? options.sentOffIds : new Set();
+    const hasExplicitStarters = Array.isArray(tactic?.starters) && tactic.starters.length;
     let assigned = [];
-    if(Array.isArray(tactic?.starters) && tactic.starters.length){
+    if(hasExplicitStarters){
       assigned = tactic.starters.slice(0, 11).map((id, i) => {
         const player = playerById(id);
         if(!player || sentOffIds.has(Number(player.id))) return null;
@@ -288,7 +290,7 @@
         return { player, slot, factor:zoneFactor(player, slot) };
       }).filter(Boolean);
     }
-    if(!assigned.length){
+    if(!assigned.length && !hasExplicitStarters){
       const lineupFallback = selectLineup(clubId, tactic).filter(player => !sentOffIds.has(Number(player?.id || 0)));
       assigned = lineupFallback.map((player, i) => ({ player, slot:slots[i] || player.position, factor:zoneFactor(player, slots[i] || player.position) }));
     }
@@ -846,6 +848,7 @@
     session.liveConditionDeltas = session.liveConditionDeltas || {};
     const tactic = liveTacticForClub(session, clubId);
     (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      if(liveIsUnavailableForPlay(session, id)) return;
       const player = playerById(id);
       if(!player) return;
       session.liveConditionDeltas[id] = Number(session.liveConditionDeltas[id] || 0) - liveFatiguePerMinute(player, instruction);
@@ -865,6 +868,7 @@
     const tactic = liveTacticForClub(session, clubId);
     let recovered = 0;
     (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      if(liveIsUnavailableForPlay(session, id)) return;
       const player = playerById(id);
       if(!player) return;
       const currentDelta = Number(session.liveConditionDeltas[id] || 0);
@@ -892,6 +896,32 @@
     if(!id || !session) return false;
     if(session.sentOffByPlayer && session.sentOffByPlayer[String(id)]) return true;
     return (session.cards || []).some(card => Number(card.playerId) === id && ['red','secondYellowRed'].includes(String(card.type || '')));
+  }
+
+  function liveMarkInjuredGhost(session, clubId, playerId){
+    const id = Number(playerId || 0);
+    if(!session || !id) return;
+    const clubKey = String(clubId || '');
+    session.injuredGhostByPlayer = session.injuredGhostByPlayer || {};
+    session.injuredGhostByClub = session.injuredGhostByClub || {};
+    session.injuredGhostByClub[clubKey] = Array.isArray(session.injuredGhostByClub[clubKey]) ? session.injuredGhostByClub[clubKey] : [];
+    session.injuredGhostByPlayer[String(id)] = true;
+    if(!session.injuredGhostByClub[clubKey].map(Number).includes(id)) session.injuredGhostByClub[clubKey].push(id);
+  }
+  function liveIsInjuredGhost(session, playerId){
+    const id = Number(playerId || 0);
+    if(!id || !session) return false;
+    if(session.injuredGhostByPlayer && session.injuredGhostByPlayer[String(id)]) return true;
+    return (session.injuries || []).some(injury => Number(injury.playerId) === id);
+  }
+  function liveUnavailableIds(session){
+    const out = new Set();
+    Object.keys(session?.sentOffByPlayer || {}).forEach(id => { const n = Number(id); if(n) out.add(n); });
+    Object.keys(session?.injuredGhostByPlayer || {}).forEach(id => { const n = Number(id); if(n) out.add(n); });
+    return out;
+  }
+  function liveIsUnavailableForPlay(session, playerId){
+    return liveIsSentOff(session, playerId) || liveIsInjuredGhost(session, playerId);
   }
   function liveMarkSentOff(session, clubId, playerId){
     const id = Number(playerId || 0);
@@ -1009,7 +1039,7 @@
     if(!chosenOut || !chosenOut.id) return [];
     const threshold = triggerMinute ? Math.min(subPressure, 58) : subPressure;
     if(chosenOut.need < threshold) return [];
-    const bench = (tactic.bench || []).map(id => playerById(id)).filter(Boolean).filter(p => !usedIn.has(Number(p.id)) && (typeof canEnterMatch !== 'function' || canEnterMatch(p.id)));
+    const bench = (tactic.bench || []).map(id => playerById(id)).filter(Boolean).filter(p => !usedIn.has(Number(p.id)) && !liveIsUnavailableForPlay(session, p.id) && (typeof canEnterMatch !== 'function' || canEnterMatch(p.id)));
     if(!bench.length) return [];
     let best = null;
     let bestScore = -99999;
@@ -1025,6 +1055,49 @@
     });
     if(!best) return [];
     return applyLiveSubstitutions(session, clubId, [{ outId:chosenOut.id, inId:best.id, trigger:'bot', manual:false }], Math.max(1, minute));
+  }
+
+  function chooseBenchForInjuredBot(session, clubId, injuredId, slot, minute){
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic?.bench?.length) return null;
+    const usedIn = new Set((session.usedIns[String(clubId)] || []).map(Number));
+    const candidates = (tactic.bench || [])
+      .map(id => playerById(id))
+      .filter(Boolean)
+      .filter(player => !usedIn.has(Number(player.id)) && !liveIsUnavailableForPlay(session, player.id) && (typeof canEnterMatch !== 'function' || canEnterMatch(player.id)));
+    if(!candidates.length) return null;
+    let best = null;
+    let bestScore = -99999;
+    candidates.forEach(player => {
+      const condition = liveEffectiveCondition(session, player.id);
+      let score = livePlayerSlotScore(player, slot) + condition * 0.45;
+      if(String(player.position || '').toUpperCase() === String(slot || '').toUpperCase()) score += 18;
+      if(condition < 45) score -= 40;
+      if(condition < 60) score -= 14;
+      if(minute >= 75 && condition > 65) score += 6;
+      if(score > bestScore){ bestScore = score; best = player; }
+    });
+    return best;
+  }
+  function handleLiveInjury(session, injury, minute){
+    if(!session || !injury) return [];
+    const clubId = Number(injury.clubId || 0);
+    const playerId = Number(injury.playerId || 0);
+    if(!clubId || !playerId) return [];
+    liveMarkInjuredGhost(session, clubId, playerId);
+    const ownId = Number(game?.selectedClubId || 0);
+    const tactic = liveTacticForClub(session, clubId);
+    const index = tactic?.starters?.findIndex(id => Number(id) === playerId) ?? -1;
+    const slots = liveFormationSlots(tactic?.formation || '4-4-2');
+    const slot = slots[index] || playerById(playerId)?.position || 'MC';
+    if(Number(clubId) === ownId){
+      session.injuryPauseRequest = { clubId, playerId, minute:Number(minute || injury.minute || 0), canSub:liveUsedSubCount(session, clubId) < 3 };
+      return [];
+    }
+    if(!LIVE_BOT_INJURY_SUB_ENABLED || liveUsedSubCount(session, clubId) >= 3) return [];
+    const replacement = chooseBenchForInjuredBot(session, clubId, playerId, slot, minute);
+    if(!replacement) return [];
+    return applyLiveSubstitutions(session, clubId, [{ outId:playerId, inId:replacement.id, trigger:'injury', manual:false }], Math.max(1, Number(minute || injury.minute || 0)));
   }
 
   function livePlayedSet(session, clubId){
@@ -1050,7 +1123,7 @@
       const outId = Number(raw?.outId || 0);
       const inId = Number(raw?.inId || 0);
       if(!outId || !inId || outId === inId) continue;
-      if(liveIsSentOff(session, outId) || liveIsSentOff(session, inId)) continue;
+      if(liveIsSentOff(session, outId) || liveIsSentOff(session, inId) || liveIsInjuredGhost(session, inId)) continue;
       const index = tactic.starters.findIndex(id => Number(id) === outId);
       if(index < 0 || usedOut.has(outId) || usedIn.has(inId)) continue;
       if(!tactic.bench.map(Number).includes(inId)) continue;
@@ -1081,7 +1154,7 @@
   function liveCardsForBlock(session, clubId, power, fouls, block){
     const cards = [];
     const locallySent = new Set();
-    const eligibleLineup = (power.lineup || []).filter(p => p && !liveIsSentOff(session, p.id));
+    const eligibleLineup = (power.lineup || []).filter(p => p && !liveIsUnavailableForPlay(session, p.id));
     const yellowCount = simClamp(probabilisticRoundV2(Math.max(0, Number(fouls || 0)) / 3.4), 0, 2);
     session.yellowByPlayer = session.yellowByPlayer || {};
     for(let i=0;i<yellowCount;i++){
@@ -1106,7 +1179,7 @@
   }
   function liveInjuriesForBlock(session, clubId, power, context, block){
     const injuries = [];
-    const candidates = (power.lineup || []).filter(player => !isUnavailable(player.id));
+    const candidates = (power.lineup || []).filter(player => !isUnavailable(player.id) && !liveIsUnavailableForPlay(session, player.id));
     candidates.forEach(player => {
       const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90;
       if(Math.random() < chance){
@@ -1159,7 +1232,7 @@
   }
   function livePowerPair(session){
     const conditionResolver = id => liveEffectiveCondition(session, id);
-    const sentOffIds = liveSentOffIds(session);
+    const sentOffIds = liveUnavailableIds(session);
     const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0, conditionResolver, sentOffIds });
     const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0, conditionResolver, sentOffIds });
     return { home, away };
@@ -1199,6 +1272,9 @@
       yellowByPlayer:{},
       sentOffByPlayer:{},
       expelledByClub:{},
+      injuredGhostByPlayer:{},
+      injuredGhostByClub:{},
+      injuryPauseRequest:null,
       instructionConditionDeltas:{},
       liveConditionDeltas:{},
       instructionLog:[],
@@ -1210,6 +1286,7 @@
     if(!delta) return;
     const tactic = liveTacticForClub(session, clubId);
     (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      if(liveIsUnavailableForPlay(session, id)) return;
       session.instructionConditionDeltas[id] = Number(session.instructionConditionDeltas[id] || 0) + delta;
     });
   }
@@ -1273,7 +1350,7 @@
     ].sort((x,y)=>x.minute-y.minute);
     injuries.forEach(injury => {
       session.injuries.push(injury);
-      removePlayerFromLiveTactic(session, injury.clubId, injury.playerId, 'injury');
+      handleLiveInjury(session, injury, injury.minute || block.from);
     });
     const homeAppliedInstruction = Number(session.match.homeId) === ownId ? instruction : homeInstruction;
     const awayAppliedInstruction = Number(session.match.awayId) === ownId ? instruction : awayInstruction;
@@ -1292,7 +1369,9 @@
     return (tactic?.starters || []).map((id, index) => {
       const player = playerById(id);
       const role = slots[index] || player?.position || '—';
-      return player ? { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id) } : null;
+      if(!player) return null;
+      const injuredGhost = liveIsInjuredGhost(session, player.id);
+      return { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:injuredGhost ? 0 : Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:injuredGhost ? 0 : liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), injuredGhost, ghost:injuredGhost };
     }).filter(Boolean);
   }
   function livePublicBoardSlots(session, clubId){
@@ -1302,6 +1381,7 @@
     return slots.slice(0, 11).map((role, index) => {
       const id = Number(starters[index] || 0);
       const player = id ? playerById(id) : null;
+      const injuredGhost = player ? liveIsInjuredGhost(session, player.id) : false;
       return {
         slotIndex:index,
         role,
@@ -1312,10 +1392,12 @@
           position:player.position,
           role,
           slotIndex:index,
-          fit:Math.round(Number(zoneFactor(player, role) || 0) * 100),
+          fit:injuredGhost ? 0 : Math.round(Number(zoneFactor(player, role) || 0) * 100),
           overall:effectiveOverall(player),
-          condition:liveEffectiveCondition(session, player.id),
-          morale:currentMorale(player.id)
+          condition:injuredGhost ? 0 : liveEffectiveCondition(session, player.id),
+          morale:currentMorale(player.id),
+          injuredGhost,
+          ghost:injuredGhost
         } : null
       };
     });
@@ -1342,11 +1424,14 @@
   }
   function livePublicBench(session, clubId){
     const tactic = liveTacticForClub(session, clubId);
-    const regular = (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, role:player.position, overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:100, expelled:false }));
+    const regular = (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).filter(player => !liveIsUnavailableForPlay(session, player.id)).map(player => ({ id:player.id, name:player.name, position:player.position, role:player.position, overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:100, expelled:false, injuredGhost:false }));
     const clubKey = String(clubId || '');
+    const starters = new Set((tactic?.starters || []).map(Number).filter(Boolean));
     const already = new Set(regular.map(player => Number(player.id)));
+    const injured = (session?.injuredGhostByClub?.[clubKey] || []).map(id => playerById(id)).filter(Boolean).filter(player => !already.has(Number(player.id)) && !starters.has(Number(player.id))).map(player => ({ id:player.id, name:player.name, position:player.position, role:'LES', overall:effectiveOverall(player), condition:0, morale:currentMorale(player.id), fit:0, expelled:false, injuredGhost:true, blocked:true }));
+    injured.forEach(player => already.add(Number(player.id)));
     const expelled = (session?.expelledByClub?.[clubKey] || []).map(id => playerById(id)).filter(Boolean).filter(player => !already.has(Number(player.id))).map(player => ({ id:player.id, name:player.name, position:player.position, role:'EXP', overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:0, expelled:true, blocked:true }));
-    return regular.concat(expelled);
+    return regular.concat(injured, expelled);
   }
   function liveStatsSnapshot(session){
     const played = livePlayedPhaseCount(session);
@@ -1398,6 +1483,9 @@
       breakLog:Array.isArray(session.breakLog) ? session.breakLog.slice() : [],
       expelledByClub:{ ...(session.expelledByClub || {}) },
       sentOffByPlayer:{ ...(session.sentOffByPlayer || {}) },
+      injuredGhostByClub:{ ...(session.injuredGhostByClub || {}) },
+      injuredGhostByPlayer:{ ...(session.injuredGhostByPlayer || {}) },
+      injuryPauseRequest:session.injuryPauseRequest ? { ...session.injuryPauseRequest } : null,
       breakPhase:Number(extra?.breakPhase || 0),
       lastBlock:extra?.block || null,
       currentBlockStats:{ home:extra?.homeBlock || null, away:extra?.awayBlock || null },
@@ -1422,7 +1510,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-tactico-v5.13',
+      engine:'simulador-vivo-tactico-v5.23',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,

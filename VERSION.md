@@ -1,6 +1,6 @@
 # Versión actual
 
-V5.22
+V5.23
 
 ## Último cambio
 

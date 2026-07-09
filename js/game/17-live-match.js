@@ -1,4 +1,4 @@
-/* V5.21 · Simulación viva con pizarra táctica integrada en primer plano. */
+/* V5.23 · Simulación viva con lesiones fantasma y pausa médica. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -128,6 +128,7 @@
   function pendingInIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.inId))); }
   function availabilityTag(player, inField, isOwn){
     if(player?.expelled) return '<span class="live-row-tag red">EXP</span>';
+    if(player?.injuredGhost) return '<span class="live-row-tag injury">LES</span>';
     if(!isOwn) return '';
     if(inField && pendingOutIds().has(Number(player.id))) return '<span class="live-row-tag warn">SALE</span>';
     if(!inField && pendingInIds().has(Number(player.id))) return '<span class="live-row-tag ok">ENTRA</span>';
@@ -200,22 +201,25 @@
   }
   function playerListRow(player, side, inField=true, isOwn=false){
     const id = Number(player.id || 0);
-    const expelled = Boolean(player?.expelled || player?.blocked);
-    const selected = isOwn && !expelled && (inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id);
-    const disabled = expelled || (isOwn && (inField ? pendingOutIds().has(id) : pendingInIds().has(id)));
+    const expelled = Boolean(player?.expelled);
+    const injuredGhost = Boolean(player?.injuredGhost || player?.ghost);
+    const blocked = Boolean(player?.blocked && !(isOwn && inField && injuredGhost));
+    const selectable = isOwn && !expelled && !blocked;
+    const selected = selectable && (inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id);
+    const disabled = expelled || blocked || (isOwn && (inField ? pendingOutIds().has(id) : pendingInIds().has(id)));
     const cond = Math.round(Number(player.condition || 0));
     const morale = Math.round(Number(player.morale || 0));
     const fit = Math.round(Number(player.fit || (inField ? 100 : 0)));
     const rating = livePlayerRating(player, side, inField);
     const ratingClass = rating === '—' ? 'idle' : liveRatingClass(Number(String(rating).replace(',', '.')));
-    const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${expelled ? 'expelled' : ''} ${isOwn && !expelled ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
-    const attr = (isOwn && !expelled) ? (inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`) : '';
+    const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${expelled ? 'expelled' : ''} ${injuredGhost ? 'injured-ghost' : ''} ${selectable ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
+    const attr = selectable ? (inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`) : '';
     const tag = availabilityTag(player, inField, isOwn);
     const icons = livePlayerIcons(id);
     const nameCell = `<span class="live-name-cell"><strong>${ehtml(lastName(player.name))}</strong>${icons}${tag}</span>`;
-    const rowNo = expelled ? 'R' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S');
+    const rowNo = expelled ? 'R' : (injuredGhost ? 'L' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'));
     const body = `<span class="num">${rowNo}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b>${Math.round(Number(player.overall || 0))}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
-    return (isOwn && !expelled) ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
+    return selectable ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
   }
   function formationSelect(){
     const current = ownFormation();
@@ -228,8 +232,9 @@
     const lineup = sideLineup(side);
     const bench = sideBench(side);
     const used = side === 'home' ? Number(liveState?.usedSubsHome || 0) : Number(liveState?.usedSubsAway || 0);
+    const injuredGhosts = lineup.filter(p => p?.injuredGhost).length;
     const selectedHint = isOwn
-      ? (liveTacticOpen ? 'Modo táctica abierto: tocá dos titulares para intercambiar roles o cambiá la formación.' : (liveSelectedStarterId ? `Sale ${eventPlayerLabel(liveSelectedStarterId)} · elegí suplente o titular para reacomodar.` : (liveSelectedBenchId ? `Entra ${eventPlayerLabel(liveSelectedBenchId)} · elegí titular que sale.` : 'Titular + suplente = cambio. Titular + titular = reacomodar.')))
+      ? (injuredGhosts ? 'Lesionado en cancha: tocá al lesionado y luego un suplente para reemplazarlo.' : (liveTacticOpen ? 'Modo táctica abierto: tocá dos titulares para intercambiar roles o cambiá la formación.' : (liveSelectedStarterId ? `Sale ${eventPlayerLabel(liveSelectedStarterId)} · elegí suplente o titular para reacomodar.` : (liveSelectedBenchId ? `Entra ${eventPlayerLabel(liveSelectedBenchId)} · elegí titular que sale.` : 'Titular + suplente = cambio. Titular + titular = reacomodar.'))))
       : `${used} cambios usados · el bot decide cambios automáticos.`;
     return `<section class="card inner live-team-panel ${isOwn ? 'own' : 'bot'} ${side}">
       <div class="live-team-head">
@@ -325,9 +330,10 @@
     const selected = index === Number(liveSelectedBoardSlot);
     const empty = !player;
     const fit = player ? Math.round(Number(player.fit || 0)) : 0;
-    const cls = `live-board-circle ${empty ? 'empty' : ''} ${selected ? 'selected' : ''} ${fit < 70 && player ? 'warn' : ''}`;
+    const injuredGhost = Boolean(player?.injuredGhost || player?.ghost);
+    const cls = `live-board-circle ${empty ? 'empty' : ''} ${injuredGhost ? 'ghost' : ''} ${selected ? 'selected' : ''} ${fit < 70 && player && !injuredGhost ? 'warn' : ''}`;
     const label = player ? lastName(player.name) : 'Hueco';
-    const meta = player ? `${Math.round(Number(player.overall || 0))} · ${Math.round(Number(player.condition || 0))}%` : 'Sin jugador';
+    const meta = player ? (injuredGhost ? 'Lesionado · no aporta' : `${Math.round(Number(player.overall || 0))} · ${Math.round(Number(player.condition || 0))}%`) : 'Sin jugador';
     return `<button type="button" class="${cls}" data-live-board-slot="${index}" ${liveState?.finished ? 'disabled' : ''}>
       <span class="role">${ehtml(slot?.role || '—')}</span>
       <strong>${ehtml(label)}</strong>
@@ -455,7 +461,15 @@
     const result = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
     if(result?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; }
     else{ liveState = result || window.Simulator20.livePublicState(liveSession); }
+    const ownInjuries = (liveState?.extra?.injuries || []).filter(injury => Number(injury.clubId || 0) === ownClubId());
     if(substitutions.length) livePendingSubstitutions = [];
+    if(ownInjuries.length){
+      livePaused = true;
+      clearTimeout(liveAutoTimer);
+      const injuredName = eventPlayerLabel(ownInjuries[0].playerId, true);
+      const canSub = Number(liveState?.usedSubs || 0) + livePendingSubstitutions.length < Number(liveState?.maxSubs || 3);
+      liveShowNotice(canSub ? `${injuredName} queda lesionado en cancha. Tocá al lesionado y luego un suplente para reemplazarlo.` : `${injuredName} queda lesionado en cancha, pero ya no quedan cambios.`, false);
+    }
     if(wasBeforeBreak && liveState?.nextBlock?.period === 'break' && !liveHalftimePaused){
       livePaused = true;
       liveHalftimePaused = true;

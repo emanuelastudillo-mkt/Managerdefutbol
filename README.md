@@ -1,5 +1,17 @@
 # Fútbol Manager MVP
 
+## V5.23 - Lesiones fantasma y reemplazos bot
+
+- El simulador vivo ahora distingue lesiones activas durante el partido.
+- Si un jugador bot se lesiona y el equipo todavía no hizo 3 cambios, el bot intenta reemplazarlo automáticamente con un suplente coherente para el rol.
+- Si un jugador del manager se lesiona, el partido se pausa automáticamente.
+- El lesionado del manager queda en cancha como jugador fantasma: visible, clickeable, sin aporte ofensivo, defensivo ni táctico.
+- El manager puede tocar al lesionado y luego a un suplente para confirmar el reemplazo si todavía tiene cambios.
+- Si no quedan cambios, el lesionado queda visible pero sin aportar nada al equipo.
+- Los lesionados ya no siguen participando en goles, asistencias, tarjetas, errores ni cálculos de fuerza del equipo.
+- Se agregan etiquetas visuales `LES` para distinguir lesionados bloqueados o fantasmas.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.23.
+
 ## V5.22 - Controles del simulador centrados
 
 - Los botones de instrucciones del simulador vivo quedan centrados en una primera línea.

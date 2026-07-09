@@ -438,7 +438,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
         <button id="finishMatchReveal" class="primary">Finalizar partido</button>
       </div>
       <div id="matchRevealDynamic"></div>
-      <div class="card inner match-context-card">
+      <div class="card inner match-context-card compact-match-context">
         <h3>Contexto del partido</h3>
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
@@ -496,7 +496,7 @@ function matchRevealStageLabel(minute, index, total){
 }
 function matchRevealStageNote(minute, index, total){
   if(index === 0) return 'Los equipos salen a la cancha. Todavía no hay eventos revelados.';
-  if(index >= total - 1) return 'Resultado final, estadísticas completas y consecuencias del partido.';
+  if(index >= total - 1) return '';
   if(minute < 15) return 'Primeras posesiones, presión inicial y tanteo táctico.';
   if(minute < 30) return 'El ritmo empieza a mostrar quién logra progresar mejor.';
   if(minute < 45) return 'Últimos ataques antes del descanso.';
@@ -590,13 +590,13 @@ function renderMatchRevealStage(match, stage, index, total){
         </div>
         ${specialEvents.length ? `<div class="reveal-special-stack">${specialEvents.map((event, specialIndex) => revealSpecialEventCard(match, event, specialIndex)).join('')}</div>` : ''}
         ${revealPitchMomentumCard(match, fieldTilt)}
-        <div class="card inner reveal-stage-card">
+        ${stage.factor === 1 ? '' : `<div class="card inner reveal-stage-card">
           <div class="row">
             <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
             <span class="pill">${index + 1}/${total}</span>
           </div>
           <p class="muted small">${escapeHtml(stage.note)}</p>
-        </div>
+        </div>`}
         <div class="card inner reveal-events-card">
           <h3>Eventos visibles <span class="muted small">últimos arriba</span></h3>
           <div class="reveal-events-scroll">${events.length ? events.slice().reverse().map(revealEventLine).join('') : '<p class="muted">Sin eventos relevantes en este tramo.</p>'}</div>
@@ -862,7 +862,7 @@ function showMatchModal(matchId){
       <p class="label">Fecha ${match.matchday} · ${match.date}</p>
       <h2>${clubLink(match.homeId)} ${match.homeGoals} - ${match.awayGoals} ${clubLink(match.awayId)}</h2>
     </div>
-    <div class="card inner match-context-card">
+    <div class="card inner match-context-card compact-match-context">
       <h3>Contexto del partido</h3>
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>

@@ -1,8 +1,18 @@
 # Fútbol Manager MVP
 
-**V4.23 - Balance diario, academia semanal y confirmar equipo**
+**V4.24 - Avance no bloqueante, economía negativa y simulador compacto**
 
 ## Historial de versiones
+
+### V4.24 - Avance no bloqueante, economía negativa y simulador compacto
+- `Ir a próximo partido` ya no abre una pantalla de carga bloqueante para avanzar días.
+- El avance automático hasta el partido propio se muestra dentro del bloque del botón, con spinner y barra de progreso.
+- El contexto del partido se compacta para ocupar menos espacio en el simulador.
+- La cruz de cierre del simulador queda alineada a la derecha.
+- La economía del club puede quedar en saldo negativo.
+- Los gastos recurrentes ya no se cortan al llegar a $0: el saldo sigue bajando como deuda.
+- Los montos negativos se muestran con signo menos y color rojo en Oficina, Finanzas e historial.
+- Se elimina del simulador visual el bloque final `Minuto 90 / Final / Resultado final...` para ahorrar espacio.
 
 ### V4.23 - Balance diario, academia semanal y confirmar equipo
 - La ganancia de cohesión por partido baja a 8.

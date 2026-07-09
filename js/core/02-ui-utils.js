@@ -76,7 +76,13 @@ function showTurnTransition(label='Avanzando días'){
 function clamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
 function rnd(min,max){ return min + Math.random() * (max-min); }
 function avg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
-function formatMoney(value){ return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(value); }
+function formatMoney(value){
+  const num = Math.round(Number(value) || 0);
+  const formatted = new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Math.abs(num));
+  return num < 0 ? `-${formatted}` : formatted;
+}
+function moneyTone(value){ return Number(value || 0) < 0 ? 'bad budget-negative' : 'ok'; }
+function budgetTone(value){ return Number(value || 0) < 0 ? 'budget-negative bad' : ''; }
 function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
 function isFoundedClub(club){ return Boolean(club?.isFoundedClub || club?.founderClub || club?.modoFundador); }
 function isFoundedClubId(clubId){ return isFoundedClub(seed?.clubs?.find(c => Number(c.id) === Number(clubId))); }

@@ -701,20 +701,29 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
   return { botResults, recovered, bankPayment };
 }
+function setAutoAdvanceButtonLoading(active){
+  const btn = $('advanceMatchBtn');
+  if(!btn) return;
+  btn.classList.toggle('is-loading', Boolean(active));
+  btn.disabled = Boolean(active);
+  btn.innerHTML = active ? '<span class="mini-spinner" aria-hidden="true"></span><span>Avanzando...</span>' : 'Ir a próximo partido';
+}
 function showAutoAdvanceOverlay(totalDays, currentDate='', targetDate=''){
   let root = $('autoAdvanceOverlay');
   if(root) root.remove();
+  const host = $('advanceProgressBox');
   root = document.createElement('div');
   root.id = 'autoAdvanceOverlay';
-  root.className = 'auto-advance-backdrop';
+  root.className = host ? 'auto-advance-inline' : 'auto-advance-floating';
   root.innerHTML = `<div class="auto-advance-card">
-    <div class="turn-spinner" aria-hidden="true"></div>
-    <strong>Avanzando hasta el próximo partido</strong>
+    <div class="auto-advance-head"><div class="turn-spinner" aria-hidden="true"></div><strong>Avanzando días</strong></div>
     <span class="auto-advance-status">Preparando calendario diario...</span>
     <div class="turn-transition-bar"><i style="width:0%"></i></div>
     <p class="muted small">${escapeHtml(currentDate || '—')} → ${escapeHtml(targetDate || '—')} · ${totalDays} día${totalDays === 1 ? '' : 's'}</p>
   </div>`;
-  document.body.appendChild(root);
+  if(host){ host.innerHTML = ''; host.appendChild(root); }
+  else document.body.appendChild(root);
+  setAutoAdvanceButtonLoading(true);
   return root;
 }
 function updateAutoAdvanceOverlay(root, data={}){
@@ -726,9 +735,16 @@ function updateAutoAdvanceOverlay(root, data={}){
   if(bar) bar.style.width = `${pct}%`;
 }
 function closeAutoAdvanceOverlay(root){
-  if(!root) return;
-  root.classList.add('is-exiting');
-  setTimeout(()=>root.remove(), 280);
+  if(root){
+    root.classList.add('is-exiting');
+    setTimeout(()=>{
+      root.remove();
+      const box = $('advanceProgressBox');
+      if(box && !box.querySelector('[data-advance-progress-fill]')) box.innerHTML = advanceProgressMarkup();
+      updateAdvanceProgressBox();
+    }, 260);
+  }
+  setAutoAdvanceButtonLoading(false);
 }
 function startAutoAdvanceToNextOwnMatch(){
   if(!game || !isRegularSeason()) return false;
@@ -1081,7 +1097,7 @@ function recordBudgetChange(delta, concept, meta={}){
   if(!game) return;
   game.budgetHistory = game.budgetHistory || [];
   const safeDelta = Math.round(Number(delta) || 0);
-  game.budget = Math.max(0, Math.round((game.budget || 0) + safeDelta));
+  game.budget = Math.round(Number(game.budget || 0) + safeDelta);
   game.lastBudgetDelta = safeDelta;
   game.budgetHistory.push({
     season:game.seasonNumber || 1,
@@ -1340,7 +1356,7 @@ function financeCategoryRows(entries){
     const delta = Number(entry.delta || 0);
     const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
     const extra = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Entradas ${formatMoney(entry.ticketRevenue)}</span>` : '';
-    return `<tr><td>Fecha ${Number(entry.matchdayIndex || 0) + 1}</td><td>${escapeHtml(budgetConcept(entry))}${extra}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
+    return `<tr><td>Fecha ${Number(entry.matchdayIndex || 0) + 1}</td><td>${escapeHtml(budgetConcept(entry))}${extra}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.budget || 0)}">${formatMoney(entry.budget || 0)}</span></td></tr>`;
   }).join('');
 }
 function financeExpensesByCategoryMarkup(){
@@ -1585,12 +1601,12 @@ function renderFinances(){
     const delta = Number(entry.delta || 0);
     const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
     const ticketText = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Recaudación ${formatMoney(entry.ticketRevenue)}</span>` : '';
-    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}${ticketText}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.budget || 0)}</td></tr>`;
+    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}${ticketText}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.budget || 0)}">${formatMoney(entry.budget || 0)}</span></td></tr>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title"><div><h2>Finanzas</h2><p class="tagline">Detalle del presupuesto, sus movimientos registrados y la masa salarial del plantel.</p></div></div>
     <div class="grid cols-4 compact-team-stats">
-      <div class="card"><p class="label">Presupuesto actual</p><strong>${formatMoney(game.budget || 0)}</strong></div>
+      <div class="card"><p class="label">Presupuesto actual</p><strong class="${budgetTone(game.budget || 0)}">${formatMoney(game.budget || 0)}</strong></div>
       <div class="card"><p class="label">Ingresos temporada</p><strong class="ok">${formatMoney(seasonIncome)}</strong></div>
       <div class="card"><p class="label">Gastos temporada</p><strong class="bad">${formatMoney(seasonExpenses)}</strong></div>
       <div class="card"><p class="label">Sueldos anuales estimados</p><strong>${formatMoney(salaryTotal)}</strong></div>

@@ -263,7 +263,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
       <div class="office-mini-grid">
         <div><span>Posición</span><strong>${position || '—'}°</strong></div>
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
-        <div><span>Presupuesto</span><strong class="office-budget-compact">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
+        <div><span>Presupuesto</span><strong class="office-budget-compact ${budgetTone(game.budget || 0)}">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
         <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
         <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
         <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
@@ -381,7 +381,7 @@ function renderHome(){
     <div class="grid cols-3" style="margin-top:14px">
       <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
       <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
-      <div class="card"><p class="label">Presupuesto</p><div class="metric small">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
+      <div class="card"><p class="label">Presupuesto</p><div class="metric small ${budgetTone(game.budget || 0)}">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
     </div>
     <div class="card own-team-stats-card" style="margin-top:14px">
       <h3>Estadísticas de mi equipo</h3>

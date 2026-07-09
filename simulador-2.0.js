@@ -1295,6 +1295,51 @@
       return player ? { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id) } : null;
     }).filter(Boolean);
   }
+  function livePublicBoardSlots(session, clubId){
+    const tactic = liveTacticForClub(session, clubId);
+    const slots = FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2'];
+    const starters = Array.isArray(tactic?.starters) ? tactic.starters : [];
+    return slots.slice(0, 11).map((role, index) => {
+      const id = Number(starters[index] || 0);
+      const player = id ? playerById(id) : null;
+      return {
+        slotIndex:index,
+        role,
+        empty:!player,
+        player:player ? {
+          id:player.id,
+          name:player.name,
+          position:player.position,
+          role,
+          slotIndex:index,
+          fit:Math.round(Number(zoneFactor(player, role) || 0) * 100),
+          overall:effectiveOverall(player),
+          condition:liveEffectiveCondition(session, player.id),
+          morale:currentMorale(player.id)
+        } : null
+      };
+    });
+  }
+  function swapLiveSlots(session, clubId, slotA, slotB){
+    if(!session || session.finished) return false;
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic || !Array.isArray(tactic.starters)) return false;
+    const a = Number(slotA);
+    const b = Number(slotB);
+    if(!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a === b) return false;
+    const slots = liveFormationSlots(tactic.formation || '4-4-2');
+    const max = Math.min(11, slots.length || 11);
+    if(a >= max || b >= max) return false;
+    while(tactic.starters.length < max) tactic.starters.push(0);
+    const aId = Number(tactic.starters[a] || 0);
+    const bId = Number(tactic.starters[b] || 0);
+    if(!aId && !bId) return false;
+    tactic.starters[a] = bId || 0;
+    tactic.starters[b] = aId || 0;
+    tactic.autoSubs = [];
+    liveSetTacticForClub(session, clubId, tactic);
+    return true;
+  }
   function livePublicBench(session, clubId){
     const tactic = liveTacticForClub(session, clubId);
     const regular = (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, role:player.position, overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:100, expelled:false }));
@@ -1330,6 +1375,9 @@
       instructionLog:session.instructionLog.slice(),
       homeLineup:livePublicLineup(session, session.match.homeId),
       awayLineup:livePublicLineup(session, session.match.awayId),
+      homeBoardSlots:livePublicBoardSlots(session, session.match.homeId),
+      awayBoardSlots:livePublicBoardSlots(session, session.match.awayId),
+      ownBoardSlots:livePublicBoardSlots(session, game?.selectedClubId || 0),
       homeBench:livePublicBench(session, session.match.homeId),
       awayBench:livePublicBench(session, session.match.awayId),
       ownBench:livePublicBench(session, game?.selectedClubId || 0),
@@ -1484,6 +1532,7 @@
     createLiveMatchSession,
     simulateLiveBlock,
     applyLiveFormation,
+    swapLiveSlots,
     finishLiveMatchSession,
     livePublicState,
     pitchEffect:pitchEffectV2,

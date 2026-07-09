@@ -1,5 +1,15 @@
 # Fútbol Manager MVP
 
+## V5.21 - Pizarra táctica integrada al simulador
+
+- El botón **Táctica** del simulador vivo ahora abre una pizarra interna en primer plano.
+- Ya no se intenta usar la pantalla general de tácticas por detrás del modal del partido.
+- Los titulares se muestran como círculos por zona de cancha.
+- Clic en un círculo y luego en otro intercambia posiciones.
+- Si hay un hueco por expulsión, se puede mover un jugador a ese espacio para cubrir el rol perdido.
+- El selector de formación queda disponible dentro de la pizarra.
+- Los expulsados permanecen visibles junto al banco, con roja y bloqueados.
+
 ## V5.20 - Ojeo persistente en fichas
 
 - Los informes del Centro de Ojeo ya no se pierden al quitar jugadores de la lista activa.

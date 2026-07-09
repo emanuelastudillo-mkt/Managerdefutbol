@@ -1,4 +1,4 @@
-/* V5.19 · Simulación viva con táctica rápida, expulsados visibles y desventaja numérica real. */
+/* V5.21 · Simulación viva con pizarra táctica integrada en primer plano. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -11,6 +11,7 @@
   let livePendingSubstitutions = [];
   let liveHalftimePaused = false;
   let liveTacticOpen = false;
+  let liveSelectedBoardSlot = -1;
 
   function ehtml(value){
     return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value ?? '').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
@@ -31,6 +32,10 @@
   function currentOwnLineup(){ return sideLineup(ownSide()); }
   function ownFormation(){ return liveState?.ownFormation || (ownSide() === 'home' ? liveState?.homeFormation : liveState?.awayFormation) || '4-4-2'; }
   function sideFormation(side){ return side === 'home' ? (liveState?.homeFormation || '4-4-2') : (liveState?.awayFormation || '4-4-2'); }
+  function ownBoardSlots(){
+    if(Array.isArray(liveState?.ownBoardSlots) && liveState.ownBoardSlots.length) return liveState.ownBoardSlots;
+    return ownSide() === 'home' ? (liveState?.homeBoardSlots || []) : (liveState?.awayBoardSlots || []);
+  }
   function liveIsBreak(){ return liveState?.period === 'break' || liveState?.nextBlock?.period === 'break' || liveState?.lastBlock?.period === 'break'; }
   function liveDisplayMinute(){
     if(liveState?.finished) return 'FIN';
@@ -304,13 +309,53 @@
       </div>
     </div>`;
   }
-  function liveTacticHelper(){
+  function boardZone(slot){
+    const role = String(slot?.role || '');
+    if(role === 'POR') return 'gk';
+    if(['DFC','LI','LD'].includes(role)) return 'def';
+    if(['MCD','MC'].includes(role)) return 'mid';
+    if(['MI','MD','MCO'].includes(role)) return 'am';
+    if(['DC','EI','ED'].includes(role)) return 'att';
+    return 'mid';
+  }
+  function boardZoneLabel(zone){ return ({ att:'Ataque', am:'Volantes ofensivos', mid:'Medios', def:'Defensa', gk:'Arquero' })[zone] || 'Zona'; }
+  function boardSlotButton(slot){
+    const index = Number(slot?.slotIndex ?? -1);
+    const player = slot?.player || null;
+    const selected = index === Number(liveSelectedBoardSlot);
+    const empty = !player;
+    const fit = player ? Math.round(Number(player.fit || 0)) : 0;
+    const cls = `live-board-circle ${empty ? 'empty' : ''} ${selected ? 'selected' : ''} ${fit < 70 && player ? 'warn' : ''}`;
+    const label = player ? lastName(player.name) : 'Hueco';
+    const meta = player ? `${Math.round(Number(player.overall || 0))} · ${Math.round(Number(player.condition || 0))}%` : 'Sin jugador';
+    return `<button type="button" class="${cls}" data-live-board-slot="${index}" ${liveState?.finished ? 'disabled' : ''}>
+      <span class="role">${ehtml(slot?.role || '—')}</span>
+      <strong>${ehtml(label)}</strong>
+      <small>${ehtml(meta)}</small>
+    </button>`;
+  }
+  function liveTacticBoard(){
     if(!liveTacticOpen || liveState?.finished) return '';
-    const own = ownSide();
-    const lineup = sideLineup(own);
+    const slots = ownBoardSlots();
     const redCount = (liveState?.cards || []).filter(c => Number(c.clubId) === ownClubId() && ['red','secondYellowRed'].includes(String(c.type || ''))).length;
-    const emptySlots = Math.max(0, 11 - lineup.length);
-    return `<div class="card inner live-tactic-helper"><div><p class="label">Táctica rápida</p><h3>${redCount ? `${redCount} expulsado(s) · ${emptySlots} hueco(s)` : 'Reacomodar equipo'}</h3><span class="muted small">Usá la lista de tu equipo: titular + titular intercambia roles. Titular + suplente confirma cambio. La formación se ajusta desde el selector superior de tu equipo.</span></div></div>`;
+    const emptySlots = slots.filter(slot => slot?.empty).length;
+    const zones = ['att','am','mid','def','gk'];
+    const rows = zones.map(zone => {
+      const zoneSlots = slots.filter(slot => boardZone(slot) === zone);
+      if(!zoneSlots.length) return '';
+      return `<div class="live-board-row ${zone}"><span>${boardZoneLabel(zone)}</span><div>${zoneSlots.map(boardSlotButton).join('')}</div></div>`;
+    }).filter(Boolean).join('');
+    const selected = liveSelectedBoardSlot >= 0 ? slots.find(slot => Number(slot.slotIndex) === Number(liveSelectedBoardSlot)) : null;
+    const selectedText = selected ? (selected.player ? `${selected.role}: ${lastName(selected.player.name)}` : `${selected.role}: hueco`) : 'Elegí un círculo y después otro para intercambiar o cubrir un hueco.';
+    return `<section class="card inner live-tactic-board-front">
+      <div class="live-tactic-board-head">
+        <div><p class="label">Pizarra táctica</p><h3>${redCount ? `${redCount} expulsado(s) · ${emptySlots} hueco(s)` : 'Reacomodar posiciones'}</h3></div>
+        <div class="live-formation-control board"><span>Formación</span>${formationSelect()}</div>
+        <button type="button" id="liveCloseBoardBtn" class="ghost mini">Cerrar pizarra</button>
+      </div>
+      <p class="muted small live-board-selected">${ehtml(selectedText)}</p>
+      <div class="live-board-field">${rows}</div>
+    </section>`;
   }
   function renderLiveMatch(){
     if(!liveState) return;
@@ -333,7 +378,7 @@
       </div>
       <div class="live-progress"><span style="width:${progress}%"></span></div>
       ${minuteRail(events)}
-      ${liveTacticHelper()}
+      ${liveTacticBoard()}
       <div class="live-v512-grid">
         ${liveTeamPanel('home')}
         <section class="live-center-stack">
@@ -363,7 +408,7 @@
     if(root) root.innerHTML = html;
     bindLiveControls();
   }
-  function resetLiveSelections(){ liveSelectedStarterId = 0; liveSelectedBenchId = 0; }
+  function resetLiveSelections(){ liveSelectedStarterId = 0; liveSelectedBenchId = 0; liveSelectedBoardSlot = -1; }
   function queueSubstitution(outId, inId){
     outId = Number(outId || 0); inId = Number(inId || 0);
     if(!outId || !inId || outId === inId) return;
@@ -376,22 +421,32 @@
     liveShowNotice('Cambio confirmado para el próximo minuto.', false);
     renderLiveMatch();
   }
+  function swapSlots(slotA, slotB){
+    slotA = Number(slotA); slotB = Number(slotB);
+    if(slotA < 0 || slotB < 0 || slotA === slotB) return;
+    const slots = ownBoardSlots();
+    const a = slots.find(slot => Number(slot.slotIndex) === slotA);
+    const b = slots.find(slot => Number(slot.slotIndex) === slotB);
+    if(!a || !b || (!a.player && !b.player)) return;
+    const aText = a.player ? `${eventPlayerLabel(a.player.id, true)} (${a.role})` : `Hueco (${a.role})`;
+    const bText = b.player ? `${eventPlayerLabel(b.player.id, true)} (${b.role})` : `Hueco (${b.role})`;
+    const msg = `Reacomodar pizarra\n\n${aText} ⇄ ${bText}`;
+    if(!liveConfirm(msg)) return;
+    const ok = window.Simulator20?.swapLiveSlots?.(liveSession, ownClubId(), slotA, slotB);
+    if(!ok){ liveShowNotice('No se pudo reacomodar la pizarra.', true); return; }
+    liveState = window.Simulator20.livePublicState(liveSession);
+    resetLiveSelections();
+    liveShowNotice('Pizarra reacomodada.', false);
+    renderLiveMatch();
+  }
   function swapStarters(aId, bId){
     aId = Number(aId || 0); bId = Number(bId || 0);
     if(!aId || !bId || aId === bId) return;
     const lineup = currentOwnLineup();
-    const order = lineup.map(p => Number(p.id));
-    const a = order.indexOf(aId); const b = order.indexOf(bId);
-    if(a < 0 || b < 0) return;
-    const msg = `Reacomodar roles\n\n${eventPlayerLabel(aId, true)} cambia su rol con ${eventPlayerLabel(bId, true)}.`;
-    if(!liveConfirm(msg)) return;
-    [order[a], order[b]] = [order[b], order[a]];
-    const ok = window.Simulator20?.applyLiveFormation?.(liveSession, ownClubId(), ownFormation(), order);
-    if(!ok){ liveShowNotice('No se pudo reacomodar la formación.', true); return; }
-    liveState = window.Simulator20.livePublicState(liveSession);
-    resetLiveSelections();
-    liveShowNotice('Jugadores reacomodados.', false);
-    renderLiveMatch();
+    const a = lineup.find(p => Number(p.id) === aId);
+    const b = lineup.find(p => Number(p.id) === bId);
+    if(!a || !b) return;
+    swapSlots(Number(a.slotIndex), Number(b.slotIndex));
   }
   function simulateNextBlockFromUi(){
     if(!liveSession || liveState?.finished) return;
@@ -412,7 +467,7 @@
   }
   function bindLiveControls(){
     document.querySelectorAll('[data-live-instruction]').forEach(btn => btn.addEventListener('click', () => { liveSelectedInstruction = btn.getAttribute('data-live-instruction') || 'none'; renderLiveMatch(); }));
-    document.querySelector('#liveFormationSelect')?.addEventListener('change', (ev) => {
+    document.querySelectorAll('#liveFormationSelect').forEach(select => select.addEventListener('change', (ev) => {
       const value = ev.target.value;
       if(!value || value === ownFormation()) return;
       if(!liveConfirm(`Cambiar formación a ${value}.\n\nEl cuerpo técnico reacomodará automáticamente a los titulares para reducir penalizaciones por rol.`)){ ev.target.value = ownFormation(); return; }
@@ -420,7 +475,7 @@
       if(!ok){ liveShowNotice('No se pudo cambiar la formación.', true); return; }
       liveState = window.Simulator20.livePublicState(liveSession);
       resetLiveSelections(); liveShowNotice(`Formación cambiada a ${value}.`, false); renderLiveMatch();
-    });
+    }));
     document.querySelectorAll('[data-live-starter-id]').forEach(btn => btn.addEventListener('click', () => {
       const id = Number(btn.getAttribute('data-live-starter-id') || 0);
       if(!id || liveState?.finished) return;
@@ -442,7 +497,15 @@
       if(index >= 0) livePendingSubstitutions.splice(index, 1);
       resetLiveSelections(); renderLiveMatch();
     }));
-    document.querySelector('#liveTacticBtn')?.addEventListener('click', () => { liveTacticOpen = !liveTacticOpen; livePaused = true; clearTimeout(liveAutoTimer); renderLiveMatch(); });
+    document.querySelectorAll('[data-live-board-slot]').forEach(btn => btn.addEventListener('click', () => {
+      const slot = Number(btn.getAttribute('data-live-board-slot') || -1);
+      if(slot < 0 || liveState?.finished) return;
+      if(liveSelectedBoardSlot >= 0 && liveSelectedBoardSlot !== slot){ swapSlots(liveSelectedBoardSlot, slot); return; }
+      liveSelectedBoardSlot = liveSelectedBoardSlot === slot ? -1 : slot;
+      liveSelectedStarterId = 0; liveSelectedBenchId = 0; renderLiveMatch();
+    }));
+    document.querySelector('#liveCloseBoardBtn')?.addEventListener('click', () => { liveTacticOpen = false; liveSelectedBoardSlot = -1; renderLiveMatch(); });
+    document.querySelector('#liveTacticBtn')?.addEventListener('click', () => { liveTacticOpen = !liveTacticOpen; livePaused = true; clearTimeout(liveAutoTimer); liveSelectedBoardSlot = -1; renderLiveMatch(); });
     document.querySelector('#liveNextBlockBtn')?.addEventListener('click', () => { livePaused = true; clearTimeout(liveAutoTimer); simulateNextBlockFromUi(); });
     document.querySelector('#livePauseBtn')?.addEventListener('click', () => { livePaused = !livePaused; if(!livePaused) runAutoMode(); renderLiveMatch(); });
     document.querySelector('#liveFinishBtn')?.addEventListener('click', () => {
@@ -451,7 +514,7 @@
       const result = liveSession.result;
       closeModal();
       if(typeof liveOptions?.onComplete === 'function') liveOptions.onComplete(result);
-      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false;
+      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1;
       resetLiveSelections(); clearTimeout(liveAutoTimer);
     });
   }
@@ -464,7 +527,7 @@
   function start(match, options={}){
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;
     clearTimeout(liveAutoTimer);
-    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; resetLiveSelections();
+    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1; resetLiveSelections();
     liveSession = window.Simulator20.createLiveMatchSession(match);
     liveState = window.Simulator20.livePublicState(liveSession);
     window.__liveMatchCloseLocked = false;

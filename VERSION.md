@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.20
+V5.21
 
 ## Último cambio
 
-Ojeo persistente en fichas: los informes revelados ya no se eliminan al quitar jugadores de la lista activa.
+Pizarra táctica integrada al simulador vivo: reacomodo por círculos en primer plano sin abrir la pantalla de tácticas detrás del modal.

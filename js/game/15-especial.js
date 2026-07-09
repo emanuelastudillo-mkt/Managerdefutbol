@@ -536,17 +536,18 @@ function specialCardMarkup(card, zone='reserve'){
   const rarity = String(card.rareza || 'inutil');
   const canActivate = zone === 'reserve' && card.activable;
   const activeLock = zone === 'active' ? specialCardActiveLockInfo(card) : { locked:false, remaining:0, until:null };
-  const lockPill = zone === 'active' && activeLock.locked ? `<span class="pill warn">Fija ${formatDays(activeLock.remaining)}</span>` : '';
+  const lockPill = zone === 'active' && activeLock.locked ? `<span class="pill warn">${formatDays(activeLock.remaining)}</span>` : '';
+  const bonus = specialCardBonusText(card);
   const action = zone === 'active'
-    ? `<button class="ghost small-btn" data-special-deactivate="${escapeHtml(card.id_carta)}" ${activeLock.locked ? 'disabled' : ''}>${activeLock.locked ? 'No se puede desactivar' : 'Desactivar'}</button>`
+    ? `<button class="ghost small-btn" data-special-deactivate="${escapeHtml(card.id_carta)}" ${activeLock.locked ? 'disabled' : ''}>${activeLock.locked ? 'Fija' : 'Quitar'}</button>`
     : (zone === 'opened'
-      ? `<span class="pill">Guardada en reserva</span>`
+      ? `<span class="pill">Guardada</span>`
       : `<div class="row gap-xs"><button class="primary small-btn" data-special-activate="${escapeHtml(card.id_carta)}" ${canActivate ? '' : 'disabled'}>Activar</button><button class="ghost small-btn" data-special-destroy="${escapeHtml(card.id_carta)}">Destruir</button></div>`);
   return `<div class="special-card rarity-${escapeHtml(rarity)} ${zone === 'active' ? 'active' : ''} ${zone === 'opened' ? 'opened' : ''}" data-special-card-id="${escapeHtml(card.id_carta)}" draggable="${canActivate ? 'true' : 'false'}"> 
-    <div class="row"><span class="pill rarity-pill rarity-${escapeHtml(rarity)}">${escapeHtml(specialRarityLabel(rarity))}</span>${card.activable ? '<span class="pill ok">Activable</span>' : '<span class="pill">Sin bonus</span>'}${lockPill}</div>
+    <div class="special-card-head"><span class="pill rarity-pill rarity-${escapeHtml(rarity)}">${escapeHtml(specialRarityLabel(rarity))}</span>${lockPill}</div>
     <h3>${escapeHtml(card.nombre)}</h3>
-    <p>${escapeHtml(card.texto || '')}</p>
-    <strong>${escapeHtml(specialCardBonusText(card))}</strong>
+    ${card.texto ? `<p>${escapeHtml(card.texto)}</p>` : ''}
+    <strong>${escapeHtml(bonus)}</strong>
     <div class="special-card-actions">${action}</div>
   </div>`;
 }
@@ -594,25 +595,29 @@ function renderSpecial(opened=[], options={}){
   const bonuses = specialActiveBonusSummary();
   const pointAnimation = specialPointsAnimation;
   const activeBonusCards = active.filter(card => card.tipo_bonus && Number(card.valor_bonus || 0) > 0);
-  const lockText = locked.locked ? `${locked.count} carta(s) activas todavía están fijas. La próxima se libera en ${formatDays(locked.remaining)}.` : 'Las cartas activas ya pueden desactivarse si querés cambiar bonus.';
+  const lockText = locked.locked ? `${locked.count} fija(s). Próxima libre en ${formatDays(locked.remaining)}.` : 'Cambios disponibles.';
+  const bonusChips = bonuses.length
+    ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}%</span>`).join('')
+    : '<span class="pill">Sin bonus activo</span>';
   view.innerHTML = `
-    <div class="row section-title"><div><h2>ESPECIAL</h2><p class="tagline">Sistema de cartas, sobres y bonus acumulables del manager.</p></div></div>
+    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, sobres y bonus activos del manager.</p></div></div>
     <div class="grid cols-4 compact-team-stats special-summary">
-      <div class="card"><p class="label">Manager</p><strong>${escapeHtml(state.nombre_manager || 'Manager')}</strong></div>
-      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos de habilidad</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
-      <div class="card"><p class="label">Cartas activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
+      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
+      <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
-    </div>
-    <div class="card special-lock-card ${locked.locked ? 'warn' : 'ok'}"><div class="row"><div><h3>Regla de cartas activas</h3><p class="muted small">Podés activar hasta ${limits.activeMax} cartas. Cada carta activada queda fija durante ${limits.lockDays} días; recién después puede desactivarse para liberar espacio.</p><p class="muted small">${escapeHtml(lockText)}</p></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${locked.locked ? 'Cartas fijas' : 'Cambios disponibles'}</span></div>
-      ${specialActiveRulesDetailMarkup(activeBonusCards, limits)}
-    </div>
-    <div class="grid cols-3 special-bonus-grid">
-      ${bonuses.length ? bonuses.map(item => `<div class="card"><p class="label">${escapeHtml(specialBonusLabel(item.type))}</p><strong>${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}%</strong></div>`).join('') : ''}
+      <div class="card"><p class="label">Cambios</p><strong>${escapeHtml(locked.locked ? 'Bloqueados' : 'Libres')}</strong></div>
     </div>
     ${specialOpenedMarkup(opened, options)}
-    <div class="card special-active-drop" data-special-drop-active="1"><div class="row"><div><p class="label">Bonus activo</p><h3>Cartas bloqueadas y aplicadas</h3></div><span class="pill">Máximo ${limits.activeMax}</span></div><p class="muted small">Las cartas activadas quedan en este sector durante ${limits.lockDays} días. Podés activar cartas con el botón o arrastrándolas hasta este bloque.</p><div class="special-card-grid">${active.length ? active.map(card => specialCardMarkup(card, 'active')).join('') : '<p class="muted">No hay cartas activas.</p>'}</div></div>
-    <div class="card"><div class="row"><div><p class="label">Abrir sobres</p><h3>Sobres disponibles</h3></div><span class="pill">Reserva libre: ${Math.max(0, limits.reserveMax - reserveAll.length)}</span></div><div class="grid cols-3">${packs.length ? packs.map(specialPackMarkup).join('') : '<p class="muted">No hay sobres configurados.</p>'}</div></div>
-    <div class="card"><div class="row"><div><p class="label">Cartas en reserva</p><h3>Inventario</h3></div><span class="pill">${reserve.length}/${limits.reserveMax}</span></div><div class="special-card-grid">${reserve.length ? reserve.map(card => specialCardMarkup(card, 'reserve')).join('') : '<p class="muted">No hay cartas en reserva.</p>'}</div></div>
+    <div class="card special-active-drop" data-special-drop-active="1">
+      <div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${escapeHtml(lockText)}</span></div>
+      <div class="special-bonus-chips">${bonusChips}</div>
+      ${specialActiveRulesDetailMarkup(activeBonusCards, limits)}
+      <div class="special-card-grid compact">${active.length ? active.map(card => specialCardMarkup(card, 'active')).join('') : '<p class="muted">No hay cartas activas.</p>'}</div>
+    </div>
+    <div class="grid cols-2 special-main-grid">
+      <div class="card"><div class="row"><div><p class="label">Sobres</p><h3>Abrir</h3></div><span class="pill">Reserva libre: ${Math.max(0, limits.reserveMax - reserveAll.length)}</span></div><div class="grid cols-1">${packs.length ? packs.map(specialPackMarkup).join('') : '<p class="muted">No hay sobres configurados.</p>'}</div></div>
+      <div class="card"><div class="row"><div><p class="label">Reserva</p><h3>Inventario</h3></div><span class="pill">${reserve.length}/${limits.reserveMax}</span></div><div class="special-card-grid compact">${reserve.length ? reserve.map(card => specialCardMarkup(card, 'reserve')).join('') : '<p class="muted">No hay cartas en reserva.</p>'}</div></div>
+    </div>
   `;
   document.querySelectorAll('[data-open-special-pack]').forEach(btn => btn.addEventListener('click', () => openSpecialPack(btn.dataset.openSpecialPack)));
   document.querySelectorAll('.special-card[draggable="true"]').forEach(card => {

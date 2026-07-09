@@ -3371,3 +3371,17 @@ th{
 /* V5.13 · Puntajes e iconos acumulables en simulador vivo */
 .live-v512 .live-list-head,.live-v512 .live-list-row{grid-template-columns:24px minmax(82px,1fr) 36px 32px 34px 32px 32px 36px;gap:3px}
 .live-name-cell{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}.live-name-cell strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.live-player-icons{display:inline-flex;align-items:center;gap:1px;flex:0 0 auto;font-size:11px;line-height:1;letter-spacing:-1px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.28))}.live-list-row .live-rating{font-size:10px;font-weight:950;border-radius:999px;text-align:center;padding:1px 3px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.12)}.live-list-row .live-rating.ok{color:#86efac;border-color:rgba(34,197,94,.24);background:rgba(34,197,94,.10)}.live-list-row .live-rating.warn{color:#fde68a;border-color:rgba(250,204,21,.24);background:rgba(250,204,21,.10)}.live-list-row .live-rating.bad{color:#fca5a5;border-color:rgba(248,113,113,.24);background:rgba(248,113,113,.10)}.live-list-row .live-rating.idle{color:#94a3b8;background:rgba(148,163,184,.08)}.live-v512 .live-list-row span:not(.num):not(.live-row-tag):not(.live-player-icons):not(.live-name-cell){font-size:10px;color:#9fb0c9;font-weight:850}.live-v512 .live-list-row .live-name-cell strong{font-size:11px}.live-v512 .live-row-tag{margin-left:2px;white-space:nowrap}@media (max-width:760px){.live-v512 .live-list-head,.live-v512 .live-list-row{grid-template-columns:22px minmax(70px,1fr) 34px 30px 32px 30px 30px}.live-v512 .live-list-head span:nth-child(8),.live-v512 .live-list-row i:nth-last-child(1){display:none}}
+
+/* V5.15 · Cartas minimalistas */
+.special-main-grid{align-items:start;margin-top:14px}
+.special-bonus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
+.special-card-grid.compact{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.special-card-grid.compact .special-card{min-height:142px;padding:12px;border-radius:15px;gap:6px}
+.special-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}
+.special-card-grid.compact .special-card h3{font-size:.92rem;line-height:1.2}
+.special-card-grid.compact .special-card p{font-size:.8rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.special-card-grid.compact .special-card strong{font-size:.82rem}
+.special-card-grid.compact .special-card-actions{margin-top:6px}
+.special-pack-card{gap:8px;padding:12px}
+.special-pack-card h3{font-size:1rem}
+.special-pack-card p.muted.small{font-size:.78rem;line-height:1.3}

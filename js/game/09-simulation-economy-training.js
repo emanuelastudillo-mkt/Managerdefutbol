@@ -761,6 +761,7 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily();
+  if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('daily');
   processMonthlyClubExpensesDaily();
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
@@ -1212,6 +1213,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   rememberCalendarDate();
   advanceGlobalTurn();
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'preseason' });
+  if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('preseason');
   processAcademyTurn();
   processPendingTransfers();
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
@@ -1285,6 +1287,7 @@ function simulatePostseasonTurn(){
   rememberCalendarDate();
   advanceGlobalTurn();
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'postseason' });
+  if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('postseason');
   processAcademyTurn();
   processPendingTransfers();
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
@@ -2225,26 +2228,67 @@ function trainingSkillFinalChance(player, skill){
   const current = clamp(Math.round(baseSkill(player, skill)), 1, 99);
   return clamp((100 - current) / 100, TRAINING_SKILL_MIN_FINAL_CHANCE, 1);
 }
-function improveSkillFromPool(player, skills, chanceScale=1){
-  if(!game.playerSkillBoosts) game.playerSkillBoosts = {};
-  if(!game.playerSkillBoosts[player.id]) game.playerSkillBoosts[player.id] = {};
-  const available = (skills || []).filter(skill => Number.isFinite(baseSkill(player, skill)));
-  if(!available.length) return 0;
-  const skill = available[hashNumber(`${player.id}-${game.matchdayIndex}-${skillRollToken()}`, available.length)];
-  const baseChance = clamp(0.50 * Number(chanceScale || 0) * TRAINING_SKILL_GAIN_MULTIPLIER, 0, 1);
-  if(Math.random() >= baseChance) return 0;
+function trainingRawSkillValue(player, skill){
+  return clamp(Math.round(baseSkill(player, skill)), 1, 99);
+}
+function ensureTrainingProgressForPlayer(playerId){
+  if(!game.trainingSkillProgress) game.trainingSkillProgress = {};
+  const key = String(playerId);
+  game.trainingSkillProgress[key] = game.trainingSkillProgress[key] && typeof game.trainingSkillProgress[key] === 'object' && !Array.isArray(game.trainingSkillProgress[key]) ? game.trainingSkillProgress[key] : {};
+  game.trainingSkillProgress[key].__general = Number(game.trainingSkillProgress[key].__general || 0);
+  game.trainingSkillProgress[key].__individual = Number(game.trainingSkillProgress[key].__individual || 0);
+  return game.trainingSkillProgress[key];
+}
+function applySeasonTrainingSkillBoost(player, skill){
+  if(!player || !skill) return 0;
+  game.playerSkillBoosts = game.playerSkillBoosts || {};
+  game.playerSkillBoosts[player.id] = game.playerSkillBoosts[player.id] && typeof game.playerSkillBoosts[player.id] === 'object' && !Array.isArray(game.playerSkillBoosts[player.id]) ? game.playerSkillBoosts[player.id] : {};
+  const currentValue = trainingRawSkillValue(player, skill);
+  if(currentValue >= 99) return 0;
+  const currentBoost = Math.max(0, Math.round(Number(game.playerSkillBoosts[player.id][skill] || 0)));
+  game.playerSkillBoosts[player.id][skill] = clamp(currentBoost + 1, 0, 30);
+  return 1;
+}
+function trainingExpectedBoostProgress(player, skill, chanceScale=1, mode='individual'){
+  const scaled = Math.max(0, Number(chanceScale || 0)) * TRAINING_SKILL_GAIN_MULTIPLIER;
+  if(scaled <= 0) return 0;
   const finalChance = trainingSkillFinalChance(player, skill);
-  const gain = Math.random() < finalChance ? 1 : 0;
-  if(gain > 0){
-    game.playerSkillBoosts[player.id][skill] = clamp(Number(game.playerSkillBoosts[player.id][skill] || 0) + gain, 0, 30);
+  if(mode === 'intense'){
+    // El intensivo debe sentirse visible: dos turnos intensivos suelen generar 1-2 puntos temporales.
+    // La habilidad base profesional no cambia; se suma como boost de temporada.
+    return clamp(scaled * (0.60 + (finalChance * 0.40)), 0, 1.25);
+  }
+  return clamp(0.35 * scaled * finalChance, 0, 0.75);
+}
+function improveSkillFromPool(player, skills, chanceScale=1, options={}){
+  const mode = options?.mode === 'intense' ? 'intense' : 'individual';
+  const progressKey = mode === 'intense' ? '__general' : '__individual';
+  const available = (skills || []).filter(skill => Number.isFinite(trainingRawSkillValue(player, skill)) && trainingRawSkillValue(player, skill) < 99);
+  if(!available.length) return 0;
+  const progress = ensureTrainingProgressForPlayer(player.id);
+  const token = `${player.id}-${game.seasonNumber || 1}-${game.matchdayIndex || 0}-${typeof currentGlobalDayNumber === 'function' ? currentGlobalDayNumber() : 0}-${mode}-${skillRollToken()}`;
+  let gain = 0;
+  let safety = 0;
+  const firstSkill = available[hashNumber(token, available.length)];
+  progress[progressKey] = clamp(Number(progress[progressKey] || 0) + trainingExpectedBoostProgress(player, firstSkill, chanceScale, mode), 0, 12);
+  while(progress[progressKey] >= 1 && gain < (mode === 'intense' ? 2 : 1) && safety < 8){
+    const skill = available[hashNumber(`${token}-${gain}-${safety}`, available.length)];
+    const applied = applySeasonTrainingSkillBoost(player, skill);
+    if(applied){
+      progress[progressKey] = Math.max(0, Number(progress[progressKey] || 0) - 1);
+      gain += applied;
+    }else{
+      progress[progressKey] = Math.max(0, Number(progress[progressKey] || 0) - 0.35);
+    }
+    safety += 1;
   }
   return gain;
 }
 function skillRollToken(){
   return `${Date.now()}-${Math.random()}`;
 }
-function improveRandomSkill(player, chanceScale=1){
-  return improveSkillFromPool(player, trainableSkillsForPlayer(player), chanceScale);
+function improveRandomSkill(player, chanceScale=1, options={}){
+  return improveSkillFromPool(player, trainableSkillsForPlayer(player), chanceScale, options);
 }
 function individualTrainingSkillPool(player, type){
   const pools = {
@@ -2259,19 +2303,21 @@ function individualTrainingSkillPool(player, type){
   return pools[type] || trainableSkillsForPlayer(player);
 }
 function applyTrainingSessionToPlayer(player, type, scale, conditionDraft, moraleDraft){
+  let gain = 0;
   if(type === 'regenerative'){
     conditionDraft[player.id] = clamp(conditionDraft[player.id] + rnd(1,3) * scale, 0, 99);
   } else if(type === 'massage'){
     conditionDraft[player.id] = clamp(conditionDraft[player.id] + rnd(5,8) * scale, 0, 99);
     moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(2,3) * scale, 1, 99);
   } else if(type === 'intense'){
-    improveRandomSkill(player, scale);
+    gain += improveRandomSkill(player, scale, { mode:'intense' });
     conditionDraft[player.id] = clamp(conditionDraft[player.id] - rnd(2,3) * scale, 0, 99);
     moraleDraft[player.id] = clamp(moraleDraft[player.id] - rnd(5,6) * scale, 1, 99);
   } else if(type === 'dayoff'){
     conditionDraft[player.id] = clamp(conditionDraft[player.id] + rnd(1,2) * scale, 0, 99);
     moraleDraft[player.id] = clamp(moraleDraft[player.id] + rnd(8,10) * scale, 1, 99);
   }
+  return gain;
 }
 function applyIndividualTrainingSessionToPlayer(player, type, scale, conditionDraft, moraleDraft){
   const focus = safeIndividualTrainingType(type);
@@ -2324,6 +2370,7 @@ function applyTrainingEffects(){
   let wearReduced = 0;
   let individualSessions = 0;
   let individualSkillGains = 0;
+  let generalSkillGains = 0;
   const slots = trainingScheduleSlots();
   slots.forEach(item => {
     if(item.type === 'tactical'){
@@ -2332,7 +2379,7 @@ function applyTrainingEffects(){
     }
     if(item.type === 'intense') intenseSessions += 1;
     if(item.type === 'massage') massageSessions += 1;
-    squad.forEach(player => applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft));
+    squad.forEach(player => { generalSkillGains += applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft) || 0; });
   });
   if(TRAINING_INDIVIDUAL_ENABLED){
     for(let day=0; day<Math.max(1, DAYS_PER_ADVANCE); day += 1){
@@ -2357,7 +2404,7 @@ function applyTrainingEffects(){
     ensureTeamCohesion();
     game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
   }
-  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, massageSessions, wearAdded, wearReduced, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, individualSessions, individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
+  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, massageSessions, wearAdded, wearReduced, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, generalSkillGains, individualSessions, individualSkillGains, totalSkillGains:generalSkillGains + individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
 }
 function trainingSlotButtonMarkup(dayIndex, slot, current){
   const option = trainingOptionByValue(current) || trainingOptionByValue(DEFAULT_TRAINING_TYPE);

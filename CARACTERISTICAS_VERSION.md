@@ -1,30 +1,33 @@
-# Características de la versión V5.13
+# Características de la versión V5.15
 
-## Simulador vivo
+## Entrenamiento profesional
 
-- El modo **Auto** ahora tarda el doble en avanzar de minuto a minuto.
-- La demora queda configurable en `GAME_CONFIG.ui.simulacionVivaAutoMs`.
-- Se mantiene el botón manual **Simular 1 minuto** para avanzar sin esperar.
+- Se corrige el enfoque de V5.14: los profesionales no aumentan sus habilidades base por entrenamiento.
+- El entrenamiento intensivo ahora suma puntos temporales de temporada en `playerSkillBoosts`.
+- Dos turnos intensivos deberían producir normalmente entre 1 y 2 puntos temporales en habilidades entrenables.
+- El progreso se acumula internamente para evitar que una tirada mala deje el entrenamiento en cero.
+- Al finalizar la temporada, los puntos entrenados se reducen al 30%.
+- La media visible puede subir durante la temporada porque toma esos boosts, pero la base del jugador queda fija.
 
-## Puntajes e iconos de jugadores
+## Academia
 
-- Cada titular en cancha muestra un puntaje vivo de partido.
-- El puntaje combina media, moral, físico, encaje de rol, resultado parcial y eventos del partido.
-- Los eventos positivos elevan el puntaje: goles, asistencias y tapadas.
-- Los eventos negativos lo reducen: amarillas, rojas, errores y lesiones.
-- Junto al apellido se acumulan iconos de estado:
-  - ⚽ gol
-  - 👟 asistencia
-  - 🟨 amarilla
-  - 🟥 roja
-  - ✚ lesión
+- Se mantiene eliminado el botón directo **Tratar · $50.000** en juveniles lesionados.
+- La Academia informa que el juvenil no entrena hasta ser tratado desde Empleados con kinesiólogo contratado o hasta recuperarse.
+- Los tratamientos de juveniles quedan centralizados en Empleados y se mantienen gratuitos.
 
-## Interfaz
+## Mensajes del asistente
 
-- Los iconos se agregan dentro de la misma fila del jugador para no crear bloques extra.
-- El equipo del manager y el equipo bot mantienen el mismo formato visual.
-- La lista se ajusta para sumar la columna **Pun** sin romper el diseño compacto horizontal.
+- Se mantienen los 20 mensajes de consejos generales del asistente.
+- Los mensajes no dan valores exactos ni revelan mecánicas internas duras.
+- Se reemplaza `#usuario#` por el nombre del manager.
+
+## Cartas
+
+- Menú de cartas compactado y renombrado visualmente como **Cartas**.
+- Se integra el resumen de bonus activo en la misma zona de cartas activas.
+- Se eliminan bloques visuales redundantes de reglas/bonus.
+- Las cartas usan diseño más bajo y minimalista para mostrar más información en menos espacio.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Afecta partidos propios futuros o pendientes que abran el simulador vivo.
+Se implementa solo. No requiere reiniciar partida. Las partidas existentes conservan progreso, puntos, cartas y juveniles. Los próximos entrenamientos intensivos empiezan a usar boosts temporales.

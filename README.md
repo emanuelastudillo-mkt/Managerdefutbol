@@ -1,23 +1,37 @@
 # Fútbol Manager MVP
 
-**V5.13 - Auto más pausado, puntajes e iconos de partido**
+**V5.15 - Entrenamiento temporal, academia y cartas limpias**
 
 ## Historial de versiones
+
+### V5.15 - Entrenamiento temporal, academia y cartas limpias
+
+- Rehecho el ajuste de entrenamiento profesional de V5.14.
+- Los jugadores profesionales ya no suben habilidades base de forma permanente por entrenamiento.
+- El entrenamiento intensivo suma **boosts temporales de temporada** sobre habilidades existentes.
+- Dos turnos de entrenamiento intensivo deberían generar normalmente entre **1 y 2 puntos temporales** en habilidades entrenables.
+- Al cerrar temporada, los boosts de entrenamiento se reducen al **30%**.
+- Se mantiene quitado el botón **Tratar · $50.000** de Academia.
+- Los juveniles lesionados se tratan desde **Empleados** con kinesiólogo contratado y sin costo para juveniles.
+- Se mantienen los 20 consejos del asistente con reemplazo de `#usuario#` por el nombre del manager.
+- Apartado **Cartas** revisado: menos bloques duplicados, información más compacta, resumen de bonus activo integrado y cartas más minimalistas.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.15.
+
+### V5.14 - Academia y consejos del asistente
+
+- Quitado el botón **Tratar · $50.000** de las tarjetas de juveniles lesionados en Academia.
+- Los juveniles lesionados se tratan desde **Empleados** con kinesiólogo contratado, sin costo para juveniles.
+- Agregados 20 consejos del asistente sin especificidades duras, con reemplazo de `#usuario#` por el nombre del manager.
+- El asistente envía un consejo al iniciar carrera y luego mensajes periódicos durante la partida.
 
 ### V5.13 - Auto más pausado, puntajes e iconos de partido
 
 - El botón **Auto** del simulador vivo ahora avanza más lento: tarda el doble entre minuto y minuto.
 - Se agrega puntaje vivo de partido para titulares de ambos equipos.
 - El puntaje se calcula de forma coherente según media, moral, físico, encaje de rol, resultado parcial y eventos.
-- Se agregan iconos acumulables junto al apellido del jugador:
-  - ⚽ gol
-  - 👟 asistencia
-  - 🟨 amarilla
-  - 🟥 roja
-  - ✚ lesión
+- Se agregan iconos acumulables junto al apellido del jugador: ⚽, 👟, 🟨, 🟥 y ✚.
 - Los iconos se muestran tanto para el equipo del manager como para el bot.
 - Se mantiene el formato compacto de lista para ahorrar espacio horizontal.
-- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting, `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y documentación a V5.13.
 
 ### V5.12 - Simulador vivo compacto, fatiga real y cambios bot
 
@@ -25,14 +39,9 @@
 - Las estadísticas del partido ahora se muestran en una sola tarjeta comparativa, con ambos equipos en la misma línea.
 - El equipo del manager y el equipo bot usan el mismo formato visual de lista.
 - Titulares y suplentes se muestran como filas compactas clickeables, similar al menú de táctica.
-- Las sustituciones del manager se mantienen por clic: titular + suplente, con confirmación.
 - Las instrucciones de campo pasan a botones inferiores centrados, sin explicación visible.
-- Se mantiene la instrucción **Sin instrucciones**.
 - Los jugadores de ambos equipos pierden estado físico minuto a minuto.
-- La pérdida física depende principalmente de resistencia, genética, posición y esfuerzo táctico.
 - El bot ahora tiene banco visible y realiza cambios automáticos coherentes.
-- El bot prioriza cansancio, mal encaje de rol, contexto del resultado y minuto del partido.
-- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting, `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y documentación a V5.12.
 
 ### V5.11 - Simulador táctico horizontal y cambios por clic
 

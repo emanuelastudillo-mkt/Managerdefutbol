@@ -2067,6 +2067,7 @@ function newGame(selectedClubId, options={}){
   } else {
     pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
   }
+  if(typeof queueInitialAssistantAdviceMessages === 'function') queueInitialAssistantAdviceMessages();
   activeTab = 'home';
   closeModal();
   newGameModalShown = true;
@@ -3116,7 +3117,7 @@ function decayTrainedSkillBoosts(){
     Object.keys(boosts).forEach(skill => {
       const oldValue = Math.max(0, Math.round(Number(boosts[skill]) || 0));
       if(oldValue <= 0){ delete boosts[skill]; return; }
-      const nextValue = Math.max(0, Math.round(oldValue * 0.40));
+      const nextValue = Math.max(0, Math.round(oldValue * 0.30));
       lost += Math.max(0, oldValue - nextValue);
       remaining += nextValue;
       affected = true;

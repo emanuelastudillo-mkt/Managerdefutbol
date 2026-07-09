@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.26',
+  version: 'V5.27',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -433,9 +433,9 @@ window.GAME_CONFIG = {
     maximoErroresPorEquipo: 5,
     // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
     fatigaVivaMultiplicador: 2,
-    // V5.26: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
+    // V5.27: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
     multiplicadorTarjetas: 0.50,
-    // V5.26: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
+    // V5.27: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
     rojasDerrotaDefault: 5,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
     estrellasMaximasPorEquipo: 3,

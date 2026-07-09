@@ -3692,3 +3692,48 @@ th{
 #liveInstantFinishBtn{
   white-space:nowrap;
 }
+
+
+/* V5.27 · Tácticas: visores restaurados y pizarra ampliada */
+.tactic-board-layout{
+  grid-template-columns:minmax(170px,220px) minmax(560px,1fr) minmax(170px,220px);
+  align-items:start;
+}
+.pitch-board.centered{
+  max-width:900px!important;
+  min-width:min(100%,560px);
+}
+.tactic-board-visors{
+  align-self:stretch;
+  display:flex;
+  align-items:flex-start;
+}
+.tactic-board-visors .tactic-skill-visor-list{
+  width:100%;
+  margin-top:0;
+  gap:8px;
+}
+.tactic-board-visors .tactic-skill-visor{
+  padding:9px 10px;
+  border-radius:14px;
+}
+.tactic-board-visors .tactic-skill-visor .row{
+  margin-bottom:5px;
+}
+.tactic-board-visors .tactic-skill-visor span{
+  font-size:12px;
+  font-weight:900;
+  color:#dbeafe;
+}
+.tactic-board-visors .tactic-skill-visor strong{
+  font-size:22px;
+  line-height:1;
+}
+@media (max-width:1150px){
+  .tactic-board-layout{grid-template-columns:1fr}
+  .pitch-board.centered{min-width:0;max-width:100%!important}
+  .tactic-board-visors .tactic-skill-visor-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:700px){
+  .tactic-board-visors .tactic-skill-visor-list{grid-template-columns:1fr}
+}

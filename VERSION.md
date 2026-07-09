@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.26
+V5.27
 
 ## Último cambio
 
-Ajuste de desgaste, reducción de tarjetas, suspensión por cinco expulsiones y limpieza de textos en Tácticas.
+Restaura los visores tácticos de porcentajes y amplía la pizarra de táctica.

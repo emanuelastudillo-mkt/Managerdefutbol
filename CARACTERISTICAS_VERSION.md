@@ -1,12 +1,13 @@
-# V5.26 - Desgaste, tarjetas y limpieza táctica
+# V5.27 - Pizarra táctica y visores restaurados
 
-- Aumenta en 1 punto el desgaste de partido.
-- Reduce al 50% la generación de tarjetas del simulador.
-- Si un equipo recibe 5 rojas, el partido se suspende y pierde 0-3.
-- Limpia textos redundantes del apartado Tácticas.
+## Cambios principales
 
-# Características de la versión V5.25
+- Restaurados los visores de porcentaje del apartado Táctica.
+- Los visores vuelven a mostrar Defensa, Medios y Delantera.
+- Se mantienen eliminados los textos largos y aclaraciones redundantes.
+- Corregido el layout que dejaba la pizarra demasiado pequeña tras quitar el panel izquierdo.
+- La pizarra vuelve a ocupar el bloque central con mayor ancho máximo.
 
-- Cambiado el texto del botón **Ver partido** por **Dirigir partido**.
-- Aplica a partidos propios oficiales y amistosos.
-- No modifica el motor vivo, resultado directo, terminar partido, calendario, fatiga, lesiones ni cambios.
+## Compatibilidad
+
+Se implementa solo. No requiere reiniciar partida. Es un ajuste visual del apartado Táctica.

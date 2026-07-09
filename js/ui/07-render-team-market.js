@@ -705,9 +705,9 @@ function tacticSectorSkillVisors(){
     return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.remate ?? 0), Number(p.skills?.cabezazo ?? 0)])))), 0, 99);
   };
   const rows = [
-    { key:'defense', label:'Defensas titulares', value:stat(groupPlayers.defense, 'defense'), detail:'' },
-    { key:'midfield', label:'Medios titulares', value:stat(groupPlayers.midfield, 'midfield'), detail:'' },
-    { key:'attack', label:'Delanteros titulares', value:stat(groupPlayers.attack, 'attack'), detail:'' }
+    { key:'defense', label:'Defensa', value:stat(groupPlayers.defense, 'defense'), detail:'' },
+    { key:'midfield', label:'Medios', value:stat(groupPlayers.midfield, 'midfield'), detail:'' },
+    { key:'attack', label:'Delantera', value:stat(groupPlayers.attack, 'attack'), detail:'' }
   ];
   return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div>${row.detail ? `<small class="muted">${escapeHtml(row.detail)}</small>` : ''}</div>`).join('')}</div>`;
 }
@@ -752,6 +752,9 @@ function renderTactics(){
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
       <div class="tactic-board-layout">
+        <aside class="tactic-board-side tactic-board-left tactic-board-visors" aria-label="Visores tácticos">
+          ${tacticSectorSkillVisors()}
+        </aside>
         <div class="pitch-board-wrap">
           <div class="pitch-board centered">${pitch}</div>
           <div class="tactic-state-legend">

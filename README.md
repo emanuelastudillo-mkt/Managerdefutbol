@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## V5.27 - Pizarra táctica y visores restaurados
+
+- Restaura los visores tácticos de porcentaje en Táctica: Defensa, Medios y Delantera.
+- Mantiene eliminados los textos explicativos largos pedidos en V5.26.
+- Ajusta el layout para que la pizarra vuelva a ocupar el bloque central y no quede reducida.
+- Amplía el ancho máximo de la pizarra táctica y ajusta visores a un formato compacto.
+
 ## V5.26 - Desgaste, tarjetas y limpieza táctica
 
 - Aumenta en 1 punto el desgaste de partido.

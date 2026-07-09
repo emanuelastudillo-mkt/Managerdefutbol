@@ -1,24 +1,26 @@
-# Características de la versión V5.16
+# Características de la versión V5.17
 
-## Avance diario unificado
+## Simulador vivo más compacto
 
-- Se reemplazan los dos botones de avance de la oficina por un único botón principal.
-- En temporada regular, el botón avanza siempre al día siguiente cuando no hay partido propio pendiente.
-- Si el partido propio ya corresponde al día actual, el mismo botón pasa a abrir el simulador vivo del partido.
-- En pretemporada y postemporada, el mismo botón ejecuta el avance correspondiente de la fase.
+- Se redujo aproximadamente 10% la tipografía de listas de jugadores y eventos.
+- Se achicaron paddings, alto de filas y espacios verticales para aprovechar mejor pantallas horizontales.
+- Las listas de titulares, banco y eventos mantienen scroll propio para evitar que la parte inferior del simulador quede cortada.
 
-## Cooldown único
+## Entretiempo con fases de descanso
 
-- Después de cada avance se aplica un cooldown de 20 segundos.
-- El mismo cooldown se usa para días normales, amistosos, partidos propios y postemporada.
-- Se elimina el flujo visual de salto largo hasta el próximo partido para evitar contradicciones entre días, bloqueo y simulaciones pendientes.
-- Si una partida traía un bloqueo viejo más largo, se normaliza al nuevo cooldown máximo.
+- El partido vivo ahora se divide en 105 fases:
+  - 45 fases del primer tiempo.
+  - 15 fases de descanso.
+  - 45 fases del segundo tiempo.
+- Al llegar a los 45 minutos, el modo automático se pausa y permite pensar cambios, formación o instrucciones.
+- Durante el descanso no se generan goles, tarjetas, lesiones ni estadísticas nuevas.
 
-## Procesos durante el avance
+## Recuperación física
 
-- Cada avance procesa verificaciones diarias y tareas de fondo: entrenamiento, academia, scouting, recuperaciones, sponsors, préstamos, obras y partidos bot pendientes.
-- Si hay partidos bot programados para la fecha alcanzada, se simulan durante el avance y se informa en el resumen.
+- En cada fase de descanso, los jugadores en cancha recuperan algo de estado físico.
+- La recuperación depende de resistencia, genética y posición.
+- La recuperación sólo compensa desgaste del partido: no supera el estado físico inicial de cada jugador.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Las partidas existentes conservan progreso, puntos, cartas, juveniles y calendario. El cambio afecta el flujo de avance desde la oficina y reduce problemas de bloqueo entre botones.
+Se implementa solo. No requiere reiniciar partida. Afecta partidos propios futuros o pendientes que abran el simulador vivo.

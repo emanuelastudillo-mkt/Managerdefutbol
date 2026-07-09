@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.13 simulación viva compacta con puntajes, iconos, fatiga y cambios bot
+/* Motor de simulación V2.0 · V5.17 simulación viva compacta con descanso, recuperación y pausa de entretiempo
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -17,11 +17,36 @@
     from:index * 3 + 1,
     to:index === 29 ? 90 : index * 3 + 3
   }));
-  const LIVE_BLOCKS = Array.from({ length:90 }, (_, index) => ({
-    from:index + 1,
-    to:index + 1,
-    label:`${index + 1}'`
-  }));
+  const LIVE_BLOCKS = [
+    ...Array.from({ length:45 }, (_, index) => ({
+      phase:index + 1,
+      from:index + 1,
+      to:index + 1,
+      matchMinute:index + 1,
+      label:`${index + 1}'`,
+      period:'first',
+      playable:true
+    })),
+    ...Array.from({ length:15 }, (_, index) => ({
+      phase:46 + index,
+      from:45,
+      to:45,
+      matchMinute:45,
+      breakMinute:index + 1,
+      label:`Descanso ${index + 1}/15`,
+      period:'break',
+      playable:false
+    })),
+    ...Array.from({ length:45 }, (_, index) => ({
+      phase:61 + index,
+      from:46 + index,
+      to:46 + index,
+      matchMinute:46 + index,
+      label:`${46 + index}'`,
+      period:'second',
+      playable:true
+    }))
+  ];
   const LIVE_MANAGER_INSTRUCTIONS = [
     { value:'none', label:'Sin instrucciones', desc:'Sin bonus ni penalización.' },
     { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
@@ -811,6 +836,41 @@
       session.liveConditionDeltas[id] = Number(session.liveConditionDeltas[id] || 0) - liveFatiguePerMinute(player, instruction);
     });
   }
+  function liveRestRecoveryPerPhase(player){
+    if(!player) return 0.24;
+    const resistance = simClamp(Number(typeof matchSkill === 'function' ? matchSkill(player, 'resistencia') : effectiveSkill(player, 'resistencia')) || 55, 1, 99);
+    const genetics = liveHiddenValue(player, ['genetics','genetica','genética','genetic','growth','gen'], 50);
+    const pos = String(player.position || '').toUpperCase();
+    const posFactor = pos === 'POR' ? 0.72 : 1;
+    return simClamp((0.13 + resistance * 0.0018 + genetics * 0.0014) * posFactor, 0.18, 0.46);
+  }
+  function applyLiveRestRecovery(session, clubId){
+    if(!session) return 0;
+    session.liveConditionDeltas = session.liveConditionDeltas || {};
+    const tactic = liveTacticForClub(session, clubId);
+    let recovered = 0;
+    (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      const player = playerById(id);
+      if(!player) return;
+      const currentDelta = Number(session.liveConditionDeltas[id] || 0);
+      if(currentDelta >= 0) return;
+      const nextDelta = Math.min(0, currentDelta + liveRestRecoveryPerPhase(player));
+      recovered += Math.max(0, nextDelta - currentDelta);
+      session.liveConditionDeltas[id] = nextDelta;
+    });
+    return recovered;
+  }
+  function livePlayedPhaseCount(session){
+    if(!session) return 0;
+    return (session.blocks || []).slice(0, Number(session.blockIndex || 0)).filter(block => block?.playable !== false).length;
+  }
+  function liveCurrentPeriod(session){
+    const last = session?.blocks?.[Math.max(0, Number(session?.blockIndex || 0) - 1)] || null;
+    const next = session?.blocks?.[Number(session?.blockIndex || 0)] || null;
+    if(next?.period === 'break' || last?.period === 'break') return 'break';
+    if(Number(session?.currentMinute || 0) <= 45 && !session?.finished) return 'first';
+    return session?.finished ? 'final' : 'second';
+  }
   function liveUsedSubCount(session, clubId){ return (liveEnsureSubBucket(session, clubId) || []).length; }
   function maybeBotAutoSubstitution(session, clubId, minute){
     const ownId = Number(game?.selectedClubId || 0);
@@ -1039,9 +1099,21 @@
     if(!block) return finishLiveMatchSession(session);
     const ownId = Number(game?.selectedClubId || 0);
     const instruction = liveNormalizeInstruction(options.instruction);
-    applyLiveSubstitutions(session, ownId, options.substitutions || [], Math.max(1, block.from));
-    maybeBotAutoSubstitution(session, session.match.homeId, Math.max(1, block.from));
-    maybeBotAutoSubstitution(session, session.match.awayId, Math.max(1, block.from));
+    const minuteForActions = Math.max(1, Number(block.matchMinute || block.from || 1));
+    applyLiveSubstitutions(session, ownId, options.substitutions || [], minuteForActions);
+    maybeBotAutoSubstitution(session, session.match.homeId, minuteForActions);
+    maybeBotAutoSubstitution(session, session.match.awayId, minuteForActions);
+    if(block.playable === false || block.period === 'break'){
+      const homeRecovered = applyLiveRestRecovery(session, session.match.homeId);
+      const awayRecovered = applyLiveRestRecovery(session, session.match.awayId);
+      session.breakLog = Array.isArray(session.breakLog) ? session.breakLog : [];
+      session.breakLog.push({ phase:block.phase, breakMinute:block.breakMinute, homeRecovered:Number(homeRecovered.toFixed(2)), awayRecovered:Number(awayRecovered.toFixed(2)) });
+      session.instructionLog.push({ minute:45, to:45, instruction:'break', label:block.label });
+      session.currentMinute = Number(block.matchMinute || 45);
+      session.blockIndex += 1;
+      if(session.blockIndex >= session.blocks.length) return finishLiveMatchSession(session);
+      return livePublicState(session, { block, breakPhase:block.breakMinute, rest:true, homeRecovered, awayRecovered });
+    }
     let { home, away } = livePowerPair(session);
     if(Number(session.match.homeId) === ownId) home = applyLiveInstructionToPower(home, instruction);
     if(Number(session.match.awayId) === ownId) away = applyLiveInstructionToPower(away, instruction);
@@ -1084,7 +1156,7 @@
     applyLiveMinuteFatigue(session, session.match.awayId, awayAppliedInstruction);
     addLiveInstructionCondition(session, ownId, instruction);
     session.instructionLog.push({ minute:block.from, to:block.to, instruction, label:liveInstructionLabel(instruction) });
-    session.currentMinute = block.to;
+    session.currentMinute = Number(block.matchMinute || block.to);
     session.blockIndex += 1;
     if(session.blockIndex >= session.blocks.length) return finishLiveMatchSession(session);
     return livePublicState(session, { block, homeBlock:h, awayBlock:a, cards, injuries });
@@ -1103,8 +1175,9 @@
     return (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, role:player.position, overall:effectiveOverall(player), condition:liveEffectiveCondition(session, player.id), morale:currentMorale(player.id), fit:100 }));
   }
   function liveStatsSnapshot(session){
-    const home = liveCurrentStats(session.homeTotals, session.blockIndex);
-    const away = liveCurrentStats(session.awayTotals, session.blockIndex);
+    const played = livePlayedPhaseCount(session);
+    const home = liveCurrentStats(session.homeTotals, played);
+    const away = liveCurrentStats(session.awayTotals, played);
     away.possession = 100 - home.possession;
     return { home, away };
   }
@@ -1112,6 +1185,9 @@
     return {
       match:session.match,
       minute:session.currentMinute,
+      period:liveCurrentPeriod(session),
+      phaseIndex:Number(session.blockIndex || 0),
+      phaseLabel:(session.blocks[Math.max(0, Number(session.blockIndex || 0) - 1)] || {}).label || `0'`,
       finished:Boolean(session.finished),
       nextBlock:session.blocks[session.blockIndex] || null,
       homeGoals:session.homeGoals,
@@ -1139,7 +1215,11 @@
       matchStats:liveStatsSnapshot(session),
       matchContext:session.matchContext,
       phasesPlayed:Number(session.blockIndex || 0),
+      matchPhasesPlayed:livePlayedPhaseCount(session),
       totalPhases:session.blocks.length,
+      phaseTimeline:(session.blocks || []).map(block => ({ phase:block.phase, label:block.label, period:block.period, matchMinute:block.matchMinute, breakMinute:block.breakMinute, playable:block.playable !== false })),
+      breakLog:Array.isArray(session.breakLog) ? session.breakLog.slice() : [],
+      breakPhase:Number(extra?.breakPhase || 0),
       lastBlock:extra?.block || null,
       currentBlockStats:{ home:extra?.homeBlock || null, away:extra?.awayBlock || null },
       extra
@@ -1154,7 +1234,7 @@
     session.substitutions.sort((a,b)=>a.minute-b.minute);
     session.keySaves.sort((a,b)=>a.minute-b.minute);
     session.errors.sort((a,b)=>a.minute-b.minute);
-    const matchStats = { home:liveFinalizeStats(session.homeTotals, session.blocks.length), away:liveFinalizeStats(session.awayTotals, session.blocks.length) };
+    const matchStats = { home:liveFinalizeStats(session.homeTotals, 90), away:liveFinalizeStats(session.awayTotals, 90) };
     matchStats.away.possession = 100 - matchStats.home.possession;
     const starterIdsHome = (session.initialStarterIdsHome || []).map(Number).filter(Boolean);
     const starterIdsAway = (session.initialStarterIdsAway || []).map(Number).filter(Boolean);

@@ -3388,3 +3388,75 @@ th{
 .special-pack-card{gap:8px;padding:12px}
 .special-pack-card h3{font-size:1rem}
 .special-pack-card p.muted.small{font-size:.78rem;line-height:1.3}
+
+/* V5.17 · simulador vivo más compacto, descanso y tipografía fina */
+.modal-panel:has(.live-match-shell.live-v517){width:min(1760px,99vw);max-height:98vh;padding:6px;overflow:auto}
+.live-match-shell.live-v517{gap:5px;font-size:.9rem}
+.live-v517 .live-match-head{gap:8px;margin-bottom:1px}
+.live-v517 .live-head-left h2{font-size:16px;gap:6px}
+.live-v517 .live-head-left .label{font-size:9px}
+.live-v517 .live-head-right strong{font-size:28px;font-weight:700;letter-spacing:-.04em}
+.live-v517 .live-head-right span,.live-v517 .live-head-right small{font-size:9px;font-weight:650;letter-spacing:.025em}
+.live-v517 .live-score{min-width:70px;padding:4px 9px;font-size:1.15em}
+.live-v517 .live-progress{height:5px}
+.live-v517 .live-minute-rail{grid-template-columns:repeat(105,1fr);gap:1px}
+.live-v517 .live-minute-rail span{height:6px;border-radius:6px}
+.live-v517 .live-minute-rail span.rest{background:rgba(250,204,21,.20);border-color:rgba(250,204,21,.16)}
+.live-v517 .live-minute-rail span.rest.done{background:rgba(250,204,21,.48)}
+.live-v517 .live-minute-rail span.rest.current{background:#fde68a;box-shadow:0 0 0 1px rgba(253,230,138,.55)}
+.live-v517 .live-v512-grid{grid-template-columns:minmax(292px,.78fr) minmax(400px,1.14fr) minmax(292px,.78fr);gap:6px}
+.live-v517 .live-team-panel{gap:4px;padding:6px;border-radius:11px}
+.live-v517 .live-team-head h3{font-size:13px;font-weight:650}
+.live-v517 .live-selected-hint{font-size:10px;margin:0}
+.live-v517 .live-list-head,.live-v517 .live-list-row{grid-template-columns:22px minmax(78px,1fr) 34px 30px 31px 30px 30px 34px;gap:2px}
+.live-v517 .live-list-head{font-size:8px;font-weight:650;letter-spacing:.025em;padding:0 4px}
+.live-v517 .live-team-list{gap:2px}
+.live-v517 .live-team-list.starters{max-height:286px;overflow:auto;padding-right:2px}
+.live-v517 .live-team-list.bench{max-height:138px;overflow:auto;padding-right:2px}
+.live-v517 .live-list-row{min-height:22px;padding:2px 4px;border-radius:7px;line-height:1.05;font-weight:400}
+.live-v517 .live-list-row .num{font-size:9px;font-weight:550}
+.live-v517 .live-list-row strong,.live-v517 .live-list-row b{font-size:10px;font-weight:600}
+.live-v517 .live-list-row .live-name-cell strong{font-size:10px;font-weight:600}
+.live-v517 .live-list-row span:not(.num):not(.live-row-tag):not(.live-player-icons):not(.live-name-cell){font-size:9px;font-weight:500}
+.live-v517 .live-list-row i,.live-v517 .live-list-row .live-rating{font-size:9px;font-weight:650;padding:0 2px}
+.live-v517 .live-player-icons{font-size:10px;letter-spacing:-1px}
+.live-v517 .live-bench-title.compact{margin-top:1px}
+.live-v517 .live-bench-title.compact strong{font-size:10px;font-weight:650}
+.live-v517 .live-bench-title.compact span{font-size:8px;font-weight:550}
+.live-v517 .live-center-stack{gap:5px}
+.live-v517 .live-commentary-card{padding:8px 10px;border-radius:12px}
+.live-v517 .live-commentary-card.break:before{background:#fde68a}
+.live-v517 .live-commentary-card h3{font-size:12px;font-weight:650}
+.live-v517 .live-commentary-card .label{font-size:9px;margin-bottom:2px}
+.live-v517 .live-commentary-text{font-size:16px;line-height:1.12;font-weight:650;margin-top:3px}
+.live-v517 .live-commentary-sub{font-size:10px;margin-top:3px}
+.live-v517 .live-compare-card{gap:5px;padding:7px 9px;border-radius:12px}
+.live-v517 .live-compare-top b{font-size:12px;font-weight:650}
+.live-v517 .live-compare-top span{font-size:10px;font-weight:600}
+.live-v517 .live-compare-row{gap:1px}
+.live-v517 .live-compare-row p{font-size:10px;font-weight:600}
+.live-v517 .live-compare-values{grid-template-columns:36px 1fr 1fr 36px;gap:4px}
+.live-v517 .live-compare-values strong{font-size:11px;font-weight:600}
+.live-v517 .live-compare-values .bar{height:7px}
+.live-v517 .live-events-card{padding:7px 8px;border-radius:12px}
+.live-v517 .live-card-head h3{font-size:12px;font-weight:650}
+.live-v517 .live-events-list{gap:3px;max-height:142px;padding-right:2px}
+.live-v517 .live-event{grid-template-columns:28px 18px 20px 1fr;gap:4px;padding:3px 5px;border-radius:7px;line-height:1.08}
+.live-v517 .live-event span{font-size:10px;font-weight:550}
+.live-v517 .live-event strong{font-size:10.5px;font-weight:500;line-height:1.08}
+.live-v517 .live-context-compact{padding:5px 7px;gap:4px}
+.live-v517 .live-context-compact span{font-size:8.5px;font-weight:550}
+.live-v517 .live-context-compact strong{font-size:10px;font-weight:600}
+.live-v517 .live-bottom-controls{margin-top:4px;padding:6px 8px;border-radius:11px;gap:8px}
+.live-v517 .live-instruction-buttons.compact{gap:5px}
+.live-v517 .live-instruction-buttons.compact button{min-height:30px;padding:5px 8px;border-radius:9px}
+.live-v517 .live-instruction-buttons.compact button strong{font-size:10px;font-weight:650}
+.live-v517 .live-bottom-controls .live-action-row{grid-template-columns:82px 122px 112px;gap:5px}
+.live-v517 .live-bottom-controls .live-action-row button{min-height:31px;padding:5px 7px;font-size:11px}
+.live-v517 .live-pending-subs{gap:3px}
+.live-v517 .live-pending-subs div{padding:3px 4px;border-radius:7px;grid-template-columns:54px 1fr 48px}
+.live-v517 .live-pending-subs span{font-size:8px;font-weight:650}
+.live-v517 .live-pending-subs strong{font-size:10px;font-weight:550}
+.live-v517 .live-pending-subs .mini{font-size:9px;padding:3px 5px}
+@media (max-width:1260px){.live-v517 .live-v512-grid{grid-template-columns:1fr}.live-v517 .live-team-list.starters{max-height:260px}.live-v517 .live-team-list.bench{max-height:120px}}
+@media (max-width:760px){.live-v517 .live-minute-rail{grid-template-columns:repeat(35,1fr)}.live-v517 .live-list-head,.live-v517 .live-list-row{grid-template-columns:20px minmax(68px,1fr) 32px 28px 30px 28px 28px}.live-v517 .live-bottom-controls .live-action-row{grid-template-columns:1fr}}

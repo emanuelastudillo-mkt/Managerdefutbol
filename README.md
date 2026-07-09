@@ -1,5 +1,19 @@
 # Fútbol Manager MVP
 
+## Historial de versiones
+
+### V5.17 - Simulador compacto con descanso real
+
+- El simulador vivo reduce tipografía, alto de filas y espacios verticales en listas de jugadores y eventos para evitar cortes en pantalla horizontal.
+- El partido vivo ahora tiene 105 fases: 45 minutos del primer tiempo, 15 fases de descanso y 45 minutos del segundo tiempo.
+- Al llegar al entretiempo, el modo automático se pausa para permitir cambios, ajuste de formación o instrucciones.
+- Durante las 15 fases de descanso no se generan eventos de partido: los jugadores recuperan parte de su estado físico.
+- La recuperación depende de resistencia, genética y posición, sin superar el estado físico con el que cada jugador llegó al partido.
+- La barra de fases diferencia primer tiempo, descanso y segundo tiempo.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.17.
+
+# Fútbol Manager MVP
+
 **V5.16 - Avance diario unificado y cooldown de 20 segundos**
 
 ## Historial de versiones

@@ -1,4 +1,4 @@
-/* V5.13 · Simulación viva con auto más pausado, puntajes e iconos acumulables por jugador. */
+/* V5.17 · Simulación viva con entretiempo, recuperación y UI compacta. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -9,6 +9,7 @@
   let liveSelectedStarterId = 0;
   let liveSelectedBenchId = 0;
   let livePendingSubstitutions = [];
+  let liveHalftimePaused = false;
 
   function ehtml(value){
     return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value ?? '').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
@@ -29,6 +30,19 @@
   function currentOwnLineup(){ return sideLineup(ownSide()); }
   function ownFormation(){ return liveState?.ownFormation || (ownSide() === 'home' ? liveState?.homeFormation : liveState?.awayFormation) || '4-4-2'; }
   function sideFormation(side){ return side === 'home' ? (liveState?.homeFormation || '4-4-2') : (liveState?.awayFormation || '4-4-2'); }
+  function liveIsBreak(){ return liveState?.period === 'break' || liveState?.nextBlock?.period === 'break' || liveState?.lastBlock?.period === 'break'; }
+  function liveDisplayMinute(){
+    if(liveState?.finished) return 'FIN';
+    if(liveIsBreak()) return 'DESC';
+    return `${Number(liveState?.minute || 0)}'`;
+  }
+  function livePhaseLabel(){
+    if(liveState?.finished) return 'Finalizado';
+    const next = liveState?.nextBlock;
+    if(next?.period === 'break') return `Siguiente: ${next.label}`;
+    if(liveState?.lastBlock?.period === 'break') return `Descanso ${Number(liveState.breakPhase || liveState.lastBlock.breakMinute || 0)}/15`;
+    return next ? `Siguiente: ${next.label}` : 'Finalizado';
+  }
   function eventPlayerLabel(id, full=false){
     const player = typeof playerById === 'function' ? playerById(id) : null;
     const name = player?.name || player?.nombre || 'Jugador';
@@ -71,6 +85,11 @@
     const minute = Number(liveState?.minute || 0);
     const fresh = events.filter(ev => Number(ev.minute || 0) === minute).slice(-1)[0];
     const latest = fresh || events.slice(-1)[0];
+    if(!liveState?.finished && liveIsBreak()){
+      const phase = Number(liveState?.breakPhase || liveState?.lastBlock?.breakMinute || 0);
+      const label = phase ? `Descanso ${phase}/15` : 'Entretiempo';
+      return { tone:'break', title:label, text:'Los jugadores recuperan algo de estado físico antes del segundo tiempo.', sub:'Podés hacer cambios, tocar la formación o dejar instrucciones listas.' };
+    }
     if(liveState?.finished){
       const h = Number(liveState.homeGoals || 0), a = Number(liveState.awayGoals || 0);
       return { tone:'final', title:'Final del partido', text:`Resultado final: ${h} - ${a}.`, sub:'Ya podés cerrar y guardar el resultado.' };
@@ -94,7 +113,7 @@
     const aPressure = Number(aStats.attacks || 0) + Number(aStats.chances || 0) * 3 + Number(aStats.possession || 50) / 12;
     const leader = hPressure > aPressure + 2 ? liveClubName(liveState.match.homeId) : (aPressure > hPressure + 2 ? liveClubName(liveState.match.awayId) : 'ninguno');
     const text = leader === 'ninguno' ? 'El partido está parejo y todavía no aparece una ventaja clara.' : `${leader} empieza a inclinar la cancha.`;
-    return { tone:'ambient', title:`Minuto ${minute}'`, text, sub:minute < 45 ? 'Primer tiempo en desarrollo.' : 'Segundo tiempo en desarrollo.' };
+    return { tone:'ambient', title:`Minuto ${minute}'`, text, sub:minute <= 45 ? 'Primer tiempo en desarrollo.' : 'Segundo tiempo en desarrollo.' };
   }
   function meterClass(value){ const n = Number(value || 0); return n >= 76 ? 'ok' : n >= 55 ? 'warn' : 'bad'; }
   function fitClass(value){ const n = Number(value || 0); return n >= 90 ? 'ok' : n >= 74 ? 'warn' : 'bad'; }
@@ -245,14 +264,21 @@
     </div>`;
   }
   function minuteRail(events){
-    const eventMinutes = new Map();
-    events.forEach(ev => eventMinutes.set(Number(ev.minute || 0), ev.type));
-    const current = Number(liveState?.minute || 0);
-    return `<div class="live-minute-rail" aria-label="90 fases minuto a minuto">${Array.from({ length:90 }, (_, i) => {
-      const minute = i + 1;
-      const type = eventMinutes.get(minute);
-      const cls = minute < current ? 'done' : (minute === current ? 'current' : 'pending');
-      return `<span class="${cls} ${type ? `has-event ${ehtml(type)}` : ''}" title="${minute}'${type ? ` · ${type}` : ''}"></span>`;
+    const eventByMinute = new Map();
+    events.forEach(ev => {
+      const minute = Number(ev.minute || 0);
+      if(!eventByMinute.has(minute) || eventOrder(ev.type) < eventOrder(eventByMinute.get(minute))) eventByMinute.set(minute, ev.type);
+    });
+    const played = Number(liveState?.phasesPlayed || 0);
+    const timeline = Array.isArray(liveState?.phaseTimeline) && liveState.phaseTimeline.length
+      ? liveState.phaseTimeline
+      : Array.from({ length:90 }, (_, index) => ({ phase:index + 1, matchMinute:index + 1, label:`${index + 1}'`, period:index < 45 ? 'first' : 'second', playable:true }));
+    return `<div class="live-minute-rail" aria-label="45 fases, 15 de descanso y 45 fases">${timeline.map((block, index) => {
+      const phaseNo = index + 1;
+      const type = block.playable === false ? '' : eventByMinute.get(Number(block.matchMinute || 0));
+      const status = phaseNo <= played ? 'done' : (!liveState?.finished && phaseNo === played + 1 ? 'current' : 'pending');
+      const period = block.period === 'break' ? 'rest' : (block.period === 'second' ? 'second' : 'first');
+      return `<span class="${status} ${period} ${type ? `has-event ${ehtml(type)}` : ''}" title="${ehtml(block.label || `${phaseNo}`)}${type ? ` · ${type}` : ''}"></span>`;
     }).join('')}</div>`;
   }
   function instructionButtons(){
@@ -268,7 +294,7 @@
       ${instructionButtons()}
       <div class="live-action-row">
         <button id="livePauseBtn" class="ghost">${livePaused ? 'Auto' : 'Pausar'}</button>
-        <button id="liveNextBlockBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>Simular 1 minuto</button>
+        <button id="liveNextBlockBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>${ehtml(liveState?.nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto')}</button>
         <button id="liveFinishBtn" class="primary" ${liveState.finished ? '' : 'disabled'}>Cerrar y guardar</button>
       </div>
     </div>`;
@@ -279,16 +305,18 @@
     const homeTitle = liveClubName(match.homeId);
     const awayTitle = liveClubName(match.awayId);
     const currentMinute = Number(liveState.minute || 0);
-    const totalPhases = Number(liveState.totalPhases || 90);
-    const progress = Math.max(0, Math.min(100, Math.round((currentMinute / 90) * 100)));
+    const totalPhases = Number(liveState.totalPhases || 105);
+    const phasesPlayed = Number(liveState.phasesPlayed || 0);
+    const progress = Math.max(0, Math.min(100, Math.round((phasesPlayed / Math.max(1,totalPhases)) * 100)));
     const nextBlock = liveState.nextBlock;
+    const nextButtonLabel = nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto';
     const events = liveEvents();
     const narration = liveNarration(events);
     const recentEvents = events.slice().reverse().slice(0, 11);
-    const html = `<div class="live-match-shell live-v512">
+    const html = `<div class="live-match-shell live-v512 live-v517">
       <div class="match-modal-head live-match-head">
         <div class="live-head-left"><p class="label">${match.friendly ? 'Simulación viva · Amistoso' : 'Simulación viva · Fecha'} ${ehtml(match.matchday || '—')} · ${ehtml(match.date || '')}</p><h2>${liveBadge(match.homeId)} ${ehtml(homeTitle)} <span class="live-score">${Number(liveState.homeGoals || 0)} - ${Number(liveState.awayGoals || 0)}</span> ${ehtml(awayTitle)} ${liveBadge(match.awayId)}</h2></div>
-        <div class="live-head-right"><strong>${currentMinute}'</strong><span>Fase ${Math.max(1,currentMinute)} / ${totalPhases}</span><small>${nextBlock ? `Siguiente: ${nextBlock.label}` : 'Finalizado'}</small></div>
+        <div class="live-head-right"><strong>${ehtml(liveDisplayMinute())}</strong><span>Fase ${Math.min(totalPhases, Math.max(1, phasesPlayed || 1))} / ${totalPhases}</span><small>${ehtml(livePhaseLabel())}</small></div>
       </div>
       <div class="live-progress"><span style="width:${progress}%"></span></div>
       ${minuteRail(events)}
@@ -353,11 +381,18 @@
   }
   function simulateNextBlockFromUi(){
     if(!liveSession || liveState?.finished) return;
+    const wasBeforeBreak = liveState?.nextBlock?.period !== 'break' && liveState?.period !== 'break';
     const substitutions = livePendingSubstitutions.slice();
     const result = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
     if(result?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; }
     else{ liveState = result || window.Simulator20.livePublicState(liveSession); }
     if(substitutions.length) livePendingSubstitutions = [];
+    if(wasBeforeBreak && liveState?.nextBlock?.period === 'break' && !liveHalftimePaused){
+      livePaused = true;
+      liveHalftimePaused = true;
+      clearTimeout(liveAutoTimer);
+      liveShowNotice('Entretiempo: el partido queda pausado. Podés hacer cambios o ajustar instrucciones.', false);
+    }
     resetLiveSelections();
     renderLiveMatch();
   }
@@ -401,7 +436,7 @@
       const result = liveSession.result;
       closeModal();
       if(typeof liveOptions?.onComplete === 'function') liveOptions.onComplete(result);
-      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = [];
+      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false;
       resetLiveSelections(); clearTimeout(liveAutoTimer);
     });
   }
@@ -414,7 +449,7 @@
   function start(match, options={}){
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;
     clearTimeout(liveAutoTimer);
-    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; resetLiveSelections();
+    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; resetLiveSelections();
     liveSession = window.Simulator20.createLiveMatchSession(match);
     liveState = window.Simulator20.livePublicState(liveSession);
     window.__liveMatchCloseLocked = false;

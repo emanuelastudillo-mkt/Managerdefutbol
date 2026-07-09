@@ -1,33 +1,12 @@
-# V4.13 - Verificador seguro de estructura
+# V4.14 - Corrección simulador visual
 
 ## Cambios principales
 
-- Se agrega un botón inferior: `Verificar que todo esté bien`.
-- El botón abre un reporte de integridad de partida.
-- El chequeo no modifica nada al abrirse.
-- Detecta clubes ubicados en divisiones de otro país.
-- Detecta overrides de división inválidos o cruzados entre países.
-- Detecta jugadores apuntando a clubes inexistentes.
-- Detecta entradas de tabla con clubes inexistentes.
-- Detecta fixtures con clubes cruzados de país respecto de la división del partido.
-- Muestra cantidad de clubes por división para revisar rápidamente mezclas raras.
-- Si hay reparaciones seguras disponibles, permite aplicarlas desde el modal.
-
-## Reparación segura
-
-- Reasigna clubes que quedaron en una división de otro país.
-- Elige una división válida del país real del club.
-- Regenera `clubDivisionOverrides` para evitar que el error vuelva a aparecer al cargar.
-- Actualiza la liga seleccionada si el club afectado es el club del manager.
-- Guarda automáticamente la reparación.
-
-## Límites de seguridad
-
-- No reconstruye calendario.
-- No borra resultados jugados.
-- No reinicia temporada.
-- No modifica ascensos/descensos ya cerrados.
-- No borra jugadores ni mercado libre desde este botón.
+- Se corrige un error del visor de inclinación de cancha agregado en V4.12.
+- El simulador volvía a quedar detenido después del bloque superior del partido por una variable interna mal nombrada.
+- El modal ahora renderiza nuevamente fases, relato, eventos, estadísticas y resultado final.
+- Se agregan defensas para que, si un partido viene con datos incompletos, el simulador visual no bloquee el cierre del partido.
+- Si el visor falla por datos corruptos de una partida vieja, muestra resultado final de respaldo y permite continuar.
 
 ## Archivos modificados
 
@@ -36,11 +15,10 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
-- `style.css`
-- `js/game/05-state-season.js`
+- `js/ui/12-modals.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
 - Sintaxis validada en todos los archivos `.js`.
-- El cambio no requiere reinicio de partida.
+- Prueba aislada del render del simulador visual con eventos de gol, roja y lesión.

@@ -381,7 +381,18 @@ function showMatchRevealModal(match, onRevealComplete=null){
     if(typeof onRevealComplete === 'function') setTimeout(onRevealComplete, 900);
   };
   const renderStage = (idx) => {
-    renderMatchRevealStage(match, stages[idx], idx, stages.length);
+    try{
+      renderMatchRevealStage(match, stages[idx], idx, stages.length);
+    }catch(err){
+      console.error('Error al renderizar simulador visual', err);
+      const box = $('matchRevealDynamic');
+      if(box){
+        box.innerHTML = `<div class="card inner"><h3>Simulador visual no disponible</h3><p class="muted">El partido ya fue procesado. Se muestra el resultado final para evitar bloquear la partida.</p><div class="score-pill">${Number(match.homeGoals || 0)} - ${Number(match.awayGoals || 0)}</div></div>`;
+      }
+      const scoreBox = $('revealScore');
+      if(scoreBox) scoreBox.textContent = `${Number(match.homeGoals || 0)} - ${Number(match.awayGoals || 0)}`;
+      notifyRevealComplete();
+    }
     if(idx >= stages.length - 1) notifyRevealComplete();
   };
   renderStage(0);
@@ -456,8 +467,17 @@ function matchRevealStages(match){
 function renderMatchRevealStage(match, stage, index, total){
   const box = $('matchRevealDynamic');
   if(!box) return;
-  const homeGoals = match.goals.filter(g => g.clubId === match.homeId && g.minute <= stage.minute).length;
-  const awayGoals = match.goals.filter(g => g.clubId === match.awayId && g.minute <= stage.minute).length;
+  match.goals = Array.isArray(match.goals) ? match.goals : [];
+  match.cards = Array.isArray(match.cards) ? match.cards : [];
+  match.injuries = Array.isArray(match.injuries) ? match.injuries : [];
+  match.substitutions = Array.isArray(match.substitutions) ? match.substitutions : [];
+  match.keySaves = Array.isArray(match.keySaves) ? match.keySaves : [];
+  match.errors = Array.isArray(match.errors) ? match.errors : [];
+  match.matchStats = match.matchStats || {};
+  match.matchStats.home = match.matchStats.home || { attacks:0, chances:0, possession:50, fouls:0, keySaves:0, errors:0, goalErrors:0, passScore:0 };
+  match.matchStats.away = match.matchStats.away || { attacks:0, chances:0, possession:50, fouls:0, keySaves:0, errors:0, goalErrors:0, passScore:0 };
+  const homeGoals = match.goals.filter(g => Number(g.clubId) === Number(match.homeId) && Number(g.minute || 0) <= Number(stage.minute || 0)).length;
+  const awayGoals = match.goals.filter(g => Number(g.clubId) === Number(match.awayId) && Number(g.minute || 0) <= Number(stage.minute || 0)).length;
   const scoreBox = $('revealScore');
   if(scoreBox) scoreBox.textContent = `${homeGoals} - ${awayGoals}`;
   const progress = $('revealProgressBar');
@@ -523,7 +543,7 @@ function matchRevealFieldTilt(match, homeStats={}, awayStats={}, factor=0){
   const leaderSide = ball > 56 ? 'local' : (ball < 44 ? 'visitante' : 'neutral');
   const label = leaderId ? `Cancha inclinada para ${clubName(leaderId)}` : 'Partido equilibrado';
   const intensity = Math.round(Math.abs(ball - 50) * 2);
-  return { ball, homeShare:ball, awayShare:100-ball, leaderId, leaderSide, label, intensity, factor:Number(factor || 0), homePressure, awayPressure };
+  return { ball, homeShare:ball, awayShare:100-ball, leaderId, leaderSide, label, intensity, factor:Number(factor || 0), homePressure:hPressure, awayPressure:aPressure };
 }
 function revealPitchMomentumCard(match, tilt){
   const homeName = clubName(match.homeId);

@@ -2,10 +2,19 @@
 
 ## Versión actual
 
-**V4.13 - Verificador seguro de estructura**
+**V4.14 - Corrección simulador visual**
 
 ## Historial de versiones
 
+
+
+### V4.14 - Corrección simulador visual
+
+- Se corrige un bug del visor de inclinación de cancha agregado en V4.12.
+- El partido volvía a quedar detenido después del bloque superior por una variable interna mal nombrada.
+- El simulador vuelve a mostrar fases, relato, eventos, estadísticas y resultado final.
+- Se agregan defensas para que datos incompletos de una partida no bloqueen el modal.
+- Si el visor visual falla, se muestra un resultado final de respaldo y la partida puede continuar.
 
 
 ### V4.13 - Verificador seguro de estructura

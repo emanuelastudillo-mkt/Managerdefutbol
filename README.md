@@ -1,5 +1,11 @@
 # Fútbol Manager MVP
 
+## V5.25 - Texto dirigir partido
+
+- Cambiado el texto del botón **Ver partido** por **Dirigir partido** antes de abrir partidos propios y amistosos.
+- No modifica lógica de simulación, resultado directo, calendario, fatiga ni estadísticas.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.25.
+
 ## V5.24 - Resultado directo y terminar partido
 
 - Agregado botón **Ver solo resultados** antes de abrir partidos propios y amistosos.

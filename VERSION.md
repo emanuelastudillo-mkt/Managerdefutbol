@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.24
+V5.25
 
 ## Último cambio
 
-Resultado directo para partidos propios y amistosos, más botón Terminar partido dentro del simulador vivo.
+Cambio de texto del botón **Ver partido** a **Dirigir partido** antes de iniciar la simulación.

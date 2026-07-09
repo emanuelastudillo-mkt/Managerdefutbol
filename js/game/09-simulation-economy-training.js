@@ -1070,7 +1070,7 @@ function startLiveOwnMatchdayInteractive(context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.24] Error al iniciar simulación viva:', err);
+    console.error('[V5.25] Error al iniciar simulación viva:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar simulación viva: ${err?.message || err}`] });
     return 'blocked';
   }
@@ -1091,7 +1091,7 @@ function startLiveOwnMatchday(context){
   if(!match) return false;
   const status = liveMatchEngineStatus();
   if(!status.ok){
-    console.warn('[V5.24] Simulación viva bloqueada por carga incompleta:', status.missing);
+    console.warn('[V5.25] Simulación viva bloqueada por carga incompleta:', status.missing);
     showLiveMatchEngineBlocked(status);
     return 'blocked';
   }
@@ -1100,7 +1100,7 @@ function startLiveOwnMatchday(context){
     <h2>${clubLink(match.homeId)} vs ${clubLink(match.awayId)}</h2>
     <p class="muted">Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.</p>
     <div class="modal-actions two-lines">
-      <button id="startLiveMatchChoice" class="primary">Ver partido</button>
+      <button id="startLiveMatchChoice" class="primary">Dirigir partido</button>
       <button id="resultOnlyMatchChoice" class="ghost">Ver solo resultados</button>
     </div>
   </div>`;
@@ -1312,7 +1312,7 @@ function startLivePreseasonFriendlyInteractive(match, context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.24] Error al iniciar amistoso vivo:', err);
+    console.error('[V5.25] Error al iniciar amistoso vivo:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar amistoso vivo: ${err?.message || err}`] });
     return 'blocked';
   }
@@ -1330,7 +1330,7 @@ function finishPreseasonFriendlyResultOnly(match, context){
 function startLivePreseasonFriendly(match, context){
   const status = liveMatchEngineStatus();
   if(!status.ok){
-    console.warn('[V5.24] Amistoso vivo bloqueado por carga incompleta:', status.missing);
+    console.warn('[V5.25] Amistoso vivo bloqueado por carga incompleta:', status.missing);
     showLiveMatchEngineBlocked(status);
     return 'blocked';
   }
@@ -1339,7 +1339,7 @@ function startLivePreseasonFriendly(match, context){
     <h2>${clubLink(match.homeId)} vs ${clubLink(match.awayId)}</h2>
     <p class="muted">Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.</p>
     <div class="modal-actions two-lines">
-      <button id="startFriendlyLiveChoice" class="primary">Ver partido</button>
+      <button id="startFriendlyLiveChoice" class="primary">Dirigir partido</button>
       <button id="resultOnlyFriendlyChoice" class="ghost">Ver solo resultados</button>
     </div>
   </div>`;

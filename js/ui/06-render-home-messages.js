@@ -311,7 +311,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     </div>
     <div class="office-side-card">
       ${nextBox}
-      <div class="advance-control office-advance"><div class="advance-buttons"><button id="advanceDayBtn" class="ghost secondary">Avanzar día</button><button id="advanceMatchBtn" class="primary">Ir a próximo partido</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
   </div>`;
 }
@@ -443,8 +443,7 @@ function renderHome(){
     ${lastTurnSummaryMarkup()}
 
   `;
-  $('advanceDayBtn')?.addEventListener('click', advanceOneDay);
-  $('advanceMatchBtn')?.addEventListener('click', goToNextMatch);
+  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
@@ -455,49 +454,43 @@ function renderHome(){
   updateAdvanceButtonState();
 }
 function updateAdvanceButtonState(){
-  const dayBtn = $('advanceDayBtn');
-  const matchBtn = $('advanceMatchBtn');
-  if((!dayBtn && !matchBtn) || !game) return;
+  const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
+  if(!btn || !game) return;
   const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
   const seasonEnded = game.seasonFinalized || seasonPhase() === 'finalized';
-  const invalid = validateCurrentTactic(false);
-  const round = typeof nextRegularRound === 'function' ? nextRegularRound() : null;
-  const matchToday = Boolean(isRegularSeason() && round?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(round.date));
-  let dayText = isRegularSeason() ? 'Avanzar día' : 'Avance diario en liga';
-  let matchText = isRegularSeason() ? 'Ir a próximo partido' : isPreseason() ? 'Avanzar pretemporada' : isPostseason() ? 'Avanzar postemporada' : 'Ir a próximo partido';
-  let dayDisabled = false;
-  let matchDisabled = false;
-  if(!isRegularSeason()){
-    dayDisabled = true;
-  }
+  const ownInfo = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
+  const ownDueToday = Boolean(isRegularSeason() && ownInfo?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(ownInfo.date));
+  const invalid = ownDueToday ? validateCurrentTactic(false) : [];
+  let text = 'Avanzar día';
+  let disabled = false;
+  btn.classList.remove('secondary');
+  btn.classList.add('primary');
   if(seasonEnded){
-    dayText = 'Temporada finalizada';
-    matchText = 'Temporada finalizada';
-    dayDisabled = true;
-    matchDisabled = true;
+    text = 'Temporada finalizada';
+    disabled = true;
   }else if(lockLeft > 0){
-    const left = formatClock(lockLeft);
-    const nextDate = typeof addDaysToIsoDate === 'function' && typeof currentCalendarDate === 'function' ? addDaysToIsoDate(currentCalendarDate(), 1) : '';
-    const ownDueNextDay = typeof hasOwnMatchDueOnOrBefore === 'function' ? hasOwnMatchDueOnOrBefore(nextDate) : true;
-    dayText = ownDueNextDay ? `Espera ${left}` : 'Avanzar día';
-    matchText = `Espera ${left}`;
-    dayDisabled = ownDueNextDay;
-    matchDisabled = true;
-  }else{
-    if(isRegularSeason() && matchToday){
-      dayText = 'Partido pendiente hoy';
-      dayDisabled = true;
+    text = `Espera ${formatClock(lockLeft)}`;
+    disabled = true;
+  }else if(game.gameOver?.active){
+    text = 'Buscar club';
+    disabled = false;
+  }else if(isRegularSeason() && ownDueToday){
+    text = 'Jugar partido de hoy';
+    if(game.mustReviewTactics){
+      text = 'Revisar táctica';
+      disabled = true;
+    }else if(invalid.length){
+      text = 'Táctica incompleta';
+      disabled = true;
     }
-    if(isRegularSeason() && game.mustReviewTactics){
-      matchText = 'Reemplazar lesionados/suspendidos';
-      matchDisabled = true;
-    }else if(isRegularSeason() && invalid.length){
-      matchText = 'Táctica incompleta';
-      matchDisabled = true;
-    }
+  }else if(isPreseason()){
+    const opponentId = Number(game.pendingFriendlyOpponentId || 0);
+    text = opponentId && typeof canPlayPreseasonFriendly === 'function' && canPlayPreseasonFriendly() ? 'Jugar amistoso' : 'Avanzar día';
+  }else if(isPostseason()){
+    text = 'Avanzar día';
   }
-  if(dayBtn){ dayBtn.textContent = dayText; dayBtn.disabled = dayDisabled; }
-  if(matchBtn){ matchBtn.textContent = matchText; matchBtn.disabled = matchDisabled; }
+  btn.textContent = text;
+  btn.disabled = disabled;
   updateAdvanceProgressBox();
 }
 function updateAdvanceProgressBox(){
@@ -616,6 +609,72 @@ function pushGameMessage(message){
   game.messages.unshift(item);
   return item;
 }
+
+function assistantAdvicePool(){
+  const cfg = window.GAME_CONFIG?.mensajesAsistente || {};
+  return Array.isArray(cfg.consejos) ? cfg.consejos.filter(Boolean) : [];
+}
+function assistantAdviceManagerName(){
+  return String(game?.rankingManagerName || (typeof storedManagerName === 'function' ? storedManagerName() : '') || 'Míster').trim() || 'Míster';
+}
+function assistantAdviceText(raw){
+  const managerName = assistantAdviceManagerName();
+  return String(raw || '')
+    .replaceAll('#usuario#', managerName)
+    .replaceAll('#manager#', managerName)
+    .replaceAll('{{usuario}}', managerName)
+    .replaceAll('{{manager}}', managerName);
+}
+function ensureAssistantAdviceState(){
+  if(!game) return null;
+  game.assistantAdviceState = game.assistantAdviceState && typeof game.assistantAdviceState === 'object' && !Array.isArray(game.assistantAdviceState) ? game.assistantAdviceState : {};
+  game.assistantAdviceState.used = Array.isArray(game.assistantAdviceState.used) ? game.assistantAdviceState.used.map(Number).filter(Number.isFinite) : [];
+  game.assistantAdviceState.lastTurn = Number.isFinite(Number(game.assistantAdviceState.lastTurn)) ? Number(game.assistantAdviceState.lastTurn) : -99999;
+  game.assistantAdviceState.count = Math.max(0, Math.round(Number(game.assistantAdviceState.count || 0)));
+  return game.assistantAdviceState;
+}
+function pickAssistantAdviceIndex(pool, state, reason='daily'){
+  if(!pool.length) return -1;
+  const used = new Set((state?.used || []).map(Number));
+  if(used.size >= pool.length){
+    state.used = [];
+    used.clear();
+  }
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game?.matchdayIndex || 0);
+  let idx = typeof hashNumber === 'function' ? hashNumber(`assistant-advice-${reason}-${game?.seasonNumber || 1}-${turn}-${state?.count || 0}`, pool.length) : Math.floor(Math.random() * pool.length);
+  for(let i=0; i<pool.length; i++){
+    const candidate = (idx + i) % pool.length;
+    if(!used.has(candidate)) return candidate;
+  }
+  return idx;
+}
+function maybePushAssistantAdviceMessage(reason='daily', options={}){
+  if(!game) return null;
+  const cfg = window.GAME_CONFIG?.mensajesAsistente || {};
+  if(cfg.activo === false) return null;
+  const pool = assistantAdvicePool();
+  if(!pool.length) return null;
+  const state = ensureAssistantAdviceState();
+  if(!state) return null;
+  const force = Boolean(options.force || reason === 'new_game');
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game.matchdayIndex || 0);
+  const interval = Math.max(1, Math.round(Number(cfg.frecuenciaDias || 12)));
+  if(!force && turn - Number(state.lastTurn || -99999) < interval) return null;
+  const idx = pickAssistantAdviceIndex(pool, state, reason);
+  if(idx < 0) return null;
+  state.used.push(idx);
+  state.lastTurn = turn;
+  state.count += 1;
+  return pushGameMessage({
+    type:'asistente',
+    priority:'normal',
+    title: cfg.titulo || 'Consejo del asistente',
+    body: assistantAdviceText(pool[idx])
+  });
+}
+function queueInitialAssistantAdviceMessages(){
+  return maybePushAssistantAdviceMessage('new_game', { force:true });
+}
 function markMessagesRead(){
   if(!game?.messages) return;
   game.messages.forEach(m => { m.read = true; });
@@ -658,7 +717,7 @@ function renderMessages(){
   saveLocal(true);
 }
 function messageIcon(type){
-  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️' };
+  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', asistente:'🎧' };
   return map[String(type || '').trim()] || '✉️';
 }
 function messageToneClass(type, priority){

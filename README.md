@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V5.15 - Entrenamiento temporal, academia y cartas limpias**
+**V5.16 - Avance diario unificado y cooldown de 20 segundos**
 
 ## Historial de versiones
+
+### V5.16 - Avance diario unificado y cooldown de 20 segundos
+
+- Unificados los botones **Avanzar día** e **Ir a próximo partido** en un solo botón principal.
+- El botón ahora avanza un día calendario por vez o abre el partido propio si el compromiso ya está pendiente ese día.
+- Cooldown único de **20 segundos** después de cada avance, amistoso, partido propio o día de postemporada.
+- Durante el avance se procesan verificaciones diarias, academia, scouting, contratos, lesiones, préstamos, sponsors y partidos bot pendientes.
+- Se eliminan los saltos automáticos largos hacia el próximo partido desde la oficina para evitar inconsistencias de bloqueo y fechas.
+- La barra de progreso queda asociada al único botón de avance.
+- Si una partida traía un bloqueo viejo más largo, se normaliza al nuevo cooldown máximo.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.16.
 
 ### V5.15 - Entrenamiento temporal, academia y cartas limpias
 

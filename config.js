@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.15',
+  version: 'V5.16',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -60,10 +60,10 @@ window.GAME_CONFIG = {
     // Los partidos sin manager usan simulación rápida para reducir bloqueos.
     simulacionRapidaBots: true,
 
-    // Bloqueo entre partidos propios en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 120000,
-    // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
-    bloqueoAvanceDiaMs: 2000,
+    // Cooldown único tras cada avance/partido. 20000 = 20 segundos.
+    bloqueoEntreAvancesMs: 20000,
+    // El avance diario usa el mismo cooldown para evitar dobles flujos de calendario.
+    bloqueoAvanceDiaMs: 20000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
     diasPretemporada: 30,

@@ -291,7 +291,16 @@ function setPostseasonTurnSummary(finalized=false){
 }
 
 function advanceLockLeftMs(){
-  return Math.max(0, Number(game?.advanceLockedUntil || 0) - Date.now());
+  if(!game) return 0;
+  const configured = Math.max(0, DAY_ADVANCE_LOCK_MS || ADVANCE_LOCK_MS || 20000);
+  let left = Math.max(0, Number(game.advanceLockedUntil || 0) - Date.now());
+  const storedDuration = Math.max(0, Number(game.advanceLockDurationMs || 0));
+  if(configured > 0 && left > configured && storedDuration > configured){
+    game.advanceLockDurationMs = configured;
+    game.advanceLockedUntil = Date.now() + configured;
+    left = configured;
+  }
+  return left;
 }
 function isAdvanceLocked(){ return advanceLockLeftMs() > 0; }
 function setAdvanceLock(ms){
@@ -768,11 +777,11 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   return { botResults, recovered, bankPayment };
 }
 function setAutoAdvanceButtonLoading(active){
-  const btn = $('advanceMatchBtn');
+  const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
   if(!btn) return;
   btn.classList.toggle('is-loading', Boolean(active));
   btn.disabled = Boolean(active);
-  btn.innerHTML = active ? '<span class="mini-spinner" aria-hidden="true"></span><span>Avanzando...</span>' : 'Ir a próximo partido';
+  btn.innerHTML = active ? '<span class="mini-spinner" aria-hidden="true"></span><span>Avanzando...</span>' : 'Avanzar día';
 }
 function showAutoAdvanceOverlay(totalDays, currentDate='', targetDate=''){
   let root = $('autoAdvanceOverlay');
@@ -866,83 +875,83 @@ function startAutoAdvanceToNextOwnMatch(){
   tick();
   return true;
 }
-function advanceOneDay(){
-  if(!game || game.seasonFinalized) return;
-  if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
-  repairBotRosters({ reason:'before_day_advance' });
-  const fromDate = currentCalendarDate();
-  if(isRegularSeason()){
-    if(game.matchdayIndex >= game.fixtures.length){
-      if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
-        saveLocal(true);
-        renderAll();
-        showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
-        return;
-      }
-      showNotice('La fase regular ya terminó. Usá el avance largo para pasar a postemporada.');
-      return;
-    }
-    const ownInfo = nextOwnMatchInfo();
-    if(ownInfo?.date && isCurrentDateOnOrAfterIso(ownInfo.date)){
-      const sameDayBotResults = simulateNonOwnDueBeforeOwnMatch(currentCalendarDate(), 'same_day_before_own_notice');
-      if(sameDayBotResults.length){
-        setDailyAdvanceSummary(currentCalendarDate(), currentCalendarDate(), sameDayBotResults.length);
-        saveLocal(true);
-        renderAll();
-        showNotice(`Se simularon ${sameDayBotResults.length} partido(s) del mismo día. Ahora podés jugar tu partido.`);
-        return;
-      }
-      showNotice('Hay un partido propio pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
-      return;
-    }
-    const nextDate = addDaysToIsoDate(fromDate, 1);
-    if(ownInfo?.date && daysBetweenIsoDates(nextDate, ownInfo.date) < 0 && isAdvanceLocked()){
-      showNotice(`El próximo partido propio sigue bloqueado por ${formatClock(advanceLockLeftMs())}. Usá “Ir a próximo partido” para avanzar automáticamente los días del bloqueo.`);
-      return;
-    }
-    const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
-    let regularEnded = game.matchdayIndex >= game.fixtures.length;
-    const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
-    if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
-    if(regularEnded){
-      game.seasonPhase = 'postseason';
-      game.phaseTurn = 0;
-      game.currentDate = dateForSeasonState(game);
-      setAdvanceLock(0);
-    } else if(!isAdvanceLocked()){
-      setAdvanceLock(DAY_ADVANCE_LOCK_MS);
-    }
-    setDailyAdvanceSummary(fromDate, nextDate, dayResult.botResults.length);
-    activeTab = 'home';
+function completeRegularSeasonIfNeeded(){
+  if(!game || !isRegularSeason()) return false;
+  if(game.matchdayIndex < game.fixtures.length) return false;
+  if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
     saveLocal(true);
     renderAll();
-    if(playoffCreated) showNotice('Se completó la liga y se creó el calendario de playoffs de promoción.', true);
-    else if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
-    else if(dayResult.botResults.length) showNotice(`Avanzaste al ${nextDate}. Se simularon ${dayResult.botResults.length} partido(s) bot.`);
-    else showNotice('Avanzaste 1 día.');
-    return;
+    showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
+    return true;
   }
-  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
-  simulateNextMatchday({ advanceLabel:isPreseason() ? 'Avanzando pretemporada' : 'Avanzando postemporada' });
+  game.seasonPhase = 'postseason';
+  game.phaseTurn = 0;
+  game.currentDate = dateForSeasonState(game);
+  rememberCalendarDate();
+  setAdvanceLock(0);
+  saveLocal(true);
+  renderAll();
+  showNotice('La fase regular terminó. Comienza la postemporada.', true);
+  return true;
 }
-function goToNextMatch(){
+function applyUnifiedAdvanceCooldown(reason='daily'){
+  if(!game) return;
+  const duration = Math.max(0, DAY_ADVANCE_LOCK_MS || ADVANCE_LOCK_MS || 20000);
+  setAdvanceLock(duration);
+  game.lastAdvanceCooldownReason = reason;
+}
+function advanceCalendarOneStep(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
-  if(isRegularSeason()){
-    const ownInfo = nextOwnMatchInfo();
-    if(ownInfo?.date && isCurrentDateBeforeIso(ownInfo.date)){
-      startAutoAdvanceToNextOwnMatch();
-      return;
-    }
-    if(isAdvanceLocked() && ownInfo?.date){
-      startAutoAdvanceToNextOwnMatch();
-      return;
-    }
+  if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está procesando el calendario.'); return; }
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
+  repairBotRosters({ reason:'before_unified_day_advance' });
+  if(isPreseason()){
+    simulatePreseasonTurn();
+    return;
+  }
+  if(isPostseason()){
+    simulatePostseasonTurn();
+    return;
+  }
+  if(!isRegularSeason()){
+    simulateNextMatchday({ advanceLabel:'Avanzando día' });
+    return;
+  }
+  if(completeRegularSeasonIfNeeded()) return;
+  const ownInfo = nextOwnMatchInfo();
+  if(ownInfo?.date && isCurrentDateOnOrAfterIso(ownInfo.date)){
     simulateNextMatchday({ advanceLabel:'Jugando partido propio' });
     return;
   }
-  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
-  simulateNextMatchday({ advanceLabel:isPreseason() ? 'Avanzando pretemporada' : 'Avanzando postemporada' });
+  const fromDate = currentCalendarDate();
+  const nextDate = addDaysToIsoDate(fromDate, 1);
+  const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
+  let regularEnded = game.matchdayIndex >= game.fixtures.length;
+  const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  if(regularEnded){
+    game.seasonPhase = 'postseason';
+    game.phaseTurn = 0;
+    game.currentDate = dateForSeasonState(game);
+    setAdvanceLock(0);
+  }else{
+    applyUnifiedAdvanceCooldown('daily');
+  }
+  setDailyAdvanceSummary(fromDate, nextDate, dayResult.botResults.length);
+  activeTab = 'home';
+  saveLocal(true);
+  renderAll();
+  if(playoffCreated) showNotice('Se completó la liga y se creó el calendario de playoffs de promoción.', true);
+  else if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
+  else if(dayResult.botResults.length) showNotice(`Avanzaste al ${nextDate}. Se procesaron ${dayResult.botResults.length} partido(s) bot durante el cooldown.`);
+  else showNotice(`Avanzaste al ${nextDate}. Verificaciones listas; el botón queda en cooldown.`);
+}
+function advanceOneDay(){
+  return advanceCalendarOneStep();
+}
+function goToNextMatch(){
+  return advanceCalendarOneStep();
 }
 
 function finalizeLiveOwnMatchdayResult(context, ownResult){
@@ -989,7 +998,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   }else{
     game.currentDate = targetDate;
     rememberCalendarDate();
-    setAdvanceLock(ADVANCE_LOCK_MS);
+    applyUnifiedAdvanceCooldown('match');
   }
   setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
   activeTab = 'home';
@@ -1151,7 +1160,7 @@ function simulateNextMatchday(options={}){
   } else {
     game.currentDate = targetDate;
     rememberCalendarDate();
-    setAdvanceLock(ownResult ? ADVANCE_LOCK_MS : DAY_ADVANCE_LOCK_MS);
+    applyUnifiedAdvanceCooldown(ownResult ? 'match' : 'daily');
   }
   if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
   else setDailyAdvanceSummary(currentCalendarDate(), targetDate, results.length);
@@ -1229,7 +1238,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice('Pretemporada finalizada. Ya está disponible la primera fecha oficial.', true);
   } else {
-    setAdvanceLock(ADVANCE_LOCK_MS);
+    applyUnifiedAdvanceCooldown('match');
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
     showNotice(canFriendly ? `Amistoso dirigido ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Día de pretemporada aplicado.', false);
   }
@@ -1304,7 +1313,7 @@ function simulatePostseasonTurn(){
     setTimeout(openSeasonEndModal, 0);
     showNotice('Postemporada finalizada. Cerró la temporada.', true);
   } else {
-    setAdvanceLock(ADVANCE_LOCK_MS);
+    applyUnifiedAdvanceCooldown('match');
     setPostseasonTurnSummary(false);
     activeTab = 'home';
     saveLocal(true);

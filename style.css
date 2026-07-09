@@ -802,6 +802,9 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   grid-template-columns:1fr 1fr;
   gap:8px;
 }
+.advance-buttons-single{
+  grid-template-columns:1fr;
+}
 .advance-control .primary,
 .advance-control .secondary{
   width:100%;

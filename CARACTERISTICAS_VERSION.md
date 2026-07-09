@@ -1,33 +1,24 @@
-# Características de la versión V5.15
+# Características de la versión V5.16
 
-## Entrenamiento profesional
+## Avance diario unificado
 
-- Se corrige el enfoque de V5.14: los profesionales no aumentan sus habilidades base por entrenamiento.
-- El entrenamiento intensivo ahora suma puntos temporales de temporada en `playerSkillBoosts`.
-- Dos turnos intensivos deberían producir normalmente entre 1 y 2 puntos temporales en habilidades entrenables.
-- El progreso se acumula internamente para evitar que una tirada mala deje el entrenamiento en cero.
-- Al finalizar la temporada, los puntos entrenados se reducen al 30%.
-- La media visible puede subir durante la temporada porque toma esos boosts, pero la base del jugador queda fija.
+- Se reemplazan los dos botones de avance de la oficina por un único botón principal.
+- En temporada regular, el botón avanza siempre al día siguiente cuando no hay partido propio pendiente.
+- Si el partido propio ya corresponde al día actual, el mismo botón pasa a abrir el simulador vivo del partido.
+- En pretemporada y postemporada, el mismo botón ejecuta el avance correspondiente de la fase.
 
-## Academia
+## Cooldown único
 
-- Se mantiene eliminado el botón directo **Tratar · $50.000** en juveniles lesionados.
-- La Academia informa que el juvenil no entrena hasta ser tratado desde Empleados con kinesiólogo contratado o hasta recuperarse.
-- Los tratamientos de juveniles quedan centralizados en Empleados y se mantienen gratuitos.
+- Después de cada avance se aplica un cooldown de 20 segundos.
+- El mismo cooldown se usa para días normales, amistosos, partidos propios y postemporada.
+- Se elimina el flujo visual de salto largo hasta el próximo partido para evitar contradicciones entre días, bloqueo y simulaciones pendientes.
+- Si una partida traía un bloqueo viejo más largo, se normaliza al nuevo cooldown máximo.
 
-## Mensajes del asistente
+## Procesos durante el avance
 
-- Se mantienen los 20 mensajes de consejos generales del asistente.
-- Los mensajes no dan valores exactos ni revelan mecánicas internas duras.
-- Se reemplaza `#usuario#` por el nombre del manager.
-
-## Cartas
-
-- Menú de cartas compactado y renombrado visualmente como **Cartas**.
-- Se integra el resumen de bonus activo en la misma zona de cartas activas.
-- Se eliminan bloques visuales redundantes de reglas/bonus.
-- Las cartas usan diseño más bajo y minimalista para mostrar más información en menos espacio.
+- Cada avance procesa verificaciones diarias y tareas de fondo: entrenamiento, academia, scouting, recuperaciones, sponsors, préstamos, obras y partidos bot pendientes.
+- Si hay partidos bot programados para la fecha alcanzada, se simulan durante el avance y se informa en el resumen.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Las partidas existentes conservan progreso, puntos, cartas y juveniles. Los próximos entrenamientos intensivos empiezan a usar boosts temporales.
+Se implementa solo. No requiere reiniciar partida. Las partidas existentes conservan progreso, puntos, cartas, juveniles y calendario. El cambio afecta el flujo de avance desde la oficina y reduce problemas de bloqueo entre botones.

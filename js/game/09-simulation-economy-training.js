@@ -103,7 +103,9 @@ function tacticSignature(tactic){
     ? window.Simulator20.normalizeMatchInstructions(tactic.matchInstructions)
     : (tactic.matchInstructions || {});
   const instructionSig = ['winning','drawing','losing'].map(key => `${key}:${instructions[key] || 'normal'}`).join('|');
-  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig].join('::');
+  const sectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(tactic.sectorStyles) : (tactic.sectorStyles || {});
+  const sectorSig = ['defense','midfield','attack'].map(key => `${key}:${sectorStyles[key] || 'posicional'}`).join('|');
+  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig, sectorSig].join('::');
 }
 function applyTacticCohesionPenalty(clubId, tactic){
   ensureTeamCohesion();

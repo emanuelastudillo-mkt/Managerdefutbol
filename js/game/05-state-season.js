@@ -1041,6 +1041,22 @@ function generateSaveCode(){
   return `FM-${Date.now().toString(36).toUpperCase()}-${hashNumber(raw, 1000000).toString().padStart(6,'0')}`;
 }
 
+function normalizeSectorStyleValue(value){
+  const clean = String(value || '').trim();
+  const aliases = { presion:'presion_alta', presionAlta:'presion_alta', presion_alta:'presion_alta', rotacion:'rotacion', rotación:'rotacion', posicional:'posicional', repliegue:'repliegue' };
+  const normalized = aliases[clean] || clean;
+  const valid = new Set((typeof TACTIC_SECTOR_STYLE_OPTIONS !== 'undefined' ? TACTIC_SECTOR_STYLE_OPTIONS : []).map(opt => opt.value));
+  return valid.has(normalized) ? normalized : 'posicional';
+}
+function normalizeSectorStyles(styles){
+  const base = typeof DEFAULT_TACTIC_SECTOR_STYLES !== 'undefined' ? DEFAULT_TACTIC_SECTOR_STYLES : { defense:'posicional', midfield:'posicional', attack:'posicional' };
+  const src = styles && typeof styles === 'object' && !Array.isArray(styles) ? styles : {};
+  return {
+    defense: normalizeSectorStyleValue(src.defense || src.defensa || base.defense),
+    midfield: normalizeSectorStyleValue(src.midfield || src.medios || src.medio || base.midfield),
+    attack: normalizeSectorStyleValue(src.attack || src.delanteros || src.delantera || base.attack)
+  };
+}
 function normalizeSavedTacticsState(src){
   const maxSlots = Number.isFinite(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3)) ? Number(TACTIC_SAVE_SLOT_COUNT) : 3;
   const rawSlots = src && typeof src === 'object' && !Array.isArray(src) ? (src.slots || src) : {};
@@ -1068,7 +1084,8 @@ function normalizeSavedTacticsState(src){
       bench,
       autoSubs:Array.isArray(raw.autoSubs) ? raw.autoSubs.slice(0,5).map(rule => ({ outId:Number(rule?.outId || 0), inId:Number(rule?.inId || 0), trigger:String(rule?.trigger || 'tired') })) : [],
       playerMentalities:cleanMentalities,
-      matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(raw.matchInstructions) : (raw.matchInstructions || DEFAULT_TACTIC.matchInstructions)
+      matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(raw.matchInstructions) : (raw.matchInstructions || DEFAULT_TACTIC.matchInstructions),
+      sectorStyles: normalizeSectorStyles(raw.sectorStyles)
     };
   }
   return { slots };
@@ -1102,7 +1119,8 @@ function snapshotCurrentTacticForSlot(slot){
     bench,
     autoSubs:(current.autoSubs || []).slice(0,5).map(rule => ({ outId:Number(rule.outId || 0), inId:Number(rule.inId || 0), trigger:String(rule.trigger || 'tired') })),
     playerMentalities:mentalities,
-    matchInstructions:current.matchInstructions || DEFAULT_TACTIC.matchInstructions
+    matchInstructions:current.matchInstructions || DEFAULT_TACTIC.matchInstructions,
+    sectorStyles:normalizeSectorStyles(current.sectorStyles)
   };
 }
 function saveCurrentTacticSlot(slot){
@@ -1147,7 +1165,8 @@ function sanitizeSavedTacticForCurrentClub(saved){
     bench,
     autoSubs,
     playerMentalities:{ ...(game.playerMentalities || {}), ...mentalities },
-    matchInstructions:window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(saved.matchInstructions) : (saved.matchInstructions || DEFAULT_TACTIC.matchInstructions)
+    matchInstructions:window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(saved.matchInstructions) : (saved.matchInstructions || DEFAULT_TACTIC.matchInstructions),
+    sectorStyles:normalizeSectorStyles(saved.sectorStyles)
   });
 }
 function loadSavedTacticSlot(slot){
@@ -1542,7 +1561,8 @@ function normalizeTactic(clubId, tactic){
   const matchInstructions = window.Simulator20?.normalizeMatchInstructions
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
     : { winning:'normal', drawing:'normal', losing:'normal' };
-  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions };
+  const sectorStyles = normalizeSectorStyles(base.sectorStyles);
+  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
   return applyStarterMentalities(normalized);
 }
 

@@ -1,11 +1,31 @@
-# Características V4.24 - Avance no bloqueante, economía negativa y simulador compacto
+# Características V4.25 - Estilos tácticos por sector
 
-- `Ir a próximo partido` ya no muestra una pantalla de carga bloqueante durante el avance automático.
-- El avance automático se integra al bloque actual de avance con spinner, barra de progreso y estado del día procesado.
-- El jugador puede seguir viendo la pantalla mientras el juego avanza días hasta el próximo partido.
-- El contexto del partido se vuelve más compacto para ahorrar espacio en el simulador.
-- La cruz de cierre del simulador queda alineada a la derecha.
-- La economía del club ahora puede quedar en negativo.
-- Los gastos recurrentes no se pierden cuando el presupuesto llega a $0: se descuentan y generan saldo negativo.
-- Los saldos negativos se muestran con signo menos y color rojo en Oficina, Finanzas e historial.
-- Se elimina el bloque final de fase `Minuto 90 / Final / Resultado final...` del simulador visual para reducir ruido y ahorrar espacio.
+- Se agrega un nuevo bloque en `Táctica y convocatoria`: `Estilos por sector`.
+- Los tres sectores configurables son:
+  - Defensa.
+  - Medios.
+  - Delanteros.
+- Cada sector permite elegir:
+  - Presión alta.
+  - Rotación.
+  - Posicional.
+  - Repliegue.
+- La interfaz usa una estética similar a los selectores de entrenamiento individual.
+- Los estilos se guardan al usar `Confirmar equipo`.
+- Las tácticas guardadas 1, 2 y 3 también guardan los estilos por sector.
+- Al cargar una táctica guardada, se restauran formación, titulares, suplentes, mentalidades, instrucciones y estilos sectoriales.
+- El simulador usa los estilos para modificar de forma moderada:
+  - posesión;
+  - ataques totales;
+  - ocasiones de gol;
+  - faltas propias;
+  - errores;
+  - cansancio posterior al partido;
+  - llegadas rivales;
+  - conversión rival en casos puntuales.
+- Los efectos dependen de habilidades clave:
+  - Defensa: velocidad, resistencia, pase, marca, posicionamiento y fuerza.
+  - Medios: velocidad, marca, entradas, pase, visión, técnica y trabajo en equipo.
+  - Delanteros: velocidad, marca, resistencia, pase, visión, técnica, cabeceo, fuerza y posicionamiento.
+- Los efectos quedan configurables en `config.js > tactica.estilosSector`.
+- Los cambios de estilo forman parte de la firma táctica usada por cohesión.

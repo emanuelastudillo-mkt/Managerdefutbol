@@ -3168,3 +3168,35 @@ th{
 }
 .auto-advance-inline .auto-advance-card{width:100%;text-align:left;justify-items:stretch;box-shadow:none;}
 .auto-advance-floating .auto-advance-card{width:100%;text-align:left;justify-items:stretch;}
+
+/* V4.25: estilos tácticos por sector */
+.sector-style-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.sector-style-control{
+  display:grid;
+  gap:7px;
+  border:1px solid var(--training-border, rgba(148,163,184,.18));
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--training-bg,rgba(148,163,184,.10)),rgba(15,23,42,.62));
+  padding:12px;
+}
+.sector-style-control label{
+  color:var(--training-accent,#e5e7eb);
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.sector-style-control select{
+  max-width:none;
+  width:100%;
+}
+.sector-style-control span{
+  color:#94a3b8;
+  font-size:11px;
+  line-height:1.35;
+}
+@media (max-width:980px){.sector-style-grid{grid-template-columns:1fr}}

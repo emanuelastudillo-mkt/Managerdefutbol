@@ -744,6 +744,11 @@ function renderTactics(){
       <p class="muted small">Elegí reglas simples: cansados, mejores suplentes o sólo cambios obligados por lesión.</p>
       <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
     </div>
+    <div class="card sector-styles-card" style="margin-top:14px">
+      <h3>Estilos por sector</h3>
+      <p class="muted small">Definí cómo se comportan defensa, medios y delanteros. Influyen en posesión, ataques, ocasiones, errores, faltas y cansancio según las habilidades clave del sector.</p>
+      <div class="sector-style-grid">${sectorStyleControls()}</div>
+    </div>
     <div class="card match-instructions-card" style="margin-top:14px">
       <h3>Instrucciones de partido</h3>
       <p class="muted small">El simulador 2.0 usa estas instrucciones según el resultado parcial del partido.</p>
@@ -809,6 +814,30 @@ function tacticPlayerRow(p){
     <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityLabel(mentalityText)) : '<span class="muted">Sólo titulares</span>'}</td>
   </tr>`;
 }
+function sectorStyleControls(){
+  const current = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(game.tactic?.sectorStyles) : (game.tactic?.sectorStyles || { defense:'posicional', midfield:'posicional', attack:'posicional' });
+  const options = typeof TACTIC_SECTOR_STYLE_OPTIONS !== 'undefined' ? TACTIC_SECTOR_STYLE_OPTIONS : [
+    { value:'presion_alta', label:'Presión alta', tone:'intense' },
+    { value:'rotacion', label:'Rotación', tone:'massage' },
+    { value:'posicional', label:'Posicional', tone:'tactical' },
+    { value:'repliegue', label:'Repliegue', tone:'regen' }
+  ];
+  const descriptions = {
+    defense:'Defensa: presión, salida y protección del área.',
+    midfield:'Medios: ritmo, posesión y generación.',
+    attack:'Delanteros: presión, movilidad y finalización.'
+  };
+  const row = (key, label) => {
+    const selected = current[key] || 'posicional';
+    const selectedOption = options.find(opt => opt.value === selected) || options.find(opt => opt.value === 'posicional') || options[0];
+    return `<div class="sector-style-control training-tone-${selectedOption?.tone || 'tactical'}">
+      <label>${label}</label>
+      <select class="training-individual-select training-tone-${selectedOption?.tone || 'tactical'}" data-sector-style="${key}">${options.map(opt=>`<option value="${opt.value}" ${selected===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select>
+      <span>${escapeHtml(descriptions[key] || '')}</span>
+    </div>`;
+  };
+  return row('defense','Defensa') + row('midfield','Medios') + row('attack','Delanteros');
+}
 function matchInstructionControls(){
   const current = window.Simulator20?.normalizeMatchInstructions
     ? window.Simulator20.normalizeMatchInstructions(game.tactic?.matchInstructions)
@@ -850,13 +879,23 @@ function saveTacticFromScreen(){
     drawing: document.querySelector('[data-match-instruction="drawing"]')?.value || 'normal',
     losing: document.querySelector('[data-match-instruction="losing"]')?.value || 'normal'
   };
+  const selectedSectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles({
+    defense: document.querySelector('[data-sector-style="defense"]')?.value || 'posicional',
+    midfield: document.querySelector('[data-sector-style="midfield"]')?.value || 'posicional',
+    attack: document.querySelector('[data-sector-style="attack"]')?.value || 'posicional'
+  }) : {
+    defense: document.querySelector('[data-sector-style="defense"]')?.value || 'posicional',
+    midfield: document.querySelector('[data-sector-style="midfield"]')?.value || 'posicional',
+    attack: document.querySelector('[data-sector-style="attack"]')?.value || 'posicional'
+  };
   const nextTactic = applyStarterMentalities({
     formation:$('formation')?.value || game.tactic.formation,
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
     autoSubs,
     playerMentalities:{ ...(game.playerMentalities || {}), ...(game.tactic.playerMentalities || {}) },
-    matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions
+    matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions,
+    sectorStyles:selectedSectorStyles
   });
   const errors = validateTactic(nextTactic);
   if(errors.length){

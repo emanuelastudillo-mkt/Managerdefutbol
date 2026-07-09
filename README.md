@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.24 - Avance no bloqueante, economía negativa y simulador compacto**
+**V4.25 - Estilos tácticos por sector**
 
 ## Historial de versiones
+
+### V4.25 - Estilos tácticos por sector
+- Se agregan estilos de juego por sector en Táctica: defensa, medios y delanteros.
+- Cada sector puede elegir entre `Presión alta`, `Rotación`, `Posicional` y `Repliegue`.
+- Los estilos afectan el simulador de forma moderada según habilidades clave del sector.
+- Defensa influye en llegadas rivales, errores, posesión y protección del área.
+- Medios influyen en posesión, faltas, ataques totales, ocasiones y errores.
+- Delantera influye en presión, movilidad, generación de ocasiones, posesión y cansancio.
+- Los efectos usan velocidad, resistencia, pase, defensa, físico, cabeceo y posicionamiento según el estilo elegido.
+- Los estilos quedan guardados al confirmar equipo y también dentro de las tácticas guardadas 1, 2 y 3.
+- Los estilos tácticos pasan a formar parte de la firma de cohesión: cambiar el plan puede afectar cohesión como cualquier cambio táctico.
 
 ### V4.24 - Avance no bloqueante, economía negativa y simulador compacto
 - `Ir a próximo partido` ya no abre una pantalla de carga bloqueante para avanzar días.

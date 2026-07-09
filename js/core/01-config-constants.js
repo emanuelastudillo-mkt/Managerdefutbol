@@ -255,6 +255,25 @@ const SUB_TRIGGERS = [
   { value:'best', label:'Mejores suplentes' },
   { value:'injuryOnly', label:'Solo cambios por lesión' }
 ];
+
+const TACTIC_SECTOR_STYLE_ENABLED = configBoolean('tactica.estilosSector.activo', true);
+const TACTIC_SECTOR_STYLE_EFFECT_INTENSITY = configNumber('tactica.estilosSector.intensidadEfecto', 0.85, 0, 2);
+const TACTIC_SECTOR_STYLE_OPTIONS = [
+  { value:'presion_alta', label:'Presión alta', tone:'intense' },
+  { value:'rotacion', label:'Rotación', tone:'massage' },
+  { value:'posicional', label:'Posicional', tone:'tactical' },
+  { value:'repliegue', label:'Repliegue', tone:'regen' }
+];
+const DEFAULT_TACTIC_SECTOR_STYLES = {
+  defense: configValue('tactica.estilosSector.defensaInicial', 'posicional'),
+  midfield: configValue('tactica.estilosSector.mediosInicial', 'posicional'),
+  attack: configValue('tactica.estilosSector.delanterosInicial', 'posicional')
+};
+const TACTIC_STYLE_CONDITION_DELTAS = {
+  highPress: configNumber('tactica.estilosSector.cansancioPresionAlta', -3, -20, 20),
+  rotation: configNumber('tactica.estilosSector.cansancioRotacion', -1, -20, 20),
+  regroup: configNumber('tactica.estilosSector.cansancioRepliegue', -1, -20, 20)
+};
 function injuryMinTurns(path, fallbackDays){
   return Math.max(1, Math.ceil(configNumber(path, fallbackDays, 1) / DAYS_PER_ADVANCE));
 }
@@ -528,7 +547,8 @@ const DEFAULT_TACTIC = {
   bench:[],
   autoSubs:[],
   playerMentalities:{},
-  matchInstructions:{winning:'normal',drawing:'normal',losing:'normal'}
+  matchInstructions:{winning:'normal',drawing:'normal',losing:'normal'},
+  sectorStyles:{...DEFAULT_TACTIC_SECTOR_STYLES}
 };
 
 let seed = null;

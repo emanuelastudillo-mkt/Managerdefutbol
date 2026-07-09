@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.24',
+  version: 'V4.25',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -397,6 +397,21 @@ window.GAME_CONFIG = {
     estrellaArqueroPartidosConTapadaClave: 3,
     estrellaMediocampistaAsistencias: 3,
     estrellaBonusReferencia: 0.30
+  },
+
+  tactica: {
+    estilosSector: {
+      activo: true,
+      defensaInicial: 'posicional',
+      mediosInicial: 'posicional',
+      delanterosInicial: 'posicional',
+      // Intensidad general del impacto de estilos sectoriales en el simulador. 1 = normal, 0.5 = suave.
+      intensidadEfecto: 0.85,
+      // Cansancio diario aplicado al finalizar el partido por estilos exigentes.
+      cansancioPresionAlta: -3,
+      cansancioRotacion: -1,
+      cansancioRepliegue: -1
+    }
   },
   lesiones: {
     // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.

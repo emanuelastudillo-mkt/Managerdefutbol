@@ -2636,7 +2636,7 @@ th{
 
 /* V3.85 · Inicio compacto y búsqueda completa en lista simple */
 .starter-club-grid{
-  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
   gap:10px;
 }
 .starter-club-card.compact{
@@ -2648,28 +2648,30 @@ th{
   width:3px;
 }
 .starter-club-head.compact{
-  grid-template-columns:34px minmax(0,1fr) auto;
-  gap:8px;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  gap:7px;
 }
 .starter-club-head.compact .club-badge-placeholder{
-  width:32px;
-  min-width:32px;
-  height:32px;
+  width:30px;
+  min-width:30px;
+  height:30px;
   border-radius:10px;
 }
 .starter-club-head.compact strong{
-  font-size:14px;
-  line-height:1.15;
+  font-size:13px;
+  line-height:1.12;
 }
 .starter-club-head.compact .pill{
   padding:3px 6px;
-  font-size:11px;
+  font-size:10.5px;
+  line-height:1.05;
+  white-space:nowrap;
 }
 .starter-club-line{
   margin:2px 0 0;
   color:var(--muted);
-  font-size:11.5px;
-  line-height:1.25;
+  font-size:10.8px;
+  line-height:1.22;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -2677,12 +2679,12 @@ th{
 .starter-club-stats{
   display:flex;
   flex-wrap:wrap;
-  gap:4px 8px;
+  gap:3px 7px;
   white-space:normal;
 }
 .starter-club-stats span{
   color:#cbd5e1;
-  font-size:11px;
+  font-size:10.5px;
   font-weight:800;
   letter-spacing:0;
   text-transform:none;
@@ -2693,7 +2695,7 @@ th{
   padding-top:2px;
 }
 .starter-club-actions.compact .small{
-  max-width:135px;
+  max-width:120px;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -2701,8 +2703,16 @@ th{
 .starter-club-actions.compact .primary{
   padding:6px 9px;
   border-radius:10px;
-  font-size:12px;
+  font-size:11.5px;
 }
+
+/* V4.02 · Ajustes visuales menores en inicio y estadio */
+.starter-prestige-pill{font-weight:900;letter-spacing:-.015em}
+.stadium-identity-line{margin:10px 0 0;color:#e5e7eb;font-size:clamp(15px,1.8vw,19px);line-height:1.25;font-weight:850;letter-spacing:-.02em}
+.stadium-identity-line::first-letter{text-transform:uppercase}
+.stadium-card .grid.cols-3 .label{font-size:11px;line-height:1.15}
+.stadium-card .grid.cols-3 strong{font-size:clamp(20px,2.2vw,27px);letter-spacing:-.035em}
+
 .job-search-modal{
   max-width:520px;
 }

@@ -289,15 +289,15 @@ function renderStadium(){
         <p class="label">Estado actual</p>
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
-        <p class="muted small">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
+        <p class="stadium-identity-line">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
 
       </div>
       <div class="card stadium-card">
         <h3>Hinchada y entradas</h3>
         <div class="grid cols-3">
-          <div><p class="label">Hinchas actuales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
-          <div><p class="label">Base</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
-          <div><p class="label">Último cambio</p><strong class="${lastFanClass}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
+          <div><p class="label">Hinchas Totales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
+          <div><p class="label">Vitalicios</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
+          <div><p class="label">Nuevos socios</p><strong class="${lastFanClass}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
         </div>
         <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
         <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">

@@ -223,9 +223,9 @@ function starterClubCardMarkup(club, options={}){
         <div>
           <strong>${escapeHtml(club.name)}</strong>
           <p class="starter-club-line">${escapeHtml(details.country)} · ${escapeHtml(details.league)}</p>
-          <p class="starter-club-line starter-club-stats"><span>Est. ${formatPlainNumber(details.capacity)}</span><span>Hin. ${formatPlainNumber(details.fans)}</span><span>${formatBudgetMillions(details.budget)}</span></p>
+          <p class="starter-club-line starter-club-stats"><span>Estadio ${formatPlainNumber(details.capacity)}</span><span>Hinchas ${formatPlainNumber(details.fans)}</span><span>${formatBudgetMillions(details.budget)}</span></p>
         </div>
-        <span class="pill ok-pill">P ${clubPrestigeValue(club)}</span>
+        <span class="pill ok-pill starter-prestige-pill">Prestigio ${clubPrestigeValue(club)}</span>
       </div>
       <div class="starter-club-actions compact">
         <span class="muted small">${escapeHtml(status)}</span>

@@ -1,3 +1,15 @@
+# V4.02 - Ajustes visuales de inicio y estadio
+
+- Se achicó el texto de las tarjetas compactas de clubes disponibles al iniciar partida.
+- Se reemplazaron abreviaturas por textos completos: `Estadio`, `Hinchas` y `Prestigio`.
+- En `Hinchada y entradas`, se cambió `Hinchas actuales` por `Hinchas Totales`.
+- Se cambió `Base` por `Vitalicios`.
+- Se cambió `Último cambio` por `Nuevos socios`.
+- En `Campo de juego`, se agrandó la línea de nombre del estadio y capacidad.
+- No se modificaron motores, simulación, ranking, guardado ni reglas de partida.
+
+## Versiones anteriores
+
 # V4.01 - Ranking automático obligatorio
 
 - Se bloqueó la carga manual de resultados al ranking online.
@@ -7,8 +19,6 @@
 - Se agregó control local de envíos por evento para evitar duplicados por temporada, club y tipo de evento.
 - Se registra el estado del envío automático: pendiente, enviado o error.
 - Se mantiene la lectura pública de la tabla online con el botón `Actualizar ranking`.
-
-## Versiones anteriores
 
 # V4.0 - Auditoría, limpieza y optimización
 

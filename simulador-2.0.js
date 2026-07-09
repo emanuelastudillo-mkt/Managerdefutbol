@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V4.25 estilos sectoriales
+/* Motor de simulación V2.0 · V5.10 simulación viva minuto a minuto
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -17,14 +17,11 @@
     from:index * 3 + 1,
     to:index === 29 ? 90 : index * 3 + 3
   }));
-  const LIVE_BLOCKS = [
-    { from:1, to:15, label:'0-15' },
-    { from:16, to:30, label:'15-30' },
-    { from:31, to:45, label:'30-45' },
-    { from:46, to:60, label:'45-60' },
-    { from:61, to:75, label:'60-75' },
-    { from:76, to:90, label:'75-90' }
-  ];
+  const LIVE_BLOCKS = Array.from({ length:90 }, (_, index) => ({
+    from:index + 1,
+    to:index + 1,
+    label:`${index + 1}'`
+  }));
   const LIVE_MANAGER_INSTRUCTIONS = [
     { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
     { value:'huevos', label:'PONGAN HUEVO!!!', desc:'Aporta +5 de forma física efectiva durante el bloque.' },
@@ -809,6 +806,21 @@
       goalErrors:Math.round(Number(stats.goalErrors || 0))
     };
   }
+  function liveCurrentStats(stats, simulatedPhases){
+    const phases = Math.max(0, Number(simulatedPhases || 0));
+    const divisor = Math.max(1, phases);
+    return {
+      attacks:simClamp(Math.round(Number(stats.attacks || 0)), 0, 75),
+      chances:simClamp(Math.round(Number(stats.chances || 0)), 0, 18),
+      possession:phases > 0 ? simClamp(Math.round(Number(stats.possessionWeighted || 0) / divisor), 20, 80) : 50,
+      fouls:simClamp(Math.round(Number(stats.fouls || 0)), 0, 32),
+      passScore:phases > 0 ? simClamp(Math.round(Number(stats.passScore || 0) / divisor), 1, 140) : 0,
+      xg:Number(Number(stats.xg || 0).toFixed(2)),
+      keySaves:Math.round(Number(stats.keySaves || 0)),
+      errors:Math.round(Number(stats.errors || 0)),
+      goalErrors:Math.round(Number(stats.goalErrors || 0))
+    };
+  }
   function livePowerPair(session){
     const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0 });
     const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0 });
@@ -922,6 +934,12 @@
     const tactic = liveTacticForClub(session, clubId);
     return (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) }));
   }
+  function liveStatsSnapshot(session){
+    const home = liveCurrentStats(session.homeTotals, session.blockIndex);
+    const away = liveCurrentStats(session.awayTotals, session.blockIndex);
+    away.possession = 100 - home.possession;
+    return { home, away };
+  }
   function livePublicState(session, extra={}){
     return {
       match:session.match,
@@ -942,7 +960,12 @@
       ownBench:livePublicBench(session, game?.selectedClubId || 0),
       usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
       maxSubs:3,
+      matchStats:liveStatsSnapshot(session),
       matchContext:session.matchContext,
+      phasesPlayed:Number(session.blockIndex || 0),
+      totalPhases:session.blocks.length,
+      lastBlock:extra?.block || null,
+      currentBlockStats:{ home:extra?.homeBlock || null, away:extra?.awayBlock || null },
       extra
     };
   }
@@ -964,7 +987,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-bloques-v5.09',
+      engine:'simulador-vivo-minuto-a-minuto-v5.10',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,

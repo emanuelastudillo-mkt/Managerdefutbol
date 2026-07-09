@@ -1,3 +1,26 @@
+# Características de la versión V5.10
+
+## Simulación viva minuto a minuto
+
+- El partido propio se resuelve en 90 fases de 1 minuto.
+- Las decisiones del manager afectan los minutos siguientes, no un resultado precalculado.
+- Se agregan estadísticas en vivo, relato principal y eventos recientes durante el desarrollo.
+- La interfaz se compacta para pantallas horizontales y reduce espacios verticales.
+
+## Archivos modificados
+
+- `simulador-2.0.js`
+- `js/game/17-live-match.js`
+- `style.css`
+- `index.html`
+- `config.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`
+
+
+---
+
 # Características de versión
 
 ## V5.09 - Simulación viva también en amistosos

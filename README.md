@@ -1,8 +1,20 @@
 # Fútbol Manager MVP
 
-**V5.09 - Simulación viva también en amistosos**
+**V5.10 - Simulación viva minuto a minuto y horizontal**
 
 ## Historial de versiones
+
+### V5.10 - Simulación viva minuto a minuto y horizontal
+
+- El motor vivo deja de avanzar en 6 tramos de 15 minutos y pasa a resolver **90 fases de 1 minuto**.
+- El resultado sigue sin quedar decidido al inicio: cada minuto se calcula recién cuando se simula la siguiente fase.
+- Se agregan estadísticas en vivo durante el partido: ataques, ocasiones, xG, posesión, faltas, tapadas, errores y pases.
+- Se recupera el relato visual del simulador anterior con comentario principal, eventos recientes y énfasis en goles, tarjetas, lesiones, tapadas, errores y cambios.
+- Se agrega una línea de progreso de 90 fases para ver el avance minuto a minuto y los minutos con eventos.
+- La interfaz del simulador se compacta y se adapta mejor a pantalla horizontal: titulares a la izquierda, relato/eventos al centro, estadísticas e instrucciones a la derecha.
+- Los cambios manuales y las instrucciones de campo se aplican antes del próximo minuto simulado.
+- El modo automático avanza minuto a minuto y puede pausarse para pensar cambios o instrucciones.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting, `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y documentación a V5.10.
 
 ### V5.09 - Simulación viva también en amistosos
 

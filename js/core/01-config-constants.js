@@ -224,6 +224,12 @@ const TRAINING_SKILL_CURVE_ENABLED = configValue('entrenamiento.curvaHabilidadAc
 const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidadMinimaSubidaHabilidad', 0, 0, 1);
 const TRAINING_SKILL_GAIN_MULTIPLIER = configNumber('entrenamiento.multiplicadorSubidaHabilidades', 3, 1, 20);
 const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial', { pre:'regenerative', morning:'intense', afternoon:'tactical', night:'dayoff' });
+const PLAYER_WEAR_ENABLED = configBoolean('entrenamiento.desgaste.activo', true);
+const PLAYER_WEAR_MAX = configNumber('entrenamiento.desgaste.maximo', 98, 0, 98);
+const PLAYER_WEAR_MATCH_MIN = configNumber('entrenamiento.desgaste.desgasteMinPartido', 1, 0, 10);
+const PLAYER_WEAR_MATCH_MAX = configNumber('entrenamiento.desgaste.desgasteMaxPartido', 3, 0, 10);
+const PLAYER_WEAR_INTENSE_TRAINING = configNumber('entrenamiento.desgaste.desgastePorTurnoIntenso', 1, 0, 10);
+const PLAYER_WEAR_MASSAGE_RECOVERY = configNumber('entrenamiento.desgaste.recuperacionPorTurnoMasajista', 1, 0, 10);
 
 const FORMATIONS = {
   '4-4-2': ['POR','LD','DFC','DFC','LI','MC','MC','MC','MC','DC','DC'],

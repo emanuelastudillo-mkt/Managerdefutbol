@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.28',
+  version: 'V4.29',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -371,6 +371,14 @@ window.GAME_CONFIG = {
       morning: 'intense',
       afternoon: 'tactical',
       night: 'dayoff'
+    },
+    desgaste: {
+      activo: true,
+      maximo: 98,
+      desgasteMinPartido: 1,
+      desgasteMaxPartido: 3,
+      desgastePorTurnoIntenso: 1,
+      recuperacionPorTurnoMasajista: 1
     }
   },
 

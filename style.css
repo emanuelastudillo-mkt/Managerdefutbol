@@ -3273,3 +3273,36 @@ th{
   .tactic-board-layout{grid-template-columns:1fr;}
   .tactic-board-left{order:2}.pitch-board-wrap{order:1}.tactic-board-right{order:3}
 }
+
+/* V4.29 · Desgaste físico */
+.condition-wear-wrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  min-width:64px;
+}
+.condition-wear-wrap .condition-wear-max{
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  pointer-events:none;
+  background:conic-gradient(rgba(140,148,165,.45) var(--wear-max-deg), rgba(90,96,110,.20) 0);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+}
+.condition-wear-wrap small{
+  color:var(--muted);
+  font-size:.68rem;
+  white-space:nowrap;
+}
+.team-event-summary .team-event-line strong{
+  font-weight:700;
+}
+.bank-loan-active [data-payoff-bank-loan]{
+  margin-top:8px;
+}

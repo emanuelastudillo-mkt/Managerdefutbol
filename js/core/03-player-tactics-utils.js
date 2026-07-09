@@ -351,11 +351,38 @@ function effectiveOverall(p){
   };
   return clamp(Math.round(avg(Object.values(simulated))), 1, 99);
 }
+function ensurePlayerWearState(){
+  if(!game) return {};
+  if(!game.playerWear || typeof game.playerWear !== 'object' || Array.isArray(game.playerWear)) game.playerWear = {};
+  return game.playerWear;
+}
+function currentPlayerWear(playerId){
+  if(!game || !PLAYER_WEAR_ENABLED) return 0;
+  const wear = ensurePlayerWearState();
+  const value = Number(wear[playerId] || 0);
+  if(!Number.isFinite(value)) wear[playerId] = 0;
+  return clamp(Math.round(Number(wear[playerId] || 0)), 0, PLAYER_WEAR_MAX);
+}
+function maxConditionForPlayer(playerId){
+  return clamp(99 - currentPlayerWear(playerId), 1, 99);
+}
+function adjustPlayerWear(playerId, delta){
+  if(!game || !PLAYER_WEAR_ENABLED || !playerId) return 0;
+  const wear = ensurePlayerWearState();
+  const before = currentPlayerWear(playerId);
+  const next = clamp(Math.round(before + Number(delta || 0)), 0, PLAYER_WEAR_MAX);
+  wear[playerId] = next;
+  if(game.playerCondition && Number.isFinite(Number(game.playerCondition[playerId]))){
+    game.playerCondition[playerId] = Math.min(Math.round(Number(game.playerCondition[playerId] || 0)), maxConditionForPlayer(playerId));
+  }
+  return next - before;
+}
 function currentCondition(playerId){
   if(!game) return 99;
   if(!game.playerCondition) game.playerCondition = {};
-  if(!Number.isFinite(game.playerCondition[playerId])) game.playerCondition[playerId] = 99;
-  return clamp(Math.round(game.playerCondition[playerId]), 0, 99);
+  if(!Number.isFinite(game.playerCondition[playerId])) game.playerCondition[playerId] = maxConditionForPlayer(playerId);
+  const raw = Math.round(Number(game.playerCondition[playerId] || 0));
+  return clamp(Math.min(raw, maxConditionForPlayer(playerId)), 0, 99);
 }
 function fatiguePoints(playerId){
   return clamp(99 - currentCondition(playerId), 0, 99);
@@ -468,7 +495,12 @@ function compactValueCircle(value, kind, label){
   return `<span class="value-circle ${kind}-circle ${colorClass}" style="--value-deg:${deg}deg" title="${escapeHtml(label)} ${clean}/99"><strong>${clean}</strong></span>`;
 }
 function conditionBar(playerId){
-  return compactValueCircle(currentCondition(playerId), 'condition', 'Estado físico');
+  const condition = currentCondition(playerId);
+  const wear = currentPlayerWear(playerId);
+  const maxCondition = maxConditionForPlayer(playerId);
+  if(!wear) return compactValueCircle(condition, 'condition', 'Estado físico');
+  const degMax = Math.round((maxCondition / 99) * 360);
+  return `<span class="condition-wear-wrap" title="Estado físico ${condition}/99 · Máximo por desgaste ${maxCondition}/99 · Desgaste ${wear}">${compactValueCircle(condition, 'condition', 'Estado físico')}<span class="condition-wear-max" style="--wear-max-deg:${degMax}deg"></span><small>Desg. ${wear}</small></span>`;
 }
 
 function currentMorale(playerId){

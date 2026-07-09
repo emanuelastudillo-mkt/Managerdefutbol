@@ -642,6 +642,7 @@ function simulateDueMatchesUntil(targetDate, options={}){
 function processNonOwnResultsAfterSimulation(results=[]){
   const list = Array.isArray(results) ? results.filter(Boolean) : [];
   if(!list.length) return 0;
+  applyPlayerWearFromMatches(list);
   if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(list);
   if(typeof processBotDismissals === 'function') processBotDismissals();
   advanceStadiumAfterMatches(list);
@@ -1558,11 +1559,31 @@ function processBankLoanWeeklyPayment(){
   }
   return amount;
 }
+function payOffBankLoanFull(){
+  if(!game || !BANK_LOANS_ENABLED) return;
+  const state = ensureBankLoanState();
+  const loan = state?.active;
+  if(!loan || Number(loan.remainingDebt || 0) <= 0){ showNotice('No hay préstamo activo para cancelar.'); return; }
+  const amount = Math.max(0, Math.round(Number(loan.remainingDebt || 0)));
+  if(!confirm(`¿Pagar ahora la totalidad del préstamo? Se descontarán ${formatMoney(amount)} del presupuesto del club.`)) return;
+  loan.remainingDebt = 0;
+  loan.paid = Math.max(0, Math.round(Number(loan.paid || 0) + amount));
+  loan.remainingWeeks = 0;
+  recordBudgetChange(-amount, `Cancelación total préstamo ${loan.bankName}`, { type:'bank_loan_full_payment', bankName:loan.bankName, loanId:loan.id, remainingDebt:0, remainingWeeks:0 });
+  state.history = Array.isArray(state.history) ? state.history : [];
+  state.history.push({ type:'paid_full', date:game.currentDate || '', bankName:loan.bankName, amount:loan.amount, paid:loan.paid });
+  state.active = null;
+  state.offers = [];
+  pushGameMessage({ type:'finanzas', title:'Préstamo cancelado', body:`El club pagó la totalidad restante del préstamo de ${loan.bankName}.`, priority:'normal' });
+  saveLocal(true);
+  renderFinances();
+  showNotice('Préstamo cancelado por pago total.');
+}
 function bankLoanProgressMarkup(loan){
   const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
   const total = Math.max(1, Math.round(Number(loan.totalToRepay || (paid + loan.remainingDebt) || 1)));
   const progress = clamp(Math.round((paid / total) * 100), 0, 100);
-  return `<div class="bank-loan-active"><div class="row"><div><p class="label">Préstamo activo</p><h3>${escapeHtml(loan.bankName)}</h3></div><span class="pill">${loan.remainingWeeks} semanas restantes</span></div><div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div><p class="muted small">Pagado: ${formatMoney(paid)} / ${formatMoney(total)} · Deuda restante: ${formatMoney(loan.remainingDebt)} · Cuota semanal: ${formatMoney(loan.weeklyPayment)}</p></div>`;
+  return `<div class="bank-loan-active"><div class="row"><div><p class="label">Préstamo activo</p><h3>${escapeHtml(loan.bankName)}</h3></div><span class="pill">${loan.remainingWeeks} semanas restantes</span></div><div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div><p class="muted small">Pagado: ${formatMoney(paid)} / ${formatMoney(total)} · Deuda restante: ${formatMoney(loan.remainingDebt)} · Cuota semanal: ${formatMoney(loan.weeklyPayment)}</p><button class="ghost danger small" data-payoff-bank-loan>Cancelar préstamo completo</button></div>`;
 }
 function bankLoanOffersMarkup(){
   if(!BANK_LOANS_ENABLED) return '';
@@ -1629,6 +1650,7 @@ function renderFinances(){
       <div class="table-wrap"><table><thead><tr><th>Temporada</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div>
     </div>`;
   document.querySelectorAll('[data-request-bank-loan]').forEach(btn => btn.addEventListener('click', () => requestBankLoan(btn.dataset.requestBankLoan)));
+  document.querySelector('[data-payoff-bank-loan]')?.addEventListener('click', () => payOffBankLoanFull());
 }
 
 function totalClubSalary(clubId){
@@ -1739,6 +1761,39 @@ function startPatchingField(){
   showNotice('Riego y parcheo iniciado. El campo mejorará 5 puntos por avance durante 21 días.');
   renderStadium();
 }
+function matchWearFromIntensity(match, clubId, playerId){
+  if(!PLAYER_WEAR_ENABLED) return 0;
+  const side = Number(match?.homeId) === Number(clubId) ? 'home' : 'away';
+  const stats = match?.matchStats?.[side] || {};
+  const attacks = Number(stats.attacks || 0);
+  const chances = Number(stats.chances || 0);
+  const fouls = Number(stats.fouls || 0);
+  const pitchFatigue = Number(pitchEffect(match?.matchContext?.pitch || 'Normal').fatigueBonus || 0);
+  const instructionDelta = Number(match?.instructionConditionDeltas?.[playerId] || 0);
+  const cards = (match?.cards || []).filter(c => Number(c.playerId) === Number(playerId));
+  let score = 0;
+  score += attacks / 32;
+  score += chances / 6;
+  score += fouls / 16;
+  score += pitchFatigue / 14;
+  if(instructionDelta < 0) score += Math.abs(instructionDelta) / 8;
+  if(cards.some(c => ['red','secondYellowRed'].includes(String(c.type || '')))) score += 0.6;
+  else if(cards.length) score += 0.25;
+  let wear = PLAYER_WEAR_MATCH_MIN;
+  if(score >= 3.25) wear = 3;
+  else if(score >= 2.05) wear = 2;
+  return clamp(Math.round(wear), PLAYER_WEAR_MATCH_MIN, PLAYER_WEAR_MATCH_MAX);
+}
+
+function applyPlayerWearFromMatches(results=[]){
+  if(!PLAYER_WEAR_ENABLED) return 0;
+  let applied = 0;
+  (Array.isArray(results) ? results : []).filter(Boolean).forEach(match => {
+    (match.playedIdsHome || []).forEach(id => { applied += Math.max(0, adjustPlayerWear(id, matchWearFromIntensity(match, match.homeId, id))); });
+    (match.playedIdsAway || []).forEach(id => { applied += Math.max(0, adjustPlayerWear(id, matchWearFromIntensity(match, match.awayId, id))); });
+  });
+  return applied;
+}
 function applyConditionUpdates(results){
   if(!game.playerCondition) game.playerCondition = {};
   seed.players.forEach(player => {
@@ -1749,8 +1804,16 @@ function applyConditionUpdates(results){
   const instructionConditionByPlayer = new Map();
   results.forEach(match => {
     const extra = pitchEffect(match.matchContext?.pitch || 'Normal').fatigueBonus || 0;
-    (match.playedIdsHome || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
-    (match.playedIdsAway || []).forEach(id => { played.add(id); pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra)); });
+    (match.playedIdsHome || []).forEach(id => {
+      played.add(id);
+      pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra));
+      adjustPlayerWear(id, matchWearFromIntensity(match, match.homeId, id));
+    });
+    (match.playedIdsAway || []).forEach(id => {
+      played.add(id);
+      pitchFatigueByPlayer.set(id, Math.max(pitchFatigueByPlayer.get(id) || 0, extra));
+      adjustPlayerWear(id, matchWearFromIntensity(match, match.awayId, id));
+    });
     Object.entries(match.instructionConditionDeltas || {}).forEach(([id, delta]) => {
       const key = Number(id);
       instructionConditionByPlayer.set(key, (instructionConditionByPlayer.get(key) || 0) + Number(delta || 0));
@@ -1766,7 +1829,7 @@ function applyConditionUpdates(results){
       else next += rnd(8,10);
       next += instructionConditionByPlayer.get(player.id) || 0;
     }
-    game.playerCondition[player.id] = clamp(Math.round(next), 0, 99);
+    game.playerCondition[player.id] = clamp(Math.min(Math.round(next), maxConditionForPlayer(player.id)), 0, 99);
   });
 }
 
@@ -2017,6 +2080,9 @@ function applyTrainingEffects(){
   const individualScale = TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS / Math.max(1, DAYS_PER_ADVANCE);
   let tacticalGain = 0;
   let intenseSessions = 0;
+  let massageSessions = 0;
+  let wearAdded = 0;
+  let wearReduced = 0;
   let individualSessions = 0;
   let individualSkillGains = 0;
   const slots = trainingScheduleSlots();
@@ -2026,6 +2092,7 @@ function applyTrainingEffects(){
       return;
     }
     if(item.type === 'intense') intenseSessions += 1;
+    if(item.type === 'massage') massageSessions += 1;
     squad.forEach(player => applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft));
   });
   if(TRAINING_INDIVIDUAL_ENABLED){
@@ -2037,15 +2104,21 @@ function applyTrainingEffects(){
       });
     }
   }
+  if(PLAYER_WEAR_ENABLED && (intenseSessions || massageSessions)){
+    squad.forEach(player => {
+      if(intenseSessions) wearAdded += Math.max(0, adjustPlayerWear(player.id, intenseSessions * PLAYER_WEAR_INTENSE_TRAINING));
+      if(massageSessions) wearReduced += Math.abs(Math.min(0, adjustPlayerWear(player.id, -massageSessions * PLAYER_WEAR_MASSAGE_RECOVERY)));
+    });
+  }
   squad.forEach(player => {
-    game.playerCondition[player.id] = clamp(Math.round(conditionDraft[player.id]), 0, 99);
+    game.playerCondition[player.id] = clamp(Math.min(Math.round(conditionDraft[player.id]), maxConditionForPlayer(player.id)), 0, 99);
     game.playerMorale[player.id] = clamp(Math.round(moraleDraft[player.id]), 1, 99);
   });
   if(tacticalGain > 0){
     ensureTeamCohesion();
     game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
   }
-  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, individualSessions, individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
+  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, massageSessions, wearAdded, wearReduced, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, individualSessions, individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
 }
 function trainingSlotButtonMarkup(dayIndex, slot, current){
   const option = trainingOptionByValue(current) || trainingOptionByValue(DEFAULT_TRAINING_TYPE);

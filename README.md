@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.28 - Aceptación de ofertas oculta**
+**V4.29 - Desgaste físico y préstamo completo**
 
 ## Historial de versiones
+
+### V4.29 - Desgaste físico y préstamo completo
+
+- El simulador visual ahora muestra goleadores, asistentes, amonestados, expulsados y lesionados a medida que suceden en el partido, no desde el inicio.
+- Agregada nueva estadística persistente por jugador: `Desgaste`.
+- El desgaste se acumula por partido jugado, de 1 a 3 puntos según intensidad.
+- Cada turno de `Entrenamiento intenso` suma 1 punto de desgaste.
+- Cada turno de `Masajista` baja 1 punto de desgaste.
+- El desgaste reduce el máximo de estado físico posible y lo muestra con referencia gris.
+- Agregado botón para cancelar la totalidad del préstamo bancario activo.
+- El pago total del préstamo descuenta la deuda restante del presupuesto y libera el bloqueo bancario.
 
 ### V4.28 - Aceptación de ofertas oculta
 

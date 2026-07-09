@@ -1,4 +1,4 @@
-/* V5.05 · Centro de Ojeo: procesa también días con partido, pretemporada y postemporada. */
+/* V5.20 · Centro de Ojeo persistente: los informes revelados no se pierden al quitar jugadores de la lista. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -12,9 +12,12 @@ function normalizeScoutingCenterState(state){
     return Boolean(p);
   });
   clean.reports = (clean.reports && typeof clean.reports === 'object' && !Array.isArray(clean.reports)) ? clean.reports : {};
-  Object.entries(clean.reports).forEach(([id, report]) => {
-    if(!clean.listedPlayerIds.includes(Number(id))) delete clean.reports[id];
-    else clean.reports[id] = normalizeScoutingReport(Number(id), report);
+  Object.entries({ ...clean.reports }).forEach(([id, report]) => {
+    const numericId = Number(id);
+    const player = typeof playerById === 'function' ? playerById(numericId) : null;
+    if(!numericId || !player){ delete clean.reports[id]; return; }
+    clean.reports[String(numericId)] = normalizeScoutingReport(numericId, report);
+    if(String(id) !== String(numericId)) delete clean.reports[id];
   });
   clean.offices = Math.max(0, Math.round(Number(clean.offices || 0)));
   clean.scouts = Math.max(0, Math.round(Number(clean.scouts || 0)));
@@ -127,7 +130,8 @@ function addPlayerToScoutingCenter(playerId){
 function removePlayerFromScoutingCenter(playerId){
   const state = ensureScoutingCenterState();
   state.listedPlayerIds = state.listedPlayerIds.filter(id => Number(id) !== Number(playerId));
-  delete state.reports[String(playerId)];
+  // El informe queda archivado. Si ya se revelaron habilidades, la ficha del jugador debe seguir mostrándolas.
+  if(state.reports[String(playerId)]) state.reports[String(playerId)] = normalizeScoutingReport(playerId, state.reports[String(playerId)]);
   saveLocal(true);
   renderScoutingCenter();
 }
@@ -279,7 +283,10 @@ function resetScoutingCenterForNewSeason(){
 }
 function resetScoutingCenterForNewClub(){
   if(!game) return;
-  game.scoutingCenter = createInitialScoutingCenterState();
+  const previous = ensureScoutingCenterState();
+  // Cambiar de club vacía oficinas, jefe, ojeadores y lista activa, pero conserva los informes ya revelados.
+  // La información ojeada es progreso del manager y debe seguir disponible en las fichas.
+  game.scoutingCenter = { ...createInitialScoutingCenterState(), reports: previous.reports || {} };
 }
 function scoutingPlayerSkillRows(player, map){
   const known = scoutingKnownSet(player.id);
@@ -330,22 +337,24 @@ function renderScoutingCenter(){
   const caps = scoutingCapacities(state);
   const maxOffices = scoutingChiefMaxOffices();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
+  const archivedReports = Object.keys(state.reports || {}).filter(id => !state.listedPlayerIds.map(Number).includes(Number(id))).length;
   const lastProcess = game?.lastScoutingDailyResult;
   const lastProcessText = lastProcess?.date ? `Último proceso: ${escapeHtml(lastProcess.date)} · intentos ${Number(lastProcess.attempts || 0)} · reveladas ${Number(lastProcess.reveals || 0)}` : 'Todavía no se procesó ningún día de ojeo.';
   view.innerHTML = `
     <div class="row section-title"><div><h2>Centro de Ojeo</h2><p class="tagline">Agregá jugadores externos o propios desde su ficha individual. En jugadores propios las habilidades visibles ya están desbloqueadas y el ojeo avanza directo sobre las ocultas.</p></div></div>
-    <div class="grid cols-4 compact-team-stats">
+    <div class="grid cols-4 compact-team-stats scouting-summary-grid">
       <div class="card"><p class="label">Jugadores listados</p><strong>${listed.length}/${caps.playerCapacity}</strong></div>
       <div class="card"><p class="label">Ojeadores</p><strong>${state.scouts}/${caps.scoutCapacity}</strong></div>
       <div class="card"><p class="label">Oficinas</p><strong>${state.offices}/${maxOffices}</strong></div>
       <div class="card"><p class="label">Costo ojeadores/día</p><strong class="bad">${formatMoney(state.scouts * SCOUTING_SCOUT_DAILY_COST)}</strong></div>
+      <div class="card"><p class="label">Informes guardados</p><strong>${Object.keys(state.reports || {}).length}</strong><small class="muted">${archivedReports} archivado(s)</small></div>
     </div>
     ${scoutingChiefMarkup()}
     <div class="card scouting-office-card" style="margin-top:14px">
       <div class="row"><div><h3>Oficinas y ojeadores</h3><p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados. Oficina: ${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes. Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día.</p></div></div>
       <div class="row message-actions"><button class="primary" data-rent-scouting-office ${state.offices >= maxOffices ? 'disabled' : ''}>Alquilar oficina</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Fuera del Centro de Ojeo no se revelan habilidades externas.</p><p class="muted small">${lastProcessText}</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
+    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados aunque quites al jugador de la lista activa. Fuera del Centro de Ojeo no se revelan habilidades nuevas.</p><p class="muted small">${lastProcessText}</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
   document.querySelectorAll('[data-hire-scouting-chief]').forEach(btn => btn.addEventListener('click', () => hireScoutingChief(btn.dataset.hireScoutingChief)));
   document.querySelector('[data-rent-scouting-office]')?.addEventListener('click', rentScoutingOffice);
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);

@@ -1,5 +1,14 @@
 # Fútbol Manager MVP
 
+## V5.20 - Ojeo persistente en fichas
+
+- Los informes del Centro de Ojeo ya no se pierden al quitar jugadores de la lista activa.
+- Las habilidades ocultas reveladas quedan guardadas en la ficha del jugador.
+- Aplica a jugadores propios, libres y contratados por otros clubes.
+- Cambiar de club vacía lista activa, jefe, oficinas y ojeadores, pero conserva informes ya revelados como progreso del manager.
+- Agregado contador de informes guardados y archivados en el Centro de Ojeo.
+
+
 ## Historial de versiones
 
 ### V5.19 - Táctica viva, expulsados reales e instrucción ajustada

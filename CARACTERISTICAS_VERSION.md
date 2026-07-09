@@ -1,3 +1,10 @@
+
+## V5.20 - Ojeo persistente en fichas
+
+- Persistencia real de informes del Centro de Ojeo aunque el jugador sea quitado de la lista.
+- Las ocultas reveladas se mantienen visibles debajo del radar en la ficha del jugador.
+- Funciona para propios, libres y jugadores de otros clubes.
+
 # Características de la versión V5.19
 
 ## Simulador vivo

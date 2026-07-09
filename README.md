@@ -1,8 +1,20 @@
 # Fútbol Manager MVP
 
-**V4.21 - Temporada segura por país**
+**V4.22 - Bots con estadísticas y scouting oculto**
 
 ## Historial de versiones
+
+### V4.22 - Bots con estadísticas y scouting oculto
+- Se baja el multiplicador de consulta de juveniles para que los informes no revelen tantas habilidades de golpe.
+- El juvenil excepcional ahora entrena x5.
+- Los partidos bot siguen usando simulación rápida, pero ahora generan estadísticas individuales.
+- Los partidos bot registran goleadores, asistencias, tarjetas, lesiones, tapadas clave, errores y partidos jugados.
+- Las estadísticas se sostienen en rankings y fichas de jugadores sin ejecutar el simulador visual completo.
+- Se evita el doble procesamiento de resultados bot previos al partido propio.
+- Las estadísticas deportivas de jugadores libres y contratados quedan ocultas en Mercado.
+- La media visible de jugadores externos pasa a ser una estimación de scouting, no la media real completa.
+- Físico y moral de jugadores externos quedan ocultos.
+- El scouting cambia por semana para que mirar jugadores en distintas semanas revele partes diferentes del perfil.
 
 ### V4.21 - Temporada segura por país
 - Se corrige el origen del cruce de clubes entre países al cambiar de temporada.

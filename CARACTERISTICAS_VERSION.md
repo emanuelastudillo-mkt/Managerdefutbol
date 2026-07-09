@@ -1,10 +1,11 @@
-# Características V4.21 - Temporada segura por país
+# Características V4.22 - Bots con estadísticas y scouting oculto
 
-- Corrección estructural del cierre de temporada para impedir ascensos/descensos entre países distintos.
-- Los movimientos de temporada ahora se calculan por país.
-- Argentina mantiene sus reglas propias de ascenso, descenso y playoffs.
-- Países con una sola división ya no generan ascensos/descensos ficticios contra otra liga.
-- Los overrides de división inválidos o cruzados por país se ignoran o reparan hacia una división válida del país del club.
-- El verificador puede regenerar calendarios cruzados cuando esos partidos todavía no fueron jugados.
-- Si hay partidos cruzados ya jugados, se informan como no reparables automáticamente para no borrar resultados.
-- El inicio de nueva temporada vuelve a validar la estructura antes de crear el fixture.
+- Se reduce la cantidad de habilidades reveladas por consulta de juveniles.
+- El juvenil excepcional pasa a entrenar con multiplicador x5.
+- Los partidos bot mantienen simulación rápida para rendimiento, pero ahora generan eventos estadísticos.
+- Se registran goleadores, asistidores, tarjetas, lesiones, tapadas clave, errores y partidos jugados en partidos bot.
+- Se evita el doble procesamiento de resultados bot previos al partido propio.
+- El mercado oculta estadísticas de jugadores libres y contratados.
+- La media de jugadores externos se muestra solo como estimación de scouting cuando hay suficientes datos observados.
+- Físico y moral de jugadores externos quedan ocultos.
+- El scouting se organiza por semana para que observar jugadores en distintas semanas muestre habilidades diferentes.

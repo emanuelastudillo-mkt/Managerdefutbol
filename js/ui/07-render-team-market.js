@@ -122,6 +122,30 @@ function marketAcceptanceLabel(player=null){
   const chance = marketPlayerAcceptanceChance(player);
   return Number.isInteger(chance) ? String(chance) : chance.toFixed(1);
 }
+function marketScoutedOverallCell(player){
+  if(typeof scoutedOverallLabel === 'function') return scoutedOverallLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutedOverallNumber(player){
+  if(!player) return 0;
+  if(typeof playerRequiresScouting === 'function' && !playerRequiresScouting(player)) return visibleOverall(player);
+  if(typeof scoutingStatMap !== 'function' || typeof scoutingVisibleKeys !== 'function') return 0;
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  const values = Object.entries(map).filter(([key]) => visible.has(key)).map(([,value]) => Number(value || 0)).filter(Number.isFinite);
+  return values.length >= 2 ? clamp(Math.round(avg(values)), 1, 99) : 0;
+}
+function marketScoutedPhysicalCell(player){
+  if(typeof scoutedPhysicalLabel === 'function') return scoutedPhysicalLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutedMoraleCell(player){
+  if(typeof scoutedMoraleLabel === 'function') return scoutedMoraleLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutingHintText(){
+  return 'Las estadísticas de jugadores libres y contratados están ocultas. El scouting semanal muestra sólo algunas habilidades; mirarlos distintas semanas ayuda a perfilar mejor al jugador.';
+}
 function freeAgentOfferRecord(playerId){
   if(!game) return null;
   const key = String(playerId);
@@ -159,7 +183,7 @@ function marketPlayerMatchesPosition(player){
   return pos === filter;
 }
 function marketPlayerMatchesFilters(player){
-  const media = visibleOverall(player);
+  const media = marketScoutedOverallNumber(player);
   const age = Number(player.age || 0);
   const price = marketPlayerPrice(player);
   const minMedia = Number(marketFilters.mediaMin || 0);
@@ -167,6 +191,7 @@ function marketPlayerMatchesFilters(player){
   const minAge = Number(marketFilters.ageMin || 0);
   const maxAge = Number(marketFilters.ageMax || 0);
   const maxPrice = Number(marketFilters.priceMax || 0);
+  if((minMedia || maxMedia) && !media) return false;
   if(minMedia && media < minMedia) return false;
   if(maxMedia && media > maxMedia) return false;
   if(minAge && age < minAge) return false;
@@ -179,8 +204,8 @@ function marketFiltersMarkup(total, shown){
   return `<div class="card market-filters-card">
     <div class="row market-filters-head"><div><p class="label">Buscar coincidencias</p><h3>Filtros de mercado</h3></div><span class="pill">${shown}/${total} jugador(es)</span></div>
     <div class="market-filter-grid">
-      <label>Media desde<input data-market-filter="mediaMin" type="number" min="1" max="99" placeholder="Min." value="${escapeHtml(marketNumberFilterValue('mediaMin'))}"></label>
-      <label>Media hasta<input data-market-filter="mediaMax" type="number" min="1" max="99" placeholder="Max." value="${escapeHtml(marketNumberFilterValue('mediaMax'))}"></label>
+      <label>Media desde<input data-market-filter="mediaMin" type="number" min="1" max="99" placeholder="Min. scouteada" value="${escapeHtml(marketNumberFilterValue('mediaMin'))}"></label>
+      <label>Media hasta<input data-market-filter="mediaMax" type="number" min="1" max="99" placeholder="Max. scouteada" value="${escapeHtml(marketNumberFilterValue('mediaMax'))}"></label>
       <label>Edad desde<input data-market-filter="ageMin" type="number" min="15" max="45" placeholder="Min." value="${escapeHtml(marketNumberFilterValue('ageMin'))}"></label>
       <label>Edad hasta<input data-market-filter="ageMax" type="number" min="15" max="45" placeholder="Max." value="${escapeHtml(marketNumberFilterValue('ageMax'))}"></label>
       <label>Precio hasta<input data-market-filter="priceMax" type="number" min="0" step="100000" placeholder="Máximo" value="${escapeHtml(marketNumberFilterValue('priceMax'))}"></label>
@@ -227,7 +252,7 @@ function renderMarket(){
   ensurePlayerStateForAll();
   if(marketSubTab !== 'contracted') marketSubTab = 'free';
   if(marketSubTab === 'contracted') return renderContractedMarket();
-  const freeBase = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold).slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a));
+  const freeBase = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold).slice().sort((a,b)=>marketScoutedOverallNumber(b)-marketScoutedOverallNumber(a) || visibleOverall(b)-visibleOverall(a));
   const freeFiltered = freeBase.filter(marketPlayerMatchesFilters);
   const free = marketVisiblePlayers(freeFiltered);
   const rows = free.map(p => `<tr>
@@ -236,9 +261,9 @@ function renderMarket(){
     <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
     <td>${Number(p.age || 0) || '—'}</td>
     <td>${nationalityShortMarkup(p.nationality)}</td>
-    <td>${visibleOverall(p)}</td>
-    <td>${conditionBar(p.id)}</td>
-    <td>${moraleBar(p.id)}</td>
+    <td>${marketScoutedOverallCell(p)}</td>
+    <td>${marketScoutedPhysicalCell(p)}</td>
+    <td>${marketScoutedMoraleCell(p)}</td>
     <td>${formatMoney(marketPlayerPrice(p))}</td>
     <td>${formatMoney(p.salary || 0)}</td>
     <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small muted">Acepta ${marketAcceptanceLabel(p)}%</span></td>
@@ -248,8 +273,8 @@ function renderMarket(){
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
-    <div class="market-limit-note small muted">Se muestran los mejores ${free.length} jugador(es) que coinciden con el filtro. La aceptación depende de media del jugador vs prestigio del club. Prestigio actual: ${marketOfferClubPrestige()}.</div>
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    <div class="market-limit-note small muted">Se muestran ${free.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()} La aceptación real depende de media del jugador vs prestigio del club. Prestigio actual: ${marketOfferClubPrestige()}.</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media scouteada</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
     ${marketMoreButtonMarkup(freeFiltered.length, free.length)}`;
   bindMarketTabs();
   bindMarketFilters();
@@ -270,7 +295,7 @@ function renderContractedMarket(){
     <td>${Number(p.age || 0) || '—'}</td>
     <td>${nationalityShortMarkup(p.nationality)}</td>
     <td>${clubBadge(p.clubId)} ${escapeHtml(clubName(p.clubId))}</td>
-    <td>${visibleOverall(p)}</td>
+    <td>${marketScoutedOverallCell(p)}</td>
     <td>${formatMoney(p.clause || p.value || 0)}</td>
     <td>${formatMoney(p.salary || 0)}</td>
     <td><span class="small muted">Acepta ${marketAcceptanceLabel(p)}%</span></td>
@@ -282,8 +307,8 @@ function renderContractedMarket(){
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(basePlayers.length, filteredPlayers.length)}
-    <div class="market-limit-note small muted">Se muestran los mejores ${players.length} jugador(es) que coinciden con el filtro.</div>
-    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media</th><th>Cláusula</th><th>Sueldo</th><th>Aceptación</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    <div class="market-limit-note small muted">Se muestran ${players.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()}</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media scouteada</th><th>Cláusula</th><th>Sueldo</th><th>Aceptación</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>
     ${marketMoreButtonMarkup(filteredPlayers.length, players.length)}`;
   bindMarketTabs();
   bindMarketFilters();

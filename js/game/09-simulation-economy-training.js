@@ -407,9 +407,160 @@ function quickClubRating(clubId){
   const cohesion = typeof cohesionValue === 'function' ? cohesionValue(clubId) : Number(game?.teamCohesion?.[clubId] || 50);
   return squadAvg * 0.62 + Number(club.reputation || 50) * 0.22 + morale * 0.08 + condition * 0.04 + cohesion * 0.04;
 }
+function quickBotLineup(clubId){
+  const squad = playersByClub(clubId)
+    .filter(player => !isUnavailable(player.id))
+    .sort((a,b) => effectiveOverall(b) - effectiveOverall(a));
+  const gk = squad.find(p => String(p.position).toUpperCase() === 'POR');
+  const outfield = squad.filter(p => p !== gk);
+  return (gk ? [gk] : []).concat(outfield).slice(0, 11);
+}
+function quickWeightedPick(items, weightFn){
+  const safe = (items || []).filter(Boolean);
+  if(!safe.length) return null;
+  const weighted = safe.map(item => ({ item, w:Math.max(1, Number(weightFn(item)) || 1) }));
+  const total = weighted.reduce((sum, x) => sum + x.w, 0);
+  let roll = Math.random() * total;
+  for(const x of weighted){ roll -= x.w; if(roll <= 0) return x.item; }
+  return weighted[0].item;
+}
+function quickScorerWeight(player){
+  if(!player) return 1;
+  const pos = String(player.position || '').toUpperCase();
+  if(pos === 'POR') return 0.05;
+  const bonus = pos === 'DC' ? 150 : ['ED','EI'].includes(pos) ? 110 : pos === 'MCO' ? 70 : ['MC','MD','MI'].includes(pos) ? 32 : ['DFC','LD','LI'].includes(pos) ? 8 : 15;
+  return effectiveSkill(player, 'remate') * 1.4 + effectiveSkill(player, 'posicionamiento') + effectiveSkill(player, 'serenidad') * 0.35 + bonus;
+}
+function quickAssistWeight(player){
+  if(!player) return 1;
+  if(String(player.position || '').toUpperCase() === 'POR') return 0.5;
+  const pos = String(player.position || '').toUpperCase();
+  const bonus = ['ED','EI','MCO','MC','MD','MI'].includes(pos) ? 35 : ['MCD','LD','LI'].includes(pos) ? 16 : 6;
+  return effectiveSkill(player, 'paseCorto') + effectiveSkill(player, 'vision') + effectiveSkill(player, 'paseLargo') * 0.45 + bonus;
+}
+function quickDefensiveErrorWeight(player){
+  if(!player) return 1;
+  const pos = String(player.position || '').toUpperCase();
+  const role = pos === 'POR' ? 58 : ['DFC','LD','LI','MCD'].includes(pos) ? 42 : 10;
+  const security = (currentMorale(player.id) + currentCondition(player.id) + visibleOverall(player)) / 3;
+  return role + Math.max(0, 100 - security);
+}
+function quickCardWeight(player){
+  if(!player) return 1;
+  const pos = String(player.position || '').toUpperCase();
+  const role = ['DFC','MCD'].includes(pos) ? 35 : ['LD','LI','MC'].includes(pos) ? 22 : 10;
+  return role + Math.max(1, 100 - effectiveSkill(player, 'disciplina')) + hiddenStats(player).aggression * 0.35;
+}
+function quickBuildGoals(clubId, lineup, goalsCount, startMinute=2, endMinute=90){
+  const goals = [];
+  for(let i=0; i<goalsCount; i++){
+    const scorer = quickWeightedPick(lineup, quickScorerWeight);
+    if(!scorer) continue;
+    const assisters = lineup.filter(p => Number(p.id) !== Number(scorer.id));
+    const assister = Math.random() < 0.72 ? quickWeightedPick(assisters, quickAssistWeight) : null;
+    goals.push({
+      clubId:Number(clubId),
+      playerId:Number(scorer.id),
+      assistId:assister ? Number(assister.id) : null,
+      minute:clamp(Math.round(rnd(startMinute, endMinute)), 1, 90),
+      quick:true
+    });
+  }
+  return goals;
+}
+function quickBuildCards(clubId, lineup, fouls){
+  const cards = [];
+  const count = clamp(quickBotPoisson(Math.max(0.10, Number(fouls || 0) / 7.4)), 0, 6);
+  const yellowByPlayer = new Map();
+  for(let i=0; i<count; i++){
+    const player = quickWeightedPick(lineup, quickCardWeight);
+    if(!player) continue;
+    const previous = yellowByPlayer.get(player.id) || 0;
+    yellowByPlayer.set(player.id, previous + 1);
+    cards.push({ clubId:Number(clubId), playerId:Number(player.id), type: previous ? 'secondYellowRed' : 'yellow', minute:clamp(Math.round(rnd(previous ? 35 : 8, 89)), 1, 90), quick:true });
+  }
+  const directRedPool = lineup.filter(p => String(p.position || '').toUpperCase() !== 'POR' && hiddenStats(p).aggression > 78);
+  if(directRedPool.length && Math.random() < 0.025){
+    const player = quickWeightedPick(directRedPool, quickCardWeight);
+    if(player) cards.push({ clubId:Number(clubId), playerId:Number(player.id), type:'red', minute:clamp(Math.round(rnd(18, 88)), 1, 90), quick:true });
+  }
+  return cards.sort((a,b) => a.minute - b.minute);
+}
+function quickBuildInjuries(clubId, lineup, context){
+  const injuries = [];
+  const candidates = (lineup || []).filter(player => !isUnavailable(player.id));
+  candidates.forEach(player => {
+    const chance = Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70;
+    if(Math.random() >= chance) return;
+    const injury = typeof pickInjuryType === 'function' ? pickInjuryType() : { name:'Lesión muscular', minTurns:7, maxTurns:28, probability:1 };
+    const matchesOut = Math.max(1, Math.round(rnd(Number(injury.minTurns || 7), Number(injury.maxTurns || 28) + 1)));
+    injuries.push({
+      clubId:Number(clubId),
+      playerId:Number(player.id),
+      type:'injury',
+      name:injury.name || 'Lesión',
+      injuryLabel:injury.name || 'Lesión',
+      probability:injury.probability || 0,
+      chance:Math.round(chance * 100),
+      matchesOut,
+      minute:clamp(Math.round(rnd(12, 90)), 1, 90),
+      phase:'durante',
+      quick:true
+    });
+  });
+  return injuries.sort((a,b) => a.minute - b.minute);
+}
+function quickBuildKeySaves(defendingClubId, keeper, chancesAgainst, goalsAgainst, chanceByLineup){
+  if(!keeper) return [];
+  const volume = Math.max(0, Number(chancesAgainst || 0) - Number(goalsAgainst || 0));
+  const count = clamp(quickBotPoisson(volume / 7.5), 0, 5);
+  const saves = [];
+  for(let i=0; i<count; i++){
+    const shooter = quickWeightedPick(chanceByLineup || [], quickScorerWeight);
+    saves.push({
+      clubId:Number(defendingClubId),
+      playerId:Number(keeper.id),
+      minute:clamp(Math.round(rnd(5, 90)), 1, 90),
+      chanceById:shooter ? Number(shooter.id) : null,
+      chanceQuality:Number(rnd(0.20, 0.70).toFixed(2)),
+      quick:true
+    });
+  }
+  return saves.sort((a,b) => a.minute - b.minute);
+}
+function quickBuildErrors(clubId, lineup, goalsAgainst, pressure){
+  const count = clamp(quickBotPoisson(Math.max(0.05, Number(pressure || 0) / 10)), 0, 5);
+  const errors = [];
+  for(let i=0; i<count; i++){
+    const player = quickWeightedPick(lineup, quickDefensiveErrorWeight);
+    if(!player) continue;
+    const goal = i < Number(goalsAgainst || 0) && Math.random() < 0.45;
+    errors.push({
+      clubId:Number(clubId),
+      playerId:Number(player.id),
+      minute:clamp(Math.round(rnd(6, 90)), 1, 90),
+      goal:Boolean(goal),
+      quick:true
+    });
+  }
+  return errors.sort((a,b) => a.minute - b.minute);
+}
+function quickEnsureStatsForPlayers(players=[]){
+  game.playerStats = game.playerStats || {};
+  players.forEach(player => {
+    if(!player) return;
+    if(!game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function'
+      ? createEmptyPlayerStat(player)
+      : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+    if(typeof normalizePlayerStatRecord === 'function') normalizePlayerStatRecord(game.playerStats[player.id]);
+  });
+}
 function quickSimulateBotMatch(match){
   const homeRating = quickClubRating(match.homeId);
   const awayRating = quickClubRating(match.awayId);
+  const homeLineup = quickBotLineup(match.homeId);
+  const awayLineup = quickBotLineup(match.awayId);
+  quickEnsureStatsForPlayers(homeLineup.concat(awayLineup));
   const context = typeof attendanceContextForMatch === 'function'
     ? { weather:'Normal', pitch:fieldConditionName(fieldScoreForClub(match.homeId)), pitchScore:fieldScoreForClub(match.homeId), ...attendanceContextForMatch(match) }
     : { weather:'Normal', pitch:'Normal', pitchScore:70, totalFans:0, homeCrowdBonus:0 };
@@ -426,14 +577,44 @@ function quickSimulateBotMatch(match){
   }
   const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + 3 + rnd(-7,7)), 31, 69);
   const awayPoss = 100 - homePoss;
-  const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), 1, 18);
-  const awayChances = clamp(Math.round(awayXg * rnd(4.0, 6.5)), 1, 18);
+  const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), Math.max(1, homeGoals), 18);
+  const awayChances = clamp(Math.round(awayXg * rnd(4.0, 6.5)), Math.max(1, awayGoals), 18);
+  const homeFouls = clamp(Math.round(rnd(6,17)), 2, 30);
+  const awayFouls = clamp(Math.round(rnd(6,17)), 2, 30);
+  const goals = quickBuildGoals(match.homeId, homeLineup, homeGoals).concat(quickBuildGoals(match.awayId, awayLineup, awayGoals)).sort((a,b) => a.minute - b.minute);
+  const cards = quickBuildCards(match.homeId, homeLineup, homeFouls).concat(quickBuildCards(match.awayId, awayLineup, awayFouls)).sort((a,b) => a.minute - b.minute);
+  const injuries = quickBuildInjuries(match.homeId, homeLineup, context).concat(quickBuildInjuries(match.awayId, awayLineup, context)).sort((a,b) => a.minute - b.minute);
+  const homeKeeper = homeLineup.find(p => String(p.position || '').toUpperCase() === 'POR');
+  const awayKeeper = awayLineup.find(p => String(p.position || '').toUpperCase() === 'POR');
+  const keySaves = quickBuildKeySaves(match.homeId, homeKeeper, awayChances, awayGoals, awayLineup)
+    .concat(quickBuildKeySaves(match.awayId, awayKeeper, homeChances, homeGoals, homeLineup))
+    .sort((a,b) => a.minute - b.minute);
+  const errors = quickBuildErrors(match.homeId, homeLineup, awayGoals, awayChances)
+    .concat(quickBuildErrors(match.awayId, awayLineup, homeGoals, homeChances))
+    .sort((a,b) => a.minute - b.minute);
+  const homeKeySaves = keySaves.filter(s => Number(s.clubId) === Number(match.homeId)).length;
+  const awayKeySaves = keySaves.filter(s => Number(s.clubId) === Number(match.awayId)).length;
+  const homeErrors = errors.filter(e => Number(e.clubId) === Number(match.homeId));
+  const awayErrors = errors.filter(e => Number(e.clubId) === Number(match.awayId));
   const matchStats = {
-    home:{ attacks:clamp(Math.round(24 + homeChances * 3 + rnd(-5,7)), 12, 78), chances:homeChances, possession:homePoss, fouls:clamp(Math.round(rnd(6,17)), 2, 30), passScore:clamp(Math.round(homeRating + rnd(-8,10)), 1, 140), xg:Number(homeXg.toFixed(2)), keySaves:0, errors:0, goalErrors:0 },
-    away:{ attacks:clamp(Math.round(22 + awayChances * 3 + rnd(-5,7)), 12, 78), chances:awayChances, possession:awayPoss, fouls:clamp(Math.round(rnd(6,17)), 2, 30), passScore:clamp(Math.round(awayRating + rnd(-8,10)), 1, 140), xg:Number(awayXg.toFixed(2)), keySaves:0, errors:0, goalErrors:0 }
+    home:{ attacks:clamp(Math.round(24 + homeChances * 3 + rnd(-5,7)), 12, 78), chances:homeChances, possession:homePoss, fouls:homeFouls, passScore:clamp(Math.round(homeRating + rnd(-8,10)), 1, 140), xg:Number(homeXg.toFixed(2)), keySaves:homeKeySaves, errors:homeErrors.length, goalErrors:homeErrors.filter(e=>e.goal).length },
+    away:{ attacks:clamp(Math.round(22 + awayChances * 3 + rnd(-5,7)), 12, 78), chances:awayChances, possession:awayPoss, fouls:awayFouls, passScore:clamp(Math.round(awayRating + rnd(-8,10)), 1, 140), xg:Number(awayXg.toFixed(2)), keySaves:awayKeySaves, errors:awayErrors.length, goalErrors:awayErrors.filter(e=>e.goal).length }
   };
-  if(!match.friendly) applyResultToTables(match, homeGoals, awayGoals);
-  return { ...match, played:true, engine:'bot-rapido-v4.06', homeGoals, awayGoals, goals:[], cards:[], injuries:[], substitutions:[], keySaves:[], errors:[], matchStats, matchContext:context, starterIdsHome:[], starterIdsAway:[], playedIdsHome:[], playedIdsAway:[], instructionConditionDeltas:{} };
+  const starterIdsHome = homeLineup.map(p => Number(p.id));
+  const starterIdsAway = awayLineup.map(p => Number(p.id));
+  const substitutions = [];
+  if(!match.friendly){
+    applyResultToTables(match, homeGoals, awayGoals);
+    if(typeof applyPlayerStats === 'function'){
+      applyPlayerStats(match.homeId, homeLineup, substitutions, goals, cards, injuries, keySaves, errors);
+      applyPlayerStats(match.awayId, awayLineup, substitutions, goals, cards, injuries, keySaves, errors);
+    }
+    if(typeof applyAvailability === 'function') applyAvailability(cards, injuries);
+    if(typeof updatePlayerStarTrackingForMatch === 'function'){
+      updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway });
+    }
+  }
+  return { ...match, played:true, engine:'bot-rapido-v4.22-estadisticas', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext:context, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas:{} };
 }
 function simulateScheduledMatch(match){
   if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);

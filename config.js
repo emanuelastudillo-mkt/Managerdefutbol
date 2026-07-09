@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.21',
+  version: 'V4.22',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -335,7 +335,7 @@ window.GAME_CONFIG = {
     costoJugadorPorAvance: 10000,
     compensacionDespido: 50000,
     multiplicadorEntrenamiento: 5,
-    multiplicadorEntrenamientoJuvenilExcepcional: 20,
+    multiplicadorEntrenamientoJuvenilExcepcional: 5,
     juvenilExcepcionalPorTemporada: true,
     edadJuvenilExcepcional: 16,
     mediaJuvenilExcepcionalMin: 12,
@@ -343,8 +343,8 @@ window.GAME_CONFIG = {
     cupoBaseJuveniles: 10,
     residenciaCuposJuveniles: 20,
     residenciaCostoMensual: 560000,
-    // Triplica la cantidad de habilidades reveladas por informe del preparador.
-    multiplicadorConsultaJuveniles: 3,
+    // Cantidad base de habilidades reveladas por informe del preparador.
+    multiplicadorConsultaJuveniles: 1,
     // Lesiones juveniles por temporada. Mientras están lesionados no entrenan.
     lesionesJuvenilesMinPorTemporada: 1,
     lesionesJuvenilesMaxPorTemporada: 2,

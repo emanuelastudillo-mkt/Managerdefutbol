@@ -33,6 +33,66 @@ function purchaseOfferBlockedLabel(playerId){
 }
 
 
+function playerRequiresScouting(player){
+  if(!player || !game) return false;
+  return Number(player.clubId || 0) !== Number(game.selectedClubId || 0);
+}
+function playerScoutingWeekKey(){
+  if(!game) return 'no-game';
+  const week = Math.floor(Math.max(0, Number(currentTurnIndex ? currentTurnIndex() : 0)) / 7);
+  return `${game.seasonNumber || 1}-${seasonPhase ? seasonPhase() : 'regular'}-w${week}`;
+}
+function scoutedVisibleKeySet(player){
+  const map = scoutingStatMap(player);
+  const keys = Object.keys(map);
+  if(!playerRequiresScouting(player)) return new Set(keys);
+  const turnKey = playerScoutingWeekKey();
+  const count = 2 + hashNumber(`scout-count-${player.id}-${turnKey}`, 2);
+  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${turnKey}-${a}`, 10000) - hashNumber(`scout-${player.id}-${turnKey}-${b}`, 10000));
+  return new Set(ordered.slice(0,count));
+}
+function scoutingValueForKey(player, key){
+  const map = scoutingStatMap(player);
+  return map[key];
+}
+function scoutedStatCell(player, key){
+  const visible = scoutedVisibleKeySet(player);
+  return visible.has(key) ? `<strong>${scoutingValueForKey(player, key)}</strong>` : '<span class="muted">—</span>';
+}
+function scoutedOverallLabel(player){
+  if(!playerRequiresScouting(player)) return String(visibleOverall(player));
+  const map = scoutingStatMap(player);
+  const visible = scoutedVisibleKeySet(player);
+  const values = Object.entries(map).filter(([key]) => visible.has(key)).map(([,value]) => Number(value || 0)).filter(Number.isFinite);
+  if(values.length < 2) return '<span class="muted">—</span>';
+  return `<span title="Estimación con habilidades observadas">≈ ${clamp(Math.round(avg(values)), 1, 99)}</span>`;
+}
+function scoutedPhysicalLabel(player){
+  return playerRequiresScouting(player) ? '<span class="muted">—</span>' : `<strong>${currentCondition(player.id)}/99</strong>`;
+}
+function scoutedMoraleLabel(player){
+  return playerRequiresScouting(player) ? '<span class="muted">—</span>' : `<strong>${currentMorale(player.id)}/99</strong>`;
+}
+function scoutedBarsMarkup(player){
+  return playerRequiresScouting(player) ? '<p class="muted small">Físico y moral ocultos hasta observar al jugador en más semanas.</p>' : `<div class="profile-bar-wrap">${moraleBar(player.id)}</div>`;
+}
+function scoutedStatsMarkup(player){
+  const map = scoutingStatMap(player);
+  const rawMap = scoutingStatMap({ ...player, skills:player.skills });
+  const visible = scoutedVisibleKeySet(player);
+  const rows = Object.entries(map).map(([key, value]) => {
+    const raw = rawMap[key];
+    const shown = !playerRequiresScouting(player) || visible.has(key);
+    return `<div class="stat-rank"><span>${escapeHtml(key)}</span><strong>${shown ? value : '—'}</strong>${shown && Number(raw) !== Number(value) ? `<small class="muted">base ${raw}</small>` : ''}</div>`;
+  }).join('');
+  const note = playerRequiresScouting(player) ? '<p class="muted small">Scouting semanal: algunas habilidades cambian de visibles cada semana. Mirarlo en distintas semanas revela mejor el perfil.</p>' : '';
+  return `${rows}${note}`;
+}
+function scoutedRadarMarkup(player){
+  if(!playerRequiresScouting(player)) return radarSvg(visibleStats(player));
+  return '<div class="scouting-radar-placeholder"><strong>Scouting incompleto</strong><span>Las habilidades completas están ocultas.</span></div>';
+}
+
 function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
   if(clubId === Number(game.selectedClubId)){
@@ -67,6 +127,7 @@ function showPlayerModal(playerId){
   if(!p) return;
   const visible = visibleStats(p);
   const stats = game?.playerStats?.[p.id];
+  const needsScouting = playerRequiresScouting(p);
   const meta = roleMeta(p.position);
   const body = `<div class="player-modal-compact">
     ${playerModalActionsMarkup(p)}
@@ -81,15 +142,15 @@ function showPlayerModal(playerId){
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
         </div>
-        <div class="radar-wrap">${radarSvg(visible)}</div>
+        <div class="radar-wrap">${scoutedRadarMarkup(p)}</div>
       </div>
       <div class="stack">
-        <div class="card inner"><h3>Stats visibles</h3>${statPairs(visible, visibleStats(p, rawVisibleSkill))}</div>
+        <div class="card inner"><h3>${needsScouting ? 'Scouting visible' : 'Stats visibles'}</h3>${scoutedStatsMarkup(p)}</div>
         <div class="card inner"><h3>Perfil</h3>
-          <div class="stat-rank"><span>Media</span><strong>${visibleOverall(p)}</strong></div>
-          <div class="stat-rank"><span>Estado físico</span><strong>${currentCondition(p.id)}/99</strong></div>
-          <div class="stat-rank"><span>Moral</span><strong>${currentMorale(p.id)}/99</strong></div>
-          <div class="profile-bar-wrap">${moraleBar(p.id)}</div>
+          <div class="stat-rank"><span>Media</span><strong>${scoutedOverallLabel(p)}</strong></div>
+          <div class="stat-rank"><span>Estado físico</span>${scoutedPhysicalLabel(p)}</div>
+          <div class="stat-rank"><span>Moral</span>${scoutedMoraleLabel(p)}</div>
+          ${scoutedBarsMarkup(p)}
           <div class="stat-rank"><span>Cláusula</span><strong>${formatMoney(p.clause || p.value || 0)}</strong></div>
           <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
         </div>
@@ -917,15 +978,10 @@ function clubTacticPreview(formation){
   </div>`;
 }
 function scoutingTurnKey(){
-  if(!game) return 'no-game';
-  return `${game.seasonNumber || 1}-${seasonPhase()}-${currentTurnIndex()}-${currentSeasonTurnNumber()}`;
+  return typeof playerScoutingWeekKey === 'function' ? playerScoutingWeekKey() : 'no-game';
 }
 function scoutingVisibleKeys(player){
-  const keys = Object.keys(scoutingStatMap(player));
-  const turnKey = scoutingTurnKey();
-  const count = 2 + hashNumber(`scout-count-${player.id}-${turnKey}`, 2);
-  const ordered = keys.slice().sort((a,b)=>hashNumber(`scout-${player.id}-${turnKey}-${a}`, 10000) - hashNumber(`scout-${player.id}-${turnKey}-${b}`, 10000));
-  return new Set(ordered.slice(0,count));
+  return typeof scoutedVisibleKeySet === 'function' ? scoutedVisibleKeySet(player) : new Set(Object.keys(scoutingStatMap(player)));
 }
 function scoutingStatMap(player){
   const stats = visibleStats(player);

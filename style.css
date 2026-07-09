@@ -3019,3 +3019,20 @@ th{
 .saved-tactic-slot strong{display:block;font-size:14px;color:#e5e7eb}.saved-tactic-slot span{display:block;font-size:13px;color:#cbd5e1;margin-top:3px}.saved-tactic-slot em{display:block;font-size:12px;color:#94a3b8;font-style:normal;margin-top:4px}
 .saved-tactic-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}.saved-tactic-actions button{flex:1;min-width:92px}
 @media (max-width: 860px){.saved-tactics-grid{grid-template-columns:1fr}}
+
+/* V4.22 · Scouting oculto para jugadores externos */
+.scouting-radar-placeholder{
+  min-height:220px;
+  border:1px dashed rgba(255,255,255,.18);
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  text-align:center;
+  background:rgba(255,255,255,.035);
+  color:var(--muted);
+}
+.scouting-radar-placeholder strong{ color:var(--text); font-size:1rem; }
+.scouting-radar-placeholder span{ font-size:.82rem; max-width:220px; }

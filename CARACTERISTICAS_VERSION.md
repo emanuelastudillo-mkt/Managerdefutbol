@@ -1,11 +1,16 @@
-# Características de la versión V5.10
+# Características de la versión V5.11
 
-## Simulación viva minuto a minuto
+## Simulador táctico horizontal
 
-- El partido propio se resuelve en 90 fases de 1 minuto.
-- Las decisiones del manager afectan los minutos siguientes, no un resultado precalculado.
-- Se agregan estadísticas en vivo, relato principal y eventos recientes durante el desarrollo.
-- La interfaz se compacta para pantallas horizontales y reduce espacios verticales.
+- La simulación viva conserva las 90 fases de 1 minuto.
+- Se rediseña la pantalla para priorizar uso horizontal y reducir espacios.
+- El manager ve su tablero táctico con titulares y suplentes disponibles.
+- Las sustituciones se hacen por clic sobre un titular y un suplente, con confirmación.
+- Los cambios confirmados se aplican antes del siguiente minuto simulado.
+- Se puede reacomodar a dos titulares intercambiando sus roles durante la pausa.
+- Se agrega selector de formación dentro del partido, con reordenamiento automático para reducir penalizaciones por rol.
+- Las instrucciones se activan con botones y se agrega `Sin instrucciones`.
+- Se mantienen relatos, eventos y estadísticas en vivo.
 
 ## Archivos modificados
 

@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.10 simulación viva minuto a minuto
+/* Motor de simulación V2.0 · V5.11 simulación viva con tablero táctico
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -23,6 +23,7 @@
     label:`${index + 1}'`
   }));
   const LIVE_MANAGER_INSTRUCTIONS = [
+    { value:'none', label:'Sin instrucciones', desc:'No aplica bonus ni penalización en el próximo minuto.' },
     { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
     { value:'huevos', label:'PONGAN HUEVO!!!', desc:'Aporta +5 de forma física efectiva durante el bloque.' },
     { value:'hold_result', label:'Cuidar el resultado', desc:'Bono de posesión y control.' },
@@ -606,10 +607,10 @@
 
   function liveNormalizeInstruction(value){
     const clean = String(value || '').trim();
-    return LIVE_MANAGER_INSTRUCTIONS.some(opt => opt.value === clean) ? clean : 'hold_result';
+    return LIVE_MANAGER_INSTRUCTIONS.some(opt => opt.value === clean) ? clean : 'none';
   }
   function liveInstructionLabel(value){
-    return LIVE_MANAGER_INSTRUCTIONS.find(opt => opt.value === value)?.label || 'Cuidar el resultado';
+    return LIVE_MANAGER_INSTRUCTIONS.find(opt => opt.value === value)?.label || 'Sin instrucciones';
   }
   function clonePowerForLive(power){
     return {
@@ -696,6 +697,65 @@
   function liveSetTacticForClub(session, clubId, tactic){
     if(liveSideKey(session, clubId) === 'home') session.homeTactic = tactic;
     else session.awayTactic = tactic;
+  }
+  function liveFormationKeys(){
+    try{ return Object.keys(FORMATIONS || {}); }
+    catch(_){ return ['4-4-2','4-3-3','4-2-3-1','3-5-2','5-3-2','4-1-4-1','3-4-3','4-5-1','4-3-1-2','5-4-1']; }
+  }
+  function liveFormationSlots(formation){
+    try{ return FORMATIONS[formation] || FORMATIONS['4-4-2'] || []; }
+    catch(_){ return []; }
+  }
+  function livePlayerSlotScore(player, slot){
+    if(!player) return -999;
+    const position = String(player.position || '');
+    const role = String(slot || '');
+    let score = Number(effectiveOverall(player) || 0) * Number(zoneFactor(player, role) || 0.65);
+    if(position === role) score += 20;
+    if(role === 'POR' && position !== 'POR') score -= 180;
+    if(role !== 'POR' && position === 'POR') score -= 180;
+    if(['DFC','LI','LD'].includes(role) && ['DFC','LI','LD'].includes(position)) score += 4;
+    if(['MCD','MC','MCO','MI','MD'].includes(role) && ['MCD','MC','MCO','MI','MD'].includes(position)) score += 4;
+    if(['DC','EI','ED'].includes(role) && ['DC','EI','ED'].includes(position)) score += 4;
+    return score;
+  }
+  function normalizeStarterOrderForLive(tactic, starterOrder){
+    const current = Array.isArray(tactic?.starters) ? tactic.starters.map(Number).filter(Boolean) : [];
+    const wanted = Array.isArray(starterOrder) ? starterOrder.map(Number).filter(Boolean) : current;
+    const unique = [];
+    wanted.concat(current).forEach(id => { if(id && !unique.includes(id)) unique.push(id); });
+    return unique.slice(0, 11);
+  }
+  function optimizeLiveStartersForFormation(starterIds, formation){
+    const slots = liveFormationSlots(formation);
+    const remaining = starterIds.map(id => playerById(id)).filter(Boolean);
+    const ordered = [];
+    slots.slice(0, 11).forEach(slot => {
+      if(!remaining.length) return;
+      let bestIndex = 0;
+      let bestScore = -9999;
+      remaining.forEach((player, index) => {
+        const score = livePlayerSlotScore(player, slot);
+        if(score > bestScore){ bestScore = score; bestIndex = index; }
+      });
+      ordered.push(Number(remaining.splice(bestIndex, 1)[0].id));
+    });
+    remaining.forEach(player => { if(ordered.length < 11) ordered.push(Number(player.id)); });
+    return ordered.slice(0, 11);
+  }
+  function applyLiveFormation(session, clubId, formation, starterOrder=null){
+    if(!session || session.finished) return false;
+    const cleanFormation = String(formation || '').trim();
+    if(!liveFormationSlots(cleanFormation).length) return false;
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic) return false;
+    const starters = normalizeStarterOrderForLive(tactic, starterOrder);
+    if(starters.length < 7) return false;
+    tactic.formation = cleanFormation;
+    tactic.starters = Array.isArray(starterOrder) ? starters.slice(0, 11) : optimizeLiveStartersForFormation(starters, cleanFormation);
+    tactic.autoSubs = [];
+    liveSetTacticForClub(session, clubId, tactic);
+    return true;
   }
   function livePlayedSet(session, clubId){
     return liveSideKey(session, clubId) === 'home' ? session.playedIdsHome : session.playedIdsAway;
@@ -927,7 +987,8 @@
     const slots = FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2'];
     return (tactic?.starters || []).map((id, index) => {
       const player = playerById(id);
-      return player ? { id:player.id, name:player.name, position:player.position, role:slots[index] || player.position, overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) } : null;
+      const role = slots[index] || player?.position || '—';
+      return player ? { id:player.id, name:player.name, position:player.position, role, slotIndex:index, fit:Math.round(Number(zoneFactor(player, role) || 0) * 100), overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) } : null;
     }).filter(Boolean);
   }
   function livePublicBench(session, clubId){
@@ -958,6 +1019,10 @@
       homeLineup:livePublicLineup(session, session.match.homeId),
       awayLineup:livePublicLineup(session, session.match.awayId),
       ownBench:livePublicBench(session, game?.selectedClubId || 0),
+      homeFormation:session.homeTactic?.formation || '4-4-2',
+      awayFormation:session.awayTactic?.formation || '4-4-2',
+      ownFormation:liveTacticForClub(session, game?.selectedClubId || 0)?.formation || '4-4-2',
+      availableFormations:liveFormationKeys(),
       usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
       maxSubs:3,
       matchStats:liveStatsSnapshot(session),
@@ -987,7 +1052,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-minuto-a-minuto-v5.10',
+      engine:'simulador-vivo-tactico-v5.11',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,
@@ -1096,6 +1161,7 @@
     simulateMatch,
     createLiveMatchSession,
     simulateLiveBlock,
+    applyLiveFormation,
     finishLiveMatchSession,
     livePublicState,
     pitchEffect:pitchEffectV2,

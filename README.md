@@ -1,8 +1,21 @@
 # Fútbol Manager MVP
 
-**V5.10 - Simulación viva minuto a minuto y horizontal**
+**V5.11 - Simulador táctico horizontal y cambios por clic**
 
 ## Historial de versiones
+
+### V5.11 - Simulador táctico horizontal y cambios por clic
+
+- Rediseñada la simulación viva para acercarse a una pantalla de partido horizontal tipo manager clásico.
+- Se agrega tablero táctico propio con los jugadores disponibles: titulares en cancha y suplentes en banco.
+- Las sustituciones pasan a hacerse por clic: seleccionar un titular, seleccionar un suplente y confirmar el cambio.
+- Los cambios quedan pendientes y se aplican antes del próximo minuto simulado.
+- Se permite reacomodar roles en vivo seleccionando dos titulares para intercambiar sus posiciones dentro de la formación.
+- Se agrega menú superior de formación dentro del partido; al cambiarla, el sistema reordena titulares para reducir penalizaciones por rol.
+- Las instrucciones pasan de selector desplegable a botones activables.
+- Se agrega la instrucción `Sin instrucciones`, sin bonus ni penalización.
+- Se mantiene la simulación minuto a minuto, el relato, los eventos y las estadísticas en vivo.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting, `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y documentación a V5.11.
 
 ### V5.10 - Simulación viva minuto a minuto y horizontal
 

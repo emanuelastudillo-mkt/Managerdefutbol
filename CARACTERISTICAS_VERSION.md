@@ -1,27 +1,30 @@
-# Características de la versión V5.12
+# Características de la versión V5.13
 
-## Simulador vivo compacto
+## Simulador vivo
 
-- Estadísticas unificadas en una sola tarjeta comparativa para ahorrar espacio.
-- Layout horizontal: equipo local, centro de partido y equipo visitante.
-- Ambos equipos usan listas visualmente equivalentes.
-- Titulares y suplentes se ven en modo lista compacto.
+- El modo **Auto** ahora tarda el doble en avanzar de minuto a minuto.
+- La demora queda configurable en `GAME_CONFIG.ui.simulacionVivaAutoMs`.
+- Se mantiene el botón manual **Simular 1 minuto** para avanzar sin esperar.
 
-## Cambios e instrucciones
+## Puntajes e iconos de jugadores
 
-- Sustitución por clic: titular que sale + suplente que entra.
-- Confirmación antes de aplicar el cambio.
-- Reacomodo por clic entre titulares.
-- Instrucciones como botones inferiores centrados.
-- Sin explicación visible en cada botón para reducir ruido visual.
+- Cada titular en cancha muestra un puntaje vivo de partido.
+- El puntaje combina media, moral, físico, encaje de rol, resultado parcial y eventos del partido.
+- Los eventos positivos elevan el puntaje: goles, asistencias y tapadas.
+- Los eventos negativos lo reducen: amarillas, rojas, errores y lesiones.
+- Junto al apellido se acumulan iconos de estado:
+  - ⚽ gol
+  - 👟 asistencia
+  - 🟨 amarilla
+  - 🟥 roja
+  - ✚ lesión
 
-## Fatiga y bot
+## Interfaz
 
-- Los 22 jugadores en cancha pierden forma física con el paso de los minutos.
-- La pérdida se ajusta por resistencia, genética, posición e instrucción activa.
-- El bot utiliza suplentes y realiza cambios automáticos coherentes.
-- Los cambios bot consideran cansancio, rol, minuto y resultado.
+- Los iconos se agregan dentro de la misma fila del jugador para no crear bloques extra.
+- El equipo del manager y el equipo bot mantienen el mismo formato visual.
+- La lista se ajusta para sumar la columna **Pun** sin romper el diseño compacto horizontal.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reinicio de partida. Afecta partidos propios futuros o pendientes que abran el simulador vivo.
+Se implementa solo. No requiere reiniciar partida. Afecta partidos propios futuros o pendientes que abran el simulador vivo.

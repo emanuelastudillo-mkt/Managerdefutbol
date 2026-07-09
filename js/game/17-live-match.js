@@ -1,4 +1,4 @@
-/* V5.12 · Simulación viva minuto a minuto con UI horizontal compacta, estadísticas comparativas y listas simétricas. */
+/* V5.13 · Simulación viva con auto más pausado, puntajes e iconos acumulables por jugador. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -107,6 +107,71 @@
     if(!inField && pendingInIds().has(Number(player.id))) return '<span class="live-row-tag ok">ENTRA</span>';
     return '';
   }
+  function livePlayerEventSummary(playerId){
+    const id = Number(playerId || 0);
+    const summary = { goals:0, assists:0, yellow:0, red:0, injuries:0, saves:0, errors:0, goalErrors:0, subIn:0, subOut:0 };
+    if(!id || !liveState) return summary;
+    (liveState.goals || []).forEach(g => {
+      if(Number(g.playerId) === id) summary.goals += 1;
+      if(Number(g.assistId) === id) summary.assists += 1;
+    });
+    (liveState.cards || []).forEach(c => {
+      if(Number(c.playerId) !== id) return;
+      if(c.type === 'yellow') summary.yellow += 1;
+      else if(c.type === 'secondYellowRed'){ summary.yellow += 1; summary.red += 1; }
+      else summary.red += 1;
+    });
+    (liveState.injuries || []).forEach(i => { if(Number(i.playerId) === id) summary.injuries += 1; });
+    (liveState.keySaves || []).forEach(k => { if(Number(k.playerId) === id) summary.saves += 1; });
+    (liveState.errors || []).forEach(err => {
+      if(Number(err.playerId) === id){ summary.errors += 1; if(err.goal) summary.goalErrors += 1; }
+    });
+    (liveState.substitutions || []).forEach(sub => {
+      if(Number(sub.inId) === id) summary.subIn += 1;
+      if(Number(sub.outId) === id) summary.subOut += 1;
+    });
+    return summary;
+  }
+  function repeatIcon(icon, count, limit=4){
+    const n = Math.max(0, Number(count || 0));
+    if(!n) return '';
+    if(n <= limit) return icon.repeat(n);
+    return `${icon}×${n}`;
+  }
+  function livePlayerIcons(playerId){
+    const ev = livePlayerEventSummary(playerId);
+    const icons = [
+      repeatIcon('⚽', ev.goals),
+      repeatIcon('👟', ev.assists),
+      repeatIcon('🟨', ev.yellow),
+      repeatIcon('🟥', ev.red),
+      repeatIcon('✚', ev.injuries, 1)
+    ].filter(Boolean).join('');
+    return icons ? `<span class="live-player-icons" title="Estados del partido">${icons}</span>` : '';
+  }
+  function liveRatingClass(value){
+    const n = Number(value || 0);
+    return n >= 7.2 ? 'ok' : n >= 6.0 ? 'warn' : 'bad';
+  }
+  function livePlayerRating(player, side, inField=true){
+    if(!player || !liveState) return '—';
+    const id = Number(player.id || 0);
+    const events = livePlayerEventSummary(id);
+    const hasPlayed = inField || events.subOut > 0 || events.subIn > 0 || events.goals > 0 || events.assists > 0 || events.yellow > 0 || events.red > 0 || events.saves > 0 || events.errors > 0;
+    if(!hasPlayed) return '—';
+    const overall = simClampUi(Number(player.overall || 0), 1, 99);
+    const cond = simClampUi(Number(player.condition || 0), 1, 100);
+    const morale = simClampUi(Number(player.morale || 0), 1, 100);
+    const fit = inField ? simClampUi(Number(player.fit || 75), 1, 110) : 75;
+    let rating = 6.05 + (overall - 62) * 0.012 + (morale - 55) * 0.006 + (cond - 70) * 0.005 + (fit - 78) * 0.004;
+    rating += events.goals * 0.82 + events.assists * 0.48 + events.saves * 0.24;
+    rating -= events.yellow * 0.22 + events.red * 1.10 + events.errors * 0.32 + events.goalErrors * 0.42 + events.injuries * 0.18;
+    const goalDiff = side === 'home' ? Number(liveState.homeGoals || 0) - Number(liveState.awayGoals || 0) : Number(liveState.awayGoals || 0) - Number(liveState.homeGoals || 0);
+    rating += simClampUi(goalDiff, -3, 3) * 0.08;
+    const minute = Number(liveState.minute || 0);
+    if(minute < 15 && !events.goals && !events.assists && !events.yellow && !events.red && !events.errors && !events.saves) rating = 6.3 + (overall - 60) * 0.006 + (fit - 80) * 0.003;
+    return simClampUi(rating, 3.0, 10.0).toFixed(1).replace('.', ',');
+  }
   function playerListRow(player, side, inField=true, isOwn=false){
     const id = Number(player.id || 0);
     const selected = isOwn && (inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id);
@@ -114,10 +179,14 @@
     const cond = Math.round(Number(player.condition || 0));
     const morale = Math.round(Number(player.morale || 0));
     const fit = Math.round(Number(player.fit || (inField ? 100 : 0)));
+    const rating = livePlayerRating(player, side, inField);
+    const ratingClass = rating === '—' ? 'idle' : liveRatingClass(Number(String(rating).replace(',', '.')));
     const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${isOwn ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
     const attr = isOwn ? (inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`) : '';
     const tag = availabilityTag(player, inField, isOwn);
-    const body = `<span class="num">${inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'}</span><strong>${ehtml(lastName(player.name))}</strong><span>${ehtml(player.role || player.position || '—')}</span><b>${Math.round(Number(player.overall || 0))}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>${tag}`;
+    const icons = livePlayerIcons(id);
+    const nameCell = `<span class="live-name-cell"><strong>${ehtml(lastName(player.name))}</strong>${icons}${tag}</span>`;
+    const body = `<span class="num">${inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b>${Math.round(Number(player.overall || 0))}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
     return isOwn ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
   }
   function formationSelect(){
@@ -140,7 +209,7 @@
         <div class="live-formation-control"><span>Formación</span>${isOwn ? formationSelect() : `<strong>${ehtml(sideFormation(side))}</strong>`}</div>
       </div>
       <p class="muted small live-selected-hint">${ehtml(selectedHint)}</p>
-      <div class="live-list-head"><span>N°</span><span>Jugador</span><span>Rol</span><span>MED</span><span>Fís</span><span>Mor</span><span>Rol%</span></div>
+      <div class="live-list-head"><span>N°</span><span>Jugador</span><span>Rol</span><span>MED</span><span>Pun</span><span>Fís</span><span>Mor</span><span>Rol%</span></div>
       <div class="live-team-list starters">${lineup.map(p => playerListRow(p, side, true, isOwn)).join('') || '<p class="muted small">Sin titulares.</p>'}</div>
       <div class="live-bench-title compact"><strong>Banco</strong><span>${bench.length} suplentes · ${used}/3 cambios</span></div>
       <div class="live-team-list bench">${bench.map(p => playerListRow(p, side, false, isOwn)).join('') || '<p class="muted small">Sin suplentes disponibles.</p>'}</div>
@@ -339,7 +408,8 @@
   function runAutoMode(){
     clearTimeout(liveAutoTimer);
     if(livePaused || !liveSession || liveState?.finished) return;
-    liveAutoTimer = setTimeout(() => { simulateNextBlockFromUi(); runAutoMode(); }, 420);
+    const autoDelay = Math.max(300, Number(window.GAME_CONFIG?.ui?.simulacionVivaAutoMs || 840));
+    liveAutoTimer = setTimeout(() => { simulateNextBlockFromUi(); runAutoMode(); }, autoDelay);
   }
   function start(match, options={}){
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;

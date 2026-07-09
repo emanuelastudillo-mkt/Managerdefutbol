@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.12',
+  version: 'V5.13',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -500,6 +500,8 @@ window.GAME_CONFIG = {
     fasesSimulacionPartido: 90,
     duracionSimulacionPartidoMs: 270000,
     duracionMinimaFaseSimulacionMs: 3000,
+    // Simulador vivo: demora entre minutos cuando se usa el botón Auto. V5.13 duplica la pausa anterior.
+    simulacionVivaAutoMs: 840,
     relatoMantenerFases: 1,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,

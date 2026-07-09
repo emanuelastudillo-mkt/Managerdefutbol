@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.12 simulación viva compacta con fatiga y cambios bot
+/* Motor de simulación V2.0 · V5.13 simulación viva compacta con puntajes, iconos, fatiga y cambios bot
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -1163,7 +1163,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-tactico-v5.12',
+      engine:'simulador-vivo-tactico-v5.13',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,

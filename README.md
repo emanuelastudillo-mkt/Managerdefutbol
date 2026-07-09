@@ -1,8 +1,23 @@
 # Fútbol Manager MVP
 
-**V5.12 - Simulador vivo compacto, fatiga real y cambios bot**
+**V5.13 - Auto más pausado, puntajes e iconos de partido**
 
 ## Historial de versiones
+
+### V5.13 - Auto más pausado, puntajes e iconos de partido
+
+- El botón **Auto** del simulador vivo ahora avanza más lento: tarda el doble entre minuto y minuto.
+- Se agrega puntaje vivo de partido para titulares de ambos equipos.
+- El puntaje se calcula de forma coherente según media, moral, físico, encaje de rol, resultado parcial y eventos.
+- Se agregan iconos acumulables junto al apellido del jugador:
+  - ⚽ gol
+  - 👟 asistencia
+  - 🟨 amarilla
+  - 🟥 roja
+  - ✚ lesión
+- Los iconos se muestran tanto para el equipo del manager como para el bot.
+- Se mantiene el formato compacto de lista para ahorrar espacio horizontal.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting, `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y documentación a V5.13.
 
 ### V5.12 - Simulador vivo compacto, fatiga real y cambios bot
 

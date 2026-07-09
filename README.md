@@ -1,8 +1,17 @@
 # Fútbol Manager MVP
 
-**V5.05 - Ojeo diario corregido en todos los avances**
+**V5.06 - Academia con crecimiento cualitativo**
 
 ## Historial de versiones
+
+### V5.06 - Academia con crecimiento cualitativo
+
+- En las tarjetas de juveniles de Academia se reemplaza el valor exacto de crecimiento `0/17` por una etiqueta cualitativa.
+- Las etiquetas posibles son `Bajo`, `Normal`, `Muy bueno` y `Excelente`.
+- `0/17` queda representado como `Bajo`; el máximo de temporada, por ejemplo `17/17`, queda representado como `Excelente`.
+- El texto `Crecimiento de media esta temporada` pasa a `Crecimiento esta temporada`.
+- Se agrega una barra visual aproximada para reforzar el estado sin mostrar el número exacto.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.06.
 
 ### V5.05 - Ojeo diario corregido en todos los avances
 

@@ -956,6 +956,29 @@ function academyPlayerStatsMarkup(player){
   const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
   return `<div class="academy-hidden-stats">${Object.entries(stats).map(([label,value]) => `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${unlocked.has(label) ? value : '—'}</strong></div>`).join('')}</div>`;
 }
+
+function academyGrowthStage(growthNow, growthLimit){
+  const limit = Math.max(0, Number(growthLimit || 0));
+  const current = Math.max(0, Number(growthNow || 0));
+  const ratio = limit ? Math.min(1, current / limit) : 0;
+  if(ratio >= 1){
+    return { label:'Excelente', className:'excellent', bar:100 };
+  }
+  if(ratio >= 0.66){
+    return { label:'Muy bueno', className:'very-good', bar:76 };
+  }
+  if(ratio >= 0.33){
+    return { label:'Normal', className:'normal', bar:52 };
+  }
+  return { label:'Bajo', className:'low', bar:22 };
+}
+function academyGrowthSoftMarkup(growthNow, growthLimit){
+  const stage = academyGrowthStage(growthNow, growthLimit);
+  return `<div class="academy-growth-soft academy-growth-${stage.className}">
+    <div class="stat-rank academy-growth-cap"><span>Crecimiento esta temporada</span><strong>${escapeHtml(stage.label)}</strong></div>
+    <div class="academy-growth-soft-bar" aria-hidden="true"><span style="width:${stage.bar}%"></span></div>
+  </div>`;
+}
 function academyPlayerCard(player){
   ensureAcademyGrowthState(player);
   const training = academyTrainingType(player.id);
@@ -972,7 +995,7 @@ function academyPlayerCard(player){
     <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${finalSeasonPill}${injuryPill}</div></div>
     ${finalSeason ? '<div class="academy-injury-alert academy-final-season-alert"><strong>Última temporada en academia</strong><span>Si no firma contrato profesional antes del cambio de temporada, desaparece.</span></div>' : ''}
     ${injured ? `<div class="academy-injury-alert"><strong>${escapeHtml(injuryLabel)}</strong><span>No entrena habilidades hasta ser tratado o recuperarse.</span></div>` : ''}
-    <div class="stat-rank academy-growth-cap"><span>Crecimiento de media esta temporada</span><strong>${growthNow}/${growthLimit}</strong></div>
+    ${academyGrowthSoftMarkup(growthNow, growthLimit)}
     ${academyVisibilityPieMarkup(player)}
     ${academyPlayerStatsMarkup(player)}
     <div class="row academy-actions">

@@ -1,5 +1,12 @@
 # Características de versión
 
+## V5.06 - Academia con crecimiento cualitativo
+
+- El crecimiento de juveniles en Academia deja de mostrarse como número exacto `actual/límite`.
+- Se usan cuatro niveles legibles: `Bajo`, `Normal`, `Muy bueno` y `Excelente`.
+- La etiqueta del bloque cambia de `Crecimiento de media esta temporada` a `Crecimiento esta temporada`.
+- Se agrega una barra aproximada para que el estado sea visual sin exponer valores tan exactos.
+
 ## V5.05 - Ojeo diario corregido en todos los avances
 
 - El proceso diario del Centro de Ojeo ya no depende únicamente de avanzar días vacíos.

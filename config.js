@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.05',
+  version: 'V5.06',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -61,7 +61,7 @@ window.GAME_CONFIG = {
     simulacionRapidaBots: true,
 
     // Bloqueo entre partidos propios en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 30000,
+    bloqueoEntreAvancesMs: 120000,
     // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
     bloqueoAvanceDiaMs: 2000,
     // Duración visual de la transición al avanzar días.

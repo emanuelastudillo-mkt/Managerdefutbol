@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.30',
+  version: 'V4.31',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -362,8 +362,17 @@ window.GAME_CONFIG = {
     multiplicadorEntrenamientoJuvenilExcepcional: 5,
     juvenilExcepcionalPorTemporada: true,
     edadJuvenilExcepcional: 16,
+    edadJuvenilMin: 12,
+    edadJuvenilMax: 16,
+    edadUltimaTemporadaAcademia: 17,
     mediaJuvenilExcepcionalMin: 12,
     mediaJuvenilExcepcionalMax: 40,
+    mediaMaximaCreacionBase: 30,
+    mediaMaximaCreacionBonusEdad: 3,
+    crecimientoTemporadaMin: 7,
+    crecimientoTemporadaMax: 11,
+    crecimientoExcepcionalTemporadaMin: 15,
+    crecimientoExcepcionalTemporadaMax: 20,
     cupoBaseJuveniles: 10,
     residenciaCuposJuveniles: 20,
     residenciaCostoMensual: 560000,

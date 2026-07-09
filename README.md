@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.30 - Centro de Ojeo y gastos mensuales**
+**V4.31 - Reglas de juveniles y límites de crecimiento**
 
 ## Historial de versiones
+
+### V4.31 - Reglas de juveniles y límites de crecimiento
+
+- Los juveniles captados ahora se crean entre 12 y 16 años.
+- La media máxima inicial depende de la edad: base 30 + bonus por edad.
+- Los juveniles normales tienen un límite de crecimiento de media por temporada entre 7 y 11 puntos.
+- El juvenil excepcional mantiene entrenamiento x5, pero queda limitado a 15-20 puntos de crecimiento de media por temporada.
+- Con 17 años el juvenil entra en su última temporada de academia.
+- Si al cambiar temporada un juvenil de 17 años no recibió contrato profesional, desaparece de la academia.
+- Se agrega advertencia visual en juveniles de 17 años.
+- La ficha de academia muestra el progreso de crecimiento de media usado en la temporada.
 
 ### V4.30 - Centro de Ojeo y gastos mensuales
 

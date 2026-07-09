@@ -223,6 +223,7 @@ function resetAcademySeasonState(){
   game.academy.lastConsultTurn = null;
   game.academy.lastConsultReveal = null;
   game.academy.exceptionalYouthGrantedSeason = null;
+  resetAcademyGrowthForSeason();
   resetAcademyYouthInjurySeason();
 }
 function resetAcademyYouthInjurySeason(){
@@ -242,23 +243,78 @@ function ensureAcademyYouthInjurySeason(){
     resetAcademyYouthInjurySeason();
   }
 }
+
+function academyCreationMaxOverall(age){
+  const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+  const base = Number.isFinite(Number(typeof ACADEMY_YOUTH_CREATION_MAX_BASE !== 'undefined' ? ACADEMY_YOUTH_CREATION_MAX_BASE : 30)) ? Number(ACADEMY_YOUTH_CREATION_MAX_BASE) : 30;
+  const bonus = Number.isFinite(Number(typeof ACADEMY_YOUTH_CREATION_AGE_BONUS !== 'undefined' ? ACADEMY_YOUTH_CREATION_AGE_BONUS : 3)) ? Number(ACADEMY_YOUTH_CREATION_AGE_BONUS) : 3;
+  const yearsBonus = Math.max(0, Math.round(Number(age || minAge)) - minAge + bonus);
+  return clamp(Math.round(base + yearsBonus), 1, 99);
+}
+function academySeasonGrowthLimit(player, season=game?.seasonNumber || 1){
+  const exceptional = Boolean(player?.exceptional);
+  const min = exceptional ? (typeof ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN !== 'undefined' ? ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN : 15) : (typeof ACADEMY_YOUTH_SEASON_GROWTH_MIN !== 'undefined' ? ACADEMY_YOUTH_SEASON_GROWTH_MIN : 7);
+  const max = exceptional ? (typeof ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX !== 'undefined' ? ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX : 20) : (typeof ACADEMY_YOUTH_SEASON_GROWTH_MAX !== 'undefined' ? ACADEMY_YOUTH_SEASON_GROWTH_MAX : 11);
+  const cleanMin = Math.max(0, Math.round(Number(min || 0)));
+  const cleanMax = Math.max(cleanMin, Math.round(Number(max || cleanMin)));
+  return cleanMin + hashNumber(`academy-growth-limit-${player?.id || 0}-${season}-${exceptional ? 'x' : 'n'}`, cleanMax - cleanMin + 1);
+}
+function academyUncappedProjectedOverall(player){ return rawVisibleOverall(academyTempPlayer(player)); }
+function ensureAcademyGrowthState(player){
+  if(!player || player.status && player.status !== 'academy') return player;
+  const season = Number(game?.seasonNumber || player.growthSeason || 1);
+  if(Number(player.growthSeason || 0) !== season || !Number.isFinite(Number(player.seasonStartOverall)) || !Number.isFinite(Number(player.seasonGrowthLimit))){
+    const current = clamp(Math.round(Number(player.overall || academyUncappedProjectedOverall(player) || 1)), 1, 99);
+    const limit = academySeasonGrowthLimit(player, season);
+    player.growthSeason = season;
+    player.seasonStartOverall = current;
+    player.seasonGrowthLimit = limit;
+    player.seasonMaxOverall = clamp(current + limit, 1, 99);
+  } else {
+    player.seasonStartOverall = clamp(Math.round(Number(player.seasonStartOverall || player.overall || 1)), 1, 99);
+    player.seasonGrowthLimit = Math.max(0, Math.round(Number(player.seasonGrowthLimit || 0)));
+    player.seasonMaxOverall = clamp(Math.round(Number(player.seasonMaxOverall || (player.seasonStartOverall + player.seasonGrowthLimit))), 1, 99);
+  }
+  return player;
+}
+function academyGrowthCapOverall(player){
+  ensureAcademyGrowthState(player);
+  return clamp(Math.round(Number(player?.seasonMaxOverall || 99)), 1, 99);
+}
+function resetAcademyGrowthForSeason(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  let count = 0;
+  academyActivePlayers().forEach(player => {
+    const current = academyProjectedOverall(player);
+    player.growthSeason = Number(game.seasonNumber || 1);
+    player.seasonStartOverall = current;
+    player.seasonGrowthLimit = academySeasonGrowthLimit(player, game.seasonNumber || 1);
+    player.seasonMaxOverall = clamp(player.seasonStartOverall + player.seasonGrowthLimit, 1, 99);
+    player.overall = current;
+    count += 1;
+  });
+  return count;
+}
 function normalizeAcademyPlayer(player){
   if(!player) return null;
   const group = normalizeAcademyGroup(player.group || player.role || player.positionGroup);
-  const age = clamp(Math.round(Number(player.age || 12)), 8, 20);
-  const overall = clamp(Math.round(Number(player.overall || player.media || 12)), 1, 40);
+  const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+  const finalAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17)) ? Number(ACADEMY_YOUTH_FINAL_ACADEMY_AGE) : 17;
+  const age = clamp(Math.round(Number(player.age || minAge)), minAge, Math.max(finalAge, minAge));
   const id = Number(player.id || nextAcademyPlayerId());
-  const skills = player.skills && typeof player.skills === 'object' ? { ...player.skills } : academySkillsFor(group, overall, id);
+  const rawOverall = clamp(Math.round(Number(player.overall || player.media || 12)), 1, 99);
+  const skills = player.skills && typeof player.skills === 'object' ? { ...player.skills } : academySkillsFor(group, rawOverall, id);
   skills.resistencia = clamp(Math.round(Number(skills.resistencia || (1 + hashNumber(`academy-res-${id}`, 9)))), 1, 99);
   const injuredThroughTurn = Math.max(0, Math.round(Number(player.injuredThroughTurn || 0)));
-  return {
+  const normalized = {
     ...player,
     id,
     name:player.name || academyName(id),
     nationality:player.nationality || academyNationality(id),
     age,
     group,
-    overall,
+    overall:rawOverall,
     skills,
     status:player.status || 'academy',
     injuredThroughTurn,
@@ -267,6 +323,9 @@ function normalizeAcademyPlayer(player){
     injuryTreated:Boolean(player.injuryTreated && injuredThroughTurn > currentTurnIndex()),
     injuriesSeason:Math.max(0, Math.round(Number(player.injuriesSeason || 0)))
   };
+  ensureAcademyGrowthState(normalized);
+  normalized.overall = academyProjectedOverall(normalized);
+  return normalized;
 }
 function normalizeAcademyGroup(group){
   const raw = String(group || '').toUpperCase();
@@ -389,11 +448,14 @@ function academyNameForCountry(id, country='Argentina'){
 function academyName(id, country='Argentina'){
   return academyNameForCountry(id, country);
 }
-function academyOverallRoll(id){
+function academyOverallRoll(id, age=null){
+  const maxByAge = academyCreationMaxOverall(age || ACADEMY_YOUTH_MIN_AGE || 12);
   const roll = hashNumber(`academy-overall-band-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 1000) / 1000;
-  if(roll < 0.80) return 1 + hashNumber(`academy-overall-low-${id}-${Math.random()}`, 19);
-  if(roll < 0.90) return 20 + hashNumber(`academy-overall-mid-${id}-${Math.random()}`, 11);
-  return 30 + hashNumber(`academy-overall-high-${id}-${Math.random()}`, 11);
+  let value;
+  if(roll < 0.80) value = 1 + hashNumber(`academy-overall-low-${id}-${Math.random()}`, 19);
+  else if(roll < 0.90) value = 20 + hashNumber(`academy-overall-mid-${id}-${Math.random()}`, 11);
+  else value = 30 + hashNumber(`academy-overall-high-${id}-${Math.random()}`, 11);
+  return clamp(value, 1, maxByAge);
 }
 function academyGroupRoll(id){
   const roll = hashNumber(`academy-group-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 100);
@@ -412,7 +474,11 @@ function academyTempPlayer(player){
   return { id:player.id, name:player.name, age:player.age, nationality:player.nationality, position:academyRepresentativePosition(player.group), overall:player.overall, skills:player.skills || academySkillsFor(player.group, player.overall, player.id) };
 }
 function academyVisibleStats(player){ return visibleStats(academyTempPlayer(player), rawVisibleSkill); }
-function academyProjectedOverall(player){ return rawVisibleOverall(academyTempPlayer(player)); }
+function academyProjectedOverall(player){
+  const raw = academyUncappedProjectedOverall(player);
+  if(!player || player.status && player.status !== 'academy') return raw;
+  return Math.min(raw, academyGrowthCapOverall(player));
+}
 function startAcademyScouting(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
@@ -432,8 +498,10 @@ function createAcademyBatch(count){
   let id = nextAcademyPlayerId();
   for(let i=0;i<count;i++, id++){
     const group = academyGroupRoll(id);
-    const overall = academyOverallRoll(id);
-    const age = 8 + hashNumber(`academy-age-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 7);
+    const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+    const maxAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MAX_CREATION_AGE !== 'undefined' ? ACADEMY_YOUTH_MAX_CREATION_AGE : 16)) ? Number(ACADEMY_YOUTH_MAX_CREATION_AGE) : 16;
+    const age = minAge + hashNumber(`academy-age-${game?.seasonNumber || 1}-${id}-${Math.random()}`, Math.max(1, maxAge - minAge + 1));
+    const overall = academyOverallRoll(id, age);
     const nationality = academyNationality(id);
     players.push(normalizeAcademyPlayer({
       id,
@@ -455,7 +523,7 @@ function createExceptionalAcademyYouth(){
   const id = nextAcademyPlayerId();
   const group = academyGroupRoll(id);
   const span = Math.max(0, ACADEMY_EXCEPTIONAL_YOUTH_MAX_OVERALL - ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL);
-  const overall = clamp(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL + hashNumber(`academy-exceptional-overall-${game?.seasonNumber || 1}-${id}-${Math.random()}`, span + 1), 1, 40);
+  const overall = clamp(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL + hashNumber(`academy-exceptional-overall-${game?.seasonNumber || 1}-${id}-${Math.random()}`, span + 1), 1, academyCreationMaxOverall(ACADEMY_EXCEPTIONAL_YOUTH_AGE));
   return normalizeAcademyPlayer({
     id,
     name:academyName(id, academyLocalCountry()),
@@ -648,18 +716,37 @@ function applyAcademyTrainingEffects(){
   academyActivePlayers().forEach(player => {
     if(academyPlayerInjured(player)) return;
     player.skills = player.skills || academySkillsFor(player.group, player.overall, player.id);
+    ensureAcademyGrowthState(player);
+    const cap = academyGrowthCapOverall(player);
+    if(academyUncappedProjectedOverall(player) >= cap){
+      player.overall = academyProjectedOverall(player);
+      return;
+    }
     const type = academyTrainingType(player.id);
     const gainMultiplier = Math.max(1, Math.round(academyTrainingGainMultiplier(player)));
+    const canApplySkillPoint = (skill) => {
+      const previous = Math.round(Number(player.skills[skill] || 1));
+      player.skills[skill] = clamp(previous + 1, 1, 99);
+      if(academyUncappedProjectedOverall(player) > cap){
+        player.skills[skill] = previous;
+        return false;
+      }
+      return true;
+    };
     if(type === 'resistance'){
-      player.skills.resistencia = clamp(Math.round(Number(player.skills.resistencia || 1) + rnd(3,6) * gainMultiplier), 1, 99);
+      const total = Math.max(1, Math.round(rnd(3,6) * gainMultiplier));
+      for(let i=0;i<total;i++){
+        if(!canApplySkillPoint('resistencia')) break;
+      }
     } else {
       const skillNames = Object.keys(player.skills).filter(k => k !== 'porteria' || player.group === 'POR');
       for(let i=0;i<gainMultiplier;i++){
+        if(academyUncappedProjectedOverall(player) >= cap) break;
         const skill = skillNames[hashNumber(`academy-train-${player.id}-${currentTurnIndex()}-${i}-${Math.random()}`, skillNames.length)];
-        player.skills[skill] = clamp(Math.round(Number(player.skills[skill] || 1) + 1), 1, 99);
+        canApplySkillPoint(skill);
       }
     }
-    player.overall = clamp(academyProjectedOverall(player), 1, 60);
+    player.overall = clamp(academyProjectedOverall(player), 1, 99);
   });
 }
 function processAcademyTurn(){
@@ -776,14 +863,44 @@ function promoteAcademyPlayer(playerId, exactPosition){
   renderAll();
   showNotice(`${official.name} ya está en el primer equipo.`);
 }
+function expireFinalSeasonAcademyPlayers(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const finalAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17)) ? Number(ACADEMY_YOUTH_FINAL_ACADEMY_AGE) : 17;
+  const expired = [];
+  game.academy.players.forEach(player => {
+    if(player.status !== 'academy') return;
+    if(Number(player.age || 0) >= finalAge){
+      player.status = 'expired';
+      player.expiredSeason = Number(game.seasonNumber || 1);
+      player.expiredTurn = currentTurnIndex();
+      expired.push(player);
+    }
+  });
+  if(expired.length){
+    expired.forEach(player => {
+      if(game.academy.unlockedStats) delete game.academy.unlockedStats[player.id];
+      if(game.academy.trainingPlan) delete game.academy.trainingPlan[player.id];
+    });
+    const names = expired.slice(0,4).map(p => p.name).join(', ');
+    pushGameMessage({
+      type:'academia',
+      title:'Juveniles dejaron la academia',
+      body:`${expired.length} juvenil(es) de 17 años terminaron su última temporada sin contrato profesional${names ? `: ${names}${expired.length > 4 ? '...' : ''}` : ''}.`,
+      priority:'high'
+    });
+  }
+  return expired.length;
+}
 function applyAcademyAgingIfNeeded(){
   if(!game?.academy) return 0;
-  const season = Number(game.seasonNumber || 1);
-  if(season % 2 !== 0) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  expireFinalSeasonAcademyPlayers();
   let count = 0;
   game.academy.players.forEach(player => {
     if(player.status !== 'academy') return;
-    player.age = Math.max(8, Number(player.age || 12) + 1);
+    player.age = Math.max(ACADEMY_YOUTH_MIN_AGE || 12, Number(player.age || 12) + 1);
+    player.age = Math.min(player.age, ACADEMY_YOUTH_FINAL_ACADEMY_AGE || 17);
     count += 1;
   });
   return count;
@@ -840,15 +957,22 @@ function academyPlayerStatsMarkup(player){
   return `<div class="academy-hidden-stats">${Object.entries(stats).map(([label,value]) => `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${unlocked.has(label) ? value : '—'}</strong></div>`).join('')}</div>`;
 }
 function academyPlayerCard(player){
+  ensureAcademyGrowthState(player);
   const training = academyTrainingType(player.id);
   const canPromote = Number(player.age || 0) >= 16;
+  const finalSeason = Number(player.age || 0) >= (typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17);
   const injured = academyPlayerInjured(player);
   const injuryLabel = academyYouthInjuryLabel(player);
   const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x5</span>' : '<span class="pill">Media oculta</span>';
+  const finalSeasonPill = finalSeason ? '<span class="pill warn">⚠ Última temporada</span>' : '';
   const injuryPill = injured ? '<span class="pill bad">Lesionado</span>' : '';
-  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''}">
-    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${injuryPill}</div></div>
+  const growthNow = Math.max(0, academyProjectedOverall(player) - Number(player.seasonStartOverall || academyProjectedOverall(player)));
+  const growthLimit = Math.max(0, Number(player.seasonGrowthLimit || 0));
+  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''} ${finalSeason ? 'academy-player-final-season' : ''}">
+    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${finalSeasonPill}${injuryPill}</div></div>
+    ${finalSeason ? '<div class="academy-injury-alert academy-final-season-alert"><strong>Última temporada en academia</strong><span>Si no firma contrato profesional antes del cambio de temporada, desaparece.</span></div>' : ''}
     ${injured ? `<div class="academy-injury-alert"><strong>${escapeHtml(injuryLabel)}</strong><span>No entrena habilidades hasta ser tratado o recuperarse.</span></div>` : ''}
+    <div class="stat-rank academy-growth-cap"><span>Crecimiento de media esta temporada</span><strong>${growthNow}/${growthLimit}</strong></div>
     ${academyVisibilityPieMarkup(player)}
     ${academyPlayerStatsMarkup(player)}
     <div class="row academy-actions">
@@ -903,7 +1027,7 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x5 y promovible de inmediato. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, entrenable x5 y promovible de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);

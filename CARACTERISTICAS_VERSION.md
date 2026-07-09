@@ -1,20 +1,18 @@
-# Características V4.30 - Centro de Ojeo y gastos mensuales
+# Características V4.31 - Reglas de juveniles y límites de crecimiento
 
 ## Cambios
 
-- Nuevo menú lateral: `Centro de Ojeo`.
-- Los jugadores externos pueden agregarse al Centro de Ojeo desde su ficha individual con el botón `Ojear`.
-- El Centro de Ojeo tiene lista de jugadores observados, informes acumulativos, oficinas, ojeadores y jefe de ojeadores.
-- Todos los clubes tienen base de 2 ojeadores y hasta 5 jugadores listados.
-- Cada oficina suma 3 cupos de ojeadores y 10 cupos de jugadores listados.
-- Contratar ojeador cuesta $200.000 por día. Se puede despedir en cualquier momento.
-- Las oficinas tienen alquiler mensual configurable.
-- El jefe de ojeadores puede ser Regular, Bueno o Elite, con sueldo mensual y capacidad máxima de oficinas.
-- El jefe de ojeadores no puede despedirse; se va al finalizar la temporada.
-- No se puede cancelar una oficina si antes no se reduce la cantidad de ojeadores o jugadores listados por debajo del nuevo cupo.
-- Se agregan gastos mensuales: impuesto de ganancias, electricidad y limpieza general.
-- Las instrucciones de partido por resultado se reemplazan por 3 visores porcentuales de habilidades titulares por sector.
+- Los juveniles generados por captación ahora nacen entre 12 y 16 años.
+- Se limita la media máxima inicial con la fórmula: `30 + (edad - 12 + 3)`.
+- Los juveniles normales pueden subir como máximo entre 7 y 11 puntos de media por temporada.
+- El juvenil excepcional conserva entrenamiento x5, pero su crecimiento máximo de media por temporada queda entre 15 y 20 puntos.
+- Cada juvenil guarda su techo de crecimiento por temporada.
+- El entrenamiento de academia deja de aumentar habilidades si el jugador ya alcanzó su techo anual de media.
+- Con 17 años el juvenil queda marcado como `Última temporada`.
+- Al cambiar temporada, los juveniles de 17 años que no firmaron contrato profesional desaparecen de la academia.
+- Se agrega advertencia visual en la tarjeta del juvenil de 17 años.
+- La tarjeta de academia muestra el progreso `crecimiento de media esta temporada`.
 
 ## Motivo
 
-El scouting externo necesitaba un sistema acumulativo y administrable. Además, la economía diaria requería nuevos gastos fijos para evitar acumulaciones excesivas de presupuesto y hacer más relevante la planificación financiera mensual.
+La academia necesitaba límites claros para evitar subidas excesivas con el calendario diario y para convertir los 17 años en una decisión real: firmar contrato profesional o perder al juvenil al final de la temporada.

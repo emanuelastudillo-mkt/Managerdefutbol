@@ -1,12 +1,15 @@
 # Fútbol Manager MVP
 
-## Versión actual
-
-**V4.14 - Corrección simulador visual**
+**V4.15 - Verificador de ligas incompletas**
 
 ## Historial de versiones
 
-
+### V4.15 - Verificador de ligas incompletas
+- El verificador ahora conserva una referencia de estructura base antes de cargar snapshots guardados.
+- La reparación segura ya no solo quita clubes de ligas incorrectas: también intenta completar divisiones que quedaron con menos de su cantidad esperada.
+- Detecta ligas con cantidad incorrecta de clubes y vuelve a mostrar la opción de reparación segura si quedan cupos sin completar.
+- El reporte de divisiones muestra `clubes / esperado`.
+- La reparación regenera `clubDivisionOverrides` y guarda la partida sin reconstruir calendario ni borrar resultados.
 
 ### V4.14 - Corrección simulador visual
 

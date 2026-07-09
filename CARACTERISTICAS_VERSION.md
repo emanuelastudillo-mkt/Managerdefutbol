@@ -1,24 +1,23 @@
-# V4.14 - Corrección simulador visual
+# V4.15 - Verificador de ligas incompletas
 
-## Cambios principales
+## Cambios
 
-- Se corrige un error del visor de inclinación de cancha agregado en V4.12.
-- El simulador volvía a quedar detenido después del bloque superior del partido por una variable interna mal nombrada.
-- El modal ahora renderiza nuevamente fases, relato, eventos, estadísticas y resultado final.
-- Se agregan defensas para que, si un partido viene con datos incompletos, el simulador visual no bloquee el cierre del partido.
-- Si el visor falla por datos corruptos de una partida vieja, muestra resultado final de respaldo y permite continuar.
+- Se mejora el botón `Verificar que todo esté bien`.
+- El verificador ahora conserva una referencia de la estructura base de clubes/divisiones antes de cargar snapshots de partidas guardadas.
+- La reparación segura corrige clubes en país incorrecto y además balancea divisiones incompletas.
+- Si una liga queda con menos de sus clubes esperados, vuelve a aparecer la opción de `Aplicar reparaciones seguras`.
+- El reporte de estructura muestra `clubes / esperado` por división.
+- La reparación actualiza `clubDivisionOverrides` y guarda la partida.
 
-## Archivos modificados
+## Seguridad
 
-- `index.html`
-- `config.js`
-- `VERSION.md`
-- `README.md`
-- `CARACTERISTICAS_VERSION.md`
-- `js/ui/12-modals.js`
+- No reconstruye calendario.
+- No borra resultados.
+- No reinicia temporada.
+- No elimina jugadores.
+- No modifica economía.
 
-## Validaciones
+## Compatibilidad
 
-- Sintaxis validada en `config.js`.
-- Sintaxis validada en todos los archivos `.js`.
-- Prueba aislada del render del simulador visual con eventos de gol, roja y lesión.
+- Se implementa solo.
+- Recomendado para partidas donde el verificador anterior movió clubes pero dejó ligas con menos de 18 equipos.

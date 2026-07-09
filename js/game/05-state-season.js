@@ -562,6 +562,116 @@ function safeTargetDivisionForClub(club, currentDivision=null){
   const currentOrder = Number(currentDivision?.order || club?.divisionOrder || 1);
   return candidates.find(division => Number(division.order || 0) === currentOrder) || candidates[0];
 }
+function baseClubDivisionIntegrityMap(){
+  if(typeof window !== 'undefined' && window.__BASE_CLUB_DIVISION_INTEGRITY_MAP__) return window.__BASE_CLUB_DIVISION_INTEGRITY_MAP__;
+  return null;
+}
+function baseClubDivisionEntry(club){
+  const map = baseClubDivisionIntegrityMap();
+  if(!map || !club) return null;
+  const byId = map.byId?.[String(club.id || '')];
+  if(byId) return byId;
+  const key = `${integrityCountryKey(club.country || club.pais || '')}::${normalizeScheduleText(club.name || '')}`;
+  return map.byName?.[key] || null;
+}
+function nativeTargetDivisionForClub(club, currentDivision=null){
+  const divisionsById = integrityDivisionById();
+  const native = baseClubDivisionEntry(club);
+  if(native?.divisionId){
+    const target = divisionsById[String(native.divisionId || '')];
+    if(target && divisionCountryKey(target) === clubCountryKeyForIntegrity(club)) return target;
+  }
+  return safeTargetDivisionForClub(club, currentDivision);
+}
+function expectedDivisionTeamCount(division){
+  const base = baseClubDivisionIntegrityMap();
+  const fromBase = Number(base?.divisionCounts?.[String(division?.id || 'default')]);
+  if(Number.isFinite(fromBase) && fromBase > 0) return Math.round(fromBase);
+  const explicit = Number(division?.expectedTeams || division?.teamCount || division?.teamsCount || division?.cantidadEquipos);
+  if(Number.isFinite(explicit) && explicit > 0) return Math.round(explicit);
+  return 18;
+}
+function setClubIntegrityDivision(club, target){
+  if(!club || !target) return false;
+  const changed = String(club.divisionId || '') !== String(target.id || '');
+  club.divisionId = target.id;
+  club.divisionName = target.name;
+  club.divisionOrder = target.order;
+  club.prizeMultiplier = target.prizeMultiplier ?? divisionPrizeMultiplier(target.name, (target.order || 1)-1);
+  return changed;
+}
+function divisionCountIntegrityRows(){
+  return (seed?.divisions || []).map(division => {
+    const expected = expectedDivisionTeamCount(division);
+    const count = (seed?.clubs || []).filter(club => String(club.divisionId || 'default') === String(division.id || 'default')).length;
+    return { id:division.id, name:division.name, country:division.country || '', order:division.order || 1, expected, count, delta:count - expected };
+  });
+}
+function buildDivisionCountRepairPlan(){
+  const divisions = (seed?.divisions || []).slice();
+  const byId = Object.fromEntries(divisions.map(division => [String(division.id || 'default'), division]));
+  const assignments = new Map((seed?.clubs || []).map(club => [Number(club.id), String(club.divisionId || 'default')]));
+  const plan = [];
+  const countries = Array.from(new Set(divisions.map(division => divisionCountryKey(division)).filter(Boolean)));
+  countries.forEach(country => {
+    const countryDivisions = divisions
+      .filter(division => divisionCountryKey(division) === country)
+      .sort((a,b)=>(a.order || 0)-(b.order || 0));
+    const expectedById = Object.fromEntries(countryDivisions.map(division => [String(division.id || 'default'), expectedDivisionTeamCount(division)]));
+    const countFor = divisionId => Array.from(assignments.values()).filter(value => String(value) === String(divisionId)).length;
+    const countryClubIds = (seed?.clubs || [])
+      .filter(club => clubCountryKeyForIntegrity(club) === country)
+      .map(club => Number(club.id));
+    countryDivisions.forEach(targetDivision => {
+      let need = Math.max(0, expectedById[String(targetDivision.id || 'default')] - countFor(targetDivision.id));
+      while(need > 0){
+        const overflowDivisions = countryDivisions
+          .filter(division => countFor(division.id) > expectedById[String(division.id || 'default')])
+          .sort((a,b)=>Math.abs((a.order || 1) - (targetDivision.order || 1)) - Math.abs((b.order || 1) - (targetDivision.order || 1)));
+        if(!overflowDivisions.length) break;
+        let chosenClub = null;
+        let fromDivision = null;
+        overflowDivisions.some(sourceDivision => {
+          const candidates = countryClubIds
+            .filter(clubId => String(assignments.get(clubId)) === String(sourceDivision.id || 'default'))
+            .map(clubId => (seed?.clubs || []).find(club => Number(club.id) === Number(clubId)))
+            .filter(Boolean)
+            .sort((a,b) => {
+              const nativeA = baseClubDivisionEntry(a);
+              const nativeB = baseClubDivisionEntry(b);
+              const targetId = String(targetDivision.id || 'default');
+              const nativeScoreA = String(nativeA?.divisionId || '') === targetId ? 0 : 10;
+              const nativeScoreB = String(nativeB?.divisionId || '') === targetId ? 0 : 10;
+              const selectedScoreA = Number(a.id) === Number(game?.selectedClubId || 0) ? 5 : 0;
+              const selectedScoreB = Number(b.id) === Number(game?.selectedClubId || 0) ? 5 : 0;
+              const foundedScoreA = typeof isFoundedClubId === 'function' && isFoundedClubId(a.id) ? 5 : 0;
+              const foundedScoreB = typeof isFoundedClubId === 'function' && isFoundedClubId(b.id) ? 5 : 0;
+              return (nativeScoreA + selectedScoreA + foundedScoreA) - (nativeScoreB + selectedScoreB + foundedScoreB);
+            });
+          if(candidates.length){
+            chosenClub = candidates[0];
+            fromDivision = sourceDivision;
+            return true;
+          }
+          return false;
+        });
+        if(!chosenClub || !fromDivision) break;
+        assignments.set(Number(chosenClub.id), String(targetDivision.id || 'default'));
+        plan.push({
+          clubId:chosenClub.id,
+          clubName:chosenClub.name,
+          fromDivisionId:fromDivision.id,
+          fromDivisionName:fromDivision.name,
+          toDivisionId:targetDivision.id,
+          toDivisionName:targetDivision.name,
+          country:targetDivision.country || country
+        });
+        need -= 1;
+      }
+    });
+  });
+  return plan.filter(item => byId[String(item.fromDivisionId || '')] && byId[String(item.toDivisionId || '')]);
+}
 function currentFreeAgentIntegrityCount(){
   const ids = new Set();
   (game?.marketPlayers || []).forEach(player => { if(Number(player?.clubId || 0) === 0) ids.add(Number(player.id)); });
@@ -606,14 +716,14 @@ function inspectGameIntegrity(){
     const divisionId = String(club.divisionId || 'default');
     const division = divisionsById[divisionId];
     if(!division){
-      const target = safeTargetDivisionForClub(club, null);
+      const target = nativeTargetDivisionForClub(club, null);
       invalidDivisionClubs.push({ clubId:club.id, clubName:club.name, divisionId, targetDivisionId:target?.id || '', targetDivisionName:target?.name || '' });
       return;
     }
     const clubCountry = clubCountryKeyForIntegrity(club);
     const divCountry = divisionCountryKey(division);
     if(clubCountry && divCountry && clubCountry !== divCountry){
-      const target = safeTargetDivisionForClub(club, division);
+      const target = nativeTargetDivisionForClub(club, division);
       crossCountryClubs.push({
         clubId:club.id,
         clubName:club.name,
@@ -696,13 +806,19 @@ function inspectGameIntegrity(){
     result.ok = false;
     result.warnings.push({ type:'free_agents_over_cap', severity:'low', title:'Mercado libre excedido', detail:`Hay ${result.stats.freeAgents} libres y el máximo configurado es ${freeCap}. La limpieza automática de mercado debería recortarlo en carga/temporada.` });
   }
-  const divisionCounts = (seed.divisions || []).map(division => ({
-    id:division.id,
-    name:division.name,
-    country:division.country || '',
-    count:(seed.clubs || []).filter(club => String(club.divisionId || 'default') === String(division.id || 'default')).length
-  }));
+  const divisionCounts = divisionCountIntegrityRows();
   result.stats.divisionCounts = divisionCounts;
+  const countMismatches = divisionCounts.filter(item => Number(item.count || 0) !== Number(item.expected || 0));
+  if(countMismatches.length){
+    result.ok = false;
+    const repairPlan = buildDivisionCountRepairPlan();
+    result.warnings.push({ type:'division_team_count_mismatch', severity:'medium', title:'Ligas con cantidad incorrecta de clubes', detail:`Hay ${countMismatches.length} división(es) que no tienen su cantidad esperada de clubes.`, samples:countMismatches.slice(0,8) });
+    if(repairPlan.length){
+      result.repairables.push({ type:'division_team_count_mismatch', title:'Completar ligas moviendo clubes de exceso a su división correspondiente', count:repairPlan.length, items:repairPlan });
+    }else if(baseClubDivisionIntegrityMap()){
+      result.repairables.push({ type:'restore_native_division_structure', title:'Restaurar estructura base de divisiones para completar ligas', count:countMismatches.length, items:countMismatches });
+    }
+  }
   result.canRepair = result.repairables.some(item => Number(item.count || 0) > 0);
   return result;
 }
@@ -720,13 +836,13 @@ function integrityIssueMarkup(item){
 function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
   const issueItems = (result.issues || []).map(integrityIssueMarkup).join('');
   const warningItems = (result.warnings || []).map(integrityIssueMarkup).join('');
-  const divisionRows = (result.stats?.divisionCounts || []).map(item => `<tr><td>${escapeHtml(item.country || '—')}</td><td>${escapeHtml(item.name || item.id)}</td><td>${Number(item.count || 0)}</td></tr>`).join('');
+  const divisionRows = (result.stats?.divisionCounts || []).map(item => { const bad = Number(item.count || 0) !== Number(item.expected || item.count || 0); return `<tr class="${bad ? 'integrity-row-warn' : ''}"><td>${escapeHtml(item.country || '—')}</td><td>${escapeHtml(item.name || item.id)}</td><td>${Number(item.count || 0)} / ${Number(item.expected || item.count || 0)}</td></tr>`; }).join('');
   const repairRows = (result.repairables || []).filter(item => Number(item.count || 0) > 0).map(item => `<li><strong>${escapeHtml(item.title)}</strong><span>${Number(item.count || 0)} caso(s)</span></li>`).join('');
   const stateLabel = result.ok ? 'Todo correcto' : (result.canRepair ? 'Hay reparaciones seguras disponibles' : 'Hay avisos para revisar');
   const body = `<div class="integrity-modal">
     <p class="eyebrow">Verificador de estructura</p>
     <h2>${escapeHtml(stateLabel)}</h2>
-    <p class="muted">Este chequeo no reinicia la partida, no reconstruye calendario y no borra resultados. La reparación segura sólo reasigna clubes que quedaron en una liga de otro país y regenera el mapa de divisiones guardado.</p>
+    <p class="muted">Este chequeo no reinicia la partida, no reconstruye calendario y no borra resultados. La reparación segura reasigna clubes que quedaron en una liga de otro país, completa divisiones con cupos incorrectos y regenera el mapa de divisiones guardado.</p>
     ${repaired ? '<div class="notice-inline good">Reparación segura aplicada y partida guardada.</div>' : ''}
     <div class="integrity-summary-grid">
       <div><span>Clubes</span><strong>${Number(result.stats?.clubs || 0)}</strong></div>
@@ -738,7 +854,7 @@ function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
     ${warningItems ? `<h3>Advertencias</h3><ul class="integrity-list">${warningItems}</ul>` : ''}
     ${repairRows ? `<h3>Reparaciones seguras</h3><ul class="integrity-repair-list">${repairRows}</ul><div class="row message-actions"><button class="primary" data-apply-integrity-repair>Aplicar reparaciones seguras</button></div>` : ''}
     <h3>Clubes por división actual</h3>
-    <div class="table-wrap compact-table"><table><thead><tr><th>País</th><th>División</th><th>Clubes</th></tr></thead><tbody>${divisionRows}</tbody></table></div>
+    <div class="table-wrap compact-table"><table><thead><tr><th>País</th><th>División</th><th>Clubes / esperado</th></tr></thead><tbody>${divisionRows}</tbody></table></div>
   </div>`;
   if(typeof openModal === 'function'){
     openModal(body);
@@ -758,14 +874,36 @@ async function applySafeGameIntegrityRepairs(){
     const currentDivision = divisionsById[String(club.divisionId || 'default')];
     const needsRepair = !currentDivision || clubCountryKeyForIntegrity(club) !== divisionCountryKey(currentDivision);
     if(!needsRepair) return;
-    const target = safeTargetDivisionForClub(club, currentDivision);
+    const target = nativeTargetDivisionForClub(club, currentDivision);
     if(!target) return;
-    club.divisionId = target.id;
-    club.divisionName = target.name;
-    club.divisionOrder = target.order;
-    club.prizeMultiplier = target.prizeMultiplier ?? divisionPrizeMultiplier(target.name, (target.order || 1)-1);
-    repaired += 1;
+    if(setClubIntegrityDivision(club, target)) repaired += 1;
   });
+
+  let countPlan = buildDivisionCountRepairPlan();
+  let guard = 0;
+  while(countPlan.length && guard < 6){
+    countPlan.forEach(item => {
+      const club = (seed?.clubs || []).find(club => Number(club.id) === Number(item.clubId));
+      const target = divisionsById[String(item.toDivisionId || '')];
+      if(!club || !target) return;
+      if(setClubIntegrityDivision(club, target)) repaired += 1;
+    });
+    const nextPlan = buildDivisionCountRepairPlan();
+    if(!nextPlan.length || nextPlan.length === countPlan.length) break;
+    countPlan = nextPlan;
+    guard += 1;
+  }
+
+  const remainingMismatch = divisionCountIntegrityRows().some(item => Number(item.count || 0) !== Number(item.expected || 0));
+  if(remainingMismatch && baseClubDivisionIntegrityMap()){
+    (seed?.clubs || []).forEach(club => {
+      const native = baseClubDivisionEntry(club);
+      const target = native?.divisionId ? divisionsById[String(native.divisionId || '')] : null;
+      if(!target || divisionCountryKey(target) !== clubCountryKeyForIntegrity(club)) return;
+      if(setClubIntegrityDivision(club, target)) repaired += 1;
+    });
+  }
+
   if(game){
     game.clubDivisionOverrides = snapshotClubDivisionOverrides();
     const selectedClub = seed.clubs.find(club => Number(club.id) === Number(game.selectedClubId));
@@ -778,7 +916,7 @@ async function applySafeGameIntegrityRepairs(){
   const after = inspectGameIntegrity();
   after.repairedCount = repaired;
   after.previousIssues = before.issues || [];
-  if(repaired > 0) showNotice(`Verificación: ${repaired} club(es) reasignados a una liga válida.`, false);
+  if(repaired > 0) showNotice(`Verificación: ${repaired} movimiento(s) de estructura aplicados.`, false);
   else showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
   return after;
 }

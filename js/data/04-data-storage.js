@@ -265,7 +265,34 @@ function applyPlayersDatabase(seedData, database){
   seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
   return seedData;
 }
+function captureBaseClubDivisionIntegrityMap(seedData=seed){
+  const map = { byId:{}, byName:{}, divisionCounts:{} };
+  (seedData?.clubs || []).forEach(club => {
+    const id = String(club.id || '');
+    const key = `${normalizeScheduleText(club.country || club.pais || '')}::${normalizeScheduleText(club.name || '')}`;
+    const entry = {
+      clubId:Number(club.id || 0),
+      clubName:club.name || '',
+      country:club.country || club.pais || '',
+      divisionId:club.divisionId || 'default',
+      divisionName:club.divisionName || 'Liga única',
+      divisionOrder:Number(club.divisionOrder || 1),
+      prizeMultiplier:Number(club.prizeMultiplier || 1)
+    };
+    if(id) map.byId[id] = entry;
+    if(key) map.byName[key] = entry;
+    const divId = String(entry.divisionId || 'default');
+    map.divisionCounts[divId] = Math.max(0, Math.round(Number(map.divisionCounts[divId] || 0))) + 1;
+  });
+  return map;
+}
+function preserveBaseClubDivisionIntegrityMap(){
+  const map = captureBaseClubDivisionIntegrityMap(seed);
+  if(typeof window !== 'undefined') window.__BASE_CLUB_DIVISION_INTEGRITY_MAP__ = map;
+  return map;
+}
 function applySavedDatabaseSnapshots(saved){
+  preserveBaseClubDivisionIntegrityMap();
   const clean = { ...(saved || {}) };
   if(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length){
     seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:club.crestPath || `img/escudos/${imageSlug(club.name)}.png` }));

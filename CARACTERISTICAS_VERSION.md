@@ -1,17 +1,25 @@
-# Características de la versión V5.18
+# Características de la versión V5.19
 
-## Fatiga reforzada
+## Simulador vivo
 
-- La pérdida de estado físico del simulador vivo se duplica para ambos equipos.
-- La fatiga sigue considerando resistencia, genética, posición e instrucción activa.
-- Se agrega `GAME_CONFIG.simulador.fatigaVivaMultiplicador` para poder ajustar el multiplicador sin tocar el motor.
+- Se agrega un botón **Táctica** en los controles inferiores del simulador.
+- Al abrirlo, el partido queda pausado para poder pensar y reacomodar el equipo.
+- La táctica rápida usa las mismas listas clickeables: dos titulares intercambian roles; titular y suplente generan una sustitución confirmada.
+- El cambio de formación sigue disponible desde el selector del equipo del manager.
 
-## Cambios bot más agresivos
+## Expulsados
 
-- El bot intenta utilizar mejor los 3 cambios disponibles.
-- Prioriza sacar jugadores cansados, con mal puntaje o con bajo encaje de rol.
-- Evalúa cambios en ventanas más claras: entretiempo, 60, 70, 78 y 84 minutos.
-- El resultado parcial influye en el tipo de suplente elegido: más ofensivo si pierde, más conservador si gana.
+- Los jugadores expulsados pasan a mostrarse junto al banco.
+- Se muestran con tarjeta roja, etiqueta **EXP** y estado bloqueado.
+- No pueden volver a entrar ni ser usados para cambios.
+- Dejan de participar en el motor de simulación desde el minuto siguiente: no aportan ataque, defensa, posesión, goles, asistencias ni tarjetas.
+- La desventaja numérica queda reflejada en la potencia del equipo.
+
+## Instrucción PONGAN HUEVO!!!
+
+- La instrucción deja de dar forma física artificial.
+- Ahora aplica +10% de ataque y +10% de defensa durante el minuto simulado.
+- Como costo, aumenta un 20% la pérdida de estado físico de los jugadores en cancha.
 
 ## Compatibilidad
 

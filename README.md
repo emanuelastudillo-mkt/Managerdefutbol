@@ -2,6 +2,18 @@
 
 ## Historial de versiones
 
+### V5.19 - Táctica viva, expulsados reales e instrucción ajustada
+
+- Agregado botón **Táctica** dentro del simulador vivo.
+- El botón pausa el modo automático y abre una ayuda de táctica rápida para reacomodar jugadores durante el partido.
+- Se mantiene el flujo de listas clickeables: titular + titular intercambia roles; titular + suplente confirma sustitución.
+- Los expulsados ya no desaparecen: pasan visualmente junto al banco con tarjeta roja, etiqueta **EXP** y quedan bloqueados para volver a entrar.
+- Los expulsados dejan de participar realmente en la simulación: no aportan fuerza de equipo, no pueden recibir nuevas tarjetas, no pueden asistir ni convertir goles.
+- El equipo con uno o más expulsados queda en desventaja numérica real para los minutos siguientes.
+- Ajustada la instrucción **PONGAN HUEVO!!!**: ahora da +10% en ataque y defensa y consume 20% extra de estado físico.
+- Se conserva el `config.js` editado por el usuario como base y se actualiza la versión a V5.19.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.19.
+
 ### V5.18 - Fatiga reforzada y cambios bot
 
 - Duplicada la pérdida de estado físico por minuto en el simulador vivo para ambos equipos.
@@ -12,9 +24,7 @@
 - El bot evalúa ventanas de cambio en entretiempo, 60, 70, 78 y 84 minutos.
 - Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.18.
 
-# Fútbol Manager MVP
 
-## Historial de versiones
 
 ### V5.17 - Simulador compacto con descanso real
 
@@ -26,11 +36,9 @@
 - La barra de fases diferencia primer tiempo, descanso y segundo tiempo.
 - Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.17.
 
-# Fútbol Manager MVP
 
 **V5.16 - Avance diario unificado y cooldown de 20 segundos**
 
-## Historial de versiones
 
 ### V5.16 - Avance diario unificado y cooldown de 20 segundos
 

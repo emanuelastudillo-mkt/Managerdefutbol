@@ -376,6 +376,7 @@ const ACADEMY_SCOUTING_TURNS = Math.ceil(configNumber('academia.diasCaptacion', 
 const ACADEMY_PLAYERS_MIN = configNumber('academia.jugadoresMinimosPorCaptacion', 5, 1);
 const ACADEMY_PLAYERS_MAX = Math.max(ACADEMY_PLAYERS_MIN, configNumber('academia.jugadoresMaximosPorCaptacion', 10, 1));
 const ACADEMY_PLAYER_TURN_COST = configNumber('academia.costoJugadorPorAvance', 10000, 0);
+const ACADEMY_PLAYER_WEEKLY_CHARGE_DAY = Math.max(0, Math.min(6, Math.round(configNumber('academia.diaCobroSemanalJuveniles', 1, 0, 6))));
 const ACADEMY_DISMISS_COMPENSATION = configNumber('academia.compensacionDespido', 50000, 0);
 const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1000000, 0);
 const ACADEMY_VISIBLE_STATS_COUNT = 7;

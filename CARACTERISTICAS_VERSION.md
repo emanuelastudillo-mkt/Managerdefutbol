@@ -1,11 +1,11 @@
-# Características V4.22 - Bots con estadísticas y scouting oculto
+# Características V4.23 - Balance diario, academia semanal y confirmar equipo
 
-- Se reduce la cantidad de habilidades reveladas por consulta de juveniles.
-- El juvenil excepcional pasa a entrenar con multiplicador x5.
-- Los partidos bot mantienen simulación rápida para rendimiento, pero ahora generan eventos estadísticos.
-- Se registran goleadores, asistidores, tarjetas, lesiones, tapadas clave, errores y partidos jugados en partidos bot.
-- Se evita el doble procesamiento de resultados bot previos al partido propio.
-- El mercado oculta estadísticas de jugadores libres y contratados.
-- La media de jugadores externos se muestra solo como estimación de scouting cuando hay suficientes datos observados.
-- Físico y moral de jugadores externos quedan ocultos.
-- El scouting se organiza por semana para que observar jugadores en distintas semanas muestre habilidades diferentes.
+- La ganancia de cohesión por partido baja a 8.
+- Los entrenamientos generales reducen su efecto al 50% del valor anterior.
+- El entrenamiento individual diario reduce su efecto al 50% del valor anterior.
+- Los juveniles de academia cobran semanalmente, no diariamente.
+- El cobro semanal de juveniles queda configurado para el lunes por defecto.
+- Las residencias juveniles mantienen alquiler mensual.
+- La pantalla de Academia conserva el texto de costo semanal y actualiza el juvenil excepcional a x5.
+- En Tácticas, el botón principal cambia a `Confirmar equipo`.
+- Si la convocatoria/táctica está incompleta o inválida, la Oficina muestra `Debes confirmar tu equipo`.

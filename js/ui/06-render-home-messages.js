@@ -197,9 +197,9 @@ function visualAlertItems(){
   const squadCount = playersByClub(game.selectedClubId).length;
   const salaryPressure = totalClubSalary(game.selectedClubId);
   if(game.mustReviewTactics){
-    items.push({ tone:'bad', icon:'!', title:'Táctica a revisar', text:'Hay lesionados o suspendidos propios fuera de la convocatoria válida.', tab:'tactics' });
+    items.push({ tone:'bad', icon:'!', title:'Debes confirmar tu equipo', text:'Hay lesionados o suspendidos propios fuera de la convocatoria válida.', tab:'tactics' });
   }else if(tacticErrors.length){
-    items.push({ tone:'bad', icon:'11', title:'Once incompleto', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
+    items.push({ tone:'bad', icon:'11', title:'Debes confirmar tu equipo', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
   }
   if(injured.length){
     items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });

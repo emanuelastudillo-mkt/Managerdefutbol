@@ -1,7 +1,7 @@
 /* V3.33 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
@@ -18,6 +18,7 @@ function normalizeAcademyState(state){
   clean.youthInjuriesCount = Math.max(0, Math.round(Number(clean.youthInjuriesCount || 0)));
   clean.residences = Math.max(0, Math.round(Number(clean.residences || 0)));
   clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
+  clean.youthSalaryLastChargeDate = validIsoDate(clean.youthSalaryLastChargeDate) ? clean.youthSalaryLastChargeDate : null;
   return clean;
 }
 
@@ -617,11 +618,23 @@ function academyInjuredTreatmentItems(){
   }));
 }
 
+function academyWeeklySalaryDueToday(today){
+  if(!validIsoDate(today)) return false;
+  const chargeDay = Number.isFinite(Number(typeof ACADEMY_PLAYER_WEEKLY_CHARGE_DAY !== 'undefined' ? ACADEMY_PLAYER_WEEKLY_CHARGE_DAY : 1)) ? Number(ACADEMY_PLAYER_WEEKLY_CHARGE_DAY) : 1;
+  const localDate = new Date(`${today}T12:00:00`);
+  if(Number(localDate.getDay()) !== chargeDay) return false;
+  return game?.academy?.youthSalaryLastChargeDate !== today;
+}
 function academyTurnSalaryCost(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
   const count = academyActivePlayers().length;
   if(!count) return 0;
+  const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  if(!academyWeeklySalaryDueToday(today)) return 0;
   const total = count * ACADEMY_PLAYER_TURN_COST;
-  recordBudgetChange(-total, 'Sueldos de academia', { type:'academy_turn_salary', players:count });
+  recordBudgetChange(-total, 'Sueldos semanales de academia', { type:'academy_weekly_salary', players:count, date:today });
+  game.academy.youthSalaryLastChargeDate = today;
   return total;
 }
 function academyTrainingType(playerId){
@@ -831,7 +844,7 @@ function academyPlayerCard(player){
   const canPromote = Number(player.age || 0) >= 16;
   const injured = academyPlayerInjured(player);
   const injuryLabel = academyYouthInjuryLabel(player);
-  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x20</span>' : '<span class="pill">Media oculta</span>';
+  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x5</span>' : '<span class="pill">Media oculta</span>';
   const injuryPill = injured ? '<span class="pill bad">Lesionado</span>' : '';
   return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''}">
     <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${injuryPill}</div></div>
@@ -890,7 +903,7 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x20 y promovible de inmediato. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de 16 años, entrenable x5 y promovible de inmediato. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);

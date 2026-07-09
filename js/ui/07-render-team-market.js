@@ -749,7 +749,7 @@ function renderTactics(){
       <p class="muted small">El simulador 2.0 usa estas instrucciones según el resultado parcial del partido.</p>
       <div class="instruction-grid">${matchInstructionControls()}</div>
     </div>
-    <div class="row sticky-actions"><button id="saveTactic" class="primary">Guardar táctica</button><span id="tacticErrors" class="bad small"></span></div>
+    <div class="row sticky-actions"><button id="saveTactic" class="primary">Confirmar equipo</button><span id="tacticErrors" class="bad small"></span></div>
   `;
   prependFirstTeamTabs('tactics');
   $('formation').addEventListener('change', () => {
@@ -861,14 +861,14 @@ function saveTacticFromScreen(){
   const errors = validateTactic(nextTactic);
   if(errors.length){
     $('tacticErrors').textContent = errors.join(' ');
-    showNotice('La táctica no se guardó. Corregí titulares, suplentes o jugadores no disponibles.');
+    showNotice('Equipo no confirmado. Corregí titulares, suplentes o jugadores no disponibles.');
     return;
   }
   game.tactic = nextTactic;
   game.mustReviewTactics = false;
   game.lastOwnProblems = [];
   saveLocal(true);
-  showNotice('Táctica guardada. Ya podés avanzar cuando termine el bloqueo.');
+  showNotice('Equipo confirmado. Ya podés avanzar cuando termine el bloqueo.');
   renderAll();
 }
 function validateCurrentTactic(showErrors=true){

@@ -892,7 +892,7 @@ function simulateNextMatchday(options={}){
     showNotice('Comienza la postemporada. Se usarán los días restantes del año antes del cierre de temporada.');
     return;
   }
-  if(game.mustReviewTactics){ showNotice('Revisá la táctica: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
+  if(game.mustReviewTactics){ showNotice('Debes confirmar tu equipo: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
   const ownInfo = nextOwnMatchInfo();

@@ -160,7 +160,7 @@ window.GAME_CONFIG = {
   cohesion: {
     // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
-    gananciaPorPartido: 9,
+    gananciaPorPartido: 8,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
@@ -333,6 +333,7 @@ window.GAME_CONFIG = {
     jugadoresMinimosPorCaptacion: 5,
     jugadoresMaximosPorCaptacion: 10,
     costoJugadorPorAvance: 10000,
+    diaCobroSemanalJuveniles: 1, // 1 = lunes. Los juveniles cobran una vez por semana.
     compensacionDespido: 50000,
     multiplicadorEntrenamiento: 5,
     multiplicadorEntrenamientoJuvenilExcepcional: 5,
@@ -354,10 +355,10 @@ window.GAME_CONFIG = {
   },
   entrenamiento: {
     // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
-    efectividadPorCasilla: 0.50,
+    efectividadPorCasilla: 0.25,
     // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
     entrenamientoIndividualDiario: true,
-    efectividadIndividualPorDia: 0.50,
+    efectividadIndividualPorDia: 0.25,
     entrenamientoIndividualInicial: 'balanced',
     // Curva de dificultad: una habilidad alta reduce la probabilidad final de subir +1.
     // Ejemplo: habilidad 80 => 20% de probabilidad final si ya superó la tirada base.

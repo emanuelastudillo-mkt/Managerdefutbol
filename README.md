@@ -1,8 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.22 - Bots con estadísticas y scouting oculto**
+**V4.23 - Balance diario, academia semanal y confirmar equipo**
 
 ## Historial de versiones
+
+### V4.23 - Balance diario, academia semanal y confirmar equipo
+- La ganancia de cohesión por partido baja a 8.
+- El efecto de entrenamientos generales baja al 50% del valor anterior.
+- El efecto del entrenamiento individual diario baja al 50% del valor anterior.
+- Los juveniles dejan de cobrar todos los días: ahora cobran una vez por semana.
+- El día de cobro semanal de juveniles queda configurable en `config.js` con `academia.diaCobroSemanalJuveniles`.
+- El alquiler de residencias juveniles se mantiene mensual.
+- Se actualizan textos de academia para reflejar el juvenil excepcional x5 y el cobro semanal.
+- En Tácticas, el botón principal pasa de `Guardar táctica` a `Confirmar equipo`.
+- Si el equipo está mal formado, la pantalla principal avisa `Debes confirmar tu equipo`.
 
 ### V4.22 - Bots con estadísticas y scouting oculto
 - Se baja el multiplicador de consulta de juveniles para que los informes no revelen tantas habilidades de golpe.

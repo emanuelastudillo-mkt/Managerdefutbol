@@ -1,24 +1,25 @@
-# V4.19 - Tácticas guardadas y objetivo dinámico
+# V4.20 - Rechazo de ofertas por media y prestigio
 
 ## Cambios
 
-- Se agregan 3 espacios para guardar tácticas personalizadas.
-- Cada táctica guardada conserva formación, titulares, suplentes, cambios automáticos, instrucciones de partido y mentalidades.
-- Se agregan botones de carga rápida para tácticas 1, 2 y 3.
-- Al cargar una táctica, los jugadores lesionados o que ya no pertenecen al club dejan hueco en el once.
-- Se corrige el cálculo del objetivo de directiva con cartas de `Objetivo más bajo`.
-- El objetivo ya no queda fijo en el valor anterior si se activa una carta durante la temporada.
-- La Oficina muestra el objetivo efectivo y el porcentaje de reducción activo.
+- Los jugadores libres ya no aceptan sólo por prestigio directo del club.
+- La aceptación se calcula con la diferencia entre media del jugador y prestigio del club ofertante.
+- La misma fórmula se aplica a jugadores contratados de otros clubes.
+- Si el jugador rechaza, queda bloqueado para ese club hasta la próxima temporada.
+- El mercado muestra la probabilidad estimada de aceptación de cada jugador.
+- En jugadores contratados, las ofertas bajas todavía pueden ser rechazadas por el club vendedor; si pasan esa negociación, el jugador decide con la nueva curva.
+
+## Fórmula aplicada
+
+- Diferencia = media del jugador - prestigio del club ofertante.
+- Diferencia -30: 95% aceptación.
+- Diferencia 0: 80% aceptación.
+- Diferencia 30: 20% aceptación.
+- Diferencia 50: 3% aceptación.
+- Diferencia 70: 1% aceptación.
+- Diferencia 100: 0.5% aceptación.
 
 ## Seguridad
 
-- No se modifica el motor de partidos.
-- No se modifican calendarios, economía ni jugadores.
-- Las tácticas guardadas se agregan como estado nuevo compatible con partidas existentes.
-
-## Compatibilidad
-
-- Se implementa solo.
-- No requiere reinicio.
-- Las partidas existentes empiezan con los 3 espacios de táctica vacíos.
-- Las cartas de objetivo ya activas empiezan a afectar el objetivo al cargar o refrescar la partida.
+- No se modifica calendario, economía, simulador ni estructura de clubes.
+- Los bloqueos de rechazo existentes siguen funcionando por temporada.

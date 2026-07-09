@@ -1,8 +1,16 @@
 # Fútbol Manager MVP
 
-**V4.19 - Tácticas guardadas y objetivo dinámico**
+**V4.20 - Rechazo de ofertas por media y prestigio**
 
 ## Historial de versiones
+
+### V4.20 - Rechazo de ofertas por media y prestigio
+- Se reemplaza la aceptación simple de jugadores libres por una curva basada en diferencia entre media del jugador y prestigio del club ofertante.
+- La misma regla se aplica a jugadores libres y a jugadores contratados de otros clubes.
+- La probabilidad de aceptación usa los puntos: diferencia -30 = 95%, 0 = 80%, 30 = 20%, 50 = 3%, 70 = 1%, 100 = 0.5%.
+- En jugadores contratados, la oferta al club mantiene la negociación por monto, pero el jugador también puede rechazar por media/prestigio.
+- Si un jugador rechaza, queda bloqueado para el club actual hasta la próxima temporada.
+- El mercado muestra el porcentaje estimado de aceptación por jugador.
 
 ### V4.19 - Tácticas guardadas y objetivo dinámico
 - Se agregan 3 espacios para guardar tácticas personalizadas.
@@ -13,7 +21,7 @@
 - La Oficina muestra el objetivo efectivo con el bonus activo, por ejemplo `1.03 (-6%)`.
 
 
-### V4.19 - Calendario diario 365 días
+### V4.18 - Calendario diario 365 días
 - La temporada pasa a procesarse día por día con 365 días fijos.
 - La pretemporada dura 30 días y la liga regular empieza al primer domingo posterior.
 - Las fechas de liga se programan una vez por semana según el día asignado a cada país/división.

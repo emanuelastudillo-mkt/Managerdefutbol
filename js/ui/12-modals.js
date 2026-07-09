@@ -7,17 +7,23 @@ function purchaseOfferRejectionRecord(playerId){
 }
 function isPurchaseOfferBlockedThisSeason(playerId){
   const record = purchaseOfferRejectionRecord(playerId);
-  return Boolean(record && Number(record.season || 0) === Number(game?.seasonNumber || 1));
+  if(!record) return false;
+  if(Number(record.season || 0) !== Number(game?.seasonNumber || 1)) return false;
+  if(Number(record.clubId || 0) && Number(record.clubId || 0) !== Number(game?.selectedClubId || 0)) return false;
+  return true;
 }
-function markPurchaseOfferRejected(playerId, kind, amount){
+function markPurchaseOfferRejected(playerId, kind, amount, chance=null, reason='player'){
   if(!game) return;
   game.rejectedPurchaseOffers = (game.rejectedPurchaseOffers && typeof game.rejectedPurchaseOffers === 'object' && !Array.isArray(game.rejectedPurchaseOffers)) ? game.rejectedPurchaseOffers : {};
   game.rejectedPurchaseOffers[String(playerId)] = {
     playerId:Number(playerId),
+    clubId:Number(game.selectedClubId || 0),
     season:Number(game.seasonNumber || 1),
     turn:currentTurnIndex(),
     kind:String(kind || ''),
     amount:Number(amount || 0),
+    acceptanceChance:Number(chance || 0),
+    reason:String(reason || 'player'),
     createdAt:Date.now()
   };
 }
@@ -44,7 +50,7 @@ function playerModalActionsMarkup(player){
   if(clubId === 0 && !player.sold){
     const blocked = typeof isFreeAgentOfferBlockedThisSeason === 'function' && isFreeAgentOfferBlockedThisSeason(player.id);
     const label = typeof freeAgentOfferButtonLabel === 'function' ? freeAgentOfferButtonLabel(player.id) : (blocked ? 'Rechazó hasta próxima temp.' : 'Hacer oferta');
-    const chance = typeof freeAgentAcceptanceChance === 'function' ? freeAgentAcceptanceChance() : 0;
+    const chance = typeof marketAcceptanceLabel === 'function' ? marketAcceptanceLabel(player) : (typeof freeAgentAcceptanceChance === 'function' ? freeAgentAcceptanceChance(player) : 0);
     return `<div class="card inner player-action-card"><h3>Mercado</h3><p class="muted small">Aceptación estimada por prestigio del club: ${chance}%.</p><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
   return '';
@@ -206,6 +212,7 @@ function openPurchaseOfferModal(playerId){
     <p class="label">Hacer oferta</p>
     <h2>${escapeHtml(player.name)}</h2>
     <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
+    <p class="small muted">Aceptación estimada del jugador: <strong>${typeof marketAcceptanceLabel === 'function' ? marketAcceptanceLabel(player) : '—'}%</strong>. Si rechaza, queda bloqueado para tu club hasta la próxima temporada.</p>
     <div style="margin-top:12px">${budgetNote}</div>
     <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
       <button class="card clickable plain" data-submit-player-offer="low" ${disabledAttrs(offerLow)}><h3>Ofrecer 50% menos</h3><p>${formatMoney(offerLow)}</p></button>
@@ -218,9 +225,9 @@ function openPurchaseOfferModal(playerId){
   document.querySelectorAll('[data-submit-player-offer]').forEach(btn => btn.addEventListener('click', () => submitPurchaseOffer(playerId, btn.dataset.submitPlayerOffer)));
 }
 function purchaseOfferConfig(kind, clause){
-  if(kind === 'low') return { amount:Math.round(clause * 0.50), chance:0.40, fail:'No nos interesa negociar con ratas' };
-  if(kind === 'mid') return { amount:Math.round(clause * 0.75), chance:0.65, fail:'Negociar no es tu fuerte, nos vemos' };
-  return { amount:Math.round(clause), chance:0.90, fail:'el jugador no quiere jugar en tu club' };
+  if(kind === 'low') return { amount:Math.round(clause * 0.50), clubChance:0.40, fail:'El club rechazó la oferta de 50% de cláusula.' };
+  if(kind === 'mid') return { amount:Math.round(clause * 0.75), clubChance:0.65, fail:'El club rechazó la oferta de 75% de cláusula.' };
+  return { amount:Math.round(clause), clubChance:1, fail:'El club no puede bloquear el pago de cláusula.' };
 }
 function submitPurchaseOffer(playerId, kind){
   const player = playerById(playerId);
@@ -237,10 +244,21 @@ function submitPurchaseOffer(playerId, kind){
     showNotice(`La directiva sólo autorizó ${formatMoney(transferAvailable)} para fichajes en este momento.`);
     return;
   }
-  const accepted = Math.random() < cfg.chance;
-  if(!accepted){
-    markPurchaseOfferRejected(player.id, kind, cfg.amount);
-    pushGameMessage({ type:'mercado', title:'Oferta rechazada', body:`${cfg.fail}. No podremos volver a enviar una oferta por este jugador hasta la próxima temporada.`, priority:'normal' });
+  const clubAccepted = Math.random() < Number(cfg.clubChance ?? 1);
+  if(!clubAccepted){
+    markPurchaseOfferRejected(player.id, kind, cfg.amount, null, 'club');
+    pushGameMessage({ type:'mercado', title:'Oferta rechazada por el club', body:`${cfg.fail} No podremos volver a enviar una oferta por este jugador hasta la próxima temporada.`, priority:'normal' });
+    closeModal();
+    activeTab = 'messages';
+    saveLocal(true);
+    renderAll();
+    return;
+  }
+  const playerChance = typeof marketPlayerAcceptanceChance === 'function' ? marketPlayerAcceptanceChance(player) : 80;
+  const playerAccepted = Math.random() * 100 < Number(playerChance || 0);
+  if(!playerAccepted){
+    markPurchaseOfferRejected(player.id, kind, cfg.amount, playerChance, 'player');
+    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:`${player.name} rechazó jugar en ${clubName(game.selectedClubId)}. Probabilidad de aceptación por media/prestigio: ${Number.isInteger(playerChance) ? playerChance : Number(playerChance).toFixed(1)}%. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);
@@ -264,7 +282,7 @@ function submitPurchaseOffer(playerId, kind){
     arrivalTurn:currentTurnIndex() + 1,
     status:'pending'
   });
-  pushGameMessage({ type:'mercado', title:'Oferta aceptada', body:`${player.name}: el jugador se pondrá a disposición en breve.`, priority:'high' });
+  pushGameMessage({ type:'mercado', title:'Oferta aceptada', body:`${player.name} aceptó jugar en ${clubName(game.selectedClubId)} y se pondrá a disposición en breve.`, priority:'high' });
   closeModal();
   activeTab = 'messages';
   saveLocal(true);

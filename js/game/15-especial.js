@@ -128,14 +128,16 @@ function specialBonusLabel(type){
   const labels = {
     sponsors_extra:'Sponsors extra',
     deterioro_campo:'Deterioro de campo',
-    probabilidad_legendaria:'Prob. legendaria'
+    probabilidad_legendaria:'Prob. legendaria',
+    objetivo_mas_bajo:'Objetivo más bajo',
+    socios_extra:'Socios ganados extra'
   };
   return labels[type] || String(type || 'Sin bonus');
 }
 function specialCardBonusText(card){
   if(!card?.tipo_bonus || !card.valor_bonus) return 'Sin bonus activo';
   const unit = card.unidad === 'porcentaje_relativo' ? '% relativo' : (card.unidad === 'porcentaje' ? '%' : '');
-  const sign = card.tipo_bonus === 'deterioro_campo' ? '-' : '+';
+  const sign = ['deterioro_campo','objetivo_mas_bajo'].includes(card.tipo_bonus) ? '-' : '+';
   return `${specialBonusLabel(card.tipo_bonus)}: ${sign}${Number(card.valor_bonus || 0)}${unit}`;
 }
 function specialCurrentDate(){
@@ -186,12 +188,12 @@ function specialActiveBonus(type){
   return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
 }
 function specialActiveBonusSummary(){
-  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria'].map(type => ({ type, value:specialActiveBonus(type) })).filter(item => item.value > 0);
+  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria','objetivo_mas_bajo','socios_extra'].map(type => ({ type, value:specialActiveBonus(type) })).filter(item => item.value > 0);
 }
 function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
   if(!activeCards.length) return '<p class="muted small">No hay cartas activas. Activá cartas desde la reserva para ver sus bonus acá.</p>';
   const totals = specialActiveBonusSummary();
-  const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${item.type === 'deterioro_campo' ? '-' : '+'}${item.value}% acumulado</span></div>`).join('')}</div>` : '';
+  const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}% acumulado</span></div>`).join('')}</div>` : '';
   const cardsMarkup = `<div class="special-active-rules-list">${activeCards.map(card => {
     const info = specialCardActiveLockInfo(card);
     const status = info.locked ? `Fija ${formatDays(info.remaining)}` : 'Lista para desactivar';
@@ -567,7 +569,7 @@ function renderSpecial(opened=[], options={}){
       ${specialActiveRulesDetailMarkup(activeBonusCards, limits)}
     </div>
     <div class="grid cols-3 special-bonus-grid">
-      ${bonuses.length ? bonuses.map(item => `<div class="card"><p class="label">${escapeHtml(specialBonusLabel(item.type))}</p><strong>${item.type === 'deterioro_campo' ? '-' : '+'}${item.value}%</strong></div>`).join('') : ''}
+      ${bonuses.length ? bonuses.map(item => `<div class="card"><p class="label">${escapeHtml(specialBonusLabel(item.type))}</p><strong>${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}%</strong></div>`).join('') : ''}
     </div>
     ${specialOpenedMarkup(opened, options)}
     <div class="card special-active-drop" data-special-drop-active="1"><div class="row"><div><p class="label">Bonus activo</p><h3>Cartas bloqueadas y aplicadas</h3></div><span class="pill">Máximo ${limits.activeMax}</span></div><p class="muted small">Las cartas activadas quedan en este sector durante ${limits.lockDays} días. Podés activar cartas con el botón o arrastrándolas hasta este bloque.</p><div class="special-card-grid">${active.length ? active.map(card => specialCardMarkup(card, 'active')).join('') : '<p class="muted">No hay cartas activas.</p>'}</div></div>

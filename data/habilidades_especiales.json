@@ -1,28 +1,8 @@
 {
-  "version": "V1.02",
+  "version": "V4.16",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": {
-    "agregado": [
-      "Nuevo menú lateral: Habilidades especiales",
-      "Puntos ocultos para el manager",
-      "Sobres común, raro y épico",
-      "Cartas inútiles, comunes, raras, épicas y legendarias",
-      "Máximo de 5 cartas activas",
-      "Máximo de 50 cartas en reserva",
-      "Bloqueo de cambio de cartas activas durante 100 días",
-      "Bonus apilables",
-      "Destrucción de cartas por pocos puntos",
-      "Probabilidad de legendarias modificable por cartas activas"
-    ],
-    "notas_balance": [
-      "Las cartas inútiles no otorgan bonus.",
-      "Los bonus se apilan aunque sean del mismo tipo.",
-      "El bonus de probabilidad legendaria se aplica de forma relativa sobre la probabilidad base.",
-      "El deterioro del campo tiene tope de reducción para evitar valores imposibles.",
-      "Las cartas raras, épicas y legendarias se visualizan al final al abrir sobres."
-    ]
-  },
+  "caracteristicas_version": "Agrega cartas de objetivo más bajo y aumento de socios ganados.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -385,6 +365,86 @@
       "unidad": "porcentaje_relativo",
       "activable": true,
       "texto": "Tus posibilidades de obtener una carta legendaria aumentan un 25% relativo."
+    },
+    {
+      "id_base": "OBJETIVO_COMUN_001",
+      "nombre": "Directiva paciente",
+      "rareza": "comun",
+      "tipo_bonus": "objetivo_mas_bajo",
+      "valor_bonus": 1,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce el objetivo de puntos de la directiva un 1% mientras esté activa."
+    },
+    {
+      "id_base": "OBJETIVO_RARA_001",
+      "nombre": "Margen de gestión",
+      "rareza": "rara",
+      "tipo_bonus": "objetivo_mas_bajo",
+      "valor_bonus": 2,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce el objetivo de puntos de la directiva un 2% mientras esté activa."
+    },
+    {
+      "id_base": "OBJETIVO_EPICA_001",
+      "nombre": "Proyecto respaldado",
+      "rareza": "epica",
+      "tipo_bonus": "objetivo_mas_bajo",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce el objetivo de puntos de la directiva un 3% mientras esté activa."
+    },
+    {
+      "id_base": "OBJETIVO_LEGENDARIA_001",
+      "nombre": "Cheque en blanco deportivo",
+      "rareza": "legendaria",
+      "tipo_bonus": "objetivo_mas_bajo",
+      "valor_bonus": 10,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce el objetivo de puntos de la directiva un 10% mientras esté activa."
+    },
+    {
+      "id_base": "SOCIOS_COMUN_001",
+      "nombre": "Campaña de barrio",
+      "rareza": "comun",
+      "tipo_bonus": "socios_extra",
+      "valor_bonus": 10,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 10% los socios ganados por resultados y posición."
+    },
+    {
+      "id_base": "SOCIOS_RARA_001",
+      "nombre": "Movida popular",
+      "rareza": "rara",
+      "tipo_bonus": "socios_extra",
+      "valor_bonus": 15,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 15% los socios ganados por resultados y posición."
+    },
+    {
+      "id_base": "SOCIOS_EPICA_001",
+      "nombre": "Explosión de tribuna",
+      "rareza": "epica",
+      "tipo_bonus": "socios_extra",
+      "valor_bonus": 20,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 20% los socios ganados por resultados y posición."
+    },
+    {
+      "id_base": "SOCIOS_LEGENDARIA_001",
+      "nombre": "Fiebre de socios",
+      "rareza": "legendaria",
+      "tipo_bonus": "socios_extra",
+      "valor_bonus": 50,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 50% los socios ganados por resultados y posición."
     }
   ],
   "estructura_datos_manager": {

@@ -1791,13 +1791,21 @@ function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.se
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
 }
 function managerObjectiveForClubDivision(clubId){
-  if(isFoundedClubId(clubId || game?.selectedClubId)) return null;
-  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2) return Number(MANAGER_OBJECTIVE_PPG);
-  const division = clubDivision(clubId || game?.selectedClubId);
-  const order = Math.round(Number(division?.order || 3));
-  if(order <= 1) return Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4);
-  if(order === 2) return Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1);
-  return Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+  const targetClubId = clubId || game?.selectedClubId;
+  if(isFoundedClubId(targetClubId)) return null;
+  let objective = null;
+  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2){
+    objective = Number(MANAGER_OBJECTIVE_PPG);
+  } else {
+    const division = clubDivision(targetClubId);
+    const order = Math.round(Number(division?.order || 3));
+    objective = order <= 1 ? Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4) : order === 2 ? Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1) : Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+  }
+  if(Number(targetClubId) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
+    const reduction = clamp(Number(specialActiveBonus('objetivo_mas_bajo') || 0), 0, 80);
+    if(reduction > 0) objective = objective * (1 - reduction / 100);
+  }
+  return Number(objective.toFixed(3));
 }
 function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const normalized = normalizeManagerStats(stats);

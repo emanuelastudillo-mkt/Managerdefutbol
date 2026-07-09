@@ -1,23 +1,33 @@
-# V4.15 - Verificador de ligas incompletas
+# V4.16 - Simulador completo, libres y tratamientos juveniles
 
 ## Cambios
 
-- Se mejora el botón `Verificar que todo esté bien`.
-- El verificador ahora conserva una referencia de la estructura base de clubes/divisiones antes de cargar snapshots de partidas guardadas.
-- La reparación segura corrige clubes en país incorrecto y además balancea divisiones incompletas.
-- Si una liga queda con menos de sus clubes esperados, vuelve a aparecer la opción de `Aplicar reparaciones seguras`.
-- El reporte de estructura muestra `clubes / esperado` por división.
-- La reparación actualiza `clubDivisionOverrides` y guarda la partida.
+- Se agregan nuevas frases finales de partido para reducir repetición del último relato.
+- Se agregan cartas nuevas:
+  - Objetivo de directiva más bajo: 1%, 2%, 3% y 10%.
+  - Socios ganados extra: +10%, +15%, +20% y +50%.
+- Las cartas activas de objetivo reducen el PPG exigido por la directiva.
+- Las cartas activas de socios aumentan sólo los socios ganados cuando el delta es positivo.
+- En Oficina del manager, el presupuesto se muestra en millones para no romper el box.
+- La respuesta del jugador al intentar convencerlo de rechazar una cláusula aparece en una ventana destacada.
+- Se corrige el cálculo de aceptación de jugadores libres para usar prestigio real del club.
+- Los juveniles lesionados aparecen también en Empleados > Kinesiólogo.
+- Los juveniles lesionados pueden tratarse gratis de a uno o dentro de `Tratar a todos`.
+- El simulador usa pantalla completa.
+- La información de local y visitante queda en laterales.
+- Los eventos visibles aparecen en orden descendente, con los más recientes arriba.
+- El bloque de comentario tiene altura fija para evitar saltos visuales cuando el texto usa más líneas.
 
 ## Seguridad
 
+- No cambia resultados ya jugados.
 - No reconstruye calendario.
-- No borra resultados.
-- No reinicia temporada.
-- No elimina jugadores.
-- No modifica economía.
+- No modifica ascensos/descensos.
+- No reinicia partidas.
 
 ## Compatibilidad
 
 - Se implementa solo.
-- Recomendado para partidas donde el verificador anterior movió clubes pero dejó ligas con menos de 18 equipos.
+- Las cartas nuevas aparecen en próximas aperturas de sobres.
+- Los tratamientos juveniles aplican si ya hay juveniles lesionados en la academia.
+- La corrección de libres aplica desde nuevas ofertas.

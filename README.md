@@ -1,8 +1,23 @@
 # Fútbol Manager MVP
 
-**V4.15 - Verificador de ligas incompletas**
+**V4.16 - Simulador completo, libres y tratamientos juveniles**
 
 ## Historial de versiones
+
+### V4.16 - Simulador completo, libres y tratamientos juveniles
+- Se agregan nuevas frases finales de partido para que el último relato sea menos repetitivo.
+- Se agregan cartas de objetivo de directiva más bajo: 1%, 2%, 3% y 10%.
+- Se agregan cartas de socios ganados extra: +10%, +15%, +20% y +50%.
+- El objetivo de directiva se reduce si hay cartas activas de ese tipo.
+- Los socios ganados aumentan si hay cartas activas de socios extra.
+- En Oficina del manager, el presupuesto se muestra en millones para ahorrar espacio.
+- La respuesta del jugador al intentar convencerlo de no aceptar una cláusula se muestra en una ventana destacada.
+- Se corrige la probabilidad de aceptación de jugadores libres para usar el prestigio real del club.
+- Los juveniles lesionados aparecen en Empleados > Kinesiólogo.
+- Los juveniles lesionados pueden tratarse gratis de a uno o con `Tratar a todos`.
+- El simulador usa pantalla completa, con datos de local y visitante en laterales.
+- Los eventos visibles se ordenan de más reciente a más antiguo.
+- El bloque de comentario del simulador tiene altura fija para evitar saltos visuales.
 
 ### V4.15 - Verificador de ligas incompletas
 - El verificador ahora conserva una referencia de estructura base antes de cargar snapshots guardados.

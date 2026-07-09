@@ -2970,3 +2970,38 @@ th{
 @media (max-width: 760px){
   .integrity-summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+
+/* V4.16: simulador en pantalla completa, comentarios fijos y eventos descendentes */
+.modal-panel:has(.match-modal-head){
+  width:min(1600px,calc(100vw - 18px));
+  height:calc(100vh - 18px);
+  max-height:calc(100vh - 18px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.modal-panel:has(.match-modal-head) .match-reveal-shell{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  height:100%;
+}
+.modal-panel:has(.match-modal-head) #matchRevealDynamic{
+  min-height:0;
+  flex:1;
+  display:flex;
+}
+.match-fullscreen-grid{
+  flex:1;
+  min-height:0;
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(190px,240px) minmax(0,1fr) minmax(190px,240px);
+  gap:10px;
+  align-items:stretch;
+}
+.match-side-column{min-height:0;display:flex;flex-direction:column;gap:10px}.match-side-column .team-stat-card{height:100%;overflow:auto}.match-main-column{min-height:0;display:flex;flex-direction:column;gap:9px}.reveal-commentary-card{min-height:96px;display:grid;align-content:center}.reveal-commentary-text{min-height:42px;display:flex;align-items:center;font-size:clamp(14px,1.35vw,19px);line-height:1.35;animation:revealCommentInV416 .26s ease-out both}.reveal-commentary-sub{min-height:18px}.reveal-events-card{flex:1;min-height:160px;display:flex;flex-direction:column}.reveal-events-scroll{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:2px;padding-right:4px}.reveal-events-card h3{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.reveal-special-stack{max-height:168px;overflow:auto}.match-context-card{max-height:145px;overflow:auto}.reveal-pitch-card,.reveal-stage-card{flex:0 0 auto}.office-mini-grid>div:nth-child(2) strong.office-budget-compact{font-size:clamp(17px,2vw,23px);white-space:nowrap}
+.special-clause-response-modal{display:grid;gap:14px;max-width:720px;margin:0 auto;text-align:center}.special-clause-response-modal .club-badge{margin:0 auto;width:72px;height:72px}.special-clause-response-modal h2{font-size:clamp(25px,4vw,42px);margin:0}.special-clause-response-modal blockquote{margin:0;padding:18px;border-radius:18px;background:rgba(255,255,255,.055);border:1px solid rgba(148,163,184,.16);font-size:clamp(16px,2vw,22px);line-height:1.45}.special-clause-response-modal.stay blockquote{border-color:rgba(34,197,94,.28)}.special-clause-response-modal.leave blockquote{border-color:rgba(239,68,68,.28)}
+.injured-treatment-row.youth-treatment{grid-template-columns:auto 1fr auto}.academy-youth-treatment-visual{display:grid;place-items:center;width:58px;min-width:58px}.academy-youth-treatment-visual .academy-visibility-pie{width:48px;height:48px}.academy-youth-treatment-visual .academy-visibility-pie strong{font-size:12px}.injured-treatment-row.youth-treatment .linklike{font-weight:850}
+@keyframes revealCommentInV416{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:980px){.modal-panel:has(.match-modal-head){height:calc(100vh - 10px);width:calc(100vw - 10px)}.match-fullscreen-grid{grid-template-columns:1fr}.match-side-column .team-stat-card{height:auto}.match-side-away{order:3}.match-main-column{order:2}.match-side-home{order:1}.match-context-card{max-height:none}.reveal-events-card{min-height:220px}}

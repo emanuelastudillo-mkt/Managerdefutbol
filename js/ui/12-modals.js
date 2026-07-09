@@ -499,29 +499,35 @@ function renderMatchRevealStage(match, stage, index, total){
   const narrationIndex = Number.isFinite(Number(stage.narrationIndex)) ? Number(stage.narrationIndex) : index;
   const narration = matchRevealNarration(match, narrationStage, narrationIndex, total);
   box.innerHTML = `
-    <div class="card inner reveal-commentary-card ${escapeHtml(narration.tone || 'ambient')}">
-      <p class="label">Relato de partido</p>
-      <div class="reveal-commentary-text">${escapeHtml(narration.text)}</div>
-      <div class="reveal-commentary-sub">${escapeHtml(narration.sub || '')}</div>
-    </div>
-    ${specialEvents.length ? `<div class="reveal-special-stack">${specialEvents.map((event, specialIndex) => revealSpecialEventCard(match, event, specialIndex)).join('')}</div>` : ''}
-    ${revealPitchMomentumCard(match, fieldTilt)}
-    <div class="card inner reveal-stage-card">
-      <div class="row">
-        <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
-        <span class="pill">${index + 1}/${total}</span>
-      </div>
-      <p class="muted small">${escapeHtml(stage.note)}</p>
-    </div>
-    <div class="match-team-columns reveal-columns">
-      ${revealTeamStatsCard(match.homeId, homeStats, 'Local')}
-      ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante')}
-    </div>
-    <div class="card inner reveal-events-card">
-      <h3>Eventos visibles</h3>
-      ${events.length ? events.map(revealEventLine).join('') : '<p class="muted">Sin eventos relevantes en este tramo.</p>'}
-    </div>
-    ${stage.factor === 1 ? `<div class="row reveal-final-actions"><button class="ghost" data-match-id="${escapeHtml(match.id)}">Ver ficha completa normal</button></div>` : ''}`;
+    <div class="match-fullscreen-grid">
+      <aside class="match-side-column match-side-home">
+        ${revealTeamStatsCard(match.homeId, homeStats, 'Local')}
+      </aside>
+      <main class="match-main-column">
+        <div class="card inner reveal-commentary-card ${escapeHtml(narration.tone || 'ambient')}">
+          <p class="label">Relato de partido</p>
+          <div class="reveal-commentary-text">${escapeHtml(narration.text)}</div>
+          <div class="reveal-commentary-sub">${escapeHtml(narration.sub || '')}</div>
+        </div>
+        ${specialEvents.length ? `<div class="reveal-special-stack">${specialEvents.map((event, specialIndex) => revealSpecialEventCard(match, event, specialIndex)).join('')}</div>` : ''}
+        ${revealPitchMomentumCard(match, fieldTilt)}
+        <div class="card inner reveal-stage-card">
+          <div class="row">
+            <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
+            <span class="pill">${index + 1}/${total}</span>
+          </div>
+          <p class="muted small">${escapeHtml(stage.note)}</p>
+        </div>
+        <div class="card inner reveal-events-card">
+          <h3>Eventos visibles <span class="muted small">últimos arriba</span></h3>
+          <div class="reveal-events-scroll">${events.length ? events.slice().reverse().map(revealEventLine).join('') : '<p class="muted">Sin eventos relevantes en este tramo.</p>'}</div>
+        </div>
+        ${stage.factor === 1 ? `<div class="row reveal-final-actions"><button class="ghost" data-match-id="${escapeHtml(match.id)}">Ver ficha completa normal</button></div>` : ''}
+      </main>
+      <aside class="match-side-column match-side-away">
+        ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante')}
+      </aside>
+    </div>`;
   const finish = $('finishMatchReveal');
   if(finish && stage.factor === 1) finish.textContent = 'Partido finalizado';
 }
@@ -675,9 +681,31 @@ function matchRevealNarration(match, stage, index, total){
 }
 function finalMatchNarration(match){
   const h = Number(match.homeGoals || 0), a = Number(match.awayGoals || 0);
-  if(h === a) return `Final en tablas: ${clubName(match.homeId)} ${h} - ${a} ${clubName(match.awayId)}. Nadie pudo quebrar del todo el partido.`;
-  const winner = h > a ? match.homeId : match.awayId;
-  return `Final del partido. Gana ${clubName(winner)} ${h} - ${a} y se lleva una tarde pesada.`;
+  const home = clubName(match.homeId);
+  const away = clubName(match.awayId);
+  const score = `${h} - ${a}`;
+  let bucket = 'final_draw';
+  if(h === 0 && a === 0) bucket = 'final_scoreless';
+  else if(Math.abs(h - a) >= 3) bucket = 'final_big_win';
+  else if((h + a) >= 5) bucket = 'final_goalfest';
+  else if(h > a) bucket = 'final_home_win';
+  else if(a > h) bucket = 'final_away_win';
+  const winnerId = h >= a ? match.homeId : match.awayId;
+  const loserId = h >= a ? match.awayId : match.homeId;
+  const template = pickRelatoPhrase(bucket, `final-${match.id}-${score}`, h === a
+    ? `Final igualado: ${home} y ${away} terminan ${score}.`
+    : `Final del partido. Gana ${clubName(winnerId)} ${score}.`);
+  return applyRelatoTemplate(template, {
+    home,
+    away,
+    score,
+    winner:clubName(winnerId),
+    loser:clubName(loserId),
+    club:clubName(winnerId),
+    rival:clubName(loserId),
+    minute:90,
+    player:''
+  });
 }
 function eventSubLabel(event){
   const labels = { goal:'Jugada destacada · gol', card:'Jugada destacada · tarjeta', keySave:'Jugada destacada · tapada', error:'Jugada destacada · error', injury:'Jugada destacada · lesión', sub:'Cambio automático' };
@@ -718,7 +746,7 @@ function pickRelatoPhrase(bucket, seedKey, fallback='El partido sigue vivo y cad
   return list[hashNumber(String(seedKey || bucket), list.length)];
 }
 function applyRelatoTemplate(text, data){
-  return String(text || '').replace(/\{(player|club|rival|minute)\}/g, (_, key) => String(data?.[key] ?? ''));
+  return String(text || '').replace(/\{([a-zA-Z_]+)\}/g, (_, key) => String(data?.[key] ?? ''));
 }
 function revealEventLine(event){
   if(event.type === 'goal'){

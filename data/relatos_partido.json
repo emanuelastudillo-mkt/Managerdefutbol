@@ -1,8 +1,8 @@
 {
-  "version": "V3.64",
+  "version": "V4.16",
   "sistema": "relatos_partido",
   "descripcion": "Frases de relato para el visor progresivo del simulador. Usa placeholders {player}, {club}, {rival}, {minute}.",
-  "total_frases": 300,
+  "total_frases": 360,
   "categorias": {
     "ambient": [
       "El partido se cocina lento, pero en cualquier momento aparece una jugada pesada.",
@@ -329,6 +329,78 @@
       "Cambio hecho. Ahora hay que ver si modifica el partido.",
       "{club} manda un mensaje desde el banco con esta variante.",
       "El partido pide decisiones y {club} ya tomó una."
+    ],
+    "final_home_win": [
+      "Final en casa: {home} se queda con el partido por {score}. La gente se va con la sensación de trabajo cumplido.",
+      "Pitazo final. {home} hizo pesar su cancha y cerró un {score} que vale más que tres puntos.",
+      "Terminó el partido: {home} ganó {score} y dejó una señal fuerte ante su gente.",
+      "La tarde termina con festejo local. {home} venció {score} y administró mejor los momentos clave.",
+      "Final con sonrisa local: {home} ganó {score} y encontró premio al empuje de su público.",
+      "Se terminó. {home} defendió su terreno y firmó un {score} importante.",
+      "El local hizo el desgaste y lo transformó en victoria. {home} ganó {score}.",
+      "Último silbatazo: {home} se impuso {score} y sostuvo el resultado cuando más pesaba.",
+      "La cancha empujó y el equipo respondió. Victoria de {home} por {score}.",
+      "Final con autoridad local. {home} ganó {score} y se queda con una noche necesaria."
+    ],
+    "final_away_win": [
+      "Golpe visitante: {away} gana {score} y se lleva puntos pesados de una cancha incómoda.",
+      "Final del partido. {away} silenció el estadio y ganó {score}.",
+      "La visita hizo su negocio completo. {away} ganó {score} y se vuelve con premio grande.",
+      "Terminó con festejo visitante. {away} venció {score} y manejó mejor los detalles.",
+      "Pitazo final: {away} ganó {score} fuera de casa y dejó al local sin reacción suficiente.",
+      "El visitante pegó en los momentos justos. {away} se impuso {score}.",
+      "Final de visitante valioso: {away} ganó {score} y se llevó una victoria de carácter.",
+      "Se termina el partido y el festejo viaja. {away} ganó {score}.",
+      "La cancha era ajena, pero el resultado fue propio. {away} ganó {score}.",
+      "Triunfo visitante con oficio. {away} firmó el {score} y sostuvo la ventaja hasta el cierre."
+    ],
+    "final_draw": [
+      "Final igualado: {home} y {away} terminan {score}. Nadie pudo torcer del todo el trámite.",
+      "Reparto de puntos. El {score} deja sensaciones mezcladas en los dos bancos.",
+      "Pitazo final y empate. {home} y {away} chocaron mucho y se escaparon poco.",
+      "Terminó en tablas: {score}. El partido tuvo tensión, pero no dueño definitivo.",
+      "No se sacaron ventajas. {home} y {away} cierran un {score} que deja cuentas pendientes.",
+      "Final parejo. El {score} refleja un partido trabado y con márgenes finos.",
+      "El reloj se agotó sin ganador. {home} y {away} igualaron {score}.",
+      "Empate consumado. El {score} deja a los dos con algo y con poco.",
+      "Nadie logró despegarse. {home} y {away} terminaron {score}.",
+      "Final de equilibrio: {score}. La diferencia estuvo cerca, pero nunca terminó de aparecer."
+    ],
+    "final_scoreless": [
+      "Final sin goles. El 0 - 0 tuvo más tensión que claridad.",
+      "Se cerró sin gritos. {home} y {away} empataron 0 - 0 y los arcos quedaron intactos.",
+      "Nada para romper el cero. El partido termina 0 - 0.",
+      "Final de defensas firmes y ataques sin precisión. 0 - 0.",
+      "El cero sobrevivió a todo. {home} y {away} terminaron 0 - 0.",
+      "Empate cerrado, de esos que se explican más por lo que faltó que por lo que sobró.",
+      "El marcador no se movió. 0 - 0 y poco margen para el festejo.",
+      "Final sin goles: el partido se apagó antes de encontrar una ruptura.",
+      "Los arcos ganaron la tarde. {home} y {away} terminaron 0 - 0.",
+      "No hubo manera de quebrar el partido. Final 0 - 0."
+    ],
+    "final_big_win": [
+      "Goleada terminada. {winner} ganó {score} y dejó una marca pesada en la tabla.",
+      "Final contundente: {winner} aplastó el partido y cerró un {score} sin discusión.",
+      "La diferencia fue demasiado grande. {winner} ganó {score} y manejó la noche de punta a punta.",
+      "Pitazo final y golpe fuerte. {winner} se impuso {score} con autoridad.",
+      "No hubo equivalencias en el cierre. {winner} ganó {score} y mostró una superioridad clara.",
+      "Resultado amplio y mensaje directo: {winner} ganó {score}.",
+      "Final de dominio total. {winner} firmó un {score} que no deja mucho para discutir.",
+      "La goleada queda escrita. {winner} ganó {score} y el rival terminó pidiendo el final.",
+      "Partido liquidado con margen grande. {winner} ganó {score}.",
+      "Una victoria que pesa por puntos y por diferencia. {winner} ganó {score}."
+    ],
+    "final_goalfest": [
+      "Lluvia de goles hasta el cierre. {home} y {away} dejaron un {score} imposible de ignorar.",
+      "Final de partido abierto: {score}. Cada ataque parecía traer una historia nueva.",
+      "Se jugó sin cerrar puertas. El {score} deja un partido cargado de golpes.",
+      "Marcador grande y defensas al límite. El partido terminó {score}.",
+      "Los arcos no tuvieron paz. Final {score}.",
+      "Partido de intercambio permanente. {home} y {away} cerraron un {score} vibrante.",
+      "Final con mucho para revisar en video. El marcador quedó {score}.",
+      "Se cansaron de atacar. El partido terminó {score}.",
+      "Nadie pudo dormir el trámite. Final {score}, con emociones hasta el final.",
+      "Resultado cargado de vértigo: {score}. El partido no dio respiro."
     ]
   }
 }

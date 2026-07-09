@@ -262,7 +262,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
       <div class="office-mini-grid">
         <div><span>Posición</span><strong>${position || '—'}°</strong></div>
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
-        <div><span>Presupuesto</span><strong>${formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
+        <div><span>Presupuesto</span><strong class="office-budget-compact">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
         <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
         <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
         <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
@@ -1036,6 +1036,20 @@ function specialClauseLeaveMessages(player, managerName){
     `Aprecio que me hayas llamado, ${managerName}. Pero la propuesta es importante y el rendimiento del equipo no coincide con mis aspiraciones. Me voy con respeto y gratitud.`
   ];
 }
+function showSpecialClauseResponseModal(player, text, status='stay'){
+  if(typeof openModal !== 'function') return;
+  const clubId = Number(game?.selectedClubId || player?.clubId || 0);
+  const title = status === 'leave' ? 'El jugador decidió irse' : 'El jugador se queda';
+  const tone = status === 'leave' ? 'leave' : 'stay';
+  const html = `<div class="special-clause-response-modal ${tone}">
+    ${clubBadge(clubId)}
+    <p class="label">Respuesta a la charla</p>
+    <h2>${escapeHtml(player?.name || 'Jugador')}</h2>
+    <blockquote>${escapeHtml(text || '')}</blockquote>
+    <button class="primary" data-close-modal>Continuar</button>
+  </div>`;
+  openModal(html);
+}
 function convinceSpecialClausePlayer(messageId){
   const msg = (game.messages || []).find(m => m.id === messageId);
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending' || msg.action.origin !== 'special_clause') return;
@@ -1050,6 +1064,7 @@ function convinceSpecialClausePlayer(messageId){
     const variants = specialClauseLeaveMessages(player, managerName);
     const text = variants[hashNumber(`special-clause-leave-${player.id}-${Date.now()}`, variants.length)];
     completeTransferSaleFromMessage(msg, player, { status:'forced_sale', bodyPrefix:text, notice:`${player.name} decidió irse. La cláusula fue ejecutada.` });
+    showSpecialClauseResponseModal(player, text, 'leave');
     return;
   }
   const variants = specialClauseStayMessages(player, managerName);
@@ -1060,6 +1075,7 @@ function convinceSpecialClausePlayer(messageId){
   saveLocal(true);
   showNotice(`${player.name} aceptó quedarse en el club.`);
   renderMessages();
+  showSpecialClauseResponseModal(player, text, 'stay');
 }
 function rejectTransferOffer(messageId){
   const msg = (game.messages || []).find(m => m.id === messageId);

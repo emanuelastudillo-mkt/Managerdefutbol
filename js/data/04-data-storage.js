@@ -925,6 +925,10 @@ function applyFanChangeForClub(clubId, resultKey){
   let totalDelta = resultDelta + positionDelta;
   if(totalDelta > 0){
     totalDelta = Math.max(0, totalDelta - current * ticketGainBlockRate(price));
+    if(Number(clubId) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
+      const sociosBonus = clamp(Number(specialActiveBonus('socios_extra') || 0), 0, 300);
+      if(sociosBonus > 0) totalDelta *= (1 + sociosBonus / 100);
+    }
   }
   const rounded = Math.round(totalDelta);
   const applied = setClubFansCurrent(clubId, Math.max(0, current + rounded), `Resultado ${resultKey}. Posición ${position}. Entrada ${formatMoney(price)}.`);

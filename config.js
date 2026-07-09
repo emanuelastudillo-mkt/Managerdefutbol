@@ -60,10 +60,10 @@ window.GAME_CONFIG = {
     // Los partidos sin manager usan simulación rápida para reducir bloqueos.
     simulacionRapidaBots: true,
 
-    // Cooldown único tras cada avance/partido. 20000 = 20 segundos.
-    bloqueoEntreAvancesMs: 20000,
+    // Cooldown único tras cada avance/partido. 10000 = 10 segundos.
+    bloqueoEntreAvancesMs: 10000,
     // El avance diario usa el mismo cooldown para evitar dobles flujos de calendario.
-    bloqueoAvanceDiaMs: 20000,
+    bloqueoAvanceDiaMs: 10000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
     diasPretemporada: 30,
@@ -120,7 +120,7 @@ window.GAME_CONFIG = {
     // Prórroga por promedio general histórico del manager.
     bonusPartidosPromedioGeneral120: 2,
     bonusPartidosPromedioGeneral150: 5,
-    bonusPartidosPromedioGeneral190: 10
+    bonusPartidosPromedioGeneral190: 12
   },
   plantel: {
     nacionalidades: {
@@ -175,7 +175,7 @@ window.GAME_CONFIG = {
   cohesion: {
     // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
-    gananciaPorPartido: 8,
+    gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,

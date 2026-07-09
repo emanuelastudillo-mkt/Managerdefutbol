@@ -61,7 +61,7 @@ window.GAME_CONFIG = {
     simulacionRapidaBots: true,
 
     // Bloqueo entre partidos propios en milisegundos. 120000 = 2 minutos.
-    bloqueoEntreAvancesMs: 120000,
+    bloqueoEntreAvancesMs: 30000,
     // Bloqueo para el avance de un solo día. 2000 = 2 segundos.
     bloqueoAvanceDiaMs: 2000,
     // Duración visual de la transición al avanzar días.

@@ -886,7 +886,8 @@
       const goal = resolveChanceV2(away, home, session.match.awayId, session.match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, session.awayTotals, session.homeTotals, session);
       if(goal){ session.goals.push(goal); session.awayGoals++; }
     }
-    const cards = [
+    const friendlyNoSanctions = Boolean(session.match?.friendly);
+    const cards = friendlyNoSanctions ? [] : [
       ...liveCardsForBlock(session, session.match.homeId, home, h.fouls, block),
       ...liveCardsForBlock(session, session.match.awayId, away, a.fouls, block)
     ].sort((x,y)=>x.minute-y.minute);
@@ -894,7 +895,7 @@
       session.cards.push(card);
       if(['red','secondYellowRed'].includes(String(card.type || ''))) removePlayerFromLiveTactic(session, card.clubId, card.playerId);
     });
-    const injuries = [
+    const injuries = friendlyNoSanctions ? [] : [
       ...liveInjuriesForBlock(session, session.match.homeId, home, session.matchContext, block),
       ...liveInjuriesForBlock(session, session.match.awayId, away, session.matchContext, block)
     ].sort((x,y)=>x.minute-y.minute);
@@ -963,7 +964,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-bloques-v5.07',
+      engine:'simulador-vivo-bloques-v5.09',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,

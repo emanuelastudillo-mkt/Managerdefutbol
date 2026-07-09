@@ -1025,7 +1025,7 @@ function startLiveOwnMatchday(context){
   if(!match) return false;
   const status = liveMatchEngineStatus();
   if(!status.ok){
-    console.warn('[V5.08] Simulación viva bloqueada por carga incompleta:', status.missing);
+    console.warn('[V5.09] Simulación viva bloqueada por carga incompleta:', status.missing);
     showLiveMatchEngineBlocked(status);
     return 'blocked';
   }
@@ -1036,7 +1036,7 @@ function startLiveOwnMatchday(context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.08] Error al iniciar simulación viva:', err);
+    console.error('[V5.09] Error al iniciar simulación viva:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar simulación viva: ${err?.message || err}`] });
     return 'blocked';
   }
@@ -1168,29 +1168,31 @@ function simulateNextMatchday(options={}){
   else finalNotice();
 }
 
-function simulatePreseasonTurn(){
-  const budgetBeforeTurn = Number(game.budget || 0);
-  showTurnTransition('Avanzando 1 día de pretemporada');
-  const opponentId = Number(game.pendingFriendlyOpponentId || 0);
-  const canFriendly = opponentId && canPlayPreseasonFriendly();
-  let friendlyResult = null;
-  if(canFriendly){
-    const homeOwn = Math.random() < 0.5;
-    const match = {
-      id:`friendly-t${game.seasonNumber || 1}-${game.phaseTurn || 0}-${game.selectedClubId}-${opponentId}`,
-      friendly:true,
-      matchday:`PRE-${(game.phaseTurn || 0) + 1}`,
-      divisionId:'friendly',
-      divisionName:'Amistoso',
-      date:game.currentDate || '',
-      homeId:homeOwn ? game.selectedClubId : opponentId,
-      awayId:homeOwn ? opponentId : game.selectedClubId,
-      played:false
-    };
-    friendlyResult = simulateMatch(match);
+function buildPreseasonFriendlyMatch(opponentId){
+  const homeOwn = Math.random() < 0.5;
+  return {
+    id:`friendly-t${game.seasonNumber || 1}-${game.phaseTurn || 0}-${game.selectedClubId}-${opponentId}`,
+    friendly:true,
+    matchday:`PRE-${(game.phaseTurn || 0) + 1}`,
+    divisionId:'friendly',
+    divisionName:'Amistoso',
+    date:game.currentDate || '',
+    homeId:homeOwn ? game.selectedClubId : opponentId,
+    awayId:homeOwn ? opponentId : game.selectedClubId,
+    played:false
+  };
+}
+function finalizePreseasonTurnAfterMatch(context={}){
+  if(!game) return;
+  const budgetBeforeTurn = Number(context.budgetBeforeTurn || 0);
+  const opponentId = Number(context.opponentId || 0);
+  const canFriendly = Boolean(context.canFriendly);
+  let friendlyResult = context.friendlyResult || null;
+  if(friendlyResult){
+    friendlyResult.friendly = true;
     friendlyResult.cards = [];
     friendlyResult.injuries = [];
-    friendlyResult.substitutions = [];
+    friendlyResult.substitutions = friendlyResult.substitutions || [];
     game.matchHistory.push(friendlyResult);
     applyConditionUpdates([friendlyResult]);
     applyMoraleUpdates([friendlyResult]);
@@ -1227,12 +1229,44 @@ function simulatePreseasonTurn(){
   } else {
     setAdvanceLock(ADVANCE_LOCK_MS);
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
-    showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Día de pretemporada aplicado.', false);
+    showNotice(canFriendly ? `Amistoso dirigido ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Día de pretemporada aplicado.', false);
   }
   activeTab = 'home';
   saveLocal(true);
   renderAll();
-  if(friendlyResult) showMatchRevealModal(friendlyResult);
+}
+function startLivePreseasonFriendly(match, context){
+  const status = liveMatchEngineStatus();
+  if(!status.ok){
+    console.warn('[V5.09] Amistoso vivo bloqueado por carga incompleta:', status.missing);
+    showLiveMatchEngineBlocked(status);
+    return 'blocked';
+  }
+  try{
+    const started = window.LiveMatchUI.start(match, {
+      onComplete:(friendlyResult) => finalizePreseasonTurnAfterMatch({ ...context, friendlyResult }),
+      onCancel:null
+    });
+    if(started) return true;
+  }catch(err){
+    console.error('[V5.09] Error al iniciar amistoso vivo:', err);
+    showLiveMatchEngineBlocked({ missing:[`Error al iniciar amistoso vivo: ${err?.message || err}`] });
+    return 'blocked';
+  }
+  showLiveMatchEngineBlocked({ missing:['El motor vivo respondió, pero no pudo abrir el amistoso'] });
+  return 'blocked';
+}
+function simulatePreseasonTurn(){
+  const budgetBeforeTurn = Number(game.budget || 0);
+  showTurnTransition('Avanzando 1 día de pretemporada');
+  const opponentId = Number(game.pendingFriendlyOpponentId || 0);
+  const canFriendly = Boolean(opponentId && canPlayPreseasonFriendly());
+  if(canFriendly){
+    const match = buildPreseasonFriendlyMatch(opponentId);
+    const liveStartState = startLivePreseasonFriendly(match, { budgetBeforeTurn, opponentId, canFriendly });
+    if(liveStartState === true || liveStartState === 'blocked') return;
+  }
+  finalizePreseasonTurnAfterMatch({ budgetBeforeTurn, opponentId, canFriendly:false, friendlyResult:null });
 }
 
 function simulatePostseasonTurn(){

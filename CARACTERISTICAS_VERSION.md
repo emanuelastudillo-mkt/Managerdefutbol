@@ -1,12 +1,13 @@
 # Características de versión
 
-## V5.08 - Corrección de conexión de simulación viva
+## V5.09 - Simulación viva también en amistosos
 
-- Se corrige el fallback silencioso que podía mandar el partido propio al simulador anterior si el módulo vivo no cargaba.
-- Si falta `js/game/17-live-match.js` o el archivo `simulador-2.0.js` no trae el motor por bloques, el partido no se simula con el sistema viejo.
-- Se muestra un aviso de diagnóstico para saber qué archivo no cargó o quedó desactualizado.
-- Se reordena `index.html` para cargar el módulo de simulación viva antes del calendario y avance de partidos.
-- El objetivo es que V5.07/V5.08 no parezca implementada sólo por versión visible: el flujo real debe entrar al partido vivo o avisar el motivo exacto.
+- Se corrige el caso que seguía mostrando el simulador anterior al iniciar una partida nueva: los amistosos de pretemporada no estaban conectados al motor vivo.
+- Los amistosos propios pasan a usar bloques de 15 minutos, pausa, cambios manuales e instrucciones de campo.
+- El avance de pretemporada queda detenido hasta cerrar y guardar el resultado del amistoso vivo.
+- Si el motor vivo no está cargado, el partido no se simula con el sistema viejo y se muestra un diagnóstico.
+- Los amistosos conservan su regla anterior: no dejan lesiones ni sanciones persistentes.
+- Se refuerza el ZIP incremental incluyendo los archivos completos del motor vivo y sus estilos.
 
 ## V5.07 - Simulación viva por bloques
 

@@ -1,4 +1,4 @@
-/* V5.08 · Simulación viva por bloques con diagnóstico de carga. */
+/* V5.09 · Simulación viva por bloques con oficiales y amistosos. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -85,7 +85,7 @@
     const instructionHelp = (window.LIVE_MANAGER_INSTRUCTIONS || []).map(opt => `<div><strong>${ehtml(opt.label)}</strong><span>${ehtml(opt.desc || '')}</span></div>`).join('');
     const html = `<div class="live-match-shell">
       <div class="match-modal-head live-match-head">
-        <p class="label">Simulación viva · Fecha ${ehtml(match.matchday || '—')} · ${ehtml(match.date || '')}</p>
+        <p class="label">${match.friendly ? 'Simulación viva · Amistoso' : 'Simulación viva · Fecha'} ${ehtml(match.matchday || '—')} · ${ehtml(match.date || '')}</p>
         <h2>${liveBadge(match.homeId)} ${ehtml(homeTitle)} <span class="live-score">${Number(liveState.homeGoals || 0)} - ${Number(liveState.awayGoals || 0)}</span> ${ehtml(awayTitle)} ${liveBadge(match.awayId)}</h2>
         <p class="muted small">Minuto ${Number(liveState.minute || 0)}${nextBlock ? ` · próximo bloque ${nextBlock.label}` : ' · finalizado'}</p>
       </div>

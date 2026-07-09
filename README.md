@@ -1,17 +1,19 @@
 # Fútbol Manager MVP
 
-**V5.07 - Simulación viva por bloques**
+**V5.09 - Simulación viva también en amistosos**
 
 ## Historial de versiones
 
-### V5.08 - Corrección de conexión de simulación viva
+### V5.09 - Simulación viva también en amistosos
 
-- Reforzada la conexión entre el botón `Ir a próximo partido` y el motor de simulación viva por bloques.
-- El juego ya no vuelve silenciosamente al simulador anterior si falta algún archivo nuevo.
-- Si no carga `js/game/17-live-match.js` o `simulador-2.0.js` está viejo/incompleto, el partido propio queda pendiente y se muestra un aviso claro.
-- Reordenada la carga de scripts para iniciar el módulo de simulación viva antes de los módulos principales de calendario.
-- Agregado diagnóstico visual para detectar cargas incompletas después de subir archivos a GitHub.
-- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.08.
+- Corregida la causa principal por la que podía seguir viéndose el simulador anterior después de reiniciar partida: los amistosos de pretemporada seguían usando el modal visual viejo.
+- Los amistosos propios ahora también abren el motor de simulación viva por bloques.
+- La pretemporada ya no avanza ni guarda el amistoso hasta terminar los 90 minutos del partido vivo.
+- Si el motor vivo no carga, el amistoso queda pendiente y se muestra diagnóstico en lugar de caer al simulador anterior.
+- Los amistosos vivos no generan sanciones ni lesiones persistentes, manteniendo el comportamiento histórico de pretemporada.
+- Se mantiene la simulación viva en partidos oficiales propios de temporada regular.
+- Se incluye nuevamente `simulador-2.0.js`, `js/game/17-live-match.js`, `style.css` y `js/ui/12-modals.js` dentro del ZIP incremental para evitar instalaciones incompletas de V5.07/V5.08.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.09.
 
 ### V5.07 - Simulación viva por bloques
 

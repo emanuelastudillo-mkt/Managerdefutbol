@@ -1,14 +1,28 @@
-# V4.08 - Academia al cambiar de club y ranking público
+# V4.09 - Playoffs de promoción Argentina
 
 ## Cambios principales
 
-- Al firmar con otro club después de un despido o una renuncia, la academia se reinicia completa.
-- Los juveniles de la academia del club anterior desaparecen.
-- El nuevo club no hereda juveniles, captaciones pendientes, informes desbloqueados, planes de entrenamiento, residencias ni lesiones juveniles del club anterior.
-- En la pantalla `Ranking Online` se elimina el bloque de `Carga automática`.
-- El ranking queda como pantalla de consulta pública únicamente.
-- Se conservan los filtros actuales de la tabla.
-- La lectura del ranking mantiene hasta 100 resultados.
+- Se agregan playoffs de promoción para Argentina al terminar la liga regular.
+- Los cruces son ida y vuelta.
+- Primera División Argentina:
+  - 1° campeón.
+  - 1° a 4° clasificados a copas futuras.
+  - 15° y 16° juegan promoción contra Segunda.
+  - 17° y 18° descienden directo.
+- Segunda División Argentina:
+  - 1° campeón y ascenso directo.
+  - 2° ascenso directo.
+  - 3° y 4° juegan promoción contra Primera.
+  - 15° y 16° juegan promoción contra Tercera.
+  - 17° y 18° descienden directo.
+- Tercera División Argentina:
+  - 1° campeón y ascenso directo.
+  - 2° ascenso directo.
+  - 3° y 4° juegan promoción contra Segunda.
+  - No hay descensos.
+- Los partidos de promoción no modifican las tablas regulares.
+- Los ascensos y descensos definitivos se calculan al cerrar la temporada.
+- En empate global conserva la categoría el club de la división superior.
 
 ## Archivos modificados
 
@@ -17,14 +31,16 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
+- `style.css`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
-- `js/game/13-ranking-online.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/11-match-engine.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
 - Sintaxis validada en todos los archivos `.js`.
-
-## Nota
-
-- No se modificó el simulador de partidos, calendario, mercado ni economía.
+- Prueba lógica aislada de creación de cruces y cálculo de movimientos de ascenso/descenso.

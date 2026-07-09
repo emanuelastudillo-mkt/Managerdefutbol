@@ -86,7 +86,7 @@ function matchDateLabel(date){
   const day = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(`${date}T00:00:00Z`).getUTCDay()] || '';
   return `${day} ${date}`;
 }
-const SEASON_CALENDAR_VERSION = 'annual-365-home-away-weekend-split-v2';
+const SEASON_CALENDAR_VERSION = 'annual-365-home-away-weekend-split-v3-playoffs';
 const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 120000, 0);
 const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
 const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);

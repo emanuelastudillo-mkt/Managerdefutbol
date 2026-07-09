@@ -1254,16 +1254,22 @@ function mergePlayedFixturesIntoCalendar(nextFixtures, previousFixtures=[]){
     })
   }));
 }
+function fixtureRoundIsPlayoff(round){
+  return Boolean(round?.playoffRound || (round?.matches || []).some(match => match?.playoff));
+}
 function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=null){
   const year = Math.round(Number(seasonYear || 0)) || seasonYearForNumber(seasonNumber || 1);
   const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year });
   const current = Array.isArray(existingFixtures) ? existingFixtures : [];
-  const currentYear = String(current?.[0]?.date || '').slice(0,4);
-  const needsCalendar = current.length !== expected.length
+  const playoffRounds = current.filter(fixtureRoundIsPlayoff);
+  const regularCurrent = current.filter(round => !fixtureRoundIsPlayoff(round));
+  const currentYear = String(regularCurrent?.[0]?.date || current?.[0]?.date || '').slice(0,4);
+  const needsCalendar = regularCurrent.length !== expected.length
     || currentYear !== String(year)
-    || current.some(round => !validIsoDate(round.date))
-    || current.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')));
-  return needsCalendar ? mergePlayedFixturesIntoCalendar(expected, current) : current;
+    || regularCurrent.some(round => !validIsoDate(round.date))
+    || regularCurrent.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')));
+  const normalizedRegular = needsCalendar ? mergePlayedFixturesIntoCalendar(expected, regularCurrent) : regularCurrent;
+  return normalizedRegular.concat(playoffRounds);
 }
 
 

@@ -2,9 +2,36 @@
 
 ## Versión actual
 
-**V4.08 - Academia al cambiar de club y ranking público**
+**V4.09 - Playoffs de promoción Argentina**
 
 ## Historial de versiones
+
+
+### V4.09 - Playoffs de promoción Argentina
+
+- Se agrega calendario de playoffs de promoción para las tres divisiones argentinas.
+- Los playoffs se crean automáticamente una vez terminada la liga regular argentina.
+- Los cruces son ida y vuelta.
+- Primera División Argentina:
+  - Puesto 1: campeón.
+  - Puestos 1 a 4: clasificados a copas futuras.
+  - Puestos 15 y 16: juegan promoción contra 4° y 3° de Segunda.
+  - Puestos 17 y 18: descienden directo.
+- Segunda División Argentina:
+  - Puesto 1: campeón y ascenso directo.
+  - Puesto 2: ascenso directo.
+  - Puestos 3 y 4: juegan promoción contra 16° y 15° de Primera.
+  - Puestos 15 y 16: juegan promoción contra 4° y 3° de Tercera.
+  - Puestos 17 y 18: descienden directo.
+- Tercera División Argentina:
+  - Puesto 1: campeón y ascenso directo.
+  - Puesto 2: ascenso directo.
+  - Puestos 3 y 4: juegan promoción contra 16° y 15° de Segunda.
+  - No hay descensos.
+- Las tablas de liga no se alteran con los resultados de promoción.
+- En empate global de una serie, conserva la categoría el club de la división superior.
+- La pantalla de calendario muestra los cruces como `Promoción Argentina · Ida` y `Promoción Argentina · Vuelta`.
+- La tabla argentina marca visualmente campeón, copas futuras, promoción y descenso directo.
 
 
 ### V4.08 - Academia al cambiar de club y ranking público

@@ -463,6 +463,12 @@ function advanceOneDay(){
   const fromDate = currentCalendarDate();
   if(isRegularSeason()){
     if(game.matchdayIndex >= game.fixtures.length){
+      if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+        saveLocal(true);
+        renderAll();
+        showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
+        return;
+      }
       showNotice('La fase regular ya terminó. Usá el avance largo para pasar a postemporada.');
       return;
     }
@@ -486,7 +492,9 @@ function advanceOneDay(){
       advanceStadiumAfterMatches(botResults);
     }
     if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(Math.max(1, Math.abs(daysBetweenIsoDates(fromDate, nextDate)) || 1));
-    const regularEnded = game.matchdayIndex >= game.fixtures.length;
+    let regularEnded = game.matchdayIndex >= game.fixtures.length;
+    const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+    if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
     if(regularEnded){
       game.seasonPhase = 'postseason';
       game.phaseTurn = 0;
@@ -499,7 +507,8 @@ function advanceOneDay(){
     activeTab = 'home';
     saveLocal(true);
     renderAll();
-    if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
+    if(playoffCreated) showNotice('Se completó la liga y se creó el calendario de playoffs de promoción.', true);
+    else if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
     else if(botResults.length) showNotice(`Avanzaste al ${nextDate}. Se simularon ${botResults.length} partido(s) de otras ligas.`);
     else showNotice(nextTarget && nextDate === nextTarget ? 'Llegaste al día del próximo evento.' : 'Avanzaste 1 día.');
     return;
@@ -539,6 +548,12 @@ function simulateNextMatchday(options={}){
     return;
   }
   if(game.matchdayIndex >= game.fixtures.length){
+    if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+      saveLocal(true);
+      renderAll();
+      showNotice('Se creó el calendario de playoffs de promoción. Avanzá para jugar la ida.', true);
+      return;
+    }
     showTurnTransition('Cambio de fase');
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
@@ -604,7 +619,9 @@ function simulateNextMatchday(options={}){
     processAcademyTurn();
     processPendingTransfers();
   }
-  const regularEnded = game.matchdayIndex >= game.fixtures.length;
+  let regularEnded = game.matchdayIndex >= game.fixtures.length;
+  const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(regularEnded){
     game.seasonPhase = 'postseason';
@@ -615,13 +632,14 @@ function simulateNextMatchday(options={}){
     game.currentDate = targetDate;
     setAdvanceLock(ownResult ? ADVANCE_LOCK_MS : DAY_ADVANCE_LOCK_MS);
   }
-  if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded, triggeredEvents);
+  if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
   else setDailyAdvanceSummary(currentCalendarDate(), targetDate, results.length);
   activeTab = 'home';
   saveLocal(true);
   renderAll();
   const finalNotice = () => {
     if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
+    else if(playoffCreated){ showNotice('Terminó la liga regular y se creó el calendario de playoffs de promoción.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
     else if(ownResult){ showNotice(`Partido propio simulado. Además se procesaron ${Math.max(0, results.length - 1)} partido(s) del calendario.`); }
     else { showNotice(`Se simularon ${results.length} partido(s) de calendario.`); }

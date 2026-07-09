@@ -635,6 +635,7 @@ function normalizeGame(saved){
   normalized.seasonInitialBudget = Number.isFinite(Number(normalized.seasonInitialBudget)) ? Math.round(Number(normalized.seasonInitialBudget)) : Math.round(Number(normalized.seasonBudgetStartBySeason[normalized.seasonNumber] || deriveSeasonInitialBudgetFromHistory(normalized, normalized.seasonNumber)));
   normalized.seasonFinalized = Boolean(normalized.seasonFinalized);
   normalized.seasonTransition = normalized.seasonTransition || null;
+  normalized.argentinaPlayoffs = (normalized.argentinaPlayoffs && typeof normalized.argentinaPlayoffs === 'object' && !Array.isArray(normalized.argentinaPlayoffs)) ? normalized.argentinaPlayoffs : null;
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
   normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
@@ -1741,24 +1742,289 @@ function applyClubDivisionOverrides(overrides={}){
 function snapshotClubDivisionOverrides(){
   return Object.fromEntries(seed.clubs.map(c => [c.id, { divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única' }]));
 }
+function playoffRoundMatchdayLabel(index){
+  const regularCount = regularFixtureLength();
+  return Number(index || 0) > regularCount ? `Promoción ${Number(index || 0) - regularCount}` : `Fecha ${Number(index || 0)}`;
+}
+function isPromotionPlayoffMatch(match){
+  return Boolean(match?.playoff || match?.promotionPlayoff || match?.playoffTieId);
+}
+function isPromotionPlayoffRound(round){
+  return Boolean(round?.playoffRound || (round?.matches || []).some(isPromotionPlayoffMatch));
+}
+function regularFixtureLength(fixtures=game?.fixtures || []){
+  const list = Array.isArray(fixtures) ? fixtures : [];
+  const firstPlayoffIndex = list.findIndex(isPromotionPlayoffRound);
+  return firstPlayoffIndex >= 0 ? firstPlayoffIndex : list.length;
+}
+function argentinaDivisions(){
+  return divisionOrderList().filter(division => normalizeScheduleText(division.country || '') === 'argentina').sort((a,b)=>(a.order || 0)-(b.order || 0));
+}
+function argentinaDivisionByOrder(order){
+  return argentinaDivisions().find(division => Number(division.order || 0) === Number(order));
+}
+function standingAtPosition(divisionId, position){
+  const table = sortedStandings(divisionId);
+  return table[Math.max(0, Number(position || 1) - 1)] || null;
+}
+function movementRecord(type, clubId, fromDivision, toDivision, reason=''){
+  return {
+    type,
+    clubId:Number(clubId),
+    fromDivisionId:fromDivision?.id,
+    fromDivisionName:fromDivision?.name || '',
+    toDivisionId:toDivision?.id,
+    toDivisionName:toDivision?.name || '',
+    reason
+  };
+}
+function addUniqueMovement(list, movement){
+  if(!movement?.clubId || !movement.fromDivisionId || !movement.toDivisionId) return;
+  if(String(movement.fromDivisionId) === String(movement.toDivisionId)) return;
+  const key = `${movement.clubId}-${movement.fromDivisionId}-${movement.toDivisionId}`;
+  if(list.some(item => `${item.clubId}-${item.fromDivisionId}-${item.toDivisionId}` === key)) return;
+  list.push(movement);
+}
+function createArgentinePlayoffTie(id, upperDivision, lowerDivision, upperPosition, lowerPosition){
+  const upperRow = standingAtPosition(upperDivision?.id, upperPosition);
+  const lowerRow = standingAtPosition(lowerDivision?.id, lowerPosition);
+  if(!upperRow || !lowerRow) return null;
+  return {
+    id,
+    upperClubId:Number(upperRow.clubId),
+    lowerClubId:Number(lowerRow.clubId),
+    upperClubName:clubName(upperRow.clubId),
+    lowerClubName:clubName(lowerRow.clubId),
+    upperPosition,
+    lowerPosition,
+    upperDivisionId:upperDivision.id,
+    upperDivisionName:upperDivision.name,
+    lowerDivisionId:lowerDivision.id,
+    lowerDivisionName:lowerDivision.name,
+    advantageClubId:Number(upperRow.clubId),
+    matchIds:[]
+  };
+}
+function buildArgentinePlayoffTies(){
+  const first = argentinaDivisionByOrder(1);
+  const second = argentinaDivisionByOrder(2);
+  const third = argentinaDivisionByOrder(3);
+  const ties = [];
+  if(first && second){
+    [
+      createArgentinePlayoffTie('primera-15-vs-segunda-4', first, second, 15, 4),
+      createArgentinePlayoffTie('primera-16-vs-segunda-3', first, second, 16, 3)
+    ].forEach(tie => { if(tie) ties.push(tie); });
+  }
+  if(second && third){
+    [
+      createArgentinePlayoffTie('segunda-15-vs-tercera-4', second, third, 15, 4),
+      createArgentinePlayoffTie('segunda-16-vs-tercera-3', second, third, 16, 3)
+    ].forEach(tie => { if(tie) ties.push(tie); });
+  }
+  return ties;
+}
+function playoffFixtureMatch(tie, leg, date, matchday){
+  const lowerHome = Number(leg) === 1;
+  const homeId = lowerHome ? tie.lowerClubId : tie.upperClubId;
+  const awayId = lowerHome ? tie.upperClubId : tie.lowerClubId;
+  const id = `arg-playoff-s${game?.seasonNumber || 1}-${tie.id}-${leg}`;
+  return {
+    id,
+    matchday,
+    leg:Number(leg),
+    playoff:true,
+    promotionPlayoff:true,
+    playoffTieId:tie.id,
+    playoffStage:Number(leg) === 1 ? 'Ida' : 'Vuelta',
+    divisionId:tie.upperDivisionId,
+    divisionName:`Promoción ${tie.upperDivisionName}`,
+    date,
+    roundDate:date,
+    homeId,
+    awayId,
+    played:false
+  };
+}
+function lastRegularFixtureDate(){
+  const regularCount = regularFixtureLength();
+  const regularRounds = (game?.fixtures || []).slice(0, regularCount);
+  const dates = [];
+  regularRounds.forEach(round => {
+    if(validIsoDate(round?.endDate)) dates.push(round.endDate);
+    if(validIsoDate(round?.date)) dates.push(round.date);
+    (round?.matches || []).forEach(match => { if(validIsoDate(match.date)) dates.push(match.date); });
+  });
+  if(!dates.length) return currentCalendarDate?.() || dateForSeasonState(game);
+  return dates.sort((a,b)=>daysBetweenIsoDates(a,b))[dates.length - 1];
+}
+function regularFixturesComplete(){
+  const regularCount = regularFixtureLength();
+  return (game?.fixtures || []).slice(0, regularCount).every(round => (round.matches || []).every(match => match.played));
+}
+function createArgentinePromotionPlayoffsIfNeeded(){
+  if(!game || game.seasonFinalized || !Array.isArray(game.fixtures)) return false;
+  const season = Number(game.seasonNumber || 1);
+  const regularCount = regularFixtureLength();
+  if(game.fixtures.some(isPromotionPlayoffRound)) return false;
+  if(Number(game.matchdayIndex || 0) < regularCount) return false;
+  if(game.argentinaPlayoffs?.season === season && game.argentinaPlayoffs?.created) return false;
+  if(!regularFixturesComplete()) return false;
+  const ties = buildArgentinePlayoffTies();
+  if(!ties.length) return false;
+  const firstLegDate = addDaysToIsoDate(lastRegularFixtureDate(), 7);
+  const secondLegDate = addDaysToIsoDate(firstLegDate, 7);
+  const firstMatchday = regularCount + 1;
+  const secondMatchday = regularCount + 2;
+  const firstLegMatches = ties.map(tie => playoffFixtureMatch(tie, 1, firstLegDate, firstMatchday));
+  const secondLegMatches = ties.map(tie => playoffFixtureMatch(tie, 2, secondLegDate, secondMatchday));
+  ties.forEach(tie => {
+    tie.matchIds = [`arg-playoff-s${season}-${tie.id}-1`, `arg-playoff-s${season}-${tie.id}-2`];
+  });
+  game.fixtures.push({
+    matchday:firstMatchday,
+    date:firstLegDate,
+    startDate:firstLegDate,
+    endDate:firstLegDate,
+    playoffRound:true,
+    playoffStage:'Ida',
+    title:'Promoción Argentina · Ida',
+    matches:firstLegMatches
+  });
+  game.fixtures.push({
+    matchday:secondMatchday,
+    date:secondLegDate,
+    startDate:secondLegDate,
+    endDate:secondLegDate,
+    playoffRound:true,
+    playoffStage:'Vuelta',
+    title:'Promoción Argentina · Vuelta',
+    matches:secondLegMatches
+  });
+  game.argentinaPlayoffs = { season, created:true, regularFixtureCount:regularCount, firstLegDate, secondLegDate, ties };
+  pushGameMessage({
+    type:'deportivo',
+    priority:'high',
+    title:'Playoffs de promoción creados',
+    body:'Terminó la liga argentina. Se agregaron cruces ida y vuelta de promoción entre Primera/Segunda y Segunda/Tercera. En empate global conserva la categoría el club de la división superior.',
+    id:`arg-playoffs-${season}`
+  });
+  return true;
+}
+function findPlayedMatchById(matchId){
+  const id = String(matchId || '');
+  for(const round of (game?.fixtures || [])){
+    const match = (round.matches || []).find(item => String(item.id) === id);
+    if(match?.played) return match;
+  }
+  return (game?.matchHistory || []).find(item => String(item.id) === id && item.played) || null;
+}
+function playoffTieResult(tie){
+  if(!tie?.matchIds?.length) return null;
+  const matches = tie.matchIds.map(findPlayedMatchById).filter(Boolean);
+  if(matches.length < tie.matchIds.length) return null;
+  const totals = { [tie.upperClubId]:0, [tie.lowerClubId]:0 };
+  matches.forEach(match => {
+    totals[match.homeId] = Number(totals[match.homeId] || 0) + Number(match.homeGoals || 0);
+    totals[match.awayId] = Number(totals[match.awayId] || 0) + Number(match.awayGoals || 0);
+  });
+  const upperGoals = Number(totals[tie.upperClubId] || 0);
+  const lowerGoals = Number(totals[tie.lowerClubId] || 0);
+  const winnerClubId = upperGoals === lowerGoals ? Number(tie.advantageClubId || tie.upperClubId) : (upperGoals > lowerGoals ? Number(tie.upperClubId) : Number(tie.lowerClubId));
+  const loserClubId = winnerClubId === Number(tie.upperClubId) ? Number(tie.lowerClubId) : Number(tie.upperClubId);
+  return { winnerClubId, loserClubId, upperGoals, lowerGoals, tied:upperGoals === lowerGoals };
+}
+function argentinaPlayoffTiesForSeason(){
+  const stored = game?.argentinaPlayoffs;
+  if(stored?.season === Number(game?.seasonNumber || 1) && Array.isArray(stored.ties)) return stored.ties;
+  return [];
+}
+function computeArgentinaSeasonMovements(){
+  const first = argentinaDivisionByOrder(1);
+  const second = argentinaDivisionByOrder(2);
+  const third = argentinaDivisionByOrder(3);
+  const movements = [];
+  if(first && second){
+    [1,2].forEach(position => {
+      const row = standingAtPosition(second.id, position);
+      if(row) addUniqueMovement(movements, movementRecord('promotion', row.clubId, second, first, position === 1 ? 'Campeón / ascenso directo' : 'Ascenso directo'));
+    });
+    [17,18].forEach(position => {
+      const row = standingAtPosition(first.id, position);
+      if(row) addUniqueMovement(movements, movementRecord('relegation', row.clubId, first, second, 'Descenso directo'));
+    });
+  }
+  if(second && third){
+    [1,2].forEach(position => {
+      const row = standingAtPosition(third.id, position);
+      if(row) addUniqueMovement(movements, movementRecord('promotion', row.clubId, third, second, position === 1 ? 'Campeón / ascenso directo' : 'Ascenso directo'));
+    });
+    [17,18].forEach(position => {
+      const row = standingAtPosition(second.id, position);
+      if(row) addUniqueMovement(movements, movementRecord('relegation', row.clubId, second, third, 'Descenso directo'));
+    });
+  }
+  argentinaPlayoffTiesForSeason().forEach(tie => {
+    const result = playoffTieResult(tie);
+    if(!result) return;
+    const upperDivision = (seed?.divisions || []).find(d => d.id === tie.upperDivisionId);
+    const lowerDivision = (seed?.divisions || []).find(d => d.id === tie.lowerDivisionId);
+    if(!upperDivision || !lowerDivision) return;
+    if(Number(result.winnerClubId) === Number(tie.lowerClubId)){
+      addUniqueMovement(movements, movementRecord('promotion', tie.lowerClubId, lowerDivision, upperDivision, 'Ganó playoff de promoción'));
+      addUniqueMovement(movements, movementRecord('relegation', tie.upperClubId, upperDivision, lowerDivision, 'Perdió playoff de promoción'));
+    }
+  });
+  return movements;
+}
+function divisionUsesArgentinaRules(division){
+  return normalizeScheduleText(division?.country || '') === 'argentina' && [1,2,3].includes(Number(division?.order || 0));
+}
 function computeSeasonMovements(){
   const divisions = divisionOrderList();
   const movements = [];
+  if(argentinaDivisions().length >= 3){
+    computeArgentinaSeasonMovements().forEach(move => addUniqueMovement(movements, move));
+  }
   for(let i=1; i<divisions.length; i++){
     const upper = divisions[i-1];
     const lower = divisions[i];
+    if(divisionUsesArgentinaRules(upper) || divisionUsesArgentinaRules(lower)) continue;
     const lowerTable = sortedStandings(lower.id);
     const upperTable = sortedStandings(upper.id);
     const lowerChampion = lowerTable[0];
     const upperLast = upperTable[upperTable.length - 1];
     if(lowerChampion){
-      movements.push({ type:'promotion', clubId:lowerChampion.clubId, fromDivisionId:lower.id, fromDivisionName:lower.name, toDivisionId:upper.id, toDivisionName:upper.name });
+      addUniqueMovement(movements, movementRecord('promotion', lowerChampion.clubId, lower, upper, 'Campeón'));
     }
     if(upperLast){
-      movements.push({ type:'relegation', clubId:upperLast.clubId, fromDivisionId:upper.id, fromDivisionName:upper.name, toDivisionId:lower.id, toDivisionName:lower.name });
+      addUniqueMovement(movements, movementRecord('relegation', upperLast.clubId, upper, lower, 'Descenso'));
     }
   }
   return movements;
+}
+function argentineStandingStatusClass(divisionId, index, total){
+  const division = (seed?.divisions || []).find(d => d.id === divisionId);
+  if(!divisionUsesArgentinaRules(division)) return '';
+  const position = Number(index || 0) + 1;
+  const order = Number(division.order || 0);
+  if(order === 1){
+    if(position === 1) return 'champion-row';
+    if(position >= 2 && position <= 4) return 'continental-row';
+    if(position >= 15 && position <= 16) return 'playoff-row';
+    if(position >= 17 && position <= 18) return 'relegation-row';
+  }
+  if(order === 2){
+    if(position >= 1 && position <= 2) return 'promotion-row';
+    if(position >= 3 && position <= 4) return 'playoff-row';
+    if(position >= 15 && position <= 16) return 'playoff-row';
+    if(position >= 17 && position <= 18) return 'relegation-row';
+  }
+  if(order === 3){
+    if(position >= 1 && position <= 2) return 'promotion-row';
+    if(position >= 3 && position <= 4) return 'playoff-row';
+  }
+  return '';
 }
 function decayTrainedSkillBoosts(){
   if(!game?.playerSkillBoosts) return { players:0, lost:0, remaining:0 };
@@ -2542,6 +2808,7 @@ function startNextSeason(selectedClubId){
   game.seasonBudgetStartBySeason[game.seasonNumber] = game.seasonInitialBudget;
   game.seasonFinalized = false;
   game.seasonTransition = null;
+  game.argentinaPlayoffs = null;
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;
@@ -2583,7 +2850,7 @@ function seasonEndPanelMarkup(){
   const movements = game?.seasonTransition?.movements || [];
   const retirements = game?.seasonTransition?.retirements || [];
   const salaryAdjustments = game?.seasonTransition?.salaryAdjustments || null;
-  const moveRows = movements.map(move => `<li><strong>${escapeHtml(clubName(move.clubId))}</strong>: ${move.type === 'promotion' ? 'asciende' : 'desciende'} a ${escapeHtml(move.toDivisionName)}</li>`).join('');
+  const moveRows = movements.map(move => `<li><strong>${escapeHtml(clubName(move.clubId))}</strong>: ${move.type === 'promotion' ? 'asciende' : 'desciende'} a ${escapeHtml(move.toDivisionName)}${move.reason ? ` · ${escapeHtml(move.reason)}` : ''}</li>`).join('');
   const retirementRows = retirements.map(p => `<li><strong>${escapeHtml(p.name)}</strong> se retiró del fútbol a los ${p.age} años.</li>`).join('');
   return `<div class="card season-end-card">
     <div class="row"><div><p class="label">Fin de temporada</p><h3>${record?.title ? 'Campeón' : `Posición final: ${escapeHtml(record?.label || '—')}`}</h3></div><span class="pill">Temporada ${game.seasonNumber || 1}</span></div>

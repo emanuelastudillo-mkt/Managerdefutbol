@@ -190,6 +190,7 @@ function scoreAtMinute(goals, minute, clubId){
   return { gf, gc };
 }
 function applyResultToTables(match, hg, ag){
+  if(match?.playoff || match?.knockout) return;
   const h = game.standings[match.homeId];
   const a = game.standings[match.awayId];
   h.pj++; a.pj++;

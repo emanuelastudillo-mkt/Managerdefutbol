@@ -1,8 +1,9 @@
-# Características de la versión V5.23
+# Características de la versión V5.24
 
-- Ajuste del simulador vivo para lesiones durante partido.
-- Si un jugador bot se lesiona y todavía tiene cambios, el bot intenta reemplazarlo automáticamente.
-- Si un jugador del manager se lesiona, el partido se pausa para permitir un reemplazo manual.
-- El lesionado del manager queda visible en cancha como jugador fantasma: no aporta, no cumple rol y puede ser clickeado para salir.
-- Los lesionados que no participan quedan bloqueados para entrar de nuevo.
-- Se mantiene la lógica de expulsados: no participan, no reciben eventos nuevos y generan desventaja numérica real.
+- Agregado botón **Ver solo resultados** antes de iniciar un partido propio o amistoso.
+- El resultado directo usa el motor vivo para resolver el partido sin abrir la simulación minuto a minuto.
+- Se muestran estadísticas completas del partido después de saltear la simulación visual.
+- Agregado botón **Terminar partido** dentro del simulador vivo.
+- Si se usa **Terminar partido**, se simulan automáticamente todos los minutos restantes y queda habilitado **Cerrar y guardar**.
+- Se conservan eventos completos: goles, asistencias, tarjetas, lesiones, cambios, tapadas, errores, contexto y estadísticas.
+- No modifica calendario, fatiga, expulsiones, lesiones fantasma ni lógica de cambios.

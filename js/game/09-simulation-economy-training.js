@@ -1030,15 +1030,39 @@ function showLiveMatchEngineBlocked(status){
   if(typeof openModal === 'function') openModal(html);
   showNotice('No se cargó el motor de simulación viva. El partido no fue simulado con el sistema anterior.', true);
 }
-function startLiveOwnMatchday(context){
+function simulateLiveMatchResultOnly(match){
+  if(!match || !window.Simulator20?.createLiveMatchSession || !window.Simulator20?.simulateLiveBlock) return null;
+  const session = window.Simulator20.createLiveMatchSession(match);
+  let guard = 0;
+  while(session && !session.finished && guard < 140){
+    window.Simulator20.simulateLiveBlock(session, { instruction:'none', substitutions:[] });
+    guard += 1;
+  }
+  return session?.result || (window.Simulator20.finishLiveMatchSession ? window.Simulator20.finishLiveMatchSession(session) : null);
+}
+function showResultOnlySummary(result){
+  if(!result) return;
+  setTimeout(() => {
+    if(typeof showMatchModal === 'function' && result.id){ showMatchModal(result.id); return; }
+    const h = clubName(result.homeId);
+    const a = clubName(result.awayId);
+    const hs = result.matchStats?.home || {};
+    const as = result.matchStats?.away || {};
+    const body = `<div class="card inner match-result-only-summary">
+      <p class="label">Resultado directo</p>
+      <h2>${escapeHtml(h)} ${Number(result.homeGoals || 0)} - ${Number(result.awayGoals || 0)} ${escapeHtml(a)}</h2>
+      <div class="grid cols-2">
+        <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Ataques: ${Number(hs.attacks || 0)}</p><p>Ocasiones: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
+        <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Ataques: ${Number(as.attacks || 0)}</p><p>Ocasiones: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
+      </div>
+      <div class="modal-actions"><button class="primary" onclick="closeModal()">Cerrar</button></div>
+    </div>`;
+    if(typeof openModal === 'function') openModal(body);
+  }, 0);
+}
+function startLiveOwnMatchdayInteractive(context){
   const match = context?.ownInfo?.match;
   if(!match) return false;
-  const status = liveMatchEngineStatus();
-  if(!status.ok){
-    console.warn('[V5.09] Simulación viva bloqueada por carga incompleta:', status.missing);
-    showLiveMatchEngineBlocked(status);
-    return 'blocked';
-  }
   try{
     const started = window.LiveMatchUI.start(match, {
       onComplete:(ownResult) => finalizeLiveOwnMatchdayResult(context, ownResult),
@@ -1046,12 +1070,46 @@ function startLiveOwnMatchday(context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.09] Error al iniciar simulación viva:', err);
+    console.error('[V5.24] Error al iniciar simulación viva:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar simulación viva: ${err?.message || err}`] });
     return 'blocked';
   }
   showLiveMatchEngineBlocked({ missing:['El motor vivo respondió, pero no pudo abrir el partido'] });
   return 'blocked';
+}
+function finishOwnMatchdayResultOnly(context){
+  const match = context?.ownInfo?.match;
+  const result = simulateLiveMatchResultOnly(match);
+  if(!result){ showLiveMatchEngineBlocked({ missing:['No se pudo generar el resultado directo con el motor vivo'] }); return 'blocked'; }
+  finalizeLiveOwnMatchdayResult(context, result);
+  showResultOnlySummary(result);
+  showNotice('Partido simulado directamente. Se muestran las estadísticas completas.', false);
+  return true;
+}
+function startLiveOwnMatchday(context){
+  const match = context?.ownInfo?.match;
+  if(!match) return false;
+  const status = liveMatchEngineStatus();
+  if(!status.ok){
+    console.warn('[V5.24] Simulación viva bloqueada por carga incompleta:', status.missing);
+    showLiveMatchEngineBlocked(status);
+    return 'blocked';
+  }
+  const body = `<div class="card inner match-start-choice">
+    <p class="label">Partido propio</p>
+    <h2>${clubLink(match.homeId)} vs ${clubLink(match.awayId)}</h2>
+    <p class="muted">Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.</p>
+    <div class="modal-actions two-lines">
+      <button id="startLiveMatchChoice" class="primary">Ver partido</button>
+      <button id="resultOnlyMatchChoice" class="ghost">Ver solo resultados</button>
+    </div>
+  </div>`;
+  if(typeof openModal === 'function') openModal(body);
+  setTimeout(() => {
+    document.querySelector('#startLiveMatchChoice')?.addEventListener('click', () => { closeModal(); startLiveOwnMatchdayInteractive(context); });
+    document.querySelector('#resultOnlyMatchChoice')?.addEventListener('click', () => { closeModal(); finishOwnMatchdayResultOnly(context); });
+  }, 0);
+  return true;
 }
 
 function simulateNextMatchday(options={}){
@@ -1246,13 +1304,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   saveLocal(true);
   renderAll();
 }
-function startLivePreseasonFriendly(match, context){
-  const status = liveMatchEngineStatus();
-  if(!status.ok){
-    console.warn('[V5.09] Amistoso vivo bloqueado por carga incompleta:', status.missing);
-    showLiveMatchEngineBlocked(status);
-    return 'blocked';
-  }
+function startLivePreseasonFriendlyInteractive(match, context){
   try{
     const started = window.LiveMatchUI.start(match, {
       onComplete:(friendlyResult) => finalizePreseasonTurnAfterMatch({ ...context, friendlyResult }),
@@ -1260,12 +1312,43 @@ function startLivePreseasonFriendly(match, context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.09] Error al iniciar amistoso vivo:', err);
+    console.error('[V5.24] Error al iniciar amistoso vivo:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar amistoso vivo: ${err?.message || err}`] });
     return 'blocked';
   }
   showLiveMatchEngineBlocked({ missing:['El motor vivo respondió, pero no pudo abrir el amistoso'] });
   return 'blocked';
+}
+function finishPreseasonFriendlyResultOnly(match, context){
+  const friendlyResult = simulateLiveMatchResultOnly(match);
+  if(!friendlyResult){ showLiveMatchEngineBlocked({ missing:['No se pudo generar el resultado directo del amistoso'] }); return 'blocked'; }
+  finalizePreseasonTurnAfterMatch({ ...context, friendlyResult });
+  showResultOnlySummary(friendlyResult);
+  showNotice('Amistoso simulado directamente. Se muestran las estadísticas completas.', false);
+  return true;
+}
+function startLivePreseasonFriendly(match, context){
+  const status = liveMatchEngineStatus();
+  if(!status.ok){
+    console.warn('[V5.24] Amistoso vivo bloqueado por carga incompleta:', status.missing);
+    showLiveMatchEngineBlocked(status);
+    return 'blocked';
+  }
+  const body = `<div class="card inner match-start-choice">
+    <p class="label">Amistoso de pretemporada</p>
+    <h2>${clubLink(match.homeId)} vs ${clubLink(match.awayId)}</h2>
+    <p class="muted">Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.</p>
+    <div class="modal-actions two-lines">
+      <button id="startFriendlyLiveChoice" class="primary">Ver partido</button>
+      <button id="resultOnlyFriendlyChoice" class="ghost">Ver solo resultados</button>
+    </div>
+  </div>`;
+  if(typeof openModal === 'function') openModal(body);
+  setTimeout(() => {
+    document.querySelector('#startFriendlyLiveChoice')?.addEventListener('click', () => { closeModal(); startLivePreseasonFriendlyInteractive(match, context); });
+    document.querySelector('#resultOnlyFriendlyChoice')?.addEventListener('click', () => { closeModal(); finishPreseasonFriendlyResultOnly(match, context); });
+  }, 0);
+  return true;
 }
 function simulatePreseasonTurn(){
   const budgetBeforeTurn = Number(game.budget || 0);

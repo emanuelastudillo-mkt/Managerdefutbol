@@ -1,4 +1,4 @@
-/* V5.23 · Simulación viva con lesiones fantasma y pausa médica. */
+/* V5.24 · Simulación viva con resultado directo y terminar partido. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -310,6 +310,7 @@
         <button id="liveTacticBtn" class="ghost ${liveTacticOpen ? 'active' : ''}" ${liveState.finished ? 'disabled' : ''}>Táctica</button>
         <button id="livePauseBtn" class="ghost">${livePaused ? 'Auto' : 'Pausar'}</button>
         <button id="liveNextBlockBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>${ehtml(liveState?.nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto')}</button>
+        <button id="liveInstantFinishBtn" class="ghost" ${liveState.finished ? 'disabled' : ''}>Terminar partido</button>
         <button id="liveFinishBtn" class="primary" ${liveState.finished ? '' : 'disabled'}>Cerrar y guardar</button>
       </div>
     </div>`;
@@ -479,6 +480,30 @@
     resetLiveSelections();
     renderLiveMatch();
   }
+  function finishLiveMatchInstantlyFromUi(){
+    if(!liveSession || liveState?.finished) return;
+    if(!liveConfirm(`Terminar partido ahora?\n\nSe simularán todos los minutos restantes sin más intervenciones y se mostrarán las estadísticas completas.`)) return;
+    livePaused = true;
+    clearTimeout(liveAutoTimer);
+    let guard = 0;
+    let first = true;
+    while(liveSession && !liveSession.finished && guard < 140){
+      const substitutions = first ? livePendingSubstitutions.slice() : [];
+      const stateOrResult = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
+      if(stateOrResult?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; break; }
+      liveState = stateOrResult || window.Simulator20.livePublicState(liveSession);
+      livePendingSubstitutions = [];
+      first = false;
+      guard += 1;
+    }
+    liveState = window.Simulator20.livePublicState(liveSession);
+    liveState.finished = true;
+    livePendingSubstitutions = [];
+    liveTacticOpen = false;
+    resetLiveSelections();
+    renderLiveMatch();
+    liveShowNotice('Partido terminado. Estadísticas completas disponibles.', false);
+  }
   function bindLiveControls(){
     document.querySelectorAll('[data-live-instruction]').forEach(btn => btn.addEventListener('click', () => { liveSelectedInstruction = btn.getAttribute('data-live-instruction') || 'none'; renderLiveMatch(); }));
     document.querySelectorAll('#liveFormationSelect').forEach(select => select.addEventListener('change', (ev) => {
@@ -521,6 +546,7 @@
     document.querySelector('#liveCloseBoardBtn')?.addEventListener('click', () => { liveTacticOpen = false; liveSelectedBoardSlot = -1; renderLiveMatch(); });
     document.querySelector('#liveTacticBtn')?.addEventListener('click', () => { liveTacticOpen = !liveTacticOpen; livePaused = true; clearTimeout(liveAutoTimer); liveSelectedBoardSlot = -1; renderLiveMatch(); });
     document.querySelector('#liveNextBlockBtn')?.addEventListener('click', () => { livePaused = true; clearTimeout(liveAutoTimer); simulateNextBlockFromUi(); });
+    document.querySelector('#liveInstantFinishBtn')?.addEventListener('click', () => { finishLiveMatchInstantlyFromUi(); });
     document.querySelector('#livePauseBtn')?.addEventListener('click', () => { livePaused = !livePaused; if(!livePaused) runAutoMode(); renderLiveMatch(); });
     document.querySelector('#liveFinishBtn')?.addEventListener('click', () => {
       if(!liveSession?.result) return;

@@ -1,5 +1,14 @@
 # Fútbol Manager MVP
 
+## V5.24 - Resultado directo y terminar partido
+
+- Agregado botón **Ver solo resultados** antes de abrir partidos propios y amistosos.
+- El botón saltea la simulación visual, resuelve el partido con el motor vivo y muestra estadísticas completas.
+- Agregado botón **Terminar partido** dentro del simulador vivo.
+- Terminar partido simula todos los minutos restantes sin más intervenciones y habilita guardar el resultado.
+- El resultado directo conserva goles, asistencias, tarjetas, lesiones, cambios, tapadas, errores, contexto y estadísticas del partido.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.24.
+
 ## V5.23 - Lesiones fantasma y reemplazos bot
 
 - El simulador vivo ahora distingue lesiones activas durante el partido.

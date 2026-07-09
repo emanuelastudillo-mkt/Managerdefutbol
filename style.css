@@ -3673,3 +3673,22 @@ th{
 }
 .live-board-circle.ghost .role{color:#fde68a}
 .live-board-circle.ghost small{color:#fef3c7}
+
+/* V5.24 · resultado directo */
+.match-start-choice .modal-actions.two-lines{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.match-start-choice h2{
+  margin-bottom:8px;
+}
+.match-result-only-summary .grid{
+  margin-top:12px;
+}
+#liveInstantFinishBtn{
+  white-space:nowrap;
+}

@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.23
+V5.24
 
 ## Último cambio
 
-Controles del simulador vivo centrados en dos líneas: instrucciones arriba y acciones principales abajo para ahorrar ancho y evitar cortes visuales.
+Resultado directo para partidos propios y amistosos, más botón Terminar partido dentro del simulador vivo.

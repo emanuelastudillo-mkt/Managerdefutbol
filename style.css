@@ -3313,7 +3313,7 @@ th{
 .tactic-skill-visor .row{align-items:center;margin-bottom:6px}.tactic-skill-visor strong{font-size:1.25rem}.tactic-skill-visor small{display:block;margin-top:6px}
 .scouting-chief-card,.scouting-office-card{margin-top:14px}.scouting-player-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}
 .scouting-player-card{display:flex;flex-direction:column;gap:10px}.scouting-player-head{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center}.scouting-player-face{width:54px;height:54px;border-radius:14px;object-fit:cover;background:rgba(255,255,255,.08)}
-.scouting-known-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.scouting-known-grid .stat-rank{padding:6px 8px;border-radius:9px;background:rgba(255,255,255,.04)}
+.scouting-known-section{display:flex;flex-direction:column;gap:6px}.scouting-hidden-section{padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025)}.scouting-known-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.scouting-known-grid .stat-rank{padding:6px 8px;border-radius:9px;background:rgba(255,255,255,.04)}
 .scouting-report-progress{height:8px;margin-top:2px}.scouting-chief-option{display:flex;flex-direction:column;gap:8px}.scouting-chief-option button{align-self:flex-start}
 @media (max-width:900px){.scouting-known-grid{grid-template-columns:1fr}.scouting-player-head{grid-template-columns:44px 1fr}.scouting-player-head button{grid-column:1/-1}}
 .filters-row{gap:10px;align-items:end;flex-wrap:wrap}

@@ -1,8 +1,20 @@
 # Fútbol Manager MVP
 
-**V5.02 - Desbloqueo de temporada y ojeo limpio**
+**V5.03 - Scouting de ocultas y ojeo propio**
 
 ## Historial de versiones
+
+### V5.03 - Scouting de ocultas y ojeo propio
+
+- El Centro de Ojeo ahora muestra un bloque específico de habilidades ocultas por jugador.
+- Se agregan como ocultas revelables: `Agresividad`, `Genética` y `Factor sorpresa`.
+- Ahora se pueden ojear jugadores propios desde la ficha del jugador.
+- Los jugadores propios entran al Centro de Ojeo con las habilidades visibles ya conocidas, por lo que el progreso diario empieza directamente sobre las ocultas.
+- Los jugadores externos mantienen el ojeo acumulativo normal, pero ahora también pueden revelar ocultas.
+- La lista de ojeo distingue visualmente entre jugador `Propio · ocultas primero` y jugador `Externo`.
+- Se actualizó el texto guía del Centro de Ojeo para explicar que sirve para jugadores propios y externos.
+- Se corrigió una duplicación visual de `Media` en la ficha del jugador.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.03.
 
 ### V5.02 - Desbloqueo de temporada y ojeo limpio
 

@@ -1,16 +1,16 @@
-# Características V5.02 - Desbloqueo de temporada y ojeo limpio
+# Características V5.03 - Scouting de ocultas y ojeo propio
 
 ## Cambios
 
-- Se agregó una herramienta lateral de recuperación: `Desbloquear y nueva temporada`.
-- La herramienta fuerza el comienzo de la siguiente temporada sin borrar la partida local.
-- El proceso protege explícitamente manager, prestigio, experiencia, puntos de habilidad y cartas especiales.
-- La temporada que se salta no calcula campeonatos, premios ni castigos; queda tratada como reparación de partida.
-- Se limpian bloqueos habituales: avance bloqueado, revisión obligatoria de táctica, estado sin club y transición de temporada incompleta.
-- En las vistas de scouting se reemplazan etiquetas compuestas por etiquetas específicas según posición.
-- Los jugadores de campo ya no muestran `Cabezazo/Mando`; muestran `Cabezazo`. Los porteros muestran `Mando`.
-- Se agregaron estilos para el botón de recuperación y para el modal de confirmación con progreso protegido.
+- El Centro de Ojeo ahora muestra también habilidades ocultas en cada informe.
+- Se agregaron tres ocultas revelables: `Agresividad`, `Genética` y `Factor sorpresa`.
+- Se permite agregar jugadores propios al Centro de Ojeo desde su ficha individual.
+- Los jugadores propios entran con todas sus habilidades visibles ya conocidas y el avance diario revela directamente las ocultas.
+- Los jugadores externos pueden revelar tanto habilidades visibles como ocultas dentro del informe acumulativo.
+- Se agregó etiqueta visual para diferenciar jugadores propios y externos en la lista de ojeo.
+- Se ajustó el texto del Centro de Ojeo para explicar el funcionamiento del ojeo propio.
+- Se corrigió una duplicación visual de `Media` en la ficha del jugador.
 
 ## Motivo
 
-V5.02 agrega una salida segura para partidas trabadas sin obligar a reiniciar desde cero. También pule la lectura del ojeo, reduciendo texto innecesario y evitando habilidades mezcladas entre porteros y jugadores de campo.
+V5.03 hace que el ojeo sea útil también para el plantel propio. Los jugadores del club ya tienen información deportiva visible, por lo que el Centro de Ojeo se concentra en revelar datos internos que antes sólo existían como cálculo oculto.

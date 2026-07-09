@@ -1,4 +1,4 @@
-/* V5.02 · Centro de Ojeo: oficinas, ojeadores, jefe de ojeadores e informes acumulativos. */
+/* V5.03 · Centro de Ojeo: ojeo propio, habilidades ocultas e informes acumulativos. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -9,7 +9,7 @@ function normalizeScoutingCenterState(state){
   clean.listedPlayerIds = Array.isArray(clean.listedPlayerIds) ? clean.listedPlayerIds.map(Number).filter(Boolean) : [];
   clean.listedPlayerIds = Array.from(new Set(clean.listedPlayerIds)).filter(id => {
     const p = typeof playerById === 'function' ? playerById(id) : null;
-    return p && Number(p.clubId || 0) !== Number(game?.selectedClubId || 0);
+    return Boolean(p);
   });
   clean.reports = (clean.reports && typeof clean.reports === 'object' && !Array.isArray(clean.reports)) ? clean.reports : {};
   Object.entries(clean.reports).forEach(([id, report]) => {
@@ -30,10 +30,13 @@ function normalizeScoutingCenterState(state){
   return clean;
 }
 function normalizeScoutingReport(playerId, report={}){
+  const player = typeof playerById === 'function' ? playerById(playerId) : null;
   const visible = Array.isArray(report.visibleSkills) ? report.visibleSkills.map(String) : [];
+  const allowed = new Set(player ? scoutingSkillKeys(player) : visible);
+  const initialKnown = player ? scoutingInitialKnownSkillKeys(player) : [];
   return {
     playerId:Number(playerId),
-    visibleSkills:Array.from(new Set(visible)),
+    visibleSkills:Array.from(new Set([...initialKnown, ...visible])).filter(key => !allowed.size || allowed.has(key)),
     daysObserved:Math.max(0, Math.round(Number(report.daysObserved || 0))),
     lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : null,
     createdDate:validIsoDate(report.createdDate) ? report.createdDate : (game?.currentDate || currentCalendarDate())
@@ -61,10 +64,31 @@ function scoutingChiefMaxOffices(){
   const type = scoutingChiefType(state.chief?.type);
   return type ? type.maxOffices : 0;
 }
+function scoutingIsOwnPlayer(player){
+  return Boolean(player && game && Number(player.clubId || 0) === Number(game.selectedClubId || 0));
+}
+function scoutingVisibleStatMap(player){
+  return typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player?.skills || {});
+}
+function scoutingHiddenStatMap(player){
+  if(!player || typeof hiddenStats !== 'function') return {};
+  const stats = hiddenStats(player);
+  return {
+    'hidden.aggression': stats.aggression,
+    'hidden.genetics': stats.genetics,
+    'hidden.surprise': stats.surprise
+  };
+}
+function scoutingFullStatMap(player){
+  return { ...scoutingVisibleStatMap(player), ...scoutingHiddenStatMap(player) };
+}
+function scoutingInitialKnownSkillKeys(player){
+  if(!scoutingIsOwnPlayer(player)) return [];
+  return Object.keys(scoutingVisibleStatMap(player) || {});
+}
 function scoutingSkillKeys(player){
   if(!player) return [];
-  const map = typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player.skills || {});
-  return Object.keys(map || {});
+  return Object.keys(scoutingFullStatMap(player) || {});
 }
 function scoutingKnownSet(playerId){
   const state = ensureScoutingCenterState();
@@ -81,7 +105,7 @@ function addPlayerToScoutingCenter(playerId){
   if(!SCOUTING_CENTER_ENABLED || !game){ showNotice('El Centro de Ojeo no está disponible.'); return; }
   const player = playerById(playerId);
   if(!player){ showNotice('Jugador no encontrado.'); return; }
-  if(Number(player.clubId || 0) === Number(game.selectedClubId || 0)){ showNotice('No necesitás ojear jugadores propios.'); return; }
+  const ownPlayer = scoutingIsOwnPlayer(player);
   const state = ensureScoutingCenterState();
   const caps = scoutingCapacities(state);
   if(state.listedPlayerIds.includes(Number(playerId))){ showNotice(`${player.name} ya está en el Centro de Ojeo.`); activeTab='scouting'; renderAll(); return; }
@@ -89,7 +113,7 @@ function addPlayerToScoutingCenter(playerId){
   state.listedPlayerIds.push(Number(playerId));
   state.reports[String(playerId)] = normalizeScoutingReport(playerId, state.reports[String(playerId)] || {});
   saveLocal(true);
-  showNotice(`${player.name} fue agregado al Centro de Ojeo.`);
+  showNotice(ownPlayer ? `${player.name} fue agregado para revelar habilidades ocultas.` : `${player.name} fue agregado al Centro de Ojeo.`);
   activeTab='scouting';
   if(typeof closeModal === 'function') closeModal();
   renderAll();
@@ -154,7 +178,7 @@ function dismissScoutingScout(){
 }
 function scoutingRevealOneSkill(){
   const state = ensureScoutingCenterState();
-  const listed = state.listedPlayerIds.map(playerById).filter(Boolean).filter(p => Number(p.clubId || 0) !== Number(game.selectedClubId || 0));
+  const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   const candidates = [];
   listed.forEach(player => {
     const keys = scoutingSkillKeys(player);
@@ -239,28 +263,38 @@ function resetScoutingCenterForNewClub(){
   if(!game) return;
   game.scoutingCenter = createInitialScoutingCenterState();
 }
-function scoutingPlayerKnownSkillRows(player){
-  const map = typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player.skills || {});
+function scoutingPlayerSkillRows(player, map){
   const known = scoutingKnownSet(player.id);
-  return Object.entries(map).map(([key,value]) => {
+  return Object.entries(map || {}).map(([key,value]) => {
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
     return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${known.has(key) ? value : '—'}</strong></div>`;
   }).join('');
+}
+function scoutingPlayerKnownSkillRows(player){
+  const visibleMap = scoutingVisibleStatMap(player);
+  const hiddenMap = scoutingHiddenStatMap(player);
+  const hiddenKnown = Object.keys(hiddenMap).filter(key => scoutingKnownSet(player.id).has(key)).length;
+  return `
+    <div class="scouting-known-section"><p class="label">Habilidades visibles</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, visibleMap)}</div></div>
+    <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>`;
 }
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);
   const known = scoutingKnownCount(player.id);
   const total = scoutingSkillKeys(player).length || 1;
+  const hiddenTotal = Object.keys(scoutingHiddenStatMap(player)).length;
+  const hiddenKnown = Object.keys(scoutingHiddenStatMap(player)).filter(key => scoutingKnownSet(player.id).has(key)).length;
   const pct = clamp(Math.round((known / total) * 100), 0, 100);
+  const ownPill = scoutingIsOwnPlayer(player) ? '<span class="pill ok">Propio · ocultas primero</span>' : '<span class="pill">Externo</span>';
   return `<div class="scouting-player-card card inner">
     <div class="scouting-player-head">
       ${faceImg(player, 'scouting-player-face')}
-      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')}</p></div>
+      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')}</p>${ownPill}</div>
       <button class="ghost small-btn" data-remove-scouting-player="${player.id}">Quitar</button>
     </div>
     <div class="project-progress scouting-report-progress"><span style="width:${pct}%"></span></div>
-    <p class="muted small">Habilidades conocidas: ${known}/${total} · Días observado: ${Number(report.daysObserved || 0)}</p>
-    <div class="scouting-known-grid">${scoutingPlayerKnownSkillRows(player)}</div>
+    <p class="muted small">Habilidades conocidas: ${known}/${total} · Ocultas reveladas: ${hiddenKnown}/${hiddenTotal} · Días observado: ${Number(report.daysObserved || 0)}</p>
+    ${scoutingPlayerKnownSkillRows(player)}
   </div>`;
 }
 function scoutingChiefMarkup(){
@@ -279,7 +313,7 @@ function renderScoutingCenter(){
   const maxOffices = scoutingChiefMaxOffices();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   view.innerHTML = `
-    <div class="row section-title"><div><h2>Centro de Ojeo</h2><p class="tagline">Agregá jugadores externos desde su ficha individual. Los ojeadores revelan habilidades acumulativas día por día.</p></div></div>
+    <div class="row section-title"><div><h2>Centro de Ojeo</h2><p class="tagline">Agregá jugadores externos o propios desde su ficha individual. En jugadores propios las habilidades visibles ya están desbloqueadas y el ojeo avanza directo sobre las ocultas.</p></div></div>
     <div class="grid cols-4 compact-team-stats">
       <div class="card"><p class="label">Jugadores listados</p><strong>${listed.length}/${caps.playerCapacity}</strong></div>
       <div class="card"><p class="label">Ojeadores</p><strong>${state.scouts}/${caps.scoutCapacity}</strong></div>
@@ -291,7 +325,7 @@ function renderScoutingCenter(){
       <div class="row"><div><h3>Oficinas y ojeadores</h3><p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados. Oficina: ${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes. Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día.</p></div></div>
       <div class="row message-actions"><button class="primary" data-rent-scouting-office ${state.offices >= maxOffices ? 'disabled' : ''}>Alquilar oficina</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Físico, moral y media real siguen ocultos hasta tener informes suficientes.</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de un jugador externo y usá “Ojear”.</p>'}</div></div>`;
+    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Las habilidades ocultas se revelan como informe permanente.</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
   document.querySelectorAll('[data-hire-scouting-chief]').forEach(btn => btn.addEventListener('click', () => hireScoutingChief(btn.dataset.hireScoutingChief)));
   document.querySelector('[data-rent-scouting-office]')?.addEventListener('click', rentScoutingOffice);
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);

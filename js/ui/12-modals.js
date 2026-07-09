@@ -1,4 +1,4 @@
-/* V5.02 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V5.03 · Modales de jugador, club, compra, partido, scouting propio y nueva partida. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -102,10 +102,11 @@ function playerModalActionsMarkup(player){
   const clubId = Number(player.clubId || 0);
   if(clubId === Number(game.selectedClubId)){
     const checked = player.transferListed ? 'checked' : '';
+    const inScouting = Array.isArray(game?.scoutingCenter?.listedPlayerIds) && game.scoutingCenter.listedPlayerIds.map(Number).includes(Number(player.id));
     return `<div class="card inner player-action-card"><h3>Acciones</h3>
       <label class="transfer-toggle-row"><input type="checkbox" data-toggle-transfer-listed="${player.id}" ${checked}> <span>Poner transferible</span></label>
-      <p class="muted small">Los transferibles reciben más ofertas, pero suelen ser más baratas.</p>
-      <div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button></div></div>`;
+      <p class="muted small">Los transferibles reciben más ofertas, pero suelen ser más baratas. El ojeo propio revela sólo las habilidades ocultas porque las visibles ya son conocidas.</p>
+      <div class="row message-actions"><button class="danger ghost" data-dismiss-player="${player.id}">Despedir</button><button class="primary" data-offer-own-player="${player.id}">Ofrecer a clubes</button><button class="ghost" data-add-scouting-player="${player.id}">${inScouting ? 'En Centro de Ojeo' : 'Ojear ocultas'}</button></div></div>`;
   }
   if(clubId > 0){
     const blocked = isPurchaseOfferBlockedThisSeason(player.id);
@@ -1018,7 +1019,10 @@ function scoutingSkillDisplayLabel(player, key){
     'Ataque/Salto': keeper ? 'Salto' : 'Ataque',
     'Velocidad/Reflejos': keeper ? 'Reflejos' : 'Velocidad',
     'Cabezazo/Mando': keeper ? 'Mando' : 'Cabezazo',
-    'Tiro/Potencia': keeper ? 'Potencia' : 'Tiro'
+    'Tiro/Potencia': keeper ? 'Potencia' : 'Tiro',
+    'hidden.aggression':'Agresividad',
+    'hidden.genetics':'Genética',
+    'hidden.surprise':'Factor sorpresa'
   };
   return labels[key] || key;
 }

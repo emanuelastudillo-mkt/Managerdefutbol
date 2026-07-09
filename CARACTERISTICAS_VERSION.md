@@ -1,18 +1,18 @@
-# V4.11 - Optimización de libres y relato de partido
+# V4.12 - Visor de partido y eventos destacados
 
 ## Cambios principales
 
-- Mercado de jugadores libres limitado a 300 jugadores como máximo duro.
-- Las partidas ya guardadas con más de 300 libres se limpian automáticamente al cargar.
-- Se elimina la generación masiva de juveniles libres por club al cambiar de temporada.
-- La renovación del mercado libre respeta el máximo y prioriza conservar mejores jugadores.
-- Los jugadores libres ahora pueden rechazar ofertas.
-- La probabilidad de aceptar equivale al prestigio actual del club.
-- Si el jugador rechaza, queda bloqueado para ese club hasta la próxima temporada.
-- La pantalla de Mercado muestra la probabilidad base de aceptación.
-- El partido ahora tiene 90 fases de relato.
-- Cada fase dura al menos 3 segundos.
-- El texto del relato se achicó y aparece con animación.
+- Se agrega un visor visual de inclinación de cancha en el simulador de partido.
+- El visor tiene dos colores: local y visitante.
+- La pelota se desplaza en la barra según posesión, ataques y ocasiones visibles hasta ese momento.
+- Se muestra una etiqueta indicando si la cancha está inclinada para el local, visitante o equilibrada.
+- Se agregan animaciones especiales para goles.
+- Los goles muestran escudo, nombre del jugador y grito `GOOOOOOLLLL!`.
+- Se agregan animaciones especiales para rojas directas y dobles amarillas.
+- Las rojas muestran escudo, nombre del jugador y tarjeta roja grande.
+- Se agregan animaciones especiales para lesiones.
+- Las lesiones muestran escudo, nombre del jugador e ícono de lesión.
+- Las animaciones se muestran al revelarse el evento dentro de las fases del relato.
 
 ## Archivos modificados
 
@@ -22,14 +22,10 @@
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
 - `style.css`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/ui/07-render-team-market.js`
 - `js/ui/12-modals.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
 - Sintaxis validada en todos los archivos `.js`.
-- Prueba lógica del recorte de mercado libre a 300 jugadores.
-- Prueba lógica de aceptación/rechazo por prestigio del club.
+- El cambio no modifica el motor de resultado, sólo la visualización del simulador.

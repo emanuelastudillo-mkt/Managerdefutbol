@@ -2,10 +2,25 @@
 
 ## Versión actual
 
-**V4.11 - Optimización de libres y relato de partido**
+**V4.12 - Visor de partido y eventos destacados**
 
 ## Historial de versiones
 
+
+
+### V4.12 - Visor de partido y eventos destacados
+
+- Se agrega un visor de inclinación de cancha dentro del simulador.
+- El visor usa dos colores para diferenciar local y visitante.
+- La pelota se mueve sobre la barra según posesión, ataques y ocasiones reveladas.
+- El simulador muestra si la cancha está inclinada para el local, visitante o equilibrada.
+- Se agregan animaciones destacadas para goles.
+- Los goles muestran escudo, nombre del jugador y grito `GOOOOOOLLLL!`.
+- Se agregan animaciones destacadas para rojas directas y dobles amarillas.
+- Las rojas muestran escudo, nombre del jugador y tarjeta grande.
+- Se agregan animaciones destacadas para lesiones.
+- Las lesiones muestran escudo, nombre del jugador e ícono de lesión.
+- No se modifica el cálculo deportivo del partido ni los resultados.
 
 
 ### V4.11 - Optimización de libres y relato de partido

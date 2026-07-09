@@ -2759,3 +2759,156 @@ th{
 .founder-mode-card{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;margin:14px 0;border-color:rgba(245,158,11,.24);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(var(--club-rgb),.04),rgba(255,255,255,.025))}
 .founder-mode-card h3{margin:.1rem 0 .35rem}.founder-mode-card p{margin:.25rem 0}.founder-warning{border-color:rgba(245,158,11,.36);background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(255,255,255,.025));margin:12px 0}.founder-preview{margin-top:12px}.founder-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.founder-preview-grid div{padding:10px;border:1px solid rgba(148,163,184,.12);border-radius:14px;background:rgba(255,255,255,.035)}.founder-preview-grid span{display:block;color:var(--muted);font-size:12px}.founder-preview-grid strong{display:block;margin-top:2px}.founder-goal-progress{border-color:rgba(245,158,11,.28);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(var(--club-rgb),.05))}.founder-goal-progress .manager-objective-bar span{background:linear-gradient(90deg,#f59e0b,var(--accent))}
 @media (max-width:760px){.founder-mode-card{grid-template-columns:1fr}.founder-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* V4.12: visor de inclinación de cancha y eventos destacados del simulador */
+.reveal-pitch-card{
+  border-color:rgba(34,197,94,.20);
+  background:linear-gradient(135deg,rgba(34,197,94,.09),rgba(37,99,235,.08));
+  overflow:hidden;
+}
+.reveal-pitch-head{align-items:flex-start;gap:12px}
+.reveal-pitch-head h3{margin:2px 0 0;font-size:18px;color:#e5f8ed}
+.pitch-momentum{
+  position:relative;
+  height:64px;
+  border-radius:18px;
+  margin:12px 0 10px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.13);
+  background:
+    linear-gradient(90deg,rgba(22,163,74,.34) 0%,rgba(22,163,74,.34) var(--home-share),rgba(37,99,235,.34) var(--home-share),rgba(37,99,235,.34) 100%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 12px);
+  box-shadow:inset 0 0 22px rgba(0,0,0,.22);
+}
+.pitch-momentum:before,.pitch-momentum:after{
+  content:"";
+  position:absolute;
+  top:14px;
+  width:36px;
+  height:36px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  opacity:.65;
+}
+.pitch-momentum:before{left:10px}
+.pitch-momentum:after{right:10px}
+.pitch-side{
+  position:absolute;
+  top:0;
+  bottom:0;
+  display:flex;
+  align-items:center;
+  color:rgba(255,255,255,.72);
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  pointer-events:none;
+}
+.pitch-home{left:14px;text-align:left}
+.pitch-away{right:14px;text-align:right}
+.pitch-midline{
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:50%;
+  width:1px;
+  background:rgba(255,255,255,.22);
+}
+.pitch-ball{
+  position:absolute;
+  left:var(--ball-pos);
+  top:50%;
+  width:34px;
+  height:34px;
+  transform:translate(-50%,-50%);
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:rgba(15,23,42,.68);
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 10px 24px rgba(0,0,0,.34),0 0 18px rgba(255,255,255,.10);
+  transition:left .55s ease;
+  animation:pitchBallPulseV412 1.35s ease-in-out infinite alternate;
+}
+.reveal-pitch-labels{font-size:12px;color:#cbd5e1;gap:10px;justify-content:space-between}
+.reveal-pitch-labels span{display:flex;align-items:center;gap:6px}
+.reveal-special-stack{display:grid;gap:10px}
+.reveal-special-event{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-height:88px;
+  padding:14px 16px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.18);
+  overflow:hidden;
+  position:relative;
+  animation:specialEventEnterV412 .54s cubic-bezier(.19,1,.22,1) both,specialEventGlowV412 1.2s ease-in-out .2s 2 alternate;
+}
+.reveal-special-event:before{
+  content:"";
+  position:absolute;
+  inset:-45% auto -45% -18%;
+  width:44%;
+  transform:rotate(16deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent);
+  animation:specialEventSweepV412 1.05s ease-out .18s both;
+}
+.reveal-special-goal{background:linear-gradient(135deg,rgba(22,163,74,.42),rgba(20,83,45,.88));border-color:rgba(74,222,128,.36)}
+.reveal-special-red{background:linear-gradient(135deg,rgba(220,38,38,.48),rgba(69,10,10,.90));border-color:rgba(248,113,113,.45)}
+.reveal-special-injury{background:linear-gradient(135deg,rgba(244,63,94,.38),rgba(76,5,25,.90));border-color:rgba(251,113,133,.42)}
+.special-event-badge{
+  width:54px;
+  height:54px;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  border-radius:18px;
+  background:rgba(15,23,42,.42);
+  border:1px solid rgba(255,255,255,.18);
+}
+.special-event-badge .club-badge-placeholder{width:42px;height:42px}
+.special-event-badge img{width:42px;height:42px;object-fit:contain}
+.special-event-main{position:relative;z-index:1;min-width:0;flex:1}
+.special-event-title{
+  font-size:24px;
+  line-height:1;
+  font-weight:950;
+  letter-spacing:.06em;
+  color:#fff;
+  text-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+.special-event-name{
+  margin-top:6px;
+  font-size:19px;
+  font-weight:900;
+  color:#f8fafc;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.special-event-sub{margin-top:4px;font-size:12px;color:rgba(255,255,255,.78);font-weight:700}
+.special-event-icon,.special-event-red-card{
+  position:relative;
+  z-index:1;
+  flex:0 0 auto;
+  font-size:42px;
+  line-height:1;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.32));
+}
+.special-event-red-card{color:#ef4444;text-shadow:0 0 0 #fff,0 8px 20px rgba(0,0,0,.45)}
+@keyframes pitchBallPulseV412{from{transform:translate(-50%,-50%) scale(.96)}to{transform:translate(-50%,-50%) scale(1.06)}}
+@keyframes specialEventEnterV412{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes specialEventGlowV412{from{box-shadow:0 0 0 rgba(255,255,255,0)}to{box-shadow:0 0 28px rgba(255,255,255,.12)}}
+@keyframes specialEventSweepV412{from{left:-42%;opacity:0}20%{opacity:1}to{left:120%;opacity:0}}
+@media (max-width:900px){
+  .pitch-momentum{height:58px;border-radius:16px}
+  .pitch-side span{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reveal-special-event{min-height:78px;padding:12px;gap:10px;border-radius:18px}
+  .special-event-badge{width:46px;height:46px;border-radius:14px}
+  .special-event-badge .club-badge-placeholder,.special-event-badge img{width:34px;height:34px}
+  .special-event-title{font-size:19px}
+  .special-event-name{font-size:16px}
+  .special-event-icon,.special-event-red-card{font-size:34px}
+}

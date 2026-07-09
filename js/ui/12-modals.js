@@ -473,6 +473,8 @@ function renderMatchRevealStage(match, stage, index, total){
     awayStats.possession = 100 - hPoss;
   }
   const events = matchRevealEvents(match, stage.minute);
+  const fieldTilt = matchRevealFieldTilt(match, homeStats, awayStats, stage.factor);
+  const specialEvents = matchRevealSpecialEvents(match, stage);
   const narrationStage = stage.narrationStage || stage;
   const narrationIndex = Number.isFinite(Number(stage.narrationIndex)) ? Number(stage.narrationIndex) : index;
   const narration = matchRevealNarration(match, narrationStage, narrationIndex, total);
@@ -482,6 +484,8 @@ function renderMatchRevealStage(match, stage, index, total){
       <div class="reveal-commentary-text">${escapeHtml(narration.text)}</div>
       <div class="reveal-commentary-sub">${escapeHtml(narration.sub || '')}</div>
     </div>
+    ${specialEvents.length ? `<div class="reveal-special-stack">${specialEvents.map((event, specialIndex) => revealSpecialEventCard(match, event, specialIndex)).join('')}</div>` : ''}
+    ${revealPitchMomentumCard(match, fieldTilt)}
     <div class="card inner reveal-stage-card">
       <div class="row">
         <div><p class="label">Minuto ${stage.minute || 0}</p><h3>${escapeHtml(stage.label)}</h3></div>
@@ -501,6 +505,98 @@ function renderMatchRevealStage(match, stage, index, total){
   const finish = $('finishMatchReveal');
   if(finish && stage.factor === 1) finish.textContent = 'Partido finalizado';
 }
+function matchRevealFieldTilt(match, homeStats={}, awayStats={}, factor=0){
+  const hAttacks = Number(homeStats.attacks || 0);
+  const aAttacks = Number(awayStats.attacks || 0);
+  const hChances = Number(homeStats.chances || 0);
+  const aChances = Number(awayStats.chances || 0);
+  const hPoss = Number(homeStats.possession || 50);
+  const aPoss = Number(awayStats.possession || (100 - hPoss));
+  const hPressure = (hPoss * 0.45) + (hAttacks * 0.85) + (hChances * 4.2);
+  const aPressure = (aPoss * 0.45) + (aAttacks * 0.85) + (aChances * 4.2);
+  const totalPressure = Math.max(1, hPressure + aPressure);
+  const dominance = clamp((hPressure - aPressure) / totalPressure, -1, 1);
+  const ball = clamp(50 + dominance * 42, 8, 92);
+  const homeId = Number(match?.homeId || 0);
+  const awayId = Number(match?.awayId || 0);
+  const leaderId = ball > 56 ? homeId : (ball < 44 ? awayId : 0);
+  const leaderSide = ball > 56 ? 'local' : (ball < 44 ? 'visitante' : 'neutral');
+  const label = leaderId ? `Cancha inclinada para ${clubName(leaderId)}` : 'Partido equilibrado';
+  const intensity = Math.round(Math.abs(ball - 50) * 2);
+  return { ball, homeShare:ball, awayShare:100-ball, leaderId, leaderSide, label, intensity, factor:Number(factor || 0), homePressure, awayPressure };
+}
+function revealPitchMomentumCard(match, tilt){
+  const homeName = clubName(match.homeId);
+  const awayName = clubName(match.awayId);
+  const ball = clamp(Number(tilt?.ball || 50), 8, 92);
+  const homeShare = clamp(Math.round(Number(tilt?.homeShare || ball)), 0, 100);
+  const awayShare = 100 - homeShare;
+  return `<div class="card inner reveal-pitch-card" style="--ball-pos:${ball}%;--home-share:${homeShare}%;--away-share:${awayShare}%">
+    <div class="row reveal-pitch-head">
+      <div>
+        <p class="label">Inclinación de cancha</p>
+        <h3>${escapeHtml(tilt?.label || 'Partido equilibrado')}</h3>
+      </div>
+      <span class="pill">Intensidad ${Math.round(Number(tilt?.intensity || 0))}%</span>
+    </div>
+    <div class="pitch-momentum" aria-label="Inclinación visual de cancha">
+      <div class="pitch-side pitch-home"><span>${escapeHtml(homeName)}</span></div>
+      <div class="pitch-side pitch-away"><span>${escapeHtml(awayName)}</span></div>
+      <div class="pitch-midline"></div>
+      <div class="pitch-ball">⚽</div>
+    </div>
+    <div class="row reveal-pitch-labels">
+      <span>${clubBadge(match.homeId)} Local · ${homeShare}%</span>
+      <span>Visitante · ${awayShare}% ${clubBadge(match.awayId)}</span>
+    </div>
+  </div>`;
+}
+function matchRevealSpecialEvents(match, stage){
+  const fromMinute = Number(stage?.previousMinute ?? -1);
+  const toMinute = Number(stage?.minute ?? 0);
+  return matchRevealAllEvents(match).filter(event => {
+    if(event.minute <= fromMinute || event.minute > toMinute) return false;
+    if(event.type === 'goal' || event.type === 'injury') return true;
+    return event.type === 'card' && ['red','secondYellowRed'].includes(String(event.data?.type || ''));
+  }).sort((a,b)=>specialEventPriority(a)-specialEventPriority(b) || a.minute-b.minute).slice(0,3);
+}
+function specialEventPriority(event){
+  if(event.type === 'goal') return 1;
+  if(event.type === 'card') return 2;
+  if(event.type === 'injury') return 3;
+  return 9;
+}
+function revealSpecialEventCard(match, event, index=0){
+  const data = event.data || {};
+  const playerId = data.playerId || data.inId || data.outId || 0;
+  const player = playerById(playerId);
+  const clubId = Number(data.clubId || data.scoringClubId || data.teamId || 0);
+  const playerName = escapeHtml(player?.name || 'Jugador');
+  const badge = clubBadge(clubId);
+  const delay = Math.min(index * 120, 360);
+  if(event.type === 'goal'){
+    return `<div class="reveal-special-event reveal-special-goal" style="animation-delay:${delay}ms">
+      <div class="special-event-badge">${badge}</div>
+      <div class="special-event-main"><div class="special-event-title">GOOOOOOLLLL!</div><div class="special-event-name">${playerName}</div><div class="special-event-sub">${event.minute}' · ${escapeHtml(clubName(clubId))}</div></div>
+      <div class="special-event-icon">⚽</div>
+    </div>`;
+  }
+  if(event.type === 'card'){
+    const label = String(data.type || '') === 'secondYellowRed' ? 'DOBLE AMARILLA Y ROJA' : 'ROJA DIRECTA';
+    return `<div class="reveal-special-event reveal-special-red" style="animation-delay:${delay}ms">
+      <div class="special-event-badge">${badge}</div>
+      <div class="special-event-main"><div class="special-event-title">${label}</div><div class="special-event-name">${playerName}</div><div class="special-event-sub">${event.minute}' · ${escapeHtml(clubName(clubId))}</div></div>
+      <div class="special-event-red-card">■</div>
+    </div>`;
+  }
+  const injuryLabel = escapeHtml(data.injuryLabel || data.name || data.severity || 'Lesión');
+  return `<div class="reveal-special-event reveal-special-injury" style="animation-delay:${delay}ms">
+    <div class="special-event-badge">${badge}</div>
+    <div class="special-event-main"><div class="special-event-title">LESIÓN</div><div class="special-event-name">${playerName}</div><div class="special-event-sub">${event.minute}' · ${injuryLabel}</div></div>
+    <div class="special-event-icon">✚</div>
+  </div>`;
+}
+
 function partialMatchStats(stats, factor){
   return {
     attacks: Math.round((stats.attacks || 0) * factor),

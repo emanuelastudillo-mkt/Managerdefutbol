@@ -1,4 +1,4 @@
-/* V5.07 · Simulación viva por bloques con intervención del manager. */
+/* V5.08 · Simulación viva por bloques con diagnóstico de carga. */
 (function(){
   let liveSession = null;
   let liveOptions = null;
@@ -194,4 +194,5 @@
     return true;
   }
   window.LiveMatchUI = { start };
+  window.__LIVE_MATCH_UI_READY = true;
 })();

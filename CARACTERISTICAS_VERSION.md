@@ -1,5 +1,13 @@
 # Características de versión
 
+## V5.08 - Corrección de conexión de simulación viva
+
+- Se corrige el fallback silencioso que podía mandar el partido propio al simulador anterior si el módulo vivo no cargaba.
+- Si falta `js/game/17-live-match.js` o el archivo `simulador-2.0.js` no trae el motor por bloques, el partido no se simula con el sistema viejo.
+- Se muestra un aviso de diagnóstico para saber qué archivo no cargó o quedó desactualizado.
+- Se reordena `index.html` para cargar el módulo de simulación viva antes del calendario y avance de partidos.
+- El objetivo es que V5.07/V5.08 no parezca implementada sólo por versión visible: el flujo real debe entrar al partido vivo o avisar el motivo exacto.
+
 ## V5.07 - Simulación viva por bloques
 
 - Los partidos propios oficiales ahora pueden abrirse en una simulación viva por bloques de 15 minutos.

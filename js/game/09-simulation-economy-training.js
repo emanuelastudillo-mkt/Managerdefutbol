@@ -1000,15 +1000,48 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   else showNotice(`Partido propio dirigido por bloques. Antes se procesaron ${(preOwnBotResults || []).length} partido(s) del mismo día o pendientes.`);
 }
 
+function liveMatchEngineStatus(){
+  const missing = [];
+  if(!window.Simulator20) missing.push('simulador-2.0.js no cargó');
+  else if(typeof window.Simulator20.createLiveMatchSession !== 'function' || typeof window.Simulator20.simulateLiveBlock !== 'function') missing.push('simulador-2.0.js está viejo o incompleto');
+  if(!window.LiveMatchUI || typeof window.LiveMatchUI.start !== 'function') missing.push('js/game/17-live-match.js no cargó');
+  return { ok:missing.length === 0, missing };
+}
+function showLiveMatchEngineBlocked(status){
+  const details = (status?.missing || []).map(item => `<li>${escapeHtml(item)}</li>`).join('');
+  const html = `<div class="card inner">
+    <p class="label">Simulación viva no disponible</p>
+    <h2>No se va a usar el simulador anterior</h2>
+    <p class="muted">El partido propio quedó pendiente para evitar que se resuelva con el sistema viejo.</p>
+    ${details ? `<ul class="live-engine-errors">${details}</ul>` : ''}
+    <p class="muted small">Subí también los archivos nuevos del ZIP, especialmente <strong>js/game/17-live-match.js</strong>, <strong>simulador-2.0.js</strong>, <strong>index.html</strong> y <strong>js/game/09-simulation-economy-training.js</strong>. Después usá Control + F5.</p>
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Entendido</button></div>
+  </div>`;
+  if(typeof openModal === 'function') openModal(html);
+  showNotice('No se cargó el motor de simulación viva. El partido no fue simulado con el sistema anterior.', true);
+}
 function startLiveOwnMatchday(context){
-  if(!window.LiveMatchUI?.start || !window.Simulator20?.createLiveMatchSession) return false;
   const match = context?.ownInfo?.match;
   if(!match) return false;
-  const started = window.LiveMatchUI.start(match, {
-    onComplete:(ownResult) => finalizeLiveOwnMatchdayResult(context, ownResult),
-    onCancel:null
-  });
-  return Boolean(started);
+  const status = liveMatchEngineStatus();
+  if(!status.ok){
+    console.warn('[V5.08] Simulación viva bloqueada por carga incompleta:', status.missing);
+    showLiveMatchEngineBlocked(status);
+    return 'blocked';
+  }
+  try{
+    const started = window.LiveMatchUI.start(match, {
+      onComplete:(ownResult) => finalizeLiveOwnMatchdayResult(context, ownResult),
+      onCancel:null
+    });
+    if(started) return true;
+  }catch(err){
+    console.error('[V5.08] Error al iniciar simulación viva:', err);
+    showLiveMatchEngineBlocked({ missing:[`Error al iniciar simulación viva: ${err?.message || err}`] });
+    return 'blocked';
+  }
+  showLiveMatchEngineBlocked({ missing:['El motor vivo respondió, pero no pudo abrir el partido'] });
+  return 'blocked';
 }
 
 function simulateNextMatchday(options={}){
@@ -1071,8 +1104,9 @@ function simulateNextMatchday(options={}){
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'matchday' });
   showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
   const fromRoundIndex = Number(game.matchdayIndex || 0);
-  if(ownInfo && startLiveOwnMatchday({ ownInfo, pendingInfo, targetDate, preOwnBotResults, budgetBeforeTurn, fromRoundIndex })){
-    return;
+  if(ownInfo){
+    const liveStartState = startLiveOwnMatchday({ ownInfo, pendingInfo, targetDate, preOwnBotResults, budgetBeforeTurn, fromRoundIndex });
+    if(liveStartState === true || liveStartState === 'blocked') return;
   }
   const results = simulateDueMatchesUntil(targetDate, { includeOwn:true });
   const ownResult = results.find(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId) || null;

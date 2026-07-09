@@ -4,6 +4,15 @@
 
 ## Historial de versiones
 
+### V5.08 - Corrección de conexión de simulación viva
+
+- Reforzada la conexión entre el botón `Ir a próximo partido` y el motor de simulación viva por bloques.
+- El juego ya no vuelve silenciosamente al simulador anterior si falta algún archivo nuevo.
+- Si no carga `js/game/17-live-match.js` o `simulador-2.0.js` está viejo/incompleto, el partido propio queda pendiente y se muestra un aviso claro.
+- Reordenada la carga de scripts para iniciar el módulo de simulación viva antes de los módulos principales de calendario.
+- Agregado diagnóstico visual para detectar cargas incompletas después de subir archivos a GitHub.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.08.
+
 ### V5.07 - Simulación viva por bloques
 
 - Agregado sistema real de partido propio por bloques de 15 minutos.

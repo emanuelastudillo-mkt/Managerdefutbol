@@ -1,8 +1,17 @@
 # Fútbol Manager MVP
 
-**V4.27 - Verificador, simulador y ranking automático**
+**V4.28 - Aceptación de ofertas oculta**
 
 ## Historial de versiones
+
+### V4.28 - Aceptación de ofertas oculta
+
+- Se oculta el porcentaje exacto de aceptación en el mercado.
+- Jugadores libres y contratados ya no muestran `Acepta X%`.
+- Las fichas y modales de oferta muestran interés oculto, sin porcentaje.
+- Los mensajes de rechazo ya no revelan la probabilidad calculada.
+- El cálculo interno de aceptación/rechazo por media y prestigio se mantiene activo.
+- El bloqueo por rechazo hasta la próxima temporada se mantiene.
 
 ### V4.27 - Verificador, simulador y ranking automático
 - El verificador revisa partidos bot ya jugados y alerta si faltan estadísticas mínimas: goleadores, asistentes, tarjetas, lesiones, tapadas o errores.

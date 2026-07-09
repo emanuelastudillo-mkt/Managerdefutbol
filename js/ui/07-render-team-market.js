@@ -122,6 +122,12 @@ function marketAcceptanceLabel(player=null){
   const chance = marketPlayerAcceptanceChance(player);
   return Number.isInteger(chance) ? String(chance) : chance.toFixed(1);
 }
+function marketAcceptanceHiddenLabel(){
+  return 'Interés oculto';
+}
+function marketAcceptanceHiddenHint(){
+  return 'El jugador puede aceptar o rechazar según su media real y el prestigio del club, pero la probabilidad exacta permanece oculta.';
+}
 function marketScoutedOverallCell(player){
   if(typeof scoutedOverallLabel === 'function') return scoutedOverallLabel(player);
   return '<span class="muted">—</span>';
@@ -266,14 +272,14 @@ function renderMarket(){
     <td>${marketScoutedMoraleCell(p)}</td>
     <td>${formatMoney(marketPlayerPrice(p))}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small muted">Acepta ${marketAcceptanceLabel(p)}%</span></td>
+    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
   </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
-    <div class="market-limit-note small muted">Se muestran ${free.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()} La aceptación real depende de media del jugador vs prestigio del club. Prestigio actual: ${marketOfferClubPrestige()}.</div>
+    <div class="market-limit-note small muted">Se muestran ${free.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()} ${marketAcceptanceHiddenHint()}</div>
     <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media scouteada</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
     ${marketMoreButtonMarkup(freeFiltered.length, free.length)}`;
   bindMarketTabs();
@@ -298,7 +304,7 @@ function renderContractedMarket(){
     <td>${marketScoutedOverallCell(p)}</td>
     <td>${formatMoney(p.clause || p.value || 0)}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><span class="small muted">Acepta ${marketAcceptanceLabel(p)}%</span></td>
+    <td><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
     <td><button class="primary small-btn" data-make-player-offer="${p.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></td>
   </tr>`;
   }).join('');
@@ -326,7 +332,7 @@ function hireFreeAgent(playerId){
   if(roll >= chance){
     const rejected = game.marketPlayers[idx];
     markFreeAgentOfferRejected(playerId, chance);
-    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:`${rejected?.name || 'El jugador'} rechazó negociar con ${clubName(game.selectedClubId)}. Probabilidad de aceptación por media/prestigio: ${chance}%. Podrás volver a intentar la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:`${rejected?.name || 'El jugador'} rechazó negociar con ${clubName(game.selectedClubId)}. La decisión depende de su media real y del prestigio del club. Podrás volver a intentar la próxima temporada.`, priority:'normal' });
     saveLocal(true);
     showNotice(`${rejected?.name || 'Jugador'} rechazó la oferta.`);
     renderMarket();

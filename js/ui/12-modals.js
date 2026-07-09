@@ -110,8 +110,7 @@ function playerModalActionsMarkup(player){
   if(clubId === 0 && !player.sold){
     const blocked = typeof isFreeAgentOfferBlockedThisSeason === 'function' && isFreeAgentOfferBlockedThisSeason(player.id);
     const label = typeof freeAgentOfferButtonLabel === 'function' ? freeAgentOfferButtonLabel(player.id) : (blocked ? 'Rechazó hasta próxima temp.' : 'Hacer oferta');
-    const chance = typeof marketAcceptanceLabel === 'function' ? marketAcceptanceLabel(player) : (typeof freeAgentAcceptanceChance === 'function' ? freeAgentAcceptanceChance(player) : 0);
-    return `<div class="card inner player-action-card"><h3>Mercado</h3><p class="muted small">Aceptación estimada por prestigio del club: ${chance}%.</p><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><p class="muted small">Interés del jugador: oculto. Puede aceptar o rechazar según su media real y el prestigio del club.</p><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
   return '';
 }
@@ -273,7 +272,7 @@ function openPurchaseOfferModal(playerId){
     <p class="label">Hacer oferta</p>
     <h2>${escapeHtml(player.name)}</h2>
     <p class="muted">${escapeHtml(clubName(player.clubId))} · ${roleBadge(player.position)} · ${visibleOverall(player)} de media · Cláusula ${formatMoney(clause)}</p>
-    <p class="small muted">Aceptación estimada del jugador: <strong>${typeof marketAcceptanceLabel === 'function' ? marketAcceptanceLabel(player) : '—'}%</strong>. Si rechaza, queda bloqueado para tu club hasta la próxima temporada.</p>
+    <p class="small muted">Interés del jugador: <strong>oculto</strong>. Puede aceptar o rechazar según su media real y el prestigio del club. Si rechaza, queda bloqueado para tu club hasta la próxima temporada.</p>
     <div style="margin-top:12px">${budgetNote}</div>
     <div class="grid cols-3 offer-choice-grid" style="margin-top:14px">
       <button class="card clickable plain" data-submit-player-offer="low" ${disabledAttrs(offerLow)}><h3>Ofrecer 50% menos</h3><p>${formatMoney(offerLow)}</p></button>
@@ -319,7 +318,7 @@ function submitPurchaseOffer(playerId, kind){
   const playerAccepted = Math.random() * 100 < Number(playerChance || 0);
   if(!playerAccepted){
     markPurchaseOfferRejected(player.id, kind, cfg.amount, playerChance, 'player');
-    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:`${player.name} rechazó jugar en ${clubName(game.selectedClubId)}. Probabilidad de aceptación por media/prestigio: ${Number.isInteger(playerChance) ? playerChance : Number(playerChance).toFixed(1)}%. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:`${player.name} rechazó jugar en ${clubName(game.selectedClubId)}. La decisión depende de su media real y del prestigio del club. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);

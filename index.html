@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fútbol Manager V4.12</title>
+  <title>Fútbol Manager V4.13</title>
   <meta name="description" content="Juego manager de fútbol en navegador con datos JSON, guardado local y ranking online." />
-  <link rel="icon" type="image/png" sizes="50x50" href="favicon.png?v=4.12" />
-  <link rel="shortcut icon" type="image/png" href="favicon.png?v=4.12" />
-  <link rel="stylesheet" href="style.css?v=4.12" />
+  <link rel="icon" type="image/png" sizes="50x50" href="favicon.png?v=4.13" />
+  <link rel="shortcut icon" type="image/png" href="favicon.png?v=4.13" />
+  <link rel="stylesheet" href="style.css?v=4.13" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">MVP local · V4.12</p>
+      <p class="eyebrow">MVP local · V4.13</p>
       <h1>Fútbol Manager</h1>
     </div>
     <div class="top-actions top-actions-compact">
@@ -53,7 +53,9 @@
         <button data-tab="ranking">Ranking Online</button>
       </nav>
       <section class="reset-zone">
-        <p class="small muted">Zona de riesgo. Borra la partida local del navegador.</p>
+        <p class="small muted">Chequeo seguro de estructura y datos guardados.</p>
+        <button id="btnVerifyIntegrity" class="ghost verify-bottom-btn">Verificar que todo esté bien</button>
+        <p class="small muted reset-warning-copy">Zona de riesgo. Borra la partida local del navegador.</p>
         <button id="btnReset" class="danger ghost reset-bottom-btn">Reset de partida</button>
       </section>
     </aside>
@@ -71,23 +73,23 @@
     </div>
   </template>
 
-  <script src="config.js?v=4.12"></script>
-  <script src="simulador-2.0.js?v=4.12"></script>
-  <script src="js/core/01-config-constants.js?v=4.12"></script>
-  <script src="js/core/02-ui-utils.js?v=4.12"></script>
-  <script src="js/core/03-player-tactics-utils.js?v=4.12"></script>
-  <script src="js/data/04-data-storage.js?v=4.12"></script>
-  <script src="js/game/05-state-season.js?v=4.12"></script>
-  <script src="js/ui/06-render-home-messages.js?v=4.12"></script>
-  <script src="js/ui/07-render-team-market.js?v=4.12"></script>
-  <script src="js/game/08-sponsors-stadium-stats.js?v=4.12"></script>
-  <script src="js/game/09-simulation-economy-training.js?v=4.12"></script>
-  <script src="js/game/10-academy-employees.js?v=4.12"></script>
-  <script src="js/game/11-match-engine.js?v=4.12"></script>
-  <script src="js/ui/12-modals.js?v=4.12"></script>
-  <script src="js/game/13-ranking-online.js?v=4.12"></script>
-  <script src="js/game/14-eventos.js?v=4.12"></script>
-  <script src="js/game/15-especial.js?v=4.12"></script>
-  <script src="app.js?v=4.12"></script>
+  <script src="config.js?v=4.13"></script>
+  <script src="simulador-2.0.js?v=4.13"></script>
+  <script src="js/core/01-config-constants.js?v=4.13"></script>
+  <script src="js/core/02-ui-utils.js?v=4.13"></script>
+  <script src="js/core/03-player-tactics-utils.js?v=4.13"></script>
+  <script src="js/data/04-data-storage.js?v=4.13"></script>
+  <script src="js/game/05-state-season.js?v=4.13"></script>
+  <script src="js/ui/06-render-home-messages.js?v=4.13"></script>
+  <script src="js/ui/07-render-team-market.js?v=4.13"></script>
+  <script src="js/game/08-sponsors-stadium-stats.js?v=4.13"></script>
+  <script src="js/game/09-simulation-economy-training.js?v=4.13"></script>
+  <script src="js/game/10-academy-employees.js?v=4.13"></script>
+  <script src="js/game/11-match-engine.js?v=4.13"></script>
+  <script src="js/ui/12-modals.js?v=4.13"></script>
+  <script src="js/game/13-ranking-online.js?v=4.13"></script>
+  <script src="js/game/14-eventos.js?v=4.13"></script>
+  <script src="js/game/15-especial.js?v=4.13"></script>
+  <script src="app.js?v=4.13"></script>
 </body>
 </html>

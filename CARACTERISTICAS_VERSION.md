@@ -1,18 +1,33 @@
-# V4.12 - Visor de partido y eventos destacados
+# V4.13 - Verificador seguro de estructura
 
 ## Cambios principales
 
-- Se agrega un visor visual de inclinación de cancha en el simulador de partido.
-- El visor tiene dos colores: local y visitante.
-- La pelota se desplaza en la barra según posesión, ataques y ocasiones visibles hasta ese momento.
-- Se muestra una etiqueta indicando si la cancha está inclinada para el local, visitante o equilibrada.
-- Se agregan animaciones especiales para goles.
-- Los goles muestran escudo, nombre del jugador y grito `GOOOOOOLLLL!`.
-- Se agregan animaciones especiales para rojas directas y dobles amarillas.
-- Las rojas muestran escudo, nombre del jugador y tarjeta roja grande.
-- Se agregan animaciones especiales para lesiones.
-- Las lesiones muestran escudo, nombre del jugador e ícono de lesión.
-- Las animaciones se muestran al revelarse el evento dentro de las fases del relato.
+- Se agrega un botón inferior: `Verificar que todo esté bien`.
+- El botón abre un reporte de integridad de partida.
+- El chequeo no modifica nada al abrirse.
+- Detecta clubes ubicados en divisiones de otro país.
+- Detecta overrides de división inválidos o cruzados entre países.
+- Detecta jugadores apuntando a clubes inexistentes.
+- Detecta entradas de tabla con clubes inexistentes.
+- Detecta fixtures con clubes cruzados de país respecto de la división del partido.
+- Muestra cantidad de clubes por división para revisar rápidamente mezclas raras.
+- Si hay reparaciones seguras disponibles, permite aplicarlas desde el modal.
+
+## Reparación segura
+
+- Reasigna clubes que quedaron en una división de otro país.
+- Elige una división válida del país real del club.
+- Regenera `clubDivisionOverrides` para evitar que el error vuelva a aparecer al cargar.
+- Actualiza la liga seleccionada si el club afectado es el club del manager.
+- Guarda automáticamente la reparación.
+
+## Límites de seguridad
+
+- No reconstruye calendario.
+- No borra resultados jugados.
+- No reinicia temporada.
+- No modifica ascensos/descensos ya cerrados.
+- No borra jugadores ni mercado libre desde este botón.
 
 ## Archivos modificados
 
@@ -22,10 +37,10 @@
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
 - `style.css`
-- `js/ui/12-modals.js`
+- `js/game/05-state-season.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
 - Sintaxis validada en todos los archivos `.js`.
-- El cambio no modifica el motor de resultado, sólo la visualización del simulador.
+- El cambio no requiere reinicio de partida.

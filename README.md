@@ -2,10 +2,22 @@
 
 ## Versión actual
 
-**V4.12 - Visor de partido y eventos destacados**
+**V4.13 - Verificador seguro de estructura**
 
 ## Historial de versiones
 
+
+
+### V4.13 - Verificador seguro de estructura
+
+- Se agrega el botón `Verificar que todo esté bien` al final del menú lateral.
+- El verificador revisa estructura de clubes, divisiones, overrides, jugadores, tablas, fixtures y mercado libre.
+- Detecta clubes asignados a divisiones de otro país, como un club rumano dentro de una división argentina.
+- La verificación inicial no modifica la partida.
+- Si encuentra clubes en ligas de otro país, permite aplicar una reparación segura.
+- La reparación segura reasigna esos clubes a una división válida de su país y regenera `clubDivisionOverrides`.
+- No reconstruye calendario, no borra resultados y no reinicia partida.
+- El reporte muestra ejemplos de errores y conteo de clubes por división.
 
 
 ### V4.12 - Visor de partido y eventos destacados

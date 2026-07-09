@@ -531,6 +531,258 @@ function fillClubSelect(){
   const select = $('clubSelect');
   if(select) select.innerHTML = clubSelectOptionsMarkup();
 }
+
+
+function integrityCountryKey(value){
+  return normalizeScheduleText(String(value || '').trim() || 'argentina');
+}
+function divisionCountryKey(division){
+  return integrityCountryKey(division?.country || division?.pais || '');
+}
+function clubCountryKeyForIntegrity(club){
+  return integrityCountryKey(typeof clubCountry === 'function' ? clubCountry(club) : (club?.country || club?.pais || 'Argentina'));
+}
+function integrityDivisionById(){
+  return Object.fromEntries((seed?.divisions || []).map(division => [String(division.id || 'default'), division]));
+}
+function integrityDivisionsForClubCountry(club){
+  const country = clubCountryKeyForIntegrity(club);
+  const direct = (seed?.divisions || []).filter(division => divisionCountryKey(division) === country);
+  if(direct.length) return direct.slice().sort((a,b)=>(a.order || 0)-(b.order || 0));
+  const inferredIds = new Set((seed?.clubs || [])
+    .filter(item => item && Number(item.id) !== Number(club?.id) && clubCountryKeyForIntegrity(item) === country)
+    .map(item => String(item.divisionId || 'default')));
+  return (seed?.divisions || [])
+    .filter(division => inferredIds.has(String(division.id || 'default')))
+    .sort((a,b)=>(a.order || 0)-(b.order || 0));
+}
+function safeTargetDivisionForClub(club, currentDivision=null){
+  const candidates = integrityDivisionsForClubCountry(club);
+  if(!candidates.length) return null;
+  const currentOrder = Number(currentDivision?.order || club?.divisionOrder || 1);
+  return candidates.find(division => Number(division.order || 0) === currentOrder) || candidates[0];
+}
+function currentFreeAgentIntegrityCount(){
+  const ids = new Set();
+  (game?.marketPlayers || []).forEach(player => { if(Number(player?.clubId || 0) === 0) ids.add(Number(player.id)); });
+  (seed?.players || []).forEach(player => { if(Number(player?.clubId || 0) === 0) ids.add(Number(player.id)); });
+  return Array.from(ids).filter(Number.isFinite).length;
+}
+function inspectGameIntegrity(){
+  const result = {
+    ok:true,
+    checkedAt:new Date().toISOString(),
+    issues:[],
+    warnings:[],
+    repairables:[],
+    stats:{ clubs:Number(seed?.clubs?.length || 0), divisions:Number(seed?.divisions?.length || 0), players:Number(seed?.players?.length || 0), freeAgents:currentFreeAgentIntegrityCount(), fixtures:Number(game?.fixtures?.length || 0) },
+    canRepair:false
+  };
+  if(!seed?.clubs?.length || !seed?.divisions?.length){
+    result.ok = false;
+    result.issues.push({ type:'base_missing', severity:'high', title:'Base incompleta', detail:'No se cargaron clubes o divisiones suficientes para verificar.' });
+    return result;
+  }
+  if(!game){
+    result.warnings.push({ type:'no_game', severity:'low', title:'Sin partida activa', detail:'La base cargó bien, pero no hay partida guardada/activa para verificar estado interno.' });
+    return result;
+  }
+  const divisionsById = integrityDivisionById();
+  const validClubIds = new Set((seed.clubs || []).map(club => Number(club.id)));
+  const duplicateClubIds = [];
+  const seenClubIds = new Set();
+  (seed.clubs || []).forEach(club => {
+    const id = Number(club.id);
+    if(seenClubIds.has(id)) duplicateClubIds.push(id);
+    seenClubIds.add(id);
+  });
+  if(duplicateClubIds.length){
+    result.ok = false;
+    result.issues.push({ type:'duplicate_club_ids', severity:'high', title:'IDs de clubes duplicados', detail:`Hay ${duplicateClubIds.length} IDs repetidos. Esto requiere revisión manual.`, samples:duplicateClubIds.slice(0,8) });
+  }
+  const crossCountryClubs = [];
+  const invalidDivisionClubs = [];
+  (seed.clubs || []).forEach(club => {
+    const divisionId = String(club.divisionId || 'default');
+    const division = divisionsById[divisionId];
+    if(!division){
+      const target = safeTargetDivisionForClub(club, null);
+      invalidDivisionClubs.push({ clubId:club.id, clubName:club.name, divisionId, targetDivisionId:target?.id || '', targetDivisionName:target?.name || '' });
+      return;
+    }
+    const clubCountry = clubCountryKeyForIntegrity(club);
+    const divCountry = divisionCountryKey(division);
+    if(clubCountry && divCountry && clubCountry !== divCountry){
+      const target = safeTargetDivisionForClub(club, division);
+      crossCountryClubs.push({
+        clubId:club.id,
+        clubName:club.name,
+        clubCountry:club.country || club.pais || clubCountry,
+        currentDivisionId:division.id,
+        currentDivisionName:division.name,
+        currentDivisionCountry:division.country || divCountry,
+        targetDivisionId:target?.id || '',
+        targetDivisionName:target?.name || ''
+      });
+    }
+  });
+  if(invalidDivisionClubs.length){
+    result.ok = false;
+    result.issues.push({ type:'invalid_club_division', severity:'high', title:'Clubes con división inexistente', detail:`Hay ${invalidDivisionClubs.length} clubes apuntando a divisiones que no existen.`, samples:invalidDivisionClubs.slice(0,8) });
+    result.repairables.push({ type:'invalid_club_division', title:'Reasignar clubes con división inexistente a una división válida de su país', count:invalidDivisionClubs.filter(item => item.targetDivisionId).length, items:invalidDivisionClubs });
+  }
+  if(crossCountryClubs.length){
+    result.ok = false;
+    result.issues.push({ type:'cross_country_clubs', severity:'high', title:'Clubes en ligas de otro país', detail:`Hay ${crossCountryClubs.length} clubes ubicados en una división de otro país.`, samples:crossCountryClubs.slice(0,8) });
+    result.repairables.push({ type:'cross_country_clubs', title:'Reasignar clubes a una división válida de su país', count:crossCountryClubs.filter(item => item.targetDivisionId).length, items:crossCountryClubs });
+  }
+  const overrides = game?.clubDivisionOverrides || {};
+  const invalidOverrides = [];
+  Object.entries(overrides).forEach(([clubId, override]) => {
+    const club = (seed.clubs || []).find(item => Number(item.id) === Number(clubId));
+    const division = divisionsById[String(override?.divisionId || '')];
+    if(!club || !division){
+      invalidOverrides.push({ clubId, clubName:club?.name || 'Club inexistente', divisionId:override?.divisionId || '' });
+      return;
+    }
+    const clubCountry = clubCountryKeyForIntegrity(club);
+    const divCountry = divisionCountryKey(division);
+    if(clubCountry && divCountry && clubCountry !== divCountry){
+      invalidOverrides.push({ clubId, clubName:club.name, divisionId:division.id, divisionName:division.name, clubCountry:club.country || clubCountry, divisionCountry:division.country || divCountry });
+    }
+  });
+  if(invalidOverrides.length){
+    result.ok = false;
+    result.issues.push({ type:'invalid_division_overrides', severity:'medium', title:'Overrides de división inconsistentes', detail:`Hay ${invalidOverrides.length} asignaciones guardadas con división inválida o de otro país.`, samples:invalidOverrides.slice(0,8) });
+    result.repairables.push({ type:'invalid_division_overrides', title:'Regenerar overrides desde la estructura actual reparada', count:invalidOverrides.length, items:invalidOverrides });
+  }
+  const invalidPlayers = (seed.players || []).filter(player => Number(player.clubId || 0) > 0 && !validClubIds.has(Number(player.clubId)));
+  if(invalidPlayers.length){
+    result.ok = false;
+    result.issues.push({ type:'invalid_player_clubs', severity:'medium', title:'Jugadores con club inexistente', detail:`Hay ${invalidPlayers.length} jugadores asignados a clubes que no existen.`, samples:invalidPlayers.slice(0,8).map(p => ({ id:p.id, name:p.name, clubId:p.clubId })) });
+  }
+  if(game?.selectedClubId && !validClubIds.has(Number(game.selectedClubId))){
+    result.ok = false;
+    result.issues.push({ type:'invalid_selected_club', severity:'high', title:'Club del manager inexistente', detail:`El club seleccionado (${game.selectedClubId}) no existe en la base actual.` });
+  }
+  const invalidStandingIds = Object.keys(game?.standings || {}).filter(id => !validClubIds.has(Number(id)));
+  if(invalidStandingIds.length){
+    result.ok = false;
+    result.issues.push({ type:'invalid_standings', severity:'medium', title:'Tabla con clubes inexistentes', detail:`Hay ${invalidStandingIds.length} entradas de tabla de clubes inexistentes.`, samples:invalidStandingIds.slice(0,8) });
+  }
+  const fixtureIssues = [];
+  (game?.fixtures || []).forEach(round => {
+    (round.matches || []).forEach(match => {
+      const home = seed.clubs.find(club => Number(club.id) === Number(match.homeId));
+      const away = seed.clubs.find(club => Number(club.id) === Number(match.awayId));
+      if(!home || !away){
+        fixtureIssues.push({ matchId:match.id, issue:'club_inexistente', homeId:match.homeId, awayId:match.awayId });
+        return;
+      }
+      const division = divisionsById[String(match.divisionId || home.divisionId || '')];
+      if(!division) return;
+      const divCountry = divisionCountryKey(division);
+      if(divCountry && (clubCountryKeyForIntegrity(home) !== divCountry || clubCountryKeyForIntegrity(away) !== divCountry)){
+        fixtureIssues.push({ matchId:match.id, issue:'fixture_pais_cruzado', division:division.name, home:home.name, away:away.name });
+      }
+    });
+  });
+  if(fixtureIssues.length){
+    result.ok = false;
+    result.warnings.push({ type:'fixture_cross_country', severity:'medium', title:'Calendario con partidos cruzados', detail:`Hay ${fixtureIssues.length} partidos cuyo país no coincide con la división del fixture. No se reparan automáticamente para no romper resultados o fechas ya jugadas.`, samples:fixtureIssues.slice(0,8) });
+  }
+  const freeCap = Number(typeof MARKET_FREE_AGENT_HARD_MAX !== 'undefined' ? MARKET_FREE_AGENT_HARD_MAX : 300);
+  if(result.stats.freeAgents > freeCap){
+    result.ok = false;
+    result.warnings.push({ type:'free_agents_over_cap', severity:'low', title:'Mercado libre excedido', detail:`Hay ${result.stats.freeAgents} libres y el máximo configurado es ${freeCap}. La limpieza automática de mercado debería recortarlo en carga/temporada.` });
+  }
+  const divisionCounts = (seed.divisions || []).map(division => ({
+    id:division.id,
+    name:division.name,
+    country:division.country || '',
+    count:(seed.clubs || []).filter(club => String(club.divisionId || 'default') === String(division.id || 'default')).length
+  }));
+  result.stats.divisionCounts = divisionCounts;
+  result.canRepair = result.repairables.some(item => Number(item.count || 0) > 0);
+  return result;
+}
+function integritySeverityLabel(severity){
+  if(severity === 'high') return 'grave';
+  if(severity === 'medium') return 'medio';
+  return 'leve';
+}
+function integrityIssueMarkup(item){
+  const samples = Array.isArray(item.samples) && item.samples.length
+    ? `<details class="integrity-samples"><summary>Ver ejemplos</summary><pre>${escapeHtml(JSON.stringify(item.samples, null, 2))}</pre></details>`
+    : '';
+  return `<li class="integrity-item integrity-${escapeHtml(item.severity || 'low')}"><strong>${escapeHtml(item.title || 'Aviso')}</strong><span>${escapeHtml(integritySeverityLabel(item.severity || 'low'))}</span><p>${escapeHtml(item.detail || '')}</p>${samples}</li>`;
+}
+function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
+  const issueItems = (result.issues || []).map(integrityIssueMarkup).join('');
+  const warningItems = (result.warnings || []).map(integrityIssueMarkup).join('');
+  const divisionRows = (result.stats?.divisionCounts || []).map(item => `<tr><td>${escapeHtml(item.country || '—')}</td><td>${escapeHtml(item.name || item.id)}</td><td>${Number(item.count || 0)}</td></tr>`).join('');
+  const repairRows = (result.repairables || []).filter(item => Number(item.count || 0) > 0).map(item => `<li><strong>${escapeHtml(item.title)}</strong><span>${Number(item.count || 0)} caso(s)</span></li>`).join('');
+  const stateLabel = result.ok ? 'Todo correcto' : (result.canRepair ? 'Hay reparaciones seguras disponibles' : 'Hay avisos para revisar');
+  const body = `<div class="integrity-modal">
+    <p class="eyebrow">Verificador de estructura</p>
+    <h2>${escapeHtml(stateLabel)}</h2>
+    <p class="muted">Este chequeo no reinicia la partida, no reconstruye calendario y no borra resultados. La reparación segura sólo reasigna clubes que quedaron en una liga de otro país y regenera el mapa de divisiones guardado.</p>
+    ${repaired ? '<div class="notice-inline good">Reparación segura aplicada y partida guardada.</div>' : ''}
+    <div class="integrity-summary-grid">
+      <div><span>Clubes</span><strong>${Number(result.stats?.clubs || 0)}</strong></div>
+      <div><span>Divisiones</span><strong>${Number(result.stats?.divisions || 0)}</strong></div>
+      <div><span>Jugadores</span><strong>${Number(result.stats?.players || 0)}</strong></div>
+      <div><span>Libres</span><strong>${Number(result.stats?.freeAgents || 0)}</strong></div>
+    </div>
+    ${issueItems ? `<h3>Problemas detectados</h3><ul class="integrity-list">${issueItems}</ul>` : '<div class="notice-inline good">No se detectaron problemas graves de estructura.</div>'}
+    ${warningItems ? `<h3>Advertencias</h3><ul class="integrity-list">${warningItems}</ul>` : ''}
+    ${repairRows ? `<h3>Reparaciones seguras</h3><ul class="integrity-repair-list">${repairRows}</ul><div class="row message-actions"><button class="primary" data-apply-integrity-repair>Aplicar reparaciones seguras</button></div>` : ''}
+    <h3>Clubes por división actual</h3>
+    <div class="table-wrap compact-table"><table><thead><tr><th>País</th><th>División</th><th>Clubes</th></tr></thead><tbody>${divisionRows}</tbody></table></div>
+  </div>`;
+  if(typeof openModal === 'function'){
+    openModal(body);
+    document.querySelector('[data-apply-integrity-repair]')?.addEventListener('click', async () => {
+      const next = await applySafeGameIntegrityRepairs();
+      showGameIntegrityModal(next, true);
+    });
+  }else{
+    showNotice(result.ok ? 'Verificación correcta.' : 'Verificación completada con avisos.', true);
+  }
+}
+async function applySafeGameIntegrityRepairs(){
+  const before = inspectGameIntegrity();
+  const divisionsById = integrityDivisionById();
+  let repaired = 0;
+  (seed?.clubs || []).forEach(club => {
+    const currentDivision = divisionsById[String(club.divisionId || 'default')];
+    const needsRepair = !currentDivision || clubCountryKeyForIntegrity(club) !== divisionCountryKey(currentDivision);
+    if(!needsRepair) return;
+    const target = safeTargetDivisionForClub(club, currentDivision);
+    if(!target) return;
+    club.divisionId = target.id;
+    club.divisionName = target.name;
+    club.divisionOrder = target.order;
+    club.prizeMultiplier = target.prizeMultiplier ?? divisionPrizeMultiplier(target.name, (target.order || 1)-1);
+    repaired += 1;
+  });
+  if(game){
+    game.clubDivisionOverrides = snapshotClubDivisionOverrides();
+    const selectedClub = seed.clubs.find(club => Number(club.id) === Number(game.selectedClubId));
+    if(selectedClub) game.selectedLeagueId = selectedClub.divisionId || game.selectedLeagueId;
+  }
+  if(repaired > 0 && typeof saveLocal === 'function'){
+    await saveLocal(true);
+  }
+  if(repaired > 0 && typeof renderAll === 'function') renderAll();
+  const after = inspectGameIntegrity();
+  after.repairedCount = repaired;
+  after.previousIssues = before.issues || [];
+  if(repaired > 0) showNotice(`Verificación: ${repaired} club(es) reasignados a una liga válida.`, false);
+  else showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
+  return after;
+}
+
 function confirmResetLocal(){
   const ok = window.confirm('Vas a borrar la partida local guardada en este navegador. Esta acción no se puede deshacer.');
   if(ok) resetLocal();
@@ -541,6 +793,7 @@ function bindEvents(){
   $('btnSave').addEventListener('click', saveLocal);
   $('btnLoad').addEventListener('click', ()=>loadLocal(false));
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
+  $('btnVerifyIntegrity')?.addEventListener('click', () => showGameIntegrityModal(inspectGameIntegrity(), false));
   $('btnReset')?.addEventListener('click', confirmResetLocal);
   document.querySelectorAll('.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{

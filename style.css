@@ -2912,3 +2912,61 @@ th{
   .special-event-name{font-size:16px}
   .special-event-icon,.special-event-red-card{font-size:34px}
 }
+
+/* V4.13 · Verificador seguro de estructura */
+.verify-bottom-btn{
+  width:100%;
+  justify-content:center;
+  border-color:rgba(96,165,250,.45);
+  background:rgba(59,130,246,.10);
+}
+.reset-warning-copy{ margin-top:14px; }
+.integrity-modal{ display:grid; gap:14px; }
+.integrity-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.integrity-summary-grid > div{
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(15,23,42,.45);
+  border-radius:14px;
+  padding:10px;
+}
+.integrity-summary-grid span{ display:block; color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.06em; }
+.integrity-summary-grid strong{ display:block; font-size:1.25rem; margin-top:3px; }
+.integrity-list,.integrity-repair-list{ display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.integrity-item,.integrity-repair-list li{
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(15,23,42,.38);
+  border-radius:14px;
+  padding:10px;
+}
+.integrity-item strong,.integrity-repair-list strong{ display:block; }
+.integrity-item > span,.integrity-repair-list span{ color:var(--muted); font-size:.8rem; }
+.integrity-item p{ margin:.35rem 0 0; color:var(--text); }
+.integrity-high{ border-color:rgba(248,113,113,.42); background:rgba(127,29,29,.20); }
+.integrity-medium{ border-color:rgba(251,191,36,.36); background:rgba(120,53,15,.18); }
+.integrity-low{ border-color:rgba(96,165,250,.32); }
+.integrity-samples{ margin-top:8px; }
+.integrity-samples summary{ cursor:pointer; color:var(--muted); }
+.integrity-samples pre{
+  white-space:pre-wrap;
+  max-height:220px;
+  overflow:auto;
+  font-size:.75rem;
+  background:rgba(2,6,23,.55);
+  border-radius:10px;
+  padding:8px;
+}
+.notice-inline{
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:14px;
+  padding:10px;
+  color:var(--text);
+  background:rgba(15,23,42,.38);
+}
+.notice-inline.good{ border-color:rgba(34,197,94,.36); background:rgba(20,83,45,.20); }
+@media (max-width: 760px){
+  .integrity-summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

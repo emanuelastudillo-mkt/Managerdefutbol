@@ -686,6 +686,48 @@ function processBankLoanDailySchedule(){
   state.active.daysSincePayment = 0;
   return processBankLoanWeeklyPayment();
 }
+
+function ensureMonthlyExpensesState(){
+  if(!game) return null;
+  game.monthlyExpenses = (game.monthlyExpenses && typeof game.monthlyExpenses === 'object' && !Array.isArray(game.monthlyExpenses)) ? game.monthlyExpenses : {};
+  game.monthlyExpenses.lastChargeDate = validIsoDate(game.monthlyExpenses.lastChargeDate) ? game.monthlyExpenses.lastChargeDate : (game.currentDate || currentCalendarDate());
+  game.monthlyExpenses.matchesPlayed = Math.max(0, Math.round(Number(game.monthlyExpenses.matchesPlayed || 0)));
+  return game.monthlyExpenses;
+}
+function noteOwnMatchForMonthlyExpenses(match){
+  if(!MONTHLY_EXPENSES_ENABLED || !game || !match) return;
+  if(Number(match.homeId) !== Number(game.selectedClubId) && Number(match.awayId) !== Number(game.selectedClubId)) return;
+  const state = ensureMonthlyExpensesState();
+  if(!state) return;
+  state.matchesPlayed += 1;
+}
+function processMonthlyClubExpensesDaily(){
+  if(!MONTHLY_EXPENSES_ENABLED || !game) return 0;
+  const state = ensureMonthlyExpensesState();
+  if(!state) return 0;
+  const today = game.currentDate || currentCalendarDate();
+  if(!validIsoDate(today) || !validIsoDate(state.lastChargeDate)) return 0;
+  const elapsed = daysBetweenIsoDates(state.lastChargeDate, today);
+  if(elapsed < 30) return 0;
+  const months = Math.max(1, Math.floor(elapsed / 30));
+  const matches = Math.max(0, Math.round(Number(state.matchesPlayed || 0)));
+  const capacity = typeof clubStadiumCapacity === 'function' ? Math.max(0, Math.round(Number(clubStadiumCapacity(game.selectedClubId) || 0))) : 0;
+  const fans = typeof clubFansCurrent === 'function' ? Math.max(0, Math.round(Number(clubFansCurrent(game.selectedClubId) || 0))) : 0;
+  let charged = 0;
+  for(let i=0; i<months; i++){
+    const tax = Math.round(Math.max(0, Number(game.budget || 0)) * MONTHLY_PROFIT_TAX_RATE);
+    if(tax > 0){ recordBudgetChange(-tax, 'Impuesto mensual de ganancias', { type:'monthly_profit_tax', rate:MONTHLY_PROFIT_TAX_RATE }); charged += tax; }
+  }
+  if(matches > 0){
+    const electricity = Math.round(matches * (MONTHLY_ELECTRICITY_BASE_PER_MATCH + (capacity * MONTHLY_ELECTRICITY_CAPACITY_FACTOR)));
+    const cleaning = Math.round(MONTHLY_CLEANING_PER_FAN_PER_MATCH * matches * fans);
+    if(electricity > 0){ recordBudgetChange(-electricity, 'Electricidad mensual del club', { type:'monthly_electricity', matches, capacity }); charged += electricity; }
+    if(cleaning > 0){ recordBudgetChange(-cleaning, 'Limpieza general mensual', { type:'monthly_cleaning', matches, fans }); charged += cleaning; }
+  }
+  state.matchesPlayed = 0;
+  state.lastChargeDate = addDaysToIsoDate(state.lastChargeDate, months * 30);
+  return charged;
+}
 function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   if(!game) return { botResults:[], recovered:0, bankPayment:0 };
   const skipTraining = Boolean(options.skipTraining);
@@ -700,6 +742,8 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   const recovered = clearRecoveredDailyInjuries();
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
+  if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily();
+  processMonthlyClubExpensesDaily();
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
   return { botResults, recovered, bankPayment };
@@ -1331,6 +1375,8 @@ function financeCategory(entry){
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
   if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
+  if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
+  if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
   if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
   if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
   if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
@@ -1343,6 +1389,8 @@ function financeBudgetCategory(entry){
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
   if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
+  if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
+  if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
   if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
   if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
   if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
@@ -1674,6 +1722,7 @@ function paySeasonSalaries(){
   return total;
 }
 function applyEconomyResult(match){
+  noteOwnMatchForMonthlyExpenses(match);
   const isHome = match.homeId === game.selectedClubId;
   const gf = isHome ? match.homeGoals : match.awayGoals;
   const gc = isHome ? match.awayGoals : match.homeGoals;

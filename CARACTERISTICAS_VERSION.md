@@ -1,17 +1,20 @@
-# Características V4.29 - Desgaste físico y préstamo completo
+# Características V4.30 - Centro de Ojeo y gastos mensuales
 
 ## Cambios
 
-- La lista lateral de goleadores, asistentes, amonestados, expulsados y lesionados del simulador ahora se revela por minuto.
-- Se agrega `Desgaste` como estado persistente por jugador.
-- El desgaste se acumula por partido jugado entre 1 y 3 puntos según intensidad del partido.
-- Cada turno general de `Entrenamiento intenso` suma 1 punto de desgaste.
-- Cada turno general de `Masajista` reduce 1 punto de desgaste.
-- El desgaste reduce el máximo de estado físico posible: `máximo = 99 - desgaste`.
-- El máximo limitado por desgaste se muestra en gris en el indicador de estado físico.
-- Se agrega un botón para pagar la totalidad de un préstamo bancario activo.
-- Al cancelar el préstamo completo, la deuda restante se descuenta del presupuesto del club y el préstamo queda cerrado.
+- Nuevo menú lateral: `Centro de Ojeo`.
+- Los jugadores externos pueden agregarse al Centro de Ojeo desde su ficha individual con el botón `Ojear`.
+- El Centro de Ojeo tiene lista de jugadores observados, informes acumulativos, oficinas, ojeadores y jefe de ojeadores.
+- Todos los clubes tienen base de 2 ojeadores y hasta 5 jugadores listados.
+- Cada oficina suma 3 cupos de ojeadores y 10 cupos de jugadores listados.
+- Contratar ojeador cuesta $200.000 por día. Se puede despedir en cualquier momento.
+- Las oficinas tienen alquiler mensual configurable.
+- El jefe de ojeadores puede ser Regular, Bueno o Elite, con sueldo mensual y capacidad máxima de oficinas.
+- El jefe de ojeadores no puede despedirse; se va al finalizar la temporada.
+- No se puede cancelar una oficina si antes no se reduce la cantidad de ojeadores o jugadores listados por debajo del nuevo cupo.
+- Se agregan gastos mensuales: impuesto de ganancias, electricidad y limpieza general.
+- Las instrucciones de partido por resultado se reemplazan por 3 visores porcentuales de habilidades titulares por sector.
 
 ## Motivo
 
-El físico necesitaba una capa de fatiga acumulada que no se solucionara sólo con recuperación diaria. El desgaste permite que una seguidilla de partidos o entrenamientos intensos limite el máximo físico, y obliga a usar Masajista para recuperar techo físico.
+El scouting externo necesitaba un sistema acumulativo y administrable. Además, la economía diaria requería nuevos gastos fijos para evitar acumulaciones excesivas de presupuesto y hacer más relevante la planificación financiera mensual.

@@ -1315,6 +1315,8 @@ function normalizeGame(saved){
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
   normalized.rejectedFreeAgentOffers = (normalized.rejectedFreeAgentOffers && typeof normalized.rejectedFreeAgentOffers === 'object' && !Array.isArray(normalized.rejectedFreeAgentOffers)) ? normalized.rejectedFreeAgentOffers : {};
+  normalized.scoutingCenter = (normalized.scoutingCenter && typeof normalized.scoutingCenter === 'object' && !Array.isArray(normalized.scoutingCenter)) ? normalized.scoutingCenter : {};
+  normalized.monthlyExpenses = (normalized.monthlyExpenses && typeof normalized.monthlyExpenses === 'object' && !Array.isArray(normalized.monthlyExpenses)) ? normalized.monthlyExpenses : {};
   normalized.lastOwnPlayerOffer = normalized.lastOwnPlayerOffer || null;
   normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
@@ -1663,6 +1665,8 @@ function newGame(selectedClubId, options={}){
     pendingTransfers: [],
     rejectedPurchaseOffers: {},
     rejectedFreeAgentOffers: {},
+    scoutingCenter: {},
+    monthlyExpenses: {},
     lastOwnPlayerOffer: null,
     seasonEndPlayerOffers: null,
     specialClauseOffers: null,
@@ -2314,6 +2318,8 @@ function resetClubSpecificCareerStateForNewClub(newClubId){
   if(!game) return;
   game.staffActions = {};
   game.staffContracts = {};
+  if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(newClubId);
+  game.monthlyExpenses = {};
   if(typeof createInitialAcademyState === 'function'){
     game.academy = createInitialAcademyState();
   }else{
@@ -3602,6 +3608,8 @@ function startNextSeason(selectedClubId){
   game.rejectedFreeAgentOffers = {};
   resetAcademySeasonState();
   resetStaffSeasonState();
+  if(typeof resetScoutingCenterForNewSeason === 'function') resetScoutingCenterForNewSeason();
+  game.monthlyExpenses = {};
   game.advanceLockedUntil = 0;
   game.lastBudgetDelta = 0;
   game.tactic = normalizeTactic(nextClubId, DEFAULT_TACTIC);

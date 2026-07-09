@@ -670,7 +670,7 @@ function savedTacticsPanelMarkup(){
     </div>`);
   }
   return `<div class="card saved-tactics-card" style="margin-top:14px">
-    <div class="row"><div><h3>Tácticas personalizadas</h3><p class="muted small">Guardá hasta 3 tácticas con formación, titulares, suplentes, instrucciones y mentalidad. Al cargar, si un jugador está lesionado o ya no está en el club, queda el hueco.</p></div></div>
+    <div class="row"><div><h3>Tácticas personalizadas</h3><p class="muted small">Guardá hasta 3 tácticas con formación, titulares, suplentes, mentalidad e instrucciones zonales. Al cargar, si un jugador está lesionado o ya no está en el club, queda el hueco.</p></div></div>
     <div class="saved-tactics-grid">${slots.join('')}</div>
   </div>`;
 }
@@ -683,6 +683,30 @@ function bindSavedTacticButtons(){
   });
 }
 
+
+function tacticSectorSkillVisors(){
+  const slots = pitchSlots(game.tactic || DEFAULT_TACTIC);
+  const groupPlayers = { defense:[], midfield:[], attack:[] };
+  slots.forEach(slot => {
+    if(!slot.player) return;
+    const group = slotGroup(slot.slot);
+    if(group === 'def') groupPlayers.defense.push(slot.player);
+    else if(group === 'mid') groupPlayers.midfield.push(slot.player);
+    else if(group === 'att') groupPlayers.attack.push(slot.player);
+  });
+  const stat = (players, type) => {
+    if(!players.length) return 0;
+    if(type === 'defense') return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.marca ?? 0), Number(p.skills?.entradas ?? 0), Number(p.skills?.posicionamiento ?? 0)])))), 0, 99);
+    if(type === 'midfield') return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.paseCorto ?? 0), Number(p.skills?.paseLargo ?? 0), Number(p.skills?.vision ?? 0)])))), 0, 99);
+    return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.remate ?? 0), Number(p.skills?.cabezazo ?? 0)])))), 0, 99);
+  };
+  const rows = [
+    { key:'defense', label:'Defensas titulares', value:stat(groupPlayers.defense, 'defense'), detail:'Defensa promedio / defensores' },
+    { key:'midfield', label:'Medios titulares', value:stat(groupPlayers.midfield, 'midfield'), detail:'Pase promedio / medios' },
+    { key:'attack', label:'Delanteros titulares', value:stat(groupPlayers.attack, 'attack'), detail:'Tiro + cabezazo / delanteros' }
+  ];
+  return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div><small class="muted">${escapeHtml(row.detail)}</small></div>`).join('')}</div>`;
+}
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
@@ -725,9 +749,9 @@ function renderTactics(){
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
       <div class="tactic-board-layout">
         <aside class="tactic-board-side tactic-board-left">
-          <h3>Instrucciones de partido</h3>
-          <p class="muted small">Se aplican según el resultado parcial. Pueden reforzar o contraponerse con instrucciones individuales.</p>
-          <div class="instruction-grid vertical">${matchInstructionControls()}</div>
+          <h3>Visores del equipo</h3>
+          <p class="muted small">Promedios de habilidades clave de titulares por sector. Sustituyen a las antiguas instrucciones de partido.</p>
+          ${tacticSectorSkillVisors()}
         </aside>
         <div class="pitch-board-wrap">
           <div class="pitch-board centered">${pitch}</div>
@@ -884,11 +908,7 @@ function saveTacticFromScreen(){
     inId: Number(document.querySelector(`[data-sub-in="${i}"]`)?.value || 0),
     trigger: document.querySelector(`[data-sub-trigger="${i}"]`)?.value || 'tired'
   }));
-  const selectedInstructions = {
-    winning: document.querySelector('[data-match-instruction="winning"]')?.value || 'normal',
-    drawing: document.querySelector('[data-match-instruction="drawing"]')?.value || 'normal',
-    losing: document.querySelector('[data-match-instruction="losing"]')?.value || 'normal'
-  };
+  const selectedInstructions = { winning:'normal', drawing:'normal', losing:'normal' };
   const selectedSectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles({
     defense: document.querySelector('[data-sector-style="defense"]')?.value || 'posicional',
     midfield: document.querySelector('[data-sector-style="midfield"]')?.value || 'posicional',

@@ -1,19 +1,31 @@
 # Fútbol Manager MVP
 
-**V4.29 - Desgaste físico y préstamo completo**
+**V4.30 - Centro de Ojeo y gastos mensuales**
 
 ## Historial de versiones
 
+### V4.30 - Centro de Ojeo y gastos mensuales
+
+- Agregado menú lateral `Centro de Ojeo`.
+- Agregado empleado contratable `Jefe de ojeadores` con categorías Regular, Bueno y Elite.
+- Agregado sistema de oficinas de ojeo, con cupos para ojeadores y jugadores listados.
+- Agregado botón `Ojear` en fichas de jugadores externos.
+- Los jugadores observados quedan en una lista acumulativa y revelan habilidades día por día.
+- Cada ojeador revela 1 habilidad diaria de los jugadores listados.
+- El jefe de ojeadores aporta revelaciones diarias según su categoría.
+- Agregados costos diarios de ojeadores y costos mensuales de oficinas/jefe.
+- Agregados gastos mensuales del club: impuesto de ganancias, electricidad y limpieza general.
+- Eliminadas de la pantalla táctica las instrucciones de partido por resultado.
+- Agregados 3 visores tácticos: defensas, medios y delanteros titulares, calculados por habilidades clave.
+
 ### V4.29 - Desgaste físico y préstamo completo
 
-- El simulador visual ahora muestra goleadores, asistentes, amonestados, expulsados y lesionados a medida que suceden en el partido, no desde el inicio.
-- Agregada nueva estadística persistente por jugador: `Desgaste`.
-- El desgaste se acumula por partido jugado, de 1 a 3 puntos según intensidad.
-- Cada turno de `Entrenamiento intenso` suma 1 punto de desgaste.
-- Cada turno de `Masajista` baja 1 punto de desgaste.
-- El desgaste reduce el máximo de estado físico posible y lo muestra con referencia gris.
-- Agregado botón para cancelar la totalidad del préstamo bancario activo.
-- El pago total del préstamo descuenta la deuda restante del presupuesto y libera el bloqueo bancario.
+- La lista lateral de eventos del simulador se revela por minuto y no completa desde el inicio.
+- Agregada estadística persistente `Desgaste`.
+- El desgaste se acumula por partidos y entrenamientos intensos.
+- El Masajista reduce desgaste.
+- El desgaste reduce el máximo de estado físico posible.
+- Agregado botón para pagar la totalidad del préstamo bancario activo.
 
 ### V4.28 - Aceptación de ofertas oculta
 

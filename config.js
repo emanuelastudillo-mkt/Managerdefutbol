@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.29',
+  version: 'V4.30',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -70,6 +70,21 @@ window.GAME_CONFIG = {
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5
+  },
+
+  centroOjeo: {
+    activo: true,
+    cupoBaseOjeadores: 2,
+    cupoBaseJugadores: 5,
+    ojeadoresPorOficina: 3,
+    jugadoresPorOficina: 10,
+    costoOjeadorDiario: 200000,
+    costoOficinaMensual: 1000000,
+    jefes: {
+      regular: { nombre:'Regular', sueldoMensual: 500000, maxOficinas: 1, revelacionesMin: 0, revelacionesMax: 1 },
+      bueno: { nombre:'Bueno', sueldoMensual: 12000000, maxOficinas: 2, revelacionesMin: 0, revelacionesMax: 1 },
+      elite: { nombre:'Elite', sueldoMensual: 180000000, maxOficinas: 5, revelacionesMin: 1, revelacionesMax: 2 }
+    }
   },
   modoFundador: {
     activo: true,
@@ -191,6 +206,14 @@ window.GAME_CONFIG = {
     maximoBoostBotPorHabilidad: 18
   },
   economia: {
+    gastosMensuales: {
+      activo: true,
+      diaCobro: 1,
+      impuestoGananciasPct: 0.01,
+      electricidadBasePorPartido: 100000,
+      electricidadPorCapacidadPorPartido: 10,
+      limpiezaPorHinchaPorPartido: 10
+    },
     escalaSueldosYClausulas: 0.10,
     // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
     escalaClausulas: 0.10,

@@ -550,6 +550,37 @@ const BANK_LOAN_BANKS = Array.isArray(configValue('economia.banco.bancos', [])) 
 const BANK_LOAN_TIERS = Array.isArray(configValue('economia.banco.montos', [])) ? configValue('economia.banco.montos', []).filter(item => Number(item?.monto) > 0).map((item, index) => ({ id:index + 1, amount:Math.round(Number(item.monto || 0)), prestigeCost:Math.max(0, Math.round(Number(item.prestigio || 0))) })) : [];
 const BANK_LOAN_TERMS = Array.isArray(configValue('economia.banco.plazosSemanas', [])) ? configValue('economia.banco.plazosSemanas', []).map(value => Math.max(1, Math.round(Number(value || 0)))).filter(Boolean) : [24,48,172];
 
+const MONTHLY_EXPENSES_ENABLED = configBoolean('economia.gastosMensuales.activo', true);
+const MONTHLY_EXPENSES_CHARGE_DAY = Math.max(1, Math.min(28, Math.round(configNumber('economia.gastosMensuales.diaCobro', 1, 1, 28))));
+const MONTHLY_PROFIT_TAX_RATE = configNumber('economia.gastosMensuales.impuestoGananciasPct', 0.01, 0, 1);
+const MONTHLY_ELECTRICITY_BASE_PER_MATCH = Math.max(0, Math.round(configNumber('economia.gastosMensuales.electricidadBasePorPartido', 100000, 0)));
+const MONTHLY_ELECTRICITY_CAPACITY_FACTOR = Math.max(0, configNumber('economia.gastosMensuales.electricidadPorCapacidadPorPartido', 10, 0));
+const MONTHLY_CLEANING_PER_FAN_PER_MATCH = Math.max(0, configNumber('economia.gastosMensuales.limpiezaPorHinchaPorPartido', 10, 0));
+
+const SCOUTING_CENTER_ENABLED = configBoolean('centroOjeo.activo', true);
+const SCOUTING_BASE_SCOUTS = Math.max(0, Math.round(configNumber('centroOjeo.cupoBaseOjeadores', 2, 0, 99)));
+const SCOUTING_BASE_PLAYER_SLOTS = Math.max(0, Math.round(configNumber('centroOjeo.cupoBaseJugadores', 5, 0, 999)));
+const SCOUTING_SCOUTS_PER_OFFICE = Math.max(0, Math.round(configNumber('centroOjeo.ojeadoresPorOficina', 3, 0, 99)));
+const SCOUTING_PLAYERS_PER_OFFICE = Math.max(0, Math.round(configNumber('centroOjeo.jugadoresPorOficina', 10, 0, 999)));
+const SCOUTING_SCOUT_DAILY_COST = Math.max(0, Math.round(configNumber('centroOjeo.costoOjeadorDiario', 200000, 0)));
+const SCOUTING_OFFICE_MONTHLY_COST = Math.max(0, Math.round(configNumber('centroOjeo.costoOficinaMensual', 1000000, 0)));
+const SCOUTING_CHIEF_TYPES = (() => {
+  const src = configValue('centroOjeo.jefes', {}) || {};
+  const fallback = {
+    regular:{ nombre:'Regular', sueldoMensual:500000, maxOficinas:1, revelacionesMin:0, revelacionesMax:1 },
+    bueno:{ nombre:'Bueno', sueldoMensual:12000000, maxOficinas:2, revelacionesMin:0, revelacionesMax:1 },
+    elite:{ nombre:'Elite', sueldoMensual:180000000, maxOficinas:5, revelacionesMin:1, revelacionesMax:2 }
+  };
+  return Object.entries({ ...fallback, ...src }).map(([key, item]) => ({
+    key:String(key),
+    name:String(item?.nombre || key),
+    monthlySalary:Math.max(0, Math.round(Number(item?.sueldoMensual ?? fallback[key]?.sueldoMensual ?? 0))),
+    maxOffices:Math.max(0, Math.round(Number(item?.maxOficinas ?? fallback[key]?.maxOficinas ?? 0))),
+    revealMin:Math.max(0, Math.round(Number(item?.revelacionesMin ?? fallback[key]?.revelacionesMin ?? 0))),
+    revealMax:Math.max(0, Math.round(Number(item?.revelacionesMax ?? fallback[key]?.revelacionesMax ?? 0)))
+  }));
+})();
+
 const TACTIC_SAVE_SLOT_COUNT = 3;
 
 const DEFAULT_TACTIC = {

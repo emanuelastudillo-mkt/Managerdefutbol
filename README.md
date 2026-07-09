@@ -1,8 +1,20 @@
 # Fútbol Manager MVP
 
-**V4.17 - Simulación previa y playoffs visibles por liga**
+**V4.18 - Calendario diario 365 días**
 
 ## Historial de versiones
+
+### V4.18 - Calendario diario 365 días
+- La temporada pasa a procesarse día por día con 365 días fijos.
+- La pretemporada dura 30 días y la liga regular empieza al primer domingo posterior.
+- Las fechas de liga se programan una vez por semana según el día asignado a cada país/división.
+- Después de la fecha 17 hay una pausa de mitad de temporada de 28 días para conservar el orden semanal del calendario.
+- `Ir a próximo partido` ya no salta directo: usa el bloqueo de 120 segundos para avanzar automáticamente los días hasta el partido propio.
+- En cada día avanzado se procesan entrenamientos, academia, cooldowns, lesiones, obras, sponsors, préstamos y partidos bot programados.
+- Los partidos bot atrasados se simulan automáticamente al avanzar día.
+- El partido propio queda separado: se juega cuando el calendario llega a su fecha.
+- Los playoffs IDA/VUELTA quedan ubicados después de la fecha 34 como eventos posteriores reales.
+- Las lesiones nuevas pasan a medirse también por `globalTurn` diario para que duren días reales.
 
 ### V4.17 - Simulación previa y playoffs visibles por liga
 - Al usar `Ir a próximo partido`, el juego simula primero los partidos bot del mismo día o pendientes hasta esa fecha.

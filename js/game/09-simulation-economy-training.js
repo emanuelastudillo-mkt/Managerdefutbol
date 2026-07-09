@@ -479,6 +479,130 @@ function simulateNonOwnDueBeforeOwnMatch(targetDate, source='before_own_match'){
   }
   return results;
 }
+
+function clearRecoveredDailyInjuries(){
+  if(!game?.playerStatus) return 0;
+  let cleared = 0;
+  Object.entries(game.playerStatus).forEach(([playerId, st]) => {
+    if(!st || typeof st !== 'object') return;
+    if(Number.isFinite(Number(st.injuredUntilTurn)) && Number(st.injuredUntilTurn || 0) <= currentTurnIndex()){
+      const { injuredThrough, injuredUntilTurn, injuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
+      game.playerStatus[playerId] = rest;
+      cleared += 1;
+    }
+  });
+  return cleared;
+}
+function processBankLoanDailySchedule(){
+  if(!game || !BANK_LOANS_ENABLED) return 0;
+  const state = ensureBankLoanState();
+  if(!state?.active) return 0;
+  state.active.daysSincePayment = Math.max(0, Math.round(Number(state.active.daysSincePayment || 0))) + 1;
+  if(state.active.daysSincePayment < 7) return 0;
+  state.active.daysSincePayment = 0;
+  return processBankLoanWeeklyPayment();
+}
+function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
+  if(!game) return { botResults:[], recovered:0, bankPayment:0 };
+  const skipTraining = Boolean(options.skipTraining);
+  const simulateBots = options.simulateBots !== false;
+  const includeOwn = options.includeOwn === true;
+  game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
+  advanceGlobalTurn();
+  if(!skipTraining) applyTrainingEffects();
+  if(typeof processAcademyTurn === 'function') processAcademyTurn();
+  if(typeof processPendingTransfers === 'function') processPendingTransfers();
+  if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(1);
+  const recovered = clearRecoveredDailyInjuries();
+  const bankPayment = processBankLoanDailySchedule();
+  if(typeof processSponsorContracts === 'function') processSponsorContracts();
+  const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
+  if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
+  return { botResults, recovered, bankPayment };
+}
+function showAutoAdvanceOverlay(totalDays, currentDate='', targetDate=''){
+  let root = $('autoAdvanceOverlay');
+  if(root) root.remove();
+  root = document.createElement('div');
+  root.id = 'autoAdvanceOverlay';
+  root.className = 'auto-advance-backdrop';
+  root.innerHTML = `<div class="auto-advance-card">
+    <div class="turn-spinner" aria-hidden="true"></div>
+    <strong>Avanzando hasta el próximo partido</strong>
+    <span class="auto-advance-status">Preparando calendario diario...</span>
+    <div class="turn-transition-bar"><i style="width:0%"></i></div>
+    <p class="muted small">${escapeHtml(currentDate || '—')} → ${escapeHtml(targetDate || '—')} · ${totalDays} día${totalDays === 1 ? '' : 's'}</p>
+  </div>`;
+  document.body.appendChild(root);
+  return root;
+}
+function updateAutoAdvanceOverlay(root, data={}){
+  if(!root) return;
+  const pct = clamp(Math.round(Number(data.progress || 0) * 100), 0, 100);
+  const status = root.querySelector('.auto-advance-status');
+  const bar = root.querySelector('.turn-transition-bar i');
+  if(status) status.textContent = data.text || 'Avanzando calendario...';
+  if(bar) bar.style.width = `${pct}%`;
+}
+function closeAutoAdvanceOverlay(root){
+  if(!root) return;
+  root.classList.add('is-exiting');
+  setTimeout(()=>root.remove(), 280);
+}
+function startAutoAdvanceToNextOwnMatch(){
+  if(!game || !isRegularSeason()) return false;
+  if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está avanzando el calendario diario.'); return true; }
+  const ownInfo = nextOwnMatchInfo();
+  if(!ownInfo?.date){ showNotice('No hay próximo partido propio programado.'); return false; }
+  const fromDate = currentCalendarDate();
+  const targetDate = ownInfo.date;
+  if(!isCurrentDateBeforeIso(targetDate)){
+    const bots = simulateNonOwnDueBeforeOwnMatch(targetDate, 'own_match_day_ready');
+    if(bots.length){ saveLocal(true); renderAll(); showNotice(`Se simularon ${bots.length} partido(s) pendientes del día. Ya podés jugar tu partido.`); return true; }
+    return false;
+  }
+  const totalDays = Math.max(1, daysBetweenIsoDates(fromDate, targetDate));
+  const duration = Math.max(1200, isAdvanceLocked() ? advanceLockLeftMs() : ADVANCE_LOCK_MS);
+  const stepMs = Math.max(120, Math.round(duration / totalDays));
+  const overlay = showAutoAdvanceOverlay(totalDays, fromDate, targetDate);
+  const processed = { days:0, bots:0, recovered:0 };
+  startAutoAdvanceToNextOwnMatch.active = true;
+  setAdvanceLock(duration);
+  const tick = () => {
+    if(!game || !isRegularSeason()){
+      startAutoAdvanceToNextOwnMatch.active = false;
+      closeAutoAdvanceOverlay(overlay);
+      return;
+    }
+    const current = currentCalendarDate();
+    if(!validIsoDate(current) || daysBetweenIsoDates(current, targetDate) <= 0){
+      const sameDayBots = simulateNonOwnDueBeforeOwnMatch(targetDate, 'auto_advance_target_day');
+      processed.bots += sameDayBots.length;
+      game.currentDate = targetDate;
+      setAdvanceLock(0);
+      setDailyAdvanceSummary(fromDate, targetDate, processed.bots);
+      saveLocal(true);
+      renderAll();
+      updateAutoAdvanceOverlay(overlay, { progress:1, text:`Listo. Llegaste al día del partido: ${targetDate}.` });
+      setTimeout(()=>closeAutoAdvanceOverlay(overlay), 650);
+      startAutoAdvanceToNextOwnMatch.active = false;
+      showNotice(`Calendario avanzado. Se simularon ${processed.bots} partido(s) bot en el camino. Ya podés jugar tu partido.`, true);
+      return;
+    }
+    const nextDate = addDaysToIsoDate(current, 1);
+    const dayResult = processDailyCalendarState(current, nextDate, { includeOwn:false });
+    processed.days += 1;
+    processed.bots += dayResult.botResults.length;
+    processed.recovered += dayResult.recovered;
+    updateAutoAdvanceOverlay(overlay, {
+      progress:processed.days / totalDays,
+      text:`${matchDateLabel(nextDate)} · ${dayResult.botResults.length ? `${dayResult.botResults.length} partido(s) bot simulados` : 'sin partidos bot'}`
+    });
+    setTimeout(tick, stepMs);
+  };
+  tick();
+  return true;
+}
 function advanceOneDay(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
@@ -508,17 +632,12 @@ function advanceOneDay(){
       showNotice('Hay un partido propio pendiente hoy. Usá “Ir a próximo partido” para jugarlo.');
       return;
     }
-    let nextDate = addDaysToIsoDate(fromDate, 1);
-    const nextTarget = ownInfo?.date || nextPendingMatchInfo()?.date || nextRegularRound()?.date;
-    if(nextTarget && daysBetweenIsoDates(nextDate, nextTarget) < 0) nextDate = nextTarget;
-    if(isAdvanceLocked() && hasOwnMatchDueOnOrBefore(nextDate)){
-      showNotice(`El próximo partido propio sigue bloqueado por ${formatClock(advanceLockLeftMs())}. Podés avanzar otros días sin partido propio.`);
+    const nextDate = addDaysToIsoDate(fromDate, 1);
+    if(ownInfo?.date && daysBetweenIsoDates(nextDate, ownInfo.date) < 0 && isAdvanceLocked()){
+      showNotice(`El próximo partido propio sigue bloqueado por ${formatClock(advanceLockLeftMs())}. Usá “Ir a próximo partido” para avanzar automáticamente los días del bloqueo.`);
       return;
     }
-    game.currentDate = nextDate;
-    const botResults = simulateDueMatchesUntil(nextDate, { includeOwn:false });
-    processNonOwnResultsAfterSimulation(botResults);
-    if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(Math.max(1, Math.abs(daysBetweenIsoDates(fromDate, nextDate)) || 1));
+    const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
     let regularEnded = game.matchdayIndex >= game.fixtures.length;
     const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
     if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
@@ -530,34 +649,36 @@ function advanceOneDay(){
     } else if(!isAdvanceLocked()){
       setAdvanceLock(DAY_ADVANCE_LOCK_MS);
     }
-    setDailyAdvanceSummary(fromDate, nextDate, botResults.length);
+    setDailyAdvanceSummary(fromDate, nextDate, dayResult.botResults.length);
     activeTab = 'home';
     saveLocal(true);
     renderAll();
     if(playoffCreated) showNotice('Se completó la liga y se creó el calendario de playoffs de promoción.', true);
     else if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
-    else if(botResults.length) showNotice(`Avanzaste al ${nextDate}. Se simularon ${botResults.length} partido(s) de otras ligas.`);
-    else showNotice(nextTarget && nextDate === nextTarget ? 'Llegaste al día del próximo evento.' : 'Avanzaste 1 día.');
+    else if(dayResult.botResults.length) showNotice(`Avanzaste al ${nextDate}. Se simularon ${dayResult.botResults.length} partido(s) bot.`);
+    else showNotice('Avanzaste 1 día.');
     return;
   }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
-  showNotice('El avance diario está disponible durante la temporada regular. En pretemporada y postemporada usá el avance largo.');
+  simulateNextMatchday({ advanceLabel:isPreseason() ? 'Avanzando pretemporada' : 'Avanzando postemporada' });
 }
 function goToNextMatch(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
-  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isRegularSeason()){
     const ownInfo = nextOwnMatchInfo();
-    const targetDate = ownInfo?.date || nextPendingMatchInfo()?.date;
-    if(targetDate && isCurrentDateBeforeIso(targetDate)){
-      const daysToMatch = Math.max(0, Math.abs(daysBetweenIsoDates(currentCalendarDate(), targetDate)) || 0);
-      if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(daysToMatch);
-      game.currentDate = targetDate;
+    if(ownInfo?.date && isCurrentDateBeforeIso(ownInfo.date)){
+      startAutoAdvanceToNextOwnMatch();
+      return;
     }
-    simulateNextMatchday({ advanceLabel:'Yendo al próximo partido' });
+    if(isAdvanceLocked() && ownInfo?.date){
+      startAutoAdvanceToNextOwnMatch();
+      return;
+    }
+    simulateNextMatchday({ advanceLabel:'Jugando partido propio' });
     return;
   }
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   simulateNextMatchday({ advanceLabel:isPreseason() ? 'Avanzando pretemporada' : 'Avanzando postemporada' });
 }
 
@@ -606,6 +727,10 @@ function simulateNextMatchday(options={}){
     showNotice('No quedan partidos pendientes. Comienza la postemporada.');
     return;
   }
+  if(ownInfo?.date && isCurrentDateBeforeIso(ownInfo.date)){
+    startAutoAdvanceToNextOwnMatch();
+    return;
+  }
   const preOwnBotResults = ownInfo ? simulateNonOwnDueBeforeOwnMatch(targetDate, 'before_own_match_click') : [];
   const budgetBeforeTurn = Number(game.budget || 0);
   showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
@@ -620,12 +745,9 @@ function simulateNextMatchday(options={}){
     applyConditionUpdates(results);
     applyMoraleUpdates(results);
     if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
-    applyTrainingEffects();
     maintainBotBalanceDuringSeason();
     if(typeof processBotDismissals === 'function') processBotDismissals();
     advanceStadiumAfterMatches(results);
-    processSponsorContracts();
-    processBankLoanWeeklyPayment();
     applyEconomyResult(ownResult);
     updateManagerMatchStats(ownResult);
     maybeGenerateTransferOffer(ownResult);
@@ -641,9 +763,6 @@ function simulateNextMatchday(options={}){
     removeOwnUnavailableFromTactic(ownProblems);
     game.lastOwnProblems = ownProblems;
     game.mustReviewTactics = game.lastOwnProblems.length > 0;
-    advanceGlobalTurn();
-    processAcademyTurn();
-    processPendingTransfers();
   }
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
   const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
@@ -676,7 +795,7 @@ function simulateNextMatchday(options={}){
 
 function simulatePreseasonTurn(){
   const budgetBeforeTurn = Number(game.budget || 0);
-  showTurnTransition('Avanzando 7 días de pretemporada');
+  showTurnTransition('Avanzando 1 día de pretemporada');
   const opponentId = Number(game.pendingFriendlyOpponentId || 0);
   const canFriendly = opponentId && canPlayPreseasonFriendly();
   let friendlyResult = null;
@@ -709,7 +828,7 @@ function simulatePreseasonTurn(){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
-  processBankLoanWeeklyPayment();
+  processBankLoanDailySchedule();
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
@@ -730,7 +849,7 @@ function simulatePreseasonTurn(){
   } else {
     setAdvanceLock(ADVANCE_LOCK_MS);
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);
-    showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Semana de pretemporada aplicada.', false);
+    showNotice(canFriendly ? `Amistoso jugado ante ${clubName(opponentId)}. La pretemporada avanza.` : 'Día de pretemporada aplicado.', false);
   }
   activeTab = 'home';
   saveLocal(true);
@@ -740,7 +859,7 @@ function simulatePreseasonTurn(){
 
 function simulatePostseasonTurn(){
   const budgetBeforeTurn = Number(game.budget || 0);
-  showTurnTransition('Avanzando 7 días de postemporada');
+  showTurnTransition('Avanzando 1 día de postemporada');
   generateSeasonEndPlayerOffers();
   applyTrainingEffects();
   reduceInjuryDurationsByTurns(1);
@@ -748,7 +867,7 @@ function simulatePostseasonTurn(){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
-  processBankLoanWeeklyPayment();
+  processBankLoanDailySchedule();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
   advanceGlobalTurn();
@@ -772,7 +891,7 @@ function simulatePostseasonTurn(){
     activeTab = 'home';
     saveLocal(true);
     renderAll();
-    showNotice('Semana de postemporada aplicada.');
+    showNotice('Día de postemporada aplicado.');
   }
 }
 

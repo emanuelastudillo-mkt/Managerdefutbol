@@ -1255,7 +1255,9 @@ function generateFixturesForDivisions(clubs, divisions, options={}){
   const firstLeagueDate = leagueStartDateForSeason(seasonYear);
   const fixtures = [];
   for(let roundIndex=0; roundIndex<maxRounds; roundIndex++){
-    const date = addDaysToIsoDate(firstLeagueDate, roundIndex * DAYS_PER_ADVANCE);
+    const baseOffset = roundIndex * LEAGUE_ROUND_INTERVAL_DAYS;
+    const breakOffset = (MIDSEASON_BREAK_AFTER_ROUND > 0 && roundIndex >= MIDSEASON_BREAK_AFTER_ROUND) ? MIDSEASON_BREAK_DAYS : 0;
+    const date = addDaysToIsoDate(firstLeagueDate, baseOffset + breakOffset);
     const matches = [];
     schedules.forEach(schedule => {
       const matchDate = matchDateForDivisionRound(date, schedule.division);
@@ -1332,6 +1334,7 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
   const currentYear = String(regularCurrent?.[0]?.date || current?.[0]?.date || '').slice(0,4);
   const needsCalendar = regularCurrent.length !== expected.length
     || currentYear !== String(year)
+    || regularCurrent.some((round, index) => expected[index] && round.date !== expected[index].date)
     || regularCurrent.some(round => !validIsoDate(round.date))
     || regularCurrent.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')));
   const normalizedRegular = needsCalendar ? mergePlayedFixturesIntoCalendar(expected, regularCurrent) : regularCurrent;

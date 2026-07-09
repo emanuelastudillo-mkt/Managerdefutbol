@@ -1,27 +1,34 @@
-# V4.17 - Simulación previa y playoffs visibles por liga
+# V4.18 - Calendario diario 365 días
 
 ## Cambios
 
-- Se ajusta el flujo de `Ir a próximo partido`.
-- Antes de abrir/simular el partido propio, se simulan los partidos bot del mismo día o pendientes hasta esa fecha.
-- Esto deja el partido del manager más aislado y con menor carga simultánea.
-- `Avanzar día` también puede procesar partidos bot del día del partido propio antes de bloquear por partido pendiente.
-- En el calendario, los playoffs argentinos ya no se muestran como fecha 35 y fecha 36.
-- Ahora figuran como `Playoffs IDA` y `Playoffs VUELTA`.
-- Los partidos de promoción se visualizan en las dos ligas implicadas.
-- El cruce es el mismo partido aunque aparezca en Primera y Segunda, o en Segunda y Tercera.
-- En el global, asciende quien haga más goles entre ida y vuelta.
-- Si el global termina empatado, cada club permanece en su liga actual.
+- Se reestructura el calendario para que la temporada use 365 días fijos.
+- Cada avance interno equivale a 1 día calendario.
+- La pretemporada dura 30 días.
+- La liga regular se juega una fecha por semana.
+- Se agrega una pausa de mitad de temporada luego de la fecha 17.
+- La pausa queda en 28 días para conservar viernes, sábado y domingo como días estables de partido.
+- `Ir a próximo partido` usa el bloqueo de 120 segundos para avanzar automáticamente los días hasta el partido propio.
+- Durante ese avance automático se procesan entrenamientos, academia, cooldowns, lesiones, obras, sponsors, préstamos y partidos bot.
+- Los partidos bot atrasados se simulan automáticamente al avanzar día.
+- El partido propio no se simula mezclado con todo el calendario: queda disponible cuando llega su día.
+- Las fechas bot se siguen distribuyendo así:
+  - Viernes: España, Italia, Inglaterra y Rumania.
+  - Sábado: Segunda y Tercera Argentina.
+  - Domingo: Chile, Brasil y Primera Argentina.
+- Las lesiones nuevas registran recuperación por día calendario.
+- Los playoffs argentinos IDA/VUELTA se ubican después de la fecha 34.
 
 ## Seguridad
 
-- No cambia resultados ya jugados.
-- No borra fixtures.
-- No reconstruye la temporada.
-- No modifica planteles ni economía.
+- El cambio migra el calendario al cargar.
+- No borra jugadores, economía ni resultados jugados.
+- Los resultados ya jugados se conservan por `match.id` cuando se regenera la grilla de fechas.
+- Si una partida ya tenía calendario viejo, las fechas futuras se reordenan al nuevo esquema diario.
 
 ## Compatibilidad
 
-- Se implementa solo.
-- Los playoffs ya creados deberían mostrarse con el nuevo nombre visual.
-- Si una partida ya tiene playoffs antiguos, se usan los datos guardados para mostrarlos en ambas ligas sin duplicar simulación.
+- Puede dar problemas menores en partidas ya avanzadas porque cambia la estructura temporal completa.
+- No requiere reinicio obligatorio.
+- Recomendado guardar/exportar la partida antes de aplicar.
+- Para testear el calendario completo de 365 días, lo más limpio es una partida nueva.

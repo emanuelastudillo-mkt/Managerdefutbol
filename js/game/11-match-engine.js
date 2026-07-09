@@ -234,12 +234,15 @@ function applyAvailability(cards, injuries){
   });
   injuries.forEach(i => {
     const label = i.injuryLabel || i.name || 'Lesión';
+    const injuryDays = Math.max(1, Math.round(Number(i.matchesOut || 1)));
     game.playerStatus[i.playerId] = {
       ...playerStatus(i.playerId),
-      injuredThrough: game.matchdayIndex + i.matchesOut,
+      injuredThrough: game.matchdayIndex + Math.max(1, Math.ceil(injuryDays / Math.max(1, LEAGUE_ROUND_INTERVAL_DAYS))),
+      injuredUntilTurn: currentTurnIndex() + injuryDays,
       injuryLabel: label,
       injuryChance: i.chance,
-      injuredAtMatchday: game.matchdayIndex
+      injuredAtMatchday: game.matchdayIndex,
+      injuredAtTurn: currentTurnIndex()
     };
   });
 }

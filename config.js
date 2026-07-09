@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.17',
+  version: 'V4.18',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -38,14 +38,17 @@ window.GAME_CONFIG = {
     relatosPartidoUrl: 'data/relatos_partido.json'
   },
   calendario: {
-    // Cada avance equivale a 7 días. El juego sigue avanzando de domingo a domingo.
-    diasPorAvance: 7,
+    // Cada avance equivale a 1 día calendario. La temporada se procesa día por día.
+    diasPorAvance: 1,
     // Año inicial del calendario. Cada temporada usa un año calendario completo y respeta años bisiestos.
     anioInicial: 2026,
     mesInicioTemporada: 1,
     diaInicioTemporada: 1,
     // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
     ligaIdaYVuelta: true,
+    diasEntreFechasLiga: 7,
+    fechaPausaLuegoDe: 17,
+    diasVacacionesMitadTemporada: 28,
     // Distribución de partidos por días para no simular todas las ligas juntas.
     // offset: -2 = viernes, -1 = sábado, 0 = domingo respecto de la fecha base de cada jornada.
     diasPorLiga: [
@@ -63,7 +66,7 @@ window.GAME_CONFIG = {
     bloqueoAvanceDiaMs: 2000,
     // Duración visual de la transición al avanzar días.
     transicionAvanceMs: 3400,
-    diasPretemporada: 70,
+    diasPretemporada: 30,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
     amistososMaximosPretemporada: 5

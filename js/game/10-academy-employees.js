@@ -1043,12 +1043,23 @@ function applyKinesioTreatment(playerId, kind='first'){
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId, success });
   if(success){
     const st = playerStatus(playerId);
-    const nextThrough = Number(st.injuredThrough) - recoveryReductionTurns;
-    if(nextThrough < game.matchdayIndex){
-      const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
-      game.playerStatus[playerId] = rest;
+    const reduction = Math.max(1, Math.round(recoveryReductionTurns));
+    if(Number.isFinite(Number(st.injuredUntilTurn))){
+      const nextUntil = Number(st.injuredUntilTurn || 0) - reduction;
+      if(nextUntil <= currentTurnIndex()){
+        const { injuredThrough, injuredUntilTurn, injuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
+        game.playerStatus[playerId] = rest;
+      } else {
+        game.playerStatus[playerId] = { ...st, injuredUntilTurn:nextUntil, injuredThrough:game.matchdayIndex + Math.max(1, Math.ceil((nextUntil - currentTurnIndex()) / Math.max(1, LEAGUE_ROUND_INTERVAL_DAYS))) };
+      }
     } else {
-      game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
+      const nextThrough = Number(st.injuredThrough) - reduction;
+      if(nextThrough < game.matchdayIndex){
+        const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+        game.playerStatus[playerId] = rest;
+      } else {
+        game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
+      }
     }
   }
   return {

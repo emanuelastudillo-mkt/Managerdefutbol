@@ -3005,3 +3005,9 @@ th{
 .injured-treatment-row.youth-treatment{grid-template-columns:auto 1fr auto}.academy-youth-treatment-visual{display:grid;place-items:center;width:58px;min-width:58px}.academy-youth-treatment-visual .academy-visibility-pie{width:48px;height:48px}.academy-youth-treatment-visual .academy-visibility-pie strong{font-size:12px}.injured-treatment-row.youth-treatment .linklike{font-weight:850}
 @keyframes revealCommentInV416{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:980px){.modal-panel:has(.match-modal-head){height:calc(100vh - 10px);width:calc(100vw - 10px)}.match-fullscreen-grid{grid-template-columns:1fr}.match-side-column .team-stat-card{height:auto}.match-side-away{order:3}.match-main-column{order:2}.match-side-home{order:1}.match-context-card{max-height:none}.reveal-events-card{min-height:220px}}
+
+/* V4.18 · Avance automático día por día */
+.auto-advance-backdrop{position:fixed;inset:0;z-index:1300;display:grid;place-items:center;padding:18px;background:rgba(2,6,23,.74);backdrop-filter:blur(7px);animation:turnBackdropInV231 .22s ease-out both}
+.auto-advance-backdrop.is-exiting{animation:turnBackdropOutV231 .28s ease-in both}
+.auto-advance-card{width:min(420px,100%);display:grid;gap:10px;justify-items:center;padding:24px 22px;border-radius:24px;background:linear-gradient(145deg,rgba(15,23,42,.98),rgba(30,41,59,.96));box-shadow:0 30px 110px rgba(0,0,0,.55);border:1px solid rgba(148,163,184,.25);text-align:center}
+.auto-advance-card strong{font-size:19px;letter-spacing:-.02em;color:#f8fafc}.auto-advance-card .auto-advance-status{min-height:38px;display:grid;place-items:center;color:var(--muted);font-size:13px;line-height:1.35}.auto-advance-card .turn-transition-bar i{animation:none;width:0%;transition:width .28s ease}

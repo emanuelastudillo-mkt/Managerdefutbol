@@ -997,6 +997,11 @@ function simulateNextMatchday(options={}){
   }
   const preOwnBotResults = ownInfo ? simulateNonOwnDueBeforeOwnMatch(targetDate, 'before_own_match_click') : [];
   const budgetBeforeTurn = Number(game.budget || 0);
+  if(validIsoDate(targetDate)){
+    game.currentDate = targetDate;
+    rememberCalendarDate();
+  }
+  if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'matchday' });
   showTurnTransition(options.advanceLabel || 'Yendo al próximo partido');
   const fromRoundIndex = Number(game.matchdayIndex || 0);
   const results = simulateDueMatchesUntil(targetDate, { includeOwn:true });
@@ -1100,6 +1105,7 @@ function simulatePreseasonTurn(){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'preseason' });
   processAcademyTurn();
   processPendingTransfers();
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
@@ -1140,6 +1146,7 @@ function simulatePostseasonTurn(){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'postseason' });
   processAcademyTurn();
   processPendingTransfers();
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);

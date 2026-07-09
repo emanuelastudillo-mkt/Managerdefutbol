@@ -1,8 +1,17 @@
 # Fútbol Manager MVP
 
-**V5.04 - Intransferibles y ojeo como única fuente**
+**V5.05 - Ojeo diario corregido en todos los avances**
 
 ## Historial de versiones
+
+### V5.05 - Ojeo diario corregido en todos los avances
+
+- Corregido el Centro de Ojeo: ahora procesa revelaciones también cuando el avance corresponde a día de partido propio.
+- Corregido el Centro de Ojeo durante pretemporada y postemporada: cada avance de día también ejecuta el proceso diario de ojeadores.
+- Los jugadores propios listados en ojeo priorizan de forma explícita las habilidades ocultas: `Agresividad`, `Genética` y `Factor sorpresa`.
+- Se eliminó el componente aleatorio puro de la elección diaria de habilidades y se reemplazó por una selección estable basada en fecha, turno e intento.
+- Agregado resumen visible en el Centro de Ojeo con último proceso diario, cantidad de intentos y habilidades reveladas.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.05.
 
 ### V5.04 - Intransferibles y ojeo como única fuente
 

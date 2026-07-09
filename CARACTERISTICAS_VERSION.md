@@ -1,3 +1,12 @@
+# Características de versión
+
+## V5.05 - Ojeo diario corregido en todos los avances
+
+- El proceso diario del Centro de Ojeo ya no depende únicamente de avanzar días vacíos.
+- Ahora se ejecuta en días de partido, pretemporada y postemporada.
+- El ojeo de jugadores propios prioriza explícitamente las tres ocultas.
+- La interfaz del Centro de Ojeo muestra el último procesamiento diario y sus revelaciones.
+
 # Características V5.04 - Intransferibles y ojeo como única fuente
 
 ## Cambios

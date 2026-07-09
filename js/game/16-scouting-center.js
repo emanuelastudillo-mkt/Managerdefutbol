@@ -1,4 +1,4 @@
-/* V5.04 · Centro de Ojeo: única fuente de habilidades externas e informes ocultos. */
+/* V5.05 · Centro de Ojeo: procesa también días con partido, pretemporada y postemporada. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -82,9 +82,15 @@ function scoutingHiddenStatMap(player){
 function scoutingFullStatMap(player){
   return { ...scoutingVisibleStatMap(player), ...scoutingHiddenStatMap(player) };
 }
+function scoutingHiddenSkillKeys(player){
+  return Object.keys(scoutingHiddenStatMap(player) || {});
+}
+function scoutingVisibleSkillKeys(player){
+  return Object.keys(scoutingVisibleStatMap(player) || {});
+}
 function scoutingInitialKnownSkillKeys(player){
   if(!scoutingIsOwnPlayer(player)) return [];
-  return Object.keys(scoutingVisibleStatMap(player) || {});
+  return scoutingVisibleSkillKeys(player);
 }
 function scoutingSkillKeys(player){
   if(!player) return [];
@@ -176,27 +182,31 @@ function dismissScoutingScout(){
   saveLocal(true);
   renderScoutingCenter();
 }
-function scoutingRevealOneSkill(){
+function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
   const state = ensureScoutingCenterState();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   const candidates = [];
   listed.forEach(player => {
-    const keys = scoutingSkillKeys(player);
     const report = scoutingReportForPlayer(player.id);
     const known = new Set(report.visibleSkills || []);
-    const hidden = keys.filter(key => !known.has(key));
-    if(hidden.length) candidates.push({ player, hidden, report });
+    const ownPlayer = scoutingIsOwnPlayer(player);
+    const revealPool = ownPlayer
+      ? scoutingHiddenSkillKeys(player).filter(key => !known.has(key))
+      : scoutingSkillKeys(player).filter(key => !known.has(key));
+    if(revealPool.length) candidates.push({ player, hidden:revealPool, report, ownPlayer });
   });
   if(!candidates.length) return false;
   candidates.sort((a,b)=>{
-    const ownDelta = Number(scoutingIsOwnPlayer(b.player)) - Number(scoutingIsOwnPlayer(a.player));
+    const ownDelta = Number(b.ownPlayer) - Number(a.ownPlayer);
     if(ownDelta) return ownDelta;
     const hiddenDelta = Number(a.hidden.length || 0) - Number(b.hidden.length || 0);
     if(hiddenDelta) return hiddenDelta;
     return a.player.name.localeCompare(b.player.name, 'es');
   });
-  const pick = candidates[hashNumber(`scout-pick-${game.currentDate}-${currentTurnIndex()}-${Math.random()}`, candidates.length)];
-  const key = pick.hidden[hashNumber(`scout-skill-${pick.player.id}-${game.currentDate}-${Math.random()}`, pick.hidden.length)];
+  const seed = `scout-pick-${game.currentDate}-${currentTurnIndex()}-${attemptIndex}-${context}-${state.lastDailyProcessDate || ''}`;
+  const pick = candidates[hashNumber(seed, candidates.length)];
+  const skillSeed = `scout-skill-${pick.player.id}-${game.currentDate}-${attemptIndex}-${context}-${pick.hidden.join('|')}`;
+  const key = pick.hidden[hashNumber(skillSeed, pick.hidden.length)];
   pick.report.visibleSkills = Array.from(new Set([...(pick.report.visibleSkills || []), key]));
   pick.report.daysObserved = Math.max(0, Number(pick.report.daysObserved || 0)) + 1;
   pick.report.lastUpdatedDate = game.currentDate || currentCalendarDate();
@@ -237,11 +247,12 @@ function processScoutingCenterMonthlyCosts(){
   }
   return total;
 }
-function processScoutingCenterDaily(){
+function processScoutingCenterDaily(options={}){
   if(!SCOUTING_CENTER_ENABLED || !game) return { reveals:0, costs:0 };
   const state = ensureScoutingCenterState();
   const today = game.currentDate || currentCalendarDate();
-  if(state.lastDailyProcessDate === today) return { reveals:0, costs:0 };
+  const reason = String(options.reason || 'daily');
+  if(state.lastDailyProcessDate === today) return { reveals:0, costs:0, skipped:true, date:today, reason };
   state.lastDailyProcessDate = today;
   let costs = 0;
   if(state.scouts > 0 && SCOUTING_SCOUT_DAILY_COST > 0){
@@ -253,9 +264,10 @@ function processScoutingCenterDaily(){
   const attempts = Math.max(0, state.scouts) + scoutingChiefDailyReveals();
   let reveals = 0;
   for(let i=0; i<attempts; i++){
-    if(scoutingRevealOneSkill()) reveals += 1;
+    if(scoutingRevealOneSkill(i, reason)) reveals += 1;
   }
-  return { reveals, costs };
+  game.lastScoutingDailyResult = { date:today, reason, attempts, reveals, costs };
+  return { reveals, costs, attempts, date:today, reason };
 }
 function resetScoutingCenterForNewSeason(){
   if(!game) return;
@@ -318,6 +330,8 @@ function renderScoutingCenter(){
   const caps = scoutingCapacities(state);
   const maxOffices = scoutingChiefMaxOffices();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
+  const lastProcess = game?.lastScoutingDailyResult;
+  const lastProcessText = lastProcess?.date ? `Último proceso: ${escapeHtml(lastProcess.date)} · intentos ${Number(lastProcess.attempts || 0)} · reveladas ${Number(lastProcess.reveals || 0)}` : 'Todavía no se procesó ningún día de ojeo.';
   view.innerHTML = `
     <div class="row section-title"><div><h2>Centro de Ojeo</h2><p class="tagline">Agregá jugadores externos o propios desde su ficha individual. En jugadores propios las habilidades visibles ya están desbloqueadas y el ojeo avanza directo sobre las ocultas.</p></div></div>
     <div class="grid cols-4 compact-team-stats">
@@ -331,7 +345,7 @@ function renderScoutingCenter(){
       <div class="row"><div><h3>Oficinas y ojeadores</h3><p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados. Oficina: ${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes. Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día.</p></div></div>
       <div class="row message-actions"><button class="primary" data-rent-scouting-office ${state.offices >= maxOffices ? 'disabled' : ''}>Alquilar oficina</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Fuera del Centro de Ojeo no se revelan habilidades externas.</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
+    <div class="card" style="margin-top:14px"><div class="row"><div><h3>Lista de ojeo</h3><p class="muted small">Los datos conocidos quedan guardados. Fuera del Centro de Ojeo no se revelan habilidades externas.</p><p class="muted small">${lastProcessText}</p></div></div><div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p>'}</div></div>`;
   document.querySelectorAll('[data-hire-scouting-chief]').forEach(btn => btn.addEventListener('click', () => hireScoutingChief(btn.dataset.hireScoutingChief)));
   document.querySelector('[data-rent-scouting-office]')?.addEventListener('click', rentScoutingOffice);
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);

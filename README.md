@@ -1,8 +1,20 @@
 # Fútbol Manager MVP
 
-**V5.00 - Auditoría, limpieza y base de versión 5**
+**V5.01 - Limpieza de auditoría y Everton por país**
 
 ## Historial de versiones
+
+### V5.01 - Limpieza de auditoría y Everton por país
+
+- Se separaron las rutas de escudo de Everton por país: Chile usa `img/escudos/everton-chi.png` e Inglaterra usa `img/escudos/everton-eng.png`.
+- Se corrigió una inconsistencia de V5.00: los 13 escudos argentinos con acentos fueron devueltos a las rutas reales del ZIP, que usan marcadores `#U00xx` en el nombre del archivo.
+- Se agregó normalización para partidas guardadas que todavía tengan `img/escudos/everton.png`: si el club es Everton de Chile o Inglaterra, se redirige a la ruta nueva según país.
+- La UI mantiene fallback automático a `img/escudos/everton.png` si todavía no existen los archivos nuevos, para no dejar el escudo roto durante la transición.
+- Mejora de rendimiento: si ya existe una partida guardada con snapshots de clubes y jugadores, el inicio evita cargar `data/jugadores.json`. Ese archivo sólo vuelve a cargarse para crear partida nueva o después de resetear partida local.
+- Se flexibilizó la carga de partidas guardadas cuando cambia la firma de la base pero la partida trae snapshots completos. Esto evita bloquear partidas por cambios menores de datos o rutas visuales.
+- Al hacer reset de partida, el juego recarga la base completa con `data/jugadores.json` para que una nueva partida no herede el snapshot alterado de la partida anterior.
+- Quedan documentados como archivos candidatos a borrar en una limpieza completa: 6 escudos huérfanos y los archivos legacy `data/estadios.json` y `data/hinchas.json`. En un ZIP incremental no se pueden eliminar automáticamente archivos ya existentes en tu repositorio.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.01.
 
 ### V5.00 - Auditoría, limpieza y base de versión 5
 
@@ -12,12 +24,12 @@
 - Se corrigió una regresión de rendimiento: `data.cacheMode` existía en `config.js`, pero `fetchJsonIfExists()` forzaba siempre `no-store`. Ahora respeta `data.cacheMode`.
 - Se paralelizó la carga inicial de jugadores, estadios, hinchas, ligas, sponsors, empleados, eventos, cartas y relatos.
 - Se redujo una petición 404 inicial del banner de bienvenida apuntando directo a `img/principales/banner_bienvenido.jpg`.
-- Se corrigieron 13 rutas de escudos argentinos que apuntaban a nombres escapados tipo `#U00e9`, mientras los archivos reales del ZIP usan acentos.
+- En V5.00 se intentó corregir 13 rutas de escudos argentinos hacia nombres acentuados. En V5.01 se corrigió ese criterio: los archivos reales del ZIP usan marcadores `#U00xx`, por lo que las rutas activas vuelven a coincidir con los PNG existentes.
 - Se agregó normalización para partidas guardadas que conserven `crestPath` antiguos con marcadores `#U00xx`.
 - Se actualizó `CARACTERISTICAS_VERSION.md` para reflejar la base V5.00.
 - Revisión de imágenes: se detectaron 6 escudos locales sin referencia activa en ninguna liga cargada. No se incluyen en este ZIP porque esta entrega contiene sólo archivos modificados.
 - Archivos de imagen candidatos a borrar en una limpieza completa: `img/escudos/Atenas_Río_Cuarto.png`, `img/escudos/Ciudad_de_Bolívar.png`, `img/escudos/Deportivo_Rincón.png`, `img/escudos/Ituzaingó.png`, `img/escudos/San_Martín_de_Formosa.png`, `img/escudos/Sarmiento_La_Banda.png`.
-- Contradicción pendiente: `img/escudos/everton.png` está compartido por Everton de Chile y Everton de Inglaterra. Conviene separar ambos escudos en futuras entregas si se confirma cuál imagen corresponde a cada club.
+- Contradicción resuelta en V5.01: Everton de Chile e Inglaterra ahora usan rutas separadas.
 - Archivos de datos legacy detectados sin referencia actual en `config.js`: `data/estadios.json` y `data/hinchas.json`. No se borran para no romper usos externos o históricos.
 
 ### V4.34 - Corrección calendario, préstamos y cartas

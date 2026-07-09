@@ -1,4 +1,4 @@
-/* V5.01 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
+/* V5.00 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -147,20 +147,9 @@ function lookupNameKey(name){
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
-function normalizeLegacyAssetMarkerEncoding(path){
+function decodeLegacyUnicodeAssetMarkers(path){
   if(path === null || path === undefined) return path;
-  return String(path).replace(/%23U([0-9a-fA-F]{4})/g, '#U$1');
-}
-function normalizeClubCrestPath(club, rawPath){
-  const fallback = `img/escudos/${imageSlug(club?.name || '')}.png`;
-  const cleanPath = normalizeLegacyAssetMarkerEncoding(rawPath || fallback);
-  const clubKey = lookupNameKey(club?.name || '');
-  const countryKey = countryNameKey(club?.country || club?.pais || '');
-  if(clubKey === 'everton' && String(cleanPath || '').endsWith('/everton.png')){
-    if(countryKey === 'chile') return 'img/escudos/everton-chi.png';
-    if(countryKey === 'inglaterra' || countryKey === 'england') return 'img/escudos/everton-eng.png';
-  }
-  return cleanPath;
+  return String(path).replace(/#U([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 function countryFromSourceUrl(url){
   const lower = String(url || '').toLowerCase();
@@ -310,7 +299,7 @@ function applySavedDatabaseSnapshots(saved){
   preserveBaseClubDivisionIntegrityMap();
   const clean = { ...(saved || {}) };
   if(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length){
-    seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:normalizeClubCrestPath(club, club.crestPath) }));
+    seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:decodeLegacyUnicodeAssetMarkers(club.crestPath || `img/escudos/${imageSlug(club.name)}.png`) }));
   }
   if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
     seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
@@ -333,10 +322,9 @@ function currentSavePayload(){
   payload.divisionsSnapshot = structuredClone(seed?.divisions || []);
   return payload;
 }
-async function loadInitialSeed(options={}){
-  const skipPlayersDatabase = Boolean(options?.skipPlayersDatabase);
+async function loadInitialSeed(){
   const [playersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
-    skipPlayersDatabase ? Promise.resolve(null) : loadPlayersDatabase(),
+    loadPlayersDatabase(),
     loadStadiumsDatabase(),
     loadFansDatabase()
   ]);
@@ -353,7 +341,7 @@ async function loadInitialSeed(options={}){
   const fallback = await fetchJsonIfExists(DATA_URL);
   if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
     fallback.meta = { ...(fallback.meta || {}), source:fallback.meta?.source || 'seed.json', signature:seedSignature(fallback) };
-    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:normalizeClubCrestPath(c, c.crestPath) }));
+    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:decodeLegacyUnicodeAssetMarkers(c.crestPath || `img/escudos/${imageSlug(c.name)}.png`) }));
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
     fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
     const withStadiums = applyStadiumAndFansDatabases(fallback, stadiumsDatabase, fansDatabase);
@@ -465,7 +453,7 @@ function buildSeedFromLigaArgentina(raw, sourceUrl){
         prizeMultiplier:divInfo.prizeMultiplier,
         fieldConditionScore,
         fieldCondition,
-        crestPath:normalizeClubCrestPath({ name, country }, team.escudo || team.crestPath)
+        crestPath:decodeLegacyUnicodeAssetMarkers(team.escudo || team.crestPath || `img/escudos/${imageSlug(name)}.png`)
       };
       clubs.push(club);
       const generated = generateClubPlayers(club, prestige, playerId, generationContext);
@@ -1389,18 +1377,6 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
 }
 
 
-function savedHasDatabaseSnapshots(saved){
-  return Boolean(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length && Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length);
-}
-async function readLocalSaveRecord(){
-  const db = await openDb();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction(DB_STORE, 'readonly');
-    const req = tx.objectStore(DB_STORE).get(SAVE_KEY);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-}
 async function openDb(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME, 1);
@@ -1421,15 +1397,18 @@ async function saveLocal(silent=false){
   if(!silent) showNotice('Partida guardada en este navegador.');
 }
 async function loadLocal(silent=false){
-  const saved = await readLocalSaveRecord();
+  const db = await openDb();
+  const saved = await new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(SAVE_KEY);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
   if(saved){
     const currentSignature = seed?.meta?.signature;
-    if(currentSignature && saved.seedSignature !== currentSignature && !savedHasDatabaseSnapshots(saved)){
-      if(!silent) showNotice('La base de datos cambió y la partida guardada no tiene snapshots suficientes. Creá una nueva partida para usar la base actual.');
-      return false;
-    }
     if(currentSignature && saved.seedSignature !== currentSignature){
-      saved._needsAutosave = true;
+      if(!silent) showNotice('La base de datos cambió. Creá una nueva partida para usar la Liga argentina.');
+      return false;
     }
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
     const needsAutosave = Boolean(game._needsAutosave);
@@ -1464,8 +1443,6 @@ async function resetLocal(){
     tx.onerror = () => reject(tx.error);
   });
   game = null;
-  seed = await loadInitialSeed({ skipPlayersDatabase:false });
-  fillClubSelect();
   activeTab = 'home';
   renderAll();
   showNotice('Partida local eliminada.');
@@ -1474,10 +1451,8 @@ async function resetLocal(){
 
 async function init(){
   try{
-    const savedRecord = await readLocalSaveRecord().catch(() => null);
-    const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
     const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedMatchCommentary] = await Promise.all([
-      loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
+      loadInitialSeed(),
       loadSponsorsDatabase(),
       loadEmployeesDatabase(),
       loadEventsDatabase(),
@@ -1495,10 +1470,6 @@ async function init(){
     startUiTicker();
     const loaded = await loadLocal(true);
     if(!loaded){
-      if(useSavedSnapshots){
-        seed = await loadInitialSeed({ skipPlayersDatabase:false });
-        fillClubSelect();
-      }
       renderAll();
       setTimeout(()=>openNewGameModal(true), 0);
     }

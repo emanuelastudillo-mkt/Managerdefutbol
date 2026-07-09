@@ -56,7 +56,7 @@
           "city": "Buenos Aires",
           "reputation": 64,
           "primaryColor": "#005BAC",
-          "crestPath": "img/escudos/V#U00e9lez.png"
+          "crestPath": "img/escudos/Vélez.png"
         },
         {
           "name": "Rosario",
@@ -84,14 +84,14 @@
           "city": "Buenos Aires",
           "reputation": 58,
           "primaryColor": "#FFFFFF",
-          "crestPath": "img/escudos/Hurac#U00e1n.png"
+          "crestPath": "img/escudos/Huracán.png"
         },
         {
           "name": "Lanús",
           "city": "Lanús",
           "reputation": 57,
           "primaryColor": "#7B003A",
-          "crestPath": "img/escudos/Lan#U00fas.png"
+          "crestPath": "img/escudos/Lanús.png"
         },
         {
           "name": "Belgrano",
@@ -126,7 +126,7 @@
           "city": "San Miguel de Tucumán",
           "reputation": 50,
           "primaryColor": "#66B3FF",
-          "crestPath": "img/escudos/Atl#U00e9tico_Tucum#U00e1n.png"
+          "crestPath": "img/escudos/Atlético_Tucumán.png"
         },
         {
           "name": "Platense",
@@ -167,7 +167,7 @@
           "city": "Santa Fe",
           "reputation": 48,
           "primaryColor": "#D71920",
-          "crestPath": "img/escudos/Uni#U00f3n.png"
+          "crestPath": "img/escudos/Unión.png"
         },
         {
           "name": "Instituto",
@@ -181,7 +181,7 @@
           "city": "San Miguel de Tucumán",
           "reputation": 45,
           "primaryColor": "#D71920",
-          "crestPath": "img/escudos/San_Mart#U00edn_Tucum#U00e1n.png"
+          "crestPath": "img/escudos/San_Martín_Tucumán.png"
         },
         {
           "name": "Barracas",
@@ -195,7 +195,7 @@
           "city": "Santiago del Estero",
           "reputation": 42,
           "primaryColor": "#111111",
-          "crestPath": "img/escudos/Central_C#U00f3rdoba_SdE.png"
+          "crestPath": "img/escudos/Central_Córdoba_SdE.png"
         },
         {
           "name": "Independiente Rivadavia",
@@ -223,7 +223,7 @@
           "city": "San Juan",
           "reputation": 37,
           "primaryColor": "#008542",
-          "crestPath": "img/escudos/San_Mart#U00edn_San_Juan.png"
+          "crestPath": "img/escudos/San_Martín_San_Juan.png"
         },
         {
           "name": "Riestra",
@@ -237,14 +237,14 @@
           "city": "Morón",
           "reputation": 35,
           "primaryColor": "#D71920",
-          "crestPath": "img/escudos/Mor#U00f3n.png"
+          "crestPath": "img/escudos/Morón.png"
         },
         {
           "name": "Deportivo Maipú",
           "city": "Maipú",
           "reputation": 34,
           "primaryColor": "#D71920",
-          "crestPath": "img/escudos/Deportivo_Maip#U00fa.png"
+          "crestPath": "img/escudos/Deportivo_Maipú.png"
         },
         {
           "name": "Deportivo Madryn",
@@ -285,7 +285,7 @@
           "city": "Rafaela",
           "reputation": 29,
           "primaryColor": "#66B3FF",
-          "crestPath": "img/escudos/Atl#U00e9tico_Rafaela.png"
+          "crestPath": "img/escudos/Atlético_Rafaela.png"
         },
         {
           "name": "Gimnasia de Jujuy",
@@ -348,7 +348,7 @@
           "city": "Tristán Suárez",
           "reputation": 19,
           "primaryColor": "#0057A6",
-          "crestPath": "img/escudos/Tristan_Su#U00e1rez.png"
+          "crestPath": "img/escudos/Tristan_Suárez.png"
         },
         {
           "name": "Midland",
@@ -397,7 +397,7 @@
           "city": "Monte Maíz",
           "reputation": 15,
           "primaryColor": "#66B3FF",
-          "crestPath": "img/escudos/Argentino_Monte_Ma#U00edz.png"
+          "crestPath": "img/escudos/Argentino_Monte_Maíz.png"
         }
       ]
     }

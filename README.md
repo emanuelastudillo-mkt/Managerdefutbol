@@ -1,8 +1,21 @@
 # Fútbol Manager MVP
 
-**V5.01 - Limpieza de auditoría y Everton por país**
+**V5.02 - Desbloqueo de temporada y ojeo limpio**
 
 ## Historial de versiones
+
+### V5.02 - Desbloqueo de temporada y ojeo limpio
+
+- Agregado botón lateral `Desbloquear y nueva temporada` como herramienta de recuperación de partida.
+- El desbloqueo fuerza el inicio de una nueva temporada con el club actual sin borrar la partida local.
+- Antes del avance forzado se toma una copia interna de seguridad del progreso del manager.
+- El desbloqueo conserva explícitamente prestigio de manager, experiencia, estadísticas acumuladas, puntos de habilidad y cartas especiales.
+- La temporada saltada no otorga títulos, premios ni penalizaciones: funciona como reparación, no como simulación deportiva completa.
+- El desbloqueo limpia estados que suelen trabar partidas: bloqueo de avance, revisión obligatoria de táctica, estado sin club y transición de temporada incompleta.
+- En Centro de Ojeo y fichas de jugador observadas, las habilidades compuestas ahora se muestran según posición: `Ataque`/`Salto`, `Velocidad`/`Reflejos`, `Cabezazo`/`Mando` y `Tiro`/`Potencia`.
+- Para jugadores que no son porteros ya no se muestra `Cabezazo/Mando`; se muestra sólo `Cabezazo`. En porteros se muestra sólo `Mando`.
+- Se agregó estilo visual específico para el botón de recuperación y el modal de progreso protegido.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.02.
 
 ### V5.01 - Limpieza de auditoría y Everton por país
 

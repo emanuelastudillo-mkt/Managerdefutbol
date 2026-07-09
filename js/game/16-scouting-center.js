@@ -1,4 +1,4 @@
-/* V4.30 · Centro de Ojeo: oficinas, ojeadores, jefe de ojeadores e informes acumulativos. */
+/* V5.02 · Centro de Ojeo: oficinas, ojeadores, jefe de ojeadores e informes acumulativos. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -242,7 +242,10 @@ function resetScoutingCenterForNewClub(){
 function scoutingPlayerKnownSkillRows(player){
   const map = typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player.skills || {});
   const known = scoutingKnownSet(player.id);
-  return Object.entries(map).map(([key,value]) => `<div class="stat-rank"><span>${escapeHtml(key)}</span><strong>${known.has(key) ? value : '—'}</strong></div>`).join('');
+  return Object.entries(map).map(([key,value]) => {
+    const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${known.has(key) ? value : '—'}</strong></div>`;
+  }).join('');
 }
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);

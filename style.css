@@ -3320,3 +3320,30 @@ th{
 .standings-year-filter select{min-width:150px}
 .saved-training-card{border-color:rgba(56,189,248,.18)}
 .saved-training-slot.filled{background:linear-gradient(180deg,rgba(56,189,248,.10),rgba(15,23,42,.54));border-color:rgba(56,189,248,.24)}
+
+/* V5.02 · Recuperación segura y scouting más legible */
+.recovery-warning-copy{margin-top:12px;color:#bae6fd!important}
+.recovery-bottom-btn{
+  width:100%;
+  margin-top:8px;
+  border-color:rgba(56,189,248,.36)!important;
+  background:linear-gradient(180deg,rgba(14,165,233,.18),rgba(15,23,42,.42))!important;
+  color:#e0f2fe!important;
+}
+.recovery-bottom-btn:hover{background:linear-gradient(180deg,rgba(14,165,233,.28),rgba(15,23,42,.54))!important}
+.force-season-modal .protected-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+  margin:14px 0;
+}
+.force-season-modal .protected-grid div{
+  padding:10px;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:12px;
+  background:rgba(15,23,42,.42);
+}
+.force-season-modal .protected-grid span{display:block;color:var(--muted);font-size:.76rem;margin-bottom:4px}
+.force-season-modal .protected-grid strong{font-size:1.05rem}
+.scouting-known-grid .stat-rank span{font-size:.72rem;line-height:1.15}
+.scouting-known-grid .stat-rank strong{font-variant-numeric:tabular-nums}

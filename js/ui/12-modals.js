@@ -1,4 +1,4 @@
-/* V3.44 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
+/* V5.02 · Modales de jugador, club, compra, partido, scouting y nueva partida. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -87,7 +87,8 @@ function scoutedStatsMarkup(player){
   const rows = Object.entries(map).map(([key, value]) => {
     const raw = rawMap[key];
     const shown = !playerRequiresScouting(player) || visible.has(key);
-    return `<div class="stat-rank"><span>${escapeHtml(key)}</span><strong>${shown ? value : '—'}</strong>${shown && Number(raw) !== Number(value) ? `<small class="muted">base ${raw}</small>` : ''}</div>`;
+    const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${shown ? value : '—'}</strong>${shown && Number(raw) !== Number(value) ? `<small class="muted">base ${raw}</small>` : ''}</div>`;
   }).join('');
   const note = playerRequiresScouting(player) ? '<p class="muted small">Scouting semanal: algunas habilidades cambian de visibles cada semana. Mirarlo en distintas semanas revela mejor el perfil.</p>' : '';
   return `${rows}${note}`;
@@ -1009,6 +1010,17 @@ function scoutingTurnKey(){
 }
 function scoutingVisibleKeys(player){
   return typeof scoutedVisibleKeySet === 'function' ? scoutedVisibleKeySet(player) : new Set(Object.keys(scoutingStatMap(player)));
+}
+
+function scoutingSkillDisplayLabel(player, key){
+  const keeper = String(player?.position || '').toUpperCase() === 'POR';
+  const labels = {
+    'Ataque/Salto': keeper ? 'Salto' : 'Ataque',
+    'Velocidad/Reflejos': keeper ? 'Reflejos' : 'Velocidad',
+    'Cabezazo/Mando': keeper ? 'Mando' : 'Cabezazo',
+    'Tiro/Potencia': keeper ? 'Potencia' : 'Tiro'
+  };
+  return labels[key] || key;
 }
 function scoutingStatMap(player){
   const stats = visibleStats(player);

@@ -1239,56 +1239,116 @@ function loadSavedTacticSlot(slot){
 }
 
 
+function maxTrainingSaveSlots(){
+  const raw = Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3);
+  return Number.isFinite(raw) && raw > 0 ? Math.min(6, Math.round(raw)) : 3;
+}
+function safeTrainingTypeForSavedPlan(value){
+  try{
+    return typeof safeTrainingType === 'function' ? safeTrainingType(value) : (value || 'regenerative');
+  }catch(_err){
+    return 'regenerative';
+  }
+}
+function safeIndividualTrainingTypeForSavedPlan(value){
+  try{
+    return typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(value) : (value || 'balanced');
+  }catch(_err){
+    return 'balanced';
+  }
+}
+function normalizeTrainingScheduleForSavedPlan(schedule){
+  try{
+    if(typeof normalizeTrainingSchedule === 'function') return normalizeTrainingSchedule(schedule);
+  }catch(_err){}
+  const labels = Array.isArray(typeof TRAINING_DAY_LABELS !== 'undefined' ? TRAINING_DAY_LABELS : null) ? TRAINING_DAY_LABELS : ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const slots = Array.isArray(typeof TRAINING_DAY_SLOTS !== 'undefined' ? TRAINING_DAY_SLOTS : null) ? TRAINING_DAY_SLOTS : [{key:'morning'},{key:'midday'},{key:'afternoon'},{key:'evening'}];
+  const normalized = {};
+  labels.forEach((_, dayIndex) => {
+    const sourceDay = schedule?.[dayIndex] || schedule?.[String(dayIndex)] || {};
+    normalized[dayIndex] = {};
+    slots.forEach(slot => { normalized[dayIndex][slot.key] = safeTrainingTypeForSavedPlan(sourceDay?.[slot.key]); });
+  });
+  return normalized;
+}
 function normalizeSavedTrainingPlansState(src){
-  const maxSlots = Number.isFinite(Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3)) ? Number(TRAINING_SAVE_SLOT_COUNT) : 3;
-  const rawSlots = src && typeof src === 'object' && !Array.isArray(src) ? (src.slots || src) : {};
+  const maxSlots = maxTrainingSaveSlots();
+  const source = src && typeof src === 'object' && !Array.isArray(src) ? src : {};
+  const rawSlots = source.slots && typeof source.slots === 'object' && !Array.isArray(source.slots) ? source.slots : source;
   const slots = {};
   for(let i=1; i<=maxSlots; i++){
-    const raw = rawSlots[i] || rawSlots[String(i)] || null;
-    if(!raw || typeof raw !== 'object') continue;
-    const rawPlan = (raw.trainingPlan && typeof raw.trainingPlan === 'object' && !Array.isArray(raw.trainingPlan)) ? raw.trainingPlan : {};
-    const plan = {};
-    Object.entries(rawPlan).forEach(([id, value]) => {
-      const cleanId = Number(id || 0);
-      if(cleanId) plan[cleanId] = safeIndividualTrainingType(value);
-    });
-    slots[i] = {
-      slot:i,
-      name:String(raw.name || `Entrenamiento ${i}`),
-      savedAt:String(raw.savedAt || ''),
-      clubId:Number(raw.clubId || 0),
-      clubName:String(raw.clubName || ''),
-      trainingSchedule:normalizeTrainingSchedule(raw.trainingSchedule),
-      trainingPlan:plan
-    };
+    try{
+      const raw = rawSlots[i] || rawSlots[String(i)] || null;
+      if(!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+      const rawPlan = (raw.trainingPlan && typeof raw.trainingPlan === 'object' && !Array.isArray(raw.trainingPlan)) ? raw.trainingPlan : {};
+      const plan = {};
+      Object.entries(rawPlan).forEach(([id, value]) => {
+        const cleanId = Number(id || 0);
+        if(cleanId) plan[cleanId] = safeIndividualTrainingTypeForSavedPlan(value);
+      });
+      slots[i] = {
+        slot:i,
+        name:String(raw.name || `Entrenamiento ${i}`).trim().slice(0,40) || `Entrenamiento ${i}`,
+        savedAt:String(raw.savedAt || ''),
+        clubId:Number(raw.clubId || 0),
+        clubName:String(raw.clubName || ''),
+        trainingSchedule:normalizeTrainingScheduleForSavedPlan(raw.trainingSchedule),
+        trainingPlan:plan
+      };
+    }catch(err){
+      console.warn('Plan de entrenamiento guardado omitido por datos inválidos', i, err);
+    }
   }
   return { slots };
 }
+function repairSavedTrainingPlansState(){
+  if(!game) return { repaired:false };
+  const before = JSON.stringify(game.savedTrainingPlans || {});
+  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
+  return { repaired: before !== JSON.stringify(game.savedTrainingPlans || {}) };
+}
+function resetSavedTrainingPlans(){
+  if(!game) return false;
+  game.savedTrainingPlans = normalizeSavedTrainingPlansState({});
+  saveLocal(true).catch?.(()=>{});
+  showNotice('Entrenamientos guardados reiniciados.');
+  if(typeof renderTraining === 'function') renderTraining();
+  return true;
+}
 function savedTrainingPlanSlot(slot){
-  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game?.savedTrainingPlans || {});
+  if(!game) return null;
+  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
   return game.savedTrainingPlans.slots?.[Number(slot || 0)] || null;
 }
 function trainingPlanSlotStatus(slot){
-  const saved = savedTrainingPlanSlot(slot);
-  if(!saved) return { exists:false, label:'Vacío', details:'Sin plan semanal guardado.' };
-  const schedule = normalizeTrainingSchedule(saved.trainingSchedule);
-  const counts = {};
-  schedule.forEach(day => Object.values(day || {}).forEach(value => { const key = safeTrainingType(value); counts[key] = Number(counts[key] || 0) + 1; }));
-  const summary = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([key,count]) => `${trainingOptionByValue(key)?.label || key}: ${count}`).join(' · ');
-  const individualCount = Object.keys(saved.trainingPlan || {}).length;
-  return { exists:true, label:saved.name || `Entrenamiento ${slot}`, details:`${summary || 'Plan semanal'} · ${individualCount} individuales` };
+  try{
+    const saved = savedTrainingPlanSlot(slot);
+    if(!saved) return { exists:false, label:'Vacío', details:'Sin plan semanal guardado.' };
+    const schedule = normalizeTrainingScheduleForSavedPlan(saved.trainingSchedule);
+    const counts = {};
+    Object.values(schedule || {}).forEach(day => Object.values(day || {}).forEach(value => { const key = safeTrainingTypeForSavedPlan(value); counts[key] = Number(counts[key] || 0) + 1; }));
+    const summary = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([key,count]) => {
+      const label = (typeof trainingOptionByValue === 'function' ? trainingOptionByValue(key)?.label : null) || key;
+      return `${label}: ${count}`;
+    }).join(' · ');
+    const individualCount = Object.keys(saved.trainingPlan || {}).length;
+    return { exists:true, label:saved.name || `Entrenamiento ${slot}`, details:`${summary || 'Plan semanal'} · ${individualCount} individuales` };
+  }catch(err){
+    console.warn('No se pudo leer el espacio de entrenamiento', slot, err);
+    return { exists:false, label:'Error de lectura', details:'Espacio inválido. Reiniciá los entrenamientos guardados.' };
+  }
 }
 function snapshotCurrentTrainingPlanForSlot(slot, name){
-  const schedule = normalizeTrainingSchedule(game.trainingSchedule);
+  const schedule = normalizeTrainingScheduleForSavedPlan(game.trainingSchedule);
   const squadIds = new Set(playersByClub(game.selectedClubId).map(p => Number(p.id)));
   const plan = {};
   Object.entries(game.trainingPlan || {}).forEach(([id, value]) => {
     const cleanId = Number(id || 0);
-    if(cleanId && squadIds.has(cleanId)) plan[cleanId] = safeIndividualTrainingType(value);
+    if(cleanId && squadIds.has(cleanId)) plan[cleanId] = safeIndividualTrainingTypeForSavedPlan(value);
   });
   return {
     slot:Number(slot || 0),
-    name:String(name || `Entrenamiento ${Number(slot || 0)}`),
+    name:String(name || `Entrenamiento ${Number(slot || 0)}`).trim().slice(0,40) || `Entrenamiento ${Number(slot || 0)}`,
     savedAt:new Date().toISOString(),
     clubId:Number(game.selectedClubId || 0),
     clubName:clubName(game.selectedClubId),
@@ -1298,38 +1358,50 @@ function snapshotCurrentTrainingPlanForSlot(slot, name){
 }
 function saveCurrentTrainingPlanSlot(slot){
   if(!game) return false;
-  const cleanSlot = Math.max(1, Math.min(Number(typeof TRAINING_SAVE_SLOT_COUNT !== 'undefined' ? TRAINING_SAVE_SLOT_COUNT : 3), Math.round(Number(slot || 1))));
-  const previous = savedTrainingPlanSlot(cleanSlot);
-  const suggested = previous?.name || `Entrenamiento ${cleanSlot}`;
-  const name = window.prompt ? window.prompt('Nombre del plan de entrenamiento:', suggested) : suggested;
-  if(name === null) return false;
-  const cleanName = String(name || suggested).trim().slice(0,40) || suggested;
-  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
-  game.savedTrainingPlans.slots[cleanSlot] = snapshotCurrentTrainingPlanForSlot(cleanSlot, cleanName);
-  saveLocal(true);
-  showNotice(`${cleanName} guardado.`);
-  if(typeof renderTraining === 'function') renderTraining();
-  return true;
+  try{
+    const cleanSlot = Math.max(1, Math.min(maxTrainingSaveSlots(), Math.round(Number(slot || 1))));
+    const previous = savedTrainingPlanSlot(cleanSlot);
+    const suggested = previous?.name || `Entrenamiento ${cleanSlot}`;
+    const name = window.prompt ? window.prompt('Nombre del plan de entrenamiento:', suggested) : suggested;
+    if(name === null) return false;
+    const cleanName = String(name || suggested).trim().slice(0,40) || suggested;
+    game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
+    game.savedTrainingPlans.slots[cleanSlot] = snapshotCurrentTrainingPlanForSlot(cleanSlot, cleanName);
+    saveLocal(true).catch(err => console.warn('No se pudo guardar el plan de entrenamiento en disco', err));
+    showNotice(`${cleanName} guardado.`);
+    if(typeof renderTraining === 'function') renderTraining();
+    return true;
+  }catch(err){
+    console.error('Error guardando entrenamiento', err);
+    showNotice('No se pudo guardar el entrenamiento. Se conservará la partida.');
+    return false;
+  }
 }
 function loadSavedTrainingPlanSlot(slot){
   if(!game) return false;
-  const saved = savedTrainingPlanSlot(slot);
-  if(!saved){ showNotice(`No hay plan guardado en el espacio ${slot}.`); return false; }
-  game.trainingSchedule = normalizeTrainingSchedule(saved.trainingSchedule);
-  game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan || {});
-  const squadIds = new Set(playersByClub(game.selectedClubId).map(p => Number(p.id)));
-  let applied = 0;
-  Object.entries(saved.trainingPlan || {}).forEach(([id, value]) => {
-    const cleanId = Number(id || 0);
-    if(cleanId && squadIds.has(cleanId)){
-      game.trainingPlan[cleanId] = safeIndividualTrainingType(value);
-      applied += 1;
-    }
-  });
-  saveLocal(true);
-  showNotice(`${saved.name || `Entrenamiento ${slot}`} cargado. Individuales aplicados: ${applied}.`);
-  if(typeof renderTraining === 'function') renderTraining();
-  return true;
+  try{
+    const saved = savedTrainingPlanSlot(slot);
+    if(!saved){ showNotice(`No hay plan guardado en el espacio ${slot}.`); return false; }
+    game.trainingSchedule = normalizeTrainingScheduleForSavedPlan(saved.trainingSchedule);
+    game.trainingPlan = typeof normalizeIndividualTrainingPlan === 'function' ? normalizeIndividualTrainingPlan(game.trainingPlan || {}) : (game.trainingPlan || {});
+    const squadIds = new Set(playersByClub(game.selectedClubId).map(p => Number(p.id)));
+    let applied = 0;
+    Object.entries(saved.trainingPlan || {}).forEach(([id, value]) => {
+      const cleanId = Number(id || 0);
+      if(cleanId && squadIds.has(cleanId)){
+        game.trainingPlan[cleanId] = safeIndividualTrainingTypeForSavedPlan(value);
+        applied += 1;
+      }
+    });
+    saveLocal(true).catch(err => console.warn('No se pudo guardar la carga del plan de entrenamiento', err));
+    showNotice(`${saved.name || `Entrenamiento ${slot}`} cargado. Individuales aplicados: ${applied}.`);
+    if(typeof renderTraining === 'function') renderTraining();
+    return true;
+  }catch(err){
+    console.error('Error cargando entrenamiento', err);
+    showNotice('No se pudo cargar ese entrenamiento. Probá reiniciar los entrenamientos guardados.');
+    return false;
+  }
 }
 function normalizeStandingsHistoryState(src){
   const obj = (src && typeof src === 'object' && !Array.isArray(src)) ? src : {};

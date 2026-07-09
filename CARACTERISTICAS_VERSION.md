@@ -1,16 +1,13 @@
-# Características V4.32 - Entrenamientos guardados e histórico de tablas
+# Características V4.33 - Corrección entrenamientos guardados
 
 ## Cambios
 
-- Se agregan 3 espacios para guardar planes de entrenamiento.
-- Al guardar un plan se pide un nombre personalizado.
-- Cada plan guarda el esquema semanal completo de 7 días.
-- También guarda el entrenamiento individual de los jugadores actuales del club.
-- Al cargar un plan, los jugadores que ya no estén en el club se ignoran y no rompen el plan.
-- La tabla de posiciones ahora registra un histórico al finalizar cada temporada.
-- El menú de tablas suma selector de año a la izquierda del selector de división.
-- Se puede alternar entre la tabla actual y temporadas cerradas anteriores.
+- Corregido un error que bloqueaba la pestaña Entrenamiento después de guardar un plan.
+- El problema venía de intentar recorrer el plan semanal guardado como si fuera una lista, cuando internamente es un objeto por día.
+- El panel de entrenamientos guardados ahora es tolerante a datos incompletos o corruptos.
+- Agregado botón para reiniciar sólo los entrenamientos guardados, sin borrar partida ni entrenamiento semanal actual.
+- Agregada protección en Primer Equipo: si una subpestaña falla, vuelve a Táctica en vez de dejar la interfaz trabada.
 
 ## Motivo
 
-El calendario diario hace que el entrenamiento semanal se use con más frecuencia. Guardar presets evita reconstruir planes manualmente. El histórico de tablas permite revisar temporadas pasadas sin depender del ranking online ni de capturas externas.
+El guardado de entrenamientos funcionaba, pero al volver a renderizar la pestaña se rompía la lectura del resumen del plan guardado. Esta versión corrige la lectura y agrega defensas para que un preset dañado no bloquee Primer Equipo.

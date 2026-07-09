@@ -90,7 +90,25 @@ function renderAll(){
   repairBotRosters({ reason:'render' });
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
-  (renderers[activeTab] || renderers.home)();
+  const renderer = renderers[activeTab] || renderers.home;
+  try{
+    renderer();
+  }catch(err){
+    console.error('Error renderizando pestaña', activeTab, err);
+    if(activeTab === 'firstTeam' && firstTeamTab !== 'tactics'){
+      try{
+        firstTeamTab = 'tactics';
+        renderFirstTeam();
+        showNotice('Se detectó un problema en una subpestaña de Primer Equipo. Se volvió a Táctica.');
+        return;
+      }catch(fallbackErr){
+        console.error('Error en fallback de Primer Equipo', fallbackErr);
+      }
+    }
+    view.innerHTML = `<div class="card blocker"><h2>No se pudo abrir esta sección</h2><p>La partida no se borró. Probá volver a Inicio o usar el verificador.</p><p class="muted small">Detalle técnico: ${escapeHtml(err?.message || String(err || 'error'))}</p><div class="row"><button class="primary" data-render-fallback-home>Ir a Inicio</button><button class="ghost" data-render-fallback-verify>Verificar que todo esté bien</button></div></div>`;
+    document.querySelector('[data-render-fallback-home]')?.addEventListener('click', () => { activeTab = 'home'; renderAll(); });
+    document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof openIntegrityChecker === 'function') openIntegrityChecker(); });
+  }
 }
 function renderClubRequirementsWarning(){
   const invalid = invalidClubRequirements();

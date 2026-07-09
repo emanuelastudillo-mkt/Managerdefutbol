@@ -1,8 +1,16 @@
 # Fútbol Manager MVP
 
-**V4.32 - Entrenamientos guardados e histórico de tablas**
+**V4.33 - Corrección entrenamientos guardados**
 
 ## Historial de versiones
+
+### V4.33 - Corrección entrenamientos guardados
+
+- Corregido el bloqueo de la pestaña Entrenamiento después de guardar un plan semanal.
+- El resumen de entrenamientos guardados ahora lee correctamente la estructura por días.
+- El panel de guardados ahora tolera datos incompletos o corruptos.
+- Se agrega botón para reiniciar sólo los entrenamientos guardados, sin borrar la partida.
+- Primer Equipo ahora tiene protección: si una subpestaña falla, vuelve a Táctica en lugar de quedar trabado.
 
 ### V4.32 - Entrenamientos guardados e histórico de tablas
 

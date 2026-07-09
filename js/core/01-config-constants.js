@@ -519,6 +519,8 @@ const BANK_LOAN_BANKS = Array.isArray(configValue('economia.banco.bancos', [])) 
 const BANK_LOAN_TIERS = Array.isArray(configValue('economia.banco.montos', [])) ? configValue('economia.banco.montos', []).filter(item => Number(item?.monto) > 0).map((item, index) => ({ id:index + 1, amount:Math.round(Number(item.monto || 0)), prestigeCost:Math.max(0, Math.round(Number(item.prestigio || 0))) })) : [];
 const BANK_LOAN_TERMS = Array.isArray(configValue('economia.banco.plazosSemanas', [])) ? configValue('economia.banco.plazosSemanas', []).map(value => Math.max(1, Math.round(Number(value || 0)))).filter(Boolean) : [24,48,172];
 
+const TACTIC_SAVE_SLOT_COUNT = 3;
+
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
   starters:[],

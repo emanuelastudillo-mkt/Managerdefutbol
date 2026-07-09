@@ -976,6 +976,130 @@ function generateSaveCode(){
   const raw = `${Date.now()}-${Math.random()}-${navigator.userAgent || ''}`;
   return `FM-${Date.now().toString(36).toUpperCase()}-${hashNumber(raw, 1000000).toString().padStart(6,'0')}`;
 }
+
+function normalizeSavedTacticsState(src){
+  const maxSlots = Number.isFinite(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3)) ? Number(TACTIC_SAVE_SLOT_COUNT) : 3;
+  const rawSlots = src && typeof src === 'object' && !Array.isArray(src) ? (src.slots || src) : {};
+  const slots = {};
+  for(let i=1; i<=maxSlots; i++){
+    const raw = rawSlots[i] || rawSlots[String(i)] || null;
+    if(!raw || typeof raw !== 'object') continue;
+    const starters = Array.isArray(raw.starters) ? raw.starters.slice(0,11).map(id => Number(id) || 0) : [];
+    while(starters.length < 11) starters.push(0);
+    const bench = Array.isArray(raw.bench) ? raw.bench.slice(0,10).map(id => Number(id) || 0).filter(Boolean) : [];
+    const playerMentalities = (raw.playerMentalities && typeof raw.playerMentalities === 'object' && !Array.isArray(raw.playerMentalities)) ? raw.playerMentalities : {};
+    const cleanMentalities = {};
+    Object.entries(playerMentalities).forEach(([id, mode]) => {
+      const cleanId = Number(id || 0);
+      if(cleanId) cleanMentalities[cleanId] = normalizeMentality(mode);
+    });
+    slots[i] = {
+      slot:i,
+      name:String(raw.name || `Táctica ${i}`),
+      savedAt:String(raw.savedAt || ''),
+      clubId:Number(raw.clubId || 0),
+      clubName:String(raw.clubName || ''),
+      formation:FORMATIONS[raw.formation] ? raw.formation : DEFAULT_TACTIC.formation,
+      starters,
+      bench,
+      autoSubs:Array.isArray(raw.autoSubs) ? raw.autoSubs.slice(0,5).map(rule => ({ outId:Number(rule?.outId || 0), inId:Number(rule?.inId || 0), trigger:String(rule?.trigger || 'tired') })) : [],
+      playerMentalities:cleanMentalities,
+      matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(raw.matchInstructions) : (raw.matchInstructions || DEFAULT_TACTIC.matchInstructions)
+    };
+  }
+  return { slots };
+}
+function savedTacticSlot(slot){
+  game.savedTactics = normalizeSavedTacticsState(game?.savedTactics || {});
+  return game.savedTactics.slots?.[Number(slot || 0)] || null;
+}
+function tacticSlotStatus(slot){
+  const saved = savedTacticSlot(slot);
+  if(!saved) return { exists:false, label:'Vacía', details:'Sin táctica guardada.' };
+  const validStarters = (saved.starters || []).filter(Boolean).length;
+  const clubText = saved.clubName ? ` · ${saved.clubName}` : '';
+  return { exists:true, label:`${saved.formation}${clubText}`, details:`${validStarters}/11 titulares guardados` };
+}
+function snapshotCurrentTacticForSlot(slot){
+  const current = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic || DEFAULT_TACTIC));
+  const starters = current.starters.slice(0,11).map(id => Number(id) || 0);
+  while(starters.length < 11) starters.push(0);
+  const bench = (current.bench || []).slice(0,10).map(id => Number(id) || 0).filter(Boolean);
+  const mentalities = {};
+  starters.filter(Boolean).forEach(id => { mentalities[id] = playerMentality(id, current); });
+  return {
+    slot:Number(slot || 0),
+    name:`Táctica ${Number(slot || 0)}`,
+    savedAt:new Date().toISOString(),
+    clubId:Number(game.selectedClubId || 0),
+    clubName:clubName(game.selectedClubId),
+    formation:current.formation || DEFAULT_TACTIC.formation,
+    starters,
+    bench,
+    autoSubs:(current.autoSubs || []).slice(0,5).map(rule => ({ outId:Number(rule.outId || 0), inId:Number(rule.inId || 0), trigger:String(rule.trigger || 'tired') })),
+    playerMentalities:mentalities,
+    matchInstructions:current.matchInstructions || DEFAULT_TACTIC.matchInstructions
+  };
+}
+function saveCurrentTacticSlot(slot){
+  if(!game) return false;
+  const cleanSlot = Math.max(1, Math.min(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3), Math.round(Number(slot || 1))));
+  game.savedTactics = normalizeSavedTacticsState(game.savedTactics || {});
+  game.savedTactics.slots[cleanSlot] = snapshotCurrentTacticForSlot(cleanSlot);
+  saveLocal(true);
+  showNotice(`Táctica ${cleanSlot} guardada.`);
+  if(typeof renderTactics === 'function') renderTactics();
+  return true;
+}
+function sanitizeSavedTacticForCurrentClub(saved){
+  const squad = playersByClub(game.selectedClubId);
+  const squadIds = new Set(squad.map(p => Number(p.id)));
+  const starters = (saved.starters || []).slice(0,11).map(id => {
+    const cleanId = Number(id || 0);
+    if(!cleanId || !squadIds.has(cleanId) || isUnavailable(cleanId)) return 0;
+    return cleanId;
+  });
+  while(starters.length < 11) starters.push(0);
+  const taken = new Set(starters.filter(Boolean));
+  const bench = (saved.bench || []).map(Number).filter(id => id && squadIds.has(id) && !taken.has(id) && canBeBench(id)).slice(0,10);
+  const mentalities = {};
+  starters.filter(Boolean).forEach(id => {
+    mentalities[id] = normalizeMentality(saved.playerMentalities?.[id] || saved.playerMentalities?.[String(id)] || 'normal');
+  });
+  const autoSubs = (saved.autoSubs || []).slice(0,5).map(rule => ({
+    outId: starters.includes(Number(rule.outId || 0)) ? Number(rule.outId || 0) : 0,
+    inId: bench.includes(Number(rule.inId || 0)) ? Number(rule.inId || 0) : 0,
+    trigger: SUB_TRIGGERS.some(t => t.value === rule.trigger) ? rule.trigger : 'tired'
+  }));
+  while(autoSubs.length < 5) autoSubs.push({ outId:0, inId:0, trigger:'tired' });
+  if(game){
+    const store = ensurePlayerMentalitiesStore(game);
+    Object.entries(mentalities).forEach(([id, mode]) => { store[Number(id)] = normalizeMentality(mode); });
+  }
+  return applyStarterMentalities({
+    ...DEFAULT_TACTIC,
+    formation:FORMATIONS[saved.formation] ? saved.formation : DEFAULT_TACTIC.formation,
+    starters,
+    bench,
+    autoSubs,
+    playerMentalities:{ ...(game.playerMentalities || {}), ...mentalities },
+    matchInstructions:window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(saved.matchInstructions) : (saved.matchInstructions || DEFAULT_TACTIC.matchInstructions)
+  });
+}
+function loadSavedTacticSlot(slot){
+  if(!game) return false;
+  const saved = savedTacticSlot(slot);
+  if(!saved){ showNotice(`No hay táctica guardada en el espacio ${slot}.`); return false; }
+  const clean = sanitizeSavedTacticForCurrentClub(saved);
+  const missing = clean.starters.filter(id => !id).length;
+  game.tactic = clean;
+  game.playerMentalities = { ...(game.playerMentalities || {}), ...(clean.playerMentalities || {}) };
+  saveLocal(true);
+  showNotice(missing ? `Táctica ${slot} cargada con ${missing} hueco(s) por jugadores lesionados o fuera del club.` : `Táctica ${slot} cargada.`);
+  if(typeof renderTactics === 'function') renderTactics();
+  return true;
+}
+
 function deriveSeasonInitialBudgetFromHistory(saved, season){
   const history = Array.isArray(saved?.budgetHistory) ? saved.budgetHistory : [];
   const currentSeason = Number(season || saved?.seasonNumber || 1);
@@ -994,6 +1118,7 @@ function normalizeGame(saved){
   normalized.version = APP_VERSION;
   normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
+  normalized.savedTactics = normalizeSavedTacticsState(normalized.savedTactics || {});
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
   normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
@@ -1372,6 +1497,7 @@ function newGame(selectedClubId, options={}){
     selectedCountry: options.country || clubCountry(selectedClub),
     selectedLeagueId: options.leagueId || selectedClub.divisionId || 'default',
     playerMentalities: {},
+    savedTactics: normalizeSavedTacticsState({}),
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -1790,7 +1916,7 @@ function updateManagerPrestigeFromWins(){
 function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
 }
-function managerObjectiveForClubDivision(clubId){
+function managerObjectiveBaseForClubDivision(clubId){
   const targetClubId = clubId || game?.selectedClubId;
   if(isFoundedClubId(targetClubId)) return null;
   let objective = null;
@@ -1801,20 +1927,36 @@ function managerObjectiveForClubDivision(clubId){
     const order = Math.round(Number(division?.order || 3));
     objective = order <= 1 ? Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4) : order === 2 ? Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1) : Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
   }
+  return Number.isFinite(Number(objective)) ? Number(Number(objective).toFixed(3)) : null;
+}
+function managerObjectiveReductionForClub(clubId){
+  const targetClubId = clubId || game?.selectedClubId;
   if(Number(targetClubId) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
-    const reduction = clamp(Number(specialActiveBonus('objetivo_mas_bajo') || 0), 0, 80);
-    if(reduction > 0) objective = objective * (1 - reduction / 100);
+    return clamp(Number(specialActiveBonus('objetivo_mas_bajo') || 0), 0, 80);
   }
+  return 0;
+}
+function applyManagerObjectiveReduction(baseObjective, clubId){
+  const base = Number(baseObjective);
+  if(!Number.isFinite(base)) return null;
+  const reduction = managerObjectiveReductionForClub(clubId);
+  const objective = reduction > 0 ? base * (1 - reduction / 100) : base;
   return Number(objective.toFixed(3));
+}
+function managerObjectiveForClubDivision(clubId){
+  return applyManagerObjectiveReduction(managerObjectiveBaseForClubDivision(clubId), clubId);
 }
 function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const normalized = normalizeManagerStats(stats);
   const generalPpg = ppgFromTotals(normalized.totals || {});
-  const objective = managerObjectiveForClubDivision(clubId);
+  const baseObjective = managerObjectiveBaseForClubDivision(clubId);
+  const objective = applyManagerObjectiveReduction(baseObjective, clubId);
   const baseMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5);
   const extraMatches = managerObjectiveExtraMatches(generalPpg);
   return {
-    objectivePpg:Number.isFinite(objective) ? objective : null,
+    objectiveBasePpg:Number.isFinite(Number(baseObjective)) ? Number(baseObjective) : null,
+    objectivePpg:Number.isFinite(Number(objective)) ? objective : null,
+    objectiveBonusReduction:managerObjectiveReductionForClub(clubId),
     objectiveBaseMatches:baseMatches,
     objectiveExtraMatches:extraMatches,
     objectiveMinMatches:baseMatches + extraMatches,
@@ -1832,6 +1974,11 @@ function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNu
     || Number(clean.objectiveClubId || 0) !== Number(clubId || 0);
   if(needsRefresh){
     Object.assign(clean, buildManagerObjectiveSeasonFields(stats, season, clubId));
+  } else {
+    const baseObjective = Number.isFinite(Number(clean.objectiveBasePpg)) ? Number(clean.objectiveBasePpg) : managerObjectiveBaseForClubDivision(clubId);
+    clean.objectiveBasePpg = Number.isFinite(Number(baseObjective)) ? Number(baseObjective) : null;
+    clean.objectiveBonusReduction = managerObjectiveReductionForClub(clubId);
+    clean.objectivePpg = applyManagerObjectiveReduction(clean.objectiveBasePpg, clubId);
   }
   return clean;
 }

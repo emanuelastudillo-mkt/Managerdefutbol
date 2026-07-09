@@ -241,7 +241,8 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
   const founderMode = currentGameIsFounderMode();
-  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? objectiveInfo.objective.toFixed(2) : '—');
+  const objectiveReduction = typeof managerObjectiveReductionForClub === 'function' ? managerObjectiveReductionForClub(game.selectedClubId) : 0;
+  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? `${objectiveInfo.objective.toFixed(2)}${objectiveReduction > 0 ? ` (-${objectiveReduction}%)` : ''}` : '—');
   const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
   const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
     ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${extraText}`

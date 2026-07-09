@@ -1,34 +1,24 @@
-# V4.18 - Calendario diario 365 días
+# V4.19 - Tácticas guardadas y objetivo dinámico
 
 ## Cambios
 
-- Se reestructura el calendario para que la temporada use 365 días fijos.
-- Cada avance interno equivale a 1 día calendario.
-- La pretemporada dura 30 días.
-- La liga regular se juega una fecha por semana.
-- Se agrega una pausa de mitad de temporada luego de la fecha 17.
-- La pausa queda en 28 días para conservar viernes, sábado y domingo como días estables de partido.
-- `Ir a próximo partido` usa el bloqueo de 120 segundos para avanzar automáticamente los días hasta el partido propio.
-- Durante ese avance automático se procesan entrenamientos, academia, cooldowns, lesiones, obras, sponsors, préstamos y partidos bot.
-- Los partidos bot atrasados se simulan automáticamente al avanzar día.
-- El partido propio no se simula mezclado con todo el calendario: queda disponible cuando llega su día.
-- Las fechas bot se siguen distribuyendo así:
-  - Viernes: España, Italia, Inglaterra y Rumania.
-  - Sábado: Segunda y Tercera Argentina.
-  - Domingo: Chile, Brasil y Primera Argentina.
-- Las lesiones nuevas registran recuperación por día calendario.
-- Los playoffs argentinos IDA/VUELTA se ubican después de la fecha 34.
+- Se agregan 3 espacios para guardar tácticas personalizadas.
+- Cada táctica guardada conserva formación, titulares, suplentes, cambios automáticos, instrucciones de partido y mentalidades.
+- Se agregan botones de carga rápida para tácticas 1, 2 y 3.
+- Al cargar una táctica, los jugadores lesionados o que ya no pertenecen al club dejan hueco en el once.
+- Se corrige el cálculo del objetivo de directiva con cartas de `Objetivo más bajo`.
+- El objetivo ya no queda fijo en el valor anterior si se activa una carta durante la temporada.
+- La Oficina muestra el objetivo efectivo y el porcentaje de reducción activo.
 
 ## Seguridad
 
-- El cambio migra el calendario al cargar.
-- No borra jugadores, economía ni resultados jugados.
-- Los resultados ya jugados se conservan por `match.id` cuando se regenera la grilla de fechas.
-- Si una partida ya tenía calendario viejo, las fechas futuras se reordenan al nuevo esquema diario.
+- No se modifica el motor de partidos.
+- No se modifican calendarios, economía ni jugadores.
+- Las tácticas guardadas se agregan como estado nuevo compatible con partidas existentes.
 
 ## Compatibilidad
 
-- Puede dar problemas menores en partidas ya avanzadas porque cambia la estructura temporal completa.
-- No requiere reinicio obligatorio.
-- Recomendado guardar/exportar la partida antes de aplicar.
-- Para testear el calendario completo de 365 días, lo más limpio es una partida nueva.
+- Se implementa solo.
+- No requiere reinicio.
+- Las partidas existentes empiezan con los 3 espacios de táctica vacíos.
+- Las cartas de objetivo ya activas empiezan a afectar el objetivo al cargar o refrescar la partida.

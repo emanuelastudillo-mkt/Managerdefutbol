@@ -582,6 +582,34 @@ function bindTacticClickEvents(){
   });
 }
 
+
+function savedTacticsPanelMarkup(){
+  const maxSlots = Number.isFinite(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3)) ? Number(TACTIC_SAVE_SLOT_COUNT) : 3;
+  const slots = [];
+  for(let i=1; i<=maxSlots; i++){
+    const info = typeof tacticSlotStatus === 'function' ? tacticSlotStatus(i) : { exists:false, label:'Vacía', details:'Sin táctica guardada.' };
+    slots.push(`<div class="saved-tactic-slot ${info.exists ? 'filled' : 'empty'}">
+      <div><strong>Táctica ${i}</strong><span>${escapeHtml(info.label)}</span><em>${escapeHtml(info.details)}</em></div>
+      <div class="saved-tactic-actions">
+        <button type="button" class="ghost" data-save-tactic-slot="${i}">Guardar ${i}</button>
+        <button type="button" class="primary" data-load-tactic-slot="${i}" ${info.exists ? '' : 'disabled'}>Cargar ${i}</button>
+      </div>
+    </div>`);
+  }
+  return `<div class="card saved-tactics-card" style="margin-top:14px">
+    <div class="row"><div><h3>Tácticas personalizadas</h3><p class="muted small">Guardá hasta 3 tácticas con formación, titulares, suplentes, instrucciones y mentalidad. Al cargar, si un jugador está lesionado o ya no está en el club, queda el hueco.</p></div></div>
+    <div class="saved-tactics-grid">${slots.join('')}</div>
+  </div>`;
+}
+function bindSavedTacticButtons(){
+  document.querySelectorAll('[data-save-tactic-slot]').forEach(btn => {
+    btn.addEventListener('click', () => saveCurrentTacticSlot(Number(btn.dataset.saveTacticSlot || 1)));
+  });
+  document.querySelectorAll('[data-load-tactic-slot]').forEach(btn => {
+    btn.addEventListener('click', () => loadSavedTacticSlot(Number(btn.dataset.loadTacticSlot || 1)));
+  });
+}
+
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
@@ -631,6 +659,7 @@ function renderTactics(){
         <span>${mentalityMarker('muy_ofensivo')} Muy ofensivo</span>
       </div>
     </div>
+    ${savedTacticsPanelMarkup()}
     <div class="grid cols-2 tactic-lists" style="margin-top:14px">
       <div class="card">
         <h3>Titulares</h3>
@@ -688,6 +717,7 @@ function renderTactics(){
     renderTactics();
   });
   $('saveTactic').addEventListener('click', saveTacticFromScreen);
+  bindSavedTacticButtons();
   bindTacticClickEvents();
 }
 function tacticPlayerRow(p){

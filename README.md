@@ -1,10 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.18 - Calendario diario 365 días**
+**V4.19 - Tácticas guardadas y objetivo dinámico**
 
 ## Historial de versiones
 
-### V4.18 - Calendario diario 365 días
+### V4.19 - Tácticas guardadas y objetivo dinámico
+- Se agregan 3 espacios para guardar tácticas personalizadas.
+- Cada espacio guarda formación, titulares, suplentes, instrucciones automáticas y mentalidad de los titulares.
+- Al cargar una táctica, si un jugador está lesionado o ya no pertenece al club, el puesto queda vacío.
+- Se agregan botones `Guardar 1/2/3` y `Cargar 1/2/3` en la pantalla de Táctica.
+- Se corrige el objetivo de directiva reducido por cartas: ahora se recalcula aunque la evaluación de temporada esté congelada.
+- La Oficina muestra el objetivo efectivo con el bonus activo, por ejemplo `1.03 (-6%)`.
+
+
+### V4.19 - Calendario diario 365 días
 - La temporada pasa a procesarse día por día con 365 días fijos.
 - La pretemporada dura 30 días y la liga regular empieza al primer domingo posterior.
 - Las fechas de liga se programan una vez por semana según el día asignado a cada país/división.

@@ -905,8 +905,8 @@ function zoneFactor(player, slot){
   return playerTacticFitFactor(player, slot);
 }
 function conditionLossForPlayer(player){
-  const loss = rnd(15,20);
-  return player?.position === 'POR' ? loss * 0.5 : loss;
+  const loss = rnd(MATCH_CONDITION_LOSS_MIN, MATCH_CONDITION_LOSS_MAX);
+  return player?.position === 'POR' ? loss * GOALKEEPER_CONDITION_LOSS_FACTOR : loss;
 }
 function rosterGroupCounts(squad=[]){
   const counts = { POR:0, DEF:0, MID:0, ATT:0 };

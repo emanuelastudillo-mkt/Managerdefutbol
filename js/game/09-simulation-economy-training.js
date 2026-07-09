@@ -1761,7 +1761,7 @@ function applyConditionUpdates(results){
     if(isInjured(player.id)){
       next -= rnd(2,3);
     } else {
-      next += rnd(12,18);
+      next += rnd(POST_MATCH_RECOVERY_MIN, POST_MATCH_RECOVERY_MAX);
       if(played.has(player.id)) next -= conditionLossForPlayer(player) + (pitchFatigueByPlayer.get(player.id) || 0);
       else next += rnd(8,10);
       next += instructionConditionByPlayer.get(player.id) || 0;

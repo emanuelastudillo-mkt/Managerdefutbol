@@ -297,6 +297,11 @@ const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilida
 const BASE_INJURY_CHANCE = configNumber('lesiones.lesionBase', 0.05, 0, 1);
 const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
 const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);
+const POST_MATCH_RECOVERY_MIN = configNumber('simulador.recuperacionAutomaticaPostPartidoMin', 4, 0, 99);
+const POST_MATCH_RECOVERY_MAX = Math.max(POST_MATCH_RECOVERY_MIN, configNumber('simulador.recuperacionAutomaticaPostPartidoMax', 6, 0, 99));
+const MATCH_CONDITION_LOSS_MIN = configNumber('simulador.desgastePartidoMin', 24, 0, 99);
+const MATCH_CONDITION_LOSS_MAX = Math.max(MATCH_CONDITION_LOSS_MIN, configNumber('simulador.desgastePartidoMax', 45, 0, 99));
+const GOALKEEPER_CONDITION_LOSS_FACTOR = configNumber('simulador.factorDesgasteArquero', 0.5, 0, 1);
 const PITCH_CONDITIONS = {
   'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
   'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.25',
+  version: 'V4.26',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -396,7 +396,13 @@ window.GAME_CONFIG = {
     estrellaGoleadorPartidosConGol: 3,
     estrellaArqueroPartidosConTapadaClave: 3,
     estrellaMediocampistaAsistencias: 3,
-    estrellaBonusReferencia: 0.30
+    estrellaBonusReferencia: 0.30,
+    // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
+    recuperacionAutomaticaPostPartidoMin: 4,
+    recuperacionAutomaticaPostPartidoMax: 6,
+    desgastePartidoMin: 24,
+    desgastePartidoMax: 45,
+    factorDesgasteArquero: 0.5
   },
 
   tactica: {

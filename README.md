@@ -1,8 +1,15 @@
 # Fútbol Manager MVP
 
-**V4.25 - Estilos tácticos por sector**
+**V4.26 - Balance físico postpartido**
 
 ## Historial de versiones
+
+### V4.26 - Balance físico postpartido
+- La recuperación automática aplicada al terminar un partido baja a un tercio: de `+12 a +18` pasa a `+4 a +6`.
+- El desgaste base por jugar sube de `-15 a -20` a `-24 a -45` para jugadores de campo.
+- En partidos extremos, combinando campo injugable, presión/forzar y estilos exigentes, el desgaste puede acercarse a `-75` de físico.
+- El factor de desgaste para arqueros queda configurable y por defecto se mantiene en 50%.
+- Los valores quedan editables en `config.js > simulador`.
 
 ### V4.25 - Estilos tácticos por sector
 - Se agregan estilos de juego por sector en Táctica: defensa, medios y delanteros.

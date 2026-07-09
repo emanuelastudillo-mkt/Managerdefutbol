@@ -1,31 +1,20 @@
-# Características V4.25 - Estilos tácticos por sector
+# Características V4.26 - Balance físico postpartido
 
-- Se agrega un nuevo bloque en `Táctica y convocatoria`: `Estilos por sector`.
-- Los tres sectores configurables son:
-  - Defensa.
-  - Medios.
-  - Delanteros.
-- Cada sector permite elegir:
-  - Presión alta.
-  - Rotación.
-  - Posicional.
-  - Repliegue.
-- La interfaz usa una estética similar a los selectores de entrenamiento individual.
-- Los estilos se guardan al usar `Confirmar equipo`.
-- Las tácticas guardadas 1, 2 y 3 también guardan los estilos por sector.
-- Al cargar una táctica guardada, se restauran formación, titulares, suplentes, mentalidades, instrucciones y estilos sectoriales.
-- El simulador usa los estilos para modificar de forma moderada:
-  - posesión;
-  - ataques totales;
-  - ocasiones de gol;
-  - faltas propias;
-  - errores;
-  - cansancio posterior al partido;
-  - llegadas rivales;
-  - conversión rival en casos puntuales.
-- Los efectos dependen de habilidades clave:
-  - Defensa: velocidad, resistencia, pase, marca, posicionamiento y fuerza.
-  - Medios: velocidad, marca, entradas, pase, visión, técnica y trabajo en equipo.
-  - Delanteros: velocidad, marca, resistencia, pase, visión, técnica, cabeceo, fuerza y posicionamiento.
-- Los efectos quedan configurables en `config.js > tactica.estilosSector`.
-- Los cambios de estilo forman parte de la firma táctica usada por cohesión.
+- Se reduce la recuperación automática que el juego aplica al terminar un partido.
+- Antes el motor sumaba aproximadamente `+12 a +18` físico antes de descontar el desgaste.
+- Ahora suma aproximadamente `+4 a +6`, equivalente a un tercio.
+- Se aumenta el desgaste base de los jugadores de campo por jugar un partido.
+- Antes el desgaste base era aproximadamente `-15 a -20`.
+- Ahora pasa a aproximadamente `-24 a -45`.
+- En condiciones extremas el desgaste puede acercarse a `-75` físico:
+  - desgaste base máximo;
+  - campo injugable;
+  - instrucción táctica exigente;
+  - estilo sectorial de alto cansancio.
+- El cálculo queda configurable en `config.js > simulador`:
+  - `recuperacionAutomaticaPostPartidoMin`;
+  - `recuperacionAutomaticaPostPartidoMax`;
+  - `desgastePartidoMin`;
+  - `desgastePartidoMax`;
+  - `factorDesgasteArquero`.
+- No se modifica la recuperación diaria por entrenamientos ni el calendario.

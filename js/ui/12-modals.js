@@ -175,7 +175,7 @@ function offerOwnPlayerToClubs(playerId){
     priority:'high',
     title:`Oferta recibida por ${playerLastName(player.name)}`,
     body:typeof transferOfferBody === 'function'
-      ? transferOfferBody(foreignClub, player, financials, pct, 'Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.')
+      ? transferOfferBody(source, player, financials, pct, 'Al haberlo ofrecido activamente, el porcentaje pagado sobre la cláusula es menor.')
       : `${foreignClub} acercó una oferta de ${formatMoney(financials.grossAmount)} por ${player.name}.`,
     action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, sourceClubId:source.id, pct }
   });

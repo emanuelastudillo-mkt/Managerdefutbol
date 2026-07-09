@@ -1,17 +1,20 @@
-# V4.06 - Optimización de simulación y calendario por días
+# V4.07 - Federaciones en ofertas de traspaso
 
 ## Cambios principales
 
-- Se agrega simulación rápida para partidos bot vs bot.
-- Los partidos del manager siguen usando el simulador completo.
-- Se distribuyen las ligas por día dentro de cada jornada:
-  - Viernes: España, Italia, Inglaterra y Rumania.
-  - Sábado: segunda y tercera argentina.
-  - Domingo: Chile, Brasil y primera argentina.
-- El avance diario puede simular partidos de otras ligas sin ejecutar el partido propio.
-- Si el partido propio está en cooldown, el juego permite avanzar días que no tengan partido propio pendiente.
-- El calendario ahora muestra la fecha específica de cada partido.
-- Se regenera el calendario de partidas existentes manteniendo resultados ya jugados.
+- Los mensajes de ofertas de jugadores ahora muestran la federación correspondiente a la liga o país del club comprador.
+- Se reemplaza el texto fijo `AFA retiene` por una sigla dinámica.
+- Federaciones configuradas:
+  - Argentina: AFA.
+  - Chile: ANFP.
+  - Brasil: CBF.
+  - Inglaterra: FA.
+  - España: RFEF.
+  - Italia: FIGC.
+  - Rumania: FRF.
+- Los clubes externos genéricos usan una sigla coherente cuando puede inferirse por el nombre.
+- Al aceptar una venta, el resumen de ingreso neto también muestra la federación correspondiente.
+- La configuración editable queda en `config.js > mercado.federacionesTraspaso`.
 
 ## Archivos modificados
 
@@ -20,13 +23,9 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
-- `style.css`
 - `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
 - `js/ui/06-render-home-messages.js`
+- `js/ui/12-modals.js`
 
 ## Validaciones
 
@@ -35,5 +34,4 @@
 
 ## Nota
 
-- Los partidos bot vs bot pasan a ser menos detallados internamente para priorizar rendimiento.
-- El partido del manager conserva el detalle completo.
+- España queda como `RFEF`, no `REFF`.

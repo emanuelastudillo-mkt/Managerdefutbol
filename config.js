@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.06',
+  version: 'V4.07',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -224,8 +224,18 @@ window.GAME_CONFIG = {
     ofertasInicialesFecha1: 2
   },
   mercado: {
-    // Impuesto AFA sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
+    // Impuesto federativo sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
     impuestoAfaTraspasos: 0.30,
+    // Siglas usadas en mensajes de ofertas según país/liga del club comprador.
+    federacionesTraspaso: {
+      Argentina:'AFA',
+      Chile:'ANFP',
+      Brasil:'CBF',
+      Inglaterra:'FA',
+      España:'RFEF',
+      Italia:'FIGC',
+      Rumania:'FRF'
+    },
     // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
     ofertaJugadoresMinPorcentajeClausula: 0.05,
     ofertaJugadoresMaxPorcentajeClausula: 0.15,

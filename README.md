@@ -2,9 +2,26 @@
 
 ## Versión actual
 
-**V4.06 - Optimización de simulación y calendario por días**
+**V4.07 - Federaciones en ofertas de traspaso**
 
 ## Historial de versiones
+
+
+### V4.07 - Federaciones en ofertas de traspaso
+
+- Los mensajes de ofertas por jugadores ya no muestran siempre `AFA` como entidad que retiene impuestos.
+- La sigla se calcula según la liga o país del club comprador.
+- Federaciones configuradas:
+  - Argentina: AFA.
+  - Chile: ANFP.
+  - Brasil: CBF.
+  - Inglaterra: FA.
+  - España: RFEF.
+  - Italia: FIGC.
+  - Rumania: FRF.
+- Para clubes externos genéricos también se asignan siglas coherentes cuando el nombre permite inferir país: FPF, FFF, DFB, KNVB o AUF.
+- Se actualiza el texto del ingreso neto al aceptar la venta para mostrar `Impuesto <sigla>`.
+- La sigla de España queda como `RFEF`.
 
 ### V4.06 - Optimización de simulación y calendario por días
 

@@ -339,6 +339,7 @@ const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;
 const SEASON_END_TRANSFER_OFFERS_MIN = 2;
 const SEASON_END_TRANSFER_OFFERS_MAX = 6;
 const TRANSFER_AFA_TAX_RATE = configNumber('mercado.impuestoAfaTraspasos', 0.30, 0, 0.95);
+const TRANSFER_TAX_FEDERATIONS = configValue('mercado.federacionesTraspaso', { Argentina:'AFA', Chile:'ANFP', Brasil:'CBF', Inglaterra:'FA', España:'RFEF', Italia:'FIGC', Rumania:'FRF' });
 const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPorcentajeClausula', 0.05, 0, 1);
 const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.15, 0, 1));
 const PLAYER_OFFERS_REQUIRE_MATCHES = configBoolean('mercado.ofertasJugadoresRequierenPartidos', true);

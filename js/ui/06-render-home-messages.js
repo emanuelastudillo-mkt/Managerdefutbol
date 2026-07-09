@@ -779,8 +779,45 @@ function buildTransferOfferFinancials(player, pct){
   const netAmount = Math.max(0, grossAmount - taxAmount);
   return { clause, grossAmount, taxAmount, netAmount };
 }
-function transferOfferBody(foreignClub, player, financials, pct, suffix=''){
-  return `${foreignClub} ofrece ${formatMoney(financials.grossAmount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. AFA retiene ${formatMoney(financials.taxAmount)} en impuestos de traspaso; el club recibiría ${formatMoney(financials.netAmount)} netos.${suffix ? ' ' + suffix : ''}`;
+function normalizeFederationKey(value){
+  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function transferTaxFederationByCountry(country){
+  const key = normalizeFederationKey(country);
+  const configured = typeof TRANSFER_TAX_FEDERATIONS === 'object' && TRANSFER_TAX_FEDERATIONS ? TRANSFER_TAX_FEDERATIONS : {};
+  const map = Object.fromEntries(Object.entries(configured).map(([countryName, federation]) => [normalizeFederationKey(countryName), String(federation || '').trim() || 'Federación']));
+  const aliases = { brazil:'Brasil', england:'Inglaterra', spain:'España', espana:'España', italy:'Italia', romania:'Rumania' };
+  return map[key] || map[normalizeFederationKey(aliases[key])] || 'Federación';
+}
+function transferTaxFederationForSource(source){
+  const sourceObj = typeof source === 'object' && source ? source : { name:String(source || '') };
+  const sourceClubId = Number(sourceObj.id || sourceObj.sourceClubId || 0);
+  if(sourceClubId > 0){
+    const sourceClub = seed?.clubs?.find(c => Number(c.id) === sourceClubId);
+    if(sourceClub) return transferTaxFederationByCountry(clubCountry(sourceClub));
+  }
+  const nameKey = normalizeFederationKey(sourceObj.name || sourceObj.club || sourceObj.foreignClub || source);
+  const genericClubFederations = [
+    { keys:['lisboa', 'porto'], value:'FPF' },
+    { keys:['london'], value:'FA' },
+    { keys:['milano'], value:'FIGC' },
+    { keys:['paris'], value:'FFF' },
+    { keys:['berlin'], value:'DFB' },
+    { keys:['madrid'], value:'RFEF' },
+    { keys:['amsterdam'], value:'KNVB' },
+    { keys:['montevideo'], value:'AUF' },
+    { keys:['santos'], value:'CBF' }
+  ];
+  const found = genericClubFederations.find(item => item.keys.some(key => nameKey.includes(key)));
+  if(found) return found.value;
+  const selectedClub = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  return transferTaxFederationByCountry(selectedClub ? clubCountry(selectedClub) : game?.selectedCountry || 'Argentina');
+}
+function transferOfferBody(source, player, financials, pct, suffix=''){
+  const sourceObj = typeof source === 'object' && source ? source : { name:String(source || 'Club interesado') };
+  const foreignClub = sourceObj.name || 'Club interesado';
+  const federation = sourceObj.federation || transferTaxFederationForSource(sourceObj);
+  return `${foreignClub} ofrece ${formatMoney(financials.grossAmount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. ${federation} retiene ${formatMoney(financials.taxAmount)} en impuestos de traspaso; el club recibiría ${formatMoney(financials.netAmount)} netos.${suffix ? ' ' + suffix : ''}`;
 }
 function managerPointsPerGame(){
   return typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0;
@@ -854,7 +891,8 @@ function maybeGenerateSpecialClauseOffer(match){
   const player = topPlayers[hashNumber(`special-clause-player-${state.season}-${state.clubId}-${matchday}`, topPlayers.length)];
   const source = sameLeagueClauseOfferClub(player);
   const financials = buildTransferOfferFinancials(player, 100);
-  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. AFA retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse.`;
+  const federation = transferTaxFederationForSource(source);
+  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. ${federation} retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse.`;
   const msg = pushGameMessage({
     type:'mercado',
     priority:'high',
@@ -891,7 +929,7 @@ function maybeGenerateTransferOffer(match){
     type:'mercado',
     priority:'high',
     title:`Oferta por ${playerLastName(player.name)}`,
-    body:transferOfferBody(source.name, player, financials, pct, note),
+    body:transferOfferBody(source, player, financials, pct, note),
     action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct }
   });
 }
@@ -931,7 +969,7 @@ function generateSeasonEndPlayerOffers(){
       type:'mercado',
       priority:'high',
       title:`Oferta por ${playerLastName(player.name)}`,
-      body:transferOfferBody(foreignClub, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+      body:transferOfferBody({ name:foreignClub }, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
       action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct, origin:'season_end' }
     });
     if(msg) created.push(msg);
@@ -943,7 +981,8 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
   const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
   const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
-  recordBudgetChange(netAmount, `Venta de ${player.name} (neto AFA)`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, origin:msg.action.origin || 'offer' });
+  const saleFederation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
+  recordBudgetChange(netAmount, `Venta de ${player.name} (neto ${saleFederation})`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, federation:saleFederation, origin:msg.action.origin || 'offer' });
   const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
   const destinationClubId = Number(msg.action.sourceClubId || -1);
   player.clubId = destinationClubId > 0 ? destinationClubId : -1;
@@ -955,7 +994,8 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   msg.action.grossAmount = grossAmount;
   msg.action.taxAmount = taxAmount;
   msg.action.netAmount = netAmount;
-  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto AFA: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
+  const federation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
+  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto ${federation}: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
   msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
   saveLocal(true);
   showNotice(options.notice || `${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.03',
+  version: 'V4.04',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -94,6 +94,22 @@ window.GAME_CONFIG = {
     bonusPartidosPromedioGeneral190: 10
   },
   plantel: {
+    nacionalidades: {
+      local: 0.70,
+      sudamerica: 0.20,
+      restoDelMundo: 0.10,
+      porPais: {
+        Argentina: 'Argentina',
+        Chile: 'Chile',
+        Brasil: 'Brasil',
+        Inglaterra: 'Inglaterra',
+        España: 'España',
+        Italia: 'Italia',
+        Rumania: 'Rumania'
+      },
+      sudamericaPaises: ['Argentina','Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'],
+      restoDelMundoPaises: ['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana','Rumania']
+    },
     // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
     jugadoresMinimosPorClub: 18,
     jugadoresInicialesPorClub: 25,
@@ -164,7 +180,28 @@ window.GAME_CONFIG = {
     // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
     escalaClausulas: 0.10,
     reduccionBaseSueldoFinTemporada: 0.05,
-    bonusSueldoPorPartidoJugado: 0.01
+    bonusSueldoPorPartidoJugado: 0.01,
+    banco: {
+      activo: true,
+      bancos: [
+        { nombre:'Banco Nación', interes:0.32 },
+        { nombre:'Banco Provincia', interes:0.36 },
+        { nombre:'Banco Galicia', interes:0.41 },
+        { nombre:'Santander', interes:0.44 },
+        { nombre:'BBVA', interes:0.43 },
+        { nombre:'Banco Macro', interes:0.47 },
+        { nombre:'Banco Credicoop', interes:0.34 },
+        { nombre:'ICBC', interes:0.39 },
+        { nombre:'Banco Supervielle', interes:0.46 },
+        { nombre:'Banco Comafi', interes:0.50 }
+      ],
+      montos: [
+        { monto:50000000, prestigio:1 },
+        { monto:500000000, prestigio:5 },
+        { monto:1500000000, prestigio:20 }
+      ],
+      plazosSemanas: [24,48,172]
+    }
   },
   sponsors: {
     // Multiplica los valores base de data/sponsors.json. 1 mantiene el valor del archivo.

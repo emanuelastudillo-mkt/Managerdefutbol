@@ -1126,7 +1126,8 @@ function generateMarketPlayers(count=50, options={}){
       salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
       freeAgent:true,
       mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
-      mediaMax:MARKET_FREE_AGENT_MEDIA_MAX
+      mediaMax:MARKET_FREE_AGENT_MEDIA_MAX,
+      nationalityOverride:freeAgentNationalityForIndex(i, label)
     });
     players.push(player);
   }

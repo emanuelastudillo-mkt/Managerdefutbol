@@ -345,22 +345,33 @@ function renderStadium(){
 
 function renderFixture(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
+  const ownClubId = Number(game?.selectedClubId || 0);
+  const showMine = fixtureViewMode !== 'league';
   const visibleDivisions = selectedFixtureDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedFixtureDivision);
   const html = game.fixtures.map(round=>{
+    if(showMine){
+      const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
+      if(!matches.length) return '';
+      return `<div class="card own-fixture-round"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
+    }
     const groups = visibleDivisions.map(division => {
       const matches = round.matches.filter(m => (m.divisionId || seed.clubs.find(c=>c.id===m.homeId)?.divisionId || 'default') === division.id);
       if(!matches.length) return '';
       return `<div class="fixture-division-block"><h4>${escapeHtml(division.name)}</h4><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
     }).join('');
     return `<div class="card"><div class="row"><h3>Fecha ${round.matchday}</h3><span class="pill">${round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
-  }).join('');
+  }).filter(Boolean).join('');
   view.innerHTML = `
-    <div class="row section-title">
-      <div><h2>Calendario</h2><p class="tagline">Los partidos jugados son clickeables para ver estadísticas y eventos.</p></div>
-      ${divisionFilterMarkup('fixtureDivisionFilter', selectedFixtureDivision)}
+    <div class="row section-title fixture-title-row">
+      <div><h2>Calendario</h2><p class="tagline">Por defecto se muestra el calendario de tu club. Los partidos jugados son clickeables para ver estadísticas y eventos.</p></div>
+      <div class="fixture-controls row">
+        <button type="button" id="btnMyFixture" class="${showMine ? 'primary' : 'ghost'}">Mi calendario</button>
+        <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
+      </div>
     </div>
-    <div class="stack">${html}</div>`;
-  $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; renderFixture(); });
+    <div class="stack">${html || '<div class="card"><p class="muted">Sin partidos para mostrar.</p></div>'}</div>`;
+  $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
+  $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
 }
 function matchCard(m){
   const events = game.matchHistory.find(x=>x.id===m.id);

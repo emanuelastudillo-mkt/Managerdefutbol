@@ -69,7 +69,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V4.0');
+const APP_VERSION = configValue('version', 'V3.87');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -437,7 +437,7 @@ const WORLD_NATIONALITIES = Array.isArray(configValue('plantel.nacionalidades.re
   : ['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana'];
 const PLAYER_NATIONALITY_BY_COUNTRY = configValue('plantel.nacionalidades.porPais', {}) || {};
 const PLAYER_GENERATION_NATIONALITY_GROUPS = [
-  { id:'local', probability:configNumber('plantel.nacionalidades.local', 0.70, 0, 1), countries:['Argentina'] },
+  { id:'local', probability:configNumber('plantel.nacionalidades.local', 0.70, 0, 1), countries:[] },
   { id:'sudamerica', probability:configNumber('plantel.nacionalidades.sudamerica', 0.20, 0, 1), countries:SOUTH_AMERICAN_NATIONALITIES },
   { id:'resto_del_mundo', probability:configNumber('plantel.nacionalidades.restoDelMundo', 0.10, 0, 1), countries:WORLD_NATIONALITIES }
 ];
@@ -462,6 +462,10 @@ const PLAYER_CLAUSE_AGE_REDUCTION = 10;
 const PLAYER_CLAUSE_BASE_BY_DIVISION_ORDER = { 1:500, 2:450, 3:300 };
 const FREE_YOUTH_SALARY_FACTOR = 0.55;
 const MARKET_FREE_AGENT_SALARY_FACTOR = 0.75;
+const BANK_LOANS_ENABLED = configBoolean('economia.banco.activo', true);
+const BANK_LOAN_BANKS = Array.isArray(configValue('economia.banco.bancos', [])) ? configValue('economia.banco.bancos', []).filter(item => item && item.nombre).map((item, index) => ({ id:index + 1, name:String(item.nombre), interest:configNumber(`economia.banco.bancos.${index}.interes`, Number(item.interes || 0.40), 0, 5) })) : [];
+const BANK_LOAN_TIERS = Array.isArray(configValue('economia.banco.montos', [])) ? configValue('economia.banco.montos', []).filter(item => Number(item?.monto) > 0).map((item, index) => ({ id:index + 1, amount:Math.round(Number(item.monto || 0)), prestigeCost:Math.max(0, Math.round(Number(item.prestigio || 0))) })) : [];
+const BANK_LOAN_TERMS = Array.isArray(configValue('economia.banco.plazosSemanas', [])) ? configValue('economia.banco.plazosSemanas', []).map(value => Math.max(1, Math.round(Number(value || 0)))).filter(Boolean) : [24,48,172];
 
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
@@ -492,6 +496,7 @@ let marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'
 let marketVisibleLimit = 20;
 let firstTeamTab = 'tactics';
 let selectedFixtureDivision = 'all';
+let fixtureViewMode = 'mine';
 let selectedStandingsDivision = 'all';
 let selectedStatsDivision = 'all';
 let uiTicker = null;

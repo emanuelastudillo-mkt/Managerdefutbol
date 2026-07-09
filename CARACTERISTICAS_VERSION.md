@@ -1,66 +1,47 @@
-# V4.03 - Corrección de empates masivos en bots
+# V4.04 - Ajustes varios de finanzas, jugadores libres, juveniles y calendario
 
-- Se corrigió el cálculo interno de ocasiones de gol del simulador.
-- El problema detectado hacía que los partidos bot vs bot generaran casi siempre 0 chances y terminaran 0-0.
-- La tabla de posiciones no era el origen del bug: los puntos reflejaban correctamente los empates generados por el motor.
-- Se ajustó la conversión de ataques a chances usando los ataques reales del bloque, evitando que las ocasiones queden casi anuladas.
-- No se modifica la estructura de guardado ni se reinician partidas existentes.
+## Cambios principales
 
-## Versiones anteriores
+- Se agrega en Finanzas un bloque de Banco con préstamos por temporada.
+- El sistema configura 10 bancos reales y muestra 3 ofertas al azar por temporada.
+- Cada oferta tiene monto, plazo, interés, cuota semanal, total a devolver y costo de prestigio.
+- Al pedir un préstamo, el dinero entra al club, se descuenta prestigio al manager y se bloquean nuevos préstamos hasta cancelar la deuda.
+- El préstamo activo muestra barra de progreso, semanas restantes, deuda pendiente y cuota semanal.
+- Cada avance semanal descuenta automáticamente una cuota del presupuesto del club.
+- Se agrega una tarjeta de Calificación económica con mensaje de la directiva.
+- La calificación compara presupuesto disponible contra sueldos anuales del plantel.
+- Se ajustan los jugadores libres para usar nacionalidades variadas de todos los países configurados.
+- Los jugadores libres quedan con físico 5 y moral 5.
+- Los juveniles excepcionales ahora toman nombre y nacionalidad del país del club.
+- Los juveniles normales conservan variedad de nacionalidades con predominio de la liga del club.
+- El menú Calendario abre por defecto en `Mi calendario`, mostrando los partidos del club del manager.
+- El calendario general por liga sigue disponible desde el desplegable de divisiones.
 
-# V4.02 - Ajustes visuales de inicio y estadio
+## Archivos modificados
 
-- Se achicó el texto de las tarjetas compactas de clubes disponibles al iniciar partida.
-- Se reemplazaron abreviaturas por textos completos: `Estadio`, `Hinchas` y `Prestigio`.
-- En `Hinchada y entradas`, se cambió `Hinchas actuales` por `Hinchas Totales`.
-- Se cambió `Base` por `Vitalicios`.
-- Se cambió `Último cambio` por `Nuevos socios`.
-- En `Campo de juego`, se agrandó la línea de nombre del estadio y capacidad.
-- No se modificaron motores, simulación, ranking, guardado ni reglas de partida.
+- `index.html`
+- `config.js`
+- `VERSION.md`
+- `README.md`
+- `CARACTERISTICAS_VERSION.md`
+- `js/core/01-config-constants.js`
+- `js/core/02-ui-utils.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/06-render-home-messages.js`
 
-# V4.01 - Ranking automático obligatorio
+## Validaciones
 
-- Se bloqueó la carga manual de resultados al ranking online.
-- El menú `Ranking Online` queda como panel de consulta y estado; ya no muestra botón para subir temporada.
-- El ranking se envía automáticamente cuando el manager es despedido.
-- El ranking se envía automáticamente cuando se cierra una temporada.
-- Se agregó control local de envíos por evento para evitar duplicados por temporada, club y tipo de evento.
-- Se registra el estado del envío automático: pendiente, enviado o error.
-- Se mantiene la lectura pública de la tabla online con el botón `Actualizar ranking`.
+- Sintaxis validada en `config.js`.
+- Sintaxis validada en todos los archivos `.js` del proyecto.
+- La deuda bancaria queda persistida dentro de la partida como `bankLoan`.
+- Las partidas anteriores sin `bankLoan` se normalizan automáticamente al cargar.
 
-# V4.0 - Auditoría, limpieza y optimización
+## Nota de interpretación
 
-- Se adopta V4.0 como nueva numeración del proyecto.
-- Se sincronizó la versión visible de la interfaz, `VERSION.md`, `config.js` y todos los parámetros de cache-busting en `index.html`.
-- Se cambió la carga de JSON a modo cache configurable desde `config.js` con `data.cacheMode`.
-- Se paralelizó la carga de jugadores, estadios, hinchas y ligas para reducir espera inicial.
-- Si `data/jugadores.json` está disponible, el juego evita crear planteles temporales que luego eran descartados.
-- Se mantiene generación automática sólo para clubes sin cobertura en la base de jugadores.
-- Se corrigió el banner inicial para no intentar cargar una ruta sin extensión antes del `.jpg`.
-- Se corrigen las rutas de escudos argentinos activos para que apunten directo al archivo existente y reduzcan fallbacks/404.
-- Se removieron 6 escudos de clubes que ya no están referenciados por ninguna liga activa.
-- Se agregó `AUDITORIA_V4.0.md` con detalle de revisión y recomendaciones.
-
-# V3.87 - Ranking Online Cloudflare Workers + D1
-
-- Se conectó el menú `Ranking Online` con la API publicada en Cloudflare Workers.
-- El envío de resultados ahora usa `POST /ranking` con JSON contra el Worker `rankingdemanagers`.
-- La lectura de tabla online ahora usa `GET /ranking?limit=...` y consume la respuesta de D1.
-- Se configuró la URL pública `https://rankingdemanagers.emanuelastudillo.workers.dev`.
-- Se adaptó la normalización de filas para aceptar campos de Cloudflare/D1 en formato snake_case.
-- Se mantiene el cálculo local de puntaje manager antes del envío.
-- Se actualizó el cache-busting de los scripts modificados a V3.87.
-
-
-# V3.86 - Modo Fundador
-
-- Se agregó el botón `Modo Fundador` en la pantalla inicial.
-- El modo fundador permite crear un club propio desde cero.
-- El club fundado reemplaza a un club bot de bajo prestigio en la división más baja del país elegido para conservar calendarios de 18 equipos.
-- El club propio inicia con 0 jugadores, $0 de presupuesto, estadio de capacidad 0, prestigio 10 y 500 hinchas.
-- Los jugadores del club reemplazado pasan al mercado como jugadores libres normales.
-- Se refuerza automáticamente el mercado de jugadores libres normales para asegurar disponibilidad mínima por posiciones.
-- El club fundado no tiene objetivos de directiva y no puede despedir al manager.
-- Se agregó un sistema de metas fundadoras con barra de progreso e importancia.
-- Las metas fundadoras se activan en orden y sólo cuentan desde que cada meta queda activa cuando corresponde.
-- Las metas incluyen hitos de estadio, victorias, hinchas, ascensos/campeonatos y un bucle progresivo posterior.
+- El monto escrito como `50.000.0000` se tomó como $50.000.000 para mantener coherencia con los otros dos escalones: $500.000.000 y $1.500.000.000.
+- Los pagos se procesan semanalmente porque el avance principal del juego equivale a una semana.

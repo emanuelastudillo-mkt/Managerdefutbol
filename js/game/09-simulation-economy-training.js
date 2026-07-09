@@ -416,6 +416,7 @@ function simulateNextMatchday(options={}){
   if(typeof processBotDismissals === 'function') processBotDismissals();
   advanceStadiumAfterMatches(results);
   processSponsorContracts();
+  processBankLoanWeeklyPayment();
   if(ownResult){
     applyEconomyResult(ownResult);
     updateManagerMatchStats(ownResult);
@@ -491,6 +492,7 @@ function simulatePreseasonTurn(){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
+  processBankLoanWeeklyPayment();
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
@@ -529,6 +531,7 @@ function simulatePostseasonTurn(){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
+  processBankLoanWeeklyPayment();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
   advanceGlobalTurn();
@@ -791,6 +794,7 @@ function financeCategory(entry){
   const type = String(entry?.type || '').toLowerCase();
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
   if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
   if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
   if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
@@ -802,6 +806,7 @@ function financeBudgetCategory(entry){
   const type = String(entry?.type || '').toLowerCase();
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
   if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
   if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
   if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
@@ -834,7 +839,7 @@ function financeExpensesByCategoryMarkup(){
     acc[category].push(entry);
     return acc;
   }, {});
-  const order = ['Sueldos','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
+  const order = ['Sueldos','Banco','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
   const details = order.filter(category => grouped[category]?.length).map((category, index) => {
     const entries = grouped[category];
     const total = entries.reduce((sum, entry) => sum + Math.abs(Number(entry.delta || 0)), 0);
@@ -858,7 +863,7 @@ function financeIncomeByCategoryMarkup(){
     acc[category].push(entry);
     return acc;
   }, {});
-  const order = ['Partidos y entradas','Sponsors','Mercado','Eventos','Otros'];
+  const order = ['Partidos y entradas','Banco','Sponsors','Mercado','Eventos','Otros'];
   const details = order.filter(category => grouped[category]?.length).map((category, index) => {
     const entries = grouped[category];
     const total = entries.reduce((sum, entry) => sum + Number(entry.delta || 0), 0);
@@ -875,6 +880,184 @@ function financeSquadRows(){
     .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.name.localeCompare(b.name,'es'))
     .map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${nationalityShortMarkup(p.nationality)}</td><td>${Number(p.age || 0) || '—'}</td><td>${visibleOverall(p)}</td><td>${formatMoney(p.salary || 0)}</td></tr>`)
     .join('');
+}
+function loanPercentLabel(rate){ return `${Math.round(Number(rate || 0) * 100)}%`; }
+function configuredLoanBanks(){
+  return (BANK_LOAN_BANKS?.length ? BANK_LOAN_BANKS : [
+    { id:1, name:'Banco Nación', interest:0.32 },
+    { id:2, name:'Banco Provincia', interest:0.36 },
+    { id:3, name:'Banco Galicia', interest:0.41 },
+    { id:4, name:'Santander', interest:0.44 },
+    { id:5, name:'BBVA', interest:0.43 },
+    { id:6, name:'Banco Macro', interest:0.47 },
+    { id:7, name:'Banco Credicoop', interest:0.34 },
+    { id:8, name:'ICBC', interest:0.39 },
+    { id:9, name:'Banco Supervielle', interest:0.46 },
+    { id:10, name:'Banco Comafi', interest:0.50 }
+  ]).map((bank, index) => ({ id:bank.id || index + 1, name:String(bank.name || bank.nombre || `Banco ${index + 1}`), interest:Math.max(0, Number(bank.interest ?? bank.interes ?? 0.40)) }));
+}
+function configuredLoanTiers(){
+  return (BANK_LOAN_TIERS?.length ? BANK_LOAN_TIERS : [
+    { id:1, amount:50000000, prestigeCost:1 },
+    { id:2, amount:500000000, prestigeCost:5 },
+    { id:3, amount:1500000000, prestigeCost:20 }
+  ]).map((tier, index) => ({ id:tier.id || index + 1, amount:Math.max(0, Math.round(Number(tier.amount || tier.monto || 0))), prestigeCost:Math.max(0, Math.round(Number(tier.prestigeCost ?? tier.prestigio ?? 0))) })).filter(tier => tier.amount > 0);
+}
+function shuffledBySeed(list, seedKey){
+  return (list || []).slice().sort((a,b)=>hashNumber(`${seedKey}-${a.id || a.name || a.amount}`, 1000000) - hashNumber(`${seedKey}-${b.id || b.name || b.amount}`, 1000000));
+}
+function createBankLoanOffers(season=game?.seasonNumber || 1){
+  if(!BANK_LOANS_ENABLED) return [];
+  const banks = shuffledBySeed(configuredLoanBanks(), `bank-loans-banks-${season}`).slice(0, 3);
+  const tiers = shuffledBySeed(configuredLoanTiers(), `bank-loans-tiers-${season}`).slice(0, 3);
+  const terms = BANK_LOAN_TERMS?.length ? BANK_LOAN_TERMS : [24,48,172];
+  return tiers.map((tier, index) => {
+    const bank = banks[index % banks.length];
+    const weeks = terms[hashNumber(`bank-loan-term-${season}-${tier.id}-${bank.id}`, terms.length)];
+    const interestRate = Math.max(0, Number(bank.interest || 0));
+    const totalToRepay = Math.round(Number(tier.amount || 0) * (1 + interestRate));
+    return {
+      id:`loan-${season}-${tier.id}-${bank.id}`,
+      season:Number(season || 1),
+      bankId:bank.id,
+      bankName:bank.name,
+      amount:Math.round(Number(tier.amount || 0)),
+      prestigeCost:Math.max(0, Math.round(Number(tier.prestigeCost || 0))),
+      interestRate,
+      weeks:Math.max(1, Math.round(Number(weeks || 1))),
+      totalToRepay,
+      weeklyPayment:Math.ceil(totalToRepay / Math.max(1, Number(weeks || 1)))
+    };
+  });
+}
+function createBankLoanState(season=game?.seasonNumber || 1){
+  return { active:null, season:Number(season || 1), offers:createBankLoanOffers(season), history:[] };
+}
+function normalizeBankLoanActiveLoan(loan){
+  if(!loan || typeof loan !== 'object' || Array.isArray(loan)) return null;
+  const totalToRepay = Math.max(0, Math.round(Number(loan.totalToRepay || loan.remainingDebt || 0)));
+  const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
+  const remainingDebt = Math.max(0, Math.round(Number(loan.remainingDebt ?? (totalToRepay - paid))));
+  const weeks = Math.max(1, Math.round(Number(loan.weeks || loan.totalWeeks || 1)));
+  const remainingWeeks = Math.max(0, Math.round(Number(loan.remainingWeeks ?? loan.weeksRemaining ?? weeks)));
+  return {
+    id:String(loan.id || `loan-active-${Date.now()}`),
+    season:Number(loan.season || game?.seasonNumber || 1),
+    bankName:String(loan.bankName || 'Banco'),
+    amount:Math.max(0, Math.round(Number(loan.amount || 0))),
+    prestigeCost:Math.max(0, Math.round(Number(loan.prestigeCost || 0))),
+    interestRate:Math.max(0, Number(loan.interestRate || 0)),
+    weeks,
+    totalWeeks:weeks,
+    totalToRepay,
+    weeklyPayment:Math.max(1, Math.round(Number(loan.weeklyPayment || Math.ceil(totalToRepay / weeks) || 1))),
+    remainingWeeks,
+    remainingDebt,
+    paid,
+    startedDate:loan.startedDate || game?.currentDate || '',
+    startedTurn:Number(loan.startedTurn || game?.globalTurn || 0)
+  };
+}
+function normalizeBankLoanState(state, sourceGame=game){
+  const season = Number(sourceGame?.seasonNumber || 1);
+  const src = state && typeof state === 'object' && !Array.isArray(state) ? state : createBankLoanState(season);
+  const active = normalizeBankLoanActiveLoan(src.active);
+  if(active){
+    return { active, season:Number(src.season || season), offers:[], history:Array.isArray(src.history) ? src.history.slice(-50) : [] };
+  }
+  if(Number(src.season || 0) !== season){
+    return createBankLoanState(season);
+  }
+  const offers = Array.isArray(src.offers) && src.offers.length ? src.offers : createBankLoanOffers(season);
+  return { active:null, season, offers, history:Array.isArray(src.history) ? src.history.slice(-50) : [] };
+}
+function refreshBankLoanOffersForSeason(state, season=game?.seasonNumber || 1){
+  const normalized = normalizeBankLoanState(state, { seasonNumber:season });
+  if(normalized.active) return normalized;
+  if(Number(normalized.season || 0) !== Number(season || 1)) return createBankLoanState(season);
+  if(!Array.isArray(normalized.offers) || normalized.offers.length !== 3){
+    normalized.offers = createBankLoanOffers(season);
+  }
+  return normalized;
+}
+function ensureBankLoanState(){
+  if(!game) return null;
+  game.bankLoan = normalizeBankLoanState(game.bankLoan, game);
+  return game.bankLoan;
+}
+function requestBankLoan(offerId){
+  if(!game || !BANK_LOANS_ENABLED) return;
+  const state = ensureBankLoanState();
+  if(state.active){ showNotice('Ya hay un préstamo activo. No se pueden pedir nuevos préstamos hasta cancelarlo.'); return; }
+  const offer = (state.offers || []).find(item => String(item.id) === String(offerId));
+  if(!offer){ showNotice('La oferta bancaria ya no está disponible.'); return; }
+  const prestige = currentManagerPrestige();
+  if(prestige < offer.prestigeCost){ showNotice(`Prestigio insuficiente. Necesitás ${offer.prestigeCost} y tenés ${formatManagerPrestige(prestige)}.`); return; }
+  const active = normalizeBankLoanActiveLoan({ ...offer, totalWeeks:offer.weeks, remainingWeeks:offer.weeks, remainingDebt:offer.totalToRepay, paid:0, startedDate:game.currentDate || '', startedTurn:game.globalTurn || 0 });
+  addManagerPrestige(-offer.prestigeCost, `Préstamo tomado con ${offer.bankName}. Costo de prestigio: ${offer.prestigeCost}`);
+  recordBudgetChange(offer.amount, `Préstamo bancario de ${offer.bankName}`, { type:'bank_loan_disbursement', bankName:offer.bankName, loanId:offer.id, prestigeCost:offer.prestigeCost, interestRate:offer.interestRate, weeks:offer.weeks, totalToRepay:offer.totalToRepay });
+  state.active = active;
+  state.offers = [];
+  state.history = Array.isArray(state.history) ? state.history : [];
+  state.history.push({ type:'accepted', date:game.currentDate || '', bankName:offer.bankName, amount:offer.amount, totalToRepay:offer.totalToRepay, weeks:offer.weeks, prestigeCost:offer.prestigeCost });
+  saveLocal(true);
+  renderFinances();
+  showNotice(`Préstamo aprobado por ${offer.bankName}. Se acreditaron ${formatMoney(offer.amount)}.`);
+}
+function processBankLoanWeeklyPayment(){
+  if(!game || !BANK_LOANS_ENABLED) return 0;
+  const state = ensureBankLoanState();
+  const loan = state?.active;
+  if(!loan || loan.remainingDebt <= 0 || loan.remainingWeeks <= 0) return 0;
+  const amount = Math.min(Math.max(1, Math.round(Number(loan.weeklyPayment || 0))), Math.round(Number(loan.remainingDebt || 0)));
+  loan.remainingDebt = Math.max(0, Math.round(Number(loan.remainingDebt || 0) - amount));
+  loan.paid = Math.max(0, Math.round(Number(loan.paid || 0) + amount));
+  loan.remainingWeeks = Math.max(0, Math.round(Number(loan.remainingWeeks || 0) - 1));
+  recordBudgetChange(-amount, `Cuota semanal préstamo ${loan.bankName}`, { type:'bank_loan_payment', bankName:loan.bankName, loanId:loan.id, remainingDebt:loan.remainingDebt, remainingWeeks:loan.remainingWeeks });
+  if(loan.remainingDebt <= 0 || loan.remainingWeeks <= 0){
+    state.history = Array.isArray(state.history) ? state.history : [];
+    state.history.push({ type:'paid', date:game.currentDate || '', bankName:loan.bankName, amount:loan.amount, paid:loan.paid });
+    state.active = null;
+    state.offers = [];
+    pushGameMessage({ type:'finanzas', title:'Préstamo cancelado', body:`El club terminó de pagar el préstamo de ${loan.bankName}. Las nuevas ofertas aparecerán en la próxima temporada.`, priority:'normal' });
+  }
+  return amount;
+}
+function bankLoanProgressMarkup(loan){
+  const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
+  const total = Math.max(1, Math.round(Number(loan.totalToRepay || (paid + loan.remainingDebt) || 1)));
+  const progress = clamp(Math.round((paid / total) * 100), 0, 100);
+  return `<div class="bank-loan-active"><div class="row"><div><p class="label">Préstamo activo</p><h3>${escapeHtml(loan.bankName)}</h3></div><span class="pill">${loan.remainingWeeks} semanas restantes</span></div><div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div><p class="muted small">Pagado: ${formatMoney(paid)} / ${formatMoney(total)} · Deuda restante: ${formatMoney(loan.remainingDebt)} · Cuota semanal: ${formatMoney(loan.weeklyPayment)}</p></div>`;
+}
+function bankLoanOffersMarkup(){
+  if(!BANK_LOANS_ENABLED) return '';
+  const state = ensureBankLoanState();
+  if(state.active){
+    return `<div class="card bank-loan-card"><div class="row"><div><h3>Banco</h3><p class="muted small">Con un préstamo activo se bloquean nuevas solicitudes.</p></div></div>${bankLoanProgressMarkup(state.active)}</div>`;
+  }
+  const offers = state.offers || [];
+  const prestige = currentManagerPrestige();
+  const cards = offers.map(offer => {
+    const locked = prestige < offer.prestigeCost;
+    return `<div class="card bank-loan-offer"><div class="row"><div><p class="label">${escapeHtml(offer.bankName)}</p><h3>${formatMoney(offer.amount)}</h3></div><span class="pill ${locked ? 'bad-pill' : 'ok-pill'}">Prestigio ${offer.prestigeCost}</span></div><p class="muted small">Interés ${loanPercentLabel(offer.interestRate)} · ${offer.weeks} semanas · Total a devolver ${formatMoney(offer.totalToRepay)} · Cuota ${formatMoney(offer.weeklyPayment)}</p><button class="primary" data-request-bank-loan="${escapeHtml(offer.id)}" ${locked ? 'disabled' : ''}>Pedir préstamo</button></div>`;
+  }).join('');
+  return `<div class="card bank-loan-card"><div class="row"><div><h3>Banco</h3><p class="muted small">Tres ofertas por temporada. Tomar una resta prestigio al manager y suma el dinero al club.</p></div><span class="pill">Prestigio actual ${formatManagerPrestige(prestige)}</span></div><div class="grid cols-3 bank-loans-grid" style="margin-top:12px">${cards || '<p class="muted">No hay ofertas bancarias hasta la próxima temporada.</p>'}</div></div>`;
+}
+function financeRating(salaryTotal=0){
+  const salaries = Math.max(1, Math.round(Number(salaryTotal || 0)));
+  const budget = Math.max(0, Math.round(Number(game?.budget || 0)));
+  const ratio = budget / salaries;
+  if(ratio < 10) return { key:'destroyed', label:'economia destruida', tone:'bad', message:'La directiva alerta que el margen para sostener sueldos es crítico. Hay que vender, subir ingresos o recortar gastos.' };
+  if(ratio < 20) return { key:'problems', label:'economia en problemas', tone:'bad', message:'La directiva ve riesgo financiero. El club puede competir, pero el margen es bajo.' };
+  if(ratio < 40) return { key:'regular', label:'economia regular', tone:'warn', message:'La directiva considera que la economía está estable, aunque sin gran respaldo para errores.' };
+  if(ratio < 50) return { key:'good', label:'economia buena', tone:'ok', message:'La directiva está conforme. Hay margen razonable para sostener el proyecto.' };
+  return { key:'excellent', label:'economia excelente', tone:'ok', message:'La directiva está muy conforme. El club tiene una espalda financiera fuerte frente a la masa salarial.' };
+}
+function financeRatingMarkup(salaryTotal=0){
+  const rating = financeRating(salaryTotal);
+  const salaries = Math.max(1, Math.round(Number(salaryTotal || 0)));
+  const budget = Math.max(0, Math.round(Number(game?.budget || 0)));
+  return `<div class="card finance-rating-card"><div class="row"><div><p class="label">Calificación</p><h3 class="${rating.tone}">${escapeHtml(rating.label)}</h3></div><span class="pill">${Math.floor(budget / salaries)}x sueldos</span></div><p class="muted small">${escapeHtml(rating.message)}</p><p class="muted small">Referencia: presupuesto actual ${formatMoney(budget)} / sueldos anuales ${formatMoney(salaryTotal)}.</p></div>`;
 }
 function renderFinances(){
   const history = (game.budgetHistory || []).slice().reverse();
@@ -895,6 +1078,10 @@ function renderFinances(){
       <div class="card"><p class="label">Gastos temporada</p><strong class="bad">${formatMoney(seasonExpenses)}</strong></div>
       <div class="card"><p class="label">Sueldos anuales estimados</p><strong>${formatMoney(salaryTotal)}</strong></div>
     </div>
+    <div class="grid cols-2" style="margin-top:14px">
+      ${financeRatingMarkup(salaryTotal)}
+      ${bankLoanOffersMarkup()}
+    </div>
     <div style="margin-top:14px">${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}</div>
     <div class="grid cols-2 finance-category-grid" style="margin-top:14px">
       ${financeExpensesByCategoryMarkup()}
@@ -906,6 +1093,7 @@ function renderFinances(){
     <div class="card" style="margin-top:14px"><h3>Movimientos</h3>
       <div class="table-wrap"><table><thead><tr><th>Temporada</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div>
     </div>`;
+  document.querySelectorAll('[data-request-bank-loan]').forEach(btn => btn.addEventListener('click', () => requestBankLoan(btn.dataset.requestBankLoan)));
 }
 
 function totalClubSalary(clubId){

@@ -355,7 +355,8 @@ function mainBannerForLastMatch(){
   const match = lastOwnMatch();
   if(!match){
     return {
-      src:'img/principales/banner_bienvenido.jpg',
+      src:'img/principales/banner_bienvenido',
+      fallbackSrc:'img/principales/banner_bienvenido.jpg',
       label:'Bienvenido al club'
     };
   }
@@ -604,9 +605,28 @@ function pickMediaRangeWithAudit(context, seedKey, constraints={}){
   if(lower) return lower;
   return weightedRulePick(allowed, `${seedKey}-range-fallback`) || PLAYER_GENERATION_MEDIA_RANGES[PLAYER_GENERATION_MEDIA_RANGES.length - 1];
 }
-function pickNationalityForGeneration(id, label, context=null){
+function localNationalityForCountry(country='Argentina'){
+  const clean = String(country || '').trim() || 'Argentina';
+  const mapped = PLAYER_NATIONALITY_BY_COUNTRY && PLAYER_NATIONALITY_BY_COUNTRY[clean] ? String(PLAYER_NATIONALITY_BY_COUNTRY[clean]) : clean;
+  return mapped || 'Argentina';
+}
+function allConfiguredNationalities(){
+  const locals = Array.from(new Set((seed?.clubs || []).map(club => localNationalityForCountry(clubCountry(club))).filter(Boolean)));
+  const pool = locals.concat(SOUTH_AMERICAN_NATIONALITIES || []).concat(WORLD_NATIONALITIES || []);
+  return Array.from(new Set(pool.filter(Boolean)));
+}
+function freeAgentNationalityForIndex(index=0, seedKey='free-agent'){
+  const pool = allConfiguredNationalities();
+  if(!pool.length) return 'Argentina';
+  const offset = hashNumber(`free-nationality-offset-${seedKey}`, pool.length);
+  return pool[(Math.max(0, Math.round(Number(index || 0))) + offset) % pool.length];
+}
+function pickNationalityForGeneration(id, label, context=null, options={}){
   const group = pickRuleWithAudit(PLAYER_GENERATION_NATIONALITY_GROUPS, player => nationalityGroupId(player.nationality), context, `${label}-${id}-nat-group`);
-  const countries = group?.countries?.length ? group.countries : ['Argentina'];
+  let countries = group?.countries?.length ? group.countries : ['Argentina'];
+  if(group?.id === 'local'){
+    countries = [localNationalityForCountry(options.localCountry || 'Argentina')];
+  }
   return countries[hashNumber(`${label}-${id}-nat-country`, countries.length)];
 }
 function pickPositionGroupForGeneration(id, label, context=null){
@@ -670,7 +690,7 @@ function ensurePlayerEconomics(player, salaryFactor=1){
   refreshPlayerClause(player);
   return player;
 }
-function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', divisionOrder=null, generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false, mediaMin=null, mediaMax=null }){
+function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, nameContext='Jugador', divisionName='', divisionOrder=null, generationContext=null, salaryFactor=1, freeAgent=false, youthFreeAgent=false, mediaMin=null, mediaMax=null, nationalityOverride=null, localCountry=null }){
   const cleanPosition = normalizePlayerPosition(position, id);
   const group = playerRoleGroup(cleanPosition);
   const generationDivision = Number.isFinite(Number(divisionOrder)) ? Number(divisionOrder) : generationDivisionOrder(clubId, divisionName);
@@ -692,7 +712,7 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
     clubId,
     freeAgent:Boolean(freeAgent),
     youthFreeAgent:Boolean(youthFreeAgent),
-    nationality:pickNationalityForGeneration(id, divisionName || nameContext, generationContext),
+    nationality:nationalityOverride || pickNationalityForGeneration(id, divisionName || nameContext, generationContext, { localCountry:localCountry || (Number(clubId || 0) > 0 ? clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(clubId))) : null) }),
     overall:visible,
     skills,
     salary:initialAnnualSalaryForMedia(visible, salaryFactor),

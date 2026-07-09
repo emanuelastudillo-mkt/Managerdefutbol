@@ -250,6 +250,7 @@ function managerCurrentDivisionId(){
 }
 function resetManagerDivisionFilterForTab(tab){
   const divisionId = managerCurrentDivisionId();
+  if(tab === 'fixture') fixtureViewMode = 'mine';
   if(tab === 'standings') selectedStandingsDivision = divisionId;
   if(tab === 'stats') selectedStatsDivision = divisionId;
 }

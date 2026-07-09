@@ -2,9 +2,7 @@
 
 async function fetchJsonIfExists(url){
   try{
-    const cacheMode = String(configValue('data.cacheMode', 'default') || 'default');
-    const fetchOptions = cacheMode ? { cache:cacheMode } : {};
-    const res = await fetch(url, fetchOptions);
+    const res = await fetch(url, { cache:'no-store' });
     if(!res.ok) return null;
     const raw = await res.text();
     if(!raw.trim()) return null;
@@ -95,9 +93,9 @@ async function loadStadiumsDatabase(){
   const urls = uniqueUrlList(STADIUMS_DATABASE_CANDIDATES || STADIUMS_DATABASE_URL);
   const teams = [];
   const raws = [];
-  const results = await Promise.all(urls.map(async url => ({ url, raw:await fetchJsonIfExists(url) })));
-  results.forEach(({ url, raw }) => {
-    if(!raw || typeof raw !== 'object') return;
+  for(const url of urls){
+    const raw = await fetchJsonIfExists(url);
+    if(!raw || typeof raw !== 'object') continue;
     raws.push({ url, raw });
     const fileCountry = raw.pais || raw.country || raw.countryName || countryFromSourceUrl(url) || '';
     const leagues = Array.isArray(raw.leagues) ? raw.leagues : (Array.isArray(raw.ligas) ? raw.ligas : []);
@@ -110,7 +108,7 @@ async function loadStadiumsDatabase(){
         teams.push({ ...team, league:leagueName, country:team.country || team.pais || leagueCountry });
       });
     });
-  });
+  }
   if(!raws.length) return { raw:null, teams:[], source:'fallback' };
   return { raw:{ sources:raws.map(item => item.url), count:raws.length }, teams, source:raws.map(item => item.url).join(', ') };
 }
@@ -118,16 +116,16 @@ async function loadFansDatabase(){
   const urls = uniqueUrlList(FANS_DATABASE_CANDIDATES || FANS_DATABASE_URL);
   const hinchadas = [];
   const raws = [];
-  const results = await Promise.all(urls.map(async url => ({ url, raw:await fetchJsonIfExists(url) })));
-  results.forEach(({ url, raw }) => {
-    if(!raw || typeof raw !== 'object') return;
+  for(const url of urls){
+    const raw = await fetchJsonIfExists(url);
+    if(!raw || typeof raw !== 'object') continue;
     raws.push({ url, raw });
     const fileCountry = raw.pais || raw.country || countryFromSourceUrl(url) || '';
     (Array.isArray(raw.hinchadas) ? raw.hinchadas : []).forEach(item => {
       if(!item) return;
       hinchadas.push({ ...item, country:item.country || item.pais || fileCountry });
     });
-  });
+  }
   if(!raws.length) return { raw:null, hinchadas:[], source:'fallback' };
   return { raw:{ sources:raws.map(item => item.url), count:raws.length }, hinchadas, source:raws.map(item => item.url).join(', ') };
 }
@@ -250,8 +248,7 @@ function databaseValidationCounts(players=[]){
 }
 function applyPlayersDatabase(seedData, database){
   if(!seedData || !database?.players?.length) return seedData;
-  const clubs = seedData.clubs || [];
-  const validClubIds = new Set(clubs.map(c => Number(c.id)));
+  const validClubIds = new Set((seedData.clubs || []).map(c => Number(c.id)));
   const normalized = database.players
     .map(normalizeDatabasePlayer)
     .filter(player => Number.isFinite(player.id) && (Number(player.clubId) === 0 || validClubIds.has(Number(player.clubId))));
@@ -259,14 +256,10 @@ function applyPlayersDatabase(seedData, database){
   const dbClubIds = new Set(normalized.map(player => Number(player.clubId || 0)).filter(Boolean));
   const dbMaxId = Math.max(0, ...normalized.map(player => Number(player.id || 0)).filter(Number.isFinite));
   let nextId = dbMaxId + 1;
-  const generatedForUncoveredClubs = [];
-  const generationContext = createPlayerGenerationContext(clubs.length * CLUB_ROSTER_SIZE, normalized.filter(player => Number(player.clubId || 0) > 0));
-  clubs.forEach(club => {
-    if(dbClubIds.has(Number(club.id))) return;
-    const generated = generateClubPlayers(club, Number(club.reputation || 50), nextId, generationContext);
-    generatedForUncoveredClubs.push(...generated);
-    nextId += generated.length;
-  });
+  const generatedForUncoveredClubs = (seedData.players || [])
+    .map(normalizeDatabasePlayer)
+    .filter(player => Number(player.clubId || 0) > 0 && validClubIds.has(Number(player.clubId)) && !dbClubIds.has(Number(player.clubId)))
+    .map(player => ensurePlayerEconomics({ ...player, id:nextId++ }));
   seedData.players = normalized.concat(generatedForUncoveredClubs);
   seedData.meta = { ...(seedData.meta || {}), playersSource:database.source, playersDatabaseVersion:database.raw?.metadata?.version || 'local', playersDatabaseValidation:database.raw?.validation || databaseValidationCounts(normalized), generatedPlayersKept:generatedForUncoveredClubs.length };
   seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
@@ -299,22 +292,17 @@ function currentSavePayload(){
   return payload;
 }
 async function loadInitialSeed(){
-  const [playersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
-    loadPlayersDatabase(),
-    loadStadiumsDatabase(),
-    loadFansDatabase()
-  ]);
-  stadiumsDatabase = loadedStadiumsDatabase;
-  fansDatabase = loadedFansDatabase;
-  const usePlayersDatabase = Boolean(playersDatabase?.players?.length);
-  const leagueResults = await Promise.all(LEAGUE_DATA_CANDIDATES.map(async url => ({ url, leagueJson:await fetchJsonIfExists(url) })));
+  const playersDatabase = await loadPlayersDatabase();
+  stadiumsDatabase = await loadStadiumsDatabase();
+  fansDatabase = await loadFansDatabase();
   const leagueSeeds = [];
-  leagueResults.forEach(({ url, leagueJson }) => {
+  for(const url of LEAGUE_DATA_CANDIDATES){
+    const leagueJson = await fetchJsonIfExists(url);
     if(leagueJson){
-      const built = applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(leagueJson, url, { skipPlayerGeneration:usePlayersDatabase }), stadiumsDatabase, fansDatabase);
+      const built = applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(leagueJson, url), stadiumsDatabase, fansDatabase);
       leagueSeeds.push(built);
     }
-  });
+  }
   if(leagueSeeds.length){
     const merged = mergeLeagueSeeds(leagueSeeds);
     return applyPlayersDatabase(merged, playersDatabase);
@@ -388,9 +376,8 @@ function mergeLeagueSeeds(seedList){
   seedData.meta.signature = seedSignature(seedData);
   return seedData;
 }
-function buildSeedFromLigaArgentina(raw, sourceUrl, options={}){
+function buildSeedFromLigaArgentina(raw, sourceUrl){
   const sourceCountry = detectLeagueCountry(raw, sourceUrl);
-  const skipPlayerGeneration = Boolean(options.skipPlayerGeneration);
   const divisions = extractLeagueDivisions(raw);
   if(!divisions.length) throw new Error('El JSON de liga no tiene divisiones o equipos reconocibles.');
   const normalizedDivisions = divisions.map((division, index) => {
@@ -405,7 +392,7 @@ function buildSeedFromLigaArgentina(raw, sourceUrl, options={}){
     };
   });
   const totalClubCount = divisions.reduce((sum, division) => sum + normalizeTeamList(division.teams || division.equipos || division.clubes || division.clubs || []).length, 0);
-  const generationContext = skipPlayerGeneration ? null : createPlayerGenerationContext(totalClubCount * CLUB_ROSTER_SIZE, []);
+  const generationContext = createPlayerGenerationContext(totalClubCount * CLUB_ROSTER_SIZE, []);
   const clubs = [];
   const players = [];
   let clubId = 1;
@@ -438,11 +425,9 @@ function buildSeedFromLigaArgentina(raw, sourceUrl, options={}){
         crestPath:team.escudo || team.crestPath || `img/escudos/${imageSlug(name)}.png`
       };
       clubs.push(club);
-      if(!skipPlayerGeneration){
-        const generated = generateClubPlayers(club, prestige, playerId, generationContext);
-        players.push(...generated);
-        playerId += generated.length;
-      }
+      const generated = generateClubPlayers(club, prestige, playerId, generationContext);
+      players.push(...generated);
+      playerId += generated.length;
       clubId += 1;
     });
   });
@@ -1075,7 +1060,8 @@ function generateClubPlayers(club, prestige, startId, generationContext=null){
       divisionName:club.divisionName,
       divisionOrder:club.divisionOrder,
       generationContext,
-      salaryFactor:1
+      salaryFactor:1,
+      localCountry:clubCountry(club)
     });
   });
 }

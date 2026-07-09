@@ -360,15 +360,33 @@ function nextAcademyPlayerId(){
     .concat((game?.academy?.players || []).map(p => Number(p.id) || 0));
   return Math.max(...ids) + 1;
 }
-function academyNationality(id){
-  return pickNationalityForGeneration(id, `academy-${game?.seasonNumber || 1}`, null) || 'Argentina';
+function academyLocalCountry(){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId || 0));
+  return club ? clubCountry(club) : 'Argentina';
+}
+function academyNationality(id, options={}){
+  if(options.local === true) return localNationalityForCountry(academyLocalCountry());
+  return pickNationalityForGeneration(id, `academy-${game?.seasonNumber || 1}`, null, { localCountry:academyLocalCountry() }) || localNationalityForCountry(academyLocalCountry());
 }
 const ACADEMY_FIRST_NAMES = ['Bruno','Mateo','Thiago','Lautaro','Benjamín','Julián','Santino','Tomás','Bautista','Franco','Facundo','Gael','Ignacio','Valentín','Ramiro','Nicolás','Agustín','Ezequiel','Simón','Máximo'];
 const ACADEMY_LAST_NAMES = ['Luna','Rojas','Pereyra','Acosta','Sosa','Coronel','Vera','Molina','Cabrera','Medina','Campos','Suárez','Giménez','Arias','Silva','Farias','Roldán','Castro','Ferreyra','Benítez'];
-function academyName(id){
-  const first = ACADEMY_FIRST_NAMES[hashNumber(`academy-name-${id}`, ACADEMY_FIRST_NAMES.length)];
-  const last = ACADEMY_LAST_NAMES[hashNumber(`academy-last-${id}`, ACADEMY_LAST_NAMES.length)];
+const ACADEMY_COUNTRY_NAME_POOLS = {
+  Argentina:{ first:ACADEMY_FIRST_NAMES, last:ACADEMY_LAST_NAMES },
+  Chile:{ first:['Benjamín','Vicente','Matías','Joaquín','Tomás','Diego','Martín','Agustín','Cristóbal','Nicolás'], last:['González','Muñoz','Rojas','Díaz','Pérez','Soto','Contreras','Silva','Martínez','Sepúlveda'] },
+  Brasil:{ first:['João','Lucas','Gabriel','Matheus','Pedro','Rafael','Felipe','Gustavo','Bruno','Caio'], last:['Silva','Santos','Oliveira','Souza','Pereira','Costa','Rodrigues','Almeida','Nascimento','Lima'] },
+  Inglaterra:{ first:['Oliver','Harry','George','Jack','Leo','Charlie','Thomas','William','James','Oscar'], last:['Smith','Jones','Taylor','Brown','Williams','Wilson','Johnson','Davies','Evans','Thomas'] },
+  España:{ first:['Alejandro','Pablo','Hugo','Álvaro','Adrián','Diego','Javier','Mario','Sergio','Marcos'], last:['García','Martínez','López','Sánchez','Pérez','Gómez','Martín','Jiménez','Ruiz','Hernández'] },
+  Italia:{ first:['Lorenzo','Matteo','Alessandro','Francesco','Leonardo','Andrea','Riccardo','Gabriele','Marco','Davide'], last:['Rossi','Russo','Ferrari','Esposito','Bianchi','Romano','Colombo','Ricci','Marino','Greco'] },
+  Rumania:{ first:['Andrei','Alexandru','Mihai','Stefan','Ionut','Cristian','Gabriel','Florin','Daniel','Radu'], last:['Popescu','Ionescu','Dumitru','Stan','Stoica','Gheorghe','Radu','Matei','Marin','Toma'] }
+};
+function academyNameForCountry(id, country='Argentina'){
+  const pool = ACADEMY_COUNTRY_NAME_POOLS[country] || ACADEMY_COUNTRY_NAME_POOLS[localNationalityForCountry(country)] || ACADEMY_COUNTRY_NAME_POOLS.Argentina;
+  const first = pool.first[hashNumber(`academy-name-${country}-${id}`, pool.first.length)];
+  const last = pool.last[hashNumber(`academy-last-${country}-${id}`, pool.last.length)];
   return `${first} ${last}`;
+}
+function academyName(id, country='Argentina'){
+  return academyNameForCountry(id, country);
 }
 function academyOverallRoll(id){
   const roll = hashNumber(`academy-overall-band-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 1000) / 1000;
@@ -415,10 +433,11 @@ function createAcademyBatch(count){
     const group = academyGroupRoll(id);
     const overall = academyOverallRoll(id);
     const age = 8 + hashNumber(`academy-age-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 7);
+    const nationality = academyNationality(id);
     players.push(normalizeAcademyPlayer({
       id,
-      name:academyName(id),
-      nationality:academyNationality(id),
+      name:academyName(id, nationality),
+      nationality,
       age,
       group,
       overall,
@@ -438,8 +457,8 @@ function createExceptionalAcademyYouth(){
   const overall = clamp(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL + hashNumber(`academy-exceptional-overall-${game?.seasonNumber || 1}-${id}-${Math.random()}`, span + 1), 1, 40);
   return normalizeAcademyPlayer({
     id,
-    name:academyName(id),
-    nationality:academyNationality(id),
+    name:academyName(id, academyLocalCountry()),
+    nationality:academyNationality(id, { local:true }),
     age:ACADEMY_EXCEPTIONAL_YOUTH_AGE,
     group,
     overall,

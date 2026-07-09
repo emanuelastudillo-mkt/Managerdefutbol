@@ -662,7 +662,16 @@ function normalizeGame(saved){
   normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();
-  normalized.marketPlayers.forEach(p => { p.position = normalizePlayerPosition(p.position, p.id); p.transferListed = Boolean(p.transferListed); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR); });
+  normalized.marketPlayers.forEach((p, index) => {
+    p.position = normalizePlayerPosition(p.position, p.id);
+    p.transferListed = Boolean(p.transferListed);
+    if(Number(p.clubId || 0) === 0 || p.freeAgent){
+      p.nationality = freeAgentNationalityForIndex(index, `market-normalized-${normalized.seasonNumber || 1}`);
+      p.freeAgent = true;
+    }
+    ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR);
+  });
+  mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
   const previousCalendarVersion = normalized.calendarVersion;
@@ -689,11 +698,18 @@ function normalizeGame(saved){
   normalized.lastBudgetDelta = Number.isFinite(normalized.lastBudgetDelta) ? normalized.lastBudgetDelta : 0;
   normalized.budgetHistory = normalized.budgetHistory || [];
   normalized.transferBudget = typeof normalizeTransferBudgetState === 'function' ? normalizeTransferBudgetState(normalized.transferBudget, normalized) : (normalized.transferBudget || null);
+  normalized.bankLoan = typeof normalizeBankLoanState === 'function' ? normalizeBankLoanState(normalized.bankLoan, normalized) : (normalized.bankLoan || null);
   normalized.nextSeasonTransferBudgetUnlock = (normalized.nextSeasonTransferBudgetUnlock && typeof normalized.nextSeasonTransferBudgetUnlock === 'object' && !Array.isArray(normalized.nextSeasonTransferBudgetUnlock)) ? normalized.nextSeasonTransferBudgetUnlock : null;
   normalized.playerCondition = normalized.playerCondition || {};
-  seed.players.forEach(p => { if(!Number.isFinite(normalized.playerCondition[p.id])) normalized.playerCondition[p.id] = 99; });
+  seed.players.forEach(p => {
+    if(Number(p.clubId || 0) === 0 || p.freeAgent) normalized.playerCondition[p.id] = 5;
+    else if(!Number.isFinite(normalized.playerCondition[p.id])) normalized.playerCondition[p.id] = 99;
+  });
   normalized.playerMorale = normalized.playerMorale || {};
-  seed.players.forEach(p => { if(!Number.isFinite(normalized.playerMorale[p.id])) normalized.playerMorale[p.id] = PLAYER_MORALE_START; });
+  seed.players.forEach(p => {
+    if(Number(p.clubId || 0) === 0 || p.freeAgent) normalized.playerMorale[p.id] = 5;
+    else if(!Number.isFinite(normalized.playerMorale[p.id])) normalized.playerMorale[p.id] = PLAYER_MORALE_START;
+  });
   normalized.playerSkillBoosts = normalized.playerSkillBoosts || {};
   normalized.trainingPlan = normalized.trainingPlan || {};
   normalized.trainingSchedule = normalizeTrainingSchedule(normalized.trainingSchedule);
@@ -751,8 +767,10 @@ function ensurePlayerStateForAll(){
   game.playerStats = game.playerStats || {};
   seed.players.forEach(p => {
     ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : (p.freeAgent ? MARKET_FREE_AGENT_SALARY_FACTOR : 1));
-    if(!Number.isFinite(game.playerCondition[p.id])) game.playerCondition[p.id] = p.freeAgent ? 15 + hashNumber(`free-cond-${p.id}`, 15) : 99;
-    if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = p.freeAgent ? 35 + hashNumber(`free-morale-${p.id}`, 55) : PLAYER_MORALE_START;
+    if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerCondition[p.id] = 5; }
+    else if(!Number.isFinite(game.playerCondition[p.id])) game.playerCondition[p.id] = 99;
+    if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerMorale[p.id] = 5; }
+    else if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
@@ -1008,6 +1026,7 @@ function newGame(selectedClubId, options={}){
     lastBudgetDelta: 0,
     budgetHistory: [],
     transferBudget: typeof createTransferBudgetState === 'function' ? createTransferBudgetState(selectedClubId, 1, 0) : null,
+    bankLoan: typeof createBankLoanState === 'function' ? createBankLoanState(1) : null,
     nextSeasonTransferBudgetUnlock: null,
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
     playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
@@ -1874,8 +1893,8 @@ function initializeFreePlayerState(players=[]){
   game.trainingPlan = game.trainingPlan || {};
   game.playerStats = game.playerStats || {};
   players.forEach(p => {
-    game.playerCondition[p.id] = clamp(15 + hashNumber(`free-cond-${p.id}`, 15), 1, 29);
-    game.playerMorale[p.id] = clamp(35 + hashNumber(`free-morale-${p.id}`, 55), 1, 99);
+    game.playerCondition[p.id] = 5;
+    game.playerMorale[p.id] = 5;
     game.playerSkillBoosts[p.id] = game.playerSkillBoosts[p.id] || {};
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     game.playerStats[p.id] = game.playerStats[p.id] || createEmptyPlayerStat(p);
@@ -1907,7 +1926,9 @@ function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
       generationContext,
       salaryFactor:FREE_YOUTH_SALARY_FACTOR,
       freeAgent:true,
-      youthFreeAgent:true
+      youthFreeAgent:true,
+      nationalityOverride:freeAgentNationalityForIndex(i, `season-youth-${season}`),
+      localCountry:club ? clubCountry(club) : null
     });
     player.originClubId = club?.id || 0;
     players.push(player);
@@ -2478,6 +2499,7 @@ function startNextSeason(selectedClubId){
   const transferUnlock = typeof consumeNextSeasonTransferBudgetUnlock === 'function' ? consumeNextSeasonTransferBudgetUnlock() : { rate:0, reasons:[] };
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(game.selectedClubId, game.seasonNumber, transferUnlock.rate || 0) : (game.transferBudget || null);
+  game.bankLoan = typeof refreshBankLoanOffersForSeason === 'function' ? refreshBankLoanOffersForSeason(game.bankLoan, game.seasonNumber) : (game.bankLoan || null);
   if(transferUnlock?.rate && typeof transferBudgetAddHistory === 'function'){
     transferBudgetAddHistory('season_bonus', `Bonus de directiva: ${(transferUnlock.reasons || []).map(r => r.reason).filter(Boolean).join(' + ') || 'temporada anterior'}`, 0, transferUnlock.rate);
   }

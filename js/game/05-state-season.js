@@ -738,6 +738,55 @@ function buildDivisionCountRepairPlan(){
   });
   return plan.filter(item => byId[String(item.fromDivisionId || '')] && byId[String(item.toDivisionId || '')]);
 }
+
+function matchHasMinimumBotStats(match){
+  if(!match || !match.played) return true;
+  if(typeof ownClubInMatch === 'function' && ownClubInMatch(match)) return true;
+  const goals = Array.isArray(match.goals) ? match.goals : [];
+  const cards = Array.isArray(match.cards) ? match.cards : [];
+  const injuries = Array.isArray(match.injuries) ? match.injuries : [];
+  const keySaves = Array.isArray(match.keySaves) ? match.keySaves : [];
+  const errors = Array.isArray(match.errors) ? match.errors : [];
+  const stats = match.matchStats || {};
+  const homeStats = stats.home || {};
+  const awayStats = stats.away || {};
+  const goalsOk = Number(match.homeGoals || 0) + Number(match.awayGoals || 0) === goals.length && goals.every(g => Number.isFinite(Number(g.playerId)) && Number(g.playerId) > 0 && (Number(match.homeGoals || 0) + Number(match.awayGoals || 0) <= 0 || g.clubId));
+  const assistsOk = goals.every(g => g.assistId === null || g.assistId === undefined || Number(g.assistId) > 0);
+  const cardsOk = Array.isArray(cards) && cards.every(c => Number(c.playerId || 0) > 0 && ['yellow','red','secondYellowRed'].includes(String(c.type || '')));
+  const injuriesOk = Array.isArray(injuries) && injuries.every(i => Number(i.playerId || 0) > 0 && String(i.injuryLabel || i.name || '').trim());
+  const savesOk = Array.isArray(keySaves) && keySaves.every(k => Number(k.playerId || 0) > 0);
+  const errorsOk = Array.isArray(errors) && errors.every(e => Number(e.playerId || 0) > 0);
+  const statsOk = ['attacks','chances','possession','fouls','keySaves','errors','goalErrors'].every(key => Number.isFinite(Number(homeStats[key] ?? 0)) && Number.isFinite(Number(awayStats[key] ?? 0)));
+  const playedIdsOk = Array.isArray(match.playedIdsHome) && match.playedIdsHome.length > 0 && Array.isArray(match.playedIdsAway) && match.playedIdsAway.length > 0;
+  return Boolean(goalsOk && assistsOk && cardsOk && injuriesOk && savesOk && errorsOk && statsOk && playedIdsOk);
+}
+function botMatchStatsIntegrityIssues(){
+  if(!game?.fixtures?.length) return [];
+  const issues = [];
+  (game.fixtures || []).forEach((round, roundIndex) => {
+    (round.matches || []).forEach(match => {
+      if(!match?.played) return;
+      if(typeof ownClubInMatch === 'function' && ownClubInMatch(match)) return;
+      if(matchHasMinimumBotStats(match)) return;
+      issues.push({
+        matchId:match.id,
+        roundIndex,
+        matchday:round.matchday || roundIndex + 1,
+        divisionId:match.divisionId || round.divisionId || '',
+        home:clubName(match.homeId),
+        away:clubName(match.awayId),
+        engine:match.engine || 'sin motor',
+        goals:Array.isArray(match.goals) ? match.goals.length : 'faltan',
+        cards:Array.isArray(match.cards) ? match.cards.length : 'faltan',
+        injuries:Array.isArray(match.injuries) ? match.injuries.length : 'faltan',
+        keySaves:Array.isArray(match.keySaves) ? match.keySaves.length : 'faltan',
+        errors:Array.isArray(match.errors) ? match.errors.length : 'faltan'
+      });
+    });
+  });
+  return issues;
+}
+
 function currentFreeAgentIntegrityCount(){
   const ids = new Set();
   (game?.marketPlayers || []).forEach(player => { if(Number(player?.clubId || 0) === 0) ids.add(Number(player.id)); });
@@ -858,6 +907,12 @@ function inspectGameIntegrity(){
     if(unplayedFixtureIssues.length && !playedFixtureIssues.length){
       result.repairables.push({ type:'rebuild_cross_country_fixtures', title:'Regenerar calendario no jugado para quitar partidos cruzados', count:unplayedFixtureIssues.length, items:unplayedFixtureIssues });
     }
+  }
+  const botStatsIssues = botMatchStatsIntegrityIssues();
+  result.stats.botMatchesWithMissingStats = botStatsIssues.length;
+  if(botStatsIssues.length){
+    result.ok = false;
+    result.warnings.push({ type:'bot_match_min_stats_missing', severity:'medium', title:'Partidos bot sin estadísticas mínimas', detail:`Hay ${botStatsIssues.length} partido(s) bot jugados sin datos mínimos de goleadores, asistentes, tarjetas, lesiones, tapadas o errores. No se reconstruyen automáticamente porque ya fueron simulados.`, samples:botStatsIssues.slice(0,8) });
   }
   const freeCap = Number(typeof MARKET_FREE_AGENT_HARD_MAX !== 'undefined' ? MARKET_FREE_AGENT_HARD_MAX : 300);
   if(result.stats.freeAgents > freeCap){
@@ -2148,6 +2203,23 @@ function managerObjectiveProgressInfo(){
     failed:objective !== null && played >= minMatches && ppg <= objective
   };
 }
+
+function queueAutomaticRankingSubmission(eventType='season_end'){
+  if(!game) return false;
+  game.rankingUploads = game.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
+  const run = () => {
+    if(typeof submitRankingAutomatically === 'function'){
+      submitRankingAutomatically(eventType, { notifyErrors:true, forceRetry:true });
+    }else if(typeof pushGameMessage === 'function'){
+      pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking pendiente', body:'El módulo de ranking no estaba listo. Volvé a abrir la partida o la pantalla Ranking para reintentar el envío automático.', id:`ranking-module-missing-${eventType}-${game.seasonNumber || 1}` });
+      if(typeof saveLocal === 'function') saveLocal(true);
+    }
+  };
+  setTimeout(run, 0);
+  setTimeout(run, 5000);
+  return true;
+}
+
 function gameOverSnapshot(){
   if(typeof buildRankingPayload === 'function'){
     const payload = buildRankingPayload(game?.rankingManagerName || storedManagerName() || 'Manager');
@@ -2195,7 +2267,7 @@ function checkManagerObjectiveGameOver(){
   activeTab = 'home';
   recordDismissedCareerStep();
   pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:`La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`, id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
-  if(typeof submitRankingAutomatically === 'function') submitRankingAutomatically('dismissal');
+  queueAutomaticRankingSubmission('dismissal');
   return true;
 }
 function ensureClubBudgetsState(){
@@ -3090,7 +3162,7 @@ function finalizeSeasonIfNeeded(){
   game.seasonFinalized = true;
   game.seasonPhase = 'finalized';
   game.seasonEndModalShown = false;
-  if(typeof submitRankingAutomatically === 'function') submitRankingAutomatically('season_end');
+  queueAutomaticRankingSubmission('season_end');
 }
 function applySeasonMovements(){
   const movements = game?.seasonTransition?.movements || [];

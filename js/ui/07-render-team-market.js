@@ -717,13 +717,27 @@ function renderTactics(){
     <div class="card tactic-board-card">
       <div class="row tactic-top-row"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div><div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div><div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div></div>
       <div class="tactic-click-help">${tacticSelectionHint()}</div>
-      <div class="pitch-board centered">${pitch}</div>
-      <div class="tactic-state-legend">
-        <span>${mentalityMarker('muy_defensivo')} Muy defensivo</span>
-        <span>${mentalityMarker('defensivo')} Defensivo</span>
-        <span>${mentalityMarker('normal')} Normal</span>
-        <span>${mentalityMarker('ofensivo')} Ofensivo</span>
-        <span>${mentalityMarker('muy_ofensivo')} Muy ofensivo</span>
+      <div class="tactic-board-layout">
+        <aside class="tactic-board-side tactic-board-left">
+          <h3>Instrucciones de partido</h3>
+          <p class="muted small">Se aplican según el resultado parcial. Pueden reforzar o contraponerse con instrucciones individuales.</p>
+          <div class="instruction-grid vertical">${matchInstructionControls()}</div>
+        </aside>
+        <div class="pitch-board-wrap">
+          <div class="pitch-board centered">${pitch}</div>
+          <div class="tactic-state-legend">
+            <span>${mentalityMarker('muy_defensivo')} Muy defensivo</span>
+            <span>${mentalityMarker('defensivo')} Defensivo</span>
+            <span>${mentalityMarker('normal')} Normal</span>
+            <span>${mentalityMarker('ofensivo')} Ofensivo</span>
+            <span>${mentalityMarker('muy_ofensivo')} Muy ofensivo</span>
+          </div>
+        </div>
+        <aside class="tactic-board-side tactic-board-right">
+          <h3>Instrucciones zonales</h3>
+          <p class="muted small">Defensa, medios y delanteros. Pueden contraponerse o no con la mentalidad individual de cada jugador.</p>
+          <div class="sector-style-grid vertical">${sectorStyleControls()}</div>
+        </aside>
       </div>
     </div>
     ${savedTacticsPanelMarkup()}
@@ -743,16 +757,6 @@ function renderTactics(){
       <h3>Cambios automáticos</h3>
       <p class="muted small">Elegí reglas simples: cansados, mejores suplentes o sólo cambios obligados por lesión.</p>
       <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
-    </div>
-    <div class="card sector-styles-card" style="margin-top:14px">
-      <h3>Estilos por sector</h3>
-      <p class="muted small">Definí cómo se comportan defensa, medios y delanteros. Influyen en posesión, ataques, ocasiones, errores, faltas y cansancio según las habilidades clave del sector.</p>
-      <div class="sector-style-grid">${sectorStyleControls()}</div>
-    </div>
-    <div class="card match-instructions-card" style="margin-top:14px">
-      <h3>Instrucciones de partido</h3>
-      <p class="muted small">El simulador 2.0 usa estas instrucciones según el resultado parcial del partido.</p>
-      <div class="instruction-grid">${matchInstructionControls()}</div>
     </div>
     <div class="row sticky-actions"><button id="saveTactic" class="primary">Confirmar equipo</button><span id="tacticErrors" class="bad small"></span></div>
   `;

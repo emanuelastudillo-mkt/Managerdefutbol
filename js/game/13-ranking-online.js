@@ -170,7 +170,7 @@ function buildRankingPayload(managerName, options={}){
   if(!record) return null;
   const eventType = String(options.eventType || 'season_snapshot');
   const initialBudget = rankingSeasonInitialBudget(record.season);
-  const finalBudget = Math.max(0, Math.round(Number(game.budget || 0)));
+  const finalBudget = Math.round(Number(game.budget || 0));
   const payload = {
     managerName: String(managerName || '').trim().slice(0, 40),
     clubId: Number(record.clubId || game.selectedClubId),
@@ -411,8 +411,11 @@ function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!payload?.position) return 'No se pudo calcular la posición actual.';
   if(options?.automatic){
     const previous = game.rankingUploads?.[payload.submissionKey];
-    if(previous?.status === 'success') return 'Este evento ya fue enviado al ranking.';
-    if(previous?.status === 'pending') return 'Este evento ya está pendiente de envío.';
+    if(previous?.status === 'success' && !options.forceRetry) return 'Este evento ya fue enviado al ranking.';
+    if(previous?.status === 'pending' && !options.forceRetry){
+      const attemptedAt = Date.parse(previous.attemptedAt || 0);
+      if(Number.isFinite(attemptedAt) && Date.now() - attemptedAt < 15000) return 'Este evento ya está pendiente de envío.';
+    }
     return '';
   }
   return rankingCooldownText();
@@ -475,30 +478,39 @@ function submitRankingAutomatically(eventType='season_end', options={}){
 }
 async function submitRankingToCloudflare(endpoint, payload, handlers={}){
   const paths = rankingConfiguredPaths('submit');
-  const body = JSON.stringify(rankingPayloadToApiBody(payload));
+  const apiBody = rankingPayloadToApiBody(payload);
+  const requestBodies = [
+    { label:'json', headers:rankingRequestHeaders(true), body:JSON.stringify(apiBody) },
+    { label:'payload', headers:{ ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams({ action:'submit', payload:JSON.stringify({ ...payload, ...apiBody }), token:String(RANKING_TOKEN || '') }).toString() }
+  ];
   let lastMessage = '';
   for(let i = 0; i < paths.length; i++){
     const path = paths[i];
-    try{
-      const response = await fetch(rankingApiUrl(endpoint, path), {
-        method:'POST',
-        headers:rankingRequestHeaders(true),
-        body
-      });
-      const data = await response.json().catch(() => ({}));
-      if(!response.ok || data.ok === false){
-        const message = rankingResponseErrorMessage(data, response);
-        lastMessage = message;
-        if(rankingIsRouteMissing(message, response) && i < paths.length - 1) continue;
-        throw new Error(message);
+    for(let j = 0; j < requestBodies.length; j++){
+      const req = requestBodies[j];
+      try{
+        const response = await fetch(rankingApiUrl(endpoint, path), {
+          method:'POST',
+          headers:req.headers,
+          body:req.body
+        });
+        const data = await response.json().catch(() => ({}));
+        if(!response.ok || data.ok === false){
+          const message = rankingResponseErrorMessage(data, response);
+          lastMessage = message;
+          if(rankingIsRouteMissing(message, response) && i < paths.length - 1) break;
+          if(j < requestBodies.length - 1) continue;
+          throw new Error(message);
+        }
+        handlers.onSuccess?.(data);
+        return;
+      }catch(error){
+        lastMessage = error?.message || lastMessage || 'Error al conectar con el ranking online.';
+        if(rankingIsRouteMissing(lastMessage) && i < paths.length - 1) break;
+        if(j < requestBodies.length - 1) continue;
+        handlers.onError?.(lastMessage);
+        return;
       }
-      handlers.onSuccess?.(data);
-      return;
-    }catch(error){
-      lastMessage = error?.message || lastMessage || 'Error al conectar con el ranking online.';
-      if(rankingIsRouteMissing(lastMessage) && i < paths.length - 1) continue;
-      handlers.onError?.(lastMessage);
-      return;
     }
   }
   handlers.onError?.(lastMessage || 'No se encontró una ruta válida para subir el ranking.');
@@ -540,4 +552,17 @@ async function loadRankingOnline(silent=false){
   }finally{
     rankingLoading = false;
   }
+}
+
+
+function retryPendingAutomaticRankingUploads(){
+  if(!game?.rankingUploads || typeof submitRankingAutomatically !== 'function') return 0;
+  let count = 0;
+  Object.values(game.rankingUploads).forEach(entry => {
+    if(entry?.status !== 'pending' && entry?.status !== 'error') return;
+    if(!['season_end','dismissal'].includes(String(entry.eventType || ''))) return;
+    submitRankingAutomatically(entry.eventType, { notifyErrors:false, forceRetry:true });
+    count += 1;
+  });
+  return count;
 }

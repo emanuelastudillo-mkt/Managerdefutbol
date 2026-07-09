@@ -1,8 +1,18 @@
 # Fútbol Manager MVP
 
-**V4.26 - Balance físico postpartido**
+**V4.27 - Verificador, simulador y ranking automático**
 
 ## Historial de versiones
+
+### V4.27 - Verificador, simulador y ranking automático
+- El verificador revisa partidos bot ya jugados y alerta si faltan estadísticas mínimas: goleadores, asistentes, tarjetas, lesiones, tapadas o errores.
+- El simulador visual agrega bajo las estadísticas de cada equipo un resumen de goles, asistencias, amonestados, expulsados y lesionados.
+- La Oficina muestra un bloque grande de `Días restantes` antes del próximo compromiso o durante vacaciones/pretemporada/postemporada.
+- El resumen del último avance se mueve al final de la pantalla principal.
+- Los estilos tácticos por sector se integran en el lateral derecho de la pizarra como instrucciones zonales.
+- Las instrucciones de partido se integran en el lateral izquierdo de la pizarra.
+- Los avisos superiores de avance automático desaparecen automáticamente luego de unos segundos.
+- Se refuerza el envío automático al ranking al cierre de temporada y despido con reintentos y formato alternativo compatible.
 
 ### V4.26 - Balance físico postpartido
 - La recuperación automática aplicada al terminar un partido baja a un tercio: de `+12 a +18` pasa a `+4 a +6`.

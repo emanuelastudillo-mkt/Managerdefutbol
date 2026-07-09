@@ -580,7 +580,7 @@ function renderMatchRevealStage(match, stage, index, total){
   box.innerHTML = `
     <div class="match-fullscreen-grid">
       <aside class="match-side-column match-side-home">
-        ${revealTeamStatsCard(match.homeId, homeStats, 'Local')}
+        ${revealTeamStatsCard(match.homeId, homeStats, 'Local', match)}
       </aside>
       <main class="match-main-column">
         <div class="card inner reveal-commentary-card ${escapeHtml(narration.tone || 'ambient')}">
@@ -604,7 +604,7 @@ function renderMatchRevealStage(match, stage, index, total){
         ${stage.factor === 1 ? `<div class="row reveal-final-actions"><button class="ghost" data-match-id="${escapeHtml(match.id)}">Ver ficha completa normal</button></div>` : ''}
       </main>
       <aside class="match-side-column match-side-away">
-        ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante')}
+        ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante', match)}
       </aside>
     </div>`;
   const finish = $('finishMatchReveal');
@@ -714,7 +714,26 @@ function partialMatchStats(stats, factor){
     goalErrors: Math.round((stats.goalErrors || 0) * factor)
   };
 }
-function revealTeamStatsCard(clubId, stats, sideLabel){
+function matchEventPlayerName(id){
+  const player = playerById(id);
+  return player ? playerLastName(player.name || player.nombre || 'Jugador') : 'Jugador';
+}
+function teamMatchEventSummary(match, clubId){
+  const goals = (match?.goals || []).filter(item => Number(item.clubId) === Number(clubId));
+  const assists = goals.filter(item => Number(item.assistId || 0) > 0);
+  const yellow = (match?.cards || []).filter(item => Number(item.clubId) === Number(clubId) && String(item.type || '') === 'yellow');
+  const red = (match?.cards || []).filter(item => Number(item.clubId) === Number(clubId) && ['red','secondYellowRed'].includes(String(item.type || '')));
+  const injuries = (match?.injuries || []).filter(item => Number(item.clubId) === Number(clubId));
+  const line = (label, list, mapper) => `<div class="team-event-line"><span>${escapeHtml(label)}</span><strong>${list.length ? list.map(mapper).join(', ') : '—'}</strong></div>`;
+  return `<div class="team-event-summary">
+    ${line('Goles', goals, item => `${escapeHtml(matchEventPlayerName(item.playerId))} ${Number(item.minute || 0)}'`)}
+    ${line('Asistencias', assists, item => `${escapeHtml(matchEventPlayerName(item.assistId))}`)}
+    ${line('Amonestados', yellow, item => `${escapeHtml(matchEventPlayerName(item.playerId))}`)}
+    ${line('Expulsados', red, item => `${escapeHtml(matchEventPlayerName(item.playerId))}`)}
+    ${line('Lesionados', injuries, item => `${escapeHtml(matchEventPlayerName(item.playerId))}`)}
+  </div>`;
+}
+function revealTeamStatsCard(clubId, stats, sideLabel, match=null){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
     <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
     <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
@@ -723,6 +742,7 @@ function revealTeamStatsCard(clubId, stats, sideLabel){
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
     <div class="stat-rank"><span>Faltas</span><strong>${stats.fouls}</strong></div>
     <div class="stat-rank"><span>Puntuación de pases</span><strong>${stats.passScore ?? '—'}</strong></div>
+    ${match ? teamMatchEventSummary(match, clubId) : ''}
   </div>`;
 }
 function matchRevealAllEvents(match){

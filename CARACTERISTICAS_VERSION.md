@@ -1,20 +1,17 @@
-# Características V4.26 - Balance físico postpartido
+# Características V4.27 - Verificador, simulador y ranking automático
 
-- Se reduce la recuperación automática que el juego aplica al terminar un partido.
-- Antes el motor sumaba aproximadamente `+12 a +18` físico antes de descontar el desgaste.
-- Ahora suma aproximadamente `+4 a +6`, equivalente a un tercio.
-- Se aumenta el desgaste base de los jugadores de campo por jugar un partido.
-- Antes el desgaste base era aproximadamente `-15 a -20`.
-- Ahora pasa a aproximadamente `-24 a -45`.
-- En condiciones extremas el desgaste puede acercarse a `-75` físico:
-  - desgaste base máximo;
-  - campo injugable;
-  - instrucción táctica exigente;
-  - estilo sectorial de alto cansancio.
-- El cálculo queda configurable en `config.js > simulador`:
-  - `recuperacionAutomaticaPostPartidoMin`;
-  - `recuperacionAutomaticaPostPartidoMax`;
-  - `desgastePartidoMin`;
-  - `desgastePartidoMax`;
-  - `factorDesgasteArquero`.
-- No se modifica la recuperación diaria por entrenamientos ni el calendario.
+- Verificador ampliado: controla que los partidos bot jugados tengan estadísticas mínimas de goleadores, asistentes, tarjetas, lesiones, tapadas y errores.
+- Simulador visual: debajo de las estadísticas laterales de cada equipo se listan goleadores, asistentes, amonestados, expulsados y lesionados.
+- Oficina: se agrega un bloque grande de `Días restantes` sobre `Próximo compromiso`.
+- El bloque `Resumen del último avance` queda al final de la pantalla principal.
+- Pantalla de táctica: instrucciones de partido al lateral izquierdo de la pizarra.
+- Pantalla de táctica: instrucciones zonales/estilos por sector al lateral derecho de la pizarra.
+- Los avisos superiores del avance automático dejan de quedar fijos.
+- Ranking automático reforzado: al cierre de temporada y despido se hacen reintentos y se prueba formato JSON y formato `payload` compatible.
+
+## Compatibilidad
+
+- Se implementa solo.
+- No requiere reinicio.
+- Las verificaciones de partidos bot aplican sobre partidos ya jugados, pero no reconstruyen estadísticas faltantes.
+- El ranking automático se refuerza desde el próximo cierre/despido; eventos anteriores pendientes pueden reintentarse si siguen guardados como error o pendiente.

@@ -236,6 +236,20 @@ function visualAlertsMarkup(){
   const items = visualAlertItems();
   return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
 }
+
+function daysUntilNextOwnMatchLabel(){
+  if(!game) return '';
+  if(!isRegularSeason()){
+    const remaining = isPreseason() ? Math.max(0, PRESEASON_TURNS - Number(game.phaseTurn || 0)) : isPostseason() ? Math.max(0, postseasonTurnsForCurrentSeason() - Number(game.phaseTurn || 0)) : 0;
+    if(remaining > 0) return `<div class="office-days-remaining"><span>Días restantes</span><strong>${remaining}</strong></div>`;
+    return '';
+  }
+  const info = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
+  if(!info?.date || typeof daysBetweenIsoDates !== 'function' || typeof currentCalendarDate !== 'function') return '';
+  const days = Math.max(0, daysBetweenIsoDates(currentCalendarDate(), info.date));
+  return `<div class="office-days-remaining"><span>Días restantes</span><strong>${days}</strong></div>`;
+}
+
 function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
   const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
@@ -251,9 +265,10 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     ? founderGoalProgressMarkup()
     : (objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');
   const phase = phaseLabel();
+  const daysRemainingBox = daysUntilNextOwnMatchLabel();
   const nextBox = next
-    ? `<div class="office-next-match"><p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
-    : `<div class="office-next-match"><p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
+    ? `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
+    : `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
   return `<div class="manager-office">
     <div class="office-main-card">
       <div class="office-club-head">
@@ -368,7 +383,6 @@ function renderHome(){
     ${turnModePanelMarkup()}
     ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
     ${visualAlertsMarkup()}
-    ${lastTurnSummaryMarkup()}
     <div class="card featured-players-panel" style="margin-top:14px">
       <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
       <div class="grid cols-3 featured-player-grid">
@@ -408,6 +422,7 @@ function renderHome(){
         <div class="timeline">${lastMatches.length ? lastMatches.map(compactMatch).join('') : '<p class="muted">Aún no hay partidos jugados.</p>'}</div>
       </div>
     </div>
+    ${lastTurnSummaryMarkup()}
 
   `;
   $('advanceDayBtn')?.addEventListener('click', advanceOneDay);

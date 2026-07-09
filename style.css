@@ -3200,3 +3200,76 @@ th{
   line-height:1.35;
 }
 @media (max-width:980px){.sector-style-grid{grid-template-columns:1fr}}
+
+/* V4.27 · Ajustes de simulador, táctica y oficina */
+.office-days-remaining{
+  border:1px solid rgba(96,165,250,.28);
+  background:linear-gradient(135deg,rgba(30,64,175,.24),rgba(15,23,42,.40));
+  border-radius:16px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.office-days-remaining span{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#bfdbfe;
+}
+.office-days-remaining strong{
+  font-size:34px;
+  line-height:1;
+  color:#fff;
+}
+.tactic-board-layout{
+  display:grid;
+  grid-template-columns:minmax(180px,240px) minmax(360px,1fr) minmax(180px,240px);
+  gap:14px;
+  align-items:stretch;
+  margin-top:12px;
+}
+.tactic-board-side{
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:18px;
+  background:rgba(15,23,42,.42);
+  padding:12px;
+  align-self:stretch;
+}
+.tactic-board-side h3{margin:0 0 6px;font-size:15px}
+.tactic-board-side .muted{margin:0 0 10px}
+.pitch-board-wrap{min-width:0}
+.instruction-grid.vertical,
+.sector-style-grid.vertical{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.tactic-board-side .instruction-control,
+.tactic-board-side .sector-style-control{
+  padding:10px;
+  border-radius:14px;
+}
+.tactic-board-side label{font-size:11px}
+.team-event-summary{
+  margin-top:10px;
+  padding-top:9px;
+  border-top:1px solid rgba(148,163,184,.20);
+  display:grid;
+  gap:5px;
+}
+.team-event-line{
+  display:grid;
+  grid-template-columns:82px 1fr;
+  gap:6px;
+  align-items:start;
+  font-size:11px;
+}
+.team-event-line span{color:#94a3b8}
+.team-event-line strong{font-size:11px;color:#e5e7eb;font-weight:650;line-height:1.25}
+@media (max-width:1100px){
+  .tactic-board-layout{grid-template-columns:1fr;}
+  .tactic-board-left{order:2}.pitch-board-wrap{order:1}.tactic-board-right{order:3}
+}

@@ -785,7 +785,7 @@ function startAutoAdvanceToNextOwnMatch(){
       updateAutoAdvanceOverlay(overlay, { progress:1, text:`Listo. Llegaste al día del partido: ${targetDate}.` });
       setTimeout(()=>closeAutoAdvanceOverlay(overlay), 650);
       startAutoAdvanceToNextOwnMatch.active = false;
-      showNotice(`Calendario avanzado. Se simularon ${processed.bots} partido(s) bot en el camino. Ya podés jugar tu partido.`, true);
+      showNotice(`Calendario avanzado. Se simularon ${processed.bots} partido(s) bot en el camino. Ya podés jugar tu partido.`);
       return;
     }
     const nextDate = addDaysToIsoDate(current, 1);

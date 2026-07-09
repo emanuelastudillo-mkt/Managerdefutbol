@@ -17,6 +17,20 @@
     from:index * 3 + 1,
     to:index === 29 ? 90 : index * 3 + 3
   }));
+  const LIVE_BLOCKS = [
+    { from:1, to:15, label:'0-15' },
+    { from:16, to:30, label:'15-30' },
+    { from:31, to:45, label:'30-45' },
+    { from:46, to:60, label:'45-60' },
+    { from:61, to:75, label:'60-75' },
+    { from:76, to:90, label:'75-90' }
+  ];
+  const LIVE_MANAGER_INSTRUCTIONS = [
+    { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
+    { value:'huevos', label:'PONGAN HUEVO!!!', desc:'Aporta +5 de forma física efectiva durante el bloque.' },
+    { value:'hold_result', label:'Cuidar el resultado', desc:'Bono de posesión y control.' },
+    { value:'all_defense', label:'Todos a defender', desc:'Bono alto de defensa. Ataque propio casi anulado.' }
+  ];
   const SIM_PITCH_CONDITIONS = {
     'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
     'Normal': { passDelta:0, chanceMultiplier:1.00, fatigueBonus:0, injuryBonus:0 },
@@ -592,6 +606,392 @@
     objects.forEach(obj => Object.entries(obj || {}).forEach(([id, delta]) => { merged[id] = (merged[id] || 0) + delta; }));
     return merged;
   }
+
+  function liveNormalizeInstruction(value){
+    const clean = String(value || '').trim();
+    return LIVE_MANAGER_INSTRUCTIONS.some(opt => opt.value === clean) ? clean : 'hold_result';
+  }
+  function liveInstructionLabel(value){
+    return LIVE_MANAGER_INSTRUCTIONS.find(opt => opt.value === value)?.label || 'Cuidar el resultado';
+  }
+  function clonePowerForLive(power){
+    return {
+      ...power,
+      profile:{ ...(power?.profile || {}) },
+      counts:{ ...(power?.counts || {}) },
+      styleEffects:{ ...(power?.styleEffects || emptySectorStyleEffectsV2()) }
+    };
+  }
+  function applyLiveInstructionToPower(power, instruction){
+    const copy = clonePowerForLive(power);
+    const style = copy.styleEffects;
+    if(instruction === 'all_attack'){
+      copy.attack *= 1.08;
+      copy.midfield *= 1.01;
+      copy.defense *= 0.94;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.07, 0.45, 1.55);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.06, 0.45, 1.55);
+      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.08, 0.55, 1.40);
+      style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.06, 0.55, 1.40);
+    }else if(instruction === 'huevos'){
+      const boost = 5;
+      copy.attack += boost;
+      copy.midfield += boost;
+      copy.defense += boost;
+      copy.keeper += boost * 0.55;
+      copy.stamina += boost;
+      style.foulAdd = simClamp((style.foulAdd || 0) + 0.35, -1.2, 3.0);
+    }else if(instruction === 'hold_result'){
+      copy.midfield *= 1.07;
+      copy.defense *= 1.03;
+      copy.attack *= 0.96;
+      style.possessionAdd = simClamp((style.possessionAdd || 0) + 5, -12, 18);
+      style.errorRiskMultiplier = simClamp((style.errorRiskMultiplier || 1) * 0.93, 0.45, 1.55);
+    }else if(instruction === 'all_defense'){
+      copy.defense *= 1.20;
+      copy.keeper *= 1.08;
+      copy.midfield *= 0.95;
+      copy.attack *= 0.34;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 0.28, 0.10, 1.55);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 0.20, 0.08, 1.55);
+      style.conversionMultiplier = simClamp((style.conversionMultiplier || 1) * 0.35, 0.12, 1.40);
+      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 0.70, 0.45, 1.22);
+      style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 0.58, 0.35, 1.22);
+      style.rivalConversionMultiplier = simClamp((style.rivalConversionMultiplier || 1) * 0.82, 0.60, 1.22);
+      style.possessionAdd = simClamp((style.possessionAdd || 0) - 8, -18, 18);
+    }
+    copy.liveInstruction = instruction;
+    copy.liveInstructionLabel = liveInstructionLabel(instruction);
+    return copy;
+  }
+  function liveInstructionConditionDelta(value){
+    if(value === 'all_attack') return -1;
+    if(value === 'huevos') return -1;
+    if(value === 'hold_result') return 0;
+    if(value === 'all_defense') return 1;
+    return 0;
+  }
+  function ensureLiveTacticShape(tactic, clubId){
+    const next = { ...(tactic || {}) };
+    next.formation = next.formation || '4-4-2';
+    if(!Array.isArray(next.starters) || next.starters.length !== 11){
+      next.starters = selectLineup(clubId, next).map(p => Number(p.id));
+    }else{
+      next.starters = next.starters.slice(0,11).map(id => Number(id || 0));
+    }
+    const starterIds = next.starters.filter(Boolean);
+    if(!Array.isArray(next.bench) || !next.bench.length){
+      next.bench = autoSelectBench(clubId, starterIds).map(p => Number(p.id));
+    }else{
+      next.bench = next.bench.map(id => Number(id || 0)).filter(Boolean);
+    }
+    next.autoSubs = [];
+    next.matchInstructions = normalizeMatchInstructions(next.matchInstructions);
+    next.sectorStyles = normalizeSectorStylesV2(next.sectorStyles);
+    return next;
+  }
+  function liveSideKey(session, clubId){
+    return Number(clubId) === Number(session.match.homeId) ? 'home' : 'away';
+  }
+  function liveTacticForClub(session, clubId){
+    return liveSideKey(session, clubId) === 'home' ? session.homeTactic : session.awayTactic;
+  }
+  function liveSetTacticForClub(session, clubId, tactic){
+    if(liveSideKey(session, clubId) === 'home') session.homeTactic = tactic;
+    else session.awayTactic = tactic;
+  }
+  function livePlayedSet(session, clubId){
+    return liveSideKey(session, clubId) === 'home' ? session.playedIdsHome : session.playedIdsAway;
+  }
+  function liveTotalsForSide(session, side){ return side === 'home' ? session.homeTotals : session.awayTotals; }
+  function liveEnsureSubBucket(session, clubId){
+    const key = String(clubId);
+    session.usedSubs[key] = Array.isArray(session.usedSubs[key]) ? session.usedSubs[key] : [];
+    session.usedIns[key] = Array.isArray(session.usedIns[key]) ? session.usedIns[key] : [];
+    session.usedOuts[key] = Array.isArray(session.usedOuts[key]) ? session.usedOuts[key] : [];
+    return session.usedSubs[key];
+  }
+  function applyLiveSubstitutions(session, clubId, changes=[], minute=0){
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic) return [];
+    const usedSubs = liveEnsureSubBucket(session, clubId);
+    const usedIn = new Set(session.usedIns[String(clubId)].map(Number));
+    const usedOut = new Set(session.usedOuts[String(clubId)].map(Number));
+    const events = [];
+    for(const raw of Array.isArray(changes) ? changes : []){
+      if(usedSubs.length >= 3) break;
+      const outId = Number(raw?.outId || 0);
+      const inId = Number(raw?.inId || 0);
+      if(!outId || !inId || outId === inId) continue;
+      const index = tactic.starters.findIndex(id => Number(id) === outId);
+      if(index < 0 || usedOut.has(outId) || usedIn.has(inId)) continue;
+      if(!tactic.bench.map(Number).includes(inId)) continue;
+      if(typeof canEnterMatch === 'function' && !canEnterMatch(inId)) continue;
+      tactic.starters[index] = inId;
+      tactic.bench = tactic.bench.filter(id => Number(id) !== inId);
+      usedSubs.push({ outId, inId, minute });
+      session.usedIns[String(clubId)].push(inId);
+      session.usedOuts[String(clubId)].push(outId);
+      livePlayedSet(session, clubId).add(inId);
+      const event = { clubId, outId, inId, minute, trigger:'manual', manual:true };
+      events.push(event);
+      session.substitutions.push(event);
+    }
+    liveSetTacticForClub(session, clubId, tactic);
+    return events;
+  }
+  function removePlayerFromLiveTactic(session, clubId, playerId){
+    const tactic = liveTacticForClub(session, clubId);
+    if(!tactic?.starters) return false;
+    const idx = tactic.starters.findIndex(id => Number(id) === Number(playerId));
+    if(idx < 0) return false;
+    tactic.starters[idx] = 0;
+    liveSetTacticForClub(session, clubId, tactic);
+    return true;
+  }
+  function liveCardsForBlock(session, clubId, power, fouls, block){
+    const cards = [];
+    const yellowCount = simClamp(probabilisticRoundV2(Math.max(0, Number(fouls || 0)) / 3.4), 0, 2);
+    session.yellowByPlayer = session.yellowByPlayer || {};
+    for(let i=0;i<yellowCount;i++){
+      const p = weightedPickV2(power.lineup, cardWeightV2);
+      if(!p) continue;
+      const key = String(p.id);
+      const minute = Math.floor(simRnd(block.from, block.to + 1));
+      const current = Number(session.yellowByPlayer[key] || 0);
+      session.yellowByPlayer[key] = current + 1;
+      if(current >= 1) cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute });
+      else cards.push({ clubId, playerId:p.id, type:'yellow', minute });
+    }
+    const directRedCandidates = (power.lineup || []).filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 78);
+    const directChance = simClamp((power.aggression - 62) / 900, 0.001, 0.045);
+    if(directRedCandidates.length && Math.random() < directChance){
+      const p = weightedPickV2(directRedCandidates, cardWeightV2);
+      cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(block.from, block.to + 1)) });
+    }
+    return cards.sort((a,b)=>a.minute-b.minute);
+  }
+  function liveInjuriesForBlock(session, clubId, power, context, block){
+    const injuries = [];
+    const candidates = (power.lineup || []).filter(player => !isUnavailable(player.id));
+    candidates.forEach(player => {
+      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90;
+      if(Math.random() < chance){
+        const injury = pickInjuryType();
+        const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
+        injuries.push({
+          clubId,
+          playerId:player.id,
+          type:'injury',
+          name:injury.name,
+          injuryLabel:injury.name,
+          probability:injury.probability,
+          chance:Math.round(chance * 100),
+          matchesOut,
+          minute:Math.floor(simRnd(block.from, block.to + 1)),
+          phase:'durante'
+        });
+      }
+    });
+    return injuries.sort((a,b)=>a.minute-b.minute);
+  }
+  function liveFinalizeStats(stats, blockCount){
+    const divisor = Math.max(1, Number(blockCount || LIVE_BLOCKS.length));
+    return {
+      attacks:simClamp(Math.round(stats.attacks), 1, 75),
+      chances:simClamp(Math.round(stats.chances), 0, 18),
+      possession:simClamp(Math.round(stats.possessionWeighted / divisor), 20, 80),
+      fouls:simClamp(Math.round(stats.fouls), 0, 32),
+      passScore:simClamp(Math.round(stats.passScore / divisor), 1, 140),
+      xg:Number(stats.xg.toFixed(2)),
+      keySaves:Math.round(Number(stats.keySaves || 0)),
+      errors:Math.round(Number(stats.errors || 0)),
+      goalErrors:Math.round(Number(stats.goalErrors || 0))
+    };
+  }
+  function livePowerPair(session){
+    const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0 });
+    const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0 });
+    return { home, away };
+  }
+  function createLiveMatchSession(match){
+    const homeTactic = ensureLiveTacticShape(getTacticForClubV2(match.homeId), match.homeId);
+    const awayTactic = ensureLiveTacticShape(getTacticForClubV2(match.awayId), match.awayId);
+    applyTacticCohesionPenalty(match.homeId, homeTactic);
+    applyTacticCohesionPenalty(match.awayId, awayTactic);
+    const matchContext = makeMatchContextV2(match);
+    const powers = livePowerPair({ match, homeTactic, awayTactic, matchContext });
+    return {
+      match:{ ...match },
+      homeTactic,
+      awayTactic,
+      matchContext,
+      blockIndex:0,
+      blocks:LIVE_BLOCKS.map(block => ({ ...block })),
+      currentMinute:0,
+      homeGoals:0,
+      awayGoals:0,
+      goals:[],
+      cards:[],
+      injuries:[],
+      substitutions:[],
+      keySaves:[],
+      errors:[],
+      homeTotals:emptyStats(),
+      awayTotals:emptyStats(),
+      initialStarterIdsHome:(powers.home.lineup || []).map(p => Number(p.id)),
+      initialStarterIdsAway:(powers.away.lineup || []).map(p => Number(p.id)),
+      playedIdsHome:new Set((powers.home.lineup || []).map(p => Number(p.id))),
+      playedIdsAway:new Set((powers.away.lineup || []).map(p => Number(p.id))),
+      usedSubs:{},
+      usedIns:{},
+      usedOuts:{},
+      yellowByPlayer:{},
+      instructionConditionDeltas:{},
+      instructionLog:[],
+      finished:false
+    };
+  }
+  function addLiveInstructionCondition(session, clubId, instruction){
+    const delta = liveInstructionConditionDelta(instruction);
+    if(!delta) return;
+    const tactic = liveTacticForClub(session, clubId);
+    (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
+      session.instructionConditionDeltas[id] = Number(session.instructionConditionDeltas[id] || 0) + delta;
+    });
+  }
+  function simulateLiveBlock(session, options={}){
+    if(!session || session.finished) return null;
+    const block = session.blocks[session.blockIndex];
+    if(!block) return finishLiveMatchSession(session);
+    const ownId = Number(game?.selectedClubId || 0);
+    const instruction = liveNormalizeInstruction(options.instruction);
+    applyLiveSubstitutions(session, ownId, options.substitutions || [], Math.max(1, block.from));
+    let { home, away } = livePowerPair(session);
+    if(Number(session.match.homeId) === ownId) home = applyLiveInstructionToPower(home, instruction);
+    if(Number(session.match.awayId) === ownId) away = applyLiveInstructionToPower(away, instruction);
+    const homeInstruction = Number(session.match.homeId) === ownId ? 'normal' : instructionForScore(session.homeTactic, session.homeGoals, session.awayGoals);
+    const awayInstruction = Number(session.match.awayId) === ownId ? 'normal' : instructionForScore(session.awayTactic, session.awayGoals, session.homeGoals);
+    const h = blockStatsForTeam(home, away, session.matchContext, homeInstruction, awayInstruction, true, block);
+    const a = blockStatsForTeam(away, home, session.matchContext, awayInstruction, homeInstruction, false, block);
+    mergeBlockStats(session.homeTotals, h);
+    mergeBlockStats(session.awayTotals, a);
+    const hBaseProb = h.chances > 0 ? simClamp(h.xg / Math.max(1, h.chances), 0.025, 0.70) : 0;
+    const aBaseProb = a.chances > 0 ? simClamp(a.xg / Math.max(1, a.chances), 0.025, 0.70) : 0;
+    for(let i=0;i<h.chances;i++){
+      const goal = resolveChanceV2(home, away, session.match.homeId, session.match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, session.homeTotals, session.awayTotals, session);
+      if(goal){ session.goals.push(goal); session.homeGoals++; }
+    }
+    for(let i=0;i<a.chances;i++){
+      const goal = resolveChanceV2(away, home, session.match.awayId, session.match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, session.awayTotals, session.homeTotals, session);
+      if(goal){ session.goals.push(goal); session.awayGoals++; }
+    }
+    const cards = [
+      ...liveCardsForBlock(session, session.match.homeId, home, h.fouls, block),
+      ...liveCardsForBlock(session, session.match.awayId, away, a.fouls, block)
+    ].sort((x,y)=>x.minute-y.minute);
+    cards.forEach(card => {
+      session.cards.push(card);
+      if(['red','secondYellowRed'].includes(String(card.type || ''))) removePlayerFromLiveTactic(session, card.clubId, card.playerId);
+    });
+    const injuries = [
+      ...liveInjuriesForBlock(session, session.match.homeId, home, session.matchContext, block),
+      ...liveInjuriesForBlock(session, session.match.awayId, away, session.matchContext, block)
+    ].sort((x,y)=>x.minute-y.minute);
+    injuries.forEach(injury => {
+      session.injuries.push(injury);
+      removePlayerFromLiveTactic(session, injury.clubId, injury.playerId);
+    });
+    addLiveInstructionCondition(session, ownId, instruction);
+    session.instructionLog.push({ minute:block.from, to:block.to, instruction, label:liveInstructionLabel(instruction) });
+    session.currentMinute = block.to;
+    session.blockIndex += 1;
+    if(session.blockIndex >= session.blocks.length) return finishLiveMatchSession(session);
+    return livePublicState(session, { block, homeBlock:h, awayBlock:a, cards, injuries });
+  }
+  function livePublicLineup(session, clubId){
+    const tactic = liveTacticForClub(session, clubId);
+    const slots = FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2'];
+    return (tactic?.starters || []).map((id, index) => {
+      const player = playerById(id);
+      return player ? { id:player.id, name:player.name, position:player.position, role:slots[index] || player.position, overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) } : null;
+    }).filter(Boolean);
+  }
+  function livePublicBench(session, clubId){
+    const tactic = liveTacticForClub(session, clubId);
+    return (tactic?.bench || []).map(id => playerById(id)).filter(Boolean).map(player => ({ id:player.id, name:player.name, position:player.position, overall:effectiveOverall(player), condition:currentCondition(player.id), morale:currentMorale(player.id) }));
+  }
+  function livePublicState(session, extra={}){
+    return {
+      match:session.match,
+      minute:session.currentMinute,
+      finished:Boolean(session.finished),
+      nextBlock:session.blocks[session.blockIndex] || null,
+      homeGoals:session.homeGoals,
+      awayGoals:session.awayGoals,
+      goals:session.goals.slice().sort((a,b)=>a.minute-b.minute),
+      cards:session.cards.slice().sort((a,b)=>a.minute-b.minute),
+      injuries:session.injuries.slice().sort((a,b)=>a.minute-b.minute),
+      substitutions:session.substitutions.slice().sort((a,b)=>a.minute-b.minute),
+      keySaves:session.keySaves.slice().sort((a,b)=>a.minute-b.minute),
+      errors:session.errors.slice().sort((a,b)=>a.minute-b.minute),
+      instructionLog:session.instructionLog.slice(),
+      homeLineup:livePublicLineup(session, session.match.homeId),
+      awayLineup:livePublicLineup(session, session.match.awayId),
+      ownBench:livePublicBench(session, game?.selectedClubId || 0),
+      usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
+      maxSubs:3,
+      matchContext:session.matchContext,
+      extra
+    };
+  }
+  function finishLiveMatchSession(session){
+    if(!session) return null;
+    session.finished = true;
+    session.goals.sort((a,b)=>a.minute-b.minute);
+    session.cards.sort((a,b)=>a.minute-b.minute);
+    session.injuries.sort((a,b)=>a.minute-b.minute);
+    session.substitutions.sort((a,b)=>a.minute-b.minute);
+    session.keySaves.sort((a,b)=>a.minute-b.minute);
+    session.errors.sort((a,b)=>a.minute-b.minute);
+    const matchStats = { home:liveFinalizeStats(session.homeTotals, session.blocks.length), away:liveFinalizeStats(session.awayTotals, session.blocks.length) };
+    matchStats.away.possession = 100 - matchStats.home.possession;
+    const starterIdsHome = (session.initialStarterIdsHome || []).map(Number).filter(Boolean);
+    const starterIdsAway = (session.initialStarterIdsAway || []).map(Number).filter(Boolean);
+    const playedIdsHome = [...session.playedIdsHome];
+    const playedIdsAway = [...session.playedIdsAway];
+    const result = {
+      ...session.match,
+      played:true,
+      engine:'simulador-vivo-bloques-v5.07',
+      starterIdsHome,
+      starterIdsAway,
+      homeGoals:session.homeGoals,
+      awayGoals:session.awayGoals,
+      goals:session.goals,
+      cards:session.cards,
+      injuries:session.injuries,
+      substitutions:session.substitutions,
+      keySaves:session.keySaves,
+      errors:session.errors,
+      matchStats,
+      matchContext:session.matchContext,
+      playedIdsHome,
+      playedIdsAway,
+      instructionConditionDeltas:session.instructionConditionDeltas,
+      liveBlocks:session.instructionLog
+    };
+    if(!result.friendly){
+      applyMatchCohesionResult(result, result.substitutions, result.cards);
+      applyResultToTables(result, result.homeGoals, result.awayGoals);
+      applyPlayerStats(result.homeId, playedIdsHome.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors);
+      applyPlayerStats(result.awayId, playedIdsAway.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors);
+      applyAvailability(result.cards, result.injuries);
+      if(typeof updatePlayerStarTrackingForMatch === 'function') updatePlayerStarTrackingForMatch(result);
+    }
+    session.result = result;
+    return result;
+  }
   function simulateMatch(match){
     const homeTactic = getTacticForClubV2(match.homeId);
     const awayTactic = getTacticForClubV2(match.awayId);
@@ -667,5 +1067,15 @@
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;
   window.DEFAULT_MATCH_INSTRUCTIONS = DEFAULT_MATCH_INSTRUCTIONS;
-  window.Simulator20 = { simulateMatch, pitchEffect:pitchEffectV2, normalizeMatchInstructions, normalizeSectorStyles:normalizeSectorStylesV2 };
+  window.LIVE_MANAGER_INSTRUCTIONS = LIVE_MANAGER_INSTRUCTIONS;
+  window.Simulator20 = {
+    simulateMatch,
+    createLiveMatchSession,
+    simulateLiveBlock,
+    finishLiveMatchSession,
+    livePublicState,
+    pitchEffect:pitchEffectV2,
+    normalizeMatchInstructions,
+    normalizeSectorStyles:normalizeSectorStylesV2
+  };
 })();

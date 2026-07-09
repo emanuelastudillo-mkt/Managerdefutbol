@@ -1265,6 +1265,10 @@ function openModal(html){
   document.body.appendChild(wrapper);
 }
 function closeModal(){
+  if(window.__liveMatchCloseLocked){
+    if(typeof showNotice === 'function') showNotice('El partido está en vivo. Debés terminar los 90 minutos y guardar el resultado para salir.', true);
+    return;
+  }
   clearMatchRevealTimers();
   const root = $('modalRoot');
   if(root) root.remove();

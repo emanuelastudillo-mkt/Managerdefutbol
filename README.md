@@ -1,8 +1,21 @@
 # Fútbol Manager MVP
 
-**V5.06 - Academia con crecimiento cualitativo**
+**V5.07 - Simulación viva por bloques**
 
 ## Historial de versiones
+
+### V5.07 - Simulación viva por bloques
+
+- Agregado sistema real de partido propio por bloques de 15 minutos.
+- El resultado ya no queda cerrado al abrir la pantalla: sólo se calcula hasta el minuto actual y el siguiente tramo se resuelve después de la intervención del manager.
+- Agregado botón de pausa/continuación automática y botón manual `Simular siguiente bloque`.
+- Agregado panel de cambios manuales con hasta 3 sustituciones durante el partido.
+- Agregadas instrucciones de campo aplicadas al bloque siguiente: `Todos al ataque`, `PONGAN HUEVO!!!`, `Cuidar el resultado` y `Todos a defender`.
+- Las instrucciones modifican ataque, defensa, posesión, riesgo, cansancio efectivo y/o producción ofensiva según el caso.
+- Se visualizan los 11 jugadores en cancha de ambos equipos durante la simulación con apellido, media, rol, estado físico y moral.
+- El relato y los eventos se actualizan por minuto: goles, tarjetas, lesiones, cambios, tapadas y errores.
+- Los partidos de bots siguen usando simulación rápida para rendimiento. El sistema vivo se aplica al partido propio oficial.
+- Actualizado `VERSION.md`, `config.js`, `index.html`, cache-busting y documentación a V5.07.
 
 ### V5.06 - Academia con crecimiento cualitativo
 

@@ -1,5 +1,14 @@
 # Características de versión
 
+## V5.07 - Simulación viva por bloques
+
+- Los partidos propios oficiales ahora pueden abrirse en una simulación viva por bloques de 15 minutos.
+- El resultado no se calcula completo al inicio: cada tramo se resuelve después de confirmar cambios e instrucciones.
+- El manager puede pausar, simular el siguiente bloque, hacer hasta 3 cambios manuales y dar instrucciones de campo.
+- Las instrucciones disponibles son `Todos al ataque`, `PONGAN HUEVO!!!`, `Cuidar el resultado` y `Todos a defender`.
+- Se muestran los 11 jugadores de ambos equipos con apellido, media, rol, físico y moral.
+- Los eventos del partido se agregan progresivamente para evitar spoilers y permitir intervención real.
+
 ## V5.06 - Academia con crecimiento cualitativo
 
 - El crecimiento de juveniles en Academia deja de mostrarse como número exacto `actual/límite`.

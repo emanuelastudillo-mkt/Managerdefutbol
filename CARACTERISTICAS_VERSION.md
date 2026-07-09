@@ -1,28 +1,15 @@
-# V4.09 - Playoffs de promoción Argentina
+# V4.10 - Precio dinámico de entradas bots
 
 ## Cambios principales
 
-- Se agregan playoffs de promoción para Argentina al terminar la liga regular.
-- Los cruces son ida y vuelta.
-- Primera División Argentina:
-  - 1° campeón.
-  - 1° a 4° clasificados a copas futuras.
-  - 15° y 16° juegan promoción contra Segunda.
-  - 17° y 18° descienden directo.
-- Segunda División Argentina:
-  - 1° campeón y ascenso directo.
-  - 2° ascenso directo.
-  - 3° y 4° juegan promoción contra Primera.
-  - 15° y 16° juegan promoción contra Tercera.
-  - 17° y 18° descienden directo.
-- Tercera División Argentina:
-  - 1° campeón y ascenso directo.
-  - 2° ascenso directo.
-  - 3° y 4° juegan promoción contra Segunda.
-  - No hay descensos.
-- Los partidos de promoción no modifican las tablas regulares.
-- Los ascensos y descensos definitivos se calculan al cerrar la temporada.
-- En empate global conserva la categoría el club de la división superior.
+- Los clubes bots locales ajustan automáticamente el precio de entrada según el prestigio del rival.
+- Rival de prestigio bajo: precio base de $100.
+- Rival de prestigio medio: precio entre $150 y $200.
+- Rival de prestigio alto: precio entre $200 y $500.
+- El club del manager conserva el precio manual de entrada.
+- El precio automático se calcula por partido y no modifica permanentemente el precio base del club bot.
+- `Atracción rival` pasa a mostrarse como `Demanda extra por rival` para aclarar que ese bonus afecta asistencia.
+- El contexto del partido muestra cuando el precio fue automático de bot, el nivel del rival y el multiplicador aplicado.
 
 ## Archivos modificados
 
@@ -31,16 +18,12 @@
 - `VERSION.md`
 - `README.md`
 - `CARACTERISTICAS_VERSION.md`
-- `style.css`
 - `js/core/01-config-constants.js`
 - `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/11-match-engine.js`
+- `js/ui/12-modals.js`
 
 ## Validaciones
 
 - Sintaxis validada en `config.js`.
 - Sintaxis validada en todos los archivos `.js`.
-- Prueba lógica aislada de creación de cruces y cálculo de movimientos de ascenso/descenso.
+- Prueba lógica de precio automático para rivales de prestigio bajo, medio y alto.

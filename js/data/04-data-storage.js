@@ -767,6 +767,36 @@ function priceRatio(price){
   if(TICKET_PRICE_MAX <= TICKET_PRICE_MIN) return 0;
   return clamp((Number(price || TICKET_PRICE_INITIAL) - TICKET_PRICE_MIN) / (TICKET_PRICE_MAX - TICKET_PRICE_MIN), 0, 1);
 }
+function roundTicketPrice(value){
+  const step = Math.max(1, Number(BOT_TICKET_ROUNDING || 1));
+  return clamp(Math.round(Number(value || TICKET_PRICE_INITIAL) / step) * step, TICKET_PRICE_MIN, TICKET_PRICE_MAX);
+}
+function botTicketMultiplierForRivalPrestige(prestige){
+  const value = clamp(Math.round(Number(prestige || 0)), 0, 99);
+  if(value <= BOT_TICKET_LOW_PRESTIGE_MAX) return 1;
+  if(value <= BOT_TICKET_MEDIUM_PRESTIGE_MAX){
+    const start = BOT_TICKET_LOW_PRESTIGE_MAX + 1;
+    const span = Math.max(1, BOT_TICKET_MEDIUM_PRESTIGE_MAX - start);
+    const progress = clamp((value - start) / span, 0, 1);
+    return BOT_TICKET_MEDIUM_MULTIPLIER_MIN + ((BOT_TICKET_MEDIUM_MULTIPLIER_MAX - BOT_TICKET_MEDIUM_MULTIPLIER_MIN) * progress);
+  }
+  const start = BOT_TICKET_MEDIUM_PRESTIGE_MAX + 1;
+  const span = Math.max(1, 99 - start);
+  const progress = clamp((value - start) / span, 0, 1);
+  return BOT_TICKET_HIGH_MULTIPLIER_MIN + ((BOT_TICKET_HIGH_MULTIPLIER_MAX - BOT_TICKET_HIGH_MULTIPLIER_MIN) * progress);
+}
+function ticketPriceInfoForMatch(match, rivalPrestige=0){
+  const homeId = Number(match?.homeId || 0);
+  const manualPrice = ticketPriceForClub(homeId);
+  const isManagerClub = Number(game?.selectedClubId || 0) === homeId;
+  if(isManagerClub || !BOT_TICKET_DYNAMIC_ENABLED){
+    return { price:manualPrice, basePrice:manualPrice, multiplier:1, isAutomaticBot:false, prestigeTier:'manual' };
+  }
+  const multiplier = botTicketMultiplierForRivalPrestige(rivalPrestige);
+  const price = roundTicketPrice(TICKET_PRICE_INITIAL * multiplier);
+  const tier = Number(rivalPrestige || 0) <= BOT_TICKET_LOW_PRESTIGE_MAX ? 'bajo' : (Number(rivalPrestige || 0) <= BOT_TICKET_MEDIUM_PRESTIGE_MAX ? 'medio' : 'alto');
+  return { price, basePrice:TICKET_PRICE_INITIAL, multiplier:Number(multiplier.toFixed(2)), isAutomaticBot:true, prestigeTier:tier };
+}
 function ticketLossShieldRate(price){
   return (1 - priceRatio(price)) * TICKET_PRICE_MAX_EFFECT_RATE;
 }
@@ -811,7 +841,8 @@ function attendanceContextForMatch(match){
   const ratioBonus = awayFans > 0 ? Math.floor(homeFans / Math.max(1, awayFans)) : HOME_CROWD_BONUS_MAX;
   const diffBonus = Math.floor(Math.max(0, homeFans - awayFans) / HOME_CROWD_FANS_PER_BONUS_POINT);
   const homeCrowdBonus = clamp(Math.max(ratioBonus, diffBonus), 0, HOME_CROWD_BONUS_MAX);
-  const ticketPrice = ticketPriceForClub(match.homeId);
+  const ticketPriceInfo = ticketPriceInfoForMatch(match, rivalPrestigeBonus.prestige);
+  const ticketPrice = ticketPriceInfo.price;
   const ticketRevenue = Math.round(totalFans * ticketPrice);
   return {
     stadiumName:clubStadiumName(match.homeId),
@@ -826,6 +857,10 @@ function attendanceContextForMatch(match){
     awayMax,
     homeCrowdBonus,
     ticketPrice,
+    ticketBasePrice:Number(ticketPriceInfo.basePrice || ticketPrice),
+    ticketPriceMultiplier:Number(ticketPriceInfo.multiplier || 1),
+    ticketPriceAutoBot:Boolean(ticketPriceInfo.isAutomaticBot),
+    ticketPricePrestigeTier:ticketPriceInfo.prestigeTier || '',
     ticketRevenue,
     homeDemandBase,
     awayDemandBase,

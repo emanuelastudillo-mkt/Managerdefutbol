@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.09',
+  version: 'V4.10',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -282,6 +282,16 @@ window.GAME_CONFIG = {
     precioEntradaInicial: 100,
     precioEntradaMinimo: 10,
     precioEntradaMaximo: 500,
+    // Precio automático sólo para clubes bots locales según prestigio del rival.
+    // Bajo: precio base. Medio: +50% a +100%. Alto: +100% a +500%.
+    precioEntradaBotAutomatico: true,
+    precioEntradaBotPrestigioBajoHasta: 39,
+    precioEntradaBotPrestigioMedioHasta: 69,
+    precioEntradaBotMultiplicadorMedioMin: 1.50,
+    precioEntradaBotMultiplicadorMedioMax: 2.00,
+    precioEntradaBotMultiplicadorAltoMin: 2.00,
+    precioEntradaBotMultiplicadorAltoMax: 5.00,
+    precioEntradaBotRedondeo: 10,
     porcentajeVisitanteMinimo: 0.07,
     porcentajeVisitanteMaximo: 0.10,
     porcentajeVisitanteMaximoConFaltanteLocal: 0.50,

@@ -2,10 +2,22 @@
 
 ## Versión actual
 
-**V4.09 - Playoffs de promoción Argentina**
+**V4.10 - Precio dinámico de entradas bots**
 
 ## Historial de versiones
 
+
+
+### V4.10 - Precio dinámico de entradas bots
+
+- Los clubes bots locales ahora ajustan automáticamente el precio de entrada según el prestigio del rival.
+- Rival de prestigio bajo: mantiene precio base de $100.
+- Rival de prestigio medio: cobra entre $150 y $200.
+- Rival de prestigio alto: cobra entre $200 y $500.
+- El club del manager mantiene el precio manual configurado en Estadio.
+- La recaudación usa el precio efectivo del partido, no modifica de forma permanente el precio base del club bot.
+- En el contexto del partido, `Atracción rival` se renombra como `Demanda extra por rival` para aclarar que afecta asistencia.
+- Si el precio fue automático de bot, el contexto del partido muestra el multiplicador aplicado.
 
 ### V4.09 - Playoffs de promoción Argentina
 

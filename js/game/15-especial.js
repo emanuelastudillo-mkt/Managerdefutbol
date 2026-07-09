@@ -34,6 +34,8 @@ function normalizeSpecialCard(card, index=0){
   if(!card || typeof card !== 'object') return null;
   const base = specialCardBaseById(card.id_base || card.baseId) || {};
   const id = String(card.id_carta || card.id || `CARD-${Date.now()}-${index}-${hashNumber(JSON.stringify(card), 100000)}`);
+  const activatedTurn = Number.isFinite(Number(card.activada_en_turno ?? card.activatedTurn)) ? Math.max(0, Math.round(Number(card.activada_en_turno ?? card.activatedTurn))) : null;
+  const lockedUntilTurn = Number.isFinite(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn)) ? Math.max(0, Math.round(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn))) : null;
   return {
     id_carta:id,
     id_base:String(card.id_base || base.id_base || ''),
@@ -50,7 +52,9 @@ function normalizeSpecialCard(card, index=0){
     obtenida_en_turno:card.obtenida_en_turno ?? currentTurnIndex(),
     obtenida_desde_sobre:String(card.obtenida_desde_sobre || ''),
     activada_en:validIsoDate(card.activada_en) ? card.activada_en : null,
-    bloqueada_hasta:validIsoDate(card.bloqueada_hasta) ? card.bloqueada_hasta : null
+    bloqueada_hasta:validIsoDate(card.bloqueada_hasta) ? card.bloqueada_hasta : null,
+    activada_en_turno:activatedTurn,
+    bloqueada_hasta_turno:lockedUntilTurn
   };
 }
 function normalizeSpecialState(state=null, managerName=''){
@@ -66,6 +70,7 @@ function normalizeSpecialState(state=null, managerName=''){
     const activeCard = { ...card, activa:true, destruida:false };
     if(!validIsoDate(activeCard.activada_en) && validIsoDate(normalized.fecha_ultimo_cambio_cartas)) activeCard.activada_en = normalized.fecha_ultimo_cambio_cartas;
     if(validIsoDate(activeCard.activada_en) && !validIsoDate(activeCard.bloqueada_hasta)) activeCard.bloqueada_hasta = addDaysToIsoDate(activeCard.activada_en, specialLimits().lockDays);
+    normalizeSpecialCardLockTurns(activeCard);
     return activeCard;
   });
   normalized.cartas_reserva = reserve.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).filter(card => !card.destruida).map(card => ({ ...card, activa:false }));
@@ -144,11 +149,41 @@ function specialCurrentDate(){
   if(typeof currentCalendarDate === 'function') return currentCalendarDate();
   return validIsoDate(game?.currentDate) ? game.currentDate : dateForSeasonState(game);
 }
+function normalizeSpecialCardLockTurns(card){
+  if(!card || typeof card !== 'object') return card;
+  const limits = specialLimits();
+  const lockDays = Math.max(0, Math.round(Number(limits.lockDays || 0)));
+  if(lockDays <= 0) return card;
+  const nowTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  if(Number.isFinite(Number(card.bloqueada_hasta_turno))){
+    card.bloqueada_hasta_turno = Math.max(0, Math.round(Number(card.bloqueada_hasta_turno || 0)));
+    if(!Number.isFinite(Number(card.activada_en_turno))) card.activada_en_turno = Math.max(0, card.bloqueada_hasta_turno - lockDays);
+    return card;
+  }
+  let remaining = lockDays;
+  const today = specialCurrentDate();
+  if(validIsoDate(card.bloqueada_hasta)){
+    remaining = daysBetweenIsoDates(today, card.bloqueada_hasta);
+  } else if(validIsoDate(card.activada_en)){
+    remaining = lockDays - Math.max(0, daysBetweenIsoDates(card.activada_en, today));
+  }
+  remaining = clamp(Math.round(Number(remaining || 0)), 0, lockDays);
+  card.activada_en_turno = nowTurn;
+  card.bloqueada_hasta_turno = nowTurn + remaining;
+  if(!validIsoDate(card.bloqueada_hasta) && validIsoDate(today)) card.bloqueada_hasta = addDaysToIsoDate(today, remaining);
+  return card;
+}
 function specialCardActiveLockInfo(card){
-  const until = validIsoDate(card?.bloqueada_hasta) ? card.bloqueada_hasta : null;
-  if(!until) return { locked:false, remaining:0, until:null };
-  const remaining = daysBetweenIsoDates(specialCurrentDate(), until);
-  return { locked:remaining > 0, remaining:Math.max(0, remaining), until };
+  if(!card || typeof card !== 'object') return { locked:false, remaining:0, until:null };
+  normalizeSpecialCardLockTurns(card);
+  const limits = specialLimits();
+  const lockDays = Math.max(0, Math.round(Number(limits.lockDays || 0)));
+  const nowTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  const turnUntil = Number.isFinite(Number(card.bloqueada_hasta_turno)) ? Math.round(Number(card.bloqueada_hasta_turno || 0)) : null;
+  let remaining = turnUntil !== null ? turnUntil - nowTurn : 0;
+  remaining = clamp(Math.round(Number(remaining || 0)), 0, lockDays);
+  const until = validIsoDate(card?.bloqueada_hasta) ? card.bloqueada_hasta : (validIsoDate(specialCurrentDate()) ? addDaysToIsoDate(specialCurrentDate(), remaining) : null);
+  return { locked:remaining > 0, remaining, until, turnUntil };
 }
 function specialActiveCardsLockSummary(){
   const state = ensureSpecialState();
@@ -169,11 +204,14 @@ function lockSpecialCardChanges(card=null, stateRef=null){
   const today = specialCurrentDate();
   const lockDays = specialLimits().lockDays;
   const until = lockDays > 0 ? addDaysToIsoDate(today, lockDays) : null;
+  const nowTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
   state.fecha_ultimo_cambio_cartas = today;
   state.bloqueado_hasta = null;
   if(card && typeof card === 'object'){
     card.activada_en = today;
     card.bloqueada_hasta = until;
+    card.activada_en_turno = nowTurn;
+    card.bloqueada_hasta_turno = nowTurn + Math.max(0, Math.round(Number(lockDays || 0)));
   }
 }
 function specialActiveBonus(type){

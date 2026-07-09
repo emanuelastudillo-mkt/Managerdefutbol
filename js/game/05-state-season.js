@@ -1556,6 +1556,12 @@ function normalizeGame(saved){
   if(previousCalendarVersion !== SEASON_CALENDAR_VERSION || !validIsoDate(normalized.currentDate) || String(normalized.currentDate).slice(0,4) !== String(normalized.seasonYear)){
     normalized.currentDate = dateForSeasonState(normalized);
   }
+  normalized.lastCalendarDate = validIsoDate(normalized.lastCalendarDate) ? normalized.lastCalendarDate : null;
+  if(normalized.lastCalendarDate && validIsoDate(normalized.currentDate) && daysBetweenIsoDates(normalized.currentDate, normalized.lastCalendarDate) > 0){
+    normalized.currentDate = normalized.lastCalendarDate;
+    normalized._calendarRegressionRepaired = true;
+  }
+  if(validIsoDate(normalized.currentDate)) normalized.lastCalendarDate = normalized.currentDate;
   normalized.calendarVersion = SEASON_CALENDAR_VERSION;
   normalized.standings = normalized.standings || createInitialStandings();
   normalized.playerStats = normalized.playerStats || createInitialPlayerStats();
@@ -3803,7 +3809,10 @@ function startNextSeason(selectedClubId){
   game.pendingFriendlyOpponentId = 0;
   game.matchdayIndex = 0;
   game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:game.seasonYear });
-  game.currentDate = firstAdvanceDateForSeason(game.seasonYear);
+  const previousDate = validIsoDate(game.currentDate) ? game.currentDate : seasonEndDateForYear(seasonYearForNumber((game.seasonNumber || 2) - 1));
+  const nextSeasonStart = firstAdvanceDateForSeason(game.seasonYear);
+  game.currentDate = validIsoDate(previousDate) && daysBetweenIsoDates(previousDate, nextSeasonStart) <= 0 ? nextSeasonStart : addDaysToIsoDate(previousDate, 1);
+  game.lastCalendarDate = game.currentDate;
   game.standings = createInitialStandings();
   game.playerStats = createInitialPlayerStats();
   game.playerStars = normalizePlayerStarsState(game.playerStars || {});

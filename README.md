@@ -1,16 +1,19 @@
 # Fútbol Manager MVP
 
-**V4.33 - Corrección entrenamientos guardados**
+**V4.34 - Corrección calendario, préstamos y cartas**
 
 ## Historial de versiones
 
-### V4.33 - Corrección entrenamientos guardados
+### V4.34 - Corrección calendario, préstamos y cartas
 
-- Corregido el bloqueo de la pestaña Entrenamiento después de guardar un plan semanal.
-- El resumen de entrenamientos guardados ahora lee correctamente la estructura por días.
-- El panel de guardados ahora tolera datos incompletos o corruptos.
-- Se agrega botón para reiniciar sólo los entrenamientos guardados, sin borrar la partida.
-- Primer Equipo ahora tiene protección: si una subpestaña falla, vuelve a Táctica en lugar de quedar trabado.
+- Corregido el cobro semanal de préstamos: el calendario de cuotas ahora usa `lastPaymentDate` y `nextPaymentDate`.
+- El contador heredado `daysSincePayment` ya no se pierde al normalizar el préstamo activo.
+- Las cuotas vencidas se procesan por fecha real y pueden continuar después del cambio de temporada.
+- El préstamo activo muestra la próxima fecha de cuota.
+- Corregido el bloqueo de cartas activas para que no pueda mostrar más días que el máximo configurado.
+- Las cartas activas ahora guardan también bloqueo por turno absoluto, no solo por fecha visible.
+- Agregada protección contra retrocesos de calendario: la partida recuerda la última fecha válida y no vuelve a una fecha anterior por normalización.
+- El inicio de nueva temporada se trata como avance desde el cierre anterior, no como reinicio hacia atrás.
 
 ### V4.32 - Entrenamientos guardados e histórico de tablas
 

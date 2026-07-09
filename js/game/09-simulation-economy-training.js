@@ -304,6 +304,14 @@ function currentCalendarDate(){
   if(!game) return '';
   return validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
 }
+function rememberCalendarDate(){
+  if(!game || !validIsoDate(game.currentDate)) return;
+  if(validIsoDate(game.lastCalendarDate) && daysBetweenIsoDates(game.currentDate, game.lastCalendarDate) > 0){
+    game.currentDate = game.lastCalendarDate;
+    return;
+  }
+  game.lastCalendarDate = game.currentDate;
+}
 function nextRegularRound(){
   if(!game || !isRegularSeason()) return null;
   if(game.matchdayIndex >= game.fixtures.length) return null;
@@ -680,11 +688,20 @@ function clearRecoveredDailyInjuries(){
 function processBankLoanDailySchedule(){
   if(!game || !BANK_LOANS_ENABLED) return 0;
   const state = ensureBankLoanState();
-  if(!state?.active) return 0;
-  state.active.daysSincePayment = Math.max(0, Math.round(Number(state.active.daysSincePayment || 0))) + 1;
-  if(state.active.daysSincePayment < 7) return 0;
-  state.active.daysSincePayment = 0;
-  return processBankLoanWeeklyPayment();
+  const loan = state?.active;
+  if(!loan) return 0;
+  const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  if(!validIsoDate(today)) return 0;
+  if(!validIsoDate(loan.lastPaymentDate)) loan.lastPaymentDate = validIsoDate(loan.startedDate) ? loan.startedDate : today;
+  if(!validIsoDate(loan.nextPaymentDate)) loan.nextPaymentDate = addDaysToIsoDate(loan.lastPaymentDate, 7);
+  let charged = 0;
+  let guard = 0;
+  while(state.active && validIsoDate(state.active.nextPaymentDate) && daysBetweenIsoDates(state.active.nextPaymentDate, today) >= 0 && guard < 10){
+    const paid = processBankLoanWeeklyPayment(state.active.nextPaymentDate);
+    charged += paid;
+    guard += 1;
+  }
+  return charged;
 }
 
 function ensureMonthlyExpensesState(){
@@ -734,6 +751,7 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   const simulateBots = options.simulateBots !== false;
   const includeOwn = options.includeOwn === true;
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
+  rememberCalendarDate();
   advanceGlobalTurn();
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
@@ -950,6 +968,7 @@ function simulateNextMatchday(options={}){
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
+    rememberCalendarDate();
     saveLocal(true);
     renderAll();
     showNotice('Comienza la postemporada. Se usarán los días restantes del año antes del cierre de temporada.');
@@ -966,6 +985,7 @@ function simulateNextMatchday(options={}){
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
+    rememberCalendarDate();
     saveLocal(true);
     renderAll();
     showNotice('No quedan partidos pendientes. Comienza la postemporada.');
@@ -1016,9 +1036,11 @@ function simulateNextMatchday(options={}){
     game.seasonPhase = 'postseason';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
+    rememberCalendarDate();
     setAdvanceLock(0);
   } else {
     game.currentDate = targetDate;
+    rememberCalendarDate();
     setAdvanceLock(ownResult ? ADVANCE_LOCK_MS : DAY_ADVANCE_LOCK_MS);
   }
   if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
@@ -1076,6 +1098,7 @@ function simulatePreseasonTurn(){
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
+  rememberCalendarDate();
   advanceGlobalTurn();
   processAcademyTurn();
   processPendingTransfers();
@@ -1084,6 +1107,7 @@ function simulatePreseasonTurn(){
     game.seasonPhase = 'regular';
     game.phaseTurn = 0;
     game.currentDate = dateForSeasonState(game);
+    rememberCalendarDate();
     setAdvanceLock(0);
     if(Number(game.sponsors?.openingOffersSeason || 0) !== Number(game.seasonNumber || 1)){
       generateOpeningSponsorOffers(true);
@@ -1114,6 +1138,7 @@ function simulatePostseasonTurn(){
   processBankLoanDailySchedule();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
+  rememberCalendarDate();
   advanceGlobalTurn();
   processAcademyTurn();
   processPendingTransfers();
@@ -1121,6 +1146,7 @@ function simulatePostseasonTurn(){
   if(game.phaseTurn >= postseasonTurnsForCurrentSeason()){
     game.seasonPhase = 'finalizing';
     game.currentDate = seasonEndDateForYear(currentSeasonYear());
+    rememberCalendarDate();
     finalizeSeasonIfNeeded();
     setAdvanceLock(0);
     setPostseasonTurnSummary(true);
@@ -1524,6 +1550,16 @@ function normalizeBankLoanActiveLoan(loan){
   const remainingDebt = Math.max(0, Math.round(Number(loan.remainingDebt ?? (totalToRepay - paid))));
   const weeks = Math.max(1, Math.round(Number(loan.weeks || loan.totalWeeks || 1)));
   const remainingWeeks = Math.max(0, Math.round(Number(loan.remainingWeeks ?? loan.weeksRemaining ?? weeks)));
+  const today = validIsoDate(game?.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  const startedDate = validIsoDate(loan.startedDate) ? loan.startedDate : today;
+  const legacyDaysSincePayment = Math.max(0, Math.round(Number(loan.daysSincePayment || 0)));
+  const hasLegacyProgress = Number(loan.paid || 0) > 0 || Number(loan.remainingWeeks ?? weeks) < weeks;
+  let lastPaymentDate = validIsoDate(loan.lastPaymentDate) ? loan.lastPaymentDate : (hasLegacyProgress ? today : startedDate);
+  if(!validIsoDate(lastPaymentDate) && validIsoDate(today)) lastPaymentDate = today;
+  let nextPaymentDate = validIsoDate(loan.nextPaymentDate) ? loan.nextPaymentDate : '';
+  if(!nextPaymentDate && validIsoDate(lastPaymentDate)){
+    nextPaymentDate = addDaysToIsoDate(lastPaymentDate, hasLegacyProgress ? 7 : Math.max(1, 7 - legacyDaysSincePayment));
+  }
   return {
     id:String(loan.id || `loan-active-${Date.now()}`),
     season:Number(loan.season || game?.seasonNumber || 1),
@@ -1538,8 +1574,11 @@ function normalizeBankLoanActiveLoan(loan){
     remainingWeeks,
     remainingDebt,
     paid,
-    startedDate:loan.startedDate || game?.currentDate || '',
-    startedTurn:Number(loan.startedTurn || game?.globalTurn || 0)
+    startedDate,
+    startedTurn:Number(loan.startedTurn || game?.globalTurn || 0),
+    lastPaymentDate:validIsoDate(lastPaymentDate) ? lastPaymentDate : '',
+    nextPaymentDate:validIsoDate(nextPaymentDate) ? nextPaymentDate : '',
+    daysSincePayment:legacyDaysSincePayment
   };
 }
 function normalizeBankLoanState(state, sourceGame=game){
@@ -1577,7 +1616,8 @@ function requestBankLoan(offerId){
   if(!offer){ showNotice('La oferta bancaria ya no está disponible.'); return; }
   const prestige = currentManagerPrestige();
   if(prestige < offer.prestigeCost){ showNotice(`Prestigio insuficiente. Necesitás ${offer.prestigeCost} y tenés ${formatManagerPrestige(prestige)}.`); return; }
-  const active = normalizeBankLoanActiveLoan({ ...offer, totalWeeks:offer.weeks, remainingWeeks:offer.weeks, remainingDebt:offer.totalToRepay, paid:0, startedDate:game.currentDate || '', startedTurn:game.globalTurn || 0 });
+  const startDate = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  const active = normalizeBankLoanActiveLoan({ ...offer, totalWeeks:offer.weeks, remainingWeeks:offer.weeks, remainingDebt:offer.totalToRepay, paid:0, startedDate:startDate, startedTurn:game.globalTurn || 0, lastPaymentDate:startDate, nextPaymentDate:validIsoDate(startDate) ? addDaysToIsoDate(startDate, 7) : '' });
   addManagerPrestige(-offer.prestigeCost, `Préstamo tomado con ${offer.bankName}. Costo de prestigio: ${offer.prestigeCost}`);
   recordBudgetChange(offer.amount, `Préstamo bancario de ${offer.bankName}`, { type:'bank_loan_disbursement', bankName:offer.bankName, loanId:offer.id, prestigeCost:offer.prestigeCost, interestRate:offer.interestRate, weeks:offer.weeks, totalToRepay:offer.totalToRepay });
   state.active = active;
@@ -1588,16 +1628,20 @@ function requestBankLoan(offerId){
   renderFinances();
   showNotice(`Préstamo aprobado por ${offer.bankName}. Se acreditaron ${formatMoney(offer.amount)}.`);
 }
-function processBankLoanWeeklyPayment(){
+function processBankLoanWeeklyPayment(paymentDate=null){
   if(!game || !BANK_LOANS_ENABLED) return 0;
   const state = ensureBankLoanState();
   const loan = state?.active;
   if(!loan || loan.remainingDebt <= 0 || loan.remainingWeeks <= 0) return 0;
+  const effectivePaymentDate = validIsoDate(paymentDate) ? paymentDate : (validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : ''));
   const amount = Math.min(Math.max(1, Math.round(Number(loan.weeklyPayment || 0))), Math.round(Number(loan.remainingDebt || 0)));
   loan.remainingDebt = Math.max(0, Math.round(Number(loan.remainingDebt || 0) - amount));
   loan.paid = Math.max(0, Math.round(Number(loan.paid || 0) + amount));
   loan.remainingWeeks = Math.max(0, Math.round(Number(loan.remainingWeeks || 0) - 1));
-  recordBudgetChange(-amount, `Cuota semanal préstamo ${loan.bankName}`, { type:'bank_loan_payment', bankName:loan.bankName, loanId:loan.id, remainingDebt:loan.remainingDebt, remainingWeeks:loan.remainingWeeks });
+  loan.lastPaymentDate = validIsoDate(effectivePaymentDate) ? effectivePaymentDate : (loan.lastPaymentDate || '');
+  loan.nextPaymentDate = validIsoDate(loan.lastPaymentDate) ? addDaysToIsoDate(loan.lastPaymentDate, 7) : '';
+  loan.daysSincePayment = 0;
+  recordBudgetChange(-amount, `Cuota semanal préstamo ${loan.bankName}`, { type:'bank_loan_payment', bankName:loan.bankName, loanId:loan.id, remainingDebt:loan.remainingDebt, remainingWeeks:loan.remainingWeeks, paymentDate:loan.lastPaymentDate, nextPaymentDate:loan.nextPaymentDate });
   if(loan.remainingDebt <= 0 || loan.remainingWeeks <= 0){
     state.history = Array.isArray(state.history) ? state.history : [];
     state.history.push({ type:'paid', date:game.currentDate || '', bankName:loan.bankName, amount:loan.amount, paid:loan.paid });
@@ -1631,7 +1675,8 @@ function bankLoanProgressMarkup(loan){
   const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
   const total = Math.max(1, Math.round(Number(loan.totalToRepay || (paid + loan.remainingDebt) || 1)));
   const progress = clamp(Math.round((paid / total) * 100), 0, 100);
-  return `<div class="bank-loan-active"><div class="row"><div><p class="label">Préstamo activo</p><h3>${escapeHtml(loan.bankName)}</h3></div><span class="pill">${loan.remainingWeeks} semanas restantes</span></div><div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div><p class="muted small">Pagado: ${formatMoney(paid)} / ${formatMoney(total)} · Deuda restante: ${formatMoney(loan.remainingDebt)} · Cuota semanal: ${formatMoney(loan.weeklyPayment)}</p><button class="ghost danger small" data-payoff-bank-loan>Cancelar préstamo completo</button></div>`;
+  const nextText = validIsoDate(loan.nextPaymentDate) ? ` · Próxima cuota: ${escapeHtml(loan.nextPaymentDate)}` : '';
+  return `<div class="bank-loan-active"><div class="row"><div><p class="label">Préstamo activo</p><h3>${escapeHtml(loan.bankName)}</h3></div><span class="pill">${loan.remainingWeeks} semanas restantes</span></div><div class="bar transfer-budget-bar"><span style="width:${progress}%"></span></div><p class="muted small">Pagado: ${formatMoney(paid)} / ${formatMoney(total)} · Deuda restante: ${formatMoney(loan.remainingDebt)} · Cuota semanal: ${formatMoney(loan.weeklyPayment)}${nextText}</p><button class="ghost danger small" data-payoff-bank-loan>Cancelar préstamo completo</button></div>`;
 }
 function bankLoanOffersMarkup(){
   if(!BANK_LOANS_ENABLED) return '';

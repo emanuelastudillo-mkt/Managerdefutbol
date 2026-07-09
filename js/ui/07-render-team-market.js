@@ -74,6 +74,37 @@ function marketNumberFilterValue(key){
 function marketPlayerPrice(player){
   return Number(player?.clause || player?.value || 0);
 }
+
+function freeAgentAcceptanceChance(){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  return clamp(Math.round(typeof clubPrestigeValue === 'function' ? clubPrestigeValue(club) : Number(club?.reputation || 0)), 0, 100);
+}
+function freeAgentOfferRecord(playerId){
+  if(!game) return null;
+  const key = String(playerId);
+  const record = game.rejectedFreeAgentOffers?.[key] || null;
+  if(!record) return null;
+  if(Number(record.season || 0) !== Number(game.seasonNumber || 1)) return null;
+  if(Number(record.clubId || 0) !== Number(game.selectedClubId || 0)) return null;
+  return record;
+}
+function isFreeAgentOfferBlockedThisSeason(playerId){
+  return Boolean(freeAgentOfferRecord(playerId));
+}
+function markFreeAgentOfferRejected(playerId, chance){
+  if(!game) return;
+  game.rejectedFreeAgentOffers = (game.rejectedFreeAgentOffers && typeof game.rejectedFreeAgentOffers === 'object' && !Array.isArray(game.rejectedFreeAgentOffers)) ? game.rejectedFreeAgentOffers : {};
+  game.rejectedFreeAgentOffers[String(playerId)] = {
+    playerId:Number(playerId),
+    clubId:Number(game.selectedClubId || 0),
+    season:Number(game.seasonNumber || 1),
+    prestigeChance:Math.round(Number(chance || 0)),
+    createdAt:Date.now()
+  };
+}
+function freeAgentOfferButtonLabel(playerId){
+  return isFreeAgentOfferBlockedThisSeason(playerId) ? 'Rechazó hasta próxima temp.' : 'Hacer oferta';
+}
 function marketPlayerMatchesPosition(player){
   const filter = String(marketFilters.position || 'all').toUpperCase();
   if(filter === 'ALL') return true;
@@ -167,14 +198,14 @@ function renderMarket(){
     <td>${moraleBar(p.id)}</td>
     <td>${formatMoney(marketPlayerPrice(p))}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><button class="primary small-btn" data-hire-free-agent="${p.id}">Contratar</button></td>
+    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button></td>
   </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
     ${marketTabsMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
-    <div class="market-limit-note small muted">Se muestran los mejores ${free.length} jugador(es) que coinciden con el filtro.</div>
+    <div class="market-limit-note small muted">Se muestran los mejores ${free.length} jugador(es) que coinciden con el filtro. Probabilidad base de aceptación de libres: ${freeAgentAcceptanceChance()}%.</div>
     <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
     ${marketMoreButtonMarkup(freeFiltered.length, free.length)}`;
   bindMarketTabs();
@@ -219,7 +250,19 @@ function renderContractedMarket(){
 function hireFreeAgent(playerId){
   const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
   if(idx < 0) return;
+  if(isFreeAgentOfferBlockedThisSeason(playerId)){ showNotice('El jugador ya rechazó una oferta de este club. Podrás volver a intentar la próxima temporada.'); return; }
   if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
+  const chance = freeAgentAcceptanceChance();
+  const roll = Math.random() * 100;
+  if(roll >= chance){
+    const rejected = game.marketPlayers[idx];
+    markFreeAgentOfferRejected(playerId, chance);
+    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:`${rejected?.name || 'El jugador'} rechazó negociar con ${clubName(game.selectedClubId)}. Probabilidad de aceptación por prestigio del club: ${chance}%. Podrás volver a intentar la próxima temporada.`, priority:'normal' });
+    saveLocal(true);
+    showNotice(`${rejected?.name || 'Jugador'} rechazó la oferta.`);
+    renderMarket();
+    return;
+  }
   game.marketPlayers[idx].clubId = game.selectedClubId;
   game.marketPlayers[idx].freeAgent = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
@@ -238,7 +281,7 @@ function hireFreeAgent(playerId){
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
   ensurePlayerStateForAll();
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} se incorporó al plantel como agente libre.`, priority:'normal' });
+  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} aceptó la oferta y se incorporó al plantel como agente libre.`, priority:'normal' });
   saveLocal(true);
   showNotice(`${player?.name || 'Jugador'} contratado.`);
   renderMarket();

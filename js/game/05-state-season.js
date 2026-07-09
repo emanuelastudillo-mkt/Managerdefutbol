@@ -384,7 +384,8 @@ function ensureFounderFreeAgentPool(initialPlayers=[]){
     generated.forEach(player => pool.push(player));
     guard += 1;
   }
-  game.marketPlayers = pool;
+  game.marketPlayers = pruneFreeAgentMarketArrayToHardMax(pool, MARKET_FREE_AGENT_HARD_MAX);
+  syncSeedFreeAgentCleanup(game.marketPlayers);
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   ensurePlayerStateForAll();
   return founderFreeAgentGroupCounts(game.marketPlayers);
@@ -659,6 +660,7 @@ function normalizeGame(saved){
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
+  normalized.rejectedFreeAgentOffers = (normalized.rejectedFreeAgentOffers && typeof normalized.rejectedFreeAgentOffers === 'object' && !Array.isArray(normalized.rejectedFreeAgentOffers)) ? normalized.rejectedFreeAgentOffers : {};
   normalized.lastOwnPlayerOffer = normalized.lastOwnPlayerOffer || null;
   normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
@@ -672,6 +674,8 @@ function normalizeGame(saved){
     }
     ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : MARKET_FREE_AGENT_SALARY_FACTOR);
   });
+  normalized.marketPlayers = pruneFreeAgentMarketArrayToHardMax(normalized.marketPlayers, MARKET_FREE_AGENT_HARD_MAX);
+  syncSeedFreeAgentCleanup(normalized.marketPlayers);
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
@@ -1002,6 +1006,7 @@ function newGame(selectedClubId, options={}){
     marketPlayers: [],
     pendingTransfers: [],
     rejectedPurchaseOffers: {},
+    rejectedFreeAgentOffers: {},
     lastOwnPlayerOffer: null,
     seasonEndPlayerOffers: null,
     specialClauseOffers: null,
@@ -1615,6 +1620,7 @@ function resetClubSpecificCareerStateForNewClub(newClubId){
   game.lastOwnPlayerOffer = null;
   game.pendingTransfers = [];
   game.rejectedPurchaseOffers = {};
+  game.rejectedFreeAgentOffers = {};
   game.specialClauseOffers = null;
   if(typeof createBankLoanState === 'function'){
     game.bankLoan = createBankLoanState(game.seasonNumber || 1);
@@ -2164,23 +2170,42 @@ function removeFreeMarketPlayersById(ids=[]){
   });
   return removed;
 }
+
+function freeAgentPrunePriority(player){
+  const media = typeof visibleOverall === 'function' ? visibleOverall(player) : Number(player.overall || player.media || 50);
+  const age = Number(player.age || 0);
+  let score = 0;
+  if(player.youthFreeAgent) score += 900;
+  if(player.founderReleased) score += 250;
+  score += Math.max(0, age - 27) * 18;
+  score += Math.max(0, 60 - media) * 4;
+  score += Number(player.id || 0) / 1000000;
+  return score;
+}
+function pruneFreeAgentMarketArrayToHardMax(players=[], maxCount=MARKET_FREE_AGENT_HARD_MAX){
+  const safeMax = Math.max(0, Math.min(300, Math.round(Number(maxCount) || 0)));
+  if(!Array.isArray(players) || safeMax <= 0) return [];
+  const free = players.filter(player => player && Number(player.clubId || 0) === 0 && !player.sold && !player.retired);
+  const excess = free.length - safeMax;
+  if(excess <= 0) return players;
+  const remove = new Set(free.slice().sort((a,b) => freeAgentPrunePriority(b) - freeAgentPrunePriority(a)).slice(0, excess).map(player => Number(player.id)));
+  return players.filter(player => !remove.has(Number(player.id)));
+}
+function syncSeedFreeAgentCleanup(activeMarketPlayers=[]){
+  if(!seed?.players || !Array.isArray(activeMarketPlayers)) return;
+  const activeMarketIds = new Set(activeMarketPlayers.map(player => Number(player.id)));
+  seed.players = seed.players.filter(player => {
+    if(!player || Number(player.clubId || 0) !== 0 || !player.freeAgent) return true;
+    return activeMarketIds.has(Number(player.id));
+  });
+}
 function pruneFreeAgentMarketToMax(maxCount=SEASON_FREE_AGENT_MARKET_MAX){
   if(!game || !SEASON_FREE_AGENT_CLEANUP_ENABLED || !Number.isFinite(Number(maxCount)) || Number(maxCount) <= 0) return [];
+  const safeMax = Math.max(0, Math.min(300, Math.round(Number(maxCount) || 0)));
   const freePlayers = currentFreeMarketPlayers();
-  const excess = freePlayers.length - Number(maxCount);
+  const excess = freePlayers.length - safeMax;
   if(excess <= 0) return [];
-  const candidates = freePlayers
-    .filter(player => Math.round(Number(player.age || 0)) >= RETIREMENT_MIN_AGE)
-    .sort((a,b) => {
-      const ageDiff = Number(b.age || 0) - Number(a.age || 0);
-      if(ageDiff !== 0) return ageDiff;
-      const youthWeight = Number(Boolean(a.youthFreeAgent)) - Number(Boolean(b.youthFreeAgent));
-      if(youthWeight !== 0) return youthWeight;
-      const mediaDiff = visibleOverall(a) - visibleOverall(b);
-      if(mediaDiff !== 0) return mediaDiff;
-      return Number(a.id || 0) - Number(b.id || 0);
-    });
-  if(!candidates.length) return [];
+  const candidates = freePlayers.slice().sort((a,b) => freeAgentPrunePriority(b) - freeAgentPrunePriority(a));
   return removeFreeMarketPlayersById(candidates.slice(0, excess).map(player => player.id));
 }
 function initializeFreePlayerState(players=[]){
@@ -2235,7 +2260,8 @@ function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
 }
 function generateSeasonYouthFreeAgentsByClub(perClub=SEASON_YOUTH_FREE_AGENTS_PER_CLUB){
   const clubs = (seed?.clubs || []).filter(club => Number(club.id || 0) > 0);
-  const total = Math.max(0, Math.round(Number(perClub || 0))) * clubs.length;
+  const available = Math.max(0, MARKET_FREE_AGENT_HARD_MAX - currentFreeMarketPlayers().length);
+  const total = Math.min(available, Math.max(0, Math.round(Number(perClub || 0))) * clubs.length);
   if(total <= 0) return [];
   return generateSeasonYouthFreeAgents(total);
 }
@@ -2252,7 +2278,8 @@ function addSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
 }
 function topUpSeasonFreeAgentsToMax(maxCount=SEASON_FREE_AGENT_MARKET_MAX){
   if(!game || !SEASON_FREE_AGENT_TOP_UP_ENABLED || !Number.isFinite(Number(maxCount)) || Number(maxCount) <= 0) return [];
-  const needed = Math.max(0, Math.round(Number(maxCount)) - currentFreeMarketPlayers().length);
+  const target = Math.min(MARKET_FREE_AGENT_HARD_MAX, Math.round(Number(maxCount)));
+  const needed = Math.max(0, target - currentFreeMarketPlayers().length);
   if(needed <= 0) return [];
   const newPlayers = generateMarketPlayers(needed, { startId:nextPlayerId(), label:`season-market-${game.seasonNumber || 1}`, nameContext:'Mercado Libre' });
   game.marketPlayers = (game.marketPlayers || []).concat(newPlayers);
@@ -2262,16 +2289,16 @@ function topUpSeasonFreeAgentsToMax(maxCount=SEASON_FREE_AGENT_MARKET_MAX){
 }
 function renewFreeAgentMarketForSeason(retiredCount=0){
   if(!game) return { removed:[], youth:[], regular:[] };
-  pruneFreeAgentMarketToMax(SEASON_FREE_AGENT_MARKET_MAX);
+  pruneFreeAgentMarketToMax(MARKET_FREE_AGENT_HARD_MAX);
   const youth = generateSeasonYouthFreeAgentsByClub(SEASON_YOUTH_FREE_AGENTS_PER_CLUB);
   game.marketPlayers = (game.marketPlayers || []).concat(youth);
   mergeMarketPlayersIntoSeed(youth);
   initializeFreePlayerState(youth);
-  pruneFreeAgentMarketToMax(SEASON_FREE_AGENT_MARKET_MAX);
+  pruneFreeAgentMarketToMax(MARKET_FREE_AGENT_HARD_MAX);
   const regular = topUpSeasonFreeAgentsToMax(SEASON_FREE_AGENT_MARKET_MAX);
-  const finalPruned = pruneFreeAgentMarketToMax(SEASON_FREE_AGENT_MARKET_MAX);
+  const finalPruned = pruneFreeAgentMarketToMax(MARKET_FREE_AGENT_HARD_MAX);
   const legacyExtra = retiredCount > 0 && SEASON_YOUTH_FREE_AGENT_COUNT > 0 ? addSeasonYouthFreeAgents(Math.max(SEASON_YOUTH_FREE_AGENT_COUNT, retiredCount)) : [];
-  if(legacyExtra.length) pruneFreeAgentMarketToMax(SEASON_FREE_AGENT_MARKET_MAX);
+  if(legacyExtra.length) pruneFreeAgentMarketToMax(MARKET_FREE_AGENT_HARD_MAX);
   const totalYouth = youth.length + legacyExtra.length;
   const totalRegular = regular.length;
   if(totalYouth || totalRegular || finalPruned.length){
@@ -2828,6 +2855,7 @@ function startNextSeason(selectedClubId){
   game.mustReviewTactics = false;
   game.seasonEndPlayerOffers = null;
   game.rejectedPurchaseOffers = {};
+  game.rejectedFreeAgentOffers = {};
   resetAcademySeasonState();
   resetStaffSeasonState();
   game.advanceLockedUntil = 0;

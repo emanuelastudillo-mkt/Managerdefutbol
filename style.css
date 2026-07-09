@@ -2395,11 +2395,12 @@ button.action-failure{
 .resign-club-btn:hover{background:rgba(239,68,68,.18)!important}
 
 
-/* V3.64: relato grande del simulador */
+/* V4.11: relato del simulador compacto y animado */
 .reveal-commentary-card{
   position:relative;
-  padding:15px 16px;
+  padding:13px 15px;
   overflow:hidden;
+  animation:revealCommentaryEnterV411 .42s ease-out both;
   border-color:rgba(250,204,21,.20);
   background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(30,41,59,.78));
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),0 14px 34px rgba(0,0,0,.22);
@@ -2412,8 +2413,8 @@ button.action-failure{
   background:#facc15;
 }
 .reveal-commentary-text{
-  font-size:clamp(20px,3.1vw,34px);
-  line-height:1.12;
+  font-size:clamp(17px,2.35vw,26px);
+  line-height:1.18;
   letter-spacing:-.045em;
   font-weight:950;
   color:#f8fafc;
@@ -2438,7 +2439,8 @@ button.action-failure{
   animation:revealPulseV364 .85s ease-in-out infinite alternate;
 }
 @keyframes revealPulseV364{from{border-color:rgba(250,204,21,.14)}to{border-color:rgba(250,204,21,.40)}}
-@media (max-width:900px){.reveal-commentary-card{padding:12px 13px}.reveal-commentary-text{font-size:20px}}
+@keyframes revealCommentaryEnterV411{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media (max-width:900px){.reveal-commentary-card{padding:11px 12px}.reveal-commentary-text{font-size:17px}}
 
 
 /* V3.67: ampliaciones de estadio */

@@ -320,7 +320,8 @@ const TICKET_PRICE_MAX_EFFECT_RATE = configNumber('estadio.precioEntradaEfectoMa
 const RIVAL_PRESTIGE_ATTENDANCE_MAX_RATE = configNumber('estadio.bonusAsistenciaPrestigioRivalMaximo', 0.35, 0, 2);
 const RIVAL_PRESTIGE_ATTENDANCE_START = Math.round(configNumber('estadio.bonusAsistenciaPrestigioRivalDesde', 20, 0, 99));
 const RIVAL_PRESTIGE_AWAY_DEMAND_SHARE = configNumber('estadio.bonusAsistenciaPrestigioRivalVisitante', 0.50, 0, 1);
-const MARKET_FREE_AGENT_COUNT = configNumber('plantel.agentesLibresIniciales', 300, 0);
+const MARKET_FREE_AGENT_COUNT = Math.min(300, configNumber('plantel.agentesLibresIniciales', 300, 0));
+const MARKET_FREE_AGENT_HARD_MAX = Math.max(0, Math.min(300, Math.round(configNumber('plantel.agentesLibresMaximosTotales', 300, 0))));
 const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 40, 1, 99);
 const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 62, 1, 99));
 const MARKET_FREE_AGENT_AGE_MIN = configNumber('plantel.agentesLibresEdadMin', 19, 15, 45);
@@ -331,7 +332,7 @@ const MARKET_FREE_AGENT_POSITION_GROUPS = [
   { id:'MID', probability:configNumber('plantel.agentesLibresPosiciones.MED', 0.35, 0), positions:['MCD','MC','MC','MCO','MI','MD'] },
   { id:'ATT', probability:configNumber('plantel.agentesLibresPosiciones.DEL', 0.20, 0), positions:['ED','EI','DC'] }
 ];
-const SEASON_FREE_AGENT_MARKET_MAX = configNumber('plantel.agentesLibresMaximosPorTemporada', 200, 0);
+const SEASON_FREE_AGENT_MARKET_MAX = Math.min(MARKET_FREE_AGENT_HARD_MAX, configNumber('plantel.agentesLibresMaximosPorTemporada', 300, 0));
 const SEASON_FREE_AGENT_TOP_UP_ENABLED = configBoolean('plantel.rellenarLibresHastaMaximoPorTemporada', true);
 const SEASON_FREE_AGENT_CLEANUP_ENABLED = configBoolean('plantel.limpiarLibresViejosAlCambiarTemporada', true);
 const SEASON_YOUTH_FREE_AGENTS_PER_CLUB = configNumber('plantel.jovenesLibresNuevosPorEquipoTemporada', 3, 0);
@@ -407,7 +408,8 @@ const BOT_EMERGENCY_MEDIA_MAX = Math.max(BOT_EMERGENCY_MEDIA_MIN, configNumber('
 const BOT_EMERGENCY_SALARY_FACTOR = configNumber('plantel.botsFactorSueldoEmergencia', 0.35, 0);
 
 const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
-const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 30000, 1000));
+const MATCH_REVEAL_MIN_PHASE_MS = Math.max(500, configNumber('ui.duracionMinimaFaseSimulacionMs', 3000, 500));
+const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 270000, 1000), MATCH_REVEAL_PHASES * MATCH_REVEAL_MIN_PHASE_MS);
 const MATCH_COMMENTARY_HOLD_PHASES = Math.max(1, Math.min(6, Math.round(configNumber('ui.relatoMantenerFases', 2, 1))));
 const STADIUM_EXPANSIONS = [
   { id:1, minCapacity:0, name:'Grada tubular norte inicial', capacityGain:500, targetCapacity:500, cost:2000000, days:1, slot:'Norte' },

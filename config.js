@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V4.10',
+  version: 'V4.11',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -135,11 +135,12 @@ window.GAME_CONFIG = {
     botsMediaEmergenciaMax: 52,
     botsFactorSueldoEmergencia: 0.35,
     agentesLibresIniciales: 300,
+    agentesLibresMaximosTotales: 300,
     agentesLibresMediaMin: 40,
     agentesLibresMediaMax: 62,
     agentesLibresEdadMin: 19,
     agentesLibresEdadMax: 30,
-    agentesLibresMaximosPorTemporada: 200,
+    agentesLibresMaximosPorTemporada: 300,
     agentesLibresPosiciones: {
       POR: 0.10,
       DEF: 0.35,
@@ -148,7 +149,7 @@ window.GAME_CONFIG = {
     },
     rellenarLibresHastaMaximoPorTemporada: true,
     limpiarLibresViejosAlCambiarTemporada: true,
-    jovenesLibresNuevosPorEquipoTemporada: 3,
+    jovenesLibresNuevosPorEquipoTemporada: 0,
     jovenesLibresEdadMin: 17,
     jovenesLibresEdadMax: 18,
     jovenesLibresPorTemporada: 0
@@ -431,9 +432,10 @@ window.GAME_CONFIG = {
   },
   ui: {
     duracionAvisoMs: 5200,
-    fasesSimulacionPartido: 60,
-    duracionSimulacionPartidoMs: 60000,
-    relatoMantenerFases: 2,
+    fasesSimulacionPartido: 90,
+    duracionSimulacionPartidoMs: 270000,
+    duracionMinimaFaseSimulacionMs: 3000,
+    relatoMantenerFases: 1,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,
     accionesFeedbackResultadoMs: 900,

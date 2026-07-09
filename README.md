@@ -2,10 +2,25 @@
 
 ## Versión actual
 
-**V4.10 - Precio dinámico de entradas bots**
+**V4.11 - Optimización de libres y relato de partido**
 
 ## Historial de versiones
 
+
+
+### V4.11 - Optimización de libres y relato de partido
+
+- El mercado de jugadores libres queda limitado a un máximo duro de 300 jugadores.
+- Las partidas existentes con exceso de libres se recortan automáticamente al cargar.
+- Se desactiva la creación masiva de juveniles libres por club al cerrar temporada.
+- La renovación de mercado rellena hasta el máximo permitido, pero ya no puede superar el límite.
+- Los jugadores libres pueden rechazar ofertas según el prestigio del club.
+- La probabilidad de aceptación de un libre equivale al prestigio actual del club.
+- Si un jugador libre rechaza, queda bloqueado para ese club hasta la próxima temporada.
+- La pantalla de Mercado muestra la probabilidad base de aceptación.
+- El relato del partido pasa a 90 fases.
+- Cada fase del relato dura al menos 3 segundos.
+- El texto del relato se achica y aparece con animación de entrada.
 
 
 ### V4.10 - Precio dinámico de entradas bots

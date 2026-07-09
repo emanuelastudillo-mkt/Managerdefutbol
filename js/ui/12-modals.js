@@ -42,7 +42,10 @@ function playerModalActionsMarkup(player){
     return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
   if(clubId === 0 && !player.sold){
-    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}">Contratar</button></div></div>`;
+    const blocked = typeof isFreeAgentOfferBlockedThisSeason === 'function' && isFreeAgentOfferBlockedThisSeason(player.id);
+    const label = typeof freeAgentOfferButtonLabel === 'function' ? freeAgentOfferButtonLabel(player.id) : (blocked ? 'Rechazó hasta próxima temp.' : 'Hacer oferta');
+    const chance = typeof freeAgentAcceptanceChance === 'function' ? freeAgentAcceptanceChance() : 0;
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><p class="muted small">Aceptación estimada por prestigio del club: ${chance}%.</p><div class="row message-actions"><button class="primary" data-hire-free-agent-modal="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></div></div>`;
   }
   return '';
 }

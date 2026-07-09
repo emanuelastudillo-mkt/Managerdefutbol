@@ -1,5 +1,12 @@
 # Fútbol Manager MVP
 
+## V5.22 - Controles del simulador centrados
+
+- Los botones de instrucciones del simulador vivo quedan centrados en una primera línea.
+- Los botones de acción quedan centrados en una segunda línea: **Táctica**, **Auto/Pausar**, **Simular 1 minuto** y **Cerrar y guardar**.
+- Se reduce el ancho ocupado por la botonera inferior para evitar cortes y desbordes en pantalla horizontal.
+- No modifica lógica del partido, fatiga, cambios, expulsiones ni calendario.
+
 ## V5.21 - Pizarra táctica integrada al simulador
 
 - El botón **Táctica** del simulador vivo ahora abre una pizarra interna en primer plano.

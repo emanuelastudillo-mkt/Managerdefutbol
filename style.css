@@ -3589,3 +3589,67 @@ th{
   .live-board-row > span{text-align:center}
   .live-board-circle{width:78px;min-height:50px}
 }
+
+
+/* V5.22 · controles del simulador centrados en dos líneas */
+.live-v517 .live-bottom-controls,
+.live-bottom-controls{
+  grid-template-columns:1fr !important;
+  justify-items:center;
+  align-items:center;
+  gap:6px;
+  padding-left:8px;
+  padding-right:8px;
+}
+.live-v517 .live-instruction-buttons.compact,
+.live-instruction-buttons.compact{
+  width:100%;
+  max-width:760px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.live-v517 .live-instruction-buttons.compact button,
+.live-instruction-buttons.compact button{
+  flex:0 1 128px;
+  min-width:108px;
+  max-width:148px;
+}
+.live-v517 .live-bottom-controls .live-action-row,
+.live-v517 .live-action-row,
+.live-bottom-controls .live-action-row{
+  width:100%;
+  max-width:600px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(86px,132px)) !important;
+  justify-content:center;
+  justify-items:stretch;
+  gap:5px;
+  margin:0;
+}
+.live-v517 .live-bottom-controls .live-action-row button,
+.live-bottom-controls .live-action-row button{
+  width:100%;
+  min-width:0;
+}
+@media (max-width:760px){
+  .live-v517 .live-instruction-buttons.compact,
+  .live-instruction-buttons.compact{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    max-width:100%;
+  }
+  .live-v517 .live-instruction-buttons.compact button,
+  .live-instruction-buttons.compact button{
+    min-width:0;
+    max-width:none;
+  }
+  .live-v517 .live-bottom-controls .live-action-row,
+  .live-v517 .live-action-row,
+  .live-bottom-controls .live-action-row{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    max-width:100%;
+  }
+}

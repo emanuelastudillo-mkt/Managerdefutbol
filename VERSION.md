@@ -1,7 +1,7 @@
 # Versión actual
 
-V5.21
+V5.22
 
 ## Último cambio
 
-Pizarra táctica integrada al simulador vivo: reacomodo por círculos en primer plano sin abrir la pantalla de tácticas detrás del modal.
+Controles del simulador vivo centrados en dos líneas: instrucciones arriba y acciones principales abajo para ahorrar ancho y evitar cortes visuales.

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.52',
+  version: 'V5.54',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -546,7 +546,27 @@ window.GAME_CONFIG = {
       'Hay partidos que se pierden antes de salir a la cancha: mala forma, mala moral, mala táctica y demasiada confianza. Revisar no cuesta nada.',
       'Si el estadio empieza a pedir arreglos, no lo dejes para siempre. El club también compite con lo que muestra alrededor de la cancha.',
       'Ojear no es descubrir una verdad absoluta; es reducir el margen de error. Igual, en este trabajo, reducir errores ya es bastante.',
-      'Si el equipo está raro, mirá primero lo simple: cansancio, roles, moral y lesionados. La épica queda mejor cuando lo básico está ordenado.'
+      'Si el equipo está raro, mirá primero lo simple: cansancio, roles, moral y lesionados. La épica queda mejor cuando lo básico está ordenado.',
+      'Antes de fichar por impulso, mandá un ojeador. Una media atractiva puede esconder poca genética, mala agresividad o un factor sorpresa que no aparece a simple vista.',
+      'Ojear jugadores propios también sirve. No es desconfianza: es saber quién puede rendir más de lo que muestra y quién está viviendo de una media cómoda.',
+      'Si un jugador libre aparece barato, preguntate por qué sigue libre. El ojeo no te da certezas absolutas, pero evita contratos largos por entusiasmo corto.',
+      'Cuando mires un equipo rival, no busques nombres solamente. Defensa, medios y delantera te dicen dónde atacar y dónde conviene no regalar la pelota.',
+      'Un informe incompleto no es inútil. A veces una sola habilidad oculta revelada alcanza para decidir si esperar, fichar o salir corriendo.',
+      'Si vas a ojear varios jugadores a la vez, ordená prioridades. No todo rumor merece oficina, ojeador y café gratis.',
+      'Los jugadores propios con informe completo te ayudan a elegir titulares sin mirar sólo la media. Algunos tienen más partido que cartel.',
+      'Un equipo ojeado puede cambiar si vende, ficha o recompone plantel. Guardar el informe sirve, pero volver a mirar antes del partido evita sorpresas.',
+      'No confundas jugador conocido con jugador conveniente. Conocer sus datos sólo elimina niebla; todavía hay que mirar sueldo, edad, puesto y necesidad real.',
+      'Si el mercado muestra pocos nombres, no es pobreza: es foco. Primero aparecen los ojeados y después una ventana razonable para no perder media vida scrolleando.',
+      'Un delantero con factor sorpresa alto puede convertir partidos cerrados en problemas nuevos para el rival. No siempre es regular, pero puede romper planes.',
+      'Un defensor con mala agresividad oculta puede regalar amarillas aunque la media lo defienda. El informe de ojeo existe para descubrir esas trampas.',
+      'La genética no mete goles, pero explica por qué algunos jugadores aguantan mejor los golpes de una temporada larga.',
+      'Ojear al rival antes de cambiar la táctica es más sano que inventar soluciones después del segundo gol en contra.',
+      'Si un jugador propio ya está ojeado, usá ese ojo junto al nombre como ventaja. Ya pagaste por esa información; no la ignores.',
+      'Los informes archivados no son decoración. Sirven para volver rápido a jugadores que antes parecían interesantes y hoy quizá encajan mejor.',
+      'No gastes todos los cupos en estrellas obvias. A veces el buen fichaje está en el jugador mediano que revela justo la oculta correcta.',
+      'Ojear equipos no reemplaza mirar la tabla. Un club puede tener buena delantera y aun así estar mal por campo, moral o plantel corto.',
+      'Si un jugador contratado tiene buenas visibles pero ocultas flojas, puede rendir bien en la ficha y mal cuando el partido se ensucia.',
+      'El ojeo no compra jugadores; compra contexto. Y en un mercado caro, el contexto suele ser más barato que corregir un contrato malo.'
     ]
   },
   ui: {

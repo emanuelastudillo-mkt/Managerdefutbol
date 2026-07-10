@@ -974,6 +974,7 @@ function conditionLossForPlayer(player){
   return player?.position === 'POR' ? loss * GOALKEEPER_CONDITION_LOSS_FACTOR : loss;
 }
 function postMatchRecoveryForPlayer(player){
+  let recovery = 0;
   if(POST_MATCH_RECOVERY_USE_STAMINA && POST_MATCH_RECOVERY_STAMINA_RULES.length){
     const stamina = clamp(Math.round(baseSkill(player || {}, 'resistencia')), 1, 99);
     const rule = POST_MATCH_RECOVERY_STAMINA_RULES.find(item => stamina >= item.minResistencia && stamina <= item.maxResistencia)
@@ -981,10 +982,16 @@ function postMatchRecoveryForPlayer(player){
     if(rule){
       const min = clamp(Math.round(Math.min(rule.recuperacionMin, rule.recuperacionMax)), 0, 99);
       const max = clamp(Math.round(Math.max(rule.recuperacionMin, rule.recuperacionMax)), min, 99);
-      return rnd(min, max);
+      recovery = rnd(min, max);
     }
+  } else {
+    recovery = rnd(POST_MATCH_RECOVERY_MIN, POST_MATCH_RECOVERY_MAX);
   }
-  return rnd(POST_MATCH_RECOVERY_MIN, POST_MATCH_RECOVERY_MAX);
+  if(player && Number(player.clubId || 0) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
+    const bonus = Number(specialActiveBonus('preparacion_fisica') || 0);
+    if(bonus > 0) recovery = Math.round(recovery * (1 + bonus / 100));
+  }
+  return clamp(Math.round(recovery), 0, 99);
 }
 function rosterGroupCounts(squad=[]){
   const counts = { POR:0, DEF:0, MID:0, ATT:0 };

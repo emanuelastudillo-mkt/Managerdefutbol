@@ -1,4 +1,29 @@
-# Fútbol Manager MVP - V5.52
+# Fútbol Manager MVP - V5.54
+
+## V5.54 - Nuevas cartas de habilidades
+
+- Se agregan 16 cartas nuevas: Ídolo del Club, Entrenador Táctico, Especialista en Libres y Preparación Física en rarezas común, rara, épica y legendaria.
+- **Ídolo del Club:** aumenta hinchas/socios ganados por resultados positivos con valores 5%, 10%, 20% y 50%.
+- **Entrenador Táctico:** suma cohesión una sola vez al activar la carta con valores +3, +5, +10 y +20.
+- **Especialista en Libres:** mejora la aceptación de jugadores libres con valores +2%, +3%, +5% y +10%.
+- **Preparación Física:** aumenta recuperación postpartido del club del manager con valores +1%, +3%, +5% y +9%.
+- Las nuevas familias no tienen tope de apilamiento.
+- La cohesión de Entrenador Táctico no se recalcula cada día: sólo se aplica al activar, y puede volver a aplicarse si la carta se desactiva y reactiva después del bloqueo.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida. Las cartas nuevas entran en futuras aperturas de sobres.
+
+---
+
+## V5.53 - Mensajes de asistente sobre ojeo
+
+- Se agregan 20 nuevos mensajes del asistente sobre ojeo.
+- Los consejos cubren jugadores propios, jugadores contratables, mercado libre y ojeo de equipos.
+- Se refuerzan decisiones como revisar ocultas, no comprar sólo por media, usar informes archivados y volver a observar equipos rivales si cambiaron plantel.
+- Es un cambio de contenido: no altera la lógica del Centro de Ojeo ni la frecuencia de aparición de mensajes.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
+
+---
 
 ## V5.52 - Cartas blancas, avisos de asistente, ojeo persistente y mercado reducido
 

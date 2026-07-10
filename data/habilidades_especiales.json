@@ -1,8 +1,8 @@
 {
-  "version": "V4.16",
+  "version": "V5.54",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "Agrega cartas de objetivo más bajo y aumento de socios ganados.",
+  "caracteristicas_version": "Agrega cartas de Ídolo del Club, Entrenador Táctico, Especialista en Libres y Preparación Física con valores balanceados por rareza.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -151,6 +151,34 @@
       "tope_porcentaje": null,
       "aplica_a": "apertura_de_sobres",
       "descripcion": "Aumenta de forma relativa la probabilidad base de obtener cartas legendarias."
+    },
+    "idolo_club": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "hinchas_y_socios_ganados_por_buenas_rachas_o_resultados_positivos",
+      "descripcion": "Aumenta hinchas/socios ganados en cambios positivos de público."
+    },
+    "especialista_libres": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "aceptacion_de_jugadores_libres_para_el_manager",
+      "descripcion": "Suma puntos porcentuales a la probabilidad de aceptación de jugadores libres."
+    },
+    "preparacion_fisica": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "recuperacion_postpartido_del_club_del_manager",
+      "descripcion": "Aumenta porcentualmente la recuperación física postpartido."
+    },
+    "cohesion_activar": {
+      "se_apila": true,
+      "metodo": "efecto_inmediato_por_activacion_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "cohesion_del_club_al_activar_la_carta",
+      "descripcion": "Suma cohesión una sola vez al activar la carta. Puede volver a aplicar si se desactiva y reactiva después del bloqueo."
     }
   },
   "bonus_por_rareza": {
@@ -171,6 +199,30 @@
       "rara": 10,
       "epica": 15,
       "legendaria": 25
+    },
+    "idolo_club": {
+      "comun": 5,
+      "rara": 10,
+      "epica": 20,
+      "legendaria": 50
+    },
+    "cohesion_activar": {
+      "comun": 3,
+      "rara": 5,
+      "epica": 10,
+      "legendaria": 20
+    },
+    "especialista_libres": {
+      "comun": 2,
+      "rara": 3,
+      "epica": 5,
+      "legendaria": 10
+    },
+    "preparacion_fisica": {
+      "comun": 1,
+      "rara": 3,
+      "epica": 5,
+      "legendaria": 9
     }
   },
   "cartas_base": [
@@ -407,44 +459,164 @@
       "texto": "Reduce el objetivo de puntos de la directiva un 10% mientras esté activa."
     },
     {
-      "id_base": "SOCIOS_COMUN_001",
-      "nombre": "Campaña de barrio",
+      "id_base": "IDOLO_CLUB_COMUN_001",
+      "nombre": "Ídolo de barrio",
       "rareza": "comun",
-      "tipo_bonus": "socios_extra",
+      "tipo_bonus": "idolo_club",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 5% los hinchas/socios ganados por buenos resultados y rachas."
+    },
+    {
+      "id_base": "IDOLO_CLUB_RARA_001",
+      "nombre": "Referente popular",
+      "rareza": "rara",
+      "tipo_bonus": "idolo_club",
       "valor_bonus": 10,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Aumenta un 10% los socios ganados por resultados y posición."
+      "texto": "Aumenta un 10% los hinchas/socios ganados por buenos resultados y rachas."
     },
     {
-      "id_base": "SOCIOS_RARA_001",
-      "nombre": "Movida popular",
-      "rareza": "rara",
-      "tipo_bonus": "socios_extra",
-      "valor_bonus": 15,
-      "unidad": "porcentaje",
-      "activable": true,
-      "texto": "Aumenta un 15% los socios ganados por resultados y posición."
-    },
-    {
-      "id_base": "SOCIOS_EPICA_001",
-      "nombre": "Explosión de tribuna",
+      "id_base": "IDOLO_CLUB_EPICA_001",
+      "nombre": "Ídolo del Club",
       "rareza": "epica",
-      "tipo_bonus": "socios_extra",
+      "tipo_bonus": "idolo_club",
       "valor_bonus": 20,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Aumenta un 20% los socios ganados por resultados y posición."
+      "texto": "Aumenta un 20% los hinchas/socios ganados por buenos resultados y rachas."
     },
     {
-      "id_base": "SOCIOS_LEGENDARIA_001",
-      "nombre": "Fiebre de socios",
+      "id_base": "IDOLO_CLUB_LEGENDARIA_001",
+      "nombre": "Leyenda de tribuna",
       "rareza": "legendaria",
-      "tipo_bonus": "socios_extra",
+      "tipo_bonus": "idolo_club",
       "valor_bonus": 50,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Aumenta un 50% los socios ganados por resultados y posición."
+      "texto": "Aumenta un 50% los hinchas/socios ganados por buenos resultados y rachas."
+    },
+    {
+      "id_base": "ENTRENADOR_TACTICO_COMUN_001",
+      "nombre": "Orden táctico básico",
+      "rareza": "comun",
+      "tipo_bonus": "cohesion_activar",
+      "valor_bonus": 3,
+      "unidad": "puntos",
+      "activable": true,
+      "texto": "Al activarse suma +3 de cohesión una sola vez."
+    },
+    {
+      "id_base": "ENTRENADOR_TACTICO_RARA_001",
+      "nombre": "Entrenador táctico",
+      "rareza": "rara",
+      "tipo_bonus": "cohesion_activar",
+      "valor_bonus": 5,
+      "unidad": "puntos",
+      "activable": true,
+      "texto": "Al activarse suma +5 de cohesión una sola vez."
+    },
+    {
+      "id_base": "ENTRENADOR_TACTICO_EPICA_001",
+      "nombre": "Maestro de pizarra",
+      "rareza": "epica",
+      "tipo_bonus": "cohesion_activar",
+      "valor_bonus": 10,
+      "unidad": "puntos",
+      "activable": true,
+      "texto": "Al activarse suma +10 de cohesión una sola vez."
+    },
+    {
+      "id_base": "ENTRENADOR_TACTICO_LEGENDARIA_001",
+      "nombre": "Arquitecto táctico",
+      "rareza": "legendaria",
+      "tipo_bonus": "cohesion_activar",
+      "valor_bonus": 20,
+      "unidad": "puntos",
+      "activable": true,
+      "texto": "Al activarse suma +20 de cohesión una sola vez."
+    },
+    {
+      "id_base": "ESPECIALISTA_LIBRES_COMUN_001",
+      "nombre": "Rastreador de libres",
+      "rareza": "comun",
+      "tipo_bonus": "especialista_libres",
+      "valor_bonus": 2,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +2% a la aceptación de jugadores libres."
+    },
+    {
+      "id_base": "ESPECIALISTA_LIBRES_RARA_001",
+      "nombre": "Especialista en libres",
+      "rareza": "rara",
+      "tipo_bonus": "especialista_libres",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +3% a la aceptación de jugadores libres."
+    },
+    {
+      "id_base": "ESPECIALISTA_LIBRES_EPICA_001",
+      "nombre": "Agenda de representantes",
+      "rareza": "epica",
+      "tipo_bonus": "especialista_libres",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +5% a la aceptación de jugadores libres."
+    },
+    {
+      "id_base": "ESPECIALISTA_LIBRES_LEGENDARIA_001",
+      "nombre": "Red global de libres",
+      "rareza": "legendaria",
+      "tipo_bonus": "especialista_libres",
+      "valor_bonus": 10,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +10% a la aceptación de jugadores libres."
+    },
+    {
+      "id_base": "PREPARACION_FISICA_COMUN_001",
+      "nombre": "Rutina de recuperación",
+      "rareza": "comun",
+      "tipo_bonus": "preparacion_fisica",
+      "valor_bonus": 1,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 1% la recuperación física postpartido."
+    },
+    {
+      "id_base": "PREPARACION_FISICA_RARA_001",
+      "nombre": "Preparación física",
+      "rareza": "rara",
+      "tipo_bonus": "preparacion_fisica",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 3% la recuperación física postpartido."
+    },
+    {
+      "id_base": "PREPARACION_FISICA_EPICA_001",
+      "nombre": "Laboratorio físico",
+      "rareza": "epica",
+      "tipo_bonus": "preparacion_fisica",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 5% la recuperación física postpartido."
+    },
+    {
+      "id_base": "PREPARACION_FISICA_LEGENDARIA_001",
+      "nombre": "Cuerpo técnico de élite",
+      "rareza": "legendaria",
+      "tipo_bonus": "preparacion_fisica",
+      "valor_bonus": 9,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 9% la recuperación física postpartido."
     }
   ],
   "estructura_datos_manager": {

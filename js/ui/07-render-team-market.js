@@ -195,7 +195,9 @@ function marketPlayerRejectionChance(player=null){
   return clamp(Math.round(probRechazarOferta(player ? visibleOverall(player) : marketOfferClubPrestige(), marketOfferClubPrestige()) * 10) / 10, 5, 99.5);
 }
 function freeAgentAcceptanceChance(player=null){
-  return marketPlayerAcceptanceChance(player);
+  const base = marketPlayerAcceptanceChance(player);
+  const bonus = typeof specialActiveBonus === 'function' ? Number(specialActiveBonus('especialista_libres') || 0) : 0;
+  return clamp(Math.round((base + bonus) * 10) / 10, 0.5, 99.5);
 }
 function marketAcceptanceLabel(player=null){
   const chance = marketPlayerAcceptanceChance(player);

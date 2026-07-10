@@ -1,4 +1,4 @@
-/* V3.38 · Menú ESPECIAL: cartas activas persistentes y detalle de bonus activo. */
+/* V5.54 · Menú ESPECIAL: cartas activas, bonus acumulables y efectos inmediatos de cohesión. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -135,15 +135,20 @@ function specialBonusLabel(type){
     deterioro_campo:'Deterioro de campo',
     probabilidad_legendaria:'Prob. legendaria',
     objetivo_mas_bajo:'Objetivo más bajo',
-    socios_extra:'Socios ganados extra'
+    socios_extra:'Socios ganados extra',
+    idolo_club:'Ídolo del Club',
+    especialista_libres:'Especialista en libres',
+    preparacion_fisica:'Preparación física',
+    cohesion_activar:'Cohesión al activar'
   };
   return labels[type] || String(type || 'Sin bonus');
 }
 function specialCardBonusText(card){
   if(!card?.tipo_bonus || !card.valor_bonus) return 'Sin bonus activo';
-  const unit = card.unidad === 'porcentaje_relativo' ? '% relativo' : (card.unidad === 'porcentaje' ? '%' : '');
+  const unit = card.unidad === 'porcentaje_relativo' ? '% relativo' : (card.unidad === 'porcentaje' ? '%' : (card.unidad === 'puntos' ? ' pts' : ''));
   const sign = ['deterioro_campo','objetivo_mas_bajo'].includes(card.tipo_bonus) ? '-' : '+';
-  return `${specialBonusLabel(card.tipo_bonus)}: ${sign}${Number(card.valor_bonus || 0)}${unit}`;
+  const suffix = card.tipo_bonus === 'cohesion_activar' ? ' una vez al activar' : '';
+  return `${specialBonusLabel(card.tipo_bonus)}: ${sign}${Number(card.valor_bonus || 0)}${unit}${suffix}`;
 }
 function specialCurrentDate(){
   if(typeof currentCalendarDate === 'function') return currentCalendarDate();
@@ -226,12 +231,31 @@ function specialActiveBonus(type){
   return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
 }
 function specialActiveBonusSummary(){
-  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria','objetivo_mas_bajo','socios_extra'].map(type => ({ type, value:specialActiveBonus(type) })).filter(item => item.value > 0);
+  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria','objetivo_mas_bajo','socios_extra','idolo_club','especialista_libres','preparacion_fisica']
+    .map(type => ({ type, value:specialActiveBonus(type) }))
+    .filter(item => item.value > 0);
+}
+function specialBonusSummaryText(item){
+  if(!item) return '';
+  const sign = ['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+';
+  const suffix = item.type === 'probabilidad_legendaria' ? '% relativo acumulado' : '% acumulado';
+  return `${sign}${Number(item.value || 0)}${suffix}`;
+}
+function applySpecialCohesionActivationBonus(card){
+  if(!game || !card || card.tipo_bonus !== 'cohesion_activar') return 0;
+  const clubId = Number(game.selectedClubId || 0);
+  if(!clubId) return 0;
+  const gain = Math.max(0, Math.round(Number(card.valor_bonus || 0)));
+  if(gain <= 0) return 0;
+  if(!game.teamCohesion || typeof game.teamCohesion !== 'object') game.teamCohesion = {};
+  const current = typeof cohesionValue === 'function' ? cohesionValue(clubId) : Number(game.teamCohesion[clubId] || 0);
+  game.teamCohesion[clubId] = clamp(Math.round(current + gain), 0, 100);
+  return Math.max(0, game.teamCohesion[clubId] - current);
 }
 function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
   if(!activeCards.length) return '<p class="muted small">No hay cartas activas. Activá cartas desde la reserva para ver sus bonus acá.</p>';
   const totals = specialActiveBonusSummary();
-  const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}% acumulado</span></div>`).join('')}</div>` : '';
+  const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${escapeHtml(specialBonusSummaryText(item))}</span></div>`).join('')}</div>` : '';
   const cardsMarkup = `<div class="special-active-rules-list">${activeCards.map(card => {
     const info = specialCardActiveLockInfo(card);
     const status = info.locked ? `Fija ${formatDays(info.remaining)}` : 'Lista para desactivar';
@@ -490,10 +514,12 @@ function activateSpecialCard(cardId){
   lockSpecialCardChanges(activatedCard, state);
   state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
+  const cohesionGain = applySpecialCohesionActivationBonus(activatedCard);
   game.special = state;
   saveLocal(true);
   renderSpecial();
-  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}.`);
+  const extra = cohesionGain > 0 ? ` Cohesión +${cohesionGain}.` : '';
+  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}.${extra}`);
 }
 function deactivateSpecialCard(cardId){
   const state = ensureSpecialState();
@@ -597,7 +623,7 @@ function renderSpecial(opened=[], options={}){
   const activeBonusCards = active.filter(card => card.tipo_bonus && Number(card.valor_bonus || 0) > 0);
   const lockText = locked.locked ? `${locked.count} fija(s). Próxima libre en ${formatDays(locked.remaining)}.` : 'Cambios disponibles.';
   const bonusChips = bonuses.length
-    ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+'}${item.value}%</span>`).join('')
+    ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${escapeHtml(specialBonusSummaryText(item))}</span>`).join('')
     : '<span class="pill">Sin bonus activo</span>';
   view.innerHTML = `
     <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, sobres y bonus activos del manager.</p></div></div>

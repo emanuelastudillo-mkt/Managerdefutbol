@@ -1178,7 +1178,7 @@ function applyFanChangeForClub(clubId, resultKey){
   if(totalDelta > 0){
     totalDelta = Math.max(0, totalDelta - current * ticketGainBlockRate(price));
     if(Number(clubId) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
-      const sociosBonus = clamp(Number(specialActiveBonus('socios_extra') || 0), 0, 300);
+      const sociosBonus = Number(specialActiveBonus('socios_extra') || 0) + Number(specialActiveBonus('idolo_club') || 0);
       if(sociosBonus > 0) totalDelta *= (1 + sociosBonus / 100);
     }
   }

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.43',
+  version: 'V5.44',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -448,6 +448,17 @@ window.GAME_CONFIG = {
     // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
+    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
+    // El rango 61-70 queda como puente para evitar saltos bruscos.
+    recuperacionPostPartidoUsaResistencia: true,
+    recuperacionPostPartidoPorResistencia: [
+      { minResistencia: 1, maxResistencia: 40, recuperacionMin: 0, recuperacionMax: 1 },
+      { minResistencia: 41, maxResistencia: 60, recuperacionMin: 2, recuperacionMax: 4 },
+      { minResistencia: 61, maxResistencia: 70, recuperacionMin: 3, recuperacionMax: 5 },
+      { minResistencia: 71, maxResistencia: 80, recuperacionMin: 4, recuperacionMax: 7 },
+      { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
+      { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
+    ],
     desgastePartidoMin: 25,
     desgastePartidoMax: 46,
     factorDesgasteArquero: 0.5

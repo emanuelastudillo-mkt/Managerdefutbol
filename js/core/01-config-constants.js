@@ -315,6 +315,18 @@ const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
 const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);
 const POST_MATCH_RECOVERY_MIN = configNumber('simulador.recuperacionAutomaticaPostPartidoMin', 4, 0, 99);
 const POST_MATCH_RECOVERY_MAX = Math.max(POST_MATCH_RECOVERY_MIN, configNumber('simulador.recuperacionAutomaticaPostPartidoMax', 6, 0, 99));
+const POST_MATCH_RECOVERY_USE_STAMINA = configBoolean('simulador.recuperacionPostPartidoUsaResistencia', false);
+const POST_MATCH_RECOVERY_STAMINA_RULES = Array.isArray(configValue('simulador.recuperacionPostPartidoPorResistencia', []))
+  ? configValue('simulador.recuperacionPostPartidoPorResistencia', [])
+      .map(rule => ({
+        minResistencia:Number(rule?.minResistencia ?? rule?.min ?? 0),
+        maxResistencia:Number(rule?.maxResistencia ?? rule?.max ?? 99),
+        recuperacionMin:Number(rule?.recuperacionMin ?? rule?.minRecuperacion ?? 0),
+        recuperacionMax:Number(rule?.recuperacionMax ?? rule?.maxRecuperacion ?? 0)
+      }))
+      .filter(rule => Number.isFinite(rule.minResistencia) && Number.isFinite(rule.maxResistencia) && Number.isFinite(rule.recuperacionMin) && Number.isFinite(rule.recuperacionMax))
+      .sort((a,b) => a.minResistencia - b.minResistencia)
+  : [];
 const MATCH_CONDITION_LOSS_MIN = configNumber('simulador.desgastePartidoMin', 24, 0, 99);
 const MATCH_CONDITION_LOSS_MAX = Math.max(MATCH_CONDITION_LOSS_MIN, configNumber('simulador.desgastePartidoMax', 45, 0, 99));
 const GOALKEEPER_CONDITION_LOSS_FACTOR = configNumber('simulador.factorDesgasteArquero', 0.5, 0, 1);

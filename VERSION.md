@@ -1,14 +1,15 @@
 # Versión actual
 
-V5.43
+V5.44
 
 ## Nombre
-Ojeo de equipos progresivo y corrección de procesamiento
+Recuperación postpartido por resistencia
 
 ## Compatibilidad
 Se implementa solo. No requiere reiniciar partida.
 
 ## Resumen
-- El ojeo de equipos revela Defensa, Medios y Delantera progresivamente como si fueran habilidades.
-- Se corrige un posible bloqueo del proceso diario de ojeo por sombra de variable `seed`.
-- Se reparte mejor el avance entre varios jugadores propios o equipos en seguimiento.
+- La recuperación automática postpartido deja de ser fija para todos los jugadores.
+- Ahora se calcula según la habilidad `resistencia` de cada jugador.
+- Los rangos quedan centralizados en `balance-modificadores.js` para balancear sin tocar módulos del juego.
+- El rango 61-70 se agrega como puente de 3 a 5 para no dejar un hueco entre 60 y 71.

@@ -973,6 +973,19 @@ function conditionLossForPlayer(player){
   const loss = rnd(MATCH_CONDITION_LOSS_MIN, MATCH_CONDITION_LOSS_MAX);
   return player?.position === 'POR' ? loss * GOALKEEPER_CONDITION_LOSS_FACTOR : loss;
 }
+function postMatchRecoveryForPlayer(player){
+  if(POST_MATCH_RECOVERY_USE_STAMINA && POST_MATCH_RECOVERY_STAMINA_RULES.length){
+    const stamina = clamp(Math.round(baseSkill(player || {}, 'resistencia')), 1, 99);
+    const rule = POST_MATCH_RECOVERY_STAMINA_RULES.find(item => stamina >= item.minResistencia && stamina <= item.maxResistencia)
+      || POST_MATCH_RECOVERY_STAMINA_RULES[POST_MATCH_RECOVERY_STAMINA_RULES.length - 1];
+    if(rule){
+      const min = clamp(Math.round(Math.min(rule.recuperacionMin, rule.recuperacionMax)), 0, 99);
+      const max = clamp(Math.round(Math.max(rule.recuperacionMin, rule.recuperacionMax)), min, 99);
+      return rnd(min, max);
+    }
+  }
+  return rnd(POST_MATCH_RECOVERY_MIN, POST_MATCH_RECOVERY_MAX);
+}
 function rosterGroupCounts(squad=[]){
   const counts = { POR:0, DEF:0, MID:0, ATT:0 };
   (squad || []).forEach(player => {

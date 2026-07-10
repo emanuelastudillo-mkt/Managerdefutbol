@@ -1,4 +1,4 @@
-/* V5.48 · Ranking online con rutas compatibles y fallback robusto. */
+/* V5.49 · Ranking online alineado con Worker Cloudflare /ranking/season. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -60,8 +60,18 @@ function rankingConfiguredPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
   const defaults = kind === 'submit'
-    ? ['records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit','']
-    : ['ranking','records','scores','api/ranking','api/records','api/scores',''];
+    ? [
+        // Worker actual Cloudflare + D1 usado por el proyecto.
+        'ranking/season',
+        // Compatibilidad con variantes frecuentes.
+        'api/ranking/season','season','records/season','api/records/season',
+        'records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''
+      ]
+    : [
+        // Lectura principal del ranking por temporada; carrera queda como respaldo si el Worker lo expone.
+        'ranking/season','ranking/career','api/ranking/season','api/ranking/career',
+        'ranking','records','scores','api/ranking','api/records','api/scores',''
+      ];
   const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
   const seen = new Set();
   return source
@@ -261,30 +271,51 @@ function rankingApiRowToGameRow(row){
 }
 function rankingPayloadToApiBody(payload){
   const body = {
+    // Nombres del Worker Cloudflare + D1.
     manager_name: payload.managerName,
     club_name: payload.club,
+    country: payload.country || '',
+    league_name: payload.division,
+    season_number: payload.season,
+    final_position: payload.position,
+    points: payload.points,
+    wins: payload.won,
+    draws: payload.drawn,
+    losses: payload.lost,
+    goals_for: payload.goalsFor,
+    goals_against: payload.goalsAgainst,
+    goal_difference: payload.goalDifference,
+    budget_initial: payload.initialBudget,
+    budget_final: payload.finalBudget,
+    manager_prestige: Number(game?.managerPrestige || game?.managerStats?.prestige || 0),
+    game_version: payload.version || APP_VERSION,
+    save_hash: payload.saveCode || '',
+
+    // Aliases usados por versiones previas del front/juego.
+    club_id: payload.clubId,
     season: payload.season,
     division: payload.division,
-    points: payload.managerScore,
-    titles: payload.titles,
+    division_id: payload.divisionId,
+    division_order: payload.divisionOrder,
+    position: payload.position,
+    match_points: payload.points,
+    won: payload.won,
+    drawn: payload.drawn,
+    lost: payload.lost,
     initial_budget: payload.initialBudget,
     final_budget: payload.finalBudget,
-    game_version: payload.version || APP_VERSION,
+    budget_variation: payload.budgetVariation,
+    titles: payload.titles,
+    title: payload.title ? 1 : 0,
+    manager_score: payload.managerScore,
+    submitted_at: payload.submittedAt || new Date().toISOString(),
     event_type: payload.eventType || 'season_snapshot',
     event_label: payload.eventLabel || rankingEventLabel(payload.eventType),
     game_date: payload.gameDate || '',
     season_day: payload.seasonDay || 0,
     submission_key: payload.submissionKey || '',
     save_code: payload.saveCode || '',
-    position: payload.position,
-    match_points: payload.points,
-    won: payload.won,
-    drawn: payload.drawn,
-    lost: payload.lost,
-    goals_for: payload.goalsFor,
-    goals_against: payload.goalsAgainst,
-    goal_difference: payload.goalDifference,
-    budget_variation: payload.budgetVariation
+    version: payload.version || APP_VERSION
   };
   if(String(RANKING_TOKEN || '').trim()) body.token = String(RANKING_TOKEN).trim();
   return body;
@@ -564,7 +595,10 @@ async function submitRankingToCloudflare(endpoint, payload, handlers={}){
   const jsonHeaders = rankingRequestHeaders(true);
   const formHeaders = { ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' };
   const requestBodies = [
-    { label:'json-flat', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...apiBody }) },
+    // Formato principal del Worker Cloudflare + D1: POST /ranking/season con JSON plano y Authorization Bearer.
+    { label:'cloudflare-season-json', headers:jsonHeaders, body:JSON.stringify(apiBody) },
+    // Respaldos compatibles con versiones anteriores.
+    { label:'json-flat-action', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...apiBody }) },
     { label:'json-payload', headers:jsonHeaders, body:JSON.stringify({ action:'submit', payload:fullPayload, token }) },
     { label:'form-payload', headers:formHeaders, body:new URLSearchParams({ action:'submit', payload:JSON.stringify(fullPayload), token }).toString() },
     { label:'form-flat', headers:formHeaders, body:new URLSearchParams(Object.entries({ action:'submit', ...apiBody, token }).reduce((acc, [key, value]) => { acc[key] = value === undefined || value === null ? '' : String(value); return acc; }, {})).toString() }
@@ -630,7 +664,12 @@ async function loadRankingOnline(silent=false){
         if(rankingIsRouteMissing(message, response) && i < paths.length - 1) continue;
         throw new Error(message);
       }
-      const rows = Array.isArray(data.ranking) ? data.ranking : Array.isArray(data.rows) ? data.rows : Array.isArray(data.records) ? data.records : [];
+      const rows = Array.isArray(data.ranking) ? data.ranking
+        : Array.isArray(data.rows) ? data.rows
+        : Array.isArray(data.records) ? data.records
+        : Array.isArray(data.data) ? data.data
+        : Array.isArray(data.items) ? data.items
+        : [];
       rankingRowsCache = rows.map(normalizeRankingRow).filter(row => row.managerName || row.club || row.saveCode);
       const box = $('rankingTableBox');
       if(box) box.innerHTML = rankingRowsTable(rankingRowsCache);

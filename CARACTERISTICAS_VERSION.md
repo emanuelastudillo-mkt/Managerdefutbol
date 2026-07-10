@@ -1,12 +1,12 @@
-# Características de la versión V5.48
+# Características de la versión V5.49
 
-## V5.48 - Ranking online con rutas compatibles
+## V5.49 - Ranking online Worker /ranking/season
 
-- Corrige el fallo de carga manual que podía mostrar `Ruta no encontrada` cuando el Worker no exponía exactamente `/records` o `/ranking`.
-- El envío manual y automático ahora prueban varias rutas compatibles: `/records`, `/ranking`, `/scores`, `/submit`, variantes `/api/...` y raíz como respaldo.
-- El envío prueba formatos JSON plano, JSON con payload, formulario con payload y formulario plano.
-- Si todas las rutas fallan, el mensaje muestra las rutas probadas para diagnosticar el Worker.
-- No cambia el cooldown de 50 días, el cálculo de puntaje ni los datos enviados.
+- Corrige el fallo de carga manual que seguía mostrando `Ruta no encontrada` porque el Worker Cloudflare + D1 actual usa `/ranking/season`.
+- Agrega `/ranking/season` como primera ruta de carga y `/ranking/career` como respaldo de lectura.
+- Mantiene compatibilidad con rutas anteriores: `/records`, `/ranking`, `/scores`, `/submit`, variantes `/api/...` y raíz.
+- El cuerpo principal del envío ahora es JSON plano compatible con el Worker actual y conserva aliases para versiones previas.
+- No cambia cooldown manual, login/token, puntaje ni ranking automático.
 
 ## Validación
 

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.48',
+  version: 'V5.49',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -506,11 +506,11 @@ window.GAME_CONFIG = {
     appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
     // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
     token: '',
-    // Rutas compatibles con Worker actual y variantes anteriores.
-    // El envío prueba rutas conocidas y termina en raíz como respaldo.
-    submitPaths: ['records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
-    // La lectura prueba rutas de listado; raíz queda al final como respaldo.
-    readPaths: ['ranking','records','scores','api/ranking','api/records','api/scores',''],
+    // Rutas compatibles con Worker Cloudflare + D1 actual y variantes anteriores.
+    // La ruta principal de carga es /ranking/season.
+    submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
+    // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
+    readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],
     resultadosPorPagina: 100,
     cooldownCargaDias: 50,
     nombreRanking: 'Ranking Online'

@@ -1,2 +1,2 @@
-/* V5.48 · Punto de entrada. Ranking online con rutas compatibles. */
+/* V5.49 · Punto de entrada. Ranking online Worker /ranking/season. */
 init();

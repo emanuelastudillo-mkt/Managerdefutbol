@@ -1,5 +1,17 @@
-# Fútbol Manager MVP - V5.47
+# Fútbol Manager MVP - V5.49
 
+
+
+## V5.49 - Ranking online Worker /ranking/season
+
+- Corrige el error persistente `Ruta no encontrada` al subir manualmente datos del club.
+- El Worker Cloudflare + D1 del proyecto usa `/ranking/season`; ahora esa ruta se prueba primero para carga manual y automática.
+- Agrega `/ranking/career` como respaldo de lectura si el Worker expone ranking de carrera.
+- El envío principal usa JSON plano con campos esperados por el Worker: `manager_name`, `club_name`, `season_number`, `final_position`, `wins`, `draws`, `losses`, `budget_initial`, `budget_final`, `manager_prestige`, `game_version` y `save_hash`.
+- Conserva aliases y rutas viejas para compatibilidad con versiones anteriores.
+- No cambia cooldown, token/login, cálculo de puntaje ni datos de temporada.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
 
 
 ## V5.48 - Ranking online con rutas compatibles

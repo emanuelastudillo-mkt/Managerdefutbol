@@ -843,10 +843,18 @@ function faceBaseForPlayer(player){
   const index = hashNumber(`face-${player?.id || 0}-${region}`, faceMaxForRegion(region)) + 1;
   return `img/faces/${region} (${index})`;
 }
+function playerPhotoPath(player){
+  const custom = player?.photoPath || player?.fotoPath || player?.imagePath || player?.photo || player?.foto || '';
+  return String(custom || '').trim();
+}
 function faceImg(player, className='photo-thumb'){
   const base = faceBaseForPlayer(player);
+  const customPath = playerPhotoPath(player);
   const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
-  return `<img class="${className}" src="${base}.png" alt="${alt}" data-face-base="${base}" data-face-ext-index="0" onerror="tryNextFaceExt(this)">`;
+  if(customPath){
+    return `<img class="${escapeHtml(className)}" src="${escapeHtml(customPath)}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1" onerror="tryNextFaceExt(this)">`;
+  }
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.png" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0" onerror="tryNextFaceExt(this)">`;
 }
 function tryNextFaceExt(img){
   const exts = ['.png','.jpg','.jpeg','.webp'];

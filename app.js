@@ -1,2 +1,2 @@
-/* V5.34 · Punto de entrada. Bots: disponibilidad, libres y ofertas reales. */
+/* V5.35 · Punto de entrada. Plantilla de jugadores manuales y fotos personalizadas. */
 init();

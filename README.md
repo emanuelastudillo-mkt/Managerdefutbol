@@ -1,5 +1,16 @@
 # Historial de versiones
 
+## V5.35 - Plantilla de jugadores manuales
+
+- Agrega `data/jugadores_manual_ejemplo.json` como archivo base para futura creación manual/importación de jugadores.
+- La plantilla incluye todos los datos principales necesarios: id, nombre, edad, posición, club, estado libre, nacionalidad, media, skills completas, sueldo, cláusula, valor y bloque de generación.
+- Incluye `photoPath` como ruta de foto personalizada por jugador.
+- Incluye dos ejemplos: un jugador asignado a un club y un jugador libre.
+- La UI queda preparada para usar `photoPath` si más adelante se importan jugadores manuales con foto propia.
+- Si la foto personalizada no existe, el juego vuelve al sistema automático de caras por nacionalidad.
+- No se agrega importador ni pantalla de edición todavía.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.34 - Bots: disponibilidad, libres y ofertas reales
 
 - Los bots ya no pueden usar jugadores lesionados o suspendidos como titulares automáticos contra el manager.

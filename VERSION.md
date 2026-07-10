@@ -1,12 +1,12 @@
 # Versión actual
 
-V5.34
+V5.35
 
 ## Nombre
-Bots: disponibilidad, libres y ofertas reales
+Plantilla de jugadores manuales
 
 ## Resumen
-Los bots respetan lesiones y suspensiones al armar titulares automáticos contra el manager. La reparación automática de planteles bot prioriza fichar jugadores libres reales, sin rechazo por parte del libre, y las ofertas de compra pasan a originarse en clubes reales del juego.
+Agrega un JSON base de ejemplo para futura creación manual de jugadores, incluyendo todos los campos principales del modelo actual, skills completas y ruta de foto personalizada mediante `photoPath`. La UI queda preparada para usar `photoPath` si un jugador manual se importa más adelante.
 
 ## Compatibilidad
-Se implementa solo. No requiere reiniciar partida; ajusta lógica de selección, reparación de planteles bot y origen de ofertas futuras.
+Se implementa solo. No requiere reiniciar partida; el archivo nuevo es una plantilla de referencia y no se carga automáticamente.

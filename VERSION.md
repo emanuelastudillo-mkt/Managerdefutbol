@@ -1,5 +1,14 @@
 # Versión actual
 
-V5.42
+V5.43
 
-Ojeo de equipos, simulador con media rival oculta y perfil físico compacto.
+## Nombre
+Ojeo de equipos progresivo y corrección de procesamiento
+
+## Compatibilidad
+Se implementa solo. No requiere reiniciar partida.
+
+## Resumen
+- El ojeo de equipos revela Defensa, Medios y Delantera progresivamente como si fueran habilidades.
+- Se corrige un posible bloqueo del proceso diario de ojeo por sombra de variable `seed`.
+- Se reparte mejor el avance entre varios jugadores propios o equipos en seguimiento.

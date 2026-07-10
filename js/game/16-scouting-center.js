@@ -1,4 +1,4 @@
-/* V5.20 · Centro de Ojeo persistente: los informes revelados no se pierden al quitar jugadores de la lista. */
+/* V5.43 · Centro de Ojeo: equipos progresivos y procesamiento diario equilibrado. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -48,11 +48,25 @@ function normalizeScoutingCenterState(state){
   clean.listedTeamIds = clean.listedTeamIds.slice(0, remainingTeamSlots);
   return clean;
 }
+function scoutingTeamSectorDefinitions(){
+  return [
+    { key:'defense', label:'Defensa' },
+    { key:'midfield', label:'Medios' },
+    { key:'attack', label:'Delantera' }
+  ];
+}
+function scoutingTeamSectorKeys(){
+  return scoutingTeamSectorDefinitions().map(item => item.key);
+}
 function normalizeScoutingTeamReport(clubId, report={}){
+  const allowed = new Set(scoutingTeamSectorKeys());
+  const visible = Array.isArray(report.visibleSectors) ? report.visibleSectors.map(String) : [];
   return {
     clubId:Number(clubId),
+    visibleSectors:Array.from(new Set(visible)).filter(key => allowed.has(key)),
+    daysObserved:Math.max(0, Math.round(Number(report.daysObserved || 0))),
     createdDate:validIsoDate(report.createdDate) ? report.createdDate : (game?.currentDate || currentCalendarDate()),
-    lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : (game?.currentDate || currentCalendarDate()),
+    lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : null,
     dynamic:true,
     type:'team_sector_report'
   };
@@ -198,27 +212,51 @@ function scoutingTeamSectorStats(clubId){
     counts:{ defense:defenders.length, midfield:mids.length, attack:attackers.length, total:squad.length }
   };
 }
+function scoutingTeamReportForClub(clubId){
+  const state = ensureScoutingCenterState();
+  const key = String(Number(clubId || 0));
+  if(!state.teamReports[key]) state.teamReports[key] = normalizeScoutingTeamReport(clubId, {});
+  return state.teamReports[key];
+}
+function scoutingTeamKnownSet(clubId){
+  const report = scoutingTeamReportForClub(clubId);
+  return new Set(report.visibleSectors || []);
+}
+function scoutingTeamKnownCount(clubId){
+  return scoutingTeamKnownSet(clubId).size;
+}
 function scoutingTeamSectorMarkup(clubId){
   const stats = scoutingTeamSectorStats(clubId);
-  const rows = [
-    { key:'defense', label:'Defensa', value:stats.defense, count:stats.counts.defense },
-    { key:'midfield', label:'Medios', value:stats.midfield, count:stats.counts.midfield },
-    { key:'attack', label:'Delantera', value:stats.attack, count:stats.counts.attack }
-  ];
-  return `<div class="tactic-skill-visor-list scouting-team-visors">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div><small class="muted">${row.count} jugador(es) relevados</small></div>`).join('')}</div>`;
+  const known = scoutingTeamKnownSet(clubId);
+  const rows = scoutingTeamSectorDefinitions().map(item => ({
+    ...item,
+    value:Number(stats[item.key] || 0),
+    count:Number(stats.counts?.[item.key] || 0),
+    visible:known.has(item.key)
+  }));
+  return `<div class="tactic-skill-visor-list scouting-team-visors">${rows.map(row => {
+    const shownValue = row.visible ? `${row.value}%` : '—';
+    const barWidth = row.visible ? row.value : 0;
+    const status = row.visible ? `${row.count} jugador(es) relevados` : 'Parámetro pendiente de ojeo';
+    return `<div class="tactic-skill-visor ${row.key} ${row.visible ? 'known' : 'unknown'}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${shownValue}</strong></div><div class="project-progress"><span style="width:${barWidth}%"></span></div><small class="muted">${escapeHtml(status)}</small></div>`;
+  }).join('')}</div>`;
 }
 function scoutingTeamCard(clubId){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   if(!club) return '';
-  const report = ensureScoutingCenterState().teamReports?.[String(clubId)] || normalizeScoutingTeamReport(clubId, {});
+  const report = scoutingTeamReportForClub(clubId);
   const squadCount = typeof playersByClub === 'function' ? playersByClub(clubId).length : 0;
+  const known = scoutingTeamKnownCount(clubId);
+  const total = scoutingTeamSectorKeys().length || 1;
+  const pct = clamp(Math.round((known / total) * 100), 0, 100);
   return `<div class="scouting-player-card scouting-team-card card inner">
     <div class="scouting-player-head">
       <div class="scouting-team-badge">${clubBadge(club.id) || '▣'}</div>
       <div><h3>${escapeHtml(club.name)}</h3><p class="muted small">${escapeHtml(club.divisionId || '')} · Plantel ${squadCount} · informe dinámico</p><span class="pill">Equipo ojeado</span></div>
       <button class="ghost small-btn" data-remove-scouting-team="${club.id}">Quitar</button>
     </div>
-    <p class="muted small">Estos porcentajes usan el promedio actual del plantel bot. Pueden cambiar si el club ficha, vende o recompone jugadores.</p>
+    <div class="project-progress scouting-report-progress"><span style="width:${pct}%"></span></div>
+    <p class="muted small">Parámetros conocidos: ${known}/${total} · Días observado: ${Number(report.daysObserved || 0)}. Los porcentajes usan el promedio actual del plantel bot y pueden cambiar si el club modifica jugadores.</p>
     ${scoutingTeamSectorMarkup(club.id)}
     <p class="muted small">Creado: ${escapeHtml(report.createdDate || '—')}</p>
   </div>`;
@@ -286,7 +324,6 @@ function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
   const state = ensureScoutingCenterState();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
-  const usedSlots = listed.length + listedTeams.length;
   const candidates = [];
   listed.forEach(player => {
     const report = scoutingReportForPlayer(player.id);
@@ -295,21 +332,33 @@ function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
     const revealPool = ownPlayer
       ? scoutingHiddenSkillKeys(player).filter(key => !known.has(key))
       : scoutingSkillKeys(player).filter(key => !known.has(key));
-    if(revealPool.length) candidates.push({ player, hidden:revealPool, report, ownPlayer });
+    if(revealPool.length) candidates.push({ type:'player', id:Number(player.id), label:player.name || `Jugador ${player.id}`, hidden:revealPool, report, ownPlayer });
+  });
+  listedTeams.forEach(club => {
+    const report = scoutingTeamReportForClub(club.id);
+    const known = new Set(report.visibleSectors || []);
+    const revealPool = scoutingTeamSectorKeys().filter(key => !known.has(key));
+    if(revealPool.length) candidates.push({ type:'team', id:Number(club.id), label:club.name || `Club ${club.id}`, hidden:revealPool, report, ownPlayer:false });
   });
   if(!candidates.length) return false;
-  candidates.sort((a,b)=>{
-    const ownDelta = Number(b.ownPlayer) - Number(a.ownPlayer);
-    if(ownDelta) return ownDelta;
-    const hiddenDelta = Number(a.hidden.length || 0) - Number(b.hidden.length || 0);
+  const ownPriority = Math.max(...candidates.map(item => Number(Boolean(item.ownPlayer))));
+  const priorityCandidates = candidates.filter(item => Number(Boolean(item.ownPlayer)) === ownPriority);
+  const minDays = Math.min(...priorityCandidates.map(item => Math.max(0, Number(item.report?.daysObserved || 0))));
+  const pool = priorityCandidates.filter(item => Math.max(0, Number(item.report?.daysObserved || 0)) === minDays);
+  pool.sort((a,b) => {
+    const hiddenDelta = Number(b.hidden.length || 0) - Number(a.hidden.length || 0);
     if(hiddenDelta) return hiddenDelta;
-    return a.player.name.localeCompare(b.player.name, 'es');
+    return String(a.label || '').localeCompare(String(b.label || ''), 'es');
   });
-  const seed = `scout-pick-${game.currentDate}-${currentTurnIndex()}-${attemptIndex}-${context}-${state.lastDailyProcessDate || ''}`;
-  const pick = candidates[hashNumber(seed, candidates.length)];
-  const skillSeed = `scout-skill-${pick.player.id}-${game.currentDate}-${attemptIndex}-${context}-${pick.hidden.join('|')}`;
+  const pickSeed = `scout-pick-${game.currentDate}-${currentTurnIndex()}-${attemptIndex}-${context}-${pool.map(item => `${item.type}:${item.id}:${item.hidden.length}:${item.report?.daysObserved || 0}`).join('|')}`;
+  const pick = pool[hashNumber(pickSeed, pool.length)];
+  const skillSeed = `scout-skill-${pick.type}-${pick.id}-${game.currentDate}-${attemptIndex}-${context}-${pick.hidden.join('|')}`;
   const key = pick.hidden[hashNumber(skillSeed, pick.hidden.length)];
-  pick.report.visibleSkills = Array.from(new Set([...(pick.report.visibleSkills || []), key]));
+  if(pick.type === 'team'){
+    pick.report.visibleSectors = Array.from(new Set([...(pick.report.visibleSectors || []), key]));
+  } else {
+    pick.report.visibleSkills = Array.from(new Set([...(pick.report.visibleSkills || []), key]));
+  }
   pick.report.daysObserved = Math.max(0, Number(pick.report.daysObserved || 0)) + 1;
   pick.report.lastUpdatedDate = game.currentDate || currentCalendarDate();
   return true;

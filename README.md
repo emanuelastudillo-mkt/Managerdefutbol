@@ -1,4 +1,17 @@
-# Fútbol Manager MVP - V5.42
+# Fútbol Manager MVP - V5.43
+
+## V5.43 - Ojeo de equipos progresivo y corrección de procesamiento
+
+- El ojeo de equipos ahora trata **Defensa**, **Medios** y **Delantera** como tres parámetros revelables.
+- Cada parámetro se descubre progresivamente con el proceso diario, igual que una habilidad de jugador.
+- Los parámetros no revelados se muestran como `—` y no exponen el porcentaje.
+- Los porcentajes revelados siguen siendo dinámicos: cambian si el bot modifica jugadores.
+- Se corrige un posible bloqueo del proceso de ojeo causado por una variable local `seed` que podía pisar el `seed` global del juego.
+- Se mejora la distribución de intentos diarios para que varios jugadores propios en seguimiento no queden visualmente trabados detrás de un único jugador.
+
+Compatibilidad de partida: **se implementa solo**. No requiere reiniciar partida.
+
+---
 
 ## V5.42 - Ojeo de equipos y perfil compacto
 

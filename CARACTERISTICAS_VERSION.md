@@ -1,19 +1,19 @@
-# Características de la versión V5.42
+# Características de la versión V5.43
 
-## Ojeo de equipos, medias rivales ocultas y ficha compacta
+## Ojeo de equipos progresivo
 
-- Agrega **Ojear equipo** desde la ficha de club.
-- Los equipos ojeados ocupan cupo en la misma lista activa del Centro de Ojeo que los jugadores.
-- El informe de equipo muestra visores dinámicos de **Defensa**, **Medios** y **Delantera** con el promedio actual del plantel bot.
-- El informe puede cambiar si el bot ficha, vende, recompone o mueve jugadores de su plantel.
-- El Centro de Ojeo ahora distingue ojeo activo entre jugadores y equipos.
-- En el simulador vivo ya no se muestra la media de los jugadores rivales; queda oculta con guion.
-- La ficha del jugador conserva el número verde del boost de temporada, pero elimina el texto repetido “boost de temporada”.
-- El bloque Perfil muestra Estado físico como `actual/máximo`, con el máximo en rojo cuando está limitado por desgaste.
-- Se elimina el texto `Máx. físico xx/99` debajo de Desgaste.
+- Defensa, Medios y Delantera pasan a funcionar como tres parámetros de informe.
+- El Centro de Ojeo revela esos parámetros de a uno, igual que las habilidades de un jugador.
+- Mientras un parámetro no fue revelado, se muestra como `—`.
+- Cuando se revela, muestra el porcentaje actual calculado sobre el plantel bot.
+- El valor sigue siendo dinámico y puede cambiar si el bot ficha, vende o recompone plantel.
+
+## Corrección de procesamiento diario
+
+- Se evita que una variable local llamada `seed` bloquee el acceso al `seed` global del juego durante el proceso de ojeo.
+- Se mejora la distribución de intentos diarios para que varios jugadores propios en seguimiento avancen de forma más pareja.
 
 ## Compatibilidad
 
-- Se implementa solo.
-- No requiere reiniciar partida.
-- Afecta informes nuevos de equipo, render del simulador y visualización de fichas.
+Se implementa solo. No requiere reiniciar partida.
+

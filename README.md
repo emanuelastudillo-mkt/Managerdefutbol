@@ -1,5 +1,17 @@
 # Historial de versiones
 
+## V5.32 - Ranking online manual y automático
+
+- Reactiva la tarjeta de carga manual dentro de **Ranking Online**.
+- Agrega botón **Subir datos del club** para enviar el estado actual del club al ranking.
+- La carga manual queda disponible cada **50 días de juego**.
+- El cooldown manual se guarda separado de la carga automática, para que el cierre de temporada no bloquee el botón manual.
+- Mantiene la carga automática al finalizar temporada y al ser despedido.
+- Cada carga manual usa evento propio por día de temporada para evitar pisar registros del mismo año.
+- Se envían datos del club, división, posición, puntos, G-E-P, diferencia de gol, presupuesto inicial/final, variación, títulos, versión y fecha de juego.
+- Actualiza `config.js` con `ranking.cooldownCargaDias: 50`.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.31 - Ajuste menor Centro de Ojeo
 
 - Quita los iconos repetidos de edificios del bloque **Control de oficinas** para evitar que deformen el panel.

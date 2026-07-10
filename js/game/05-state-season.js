@@ -1587,6 +1587,8 @@ function normalizeGame(saved){
   normalized.rankingUploads = (normalized.rankingUploads && typeof normalized.rankingUploads === 'object' && !Array.isArray(normalized.rankingUploads)) ? normalized.rankingUploads : {};
   normalized.rankingManagerName = normalized.rankingManagerName || storedManagerName() || '';
   normalized.rankingLastUploadGameDate = validIsoDate(normalized.rankingLastUploadGameDate) ? normalized.rankingLastUploadGameDate : '';
+  normalized.rankingLastManualUploadGameDate = validIsoDate(normalized.rankingLastManualUploadGameDate) ? normalized.rankingLastManualUploadGameDate : '';
+  normalized.rankingLastAutomaticUploadGameDate = validIsoDate(normalized.rankingLastAutomaticUploadGameDate) ? normalized.rankingLastAutomaticUploadGameDate : '';
   normalized.selectedCountry = normalized.selectedCountry || clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))) || 'Argentina';
   normalized.selectedLeagueId = normalized.selectedLeagueId || (seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))?.divisionId || 'default');
   normalized.playerMentalities = (normalized.playerMentalities && typeof normalized.playerMentalities === 'object' && !Array.isArray(normalized.playerMentalities)) ? normalized.playerMentalities : {};
@@ -1967,6 +1969,8 @@ function newGame(selectedClubId, options={}){
     rankingUploads: {},
     rankingManagerName: managerName,
     rankingLastUploadGameDate: '',
+    rankingLastManualUploadGameDate: '',
+    rankingLastAutomaticUploadGameDate: '',
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,

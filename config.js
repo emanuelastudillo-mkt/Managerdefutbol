@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.31',
+  version: 'V5.32',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -499,7 +499,7 @@ window.GAME_CONFIG = {
     // La lectura mantiene primero /ranking y usa /records como alternativa.
     readPaths: ['ranking','records'],
     resultadosPorPagina: 100,
-    cooldownCargaDias: 77,
+    cooldownCargaDias: 50,
     nombreRanking: 'Ranking Online'
   },
 

@@ -1,12 +1,12 @@
 # Versión actual
 
-V5.31
+V5.32
 
 ## Nombre
-Ajuste menor Centro de Ojeo
+Ranking online manual y automático
 
 ## Resumen
-Se retiran los iconos repetidos de edificios en los bloques de oficinas del Centro de Ojeo para evitar que deformen el panel visual.
+Se reactiva el ranking online con botón manual para subir datos actuales del club cada 50 días de juego y se mantiene el envío automático al finalizar temporada o al ser despedido.
 
 ## Compatibilidad
 Se implementa solo. No requiere reiniciar partida.

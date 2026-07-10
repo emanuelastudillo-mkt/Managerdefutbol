@@ -1846,7 +1846,7 @@ button.action-failure{
   .market-filter-grid{grid-template-columns:1fr;}
 }
 
-/* V3.17 · Ranking Online */
+/* V5.32 · Ranking Online manual y automático */
 .ranking-layout{
   display:grid;
   grid-template-columns:minmax(280px, 0.85fr) minmax(420px, 1.35fr);
@@ -1870,6 +1870,25 @@ button.action-failure{
 .ranking-endpoint-row input{
   width:100%;
 }
+
+.ranking-manual-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  margin:12px 0;
+}
+.ranking-manual-actions button{
+  min-width:190px;
+}
+.ranking-auto-status{
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(15,23,42,.28);
+  margin:10px 0 0;
+}
+
 .ranking-preview-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));

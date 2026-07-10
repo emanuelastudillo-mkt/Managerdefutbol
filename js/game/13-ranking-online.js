@@ -1,4 +1,4 @@
-/* V4.08 · Ranking online en modo tabla pública. */
+/* V5.32 · Ranking online con carga manual cada 50 días y carga automática de temporada. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -27,10 +27,28 @@ function rankingCurrentGameDate(){
   return validIsoDate(fallback) ? fallback : '';
 }
 function rankingUploadCooldownInfo(){
-  return { canUpload:false, elapsed:null, remaining:null, last:validIsoDate(game?.rankingLastUploadGameDate) ? game.rankingLastUploadGameDate : '', current:rankingCurrentGameDate() };
+  const current = rankingCurrentGameDate();
+  const last = validIsoDate(game?.rankingLastManualUploadGameDate) ? game.rankingLastManualUploadGameDate : '';
+  const cooldown = Math.max(0, Math.round(Number(RANKING_UPLOAD_COOLDOWN_DAYS || 50)));
+  if(!game || !validIsoDate(current)){
+    return { canUpload:false, elapsed:null, remaining:cooldown, last, current, cooldown };
+  }
+  if(!last || cooldown <= 0){
+    return { canUpload:true, elapsed:last ? Math.max(0, daysBetweenIsoDates(last, current)) : cooldown, remaining:0, last, current, cooldown };
+  }
+  const elapsed = Math.max(0, daysBetweenIsoDates(last, current));
+  const remaining = Math.max(0, cooldown - elapsed);
+  return { canUpload:remaining <= 0, elapsed, remaining, last, current, cooldown };
 }
-function rankingCooldownText(){
-  return 'Carga manual bloqueada. El ranking se envía automáticamente al terminar temporada o al ser despedido.';
+function rankingCooldownText(info=rankingUploadCooldownInfo()){
+  if(!game) return 'No hay partida activa.';
+  if(info.canUpload) return 'Carga manual disponible.';
+  return `Carga manual disponible en ${info.remaining} día(s) de juego.`;
+}
+function rankingManualEventType(){
+  const info = rankingUploadCooldownInfo();
+  const day = Number(seasonDayFromDate(info.current || rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
+  return `manual_snapshot_d${day || 0}`;
 }
 
 function normalizeRankingEndpoint(url){
@@ -82,14 +100,18 @@ function rankingIsRouteMissing(message, response){
 const RANKING_AUTO_EVENT_LABELS = {
   season_end:'Temporada finalizada',
   dismissal:'Manager despedido',
-  season_snapshot:'Resumen automático'
+  season_snapshot:'Resumen automático',
+  manual_snapshot:'Carga manual'
 };
 function rankingEventLabel(eventType){
-  return RANKING_AUTO_EVENT_LABELS[String(eventType || '')] || 'Resumen automático';
+  const event = String(eventType || '');
+  if(event.startsWith('manual_snapshot')) return 'Carga manual';
+  return RANKING_AUTO_EVENT_LABELS[event] || 'Resumen automático';
 }
 function rankingSubmissionKey(payload, eventType=payload?.eventType || 'season_snapshot'){
   const event = String(eventType || 'season_snapshot');
-  return `${payload?.saveCode || 'FM'}-T${payload?.season || 1}-C${payload?.clubId || 0}-${event}`;
+  const manualSuffix = event.startsWith('manual_snapshot') ? `-D${payload?.seasonDay || 0}` : '';
+  return `${payload?.saveCode || 'FM'}-T${payload?.season || 1}-C${payload?.clubId || 0}-${event}${manualSuffix}`;
 }
 function rankingSeasonInitialBudget(season){
   if(!game) return 0;
@@ -198,7 +220,7 @@ function buildRankingPayload(managerName, options={}){
     saveCode: game.saveCode || generateSaveCode(),
     version: APP_VERSION,
     eventType,
-    eventLabel: rankingEventLabel(eventType)
+    eventLabel: options.eventLabel || rankingEventLabel(eventType)
   };
   payload.managerScore = calculateManagerScore(payload);
   payload.submissionKey = rankingSubmissionKey(payload, eventType);
@@ -244,6 +266,9 @@ function rankingPayloadToApiBody(payload){
     game_version: payload.version || APP_VERSION,
     event_type: payload.eventType || 'season_snapshot',
     event_label: payload.eventLabel || rankingEventLabel(payload.eventType),
+    game_date: payload.gameDate || '',
+    season_day: payload.seasonDay || 0,
+    submission_key: payload.submissionKey || '',
     save_code: payload.saveCode || '',
     position: payload.position,
     match_points: payload.points,
@@ -367,7 +392,7 @@ function rankingUploadEntries(){
 }
 function rankingAutomaticStatusMarkup(){
   if(!game) return '<p class="small muted">No hay partida activa.</p>';
-  const entries = rankingUploadEntries();
+  const entries = rankingUploadEntries().filter(entry => ['season_end','dismissal'].includes(String(entry.eventType || '')));
   if(!entries.length) return '<p class="small muted">Todavía no hay envíos automáticos registrados en esta partida.</p>';
   const latest = entries[0];
   const statusText = latest.status === 'success' ? 'Enviado' : latest.status === 'pending' ? 'Pendiente' : latest.status === 'error' ? 'Error' : 'Registrado';
@@ -379,23 +404,38 @@ function rankingAutomaticStatusMarkup(){
   </div>`;
 }
 function rankingSubmitPanelMarkup(payload, endpoint){
+  const info = rankingUploadCooldownInfo();
+  const canUpload = Boolean(endpoint && game && payload && info.canUpload);
+  const buttonLabel = canUpload ? 'Subir datos del club' : rankingCooldownText(info);
+  const manualStatus = info.last
+    ? `Última carga manual: día ${seasonDayFromDate(info.last, game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1))} (${info.last}).`
+    : 'Todavía no hiciste una carga manual en esta partida.';
   return `<div class="card ranking-submit-card">
-    <div class="row"><div><p class="label">Carga automática</p><h3>Envío manual bloqueado</h3></div><span class="pill">${game ? `Temp. ${game.seasonNumber || 1}` : 'Sin partida'}</span></div>
-    <p class="muted">El ranking se sube automáticamente cuando el manager es despedido o cuando se cierra una temporada. La pantalla queda sólo para consultar la tabla online.</p>
-    ${endpoint ? '<p class="small muted">Endpoint configurado correctamente.</p>' : '<p class="small muted">Ranking online no disponible por el momento.</p>'}
+    <div class="row"><div><p class="label">Carga manual y automática</p><h3>Datos actuales del club</h3></div><span class="pill">${game ? `Temp. ${game.seasonNumber || 1}` : 'Sin partida'}</span></div>
+    <p class="muted">Podés subir manualmente los datos actuales del club cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Al finalizar la temporada, el juego también envía automáticamente el récord de temporada.</p>
+    <div class="ranking-manual-actions">
+      <button id="submitRankingManual" class="primary" type="button" ${canUpload ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
+      <span id="rankingManualStatus" class="small muted">${endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
+    </div>
     ${rankingAutomaticStatusMarkup()}
     ${rankingSeasonPreviewMarkup(payload)}
   </div>`;
 }
 function renderRankingOnline(){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const managerName = rankingStoredManagerName() || storedManagerName() || 'Manager';
+  const manualEventType = rankingManualEventType();
+  const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
+  const payload = buildRankingPayload(managerName, { eventType:manualEventType, eventLabel:`Carga manual día ${manualDay || '—'}` });
   view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Tabla comunitaria online. Se muestran hasta ${RANKING_PAGE_SIZE} registros con los filtros actuales.</p></div>
+    ${rankingSubmitPanelMarkup(payload, endpoint)}
     <div class="card ranking-list-card">
       <div class="row"><div><p class="label">Lectura pública</p><h3>Tabla online</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
       <div id="rankingStatus" class="small muted">${endpoint ? `Listo para cargar hasta ${RANKING_PAGE_SIZE} registros.` : 'Ranking online no disponible por el momento.'}</div>
       <div id="rankingTableBox">${rankingRowsTable(rankingRowsCache)}</div>
     </div>`;
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
+  $('submitRankingManual')?.addEventListener('click', submitCurrentSeasonToRanking);
   document.querySelectorAll('[data-ranking-sort]').forEach(btn => btn.addEventListener('click', () => {
     rankingSort = btn.dataset.rankingSort;
     renderRankingOnline();
@@ -409,19 +449,52 @@ function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!endpoint) return 'Ranking online no disponible por el momento.';
   if(!managerName) return 'Ingresá un nombre de manager.';
   if(!payload?.position) return 'No se pudo calcular la posición actual.';
+  const previous = game.rankingUploads?.[payload.submissionKey];
+  if(previous?.status === 'pending' && !options.forceRetry){
+    const attemptedAt = Date.parse(previous.attemptedAt || 0);
+    if(Number.isFinite(attemptedAt) && Date.now() - attemptedAt < 15000) return 'Este evento ya está pendiente de envío.';
+  }
   if(options?.automatic){
-    const previous = game.rankingUploads?.[payload.submissionKey];
     if(previous?.status === 'success' && !options.forceRetry) return 'Este evento ya fue enviado al ranking.';
-    if(previous?.status === 'pending' && !options.forceRetry){
-      const attemptedAt = Date.parse(previous.attemptedAt || 0);
-      if(Number.isFinite(attemptedAt) && Date.now() - attemptedAt < 15000) return 'Este evento ya está pendiente de envío.';
-    }
     return '';
   }
-  return rankingCooldownText();
+  const info = rankingUploadCooldownInfo();
+  if(!info.canUpload) return rankingCooldownText(info);
+  return '';
 }
 function submitCurrentSeasonToRanking(){
-  showNotice(rankingCooldownText());
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const managerName = rankingStoredManagerName() || storedManagerName() || 'Manager';
+  const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
+  const payload = buildRankingPayload(managerName, { eventType:rankingManualEventType(), eventLabel:`Carga manual día ${manualDay || '—'}` });
+  const error = validateRankingSubmit(payload, managerName, endpoint, { manual:true });
+  if(error){ showNotice(error); return false; }
+  const status = $('rankingManualStatus');
+  const button = $('submitRankingManual');
+  if(status) status.textContent = 'Enviando datos actuales del club...';
+  if(button) button.disabled = true;
+  rankingRecordUploadState(payload, 'pending', { attemptedAt:new Date().toISOString() });
+  saveLocal(true);
+  submitRankingToCloudflare(endpoint, payload, {
+    onSuccess: () => {
+      rankingRecordUploadState(payload, 'success', { submittedAt:new Date().toISOString() });
+      game.rankingLastManualUploadGameDate = payload.gameDate || rankingCurrentGameDate();
+      game.rankingLastUploadGameDate = payload.gameDate || rankingCurrentGameDate();
+      rankingRowsCache = [normalizeRankingRow(payload)].concat(rankingRowsCache.filter(row => row.saveCode !== payload.saveCode || row.eventType !== payload.eventType));
+      saveLocal(true);
+      showNotice('Datos del club enviados al ranking online.');
+      if(activeTab === 'ranking') renderRankingOnline();
+      loadRankingOnline(true);
+    },
+    onError: (message) => {
+      rankingRecordUploadState(payload, 'error', { error:message || 'Error al conectar con el ranking online.' });
+      saveLocal(true);
+      if(status) status.textContent = message || 'No se pudo enviar la carga manual.';
+      if(button) button.disabled = false;
+      showNotice(message || 'No se pudo enviar la carga manual.');
+    }
+  });
+  return true;
 }
 function rankingRecordUploadState(payload, status, extra={}){
   if(!game || !payload?.submissionKey) return;
@@ -457,6 +530,7 @@ function submitRankingAutomatically(eventType='season_end', options={}){
   submitRankingToCloudflare(endpoint, payload, {
     onSuccess: () => {
       rankingRecordUploadState(payload, 'success', { submittedAt:new Date().toISOString() });
+      game.rankingLastAutomaticUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       game.rankingLastUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       rankingRowsCache = [normalizeRankingRow(payload)].concat(rankingRowsCache.filter(row => row.saveCode !== payload.saveCode || Number(row.season) !== Number(payload.season) || row.eventType !== payload.eventType));
       if(typeof pushGameMessage === 'function'){

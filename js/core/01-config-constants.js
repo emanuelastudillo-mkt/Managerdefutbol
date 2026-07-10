@@ -117,7 +117,7 @@ const APP_VERSION = configValue('version', 'V5.02');
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
 const RANKING_PAGE_SIZE = configNumber('ranking.resultadosPorPagina', 100, 10, 500);
-const RANKING_UPLOAD_COOLDOWN_DAYS = configNumber('ranking.cooldownCargaDias', 77, 0, 366);
+const RANKING_UPLOAD_COOLDOWN_DAYS = configNumber('ranking.cooldownCargaDias', 50, 0, 366);
 const RANKING_NAME = configValue('ranking.nombreRanking', 'Ranking Online');
 const MANAGER_OBJECTIVE_RAW = configValue('manager.objetivoPuntosPorPartido', null);
 function parseManagerObjectiveValue(raw){

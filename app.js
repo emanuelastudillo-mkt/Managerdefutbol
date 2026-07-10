@@ -1,2 +1,2 @@
-/* V5.31 · Punto de entrada. Los módulos principales se cargan desde index.html. */
+/* V5.32 · Punto de entrada. Ranking online manual y automático. */
 init();

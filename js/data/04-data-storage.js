@@ -146,33 +146,103 @@ function normalizeManualDatabasePlayer(player, seedData){
     retired:Boolean(mercado.retirado ?? player.retired ?? false),
     manualPlayer:true,
     manualRespawnAfterRetirement:Boolean(mercado.reapareceAlRetirarse ?? mercado.respawnAfterRetirement ?? player.reapareceAlRetirarse ?? player.manualRespawnAfterRetirement ?? false),
-    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.38-manual-active-webp-retirement', tipo:player?.origen?.tipo || 'manual_activo' }
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.39-manual-webp-respawn-free-agent', tipo:player?.origen?.tipo || 'manual_activo' }
   };
 }
 function manualRetiredPlayerIdSet(options={}){
   const source = options.retiredManualPlayerIds || options.manualRetiredPlayerIds || game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [];
   return new Set((Array.isArray(source) ? source : []).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0));
 }
+function manualRespawnClone(player, reason='manual_respawn'){
+  if(!player) return null;
+  const clone = typeof structuredClone === 'function' ? structuredClone(player) : JSON.parse(JSON.stringify(player));
+  clone.age = 20;
+  clone.clubId = 0;
+  clone.freeAgent = true;
+  clone.youthFreeAgent = false;
+  clone.sold = false;
+  clone.retired = false;
+  clone.transferListed = false;
+  clone.intransferible = false;
+  clone.manualPlayer = true;
+  clone.manualRespawnAfterRetirement = true;
+  clone.lastSalaryPaidSeason = 0;
+  clone.salaryPaidCount = 0;
+  clone.generation = { ...(clone.generation || {}), respawnedAfterRetirement:true, respawnReason:reason };
+  return normalizeDatabasePlayer(clone);
+}
+function refreshExistingManualPlayerFromDatabase(existing, manual){
+  if(!existing || !manual) return existing;
+  const currentClubId = Number(existing.clubId || 0);
+  const currentFreeAgent = Boolean(existing.freeAgent) || currentClubId === 0;
+  const currentAge = Math.max(15, Math.round(Number(existing.age || manual.age || 20)));
+  const currentSold = Boolean(existing.sold);
+  const currentRetired = Boolean(existing.retired);
+  const currentTransferListed = Boolean(existing.transferListed);
+  const currentIntransferible = Boolean(existing.intransferible);
+  const refreshed = {
+    ...existing,
+    manualPlayer:true,
+    manualRespawnAfterRetirement:Boolean(manual.manualRespawnAfterRetirement),
+    manualOverallLocked:Boolean(manual.manualOverallLocked ?? existing.manualOverallLocked ?? true),
+    overall:Number.isFinite(Number(manual.overall)) ? Number(manual.overall) : existing.overall,
+    skills:manual.skills && typeof manual.skills === 'object' ? { ...manual.skills } : existing.skills,
+    salary:Number.isFinite(Number(manual.salary)) ? Number(manual.salary) : existing.salary,
+    clause:Number.isFinite(Number(manual.clause)) ? Number(manual.clause) : existing.clause,
+    value:Number.isFinite(Number(manual.value)) ? Number(manual.value) : existing.value,
+    fixedClause:Boolean(manual.fixedClause ?? existing.fixedClause ?? true),
+    manualFixedClause:Boolean(manual.manualFixedClause ?? existing.manualFixedClause ?? true),
+    economyLocked:Boolean(manual.economyLocked ?? existing.economyLocked ?? true),
+    photoPath:String(manual.photoPath || existing.photoPath || '').trim(),
+    generation:{ ...(existing.generation || {}), ...(manual.generation || {}), refreshedFromManualDatabase:true }
+  };
+  refreshed.clubId = currentClubId;
+  refreshed.freeAgent = currentFreeAgent;
+  refreshed.age = currentAge;
+  refreshed.sold = currentSold;
+  refreshed.retired = currentRetired;
+  refreshed.transferListed = currentTransferListed;
+  refreshed.intransferible = currentIntransferible;
+  return normalizeDatabasePlayer(refreshed);
+}
 function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, options={}){
   if(!seedData || !database?.players?.length) return seedData;
   const preserveExisting = Boolean(options?.preserveExisting);
   const retiredManualIds = manualRetiredPlayerIdSet(options);
+  const respawnedIds = [];
   const manualPlayers = database.players
     .map(player => normalizeManualDatabasePlayer(player, seedData))
     .filter(Boolean)
+    .map(player => {
+      const id = Number(player.id);
+      if(retiredManualIds.has(id) && player.manualRespawnAfterRetirement){
+        respawnedIds.push(id);
+        return manualRespawnClone(player, 'load_saved_retired_manual');
+      }
+      return player;
+    })
     .filter(player => !retiredManualIds.has(Number(player.id)) || player.manualRespawnAfterRetirement);
   if(!manualPlayers.length) return seedData;
   const manualIds = new Set(manualPlayers.map(player => Number(player.id)));
+  const manualById = new Map(manualPlayers.map(player => [Number(player.id), player]));
   const existingIds = new Set((seedData.players || []).map(player => Number(player.id)));
-  const kept = (seedData.players || []).filter(player => !manualIds.has(Number(player.id)) || preserveExisting);
+  const kept = (seedData.players || [])
+    .filter(player => !manualIds.has(Number(player.id)) || preserveExisting)
+    .map(player => preserveExisting && manualById.has(Number(player.id)) ? refreshExistingManualPlayerFromDatabase(player, manualById.get(Number(player.id))) : player);
   const toAdd = preserveExisting ? manualPlayers.filter(player => !existingIds.has(Number(player.id))) : manualPlayers;
   seedData.players = kept.concat(toAdd);
+  if(respawnedIds.length && game){
+    const respawned = new Set(respawnedIds);
+    game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawned.has(Number(id)));
+    game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawned.has(Number(id)));
+  }
   seedData.meta = {
     ...(seedData.meta || {}),
     manualPlayersSource:database.source,
     manualPlayersVersion:database.raw?.metadata?.version || 'local',
     manualPlayersApplied:manualPlayers.length,
-    manualPlayersInserted:toAdd.length
+    manualPlayersInserted:toAdd.length,
+    manualPlayersRespawned:respawnedIds.length
   };
   seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
   return seedData;
@@ -1602,7 +1672,7 @@ async function loadLocal(silent=false){
     const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
-    const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true });
+    const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [] });
     const botRepair = repairBotRosters({ reason:'load_game' });
     const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
     const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired;

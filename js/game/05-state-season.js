@@ -3390,17 +3390,17 @@ function retireSeasonVeterans(){
       return ownPlayer || freePlayer;
     })
     .map(player => ({
-      id:player.id,
-      name:player.name,
-      age:player.age,
-      position:player.position,
-      salary:player.salary || 0,
+      ...player,
       freeAgent:Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent),
       manualPlayer:Boolean(player.manualPlayer),
       manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement)
     }));
   if(!retirees.length) return [];
   const retiredIds = new Set(retirees.map(p => Number(p.id)));
+  const manualRespawned = retirees
+    .filter(player => player.manualPlayer && player.manualRespawnAfterRetirement)
+    .map(player => typeof manualRespawnClone === 'function' ? manualRespawnClone(player, 'season_retirement') : null)
+    .filter(Boolean);
   const manualRetiredIds = retirees
     .filter(player => player.manualPlayer && !player.manualRespawnAfterRetirement)
     .map(player => Number(player.id))
@@ -3419,6 +3419,15 @@ function retireSeasonVeterans(){
     delete game.playerStats?.[player.id];
     delete game.playerStatus?.[player.id];
   });
+  if(manualRespawned.length){
+    const respawnedIds = new Set(manualRespawned.map(player => Number(player.id)));
+    seed.players = seed.players.filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
+    game.marketPlayers = (game.marketPlayers || []).filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
+    if(typeof initializeFreePlayerState === 'function') initializeFreePlayerState(manualRespawned);
+    game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
+    game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
+    manualRespawned.forEach(player => { player.respawnedAsFreeAgent = true; });
+  }
   const ownRetirees = retirees.filter(player => !player.freeAgent);
   const freeRetirees = retirees.filter(player => player.freeAgent);
   if(ownRetirees.length){
@@ -3438,7 +3447,26 @@ function retireSeasonVeterans(){
       body:`${freeRetirees.length} jugadores libres se retiraron al finalizar la temporada.`
     });
   }
-  return retirees;
+  if(manualRespawned.length){
+    const names = manualRespawned.slice(0,5).map(p => `${p.name} (20)`).join(', ');
+    pushGameMessage({
+      type:'mercado',
+      priority:'normal',
+      title:'Leyendas disponibles como libres',
+      body:`${manualRespawned.length === 1 ? 'Un jugador manual reapareció' : `${manualRespawned.length} jugadores manuales reaparecieron`} en el mercado libre con 20 años: ${names}${manualRespawned.length > 5 ? '...' : ''}`
+    });
+  }
+  return retirees.map(player => ({
+    id:player.id,
+    name:player.name,
+    age:player.age,
+    position:player.position,
+    salary:player.salary || 0,
+    freeAgent:Boolean(player.freeAgent),
+    manualPlayer:Boolean(player.manualPlayer),
+    manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement),
+    respawnedAsFreeAgent:Boolean(player.manualPlayer && player.manualRespawnAfterRetirement)
+  }));
 }
 function nextPlayerId(){
   const ids = [0]

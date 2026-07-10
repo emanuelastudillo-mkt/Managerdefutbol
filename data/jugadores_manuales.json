@@ -1,10 +1,10 @@
 {
   "metadata": {
     "nombre": "jugadores_manuales",
-    "version": "V5.38",
-    "appVersion": "V5.38",
+    "version": "V5.39",
+    "appVersion": "V5.39",
     "proyecto": "manager_de_futbol",
-    "descripcion": "Jugadores manuales activos con fotos WEBP y retiro persistente.",
+    "descripcion": "Jugadores manuales con fotos WEBP, actualización de foto en partidas existentes y reaparición opcional como libres.",
     "moneda": "ARS",
     "unidadSueldo": "anual",
     "rutaFotosSugerida": "img/jugadores/manual/",
@@ -15,8 +15,8 @@
     "estado": "activo",
     "cargaAutomatica": true,
     "nota": "El juego carga este archivo automáticamente si está configurado en config.js como data.manualPlayersUrl.",
-    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando extensión .webp y los nombres declarados en cada jugador. Si falta la imagen, el juego usa caras automáticas.",
-    "retiro": "Los jugadores manuales no reaparecen automáticamente tras retirarse, salvo que se cambie reapareceAlRetirarse a true."
+    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando extensión .webp y los nombres declarados en cada jugador. La partida actualiza photoPath desde este JSON al cargar.",
+    "retiro": "Los jugadores manuales con reapareceAlRetirarse true vuelven al mercado libre con 20 años al retirarse."
   },
   "reglas": {
     "sueldoAnualFijo": 150000000,
@@ -24,7 +24,7 @@
     "valorMercadoFijo": 1200000000,
     "clausulaBloqueada": true,
     "idsReservados": "910001 en adelante para jugadores manuales activos",
-    "reapareceAlRetirarse": false
+    "reapareceAlRetirarse": true
   },
   "habilidadesRequeridas": [
     "ataque",
@@ -81,11 +81,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -127,11 +127,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -173,11 +173,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -219,11 +219,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -265,11 +265,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -311,11 +311,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     },
@@ -357,11 +357,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.38-manual-active-webp-retirement",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual_activo"
       }
     }

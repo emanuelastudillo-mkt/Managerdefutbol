@@ -1,5 +1,18 @@
 # Historial de versiones
 
+## V5.39 - Fotos manuales y reaparición libre
+
+- Corrige la actualización de `photoPath` en jugadores manuales ya insertados en partidas existentes.
+- Si la partida guardada tenía una ruta vieja o vacía, el jugador manual toma nuevamente la ruta declarada en `data/jugadores_manuales.json`.
+- Mantiene las fotos en formato `.webp` dentro de `img/jugadores/manual/` y agrega un README en esa carpeta con los nombres esperados.
+- Agrega cache-busting a fotos personalizadas para evitar que el navegador arrastre una imagen faltante o ruta vieja.
+- Cambia los 7 jugadores manuales activos a `reapareceAlRetirarse: true`.
+- Cuando uno de estos jugadores se retira, reaparece en el mercado libre con 20 años.
+- La reaparición conserva sueldo, cláusula, valor, media bloqueada, habilidades y foto personalizada.
+- El jugador reaparecido queda como libre: `clubId: 0`, `freeAgent: true`, `sold: false`, `retired: false`.
+- En partidas existentes, si alguno quedó registrado como retirado bajo la regla anterior, puede recuperarse como libre al cargar si el JSON actual indica `reapareceAlRetirarse: true`.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.38 - Jugadores manuales WEBP y retiro persistente
 
 - Cambia las rutas de foto de los jugadores manuales activos de `.png` a `.webp`.
@@ -10,7 +23,7 @@
 - Actualiza `data/jugadores_manual_ejemplo.json` para usar `.webp` en los ejemplos.
 - Compatibilidad: se implementa solo. No requiere reiniciar partida.
 
-## V5.38 - Jugadores manuales activos
+## V5.37 - Jugadores manuales activos
 
 - Agrega `data/jugadores_manuales.json` como archivo activo de carga automática.
 - Crea a Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele en clubes reales del juego.

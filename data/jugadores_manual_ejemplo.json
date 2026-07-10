@@ -1,10 +1,10 @@
 {
   "metadata": {
     "nombre": "jugadores_manual_ejemplo",
-    "version": "V5.38",
-    "appVersion": "V5.38",
+    "version": "V5.39",
+    "appVersion": "V5.39",
     "proyecto": "manager_de_futbol",
-    "descripcion": "Plantilla base para futura creacion manual de jugadores usando nombres visibles del juego, fotos WEBP y control de reaparicion tras retiro.",
+    "descripcion": "Jugadores manuales con fotos WEBP, actualización de foto en partidas existentes y reaparición opcional como libres.",
     "moneda": "ARS",
     "unidadSueldo": "anual",
     "rutaFotosSugerida": "img/jugadores/manual/",
@@ -14,10 +14,11 @@
     "estado": "plantilla_de_referencia",
     "cargaAutomatica": false,
     "nota": "Este archivo no se carga automaticamente. En una version futura, el importador deberia leer el arreglo jugadores, validar ids unicos, posiciones, clubId y habilidades completas, y convertir estos nombres visibles al modelo interno del juego.",
-    "fotoPersonalizada": "Si el jugador tiene foto, usar preferentemente .webp en img/jugadores/manual/. Si la imagen no existe, vuelve a las caras automaticas por nacionalidad.",
+    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando extensión .webp y los nombres declarados en cada jugador. La partida actualiza photoPath desde este JSON al cargar.",
     "formatosFotoRecomendados": [
       "webp"
-    ]
+    ],
+    "retiro": "Los jugadores manuales con reapareceAlRetirarse true vuelven al mercado libre con 20 años al retirarse."
   },
   "camposNecesarios": {
     "id": "Numero unico. Recomendado para manuales: 900001 en adelante para evitar choque con jugadores generados.",
@@ -130,11 +131,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manual_ejemplo.json",
-        "rulesVersion": "V5.38-manual-template-visible-names-webp",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual",
         "grupoPosicion": "MID",
         "pais": "Argentina",
@@ -178,11 +179,11 @@
         "intransferible": false,
         "vendido": false,
         "retirado": false,
-        "reapareceAlRetirarse": false
+        "reapareceAlRetirarse": true
       },
       "origen": {
         "source": "data/jugadores_manual_ejemplo.json",
-        "rulesVersion": "V5.38-manual-template-visible-names-webp",
+        "rulesVersion": "V5.39-manual-webp-respawn-free-agent",
         "tipo": "manual",
         "grupoPosicion": "DEL",
         "pais": "Brasil",

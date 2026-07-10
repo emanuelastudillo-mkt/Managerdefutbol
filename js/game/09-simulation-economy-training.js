@@ -7,7 +7,7 @@ function selectLineup(clubId, tactic){
   return autoSelectStarters(clubId, tactic);
 }
 function autoSelectStarters(clubId, tactic){
-  const squad = playersByClub(clubId).filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id));
+  const squad = playersByClub(clubId).filter(p => !isUnavailable(p.id));
   const used = new Set();
   const slots = FORMATIONS[tactic?.formation] || FORMATIONS['4-4-2'];
   const lineup = [];
@@ -44,7 +44,7 @@ function conditionSelectionScoreForSlot(player, slot){
   return conditionPriority + fitPriority + condition * 1000 + currentMorale(player.id) * 10 + visibleOverall(player);
 }
 function autoSelectByBestCondition(clubId){
-  const squad = playersByClub(clubId).filter(p => clubId !== game?.selectedClubId || !isUnavailable(p.id));
+  const squad = playersByClub(clubId).filter(p => !isUnavailable(p.id));
   const used = new Set();
   const slots = FORMATIONS[game?.tactic?.formation || DEFAULT_TACTIC.formation] || FORMATIONS['4-4-2'];
   const lineup = [];

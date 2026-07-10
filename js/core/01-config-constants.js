@@ -378,7 +378,6 @@ const RETIREMENT_MIN_AGE = 32;
 const RETIREMENT_MAX_AGE = 38;
 const SEASON_SALARY_BASE_REDUCTION = configNumber('economia.reduccionBaseSueldoFinTemporada', 0.05, 0, 1);
 const SEASON_SALARY_MATCH_BONUS = configNumber('economia.bonusSueldoPorPartidoJugado', 0.01, 0);
-const FOREIGN_CLUBS = ['Atlético Lisboa','London Athletic','Milano FC','Paris Nord','Berlin United','Porto Azul','Madrid Imperial','Amsterdam Club','Montevideo City','Santos del Mar'];
 const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;
 const SEASON_END_TRANSFER_OFFERS_MIN = 2;
 const SEASON_END_TRANSFER_OFFERS_MAX = 6;

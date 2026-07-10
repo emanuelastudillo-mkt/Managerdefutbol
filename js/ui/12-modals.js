@@ -298,7 +298,7 @@ function offerOwnPlayerToClubs(playerId){
   const financials = typeof buildTransferOfferFinancials === 'function'
     ? buildTransferOfferFinancials(player, pct)
     : { grossAmount:Math.round(refreshPlayerClause(player) * pct / 100), taxAmount:0, netAmount:Math.round(refreshPlayerClause(player) * pct / 100) };
-  const source = typeof botTransferOfferClub === 'function' ? botTransferOfferClub(player) : { name:FOREIGN_CLUBS[hashNumber(`forced-foreign-${player.id}-${Date.now()}`, FOREIGN_CLUBS.length)], id:-1 };
+  const source = typeof botTransferOfferClub === 'function' ? botTransferOfferClub(player) : { name:'Club interesado', id:-1 };
   const foreignClub = source.name;
   pushGameMessage({
     type:'mercado',

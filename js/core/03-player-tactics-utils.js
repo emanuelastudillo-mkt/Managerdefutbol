@@ -1053,7 +1053,50 @@ function convertWeakBotPlayer(club, group, report){
   if(report) report.converted += 1;
   return player;
 }
+function botFreeAgentPoolForGroup(group){
+  const targetGroup = String(group || '').toUpperCase();
+  return (seed?.players || []).filter(player => {
+    if(!player || player.retired || player.sold) return false;
+    const isFree = Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent);
+    if(!isFree) return false;
+    return playerRoleGroup(player.position) === targetGroup;
+  });
+}
+function botFreeAgentRecruitmentScore(player, club){
+  const clubRep = Number(club?.reputation || 45);
+  const overall = Number(visibleOverall(player) || player?.overall || 35);
+  const age = Number(player?.age || 24);
+  const fit = 100 - Math.abs(overall - clubRep);
+  const salaryPenalty = Math.max(0, Number(player?.salary || 0) / 1000000);
+  const ageBonus = age <= 24 ? 6 : age <= 30 ? 3 : 0;
+  return fit + ageBonus - salaryPenalty;
+}
+function signFreeAgentForBotRoster(club, group, report){
+  const pool = botFreeAgentPoolForGroup(group);
+  if(!pool.length) return null;
+  const player = pool.sort((a,b) => botFreeAgentRecruitmentScore(b, club) - botFreeAgentRecruitmentScore(a, club) || visibleOverall(b) - visibleOverall(a) || Number(a.id || 0) - Number(b.id || 0))[0];
+  if(!player) return null;
+  player.clubId = Number(club.id);
+  player.freeAgent = false;
+  player.youthFreeAgent = false;
+  player.sold = false;
+  player.transferListed = false;
+  player.intransferible = false;
+  player.salaryPaidCount = 0;
+  player.lastSalaryPaidSeason = 0;
+  refreshPlayerClause(player);
+  if(game?.marketPlayers && Array.isArray(game.marketPlayers)){
+    const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
+    if(idx >= 0){
+      game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...player, clubId:Number(club.id), freeAgent:false, youthFreeAgent:false, sold:false, transferListed:false, intransferible:false };
+    }
+  }
+  if(report) report.signedFreeAgents = Number(report.signedFreeAgents || 0) + 1;
+  return player;
+}
 function addOrConvertEmergencyBotPlayer(club, group, report){
+  const signed = signFreeAgentForBotRoster(club, group, report);
+  if(signed) return signed;
   const rosterSize = playersByClub(club.id).length;
   if(rosterSize < MAX_PLAYERS_PER_CLUB) return createEmergencyBotPlayer(club, group, report);
   return convertWeakBotPlayer(club, group, report) || createEmergencyBotPlayer(club, group, report);
@@ -1082,7 +1125,7 @@ function repairBotRoster(club, report){
 }
 function repairBotRosters(options={}){
   if(!BOT_ROSTER_REPAIR_ENABLED || !game || !seed?.clubs?.length) return { created:0, converted:0, clubs:0 };
-  const report = { created:0, converted:0, clubs:0, reason:options.reason || 'auto' };
+  const report = { created:0, converted:0, signedFreeAgents:0, clubs:0, reason:options.reason || 'auto' };
   seed.clubs.forEach(club => {
     if(Number(club.id) === Number(game.selectedClubId)) return;
     const before = clubRequirementIssues(club.id).length;
@@ -1091,7 +1134,7 @@ function repairBotRosters(options={}){
       report.clubs += 1;
     }
   });
-  if(report.created || report.converted){
+  if(report.created || report.converted || report.signedFreeAgents){
     ensurePlayerStateForAll();
     if(game.botRosterRepairLog === undefined) game.botRosterRepairLog = [];
     game.botRosterRepairLog.push({ ...report, turn:currentTurnIndex(), season:game.seasonNumber || 1, createdAt:Date.now() });

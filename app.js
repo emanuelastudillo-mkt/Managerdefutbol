@@ -1,2 +1,2 @@
-/* V5.33 · Punto de entrada. Integridad diaria de partidos bot. */
+/* V5.34 · Punto de entrada. Bots: disponibilidad, libres y ofertas reales. */
 init();

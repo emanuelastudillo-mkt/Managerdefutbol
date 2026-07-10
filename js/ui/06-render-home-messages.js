@@ -918,7 +918,7 @@ function managerPointsPerGame(){
 }
 function botTransferOfferClub(player){
   const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
-  if(!clubs.length) return { name:FOREIGN_CLUBS[0] || 'Club interesado', id:-1 };
+  if(!clubs.length) return { name:'Club interesado', id:-1 };
   const sameDivision = clubs.filter(c => String(c.divisionId || '') === String(seed.clubs.find(x => Number(x.id) === Number(game?.selectedClubId))?.divisionId || ''));
   const pool = sameDivision.length ? sameDivision : clubs;
   const club = pool[hashNumber(`bot-offer-club-${player.id}-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}`, pool.length)];
@@ -1017,7 +1017,7 @@ function maybeGenerateTransferOffer(match){
   const player = basePool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}-${Date.now()}`, basePool.length)];
   const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
   const financials = buildTransferOfferFinancials(player, pct);
-  const source = Math.random() < 0.78 ? botTransferOfferClub(player) : { name:FOREIGN_CLUBS[hashNumber(`foreign-${player.id}-${game.matchdayIndex}`, FOREIGN_CLUBS.length)], id:-1 };
+  const source = botTransferOfferClub(player);
   const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás, el jugador se va del club.';
   pushGameMessage({
     type:'mercado',
@@ -1058,13 +1058,13 @@ function generateSeasonEndPlayerOffers(){
     if(created.length >= targetCount) break;
     const pct = playerOfferPercent(player, `season-end-${season}-${created.length}-${Date.now()}`);
     const financials = buildTransferOfferFinancials(player, pct);
-    const foreignClub = FOREIGN_CLUBS[hashNumber(`season-end-foreign-${season}-${player.id}-${created.length}`, FOREIGN_CLUBS.length)];
+    const source = botTransferOfferClub(player);
     const msg = pushGameMessage({
       type:'mercado',
       priority:'high',
       title:`Oferta por ${playerLastName(player.name)}`,
-      body:transferOfferBody({ name:foreignClub }, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
-      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub, pct, origin:'season_end' }
+      body:transferOfferBody(source, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct, origin:'season_end' }
     });
     if(msg) created.push(msg);
   }

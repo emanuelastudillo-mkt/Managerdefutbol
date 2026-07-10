@@ -1,5 +1,15 @@
 # Historial de versiones
 
+## V5.34 - Bots: disponibilidad, libres y ofertas reales
+
+- Los bots ya no pueden usar jugadores lesionados o suspendidos como titulares automáticos contra el manager.
+- `autoSelectStarters()` y `autoSelectByBestCondition()` ahora filtran disponibilidad para todos los clubes, no sólo para el club del jugador.
+- La reparación automática de planteles bot ahora intenta fichar jugadores libres reales del mercado antes de crear o reconvertir jugadores de emergencia.
+- Los fichajes de libres hechos por bots no pasan por probabilidad de aceptación: los jugadores libres no pueden rechazar a bots cuando el sistema necesita completar mínimos de plantel.
+- Se eliminan las ofertas provenientes de clubes inexistentes. Las ofertas automáticas, de fin de temporada y de jugador ofrecido ahora toman clubes reales cargados en `seed.clubs`.
+- Las ventas aceptadas desde esas ofertas envían al jugador a un club real cuando existe uno disponible, en lugar de mandarlo a un destino externo ficticio.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.33 - Integridad diaria de partidos bot
 
 - Corrige el origen del problema: los fixtures ahora guardan el paquete completo del resultado y no sólo marcador/estado jugado.

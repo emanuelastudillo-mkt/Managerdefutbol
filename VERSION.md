@@ -1,12 +1,12 @@
 # Versión actual
 
-V5.33
+V5.34
 
 ## Nombre
-Integridad diaria de partidos bot
+Bots: disponibilidad, libres y ofertas reales
 
 ## Resumen
-Se corrige el origen de partidos marcados como jugados sin estadísticas mínimas, copiando el paquete completo de datos al fixture. Además, se agrega una reparación diaria conservadora para completar datos faltantes en partidos bot ya jugados sin alterar marcador, tabla ni economía.
+Los bots respetan lesiones y suspensiones al armar titulares automáticos contra el manager. La reparación automática de planteles bot prioriza fichar jugadores libres reales, sin rechazo por parte del libre, y las ofertas de compra pasan a originarse en clubes reales del juego.
 
 ## Compatibilidad
-Se implementa solo. No requiere reiniciar partida; las partidas ya afectadas pueden reparar los partidos bot jugados al avanzar día o al usar el verificador.
+Se implementa solo. No requiere reiniciar partida; ajusta lógica de selección, reparación de planteles bot y origen de ofertas futuras.

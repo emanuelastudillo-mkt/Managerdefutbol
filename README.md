@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V5.57
+# Fútbol Manager MVP - V5.58
+
+## V5.58 - Finanzas agrupadas y planteles bot clickeables
+
+- Finanzas ahora agrupa movimientos iguales por temporada, tipo y concepto para evitar listas repetidas.
+- Los totales agrupados muestran cantidad de movimientos, fechas involucradas y monto consolidado.
+- La lista **Plantel y sueldos** no se minimiza ni se convierte en desplegable: queda siempre visible.
+- Al abrir un equipo bot, los jugadores de la plantilla observada son clickeables.
+- Al clickear un jugador bot se abre su ficha, respetando la información ojeada/oculta correspondiente.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.57 - Premios deportivos reducidos
 

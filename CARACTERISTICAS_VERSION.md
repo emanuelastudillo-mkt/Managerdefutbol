@@ -1,4 +1,20 @@
-# Características de la versión V5.57
+# Características de la versión V5.58
+
+## V5.58 - Finanzas agrupadas y planteles bot clickeables
+
+### Cambios principales
+- El historial de Finanzas agrupa movimientos iguales por temporada, tipo y concepto.
+- Las filas agrupadas muestran cantidad de movimientos, rango de fechas, monto consolidado y último presupuesto registrado.
+- Los bloques por categoría de ingresos y gastos también muestran grupos cuando hay movimientos repetidos.
+- La tarjeta **Plantel y sueldos** queda siempre desplegada; no se minimiza.
+- En la ficha de un equipo bot, la tabla **Plantilla observada** permite clickear jugadores para abrir su ficha.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta sólo visualización de Finanzas y navegación de planteles bot.
+
+---
 
 ## V5.57 - Premios deportivos reducidos
 

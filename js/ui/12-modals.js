@@ -1055,7 +1055,7 @@ function showClubModal(clubId){
   const players = playersByClub(club.id).slice().sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
   const keepers = players.filter(p=>p.position === 'POR');
   const fieldPlayers = players.filter(p=>p.position !== 'POR');
-  const rows = players.map(scoutingPlayerRow).join('');
+  const rows = players.map(player => scoutingPlayerRow(player, { clickable:true })).join('');
   const isOwnClub = Number(club.id) === Number(game?.selectedClubId || 0);
   const isTeamScouted = Array.isArray(game?.scoutingCenter?.listedTeamIds) && game.scoutingCenter.listedTeamIds.map(Number).includes(Number(club.id));
   const teamScoutButton = isOwnClub ? '' : `<button class="ghost" data-add-scouting-team="${club.id}">${isTeamScouted ? 'En Centro de Ojeo' : 'Ojear equipo'}</button>`;
@@ -1140,12 +1140,16 @@ function scoutingStatMap(player){
     'Resistencia': stats.Resistencia
   };
 }
-function scoutingPlayerRow(player){
+function scoutingPlayerRow(player, options={}){
   const map = scoutingStatMap(player);
   const visible = scoutingVisibleKeys(player);
+  const clickable = Boolean(options?.clickable);
   const cell = key => visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
-  return `<tr>
-    <td>${faceImg(player,'photo-thumb')} <strong>${escapeHtml(player.name)}</strong></td>
+  const nameMarkup = clickable
+    ? `<button class="linklike" data-player-id="${Number(player.id)}"><strong>${typeof playerNameWithScoutingEye === 'function' ? playerNameWithScoutingEye(player) : escapeHtml(player.name)}</strong></button>`
+    : `<strong>${escapeHtml(player.name)}</strong>`;
+  return `<tr class="${clickable ? 'clickable-player-row' : ''}" ${clickable ? `data-player-id="${Number(player.id)}"` : ''}>
+    <td>${faceImg(player,'photo-thumb')} ${nameMarkup}</td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${nationalityShortMarkup(player.nationality)}</td>
     <td>${typeof scoutedOverallLabel === 'function' ? scoutedOverallLabel(player) : '<span class="muted">—</span>'}</td>

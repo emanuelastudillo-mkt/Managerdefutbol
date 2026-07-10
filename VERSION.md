@@ -1,7 +1,8 @@
 # Versión actual
 
-V5.57
+V5.58
 
 ## Cambios
-- Premios por campeonato y ascenso reducidos a la mitad.
-- Mantiene la lógica anti-duplicación y acumulación campeonato + ascenso.
+- Finanzas agrupa movimientos iguales para compactar el historial.
+- La lista de sueldos de jugadores queda siempre visible, sin minimizar.
+- Al abrir un club bot, los jugadores de su plantilla son clickeables y abren ficha.

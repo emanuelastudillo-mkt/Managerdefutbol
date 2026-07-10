@@ -1721,6 +1721,7 @@ function financeCategory(entry){
   const type = String(entry?.type || '').toLowerCase();
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('season_prize') || concept.includes('premio por campeonato') || concept.includes('premio por ascenso')) return 'Premios temporada';
   if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
   if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
   if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
@@ -1735,6 +1736,7 @@ function financeBudgetCategory(entry){
   const type = String(entry?.type || '').toLowerCase();
   const concept = String(entry?.concept || '').toLowerCase();
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
+  if(type.includes('season_prize') || concept.includes('premio por campeonato') || concept.includes('premio por ascenso')) return 'Premios temporada';
   if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
   if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
   if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
@@ -1749,12 +1751,59 @@ function financeBudgetCategory(entry){
   if(entry?.matchId || concept.includes('partido') || concept.includes('recaudación')) return 'Partidos y entradas';
   return 'Otros';
 }
+function financeAggregateKey(entry){
+  const season = Number(entry?.season || game?.seasonNumber || 1);
+  const type = String(entry?.type || 'budget');
+  const concept = budgetConcept(entry);
+  const sign = Number(entry?.delta || 0) >= 0 ? 'income' : 'expense';
+  return `${season}|${sign}|${type}|${concept}`;
+}
+function financeGroupedEntries(entries){
+  const groups = new Map();
+  (entries || []).forEach((entry, order) => {
+    const key = financeAggregateKey(entry);
+    if(!groups.has(key)){
+      groups.set(key, {
+        ...entry,
+        concept:budgetConcept(entry),
+        delta:0,
+        ticketRevenue:0,
+        count:0,
+        firstOrder:order,
+        latestOrder:order,
+        firstMatchdayIndex:Number(entry?.matchdayIndex || 0),
+        lastMatchdayIndex:Number(entry?.matchdayIndex || 0),
+        latestBudget:Number(entry?.budget || 0)
+      });
+    }
+    const group = groups.get(key);
+    group.delta += Number(entry?.delta || 0);
+    group.ticketRevenue += Number(entry?.ticketRevenue || 0);
+    group.count += 1;
+    group.latestOrder = Math.min(group.latestOrder, order);
+    const day = Number(entry?.matchdayIndex || 0);
+    group.firstMatchdayIndex = Math.min(group.firstMatchdayIndex, day);
+    group.lastMatchdayIndex = Math.max(group.lastMatchdayIndex, day);
+  });
+  return Array.from(groups.values()).sort((a,b) => a.firstOrder - b.firstOrder);
+}
+function financeDateLabel(entry){
+  const count = Math.max(1, Number(entry?.count || 1));
+  const first = Number(entry?.firstMatchdayIndex ?? entry?.matchdayIndex ?? 0) + 1;
+  const last = Number(entry?.lastMatchdayIndex ?? entry?.matchdayIndex ?? 0) + 1;
+  if(count <= 1) return `Fecha ${last}`;
+  return first === last ? `Fecha ${last}` : `Fechas ${first}-${last}`;
+}
+function financeCountBadge(entry){
+  const count = Math.max(1, Number(entry?.count || 1));
+  return count > 1 ? ` <span class="pill finance-mini-pill">x${count}</span>` : '';
+}
 function financeCategoryRows(entries){
-  return (entries || []).map(entry => {
+  return financeGroupedEntries(entries || []).map(entry => {
     const delta = Number(entry.delta || 0);
     const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
     const extra = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Entradas ${formatMoney(entry.ticketRevenue)}</span>` : '';
-    return `<tr><td>Fecha ${Number(entry.matchdayIndex || 0) + 1}</td><td>${escapeHtml(budgetConcept(entry))}${extra}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.budget || 0)}">${formatMoney(entry.budget || 0)}</span></td></tr>`;
+    return `<tr><td>${financeDateLabel(entry)}</td><td>${escapeHtml(budgetConcept(entry))}${financeCountBadge(entry)}${extra}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.latestBudget ?? entry.budget ?? 0)}">${formatMoney(entry.latestBudget ?? entry.budget ?? 0)}</span></td></tr>`;
   }).join('');
 }
 function financeExpensesByCategoryMarkup(){
@@ -1773,10 +1822,12 @@ function financeExpensesByCategoryMarkup(){
   const order = ['Sueldos','Banco','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
   const details = order.filter(category => grouped[category]?.length).map((category, index) => {
     const entries = grouped[category];
+    const groupedEntries = financeGroupedEntries(entries);
     const total = entries.reduce((sum, entry) => sum + Math.abs(Number(entry.delta || 0)), 0);
+    const groupedLabel = groupedEntries.length === entries.length ? `${entries.length} mov.` : `${groupedEntries.length} grupos · ${entries.length} mov.`;
     return `<details class="finance-category-detail" ${index === 0 ? 'open' : ''}>
-      <summary><span>${escapeHtml(category)}</span><strong class="bad">${formatMoney(total)}</strong><small>${entries.length} mov.</small></summary>
-      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
+      <summary><span>${escapeHtml(category)}</span><strong class="bad">${formatMoney(total)}</strong><small>${groupedLabel}</small></summary>
+      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto agrupado</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
     </details>`;
   }).join('');
   return `<div class="card finance-category-card"><div class="row"><div><h3>Gastos por categoría</h3><p class="muted small">Secciones minimizables y desplegables de la temporada actual.</p></div><span class="pill bad">${formatMoney(expenses.reduce((sum, entry) => sum + Math.abs(Number(entry.delta || 0)), 0))}</span></div>${details}</div>`;
@@ -1797,10 +1848,12 @@ function financeIncomeByCategoryMarkup(){
   const order = ['Partidos y entradas','Banco','Sponsors','Mercado','Eventos','Otros'];
   const details = order.filter(category => grouped[category]?.length).map((category, index) => {
     const entries = grouped[category];
+    const groupedEntries = financeGroupedEntries(entries);
     const total = entries.reduce((sum, entry) => sum + Number(entry.delta || 0), 0);
+    const groupedLabel = groupedEntries.length === entries.length ? `${entries.length} mov.` : `${groupedEntries.length} grupos · ${entries.length} mov.`;
     return `<details class="finance-category-detail finance-income-detail" ${index === 0 ? 'open' : ''}>
-      <summary><span>${escapeHtml(category)}</span><strong class="ok">${formatMoney(total)}</strong><small>${entries.length} mov.</small></summary>
-      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
+      <summary><span>${escapeHtml(category)}</span><strong class="ok">${formatMoney(total)}</strong><small>${groupedLabel}</small></summary>
+      <div class="table-wrap compact-finance-table"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto agrupado</th><th>Presupuesto luego</th></tr></thead><tbody>${financeCategoryRows(entries)}</tbody></table></div>
     </details>`;
   }).join('');
   return `<div class="card finance-category-card"><div class="row"><div><h3>Ingresos por categoría</h3><p class="muted small">Incluye partidos, sponsors, ventas y recaudación de entradas.</p></div><span class="pill ok">${formatMoney(income.reduce((sum, entry) => sum + Number(entry.delta || 0), 0))}</span></div>${details}</div>`;
@@ -2034,11 +2087,12 @@ function renderFinances(){
   const seasonExpenses = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) < 0).reduce((a,h)=>a+Math.abs(Number(h.delta || 0)),0);
   const seasonIncome = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) > 0).reduce((a,h)=>a+Number(h.delta || 0),0);
   const salaryTotal = totalClubSalary(game.selectedClubId);
-  const rows = history.slice(0,80).map(entry => {
+  const groupedHistory = financeGroupedEntries(history).slice(0,80);
+  const rows = groupedHistory.map(entry => {
     const delta = Number(entry.delta || 0);
     const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
     const ticketText = Number(entry.ticketRevenue || 0) > 0 ? ` <span class="pill finance-mini-pill">Recaudación ${formatMoney(entry.ticketRevenue)}</span>` : '';
-    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}</td><td>${escapeHtml(budgetConcept(entry))}${ticketText}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.budget || 0)}">${formatMoney(entry.budget || 0)}</span></td></tr>`;
+    return `<tr><td>Temp. ${entry.season || game.seasonNumber || 1}<br><span class="muted small">${financeDateLabel(entry)}</span></td><td>${escapeHtml(budgetConcept(entry))}${financeCountBadge(entry)}${ticketText}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td><span class="${budgetTone(entry.latestBudget ?? entry.budget ?? 0)}">${formatMoney(entry.latestBudget ?? entry.budget ?? 0)}</span></td></tr>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title"><div><h2>Finanzas</h2><p class="tagline">Detalle del presupuesto, sus movimientos registrados y la masa salarial del plantel.</p></div></div>
@@ -2057,10 +2111,10 @@ function renderFinances(){
       ${financeExpensesByCategoryMarkup()}
       ${financeIncomeByCategoryMarkup()}
     </div>
-    <div class="card" style="margin-top:14px"><h3>Plantel y sueldos</h3>
+    <div class="card finance-salary-card" style="margin-top:14px"><h3>Plantel y sueldos</h3>
       <div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Nac.</th><th>Edad</th><th>Media</th><th>Sueldo anual</th></tr></thead><tbody>${financeSquadRows() || '<tr><td colspan="5" class="muted">No hay jugadores en el plantel.</td></tr>'}</tbody></table></div>
     </div>
-    <div class="card" style="margin-top:14px"><h3>Movimientos</h3>
+    <div class="card" style="margin-top:14px"><h3>Movimientos agrupados</h3><p class="muted small">Los conceptos iguales se consolidan para leer mejor el historial. La lista de sueldos del plantel queda siempre visible.</p>
       <div class="table-wrap"><table><thead><tr><th>Temporada</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div>
     </div>`;
   document.querySelectorAll('[data-request-bank-loan]').forEach(btn => btn.addEventListener('click', () => requestBankLoan(btn.dataset.requestBankLoan)));

@@ -4553,3 +4553,36 @@ th{
 .pill.danger{background:rgba(239,68,68,.18)!important;color:#fecaca!important;border-color:rgba(239,68,68,.32)!important}
 .scouted-eye{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:20px;height:20px;border-radius:999px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.30);font-size:12px;vertical-align:middle;line-height:1}
 .market-limit-note{line-height:1.45}
+
+
+.manager-achievements-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+.achievement-unlocked-card{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:14px;
+  padding:10px;
+}
+.achievement-icon{
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  box-shadow:0 3px 10px rgba(15,23,42,.08);
+  flex:0 0 auto;
+}
+
+/* V5.58 · Finanzas agrupadas y planteles bot clickeables */
+.clickable-player-row{cursor:pointer}
+.clickable-player-row:hover{background:rgba(59,130,246,.08)}
+.finance-salary-card{display:block}
+.finance-salary-card .table-wrap{max-height:none}

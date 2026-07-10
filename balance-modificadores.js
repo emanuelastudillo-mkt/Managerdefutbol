@@ -51,7 +51,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
     fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 0.90,
+    multiplicadorTarjetas: 0.80,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
@@ -67,7 +67,7 @@ window.GAME_BALANCE_MODIFICADORES = {
       { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
     ],
     desgastePartidoMin: 40,
-    desgastePartidoMax: 78,
+    desgastePartidoMax: 63,
     factorDesgasteArquero: 0.5
   },
 
@@ -79,9 +79,9 @@ window.GAME_BALANCE_MODIFICADORES = {
       // desgasteFisicoPct se aplica como pérdida extra de estado físico sobre la fatiga normal del partido.
       // bonusAtaquePct aumenta la presión ofensiva mientras el bot va perdiendo.
       reglasDiferencia: [
-        { diferenciaMin: 1, diferenciaMax: 1, desgasteFisicoPct: 0.20, bonusAtaquePct: 0.10 },
-        { diferenciaMin: 2, diferenciaMax: 2, desgasteFisicoPct: 0.30, bonusAtaquePct: 0.20 },
-        { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.30 }
+        { diferenciaMin: 1, diferenciaMax: 1, desgasteFisicoPct: 0.20, bonusAtaquePct: 0.30 },
+        { diferenciaMin: 2, diferenciaMax: 2, desgasteFisicoPct: 0.30, bonusAtaquePct: 0.40 },
+        { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.50 }
       ],
       maxGolesExtraPorEquipo: 1,
       // Valores heredados: quedan como respaldo si se borra reglasDiferencia.

@@ -1,11 +1,11 @@
 # Versión actual
 
-V5.39
+V5.40
 
 ## Nombre
 
-Fotos manuales y reaparición libre
+Balance separado y entrenamiento diario corregido
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Las partidas existentes actualizan rutas de foto manuales al cargar y los jugadores manuales configurados con `reapareceAlRetirarse: true` reaparecen como libres de 20 años al retirarse.
+Se implementa solo. No requiere reiniciar partida. El entrenamiento profesional pasa a aplicar sólo los 4 bloques del día actual en el próximo avance; los boosts de temporada existentes se conservan.

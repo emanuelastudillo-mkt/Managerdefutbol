@@ -78,15 +78,41 @@ function scoutedMoraleLabel(player){
 function scoutedBarsMarkup(player){
   return playerRequiresScouting(player) ? '<p class="muted small">Físico y moral ocultos hasta observar al jugador en más semanas.</p>' : `<div class="profile-bar-wrap">${moraleBar(player.id)}</div>`;
 }
+function scoutingStatMapWithResolver(player, resolver=baseSkill){
+  const stats = visibleStats(player, resolver);
+  if(player.position === 'POR'){
+    return {
+      'Ataque/Salto': stats.Salto,
+      'Defensa': stats.Defensa,
+      'Pase': stats.Pase,
+      'Velocidad/Reflejos': stats.Reflejos,
+      'Cabezazo/Mando': stats.Mando,
+      'Tiro/Potencia': stats.Potencia,
+      'Resistencia': stats.Resistencia
+    };
+  }
+  return {
+    'Ataque/Salto': stats.Ataque,
+    'Defensa': stats.Defensa,
+    'Pase': stats.Pase,
+    'Velocidad/Reflejos': stats.Velocidad,
+    'Cabezazo/Mando': stats.Cabezazo,
+    'Tiro/Potencia': stats.Tiro,
+    'Resistencia': stats.Resistencia
+  };
+}
 function scoutedStatsMarkup(player){
   const map = scoutingStatMap(player);
-  const rawMap = scoutingStatMap({ ...player, skills:player.skills });
+  const rawMap = scoutingStatMapWithResolver(player, rawVisibleSkill);
   const visible = scoutedVisibleKeySet(player);
   const rows = Object.entries(map).map(([key, value]) => {
-    const raw = rawMap[key];
+    const raw = Number(rawMap[key]);
+    const current = Number(value);
+    const boost = Number.isFinite(raw) && Number.isFinite(current) ? Math.max(0, current - raw) : 0;
     const shown = !playerRequiresScouting(player) || visible.has(key);
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${shown ? value : '—'}</strong>${shown && Number(raw) !== Number(value) ? `<small class="muted">base ${raw}</small>` : ''}</div>`;
+    const valueMarkup = shown ? (boost > 0 ? `${raw}<span class="trained-boost" title="Boost de temporada">+${boost}</span>` : `${current}`) : '—';
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong>${shown && boost > 0 ? `<small class="muted">boost de temporada</small>` : ''}</div>`;
   }).join('');
   const note = playerRequiresScouting(player) ? '<p class="muted small">Sólo se muestran datos guardados en el Centro de Ojeo. Sin informe, la habilidad queda oculta.</p>' : '';
   return `${rows}${note}`;

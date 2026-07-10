@@ -1,5 +1,18 @@
 # Historial de versiones
 
+## V5.40 - Balance separado y entrenamiento diario corregido
+
+- Agrega `balance-modificadores.js` como archivo activo para centralizar modificadores de entrenamiento, cohesión, lesiones, simulador, bots y clima.
+- El archivo se carga antes de `config.js`; sus valores sobrescriben los bloques equivalentes sin tocar el resto de la configuración.
+- Corrige el entrenamiento general diario: al avanzar un día se aplican sólo los 4 bloques del día actual.
+- Mantiene el entrenamiento individual como una aplicación diaria por jugador.
+- Los bots no entrenan; conservan su balance por simulación rápida y mantenimiento competitivo.
+- En la simulación rápida, si un bot va perdiendo puede sobreexigirse: recibe una posibilidad de gol extra y paga desgaste/condición.
+- La lluvia aumenta el deterioro del campo del manager cuando juega de local.
+- La ficha del jugador muestra el boost de temporada en verde al lado de la habilidad visible.
+- El desgaste sigue sin entrar directo al simulador; funciona como techo del estado físico, y el estado físico sí afecta el rendimiento.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.39 - Fotos manuales y reaparición libre
 
 - Corrige la actualización de `photoPath` en jugadores manuales ya insertados en partidas existentes.

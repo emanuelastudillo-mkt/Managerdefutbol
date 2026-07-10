@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.39',
+  version: 'V5.40',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -615,3 +615,20 @@ window.GAME_CONFIG = {
     ]
   }
 };
+
+
+(function aplicarModificadoresBalanceSeparados(){
+  const balance = window.GAME_BALANCE_MODIFICADORES;
+  if(!balance || typeof balance !== 'object') return;
+  const mergeDeep = (base, extra) => {
+    Object.entries(extra || {}).forEach(([key, value]) => {
+      if(value && typeof value === 'object' && !Array.isArray(value)){
+        base[key] = mergeDeep(base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]) ? base[key] : {}, value);
+      }else{
+        base[key] = value;
+      }
+    });
+    return base;
+  };
+  window.GAME_CONFIG = mergeDeep(window.GAME_CONFIG || {}, balance);
+})();

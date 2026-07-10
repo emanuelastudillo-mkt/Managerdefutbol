@@ -1,2 +1,2 @@
-/* V5.39 · Punto de entrada. Jugadores manuales WEBP y reaparición libre. */
+/* V5.40 · Punto de entrada. Balance separado y entrenamiento diario corregido. */
 init();

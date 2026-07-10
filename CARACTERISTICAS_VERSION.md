@@ -1,24 +1,37 @@
-# Características de la versión V5.39
+# Características de la versión V5.40
 
-## Fotos manuales y reaparición libre
+## Balance separado y entrenamiento diario corregido
 
-- Corrige la sincronización de fotos personalizadas para jugadores manuales ya existentes en partidas guardadas.
-- El sincronizador actualiza `photoPath` desde `data/jugadores_manuales.json` sin resetear club actual, edad actual, estado de transferencia ni progreso de partida.
-- Los 7 jugadores manuales activos usan rutas `.webp` en `img/jugadores/manual/` y el ZIP incluye esa carpeta con un README de nombres esperados.
-- La UI agrega versión a la URL de fotos personalizadas para evitar caché vieja del navegador.
-- Los 7 jugadores manuales activos quedan con `reapareceAlRetirarse: true`.
-- Al retirarse, estos jugadores reaparecen como libres con 20 años.
-- La reaparición conserva sueldo, cláusula, valor de mercado, media bloqueada, habilidades y ruta de foto.
-- El jugador reaparecido queda disponible en el mercado libre con `clubId: 0` y `freeAgent: true`.
-- El sistema limpia estados anteriores de lesión, moral, condición, entrenamiento y estadísticas antes de inicializarlo como libre.
+- Agrega `balance-modificadores.js` como archivo activo para centralizar modificadores y multiplicadores de balance.
+- `balance-modificadores.js` se carga antes de `config.js` y pisa sólo los valores declarados ahí.
+- El entrenamiento general del manager ahora aplica sólo los 4 bloques del día actual, no los 28 bloques de toda la semana.
+- Los bots siguen sin entrenamiento diario. Su balance permanece por simulación rápida y mantenimiento competitivo.
+- La simulación rápida de bots agrega sobreexigencia si un bot va perdiendo: puede recibir un pequeño boost ofensivo y paga más desgaste/condición.
+- La lluvia ahora aumenta el deterioro del campo del club manager cuando juega como local.
+- La ficha del jugador muestra los boosts de temporada en verde junto a la habilidad visible, por ejemplo `Pase 72 +7`.
+- El desgaste se mantiene como efecto indirecto: no entra directo al simulador, pero limita el máximo de estado físico y ese estado físico sí modifica el rendimiento.
+- Se mantiene la penalización actual para lesionados usados como suplentes: rinden casi como jugadores inutilizables.
+
+## Archivo nuevo
+
+- `balance-modificadores.js`
+
+Bloques principales:
+
+- `entrenamiento`
+- `cohesion`
+- `lesiones`
+- `simulador`
+- `equilibrioBots.tacticaRapida`
+- `estadio.clima`
 
 ## Alcance
 
-- No agrega pantalla de edición manual todavía.
-- No cambia los clubes iniciales de Ronaldinho, Buffon, Beckham, Maldini, Maradona, Zidane ni Pele.
-- No modifica la lógica general de retiro para jugadores comunes.
-- No modifica la generación automática de jugadores comunes ni el mercado general.
+- No cambia planteles, mercado, clubes, calendario ni jugadores manuales.
+- No convierte el balance a pantalla editable todavía.
+- No hace que los bots entrenen.
+- No cambia el cálculo base de habilidades; sólo expone mejor los boosts de temporada y corrige el ritmo de aplicación diaria.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Las partidas existentes actualizan las rutas de foto de jugadores manuales al cargar y aplican la nueva regla de reaparición para retiros futuros.
+Se implementa solo. No requiere reiniciar partida. Los cambios aplican a entrenamientos y partidos futuros.

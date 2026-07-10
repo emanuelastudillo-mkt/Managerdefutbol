@@ -594,6 +594,28 @@ function quickSimulateBotMatch(match){
     if(Math.random() < clamp(0.50 + edge * 0.18, 0.25, 0.75)) homeGoals = 1;
     else awayGoals = 1;
   }
+  const instructionConditionDeltas = {};
+  const overexertionEvents = [];
+  const applyTrailingBotOverexertion = (side, lineup) => {
+    if(!BOT_QUICK_OVEREXERTION_ENABLED || BOT_QUICK_OVEREXERTION_MAX_GOALS <= 0) return 0;
+    const extraGoals = Math.min(BOT_QUICK_OVEREXERTION_MAX_GOALS, Math.random() < BOT_QUICK_OVEREXERTION_GOAL_CHANCE ? 1 : 0);
+    lineup.forEach(player => {
+      const id = Number(player?.id || 0);
+      if(!id) return;
+      instructionConditionDeltas[id] = (Number(instructionConditionDeltas[id] || 0) + BOT_QUICK_OVEREXERTION_CONDITION_DELTA);
+      if(BOT_QUICK_OVEREXERTION_EXTRA_WEAR > 0 && typeof adjustPlayerWear === 'function') adjustPlayerWear(id, BOT_QUICK_OVEREXERTION_EXTRA_WEAR);
+    });
+    overexertionEvents.push({ side, extraGoals, xgExtra:BOT_QUICK_OVEREXERTION_XG_EXTRA, conditionDelta:BOT_QUICK_OVEREXERTION_CONDITION_DELTA, wearExtra:BOT_QUICK_OVEREXERTION_EXTRA_WEAR });
+    return extraGoals;
+  };
+  if(homeGoals < awayGoals){
+    const extra = applyTrailingBotOverexertion('home', homeLineup);
+    if(extra > 0){ homeGoals += extra; homeXg = clamp(homeXg + BOT_QUICK_OVEREXERTION_XG_EXTRA, 0.15, 4.80); }
+  }
+  if(awayGoals < homeGoals){
+    const extra = applyTrailingBotOverexertion('away', awayLineup);
+    if(extra > 0){ awayGoals += extra; awayXg = clamp(awayXg + BOT_QUICK_OVEREXERTION_XG_EXTRA, 0.12, 4.60); }
+  }
   const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + 3 + rnd(-7,7)), 31, 69);
   const awayPoss = 100 - homePoss;
   const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), Math.max(1, homeGoals), 18);
@@ -633,7 +655,8 @@ function quickSimulateBotMatch(match){
       updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway });
     }
   }
-  return { ...match, played:true, engine:'bot-rapido-v4.22-estadisticas', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext:context, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas:{} };
+  const matchContext = overexertionEvents.length ? { ...context, botOverexertion:overexertionEvents } : context;
+  return { ...match, played:true, engine:'bot-rapido-v5.40-balance', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas };
 }
 function simulateScheduledMatch(match){
   if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
@@ -2061,8 +2084,22 @@ function applyEconomyResult(match){
     rivalPrestigeAttendanceBonusPct:match?.matchContext?.rivalPrestigeAttendanceBonusPct || 0
   });
 }
+function rainFieldDeteriorationForWeather(weather=''){
+  if(!RAIN_FIELD_DETERIORATION_ENABLED) return 0;
+  const normalized = String(weather || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if(!normalized.includes('lluvia')) return 0;
+  if(normalized.includes('intensa') || normalized.includes('fuerte')) return RAIN_FIELD_DETERIORATION_HEAVY;
+  return RAIN_FIELD_DETERIORATION_LIGHT;
+}
 function advanceStadiumAfterMatches(results){
   ensureStadiumState();
+  const homeWeatherDeterioration = new Map();
+  (results || []).forEach(match => {
+    const clubId = Number(match?.homeId || 0);
+    if(!clubId) return;
+    const rainExtra = rainFieldDeteriorationForWeather(match?.matchContext?.weather || '');
+    homeWeatherDeterioration.set(clubId, Math.max(Number(homeWeatherDeterioration.get(clubId) || 0), Number(rainExtra || 0)));
+  });
   const homePlayed = new Set((results || []).map(match => match.homeId));
   homePlayed.forEach(clubId => {
     if(BOT_FIELDS_FIXED_BY_SEASON && !isManagedClubField(clubId)) return;
@@ -2070,7 +2107,7 @@ function advanceStadiumAfterMatches(results){
     if(project.replantingTurnsLeft > 0){
       game.stadium.fields[clubId] = 30;
     } else {
-      const rawDeterioration = rnd(5,8);
+      const rawDeterioration = rnd(5,8) + Number(homeWeatherDeterioration.get(Number(clubId)) || 0);
       const reductionPct = (typeof specialActiveBonus === 'function' && Number(clubId) === Number(game?.selectedClubId)) ? specialActiveBonus('deterioro_campo') : 0;
       const adjustedDeterioration = Math.max(0, rawDeterioration * (1 - (clamp(reductionPct, 0, 95) / 100)));
       game.stadium.fields[clubId] = clamp(Math.round(fieldScoreForClub(clubId) - adjustedDeterioration), 1, 100);
@@ -2312,10 +2349,19 @@ function trainingDayDate(dayIndex){
   const base = validIsoDate(game?.currentDate) ? game.currentDate : dateForSeasonState(game);
   return addDaysToIsoDate(base, Number(dayIndex || 0));
 }
-function trainingScheduleSlots(){
+function currentTrainingDayIndex(){
+  const date = validIsoDate(game?.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  if(!validIsoDate(date)) return 0;
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return Number.isFinite(day) ? clamp(Math.round(day), 0, 6) : 0;
+}
+function trainingScheduleSlots(options={}){
   const schedule = currentTrainingSchedule();
   const slots = [];
+  const onlyCurrentDay = Boolean(options.currentDayOnly);
+  const currentDay = currentTrainingDayIndex();
   TRAINING_DAY_LABELS.forEach((dayLabel, dayIndex) => {
+    if(onlyCurrentDay && dayIndex !== currentDay) return;
     TRAINING_DAY_SLOTS.forEach(slot => {
       slots.push({
         dayIndex,
@@ -2493,7 +2539,7 @@ function applyTrainingEffects(){
   let individualSessions = 0;
   let individualSkillGains = 0;
   let generalSkillGains = 0;
-  const slots = trainingScheduleSlots();
+  const slots = trainingScheduleSlots({ currentDayOnly: TRAINING_APPLY_CURRENT_DAY_ONLY });
   slots.forEach(item => {
     if(item.type === 'tactical'){
       tacticalGain += Math.random() < TEAM_COHESION_TACTICAL_TRAINING_CHANCE ? TEAM_COHESION_TACTICAL_TRAINING_GAIN : 0;

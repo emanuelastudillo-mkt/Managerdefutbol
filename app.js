@@ -1,2 +1,2 @@
-/* V5.52 · Punto de entrada. Cartas blancas, avisos destacados, ojeo persistente y mercado reducido. */
+/* V5.53 · Punto de entrada. Mensajes nuevos del asistente sobre ojeo. */
 init();

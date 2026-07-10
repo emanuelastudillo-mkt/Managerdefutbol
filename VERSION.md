@@ -1,12 +1,12 @@
 # Versión actual
 
-V5.32
+V5.33
 
 ## Nombre
-Ranking online manual y automático
+Integridad diaria de partidos bot
 
 ## Resumen
-Se reactiva el ranking online con botón manual para subir datos actuales del club cada 50 días de juego y se mantiene el envío automático al finalizar temporada o al ser despedido.
+Se corrige el origen de partidos marcados como jugados sin estadísticas mínimas, copiando el paquete completo de datos al fixture. Además, se agrega una reparación diaria conservadora para completar datos faltantes en partidos bot ya jugados sin alterar marcador, tabla ni economía.
 
 ## Compatibilidad
-Se implementa solo. No requiere reiniciar partida.
+Se implementa solo. No requiere reiniciar partida; las partidas ya afectadas pueden reparar los partidos bot jugados al avanzar día o al usar el verificador.

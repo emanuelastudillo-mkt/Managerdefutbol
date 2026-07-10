@@ -787,6 +787,201 @@ function botMatchStatsIntegrityIssues(){
   return issues;
 }
 
+function integrityClonePlain(value){
+  try{ return JSON.parse(JSON.stringify(value ?? null)); }
+  catch(_){ return value ?? null; }
+}
+function integrityMatchFiniteScore(match){
+  const homeGoals = Number(match?.homeGoals);
+  const awayGoals = Number(match?.awayGoals);
+  if(!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) return null;
+  return { homeGoals:Math.max(0, Math.round(homeGoals)), awayGoals:Math.max(0, Math.round(awayGoals)) };
+}
+function integrityMatchComparableDate(match, round){
+  const direct = String(match?.date || '').slice(0,10);
+  if(validIsoDate(direct)) return direct;
+  if(typeof scheduledDateForMatch === 'function') return scheduledDateForMatch(match, round);
+  return String(round?.date || '').slice(0,10);
+}
+function integritySameScheduledMatch(record, match, round){
+  if(!record || !match) return false;
+  if(match.id && record.id && String(record.id) === String(match.id)) return true;
+  const date = integrityMatchComparableDate(match, round);
+  const recordDate = String(record.date || '').slice(0,10);
+  return Number(record.homeId) === Number(match.homeId)
+    && Number(record.awayId) === Number(match.awayId)
+    && String(record.divisionId || '') === String(match.divisionId || round?.divisionId || '')
+    && (!validIsoDate(date) || !validIsoDate(recordDate) || date === recordDate);
+}
+function integrityHistoryRecordForFixture(match, round, requireValid=false){
+  const history = Array.isArray(game?.matchHistory) ? game.matchHistory : [];
+  return history.find(record => {
+    if(!record?.played) return false;
+    if(!integritySameScheduledMatch(record, match, round)) return false;
+    if(requireValid && !matchHasMinimumBotStats(record)) return false;
+    return true;
+  }) || null;
+}
+function integrityBotLineupForRepair(clubId){
+  if(typeof quickBotLineup === 'function'){
+    const lineup = quickBotLineup(clubId);
+    if(Array.isArray(lineup) && lineup.length) return lineup;
+  }
+  const squad = typeof playersByClub === 'function' ? playersByClub(clubId) : [];
+  return (squad || [])
+    .filter(player => !player?.id || typeof isUnavailable !== 'function' || !isUnavailable(player.id))
+    .sort((a,b) => Number((typeof effectiveOverall === 'function' ? effectiveOverall(b) : b?.overall) || 0) - Number((typeof effectiveOverall === 'function' ? effectiveOverall(a) : a?.overall) || 0))
+    .slice(0, 11);
+}
+function integrityPickRepairPlayer(lineup=[], role='goal'){
+  const list = (lineup || []).filter(player => Number(player?.id || 0) > 0);
+  if(!list.length) return null;
+  const posScore = player => {
+    const pos = String(player?.position || '').toUpperCase();
+    if(role === 'assist') return ['MCO','MC','MD','MI','ED','EI'].includes(pos) ? 6 : ['LD','LI','MCD'].includes(pos) ? 3 : 1;
+    if(role === 'save') return pos === 'POR' ? 20 : 1;
+    if(pos === 'DC') return 9;
+    if(['ED','EI','MCO'].includes(pos)) return 6;
+    if(['MC','MD','MI'].includes(pos)) return 3;
+    if(['DFC','LD','LI','MCD'].includes(pos)) return 1.5;
+    return 0.7;
+  };
+  const weighted = list.map(player => ({ player, weight:Math.max(1, Number(posScore(player)) || 1) }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.random() * total;
+  for(const item of weighted){
+    roll -= item.weight;
+    if(roll <= 0) return item.player;
+  }
+  return weighted[0].player;
+}
+function integrityBuildRepairGoals(clubId, lineup, count){
+  const goals = [];
+  const total = Math.max(0, Math.round(Number(count || 0)));
+  for(let i=0; i<total; i++){
+    const scorer = integrityPickRepairPlayer(lineup, 'goal');
+    if(!scorer) return null;
+    const assistants = (lineup || []).filter(player => Number(player?.id) !== Number(scorer.id));
+    const assister = assistants.length && Math.random() < 0.70 ? integrityPickRepairPlayer(assistants, 'assist') : null;
+    goals.push({
+      clubId:Number(clubId),
+      playerId:Number(scorer.id),
+      assistId:assister ? Number(assister.id) : null,
+      minute:Math.max(1, Math.min(90, Math.round(8 + Math.random() * 80))),
+      integrityRepair:true
+    });
+  }
+  return goals.sort((a,b) => a.minute - b.minute);
+}
+function integrityBuildRepairStats(match, score, homeLineup, awayLineup){
+  const homeRating = typeof quickClubRating === 'function' ? quickClubRating(match.homeId) : 55;
+  const awayRating = typeof quickClubRating === 'function' ? quickClubRating(match.awayId) : 55;
+  const homeChances = Math.max(score.homeGoals, Math.round(4 + score.homeGoals * 2 + Math.random() * 6));
+  const awayChances = Math.max(score.awayGoals, Math.round(4 + score.awayGoals * 2 + Math.random() * 6));
+  const homePoss = Math.max(35, Math.min(65, Math.round(50 + (homeRating - awayRating) * 0.25 + Math.random() * 10 - 5)));
+  const awayPoss = 100 - homePoss;
+  return {
+    home:{ attacks:Math.max(12, Math.round(24 + homeChances * 3)), chances:homeChances, possession:homePoss, fouls:Math.round(6 + Math.random() * 11), passScore:Math.round(homeRating), xg:Number(Math.max(0.2, score.homeGoals * 0.75 + homeChances * 0.11).toFixed(2)), keySaves:0, errors:0, goalErrors:0 },
+    away:{ attacks:Math.max(12, Math.round(22 + awayChances * 3)), chances:awayChances, possession:awayPoss, fouls:Math.round(6 + Math.random() * 11), passScore:Math.round(awayRating), xg:Number(Math.max(0.2, score.awayGoals * 0.75 + awayChances * 0.11).toFixed(2)), keySaves:0, errors:0, goalErrors:0 }
+  };
+}
+function integrityGenerateBotFixtureDetails(match, round){
+  const score = integrityMatchFiniteScore(match);
+  if(!score) return null;
+  const homeLineup = integrityBotLineupForRepair(match.homeId);
+  const awayLineup = integrityBotLineupForRepair(match.awayId);
+  if(!homeLineup.length || !awayLineup.length) return null;
+  const homeGoals = integrityBuildRepairGoals(match.homeId, homeLineup, score.homeGoals);
+  const awayGoals = integrityBuildRepairGoals(match.awayId, awayLineup, score.awayGoals);
+  if(!homeGoals || !awayGoals) return null;
+  const starterIdsHome = homeLineup.map(player => Number(player.id)).filter(Number.isFinite);
+  const starterIdsAway = awayLineup.map(player => Number(player.id)).filter(Number.isFinite);
+  const date = integrityMatchComparableDate(match, round);
+  return {
+    ...integrityClonePlain(match),
+    played:true,
+    date:validIsoDate(date) ? date : match.date,
+    homeGoals:score.homeGoals,
+    awayGoals:score.awayGoals,
+    goals:homeGoals.concat(awayGoals).sort((a,b) => a.minute - b.minute),
+    cards:Array.isArray(match.cards) ? match.cards : [],
+    injuries:Array.isArray(match.injuries) ? match.injuries : [],
+    substitutions:Array.isArray(match.substitutions) ? match.substitutions : [],
+    keySaves:Array.isArray(match.keySaves) ? match.keySaves : [],
+    errors:Array.isArray(match.errors) ? match.errors : [],
+    matchStats:integrityBuildRepairStats(match, score, homeLineup, awayLineup),
+    matchContext:match.matchContext || { weather:'Normal', pitch:'Normal', integrityRepair:true },
+    starterIdsHome,
+    starterIdsAway,
+    playedIdsHome:starterIdsHome,
+    playedIdsAway:starterIdsAway,
+    instructionConditionDeltas:match.instructionConditionDeltas || {},
+    engine:match.engine || 'bot-integrity-repair-v5.33',
+    integrityRepair:true
+  };
+}
+function integrityCopyBotMatchDetails(target, source){
+  if(!target || !source) return false;
+  const fields = [
+    'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
+    'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
+    'instructionConditionDeltas','engine','suspended','defaultWin','defaultLoss','suspensionReason','integrityRepair'
+  ];
+  fields.forEach(field => {
+    if(Object.prototype.hasOwnProperty.call(source, field)) target[field] = integrityClonePlain(source[field]);
+  });
+  target.played = true;
+  if(source.date) target.date = source.date;
+  return true;
+}
+function runDailyMatchStatsIntegrityRepair(options={}){
+  const summary = { checked:0, fixed:0, fixedFromHistory:0, fixedGenerated:0, skipped:0, remaining:0 };
+  if(!game?.fixtures?.length) return summary;
+  const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  const force = Boolean(options.force);
+  if(!force && game.lastMatchStatsIntegrityRepairDate === today) return game.lastMatchStatsIntegrityRepairSummary || summary;
+  (game.fixtures || []).forEach((round) => {
+    (round.matches || []).forEach(match => {
+      if(!match?.played) return;
+      if(typeof ownClubInMatch === 'function' && ownClubInMatch(match)) return;
+      if(matchHasMinimumBotStats(match)) return;
+      summary.checked += 1;
+      const validHistory = integrityHistoryRecordForFixture(match, round, true);
+      const existingHistory = integrityHistoryRecordForFixture(match, round, false);
+      if(validHistory){
+        integrityCopyBotMatchDetails(match, validHistory);
+        summary.fixed += 1;
+        summary.fixedFromHistory += 1;
+        return;
+      }
+      const generated = integrityGenerateBotFixtureDetails(match, round);
+      if(generated && matchHasMinimumBotStats(generated)){
+        integrityCopyBotMatchDetails(match, generated);
+        if(existingHistory) integrityCopyBotMatchDetails(existingHistory, generated);
+        else {
+          game.matchHistory = Array.isArray(game.matchHistory) ? game.matchHistory : [];
+          game.matchHistory.push(integrityClonePlain(generated));
+        }
+        summary.fixed += 1;
+        summary.fixedGenerated += 1;
+        return;
+      }
+      summary.skipped += 1;
+    });
+  });
+  summary.remaining = botMatchStatsIntegrityIssues().length;
+  game.lastMatchStatsIntegrityRepairDate = today;
+  game.lastMatchStatsIntegrityRepairSummary = { ...summary, reason:options.reason || 'daily', checkedAt:new Date().toISOString() };
+  if(summary.fixed > 0){
+    game.matchIntegrityRepairLog = Array.isArray(game.matchIntegrityRepairLog) ? game.matchIntegrityRepairLog.slice(-20) : [];
+    game.matchIntegrityRepairLog.push({ ...game.lastMatchStatsIntegrityRepairSummary });
+  }
+  if(summary.fixed > 0 && !options.silent && typeof showNotice === 'function'){
+    showNotice(`Se repararon ${summary.fixed} partido(s) bot con estadísticas mínimas faltantes.`, false);
+  }
+  return summary;
+}
+
 function currentFreeAgentIntegrityCount(){
   const ids = new Set();
   (game?.marketPlayers || []).forEach(player => { if(Number(player?.clubId || 0) === 0) ids.add(Number(player.id)); });
@@ -912,7 +1107,8 @@ function inspectGameIntegrity(){
   result.stats.botMatchesWithMissingStats = botStatsIssues.length;
   if(botStatsIssues.length){
     result.ok = false;
-    result.warnings.push({ type:'bot_match_min_stats_missing', severity:'medium', title:'Partidos bot sin estadísticas mínimas', detail:`Hay ${botStatsIssues.length} partido(s) bot jugados sin datos mínimos de goleadores, asistentes, tarjetas, lesiones, tapadas o errores. No se reconstruyen automáticamente porque ya fueron simulados.`, samples:botStatsIssues.slice(0,8) });
+    result.warnings.push({ type:'bot_match_min_stats_missing', severity:'medium', title:'Partidos bot sin estadísticas mínimas', detail:`Hay ${botStatsIssues.length} partido(s) bot jugados sin datos mínimos de goleadores, asistentes, tarjetas, lesiones, tapadas o errores. Se pueden completar copiando el historial válido o agregando datos conservadores sin alterar marcador ni tabla.`, samples:botStatsIssues.slice(0,8) });
+    result.repairables.push({ type:'bot_match_min_stats_missing', title:'Completar estadísticas mínimas faltantes en partidos bot ya jugados', count:botStatsIssues.length, items:botStatsIssues });
   }
   const freeCap = Number(typeof MARKET_FREE_AGENT_HARD_MAX !== 'undefined' ? MARKET_FREE_AGENT_HARD_MAX : 300);
   if(result.stats.freeAgents > freeCap){
@@ -955,7 +1151,7 @@ function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
   const body = `<div class="integrity-modal">
     <p class="eyebrow">Verificador de estructura</p>
     <h2>${escapeHtml(stateLabel)}</h2>
-    <p class="muted">Este chequeo no reinicia la partida y no borra resultados. La reparación segura reasigna clubes que quedaron en una liga de otro país, completa divisiones con cupos incorrectos, regenera el mapa de divisiones guardado y puede reconstruir calendarios cruzados solo si esos partidos todavía no fueron jugados.</p>
+    <p class="muted">Este chequeo no reinicia la partida y no borra resultados. La reparación segura reasigna clubes que quedaron en una liga de otro país, completa divisiones con cupos incorrectos, regenera el mapa de divisiones guardado, puede reconstruir calendarios cruzados no jugados y completa estadísticas mínimas de partidos bot ya jugados sin alterar marcador ni tabla.</p>
     ${repaired ? '<div class="notice-inline good">Reparación segura aplicada y partida guardada.</div>' : ''}
     <div class="integrity-summary-grid">
       <div><span>Clubes</span><strong>${Number(result.stats?.clubs || 0)}</strong></div>
@@ -984,6 +1180,7 @@ async function applySafeGameIntegrityRepairs(){
   const divisionsById = integrityDivisionById();
   let repaired = 0;
   let fixturesRebuilt = 0;
+  let statsFixed = 0;
   const countryRepair = repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
   repaired += Number(countryRepair.repaired || 0);
 
@@ -1016,6 +1213,11 @@ async function applySafeGameIntegrityRepairs(){
   const fixtureRepair = rebuildSafeSeasonFixturesAfterStructureRepair();
   if(fixtureRepair.rebuilt) fixturesRebuilt = Number(fixtureRepair.fixed || 0);
 
+  if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
+    const statsRepair = runDailyMatchStatsIntegrityRepair({ reason:'manual_integrity_repair', force:true, silent:true });
+    statsFixed = Number(statsRepair.fixed || 0);
+  }
+
   if(game){
     game.clubDivisionOverrides = snapshotClubDivisionOverrides();
     const selectedClub = seed.clubs.find(club => Number(club.id) === Number(game.selectedClubId));
@@ -1028,11 +1230,13 @@ async function applySafeGameIntegrityRepairs(){
   const after = inspectGameIntegrity();
   after.repairedCount = repaired;
   after.fixturesRebuiltCount = fixturesRebuilt;
+  after.botStatsRepairedCount = statsFixed;
   after.previousIssues = before.issues || [];
-  if(repaired > 0 || fixturesRebuilt > 0){
+  if(repaired > 0 || fixturesRebuilt > 0 || statsFixed > 0){
     const parts = [];
     if(repaired > 0) parts.push(`${repaired} movimiento(s) de estructura`);
     if(fixturesRebuilt > 0) parts.push(`${fixturesRebuilt} partido(s) de calendario regenerados`);
+    if(statsFixed > 0) parts.push(`${statsFixed} partido(s) con estadísticas completadas`);
     showNotice(`Verificación: ${parts.join(' y ')} aplicados.`, false);
   }else{
     showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);

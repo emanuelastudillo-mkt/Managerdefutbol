@@ -639,8 +639,26 @@ function simulateScheduledMatch(match){
   if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
   return simulateMatch(match);
 }
+function matchFixtureClonePlain(value){
+  try{ return JSON.parse(JSON.stringify(value ?? null)); }
+  catch(_){ return value ?? null; }
+}
+function scheduledMatchCopyFields(result){
+  if(!result || typeof result !== 'object') return {};
+  const fields = [
+    'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
+    'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
+    'instructionConditionDeltas','engine','suspended','defaultWin','defaultLoss','suspensionReason'
+  ];
+  const data = {};
+  fields.forEach(field => {
+    if(Object.prototype.hasOwnProperty.call(result, field)) data[field] = matchFixtureClonePlain(result[field]);
+  });
+  return data;
+}
 function markScheduledResult(item, result){
-  Object.assign(item.match, { played:true, homeGoals:result.homeGoals, awayGoals:result.awayGoals, date:item.date });
+  if(!item?.match || !result) return;
+  Object.assign(item.match, scheduledMatchCopyFields(result), { played:true, homeGoals:result.homeGoals, awayGoals:result.awayGoals, date:item.date });
 }
 function simulateDueMatchesUntil(targetDate, options={}){
   const due = collectDueMatchesUntil(targetDate, options);
@@ -653,6 +671,7 @@ function simulateDueMatchesUntil(targetDate, options={}){
   if(results.length){
     game.matchHistory.push(...results);
     advanceCompletedRegularRounds();
+    if(typeof runDailyMatchStatsIntegrityRepair === 'function') runDailyMatchStatsIntegrityRepair({ reason:'after_due_match_simulation', force:true, silent:true });
   }
   return results;
 }
@@ -774,7 +793,10 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   processMonthlyClubExpensesDaily();
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
-  return { botResults, recovered, bankPayment };
+  const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
+    ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state', silent:true })
+    : { fixed:0, remaining:0 };
+  return { botResults, recovered, bankPayment, integrityRepair };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -906,6 +928,13 @@ function advanceCalendarOneStep(){
   if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está procesando el calendario.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   repairBotRosters({ reason:'before_unified_day_advance' });
+  if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
+    const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_unified_day_advance', force:true, silent:true });
+    if(integrity.remaining > 0){
+      showNotice(`Hay ${integrity.remaining} partido(s) ya jugados sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
+      return;
+    }
+  }
   if(isPreseason()){
     simulatePreseasonTurn();
     return;
@@ -1110,6 +1139,13 @@ function simulateNextMatchday(options={}){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   repairBotRosters({ reason:'before_turn' });
+  if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
+    const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_matchday_advance', force:true, silent:true });
+    if(integrity.remaining > 0){
+      showNotice(`Hay ${integrity.remaining} partido(s) ya jugados sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
+      return;
+    }
+  }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isPreseason()){
     simulatePreseasonTurn();

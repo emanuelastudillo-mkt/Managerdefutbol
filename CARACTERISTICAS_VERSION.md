@@ -1,23 +1,21 @@
-# V5.32 - Ranking online manual y automático
+# V5.33 - Integridad diaria de partidos bot
 
 ## Cambios
-- Se reactiva la carga manual desde la pantalla **Ranking Online**.
-- Se agrega el botón **Subir datos del club**.
-- El botón permite enviar el estado actual del club cada **50 días de juego**.
-- El bloqueo manual usa `rankingLastManualUploadGameDate`, separado de los envíos automáticos.
-- Se mantiene la carga automática al finalizar temporada y al ser despedido.
-- Las cargas manuales generan eventos por día de temporada para evitar pisar envíos manuales anteriores.
-- La tabla online sigue permitiendo actualizar y ordenar registros.
-- `config.js` queda con `ranking.cooldownCargaDias: 50`.
+- Se corrige `markScheduledResult()` para que el fixture guarde el paquete completo del resultado: goles, tarjetas, lesiones, tapadas, errores, estadísticas, titulares y jugadores utilizados.
+- Se agrega una verificación automática de integridad de partidos bot al avanzar el calendario.
+- Si un partido bot ya fue jugado pero quedó sin datos mínimos, el sistema primero intenta recuperar los datos desde `game.matchHistory`.
+- Si no existe historial completo, el sistema agrega datos mínimos conservadores preservando el marcador ya registrado.
+- La reparación no vuelve a aplicar tabla, economía, disponibilidad, desgaste ni estadísticas acumuladas, para evitar duplicaciones.
+- El avance de calendario se bloquea si quedan partidos jugados sin datos mínimos que no pueden repararse de forma segura.
+- El verificador manual ahora también puede completar estadísticas mínimas faltantes de partidos bot.
 
-## Datos enviados
-- Manager, club, división, temporada, posición, puntos, G-E-P, goles, diferencia de gol.
-- Presupuesto inicial, presupuesto final, variación de presupuesto y puntaje manager.
-- Fecha de juego, día de temporada, tipo de evento, versión y código de partida.
+## Criterio de rendimiento
+- La verificación se ejecuta cada día porque el escaneo es liviano: sólo revisa fixtures jugados y sólo genera datos cuando detecta un caso roto.
+- No se re-simula toda la fecha completa, salvo que el partido aún no haya sido jugado por el flujo normal del calendario.
 
 ## Validación
 - `node --check` aplicado sobre todos los archivos JS.
 - JSON de `data/` parseados correctamente.
 
 ## Compatibilidad
-Se implementa solo. No requiere reiniciar partida porque agrega campos nuevos opcionales al guardado local.
+Se implementa solo. No requiere reiniciar partida porque los campos agregados son datos complementarios sobre fixtures ya existentes.

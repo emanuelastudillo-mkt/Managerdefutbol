@@ -1,5 +1,16 @@
 # Historial de versiones
 
+## V5.33 - Integridad diaria de partidos bot
+
+- Corrige el origen del problema: los fixtures ahora guardan el paquete completo del resultado y no sólo marcador/estado jugado.
+- Agrega verificación automática diaria de partidos bot ya jugados sin estadísticas mínimas.
+- Si existe historial válido, recupera desde `game.matchHistory`.
+- Si no existe historial completo, agrega datos mínimos conservadores respetando el marcador ya registrado.
+- No vuelve a aplicar tabla, economía, desgaste, disponibilidad ni estadísticas acumuladas para evitar duplicaciones.
+- El avance queda bloqueado si todavía existe un partido jugado que no pudo repararse con seguridad.
+- El verificador manual también puede completar estas estadísticas faltantes.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.32 - Ranking online manual y automático
 
 - Reactiva la tarjeta de carga manual dentro de **Ranking Online**.

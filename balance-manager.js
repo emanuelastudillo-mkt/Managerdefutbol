@@ -1,0 +1,95 @@
+/*
+  V5.47 · Balance del manager, objetivos y prestigio.
+  Archivo activo: centraliza objetivos deportivos sin tocar el simulador.
+*/
+window.GAME_BALANCE_MANAGER = {
+  metadataBalance: {
+    version: 'V5.47',
+    nombre: 'Objetivos dinámicos por prestigio relativo',
+    nota: 'Define exigencia de directiva según liga, prestigio del club y prestigio promedio de sus rivales.'
+  },
+
+  objetivos: {
+    activo: true,
+    usarPrestigioRelativo: true,
+    respetarObjetivoManualConfig: true,
+
+    basesPorDivision: {
+      primeraFuerte: 1.25,
+      primeraMedia: 1.20,
+      segunda: 1.05,
+      tercera: 0.90
+    },
+
+    // Países cuya primera división arranca desde la base fuerte.
+    paisesPrimeraFuerte: ['Argentina', 'Brasil', 'España', 'Inglaterra', 'Italia'],
+
+    limitesPorDivision: {
+      primera: { min: 0.95, max: 2.10 },
+      segunda: { min: 0.80, max: 2.00 },
+      tercera: { min: 0.70, max: 1.90 }
+    },
+
+    modificadoresPrestigioRelativo: [
+      { min: -999, max: -50, ppg: -0.35 },
+      { min: -49, max: -40, ppg: -0.30 },
+      { min: -39, max: -30, ppg: -0.25 },
+      { min: -29, max: -20, ppg: -0.18 },
+      { min: -19, max: -10, ppg: -0.10 },
+      { min: -9, max: -1, ppg: -0.05 },
+      { min: 0, max: 9, ppg: 0.00 },
+      { min: 10, max: 19, ppg: 0.10 },
+      { min: 20, max: 29, ppg: 0.20 },
+      { min: 30, max: 39, ppg: 0.30 },
+      { min: 40, max: 49, ppg: 0.40 },
+      { min: 50, max: 999, ppg: 0.50 }
+    ],
+
+    expectativasPrestigioRelativo: [
+      { min: -999, max: -30, texto: 'Evitar el último puesto' },
+      { min: -29, max: -20, texto: 'Evitar descenso' },
+      { min: -19, max: -10, texto: 'Temporada aceptable' },
+      { min: -9, max: 9, texto: 'Mitad de tabla' },
+      { min: 10, max: 19, texto: 'Pelear parte alta' },
+      { min: 20, max: 29, texto: 'Clasificar a playoffs/copas' },
+      { min: 30, max: 39, texto: 'Pelear ascenso/título' },
+      { min: 40, max: 999, texto: 'Salir campeón' }
+    ],
+
+    partidosMinimosEvaluacion: [
+      { maxObjetivo: 0.99, partidos: 7 },
+      { maxObjetivo: 1.50, partidos: 6 },
+      { maxObjetivo: 1.85, partidos: 5 },
+      { maxObjetivo: 9.99, partidos: 4 }
+    ],
+
+    estadosDirectiva: [
+      { minDelta: 0.20, estado: 'Excelente', clase: 'ok', despido: false },
+      { minDelta: 0.01, estado: 'Cumple', clase: 'ok', despido: false },
+      { minDelta: -0.14, estado: 'Advertencia leve', clase: 'warn', despido: false },
+      { minDelta: -0.29, estado: 'Riesgo', clase: 'warn', despido: false },
+      { minDelta: -0.49, estado: 'Crisis', clase: 'danger', despido: false },
+      { minDelta: -999, estado: 'Despido probable', clase: 'danger', despido: true }
+    ],
+
+    prestigioPorResultado: [
+      { minDelta: 0.60, puntos: 12, etiqueta: 'Objetivo superado ampliamente' },
+      { minDelta: 0.40, puntos: 8, etiqueta: 'Objetivo superado con autoridad' },
+      { minDelta: 0.20, puntos: 5, etiqueta: 'Objetivo superado' },
+      { minDelta: 0.00, puntos: 3, etiqueta: 'Objetivo cumplido' },
+      { minDelta: -0.15, puntos: -1, etiqueta: 'Objetivo incumplido levemente' },
+      { minDelta: -0.30, puntos: -3, etiqueta: 'Objetivo incumplido' },
+      { minDelta: -999, puntos: -5, etiqueta: 'Objetivo muy incumplido' }
+    ],
+
+    penalizacionesTemporada: {
+      descenso: -8,
+      ultimoPuestoAdicional: -5
+    },
+
+    despido: {
+      activo: true,
+      deltaDespido: -0.50
+    }
+  }
+};

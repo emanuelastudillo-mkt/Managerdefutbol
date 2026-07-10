@@ -1,4 +1,21 @@
-# Fútbol Manager MVP - V5.46
+# Fútbol Manager MVP - V5.47
+
+
+## V5.47 - Objetivos dinámicos por prestigio relativo
+
+- Agrega `balance-manager.js` para centralizar objetivos deportivos, evaluación directiva y ajustes de prestigio.
+- Los objetivos ahora se calculan por base de liga/división + modificador de prestigio relativo del club contra el promedio de su liga.
+- Se guardan datos de contexto del objetivo: prestigio del club, promedio de la liga, diferencia relativa, expectativa y modificador PPG.
+- La evaluación de continuidad deja de despedir por quedar apenas debajo del objetivo; ahora usa estados de directiva y sólo despide en zona crítica.
+- Los partidos mínimos de evaluación dependen del objetivo: equipos con objetivo bajo reciben más margen y equipos dominantes son evaluados antes.
+- El prestigio por objetivo deja de ser un +5 fijo: ahora puede sumar +3/+5/+8/+12 o restar -1/-3/-5 según diferencia contra el objetivo.
+- Las penalizaciones de mala temporada se separan en descenso (-8) y último puesto (-5 adicional).
+- La oficina del manager muestra expectativa y diferencia PPG actual contra la meta.
+- La pantalla de estadísticas muestra objetivo, diferencia y ajuste de prestigio por temporada.
+- Compatibilidad de partida: se implementa solo. En temporadas ya iniciadas con objetivo congelado, el objetivo actual se conserva; nuevas temporadas usan la escala dinámica.
+
+---
+
 
 ## V5.46 - Ojeo progresivo sólo sobre faltantes
 

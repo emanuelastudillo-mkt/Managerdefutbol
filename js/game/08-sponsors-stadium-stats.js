@@ -509,15 +509,20 @@ function renderManagerStats(){
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
   const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
   const experience = Number(game.managerStats.experience || 0);
-  const rows = seasons.map(item => `<tr>
+  const rows = seasons.map(item => {
+    const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${Number(item.objectivePpg).toFixed(2)} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : '—';
+    const deltaLabel = Number.isFinite(Number(item.objectiveDelta)) ? ` <span class="small muted">${Number(item.objectiveDelta) >= 0 ? '+' : ''}${Number(item.objectiveDelta).toFixed(2)}</span>` : '';
+    const prestigeLabel = Number.isFinite(Number(item.managerPrestigeObjectiveReward)) && Number(item.managerPrestigeObjectiveReward) !== 0 ? ` <span class="small ${Number(item.managerPrestigeObjectiveReward) > 0 ? 'ok' : 'danger'}">${Number(item.managerPrestigeObjectiveReward) > 0 ? '+' : ''}${Number(item.managerPrestigeObjectiveReward)}</span>` : '';
+    return `<tr>
     <td>${item.season}</td>
     <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
     <td>${escapeHtml(item.divisionName || '—')}</td>
     <td><strong>${escapeHtml(item.label || (item.position === 1 ? 'Campeón' : `${item.position || '—'}°`))}</strong></td>
-    <td>${item.objectiveAchieved ? '<span class="ok">Sí</span>' : '<span class="muted">No</span>'}</td>
+    <td>${objectiveLabel}${deltaLabel}${prestigeLabel}</td>
     <td>${Number(item.ppg || 0).toFixed(2)}</td>
     <td>${item.pts || 0}</td><td>${item.pg || 0}</td><td>${item.pe || 0}</td><td>${item.pp || 0}</td><td>${item.gf || 0}</td><td>${item.gc || 0}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   const careerRows = career.map(item => `<tr>
     <td>${item.season || '—'}</td>
     <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
@@ -538,7 +543,7 @@ function renderManagerStats(){
       <div class="card"><p class="label">GF / GC</p><strong>${totals.gf || 0} / ${totals.gc || 0}</strong></div>
       <div class="card"><p class="label">Títulos obtenidos</p><strong>${game.managerStats.titles || 0}</strong></div>
       <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
-      <div class="card"><p class="label">Objetivos cumplidos</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">+${MANAGER_PRESTIGE_OBJECTIVE_REWARD} c/u</span></div>
+      <div class="card"><p class="label">Objetivos / directiva</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">dinámico por PPG vs objetivo</span></div>
       <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>

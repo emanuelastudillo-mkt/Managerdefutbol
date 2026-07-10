@@ -276,12 +276,15 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const objectiveReduction = typeof managerObjectiveReductionForClub === 'function' ? managerObjectiveReductionForClub(game.selectedClubId) : 0;
   const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? `${objectiveInfo.objective.toFixed(2)}${objectiveReduction > 0 ? ` (-${objectiveReduction}%)` : ''}` : '—');
   const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
+  const objectiveStateText = objectiveInfo.boardState || (objectiveInfo.ppg >= objectiveInfo.objective ? 'Cumple' : 'Riesgo');
+  const objectiveGapText = objectiveInfo.active ? ` Diferencia actual: ${(Number(objectiveInfo.delta || 0) >= 0 ? '+' : '')}${Number(objectiveInfo.delta || 0).toFixed(2)} PPG.` : '';
+  const objectiveExpectationText = objectiveInfo.expectation ? ` Expectativa: ${escapeHtml(objectiveInfo.expectation)}.` : '';
   const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
-    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${extraText}`
-    : (objectiveInfo.ppg > objectiveInfo.objective ? 'La confianza de la directiva se sostiene por ahora.' : 'La directiva evalúa despedirte.');
+    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${objectiveExpectationText}${objectiveGapText}${extraText}`
+    : `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText}`;
   const objectiveProgress = founderMode
     ? founderGoalProgressMarkup()
-    : (objectiveInfo.active ? `<div class="manager-objective-progress ${objectiveInfo.ppg > objectiveInfo.objective ? 'ok' : 'warn'}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');
+    : (objectiveInfo.active ? `<div class="manager-objective-progress ${escapeHtml(objectiveInfo.boardClass || (objectiveInfo.ppg >= objectiveInfo.objective ? 'ok' : 'warn'))}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');
   const phase = phaseLabel();
   const daysRemainingBox = daysUntilNextOwnMatchLabel();
   const nextBox = next

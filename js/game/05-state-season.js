@@ -33,7 +33,10 @@ function managerPrestigeBreakdown(stats=game?.managerStats){
   const wins = Math.max(0, Math.round(Number(totals.won || 0)));
   const experiencePrestige = experience * Number(MANAGER_XP_TO_PRESTIGE_RATE || 0.001);
   const winPrestige = Math.floor(wins / Math.max(1, Number(MANAGER_PRESTIGE_WINS_STEP || 10)));
-  const objectivePrestige = seasons.filter(item => Boolean(item.objectiveAchieved)).length * Number(MANAGER_PRESTIGE_OBJECTIVE_REWARD || 5);
+  const objectivePrestige = seasons.reduce((sum, item) => {
+    if(Number.isFinite(Number(item.managerPrestigeObjectiveReward))) return sum + Number(item.managerPrestigeObjectiveReward);
+    return sum + (Boolean(item.objectiveAchieved) ? Number(MANAGER_PRESTIGE_OBJECTIVE_REWARD || 5) : 0);
+  }, 0);
   const championPrestige = seasons.reduce((sum, item) => {
     if(!(item.title || item.position === 1)) return sum;
     return sum + championPrestigeRewardByDivisionOrder(item.divisionOrder || divisionOrderFromName(item.divisionName));
@@ -2601,18 +2604,119 @@ function updateManagerPrestigeFromWins(){
 function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
 }
-function managerObjectiveBaseForClubDivision(clubId){
-  const targetClubId = clubId || game?.selectedClubId;
-  if(isFoundedClubId(targetClubId)) return null;
-  let objective = null;
-  if(Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2){
-    objective = Number(MANAGER_OBJECTIVE_PPG);
-  } else {
-    const division = clubDivision(targetClubId);
-    const order = Math.round(Number(division?.order || 3));
-    objective = order <= 1 ? Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4) : order === 2 ? Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1) : Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+function managerBalanceObjectiveConfig(){
+  return (window.GAME_BALANCE_MANAGER && window.GAME_BALANCE_MANAGER.objetivos) ? window.GAME_BALANCE_MANAGER.objetivos : {};
+}
+function normalizeObjectiveText(value=''){
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+function managerObjectiveDivisionKey(order=3){
+  const value = Math.round(Number(order || 3));
+  if(value <= 1) return 'primera';
+  if(value === 2) return 'segunda';
+  return 'tercera';
+}
+function managerObjectiveLeagueClubs(clubId){
+  const targetClubId = Number(clubId || game?.selectedClubId || 0);
+  const club = seed?.clubs?.find(c => Number(c.id) === targetClubId);
+  if(!club) return [];
+  const divisionId = String(club.divisionId || 'default');
+  return (seed?.clubs || []).filter(item => String(item.divisionId || 'default') === divisionId);
+}
+function managerObjectiveAverageLeaguePrestige(clubId){
+  const clubs = managerObjectiveLeagueClubs(clubId);
+  if(!clubs.length) return clubPrestigeValue(clubId);
+  const total = clubs.reduce((sum, item) => sum + clubPrestigeValue(item), 0);
+  return total / clubs.length;
+}
+function managerObjectiveEntryForValue(list=[], value=0){
+  const n = Number(value || 0);
+  const items = Array.isArray(list) ? list : [];
+  const deltaRule = items.find(item => Number.isFinite(Number(item.minDelta)) && n >= Number(item.minDelta));
+  if(deltaRule) return deltaRule;
+  return items.find(item => n >= Number(item.min ?? -999) && n <= Number(item.max ?? 999)) || null;
+}
+function managerObjectiveBaseValueForDivision(division={}, clubId=0){
+  const cfg = managerBalanceObjectiveConfig();
+  const bases = cfg.basesPorDivision || {};
+  const order = Math.round(Number(division?.order || 3));
+  if(order <= 1){
+    const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId || game?.selectedClubId || 0));
+    const country = normalizeObjectiveText(division?.country || division?.pais || clubCountry(club));
+    const strongCountries = Array.isArray(cfg.paisesPrimeraFuerte) ? cfg.paisesPrimeraFuerte.map(normalizeObjectiveText) : [];
+    return Number(strongCountries.includes(country) ? (bases.primeraFuerte ?? 1.25) : (bases.primeraMedia ?? 1.20));
   }
-  return Number.isFinite(Number(objective)) ? Number(Number(objective).toFixed(3)) : null;
+  if(order === 2) return Number(bases.segunda ?? 1.05);
+  return Number(bases.tercera ?? 0.90);
+}
+function managerObjectiveLimitsForDivision(division={}){
+  const cfg = managerBalanceObjectiveConfig();
+  const key = managerObjectiveDivisionKey(division?.order || 3);
+  const limits = (cfg.limitesPorDivision || {})[key] || {};
+  const fallback = key === 'primera' ? { min:0.95, max:2.10 } : key === 'segunda' ? { min:0.80, max:2.00 } : { min:0.70, max:1.90 };
+  return {
+    min:Number.isFinite(Number(limits.min)) ? Number(limits.min) : fallback.min,
+    max:Number.isFinite(Number(limits.max)) ? Number(limits.max) : fallback.max
+  };
+}
+function managerObjectiveBreakdownForClubDivision(clubId){
+  const targetClubId = clubId || game?.selectedClubId;
+  if(isFoundedClubId(targetClubId)) return { active:false, objective:null, reason:'fundador' };
+  const cfg = managerBalanceObjectiveConfig();
+  const division = clubDivision(targetClubId);
+  const manualAllowed = cfg.respetarObjetivoManualConfig !== false;
+  if(manualAllowed && Number.isFinite(Number(MANAGER_OBJECTIVE_PPG)) && Number(MANAGER_OBJECTIVE_PPG) >= 0.3 && Number(MANAGER_OBJECTIVE_PPG) <= 2){
+    const limits = managerObjectiveLimitsForDivision(division);
+    const manualObjective = clamp(Number(MANAGER_OBJECTIVE_PPG), limits.min, limits.max);
+    return {
+      active:true,
+      source:'manual',
+      objective:Number(manualObjective.toFixed(3)),
+      basePpg:Number(manualObjective.toFixed(3)),
+      modifierPpg:0,
+      prestige:clubPrestigeValue(targetClubId),
+      leagueAveragePrestige:managerObjectiveAverageLeaguePrestige(targetClubId),
+      prestigeRelative:0,
+      expectation:'Objetivo manual',
+      divisionKey:managerObjectiveDivisionKey(division?.order || 3),
+      minLimit:limits.min,
+      maxLimit:limits.max
+    };
+  }
+  if(cfg.activo === false || cfg.usarPrestigioRelativo === false){
+    const order = Math.round(Number(division?.order || 3));
+    const legacy = order <= 1 ? Number(MANAGER_OBJECTIVE_DIVISION_1 || 1.4) : order === 2 ? Number(MANAGER_OBJECTIVE_DIVISION_2 || 1.1) : Number(MANAGER_OBJECTIVE_DIVISION_3 || 0.9);
+    return { active:true, source:'legacy', objective:Number(legacy.toFixed(3)), basePpg:Number(legacy.toFixed(3)), modifierPpg:0, prestige:clubPrestigeValue(targetClubId), leagueAveragePrestige:managerObjectiveAverageLeaguePrestige(targetClubId), prestigeRelative:0, expectation:'Objetivo por división', divisionKey:managerObjectiveDivisionKey(division?.order || 3) };
+  }
+  const prestige = clubPrestigeValue(targetClubId);
+  const avg = managerObjectiveAverageLeaguePrestige(targetClubId);
+  const relative = Math.round(prestige - avg);
+  const base = managerObjectiveBaseValueForDivision(division, targetClubId);
+  const modEntry = managerObjectiveEntryForValue(cfg.modificadoresPrestigioRelativo, relative);
+  const modifier = Number(modEntry?.ppg || 0);
+  const limits = managerObjectiveLimitsForDivision(division);
+  const raw = base + modifier;
+  const objective = clamp(raw, limits.min, limits.max);
+  const expectationEntry = managerObjectiveEntryForValue(cfg.expectativasPrestigioRelativo, relative);
+  return {
+    active:true,
+    source:'prestigio_relativo',
+    objective:Number(objective.toFixed(3)),
+    basePpg:Number(base.toFixed(3)),
+    modifierPpg:Number(modifier.toFixed(3)),
+    rawPpg:Number(raw.toFixed(3)),
+    prestige,
+    leagueAveragePrestige:Number(avg.toFixed(2)),
+    prestigeRelative:relative,
+    expectation:expectationEntry?.texto || 'Mitad de tabla',
+    divisionKey:managerObjectiveDivisionKey(division?.order || 3),
+    minLimit:limits.min,
+    maxLimit:limits.max
+  };
+}
+function managerObjectiveBaseForClubDivision(clubId){
+  const info = managerObjectiveBreakdownForClubDivision(clubId);
+  return Number.isFinite(Number(info?.objective)) ? Number(Number(info.objective).toFixed(3)) : null;
 }
 function managerObjectiveReductionForClub(clubId){
   const targetClubId = clubId || game?.selectedClubId;
@@ -2631,13 +2735,44 @@ function applyManagerObjectiveReduction(baseObjective, clubId){
 function managerObjectiveForClubDivision(clubId){
   return applyManagerObjectiveReduction(managerObjectiveBaseForClubDivision(clubId), clubId);
 }
+function managerObjectiveMinMatchesForObjective(objective){
+  const cfg = managerBalanceObjectiveConfig();
+  const rules = Array.isArray(cfg.partidosMinimosEvaluacion) ? cfg.partidosMinimosEvaluacion : [];
+  const value = Number(objective || 0);
+  const rule = rules.find(item => value <= Number(item.maxObjetivo ?? 9.99));
+  if(rule && Number.isFinite(Number(rule.partidos))) return Math.max(1, Math.round(Number(rule.partidos)));
+  return Math.max(1, Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5));
+}
+function managerObjectiveResultDelta(ppg, objective){
+  const a = Number(ppg || 0);
+  const b = Number(objective || 0);
+  return Number.isFinite(a) && Number.isFinite(b) ? Number((a - b).toFixed(3)) : 0;
+}
+function managerObjectiveBoardState(delta){
+  const cfg = managerBalanceObjectiveConfig();
+  const entry = managerObjectiveEntryForValue(cfg.estadosDirectiva, Number(delta || 0));
+  return entry || { estado:'Cumple', clase:'ok', despido:false };
+}
+function managerObjectivePrestigeRewardForDelta(delta){
+  const cfg = managerBalanceObjectiveConfig();
+  const entry = managerObjectiveEntryForValue(cfg.prestigioPorResultado, Number(delta || 0));
+  if(!entry) return { points:0, label:'Sin ajuste por objetivo' };
+  return { points:Math.round(Number(entry.puntos || 0)), label:String(entry.etiqueta || 'Resultado de objetivo') };
+}
+function managerObjectiveBadSeasonPenalty({ relegated=false, last=false }={}){
+  const cfg = managerBalanceObjectiveConfig();
+  const penalties = cfg.penalizacionesTemporada || {};
+  const raw = (relegated ? Number(penalties.descenso ?? -8) : 0) + (last ? Number(penalties.ultimoPuestoAdicional ?? -5) : 0);
+  return Math.max(0, Math.abs(Math.round(raw)));
+}
 function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const normalized = normalizeManagerStats(stats);
   const generalPpg = ppgFromTotals(normalized.totals || {});
-  const baseObjective = managerObjectiveBaseForClubDivision(clubId);
+  const dynamicInfo = managerObjectiveBreakdownForClubDivision(clubId);
+  const baseObjective = Number.isFinite(Number(dynamicInfo?.objective)) ? Number(dynamicInfo.objective) : managerObjectiveBaseForClubDivision(clubId);
   const objective = applyManagerObjectiveReduction(baseObjective, clubId);
-  const baseMatches = Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5);
-  const extraMatches = managerObjectiveExtraMatches(generalPpg);
+  const baseMatches = managerObjectiveMinMatchesForObjective(objective);
+  const extraMatches = 0;
   return {
     objectiveBasePpg:Number.isFinite(Number(baseObjective)) ? Number(baseObjective) : null,
     objectivePpg:Number.isFinite(Number(objective)) ? objective : null,
@@ -2647,7 +2782,14 @@ function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1
     objectiveMinMatches:baseMatches + extraMatches,
     objectiveGeneralPpgAtStart:generalPpg,
     objectiveSeason:Number(season || 1),
-    objectiveClubId:Number(clubId || 0)
+    objectiveClubId:Number(clubId || 0),
+    objectiveSource:dynamicInfo?.source || 'division',
+    objectiveExpectation:dynamicInfo?.expectation || '',
+    objectivePrestigeRelative:Number.isFinite(Number(dynamicInfo?.prestigeRelative)) ? Number(dynamicInfo.prestigeRelative) : null,
+    objectiveClubPrestige:Number.isFinite(Number(dynamicInfo?.prestige)) ? Number(dynamicInfo.prestige) : null,
+    objectiveLeagueAveragePrestige:Number.isFinite(Number(dynamicInfo?.leagueAveragePrestige)) ? Number(dynamicInfo.leagueAveragePrestige) : null,
+    objectiveModifierPpg:Number.isFinite(Number(dynamicInfo?.modifierPpg)) ? Number(dynamicInfo.modifierPpg) : 0,
+    objectiveDivisionKey:dynamicInfo?.divisionKey || ''
   };
 }
 function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
@@ -2660,10 +2802,17 @@ function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNu
   if(needsRefresh){
     Object.assign(clean, buildManagerObjectiveSeasonFields(stats, season, clubId));
   } else {
+    const dynamicInfo = managerObjectiveBreakdownForClubDivision(clubId);
     const baseObjective = Number.isFinite(Number(clean.objectiveBasePpg)) ? Number(clean.objectiveBasePpg) : managerObjectiveBaseForClubDivision(clubId);
     clean.objectiveBasePpg = Number.isFinite(Number(baseObjective)) ? Number(baseObjective) : null;
     clean.objectiveBonusReduction = managerObjectiveReductionForClub(clubId);
     clean.objectivePpg = applyManagerObjectiveReduction(clean.objectiveBasePpg, clubId);
+    clean.objectiveExpectation = clean.objectiveExpectation || dynamicInfo?.expectation || '';
+    clean.objectivePrestigeRelative = Number.isFinite(Number(clean.objectivePrestigeRelative)) ? Number(clean.objectivePrestigeRelative) : (Number.isFinite(Number(dynamicInfo?.prestigeRelative)) ? Number(dynamicInfo.prestigeRelative) : null);
+    clean.objectiveClubPrestige = Number.isFinite(Number(clean.objectiveClubPrestige)) ? Number(clean.objectiveClubPrestige) : (Number.isFinite(Number(dynamicInfo?.prestige)) ? Number(dynamicInfo.prestige) : null);
+    clean.objectiveLeagueAveragePrestige = Number.isFinite(Number(clean.objectiveLeagueAveragePrestige)) ? Number(clean.objectiveLeagueAveragePrestige) : (Number.isFinite(Number(dynamicInfo?.leagueAveragePrestige)) ? Number(dynamicInfo.leagueAveragePrestige) : null);
+    clean.objectiveModifierPpg = Number.isFinite(Number(clean.objectiveModifierPpg)) ? Number(clean.objectiveModifierPpg) : (Number.isFinite(Number(dynamicInfo?.modifierPpg)) ? Number(dynamicInfo.modifierPpg) : 0);
+    clean.objectiveSource = clean.objectiveSource || dynamicInfo?.source || 'division';
   }
   return clean;
 }
@@ -2734,6 +2883,8 @@ function managerObjectiveProgressInfo(){
   const minMatches = Math.max(baseMinMatches, Number(seasonTotals.objectiveMinMatches || (baseMinMatches + extraMatches)));
   const generalPpg = Number.isFinite(Number(seasonTotals.objectiveGeneralPpgAtStart)) ? Number(seasonTotals.objectiveGeneralPpgAtStart) : managerGeneralPPG();
   const confidence = objective ? clamp((ppg / objective) * 100, 0, 140) : 0;
+  const delta = objective !== null ? managerObjectiveResultDelta(ppg, objective) : 0;
+  const boardState = managerObjectiveBoardState(delta);
   return {
     active:objective !== null,
     objective,
@@ -2745,8 +2896,16 @@ function managerObjectiveProgressInfo(){
     generalPpg,
     progress:confidence,
     confidence,
+    delta,
+    boardState:boardState.estado,
+    boardClass:boardState.clase,
+    expectation:seasonTotals.objectiveExpectation || '',
+    prestigeRelative:seasonTotals.objectivePrestigeRelative,
+    clubPrestige:seasonTotals.objectiveClubPrestige,
+    leagueAveragePrestige:seasonTotals.objectiveLeagueAveragePrestige,
+    modifierPpg:seasonTotals.objectiveModifierPpg,
     remainingMatches:Math.max(0, minMatches - played),
-    failed:objective !== null && played >= minMatches && ppg <= objective
+    failed:objective !== null && played >= minMatches && Boolean(boardState.despido)
   };
 }
 
@@ -2802,7 +2961,7 @@ function checkManagerObjectiveGameOver(){
   game.gameOver = {
     active:true,
     type:'dismissal',
-    reason:`La directiva perdió confianza: promedio ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} tras ${info.played} partidos oficiales de la temporada.`,
+    reason:`La directiva perdió confianza: promedio ${info.ppg.toFixed(2)} / objetivo ${info.objective.toFixed(2)} (${info.delta.toFixed(2)}) tras ${info.played} partidos oficiales de la temporada.`,
     triggeredAt:new Date().toISOString(),
     objective:info.objective,
     ppg:info.ppg,
@@ -3681,7 +3840,8 @@ function finalizeSeasonIfNeeded(){
   const champion = position === 1;
   const movementsPreview = computeSeasonMovements();
   const totalTeams = table.length || 0;
-  const relegatedOrLast = Boolean(movementsPreview.some(move => move.type === 'relegation' && Number(move.clubId) === Number(game.selectedClubId)) || (position && totalTeams && position === totalTeams));
+  const wasRelegated = Boolean(movementsPreview.some(move => move.type === 'relegation' && Number(move.clubId) === Number(game.selectedClubId)));
+  const finishedLast = Boolean(position && totalTeams && position === totalTeams);
   const record = {
     season:game.seasonNumber || 1,
     clubId:game.selectedClubId,
@@ -3699,23 +3859,27 @@ function finalizeSeasonIfNeeded(){
     gc:row.gc || 0,
     title:champion,
     managerPrestigeChampionReward: champion ? championPrestigeRewardByDivisionOrder(division.order || divisionOrderFromName(division.name)) : 0,
-    managerPrestigeBadSeasonPenalty: relegatedOrLast ? badSeasonPrestigePenaltyByDivisionOrder(division.order || divisionOrderFromName(division.name)) : 0
+    managerPrestigeBadSeasonPenalty: managerObjectiveBadSeasonPenalty({ relegated:wasRelegated, last:finishedLast })
   };
   if(!game.managerStats.seasons.some(s => s.season === record.season)){
-    const objective = managerObjectiveForClubDivision(game.selectedClubId);
+    const objective = Number.isFinite(Number(game.managerStats.currentSeason?.objectivePpg)) ? Number(game.managerStats.currentSeason.objectivePpg) : managerObjectiveForClubDivision(game.selectedClubId);
     const seasonPpg = ppgFromTotals(game.managerStats.currentSeason || record);
+    const objectiveDelta = Number.isFinite(Number(objective)) ? managerObjectiveResultDelta(seasonPpg, objective) : 0;
+    const objectiveReward = !currentGameIsFounderMode() && Number.isFinite(Number(objective)) ? managerObjectivePrestigeRewardForDelta(objectiveDelta) : { points:0, label:'Sin objetivo' };
     record.objectivePpg = objective;
     record.objectiveAchieved = !currentGameIsFounderMode() && Number.isFinite(Number(objective)) && seasonPpg >= Number(objective);
+    record.objectiveDelta = objectiveDelta;
+    record.objectiveExpectation = game.managerStats.currentSeason?.objectiveExpectation || '';
+    record.objectivePrestigeRelative = game.managerStats.currentSeason?.objectivePrestigeRelative;
+    record.managerPrestigeObjectiveReward = objectiveReward.points;
+    record.objectivePrestigeLabel = objectiveReward.label;
     record.ppg = seasonPpg;
     game.managerStats.seasons.push(record);
     if(champion) game.managerStats.titles += 1;
     game.managerStats = normalizeManagerStats(game.managerStats);
-    if(record.objectiveAchieved && MANAGER_PRESTIGE_OBJECTIVE_REWARD > 0){
-      const awardKey = `${record.season}-${record.clubId}`;
-      if(!game.managerStats.objectivePrestigeAwards.includes(awardKey)){
-        game.managerStats.objectivePrestigeAwards.push(awardKey);
-        pushGameMessage({ type:'directiva', priority:'normal', title:'Objetivo cumplido', body:`Objetivo cumplido con ${record.clubName}. Suma ${MANAGER_PRESTIGE_OBJECTIVE_REWARD} puntos de prestigio de manager.`, id:`objective-prestige-${record.season}-${record.clubId}` });
-      }
+    if(Number(objectiveReward.points || 0) !== 0){
+      const sign = objectiveReward.points > 0 ? 'Suma' : 'Resta';
+      pushGameMessage({ type:'directiva', priority:objectiveReward.points > 0 ? 'normal' : 'high', title:objectiveReward.label, body:`${record.clubName}: ${seasonPpg.toFixed(2)} PPG / objetivo ${Number(objective || 0).toFixed(2)}. ${sign} ${Math.abs(objectiveReward.points)} punto(s) de prestigio de manager.`, id:`objective-prestige-${record.season}-${record.clubId}` });
     }
   }
   if(champion){

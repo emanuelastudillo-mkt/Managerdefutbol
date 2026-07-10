@@ -1,2 +1,2 @@
-/* V5.51 · Punto de entrada. Ranking online con login sin contraseña. */
+/* V5.52 · Punto de entrada. Cartas blancas, avisos destacados, ojeo persistente y mercado reducido. */
 init();

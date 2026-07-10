@@ -1,4 +1,23 @@
-# Fútbol Manager MVP - V5.51
+# Fútbol Manager MVP - V5.52
+
+## V5.52 - Cartas blancas, avisos de asistente, ojeo persistente y mercado reducido
+
+- Las cartas del menú **Cartas** ahora usan fondo blanco para simular cartas físicas reales.
+- Se mantienen diferencias visuales por rareza mediante acentos, bordes y franjas superiores.
+- Los consejos del asistente quedan más destacados en Mensajes y en los avisos de Oficina Manager.
+- Si hay un consejo sin leer, aparece un aviso tipo **Tenés 1 mensaje del asistente** con numeración roja.
+- Los avisos de confirmación usan un estilo visual más integrado con el resto de la interfaz.
+- Al tocar **Ojear** desde la ficha de un jugador, el juego permanece en la ficha y no salta al Centro de Ojeo.
+- Los jugadores ojeados muestran un icono de ojo junto al nombre en el plantel, mercado de libres y mercado de contratados.
+- El mercado deja de mostrar todo el universo de jugadores: siempre incluye jugadores ojeados y suma hasta 50 jugadores aleatorios.
+- En mercado contratado se priorizan jugadores de la misma liga/división del manager.
+- En mercado de libres se prioriza el país local del club del manager.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
+
+---
+
+
 
 ## V5.51 - Login del ranking sin contraseña obligatoria
 
@@ -13,7 +32,6 @@
 **Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
 
 ---
-
 
 
 

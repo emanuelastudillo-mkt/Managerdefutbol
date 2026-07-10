@@ -199,19 +199,31 @@ function scoutingReportForPlayer(playerId, stateOverride=null){
   if(!state.reports[key]) state.reports[key] = normalizeScoutingReport(playerId, {});
   return state.reports[key];
 }
-function addPlayerToScoutingCenter(playerId){
+function addPlayerToScoutingCenter(playerId, options={}){
   if(!SCOUTING_CENTER_ENABLED || !game){ showNotice('El Centro de Ojeo no está disponible.'); return; }
   const player = playerById(playerId);
   if(!player){ showNotice('Jugador no encontrado.'); return; }
   const ownPlayer = scoutingIsOwnPlayer(player);
   const state = ensureScoutingCenterState();
   const caps = scoutingCapacities(state);
-  if(state.listedPlayerIds.includes(Number(playerId))){ showNotice(`${player.name} ya está en el Centro de Ojeo.`); activeTab='scouting'; renderAll(); return; }
+  const keepFicha = options.keepFicha !== false;
+  const refreshFicha = () => {
+    if(keepFicha && typeof showPlayerModal === 'function' && document.querySelector('.modal-backdrop')) showPlayerModal(Number(playerId));
+  };
+  if(state.listedPlayerIds.includes(Number(playerId))){
+    showNotice(`${player.name} ya está en el Centro de Ojeo.`);
+    refreshFicha();
+    return;
+  }
   if((state.listedPlayerIds.length + (state.listedTeamIds || []).length) >= caps.playerCapacity){ showNotice('No hay cupos libres en la lista de ojeo. Alquilá oficinas o quitá jugadores/equipos.'); return; }
   state.listedPlayerIds.push(Number(playerId));
   state.reports[String(playerId)] = normalizeScoutingReport(playerId, state.reports[String(playerId)] || {});
   saveLocal(true);
   showNotice(ownPlayer ? `${player.name} fue agregado para revelar habilidades ocultas.` : `${player.name} fue agregado al Centro de Ojeo.`);
+  if(keepFicha){
+    refreshFicha();
+    return;
+  }
   activeTab='scouting';
   if(typeof closeModal === 'function') closeModal();
   renderAll();

@@ -1,9 +1,9 @@
 # Versión actual
 
-V5.51
+V5.52
 
 ## Nombre
-Ranking online con login sin contraseña
+Cartas blancas, avisos de asistente, ojeo persistente y mercado reducido
 
 ## Compatibilidad
 Se implementa solo. No requiere reiniciar partida.

@@ -222,8 +222,12 @@ function visualAlertItems(){
   if(injured.length){
     items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });
   }
+  const assistantUnread = unreadAssistantMessagesCount();
+  if(assistantUnread){
+    items.push({ tone:'assistant', icon:String(assistantUnread), title:`Tenés ${assistantUnread} mensaje(s) del asistente`, text:'Consejo nuevo pendiente de lectura.', tab:'messages' });
+  }
   const unread = unreadMessagesCount();
-  if(unread){
+  if(unread && !assistantUnread){
     items.push({ tone:'info', icon:'✉', title:`${unread} mensaje(s) nuevo(s)`, text:'Hay eventos pendientes para leer.', tab:'messages' });
   }
   if(pendingTransferOffers){
@@ -593,6 +597,9 @@ function compactMatch(m){
 function unreadMessagesCount(){
   return (game?.messages || []).filter(m => !m.read).length;
 }
+function unreadAssistantMessagesCount(){
+  return (game?.messages || []).filter(m => !m.read && String(m.type || '').toLowerCase() === 'asistente').length;
+}
 function pushGameMessage(message){
   if(!game) return null;
   game.messages = Array.isArray(game.messages) ? game.messages : [];
@@ -691,9 +698,13 @@ function homeMessagesSummary(){
   if(!items.length){
     return `<div class="home-messages-summary"><p class="label">Mensajes / eventos</p><h2>Sin mensajes nuevos</h2><p class="tagline">Los avisos deportivos, ofertas y eventos del club aparecerán acá.</p></div>`;
   }
-  return `<div class="home-messages-summary clickable" data-open-messages>
-    <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(items[0].title)}</h2></div>${count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>'}</div>
-    <p class="tagline">${escapeHtml(items[0].body)}</p>
+  const latest = items[0];
+  const assistantClass = String(latest.type || '').toLowerCase() === 'asistente' ? ' assistant-message-summary' : '';
+  const assistantUnread = unreadAssistantMessagesCount();
+  const badge = assistantUnread ? `<span class="pill danger">${assistantUnread} mensaje asistente</span>` : (count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>');
+  return `<div class="home-messages-summary clickable${assistantClass}" data-open-messages>
+    <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(latest.title)}</h2></div>${badge}</div>
+    <p class="tagline">${escapeHtml(latest.body)}</p>
   </div>`;
 }
 function renderMessages(){
@@ -730,6 +741,7 @@ function messageToneClass(type, priority){
   if(['evento','noticia'].includes(key)) return 'message-tone-sport';
   if(['warning'].includes(key)) return 'message-tone-alert';
   if(['staff','directiva'].includes(key)) return 'message-tone-board';
+  if(['asistente'].includes(key)) return 'message-tone-assistant';
   return 'message-tone-info';
 }
 function messageTypeLabel(type){
@@ -777,8 +789,10 @@ function messageCard(m){
     ? `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : ''}<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`
     : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '');
   const toneClass = messageToneClass(m.type, m.priority);
+  const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
-  return `<div class="card message-card ${toneClass} ${m.read ? '' : 'unread'}">
+  const assistantBadge = isAssistant && !m.read ? '<span class="assistant-message-badge">Tenés 1 mensaje</span>' : '';
+  return `<div class="card message-card ${toneClass} ${isAssistant ? 'assistant-message-card' : ''} ${m.read ? '' : 'unread'}">
     <div class="message-card-accent"></div>
     <div class="message-card-main">
       <div class="row message-card-head">
@@ -787,6 +801,7 @@ function messageCard(m){
             <span class="message-type-chip">${messageIcon(m.type)} ${escapeHtml(messageTypeLabel(m.type || 'info'))}</span>
             <span class="message-date-chip">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</span>
             ${unreadMark}
+            ${assistantBadge}
           </div>
           <h3>${messageTitleHtml(m)}</h3>
         </div>

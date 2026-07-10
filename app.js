@@ -1,2 +1,2 @@
-/* V5.47 · Punto de entrada. Objetivos dinámicos por prestigio relativo. */
+/* V5.48 · Punto de entrada. Ranking online con rutas compatibles. */
 init();

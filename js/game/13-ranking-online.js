@@ -1,4 +1,4 @@
-/* V5.32 · Ranking online con carga manual cada 50 días y carga automática de temporada. */
+/* V5.48 · Ranking online con rutas compatibles y fallback robusto. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -59,8 +59,10 @@ function normalizeRankingEndpoint(url){
 function rankingConfiguredPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
-  const fallback = kind === 'submit' ? ['records','ranking'] : ['ranking','records'];
-  const source = Array.isArray(raw) && raw.length ? raw : fallback;
+  const defaults = kind === 'submit'
+    ? ['records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit','']
+    : ['ranking','records','scores','api/ranking','api/records','api/scores',''];
+  const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
   const seen = new Set();
   return source
     .map(path => String(path || '').trim().replace(/^\/+|\/+$/g, ''))
@@ -69,6 +71,10 @@ function rankingConfiguredPaths(kind){
       seen.add(path);
       return true;
     });
+}
+function rankingRouteLabel(path){
+  const clean = String(path || '').trim().replace(/^\/+|\/+$/g, '');
+  return clean ? `/${clean}` : '/';
 }
 function rankingApiUrl(endpoint, path, query=''){
   const base = normalizeRankingEndpoint(endpoint);
@@ -553,13 +559,21 @@ function submitRankingAutomatically(eventType='season_end', options={}){
 async function submitRankingToCloudflare(endpoint, payload, handlers={}){
   const paths = rankingConfiguredPaths('submit');
   const apiBody = rankingPayloadToApiBody(payload);
+  const fullPayload = { ...payload, ...apiBody };
+  const token = String(RANKING_TOKEN || '').trim();
+  const jsonHeaders = rankingRequestHeaders(true);
+  const formHeaders = { ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' };
   const requestBodies = [
-    { label:'json', headers:rankingRequestHeaders(true), body:JSON.stringify(apiBody) },
-    { label:'payload', headers:{ ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams({ action:'submit', payload:JSON.stringify({ ...payload, ...apiBody }), token:String(RANKING_TOKEN || '') }).toString() }
+    { label:'json-flat', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...apiBody }) },
+    { label:'json-payload', headers:jsonHeaders, body:JSON.stringify({ action:'submit', payload:fullPayload, token }) },
+    { label:'form-payload', headers:formHeaders, body:new URLSearchParams({ action:'submit', payload:JSON.stringify(fullPayload), token }).toString() },
+    { label:'form-flat', headers:formHeaders, body:new URLSearchParams(Object.entries({ action:'submit', ...apiBody, token }).reduce((acc, [key, value]) => { acc[key] = value === undefined || value === null ? '' : String(value); return acc; }, {})).toString() }
   ];
   let lastMessage = '';
+  const attemptedRoutes = new Set();
   for(let i = 0; i < paths.length; i++){
     const path = paths[i];
+    attemptedRoutes.add(rankingRouteLabel(path));
     for(let j = 0; j < requestBodies.length; j++){
       const req = requestBodies[j];
       try{
@@ -582,12 +596,16 @@ async function submitRankingToCloudflare(endpoint, payload, handlers={}){
         lastMessage = error?.message || lastMessage || 'Error al conectar con el ranking online.';
         if(rankingIsRouteMissing(lastMessage) && i < paths.length - 1) break;
         if(j < requestBodies.length - 1) continue;
-        handlers.onError?.(lastMessage);
+        const tried = Array.from(attemptedRoutes).join(', ');
+        const message = rankingIsRouteMissing(lastMessage) && tried ? `${lastMessage} Rutas probadas: ${tried}.` : lastMessage;
+        handlers.onError?.(message);
         return;
       }
     }
   }
-  handlers.onError?.(lastMessage || 'No se encontró una ruta válida para subir el ranking.');
+  const tried = Array.from(attemptedRoutes).join(', ');
+  const message = lastMessage || 'No se encontró una ruta válida para subir el ranking.';
+  handlers.onError?.(rankingIsRouteMissing(message) && tried ? `${message} Rutas probadas: ${tried}.` : message);
 }
 async function loadRankingOnline(silent=false){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());

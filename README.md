@@ -1,6 +1,16 @@
 # Fútbol Manager MVP - V5.47
 
 
+
+## V5.48 - Ranking online con rutas compatibles
+
+- Corrige el error de carga manual `Ruta no encontrada` cuando el Worker usa una ruta distinta a la configurada.
+- El ranking prueba rutas alternativas para enviar datos: `/records`, `/ranking`, `/scores`, `/submit`, variantes `/api/...` y raíz.
+- El envío acepta varios formatos de cuerpo para mantener compatibilidad con Worker y endpoints anteriores.
+- No cambia puntaje, token, login, cooldown ni reglas de ranking.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
+
 ## V5.47 - Objetivos dinámicos por prestigio relativo
 
 - Agrega `balance-manager.js` para centralizar objetivos deportivos, evaluación directiva y ajustes de prestigio.

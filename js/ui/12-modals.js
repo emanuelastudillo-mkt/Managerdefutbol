@@ -70,7 +70,10 @@ function scoutedOverallLabel(player){
   return `<span title="Estimación con habilidades observadas">≈ ${clamp(Math.round(avg(values)), 1, 99)}</span>`;
 }
 function scoutedPhysicalLabel(player){
-  return playerRequiresScouting(player) ? '<span class="muted">—</span>' : `<strong>${currentCondition(player.id)}/99</strong>`;
+  if(playerRequiresScouting(player)) return '<span class="muted">—</span>';
+  const current = typeof currentCondition === 'function' ? currentCondition(player.id) : 0;
+  const max = typeof maxConditionForPlayer === 'function' ? maxConditionForPlayer(player.id) : 99;
+  return `<strong>${current}/<span class="max-condition-limit" title="Máximo actual por desgaste">${max}</span></strong>`;
 }
 function scoutedMoraleLabel(player){
   return playerRequiresScouting(player) ? '<span class="muted">—</span>' : `<strong>${currentMorale(player.id)}/99</strong>`;
@@ -111,8 +114,8 @@ function scoutedStatsMarkup(player){
     const boost = Number.isFinite(raw) && Number.isFinite(current) ? Math.max(0, current - raw) : 0;
     const shown = !playerRequiresScouting(player) || visible.has(key);
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    const valueMarkup = shown ? (boost > 0 ? `${raw}<span class="trained-boost" title="Boost de temporada">+${boost}</span>` : `${current}`) : '—';
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong>${shown && boost > 0 ? `<small class="muted">boost de temporada</small>` : ''}</div>`;
+    const valueMarkup = shown ? (boost > 0 ? `${raw}<span class="trained-boost">+${boost}</span>` : `${current}`) : '—';
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong>${shown && boost > 0 ? `` : ''}</div>`;
   }).join('');
   const note = playerRequiresScouting(player) ? '<p class="muted small">Sólo se muestran datos guardados en el Centro de Ojeo. Sin informe, la habilidad queda oculta.</p>' : '';
   return `${rows}${note}`;
@@ -216,7 +219,7 @@ function showPlayerModal(playerId){
         <div class="card inner"><h3>Perfil</h3>
           <div class="stat-rank"><span>Media</span><strong>${scoutedOverallLabel(p)}</strong></div>
           <div class="stat-rank"><span>Estado físico</span>${scoutedPhysicalLabel(p)}</div>
-          ${!needsScouting && typeof currentPlayerWear === 'function' ? `<div class="stat-rank"><span>Desgaste</span><strong>${currentPlayerWear(p.id)}</strong><small class="muted">Máx. físico ${maxConditionForPlayer(p.id)}/99</small></div>` : ''}
+          ${!needsScouting && typeof currentPlayerWear === 'function' ? `<div class="stat-rank"><span>Desgaste</span><strong>${currentPlayerWear(p.id)}</strong></div>` : ''}
           <div class="stat-rank"><span>Moral</span>${scoutedMoraleLabel(p)}</div>
           ${scoutedBarsMarkup(p)}
           <div class="stat-rank"><span>Cláusula</span><strong>${formatMoney(p.clause || p.value || 0)}</strong></div>
@@ -1051,10 +1054,14 @@ function showClubModal(clubId){
   const keepers = players.filter(p=>p.position === 'POR');
   const fieldPlayers = players.filter(p=>p.position !== 'POR');
   const rows = players.map(scoutingPlayerRow).join('');
+  const isOwnClub = Number(club.id) === Number(game?.selectedClubId || 0);
+  const isTeamScouted = Array.isArray(game?.scoutingCenter?.listedTeamIds) && game.scoutingCenter.listedTeamIds.map(Number).includes(Number(club.id));
+  const teamScoutButton = isOwnClub ? '' : `<button class="ghost" data-add-scouting-team="${club.id}">${isTeamScouted ? 'En Centro de Ojeo' : 'Ojear equipo'}</button>`;
+  const teamSectorReport = isTeamScouted && typeof scoutingTeamSectorMarkup === 'function' ? scoutingTeamSectorMarkup(club.id) : '<p class="muted small">Usá “Ojear equipo” para guardar un informe dinámico de Defensa, Medios y Delantera en el Centro de Ojeo.</p>';
   const body = `
     <div class="club-modal-head" style="clear:both">
       <p class="label">Club observado</p>
-      <h2>${clubBadge(club.id)}${escapeHtml(club.name)}</h2>
+      <div class="row between"><h2>${clubBadge(club.id)}${escapeHtml(club.name)}</h2>${teamScoutButton}</div>
       <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation} · Presupuesto base ${formatMoney(club.budget || 0)}</p>
     </div>
     <div class="grid cols-3" style="margin:14px 0">
@@ -1069,8 +1076,8 @@ function showClubModal(clubId){
         ${clubTacticPreview(tactic.formation)}
       </div>
       <div class="card inner">
-        <h3>Informe de ojeo</h3>
-        <p class="muted small">No se revelan habilidades por abrir la ficha del club. Sólo aparecen datos ya trabajados por tu Centro de Ojeo.</p>
+        <h3>Informe de ojeo de equipo</h3>
+        ${teamSectorReport}
       </div>
     </div>
     <div class="card inner" style="margin-top:14px">
@@ -1078,6 +1085,7 @@ function showClubModal(clubId){
       <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media ojeada</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
   openModal(body);
+  document.querySelector('[data-add-scouting-team]')?.addEventListener('click', ev => { ev.stopPropagation(); if(typeof addTeamToScoutingCenter === 'function') addTeamToScoutingCenter(Number(ev.currentTarget.dataset.addScoutingTeam || 0)); });
 }
 function clubTacticPreview(formation){
   const layout = formationLayout(formation);

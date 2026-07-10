@@ -4382,3 +4382,38 @@ th{
   .scouting-summary-grid{grid-template-columns:1fr}
   .scouting-action-grid{grid-template-columns:1fr}
 }
+
+/* V5.42 · Ojeo de equipos y perfil compacto */
+.max-condition-limit{
+  color:#ef4444;
+  font-weight:900;
+}
+.scouting-team-badge{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  background:rgba(59,130,246,.14);
+  border:1px solid rgba(96,165,250,.24);
+  font-size:1.35rem;
+}
+.scouting-team-card .scouting-team-visors{
+  margin-top:0;
+}
+.scouting-team-card .tactic-skill-visor{
+  background:rgba(15,23,42,.42);
+}
+.club-modal-head .row.between{
+  align-items:center;
+  gap:12px;
+}
+.club-modal-head .row.between h2{
+  margin:0;
+}
+@media (max-width:720px){
+  .club-modal-head .row.between{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}

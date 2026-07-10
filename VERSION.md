@@ -1,5 +1,5 @@
 # Versión actual
 
-V5.41
+V5.42
 
-Fatiga visitante y sobreexigencia bot progresiva.
+Ojeo de equipos, simulador con media rival oculta y perfil físico compacto.

@@ -1,21 +1,19 @@
-# Características de la versión V5.41
+# Características de la versión V5.42
 
-## Fatiga visitante y sobreexigencia bot progresiva
+## Ojeo de equipos, medias rivales ocultas y ficha compacta
 
-- Se toma como base el archivo `balance-modificadores.js` ajustado por el usuario.
-- Se agrega protección para que la fatiga viva de un mismo club se aplique una sola vez por bloque de partido.
-- Se mantiene corregido el caso del visitante: local y visitante reciben una única aplicación de fatiga por bloque.
-- Los bots conservan su sistema de protección/recuperación física fuera del partido.
-- Se agregan reglas progresivas de sobreexigencia cuando un bot va perdiendo:
-  - diferencia de 1 gol: +20% de desgaste físico y +10% de bonus de ataque.
-  - diferencia de 2 goles: +30% de desgaste físico y +20% de bonus de ataque.
-  - diferencia de 3 o más goles: +50% de desgaste físico y +30% de bonus de ataque.
-- Las reglas viven en `balance-modificadores.js`, dentro de `equilibrioBots.tacticaRapida.reglasDiferencia`.
-- La sobreexigencia se aplica en partido vivo contra el manager y en simulación rápida bot vs bot.
-- Se registran eventos de sobreexigencia bot en el resultado del partido cuando corresponde.
+- Agrega **Ojear equipo** desde la ficha de club.
+- Los equipos ojeados ocupan cupo en la misma lista activa del Centro de Ojeo que los jugadores.
+- El informe de equipo muestra visores dinámicos de **Defensa**, **Medios** y **Delantera** con el promedio actual del plantel bot.
+- El informe puede cambiar si el bot ficha, vende, recompone o mueve jugadores de su plantel.
+- El Centro de Ojeo ahora distingue ojeo activo entre jugadores y equipos.
+- En el simulador vivo ya no se muestra la media de los jugadores rivales; queda oculta con guion.
+- La ficha del jugador conserva el número verde del boost de temporada, pero elimina el texto repetido “boost de temporada”.
+- El bloque Perfil muestra Estado físico como `actual/máximo`, con el máximo en rojo cuando está limitado por desgaste.
+- Se elimina el texto `Máx. físico xx/99` debajo de Desgaste.
 
 ## Compatibilidad
 
 - Se implementa solo.
 - No requiere reiniciar partida.
-- Afecta partidos futuros y simulaciones futuras.
+- Afecta informes nuevos de equipo, render del simulador y visualización de fichas.

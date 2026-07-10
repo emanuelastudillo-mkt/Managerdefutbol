@@ -1,12 +1,12 @@
 /*
-  V5.41 · Modificadores de balance del simulador y entrenamiento.
+  V5.42 · Modificadores de balance del simulador y entrenamiento.
   Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
   Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V5.41',
-    nombre: 'Balance centralizado de modificadores V5.41',
+    version: 'V5.42',
+    nombre: 'Balance centralizado de modificadores V5.42',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -51,7 +51,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
     fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 1.10,
+    multiplicadorTarjetas: 1.50,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
@@ -64,7 +64,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     // Los bots no entrenan. Este bloque sólo ajusta su simulación rápida de partido.
     tacticaRapida: {
       sobreexigenciaSiPierde: true,
-      // V5.41: reglas progresivas según diferencia de goles en contra del bot.
+      // V5.42: reglas progresivas según diferencia de goles en contra del bot.
       // desgasteFisicoPct se aplica como pérdida extra de estado físico sobre la fatiga normal del partido.
       // bonusAtaquePct aumenta la presión ofensiva mientras el bot va perdiendo.
       reglasDiferencia: [

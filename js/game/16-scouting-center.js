@@ -1,7 +1,7 @@
 /* V5.20 · Centro de Ojeo persistente: los informes revelados no se pierden al quitar jugadores de la lista. */
 
 function createInitialScoutingCenterState(){
-  return { listedPlayerIds:[], reports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
+  return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
 }
 function normalizeScoutingCenterState(state){
   const base = createInitialScoutingCenterState();
@@ -11,7 +11,13 @@ function normalizeScoutingCenterState(state){
     const p = typeof playerById === 'function' ? playerById(id) : null;
     return Boolean(p);
   });
+  clean.listedTeamIds = Array.isArray(clean.listedTeamIds) ? clean.listedTeamIds.map(Number).filter(Boolean) : [];
+  clean.listedTeamIds = Array.from(new Set(clean.listedTeamIds)).filter(id => {
+    const club = seed?.clubs?.find(c => Number(c.id) === Number(id));
+    return Boolean(club) && Number(id) !== Number(game?.selectedClubId || 0);
+  });
   clean.reports = (clean.reports && typeof clean.reports === 'object' && !Array.isArray(clean.reports)) ? clean.reports : {};
+  clean.teamReports = (clean.teamReports && typeof clean.teamReports === 'object' && !Array.isArray(clean.teamReports)) ? clean.teamReports : {};
   Object.entries({ ...clean.reports }).forEach(([id, report]) => {
     const numericId = Number(id);
     const player = typeof playerById === 'function' ? playerById(numericId) : null;
@@ -28,9 +34,28 @@ function normalizeScoutingCenterState(state){
   clean.scoutsLastChargeDate = validIsoDate(clean.scoutsLastChargeDate) ? clean.scoutsLastChargeDate : null;
   clean.lastDailyProcessDate = validIsoDate(clean.lastDailyProcessDate) ? clean.lastDailyProcessDate : null;
   const caps = scoutingCapacities(clean);
+  Object.entries({ ...clean.teamReports }).forEach(([id, report]) => {
+    const numericId = Number(id);
+    const club = seed?.clubs?.find(c => Number(c.id) === Number(numericId));
+    if(!numericId || !club){ delete clean.teamReports[id]; return; }
+    clean.teamReports[String(numericId)] = normalizeScoutingTeamReport(numericId, report);
+    if(String(id) !== String(numericId)) delete clean.teamReports[id];
+  });
   clean.scouts = Math.min(clean.scouts, caps.scoutCapacity);
-  clean.listedPlayerIds = clean.listedPlayerIds.slice(0, caps.playerCapacity);
+  const totalSlots = Math.max(0, Number(caps.playerCapacity || 0));
+  clean.listedPlayerIds = clean.listedPlayerIds.slice(0, totalSlots);
+  const remainingTeamSlots = Math.max(0, totalSlots - clean.listedPlayerIds.length);
+  clean.listedTeamIds = clean.listedTeamIds.slice(0, remainingTeamSlots);
   return clean;
+}
+function normalizeScoutingTeamReport(clubId, report={}){
+  return {
+    clubId:Number(clubId),
+    createdDate:validIsoDate(report.createdDate) ? report.createdDate : (game?.currentDate || currentCalendarDate()),
+    lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : (game?.currentDate || currentCalendarDate()),
+    dynamic:true,
+    type:'team_sector_report'
+  };
 }
 function normalizeScoutingReport(playerId, report={}){
   const player = typeof playerById === 'function' ? playerById(playerId) : null;
@@ -118,7 +143,7 @@ function addPlayerToScoutingCenter(playerId){
   const state = ensureScoutingCenterState();
   const caps = scoutingCapacities(state);
   if(state.listedPlayerIds.includes(Number(playerId))){ showNotice(`${player.name} ya está en el Centro de Ojeo.`); activeTab='scouting'; renderAll(); return; }
-  if(state.listedPlayerIds.length >= caps.playerCapacity){ showNotice('No hay cupos libres en la lista de ojeo. Alquilá oficinas o quitá jugadores.'); return; }
+  if((state.listedPlayerIds.length + (state.listedTeamIds || []).length) >= caps.playerCapacity){ showNotice('No hay cupos libres en la lista de ojeo. Alquilá oficinas o quitá jugadores/equipos.'); return; }
   state.listedPlayerIds.push(Number(playerId));
   state.reports[String(playerId)] = normalizeScoutingReport(playerId, state.reports[String(playerId)] || {});
   saveLocal(true);
@@ -126,6 +151,77 @@ function addPlayerToScoutingCenter(playerId){
   activeTab='scouting';
   if(typeof closeModal === 'function') closeModal();
   renderAll();
+}
+
+function addTeamToScoutingCenter(clubId){
+  if(!SCOUTING_CENTER_ENABLED || !game){ showNotice('El Centro de Ojeo no está disponible.'); return; }
+  const id = Number(clubId || 0);
+  const club = seed?.clubs?.find(c => Number(c.id) === id);
+  if(!club){ showNotice('Club no encontrado.'); return; }
+  if(id === Number(game.selectedClubId || 0)){ showNotice('No necesitás ojear tu propio equipo desde el Centro de Ojeo.'); return; }
+  const state = ensureScoutingCenterState();
+  const caps = scoutingCapacities(state);
+  state.listedTeamIds = Array.isArray(state.listedTeamIds) ? state.listedTeamIds.map(Number).filter(Boolean) : [];
+  if(state.listedTeamIds.includes(id)){ showNotice(`${club.name} ya está en el Centro de Ojeo.`); activeTab='scouting'; if(typeof closeModal === 'function') closeModal(); renderAll(); return; }
+  if((state.listedPlayerIds.length + state.listedTeamIds.length) >= caps.playerCapacity){ showNotice('No hay cupos libres en la lista de ojeo. Alquilá oficinas o quitá jugadores/equipos.'); return; }
+  state.listedTeamIds.push(id);
+  state.teamReports = (state.teamReports && typeof state.teamReports === 'object' && !Array.isArray(state.teamReports)) ? state.teamReports : {};
+  state.teamReports[String(id)] = normalizeScoutingTeamReport(id, state.teamReports[String(id)] || {});
+  saveLocal(true);
+  showNotice(`${club.name} fue agregado al Centro de Ojeo.`);
+  activeTab='scouting';
+  if(typeof closeModal === 'function') closeModal();
+  renderAll();
+}
+function removeTeamFromScoutingCenter(clubId){
+  const state = ensureScoutingCenterState();
+  const id = Number(clubId || 0);
+  state.listedTeamIds = (state.listedTeamIds || []).map(Number).filter(teamId => teamId !== id);
+  if(state.teamReports?.[String(id)]) state.teamReports[String(id)] = normalizeScoutingTeamReport(id, state.teamReports[String(id)]);
+  saveLocal(true);
+  renderScoutingCenter();
+}
+function scoutingTeamSectorStats(clubId){
+  const squad = typeof playersByClub === 'function' ? playersByClub(clubId).filter(Boolean) : [];
+  const avgSafe = values => values.length ? clamp(Math.round(avg(values)), 0, 99) : 0;
+  const groupAvg = (players, resolver) => avgSafe(players.map(player => avgSafe(resolver(player))));
+  const defenders = squad.filter(p => ['POR','DFC','LI','LD'].includes(String(p.position || '').toUpperCase()));
+  const mids = squad.filter(p => ['MCD','MC','MCO','MD','MI'].includes(String(p.position || '').toUpperCase()));
+  const attackers = squad.filter(p => ['DC','EI','ED'].includes(String(p.position || '').toUpperCase()));
+  const skill = (p,key) => Number(p?.skills?.[key] ?? 0);
+  return {
+    defense:groupAvg(defenders, p => String(p.position || '').toUpperCase() === 'POR'
+      ? [skill(p,'porteria'), skill(p,'posicionamiento'), skill(p,'serenidad')]
+      : [skill(p,'marca'), skill(p,'entradas'), skill(p,'posicionamiento')]),
+    midfield:groupAvg(mids, p => [skill(p,'paseCorto'), skill(p,'paseLargo'), skill(p,'vision')]),
+    attack:groupAvg(attackers, p => [skill(p,'remate'), skill(p,'cabezazo')]),
+    counts:{ defense:defenders.length, midfield:mids.length, attack:attackers.length, total:squad.length }
+  };
+}
+function scoutingTeamSectorMarkup(clubId){
+  const stats = scoutingTeamSectorStats(clubId);
+  const rows = [
+    { key:'defense', label:'Defensa', value:stats.defense, count:stats.counts.defense },
+    { key:'midfield', label:'Medios', value:stats.midfield, count:stats.counts.midfield },
+    { key:'attack', label:'Delantera', value:stats.attack, count:stats.counts.attack }
+  ];
+  return `<div class="tactic-skill-visor-list scouting-team-visors">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div><small class="muted">${row.count} jugador(es) relevados</small></div>`).join('')}</div>`;
+}
+function scoutingTeamCard(clubId){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  if(!club) return '';
+  const report = ensureScoutingCenterState().teamReports?.[String(clubId)] || normalizeScoutingTeamReport(clubId, {});
+  const squadCount = typeof playersByClub === 'function' ? playersByClub(clubId).length : 0;
+  return `<div class="scouting-player-card scouting-team-card card inner">
+    <div class="scouting-player-head">
+      <div class="scouting-team-badge">${clubBadge(club.id) || '▣'}</div>
+      <div><h3>${escapeHtml(club.name)}</h3><p class="muted small">${escapeHtml(club.divisionId || '')} · Plantel ${squadCount} · informe dinámico</p><span class="pill">Equipo ojeado</span></div>
+      <button class="ghost small-btn" data-remove-scouting-team="${club.id}">Quitar</button>
+    </div>
+    <p class="muted small">Estos porcentajes usan el promedio actual del plantel bot. Pueden cambiar si el club ficha, vende o recompone jugadores.</p>
+    ${scoutingTeamSectorMarkup(club.id)}
+    <p class="muted small">Creado: ${escapeHtml(report.createdDate || '—')}</p>
+  </div>`;
 }
 function removePlayerFromScoutingCenter(playerId){
   const state = ensureScoutingCenterState();
@@ -162,7 +258,7 @@ function cancelScoutingOffice(){
   const nextOffices = state.offices - 1;
   const nextCaps = scoutingCapacities({ ...state, offices:nextOffices });
   if(state.scouts > nextCaps.scoutCapacity){ showNotice('Primero despedí ojeadores. Con una oficina menos no alcanza el cupo actual.'); return; }
-  if(state.listedPlayerIds.length > nextCaps.playerCapacity){ showNotice('Primero quitá jugadores de la lista de ojeo. Con una oficina menos no alcanza el cupo actual.'); return; }
+  if((state.listedPlayerIds.length + (state.listedTeamIds || []).length) > nextCaps.playerCapacity){ showNotice('Primero quitá jugadores o equipos de la lista de ojeo. Con una oficina menos no alcanza el cupo actual.'); return; }
   state.offices = nextOffices;
   if(state.offices <= 0) state.officeLastChargeDate = null;
   saveLocal(true);
@@ -189,6 +285,8 @@ function dismissScoutingScout(){
 function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
   const state = ensureScoutingCenterState();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
+  const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
+  const usedSlots = listed.length + listedTeams.length;
   const candidates = [];
   listed.forEach(player => {
     const report = scoutingReportForPlayer(player.id);
@@ -286,7 +384,7 @@ function resetScoutingCenterForNewClub(){
   const previous = ensureScoutingCenterState();
   // Cambiar de club vacía oficinas, jefe, ojeadores y lista activa, pero conserva los informes ya revelados.
   // La información ojeada es progreso del manager y debe seguir disponible en las fichas.
-  game.scoutingCenter = { ...createInitialScoutingCenterState(), reports: previous.reports || {} };
+  game.scoutingCenter = { ...createInitialScoutingCenterState(), reports: previous.reports || {}, teamReports: previous.teamReports || {} };
 }
 
 function scoutingRepeatedIcons(icon, active=0, total=null, className=''){
@@ -378,8 +476,11 @@ function renderScoutingCenter(){
   const caps = scoutingCapacities(state);
   const maxOffices = scoutingChiefMaxOffices();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
+  const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
+  const usedSlots = listed.length + listedTeams.length;
   const archivedReports = Object.keys(state.reports || {}).filter(id => !state.listedPlayerIds.map(Number).includes(Number(id))).length;
-  const reportCount = Object.keys(state.reports || {}).length;
+  const archivedTeamReports = Object.keys(state.teamReports || {}).filter(id => !(state.listedTeamIds || []).map(Number).includes(Number(id))).length;
+  const reportCount = Object.keys(state.reports || {}).length + Object.keys(state.teamReports || {}).length;
   const lastProcess = game?.lastScoutingDailyResult;
   const lastProcessText = lastProcess?.date ? `Último proceso: ${escapeHtml(lastProcess.date)} · intentos ${Number(lastProcess.attempts || 0)} · reveladas ${Number(lastProcess.reveals || 0)}` : 'Todavía no se procesó ningún día de ojeo.';
   const officeCost = state.offices > 0 ? `${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes` : 'Sin alquileres activos';
@@ -395,20 +496,20 @@ function renderScoutingCenter(){
         </div>
       </div>
       <div class="scouting-summary-grid">
-        ${scoutingSummaryTile({ label:'Jugadores listados', value:`${listed.length}/${caps.playerCapacity}`, hint:'Cupo activo', icon:scoutingBinocularsIcon('mini') })}
+        ${scoutingSummaryTile({ label:'Ojeo activo', value:`${usedSlots}/${caps.playerCapacity}`, hint:`${listed.length} jugador(es) · ${listedTeams.length} equipo(s)`, icon:scoutingBinocularsIcon('mini') })}
         ${scoutingSummaryTile({ label:'Ojeadores', value:`${state.scouts}/${caps.scoutCapacity}`, hint:scoutCost, icon:'👤' })}
         ${scoutingSummaryTile({ label:'Oficinas', value:`${state.offices}/${maxOffices}`, hint:officeCost, icon:'🏢' })}
-        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports} archivado(s)`, icon:'▣' })}
+        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports + archivedTeamReports} archivado(s)`, icon:'▣' })}
       </div>
       <div class="scouting-workspace">
         <div class="scouting-main-stack">
           <div class="card scouting-list-card">
             <div class="scouting-card-head">
-              <div><p class="label">Lista activa</p><h3>Jugadores en seguimiento</h3></div>
-              <span class="pill">${listed.length}/${caps.playerCapacity}</span>
+              <div><p class="label">Lista activa</p><h3>Jugadores y equipos en seguimiento</h3></div>
+              <span class="pill">${usedSlots}/${caps.playerCapacity}</span>
             </div>
-            <p class="muted small">Los datos conocidos quedan guardados aunque quites al jugador de la lista activa. Fuera del Centro de Ojeo no se revelan habilidades nuevas.</p>
-            <div class="scouting-player-list">${listed.length ? listed.map(scoutingPlayerCard).join('') : '<div class="scouting-empty-list"><div class="scouting-empty-icon">' + scoutingBinocularsIcon('empty') + '</div><p class="muted">Todavía no agregaste jugadores. Abrí la ficha de cualquier jugador y usá “Ojear”.</p></div>'}</div>
+            <p class="muted small">Los datos conocidos quedan guardados aunque quites al jugador o equipo de la lista activa. Los informes de equipo muestran visores dinámicos del plantel actual.</p>
+            <div class="scouting-player-list">${usedSlots ? listed.map(scoutingPlayerCard).join('') + listedTeams.map(club => scoutingTeamCard(club.id)).join('') : '<div class="scouting-empty-list"><div class="scouting-empty-icon">' + scoutingBinocularsIcon('empty') + '</div><p class="muted">Todavía no agregaste jugadores ni equipos. Abrí una ficha y usá “Ojear”.</p></div>'}</div>
           </div>
         </div>
         <aside class="scouting-side-rail">
@@ -443,4 +544,5 @@ function renderScoutingCenter(){
   document.querySelector('[data-hire-scouting-scout]')?.addEventListener('click', hireScoutingScout);
   document.querySelector('[data-dismiss-scouting-scout]')?.addEventListener('click', dismissScoutingScout);
   document.querySelectorAll('[data-remove-scouting-player]').forEach(btn => btn.addEventListener('click', () => removePlayerFromScoutingCenter(Number(btn.dataset.removeScoutingPlayer || 0))));
+  document.querySelectorAll('[data-remove-scouting-team]').forEach(btn => btn.addEventListener('click', () => removeTeamFromScoutingCenter(Number(btn.dataset.removeScoutingTeam || 0))));
 }

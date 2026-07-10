@@ -1,4 +1,21 @@
-# Fútbol Manager MVP - V5.41
+# Fútbol Manager MVP - V5.42
+
+## V5.42 - Ojeo de equipos y perfil compacto
+
+- Agrega la acción **Ojear equipo** desde la ficha de club.
+- Un equipo ojeado ocupa un cupo de la misma lista activa del Centro de Ojeo que un jugador.
+- El informe de equipo muestra visores dinámicos de **Defensa**, **Medios** y **Delantera** calculados sobre el plantel bot actual.
+- Los visores pueden cambiar si el bot cambia jugadores, ficha libres o recompone su plantel.
+- El Centro de Ojeo ahora muestra cupos usados por jugadores y equipos.
+- En el simulador vivo se oculta la media de jugadores rivales. La media real sigue existiendo para el motor, pero no se muestra al usuario.
+- En la ficha de jugador se elimina el texto “boost de temporada”; queda sólo el número verde al lado de la habilidad.
+- El perfil físico queda compacto: `Estado físico actual/máximo`, máximo en rojo, `Desgaste` separado y `Moral actual/99`.
+- Se elimina el texto `Máx. físico xx/99` debajo de Desgaste.
+
+Compatibilidad de partida: **se implementa solo**. No requiere reiniciar partida.
+
+---
+
 
 ## V5.41 - Fatiga visitante y sobreexigencia bot progresiva
 

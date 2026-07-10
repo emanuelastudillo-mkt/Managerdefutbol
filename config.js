@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.45',
+  version: 'V5.46',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -448,7 +448,7 @@ window.GAME_CONFIG = {
     // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
-    // V5.45: si está activo, la recuperación postpartido usa la resistencia del jugador.
+    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
     // El rango 61-70 queda como puente para evitar saltos bruscos.
     recuperacionPostPartidoUsaResistencia: true,
     recuperacionPostPartidoPorResistencia: [

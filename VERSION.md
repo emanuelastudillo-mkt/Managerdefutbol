@@ -1,7 +1,9 @@
 # Versión actual
 
-V5.45
+V5.46
 
-## Resumen
+## Nombre
+Ojeo progresivo sólo sobre faltantes
 
-Resultado de partido con contexto sin solapamiento e informes de ojeo de jugadores consultables desde el Centro de Ojeo.
+## Compatibilidad de partida
+Se implementa solo. No requiere reiniciar partida.

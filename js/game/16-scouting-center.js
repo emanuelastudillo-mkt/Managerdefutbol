@@ -1,4 +1,4 @@
-/* V5.45 · Centro de Ojeo: informes guardados/archivados y equipos progresivos. */
+/* V5.46 · Centro de Ojeo: avances sólo sobre información faltante y observación diaria estable. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -61,12 +61,16 @@ function scoutingTeamSectorKeys(){
 function normalizeScoutingTeamReport(clubId, report={}){
   const allowed = new Set(scoutingTeamSectorKeys());
   const visible = Array.isArray(report.visibleSectors) ? report.visibleSectors.map(String) : [];
+  const visibleSectors = Array.from(new Set(visible)).filter(key => allowed.has(key));
   return {
     clubId:Number(clubId),
-    visibleSectors:Array.from(new Set(visible)).filter(key => allowed.has(key)),
+    visibleSectors,
     daysObserved:Math.max(0, Math.round(Number(report.daysObserved || 0))),
+    revealCount:Math.max(visibleSectors.length, Math.round(Number(report.revealCount || 0))),
     createdDate:validIsoDate(report.createdDate) ? report.createdDate : (game?.currentDate || currentCalendarDate()),
     lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : null,
+    lastObservedDate:validIsoDate(report.lastObservedDate) ? report.lastObservedDate : null,
+    lastRevealDate:validIsoDate(report.lastRevealDate) ? report.lastRevealDate : null,
     dynamic:true,
     type:'team_sector_report'
   };
@@ -76,11 +80,19 @@ function normalizeScoutingReport(playerId, report={}){
   const visible = Array.isArray(report.visibleSkills) ? report.visibleSkills.map(String) : [];
   const allowed = new Set(player ? scoutingSkillKeys(player) : visible);
   const initialKnown = player ? scoutingInitialKnownSkillKeys(player) : [];
+  const visibleSkills = Array.from(new Set([...initialKnown, ...visible])).filter(key => !allowed.size || allowed.has(key));
+  const initialKnownSet = new Set(initialKnown);
+  const revealedOnlyCount = player
+    ? visibleSkills.filter(key => !initialKnownSet.has(key)).length
+    : visibleSkills.length;
   return {
     playerId:Number(playerId),
-    visibleSkills:Array.from(new Set([...initialKnown, ...visible])).filter(key => !allowed.size || allowed.has(key)),
+    visibleSkills,
     daysObserved:Math.max(0, Math.round(Number(report.daysObserved || 0))),
+    revealCount:Math.max(revealedOnlyCount, Math.round(Number(report.revealCount || 0))),
     lastUpdatedDate:validIsoDate(report.lastUpdatedDate) ? report.lastUpdatedDate : null,
+    lastObservedDate:validIsoDate(report.lastObservedDate) ? report.lastObservedDate : null,
+    lastRevealDate:validIsoDate(report.lastRevealDate) ? report.lastRevealDate : null,
     createdDate:validIsoDate(report.createdDate) ? report.createdDate : (game?.currentDate || currentCalendarDate())
   };
 }
@@ -138,14 +150,52 @@ function scoutingSkillKeys(player){
   if(!player) return [];
   return Object.keys(scoutingFullStatMap(player) || {});
 }
+function scoutingMissingSkillKeysForPlayer(player, report=null){
+  if(!player) return [];
+  const cleanReport = report || scoutingReportForPlayer(player.id);
+  const known = new Set(cleanReport.visibleSkills || []);
+  // Jugadores propios: sólo se ojea información oculta faltante. Nunca se gasta avance en habilidades visibles.
+  if(scoutingIsOwnPlayer(player)) return scoutingHiddenSkillKeys(player).filter(key => !known.has(key));
+  // Jugadores externos: se revela cualquier dato todavía desconocido, visible u oculto, sin repetir habilidades ya ojeadas.
+  return scoutingSkillKeys(player).filter(key => !known.has(key));
+}
+function scoutingMissingSectorKeysForTeam(clubId, report=null){
+  const cleanReport = report || scoutingTeamReportForClub(clubId);
+  const known = new Set(cleanReport.visibleSectors || []);
+  return scoutingTeamSectorKeys().filter(key => !known.has(key));
+}
+function markScoutingDailyObservation(state, today){
+  if(!state || !validIsoDate(today)) return 0;
+  let observed = 0;
+  (state.listedPlayerIds || []).forEach(playerId => {
+    const player = typeof playerById === 'function' ? playerById(playerId) : null;
+    if(!player) return;
+    const report = scoutingReportForPlayer(player.id, state);
+    if(report.lastObservedDate === today) return;
+    report.daysObserved = Math.max(0, Number(report.daysObserved || 0)) + 1;
+    report.lastObservedDate = today;
+    observed += 1;
+  });
+  (state.listedTeamIds || []).forEach(clubId => {
+    const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+    if(!club) return;
+    const report = scoutingTeamReportForClub(club.id, state);
+    if(report.lastObservedDate === today) return;
+    report.daysObserved = Math.max(0, Number(report.daysObserved || 0)) + 1;
+    report.lastObservedDate = today;
+    observed += 1;
+  });
+  return observed;
+}
 function scoutingKnownSet(playerId){
   const state = ensureScoutingCenterState();
   return new Set(state.reports[String(playerId)]?.visibleSkills || []);
 }
 function scoutingKnownCount(playerId){ return scoutingKnownSet(playerId).size; }
-function scoutingReportForPlayer(playerId){
-  const state = ensureScoutingCenterState();
-  const key = String(playerId);
+function scoutingReportForPlayer(playerId, stateOverride=null){
+  const state = stateOverride || ensureScoutingCenterState();
+  state.reports = (state.reports && typeof state.reports === 'object' && !Array.isArray(state.reports)) ? state.reports : {};
+  const key = String(Number(playerId || 0));
   if(!state.reports[key]) state.reports[key] = normalizeScoutingReport(playerId, {});
   return state.reports[key];
 }
@@ -212,8 +262,9 @@ function scoutingTeamSectorStats(clubId){
     counts:{ defense:defenders.length, midfield:mids.length, attack:attackers.length, total:squad.length }
   };
 }
-function scoutingTeamReportForClub(clubId){
-  const state = ensureScoutingCenterState();
+function scoutingTeamReportForClub(clubId, stateOverride=null){
+  const state = stateOverride || ensureScoutingCenterState();
+  state.teamReports = (state.teamReports && typeof state.teamReports === 'object' && !Array.isArray(state.teamReports)) ? state.teamReports : {};
   const key = String(Number(clubId || 0));
   if(!state.teamReports[key]) state.teamReports[key] = normalizeScoutingTeamReport(clubId, {});
   return state.teamReports[key];
@@ -324,43 +375,68 @@ function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
   const state = ensureScoutingCenterState();
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
+  const today = game.currentDate || currentCalendarDate();
   const candidates = [];
   listed.forEach(player => {
-    const report = scoutingReportForPlayer(player.id);
-    const known = new Set(report.visibleSkills || []);
+    const report = scoutingReportForPlayer(player.id, state);
     const ownPlayer = scoutingIsOwnPlayer(player);
-    const revealPool = ownPlayer
-      ? scoutingHiddenSkillKeys(player).filter(key => !known.has(key))
-      : scoutingSkillKeys(player).filter(key => !known.has(key));
-    if(revealPool.length) candidates.push({ type:'player', id:Number(player.id), label:player.name || `Jugador ${player.id}`, hidden:revealPool, report, ownPlayer });
+    const revealPool = scoutingMissingSkillKeysForPlayer(player, report);
+    if(revealPool.length){
+      candidates.push({
+        type:'player',
+        id:Number(player.id),
+        label:player.name || `Jugador ${player.id}`,
+        hidden:revealPool,
+        report,
+        ownPlayer,
+        revealCount:Math.max(0, Number(report.revealCount || 0)),
+        lastRevealDate:report.lastRevealDate || ''
+      });
+    }
   });
   listedTeams.forEach(club => {
-    const report = scoutingTeamReportForClub(club.id);
-    const known = new Set(report.visibleSectors || []);
-    const revealPool = scoutingTeamSectorKeys().filter(key => !known.has(key));
-    if(revealPool.length) candidates.push({ type:'team', id:Number(club.id), label:club.name || `Club ${club.id}`, hidden:revealPool, report, ownPlayer:false });
+    const report = scoutingTeamReportForClub(club.id, state);
+    const revealPool = scoutingMissingSectorKeysForTeam(club.id, report);
+    if(revealPool.length){
+      candidates.push({
+        type:'team',
+        id:Number(club.id),
+        label:club.name || `Club ${club.id}`,
+        hidden:revealPool,
+        report,
+        ownPlayer:false,
+        revealCount:Math.max(0, Number(report.revealCount || 0)),
+        lastRevealDate:report.lastRevealDate || ''
+      });
+    }
   });
   if(!candidates.length) return false;
   const ownPriority = Math.max(...candidates.map(item => Number(Boolean(item.ownPlayer))));
   const priorityCandidates = candidates.filter(item => Number(Boolean(item.ownPlayer)) === ownPriority);
-  const minDays = Math.min(...priorityCandidates.map(item => Math.max(0, Number(item.report?.daysObserved || 0))));
-  const pool = priorityCandidates.filter(item => Math.max(0, Number(item.report?.daysObserved || 0)) === minDays);
+  const minReveals = Math.min(...priorityCandidates.map(item => Number(item.revealCount || 0)));
+  const lowRevealCandidates = priorityCandidates.filter(item => Number(item.revealCount || 0) === minReveals);
+  const minMissing = Math.min(...lowRevealCandidates.map(item => Number(item.hidden.length || 0)));
+  const pool = lowRevealCandidates.filter(item => Number(item.hidden.length || 0) === minMissing);
   pool.sort((a,b) => {
-    const hiddenDelta = Number(b.hidden.length || 0) - Number(a.hidden.length || 0);
-    if(hiddenDelta) return hiddenDelta;
+    const lastDateDelta = String(a.lastRevealDate || '').localeCompare(String(b.lastRevealDate || ''));
+    if(lastDateDelta) return lastDateDelta;
     return String(a.label || '').localeCompare(String(b.label || ''), 'es');
   });
-  const pickSeed = `scout-pick-${game.currentDate}-${currentTurnIndex()}-${attemptIndex}-${context}-${pool.map(item => `${item.type}:${item.id}:${item.hidden.length}:${item.report?.daysObserved || 0}`).join('|')}`;
+  const pickSeed = `scout-pick-${today}-${currentTurnIndex()}-${attemptIndex}-${context}-${pool.map(item => `${item.type}:${item.id}:${item.hidden.length}:${item.revealCount}:${item.lastRevealDate || '-'}`).join('|')}`;
   const pick = pool[hashNumber(pickSeed, pool.length)];
-  const skillSeed = `scout-skill-${pick.type}-${pick.id}-${game.currentDate}-${attemptIndex}-${context}-${pick.hidden.join('|')}`;
+  const skillSeed = `scout-skill-${pick.type}-${pick.id}-${today}-${attemptIndex}-${context}-${pick.hidden.join('|')}`;
   const key = pick.hidden[hashNumber(skillSeed, pick.hidden.length)];
+  const targetReport = pick.type === 'team'
+    ? scoutingTeamReportForClub(pick.id, state)
+    : scoutingReportForPlayer(pick.id, state);
   if(pick.type === 'team'){
-    pick.report.visibleSectors = Array.from(new Set([...(pick.report.visibleSectors || []), key]));
+    targetReport.visibleSectors = Array.from(new Set([...(targetReport.visibleSectors || []), key]));
   } else {
-    pick.report.visibleSkills = Array.from(new Set([...(pick.report.visibleSkills || []), key]));
+    targetReport.visibleSkills = Array.from(new Set([...(targetReport.visibleSkills || []), key]));
   }
-  pick.report.daysObserved = Math.max(0, Number(pick.report.daysObserved || 0)) + 1;
-  pick.report.lastUpdatedDate = game.currentDate || currentCalendarDate();
+  targetReport.revealCount = Math.max(0, Number(targetReport.revealCount || 0)) + 1;
+  targetReport.lastRevealDate = today;
+  targetReport.lastUpdatedDate = today;
   return true;
 }
 function scoutingChiefDailyReveals(){
@@ -413,12 +489,13 @@ function processScoutingCenterDaily(options={}){
   }
   costs += processScoutingCenterMonthlyCosts();
   const attempts = Math.max(0, state.scouts) + scoutingChiefDailyReveals();
+  const observed = attempts > 0 ? markScoutingDailyObservation(state, today) : 0;
   let reveals = 0;
   for(let i=0; i<attempts; i++){
     if(scoutingRevealOneSkill(i, reason)) reveals += 1;
   }
-  game.lastScoutingDailyResult = { date:today, reason, attempts, reveals, costs };
-  return { reveals, costs, attempts, date:today, reason };
+  game.lastScoutingDailyResult = { date:today, reason, attempts, reveals, observed, costs };
+  return { reveals, costs, attempts, observed, date:today, reason };
 }
 function resetScoutingCenterForNewSeason(){
   if(!game) return;

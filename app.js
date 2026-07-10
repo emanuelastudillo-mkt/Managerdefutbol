@@ -1,2 +1,2 @@
-/* V5.45 · Punto de entrada. Resultado de partido e informes de ojeo navegables. */
+/* V5.46 · Punto de entrada. Ojeo progresivo sólo sobre faltantes. */
 init();

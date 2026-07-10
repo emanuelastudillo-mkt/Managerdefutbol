@@ -1,12 +1,12 @@
 /*
-  V5.45 · Modificadores de balance del simulador y entrenamiento.
+  V5.46 · Modificadores de balance del simulador y entrenamiento.
   Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
   Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V5.45',
-    nombre: 'Balance centralizado de modificadores V5.45',
+    version: 'V5.46',
+    nombre: 'Balance centralizado de modificadores V5.46',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -51,7 +51,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
     fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 1.50,
+    multiplicadorTarjetas: 1.10,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,

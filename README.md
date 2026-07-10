@@ -1,4 +1,14 @@
-# Fútbol Manager MVP - V5.45
+# Fútbol Manager MVP - V5.46
+
+## V5.46 - Ojeo progresivo sólo sobre faltantes
+
+- Corrección del Centro de Ojeo para que los avances no puedan gastarse en habilidades visibles o ya reveladas.
+- En jugadores propios, el ojeo apunta únicamente a las 3 habilidades ocultas faltantes: agresividad, genética y factor sorpresa.
+- En jugadores externos, el ojeo apunta sólo a datos todavía desconocidos, visibles u ocultos.
+- El contador de días observados ahora avanza por día real de observación cuando hay ojeadores/jefe activo, no sólo cuando se revela una habilidad.
+- La distribución de revelaciones usa un conteo de avances por informe para evitar que varios jugadores queden trabados mientras uno concentra todo el progreso.
+- Corrección técnica: las lecturas repetidas del estado de ojeo ya no pueden trabajar sobre copias desacopladas del informe; cada revelación se guarda sobre el informe persistente.
+- Compatibilidad de partida: se implementa solo.
 
 ## V5.45 - Resultado de partido e informes de ojeo navegables
 

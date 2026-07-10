@@ -318,6 +318,14 @@ async function loadSpecialSkillsDatabase(){
 }
 
 
+async function loadManagerAchievementsDatabase(){
+  const fallback = { metadata:{ version:APP_VERSION, sistema:'hitos_manager', source:'fallback' }, hitos:[] };
+  const raw = await fetchJsonIfExists(MANAGER_ACHIEVEMENTS_DATABASE_URL);
+  if(!raw || typeof raw !== 'object') return fallback;
+  const hitos = Array.isArray(raw.hitos) ? raw.hitos.filter(item => item && item.id && item.metrica) : [];
+  return { ...raw, hitos, source:MANAGER_ACHIEVEMENTS_DATABASE_URL };
+}
+
 function uniqueUrlList(list){
   const raw = Array.isArray(list) ? list : [list];
   return Array.from(new Set(raw.filter(Boolean).map(String)));
@@ -1713,12 +1721,13 @@ async function init(){
   try{
     const savedRecord = await readLocalSaveRecord().catch(() => null);
     const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
-    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedMatchCommentary] = await Promise.all([
+    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedMatchCommentary] = await Promise.all([
       loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
       loadSponsorsDatabase(),
       loadEmployeesDatabase(),
       loadEventsDatabase(),
       loadSpecialSkillsDatabase(),
+      loadManagerAchievementsDatabase(),
       loadMatchCommentaryDatabase()
     ]);
     seed = loadedSeed;
@@ -1726,6 +1735,7 @@ async function init(){
     employeesDatabase = loadedEmployees;
     eventsDatabase = loadedEvents;
     specialSkillsDatabase = loadedSpecialSkills;
+    managerAchievementsDatabase = loadedManagerAchievements;
     matchCommentaryDatabase = loadedMatchCommentary;
     fillClubSelect();
     bindEvents();

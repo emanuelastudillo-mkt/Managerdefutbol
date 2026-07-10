@@ -1,2 +1,2 @@
-/* V5.59 · Punto de entrada. Hitos visibles en estadísticas y partidas existentes. */
+/* V5.58 · Punto de entrada. Finanzas agrupadas y planteles bot clickeables. */
 init();

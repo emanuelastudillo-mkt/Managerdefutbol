@@ -2598,40 +2598,6 @@ function managerAchievementsCatalog(){
   const db = managerAchievementsDatabase && typeof managerAchievementsDatabase === 'object' ? managerAchievementsDatabase : null;
   return Array.isArray(db?.hitos) ? db.hitos : [];
 }
-
-function repairManagerStatsFromCurrentStandingsIfNeeded(){
-  if(!game?.managerStats || !game?.standings || !game?.selectedClubId) return false;
-  game.managerStats = normalizeManagerStats(game.managerStats);
-  const totals = game.managerStats.totals || {};
-  if(Number(totals.played || 0) > 0) return false;
-  const row = game.standings[game.selectedClubId] || game.standings[String(game.selectedClubId)];
-  if(!row) return false;
-  const played = Math.max(0, Math.round(Number(row.pj ?? row.played ?? 0)));
-  if(played <= 0) return false;
-  const won = Math.max(0, Math.round(Number(row.pg ?? row.won ?? 0)));
-  const drawn = Math.max(0, Math.round(Number(row.pe ?? row.drawn ?? 0)));
-  const lost = Math.max(0, Math.round(Number(row.pp ?? row.lost ?? Math.max(0, played - won - drawn))));
-  const gf = Math.max(0, Math.round(Number(row.gf || 0)));
-  const gc = Math.max(0, Math.round(Number(row.gc || 0)));
-  game.managerStats.totals = { played, won, drawn, lost, gf, gc };
-  game.managerStats.currentSeason = {
-    ...(game.managerStats.currentSeason || {}),
-    season:Number(game.seasonNumber || 1),
-    clubId:Number(game.selectedClubId || 0),
-    played,
-    won,
-    drawn,
-    lost,
-    gf,
-    gc
-  };
-  if(Number(game.managerStats.experience || 0) <= 0){
-    game.managerStats.experience = (won * MANAGER_XP_WIN) + (drawn * MANAGER_XP_DRAW) + (lost * MANAGER_XP_LOSS);
-  }
-  game.managerStats = normalizeManagerStats(game.managerStats);
-  return true;
-}
-
 function managerAchievementMetricValue(metric){
   const stats = normalizeManagerStats(game?.managerStats || createInitialManagerStats());
   const totals = stats.totals || {};
@@ -2668,7 +2634,6 @@ function managerAchievementMetricValue(metric){
 }
 function checkManagerAchievements(options={}){
   if(!game?.managerStats) return [];
-  if(typeof repairManagerStatsFromCurrentStandingsIfNeeded === 'function') repairManagerStatsFromCurrentStandingsIfNeeded();
   game.managerStats = normalizeManagerStats(game.managerStats);
   const state = game.managerStats.achievements || normalizeManagerAchievementsState();
   const catalog = managerAchievementsCatalog();

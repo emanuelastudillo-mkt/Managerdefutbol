@@ -21,6 +21,160 @@ async function loadPlayersDatabase(){
   return { raw, players, source:PLAYERS_DATABASE_URL };
 }
 
+
+async function loadManualPlayersDatabase(){
+  const raw = await fetchJsonIfExists(MANUAL_PLAYERS_DATABASE_URL);
+  if(!raw || typeof raw !== 'object') return null;
+  const players = Array.isArray(raw.jugadores) ? raw.jugadores : (Array.isArray(raw.players) ? raw.players : []);
+  if(!players.length || raw?.uso?.cargaAutomatica === false) return null;
+  return { raw, players, source:MANUAL_PLAYERS_DATABASE_URL };
+}
+function manualValue(value, fallback=50, min=1, max=99){
+  const raw = Number(value);
+  const clean = Number.isFinite(raw) ? raw : Number(fallback);
+  return clamp(Math.round(clean), min, max);
+}
+function manualSkill(manualSkills, key, fallback=50, min=1, max=99){
+  if(!manualSkills || typeof manualSkills !== 'object') return manualValue(fallback, fallback, min, max);
+  return manualValue(manualSkills[key], fallback, min, max);
+}
+function resolveManualClubId(seedData, player){
+  const direct = Number(player?.clubId || 0);
+  const validIds = new Set((seedData?.clubs || []).map(club => Number(club.id)));
+  if(direct && validIds.has(direct)) return direct;
+  const teamName = player?.equipo || player?.club || player?.clubName || player?.teamName || '';
+  const teamKey = lookupNameKey(teamName);
+  if(!teamKey) return 0;
+  const club = (seedData?.clubs || []).find(item => lookupNameKey(item?.name || item?.nombre || '') === teamKey);
+  return club ? Number(club.id || 0) : 0;
+}
+function manualVisibleSkillsToInternal(position, manualSkills={}, media=50){
+  const base = manualValue(media, 50, 1, 99);
+  const ataque = manualSkill(manualSkills, 'ataque', base);
+  const defensa = manualSkill(manualSkills, 'defensa', base);
+  const tiro = manualSkill(manualSkills, 'tiro', base);
+  const pase = manualSkill(manualSkills, 'pase', base);
+  const velocidad = manualSkill(manualSkills, 'velocidad', base);
+  const cabezazo = manualSkill(manualSkills, 'cabezazo', base);
+  const resistencia = manualSkill(manualSkills, 'resistencia', base);
+  const liderazgo = manualSkill(manualSkills, 'liderazgo', base);
+  const disciplina = manualSkill(manualSkills, 'disciplina', base);
+  const trabajoEquipo = manualSkill(manualSkills, 'trabajoEquipo', base);
+  const potencial = manualSkill(manualSkills, 'potencial', base);
+  const serenidad = manualValue(Math.round((disciplina + liderazgo + base) / 3), base);
+  const pos = normalizePlayerPosition(position, 0);
+  const skills = {
+    porteria: pos === 'POR' ? defensa : 1,
+    entradas:defensa,
+    marca:defensa,
+    posicionamiento:manualValue(Math.round((ataque + defensa) / 2), base),
+    paseCorto:pase,
+    paseLargo:pase,
+    vision:pase,
+    regate:ataque,
+    tecnica:manualValue(Math.round((ataque + pase) / 2), base),
+    remate:tiro,
+    cabezazo,
+    velocidad,
+    aceleracion:velocidad,
+    fuerza:manualValue(Math.round((cabezazo + resistencia + base) / 3), base),
+    resistencia,
+    trabajoEquipo,
+    serenidad,
+    disciplina,
+    liderazgo,
+    potencial,
+    agresividad:manualSkill(manualSkills, 'agresividad', Math.max(1, 100 - disciplina)),
+    genetica:manualSkill(manualSkills, 'genetica', base),
+    factorSorpresa:manualSkill(manualSkills, 'factorSorpresa', 0, 0, 20)
+  };
+  if(pos === 'POR'){
+    skills.cabezazo = manualValue(Math.round((ataque + cabezazo) / 2), base);
+    skills.fuerza = manualValue(Math.round((ataque + tiro) / 2), base);
+    skills.porteria = manualValue(Math.round((defensa + velocidad) / 2), base);
+    skills.posicionamiento = defensa;
+    skills.paseCorto = pase;
+    skills.paseLargo = manualValue(Math.round((pase + tiro) / 2), base);
+    skills.vision = pase;
+    skills.velocidad = velocidad;
+    skills.aceleracion = velocidad;
+    skills.serenidad = manualValue(Math.round((velocidad + liderazgo + disciplina) / 3), base);
+    skills.liderazgo = manualValue(Math.round((cabezazo + liderazgo) / 2), base);
+    skills.trabajoEquipo = manualValue(Math.round((cabezazo + trabajoEquipo) / 2), base);
+    skills.remate = 1;
+    skills.regate = 1;
+    skills.tecnica = pase;
+    skills.marca = defensa;
+    skills.entradas = defensa;
+  }
+  return skills;
+}
+function normalizeManualDatabasePlayer(player, seedData){
+  if(!player || typeof player !== 'object') return null;
+  const id = Number(player.id || 0);
+  if(!Number.isFinite(id) || id <= 0) return null;
+  const position = normalizePlayerPosition(player.posicion || player.position, id);
+  const clubId = resolveManualClubId(seedData, player);
+  const freeAgent = Boolean(player.jugadorLibre || player.freeAgent || !clubId);
+  const media = manualValue(player.media ?? player.overall, 50, 1, 99);
+  const economy = player.economia && typeof player.economia === 'object' ? player.economia : {};
+  const salary = Math.max(0, Math.round(Number(economy.sueldo ?? player.salary ?? 0)));
+  const clause = Math.max(0, Math.round(Number(economy.clausula ?? player.clause ?? 0)));
+  const value = Math.max(0, Math.round(Number(economy.valor ?? player.value ?? clause)));
+  const mercado = player.mercado && typeof player.mercado === 'object' ? player.mercado : {};
+  return {
+    id,
+    name:String(player.nombre || player.name || `Jugador Manual ${id}`).trim(),
+    age:Math.max(15, Math.round(Number(player.edad ?? player.age ?? 18))),
+    position,
+    clubId:freeAgent ? 0 : clubId,
+    freeAgent,
+    nationality:String(player.nacionalidad || player.nationality || 'Argentina').trim(),
+    overall:media,
+    manualOverallLocked:true,
+    skills:manualVisibleSkillsToInternal(position, player.habilidades || player.skills || {}, media),
+    salary:salary || initialAnnualSalaryForMedia(media, 1),
+    clause:clause || value || 0,
+    value:value || clause || 0,
+    fixedClause:Boolean(economy.clausulaBloqueada ?? player.clausulaBloqueada ?? player.fixedClause ?? true),
+    manualFixedClause:Boolean(economy.clausulaBloqueada ?? player.clausulaBloqueada ?? player.manualFixedClause ?? true),
+    economyLocked:Boolean(economy.clausulaBloqueada ?? player.economyLocked ?? true),
+    photoPath:String(player.foto || player.photoPath || player.photo || '').trim(),
+    transferListed:Boolean(mercado.transferible ?? player.transferListed ?? false),
+    intransferible:Boolean(mercado.intransferible ?? player.intransferible ?? false),
+    sold:Boolean(mercado.vendido ?? player.sold ?? false),
+    retired:Boolean(mercado.retirado ?? player.retired ?? false),
+    manualPlayer:true,
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.37-manual-active-visible-names', tipo:player?.origen?.tipo || 'manual_activo' }
+  };
+}
+function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, options={}){
+  if(!seedData || !database?.players?.length) return seedData;
+  const preserveExisting = Boolean(options?.preserveExisting);
+  const manualPlayers = database.players.map(player => normalizeManualDatabasePlayer(player, seedData)).filter(Boolean);
+  if(!manualPlayers.length) return seedData;
+  const manualIds = new Set(manualPlayers.map(player => Number(player.id)));
+  const existingIds = new Set((seedData.players || []).map(player => Number(player.id)));
+  const kept = (seedData.players || []).filter(player => !manualIds.has(Number(player.id)) || preserveExisting);
+  const toAdd = preserveExisting ? manualPlayers.filter(player => !existingIds.has(Number(player.id))) : manualPlayers;
+  seedData.players = kept.concat(toAdd);
+  seedData.meta = {
+    ...(seedData.meta || {}),
+    manualPlayersSource:database.source,
+    manualPlayersVersion:database.raw?.metadata?.version || 'local',
+    manualPlayersApplied:manualPlayers.length,
+    manualPlayersInserted:toAdd.length
+  };
+  seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
+  return seedData;
+}
+function syncManualPlayersIntoSeed(options={}){
+  if(!seed || !manualPlayersDatabase?.players?.length) return { inserted:0 };
+  const before = seed.players?.length || 0;
+  applyManualPlayersDatabase(seed, manualPlayersDatabase, { preserveExisting:true, ...options });
+  return { inserted:Math.max(0, (seed.players?.length || 0) - before) };
+}
+
 async function loadSponsorsDatabase(){
   const raw = await fetchJsonIfExists(SPONSORS_DATABASE_URL);
   if(!raw) return { lugares_sponsor:[], sponsors:[], reglas_calculo:{} };
@@ -243,7 +397,7 @@ function normalizeDatabasePlayer(player){
   const clean = { ...player, id:Number(player.id), clubId:Number(player.clubId || 0), age:Math.max(15, Math.round(Number(player.age || 18))) };
   clean.position = normalizePlayerPosition(clean.position, clean.id);
   clean.skills = clean.skills && typeof clean.skills === 'object' ? { ...clean.skills } : skillsForPosition(clean.position, Number(clean.overall || 50), clean.id);
-  clean.overall = rawVisibleOverall({ ...clean, overall:Number(clean.overall || 50) });
+  clean.overall = (clean.manualOverallLocked || clean.overallLocked) ? clamp(Math.round(Number(clean.overall || clean.media || 50)), 1, 99) : rawVisibleOverall({ ...clean, overall:Number(clean.overall || 50) });
   ensurePlayerEconomics(clean, clean.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : (clean.freeAgent ? MARKET_FREE_AGENT_SALARY_FACTOR : 1));
   return clean;
 }
@@ -314,6 +468,7 @@ function applySavedDatabaseSnapshots(saved){
   }
   if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
     seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
+    syncManualPlayersIntoSeed({ preserveExisting:true });
   }
   delete clean.playersSnapshot;
   delete clean.clubsSnapshot;
@@ -335,11 +490,13 @@ function currentSavePayload(){
 }
 async function loadInitialSeed(options={}){
   const skipPlayersDatabase = Boolean(options?.skipPlayersDatabase);
-  const [playersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
+  const [playersDatabase, loadedManualPlayersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
     skipPlayersDatabase ? Promise.resolve(null) : loadPlayersDatabase(),
+    loadManualPlayersDatabase(),
     loadStadiumsDatabase(),
     loadFansDatabase()
   ]);
+  manualPlayersDatabase = loadedManualPlayersDatabase;
   stadiumsDatabase = loadedStadiumsDatabase;
   fansDatabase = loadedFansDatabase;
   const loadedLeagues = await Promise.all(LEAGUE_DATA_CANDIDATES.map(async url => ({ url, leagueJson:await fetchJsonIfExists(url) })));
@@ -348,7 +505,7 @@ async function loadInitialSeed(options={}){
     .map(item => applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(item.leagueJson, item.url), stadiumsDatabase, fansDatabase));
   if(leagueSeeds.length){
     const merged = mergeLeagueSeeds(leagueSeeds);
-    return applyPlayersDatabase(merged, playersDatabase);
+    return applyManualPlayersDatabase(applyPlayersDatabase(merged, playersDatabase), manualPlayersDatabase);
   }
   const fallback = await fetchJsonIfExists(DATA_URL);
   if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
@@ -357,7 +514,7 @@ async function loadInitialSeed(options={}){
     fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
     fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
     const withStadiums = applyStadiumAndFansDatabases(fallback, stadiumsDatabase, fansDatabase);
-    return applyPlayersDatabase(withStadiums, playersDatabase);
+    return applyManualPlayersDatabase(applyPlayersDatabase(withStadiums, playersDatabase), manualPlayersDatabase);
   }
   throw new Error('No se pudo cargar ningún JSON de liga ni un data/seed.json válido');
 }
@@ -1436,9 +1593,10 @@ async function loadLocal(silent=false){
     const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
+    const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true });
     const botRepair = repairBotRosters({ reason:'load_game' });
     const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
-    const shouldAutosave = botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired;
+    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired;
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
     activeTab = 'home';

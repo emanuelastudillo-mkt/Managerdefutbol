@@ -1,21 +1,22 @@
-# Características de la versión V5.36
+# Características de la versión V5.37
 
-## Plantilla manual con nombres visibles
+## Jugadores manuales activos
 
-- Corrige `data/jugadores_manual_ejemplo.json` para que use nombres editables del juego en lugar de nombres técnicos internos.
-- Reemplaza la estructura anterior por campos en español: `nombre`, `edad`, `posicion`, `jugadorLibre`, `media`, `habilidades`, `economia`, `foto`, `mercado` y `origen`.
-- El bloque `habilidades` ahora usa atributos visibles: `ataque`, `defensa`, `tiro`, `pase`, `velocidad`, `cabezazo`, `resistencia`, `agresividad`, `genetica`, `factorSorpresa`, `potencial`, `liderazgo`, `disciplina` y `trabajoEquipo`.
-- Agrega reglas de rango para habilidades: valores generales de 1 a 99 y `factorSorpresa` de 0 a 20.
-- Agrega equivalencias específicas para arqueros: ataque/salto, tiro/potencia, velocidad/reflejos y cabezazo/mando.
-- Mantiene `foto` como ruta personalizada de imagen por jugador.
+- Agrega `data/jugadores_manuales.json` como archivo activo de carga automática.
+- Crea 7 jugadores manuales en clubes reales del juego: Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele.
+- Resuelve los clubes destino con IDs reales cargados por el juego: Barcelona, Juventus, Manchester United, Milan, Napoli, Real Madrid y Santos.
+- Todos los jugadores manuales usan sueldo anual fijo de `$150.000.000`, cláusula fija de `$1.200.000.000` y valor de mercado de `$1.200.000.000`.
+- Agrega rutas de foto personalizadas en `img/jugadores/manual/`. Si la imagen no existe, la UI vuelve automáticamente a las caras por nacionalidad.
+- Convierte la estructura visible de `habilidades` al modelo interno del juego.
+- Respeta `media` como media bloqueada para estos jugadores manuales.
+- Los campos `agresividad`, `genetica` y `factorSorpresa` ahora pueden impactar como habilidades ocultas cuando existen en jugadores manuales.
 
 ## Alcance
 
 - No agrega pantalla de edición manual todavía.
-- No carga automáticamente el JSON nuevo.
-- No modifica generación automática, mercado, planteles ni partidas guardadas.
-- El importador futuro deberá convertir esta estructura amigable al modelo interno del juego.
+- No modifica la generación automática de jugadores comunes.
+- No modifica reglas de mercado, contratos ni simulación fuera de la carga manual.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida; es una corrección de plantilla/documentación para futura carga manual.
+Se implementa solo. No requiere reiniciar partida. En partidas existentes, los jugadores manuales se agregan al cargar si todavía no existen por ID.

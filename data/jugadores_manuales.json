@@ -1,0 +1,359 @@
+{
+  "metadata": {
+    "nombre": "jugadores_manuales",
+    "version": "V5.37",
+    "appVersion": "V5.37",
+    "proyecto": "manager_de_futbol",
+    "descripcion": "Jugadores manuales activos cargados con nombres visibles de la plantilla V5.36.",
+    "moneda": "ARS",
+    "unidadSueldo": "anual",
+    "rutaFotosSugerida": "img/jugadores/manual/",
+    "campoFotoPersonalizada": "foto"
+  },
+  "uso": {
+    "estado": "activo",
+    "cargaAutomatica": true,
+    "nota": "El juego carga este archivo automáticamente si está configurado en config.js como data.manualPlayersUrl.",
+    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando los nombres declarados en cada jugador. Si falta la imagen, el juego usa caras automáticas."
+  },
+  "reglas": {
+    "sueldoAnualFijo": 150000000,
+    "clausulaFija": 1200000000,
+    "valorMercadoFijo": 1200000000,
+    "clausulaBloqueada": true,
+    "idsReservados": "910001 en adelante para jugadores manuales activos"
+  },
+  "habilidadesRequeridas": [
+    "ataque",
+    "defensa",
+    "tiro",
+    "pase",
+    "velocidad",
+    "cabezazo",
+    "resistencia",
+    "agresividad",
+    "genetica",
+    "factorSorpresa",
+    "potencial",
+    "liderazgo",
+    "disciplina",
+    "trabajoEquipo"
+  ],
+  "jugadores": [
+    {
+      "id": 910001,
+      "nombre": "Ronaldinho",
+      "edad": 23,
+      "posicion": "EI",
+      "equipo": "Barcelona",
+      "clubId": 110,
+      "jugadorLibre": false,
+      "nacionalidad": "Brasil",
+      "media": 95,
+      "habilidades": {
+        "ataque": 97,
+        "defensa": 45,
+        "tiro": 93,
+        "pase": 96,
+        "velocidad": 93,
+        "cabezazo": 72,
+        "resistencia": 88,
+        "agresividad": 30,
+        "genetica": 96,
+        "factorSorpresa": 20,
+        "potencial": 99,
+        "liderazgo": 88,
+        "disciplina": 70,
+        "trabajoEquipo": 90
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/ronaldinho.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910002,
+      "nombre": "Gianluigi Buffon",
+      "edad": 26,
+      "posicion": "POR",
+      "equipo": "Juventus",
+      "clubId": 127,
+      "jugadorLibre": false,
+      "nacionalidad": "Italia",
+      "media": 92,
+      "habilidades": {
+        "ataque": 90,
+        "defensa": 96,
+        "tiro": 90,
+        "pase": 79,
+        "velocidad": 94,
+        "cabezazo": 95,
+        "resistencia": 88,
+        "agresividad": 25,
+        "genetica": 95,
+        "factorSorpresa": 12,
+        "potencial": 97,
+        "liderazgo": 96,
+        "disciplina": 94,
+        "trabajoEquipo": 92
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/gianluigi_buffon.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910003,
+      "nombre": "David Beckham",
+      "edad": 22,
+      "posicion": "MD",
+      "equipo": "Manchester United",
+      "clubId": 93,
+      "jugadorLibre": false,
+      "nacionalidad": "Inglaterra",
+      "media": 88,
+      "habilidades": {
+        "ataque": 86,
+        "defensa": 70,
+        "tiro": 85,
+        "pase": 96,
+        "velocidad": 80,
+        "cabezazo": 70,
+        "resistencia": 88,
+        "agresividad": 45,
+        "genetica": 88,
+        "factorSorpresa": 12,
+        "potencial": 93,
+        "liderazgo": 88,
+        "disciplina": 90,
+        "trabajoEquipo": 92
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/david_beckham.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910004,
+      "nombre": "Paolo Maldini",
+      "edad": 24,
+      "posicion": "LI",
+      "equipo": "Milan",
+      "clubId": 129,
+      "jugadorLibre": false,
+      "nacionalidad": "Italia",
+      "media": 92,
+      "habilidades": {
+        "ataque": 75,
+        "defensa": 98,
+        "tiro": 65,
+        "pase": 86,
+        "velocidad": 88,
+        "cabezazo": 91,
+        "resistencia": 93,
+        "agresividad": 38,
+        "genetica": 94,
+        "factorSorpresa": 8,
+        "potencial": 96,
+        "liderazgo": 95,
+        "disciplina": 96,
+        "trabajoEquipo": 94
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/paolo_maldini.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910005,
+      "nombre": "Diego Maradona",
+      "edad": 23,
+      "posicion": "MCO",
+      "equipo": "Napoli",
+      "clubId": 130,
+      "jugadorLibre": false,
+      "nacionalidad": "Argentina",
+      "media": 98,
+      "habilidades": {
+        "ataque": 99,
+        "defensa": 50,
+        "tiro": 97,
+        "pase": 99,
+        "velocidad": 95,
+        "cabezazo": 65,
+        "resistencia": 88,
+        "agresividad": 45,
+        "genetica": 98,
+        "factorSorpresa": 20,
+        "potencial": 99,
+        "liderazgo": 94,
+        "disciplina": 62,
+        "trabajoEquipo": 90
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/diego_maradona.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910006,
+      "nombre": "Zinedine Zidane",
+      "edad": 25,
+      "posicion": "MCO",
+      "equipo": "Real Madrid",
+      "clubId": 109,
+      "jugadorLibre": false,
+      "nacionalidad": "Francia",
+      "media": 96,
+      "habilidades": {
+        "ataque": 96,
+        "defensa": 62,
+        "tiro": 92,
+        "pase": 99,
+        "velocidad": 85,
+        "cabezazo": 86,
+        "resistencia": 91,
+        "agresividad": 35,
+        "genetica": 96,
+        "factorSorpresa": 18,
+        "potencial": 99,
+        "liderazgo": 92,
+        "disciplina": 86,
+        "trabajoEquipo": 94
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/zinedine_zidane.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    },
+    {
+      "id": 910007,
+      "nombre": "Pele",
+      "edad": 27,
+      "posicion": "DC",
+      "equipo": "Santos",
+      "clubId": 77,
+      "jugadorLibre": false,
+      "nacionalidad": "Brasil",
+      "media": 98,
+      "habilidades": {
+        "ataque": 99,
+        "defensa": 55,
+        "tiro": 99,
+        "pase": 94,
+        "velocidad": 96,
+        "cabezazo": 95,
+        "resistencia": 94,
+        "agresividad": 35,
+        "genetica": 99,
+        "factorSorpresa": 18,
+        "potencial": 99,
+        "liderazgo": 95,
+        "disciplina": 90,
+        "trabajoEquipo": 92
+      },
+      "economia": {
+        "sueldo": 150000000,
+        "clausula": 1200000000,
+        "valor": 1200000000,
+        "clausulaBloqueada": true
+      },
+      "foto": "img/jugadores/manual/pele.png",
+      "mercado": {
+        "transferible": false,
+        "intransferible": false,
+        "vendido": false,
+        "retirado": false
+      },
+      "origen": {
+        "source": "data/jugadores_manuales.json",
+        "rulesVersion": "V5.37-manual-active-visible-names",
+        "tipo": "manual_activo"
+      }
+    }
+  ]
+}

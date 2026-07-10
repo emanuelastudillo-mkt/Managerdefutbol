@@ -23,6 +23,7 @@ const DATA_URL = configValue('data.seedUrl', 'data/seed.json');
 const DATA_CACHE_MODE_RAW = String(configValue('data.cacheMode', 'default')).trim();
 const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache'].includes(DATA_CACHE_MODE_RAW) ? DATA_CACHE_MODE_RAW : 'default';
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
@@ -605,6 +606,7 @@ const DEFAULT_TACTIC = {
 };
 
 let seed = null;
+let manualPlayersDatabase = null;
 let sponsorsDatabase = null;
 let employeesDatabase = null;
 let eventsDatabase = null;

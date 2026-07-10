@@ -1,5 +1,16 @@
 # Historial de versiones
 
+## V5.37 - Jugadores manuales activos
+
+- Agrega `data/jugadores_manuales.json` como archivo activo de carga automática.
+- Crea a Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele en clubes reales del juego.
+- Todos quedan con sueldo anual `$150.000.000`, cláusula fija `$1.200.000.000` y valor `$1.200.000.000`.
+- Usa rutas de foto en `img/jugadores/manual/`, por ejemplo `img/jugadores/manual/ronaldinho.png`.
+- Convierte `media` y `habilidades` visibles al modelo interno del juego.
+- Respeta la media manual como media bloqueada.
+- En partidas existentes, los agrega al cargar si todavía no existen.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
 ## V5.36 - Plantilla manual con nombres visibles de habilidades
 
 - Corrige `data/jugadores_manual_ejemplo.json` para que use nombres visibles y editables del juego, no nombres técnicos internos.

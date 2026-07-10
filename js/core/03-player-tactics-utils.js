@@ -300,9 +300,12 @@ function rawVisibleSkill(p, skillName){
   return clamp(Math.round(p.skills?.[skillName] ?? p.overall ?? 50), 1, 99);
 }
 function hiddenStats(p){
-  const aggression = clamp(Math.round(100 - (p.skills.disciplina || 50) + hashNumber(`ag${p.id}`, 18) - 8), 1, 99);
-  const genetics = clamp(Math.round(45 + hashNumber(`ge${p.id}`, 55)), 1, 99);
-  const surprise = clamp(hashNumber(`su${p.id}`, 21), 0, 20);
+  const manualAggression = Number(p?.skills?.agresividad);
+  const manualGenetics = Number(p?.skills?.genetica);
+  const manualSurprise = Number(p?.skills?.factorSorpresa);
+  const aggression = Number.isFinite(manualAggression) ? clamp(Math.round(manualAggression), 1, 99) : clamp(Math.round(100 - (p.skills.disciplina || 50) + hashNumber(`ag${p.id}`, 18) - 8), 1, 99);
+  const genetics = Number.isFinite(manualGenetics) ? clamp(Math.round(manualGenetics), 1, 99) : clamp(Math.round(45 + hashNumber(`ge${p.id}`, 55)), 1, 99);
+  const surprise = Number.isFinite(manualSurprise) ? clamp(Math.round(manualSurprise), 0, 20) : clamp(hashNumber(`su${p.id}`, 21), 0, 20);
   return { aggression, genetics, surprise };
 }
 function effectiveSkill(p, skillName){
@@ -333,13 +336,24 @@ function visibleStats(p, skillResolver=baseSkill){
   };
 }
 
+function lockedManualOverall(p){
+  if(!p?.manualOverallLocked && !p?.overallLocked) return null;
+  const value = Number(p?.overall || p?.media);
+  return Number.isFinite(value) ? clamp(Math.round(value), 1, 99) : null;
+}
 function visibleOverall(p){
+  const locked = lockedManualOverall(p);
+  if(locked !== null) return locked;
   return clamp(Math.round(avg(Object.values(visibleStats(p)))), 1, 99);
 }
 function rawVisibleOverall(p){
+  const locked = lockedManualOverall(p);
+  if(locked !== null) return locked;
   return clamp(Math.round(avg(Object.values(visibleStats(p, rawVisibleSkill)))), 1, 99);
 }
 function effectiveOverall(p){
+  const locked = lockedManualOverall(p);
+  if(locked !== null) return locked;
   const simulated = {
     Ataque: Math.round(avg([effectiveSkill(p,'remate'), effectiveSkill(p,'regate'), effectiveSkill(p,'posicionamiento')])) || p.overall,
     Defensa: Math.round(avg([effectiveSkill(p,'marca'), effectiveSkill(p,'entradas'), effectiveSkill(p,'posicionamiento')])) || p.overall,
@@ -767,6 +781,11 @@ function playerClauseFor(player, clubId=player?.clubId, divisionName=''){
 }
 function refreshPlayerClause(player){
   if(!player) return 0;
+  if(player.fixedClause || player.manualFixedClause || player.economyLocked){
+    player.clause = Math.max(0, Math.round(Number(player.clause || player.value || 0)));
+    player.value = Math.max(0, Math.round(Number(player.value || player.clause || 0)));
+    return player.clause;
+  }
   player.clause = playerClauseFor(player, player.clubId);
   player.value = player.clause;
   return player.clause;

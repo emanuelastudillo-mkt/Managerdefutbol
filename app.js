@@ -1,2 +1,2 @@
-/* V5.36 · Punto de entrada. Plantilla manual con nombres visibles de habilidades. */
+/* V5.37 · Punto de entrada. Jugadores manuales activos por JSON. */
 init();

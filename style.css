@@ -4565,10 +4565,18 @@ th{
   display:flex;
   gap:10px;
   align-items:flex-start;
-  background:rgba(255,255,255,.72);
-  border:1px solid rgba(15,23,42,.08);
+  background:linear-gradient(180deg,rgba(255,245,186,.94),rgba(243,202,89,.78));
+  border:1px solid rgba(181,132,24,.34);
   border-radius:14px;
   padding:10px;
+  box-shadow:0 10px 26px rgba(166,118,16,.16), inset 0 1px 0 rgba(255,255,255,.42);
+}
+.achievement-unlocked-card strong{color:#6b4500}
+.achievement-unlocked-card .small.muted{color:#7c5a12!important}
+.achievement-unlocked-card .pill{
+  background:rgba(158,104,0,.14)!important;
+  color:#7a4a00!important;
+  border-color:rgba(158,104,0,.26)!important;
 }
 .achievement-icon{
   width:34px;
@@ -4576,8 +4584,10 @@ th{
   border-radius:999px;
   display:grid;
   place-items:center;
-  background:#fff;
-  box-shadow:0 3px 10px rgba(15,23,42,.08);
+  background:radial-gradient(circle at 30% 30%,#fff7cf 0%,#f4d35e 58%,#d4a017 100%);
+  border:1px solid rgba(162,113,10,.28);
+  color:#7a4a00;
+  box-shadow:0 3px 12px rgba(166,118,16,.22);
   flex:0 0 auto;
 }
 

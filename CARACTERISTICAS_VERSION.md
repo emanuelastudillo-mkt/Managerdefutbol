@@ -1,4 +1,18 @@
-# Características de la versión V5.58
+# Características de la versión V5.61
+
+## V5.61 - Hitos con estilo dorado
+
+### Cambios principales
+- Las tarjetas de hitos y récords personales pasan de blanco a amarillo/dorado.
+- Se ajustan fondo, borde, brillo, icono y pill de categoría para reforzar el aspecto de logro desbloqueado.
+- No cambia el sistema de hitos ni sus condiciones, sólo la parte visual.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta únicamente la presentación visual de los hitos.
+
+---
 
 ## V5.58 - Finanzas agrupadas y planteles bot clickeables
 

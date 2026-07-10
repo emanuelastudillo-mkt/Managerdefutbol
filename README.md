@@ -1,4 +1,13 @@
-# Fútbol Manager MVP - V5.58
+# Fútbol Manager MVP - V5.61
+
+## V5.61 - Hitos con estilo dorado
+
+- Los hitos y récords personales ahora usan una estética amarilla/dorada en lugar de blanca.
+- Se ajustaron fondo, borde, sombra, textos e ícono para que se destaquen como logros desbloqueados.
+- No cambia la lógica de desbloqueo, sólo la presentación visual.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.58 - Finanzas agrupadas y planteles bot clickeables
 

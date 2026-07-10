@@ -1,8 +1,8 @@
 # Versión actual
 
-V5.58
+V5.61
 
 ## Cambios
-- Finanzas agrupa movimientos iguales para compactar el historial.
-- La lista de sueldos de jugadores queda siempre visible, sin minimizar.
-- Al abrir un club bot, los jugadores de su plantilla son clickeables y abren ficha.
+- Los hitos y récords personales ahora usan un estilo visual amarillo/dorado.
+- Se ajustan fondo, borde, icono y etiquetas para destacarlos mejor.
+- No cambia la lógica de desbloqueo, sólo la presentación visual.

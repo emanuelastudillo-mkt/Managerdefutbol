@@ -1,2 +1,2 @@
-/* V5.58 · Punto de entrada. Finanzas agrupadas y planteles bot clickeables. */
+/* V5.61 · Punto de entrada. Hitos con estilo dorado. */
 init();

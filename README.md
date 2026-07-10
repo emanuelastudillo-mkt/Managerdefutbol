@@ -1,4 +1,16 @@
-# Fútbol Manager MVP - V5.62
+# Fútbol Manager MVP - V5.63
+
+## V5.63 - Verificador automático cada 5 días
+
+- Se agrega un verificador/reparador automático cada 5 días de juego.
+- El chequeo se ejecuta durante pretemporada, temporada regular y postemporada.
+- Repara de forma silenciosa estadísticas mínimas faltantes de partidos bot ya jugados.
+- Ejecuta reparación segura de planteles bot cuando corresponde.
+- En postemporada valida `postseasonStartDate`, `postseasonTotalTurns` y fecha visible para evitar contadores inflados o fechas congeladas.
+- Guarda resumen interno en `game.scheduledVerifierState` y log acotado en `game.scheduledVerifierLog`.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.62 - Corrección calendario postemporada
 

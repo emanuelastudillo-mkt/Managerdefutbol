@@ -1,9 +1,9 @@
 # Versión actual
 
-V5.62
+V5.63
 
 ## Cambios
-- Corrige el cálculo de duración de postemporada.
-- Guarda fecha de inicio y duración de postemporada para evitar recálculos desde fixtures incompletos.
-- Repara partidas ya afectadas donde el calendario quedaba congelado y mostraba postemporadas excesivas.
-- Normaliza versión visible y cache-busting a V5.62.
+- Agrega verificador/reparador automático cada 5 días de juego.
+- Revisa partidos bot con datos mínimos faltantes, planteles bot y calendario de postemporada.
+- En postemporada valida fecha de inicio, duración total y fecha visible para evitar contadores inflados o días congelados.
+- Guarda resumen interno en `game.scheduledVerifierState` y log acotado en `game.scheduledVerifierLog`.

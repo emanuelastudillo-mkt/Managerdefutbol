@@ -1,2 +1,2 @@
-/* V5.62 · Punto de entrada. Corrección de calendario de postemporada. */
+/* V5.63 · Punto de entrada. Verificador automático cada 5 días. */
 init();

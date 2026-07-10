@@ -1,4 +1,19 @@
-# Características de la versión V5.62
+# Características de la versión V5.63
+
+## V5.63 - Verificador automático cada 5 días
+
+### Cambios principales
+- Se suma un verificador/reparador automático que corre cada 5 días de juego.
+- El verificador revisa datos mínimos de partidos bot, reparación segura de planteles bot y consistencia de calendario de postemporada.
+- En postemporada revalida el inicio, duración total y fecha visible para evitar casos como contadores inflados o día congelado.
+- El proceso es silencioso; sólo guarda un resumen interno cuando corrige algo.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta chequeos futuros al avanzar días.
+
+---
 
 ## V5.62 - Corrección calendario postemporada
 

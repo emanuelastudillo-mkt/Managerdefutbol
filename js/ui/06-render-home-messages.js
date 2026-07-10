@@ -83,6 +83,8 @@ function renderAll(){
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof repairManagerStatsFromCurrentStandingsIfNeeded === 'function') repairManagerStatsFromCurrentStandingsIfNeeded();
+  if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:true });
   if(game.gameOver?.active){
     renderGameOverScreen();
     return;

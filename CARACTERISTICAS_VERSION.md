@@ -1,18 +1,18 @@
-# Características de la versión V5.58
+# Características de la versión V5.59
 
-## V5.58 - Finanzas agrupadas y planteles bot clickeables
+## V5.59 - Hitos visibles en estadísticas
 
 ### Cambios principales
-- El historial de Finanzas agrupa movimientos iguales por temporada, tipo y concepto.
-- Las filas agrupadas muestran cantidad de movimientos, rango de fechas, monto consolidado y último presupuesto registrado.
-- Los bloques por categoría de ingresos y gastos también muestran grupos cuando hay movimientos repetidos.
-- La tarjeta **Plantel y sueldos** queda siempre desplegada; no se minimiza.
-- En la ficha de un equipo bot, la tabla **Plantilla observada** permite clickear jugadores para abrir su ficha.
+- Los hitos y récords personales aparecen en **Mis estadísticas** y también como tarjeta superior dentro de **Estadísticas**.
+- Se renombra el acceso lateral a **Mis estadísticas**.
+- Se fuerza el chequeo silencioso de hitos al renderizar la UI para que partidas existentes desbloqueen logros ya cumplidos.
+- Se agrega recuperación mínima de estadísticas desde la tabla actual si una partida antigua no tenía totales de manager registrados.
+- El bloque de hitos muestra contador `desbloqueados/total` y aviso claro si no se cargó `data/hitos_manager.json`.
 
 ### Compatibilidad
 - Se implementa solo.
 - No requiere reiniciar partida.
-- Afecta sólo visualización de Finanzas y navegación de planteles bot.
+- Las partidas ya iniciadas pueden desbloquear hitos sobre los datos que ya estén guardados o reconstruibles desde la tabla actual.
 
 ---
 

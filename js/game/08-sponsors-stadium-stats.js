@@ -499,7 +499,22 @@ function standingsStatusClass(divisionId, index, total){
   return '';
 }
 
+
+function renderManagerAchievementsSummaryCard(){
+  const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];
+  const achievementTotal = typeof managerAchievementsCatalog === 'function' ? managerAchievementsCatalog().length : unlockedAchievements.length;
+  const achievementRows = unlockedAchievements.map(item => `<div class="achievement-unlocked-card"><span class="achievement-icon">${escapeHtml(item.icono || '★')}</span><div><strong>${escapeHtml(item.titulo || 'Hito')}</strong><p class="small muted">${escapeHtml(item.descripcion || '')}</p><span class="pill">${escapeHtml(item.categoria || 'Manager')}</span></div></div>`).join('');
+  const emptyText = achievementTotal > 0
+    ? 'Todavía no desbloqueaste hitos personales. Cuando cumplas uno, aparecerá acá automáticamente.'
+    : 'No se pudo cargar la lista de hitos. Revisá que exista data/hitos_manager.json.';
+  return `<div class="card manager-achievements-card" style="margin-top:14px">
+    <div class="row space-between"><div><h3>Hitos y récords personales</h3><p class="muted small">Sólo se muestran los logros ya conseguidos. Los pendientes permanecen ocultos.</p></div><span class="pill achievement-count-pill">${unlockedAchievements.length}/${achievementTotal || 0}</span></div>
+    <div class="manager-achievements-grid">${achievementRows || `<p class="muted">${emptyText}</p>`}</div>
+  </div>`;
+}
+
 function renderManagerStats(){
+  if(typeof repairManagerStatsFromCurrentStandingsIfNeeded === 'function') repairManagerStatsFromCurrentStandingsIfNeeded();
   game.managerStats = normalizeManagerStats(game.managerStats);
   const totals = game.managerStats.totals;
   const seasons = game.managerStats.seasons.slice().sort((a,b)=>(b.season || 0)-(a.season || 0));
@@ -509,6 +524,9 @@ function renderManagerStats(){
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
   const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
   const experience = Number(game.managerStats.experience || 0);
+  const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];
+  const achievementTotal = typeof managerAchievementsCatalog === 'function' ? managerAchievementsCatalog().length : unlockedAchievements.length;
+  const achievementsCard = typeof renderManagerAchievementsSummaryCard === 'function' ? renderManagerAchievementsSummaryCard() : '';
   const rows = seasons.map(item => {
     const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${Number(item.objectivePpg).toFixed(2)} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : '—';
     const deltaLabel = Number.isFinite(Number(item.objectiveDelta)) ? ` <span class="small muted">${Number(item.objectiveDelta) >= 0 ? '+' : ''}${Number(item.objectiveDelta).toFixed(2)}</span>` : '';
@@ -545,7 +563,9 @@ function renderManagerStats(){
       <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
       <div class="card"><p class="label">Objetivos / directiva</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">dinámico por PPG vs objetivo</span></div>
       <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
+      <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">lista oculta: se revela al conseguirlos</span></div>
     </div>
+    ${achievementsCard}
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
       <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
     </div>
@@ -555,6 +575,8 @@ function renderManagerStats(){
 }
 
 function renderStats(){
+  if(game && typeof repairManagerStatsFromCurrentStandingsIfNeeded === 'function') repairManagerStatsFromCurrentStandingsIfNeeded();
+  const achievementsCard = game && typeof renderManagerAchievementsSummaryCard === 'function' ? renderManagerAchievementsSummaryCard() : '';
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
   if(selectedStatsDivision !== 'all' && !divisions.some(d => d.id === selectedStatsDivision)){
@@ -580,7 +602,8 @@ function renderStats(){
       <div><h2>Estadísticas</h2><p class="tagline">Rankings separados por división.</p></div>
       ${divisionFilterMarkup('statsDivisionFilter', selectedStatsDivision)}
     </div>
-    <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>
+    ${achievementsCard}
+    <div class="stack" style="margin-top:14px">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>
   `;
   $('statsDivisionFilter')?.addEventListener('change', event => { selectedStatsDivision = event.target.value; renderStats(); });
 }

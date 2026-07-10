@@ -2547,7 +2547,8 @@ function createInitialManagerStats(){
     prestigeWinMilestones:0,
     prestigeAdjustments:[],
     objectivePrestigeAwards:[],
-    careerHistory:[]
+    careerHistory:[],
+    achievements:{ unlocked:{}, lastCheckedDate:null }
   };
 }
 function normalizeManagerStats(stats){
@@ -2571,11 +2572,137 @@ function normalizeManagerStats(stats){
     prestigeWinMilestones,
     prestigeAdjustments,
     objectivePrestigeAwards:Array.isArray(src.objectivePrestigeAwards) ? src.objectivePrestigeAwards : [],
-    careerHistory:Array.isArray(src.careerHistory) ? src.careerHistory : []
+    careerHistory:Array.isArray(src.careerHistory) ? src.careerHistory : [],
+    achievements:normalizeManagerAchievementsState(src.achievements)
   };
   normalized.prestige = managerPrestigeBreakdown(normalized).total;
   return normalized;
 }
+
+function normalizeManagerAchievementsState(state){
+  const clean = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const unlockedRaw = clean.unlocked && typeof clean.unlocked === 'object' && !Array.isArray(clean.unlocked) ? clean.unlocked : {};
+  const unlocked = {};
+  Object.entries(unlockedRaw).forEach(([id, item]) => {
+    if(!id) return;
+    unlocked[String(id)] = {
+      id:String(id),
+      unlockedAt:item?.unlockedAt || item?.date || null,
+      season:Number(item?.season || 0),
+      value:Number.isFinite(Number(item?.value)) ? Number(item.value) : 0
+    };
+  });
+  return { unlocked, lastCheckedDate:clean.lastCheckedDate || null };
+}
+function managerAchievementsCatalog(){
+  const db = managerAchievementsDatabase && typeof managerAchievementsDatabase === 'object' ? managerAchievementsDatabase : null;
+  return Array.isArray(db?.hitos) ? db.hitos : [];
+}
+
+function repairManagerStatsFromCurrentStandingsIfNeeded(){
+  if(!game?.managerStats || !game?.standings || !game?.selectedClubId) return false;
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  const totals = game.managerStats.totals || {};
+  if(Number(totals.played || 0) > 0) return false;
+  const row = game.standings[game.selectedClubId] || game.standings[String(game.selectedClubId)];
+  if(!row) return false;
+  const played = Math.max(0, Math.round(Number(row.pj ?? row.played ?? 0)));
+  if(played <= 0) return false;
+  const won = Math.max(0, Math.round(Number(row.pg ?? row.won ?? 0)));
+  const drawn = Math.max(0, Math.round(Number(row.pe ?? row.drawn ?? 0)));
+  const lost = Math.max(0, Math.round(Number(row.pp ?? row.lost ?? Math.max(0, played - won - drawn))));
+  const gf = Math.max(0, Math.round(Number(row.gf || 0)));
+  const gc = Math.max(0, Math.round(Number(row.gc || 0)));
+  game.managerStats.totals = { played, won, drawn, lost, gf, gc };
+  game.managerStats.currentSeason = {
+    ...(game.managerStats.currentSeason || {}),
+    season:Number(game.seasonNumber || 1),
+    clubId:Number(game.selectedClubId || 0),
+    played,
+    won,
+    drawn,
+    lost,
+    gf,
+    gc
+  };
+  if(Number(game.managerStats.experience || 0) <= 0){
+    game.managerStats.experience = (won * MANAGER_XP_WIN) + (drawn * MANAGER_XP_DRAW) + (lost * MANAGER_XP_LOSS);
+  }
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  return true;
+}
+
+function managerAchievementMetricValue(metric){
+  const stats = normalizeManagerStats(game?.managerStats || createInitialManagerStats());
+  const totals = stats.totals || {};
+  const seasons = Array.isArray(stats.seasons) ? stats.seasons : [];
+  const key = String(metric || '');
+  if(key === 'totals.played') return Number(totals.played || 0);
+  if(key === 'totals.won') return Number(totals.won || 0);
+  if(key === 'totals.drawn') return Number(totals.drawn || 0);
+  if(key === 'totals.lost') return Number(totals.lost || 0);
+  if(key === 'totals.gf') return Number(totals.gf || 0);
+  if(key === 'totals.gc') return Number(totals.gc || 0);
+  if(key === 'goalDiff') return Number(totals.gf || 0) - Number(totals.gc || 0);
+  if(key === 'titles') return Number(stats.titles || 0);
+  if(key === 'experience') return Number(stats.experience || 0);
+  if(key === 'prestige') return Number(stats.prestige || 0);
+  if(key === 'seasonsCompleted') return seasons.length;
+  if(key === 'objectivesAchieved') return seasons.filter(item => item?.objectiveAchieved === true).length;
+  if(key === 'bestSeasonPpg') return seasons.reduce((max, item) => Math.max(max, Number(item.ppg || 0)), 0);
+  if(key === 'bestSeasonPoints') return seasons.reduce((max, item) => Math.max(max, Number(item.pts || 0)), 0);
+  if(key === 'currentBudget') return Math.max(0, Math.round(Number(game?.budget || 0)));
+  if(key === 'stadiumCapacity') return typeof clubStadiumCapacity === 'function' ? clubStadiumCapacity(game?.selectedClubId) : 0;
+  if(key === 'fans') return typeof clubFansCurrent === 'function' ? clubFansCurrent(game?.selectedClubId) : 0;
+  if(key === 'skillPoints') return Math.max(0, Math.round(Number(game?.special?.puntos_habilidad || 0)));
+  if(key === 'activeSpecialCards') return Array.isArray(game?.special?.activeCards) ? game.special.activeCards.length : 0;
+  if(key === 'savedScoutingReports') return game?.scoutingCenter?.reports && typeof game.scoutingCenter.reports === 'object' ? Object.keys(game.scoutingCenter.reports).length : 0;
+  if(key === 'archivedScoutingReports'){
+    const listed = new Set(Array.isArray(game?.scoutingCenter?.listedPlayerIds) ? game.scoutingCenter.listedPlayerIds.map(Number) : []);
+    return game?.scoutingCenter?.reports && typeof game.scoutingCenter.reports === 'object' ? Object.keys(game.scoutingCenter.reports).filter(id => !listed.has(Number(id))).length : 0;
+  }
+  if(key === 'scoutedTeams') return game?.scoutingCenter?.teamReports && typeof game.scoutingCenter.teamReports === 'object' ? Object.keys(game.scoutingCenter.teamReports).length : 0;
+  if(key === 'academyPlayers') return Array.isArray(game?.academy?.players) ? game.academy.players.length : 0;
+  if(key === 'employeesCount') return ['psychologist','kinesiologist','youthPreparer'].filter(key => game?.employees?.[key]).length;
+  return 0;
+}
+function checkManagerAchievements(options={}){
+  if(!game?.managerStats) return [];
+  if(typeof repairManagerStatsFromCurrentStandingsIfNeeded === 'function') repairManagerStatsFromCurrentStandingsIfNeeded();
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  const state = game.managerStats.achievements || normalizeManagerAchievementsState();
+  const catalog = managerAchievementsCatalog();
+  const unlockedNow = [];
+  catalog.forEach(item => {
+    const id = String(item.id || '');
+    if(!id || state.unlocked[id]) return;
+    const value = managerAchievementMetricValue(item.metrica);
+    const target = Number(item.objetivo || 0);
+    if(Number(value) >= target){
+      state.unlocked[id] = { id, unlockedAt:currentCalendarDate(), season:Number(game.seasonNumber || 1), value:Number(value || 0) };
+      unlockedNow.push({ ...item, value:Number(value || 0) });
+    }
+  });
+  state.lastCheckedDate = currentCalendarDate();
+  game.managerStats.achievements = state;
+  if(unlockedNow.length && options.silent !== true){
+    const first = unlockedNow[0];
+    pushGameMessage({ type:'asistente', priority:'normal', title:'Nuevo hito desbloqueado', body:`${first.titulo}${unlockedNow.length > 1 ? ` y ${unlockedNow.length - 1} hito(s) más` : ''}. Revisalo en Tus estadísticas.`, id:`manager-achievement-${game.seasonNumber || 1}-${game.globalTurn || 0}-${first.id}` });
+  }
+  return unlockedNow;
+}
+function managerUnlockedAchievements(){
+  if(!game?.managerStats) return [];
+  game.managerStats = normalizeManagerStats(game.managerStats);
+  checkManagerAchievements({ silent:true });
+  const state = game.managerStats.achievements || normalizeManagerAchievementsState();
+  const catalog = managerAchievementsCatalog();
+  return catalog
+    .filter(item => state.unlocked?.[String(item.id || '')])
+    .map(item => ({ ...item, unlocked:state.unlocked[String(item.id || '')] }))
+    .sort((a,b)=>String(b.unlocked?.unlockedAt || '').localeCompare(String(a.unlocked?.unlockedAt || '')) || String(a.categoria || '').localeCompare(String(b.categoria || '')));
+}
+
 function addManagerPrestige(points, reason=''){
   if(!game?.managerStats || Number(points || 0) === 0) return 0;
   game.managerStats = normalizeManagerStats(game.managerStats);
@@ -3130,6 +3257,7 @@ function updateManagerMatchStats(match){
   updateManagerPrestigeFromWins();
   if(typeof updateTransferBudgetPerformanceUnlocks === 'function') updateTransferBudgetPerformanceUnlocks();
   if(currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
+  checkManagerAchievements({ silent:false });
   checkManagerObjectiveGameOver();
 }
 function divisionOrderList(){
@@ -3827,6 +3955,100 @@ function updateClubPrestigeAfterSeason(){
   });
   return changes;
 }
+
+function managerSeasonPrizeConfig(){
+  const cfg = window.GAME_BALANCE_MANAGER?.premiosTemporada || {};
+  return {
+    activo: cfg.activo !== false,
+    evitarDuplicados: cfg.evitarDuplicados !== false,
+    conceptoCampeon: cfg.conceptoCampeon || 'Premio por campeonato',
+    conceptoAscenso: cfg.conceptoAscenso || 'Premio por ascenso',
+    campeonatoPorDivisionOrden: cfg.campeonatoPorDivisionOrden || {},
+    ascensoPorDivisionOrigenOrden: cfg.ascensoPorDivisionOrigenOrden || {},
+    valoresFallback: cfg.valoresFallback || { campeonato:750000000, ascenso:500000000 },
+    acumularCampeonatoYAscenso: cfg.acumularCampeonatoYAscenso !== false
+  };
+}
+function seasonPrizeDivisionOrder(division){
+  return Math.max(1, Math.round(Number(division?.order || divisionOrderFromName(division?.name) || 1)));
+}
+function seasonChampionPrizeAmount(division){
+  const cfg = managerSeasonPrizeConfig();
+  if(!cfg.activo) return 0;
+  const order = seasonPrizeDivisionOrder(division);
+  const direct = Number(cfg.campeonatoPorDivisionOrden?.[order]);
+  if(Number.isFinite(direct) && direct > 0) return Math.round(direct);
+  return Math.max(0, Math.round(Number(cfg.valoresFallback?.campeonato || 0)));
+}
+function seasonPromotionPrizeAmount(division){
+  const cfg = managerSeasonPrizeConfig();
+  if(!cfg.activo) return 0;
+  const order = seasonPrizeDivisionOrder(division);
+  const direct = Number(cfg.ascensoPorDivisionOrigenOrden?.[order]);
+  if(Number.isFinite(direct) && direct > 0) return Math.round(direct);
+  return Math.max(0, Math.round(Number(cfg.valoresFallback?.ascenso || 0)));
+}
+function applyManagerSeasonPrize(delta, concept, meta={}){
+  if(!game) return 0;
+  const amount = Math.max(0, Math.round(Number(delta || 0)));
+  if(amount <= 0) return 0;
+  if(typeof recordBudgetChange === 'function'){
+    recordBudgetChange(amount, concept, { type:'season_prize', category:'Premios temporada', ...meta });
+  } else {
+    game.budgetHistory = Array.isArray(game.budgetHistory) ? game.budgetHistory : [];
+    game.budget = Math.round(Number(game.budget || 0) + amount);
+    game.lastBudgetDelta = amount;
+    game.budgetHistory.push({
+      season:game.seasonNumber || 1,
+      matchdayIndex:game.matchdayIndex || 0,
+      date:game.currentDate || '',
+      concept,
+      delta:amount,
+      budget:game.budget,
+      type:'season_prize',
+      category:'Premios temporada',
+      ...meta
+    });
+  }
+  game.clubBudgets = (game.clubBudgets && typeof game.clubBudgets === 'object' && !Array.isArray(game.clubBudgets)) ? game.clubBudgets : {};
+  if(Number.isFinite(Number(game.selectedClubId))) game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
+  return amount;
+}
+function awardManagerSeasonPrizes(record){
+  if(!game || !record) return { total:0, champion:0, promotion:0, applied:false };
+  const cfg = managerSeasonPrizeConfig();
+  if(!cfg.activo) return { total:0, champion:0, promotion:0, applied:false };
+  const key = `${record.season || game.seasonNumber || 1}-${record.clubId || game.selectedClubId}`;
+  game.seasonPrizeAwards = (game.seasonPrizeAwards && typeof game.seasonPrizeAwards === 'object' && !Array.isArray(game.seasonPrizeAwards)) ? game.seasonPrizeAwards : {};
+  if(cfg.evitarDuplicados && game.seasonPrizeAwards[key]) return { ...game.seasonPrizeAwards[key], applied:false, duplicate:true };
+  const championPrize = Math.max(0, Math.round(Number(record.championPrize || 0)));
+  const promotionPrize = Math.max(0, Math.round(Number(record.promotionPrize || 0)));
+  const total = championPrize + promotionPrize;
+  if(total <= 0){
+    game.seasonPrizeAwards[key] = { total:0, champion:0, promotion:0, season:record.season, clubId:record.clubId };
+    return { total:0, champion:0, promotion:0, applied:false };
+  }
+  if(championPrize > 0){
+    applyManagerSeasonPrize(championPrize, `${cfg.conceptoCampeon}: ${record.divisionName || 'liga'}`, { prizeType:'champion', divisionId:record.divisionId, divisionName:record.divisionName });
+  }
+  if(promotionPrize > 0){
+    applyManagerSeasonPrize(promotionPrize, `${cfg.conceptoAscenso}: ${record.divisionName || 'liga'}`, { prizeType:'promotion', divisionId:record.divisionId, divisionName:record.divisionName });
+  }
+  const summary = { total, champion:championPrize, promotion:promotionPrize, season:record.season, clubId:record.clubId, applied:true };
+  game.seasonPrizeAwards[key] = summary;
+  const parts = [];
+  if(championPrize > 0) parts.push(`campeonato ${formatMoney(championPrize)}`);
+  if(promotionPrize > 0) parts.push(`ascenso ${formatMoney(promotionPrize)}`);
+  pushGameMessage({
+    type:'finanzas',
+    priority:'high',
+    title:'Premios deportivos acreditados',
+    body:`La federación acreditó ${formatMoney(total)} por ${parts.join(' + ')}.`,
+    id:`season-prizes-${key}`
+  });
+  return summary;
+}
+
 function finalizeSeasonIfNeeded(){
   if(!game || game.seasonFinalized || game.matchdayIndex < game.fixtures.length) return;
   repairCrossCountryClubAssignments({ restoreNativeIfNeeded:false });
@@ -3839,9 +4061,11 @@ function finalizeSeasonIfNeeded(){
   const position = index >= 0 ? index + 1 : null;
   const champion = position === 1;
   const movementsPreview = computeSeasonMovements();
+  const promoted = movementsPreview.some(move => move.type === 'promotion' && Number(move.clubId) === Number(game.selectedClubId));
   const totalTeams = table.length || 0;
   const wasRelegated = Boolean(movementsPreview.some(move => move.type === 'relegation' && Number(move.clubId) === Number(game.selectedClubId)));
   const finishedLast = Boolean(position && totalTeams && position === totalTeams);
+  const prizeConfig = managerSeasonPrizeConfig();
   const record = {
     season:game.seasonNumber || 1,
     clubId:game.selectedClubId,
@@ -3858,9 +4082,13 @@ function finalizeSeasonIfNeeded(){
     gf:row.gf || 0,
     gc:row.gc || 0,
     title:champion,
+    promoted,
+    championPrize: champion ? seasonChampionPrizeAmount(division) : 0,
+    promotionPrize: promoted && (!champion || prizeConfig.acumularCampeonatoYAscenso) ? seasonPromotionPrizeAmount(division) : 0,
     managerPrestigeChampionReward: champion ? championPrestigeRewardByDivisionOrder(division.order || divisionOrderFromName(division.name)) : 0,
     managerPrestigeBadSeasonPenalty: managerObjectiveBadSeasonPenalty({ relegated:wasRelegated, last:finishedLast })
   };
+  record.totalSeasonPrize = Math.max(0, Math.round(Number(record.championPrize || 0) + Number(record.promotionPrize || 0)));
   if(!game.managerStats.seasons.some(s => s.season === record.season)){
     const objective = Number.isFinite(Number(game.managerStats.currentSeason?.objectivePpg)) ? Number(game.managerStats.currentSeason.objectivePpg) : managerObjectiveForClubDivision(game.selectedClubId);
     const seasonPpg = ppgFromTotals(game.managerStats.currentSeason || record);
@@ -3889,10 +4117,10 @@ function finalizeSeasonIfNeeded(){
   if(record.managerPrestigeBadSeasonPenalty > 0){
     pushGameMessage({ type:'directiva', priority:'high', title:'Prestigio de manager reducido', body:`Descender o terminar último resta ${record.managerPrestigeBadSeasonPenalty} puntos de prestigio de manager.`, id:`bad-season-prestige-${game.seasonNumber || 1}-${game.selectedClubId}` });
   }
+  const seasonPrizeAwards = awardManagerSeasonPrizes(record);
   snapshotStandingsHistoryForCurrentSeason();
   const prestigeChanges = updateClubPrestigeAfterSeason();
   const movements = movementsPreview;
-  const promoted = movements.some(move => move.type === 'promotion' && Number(move.clubId) === Number(game.selectedClubId));
   if(currentGameIsFounderMode() && promoted){
     ensureFounderGoalsState();
     game.founderGoals.promotions = Math.max(0, Math.round(Number(game.founderGoals.promotions || 0))) + 1;
@@ -3914,6 +4142,7 @@ function finalizeSeasonIfNeeded(){
     retirements,
     trainingDecay,
     prestigeChanges,
+    seasonPrizeAwards,
     agingApplied: true
   };
   game.seasonFinalized = true;
@@ -4389,6 +4618,7 @@ function seasonEndPanelMarkup(){
   return `<div class="card season-end-card">
     <div class="row"><div><p class="label">Fin de temporada</p><h3>${record?.title ? 'Campeón' : `Posición final: ${escapeHtml(record?.label || '—')}`}</h3></div><span class="pill">Temporada ${game.seasonNumber || 1}</span></div>
     <p class="muted">Podés seguir en ${escapeHtml(clubName(game.selectedClubId))} o elegir otro club para la próxima temporada.</p>
+    ${record?.totalSeasonPrize ? `<p class="tagline ok">Premios deportivos cobrados: <strong>${formatMoney(record.totalSeasonPrize)}</strong>${record.championPrize ? ` · Campeonato ${formatMoney(record.championPrize)}` : ''}${record.promotionPrize ? ` · Ascenso ${formatMoney(record.promotionPrize)}` : ''}.</p>` : ''}
     ${game.seasonTransition?.salariesPaid ? `<p class="tagline">Pago anual de sueldos descontado: <strong>${formatMoney(game.seasonTransition.salariesPaid)}</strong>.</p>` : ''}
     ${salaryAdjustments ? `<p class="tagline">Sueldos ajustados para la próxima temporada según partidos jugados: ${salaryAdjustments.increased || 0} suben, ${salaryAdjustments.decreased || 0} bajan.</p>` : ''}
     ${retirementRows ? `<ul class="season-movement-list">${retirementRows}</ul>` : ''}
@@ -4402,6 +4632,7 @@ function openSeasonEndModal(){
   const body = `<div class="season-end-modal">
     <p class="label">Fin de temporada ${game.seasonNumber || 1}</p>
     <h2>${record?.title ? 'Saliste campeón' : `Finalizaste ${escapeHtml(record?.label || '—')}`}</h2>
+    ${record?.totalSeasonPrize ? `<p class="tagline ok">Premios cobrados: <strong>${formatMoney(record.totalSeasonPrize)}</strong>${record.championPrize ? ` · Campeonato ${formatMoney(record.championPrize)}` : ''}${record.promotionPrize ? ` · Ascenso ${formatMoney(record.promotionPrize)}` : ''}.</p>` : ''}
     <p class="muted">Elegí cómo continuar la próxima temporada.</p>
     <div class="row" style="margin-top:14px"><button id="btnContinueSameClub" class="primary">Seguir en ${escapeHtml(clubName(game.selectedClubId))}</button></div>
     <hr>

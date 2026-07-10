@@ -1,8 +1,9 @@
 # Versión actual
 
-V5.58
+V5.59
 
 ## Cambios
-- Finanzas agrupa movimientos iguales para compactar el historial.
-- La lista de sueldos de jugadores queda siempre visible, sin minimizar.
-- Al abrir un club bot, los jugadores de su plantilla son clickeables y abren ficha.
+- Hitos visibles también en Estadísticas.
+- Acceso lateral renombrado a Mis estadísticas.
+- Rechequeo automático de hitos en partidas existentes.
+- Recuperación mínima de totales desde la tabla actual para partidas antiguas.

@@ -4473,3 +4473,38 @@ th{
 .scouting-reports-table th:nth-child(6){
   text-align:center;
 }
+
+/* V5.50 · Login visible del ranking online */
+.ranking-login-card{
+  margin-bottom:14px;
+}
+.ranking-auth-status{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  margin:10px 0;
+}
+.ranking-login-form{
+  display:grid;
+  grid-template-columns:minmax(150px, 1fr) minmax(150px, 1fr) auto auto auto;
+  gap:8px;
+  align-items:center;
+}
+.ranking-login-form input{
+  min-width:0;
+  width:100%;
+}
+@media (max-width: 900px){
+  .ranking-login-form{
+    grid-template-columns:1fr 1fr;
+  }
+  .ranking-login-form button{
+    width:100%;
+  }
+}
+@media (max-width: 560px){
+  .ranking-login-form{
+    grid-template-columns:1fr;
+  }
+}

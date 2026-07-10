@@ -1,4 +1,4 @@
-/* V5.49 · Ranking online alineado con Worker Cloudflare /ranking/season. */
+/* V5.50 · Ranking online con login visible y sesión persistente. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -98,6 +98,190 @@ function rankingStoredAuthToken(){
   try{
     return String(localStorage.getItem('fmRankingAuthToken') || localStorage.getItem('fmRankingToken') || localStorage.getItem('rankingToken') || '').trim();
   }catch(_){ return ''; }
+}
+
+function rankingStoredAuthUsername(){
+  try{ return String(localStorage.getItem('fmRankingAuthUser') || localStorage.getItem('fmRankingUsername') || '').trim(); }
+  catch(_){ return ''; }
+}
+function rankingStoredAuthExpiresAt(){
+  try{ return String(localStorage.getItem('fmRankingAuthExpiresAt') || '').trim(); }
+  catch(_){ return ''; }
+}
+function rankingAuthPaths(kind){
+  const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
+  const raw = kind === 'me' ? cfg.mePaths : cfg.loginPaths;
+  const defaults = kind === 'me'
+    ? ['auth/me','me','api/auth/me','api/me','user','api/user']
+    : ['auth/login','login','api/auth/login','api/login'];
+  const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
+  const seen = new Set();
+  return source
+    .map(path => String(path || '').trim().replace(/^\/+|\/+$/g, ''))
+    .filter(path => {
+      if(seen.has(path)) return false;
+      seen.add(path);
+      return true;
+    });
+}
+function rankingExtractToken(data){
+  if(!data || typeof data !== 'object') return '';
+  const candidates = [
+    data.token, data.access_token, data.accessToken, data.authToken,
+    data?.data?.token, data?.data?.access_token, data?.session?.token,
+    data?.auth?.token, data?.result?.token
+  ];
+  return String(candidates.find(value => value !== undefined && value !== null && String(value).trim()) || '').trim();
+}
+function rankingExtractUsername(data, fallback=''){
+  if(!data || typeof data !== 'object') return String(fallback || '').trim();
+  const candidates = [
+    data?.user?.username, data?.user?.name, data?.user?.email,
+    data?.data?.user?.username, data?.data?.user?.name, data?.data?.username,
+    data?.username, data?.name, data?.email, fallback
+  ];
+  return String(candidates.find(value => value !== undefined && value !== null && String(value).trim()) || '').trim();
+}
+function rankingStoreAuthSession(data, fallbackUsername=''){
+  const token = rankingExtractToken(data);
+  if(!token) return '';
+  const username = rankingExtractUsername(data, fallbackUsername);
+  const expiresAt = String(data?.expires_at || data?.expiresAt || data?.data?.expires_at || data?.session?.expires_at || '').trim();
+  try{
+    localStorage.setItem('fmRankingAuthToken', token);
+    localStorage.setItem('fmRankingToken', token);
+    localStorage.setItem('rankingToken', token);
+    if(username) localStorage.setItem('fmRankingAuthUser', username);
+    if(expiresAt) localStorage.setItem('fmRankingAuthExpiresAt', expiresAt);
+    if(data?.user?.id || data?.data?.user?.id) localStorage.setItem('fmRankingAuthUserId', String(data?.user?.id || data?.data?.user?.id));
+  }catch(_){ /* sin almacenamiento */ }
+  if(username && (!rankingStoredManagerName() || rankingStoredManagerName() === 'Manager')) setRankingStoredManagerName(username);
+  return token;
+}
+function rankingClearAuthSession(){
+  try{
+    ['fmRankingAuthToken','fmRankingToken','rankingToken','fmRankingAuthUser','fmRankingUsername','fmRankingAuthExpiresAt','fmRankingAuthUserId'].forEach(key => localStorage.removeItem(key));
+  }catch(_){ /* sin almacenamiento */ }
+}
+function rankingAuthStatusMarkup(endpoint){
+  const token = rankingStoredAuthToken();
+  const user = rankingStoredAuthUsername() || rankingStoredManagerName();
+  const expiresAt = rankingStoredAuthExpiresAt();
+  if(!endpoint) return '<span class="bad">Ranking sin endpoint configurado.</span>';
+  if(token){
+    const source = String(RANKING_TOKEN || '').trim() ? 'config.js' : 'sesión local';
+    return `<span class="ok">Sesión activa${user ? ` · ${escapeHtml(user)}` : ''}</span><span class="small muted">Token desde ${escapeHtml(source)}${expiresAt ? ` · vence ${escapeHtml(expiresAt)}` : ''}</span>`;
+  }
+  if(RANKING_REQUIRES_LOGIN) return '<span class="warn">Sin sesión. Iniciá sesión para subir récords.</span>';
+  return '<span class="muted">Login opcional.</span>';
+}
+function rankingLoginPanelMarkup(endpoint){
+  const token = rankingStoredAuthToken();
+  const disabled = endpoint ? '' : 'disabled';
+  const user = rankingStoredAuthUsername() || rankingStoredManagerName() || '';
+  return `<div class="card ranking-login-card">
+    <div class="row"><div><p class="label">Cuenta online</p><h3>Login del ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
+    <p class="muted">La partida puede estar empezada. El login sólo guarda el token en este navegador y lo usa para subir récords.</p>
+    <div id="rankingAuthStatus" class="ranking-auth-status small">${rankingAuthStatusMarkup(endpoint)}</div>
+    <form id="rankingLoginForm" class="ranking-login-form">
+      <input id="rankingLoginUser" name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
+      <input id="rankingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Contraseña" ${disabled} />
+      <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
+      <button id="rankingCheckSession" class="ghost" type="button" ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
+      <button id="rankingLogout" class="danger" type="button" ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
+    </form>
+    <div id="rankingLoginStatus" class="small muted">${token ? 'Token guardado. Ya podés subir datos si el cooldown lo permite.' : 'No se guarda la contraseña.'}</div>
+  </div>`;
+}
+async function rankingLoginRequest(endpoint, username, password){
+  const paths = rankingAuthPaths('login');
+  const bodies = [
+    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ username, password }) },
+    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ user:username, username, password }) },
+    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ email:username, password }) },
+    { headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams({ username, password }).toString() }
+  ];
+  let lastMessage = '';
+  for(const path of paths){
+    for(const req of bodies){
+      const response = await fetch(rankingApiUrl(endpoint, path), { method:'POST', headers:req.headers, body:req.body });
+      const data = await response.json().catch(() => ({}));
+      if(response.ok && data.ok !== false){
+        const token = rankingStoreAuthSession(data, username);
+        if(token) return data;
+        lastMessage = 'El login respondió sin token.';
+        continue;
+      }
+      const message = rankingResponseErrorMessage(data, response, 'No se pudo iniciar sesión.');
+      lastMessage = message;
+      if(rankingIsRouteMissing(message, response)) break;
+      if([401,403].includes(Number(response.status || 0)) || /credencial|contraseña|password|usuario|login|token/i.test(message)) throw new Error(message);
+    }
+  }
+  throw new Error(lastMessage || 'No se encontró una ruta válida de login.');
+}
+async function loginRankingAccount(event){
+  event?.preventDefault?.();
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const username = String($('rankingLoginUser')?.value || '').trim();
+  const password = String($('rankingLoginPassword')?.value || '');
+  const status = $('rankingLoginStatus');
+  if(!username || !password){ showNotice('Ingresá usuario y contraseña del ranking.'); return false; }
+  if(status) status.textContent = 'Iniciando sesión...';
+  const submit = document.querySelector('#rankingLoginForm button[type="submit"]');
+  if(submit) submit.disabled = true;
+  try{
+    const data = await rankingLoginRequest(endpoint, username, password);
+    const savedUser = rankingExtractUsername(data, username);
+    if(status) status.textContent = `Sesión iniciada${savedUser ? ` como ${savedUser}` : ''}.`;
+    showNotice('Sesión iniciada en el ranking online.');
+    renderRankingOnline();
+    return true;
+  }catch(error){
+    const message = error?.message || 'No se pudo iniciar sesión.';
+    if(status) status.textContent = message;
+    showNotice(message);
+    if(submit) submit.disabled = false;
+    return false;
+  }
+}
+async function checkRankingSession(){
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const token = rankingStoredAuthToken();
+  const status = $('rankingLoginStatus');
+  if(!token){ showNotice('No hay sesión guardada.'); return false; }
+  if(status) status.textContent = 'Verificando sesión...';
+  let lastMessage = '';
+  try{
+    for(const path of rankingAuthPaths('me')){
+      const response = await fetch(rankingApiUrl(endpoint, path), { method:'GET', headers:rankingRequestHeaders(false) });
+      const data = await response.json().catch(() => ({}));
+      if(response.ok && data.ok !== false){
+        const user = rankingExtractUsername(data, rankingStoredAuthUsername());
+        if(user){
+          try{ localStorage.setItem('fmRankingAuthUser', user); }catch(_){ /* sin almacenamiento */ }
+        }
+        if(status) status.textContent = `Sesión válida${user ? ` · ${user}` : ''}.`;
+        showNotice('Sesión válida en el ranking online.');
+        renderRankingOnline();
+        return true;
+      }
+      const message = rankingResponseErrorMessage(data, response, 'Sesión no válida.');
+      lastMessage = message;
+      if(!rankingIsRouteMissing(message, response)) break;
+    }
+    throw new Error(lastMessage || 'No se pudo verificar la sesión.');
+  }catch(error){
+    const message = error?.message || 'No se pudo verificar la sesión.';
+    if(status) status.textContent = message;
+    showNotice(message);
+    return false;
+  }
+}
+function logoutRankingAccount(){
+  rankingClearAuthSession();
+  showNotice('Sesión del ranking cerrada en este navegador.');
+  renderRankingOnline();
 }
 function rankingRequestHeaders(json=true){
   const headers = json ? { 'Content-Type':'application/json' } : {};
@@ -442,8 +626,10 @@ function rankingAutomaticStatusMarkup(){
 }
 function rankingSubmitPanelMarkup(payload, endpoint){
   const info = rankingUploadCooldownInfo();
-  const canUpload = Boolean(endpoint && game && payload && info.canUpload);
-  const buttonLabel = canUpload ? 'Subir datos del club' : rankingCooldownText(info);
+  const hasSession = Boolean(rankingStoredAuthToken());
+  const loginOk = !RANKING_REQUIRES_LOGIN || hasSession;
+  const canUpload = Boolean(endpoint && game && payload && info.canUpload && loginOk);
+  const buttonLabel = !loginOk ? 'Iniciar sesión para subir' : canUpload ? 'Subir datos del club' : rankingCooldownText(info);
   const manualStatus = info.last
     ? `Última carga manual: día ${seasonDayFromDate(info.last, game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1))} (${info.last}).`
     : 'Todavía no hiciste una carga manual en esta partida.';
@@ -452,7 +638,7 @@ function rankingSubmitPanelMarkup(payload, endpoint){
     <p class="muted">Podés subir manualmente los datos actuales del club cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Al finalizar la temporada, el juego también envía automáticamente el récord de temporada.</p>
     <div class="ranking-manual-actions">
       <button id="submitRankingManual" class="primary" type="button" ${canUpload ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
-      <span id="rankingManualStatus" class="small muted">${endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
+      <span id="rankingManualStatus" class="small muted">${!loginOk ? 'Tenés que iniciar sesión para subir récords.' : endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
     </div>
     ${rankingAutomaticStatusMarkup()}
     ${rankingSeasonPreviewMarkup(payload)}
@@ -465,6 +651,7 @@ function renderRankingOnline(){
   const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
   const payload = buildRankingPayload(managerName, { eventType:manualEventType, eventLabel:`Carga manual día ${manualDay || '—'}` });
   view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Tabla comunitaria online. Se muestran hasta ${RANKING_PAGE_SIZE} registros con los filtros actuales.</p></div>
+    ${rankingLoginPanelMarkup(endpoint)}
     ${rankingSubmitPanelMarkup(payload, endpoint)}
     <div class="card ranking-list-card">
       <div class="row"><div><p class="label">Lectura pública</p><h3>Tabla online</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
@@ -473,6 +660,9 @@ function renderRankingOnline(){
     </div>`;
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
   $('submitRankingManual')?.addEventListener('click', submitCurrentSeasonToRanking);
+  $('rankingLoginForm')?.addEventListener('submit', loginRankingAccount);
+  $('rankingCheckSession')?.addEventListener('click', checkRankingSession);
+  $('rankingLogout')?.addEventListener('click', logoutRankingAccount);
   document.querySelectorAll('[data-ranking-sort]').forEach(btn => btn.addEventListener('click', () => {
     rankingSort = btn.dataset.rankingSort;
     renderRankingOnline();
@@ -484,6 +674,7 @@ function renderRankingOnline(){
 function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!game) return 'No hay partida activa.';
   if(!endpoint) return 'Ranking online no disponible por el momento.';
+  if(RANKING_REQUIRES_LOGIN && !rankingStoredAuthToken()) return 'Tenés que iniciar sesión para subir récords.';
   if(!managerName) return 'Ingresá un nombre de manager.';
   if(!payload?.position) return 'No se pudo calcular la posición actual.';
   const previous = game.rankingUploads?.[payload.submissionKey];

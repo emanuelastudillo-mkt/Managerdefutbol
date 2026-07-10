@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.49',
+  version: 'V5.50',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -506,9 +506,14 @@ window.GAME_CONFIG = {
     appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
     // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
     token: '',
+    // El Worker actual exige sesión para subir récords. El front guarda el token en localStorage tras iniciar sesión.
+    requiereLogin: true,
     // Rutas compatibles con Worker Cloudflare + D1 actual y variantes anteriores.
     // La ruta principal de carga es /ranking/season.
     submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
+    // Rutas de login/verificación compatibles con el Worker Cloudflare + D1.
+    loginPaths: ['auth/login','login','api/auth/login','api/login'],
+    mePaths: ['auth/me','me','api/auth/me','api/me','user','api/user'],
     // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
     readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],
     resultadosPorPagina: 100,

@@ -1,6 +1,19 @@
-# Fútbol Manager MVP - V5.49
+# Fútbol Manager MVP - V5.50
 
 
+
+## V5.50 - Login visible para Ranking Online
+
+- Agrega una tarjeta **Login del ranking** en la pantalla Ranking Online.
+- Permite iniciar sesión con usuario y contraseña aunque la partida ya esté empezada.
+- Guarda el token de sesión en el navegador para que el Worker acepte cargas manuales y automáticas.
+- Agrega botones **Iniciar sesión**, **Verificar sesión** y **Cerrar sesión**.
+- Si no hay token y el ranking exige login, el botón de subida manual se bloquea antes de llamar al Worker.
+- Mantiene la ruta principal `/ranking/season` y no cambia cooldown, puntaje ni datos enviados.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida. Entrá a Ranking Online, iniciá sesión y luego subí los datos cuando el cooldown lo permita.
+
+---
 
 ## V5.49 - Ranking online Worker /ranking/season
 

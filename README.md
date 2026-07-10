@@ -1,11 +1,21 @@
 # Historial de versiones
 
-## V5.37 - Jugadores manuales activos
+## V5.38 - Jugadores manuales WEBP y retiro persistente
+
+- Cambia las rutas de foto de los jugadores manuales activos de `.png` a `.webp`.
+- Los 7 jugadores manuales siguen iniciando en los clubes acordados: Barcelona, Juventus, Manchester United, Milan, Napoli, Real Madrid y Santos.
+- Agrega `reapareceAlRetirarse: false` al bloque de mercado de los jugadores manuales activos.
+- Agrega `game.manualRetiredPlayerIds` para recordar retiros manuales en la partida guardada.
+- Si un jugador manual se retira, no se vuelve a insertar automáticamente al cargar la partida.
+- Actualiza `data/jugadores_manual_ejemplo.json` para usar `.webp` en los ejemplos.
+- Compatibilidad: se implementa solo. No requiere reiniciar partida.
+
+## V5.38 - Jugadores manuales activos
 
 - Agrega `data/jugadores_manuales.json` como archivo activo de carga automática.
 - Crea a Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele en clubes reales del juego.
 - Todos quedan con sueldo anual `$150.000.000`, cláusula fija `$1.200.000.000` y valor `$1.200.000.000`.
-- Usa rutas de foto en `img/jugadores/manual/`, por ejemplo `img/jugadores/manual/ronaldinho.png`.
+- Usa rutas de foto en `img/jugadores/manual/`, por ejemplo `img/jugadores/manual/ronaldinho.webp`.
 - Convierte `media` y `habilidades` visibles al modelo interno del juego.
 - Respeta la media manual como media bloqueada.
 - En partidas existentes, los agrega al cargar si todavía no existen.

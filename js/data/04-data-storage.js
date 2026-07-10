@@ -145,13 +145,22 @@ function normalizeManualDatabasePlayer(player, seedData){
     sold:Boolean(mercado.vendido ?? player.sold ?? false),
     retired:Boolean(mercado.retirado ?? player.retired ?? false),
     manualPlayer:true,
-    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.37-manual-active-visible-names', tipo:player?.origen?.tipo || 'manual_activo' }
+    manualRespawnAfterRetirement:Boolean(mercado.reapareceAlRetirarse ?? mercado.respawnAfterRetirement ?? player.reapareceAlRetirarse ?? player.manualRespawnAfterRetirement ?? false),
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.38-manual-active-webp-retirement', tipo:player?.origen?.tipo || 'manual_activo' }
   };
+}
+function manualRetiredPlayerIdSet(options={}){
+  const source = options.retiredManualPlayerIds || options.manualRetiredPlayerIds || game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [];
+  return new Set((Array.isArray(source) ? source : []).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0));
 }
 function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, options={}){
   if(!seedData || !database?.players?.length) return seedData;
   const preserveExisting = Boolean(options?.preserveExisting);
-  const manualPlayers = database.players.map(player => normalizeManualDatabasePlayer(player, seedData)).filter(Boolean);
+  const retiredManualIds = manualRetiredPlayerIdSet(options);
+  const manualPlayers = database.players
+    .map(player => normalizeManualDatabasePlayer(player, seedData))
+    .filter(Boolean)
+    .filter(player => !retiredManualIds.has(Number(player.id)) || player.manualRespawnAfterRetirement);
   if(!manualPlayers.length) return seedData;
   const manualIds = new Set(manualPlayers.map(player => Number(player.id)));
   const existingIds = new Set((seedData.players || []).map(player => Number(player.id)));
@@ -468,7 +477,7 @@ function applySavedDatabaseSnapshots(saved){
   }
   if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
     seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
-    syncManualPlayersIntoSeed({ preserveExisting:true });
+    syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:saved?.manualRetiredPlayerIds || saved?.retiredManualPlayerIds || [] });
   }
   delete clean.playersSnapshot;
   delete clean.clubsSnapshot;

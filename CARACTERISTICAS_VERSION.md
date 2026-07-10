@@ -1,22 +1,20 @@
-# Características de la versión V5.37
+# Características de la versión V5.38
 
-## Jugadores manuales activos
+## Jugadores manuales WEBP y retiro persistente
 
-- Agrega `data/jugadores_manuales.json` como archivo activo de carga automática.
-- Crea 7 jugadores manuales en clubes reales del juego: Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele.
-- Resuelve los clubes destino con IDs reales cargados por el juego: Barcelona, Juventus, Manchester United, Milan, Napoli, Real Madrid y Santos.
-- Todos los jugadores manuales usan sueldo anual fijo de `$150.000.000`, cláusula fija de `$1.200.000.000` y valor de mercado de `$1.200.000.000`.
-- Agrega rutas de foto personalizadas en `img/jugadores/manual/`. Si la imagen no existe, la UI vuelve automáticamente a las caras por nacionalidad.
-- Convierte la estructura visible de `habilidades` al modelo interno del juego.
-- Respeta `media` como media bloqueada para estos jugadores manuales.
-- Los campos `agresividad`, `genetica` y `factorSorpresa` ahora pueden impactar como habilidades ocultas cuando existen en jugadores manuales.
+- Cambia las rutas de foto de los jugadores manuales activos a formato `.webp`.
+- Mantiene a Ronaldinho, Gianluigi Buffon, David Beckham, Paolo Maldini, Diego Maradona, Zinedine Zidane y Pele asignados a los clubes acordados desde el inicio de la partida.
+- Agrega control persistente de retiro para jugadores manuales.
+- Si un jugador manual se retira, queda registrado en `game.manualRetiredPlayerIds` y no vuelve a insertarse automáticamente al cargar la partida.
+- Agrega la bandera `reapareceAlRetirarse: false` en el bloque `mercado` de los jugadores manuales activos.
+- Actualiza la plantilla `data/jugadores_manual_ejemplo.json` para usar `.webp` en los ejemplos.
 
 ## Alcance
 
 - No agrega pantalla de edición manual todavía.
-- No modifica la generación automática de jugadores comunes.
-- No modifica reglas de mercado, contratos ni simulación fuera de la carga manual.
+- No modifica contratos, cláusulas, medias ni habilidades de los 7 jugadores manuales.
+- No modifica la lógica general de mercado ni la generación automática de jugadores comunes.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. En partidas existentes, los jugadores manuales se agregan al cargar si todavía no existen por ID.
+Se implementa solo. No requiere reiniciar partida. Las partidas existentes cargan la nueva regla; los retiros futuros de jugadores manuales ya quedan protegidos contra reaparición automática.

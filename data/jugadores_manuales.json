@@ -1,27 +1,30 @@
 {
   "metadata": {
     "nombre": "jugadores_manuales",
-    "version": "V5.37",
-    "appVersion": "V5.37",
+    "version": "V5.38",
+    "appVersion": "V5.38",
     "proyecto": "manager_de_futbol",
-    "descripcion": "Jugadores manuales activos cargados con nombres visibles de la plantilla V5.36.",
+    "descripcion": "Jugadores manuales activos con fotos WEBP y retiro persistente.",
     "moneda": "ARS",
     "unidadSueldo": "anual",
     "rutaFotosSugerida": "img/jugadores/manual/",
-    "campoFotoPersonalizada": "foto"
+    "campoFotoPersonalizada": "foto",
+    "formatoFotoPrincipal": "webp"
   },
   "uso": {
     "estado": "activo",
     "cargaAutomatica": true,
     "nota": "El juego carga este archivo automáticamente si está configurado en config.js como data.manualPlayersUrl.",
-    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando los nombres declarados en cada jugador. Si falta la imagen, el juego usa caras automáticas."
+    "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando extensión .webp y los nombres declarados en cada jugador. Si falta la imagen, el juego usa caras automáticas.",
+    "retiro": "Los jugadores manuales no reaparecen automáticamente tras retirarse, salvo que se cambie reapareceAlRetirarse a true."
   },
   "reglas": {
     "sueldoAnualFijo": 150000000,
     "clausulaFija": 1200000000,
     "valorMercadoFijo": 1200000000,
     "clausulaBloqueada": true,
-    "idsReservados": "910001 en adelante para jugadores manuales activos"
+    "idsReservados": "910001 en adelante para jugadores manuales activos",
+    "reapareceAlRetirarse": false
   },
   "habilidadesRequeridas": [
     "ataque",
@@ -72,16 +75,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/ronaldinho.png",
+      "foto": "img/jugadores/manual/ronaldinho.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -117,16 +121,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/gianluigi_buffon.png",
+      "foto": "img/jugadores/manual/gianluigi_buffon.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -162,16 +167,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/david_beckham.png",
+      "foto": "img/jugadores/manual/david_beckham.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -207,16 +213,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/paolo_maldini.png",
+      "foto": "img/jugadores/manual/paolo_maldini.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -252,16 +259,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/diego_maradona.png",
+      "foto": "img/jugadores/manual/diego_maradona.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -297,16 +305,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/zinedine_zidane.png",
+      "foto": "img/jugadores/manual/zinedine_zidane.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     },
@@ -342,16 +351,17 @@
         "valor": 1200000000,
         "clausulaBloqueada": true
       },
-      "foto": "img/jugadores/manual/pele.png",
+      "foto": "img/jugadores/manual/pele.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V5.37-manual-active-visible-names",
+        "rulesVersion": "V5.38-manual-active-webp-retirement",
         "tipo": "manual_activo"
       }
     }

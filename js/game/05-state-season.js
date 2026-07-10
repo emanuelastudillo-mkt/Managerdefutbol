@@ -1776,6 +1776,7 @@ function normalizeGame(saved){
   normalized.savedTrainingPlans = normalizeSavedTrainingPlansState(normalized.savedTrainingPlans || {});
   normalized.standingsHistory = normalizeStandingsHistoryState(normalized.standingsHistory || {});
   normalized.playerStatus = normalized.playerStatus || {};
+  normalized.manualRetiredPlayerIds = Array.from(new Set((Array.isArray(normalized.manualRetiredPlayerIds) ? normalized.manualRetiredPlayerIds : (Array.isArray(normalized.retiredManualPlayerIds) ? normalized.retiredManualPlayerIds : [])).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
   normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
@@ -2175,6 +2176,7 @@ function newGame(selectedClubId, options={}){
     rankingLastUploadGameDate: '',
     rankingLastManualUploadGameDate: '',
     rankingLastAutomaticUploadGameDate: '',
+    manualRetiredPlayerIds: [],
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,
@@ -3387,9 +3389,25 @@ function retireSeasonVeterans(){
       const freePlayer = Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent);
       return ownPlayer || freePlayer;
     })
-    .map(player => ({ id:player.id, name:player.name, age:player.age, position:player.position, salary:player.salary || 0, freeAgent:Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent) }));
+    .map(player => ({
+      id:player.id,
+      name:player.name,
+      age:player.age,
+      position:player.position,
+      salary:player.salary || 0,
+      freeAgent:Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent),
+      manualPlayer:Boolean(player.manualPlayer),
+      manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement)
+    }));
   if(!retirees.length) return [];
   const retiredIds = new Set(retirees.map(p => Number(p.id)));
+  const manualRetiredIds = retirees
+    .filter(player => player.manualPlayer && !player.manualRespawnAfterRetirement)
+    .map(player => Number(player.id))
+    .filter(id => Number.isFinite(id) && id > 0);
+  if(manualRetiredIds.length){
+    game.manualRetiredPlayerIds = Array.from(new Set([...(Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []), ...manualRetiredIds]));
+  }
   seed.players = seed.players.filter(player => !retiredIds.has(Number(player.id)));
   game.marketPlayers = (game.marketPlayers || []).filter(player => !retiredIds.has(Number(player.id)));
   retirees.forEach(player => {

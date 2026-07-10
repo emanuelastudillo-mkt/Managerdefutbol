@@ -1,10 +1,10 @@
 {
   "metadata": {
     "nombre": "jugadores_manual_ejemplo",
-    "version": "V5.36",
-    "appVersion": "V5.36",
+    "version": "V5.38",
+    "appVersion": "V5.38",
     "proyecto": "manager_de_futbol",
-    "descripcion": "Plantilla base para futura creacion manual de jugadores usando nombres visibles del juego, no nombres internos de codigo.",
+    "descripcion": "Plantilla base para futura creacion manual de jugadores usando nombres visibles del juego, fotos WEBP y control de reaparicion tras retiro.",
     "moneda": "ARS",
     "unidadSueldo": "anual",
     "rutaFotosSugerida": "img/jugadores/manual/",
@@ -14,12 +14,9 @@
     "estado": "plantilla_de_referencia",
     "cargaAutomatica": false,
     "nota": "Este archivo no se carga automaticamente. En una version futura, el importador deberia leer el arreglo jugadores, validar ids unicos, posiciones, clubId y habilidades completas, y convertir estos nombres visibles al modelo interno del juego.",
-    "fotoPersonalizada": "Si el jugador tiene foto, la UI puede intentar cargar esa ruta cuando el jugador ya exista/importado. Si la imagen no existe, vuelve a las caras automaticas por nacionalidad.",
+    "fotoPersonalizada": "Si el jugador tiene foto, usar preferentemente .webp en img/jugadores/manual/. Si la imagen no existe, vuelve a las caras automaticas por nacionalidad.",
     "formatosFotoRecomendados": [
-      "webp",
-      "png",
-      "jpg",
-      "jpeg"
+      "webp"
     ]
   },
   "camposNecesarios": {
@@ -34,7 +31,7 @@
     "habilidades": "Bloque de atributos editables con nombres visibles del juego.",
     "economia": "Sueldo anual, clausula y valor de mercado en ARS.",
     "foto": "Ruta personalizada de foto. Ejemplo: img/jugadores/manual/mateo_rojas.webp",
-    "mercado": "Estados iniciales para transferible, intransferible, vendido y retirado.",
+    "mercado": "Estados iniciales para transferible, intransferible, vendido, retirado y reapareceAlRetirarse.",
     "origen": "Bloque informativo para saber que el jugador fue creado manualmente."
   },
   "habilidadesRequeridas": [
@@ -132,11 +129,12 @@
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manual_ejemplo.json",
-        "rulesVersion": "V5.36-manual-template-visible-names",
+        "rulesVersion": "V5.38-manual-template-visible-names-webp",
         "tipo": "manual",
         "grupoPosicion": "MID",
         "pais": "Argentina",
@@ -174,16 +172,17 @@
         "clausula": 198000000,
         "valor": 198000000
       },
-      "foto": "img/jugadores/manual/bruno_ferreira.png",
+      "foto": "img/jugadores/manual/bruno_ferreira.webp",
       "mercado": {
         "transferible": false,
         "intransferible": false,
         "vendido": false,
-        "retirado": false
+        "retirado": false,
+        "reapareceAlRetirarse": false
       },
       "origen": {
         "source": "data/jugadores_manual_ejemplo.json",
-        "rulesVersion": "V5.36-manual-template-visible-names",
+        "rulesVersion": "V5.38-manual-template-visible-names-webp",
         "tipo": "manual",
         "grupoPosicion": "DEL",
         "pais": "Brasil",

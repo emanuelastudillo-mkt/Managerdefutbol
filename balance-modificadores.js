@@ -30,7 +30,7 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   cohesion: {
-    valorInicial: 50,
+    valorInicial: 10,
     gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
@@ -40,7 +40,7 @@ window.GAME_BALANCE_MODIFICADORES = {
 
   lesiones: {
     // Se mantiene así: un lesionado usado como suplente rinde casi nada.
-    penalizacionLesionadoSuplente: 0.10
+    penalizacionLesionadoSuplente: 0.30
   },
 
   simulador: {
@@ -51,7 +51,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
     fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 0.70,
+    multiplicadorTarjetas: 1.50,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,

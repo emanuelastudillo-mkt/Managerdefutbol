@@ -564,6 +564,31 @@ function quickBuildErrors(clubId, lineup, goalsAgainst, pressure){
   }
   return errors.sort((a,b) => a.minute - b.minute);
 }
+function quickBotOverexertionRules(){
+  const rules = Array.isArray(configValue('equilibrioBots.tacticaRapida.reglasDiferencia', [])) ? configValue('equilibrioBots.tacticaRapida.reglasDiferencia', []) : [];
+  const fallback = [
+    { diferenciaMin:1, diferenciaMax:1, desgasteFisicoPct:0.20, bonusAtaquePct:0.10 },
+    { diferenciaMin:2, diferenciaMax:2, desgasteFisicoPct:0.30, bonusAtaquePct:0.20 },
+    { diferenciaMin:3, diferenciaMax:99, desgasteFisicoPct:0.50, bonusAtaquePct:0.30 }
+  ];
+  return (rules.length ? rules : fallback).map(rule => ({
+    diferenciaMin:Math.max(1, Math.round(Number(rule?.diferenciaMin ?? rule?.min ?? rule?.diferencia ?? 1) || 1)),
+    diferenciaMax:Math.max(1, Math.round(Number(rule?.diferenciaMax ?? rule?.max ?? rule?.diferencia ?? 99) || 99)),
+    desgasteFisicoPct:clamp(Number(rule?.desgasteFisicoPct ?? rule?.desgastePct ?? 0) || 0, 0, 2),
+    bonusAtaquePct:clamp(Number(rule?.bonusAtaquePct ?? rule?.ataquePct ?? 0) || 0, 0, 2)
+  })).sort((a,b) => a.diferenciaMin - b.diferenciaMin);
+}
+function quickBotOverexertionRule(gf, gc){
+  if(!BOT_QUICK_OVEREXERTION_ENABLED) return null;
+  const diff = Math.max(0, Math.round(Number(gc || 0) - Number(gf || 0)));
+  if(diff <= 0) return null;
+  return quickBotOverexertionRules().find(rule => diff >= Number(rule.diferenciaMin || 1) && diff <= Number(rule.diferenciaMax || 99)) || null;
+}
+function quickBotConditionDeltaForOverexertion(player, rule){
+  if(!player || !rule) return 0;
+  const baseLoss = typeof conditionLossForPlayer === 'function' ? Math.max(1, Number(conditionLossForPlayer(player) || 0)) : 10;
+  return -Math.max(1, Math.round(baseLoss * Number(rule.desgasteFisicoPct || 0)));
+}
 function quickEnsureStatsForPlayers(players=[]){
   game.playerStats = game.playerStats || {};
   players.forEach(player => {
@@ -596,25 +621,28 @@ function quickSimulateBotMatch(match){
   }
   const instructionConditionDeltas = {};
   const overexertionEvents = [];
-  const applyTrailingBotOverexertion = (side, lineup) => {
-    if(!BOT_QUICK_OVEREXERTION_ENABLED || BOT_QUICK_OVEREXERTION_MAX_GOALS <= 0) return 0;
-    const extraGoals = Math.min(BOT_QUICK_OVEREXERTION_MAX_GOALS, Math.random() < BOT_QUICK_OVEREXERTION_GOAL_CHANCE ? 1 : 0);
+  const applyTrailingBotOverexertion = (side, lineup, gf, gc, currentXg) => {
+    if(!BOT_QUICK_OVEREXERTION_ENABLED || BOT_QUICK_OVEREXERTION_MAX_GOALS <= 0) return { extraGoals:0, xgExtra:0, rule:null };
+    const rule = quickBotOverexertionRule(gf, gc);
+    if(!rule) return { extraGoals:0, xgExtra:0, rule:null };
+    const xgExtra = Math.max(0, Number(currentXg || 0) * Number(rule.bonusAtaquePct || 0));
+    const extraGoals = Math.min(BOT_QUICK_OVEREXERTION_MAX_GOALS, quickBotPoisson(xgExtra));
     lineup.forEach(player => {
       const id = Number(player?.id || 0);
       if(!id) return;
-      instructionConditionDeltas[id] = (Number(instructionConditionDeltas[id] || 0) + BOT_QUICK_OVEREXERTION_CONDITION_DELTA);
-      if(BOT_QUICK_OVEREXERTION_EXTRA_WEAR > 0 && typeof adjustPlayerWear === 'function') adjustPlayerWear(id, BOT_QUICK_OVEREXERTION_EXTRA_WEAR);
+      const conditionDelta = quickBotConditionDeltaForOverexertion(player, rule);
+      instructionConditionDeltas[id] = (Number(instructionConditionDeltas[id] || 0) + conditionDelta);
     });
-    overexertionEvents.push({ side, extraGoals, xgExtra:BOT_QUICK_OVEREXERTION_XG_EXTRA, conditionDelta:BOT_QUICK_OVEREXERTION_CONDITION_DELTA, wearExtra:BOT_QUICK_OVEREXERTION_EXTRA_WEAR });
-    return extraGoals;
+    overexertionEvents.push({ side, diferencia:Number(gc || 0) - Number(gf || 0), extraGoals, xgExtra:Number(xgExtra.toFixed(2)), desgasteFisicoPct:rule.desgasteFisicoPct, bonusAtaquePct:rule.bonusAtaquePct });
+    return { extraGoals, xgExtra, rule };
   };
   if(homeGoals < awayGoals){
-    const extra = applyTrailingBotOverexertion('home', homeLineup);
-    if(extra > 0){ homeGoals += extra; homeXg = clamp(homeXg + BOT_QUICK_OVEREXERTION_XG_EXTRA, 0.15, 4.80); }
+    const extra = applyTrailingBotOverexertion('home', homeLineup, homeGoals, awayGoals, homeXg);
+    if(extra.extraGoals > 0 || extra.xgExtra > 0){ homeGoals += extra.extraGoals; homeXg = clamp(homeXg + extra.xgExtra, 0.15, 4.80); }
   }
   if(awayGoals < homeGoals){
-    const extra = applyTrailingBotOverexertion('away', awayLineup);
-    if(extra > 0){ awayGoals += extra; awayXg = clamp(awayXg + BOT_QUICK_OVEREXERTION_XG_EXTRA, 0.12, 4.60); }
+    const extra = applyTrailingBotOverexertion('away', awayLineup, awayGoals, homeGoals, awayXg);
+    if(extra.extraGoals > 0 || extra.xgExtra > 0){ awayGoals += extra.extraGoals; awayXg = clamp(awayXg + extra.xgExtra, 0.12, 4.60); }
   }
   const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + 3 + rnd(-7,7)), 31, 69);
   const awayPoss = 100 - homePoss;
@@ -656,7 +684,7 @@ function quickSimulateBotMatch(match){
     }
   }
   const matchContext = overexertionEvents.length ? { ...context, botOverexertion:overexertionEvents } : context;
-  return { ...match, played:true, engine:'bot-rapido-v5.40-balance', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas };
+  return { ...match, played:true, engine:'bot-rapido-v5.41-sobreexigencia-progresiva', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas, botOverexertionEvents:overexertionEvents };
 }
 function simulateScheduledMatch(match){
   if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
@@ -671,7 +699,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','engine','suspended','defaultWin','defaultLoss','suspensionReason'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason'
   ];
   const data = {};
   fields.forEach(field => {

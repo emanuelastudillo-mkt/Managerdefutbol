@@ -1,37 +1,21 @@
-# Características de la versión V5.40
+# Características de la versión V5.41
 
-## Balance separado y entrenamiento diario corregido
+## Fatiga visitante y sobreexigencia bot progresiva
 
-- Agrega `balance-modificadores.js` como archivo activo para centralizar modificadores y multiplicadores de balance.
-- `balance-modificadores.js` se carga antes de `config.js` y pisa sólo los valores declarados ahí.
-- El entrenamiento general del manager ahora aplica sólo los 4 bloques del día actual, no los 28 bloques de toda la semana.
-- Los bots siguen sin entrenamiento diario. Su balance permanece por simulación rápida y mantenimiento competitivo.
-- La simulación rápida de bots agrega sobreexigencia si un bot va perdiendo: puede recibir un pequeño boost ofensivo y paga más desgaste/condición.
-- La lluvia ahora aumenta el deterioro del campo del club manager cuando juega como local.
-- La ficha del jugador muestra los boosts de temporada en verde junto a la habilidad visible, por ejemplo `Pase 72 +7`.
-- El desgaste se mantiene como efecto indirecto: no entra directo al simulador, pero limita el máximo de estado físico y ese estado físico sí modifica el rendimiento.
-- Se mantiene la penalización actual para lesionados usados como suplentes: rinden casi como jugadores inutilizables.
-
-## Archivo nuevo
-
-- `balance-modificadores.js`
-
-Bloques principales:
-
-- `entrenamiento`
-- `cohesion`
-- `lesiones`
-- `simulador`
-- `equilibrioBots.tacticaRapida`
-- `estadio.clima`
-
-## Alcance
-
-- No cambia planteles, mercado, clubes, calendario ni jugadores manuales.
-- No convierte el balance a pantalla editable todavía.
-- No hace que los bots entrenen.
-- No cambia el cálculo base de habilidades; sólo expone mejor los boosts de temporada y corrige el ritmo de aplicación diaria.
+- Se toma como base el archivo `balance-modificadores.js` ajustado por el usuario.
+- Se agrega protección para que la fatiga viva de un mismo club se aplique una sola vez por bloque de partido.
+- Se mantiene corregido el caso del visitante: local y visitante reciben una única aplicación de fatiga por bloque.
+- Los bots conservan su sistema de protección/recuperación física fuera del partido.
+- Se agregan reglas progresivas de sobreexigencia cuando un bot va perdiendo:
+  - diferencia de 1 gol: +20% de desgaste físico y +10% de bonus de ataque.
+  - diferencia de 2 goles: +30% de desgaste físico y +20% de bonus de ataque.
+  - diferencia de 3 o más goles: +50% de desgaste físico y +30% de bonus de ataque.
+- Las reglas viven en `balance-modificadores.js`, dentro de `equilibrioBots.tacticaRapida.reglasDiferencia`.
+- La sobreexigencia se aplica en partido vivo contra el manager y en simulación rápida bot vs bot.
+- Se registran eventos de sobreexigencia bot en el resultado del partido cuando corresponde.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Los cambios aplican a entrenamientos y partidos futuros.
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta partidos futuros y simulaciones futuras.

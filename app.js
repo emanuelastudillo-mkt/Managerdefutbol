@@ -1,2 +1,2 @@
-/* V5.40 · Punto de entrada. Balance separado y entrenamiento diario corregido. */
+/* V5.41 · Punto de entrada. Fatiga visitante y sobreexigencia bot progresiva. */
 init();

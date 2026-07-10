@@ -1,6 +1,23 @@
+# Fútbol Manager MVP - V5.41
+
+## V5.41 - Fatiga visitante y sobreexigencia bot progresiva
+
+- Base actualizada con el `balance-modificadores.js` entregado por el usuario.
+- Corregido/protegido el cálculo de fatiga viva para que el visitante no pueda recibir doble aplicación por bloque.
+- Los bots mantienen recuperación física por sistema de protección, pero si van perdiendo se sobreexigen durante el partido.
+- Reglas nuevas:
+  - Pierde por 1 gol: +20% desgaste físico, +10% bonus de ataque.
+  - Pierde por 2 goles: +30% desgaste físico, +20% bonus de ataque.
+  - Pierde por 3+ goles: +50% desgaste físico, +30% bonus de ataque.
+- Las reglas quedan centralizadas en `balance-modificadores.js`.
+
+Compatibilidad de partida: **se implementa solo**. No requiere reiniciar partida.
+
+---
+
 # Historial de versiones
 
-## V5.40 - Balance separado y entrenamiento diario corregido
+## V5.41 - Balance separado y entrenamiento diario corregido
 
 - Agrega `balance-modificadores.js` como archivo activo para centralizar modificadores de entrenamiento, cohesión, lesiones, simulador, bots y clima.
 - El archivo se carga antes de `config.js`; sus valores sobrescriben los bloques equivalentes sin tocar el resto de la configuración.

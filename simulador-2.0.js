@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.26 desgaste, tarjetas y suspensión
+/* Motor de simulación V2.0 · V5.41 fatiga visitante y sobreexigencia bot progresiva
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){
@@ -72,6 +72,24 @@
     if(Number.isFinite(max)) value = Math.min(max, value);
     return value;
   }
+  function simConfigArray(path, fallback=[]){
+    const raw = simConfigValue(path, fallback);
+    return Array.isArray(raw) ? raw : fallback;
+  }
+  function normalizeBotOverexertionRules(rawRules){
+    const fallback = [
+      { diferenciaMin:1, diferenciaMax:1, desgasteFisicoPct:0.20, bonusAtaquePct:0.10 },
+      { diferenciaMin:2, diferenciaMax:2, desgasteFisicoPct:0.30, bonusAtaquePct:0.20 },
+      { diferenciaMin:3, diferenciaMax:99, desgasteFisicoPct:0.50, bonusAtaquePct:0.30 }
+    ];
+    const source = Array.isArray(rawRules) && rawRules.length ? rawRules : fallback;
+    return source.map(rule => ({
+      diferenciaMin: Math.max(1, Math.round(Number(rule?.diferenciaMin ?? rule?.min ?? rule?.diferencia ?? 1) || 1)),
+      diferenciaMax: Math.max(1, Math.round(Number(rule?.diferenciaMax ?? rule?.max ?? rule?.diferencia ?? 99) || 99)),
+      desgasteFisicoPct: Math.max(0, Math.min(2, Number(rule?.desgasteFisicoPct ?? rule?.desgastePct ?? 0) || 0)),
+      bonusAtaquePct: Math.max(0, Math.min(2, Number(rule?.bonusAtaquePct ?? rule?.ataquePct ?? 0) || 0))
+    })).sort((a,b) => a.diferenciaMin - b.diferenciaMin);
+  }
   const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.70, 0, 1);
   const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
   const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
@@ -83,12 +101,46 @@
   const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
   const SIM_CARD_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorTarjetas', 0.5, 0, 2);
   const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
+  const BOT_OVEREXERTION_ENABLED_V2 = Boolean(simConfigValue('equilibrioBots.tacticaRapida.sobreexigenciaSiPierde', true));
+  const BOT_OVEREXERTION_RULES_V2 = normalizeBotOverexertionRules(simConfigArray('equilibrioBots.tacticaRapida.reglasDiferencia', []));
   const LIVE_BOT_SUB_MINUTES = [45, 60, 70, 78, 84];
   const LIVE_BOT_INJURY_SUB_ENABLED = true;
 
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
   function simRnd(min,max){ return min + Math.random() * (max-min); }
+  function botOverexertionRuleV2(gf, gc){
+    if(!BOT_OVEREXERTION_ENABLED_V2) return null;
+    const diff = Math.max(0, Math.round(Number(gc || 0) - Number(gf || 0)));
+    if(diff <= 0) return null;
+    return BOT_OVEREXERTION_RULES_V2.find(rule => diff >= Number(rule.diferenciaMin || 1) && diff <= Number(rule.diferenciaMax || 99)) || null;
+  }
+  function isManagerClubV2(clubId){
+    return Number(clubId || 0) === Number(game?.selectedClubId || 0);
+  }
+  function applyBotOverexertionPowerV2(power, rule){
+    if(!power || !rule) return power;
+    const bonus = simClamp(Number(rule.bonusAtaquePct || 0), 0, 2);
+    if(bonus <= 0) return power;
+    const copy = clonePowerForLive(power);
+    const style = copy.styleEffects || emptySectorStyleEffectsV2();
+    copy.styleEffects = style;
+    copy.attack *= (1 + bonus);
+    copy.attackQuality *= (1 + bonus * 0.65);
+    style.attackMultiplier = simClamp((style.attackMultiplier || 1) * (1 + bonus), 0.45, 1.80);
+    style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * (1 + bonus * 0.75), 0.45, 1.80);
+    copy.botOverexertion = { ...rule };
+    return copy;
+  }
+  function liveBotOverexertionRuleForClub(session, clubId){
+    if(!session || isManagerClubV2(clubId)) return null;
+    if(Number(clubId) === Number(session.match?.homeId)) return botOverexertionRuleV2(session.homeGoals, session.awayGoals);
+    if(Number(clubId) === Number(session.match?.awayId)) return botOverexertionRuleV2(session.awayGoals, session.homeGoals);
+    return null;
+  }
+  function botOverexertionFatigueMultiplierV2(rule){
+    return 1 + simClamp(Number(rule?.desgasteFisicoPct || 0), 0, 2);
+  }
   function probabilisticRoundV2(value){
     const safe = Math.max(0, Number(value) || 0);
     const base = Math.floor(safe);
@@ -875,15 +927,22 @@
     const base = 0.055 + (100 - resistance) * 0.0018 + (100 - genetics) * 0.0012;
     return simClamp((base + instructionLoad) * posLoad * LIVE_FATIGUE_MULTIPLIER * instructionMultiplier, 0.07, 0.72);
   }
-  function applyLiveMinuteFatigue(session, clubId, instruction='none'){
+  function applyLiveMinuteFatigue(session, clubId, instruction='none', multiplier=1, guardKey=''){
     if(!session) return;
     session.liveConditionDeltas = session.liveConditionDeltas || {};
+    const safeMultiplier = simClamp(Number(multiplier || 1), 0.25, 4);
+    if(guardKey){
+      session.liveFatigueAppliedKeys = session.liveFatigueAppliedKeys instanceof Set ? session.liveFatigueAppliedKeys : new Set();
+      const key = `${guardKey}:${Number(clubId || 0)}`;
+      if(session.liveFatigueAppliedKeys.has(key)) return;
+      session.liveFatigueAppliedKeys.add(key);
+    }
     const tactic = liveTacticForClub(session, clubId);
     (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {
       if(liveIsUnavailableForPlay(session, id)) return;
       const player = playerById(id);
       if(!player) return;
-      session.liveConditionDeltas[id] = Number(session.liveConditionDeltas[id] || 0) - liveFatiguePerMinute(player, instruction);
+      session.liveConditionDeltas[id] = Number(session.liveConditionDeltas[id] || 0) - (liveFatiguePerMinute(player, instruction) * safeMultiplier);
     });
   }
   function liveRestRecoveryPerPhase(player){
@@ -1349,8 +1408,12 @@
       return livePublicState(session, { block, breakPhase:block.breakMinute, rest:true, homeRecovered, awayRecovered });
     }
     let { home, away } = livePowerPair(session);
+    const homeBotOverexertion = liveBotOverexertionRuleForClub(session, session.match.homeId);
+    const awayBotOverexertion = liveBotOverexertionRuleForClub(session, session.match.awayId);
     if(Number(session.match.homeId) === ownId) home = applyLiveInstructionToPower(home, instruction);
+    else home = applyBotOverexertionPowerV2(home, homeBotOverexertion);
     if(Number(session.match.awayId) === ownId) away = applyLiveInstructionToPower(away, instruction);
+    else away = applyBotOverexertionPowerV2(away, awayBotOverexertion);
     const homeInstruction = Number(session.match.homeId) === ownId ? 'normal' : instructionForScore(session.homeTactic, session.homeGoals, session.awayGoals);
     const awayInstruction = Number(session.match.awayId) === ownId ? 'normal' : instructionForScore(session.awayTactic, session.awayGoals, session.homeGoals);
     const h = blockStatsForTeam(home, away, session.matchContext, homeInstruction, awayInstruction, true, block);
@@ -1391,8 +1454,14 @@
     });
     const homeAppliedInstruction = Number(session.match.homeId) === ownId ? instruction : homeInstruction;
     const awayAppliedInstruction = Number(session.match.awayId) === ownId ? instruction : awayInstruction;
-    applyLiveMinuteFatigue(session, session.match.homeId, homeAppliedInstruction);
-    applyLiveMinuteFatigue(session, session.match.awayId, awayAppliedInstruction);
+    const fatigueGuardKey = `block-${session.blockIndex}`;
+    applyLiveMinuteFatigue(session, session.match.homeId, homeAppliedInstruction, botOverexertionFatigueMultiplierV2(homeBotOverexertion), fatigueGuardKey);
+    applyLiveMinuteFatigue(session, session.match.awayId, awayAppliedInstruction, botOverexertionFatigueMultiplierV2(awayBotOverexertion), fatigueGuardKey);
+    if(homeBotOverexertion || awayBotOverexertion){
+      session.botOverexertionEvents = Array.isArray(session.botOverexertionEvents) ? session.botOverexertionEvents : [];
+      if(homeBotOverexertion) session.botOverexertionEvents.push({ clubId:Number(session.match.homeId), side:'home', minute:block.from, diferencia:session.awayGoals - session.homeGoals, ...homeBotOverexertion });
+      if(awayBotOverexertion) session.botOverexertionEvents.push({ clubId:Number(session.match.awayId), side:'away', minute:block.from, diferencia:session.homeGoals - session.awayGoals, ...awayBotOverexertion });
+    }
     addLiveInstructionCondition(session, ownId, instruction);
     session.instructionLog.push({ minute:block.from, to:block.to, instruction, label:liveInstructionLabel(instruction) });
     session.currentMinute = Number(block.matchMinute || block.to);
@@ -1563,6 +1632,7 @@
       playedIdsHome,
       playedIdsAway,
       instructionConditionDeltas:session.instructionConditionDeltas,
+      botOverexertionEvents:Array.isArray(session.botOverexertionEvents) ? session.botOverexertionEvents.slice() : [],
       liveBlocks:session.instructionLog,
       suspended:Boolean(session.suspended),
       defaultLoss:session.defaultLoss || null
@@ -1595,8 +1665,12 @@
     for(const block of BLOCKS){
       const homeInstruction = instructionForScore(homeTactic, homeGoals, awayGoals);
       const awayInstruction = instructionForScore(awayTactic, awayGoals, homeGoals);
-      const h = blockStatsForTeam(home, away, matchContext, homeInstruction, awayInstruction, true, block);
-      const a = blockStatsForTeam(away, home, matchContext, awayInstruction, homeInstruction, false, block);
+      const homeBotOverexertion = isManagerClubV2(match.homeId) ? null : botOverexertionRuleV2(homeGoals, awayGoals);
+      const awayBotOverexertion = isManagerClubV2(match.awayId) ? null : botOverexertionRuleV2(awayGoals, homeGoals);
+      const homeBlockPower = applyBotOverexertionPowerV2(home, homeBotOverexertion);
+      const awayBlockPower = applyBotOverexertionPowerV2(away, awayBotOverexertion);
+      const h = blockStatsForTeam(homeBlockPower, awayBlockPower, matchContext, homeInstruction, awayInstruction, true, block);
+      const a = blockStatsForTeam(awayBlockPower, homeBlockPower, matchContext, awayInstruction, homeInstruction, false, block);
       mergeBlockStats(homeTotals, h);
       mergeBlockStats(awayTotals, a);
       let hGoals = 0;
@@ -1647,13 +1721,27 @@
         updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway });
       }
     }
+    const botOverexertionConditionDelta = (clubId, gf, gc, ids) => {
+      if(isManagerClubV2(clubId)) return {};
+      const rule = botOverexertionRuleV2(gf, gc);
+      if(!rule) return {};
+      const result = {};
+      (ids || []).forEach(id => {
+        const player = playerById(id);
+        const baseLoss = player && typeof conditionLossForPlayer === 'function' ? Math.max(1, Number(conditionLossForPlayer(player) || 0)) : 10;
+        result[id] = -Math.max(1, Math.round(baseLoss * Number(rule.desgasteFisicoPct || 0)));
+      });
+      return result;
+    };
     const instructionConditionDeltas = mergeConditionDeltas(
       instructionConditionDelta(homeTactic, homeGoals, awayGoals, starterIdsHome),
       instructionConditionDelta(awayTactic, awayGoals, homeGoals, starterIdsAway),
       sectorStyleConditionDelta(home, starterIdsHome),
-      sectorStyleConditionDelta(away, starterIdsAway)
+      sectorStyleConditionDelta(away, starterIdsAway),
+      botOverexertionConditionDelta(match.homeId, homeGoals, awayGoals, starterIdsHome),
+      botOverexertionConditionDelta(match.awayId, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0-jugadorista', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    return { ...match, played:true, engine:'simulador-2.0-v5.41-sobreexigencia-bot', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

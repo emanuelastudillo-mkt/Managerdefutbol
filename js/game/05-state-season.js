@@ -925,7 +925,7 @@ function integrityCopyBotMatchDetails(target, source){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','engine','suspended','defaultWin','defaultLoss','suspensionReason','integrityRepair'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','integrityRepair'
   ];
   fields.forEach(field => {
     if(Object.prototype.hasOwnProperty.call(source, field)) target[field] = integrityClonePlain(source[field]);

@@ -1,4 +1,20 @@
-# Características de la versión V5.61
+# Características de la versión V5.62
+
+## V5.62 - Corrección calendario postemporada
+
+### Cambios principales
+- La postemporada deja de recalcular su duración desde el fixture cada vez que se renderiza o avanza.
+- Al terminar la fase regular se guardan `postseasonStartDate` y `postseasonTotalTurns`.
+- Si una partida ya quedó con una duración inflada de postemporada, el cargador intenta inferir una fecha de inicio válida y normalizar el total.
+- El avance de postemporada vuelve a mover `currentDate` hacia adelante hasta el cierre real del año.
+- Se actualizaron versión visible y cache-busting a V5.62.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta sólo calendario/postemporada y reparación de partidas ya iniciadas.
+
+---
 
 ## V5.61 - Hitos con estilo dorado
 

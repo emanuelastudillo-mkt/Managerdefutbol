@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V5.61
+# Fútbol Manager MVP - V5.62
+
+## V5.62 - Corrección calendario postemporada
+
+- Se corrige el cálculo de postemporada cuando la liga termina cerca del final del año.
+- La postemporada ahora guarda fecha de inicio y duración al entrar en la fase, en lugar de recalcularla siempre desde el fixture.
+- Se repara partidas ya afectadas donde aparecía una postemporada absurda, por ejemplo `20-20 de 321`.
+- El calendario deja de quedar congelado en el último día de liga y vuelve a avanzar día por día.
+- Se normaliza el cache-busting y la versión visible a V5.62.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.61 - Hitos con estilo dorado
 

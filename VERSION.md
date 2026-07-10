@@ -1,8 +1,9 @@
 # Versión actual
 
-V5.61
+V5.62
 
 ## Cambios
-- Los hitos y récords personales ahora usan un estilo visual amarillo/dorado.
-- Se ajustan fondo, borde, icono y etiquetas para destacarlos mejor.
-- No cambia la lógica de desbloqueo, sólo la presentación visual.
+- Corrige el cálculo de duración de postemporada.
+- Guarda fecha de inicio y duración de postemporada para evitar recálculos desde fixtures incompletos.
+- Repara partidas ya afectadas donde el calendario quedaba congelado y mostraba postemporadas excesivas.
+- Normaliza versión visible y cache-busting a V5.62.

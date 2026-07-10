@@ -197,10 +197,63 @@ function lastFixtureMatchDate(state=game){
   const fixtures = state?.fixtures || [];
   for(let i=fixtures.length-1; i>=0; i--){
     const dates = (fixtures[i].matches || []).map(m => validIsoDate(m.date) ? m.date : fixtures[i].date).filter(validIsoDate);
-    if(dates.length){ const sortedDates = dates.sort((a,b)=>daysBetweenIsoDates(b,a)); return sortedDates[sortedDates.length - 1]; }
+    if(dates.length){ const sortedDates = dates.sort((a,b)=>daysBetweenIsoDates(a,b)); return sortedDates[sortedDates.length - 1]; }
     if(validIsoDate(fixtures[i].date)) return fixtures[i].date;
   }
   return '';
+}
+function latestIsoDateInSeason(dates=[], year=currentSeasonYear()){
+  const start = seasonStartDateForYear(year);
+  const end = seasonEndDateForYear(year);
+  const clean = (dates || []).filter(validIsoDate).filter(date => daysBetweenIsoDates(start, date) >= 0 && daysBetweenIsoDates(date, end) >= 0);
+  if(!clean.length) return '';
+  clean.sort((a,b)=>daysBetweenIsoDates(a,b));
+  return clean[clean.length - 1];
+}
+function latestKnownCalendarDateForState(state=game, year=currentSeasonYear()){
+  const dates = [state?.currentDate, state?.lastCalendarDate, lastFixtureMatchDate(state)];
+  (state?.matchHistory || []).forEach(result => { if(validIsoDate(result?.date)) dates.push(result.date); });
+  return latestIsoDateInSeason(dates, year);
+}
+function postseasonTotalTurnsFromStartDate(startDate, year=currentSeasonYear()){
+  if(POSTSEASON_TURNS_CONFIG > 0) return POSTSEASON_TURNS_CONFIG;
+  if(!validIsoDate(startDate)) return 0;
+  const remainingDays = Math.max(0, daysBetweenIsoDates(startDate, seasonEndDateForYear(year)) + 1);
+  return Math.ceil(remainingDays / Math.max(1, DAYS_PER_ADVANCE));
+}
+function ensurePostseasonCalendar(state=game, options={}){
+  if(!state) return { startDate:'', totalTurns:0, repaired:false };
+  const year = Math.round(Number(state.seasonYear || 0)) || seasonYearForNumber(state.seasonNumber || 1);
+  const phaseTurn = Math.max(0, Math.round(Number(state.phaseTurn || 0)));
+  const reset = Boolean(options.reset);
+  let startDate = validIsoDate(state.postseasonStartDate) ? state.postseasonStartDate : '';
+  let repaired = false;
+  if(reset || !startDate){
+    if(reset){
+      const anchor = validIsoDate(options.anchorDate) ? options.anchorDate : (latestKnownCalendarDateForState(state, year) || lastFixtureMatchDate(state) || leagueStartDateForSeason(year));
+      startDate = addDaysToIsoDate(anchor, DAYS_PER_ADVANCE);
+    }else if(validIsoDate(state.currentDate) && phaseTurn > 0){
+      startDate = addDaysToIsoDate(state.currentDate, -phaseTurn * DAYS_PER_ADVANCE);
+    }else{
+      const anchor = latestKnownCalendarDateForState(state, year) || lastFixtureMatchDate(state) || leagueStartDateForSeason(year);
+      startDate = addDaysToIsoDate(anchor, DAYS_PER_ADVANCE);
+    }
+    repaired = true;
+  }
+  const seasonStart = seasonStartDateForYear(year);
+  const seasonEnd = seasonEndDateForYear(year);
+  if(validIsoDate(startDate) && daysBetweenIsoDates(startDate, seasonStart) > 0){ startDate = seasonStart; repaired = true; }
+  if(validIsoDate(startDate) && daysBetweenIsoDates(seasonEnd, startDate) > 0){ startDate = seasonEnd; repaired = true; }
+  let totalTurns = Math.max(0, Math.round(Number(state.postseasonTotalTurns || 0)));
+  const expectedTurns = postseasonTotalTurnsFromStartDate(startDate, year);
+  const impossibleTotal = POSTSEASON_TURNS_CONFIG <= 0 && totalTurns > Math.max(expectedTurns + phaseTurn + 7, expectedTurns + 14);
+  if(reset || !totalTurns || impossibleTotal){
+    totalTurns = expectedTurns;
+    repaired = true;
+  }
+  state.postseasonStartDate = startDate;
+  state.postseasonTotalTurns = totalTurns;
+  return { startDate, totalTurns, repaired };
 }
 function dateForSeasonState(state=game){
   const year = Math.round(Number(state?.seasonYear || 0)) || seasonYearForNumber(state?.seasonNumber || 1);
@@ -208,9 +261,9 @@ function dateForSeasonState(state=game){
   if(state.seasonFinalized || state.seasonPhase === 'finalized') return seasonEndDateForYear(year);
   if(state.seasonPhase === 'regular') return nextUnplayedMatchDateForClub(state, state.selectedClubId) || nextUnplayedMatchDate(state) || state.fixtures?.[state.matchdayIndex || 0]?.date || leagueStartDateForSeason(year);
   if(state.seasonPhase === 'postseason'){
-    const lastMatchDate = lastFixtureMatchDate(state);
-    const afterLastRound = lastMatchDate ? addDaysToIsoDate(lastMatchDate, DAYS_PER_ADVANCE) : leagueStartDateForSeason(year);
-    return addDaysToIsoDate(afterLastRound, Math.max(0, Number(state.phaseTurn || 0)) * DAYS_PER_ADVANCE);
+    const calendar = ensurePostseasonCalendar(state);
+    const startDate = validIsoDate(calendar.startDate) ? calendar.startDate : (lastFixtureMatchDate(state) ? addDaysToIsoDate(lastFixtureMatchDate(state), DAYS_PER_ADVANCE) : leagueStartDateForSeason(year));
+    return addDaysToIsoDate(startDate, Math.max(0, Number(state.phaseTurn || 0)) * DAYS_PER_ADVANCE);
   }
   if(state.seasonPhase === 'preseason'){
     return addDaysToIsoDate(firstAdvanceDateForSeason(year), Math.max(0, Number(state.phaseTurn || 0)) * DAYS_PER_ADVANCE);
@@ -227,14 +280,19 @@ function currentSeasonFixtureCount(){ return game?.fixtures?.length || seed?.fix
 function postseasonTurnsForSeason(seasonOrYear=null, fixtureCount=null){
   const year = Number(seasonOrYear || 0) > 1900 ? Math.round(Number(seasonOrYear)) : seasonYearForNumber(seasonOrYear || game?.seasonNumber || 1);
   if(POSTSEASON_TURNS_CONFIG > 0) return POSTSEASON_TURNS_CONFIG;
+  if(game && game.seasonPhase === 'postseason' && Math.round(Number(game.seasonYear || 0) || currentSeasonYear()) === year){
+    return ensurePostseasonCalendar(game).totalTurns || 0;
+  }
   const fixtures = Number.isFinite(Number(fixtureCount)) ? Math.max(0, Number(fixtureCount)) : currentSeasonFixtureCount();
   const lastDate = lastFixtureMatchDate(game);
-  const start = seasonStartDateForYear(year);
   const usedDays = lastDate ? seasonDayFromDate(lastDate, year) : ((PRESEASON_TURNS * DAYS_PER_ADVANCE) + (fixtures * LEAGUE_ROUND_INTERVAL_DAYS));
   const remainingDays = Math.max(0, daysInSeasonYear(year) - usedDays);
   return Math.ceil(remainingDays / DAYS_PER_ADVANCE);
 }
-function postseasonTurnsForCurrentSeason(){ return postseasonTurnsForSeason(currentSeasonYear(), currentSeasonFixtureCount()); }
+function postseasonTurnsForCurrentSeason(){
+  if(game && game.seasonPhase === 'postseason') return ensurePostseasonCalendar(game).totalTurns || 0;
+  return postseasonTurnsForSeason(currentSeasonYear(), currentSeasonFixtureCount());
+}
 function totalSeasonTurnCount(){
   return PRESEASON_TURNS + currentSeasonFixtureCount() + postseasonTurnsForCurrentSeason();
 }

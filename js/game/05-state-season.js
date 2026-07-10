@@ -1880,7 +1880,15 @@ function normalizeGame(saved){
     normalized.currentDate = normalized.lastCalendarDate;
     normalized._calendarRegressionRepaired = true;
   }
-  if(validIsoDate(normalized.currentDate)) normalized.lastCalendarDate = normalized.currentDate;
+  if(normalized.seasonPhase === 'postseason' && typeof ensurePostseasonCalendar === 'function'){
+    const postseasonCalendar = ensurePostseasonCalendar(normalized);
+    const expectedPostseasonDate = dateForSeasonState(normalized);
+    if(validIsoDate(expectedPostseasonDate) && (!validIsoDate(normalized.currentDate) || daysBetweenIsoDates(normalized.currentDate, expectedPostseasonDate) >= 0)){
+      normalized.currentDate = expectedPostseasonDate;
+      normalized.lastCalendarDate = expectedPostseasonDate;
+    }
+    normalized._postseasonCalendarRepaired = Boolean(postseasonCalendar?.repaired || normalized._postseasonCalendarRepaired);
+  }
   normalized.calendarVersion = SEASON_CALENDAR_VERSION;
   normalized.standings = normalized.standings || createInitialStandings();
   normalized.playerStats = normalized.playerStats || createInitialPlayerStats();
@@ -2187,6 +2195,8 @@ function newGame(selectedClubId, options={}){
     seasonTransition: null,
     seasonPhase: 'preseason',
     phaseTurn: 0,
+    postseasonStartDate: '',
+    postseasonTotalTurns: 0,
     globalTurn: 0,
     preseasonFriendliesPlayed: 0,
     pendingFriendlyOpponentId: 0,
@@ -4534,6 +4544,8 @@ function startNextSeason(selectedClubId){
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;
+  game.postseasonStartDate = '';
+  game.postseasonTotalTurns = 0;
   game.preseasonFriendliesPlayed = 0;
   game.pendingFriendlyOpponentId = 0;
   game.matchdayIndex = 0;

@@ -948,6 +948,20 @@ function startAutoAdvanceToNextOwnMatch(){
   tick();
   return true;
 }
+function startPostseasonPhase(anchorDate=null){
+  if(!game) return;
+  const anchor = validIsoDate(anchorDate)
+    ? anchorDate
+    : (validIsoDate(game.currentDate) ? game.currentDate : (latestKnownCalendarDateForState(game, currentSeasonYear()) || lastFixtureMatchDate(game) || seasonEndDateForYear(currentSeasonYear())));
+  game.seasonPhase = 'postseason';
+  game.phaseTurn = 0;
+  game.postseasonStartDate = '';
+  game.postseasonTotalTurns = 0;
+  const calendar = typeof ensurePostseasonCalendar === 'function' ? ensurePostseasonCalendar(game, { reset:true, anchorDate:anchor }) : null;
+  game.currentDate = validIsoDate(calendar?.startDate) ? calendar.startDate : addDaysToIsoDate(anchor, 1);
+  rememberCalendarDate();
+}
+
 function completeRegularSeasonIfNeeded(){
   if(!game || !isRegularSeason()) return false;
   if(game.matchdayIndex < game.fixtures.length) return false;
@@ -957,10 +971,7 @@ function completeRegularSeasonIfNeeded(){
     showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
     return true;
   }
-  game.seasonPhase = 'postseason';
-  game.phaseTurn = 0;
-  game.currentDate = dateForSeasonState(game);
-  rememberCalendarDate();
+  startPostseasonPhase();
   setAdvanceLock(0);
   saveLocal(true);
   renderAll();
@@ -1011,9 +1022,7 @@ function advanceCalendarOneStep(){
   const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   if(regularEnded){
-    game.seasonPhase = 'postseason';
-    game.phaseTurn = 0;
-    game.currentDate = dateForSeasonState(game);
+    startPostseasonPhase(nextDate);
     setAdvanceLock(0);
   }else{
     applyUnifiedAdvanceCooldown('daily');
@@ -1064,10 +1073,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - Number(budgetBeforeTurn || 0));
   if(regularEnded){
-    game.seasonPhase = 'postseason';
-    game.phaseTurn = 0;
-    game.currentDate = dateForSeasonState(game);
-    rememberCalendarDate();
+    startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   }else{
     game.currentDate = targetDate;
@@ -1214,10 +1220,7 @@ function simulateNextMatchday(options={}){
       return;
     }
     showTurnTransition('Cambio de fase');
-    game.seasonPhase = 'postseason';
-    game.phaseTurn = 0;
-    game.currentDate = dateForSeasonState(game);
-    rememberCalendarDate();
+    startPostseasonPhase(currentCalendarDate());
     saveLocal(true);
     renderAll();
     showNotice('Comienza la postemporada. Se usarán los días restantes del año antes del cierre de temporada.');
@@ -1231,10 +1234,7 @@ function simulateNextMatchday(options={}){
   const targetDate = ownInfo?.date || pendingInfo?.date;
   if(!targetDate){
     game.matchdayIndex = game.fixtures.length;
-    game.seasonPhase = 'postseason';
-    game.phaseTurn = 0;
-    game.currentDate = dateForSeasonState(game);
-    rememberCalendarDate();
+    startPostseasonPhase(currentCalendarDate());
     saveLocal(true);
     renderAll();
     showNotice('No quedan partidos pendientes. Comienza la postemporada.');
@@ -1291,10 +1291,7 @@ function simulateNextMatchday(options={}){
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(regularEnded){
-    game.seasonPhase = 'postseason';
-    game.phaseTurn = 0;
-    game.currentDate = dateForSeasonState(game);
-    rememberCalendarDate();
+    startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   } else {
     game.currentDate = targetDate;

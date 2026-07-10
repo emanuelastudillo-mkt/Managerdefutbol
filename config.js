@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.50',
+  version: 'V5.51',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -512,7 +512,8 @@ window.GAME_CONFIG = {
     // La ruta principal de carga es /ranking/season.
     submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
     // Rutas de login/verificación compatibles con el Worker Cloudflare + D1.
-    loginPaths: ['auth/login','login','api/auth/login','api/login'],
+    // También prueba rutas de registro/sesión para cuentas creadas originalmente sin contraseña.
+    loginPaths: ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'],
     mePaths: ['auth/me','me','api/auth/me','api/me','user','api/user'],
     // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
     readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],

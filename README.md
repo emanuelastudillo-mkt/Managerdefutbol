@@ -1,4 +1,19 @@
-# Fútbol Manager MVP - V5.50
+# Fútbol Manager MVP - V5.51
+
+## V5.51 - Login del ranking sin contraseña obligatoria
+
+- El login del Ranking Online ya no exige contraseña.
+- Sirve para cuentas creadas originalmente sólo con usuario, como el flujo inicial del Worker.
+- El campo contraseña queda opcional: si está vacío, el juego prueba login/recuperación de sesión sólo con `username`.
+- Se prueban varios formatos de cuerpo y rutas compatibles antes de mostrar error final.
+- Se agregan rutas de registro/sesión como respaldo para recuperar token si el Worker lo permite.
+- El botón ahora dice **Iniciar / recuperar sesión**.
+- No cambia la carga manual, carga automática, cooldown, puntaje ni endpoint principal `/ranking/season`.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida.
+
+---
+
 
 
 

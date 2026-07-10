@@ -1,9 +1,9 @@
 # Versión actual
 
-V5.50
+V5.51
 
 ## Nombre
-Ranking online Worker /ranking/season
+Ranking online con login sin contraseña
 
 ## Compatibilidad
 Se implementa solo. No requiere reiniciar partida.

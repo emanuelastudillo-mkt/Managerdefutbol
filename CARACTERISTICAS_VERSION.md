@@ -1,4 +1,25 @@
-# Características de la versión V5.50
+# Características de la versión V5.51
+
+## V5.51 - Login del ranking sin contraseña obligatoria
+
+- Corrige el login del ranking para cuentas creadas originalmente sin contraseña.
+- El campo contraseña pasa a ser opcional.
+- El formulario ahora permite iniciar o recuperar sesión usando sólo el usuario del ranking.
+- El login prueba cuerpos compatibles con contraseña y sin contraseña: `username`, `user`, `managerName` y formulario URL encoded.
+- Se agregan rutas compatibles de recuperación/registro de sesión: `/auth/register`, `/register`, `/api/auth/register`, `/api/register`, `/auth/session`, `/session`, `/api/auth/session` y `/api/session`.
+- El login ya no corta en el primer error de usuario/credenciales: sigue probando rutas y formatos antes de mostrar el error final.
+- No cambia ranking, cooldown, puntaje, subida manual, subida automática ni endpoint `/ranking/season`.
+
+## Validación
+
+- `node --check` ejecutado sobre todos los JS.
+- JSON de `data/` parseados correctamente.
+
+## Compatibilidad
+
+Se implementa solo. No requiere reiniciar partida. Las partidas existentes pueden iniciar sesión desde Ranking Online con usuario solo.
+
+---
 
 ## V5.50 - Login visible para Ranking Online
 

@@ -1,2 +1,2 @@
-/* V5.50 · Punto de entrada. Ranking online Worker /ranking/season. */
+/* V5.51 · Punto de entrada. Ranking online con login sin contraseña. */
 init();

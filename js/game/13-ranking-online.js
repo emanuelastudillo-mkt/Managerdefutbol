@@ -1,4 +1,4 @@
-/* V5.50 · Ranking online con login visible y sesión persistente. */
+/* V5.51 · Ranking online con login sin contraseña y recuperación de sesión. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -113,7 +113,7 @@ function rankingAuthPaths(kind){
   const raw = kind === 'me' ? cfg.mePaths : cfg.loginPaths;
   const defaults = kind === 'me'
     ? ['auth/me','me','api/auth/me','api/me','user','api/user']
-    : ['auth/login','login','api/auth/login','api/login'];
+    : ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'];
   const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
   const seen = new Set();
   return source
@@ -185,27 +185,63 @@ function rankingLoginPanelMarkup(endpoint){
     <div id="rankingAuthStatus" class="ranking-auth-status small">${rankingAuthStatusMarkup(endpoint)}</div>
     <form id="rankingLoginForm" class="ranking-login-form">
       <input id="rankingLoginUser" name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
-      <input id="rankingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Contraseña" ${disabled} />
-      <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
+      <input id="rankingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Contraseña opcional" ${disabled} />
+      <button class="primary" type="submit" ${disabled}>Iniciar / recuperar sesión</button>
       <button id="rankingCheckSession" class="ghost" type="button" ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
       <button id="rankingLogout" class="danger" type="button" ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
     </form>
-    <div id="rankingLoginStatus" class="small muted">${token ? 'Token guardado. Ya podés subir datos si el cooldown lo permite.' : 'No se guarda la contraseña.'}</div>
+    <div id="rankingLoginStatus" class="small muted">${token ? 'Token guardado. Ya podés subir datos si el cooldown lo permite.' : 'La contraseña es opcional. Si tu cuenta fue creada sin contraseña, ingresá sólo el usuario.'}</div>
   </div>`;
+}
+function rankingLoginRequestBodies(username, password){
+  const cleanUser = String(username || '').trim();
+  const cleanPassword = String(password || '');
+  const json = payload => ({ headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(payload) });
+  const form = payload => ({ headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams(payload).toString() });
+  const bodies = [];
+  if(cleanPassword){
+    bodies.push(
+      json({ username:cleanUser, password:cleanPassword }),
+      json({ user:cleanUser, username:cleanUser, password:cleanPassword }),
+      json({ email:cleanUser, password:cleanPassword }),
+      form({ username:cleanUser, password:cleanPassword })
+    );
+  }
+  // Compatibilidad con el Worker original del proyecto: usuario + token, sin contraseña.
+  bodies.push(
+    json({ username:cleanUser }),
+    json({ user:cleanUser, username:cleanUser }),
+    json({ managerName:cleanUser, username:cleanUser }),
+    form({ username:cleanUser }),
+    form({ user:cleanUser })
+  );
+  const seen = new Set();
+  return bodies.filter(req => {
+    const key = `${req.headers['Content-Type']}|${req.body}`;
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 async function rankingLoginRequest(endpoint, username, password){
   const paths = rankingAuthPaths('login');
-  const bodies = [
-    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ username, password }) },
-    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ user:username, username, password }) },
-    { headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ email:username, password }) },
-    { headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams({ username, password }).toString() }
-  ];
+  const bodies = rankingLoginRequestBodies(username, password);
   let lastMessage = '';
+  let authMessage = '';
+  const tried = [];
   for(const path of paths){
+    const route = rankingRouteLabel(path);
     for(const req of bodies){
-      const response = await fetch(rankingApiUrl(endpoint, path), { method:'POST', headers:req.headers, body:req.body });
-      const data = await response.json().catch(() => ({}));
+      tried.push(route);
+      let response;
+      let data = {};
+      try{
+        response = await fetch(rankingApiUrl(endpoint, path), { method:'POST', headers:req.headers, body:req.body });
+        data = await response.json().catch(() => ({}));
+      }catch(error){
+        lastMessage = error?.message || 'Error de conexión con el ranking.';
+        continue;
+      }
       if(response.ok && data.ok !== false){
         const token = rankingStoreAuthSession(data, username);
         if(token) return data;
@@ -215,10 +251,18 @@ async function rankingLoginRequest(endpoint, username, password){
       const message = rankingResponseErrorMessage(data, response, 'No se pudo iniciar sesión.');
       lastMessage = message;
       if(rankingIsRouteMissing(message, response)) break;
-      if([401,403].includes(Number(response.status || 0)) || /credencial|contraseña|password|usuario|login|token/i.test(message)) throw new Error(message);
+      if([401,403].includes(Number(response.status || 0)) || /credencial|contraseña|password|usuario|login|token/i.test(message)){
+        authMessage = message;
+        // No cortar acá: algunos Workers devuelven error por formato en una ruta, pero aceptan usuario solo en otra.
+        continue;
+      }
     }
   }
-  throw new Error(lastMessage || 'No se encontró una ruta válida de login.');
+  const uniqueRoutes = [...new Set(tried)].join(', ');
+  if(authMessage && !String(password || '').trim()){
+    throw new Error(`${authMessage}. Probá ingresando sólo tu usuario exacto del ranking o creá nuevamente la sesión en el Worker.`);
+  }
+  throw new Error(lastMessage || `No se encontró una ruta válida de login. Rutas probadas: ${uniqueRoutes}`);
 }
 async function loginRankingAccount(event){
   event?.preventDefault?.();
@@ -226,8 +270,8 @@ async function loginRankingAccount(event){
   const username = String($('rankingLoginUser')?.value || '').trim();
   const password = String($('rankingLoginPassword')?.value || '');
   const status = $('rankingLoginStatus');
-  if(!username || !password){ showNotice('Ingresá usuario y contraseña del ranking.'); return false; }
-  if(status) status.textContent = 'Iniciando sesión...';
+  if(!username){ showNotice('Ingresá el usuario del ranking. La contraseña es opcional.'); return false; }
+  if(status) status.textContent = password ? 'Iniciando sesión...' : 'Buscando sesión por usuario...';
   const submit = document.querySelector('#rankingLoginForm button[type="submit"]');
   if(submit) submit.disabled = true;
   try{

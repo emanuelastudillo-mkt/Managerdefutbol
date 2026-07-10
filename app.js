@@ -1,2 +1,2 @@
-/* V5.54 · Punto de entrada. Nuevas cartas de habilidades y bonus de manager. */
+/* V5.57 · Punto de entrada. Premios deportivos reducidos. */
 init();

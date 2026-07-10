@@ -1,12 +1,12 @@
 /*
-  V5.47 · Balance del manager, objetivos y prestigio.
+  V5.57 · Balance del manager, objetivos, prestigio y premios.
   Archivo activo: centraliza objetivos deportivos sin tocar el simulador.
 */
 window.GAME_BALANCE_MANAGER = {
   metadataBalance: {
-    version: 'V5.47',
-    nombre: 'Objetivos dinámicos por prestigio relativo',
-    nota: 'Define exigencia de directiva según liga, prestigio del club y prestigio promedio de sus rivales.'
+    version: 'V5.57',
+    nombre: 'Objetivos dinámicos y premios deportivos ajustados',
+    nota: 'Define exigencia de directiva y premios económicos por campeonatos y ascensos con escala reducida.'
   },
 
   objetivos: {
@@ -91,5 +91,28 @@ window.GAME_BALANCE_MANAGER = {
       activo: true,
       deltaDespido: -0.50
     }
+  },
+
+  premiosTemporada: {
+    activo: true,
+    evitarDuplicados: true,
+    conceptoCampeon: 'Premio por campeonato',
+    conceptoAscenso: 'Premio por ascenso',
+    campeonatoPorDivisionOrden: {
+      1: 1500000000,
+      2: 750000000,
+      3: 375000000
+    },
+    ascensoPorDivisionOrigenOrden: {
+      2: 500000000,
+      3: 250000000
+    },
+    valoresFallback: {
+      campeonato: 375000000,
+      ascenso: 250000000
+    },
+    // Los premios se apilan: un campeón de segunda o tercera que asciende cobra campeonato + ascenso.
+    acumularCampeonatoYAscenso: true
   }
+
 };

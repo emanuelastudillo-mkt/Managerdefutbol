@@ -1,9 +1,7 @@
 # Versión actual
 
-V5.54
+V5.57
 
-## Nombre
-Nuevas cartas de habilidades
-
-## Compatibilidad
-Se implementa solo. No requiere reiniciar partida.
+## Cambios
+- Premios por campeonato y ascenso reducidos a la mitad.
+- Mantiene la lógica anti-duplicación y acumulación campeonato + ascenso.

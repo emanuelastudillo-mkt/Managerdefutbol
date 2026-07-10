@@ -1,21 +1,52 @@
-# Características de la versión V5.54
+# Características de la versión V5.57
 
-## V5.54 - Nuevas cartas de habilidades
+## V5.57 - Premios deportivos reducidos
 
-- Se agregan cartas de Ídolo del Club con bonus a hinchas/socios ganados por resultados positivos.
-- Se agregan cartas de Entrenador Táctico: al activarse suman cohesión una sola vez y quedan fijas por 100 días.
-- Se agregan cartas de Especialista en Libres con bonus a la aceptación de jugadores libres.
-- Se agregan cartas de Preparación Física con bonus bajo a la recuperación postpartido del club del manager.
-- Ninguna de estas nuevas familias usa tope interno de apilamiento.
-- Se actualiza el resumen de cartas activas para mostrar bonus porcentuales, relativos y puntos de cohesión con texto correcto.
-- No se modifican sobres, costos, cantidad de cartas activas, bloqueo de 100 días ni probabilidades de rareza.
+### Cambios principales
+- Se redujeron a la mitad los premios económicos por campeonato y ascenso agregados en V5.56.
+- Los valores quedan centralizados en `balance-manager.js`, bloque `premiosTemporada`.
+- Se mantiene la regla de acumulación: un club que sale campeón y asciende cobra ambos premios.
+- Se mantiene la protección contra pagos duplicados con `game.seasonPrizeAwards`.
+
+### Valores actuales
+
+| Logro | Premio |
+|---|---:|
+| Campeón de Primera | $1.500.000.000 |
+| Campeón de Segunda | $750.000.000 |
+| Campeón de Tercera | $375.000.000 |
+| Ascenso de Segunda a Primera | $500.000.000 |
+| Ascenso de Tercera a Segunda | $250.000.000 |
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Aplica al cierre de futuras temporadas.
+
+---
+
+## V5.56 - Premios por campeonatos y ascensos
+
+- Se agregan premios económicos configurables por campeonato y ascenso.
+- Los valores quedan centralizados en `balance-manager.js`, dentro de `premiosTemporada`.
+- Premios por campeonato:
+  - Primera: $3.000.000.000
+  - Segunda: $1.500.000.000
+  - Tercera: $750.000.000
+- Premios por ascenso:
+  - Desde segunda a primera: $1.000.000.000
+  - Desde tercera a segunda: $500.000.000
+- Los premios se apilan: si un club sale campeón y asciende, cobra ambos conceptos.
+- Se evita la duplicación mediante `game.seasonPrizeAwards`.
+- Los premios se registran en el historial financiero como `season_prize` y aparecen dentro de Finanzas en la categoría **Premios temporada**.
+- El panel y modal de fin de temporada muestran el total cobrado y el detalle de campeonato/ascenso.
 
 ## Validación
 
 - `node --check` ejecutado sobre todos los JS.
 - JSON de `data/` parseados correctamente.
-- ZIP incremental y completo generados desde V5.53.
+- ZIP incremental y completo generados desde V5.55.
 
 ## Compatibilidad
 
-Se implementa solo. No requiere reiniciar partida. Las cartas nuevas aparecen en futuras aperturas de sobres.
+Se implementa solo. No requiere reiniciar partida. Los premios se aplican al cerrar futuras temporadas.

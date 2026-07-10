@@ -1,4 +1,47 @@
-# Fútbol Manager MVP - V5.54
+# Fútbol Manager MVP - V5.57
+
+## V5.57 - Premios deportivos reducidos
+
+- Premios por campeonato y ascenso reducidos a la mitad.
+- Valores actuales:
+  - Campeón de Primera: $1.500.000.000
+  - Campeón de Segunda: $750.000.000
+  - Campeón de Tercera: $375.000.000
+  - Ascenso de Segunda a Primera: $500.000.000
+  - Ascenso de Tercera a Segunda: $250.000.000
+- Mantiene acumulación de campeonato + ascenso.
+- Mantiene protección contra pagos duplicados.
+- Compatibilidad de partida: se implementa solo.
+
+---
+
+## V5.56 - Premios por campeonatos y ascensos
+
+- Se agregan premios económicos por salir campeón y por ascender.
+- Los montos quedan editables en `balance-manager.js` bajo `premiosTemporada`.
+- Campeonato: Primera $3.000.000.000, Segunda $1.500.000.000, Tercera $750.000.000.
+- Ascenso: de Segunda a Primera $1.000.000.000, de Tercera a Segunda $500.000.000.
+- Los premios se apilan cuando corresponde: campeón + ascenso.
+- Se registran como ingreso financiero en la categoría **Premios temporada**.
+- El cierre de temporada muestra el total cobrado y el detalle por campeonato/ascenso.
+- Se guarda `game.seasonPrizeAwards` para evitar duplicados.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida. Aplica al cierre de futuras temporadas.
+
+---
+
+## V5.55 - Hitos y récords personales ocultos
+
+- Se agrega una lista inicial de 50 hitos personales en `data/hitos_manager.json`.
+- Los hitos no se muestran hasta desbloquearse.
+- **Tus estadísticas** ahora muestra el progreso `desbloqueados / total` y una grilla con los hitos conseguidos.
+- Los logros cubren partidos, resultados, goles, temporadas, objetivos, títulos, experiencia, prestigio, economía, estadio, hinchas, cartas, ojeo y academia.
+- El estado desbloqueado se guarda en `game.managerStats.achievements`.
+- Al conseguir un nuevo hito se agrega un mensaje del asistente.
+
+**Compatibilidad de partida:** se implementa solo. No requiere reiniciar partida. Los hitos ya cumplidos se detectan al revisar estadísticas o con nuevos eventos.
+
+---
 
 ## V5.54 - Nuevas cartas de habilidades
 

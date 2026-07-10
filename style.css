@@ -4596,3 +4596,17 @@ th{
 .clickable-player-row:hover{background:rgba(59,130,246,.08)}
 .finance-salary-card{display:block}
 .finance-salary-card .table-wrap{max-height:none}
+
+
+/* V5.64 · Botón de auto avance */
+.advance-auto-toggle{
+  border-color:rgba(34,197,94,.24)!important;
+  background:rgba(34,197,94,.08)!important;
+  color:#bbf7d0!important;
+}
+.advance-auto-toggle.is-active{
+  border-color:rgba(239,68,68,.35)!important;
+  background:linear-gradient(135deg,rgba(239,68,68,.18),rgba(15,23,42,.42))!important;
+  color:#fecaca!important;
+  box-shadow:0 0 0 1px rgba(239,68,68,.12),0 12px 28px rgba(239,68,68,.08);
+}

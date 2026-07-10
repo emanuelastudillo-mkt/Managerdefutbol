@@ -1,2 +1,2 @@
-/* V5.63 · Punto de entrada. Verificador automático cada 5 días. */
+/* V5.64 · Punto de entrada. Auto avance manual. */
 init();

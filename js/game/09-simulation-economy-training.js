@@ -1043,6 +1043,107 @@ function applyUnifiedAdvanceCooldown(reason='daily'){
   setAdvanceLock(duration);
   game.lastAdvanceCooldownReason = reason;
 }
+
+const ADVANCE_AUTO_CLICKER_POLL_MS = 650;
+const advanceAutoClickerState = { active:false, timer:null, running:false };
+function isAdvanceAutoClickerActive(){ return Boolean(advanceAutoClickerState.active); }
+function updateAdvanceAutoClickerButton(){
+  const btn = $('advanceAutoClickerBtn');
+  if(!btn) return;
+  const active = isAdvanceAutoClickerActive();
+  btn.classList.toggle('is-active', active);
+  const seasonEnded = Boolean(game?.seasonFinalized || (typeof seasonPhase === 'function' && seasonPhase() === 'finalized'));
+  if(active){
+    btn.textContent = 'Detener auto avance';
+    btn.disabled = false;
+  }else if(seasonEnded){
+    btn.textContent = 'Auto avance no disponible';
+    btn.disabled = true;
+  }else if(game?.gameOver?.active){
+    btn.textContent = 'Auto avance no disponible';
+    btn.disabled = true;
+  }else{
+    btn.textContent = 'Auto avance: apagado';
+    btn.disabled = false;
+  }
+}
+function stopAdvanceAutoClicker(reason='', silent=false){
+  if(advanceAutoClickerState.timer){
+    clearTimeout(advanceAutoClickerState.timer);
+    advanceAutoClickerState.timer = null;
+  }
+  const wasActive = advanceAutoClickerState.active;
+  advanceAutoClickerState.active = false;
+  advanceAutoClickerState.running = false;
+  updateAdvanceAutoClickerButton();
+  if(wasActive && reason && !silent) showNotice(`Auto avance detenido: ${reason}`);
+}
+function advanceAutoClickerStopReason(){
+  if(!game) return 'no hay partida activa';
+  if(game.gameOver?.active) return 'el manager está sin club';
+  if(game.seasonFinalized || (typeof seasonPhase === 'function' && seasonPhase() === 'finalized')) return 'la temporada está finalizada';
+  if($('modalRoot')) return 'hay una ventana abierta';
+  if(game.mustReviewTactics) return 'hay revisión táctica obligatoria';
+  const ownInfo = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
+  const ownDueToday = Boolean(typeof isRegularSeason === 'function' && isRegularSeason() && ownInfo?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(ownInfo.date));
+  if(ownDueToday && typeof validateCurrentTactic === 'function'){
+    const invalid = validateCurrentTactic(false);
+    if(Array.isArray(invalid) && invalid.length) return 'la táctica está incompleta';
+  }
+  return '';
+}
+function scheduleAdvanceAutoClickerTick(delay=ADVANCE_AUTO_CLICKER_POLL_MS){
+  if(!advanceAutoClickerState.active) return;
+  if(advanceAutoClickerState.timer) clearTimeout(advanceAutoClickerState.timer);
+  const safeDelay = Math.max(200, Math.round(Number(delay) || ADVANCE_AUTO_CLICKER_POLL_MS));
+  advanceAutoClickerState.timer = setTimeout(runAdvanceAutoClickerTick, safeDelay);
+}
+function runAdvanceAutoClickerTick(){
+  if(!advanceAutoClickerState.active) return;
+  const stopReason = advanceAutoClickerStopReason();
+  if(stopReason){ stopAdvanceAutoClicker(stopReason); return; }
+  if(startAutoAdvanceToNextOwnMatch?.active){
+    scheduleAdvanceAutoClickerTick(ADVANCE_AUTO_CLICKER_POLL_MS);
+    return;
+  }
+  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : 0;
+  if(lockLeft > 0){
+    updateAdvanceButtonState?.();
+    scheduleAdvanceAutoClickerTick(Math.min(lockLeft + 250, 5000));
+    return;
+  }
+  if(advanceAutoClickerState.running){
+    scheduleAdvanceAutoClickerTick(ADVANCE_AUTO_CLICKER_POLL_MS);
+    return;
+  }
+  advanceAutoClickerState.running = true;
+  try{
+    advanceCalendarOneStep();
+  }catch(error){
+    console.error('Auto avance falló', error);
+    stopAdvanceAutoClicker('se produjo un error al avanzar');
+    return;
+  }finally{
+    advanceAutoClickerState.running = false;
+  }
+  if(advanceAutoClickerState.active){
+    const nextLock = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : 0;
+    scheduleAdvanceAutoClickerTick(nextLock > 0 ? Math.min(nextLock + 250, 5000) : ADVANCE_AUTO_CLICKER_POLL_MS);
+  }
+}
+function startAdvanceAutoClicker(){
+  if(isAdvanceAutoClickerActive()) return;
+  const stopReason = advanceAutoClickerStopReason();
+  if(stopReason){ showNotice(`Auto avance no iniciado: ${stopReason}.`); return; }
+  advanceAutoClickerState.active = true;
+  updateAdvanceAutoClickerButton();
+  showNotice('Auto avance activado. Avanzará cada vez que termine el bloqueo.');
+  scheduleAdvanceAutoClickerTick(200);
+}
+function toggleAdvanceAutoClicker(){
+  if(isAdvanceAutoClickerActive()) stopAdvanceAutoClicker('desactivado manualmente');
+  else startAdvanceAutoClicker();
+}
 function advanceCalendarOneStep(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }

@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V5.63
+# Fútbol Manager MVP - V5.64
+
+## V5.64 - Botón de auto avance
+
+- Agrega un botón debajo de **Avanzar día** para activar/desactivar el auto avance.
+- Cuando está activo, el juego intenta avanzar cada vez que termina el bloqueo normal.
+- Respeta bloqueos existentes: temporada finalizada, manager sin club, ventanas abiertas, táctica incompleta o revisión obligatoria.
+- Si aparece una condición que requiere intervención, el auto avance se detiene con aviso.
+- No cambia calendario, simulador, economía ni reglas de partidos.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.63 - Verificador automático cada 5 días
 

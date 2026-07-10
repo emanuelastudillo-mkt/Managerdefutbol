@@ -1,4 +1,19 @@
-# Características de la versión V5.63
+# Características de la versión V5.64
+
+## V5.64 - Botón de auto avance
+
+### Cambios principales
+- Se agregó un botón debajo de **Avanzar día** para funcionar como auto clicker interno.
+- Al activarlo, intenta avanzar automáticamente cuando el cooldown llega a cero.
+- El sistema se detiene si detecta temporada finalizada, manager sin club, ventana/modal abierta, táctica incompleta o revisión táctica obligatoria.
+- El botón cambia a **Detener auto avance** mientras está activo.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- No modifica reglas de calendario, simulador ni economía; sólo automatiza el click cuando ya era legal avanzar.
+
+---
 
 ## V5.63 - Verificador automático cada 5 días
 

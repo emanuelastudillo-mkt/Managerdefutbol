@@ -318,7 +318,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     </div>
     <div class="office-side-card">
       ${nextBox}
-      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button><button id="advanceAutoClickerBtn" class="secondary advance-auto-toggle" type="button">Auto avance: apagado</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
   </div>`;
 }
@@ -451,6 +451,7 @@ function renderHome(){
 
   `;
   $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  $('advanceAutoClickerBtn')?.addEventListener('click', () => { if(typeof toggleAdvanceAutoClicker === 'function') toggleAdvanceAutoClicker(); });
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
@@ -498,6 +499,7 @@ function updateAdvanceButtonState(){
   }
   btn.textContent = text;
   btn.disabled = disabled;
+  if(typeof updateAdvanceAutoClickerButton === 'function') updateAdvanceAutoClickerButton();
   updateAdvanceProgressBox();
 }
 function updateAdvanceProgressBox(){

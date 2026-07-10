@@ -4417,3 +4417,59 @@ th{
     flex-direction:column;
   }
 }
+
+/* V5.45 · Resultado de partido sin solapamiento y listas de informes de ojeo */
+.match-result-shell{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  display:grid;
+  align-content:start;
+  gap:12px;
+  padding-right:4px;
+}
+.match-context-safe{
+  position:relative;
+  z-index:2;
+  flex:0 0 auto;
+  overflow:visible;
+}
+.modal-panel:has(.match-result-shell){
+  overflow:hidden;
+}
+.modal-panel:has(.match-result-shell) .match-context-card{
+  max-height:none;
+}
+.modal-panel:has(.match-reveal-shell) .compact-match-context.match-context-safe{
+  max-height:118px;
+  overflow:auto;
+}
+.scouting-reports-card .scouting-action-grid{
+  grid-template-columns:1fr;
+}
+.scouting-reports-head{
+  margin-bottom:12px;
+}
+.scouting-reports-head h2{
+  margin:0;
+}
+.scouting-reports-table-wrap{
+  margin-top:12px;
+  max-height:min(62vh,620px);
+  overflow:auto;
+}
+.scouting-reports-table{
+  min-width:760px;
+}
+.scouting-reports-table th,
+.scouting-reports-table td{
+  text-align:left;
+}
+.scouting-reports-table td:nth-child(4),
+.scouting-reports-table td:nth-child(5),
+.scouting-reports-table td:nth-child(6),
+.scouting-reports-table th:nth-child(4),
+.scouting-reports-table th:nth-child(5),
+.scouting-reports-table th:nth-child(6){
+  text-align:center;
+}

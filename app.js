@@ -1,2 +1,2 @@
-/* V5.44 · Punto de entrada. Recuperación postpartido por resistencia. */
+/* V5.45 · Punto de entrada. Resultado de partido e informes de ojeo navegables. */
 init();

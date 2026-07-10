@@ -1,4 +1,4 @@
-/* V5.04 · Modales de jugador, intransferibles y scouting exclusivamente por informe. */
+/* V5.45 · Modales: resultado de partido ordenado e informes de ojeo navegables. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -528,8 +528,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
         <div class="reveal-progress"><span id="revealProgressBar"></span></div>
         <button id="finishMatchReveal" class="primary">Finalizar partido</button>
       </div>
-      <div id="matchRevealDynamic"></div>
-      <div class="card inner match-context-card compact-match-context">
+      <div class="card inner match-context-card compact-match-context match-context-safe">
         <h3>Contexto del partido</h3>
         <div class="grid cols-4">
           <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
@@ -542,6 +541,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
           ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Demanda extra por rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Asistencia · prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
         </div>
       </div>
+      <div id="matchRevealDynamic"></div>
     </div>`;
   openModal(html);
   const stages = matchRevealStages(match);
@@ -971,11 +971,12 @@ function showMatchModal(matchId){
   const away = clubName(match.awayId);
   const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
   const body = `
+    <div class="match-result-shell">
     <div class="match-modal-head">
       <p class="label">Fecha ${match.matchday} · ${match.date}</p>
       <h2>${clubLink(match.homeId)} ${match.homeGoals} - ${match.awayGoals} ${clubLink(match.awayId)}</h2>
     </div>
-    <div class="card inner match-context-card compact-match-context">
+    <div class="card inner match-context-card compact-match-context match-context-safe">
       <h3>Contexto del partido</h3>
       <div class="grid cols-4">
         <div><p class="label">Clima</p><strong>${escapeHtml(context.weather)}</strong></div>
@@ -999,6 +1000,7 @@ function showMatchModal(matchId){
       <div class="card inner"><h3>Amonestados y expulsados</h3>${match.cards.length ? match.cards.map(cardLine).join('') : '<p class="muted">Sin tarjetas.</p>'}</div>
       <div class="card inner"><h3>Cambios automáticos</h3>${match.substitutions?.length ? match.substitutions.map(subLine).join('') : '<p class="muted">Sin cambios automáticos ejecutados.</p>'}</div>
       <div class="card inner"><h3>Lesiones</h3>${match.injuries?.length ? match.injuries.map(injuryLine).join('') : '<p class="muted">Sin lesiones.</p>'}</div>
+    </div>
     </div>`;
   openModal(body);
 }

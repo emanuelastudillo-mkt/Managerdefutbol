@@ -1,4 +1,19 @@
-# Fútbol Manager MVP - V5.44
+# Fútbol Manager MVP - V5.45
+
+## V5.45 - Resultado de partido e informes de ojeo navegables
+
+- Ajusta la pantalla de resultado para que el bloque **Contexto del partido** no quede tapado por estadísticas, eventos u otros bloques.
+- En la simulación visual, el contexto queda arriba del bloque dinámico del partido y conserva scroll propio si falta espacio.
+- En el modal de resultado histórico, el contenido queda dentro de un contenedor desplazable para evitar solapamientos.
+- En el **Centro de Ojeo** se agrega acceso a **Informes guardados** y **Archivados**.
+- Los informes se muestran como lista de jugadores clickeables.
+- Al hacer clic en un jugador informado se abre su ficha.
+- Los equipos no se incluyen como archivados: sus informes siguen siendo dinámicos y dependen del plantel actual del bot.
+- Se mantienen los informes de jugadores aunque se los quite de la lista activa.
+
+Compatibilidad de partida: **se implementa solo**. No requiere reiniciar partida.
+
+---
 
 ## V5.44 - Recuperación postpartido por resistencia
 

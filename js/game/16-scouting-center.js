@@ -1,4 +1,4 @@
-/* V5.43 · Centro de Ojeo: equipos progresivos y procesamiento diario equilibrado. */
+/* V5.45 · Centro de Ojeo: informes guardados/archivados y equipos progresivos. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -492,6 +492,76 @@ function scoutingPlayerCard(player){
     ${scoutingPlayerKnownSkillRows(player)}
   </div>`;
 }
+
+function scoutingPlayerReportEntries(mode='all'){
+  const state = ensureScoutingCenterState();
+  const activeIds = new Set((state.listedPlayerIds || []).map(Number));
+  const reports = state.reports && typeof state.reports === 'object' && !Array.isArray(state.reports) ? state.reports : {};
+  return Object.keys(reports).map(id => {
+    const player = typeof playerById === 'function' ? playerById(Number(id)) : null;
+    if(!player) return null;
+    const report = normalizeScoutingReport(Number(id), reports[id]);
+    const active = activeIds.has(Number(id));
+    if(mode === 'archived' && active) return null;
+    if(mode === 'active' && !active) return null;
+    return { player, report, active };
+  }).filter(Boolean).sort((a,b) => {
+    if(Number(b.active) !== Number(a.active)) return Number(b.active) - Number(a.active);
+    return String(a.player.name || '').localeCompare(String(b.player.name || ''), 'es');
+  });
+}
+function scoutingPlayerReportListRow(entry){
+  const player = entry.player;
+  const report = entry.report || {};
+  const known = Array.isArray(report.visibleSkills) ? report.visibleSkills.length : 0;
+  const total = scoutingSkillKeys(player).length || 1;
+  const hiddenMap = scoutingHiddenStatMap(player);
+  const hiddenKnown = Object.keys(hiddenMap).filter(key => (report.visibleSkills || []).includes(key)).length;
+  const hiddenTotal = Object.keys(hiddenMap).length;
+  const status = entry.active ? '<span class="pill ok">Activo</span>' : '<span class="pill">Archivado</span>';
+  return `<tr>
+    <td><button class="linklike" data-scouting-report-player="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
+    <td>${roleBadge(player.position)}</td>
+    <td>${escapeHtml(clubName(player.clubId))}</td>
+    <td>${known}/${total}</td>
+    <td>${hiddenKnown}/${hiddenTotal}</td>
+    <td>${Number(report.daysObserved || 0)}</td>
+    <td>${status}</td>
+  </tr>`;
+}
+function scoutingReportsModalMarkup(mode='all'){
+  const title = mode === 'archived' ? 'Informes archivados' : 'Informes guardados';
+  const entries = scoutingPlayerReportEntries(mode);
+  const rows = entries.map(scoutingPlayerReportListRow).join('');
+  const empty = mode === 'archived'
+    ? 'No hay informes archivados de jugadores. Quitá un jugador de la lista activa para archivar su informe.'
+    : 'Todavía no hay informes guardados de jugadores.';
+  return `<div class="scouting-reports-modal">
+    <div class="scouting-reports-head"><p class="label">Centro de Ojeo</p><h2>${escapeHtml(title)}</h2></div>
+    <p class="muted small">Sólo se listan jugadores. Los informes de equipo son dinámicos y no se archivan.</p>
+    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
+  </div>`;
+}
+function openScoutingReportsModal(mode='all'){
+  if(typeof openModal !== 'function') return;
+  openModal(scoutingReportsModalMarkup(mode));
+  document.querySelectorAll('[data-scouting-report-player]').forEach(btn => btn.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const playerId = Number(ev.currentTarget.dataset.scoutingReportPlayer || 0);
+    if(playerId && typeof showPlayerModal === 'function') showPlayerModal(playerId);
+  }));
+}
+function scoutingReportsControlMarkup(){
+  const state = ensureScoutingCenterState();
+  const totalPlayerReports = scoutingPlayerReportEntries('all').length;
+  const teamReports = Object.keys(state.teamReports || {}).length;
+  return `<div class="card scouting-reports-card scouting-control-card">
+    <div class="scouting-card-head"><div><p class="label">Informes</p><h3>Guardados y archivados</h3></div><span class="pill">${totalPlayerReports}</span></div>
+    <p class="muted small">Abrí jugadores ya ojeados en lista. Los equipos no se archivan; sus visores se actualizan con el plantel actual.</p>
+    <div class="scouting-action-grid"><button class="ghost" data-open-scouting-reports="all">Informes guardados</button><button class="ghost" data-open-scouting-reports="archived">Archivados</button></div>
+    ${teamReports ? `<p class="muted small">Informes dinámicos de equipo activos/guardados: ${teamReports}</p>` : ''}
+  </div>`;
+}
 function scoutingChiefMarkup(){
   const state = ensureScoutingCenterState();
   if(state.chief){
@@ -528,8 +598,7 @@ function renderScoutingCenter(){
   const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
   const usedSlots = listed.length + listedTeams.length;
   const archivedReports = Object.keys(state.reports || {}).filter(id => !state.listedPlayerIds.map(Number).includes(Number(id))).length;
-  const archivedTeamReports = Object.keys(state.teamReports || {}).filter(id => !(state.listedTeamIds || []).map(Number).includes(Number(id))).length;
-  const reportCount = Object.keys(state.reports || {}).length + Object.keys(state.teamReports || {}).length;
+  const reportCount = Object.keys(state.reports || {}).length;
   const lastProcess = game?.lastScoutingDailyResult;
   const lastProcessText = lastProcess?.date ? `Último proceso: ${escapeHtml(lastProcess.date)} · intentos ${Number(lastProcess.attempts || 0)} · reveladas ${Number(lastProcess.reveals || 0)}` : 'Todavía no se procesó ningún día de ojeo.';
   const officeCost = state.offices > 0 ? `${formatMoney(SCOUTING_OFFICE_MONTHLY_COST)}/mes` : 'Sin alquileres activos';
@@ -548,7 +617,7 @@ function renderScoutingCenter(){
         ${scoutingSummaryTile({ label:'Ojeo activo', value:`${usedSlots}/${caps.playerCapacity}`, hint:`${listed.length} jugador(es) · ${listedTeams.length} equipo(s)`, icon:scoutingBinocularsIcon('mini') })}
         ${scoutingSummaryTile({ label:'Ojeadores', value:`${state.scouts}/${caps.scoutCapacity}`, hint:scoutCost, icon:'👤' })}
         ${scoutingSummaryTile({ label:'Oficinas', value:`${state.offices}/${maxOffices}`, hint:officeCost, icon:'🏢' })}
-        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports + archivedTeamReports} archivado(s)`, icon:'▣' })}
+        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports} jugador(es) archivado(s)`, icon:'▣' })}
       </div>
       <div class="scouting-workspace">
         <div class="scouting-main-stack">
@@ -580,6 +649,7 @@ function renderScoutingCenter(){
             <p class="muted small">Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día. Costo actual: <strong class="bad">${formatMoney(state.scouts * SCOUTING_SCOUT_DAILY_COST)}</strong>.</p>
             <div class="scouting-action-grid"><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
           </div>
+          ${scoutingReportsControlMarkup()}
           <div class="card scouting-process-card scouting-control-card">
             <div class="scouting-card-head"><div><p class="label">Actividad diaria</p><h3>Proceso de ojeo</h3></div></div>
             <p class="muted small">${lastProcessText}</p>
@@ -592,6 +662,7 @@ function renderScoutingCenter(){
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);
   document.querySelector('[data-hire-scouting-scout]')?.addEventListener('click', hireScoutingScout);
   document.querySelector('[data-dismiss-scouting-scout]')?.addEventListener('click', dismissScoutingScout);
+  document.querySelectorAll('[data-open-scouting-reports]').forEach(btn => btn.addEventListener('click', () => openScoutingReportsModal(btn.dataset.openScoutingReports || 'all')));
   document.querySelectorAll('[data-remove-scouting-player]').forEach(btn => btn.addEventListener('click', () => removePlayerFromScoutingCenter(Number(btn.dataset.removeScoutingPlayer || 0))));
   document.querySelectorAll('[data-remove-scouting-team]').forEach(btn => btn.addEventListener('click', () => removeTeamFromScoutingCenter(Number(btn.dataset.removeScoutingTeam || 0))));
 }

@@ -1,23 +1,18 @@
-# Características de la versión V5.44
+# Características de la versión V5.45
 
-## Recuperación postpartido por resistencia
+## Resultado de partido
 
-- La recuperación automática postpartido ya no usa un rango fijo universal de 4 a 6.
-- Ahora se calcula jugador por jugador según su habilidad `resistencia`.
-- Los rangos activos quedan en `balance-modificadores.js`:
-  - Resistencia 1-40: recupera 0 a 1.
-  - Resistencia 41-60: recupera 2 a 4.
-  - Resistencia 61-70: recupera 3 a 5.
-  - Resistencia 71-80: recupera 4 a 7.
-  - Resistencia 81-90: recupera 6 a 9.
-  - Resistencia 91-99: recupera 12 a 20.
-- El rango 61-70 se agrega como puente para evitar un salto brusco entre 60 y 71.
+- El bloque **Contexto del partido** deja de quedar tapado por estadísticas, eventos o bloques inferiores.
+- En la simulación visual, el contexto se ubica antes del bloque dinámico del partido y queda protegido con `z-index` y tamaño propio.
+- En el resultado histórico, el contenido se envuelve en `match-result-shell`, con scroll interno seguro.
 
-## Balance centralizado
+## Centro de Ojeo
 
-- Se agrega `simulador.recuperacionPostPartidoUsaResistencia`.
-- Se agrega `simulador.recuperacionPostPartidoPorResistencia`.
-- Si se desactiva esa opción, el sistema vuelve al respaldo anterior `recuperacionAutomaticaPostPartidoMin/Max`.
+- Se agrega una tarjeta de **Informes guardados y archivados**.
+- **Informes guardados** muestra todos los informes de jugadores registrados.
+- **Archivados** muestra sólo los informes de jugadores que ya no están en la lista activa.
+- La lista permite hacer clic sobre un jugador para abrir su ficha.
+- Los equipos no se archivan; sus informes siguen siendo dinámicos porque sus porcentajes pueden cambiar si el bot cambia jugadores.
 
 ## Compatibilidad
 

@@ -50,13 +50,13 @@ window.GAME_BALANCE_MODIFICADORES = {
     escalaRiesgoErrorJugador: 0.72,
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
-    fatigaVivaMultiplicador: 2,
-    multiplicadorTarjetas: 0.50,
+    fatigaVivaMultiplicador: 5,
+    multiplicadorTarjetas: 0.70,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
-    desgastePartidoMin: 25,
-    desgastePartidoMax: 46,
+    desgastePartidoMin: 40,
+    desgastePartidoMax: 78,
     factorDesgasteArquero: 0.5
   },
 
@@ -75,8 +75,8 @@ window.GAME_BALANCE_MODIFICADORES = {
   estadio: {
     clima: {
       lluviaDeterioroActivo: true,
-      lluviaLeveExtraDeterioro: 2,
-      lluviaIntensaExtraDeterioro: 4
+      lluviaLeveExtraDeterioro: 3,
+      lluviaIntensaExtraDeterioro: 7
     }
   }
 };

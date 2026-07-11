@@ -2312,6 +2312,10 @@ function financeRatingMarkup(salaryTotal=0){
   return `<div class="card finance-rating-card"><div class="row"><div><p class="label">Calificación</p><h3 class="${rating.tone}">${escapeHtml(rating.label)}</h3></div><span class="pill">${Math.floor(budget / salaries)}x sueldos</span></div><p class="muted small">${escapeHtml(rating.message)}</p><p class="muted small">Referencia: presupuesto actual ${formatMoney(budget)} / sueldos anuales ${formatMoney(salaryTotal)}.</p></div>`;
 }
 function renderFinances(){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){
+    view.innerHTML = `<div class="section-title compact-section-title"><h2>Finanzas</h2><p class="tagline">Sin club activo.</p></div><div class="card"><p class="label">Finanzas vacías</p><h3>Actualmente no gestionás ningún presupuesto</h3><p class="muted small">Al renunciar o ser despedido se vacían las finanzas del menú lateral. Cuando firmes con otro club se cargará la economía del nuevo equipo.</p></div>`;
+    return;
+  }
   const history = (game.budgetHistory || []).slice().reverse();
   const seasonExpenses = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) < 0).reduce((a,h)=>a+Math.abs(Number(h.delta || 0)),0);
   const seasonIncome = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) > 0).reduce((a,h)=>a+Number(h.delta || 0),0);

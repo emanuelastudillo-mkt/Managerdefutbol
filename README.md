@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.25
+# Fútbol Manager MVP - V6.26
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.24**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.25**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -11,6 +11,18 @@ La versión vigente se identifica desde:
 - `index.html`
 
 
+
+
+
+## V6.26 - Bloqueos sin club y mercado laboral más claro
+
+Cambios principales:
+- Al estar sin club, los mensajes viejos con ofertas de jugadores ya no permiten aceptar, rechazar ni intervenir operaciones del club anterior.
+- En la ficha de jugadores, al estar sin club quedan bloqueadas las acciones de ojear, marcar transferible/intransferible, despedir, ofrecer a clubes, contratar libres o enviar ofertas.
+- La pantalla de Finanzas queda vacía al renunciar o ser despedido, porque el manager no gestiona presupuesto hasta firmar con otro club.
+- Las ofertas laborales muestran el detalle del objetivo estimado y las restricciones de fichajes/presupuesto aplicadas.
+- Las solicitudes de trabajo a clubes superiores pueden ser rechazadas aunque estén dentro del margen de 20 puntos.
+- Cada solicitud tiene un riesgo interno de rechazo entre 1% y 20%, mayor cuanto más prestigio tenga el club por encima del manager.
 
 
 
@@ -235,14 +247,19 @@ Cambios principales:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.25
+## Archivos modificados en V6.26
 
-- `js/game/13-ranking-online.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/16-scouting-center.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/07-render-team-market.js`
+- `js/ui/12-modals.js`
 - `index.html`
 - `config.js`
 - `README.md`
 
-## Validación V6.25
+## Validación V6.26
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

@@ -160,6 +160,9 @@ function markPendingTransferOffersRejectedForUntransferable(player){
 }
 
 function playerModalActionsMarkup(player){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){
+    return `<div class="card inner player-action-card"><h3>Acciones bloqueadas</h3><p class="muted small">Estás sin club. No podés ojear, marcar transferible/intransferible, despedir, ofrecer jugadores ni enviar ofertas hasta firmar con un equipo.</p></div>`;
+  }
   const clubId = Number(player.clubId || 0);
   if(clubId === Number(game.selectedClubId)){
     const checked = player.transferListed ? 'checked' : '';
@@ -184,6 +187,7 @@ function playerModalActionsMarkup(player){
   return '';
 }
 function bindPlayerModalActions(playerId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)) return;
   document.querySelector('[data-dismiss-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); dismissOwnPlayer(playerId); });
   document.querySelector('[data-offer-own-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); offerOwnPlayerToClubs(playerId); });
   document.querySelector('[data-make-player-offer]')?.addEventListener('click', (ev) => { ev.stopPropagation(); openPurchaseOfferModal(playerId); });
@@ -247,6 +251,7 @@ function showPlayerModal(playerId){
 
 
 function toggleTransferListed(playerId, value){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés modificar estados de jugadores mientras estás sin club.'); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   player.transferListed = Boolean(value);
@@ -257,6 +262,7 @@ function toggleTransferListed(playerId, value){
   showPlayerModal(playerId);
 }
 function toggleUntransferablePlayer(playerId, value){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés modificar estados de jugadores mientras estás sin club.'); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   player.intransferible = Boolean(value);
@@ -270,6 +276,7 @@ function toggleUntransferablePlayer(playerId, value){
 
 
 function dismissOwnPlayer(playerId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés despedir jugadores mientras estás sin club.'); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
@@ -295,6 +302,7 @@ function dismissOwnPlayer(playerId){
   showNotice(`${player.name} fue despedido.`);
 }
 function offerOwnPlayerToClubs(playerId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés ofrecer jugadores mientras estás sin club.'); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
@@ -346,6 +354,7 @@ function offerOwnPlayerToClubs(playerId){
   showNotice('Llegó una oferta por el jugador.');
 }
 function openPurchaseOfferModal(playerId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés enviar ofertas mientras estás sin club.'); return; }
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
@@ -382,6 +391,7 @@ function purchaseOfferConfig(kind, clause){
   return { amount:Math.round(clause), clubChance:1, fail:'El club no puede bloquear el pago de cláusula.' };
 }
 function submitPurchaseOffer(playerId, kind){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés enviar ofertas mientras estás sin club.'); return; }
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;

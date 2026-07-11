@@ -415,6 +415,7 @@ function renderContractedMarket(){
 }
 
 function hireFreeAgent(playerId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés contratar jugadores mientras estás sin club.'); return; }
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
   if(idx < 0) return;

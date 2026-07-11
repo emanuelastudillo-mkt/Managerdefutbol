@@ -244,6 +244,7 @@ function scoutingReportForPlayer(playerId, stateOverride=null){
   return state.reports[key];
 }
 function addPlayerToScoutingCenter(playerId, options={}){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés ojear jugadores mientras estás sin club.'); return; }
   if(!SCOUTING_CENTER_ENABLED || !game){ showNotice('El Centro de Ojeo no está disponible.'); return; }
   const player = playerById(playerId);
   if(!player){ showNotice('Jugador no encontrado.'); return; }
@@ -274,6 +275,7 @@ function addPlayerToScoutingCenter(playerId, options={}){
 }
 
 function addTeamToScoutingCenter(clubId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés ojear equipos mientras estás sin club.'); return; }
   if(!SCOUTING_CENTER_ENABLED || !game){ showNotice('El Centro de Ojeo no está disponible.'); return; }
   const id = Number(clubId || 0);
   const club = seed?.clubs?.find(c => Number(c.id) === id);

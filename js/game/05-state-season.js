@@ -551,6 +551,7 @@ function normalizeManagerJobMarketState(state={}){
       managerPrestigeAtOffer:Math.max(0, Math.round(Number(offer?.managerPrestigeAtOffer ?? currentManagerPrestige()))),
       objectiveBonus:Number.isFinite(Number(offer?.objectiveBonus)) ? Number(offer.objectiveBonus) : (String(offer?.contractType || '') === 'high_risk' ? 0.25 : 0),
       transferBudgetRate:Number.isFinite(Number(offer?.transferBudgetRate)) ? Number(offer.transferBudgetRate) : (String(offer?.contractType || '') === 'high_risk' ? 0.05 : null),
+      rejectionChance:Number.isFinite(Number(offer?.rejectionChance)) ? clamp(Number(offer.rejectionChance), 1, 20) : 1,
       note:String(offer?.note || '')
     };
   };
@@ -564,6 +565,7 @@ function normalizeManagerJobMarketState(state={}){
       requestedDate,
       responseDate:validIsoDate(app?.responseDate) ? app.responseDate : addDaysToIsoDate(requestedDate, 3),
       managerPrestigeAtRequest:Math.max(0, Math.round(Number(app?.managerPrestigeAtRequest ?? currentManagerPrestige()))),
+      rejectionChance:Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 20) : 1,
       status:String(app?.status || 'pending')
     };
   };
@@ -635,6 +637,7 @@ function managerJobCreateOffer(clubId, options={}){
     managerPrestigeAtOffer:currentManagerPrestige(),
     objectiveBonus:contractType === 'high_risk' ? 0.25 : 0,
     transferBudgetRate:contractType === 'high_risk' ? 0.05 : null,
+    rejectionChance:Number.isFinite(Number(options.rejectionChance)) ? clamp(Number(options.rejectionChance), 1, 20) : 1,
     note:String(options.note || '')
   };
   state.offers.push(offer);
@@ -684,11 +687,14 @@ function processManagerJobMarketDaily(){
     const managerPrestige = currentManagerPrestige();
     const clubPrestige = clubPrestigeValue(club);
     const diff = clubPrestige - managerClubAccessPrestige(managerPrestige);
-    if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
-      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.' });
+    const rejection = managerJobApplicationRejected(app, club);
+    if(rejection.rejected){
+      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud. La decisión interna fue negativa aunque estabas dentro del margen evaluable. Probabilidad de rechazo aplicada: ${Math.round(rejection.chance)}%.`, id:`job-application-random-rejected-${club.id}-${today}` });
+    }else if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
+      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
     }else if(diff > 0 && diff <= 20){
-      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.' });
+      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud en evaluación aceptada', body:`${club.name} analiza tu perfil pese a la diferencia de prestigio. Te ofrece contrato con objetivo superior al normal y una restricción de fichajes muy alta. Tenés 20 días para aceptar.`, id:`job-application-risk-${club.id}-${today}` });
     }else{
       pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} respondió que la diferencia de reputación todavía es demasiado grande para ofrecerte el cargo.`, id:`job-application-rejected-${club.id}-${today}` });
@@ -712,32 +718,63 @@ function processManagerJobMarketDaily(){
   state.lastProcessedDate = today;
   return { offers, expired, applications:applicationResponses, previousOffers:before };
 }
+
+function managerJobApplicationRejectionChance(club, managerPrestige=currentManagerPrestige()){
+  const diff = clubPrestigeValue(club) - managerClubAccessPrestige(managerPrestige);
+  return clamp(Math.round(1 + Math.max(0, diff)), 1, 20);
+}
+function managerJobApplicationRejected(app, club){
+  const chance = Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 20) : managerJobApplicationRejectionChance(club, app?.managerPrestigeAtRequest ?? currentManagerPrestige());
+  const roll = hashNumber(`job-app-reject-${app?.id || ''}-${club?.id || 0}-${app?.responseDate || currentCalendarDate()}`, 10000) / 100;
+  return { rejected: roll < chance, chance, roll };
+}
+function managerJobOfferObjectiveDetails(offer, clubId=offer?.clubId){
+  const base = Number(managerObjectiveForClubDivision(clubId));
+  const highRisk = String(offer?.contractType || '') === 'high_risk';
+  const bonus = highRisk ? Number(offer?.objectiveBonus || 0.25) : 0;
+  const finalObjective = Number.isFinite(base) ? Number(Math.min(2.75, base + bonus).toFixed(2)) : null;
+  const baseLabel = Number.isFinite(base) ? Number(base).toFixed(2) : '—';
+  const finalLabel = Number.isFinite(finalObjective) ? Number(finalObjective).toFixed(2) : '—';
+  const objectiveText = highRisk
+    ? `Objetivo: ${finalLabel} pts/partido. Normal estimado ${baseLabel} + exigencia ${Number(bonus).toFixed(2)}.`
+    : `Objetivo: ${baseLabel} pts/partido estimados según el club.`;
+  const budgetRate = highRisk ? clamp(Number(offer?.transferBudgetRate || 0.05), 0.01, 1) : null;
+  const restrictionText = highRisk
+    ? `Restricción de fichajes: presupuesto muy limitado, aprox. ${Math.round(budgetRate * 100)}% del margen normal autorizado.`
+    : 'Restricción de fichajes: condiciones normales del club.';
+  return { objectiveText, restrictionText, baseLabel, finalLabel, highRisk, budgetRate };
+}
+
 function managerJobOfferCard(offer){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(offer.clubId));
   if(!club) return '';
   const division = clubDivision(club.id);
   const highRisk = String(offer.contractType || '') === 'high_risk';
   const tag = highRisk ? 'Contrato exigente' : 'Contrato normal';
+  const detail = managerJobOfferObjectiveDetails(offer, club.id);
   const note = highRisk
     ? 'Objetivo superior al normal y fichajes muy restringidos.'
     : 'Condiciones normales según reputación y división.';
   return `<article class="card job-offer-card ${highRisk ? 'warn' : ''}">
     <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
     <p class="muted small">${escapeHtml(division?.name || 'Liga')} · Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(note)}</p>
+    <div class="job-offer-details"><p class="small"><strong>${escapeHtml(detail.objectiveText)}</strong></p><p class="muted small">${escapeHtml(detail.restrictionText)}</p></div>
     <div class="row message-actions"><button class="primary" data-accept-job-offer="${escapeHtml(offer.id)}">Aceptar cargo</button><button class="ghost" data-reject-job-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
   </article>`;
 }
 function managerJobApplicationCard(app){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(app.clubId));
   if(!club) return '';
-  return `<article class="card job-application-card"><p class="label">Solicitud enviada</p><h3>${escapeHtml(club.name)}</h3><p class="muted small">Responden el ${escapeHtml(app.responseDate || '—')}. Prestigio club ${clubPrestigeValue(club)} · tu prestigio ${formatManagerPrestige(currentManagerPrestige())}.</p></article>`;
+  const chance = Number.isFinite(Number(app.rejectionChance)) ? Number(app.rejectionChance) : managerJobApplicationRejectionChance(club, app.managerPrestigeAtRequest ?? currentManagerPrestige());
+  return `<article class="card job-application-card"><p class="label">Solicitud enviada</p><h3>${escapeHtml(club.name)}</h3><p class="muted small">Responden el ${escapeHtml(app.responseDate || '—')}. Prestigio club ${clubPrestigeValue(club)} · tu prestigio ${formatManagerPrestige(currentManagerPrestige())}. Riesgo de rechazo interno ${Math.round(chance)}%.</p></article>`;
 }
 function managerJobApplicationOptionCard(club){
   const prestige = managerClubAccessPrestige(currentManagerPrestige());
   const diff = clubPrestigeValue(club) - prestige;
+  const rejectionChance = managerJobApplicationRejectionChance(club, currentManagerPrestige());
   return `<button type="button" class="card available-club-card job-application-option" data-apply-job-club="${Number(club.id)}">
     <div class="available-club-head"><span class="available-club-badge">${clubBadge(club.id) || '▣'}</span><strong>${escapeHtml(club.name || 'Club')}</strong></div>
-    <p class="muted small">Prestigio ${clubPrestigeValue(club)} · ${diff > 0 ? `+${diff} sobre tu reputación` : 'alcanzable'}</p>
+    <p class="muted small">Prestigio ${clubPrestigeValue(club)} · ${diff > 0 ? `+${diff} sobre tu reputación` : 'alcanzable'} · rechazo ${Math.round(rejectionChance)}%</p>
     <small>Enviar solicitud · respuesta en 3 días</small>
   </button>`;
 }
@@ -780,6 +817,7 @@ function applyForManagerJob(clubId){
     requestedDate:today,
     responseDate:addDaysToIsoDate(today, 3),
     managerPrestigeAtRequest:currentManagerPrestige(),
+    rejectionChance:managerJobApplicationRejectionChance(club, currentManagerPrestige()),
     status:'pending'
   });
   pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud enviada', body:`Enviaste una solicitud para dirigir a ${club.name}. Responderán en 3 días.`, id:`job-application-sent-${club.id}-${today}` });
@@ -839,7 +877,9 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   const baseBudget = Math.max(0, Math.round(Number(club?.budget || 0)));
   game.clubBudgets[id] = baseBudget;
   if(Number(game.selectedClubId || 0) === id){
-    game.budget = baseBudget;
+    game.budget = 0;
+    game.seasonInitialBudget = 0;
+    game.budgetHistory = [];
     game.lastBudgetDelta = 0;
   }
   game.staffActions = {};
@@ -858,6 +898,14 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.managerJobContract = null;
   game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
   pushGameMessage({ type:'sistema', priority:'normal', title:'Club saliente reiniciado', body:`${club?.name || 'El club anterior'} reinició economía, empleados, academia, préstamos, lista activa de ojeo y sponsors tras tu salida.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
+}
+
+
+function managerHasActiveClub(){
+  return Boolean(game && !game.gameOver?.active && Number(game.selectedClubId || 0) > 0);
+}
+function managerWithoutClubActive(){
+  return Boolean(game?.gameOver?.active);
 }
 
 function formatPlainNumber(value){

@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.11
+# Fútbol Manager MVP - V6.12
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.10**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.11**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -10,20 +10,15 @@ La versión vigente se identifica desde:
 - `config.js`
 - `index.html`
 
-## V6.11 - Sponsors, Home e instrucciones extremas
+## V6.12 - Pesos de goleadores por posición
 
 ### Cambios principales
 
-- El sponsor especial ahora muestra el monto exacto del bono que pagará si se cumple el objetivo.
-- En Inicio se reemplazó el segundo bloque de **Próximo partido** por una vista compacta de la tabla de posiciones.
-- La tabla compacta muestra al club propio y su zona inmediata: el equipo de arriba y el de abajo; si el club está primero o último, mantiene tres equipos mostrando los dos más cercanos.
-- El simulador vivo incorpora el nuevo orden de instrucciones: **Sin instrucciones**, **Todos a defender**, **Cuidar el resultado**, **Contraataque**, **Bajar el ritmo**, **Jugar limpio**, **Luchar**, **Ataque** y **Gol como sea!**.
-- **Gol como sea!** aumenta fuerte la búsqueda de ocasiones, pero también deja más ataques rivales.
-- **Jugar limpio** reduce fuerte la probabilidad de tarjetas y mejora el control de la pelota.
-- **Contraataque** baja la posesión y el volumen, pero mejora la peligrosidad de las llegadas claras.
-- **Bajar el ritmo** reduce ataques, posesión, disparos/ocasiones y también baja el riesgo de lesión propia.
-- El botón **Auto** del simulador ahora dice **Avance automático**.
-- Se ajustó la disposición para centrar el botón **Cerrar y guardar**.
+- Ajustada la selección de autores de gol en el simulador vivo y en la simulación rápida.
+- En jugada normal se aplican pesos posicionales más marcados: **DC** como referencia principal; **ED/EI**, **MCO**, **MC**, **MD/MI**, **MCD** y defensores bajan de forma progresiva.
+- En pelota parada se aplican pesos específicos: **DC** sigue como referencia, pero **DFC**, laterales y mediocampistas ganan más participación relativa.
+- Los arqueros siguen con participación casi nula como autores de gol.
+- Estos pesos no eliminan el impacto de habilidades: remate, cabezazo, posicionamiento, serenidad, moral, referencias de estrella e instrucciones siguen influyendo.
 
 ## Base acumulada reciente
 
@@ -85,26 +80,30 @@ La versión vigente se identifica desde:
 - La primera temporada tiene objetivo fijo: **no descender**.
 - El campo de juego inicial queda al **100%**.
 
-## Archivos modificados en V6.11
+### V6.11 - Sponsors, Home e instrucciones extremas
+
+- El sponsor especial muestra el monto exacto del bono que pagará si se cumple el objetivo.
+- En Inicio se reemplazó el segundo bloque de **Próximo partido** por una vista compacta de la tabla de posiciones.
+- El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
+- Se centró el botón **Cerrar y guardar**.
+
+## Archivos modificados en V6.12
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `style.css`
 - `simulador-2.0.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/17-live-match.js`
-- `js/ui/06-render-home-messages.js`
+- `js/game/09-simulation-economy-training.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.11**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.12**.
 
-Para actualizar desde V6.10, aplicar el ZIP incremental **V6.11** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.11, aplicar el ZIP incremental **V6.12** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.11 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.12 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.11
+## Validación V6.12
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

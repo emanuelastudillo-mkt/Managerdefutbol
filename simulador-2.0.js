@@ -546,19 +546,25 @@
     for(const x of weighted){ r -= x.w; if(r<=0) return x.item; }
     return weighted[0]?.item;
   }
+  const GOAL_POSITION_WEIGHTS_V2 = { DC:100, ED:80, EI:80, MCO:65, MC:55, MD:40, MI:40, MCD:30, DFC:10, LD:10, LI:10, POR:0.05 };
+  const SET_PIECE_GOAL_POSITION_WEIGHTS_V2 = { DC:100, DFC:70, LD:60, LI:60, ED:60, EI:60, MCO:60, MC:55, MCD:55, MD:45, MI:45, POR:0.05 };
+  function scorerPositionWeightV2(player, setPiece=false){
+    const pos = String(player?.position || '').toUpperCase();
+    const table = setPiece ? SET_PIECE_GOAL_POSITION_WEIGHTS_V2 : GOAL_POSITION_WEIGHTS_V2;
+    return Number(table[pos] ?? 35);
+  }
   function scorerWeightV2(player, setPiece=false, tactic=null){
     if(!player) return 1;
-    if(player.position === 'POR') return 0.05;
-    const pos = String(player.position || '').toUpperCase();
-    if(setPiece){
-      const setPieceBonus = pos === 'DC' ? 110 : ['DFC','LD','LI'].includes(pos) ? 72 : ['ED','EI','MCO'].includes(pos) ? 46 : ['MC','MCD'].includes(pos) ? 28 : 12;
-      const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-      return (effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35 + setPieceBonus) * starMul * simMentalityAttackMultiplier(player, tactic);
-    }
-    const posBonus = pos === 'DC' ? 160 : ['ED','EI'].includes(pos) ? 118 : pos === 'MCO' ? 72 : pos === 'MC' ? 28 : pos === 'MCD' ? 9 : 2;
-    const rolePenalty = ['DFC','LD','LI'].includes(pos) ? 0.28 : pos === 'MCD' ? 0.55 : 1;
+    const roleWeight = scorerPositionWeightV2(player, setPiece);
+    if(roleWeight <= 0.1) return 0.05;
     const starMul = typeof playerStarReferenceMultiplier === 'function' ? playerStarReferenceMultiplier(player, 'goal') : 1;
-    return (effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20 + posBonus) * rolePenalty * starMul * simMentalityAttackMultiplier(player, tactic);
+    const roleMul = roleWeight / 100;
+    if(setPiece){
+      const skillWeight = effectiveSkill(player,'cabezazo') * 1.18 + effectiveSkill(player,'fuerza') * 0.35 + effectiveSkill(player,'posicionamiento') * 0.70 + effectiveSkill(player,'serenidad') * 0.35;
+      return Math.max(1, skillWeight * roleMul) * starMul * simMentalityAttackMultiplier(player, tactic);
+    }
+    const skillWeight = effectiveSkill(player,'remate') * 1.55 + effectiveSkill(player,'posicionamiento') * 1.20 + effectiveSkill(player,'serenidad') * 0.55 + currentMorale(player.id) * 0.20;
+    return Math.max(1, skillWeight * roleMul) * starMul * simMentalityAttackMultiplier(player, tactic);
   }
   function cardWeightV2(player){
     if(!player) return 1;

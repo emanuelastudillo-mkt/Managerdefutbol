@@ -469,12 +469,17 @@ function quickWeightedPick(items, weightFn){
   for(const x of weighted){ roll -= x.w; if(roll <= 0) return x.item; }
   return weighted[0].item;
 }
+const QUICK_GOAL_POSITION_WEIGHTS = { DC:100, ED:80, EI:80, MCO:65, MC:55, MD:40, MI:40, MCD:30, DFC:10, LD:10, LI:10, POR:0.05 };
+function quickGoalPositionWeight(player){
+  const pos = String(player?.position || '').toUpperCase();
+  return Number(QUICK_GOAL_POSITION_WEIGHTS[pos] ?? 35);
+}
 function quickScorerWeight(player){
   if(!player) return 1;
-  const pos = String(player.position || '').toUpperCase();
-  if(pos === 'POR') return 0.05;
-  const bonus = pos === 'DC' ? 150 : ['ED','EI'].includes(pos) ? 110 : pos === 'MCO' ? 70 : ['MC','MD','MI'].includes(pos) ? 32 : ['DFC','LD','LI'].includes(pos) ? 8 : 15;
-  return effectiveSkill(player, 'remate') * 1.4 + effectiveSkill(player, 'posicionamiento') + effectiveSkill(player, 'serenidad') * 0.35 + bonus;
+  const roleWeight = quickGoalPositionWeight(player);
+  if(roleWeight <= 0.1) return 0.05;
+  const skillWeight = effectiveSkill(player, 'remate') * 1.4 + effectiveSkill(player, 'posicionamiento') + effectiveSkill(player, 'serenidad') * 0.35;
+  return Math.max(1, skillWeight * (roleWeight / 100));
 }
 function quickAssistWeight(player){
   if(!player) return 1;

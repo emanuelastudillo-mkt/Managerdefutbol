@@ -467,6 +467,15 @@ function teamOptionsMarkup(country='Argentina', leagueId='', selectedClubId=0){
     return `<option value="${club.id}" ${Number(club.id)===selected?'selected':''} ${available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
   }).join('');
 }
+function teamOptionsMarkupAll(country='Argentina', leagueId='', selectedClubId=0, statusLabel='Libre'){
+  const clubs = clubsByCountryLeague(country, leagueId);
+  const selected = clubs.some(club => Number(club.id) === Number(selectedClubId)) ? Number(selectedClubId) : Number(clubs[0]?.id || 0);
+  return clubs.map(club => {
+    const label = `${club.name} · Prestigio ${clubPrestigeValue(club)} · ${statusLabel}`;
+    return `<option value="${club.id}" ${Number(club.id)===selected?'selected':''}>${escapeHtml(label)}</option>`;
+  }).join('');
+}
+
 function formatPlainNumber(value){
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits:0 }).format(Math.max(0, Math.round(Number(value || 0))));
 }
@@ -2034,6 +2043,8 @@ function normalizeGame(saved){
   normalized.founderClubId = normalized.founderMode ? Number(normalized.founderClubId || normalized.selectedClubId || 0) : 0;
   normalized.founderReplacedClub = normalized.founderReplacedClub || null;
   normalized.founderGoals = normalized.founderMode && normalized.founderGoals && typeof normalized.founderGoals === 'object' && !Array.isArray(normalized.founderGoals) ? normalized.founderGoals : (normalized.founderMode ? {} : null);
+  normalized.bankruptcyMode = Boolean(normalized.bankruptcyMode);
+  normalized.bankruptcy = normalized.bankruptcy && typeof normalized.bankruptcy === 'object' && !Array.isArray(normalized.bankruptcy) ? normalized.bankruptcy : null;
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.messages = normalized.messages.filter(msg => !String(msg?.body || '').includes('La liga ajustó la preparación de'));
   normalized.specialClauseOffers = (normalized.specialClauseOffers && typeof normalized.specialClauseOffers === 'object' && !Array.isArray(normalized.specialClauseOffers)) ? normalized.specialClauseOffers : null;
@@ -2145,6 +2156,25 @@ function normalizeGame(saved){
       club.budget = Number.isFinite(Number(club.budget)) ? Math.round(Number(club.budget)) : FOUNDER_CLUB_INITIAL_BUDGET;
     }
     normalized.fans.clubs[clubId] = normalized.fans.clubs[clubId] || { base:FOUNDER_CLUB_INITIAL_FANS, current:FOUNDER_CLUB_INITIAL_FANS, lastDelta:0, lastReason:'Modo fundador' };
+  }
+  if(normalized.bankruptcyMode){
+    const clubId = Number(normalized.selectedClubId);
+    const club = seed.clubs.find(c => Number(c.id) === clubId);
+    if(club){
+      const prestige = Number(normalized.bankruptcy?.reducedPrestige || club.reputation || 1);
+      club.reputation = clamp(Math.round(prestige), 1, 99);
+      club.managerPrestige = clamp(Math.round(prestige), 1, 99);
+      club.stadiumCapacity = BANKRUPTCY_INITIAL_CAPACITY;
+      club.budget = Number.isFinite(Number(normalized.clubBudgets?.[clubId])) ? Math.round(Number(normalized.clubBudgets[clubId])) : BANKRUPTCY_INITIAL_BUDGET;
+      club.fieldConditionScore = Number.isFinite(Number(club.fieldConditionScore)) ? Math.round(Number(club.fieldConditionScore)) : BANKRUPTCY_INITIAL_FIELD;
+    }
+    normalized.fans.clubs[clubId] = normalized.fans.clubs[clubId] || { base:0, current:0, lastDelta:0, lastReason:'Modo Bancarrota' };
+    if(normalized.stadium){
+      normalized.stadium.capacityOverrides = normalized.stadium.capacityOverrides || {};
+      normalized.stadium.capacityOverrides[clubId] = Number.isFinite(Number(normalized.stadium.capacityOverrides[clubId])) ? Math.round(Number(normalized.stadium.capacityOverrides[clubId])) : BANKRUPTCY_INITIAL_CAPACITY;
+      normalized.stadium.fields = normalized.stadium.fields || {};
+      normalized.stadium.fields[clubId] = Number.isFinite(Number(normalized.stadium.fields[clubId])) ? Math.round(Number(normalized.stadium.fields[clubId])) : BANKRUPTCY_INITIAL_FIELD;
+    }
   }
   normalized.sponsors = normalizeSponsorState(normalized.sponsors);
   normalized.teamCohesion = normalized.teamCohesion || {};
@@ -2333,6 +2363,146 @@ function normalizeTactic(clubId, tactic){
   return applyStarterMentalities(normalized);
 }
 
+
+function bankruptcyModeEnabled(){ return Boolean(BANKRUPTCY_MODE_ENABLED); }
+function bankruptcyReducedPrestige(originalPrestige){
+  const value = Math.max(1, Math.round(Number(originalPrestige || 0) * (1 - Number(BANKRUPTCY_PRESTIGE_REDUCTION || 0))));
+  return clamp(value, 1, 99);
+}
+function bankruptcyReleasePlayer(player, reason='Modo Bancarrota'){
+  if(!player) return null;
+  player.clubId = 0;
+  player.freeAgent = true;
+  player.bankruptcyReleased = true;
+  player.origin = player.origin || reason;
+  if(typeof refreshPlayerClause === 'function') refreshPlayerClause(player);
+  return { ...player };
+}
+function bankruptcyPositionPriority(position){
+  const group = typeof playerRoleGroup === 'function' ? playerRoleGroup(position) : String(position || '');
+  if(group === 'POR') return 0;
+  if(group === 'DEF') return 1;
+  if(group === 'MID') return 2;
+  return 3;
+}
+function selectBankruptcyLoyalPlayers(clubId){
+  const squad = playersByClub(clubId).slice().sort((a,b)=>
+    bankruptcyPositionPriority(a.position)-bankruptcyPositionPriority(b.position) ||
+    visibleOverall(b)-visibleOverall(a) ||
+    Number(a.salary || 0)-Number(b.salary || 0) ||
+    Number(a.id)-Number(b.id)
+  );
+  const keep = new Set();
+  const keepByGroup = (group, count) => {
+    squad.filter(p => (typeof playerRoleGroup === 'function' ? playerRoleGroup(p.position) : '') === group && !keep.has(Number(p.id))).slice(0, count).forEach(p => keep.add(Number(p.id)));
+  };
+  keepByGroup('POR', BANKRUPTCY_LOYAL_GK_MIN);
+  keepByGroup('DEF', 4);
+  keepByGroup('MID', 4);
+  keepByGroup('ATT', 3);
+  squad.filter(p => !keep.has(Number(p.id))).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || Number(a.salary || 0)-Number(b.salary || 0)).forEach(player => {
+    if(keep.size < BANKRUPTCY_LOYAL_FIRST_TEAM_PLAYERS) keep.add(Number(player.id));
+  });
+  return keep;
+}
+function trimBankruptcyFirstTeam(clubId){
+  const loyal = selectBankruptcyLoyalPlayers(clubId);
+  const released = [];
+  (seed?.players || []).forEach(player => {
+    if(Number(player.clubId || 0) !== Number(clubId)) return;
+    if(loyal.has(Number(player.id))){
+      player.bankruptcyLoyal = true;
+      player.joinedClubSeason = game?.seasonNumber || 1;
+      return;
+    }
+    const free = bankruptcyReleasePlayer(player, 'Liberado por quiebra del club');
+    if(free) released.push(free);
+  });
+  if(Array.isArray(game?.marketPlayers)){
+    const existing = new Set(game.marketPlayers.map(p => Number(p.id)));
+    released.forEach(player => { if(!existing.has(Number(player.id))){ game.marketPlayers.push({ ...player }); existing.add(Number(player.id)); } });
+  }
+  return { kept:loyal.size, released:released.length };
+}
+function bankruptcyAcademyGroupForIndex(index){
+  if(index < BANKRUPTCY_ACADEMY_GK_MIN) return 'POR';
+  const pattern = ['DEF','MED','DEL','DEF','MED','DEL','MED','DEF','DEL'];
+  return pattern[(index - BANKRUPTCY_ACADEMY_GK_MIN) % pattern.length];
+}
+function createBankruptcyAcademyPlayers(count=BANKRUPTCY_ACADEMY_PLAYERS){
+  const created = [];
+  if(!game?.academy || typeof nextAcademyPlayerId !== 'function') return created;
+  let id = nextAcademyPlayerId();
+  for(let i=0;i<count;i++, id++){
+    const group = bankruptcyAcademyGroupForIndex(i);
+    const nationality = typeof academyNationality === 'function' ? academyNationality(id, { local:true }) : 'Argentina';
+    const overall = typeof academyOverallRoll === 'function' ? academyOverallRoll(id, 16) : 10;
+    const raw = {
+      id,
+      name:typeof academyName === 'function' ? academyName(id, nationality) : `Juvenil ${id}`,
+      nationality,
+      age:16,
+      group,
+      overall,
+      skills:typeof academySkillsFor === 'function' ? academySkillsFor(group, overall, id) : {},
+      status:'academy',
+      source:'modo_bancarrota_renacer',
+      bankruptcyYouth:true,
+      joinedSeason:game?.seasonNumber || 1,
+      joinedTurn:typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0
+    };
+    created.push(typeof normalizeAcademyPlayer === 'function' ? normalizeAcademyPlayer(raw) : raw);
+  }
+  game.academy.players.push(...created);
+  created.forEach(player => { game.academy.trainingPlan[player.id] = game.academy.trainingPlan[player.id] || (typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL) : 'balanced'); });
+  return created;
+}
+function applyBankruptcyModeSetup(selectedClubId, options={}){
+  if(!game || !bankruptcyModeEnabled()) return null;
+  const club = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
+  if(!club) return null;
+  const original = {
+    reputation:clubPrestigeValue(club),
+    budget:Number(club.budget || 0),
+    stadiumCapacity:typeof clubStadiumCapacity === 'function' ? clubStadiumCapacity(selectedClubId) : Number(club.stadiumCapacity || 0),
+    fans:typeof clubFansCurrent === 'function' ? clubFansCurrent(selectedClubId) : Number(club.fansBase || 0),
+    players:playersByClub(selectedClubId).length
+  };
+  const reducedPrestige = bankruptcyReducedPrestige(original.reputation);
+  club.reputation = reducedPrestige;
+  club.managerPrestige = reducedPrestige;
+  club.budget = BANKRUPTCY_INITIAL_BUDGET;
+  club.stadiumCapacity = BANKRUPTCY_INITIAL_CAPACITY;
+  club.fieldConditionScore = BANKRUPTCY_INITIAL_FIELD;
+  club.fieldCondition = typeof fieldConditionName === 'function' ? fieldConditionName(BANKRUPTCY_INITIAL_FIELD) : 'Crítico';
+  game.bankruptcyMode = true;
+  game.bankruptcy = { active:true, label:'Bancarrota, Renacer', startedAt:{ season:game.seasonNumber || 1, date:game.currentDate || '', turn:game.globalTurn || 0 }, original, reducedPrestige, initialDebt:BANKRUPTCY_INITIAL_BUDGET };
+  game.clubBudgets[selectedClubId] = BANKRUPTCY_INITIAL_BUDGET;
+  game.budget = BANKRUPTCY_INITIAL_BUDGET;
+  game.seasonInitialBudget = BANKRUPTCY_INITIAL_BUDGET;
+  game.seasonBudgetStartBySeason = { 1:BANKRUPTCY_INITIAL_BUDGET };
+  if(game.stadium){
+    game.stadium.capacityOverrides = game.stadium.capacityOverrides || {};
+    game.stadium.fields = game.stadium.fields || {};
+    game.stadium.capacityOverrides[selectedClubId] = BANKRUPTCY_INITIAL_CAPACITY;
+    game.stadium.fields[selectedClubId] = BANKRUPTCY_INITIAL_FIELD;
+  }
+  if(typeof ensureFanState === 'function') ensureFanState(game);
+  const reducedFans = Math.max(0, Math.round(Number(original.fans || 0) * (1 - Number(BANKRUPTCY_FANS_REDUCTION || 0))));
+  if(game.fans?.clubs){
+    game.fans.clubs[selectedClubId] = { ...(game.fans.clubs[selectedClubId] || {}), base:reducedFans, current:reducedFans, lastDelta:reducedFans - Number(original.fans || 0), lastReason:'Modo Bancarrota' };
+  }
+  const roster = trimBankruptcyFirstTeam(selectedClubId);
+  const academyPlayers = createBankruptcyAcademyPlayers(BANKRUPTCY_ACADEMY_PLAYERS);
+  game.bankruptcy.roster = roster;
+  game.bankruptcy.academyPlayers = academyPlayers.length;
+  game.tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
+  if(game.managerStats){
+    game.managerStats.currentSeason = applyManagerObjectiveSeasonFields(game.managerStats.currentSeason || {}, game.managerStats, 1, selectedClubId);
+  }
+  return game.bankruptcy;
+}
+
 function newGame(selectedClubId, options={}){
   const selectedClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId)) || {};
   if(!options.ignorePrestige && !managerCanSelectClub(selectedClub, currentManagerPrestige())){
@@ -2434,6 +2604,8 @@ function newGame(selectedClubId, options={}){
     founderClubId: options.founderMode ? Number(selectedClubId) : 0,
     founderReplacedClub: options.founderReplacedClub || null,
     founderGoals: null,
+    bankruptcyMode: Boolean(options.bankruptcyMode),
+    bankruptcy: null,
     challenge: null
   };
   assignInitialBotFieldStates(selectedClubId);
@@ -2455,6 +2627,7 @@ function newGame(selectedClubId, options={}){
     game.fans.clubs[selectedClubId] = { base:FOUNDER_CLUB_INITIAL_FANS, current:FOUNDER_CLUB_INITIAL_FANS, lastDelta:0, lastReason:'Modo fundador' };
   }
   game.marketPlayers = generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
+  if(options.bankruptcyMode) applyBankruptcyModeSetup(selectedClubId, options);
   if(options.founderMode) ensureFounderFreeAgentPool(options.founderReleasedPlayers || []);
   else mergeMarketPlayersIntoSeed(game.marketPlayers);
   ensurePlayerStateForAll();
@@ -2465,6 +2638,12 @@ function newGame(selectedClubId, options={}){
     ensureFounderGoalsState();
     pushGameMessage({ type:'fundador', title:'Club fundado desde cero', body:`Fundaste ${clubName(selectedClubId)}. El club empieza sin jugadores, sin presupuesto, con estadio de capacidad 0, prestigio ${FOUNDER_CLUB_REPUTATION} y ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas. No tendrás objetivos de directiva ni riesgo de despido.`, priority:'high' });
     pushGameMessage({ type:'fundador', title:`Primera meta: ${game.founderGoals.current.title}`, body:game.founderGoals.current.description, priority:'normal' });
+  } else if(options.bankruptcyMode) {
+    const info = game.bankruptcy || {};
+    pushGameMessage({ type:'directiva', title:'Bancarrota, Renacer', body:`Aceptaste refundar ${clubName(selectedClubId)} tras la quiebra. El club quedó con deuda extrema, sin estadio propio, menor prestigio, menos hinchas, un plantel reducido de jugadores leales y una camada de juveniles de 16 años en Academia.`, priority:'high' });
+    if(info.roster){
+      pushGameMessage({ type:'mercado', title:'Plantel reducido por la crisis', body:'Parte del plantel se marchó como agente libre. Los jugadores que permanecieron serán la base deportiva inmediata mientras formás juveniles y recuperás ingresos.', priority:'normal' });
+    }
   } else if(options.challengeId) {
     pushGameMessage({ type:'reto', title:'Reto activo', body:'La partida empezó desde un escenario predeterminado. Revisá las reglas del reto en Inicio antes de avanzar.', priority:'high' });
   } else {
@@ -2476,7 +2655,7 @@ function newGame(selectedClubId, options={}){
   newGameModalShown = true;
   renderAll();
   if(typeof saveLocal === 'function') saveLocal(true).catch?.(()=>{});
-  showNotice(options.founderMode ? 'Club fundado. Armá el plantel desde Mercado antes de competir.' : (options.challengeId ? 'Reto creado. Dirigí los 5 partidos y buscá el campeonato.' : 'Carrera creada. Revisá táctica, titulares y mentalidades antes de avanzar.'));
+  showNotice(options.founderMode ? 'Club fundado. Armá el plantel desde Mercado antes de competir.' : (options.bankruptcyMode ? 'Modo Bancarrota iniciado. Revisá Finanzas, Academia, Estadio y Táctica antes de avanzar.' : (options.challengeId ? 'Reto creado. Dirigí los 5 partidos y buscá el campeonato.' : 'Carrera creada. Revisá táctica, titulares y mentalidades antes de avanzar.')));
 }
 
 function createInitialStandings(){

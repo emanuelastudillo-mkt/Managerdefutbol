@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.07',
+  version: 'V6.09',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -117,6 +117,18 @@ window.GAME_CONFIG = {
     libresMinimosDefensores: 20,
     libresMinimosMediocampistas: 24,
     libresMinimosDelanteros: 16
+  },
+  modoBancarrota: {
+    activo: true,
+    cajaInicial: -500000000,
+    reduccionPrestigio: 0.70,
+    reduccionHinchas: 0.50,
+    capacidadEstadioInicial: 0,
+    campoInicial: 25,
+    juvenilesIniciales: 20,
+    juvenilesPorterosMinimos: 1,
+    jugadoresLealesPrimerEquipo: 14,
+    jugadoresLealesPorterosMinimos: 1
   },
   manager: {
     // Prestigio inicial del manager. Un manager nuevo arranca en 0.

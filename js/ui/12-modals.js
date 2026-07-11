@@ -1217,6 +1217,82 @@ function openFounderModeModal(){
 
 
 
+
+function openBankruptcyModeModal(options={}){
+  options = options && typeof options === 'object' ? options : {};
+  if(typeof bankruptcyModeEnabled === 'function' && !bankruptcyModeEnabled()){
+    showNotice('El modo Bancarrota está desactivado en la configuración.');
+    return;
+  }
+  if(game && !game.gameOver?.active){
+    showNotice('El modo Bancarrota se inicia como una partida nueva o desde una carrera sin club.');
+    return;
+  }
+  const requestedClub = options.selectedClubId ? seed?.clubs?.find(club => Number(club.id) === Number(options.selectedClubId)) : null;
+  const initialCountry = requestedClub ? clubCountry(requestedClub) : (availableCountries()[0] || 'Argentina');
+  const initialLeague = requestedClub ? (requestedClub.divisionId || 'default') : (divisionsByCountry(initialCountry)[0]?.id || 'default');
+  const initialClub = requestedClub?.id || clubsByCountryLeague(initialCountry, initialLeague)[0]?.id || 0;
+  const body = `
+    <div class="new-game-modal bankruptcy-modal">
+      <p class="label">Modo Bancarrota · Renacer</p>
+      <h2>Refundar desde las cenizas</h2>
+      <p class="muted">Elegí cualquier club del mundo sin bloqueo por prestigio. El club inicia en quiebra: deuda extrema, estadio vendido, menos hinchas, prestigio recortado, plantel reducido y una camada juvenil de 16 años para reconstruir.</p>
+      <div class="card blocker"><strong>Modo difícil.</strong><p class="muted small">La carrera funciona como una partida normal: hay directiva, objetivos, mercado, lesiones, moral y riesgo deportivo. La diferencia está en el punto de partida.</p></div>
+      <div class="new-game-form-grid">
+        <label for="bankruptcyManagerName">Nombre del manager</label>
+        <input id="bankruptcyManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
+        <label for="bankruptcyCountrySelect">País</label>
+        <select id="bankruptcyCountrySelect">${countryOptionsMarkup(initialCountry)}</select>
+        <label for="bankruptcyLeagueSelect">Liga</label>
+        <select id="bankruptcyLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
+        <label for="bankruptcyClubSelect">Equipo</label>
+        <select id="bankruptcyClubSelect">${typeof teamOptionsMarkupAll === 'function' ? teamOptionsMarkupAll(initialCountry, initialLeague, initialClub, 'Elegible') : teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+      </div>
+      <div class="founder-preview card">
+        <p class="label">Condiciones iniciales</p>
+        <div class="founder-preview-grid">
+          <div><span>Selección</span><strong>Libre</strong></div>
+          <div><span>Caja</span><strong>Deuda extrema</strong></div>
+          <div><span>Estadio</span><strong>Vendido</strong></div>
+          <div><span>Hinchas</span><strong>Reducidos</strong></div>
+          <div><span>Prestigio club</span><strong>Recortado</strong></div>
+          <div><span>Academia</span><strong>20 juveniles</strong></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px"><button id="btnStartBankruptcyMode" class="primary">Iniciar Bancarrota</button><button id="btnBackToNormalNewGame" class="ghost">Volver</button></div>
+    </div>`;
+  openModal(body);
+  const countrySelect = $('bankruptcyCountrySelect');
+  const leagueSelect = $('bankruptcyLeagueSelect');
+  const clubSelect = $('bankruptcyClubSelect');
+  const syncClubs = () => {
+    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
+    const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
+    if(clubSelect) clubSelect.innerHTML = typeof teamOptionsMarkupAll === 'function' ? teamOptionsMarkupAll(country, league, clubSelect.value, 'Elegible') : teamOptionsMarkup(country, league, clubSelect.value);
+  };
+  const syncLeagues = () => {
+    const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
+    if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
+    syncClubs();
+  };
+  countrySelect?.addEventListener('change', syncLeagues);
+  leagueSelect?.addEventListener('change', syncClubs);
+  $('bankruptcyManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
+  $('btnBackToNormalNewGame')?.addEventListener('click', () => openNewGameModal(true, { saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER }));
+  $('btnStartBankruptcyMode')?.addEventListener('click', () => {
+    const selected = Number(clubSelect?.value || 0);
+    if(!selected) return;
+    newGame(selected, {
+      managerName:$('bankruptcyManagerName')?.value || '',
+      country:countrySelect?.value || '',
+      leagueId:leagueSelect?.value || '',
+      saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER,
+      ignorePrestige:true,
+      bankruptcyMode:true
+    });
+  });
+}
+
 function openCampoDestruidoChallengeModal(options={}){
   options = options && typeof options === 'object' ? options : {};
   if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO);
@@ -1277,6 +1353,7 @@ function openNewGameModal(force=false, options={}){
         <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
       <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
+      ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo difícil libre</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, sin estadio, menos hinchas, menor prestigio, plantel reducido y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
       ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
     </div>`;
   openModal(body);
@@ -1322,6 +1399,7 @@ function openNewGameModal(force=false, options={}){
       saveSlotId:options.saveSlotId || SAVE_SLOT_CAREER
     });
   });
+  $('btnOpenBankruptcyMode')?.addEventListener('click', () => openBankruptcyModeModal({ saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER }));
   $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
   newGameModalShown = true;
 }

@@ -4683,3 +4683,68 @@ th{
 /* V5.72 · Sponsors especiales */
 .sponsor-special-line{display:block;margin-top:6px;line-height:1.35}
 .sponsor-special-line .pill{margin-right:6px}
+
+
+/* V5.77 · Slots sin superposición */
+.save-slots-screen{
+  gap:14px;
+}
+.save-slots-screen .welcome-hero{
+  min-width:0;
+}
+.save-slot-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
+  gap:12px;
+  align-items:stretch;
+  width:100%;
+  min-width:0;
+}
+.save-slot-card{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
+  min-height:190px;
+  overflow:hidden;
+}
+.save-slot-card .label{
+  margin-bottom:0;
+}
+.save-slot-card h3{
+  margin:0;
+  font-size:clamp(16px,1.55vw,21px);
+  line-height:1.18;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.save-slot-card p{
+  min-width:0;
+}
+.save-slot-card .muted{
+  line-height:1.4;
+}
+.save-slot-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:auto;
+  width:100%;
+}
+.save-slot-actions button{
+  width:100%;
+  min-width:0;
+  white-space:normal;
+  line-height:1.15;
+}
+.save-slot-card.empty-slot{
+  border-style:dashed;
+  background:rgba(255,255,255,.025);
+}
+@media (max-width:780px){
+  .save-slot-grid{grid-template-columns:1fr;}
+  .save-slot-card{min-height:0;}
+}
+@media (max-width:420px){
+  .save-slot-actions{grid-template-columns:1fr;}
+}

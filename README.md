@@ -1,16 +1,16 @@
-# Fútbol Manager MVP - V5.76
+# Fútbol Manager MVP - V5.77
 
-## V5.76 - Slots de carreras con nombres automáticos
+## V5.77 - Corrección visual de slots
 
-Esta versión amplía el sistema de slots: ahora hay varias carreras normales separadas y sus nombres visibles se generan automáticamente con el equipo y la temporada de cada partida.
+Esta versión corrige la pantalla de slots para evitar que las tarjetas y botones se superpongan entre sí.
 
 ### Cambios principales
 
-- 5 slots de carrera normal.
-- Nombre automático por slot: Carrera N · Equipo · Temporada.
-- Slots vacíos visibles como disponibles.
-- Compatibilidad con partidas anteriores: la partida principal pasa a Carrera 1.
-- Los retos siguen separados de las carreras normales.
+- El menú de slots usa una grilla propia y estable.
+- Las tarjetas de carrera y reto ya no dependen de la grilla genérica de 2 columnas.
+- Los botones de cada slot quedan contenidos dentro de su tarjeta.
+- Los nombres largos de carrera se ajustan dentro del bloque sin invadir otras tarjetas.
+- Mejor comportamiento en pantallas chicas.
 
 ### Uso
 

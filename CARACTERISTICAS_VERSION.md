@@ -1,9 +1,10 @@
-# Características de la versión V5.76
+# Características de la versión V5.77
 
-## V5.76 - Slots de carreras con nombres automáticos
+## V5.77 - Corrección visual de slots
 
-- Se agregan 5 slots de carrera normal separados.
-- Cada slot se nombra automáticamente según el club y la temporada guardada.
-- Los slots vacíos se muestran como carrera disponible.
-- La carrera vieja guardada como `main` o `career` se conserva como Carrera 1.
-- El reto Campo destruido sigue separado y se cierra al ganarlo o perderlo.
+- Se corrige la superposición visual en la pantalla de slots.
+- La grilla de slots ahora usa columnas automáticas con ancho mínimo seguro.
+- Cada tarjeta de slot contiene internamente título, detalle y botones.
+- Los botones **Entrar / Crear / Nueva / Iniciar reto / Continuar reto** ya no quedan fuera del bloque.
+- Los textos largos de equipo y temporada hacen salto de línea sin romper el diseño.
+- No se modifica la lógica de guardado ni la separación entre carreras y retos.

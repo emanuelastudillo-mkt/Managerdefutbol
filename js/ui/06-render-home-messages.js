@@ -12,7 +12,7 @@ function renderWelcomeScreen(){
           <p class="label">Carrera normal</p>
           <h3 data-save-slot-title>${escapeHtml(base)} · Revisando...</h3>
           <p class="muted" data-save-slot-detail>Buscando datos del slot guardado.</p>
-          <div class="row" style="margin-top:14px">
+          <div class="save-slot-actions">
             <button class="primary" data-slot-continue="${escapeHtml(slotId)}">Entrar</button>
             <button class="ghost danger" data-slot-new="${escapeHtml(slotId)}">Nueva</button>
           </div>
@@ -33,14 +33,14 @@ function renderWelcomeScreen(){
         </div>
       </div>
 
-      <div class="grid cols-2 save-slot-grid">
+      <div class="save-slot-grid">
         ${careerCards}
 
         <div class="card save-slot-card ${challengeAvailable ? '' : 'blocker'}">
           <p class="label">Reto predeterminado</p>
           <h3>Campo destruido</h3>
           <p class="muted">Campo propio 15/100, sin mantenimiento, sin fichajes, sin empleados, últimas 5 fechas obligatorias dirigidas y objetivo campeón.</p>
-          <div class="row" style="margin-top:14px">
+          <div class="save-slot-actions">
             <button id="btnSlotCampoNew" class="primary" ${challengeAvailable ? '' : 'disabled'}>Iniciar reto</button>
             <button id="btnSlotCampoContinue" class="ghost" ${challengeAvailable ? '' : 'disabled'}>Continuar reto</button>
           </div>

@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.09
+# Fútbol Manager MVP - V6.10
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.08**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.09**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -10,21 +10,21 @@ La versión vigente se identifica desde:
 - `config.js`
 - `index.html`
 
-## V6.09 - Modo Bancarrota, Renacer
+## V6.10 - Ajustes del Modo Bancarrota
 
 ### Cambios principales
 
-- Se agregó el modo **Bancarrota, Renacer - Libre**.
-- Desde el alta de una carrera nueva se puede abrir este modo como variante difícil.
+- El modo **Bancarrota, Renacer - Libre** queda definido como un modo libre en bancarrota, no como un modo difícil separado.
 - Permite elegir cualquier club disponible en la base, sin bloqueo por prestigio del mánager.
 - El club elegido inicia con una crisis extrema:
   - caja inicial negativa de **-500 millones**;
-  - estadio vendido, con capacidad inicial 0;
+  - estadio vendido/sin capacidad disponible, con capacidad inicial 0 real;
   - prestigio del club reducido fuertemente;
   - hinchas reducidos a la mitad;
-  - campo en estado crítico;
+  - campo de juego inicial al **100%**;
   - plantel profesional reducido a un grupo de jugadores leales;
   - 20 juveniles de 16 años en Academia, con al menos un portero.
+- La primera temporada tiene objetivo fijo: **no descender**.
 - El modo se comporta como una partida normal: mantiene objetivos de directiva, riesgo deportivo, mercado, empleados, academia, finanzas, calendario y ranking.
 
 ### Cómo iniciar el modo
@@ -87,6 +87,13 @@ La dificultad inicial se concentra en la economía, la falta de estadio, la pér
 - Se eliminaron de la versión completa los archivos documentales separados de revisión, versión y características.
 - El historial relevante queda resumido dentro de este README.
 - Las validaciones y notas técnicas de cada entrega se informan en este mismo archivo.
+
+### V6.09 - Modo Bancarrota, Renacer
+
+- Se agregó el modo **Bancarrota, Renacer - Libre**.
+- Desde el alta de una carrera nueva se puede abrir este modo como variante de inicio libre en crisis.
+- El club elegido arranca con deuda extrema, estadio sin capacidad disponible, menos hinchas, menor prestigio, plantel reducido y academia juvenil de emergencia.
+
 
 ## Archivos modificados en V6.09
 

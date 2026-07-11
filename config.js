@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.09',
+  version: 'V6.10',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -124,7 +124,7 @@ window.GAME_CONFIG = {
     reduccionPrestigio: 0.70,
     reduccionHinchas: 0.50,
     capacidadEstadioInicial: 0,
-    campoInicial: 25,
+    campoInicial: 100,
     juvenilesIniciales: 20,
     juvenilesPorterosMinimos: 1,
     jugadoresLealesPrimerEquipo: 14,

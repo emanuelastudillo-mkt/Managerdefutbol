@@ -2365,6 +2365,7 @@ function normalizeTactic(clubId, tactic){
 
 
 function bankruptcyModeEnabled(){ return Boolean(BANKRUPTCY_MODE_ENABLED); }
+function currentGameIsBankruptcyMode(){ return Boolean(game?.bankruptcyMode || game?.bankruptcy?.active); }
 function bankruptcyReducedPrestige(originalPrestige){
   const value = Math.max(1, Math.round(Number(originalPrestige || 0) * (1 - Number(BANKRUPTCY_PRESTIGE_REDUCTION || 0))));
   return clamp(value, 1, 99);
@@ -2474,7 +2475,7 @@ function applyBankruptcyModeSetup(selectedClubId, options={}){
   club.budget = BANKRUPTCY_INITIAL_BUDGET;
   club.stadiumCapacity = BANKRUPTCY_INITIAL_CAPACITY;
   club.fieldConditionScore = BANKRUPTCY_INITIAL_FIELD;
-  club.fieldCondition = typeof fieldConditionName === 'function' ? fieldConditionName(BANKRUPTCY_INITIAL_FIELD) : 'Crítico';
+  club.fieldCondition = typeof fieldConditionName === 'function' ? fieldConditionName(BANKRUPTCY_INITIAL_FIELD) : 'Óptimo';
   game.bankruptcyMode = true;
   game.bankruptcy = { active:true, label:'Bancarrota, Renacer', startedAt:{ season:game.seasonNumber || 1, date:game.currentDate || '', turn:game.globalTurn || 0 }, original, reducedPrestige, initialDebt:BANKRUPTCY_INITIAL_BUDGET };
   game.clubBudgets[selectedClubId] = BANKRUPTCY_INITIAL_BUDGET;
@@ -2640,7 +2641,7 @@ function newGame(selectedClubId, options={}){
     pushGameMessage({ type:'fundador', title:`Primera meta: ${game.founderGoals.current.title}`, body:game.founderGoals.current.description, priority:'normal' });
   } else if(options.bankruptcyMode) {
     const info = game.bankruptcy || {};
-    pushGameMessage({ type:'directiva', title:'Bancarrota, Renacer', body:`Aceptaste refundar ${clubName(selectedClubId)} tras la quiebra. El club quedó con deuda extrema, sin estadio propio, menor prestigio, menos hinchas, un plantel reducido de jugadores leales y una camada de juveniles de 16 años en Academia.`, priority:'high' });
+    pushGameMessage({ type:'directiva', title:'Bancarrota, Renacer', body:`Aceptaste refundar ${clubName(selectedClubId)} tras la quiebra. El club quedó con deuda extrema, sin estadio disponible, menor prestigio, menos hinchas, un plantel reducido de jugadores leales y una camada de juveniles de 16 años en Academia. La primera temporada la directiva sólo exige no descender.`, priority:'high' });
     if(info.roster){
       pushGameMessage({ type:'mercado', title:'Plantel reducido por la crisis', body:'Parte del plantel se marchó como agente libre. Los jugadores que permanecieron serán la base deportiva inmediata mientras formás juveniles y recuperás ingresos.', priority:'normal' });
     }
@@ -3205,6 +3206,37 @@ function managerObjectiveMinMatchesForObjective(objective){
   if(rule && Number.isFinite(Number(rule.partidos))) return Math.max(1, Math.round(Number(rule.partidos)));
   return Math.max(1, Number(MANAGER_OBJECTIVE_MIN_MATCHES || 5));
 }
+function bankruptcyFirstSeasonObjectiveActive(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  return currentGameIsBankruptcyMode() && Number(season || 1) === 1 && Number(clubId || 0) === Number(game?.selectedClubId || 0);
+}
+function buildBankruptcyFirstSeasonObjectiveFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  const normalized = normalizeManagerStats(stats);
+  const generalPpg = ppgFromTotals(normalized.totals || {});
+  const division = clubDivision(clubId);
+  const limits = managerObjectiveLimitsForDivision(division);
+  const objective = Number(Number(limits.min || 0.8).toFixed(3));
+  const baseMatches = managerObjectiveMinMatchesForObjective(objective);
+  return {
+    objectiveBasePpg:objective,
+    objectivePpg:objective,
+    objectiveBonusReduction:0,
+    objectiveBaseMatches:baseMatches,
+    objectiveExtraMatches:0,
+    objectiveMinMatches:baseMatches,
+    objectiveGeneralPpgAtStart:generalPpg,
+    objectiveSeason:Number(season || 1),
+    objectiveClubId:Number(clubId || 0),
+    objectiveSource:'bancarrota',
+    objectiveExpectation:'No descender',
+    objectiveLabel:'No descender',
+    objectiveFixed:true,
+    objectivePrestigeRelative:null,
+    objectiveClubPrestige:clubPrestigeValue(clubId),
+    objectiveLeagueAveragePrestige:Number(managerObjectiveAverageLeaguePrestige(clubId).toFixed(2)),
+    objectiveModifierPpg:0,
+    objectiveDivisionKey:managerObjectiveDivisionKey(division?.order || 3)
+  };
+}
 function managerObjectiveResultDelta(ppg, objective){
   const a = Number(ppg || 0);
   const b = Number(objective || 0);
@@ -3228,6 +3260,7 @@ function managerObjectiveBadSeasonPenalty({ relegated=false, last=false }={}){
   return Math.max(0, Math.abs(Math.round(raw)));
 }
 function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
+  if(bankruptcyFirstSeasonObjectiveActive(season, clubId)) return buildBankruptcyFirstSeasonObjectiveFields(stats, season, clubId);
   const normalized = normalizeManagerStats(stats);
   const generalPpg = ppgFromTotals(normalized.totals || {});
   const dynamicInfo = managerObjectiveBreakdownForClubDivision(clubId);
@@ -3256,6 +3289,10 @@ function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1
 }
 function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const clean = { ...(current || {}) };
+  if(bankruptcyFirstSeasonObjectiveActive(season, clubId)){
+    Object.assign(clean, buildBankruptcyFirstSeasonObjectiveFields(stats, season, clubId));
+    return clean;
+  }
   const needsRefresh = !MANAGER_OBJECTIVE_FREEZE_BY_SEASON
     || !Number.isFinite(Number(clean.objectiveMinMatches || 0))
     || !Number.isFinite(Number(clean.objectivePpg || 0))
@@ -3356,6 +3393,7 @@ function managerObjectiveProgressInfo(){
     boardState:boardState.estado,
     boardClass:boardState.clase,
     expectation:seasonTotals.objectiveExpectation || '',
+    label:seasonTotals.objectiveLabel || '',
     prestigeRelative:seasonTotals.objectivePrestigeRelative,
     clubPrestige:seasonTotals.objectiveClubPrestige,
     leagueAveragePrestige:seasonTotals.objectiveLeagueAveragePrestige,
@@ -4461,6 +4499,9 @@ function finalizeSeasonIfNeeded(){
     record.objectiveAchieved = !currentGameIsFounderMode() && Number.isFinite(Number(objective)) && seasonPpg >= Number(objective);
     record.objectiveDelta = objectiveDelta;
     record.objectiveExpectation = game.managerStats.currentSeason?.objectiveExpectation || '';
+    record.objectiveLabel = game.managerStats.currentSeason?.objectiveLabel || '';
+    record.objectiveSource = game.managerStats.currentSeason?.objectiveSource || '';
+    record.objectiveFixed = Boolean(game.managerStats.currentSeason?.objectiveFixed);
     record.objectivePrestigeRelative = game.managerStats.currentSeason?.objectivePrestigeRelative;
     record.managerPrestigeObjectiveReward = objectiveReward.points;
     record.objectivePrestigeLabel = objectiveReward.label;

@@ -1236,8 +1236,8 @@ function openBankruptcyModeModal(options={}){
     <div class="new-game-modal bankruptcy-modal">
       <p class="label">Modo Bancarrota · Renacer</p>
       <h2>Refundar desde las cenizas</h2>
-      <p class="muted">Elegí cualquier club del mundo sin bloqueo por prestigio. El club inicia en quiebra: deuda extrema, estadio vendido, menos hinchas, prestigio recortado, plantel reducido y una camada juvenil de 16 años para reconstruir.</p>
-      <div class="card blocker"><strong>Modo difícil.</strong><p class="muted small">La carrera funciona como una partida normal: hay directiva, objetivos, mercado, lesiones, moral y riesgo deportivo. La diferencia está en el punto de partida.</p></div>
+      <p class="muted">Elegí cualquier club del mundo sin bloqueo por prestigio. Es un modo libre, pero el club inicia en bancarrota: deuda extrema, estadio sin capacidad disponible, menos hinchas, prestigio recortado, plantel reducido y una camada juvenil de 16 años para reconstruir.</p>
+      <div class="card blocker"><strong>Modo libre en bancarrota.</strong><p class="muted small">La carrera funciona como una partida normal: hay directiva, mercado, lesiones, moral y riesgo deportivo. La primera temporada el objetivo fijo es no descender.</p></div>
       <div class="new-game-form-grid">
         <label for="bankruptcyManagerName">Nombre del manager</label>
         <input id="bankruptcyManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
@@ -1253,7 +1253,8 @@ function openBankruptcyModeModal(options={}){
         <div class="founder-preview-grid">
           <div><span>Selección</span><strong>Libre</strong></div>
           <div><span>Caja</span><strong>Deuda extrema</strong></div>
-          <div><span>Estadio</span><strong>Vendido</strong></div>
+          <div><span>Estadio</span><strong>Capacidad 0</strong></div>
+          <div><span>Campo</span><strong>100%</strong></div>
           <div><span>Hinchas</span><strong>Reducidos</strong></div>
           <div><span>Prestigio club</span><strong>Recortado</strong></div>
           <div><span>Academia</span><strong>20 juveniles</strong></div>
@@ -1353,7 +1354,7 @@ function openNewGameModal(force=false, options={}){
         <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
       <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
-      ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo difícil libre</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, sin estadio, menos hinchas, menor prestigio, plantel reducido y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
+      ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
       ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
     </div>`;
   openModal(body);

@@ -1101,8 +1101,9 @@ function baseStadiumCapacityForClub(clubId){
 function clubStadiumCapacity(clubId){
   ensureStadiumState();
   const founded = isFoundedClubId(clubId);
+  const bankruptcy = Boolean(game?.bankruptcyMode && Number(game?.selectedClubId || 0) === Number(clubId || 0));
   const override = Number(game?.stadium?.capacityOverrides?.[clubId]);
-  if(Number.isFinite(override) && (override > 0 || founded)) return clamp(Math.round(override), founded ? 0 : 500, STADIUM_EXPANSION_MAX_CAPACITY);
+  if(Number.isFinite(override) && (override > 0 || founded || bankruptcy)) return clamp(Math.round(override), (founded || bankruptcy) ? 0 : 500, STADIUM_EXPANSION_MAX_CAPACITY);
   return baseStadiumCapacityForClub(clubId);
 }
 function applyManagedStadiumCapacityDeterioration(clubId, season=game?.seasonNumber || 1){
@@ -1111,7 +1112,7 @@ function applyManagedStadiumCapacityDeterioration(clubId, season=game?.seasonNum
   if(!id) return null;
   ensureStadiumState();
   const before = clubStadiumCapacity(id);
-  const minCapacity = isFoundedClubId(id) ? 0 : 500;
+  const minCapacity = (isFoundedClubId(id) || Boolean(game?.bankruptcyMode && Number(game?.selectedClubId || 0) === id)) ? 0 : 500;
   if(before <= minCapacity) return null;
   let after = Math.floor(before * (1 - (STADIUM_CAPACITY_SEASON_DECAY_PCT / 100)));
   if(after >= before && before > minCapacity) after = before - 1;

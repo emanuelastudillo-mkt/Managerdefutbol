@@ -284,7 +284,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
   const founderMode = currentGameIsFounderMode();
   const objectiveReduction = typeof managerObjectiveReductionForClub === 'function' ? managerObjectiveReductionForClub(game.selectedClubId) : 0;
-  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? `${objectiveInfo.objective.toFixed(2)}${objectiveReduction > 0 ? ` (-${objectiveReduction}%)` : ''}` : '—');
+  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? (objectiveInfo.label || `${objectiveInfo.objective.toFixed(2)}${objectiveReduction > 0 ? ` (-${objectiveReduction}%)` : ''}`) : '—');
   const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
   const objectiveStateText = objectiveInfo.boardState || (objectiveInfo.ppg >= objectiveInfo.objective ? 'Cumple' : 'Riesgo');
   const objectiveGapText = objectiveInfo.active ? ` Diferencia actual: ${(Number(objectiveInfo.delta || 0) >= 0 ? '+' : '')}${Number(objectiveInfo.delta || 0).toFixed(2)} PPG.` : '';
@@ -311,7 +311,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
         <div><span>Presupuesto</span><strong class="office-budget-compact ${budgetTone(game.budget || 0)}">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
         <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
-        <div><span>Objetivo</span><strong>${objectiveText}</strong></div>
+        <div><span>Objetivo</span><strong>${escapeHtml(objectiveText)}</strong></div>
         <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
       </div>
       ${objectiveProgress}

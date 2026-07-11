@@ -871,7 +871,8 @@ function renderManagerStats(){
   const achievementTotal = typeof managerAchievementsCatalog === 'function' ? managerAchievementsCatalog().length : unlockedAchievements.length;
   const achievementRows = unlockedAchievements.map(item => `<div class="achievement-unlocked-card"><span class="achievement-icon">${escapeHtml(item.icono || '★')}</span><div><strong>${escapeHtml(item.titulo || 'Hito')}</strong><p class="small muted">${escapeHtml(item.descripcion || '')}</p><span class="pill">${escapeHtml(item.categoria || 'Manager')}</span></div></div>`).join('');
   const rows = seasons.map(item => {
-    const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${Number(item.objectivePpg).toFixed(2)} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : '—';
+    const objectiveName = item.objectiveLabel ? escapeHtml(item.objectiveLabel) : (Number.isFinite(Number(item.objectivePpg)) ? Number(item.objectivePpg).toFixed(2) : '—');
+    const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${objectiveName} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : objectiveName;
     const deltaLabel = Number.isFinite(Number(item.objectiveDelta)) ? ` <span class="small muted">${Number(item.objectiveDelta) >= 0 ? '+' : ''}${Number(item.objectiveDelta).toFixed(2)}</span>` : '';
     const prestigeLabel = Number.isFinite(Number(item.managerPrestigeObjectiveReward)) && Number(item.managerPrestigeObjectiveReward) !== 0 ? ` <span class="small ${Number(item.managerPrestigeObjectiveReward) > 0 ? 'ok' : 'danger'}">${Number(item.managerPrestigeObjectiveReward) > 0 ? '+' : ''}${Number(item.managerPrestigeObjectiveReward)}</span>` : '';
     return `<tr>

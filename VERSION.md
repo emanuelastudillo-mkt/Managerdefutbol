@@ -1,3 +1,3 @@
-V6.01
+V6.02
 
-Revisión exhaustiva inicial de la línea Manager V6: limpieza de funciones sin referencias, actualización de versión/cache, eliminación de archivo vacío y ajuste de contradicción de balance en tarjetas.
+División de `data/jugadores.json` en chunks por país/liga. El archivo principal queda como manifest liviano y la carga acepta tanto formato legacy como lista `playersUrls`.

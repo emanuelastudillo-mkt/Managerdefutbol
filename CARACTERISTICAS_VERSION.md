@@ -1,17 +1,22 @@
-# Características de la versión V6.01
+# Características de la versión V6.02
 
-## V6.01 - Revisión y limpieza inicial de Manager V6
+## V6.02 - División de base de jugadores
 
-Esta versión toma `futbol-manager-mvp-V5.80-completa-correccion-slots-vacios(1).zip` como base y abre la nueva línea V6.01.
+Esta versión toma V6.01 como base y optimiza el archivo más pesado del proyecto: `data/jugadores.json`.
 
 ### Cambios aplicados
 
-- Actualización visible de versión a V6.01 en `index.html`, `config.js`, `app.js`, `VERSION.md`, `README.md` y caché de scripts/estilos.
-- Limpieza de funciones declaradas que no tenían referencias internas en el proyecto.
-- Eliminación del archivo vacío `err`, que no cumplía ninguna función de juego ni documentación.
-- Ajuste de contradicción de balance: `config.js` mantenía tarjetas al 50%, pero `balance-modificadores.js` lo pisaba con `1.50`. En V6.01 queda centralizado en `1.10` dentro de `balance-modificadores.js`.
-- Actualización de metadata de balance a V6.01.
-- Agregado de reporte técnico `REVISION_CODIGO_V6.01.md`.
+- `data/jugadores.json` se reemplaza por un manifest liviano.
+- Se crean 9 archivos JSON de jugadores dentro de `data/jugadores/`, cada uno con 450 jugadores.
+- Se agrega `playersUrls` a `config.js` para cargar los chunks en paralelo.
+- Se actualiza `js/core/01-config-constants.js` para exponer `PLAYERS_DATABASE_URLS`.
+- Se actualiza `js/data/04-data-storage.js` para aceptar tres formatos:
+  - archivo legacy con `players` directo;
+  - archivo legacy como array directo;
+  - manifest con lista `files`, `playerFiles` o `jugadoresFiles`.
+- Se actualiza versión visible/cache a V6.02.
+- Se actualiza README y VERSION.
+- Se crea `REVISION_CODIGO_V6.02.md`.
 
 ### Archivos modificados
 
@@ -19,24 +24,28 @@ Esta versión toma `futbol-manager-mvp-V5.80-completa-correccion-slots-vacios(1)
 - `app.js`
 - `config.js`
 - `balance-modificadores.js`
-- `simulador-2.0.js`
-- `js/core/02-ui-utils.js`
-- `js/core/03-player-tactics-utils.js`
+- `js/core/01-config-constants.js`
 - `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/game/13-ranking-online.js`
-- `js/game/15-especial.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/07-render-team-market.js`
-- `js/ui/12-modals.js`
+- `data/jugadores.json`
 - `README.md`
 - `VERSION.md`
 - `CARACTERISTICAS_VERSION.md`
-- `REVISION_CODIGO_V6.01.md`
+- `REVISION_CODIGO_V6.02.md`
 
-### Archivo eliminado en versión completa
+### Archivos agregados
 
-- `err`
+- `data/jugadores/argentina-liga-profesional.json`
+- `data/jugadores/argentina-primera-nacional.json`
+- `data/jugadores/argentina-federal-a.json`
+- `data/jugadores/chile-primera-division-chile.json`
+- `data/jugadores/brasil-brasileirao.json`
+- `data/jugadores/inglaterra-premier-league.json`
+- `data/jugadores/espana-laliga-espana.json`
+- `data/jugadores/italia-serie-a-italia.json`
+- `data/jugadores/rumania-superliga-rumania.json`
+
+### Resultado técnico
+
+- `data/jugadores.json` deja de pesar varios MB y queda como índice de carga.
+- La carga inicial puede resolver chunks por `playersUrls` o por manifest.
+- La base total sigue conservando 4.050 jugadores.

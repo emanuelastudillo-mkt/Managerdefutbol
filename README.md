@@ -1,36 +1,52 @@
-# Fútbol Manager MVP - V6.01
+# Fútbol Manager MVP - V6.02
 
-## V6.01 - Revisión exhaustiva y limpieza inicial de Manager V6
+## V6.02 - División de `data/jugadores.json`
 
-Esta entrega toma como base la última versión V5.80 y abre la nueva línea de versiones V6.01 y siguientes.
+Esta entrega continúa la línea Manager V6 y toma V6.01 como base.
 
 ### Cambios principales
 
-- Se actualiza la versión visible del proyecto a V6.01.
-- Se actualizan los parámetros de caché en `index.html` de `v=5.80` a `v=6.01` para forzar recarga de JS/CSS en navegador.
-- Se eliminan funciones internas sin referencias detectables por análisis estático.
-- Se elimina el archivo vacío `err` en la versión completa.
-- Se corrige una contradicción de balance: `config.js` indicaba `multiplicadorTarjetas: 0.50`, pero `balance-modificadores.js` lo pisaba con `1.50`. La configuración activa queda en `1.10` desde `balance-modificadores.js`.
-- Se actualiza la metadata de balance a V6.01.
-- Se agrega `REVISION_CODIGO_V6.01.md` con detalle técnico de la revisión.
+- `data/jugadores.json` deja de contener toda la base pesada de jugadores y pasa a funcionar como manifest liviano.
+- La base completa de 4.050 jugadores se divide en 9 archivos dentro de `data/jugadores/`, separados por país/liga.
+- Se agrega soporte de carga por `playersUrls` en `config.js`, con carga paralela de los chunks.
+- Se mantiene compatibilidad con el formato anterior: el loader todavía acepta un `jugadores.json` con `players` directo.
+- También se agrega compatibilidad con manifest: si `playersUrl` apunta a un archivo con `files`, el juego puede resolver y cargar los chunks declarados.
+- Se actualiza versión visible, caché de scripts/estilos y documentación a V6.02.
+- Se elimina del reporte la observación sobre fotos de jugadores manuales no incluidas, ya que esas imágenes existen fuera del ZIP.
+
+### Archivos de jugadores generados
+
+- `data/jugadores/argentina-liga-profesional.json`
+- `data/jugadores/argentina-primera-nacional.json`
+- `data/jugadores/argentina-federal-a.json`
+- `data/jugadores/chile-primera-division-chile.json`
+- `data/jugadores/brasil-brasileirao.json`
+- `data/jugadores/inglaterra-premier-league.json`
+- `data/jugadores/espana-laliga-espana.json`
+- `data/jugadores/italia-serie-a-italia.json`
+- `data/jugadores/rumania-superliga-rumania.json`
 
 ### Validaciones realizadas
 
-- Sintaxis JavaScript validada con `node --check` en todos los archivos JS principales y módulos.
 - Parseo JSON validado en todos los archivos dentro de `data/`.
-- Revisión de referencias de imágenes declaradas en JSON.
-- Revisión estática de funciones declaradas sin uso interno.
-- Carga secuencial de scripts en entorno de prueba con VM para verificar que no haya errores globales de inicialización.
-- Revisión de archivos vacíos o residuales.
+- Verificación de cantidad total de jugadores cargables desde chunks: 4.050.
+- Verificación de IDs únicos de jugadores: 4.050 IDs únicos.
+- Sintaxis JavaScript validada con `node --check`.
+- Revisión de referencias de carga para `playersUrl`, `playersUrls` y manifest.
 
-### Hallazgos importantes
+### Instalación
 
-- `data/jugadores.json` es el archivo más pesado del proyecto. Funciona, pero es el principal punto de optimización futura para mejorar carga inicial.
-- Las fotos manuales declaradas en `data/jugadores_manuales.json` no están incluidas en `img/jugadores/manual/`. El juego tiene fallback visual, pero esas fotos quedan pendientes si se quieren mostrar retratos específicos.
-- El sistema de scripts globales sigue funcionando como aplicación simple de navegador, pero a futuro conviene modularizar o separar carga crítica/no crítica.
+Para instalación limpia, subir todo el contenido del ZIP completo V6.02.
 
-## Instalación
+Para actualizar desde V6.01, aplicar el ZIP incremental V6.02 sobre la carpeta existente y forzar recarga con Control + F5. El incremental sobrescribe `data/jugadores.json` con el manifest liviano y agrega la carpeta `data/jugadores/`.
 
-Para instalación limpia, subir todo el contenido del ZIP completo V6.01.
+## Historial inmediato
 
-Para actualizar desde V5.80, aplicar el ZIP incremental V6.01 sobre la carpeta existente y forzar recarga con Control + F5. Si queda el archivo vacío `err` de versiones anteriores, se puede borrar manualmente; no afecta el juego.
+### V6.01 - Revisión exhaustiva y limpieza inicial de Manager V6
+
+- Se abrió la línea Manager V6 tomando como base V5.80.
+- Se actualizaron versión visible y caché a V6.01.
+- Se eliminaron funciones internas sin referencias detectables por análisis estático.
+- Se eliminó el archivo vacío `err` en la versión completa.
+- Se corrigió la contradicción de balance de tarjetas y quedó activo `1.10` desde `balance-modificadores.js`.
+- Se agregó `REVISION_CODIGO_V6.01.md`.

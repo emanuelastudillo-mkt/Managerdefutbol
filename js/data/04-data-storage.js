@@ -13,12 +13,61 @@ async function fetchJsonIfExists(url){
   }
 }
 
-async function loadPlayersDatabase(){
-  const raw = await fetchJsonIfExists(PLAYERS_DATABASE_URL);
+function playersPayloadArray(raw){
+  if(Array.isArray(raw)) return raw;
+  if(Array.isArray(raw?.players)) return raw.players;
+  if(Array.isArray(raw?.jugadores)) return raw.jugadores;
+  return [];
+}
+function playersManifestFiles(raw){
+  if(!raw || typeof raw !== 'object') return [];
+  const files = Array.isArray(raw.files) ? raw.files : (Array.isArray(raw.playerFiles) ? raw.playerFiles : (Array.isArray(raw.jugadoresFiles) ? raw.jugadoresFiles : []));
+  return files
+    .map(item => typeof item === 'string' ? item : (item?.path || item?.url || item?.file || ''))
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+}
+function resolveDataUrl(baseUrl='', childUrl=''){
+  const child = String(childUrl || '').trim();
+  if(!child) return '';
+  if(/^https?:\/\//i.test(child) || child.startsWith('/') || child.startsWith('data/')) return child;
+  const base = String(baseUrl || '');
+  const slash = base.lastIndexOf('/');
+  return slash >= 0 ? `${base.slice(0, slash + 1)}${child}` : child;
+}
+async function loadPlayersDatabaseFile(url, visited=new Set()){
+  const cleanUrl = String(url || '').trim();
+  if(!cleanUrl || visited.has(cleanUrl)) return null;
+  visited.add(cleanUrl);
+  const raw = await fetchJsonIfExists(cleanUrl);
   if(!raw) return null;
-  const players = Array.isArray(raw) ? raw : raw.players;
-  if(!Array.isArray(players) || !players.length) return null;
-  return { raw, players, source:PLAYERS_DATABASE_URL };
+  const directPlayers = playersPayloadArray(raw);
+  if(directPlayers.length) return { raw, players:directPlayers, source:cleanUrl };
+  const files = playersManifestFiles(raw);
+  if(!files.length) return null;
+  const loaded = await Promise.all(files.map(file => loadPlayersDatabaseFile(resolveDataUrl(cleanUrl, file), visited)));
+  const valid = loaded.filter(item => item?.players?.length);
+  if(!valid.length) return null;
+  return {
+    raw,
+    players:valid.flatMap(item => item.players),
+    source:valid.map(item => item.source).join(', ')
+  };
+}
+async function loadPlayersDatabase(){
+  const urls = PLAYERS_DATABASE_URLS.length ? PLAYERS_DATABASE_URLS : [PLAYERS_DATABASE_URL];
+  const loaded = await Promise.all(urls.map(url => loadPlayersDatabaseFile(url)));
+  const valid = loaded.filter(item => item?.players?.length);
+  if(!valid.length) return null;
+  const players = valid.flatMap(item => item.players);
+  return {
+    raw:{
+      metadata:{ version:GAME_CONFIG.version || 'V6', splitFiles:valid.length },
+      validation:databaseValidationCounts(players)
+    },
+    players,
+    source:valid.map(item => item.source).join(', ')
+  };
 }
 
 

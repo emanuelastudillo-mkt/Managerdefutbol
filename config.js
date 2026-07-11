@@ -4,9 +4,9 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.01',
+  version: 'V6.02',
   partidas: {
-    // V6.01: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
+    // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
   },
   data: {
@@ -15,7 +15,19 @@ window.GAME_CONFIG = {
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
     leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
+    playersUrls: [
+      'data/jugadores/argentina-liga-profesional.json',
+      'data/jugadores/argentina-primera-nacional.json',
+      'data/jugadores/argentina-federal-a.json',
+      'data/jugadores/chile-primera-division-chile.json',
+      'data/jugadores/brasil-brasileirao.json',
+      'data/jugadores/inglaterra-premier-league.json',
+      'data/jugadores/espana-laliga-espana.json',
+      'data/jugadores/italia-serie-a-italia.json',
+      'data/jugadores/rumania-superliga-rumania.json'
+    ],
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',

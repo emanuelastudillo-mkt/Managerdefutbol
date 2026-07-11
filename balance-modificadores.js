@@ -1,12 +1,12 @@
 /*
-  V6.01 · Modificadores de balance del simulador y entrenamiento.
+  V6.02 · Modificadores de balance del simulador y entrenamiento.
   Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
   Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V6.01',
-    nombre: 'Balance centralizado de modificadores V6.01',
+    version: 'V6.02',
+    nombre: 'Balance centralizado de modificadores V6.02',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 

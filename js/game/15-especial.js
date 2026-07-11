@@ -1,4 +1,4 @@
-/* V6.22 · Cartas y cartas activas globales por manager con usos compartidos. */
+/* V6.23 · Cartas y cartas activas globales por manager con usos compartidos. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;

@@ -953,7 +953,8 @@ function renderManagerStats(){
   const prestige = breakdown.total;
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
   const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
-  const experience = Number(game.managerStats.experience || 0);
+  const localExperience = Number(game.managerStats.experience || 0);
+  const experience = typeof currentManagerExperience === 'function' ? currentManagerExperience() : localExperience;
   const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];
   const achievementTotal = typeof managerAchievementsCatalog === 'function' ? managerAchievementsCatalog().length : unlockedAchievements.length;
   const achievementRows = unlockedAchievements.map(item => `<div class="achievement-unlocked-card"><span class="achievement-icon">${escapeHtml(item.icono || '★')}</span><div><strong>${escapeHtml(item.titulo || 'Hito')}</strong><p class="small muted">${escapeHtml(item.descripcion || '')}</p><span class="pill">${escapeHtml(item.categoria || 'Manager')}</span></div></div>`).join('');
@@ -981,10 +982,10 @@ function renderManagerStats(){
     <td>${Number(item.ppg || 0).toFixed(2)}</td>
     <td>${escapeHtml(item.type === 'dismissal' ? 'Despido' : item.type || 'Cambio')}</td>
   </tr>`).join('');
-  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
+  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado y prestigio propio de esta carrera.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Acceso por carrera: prestigio ${prestigeAccess}. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
-      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${typeof formatManagerPrestigeDecimal === 'function' ? formatManagerPrestigeDecimal(Number(breakdown.experiencePrestige || 0)) : Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
+      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Propio de este slot. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
+      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">Compartidos como perfil; el prestigio no se comparte entre slots.</span></div>
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
       <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>

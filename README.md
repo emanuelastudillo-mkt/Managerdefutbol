@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.22
+# Fútbol Manager MVP - V6.23
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.21**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.22**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -11,6 +11,15 @@ La versión vigente se identifica desde:
 - `index.html`
 
 
+
+
+## V6.23 - Prestigio propio por slot
+
+- El **prestigio del manager deja de compartirse entre slots/carreras**.
+- Al crear una nueva carrera, la selección de clubes vuelve a usar el prestigio propio de ese slot, no el perfil global.
+- Al cargar una carrera vieja, el perfil global ya no pisa `managerStats` ni altera el prestigio acumulado de esa partida.
+- Se mantienen compartidos los puntos de habilidad y las cartas globales/activas.
+- La pantalla de estadísticas aclara que el prestigio es propio de la carrera actual.
 
 ## V6.22 - Hinchas base en clubes disponibles y ranking JSON estable
 
@@ -25,13 +34,12 @@ La versión vigente se identifica desde:
 
 - El perfil del manager se comparte entre partidas locales.
 - Se comparten entre slots:
-  - prestigio del manager;
   - puntos de experiencia;
   - puntos de habilidad;
   - carrera laboral / historial de clubes;
   - estadísticas acumuladas y logros del manager.
-- Al crear una nueva partida, el juego toma el prestigio global para determinar qué clubes puede elegir el manager.
-- Al cargar una partida vieja, se sincroniza con el perfil global sin borrar la temporada actual de ese slot.
+- Desde V6.23, el prestigio ya no se toma del perfil global: cada slot conserva su propio acceso a clubes.
+- Al cargar una partida vieja, se sincronizan elementos globales sin pisar la temporada actual ni el prestigio propio de ese slot.
 - Al guardar, el perfil global se actualiza con el progreso actual del manager.
 - Las cartas activas dejan de estar limitadas al slot donde se activaron.
 - Una carta activada aparece como activa en el resto de partidas y mantiene usos compartidos.
@@ -214,24 +222,25 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.22
+## Archivos modificados en V6.23
 
 - `index.html`
 - `config.js`
 - `README.md`
 - `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
 - `js/game/13-ranking-online.js`
 - `js/game/15-especial.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.22**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.23**.
 
-Para actualizar desde V6.21, aplicar el ZIP incremental **V6.22** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.22, aplicar el ZIP incremental **V6.23** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.22 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.23 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.22
+## Validación V6.23
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

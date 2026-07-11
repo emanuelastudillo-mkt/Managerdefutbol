@@ -1,4 +1,4 @@
-/* V6.22 · Ranking online con envío JSON estable para carrera. */
+/* V6.23 · Ranking online con envío JSON estable para carrera. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();

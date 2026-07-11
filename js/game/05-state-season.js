@@ -54,15 +54,15 @@ function managerClubAccessPrestige(value=currentManagerPrestige()){
   return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
 }
 function currentManagerPrestige(){
+  // V6.23: el prestigio vuelve a ser propio de cada slot/carrera.
+  // No se usa el perfil global para abrir clubes ni para calcular reputación activa.
   if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;
-  if(typeof readManagerGlobalProfileState === 'function'){
-    const profile = readManagerGlobalProfileState();
-    if(profile && !profile.empty && profile.managerStats) return managerPrestigeBreakdown(profile.managerStats).total;
-  }
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
 }
 function currentManagerExperience(){
-  if(game?.managerStats) return Math.max(0, Math.round(Number(game.managerStats.experience || 0)));
+  const localExperience = game?.managerStats ? Math.max(0, Math.round(Number(game.managerStats.experience || 0))) : 0;
+  const sharedExperience = game?.managerSharedProfile ? Math.max(0, Math.round(Number(game.managerSharedProfile.experience || 0))) : 0;
+  if(game?.managerStats) return Math.max(localExperience, sharedExperience);
   if(typeof readManagerGlobalProfileState === 'function'){
     const profile = readManagerGlobalProfileState();
     if(profile && !profile.empty && profile.managerStats) return Math.max(0, Math.round(Number(profile.managerStats.experience || 0)));
@@ -2105,6 +2105,12 @@ function normalizeGame(saved){
   normalized.pendingFriendlyOpponentId = Number.isFinite(normalized.pendingFriendlyOpponentId) ? normalized.pendingFriendlyOpponentId : 0;
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
+  normalized.managerSharedProfile = (normalized.managerSharedProfile && typeof normalized.managerSharedProfile === 'object' && !Array.isArray(normalized.managerSharedProfile)) ? {
+    version:String(normalized.managerSharedProfile.version || 'V6.23'),
+    experience:Math.max(0, Math.round(Number(normalized.managerSharedProfile.experience || 0))),
+    careerHistory:Array.isArray(normalized.managerSharedProfile.careerHistory) ? normalized.managerSharedProfile.careerHistory : [],
+    updatedAt:normalized.managerSharedProfile.updatedAt || null
+  } : null;
   normalized.gameOver = normalizeGameOverState(normalized.gameOver);
   normalized.founderMode = Boolean(normalized.founderMode || isFoundedClubId(normalized.selectedClubId));
   normalized.founderClubId = normalized.founderMode ? Number(normalized.founderClubId || normalized.selectedClubId || 0) : 0;
@@ -3040,7 +3046,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const skillPoints = Math.max(0, Math.round(Number(raw.skillPoints ?? raw.puntos_habilidad ?? raw.puntosHabilidad ?? 0)));
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName;
   return {
-    version:'V6.22',
+    version:'V6.23',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -3060,7 +3066,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V6.22';
+    clean.version = 'V6.23';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -3073,11 +3079,17 @@ function applySharedManagerProfileToGame(options={}){
   if(!profile || profile.empty) return { changed:false };
   const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
   const clubId = Number(game.selectedClubId || 0);
+  // V6.23: no reemplazar managerStats por el perfil global.
+  // managerStats contiene el prestigio de esta carrera/slot; si se pisa, el prestigio se comparte.
   const previousStats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
-  const previousCurrent = previousStats.currentSeason || emptyManagerSeasonStats(season, clubId);
-  const nextStats = normalizeManagerStats(profile.managerStats || previousStats);
-  nextStats.currentSeason = { ...emptyManagerSeasonStats(season, clubId), ...previousCurrent, season, clubId };
-  game.managerStats = ensureManagerCurrentSeasonStats(nextStats, season, clubId);
+  game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
+  const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
+  game.managerSharedProfile = {
+    version:'V6.23',
+    experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
+    careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
+    updatedAt:profile.updatedAt || null
+  };
   if(profile.managerName && !game.rankingManagerName) game.rankingManagerName = profile.managerName;
   if(profile.saveCode && !game.saveCode) game.saveCode = profile.saveCode;
   if(typeof normalizeSpecialState === 'function'){
@@ -3098,7 +3110,7 @@ function persistSharedManagerProfileFromGame(options={}){
   let special = game.special;
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const profile = {
-    version:'V6.22',
+    version:'V6.23',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,

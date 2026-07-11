@@ -180,6 +180,14 @@
     const n = Number(value || 0);
     return n >= 7.2 ? 'ok' : n >= 6.0 ? 'warn' : 'bad';
   }
+  function liveDisplayOverall(player){
+    if(!player) return 0;
+    const source = typeof playerById === 'function' ? (playerById(player.id) || player) : player;
+    const visible = typeof visibleOverall === 'function' ? visibleOverall(source) : null;
+    const fallback = Number(player.overall || source?.overall || source?.media || 0);
+    const value = visible !== null && visible !== undefined && Number.isFinite(Number(visible)) ? Number(visible) : fallback;
+    return simClampUi(Math.round(value || 0), 1, 99);
+  }
   function livePlayerRating(player, side, inField=true){
     if(!player || !liveState) return '—';
     const id = Number(player.id || 0);
@@ -218,7 +226,7 @@
     const icons = livePlayerIcons(id);
     const nameCell = `<span class="live-name-cell"><strong>${ehtml(lastName(player.name))}</strong>${icons}${tag}</span>`;
     const rowNo = expelled ? 'R' : (injuredGhost ? 'L' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'));
-    const mediaCell = isOwn ? String(Math.round(Number(player.overall || 0))) : '—';
+    const mediaCell = isOwn ? String(liveDisplayOverall(player)) : '—';
     const body = `<span class="num">${rowNo}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b>${ehtml(mediaCell)}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
     return selectable ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
   }
@@ -335,7 +343,7 @@
     const injuredGhost = Boolean(player?.injuredGhost || player?.ghost);
     const cls = `live-board-circle ${empty ? 'empty' : ''} ${injuredGhost ? 'ghost' : ''} ${selected ? 'selected' : ''} ${fit < 70 && player && !injuredGhost ? 'warn' : ''}`;
     const label = player ? lastName(player.name) : 'Hueco';
-    const meta = player ? (injuredGhost ? 'Lesionado · no aporta' : `${Math.round(Number(player.overall || 0))} · ${Math.round(Number(player.condition || 0))}%`) : 'Sin jugador';
+    const meta = player ? (injuredGhost ? 'Lesionado · no aporta' : `${liveDisplayOverall(player)} · ${Math.round(Number(player.condition || 0))}%`) : 'Sin jugador';
     return `<button type="button" class="${cls}" data-live-board-slot="${index}" ${liveState?.finished ? 'disabled' : ''}>
       <span class="role">${ehtml(slot?.role || '—')}</span>
       <strong>${ehtml(label)}</strong>

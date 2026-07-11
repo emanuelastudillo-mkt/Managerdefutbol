@@ -1,14 +1,23 @@
-# Fútbol Manager MVP - V6.12
+# Fútbol Manager MVP - V6.13
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.11**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.12**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+## V6.13 - Media visible en simulador vivo
+
+### Cambios principales
+
+- La columna **MED** del simulador vivo ahora muestra la misma media visible que la vista de Plantel.
+- `player.overall` se mantiene intacto y oculto como valor interno del jugador.
+- La lógica de rendimiento, calificaciones y motor de partido no cambia: sólo se unifica el valor mostrado al usuario.
+- La pizarra táctica del simulador también usa la media visible en su resumen corto del jugador.
 
 ## V6.12 - Pesos de goleadores por posición
 
@@ -87,23 +96,22 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.12
+## Archivos modificados en V6.13
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `simulador-2.0.js`
-- `js/game/09-simulation-economy-training.js`
+- `js/game/17-live-match.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.12**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.13**.
 
-Para actualizar desde V6.11, aplicar el ZIP incremental **V6.12** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.12, aplicar el ZIP incremental **V6.13** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.12 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.13 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.12
+## Validación V6.13
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

@@ -1,4 +1,20 @@
-# Fútbol Manager MVP - V5.72
+# Fútbol Manager MVP - V5.73
+
+## V5.73 - Retos predeterminados: Campo destruido
+
+- Se agrega el modo de **Retos predeterminados** dentro del flujo de nueva carrera.
+- Primer reto disponible: **Campo destruido**.
+- El manager puede elegir uno de estos clubes: River Plate, Boca Juniors, Estudiantes, San Lorenzo, Racing Club o Independiente.
+- Los otros cinco quedan como rivales de las últimas 5 fechas, todas en el campo propio destruido.
+- El campo propio empieza en **15/100**.
+- Replantar y reparar quedan bloqueados durante el reto.
+- No se pueden contratar empleados, ojeadores, jugadores libres, jugadores comprados ni juveniles promovidos.
+- Diego Maradona queda en el plantel del club elegido, lesionado al inicio, y se recupera para los últimos 2 partidos.
+- **Ver resultado** queda bloqueado: todos los partidos propios deben dirigirse.
+- Objetivo del reto: salir campeón y que Maradona no vuelva a lesionarse.
+- Compatibilidad de partida: se implementa solo para partidas nuevas creadas desde el reto; no altera partidas normales.
+
+---
 
 ## V5.72 - Sponsors especiales con condiciones
 

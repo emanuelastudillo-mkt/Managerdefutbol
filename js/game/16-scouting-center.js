@@ -333,6 +333,7 @@ function removePlayerFromScoutingCenter(playerId){
   renderScoutingCenter();
 }
 function hireScoutingChief(type){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const chief = scoutingChiefType(type);
   if(!chief){ showNotice('Jefe de ojeadores inválido.'); return; }
   const state = ensureScoutingCenterState();
@@ -344,6 +345,7 @@ function hireScoutingChief(type){
   renderScoutingCenter();
 }
 function rentScoutingOffice(){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const state = ensureScoutingCenterState();
   const max = scoutingChiefMaxOffices();
   if(state.offices >= max){ showNotice(max > 0 ? 'Tu jefe de ojeadores no puede controlar más oficinas.' : 'Contratá un jefe de ojeadores antes de alquilar oficinas.'); return; }
@@ -366,6 +368,7 @@ function cancelScoutingOffice(){
   renderScoutingCenter();
 }
 function hireScoutingScout(){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const state = ensureScoutingCenterState();
   const caps = scoutingCapacities(state);
   if(state.scouts >= caps.scoutCapacity){ showNotice('No hay cupo para más ojeadores. Alquilá oficinas.'); return; }

@@ -1025,7 +1025,7 @@ function startPostseasonPhase(anchorDate=null){
 function completeRegularSeasonIfNeeded(){
   if(!game || !isRegularSeason()) return false;
   if(game.matchdayIndex < game.fixtures.length) return false;
-  if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+  if(!(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
     saveLocal(true);
     renderAll();
     showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
@@ -1180,7 +1180,7 @@ function advanceCalendarOneStep(){
   const nextDate = addDaysToIsoDate(fromDate, 1);
   const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   if(regularEnded){
     startPostseasonPhase(nextDate);
@@ -1230,7 +1230,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   game.lastOwnProblems = ownProblems;
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - Number(budgetBeforeTurn || 0));
   if(regularEnded){
@@ -1319,6 +1319,7 @@ function startLiveOwnMatchdayInteractive(context){
   return 'blocked';
 }
 function finishOwnMatchdayResultOnly(context){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('resultOnly')){ showNotice(managerChallengeBlockedMessage('resultOnly')); return 'blocked'; }
   const match = context?.ownInfo?.match;
   const result = simulateLiveMatchResultOnly(match);
   if(!result){ showLiveMatchEngineBlocked({ missing:['No se pudo generar el resultado directo con el motor vivo'] }); return 'blocked'; }
@@ -1339,10 +1340,10 @@ function startLiveOwnMatchday(context){
   const body = `<div class="card inner match-start-choice">
     <p class="label">Partido propio</p>
     <h2>${clubLink(match.homeId)} vs ${clubLink(match.awayId)}</h2>
-    <p class="muted">Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.</p>
+    <p class="muted">${typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('resultOnly') ? 'Reto activo: es obligatorio dirigir el partido. Ver resultado está bloqueado.' : 'Podés dirigir la simulación viva o saltear el desarrollo y ver sólo el resultado con estadísticas completas.'}</p>
     <div class="modal-actions two-lines">
       <button id="startLiveMatchChoice" class="primary">Dirigir partido</button>
-      <button id="resultOnlyMatchChoice" class="ghost">Ver solo resultados</button>
+      ${typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('resultOnly') ? '<button id="resultOnlyMatchChoice" class="ghost" disabled>Ver resultado bloqueado</button>' : '<button id="resultOnlyMatchChoice" class="ghost">Ver solo resultados</button>'}
     </div>
   </div>`;
   if(typeof openModal === 'function') openModal(body);
@@ -1374,7 +1375,7 @@ function simulateNextMatchday(options={}){
     return;
   }
   if(game.matchdayIndex >= game.fixtures.length){
-    if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+    if(!(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
       saveLocal(true);
       renderAll();
       showNotice('Se creó el calendario de playoffs de promoción. Avanzá para jugar la ida.', true);
@@ -1448,7 +1449,7 @@ function simulateNextMatchday(options={}){
     game.mustReviewTactics = game.lastOwnProblems.length > 0;
   }
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
   if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(regularEnded){
@@ -2382,6 +2383,7 @@ function processStadiumProjects(){
 }
 function startReplantingField(){
   if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance')){ showNotice(managerChallengeBlockedMessage('fieldMaintenance')); return; }
   ensureStadiumState();
   const project = stadiumProjectForClub(game.selectedClubId);
   if(project.replantingTurnsLeft > 0 || project.patchingTurnsLeft > 0){ showNotice('Ya hay un trabajo de mantenimiento activo en el estadio.'); return; }
@@ -2396,6 +2398,7 @@ function startReplantingField(){
 }
 function startPatchingField(){
   if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance')){ showNotice(managerChallengeBlockedMessage('fieldMaintenance')); return; }
   ensureStadiumState();
   const project = stadiumProjectForClub(game.selectedClubId);
   if(project.replantingTurnsLeft > 0 || project.patchingTurnsLeft > 0){ showNotice('Ya hay un trabajo de mantenimiento activo en el estadio.'); return; }

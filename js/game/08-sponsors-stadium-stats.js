@@ -647,6 +647,7 @@ function renderStadium(){
   const patchActive = project.patchingTurnsLeft > 0;
   const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
   const patchProgress = patchActive ? Math.round(((PATCH_TURNS - project.patchingTurnsLeft) / PATCH_TURNS) * 100) : 0;
+  const fieldMaintenanceBlocked = typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance');
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -666,15 +667,16 @@ function renderStadium(){
         </div>
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
+        ${fieldMaintenanceBlocked ? '<p class="muted small danger">Reto activo: no se puede replantar ni reparar el campo.</p>' : ''}
         <p class="stadium-identity-line">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
         <div class="stack" style="margin-top:14px">
           <div class="maintenance-option">
             <div><strong>Replantar todo</strong><p class="muted small">Costo ${formatMoney(REPLANT_COST)}. Durante 35 días el campo queda muy malo; al finalizar sube a 99.</p></div>
-            <button id="btnReplant" class="primary" ${replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
+            <button id="btnReplant" class="primary" ${fieldMaintenanceBlocked || replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
           </div>
           <div class="maintenance-option">
             <div><strong>Regar y parchar campo de juego</strong><p class="muted small">Costo ${formatMoney(PATCH_COST)}. Mejora el campo durante los próximos 21 días.</p></div>
-            <button id="btnPatch" class="ghost" ${replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
+            <button id="btnPatch" class="ghost" ${fieldMaintenanceBlocked || replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
           </div>
         </div>
       </div>

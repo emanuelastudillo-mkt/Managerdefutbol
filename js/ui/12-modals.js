@@ -345,6 +345,7 @@ function offerOwnPlayerToClubs(playerId){
   showNotice('Llegó una oferta por el jugador.');
 }
 function openPurchaseOfferModal(playerId){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
   if(isPurchaseOfferBlockedThisSeason(player.id)){
@@ -380,6 +381,7 @@ function purchaseOfferConfig(kind, clause){
   return { amount:Math.round(clause), clubChance:1, fail:'El club no puede bloquear el pago de cláusula.' };
 }
 function submitPurchaseOffer(playerId, kind){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
   if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
@@ -1220,6 +1222,33 @@ function openFounderModeModal(){
   });
 }
 
+
+
+function openCampoDestruidoChallengeModal(){
+  if(game && !game.gameOver?.active){
+    showNotice('Los retos predeterminados se inician como partida nueva o desde una carrera sin club.');
+    return;
+  }
+  const clubs = typeof campoDestruidoChallengeClubs === 'function' ? campoDestruidoChallengeClubs() : [];
+  if(!clubs.length){ showNotice('No se encontraron los clubes necesarios para el reto.'); return; }
+  const cards = clubs.map(club => `<button class="card clickable plain challenge-club-card" data-start-campo-destruido="${Number(club.id)}">
+    <h3>${clubBadge(club.id)} ${escapeHtml(club.name)}</h3>
+    <p class="muted small">Elegir como tu club. Los otros cinco serán tus rivales en las últimas fechas, todas en tu campo.</p>
+    <span class="pill">Prestigio ${clubPrestigeValue(club)}</span>
+  </button>`).join('');
+  openModal(`<div class="new-game-modal challenge-modal">
+    <p class="label">Reto predeterminado</p>
+    <h2>Campo destruido</h2>
+    <p class="muted">Campo propio en 15/100. No se puede replantar ni reparar. Quedan 5 fechas en tu campo contra los otros grandes. Maradona está lesionado y vuelve para los últimos 2 partidos.</p>
+    <div class="card blocker"><strong>Reglas del reto</strong><p class="muted small">No se pueden contratar empleados ni jugadores. Objetivo: ser campeón y que Maradona no vuelva a lesionarse. Ver resultado queda bloqueado: es obligatorio dirigir los partidos.</p></div>
+    <div class="grid cols-3" style="margin-top:14px">${cards}</div>
+  </div>`);
+  document.querySelectorAll('[data-start-campo-destruido]').forEach(btn => btn.addEventListener('click', () => {
+    const clubId = Number(btn.dataset.startCampoDestruido || 0);
+    if(typeof startCampoDestruidoChallenge === 'function') startCampoDestruidoChallenge(clubId, { managerName:storedManagerName() });
+  }));
+}
+
 function openNewGameModal(force=false, options={}){
   if(force && typeof force === 'object'){
     options = force.target ? {} : force;
@@ -1252,6 +1281,7 @@ function openNewGameModal(force=false, options={}){
         <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
       </div>
       <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
+      ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
     </div>`;
   openModal(body);
   const countrySelect = $('modalCountrySelect');
@@ -1295,6 +1325,7 @@ function openNewGameModal(force=false, options={}){
       leagueId:leagueSelect?.value || ''
     });
   });
+  $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', openCampoDestruidoChallengeModal);
   newGameModalShown = true;
 }
 function openModal(html){

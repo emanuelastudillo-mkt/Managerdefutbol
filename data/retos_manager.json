@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "nombre": "retos_manager",
+    "version": "V5.73",
+    "descripcion": "Retos predeterminados para iniciar partidas con escenarios especiales.",
+    "estado": "activo"
+  },
+  "retos": [
+    {
+      "id": "campo_destruido",
+      "nombre": "Campo destruido",
+      "dificultad": "Muy alta",
+      "clubesSeleccionables": [
+        "River Plate",
+        "Boca Juniors",
+        "Estudiantes",
+        "San Lorenzo",
+        "Racing Club",
+        "Independiente"
+      ],
+      "condicionesIniciales": {
+        "campoPropio": 15,
+        "fechasRestantes": 5,
+        "rivalidad": "El club elegido enfrenta a los otros cinco clubes seleccionables, todas las fechas en su campo propio destruido.",
+        "maradona": "Diego Maradona está en el plantel, lesionado al inicio, y se recupera para los últimos 2 partidos.",
+        "plantelPropio": "El plantel propio queda aproximadamente 10 puntos por debajo del nivel de los rivales principales."
+      },
+      "bloqueos": [
+        "replantar_campo",
+        "reparar_campo",
+        "contratar_empleados",
+        "contratar_jugadores",
+        "ver_resultado"
+      ],
+      "objetivos": [
+        "Ser campeón",
+        "Que Maradona no vuelva a lesionarse"
+      ],
+      "implementacion": "El juego aplica este reto desde el modal de nueva carrera; este JSON documenta el preset y permite ampliarlo después."
+    }
+  ]
+}

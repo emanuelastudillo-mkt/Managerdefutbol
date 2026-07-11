@@ -1,2 +1,2 @@
-/* V5.72 · Punto de entrada. Sponsors especiales con condiciones. */
+/* V5.73 · Punto de entrada. Retos predeterminados: Campo destruido. */
 init();

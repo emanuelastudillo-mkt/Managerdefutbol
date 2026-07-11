@@ -408,6 +408,7 @@ function renderHome(){
     ${problemBox}
     ${seasonBox}
     ${turnModePanelMarkup()}
+    ${typeof managerChallengeHomeMarkup === 'function' ? managerChallengeHomeMarkup() : ''}
     ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
     ${visualAlertsMarkup()}
     <div class="card featured-players-panel" style="margin-top:14px">

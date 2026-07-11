@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.72',
+  version: 'V5.73',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -18,6 +18,7 @@ window.GAME_CONFIG = {
     eventsUrl: 'data/eventos.json',
     specialSkillsUrl: 'data/habilidades_especiales.json',
     managerAchievementsUrl: 'data/hitos_manager.json',
+    retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
     hinchasUrl: 'data/hinchas_argentina.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -262,7 +263,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.72: sistema fijo por temporada + sponsor especial con condición.
+    // V5.73: sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,

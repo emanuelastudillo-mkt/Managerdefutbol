@@ -1,4 +1,34 @@
-# Características de la versión V5.72
+# Características de la versión V5.73
+
+## V5.73 - Retos predeterminados: Campo destruido
+
+### Cambios principales
+- Se incorpora el primer reto predeterminado del juego: **Campo destruido**.
+- El reto se inicia desde el modal de nueva carrera, en el bloque **Retos predeterminados**.
+- El jugador elige uno de estos clubes: River Plate, Boca Juniors, Estudiantes, San Lorenzo, Racing Club o Independiente.
+- El club elegido enfrenta a los otros cinco en las últimas 5 fechas, todas en su campo propio destruido.
+- La tabla arranca con tres equipos punteros y margen corto para salir campeón.
+- El plantel propio queda reducido aproximadamente 10 puntos para que el reto tenga desventaja deportiva real.
+- Diego Maradona pasa al plantel del club elegido, inicia lesionado y queda programado para recuperarse en los últimos 2 partidos.
+
+### Bloqueos del reto
+- No se puede replantar ni regar/parchar el campo.
+- No se pueden contratar empleados comunes.
+- No se pueden contratar jefe de ojeadores, ojeadores ni oficinas de ojeo.
+- No se pueden contratar jugadores libres ni comprar jugadores.
+- No se pueden promover juveniles al primer equipo.
+- El botón **Ver resultado** queda bloqueado; es obligatorio dirigir el partido.
+
+### Objetivo
+- Ser campeón.
+- Que Maradona no vuelva a lesionarse.
+
+### Compatibilidad
+- Se implementa solo.
+- No altera partidas normales.
+- El reto aplica únicamente a nuevas partidas creadas desde el selector de retos.
+
+---
 
 ## V5.72 - Sponsors especiales con condiciones
 

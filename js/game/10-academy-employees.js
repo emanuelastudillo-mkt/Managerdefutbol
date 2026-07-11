@@ -162,6 +162,7 @@ function staffContractsPanelMarkup({ empty=false }={}){
 }
 function openStaffHireModal(staffId, after=null){
   if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const def = staffDefinition(staffId);
   if(!def){ showNotice('Empleado no disponible.'); return; }
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
@@ -186,6 +187,7 @@ function openStaffHireModal(staffId, after=null){
 }
 function hireStaffEmployee(staffId, categoryId='regular', after=null){
   if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const def = staffDefinition(staffId);
   if(!def) return;
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
@@ -814,6 +816,7 @@ function dismissAcademyPlayer(playerId){
   showNotice(`${player.name} fue dado de baja de la academia.`);
 }
 function openPromoteAcademyModal(playerId){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = academyActivePlayers().find(p => Number(p.id) === Number(playerId));
   if(!player) return;
   if(Number(player.age || 0) < 16){ showNotice('El juvenil todavía no tiene edad para firmar contrato profesional.'); return; }
@@ -823,6 +826,7 @@ function openPromoteAcademyModal(playerId){
 }
 function promoteAcademyPlayer(playerId, exactPosition){
   if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   game.academy = normalizeAcademyState(game.academy);
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
   if(!player) return;

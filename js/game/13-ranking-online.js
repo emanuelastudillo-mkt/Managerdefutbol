@@ -1,4 +1,4 @@
-/* V6.23 · Ranking online con envío JSON estable para carrera. */
+/* V6.25 · Ranking online con manager_name explícito y alias estables. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -540,8 +540,13 @@ function calculateManagerScore(payload){
     negativePenalty
   );
 }
+function rankingCleanManagerName(value=''){
+  const clean = String(value || rankingStoredManagerName() || rankingStoredAuthUsername() || storedManagerName() || game?.rankingManagerName || '').trim().slice(0, 40);
+  return clean || 'Manager';
+}
 function buildRankingPayload(managerName, options={}){
   if(!game) return null;
+  const cleanManagerName = rankingCleanManagerName(managerName);
   options = options && typeof options === 'object' ? options : {};
   const scope = String(options.scope || 'career');
   const eventType = String(options.eventType || (scope === 'career' ? 'career_snapshot' : 'season_snapshot'));
@@ -551,7 +556,9 @@ function buildRankingPayload(managerName, options={}){
   const finalBudget = Math.round(Number(game.budget || 0));
   const payload = {
     recordScope:scope,
-    managerName: String(managerName || '').trim().slice(0, 40),
+    managerName: cleanManagerName,
+    manager_name: cleanManagerName,
+    nombre_manager: cleanManagerName,
     clubId: Number(record.clubId || game.selectedClubId),
     club: scope === 'career' ? (record.clubName || clubName(game.selectedClubId)) : (record.clubName || clubName(game.selectedClubId)),
     currentClub: record.clubName || clubName(game.selectedClubId),
@@ -666,7 +673,8 @@ function rankingRequestVariantsForPath(path, apiBody, fullPayload){
   const jsonVariants = [
     { label:'json-flat', headers:jsonHeaders, body:JSON.stringify(cleanApiBody) },
     { label:'json-action-flat', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...cleanApiBody }) },
-    { label:'json-payload-object', headers:jsonHeaders, body:JSON.stringify({ action:'submit', payload:cleanFullPayload, token }) }
+    // Algunos Workers validan campos de nivel superior aunque también acepten payload anidado.
+    { label:'json-payload-object', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...cleanApiBody, payload:cleanFullPayload, token }) }
   ];
   const formVariants = [
     { label:'form-payload', headers:formHeaders, body:new URLSearchParams({ action:'submit', payload:JSON.stringify(cleanFullPayload), token }).toString() },
@@ -675,10 +683,16 @@ function rankingRequestVariantsForPath(path, apiBody, fullPayload){
   return rankingPathPrefersJson(path) ? jsonVariants : jsonVariants.concat(formVariants);
 }
 function rankingPayloadToApiBody(payload){
+  const cleanManagerName = rankingCleanManagerName(payload?.managerName || payload?.manager_name || payload?.nombre_manager);
   const body = {
     // Nombres del Worker Cloudflare + D1.
     record_scope: payload.recordScope || 'career',
-    manager_name: payload.managerName,
+    manager_name: cleanManagerName,
+    managerName: cleanManagerName,
+    nombre_manager: cleanManagerName,
+    manager: cleanManagerName,
+    name: cleanManagerName,
+    username: cleanManagerName,
     club_name: payload.club,
     current_club: payload.currentClub || payload.club || '',
     clubs_managed: Array.isArray(payload.clubsManaged) ? payload.clubsManaged.join(' | ') : String(payload.clubsManaged || ''),
@@ -917,7 +931,7 @@ function rankingSubmitPanelMarkup(payload, endpoint){
 }
 function renderRankingOnline(){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const managerName = rankingStoredManagerName() || storedManagerName() || 'Manager';
+  const managerName = rankingCleanManagerName();
   const manualEventType = rankingManualEventType();
   const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
   const payload = buildRankingPayload(managerName, { eventType:manualEventType, eventLabel:`Carrera actualizada manualmente · día ${manualDay || '—'}` });
@@ -964,7 +978,7 @@ function validateRankingSubmit(payload, managerName, endpoint, options={}){
 }
 function submitCurrentSeasonToRanking(){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const managerName = rankingStoredManagerName() || storedManagerName() || 'Manager';
+  const managerName = rankingCleanManagerName();
   const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
   const payload = buildRankingPayload(managerName, { eventType:rankingManualEventType(), eventLabel:`Carrera actualizada manualmente · día ${manualDay || '—'}` });
   const error = validateRankingSubmit(payload, managerName, endpoint, { manual:true });
@@ -1018,7 +1032,7 @@ function rankingRecordUploadState(payload, status, extra={}){
 }
 function submitRankingAutomatically(eventType='season_end', options={}){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const managerName = rankingStoredManagerName() || storedManagerName() || 'Manager';
+  const managerName = rankingCleanManagerName();
   const payload = buildRankingPayload(managerName, { ...options, eventType });
   const error = validateRankingSubmit(payload, managerName, endpoint, { automatic:true });
   if(error){

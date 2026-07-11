@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.24
+# Fútbol Manager MVP - V6.25
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.23**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.24**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -12,6 +12,15 @@ La versión vigente se identifica desde:
 
 
 
+
+
+## V6.25 - Ranking online con `manager_name` explícito
+
+### Corrección de ranking
+- `Subir carrera` ahora envía siempre `manager_name` como campo superior obligatorio.
+- También se envían alias compatibles: `managerName`, `nombre_manager`, `manager`, `name` y `username`.
+- El nombre del manager se normaliza con fallback estable: nombre de ranking, usuario autenticado, nombre guardado o `Manager`.
+- La variante JSON con `payload` anidado también repite los campos planos arriba para Workers que validan antes de leer el objeto interno.
 
 ## V6.24 - Carrera sin club activa y mercado laboral
 
@@ -226,16 +235,14 @@ Cambios principales:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.24
+## Archivos modificados en V6.25
 
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/ui/06-render-home-messages.js`
+- `js/game/13-ranking-online.js`
 - `index.html`
 - `config.js`
 - `README.md`
 
-## Validación V6.24
+## Validación V6.25
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

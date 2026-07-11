@@ -1324,6 +1324,154 @@ function openNewGameModal(force=false, options={}){
   $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
   newGameModalShown = true;
 }
+function gameHelpGoButton(tab, label, subtab=''){
+  const extra = subtab ? ` data-help-subtab="${escapeHtml(subtab)}"` : '';
+  return `<button class="ghost small-btn help-jump-btn" type="button" data-help-tab="${escapeHtml(tab)}"${extra}>${escapeHtml(label)}</button>`;
+}
+function openGameHelpModal(){
+  const body = `
+  <div class="help-modal">
+    <div class="help-hero card">
+      <p class="eyebrow">Guía rápida</p>
+      <h2>Ayuda de Fútbol Manager</h2>
+      <p class="muted">Repaso breve para ubicarse en una interfaz centrada en datos. La lógica general es revisar alertas, ordenar el equipo, avanzar el calendario y volver a corregir cuando aparezcan problemas deportivos, físicos, económicos o de vestuario.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Prioridad alta: lo que conviene mirar seguido</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <span class="pill warn">1 · Control diario</span>
+          <h4>Inicio</h4>
+          <p>Es el tablero principal. Ahí ves el estado del club, próximo partido, últimos resultados, alertas, lesionados, presupuesto y resumen del avance. Si no sabés qué hacer, empezá por esta pantalla.</p>
+          ${gameHelpGoButton('home','Abrir Inicio')}
+        </article>
+        <article class="help-card card">
+          <span class="pill warn">2 · Competencia</span>
+          <h4>Primer Equipo</h4>
+          <p>Concentra Táctica, Plantel y Entrenamiento. Usalo para armar titulares, corregir jugadores lesionados o suspendidos, revisar físico y moral, rotar suplentes y evitar repetir siempre el mismo planteo.</p>
+          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Plantel','squad')}${gameHelpGoButton('firstTeam','Abrir Entrenamiento','training')}</div>
+        </article>
+        <article class="help-card card">
+          <span class="pill warn">3 · Alertas</span>
+          <h4>Mensajes</h4>
+          <p>Reúne avisos importantes del juego. Sirve para detectar problemas, oportunidades, cambios de estado y consecuencias de decisiones anteriores.</p>
+          ${gameHelpGoButton('messages','Abrir Mensajes')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Gestión de plantel y crecimiento</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <h4>Mercado</h4>
+          <p>Buscá jugadores libres o con contrato. En los externos, el ojeo ayuda a estimar mejor su nivel y la probabilidad de fichaje. No todos los buenos jugadores aceptan cualquier club.</p>
+          ${gameHelpGoButton('market','Abrir Mercado')}
+        </article>
+        <article class="help-card card">
+          <h4>Centro de Ojeo</h4>
+          <p>Usalo para descubrir información antes de comprar. Los informes reducen la incertidumbre sobre habilidades y muestran una orientación de qué tan posible es fichar al jugador.</p>
+          ${gameHelpGoButton('scouting','Abrir Ojeo')}
+        </article>
+        <article class="help-card card">
+          <h4>Academia</h4>
+          <p>Espacio de juveniles. Sirve para captar, revisar y desarrollar jugadores jóvenes. No todos progresan igual, por lo que conviene mirar edad, posición, media visible y evolución.</p>
+          ${gameHelpGoButton('academy','Abrir Academia')}
+        </article>
+        <article class="help-card card">
+          <h4>Empleados</h4>
+          <p>Mejoran áreas de trabajo del club. Son apoyo indirecto: entrenamiento, juveniles, observación, recuperación y gestión general. Revisalos cuando el club crece o cuando una zona queda débil.</p>
+          ${gameHelpGoButton('employees','Abrir Empleados')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Club, economía y contexto</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <h4>Finanzas</h4>
+          <p>Mostrá ingresos, gastos, balances y presupuesto. Conviene revisarlo antes de fichar, renovar, construir o contratar empleados.</p>
+          ${gameHelpGoButton('finance','Abrir Finanzas')}
+        </article>
+        <article class="help-card card">
+          <h4>Estadio</h4>
+          <p>Permite revisar infraestructura, campo, capacidad y mejoras. Es crecimiento de club a mediano plazo, no una solución inmediata de partido.</p>
+          ${gameHelpGoButton('stadium','Abrir Estadio')}
+        </article>
+        <article class="help-card card">
+          <h4>Calendario</h4>
+          <p>Sirve para ubicar próximos partidos, carga de fechas y resultados. Revisalo para decidir rotaciones y no llegar con jugadores clave sobreexigidos.</p>
+          ${gameHelpGoButton('fixture','Abrir Calendario')}
+        </article>
+        <article class="help-card card">
+          <h4>Tabla</h4>
+          <p>Muestra la posición del club en la liga. Es la referencia rápida para saber si estás cumpliendo expectativas o si el contexto empieza a presionar.</p>
+          ${gameHelpGoButton('standings','Abrir Tabla')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Seguimiento, carrera y competencia externa</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <h4>Estadísticas</h4>
+          <p>Compará rendimiento de equipos y jugadores. Es útil para detectar si ganás por solidez, pegada, defensa o simplemente por rachas.</p>
+          ${gameHelpGoButton('stats','Abrir Estadísticas')}
+        </article>
+        <article class="help-card card">
+          <h4>Tus estadísticas</h4>
+          <p>Resume tu carrera como mánager: progreso, clubes dirigidos, temporadas y rendimiento general. Sirve para medir evolución más allá de una temporada.</p>
+          ${gameHelpGoButton('mystats','Abrir Tus estadísticas')}
+        </article>
+        <article class="help-card card">
+          <h4>Ranking Online</h4>
+          <p>Permite subir y comparar la carrera completa del mánager. La competencia tiene más sentido si se suben partidas reales y se evita repetir la misma carrera varias veces.</p>
+          ${gameHelpGoButton('ranking','Abrir Ranking')}
+        </article>
+        <article class="help-card card">
+          <h4>ESPECIAL</h4>
+          <p>Contiene funciones especiales, recompensas o sistemas extra. No es lo primero que necesitás para jugar, pero puede cambiar el ritmo de una carrera avanzada.</p>
+          ${gameHelpGoButton('special','Abrir Especial')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Funciones superiores</h3>
+      <div class="help-grid compact">
+        <article class="help-card card"><h4>Guardar</h4><p>Guarda la partida local en el navegador. Usalo antes de cerrar o después de avances importantes.</p></article>
+        <article class="help-card card"><h4>Cargar</h4><p>Abre los slots de partida. Desde ahí podés continuar una carrera existente o iniciar otra.</p></article>
+        <article class="help-card card"><h4>Renunciar</h4><p>Permite dejar el club actual y buscar otro destino cuando la carrera ya está iniciada.</p></article>
+        <article class="help-card card"><h4>Avance automático</h4><p>Automatiza el avance cuando corresponde. Si aparece un bloqueo, una revisión táctica o una decisión pendiente, conviene resolverla manualmente.</p></article>
+      </div>
+    </div>
+
+    <div class="card help-final-note">
+      <h3>Forma simple de jugar</h3>
+      <p>Entrá a Inicio, revisá alertas, corregí Primer Equipo, controlá físico y moral, mirá el Calendario, avanzá, y después revisá Mensajes. Cuando tengas estabilidad, el desafío pasa por sostenerla: rotar, no abusar de los mismos jugadores, variar planteos y cuidar economía.</p>
+    </div>
+  </div>`;
+  openModal(body);
+  document.querySelectorAll('[data-help-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.helpTab || 'home';
+      const subtab = btn.dataset.helpSubtab || '';
+      if(!game && tab !== 'ranking'){
+        closeModal();
+        if(typeof showNotice === 'function') showNotice('Iniciá o cargá una partida para abrir esa sección.', true);
+        return;
+      }
+      if(tab === 'firstTeam' && subtab) firstTeamTab = subtab;
+      activeTab = tab;
+      closeModal();
+      if(typeof renderAll === 'function') renderAll();
+    });
+  });
+}
+
 function openModal(html){
   closeModal();
   const wrapper = document.createElement('div');

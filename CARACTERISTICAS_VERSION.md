@@ -1,31 +1,35 @@
-# Características de la versión V6.05
+# Características de la versión V6.06
 
-## V6.05 - Limpieza de backend legacy de ranking
+## V6.06 - Botón de ayuda y guía de interfaz
 
 ### Objetivo
 
-Eliminar del proyecto el archivo heredado de Google Apps Script para evitar confusión con la implementación actual de ranking online basada en Cloudflare Worker + D1.
+Agregar una ayuda integrada para que el jugador pueda entender rápidamente la jerarquía de menús, las funciones principales y el flujo recomendado de uso sin depender de imágenes ni de explicaciones técnicas internas.
 
 ### Cambios
 
-- Se elimina `apps-script-ranking.gs` de la versión completa.
-- Se documenta que el ranking activo usa Cloudflare Worker + D1.
-- Se conserva la lógica V6.04 de ranking de carrera completa.
-- Se mantiene deduplicación por código estable de partida.
-- Se actualizan versión visible y caché a V6.05.
+- Nuevo botón **Ayuda** en la barra superior, antes de Guardar, Cargar y Renunciar.
+- Nueva ventana modal de ayuda con guía jerárquica.
+- Repaso de menús laterales por importancia:
+  - revisión diaria;
+  - gestión de plantel;
+  - crecimiento del club;
+  - seguimiento estadístico;
+  - ranking y funciones especiales.
+- Repaso de funciones superiores:
+  - Guardar;
+  - Cargar;
+  - Renunciar;
+  - Avance automático.
+- Botones internos de salto a secciones cuando la partida está activa.
+- Estilos específicos para que la ayuda sea legible en desktop y mobile.
 
-### Nota de incremental
+### Criterio de redacción
 
-El incremental incluye `ELIMINAR_ARCHIVOS_V6.05.txt` porque descomprimir un ZIP incremental encima de una carpeta existente no borra archivos viejos.
-
-Archivo a borrar manualmente si todavía existe:
-
-```txt
-apps-script-ranking.gs
-```
+La ayuda explica cómo orientarse, dónde buscar cada cosa y cómo usar el flujo general del juego. No muestra valores internos exactos ni fórmulas de balance.
 
 ### Validaciones
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.
-- Verificado que la versión completa V6.05 no contiene `apps-script-ranking.gs`.
+- Verificado que la versión completa V6.06 no contiene `apps-script-ranking.gs`.

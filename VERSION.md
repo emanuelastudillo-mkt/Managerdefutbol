@@ -1,7 +1,8 @@
-V6.05
+V6.06
 
-Limpieza de backend legacy de ranking.
+Botón de ayuda y guía de interfaz.
 
-- Se elimina apps-script-ranking.gs de la versión completa.
-- El ranking queda documentado como Cloudflare Worker + D1.
-- Se mantiene ranking de carrera completa incorporado en V6.04.
+- Se agrega botón Ayuda en la barra superior.
+- Se incorpora modal con repaso jerárquico de menús laterales.
+- Se explica el uso general de funciones principales sin valores internos exactos.
+- Se agregan accesos rápidos desde la ayuda hacia secciones del juego.

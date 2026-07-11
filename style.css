@@ -4910,3 +4910,36 @@ th{
   .scouting-signing-chance{text-align:left;min-width:0}
 }
 .auto-advance-switch{width:100%}
+
+/* V6.06: ayuda superior y guía de menús */
+.help-top-btn{
+  color:#dbeafe;
+  border-color:rgba(147,197,253,.24);
+  background:rgba(59,130,246,.12);
+}
+.help-modal{
+  display:grid;
+  gap:16px;
+  clear:both;
+}
+.help-hero{
+  background:linear-gradient(135deg,rgba(59,130,246,.16),rgba(34,197,94,.08));
+  border-color:rgba(147,197,253,.22);
+}
+.help-hero h2{font-size:clamp(25px,3vw,38px);margin-bottom:8px}
+.help-section{display:grid;gap:10px}
+.help-section h3{margin:0;color:#eaf2ff}
+.help-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.help-grid.compact{grid-template-columns:repeat(4,minmax(0,1fr))}
+.help-card{display:grid;align-content:start;gap:8px;min-height:190px}
+.help-grid.compact .help-card{min-height:150px}
+.help-card h4{margin:0;font-size:18px;letter-spacing:-.02em;color:#f8fafc}
+.help-card p,.help-final-note p{margin:0;color:var(--muted);line-height:1.5}
+.help-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.help-jump-btn{justify-self:start;padding:8px 10px;margin-top:2px}
+.help-final-note{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.2)}
+@media (max-width:900px){
+  .top-actions.top-actions-compact{justify-content:flex-start}
+  .help-grid,.help-grid.compact{grid-template-columns:1fr}
+  .help-card,.help-grid.compact .help-card{min-height:auto}
+}

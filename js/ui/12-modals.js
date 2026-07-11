@@ -1343,19 +1343,24 @@ function openNewGameModal(force=false, options={}){
       <h2>${game?.gameOver?.active ? 'Firmar nuevo contrato' : 'Crear manager'}</h2>
       <p class="muted">Prestigio actual del manager: <strong>${prestigeLabel}</strong>. Elegí un club disponible y firmá contrato. Los clubes con prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos aceptan cualquier manager.</p>
       ${!canChooseJob ? '<div class="card blocker"><strong>Ya tenés club.</strong><p class="muted small">La búsqueda de club se habilita cuando estás sin cargo.</p></div>' : ''}
-      <div class="new-game-form-grid">
-        <label for="modalManagerName">Nombre del manager</label>
-        <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}" ${hasCareer ? 'disabled' : ''}>
-        <label for="modalCountrySelect">País</label>
-        <select id="modalCountrySelect">${countryOptionsMarkup(initialCountry)}</select>
-        <label for="modalLeagueSelect">Liga</label>
-        <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
-        <label for="modalClubSelect">Equipo</label>
-        <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+      <div class="job-search-layout">
+        <div class="job-search-main">
+          <div class="new-game-form-grid">
+            <label for="modalManagerName">Nombre del manager</label>
+            <input id="modalManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}" ${hasCareer ? 'disabled' : ''}>
+            <label for="modalCountrySelect">País</label>
+            <select id="modalCountrySelect">${countryOptionsMarkup(initialCountry)}</select>
+            <label for="modalLeagueSelect">Liga</label>
+            <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
+            <label for="modalClubSelect">Equipo</label>
+            <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+          </div>
+          <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
+          ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
+          ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
+        </div>
+        ${canChooseJob && typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'modal', selectable:true }) : ''}
       </div>
-      <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
-      ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
-      ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
     </div>`;
   openModal(body);
   const countrySelect = $('modalCountrySelect');
@@ -1375,6 +1380,19 @@ function openNewGameModal(force=false, options={}){
   countrySelect?.addEventListener('change', syncLeagues);
   leagueSelect?.addEventListener('change', syncClubs);
   $('modalManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
+  document.querySelectorAll('[data-select-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const clubId = Number(btn.dataset.selectJobClub || 0);
+    const club = seed?.clubs?.find(c => Number(c.id) === clubId);
+    if(!club || !clubSelect) return;
+    const country = clubCountry(club);
+    if(countrySelect) countrySelect.value = country;
+    if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, club.divisionId || 'default');
+    if(leagueSelect) leagueSelect.value = club.divisionId || 'default';
+    clubSelect.innerHTML = teamOptionsMarkup(country, club.divisionId || 'default', clubId);
+    clubSelect.value = String(clubId);
+  }));
   $('btnStartNewGameModal')?.addEventListener('click', () => {
     const selected = Number(clubSelect?.value || 0);
     if(!selected) return;

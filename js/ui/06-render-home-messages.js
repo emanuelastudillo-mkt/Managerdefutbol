@@ -352,12 +352,12 @@ function lastTurnSummaryMarkup(){
 }
 
 
-const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','academy','employees','scouting','stadium','finance']);
+const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','academy','employees','scouting','stadium','market','finance']);
 function isManagerWithoutClubBlockedTab(tab){
   return Boolean(game?.gameOver?.active && MANAGER_WITHOUT_CLUB_BLOCKED_TABS.has(String(tab || '')));
 }
 function managerWithoutClubBlockedNotice(tab){
-  const labels = { firstTeam:'Primer Equipo', academy:'Academia', employees:'Empleados', scouting:'Centro de Ojeo', stadium:'Estadio', finance:'Finanzas' };
+  const labels = { firstTeam:'Primer Equipo', academy:'Academia', employees:'Empleados', scouting:'Centro de Ojeo', stadium:'Estadio', market:'Mercado', finance:'Finanzas' };
   return `${labels[String(tab || '')] || 'Esta sección'} está bloqueada mientras el manager está sin club.`;
 }
 function refreshManagerWithoutClubTabState(){
@@ -414,13 +414,22 @@ function renderGameOverScreen(){
       <div class="row game-over-actions">
         <button class="primary" id="btnGameOverNewGame">Buscar otro club</button>
         ${typeof founderModeEnabled === 'function' && founderModeEnabled() ? '<button class="ghost" id="btnGameOverFounder">Fundar club</button>' : ''}
+        <button class="ghost" id="btnGameOverScoutingArchive">Archivo de jugadores ojeados</button>
         <button class="ghost" id="btnGameOverSave">Guardar carrera</button>
       </div>
     </div>
+    ${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'game-over', selectable:false }) : ''}
   </div>`;
   $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
   $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
+  $('btnGameOverScoutingArchive')?.addEventListener('click', () => { if(typeof openScoutingReportsModal === 'function') openScoutingReportsModal('all'); else showNotice('El archivo de ojeo no está disponible todavía.'); });
   $('btnGameOverSave')?.addEventListener('click', saveLocal);
+  document.querySelectorAll('[data-open-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const clubId = Number(btn.dataset.openJobClub || 0);
+    if(clubId && typeof openNewGameModal === 'function') openNewGameModal(false, { selectedClubId:clubId });
+  }));
 }
 
 function renderHome(){

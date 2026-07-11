@@ -476,6 +476,48 @@ function teamOptionsMarkupAll(country='Argentina', leagueId='', selectedClubId=0
   }).join('');
 }
 
+function managerAvailableClubPool(prestige=currentManagerPrestige()){
+  return (seed?.clubs || [])
+    .filter(club => managerCanSelectClub(club, prestige))
+    .sort((a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' }));
+}
+function managerAvailableClubSample(limit=8, seedSuffix=''){
+  const pool = managerAvailableClubPool(currentManagerPrestige());
+  const keyBase = `club-options-${currentManagerPrestige()}-${game?.seasonNumber || 0}-${game?.globalTurn || 0}-${seedSuffix}`;
+  return pool
+    .map((club,index)=>({ club, score:hashNumber(`${keyBase}-${club.id}-${index}`, 1000000) }))
+    .sort((a,b)=>a.score-b.score || String(a.club.name || '').localeCompare(String(b.club.name || ''),'es',{sensitivity:'base'}))
+    .slice(0, Math.max(1, Math.min(Number(limit || 8), 8)))
+    .map(item=>item.club);
+}
+function managerAvailableClubCard(club, options={}){
+  if(!club) return '';
+  const division = clubDivision(club.id);
+  const budget = formatMoney(Number(club?.budget || game?.clubBudgets?.[club.id] || 0));
+  const supporters = typeof supporterCountForClub === 'function' ? supporterCountForClub(club.id) : Number(club?.supporters || 0);
+  const actionAttr = options.selectable ? ` data-select-job-club="${Number(club.id)}"` : ` data-open-job-club="${Number(club.id)}"`;
+  const actionLabel = options.selectable ? 'Seleccionar' : 'Ver opción';
+  return `<button type="button" class="card available-club-card"${actionAttr}>
+    <div class="available-club-head"><span class="available-club-badge">${clubBadge(club.id) || '▣'}</span><strong>${escapeHtml(club.name || 'Club')}</strong></div>
+    <p class="muted small">${escapeHtml(division?.name || club.divisionId || 'Liga')} · ${escapeHtml(clubCountry(club))}</p>
+    <div class="available-club-meta"><span>Prestigio ${clubPrestigeValue(club)}</span><span>${budget}</span><span>${formatPlainNumber(supporters)} hinchas</span></div>
+    <small>${actionLabel}</small>
+  </button>`;
+}
+function managerAvailableClubsPanelMarkup(options={}){
+  const clubs = managerAvailableClubSample(8, options.context || 'general');
+  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(currentManagerPrestige()) : String(currentManagerPrestige());
+  if(!clubs.length){
+    return `<aside class="card available-clubs-panel"><p class="label">Clubes disponibles</p><h3>Sin opciones</h3><p class="muted small">No hay clubes disponibles con tu prestigio actual (${escapeHtml(prestigeLabel)}).</p></aside>`;
+  }
+  return `<aside class="card available-clubs-panel">
+    <p class="label">Clubes disponibles</p>
+    <h3>Opciones para tu prestigio</h3>
+    <p class="muted small">Muestra aleatoria de hasta 8 equipos que aceptarían tu contrato con prestigio ${escapeHtml(prestigeLabel)}.</p>
+    <div class="available-clubs-grid">${clubs.map(club => managerAvailableClubCard(club, options)).join('')}</div>
+  </aside>`;
+}
+
 function formatPlainNumber(value){
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits:0 }).format(Math.max(0, Math.round(Number(value || 0))));
 }
@@ -3471,6 +3513,7 @@ function checkManagerObjectiveGameOver(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
+  if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('dismissal');
   recordDismissedCareerStep();
   pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:`La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`, id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
@@ -3566,6 +3609,7 @@ function resignCurrentClub(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
+  if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('resignation');
   recordDismissedCareerStep();
   pushGameMessage({ type:'directiva', priority:'high', title:'Renuncia del manager', body:'Presentaste la renuncia. El mundo de la partida sigue activo y podés buscar otro club.', id:`resignation-${game.seasonNumber || 1}-${game.selectedClubId}-${game.globalTurn || 0}` });

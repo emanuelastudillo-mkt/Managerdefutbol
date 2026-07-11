@@ -1103,10 +1103,6 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   border-style:dashed;
   border-color:rgba(251,146,60,.56);
 }
-.drag-player.playable-injured-card span::after{
-  content:" · Suplente penalizado";
-  color:#fdba74;
-}
 @media (max-width:700px){
   .main-visual-banner{min-height:160px}
 }
@@ -4997,3 +4993,22 @@ th{
   cursor:not-allowed;
 }
 .game-over-card .game-over-actions{justify-content:center}
+
+/* V6.17 · Opciones laborales y archivo de ojeo sin club */
+.job-search-modal{max-width:min(1180px,96vw)!important;width:100%}
+.job-search-layout{display:grid;grid-template-columns:minmax(320px,520px) minmax(280px,1fr);gap:14px;align-items:start;margin-top:12px}
+.job-search-main{display:grid;gap:0;min-width:0}
+.available-clubs-panel{align-self:start;display:grid;gap:10px;max-height:min(72vh,760px);overflow:auto}
+.available-clubs-panel h3{margin:0}
+.available-clubs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.available-club-card{display:grid;gap:5px;text-align:left;padding:10px!important;border:1px solid rgba(148,163,184,.16);background:rgba(255,255,255,.04);cursor:pointer}
+.available-club-card:hover{border-color:rgba(96,165,250,.42);background:rgba(59,130,246,.10);transform:translateY(-1px)}
+.available-club-head{display:flex;align-items:center;gap:8px;min-width:0}
+.available-club-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.available-club-badge{width:26px;height:26px;display:inline-grid;place-items:center;flex:0 0 auto}
+.available-club-badge img,.available-club-badge .club-badge-img{width:24px;height:24px;object-fit:contain}
+.available-club-meta{display:flex;flex-wrap:wrap;gap:5px}
+.available-club-meta span{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#cbd5e1;background:rgba(15,23,42,.48);border:1px solid rgba(148,163,184,.15);border-radius:999px;padding:3px 6px}
+.game-over-screen{grid-template-columns:minmax(0,1fr) minmax(280px,380px);gap:16px;place-items:stretch;align-items:start}
+.game-over-screen>.available-clubs-panel{width:100%;margin-top:0}
+@media (max-width:980px){.job-search-layout,.game-over-screen{grid-template-columns:1fr}.available-clubs-grid{grid-template-columns:1fr}.available-clubs-panel{max-height:none}}

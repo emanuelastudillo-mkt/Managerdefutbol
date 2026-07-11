@@ -1,14 +1,26 @@
-# Fútbol Manager MVP - V6.16
+# Fútbol Manager MVP - V6.17
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.15**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.16**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+## V6.17 - Sin club, opciones laborales y ojeo persistente
+
+### Cambios principales
+
+- En Táctica se quitó el texto visual **Suplente penalizado** de las tarjetas de suplentes lesionados para liberar espacio.
+- La pantalla de **Crear manager / Continuar carrera** ahora muestra un panel lateral con hasta 8 clubes disponibles según el prestigio actual del manager.
+- Al renunciar o ser despedido, la pantalla **Sin club** también muestra opciones laborales disponibles.
+- En estado **Sin club**, el menú lateral de **Mercado** queda bloqueado junto con Primer Equipo, Academia, Empleados, Centro de Ojeo, Estadio y Finanzas.
+- Se agregó el botón **Archivo de jugadores ojeados** en la pantalla Sin club, junto a Buscar otro club, Fundar club y Guardar carrera.
+- El archivo de jugadores ojeados se conserva como progreso del manager al cambiar de club.
+- Al renunciar, ser despedido o firmar con otro club se borra sólo el dato de **Prob. fichaje**, porque depende del club actual.
 
 ## V6.16 - Imágenes de jugadores por nacionalidad
 
@@ -130,24 +142,26 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.16
+## Archivos modificados en V6.17
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `js/core/03-player-tactics-utils.js`
+- `style.css`
+- `js/game/05-state-season.js`
+- `js/game/16-scouting-center.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/12-modals.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.16**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.17**.
 
-Para actualizar desde V6.15, aplicar el ZIP incremental **V6.16** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.16, aplicar el ZIP incremental **V6.17** sobre la carpeta existente y forzar recarga del navegador.
 
-Las imágenes por nacionalidad deben estar publicadas en GitHub dentro de `img/jugadores/nacionalidades/` con nombres tipo slug.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.17 mantiene la documentación unificada sólo en `README.md`.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.16 mantiene la documentación unificada sólo en `README.md`.
-
-## Validación V6.16
+## Validación V6.17
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

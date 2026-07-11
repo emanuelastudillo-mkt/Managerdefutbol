@@ -123,6 +123,26 @@ function scoutingIsOwnPlayer(player){
 }
 const SCOUTING_SIGNING_CHANCE_KEY = 'market.signingChance';
 function scoutingSigningChanceKey(){ return SCOUTING_SIGNING_CHANCE_KEY; }
+function stripScoutingSigningChanceFromReport(report){
+  if(!report || typeof report !== 'object') return report;
+  if(Array.isArray(report.visibleSkills)){
+    report.visibleSkills = report.visibleSkills.filter(key => String(key) !== SCOUTING_SIGNING_CHANCE_KEY);
+  }
+  report.revealCount = Math.max(0, Math.round(Number(report.revealCount || 0)) - 1);
+  return report;
+}
+function clearScoutedSigningChances(){
+  if(!game?.scoutingCenter?.reports) return 0;
+  let changed = 0;
+  Object.keys(game.scoutingCenter.reports || {}).forEach(id => {
+    const report = game.scoutingCenter.reports[id];
+    if(report && Array.isArray(report.visibleSkills) && report.visibleSkills.includes(SCOUTING_SIGNING_CHANCE_KEY)){
+      stripScoutingSigningChanceFromReport(report);
+      changed += 1;
+    }
+  });
+  return changed;
+}
 function scoutingSigningChanceMap(player){
   if(!player || scoutingIsOwnPlayer(player)) return {};
   const chance = typeof marketPlayerAcceptanceChance === 'function' ? marketPlayerAcceptanceChance(player) : null;
@@ -547,8 +567,9 @@ function resetScoutingCenterForNewSeason(){
 function resetScoutingCenterForNewClub(){
   if(!game) return;
   const previous = ensureScoutingCenterState();
+  Object.keys(previous.reports || {}).forEach(id => stripScoutingSigningChanceFromReport(previous.reports[id]));
   // Cambiar de club vacía oficinas, jefe, ojeadores y lista activa, pero conserva los informes ya revelados.
-  // La información ojeada es progreso del manager y debe seguir disponible en las fichas.
+  // La información ojeada es progreso del manager. Sólo se borra la probabilidad de fichaje porque depende del club actual.
   game.scoutingCenter = { ...createInitialScoutingCenterState(), reports: previous.reports || {}, teamReports: previous.teamReports || {} };
 }
 

@@ -129,16 +129,16 @@ window.GAME_CONFIG = {
     // Cada código se puede reclamar una sola vez por partida guardada.
     codigos: [
       {
-        codigo: 'PRESTIGIO20',
+        codigo: 'PRESTIGIO30',
         nombre: 'Impulso de prestigio',
-        descripcion: 'Suma 20 puntos de prestigio al manager.',
-        beneficios: { prestigio: 20 }
+        descripcion: 'Suma 30 puntos de prestigio al manager.',
+        beneficios: { prestigio: 30 }
       },
       {
-        codigo: 'PUNTOS50000',
+        codigo: 'PUNTOS60000',
         nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 50000 }
+        descripcion: 'Suma 60.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 60000 }
       }
     ]
   },

@@ -78,11 +78,18 @@ function renderWelcomeScreen(){
 function renderAll(){
   applySelectedClubTheme(game?.selectedClubId || 0);
   if(game && currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
-  document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
+  if(game?.gameOver?.active && isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
+  if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
+  else document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
 
   if(game){
-    $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
-    $('managerClub').classList.add('side-club-name');
+    if(game.gameOver?.active){
+      $('managerClub').innerHTML = `<span>Sin club</span><small class="muted">Último: ${escapeHtml(clubName(game.selectedClubId))}</small>`;
+      $('managerClub').classList.add('side-club-name');
+    }else{
+      $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
+      $('managerClub').classList.add('side-club-name');
+    }
   }else{
     $('managerClub').textContent = 'Sin partida';
     $('managerClub').classList.remove('side-club-name');
@@ -103,13 +110,18 @@ function renderAll(){
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  if(game.gameOver?.active){
-    renderGameOverScreen();
-    return;
-  }
-  repairBotRosters({ reason:'render' });
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
+  if(game.gameOver?.active){
+    if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
+    if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
+    if(activeTab === 'home' || !renderers[activeTab]){
+      renderGameOverScreen();
+      return;
+    }
+  }else{
+    repairBotRosters({ reason:'render' });
+  }
   const renderer = renderers[activeTab] || renderers.home;
   try{
     renderer();
@@ -339,6 +351,24 @@ function lastTurnSummaryMarkup(){
   </div>`;
 }
 
+
+const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','academy','employees','scouting','stadium','finance']);
+function isManagerWithoutClubBlockedTab(tab){
+  return Boolean(game?.gameOver?.active && MANAGER_WITHOUT_CLUB_BLOCKED_TABS.has(String(tab || '')));
+}
+function managerWithoutClubBlockedNotice(tab){
+  const labels = { firstTeam:'Primer Equipo', academy:'Academia', employees:'Empleados', scouting:'Centro de Ojeo', stadium:'Estadio', finance:'Finanzas' };
+  return `${labels[String(tab || '')] || 'Esta sección'} está bloqueada mientras el manager está sin club.`;
+}
+function refreshManagerWithoutClubTabState(){
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    const blocked = isManagerWithoutClubBlockedTab(btn.dataset.tab);
+    btn.disabled = blocked;
+    btn.classList.toggle('tab-disabled', blocked);
+    btn.classList.toggle('active', btn.dataset.tab === activeTab);
+  });
+}
+
 function gameOverStatCard(label, value){
   return `<div class="card"><p class="label">${escapeHtml(label)}</p><strong>${escapeHtml(String(value ?? '—'))}</strong></div>`;
 }
@@ -352,12 +382,14 @@ function renderGameOverScreen(){
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : Number(game?.managerStats?.prestige || 0);
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const xp = typeof currentManagerExperience === 'function' ? currentManagerExperience() : Number(game?.managerStats?.experience || 0);
+  const title = state.type === 'resignation' ? 'Renunciaste al club' : 'La directiva te despidió';
+  const fallbackReason = state.type === 'resignation' ? 'Renunciaste al cargo. El mundo de la partida sigue activo.' : 'La directiva decidió terminar tu ciclo por no cumplir el objetivo deportivo.';
   view.innerHTML = `<div class="game-over-screen">
     <div class="card game-over-card">
-      <p class="label">Sin club</p>
-      <h1>La directiva te despidió</h1>
-      <p>${escapeHtml(state.reason || 'La directiva decidió terminar tu ciclo por no cumplir el objetivo deportivo.')}</p>
-      <p class="muted small">La partida no se reinicia. El mundo sigue igual y podés buscar otro club disponible según tu prestigio.</p>
+      <p class="label">Inicio · Sin club</p>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(state.reason || fallbackReason)}</p>
+      <p class="muted small">La partida no se reinicia. Podés navegar el calendario, tablas, estadísticas, tus estadísticas y ranking online. Las áreas operativas del club quedan bloqueadas hasta firmar con otro equipo.</p>
       <div class="game-over-objective">
         <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>
         <div><span>Objetivo</span><strong>${objective ? objective.toFixed(2) : '—'}</strong></div>
@@ -895,11 +927,13 @@ function playerOfferPerformanceScore(player){
 }
 function playerOfferRange(player){
   const profile = playerOfferProfile(player);
-  if(profile === 'star') return { min:35, max:60 };
-  if(profile === 'young_good') return { min:18, max:35 };
-  if(profile === 'transfer_listed') return { min:6, max:18 };
-  const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.05);
-  const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.15);
+  // V6.15: las ofertas normales duplican el porcentaje previo sobre cláusula.
+  // Las ofertas de cláusula completa mantienen su flujo separado.
+  if(profile === 'star') return { min:70, max:100 };
+  if(profile === 'young_good') return { min:36, max:70 };
+  if(profile === 'transfer_listed') return { min:12, max:36 };
+  const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.10);
+  const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.30);
   return { min:Math.round(minRate * 100), max:Math.max(Math.round(minRate * 100), Math.round(maxRate * 100)) };
 }
 function playerOfferPercent(player, salt=''){
@@ -910,7 +944,7 @@ function playerOfferPercent(player, salt=''){
   const score = playerOfferPerformanceScore(player);
   const scoreBonus = Math.min(span, Math.floor(score / 42));
   const noise = span > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, span + 1) : 0;
-  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.55)), minPct, maxPct);
+  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.55)), minPct, Math.min(100, maxPct));
 }
 function buildTransferOfferFinancials(player, pct){
   const clause = refreshPlayerClause(player);

@@ -333,8 +333,7 @@ function statusText(playerId){
   const st = playerStatus(playerId);
   const parts = [];
   if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough){
-    const subNote = canUseInjuredAsSub(playerId) ? ' · puede ir al banco con penalización' : '';
-    parts.push(`Lesionado: ${st.injuryLabel || 'Lesión'}${subNote}`.trim());
+    parts.push(`${st.injuryLabel || 'Lesión'}`.trim());
   }
   if(st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough) parts.push('Suspendido');
   return parts.length ? parts.join(' · ') : 'Disponible';

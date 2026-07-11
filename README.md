@@ -1,14 +1,27 @@
-# Fútbol Manager MVP - V6.14
+# Fútbol Manager MVP - V6.15
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.13**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.14**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+## V6.15 - Ajustes de interfaz, sponsors y mercado
+
+### Cambios principales
+
+- La información de lesionados en plantel/táctica ahora muestra sólo el diagnóstico, por ejemplo **Desgarro**, sin el prefijo `Lesionado:` ni la nota de banco con penalización.
+- Se amplió de forma importante la variedad de nombres y apellidos usados por la generación de jugadores y juveniles.
+- Al ser despedido por la directiva o renunciar, la pantalla **Sin club** funciona como Inicio de carrera: permite navegar por el menú lateral para consultar calendario, tabla, estadísticas, tus estadísticas y ranking online.
+- Mientras el manager está sin club, quedan bloqueadas las áreas operativas: Primer Equipo, Academia, Empleados, Centro de Ojeo, Estadio y Finanzas.
+- Los botones de verificación, desbloqueo y reset fueron movidos dentro del desplegable **Si tienes problemas ingresa aquí**.
+- Los ingresos de sponsors nuevos bajan al 10% del valor anterior mediante `sponsors.factorValorBase = 0.1`.
+- Las ofertas normales por jugadores propios duplican el porcentaje previo ofrecido sobre la cláusula. Las ofertas de cláusula completa mantienen su lógica separada.
+- La directiva bloquea la venta de estrellas si una oferta normal no llega al 60% de su cláusula.
 
 ## V6.14 - Tarjetas del simulador vivo alineadas con simulación rápida
 
@@ -105,22 +118,27 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.14
+## Archivos modificados en V6.15
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `simulador-2.0.js`
+- `style.css`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/06-render-home-messages.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.14**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.15**.
 
-Para actualizar desde V6.13, aplicar el ZIP incremental **V6.14** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.14, aplicar el ZIP incremental **V6.15** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.14 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.15 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.14
+## Validación V6.15
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

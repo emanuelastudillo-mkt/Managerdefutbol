@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.14',
+  version: 'V6.15',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -297,7 +297,7 @@ window.GAME_CONFIG = {
   },
   sponsors: {
     // V5.72+: sistema fijo por temporada + sponsor especial con condición.
-    factorValorBase: 1,
+    factorValorBase: 0.1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
     ofertasVencenEnDias: 5,
@@ -334,10 +334,11 @@ window.GAME_CONFIG = {
       Rumania:'FRF'
     },
     // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
-    ofertaJugadoresMinPorcentajeClausula: 0.05,
-    ofertaJugadoresMaxPorcentajeClausula: 0.15,
+    ofertaJugadoresMinPorcentajeClausula: 0.10,
+    ofertaJugadoresMaxPorcentajeClausula: 0.30,
     ofertasJugadoresRequierenPartidos: true,
     ofertasJugadoresRequierenGolOAsistencia: true,
+    ofertaMinimaEstrellaParaVentaPct: 60,
 
     // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
     presupuestoFichajesActivo: true,

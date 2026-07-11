@@ -1589,7 +1589,14 @@ function bindEvents(){
   $('btnReset')?.addEventListener('click', confirmResetLocal);
   document.querySelectorAll('.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      activeTab = btn.dataset.tab;
+      const targetTab = btn.dataset.tab;
+      if(typeof isManagerWithoutClubBlockedTab === 'function' && isManagerWithoutClubBlockedTab(targetTab)){
+        activeTab = 'home';
+        if(typeof managerWithoutClubBlockedNotice === 'function') showNotice(managerWithoutClubBlockedNotice(targetTab));
+        renderAll();
+        return;
+      }
+      activeTab = targetTab;
       if(typeof resetManagerDivisionFilterForTab === 'function') resetManagerDivisionFilterForTab(activeTab);
       renderAll();
     });

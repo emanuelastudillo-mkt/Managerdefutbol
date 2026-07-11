@@ -4685,7 +4685,7 @@ th{
 .sponsor-special-line .pill{margin-right:6px}
 
 
-/* V5.77 · Slots sin superposición */
+/* V5.79 · Slots en listado estable */
 .save-slots-screen{
   gap:14px;
 }
@@ -4693,33 +4693,41 @@ th{
   min-width:0;
 }
 .save-slot-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
-  gap:12px;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px;
   align-items:stretch;
   width:100%;
   min-width:0;
 }
 .save-slot-card{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(230px,360px);
+  align-items:center;
+  gap:14px;
+  width:100%;
+  max-width:none;
   min-width:0;
-  min-height:190px;
-  overflow:hidden;
+  min-height:0;
+  overflow:visible;
+}
+.save-slot-main{
+  min-width:0;
 }
 .save-slot-card .label{
-  margin-bottom:0;
+  margin-bottom:5px;
 }
 .save-slot-card h3{
-  margin:0;
-  font-size:clamp(16px,1.55vw,21px);
+  margin:0 0 6px;
+  font-size:clamp(16px,1.5vw,22px);
   line-height:1.18;
-  overflow-wrap:anywhere;
+  overflow-wrap:break-word;
   word-break:normal;
+  hyphens:auto;
 }
 .save-slot-card p{
   min-width:0;
+  margin-bottom:0;
 }
 .save-slot-card .muted{
   line-height:1.4;
@@ -4728,8 +4736,10 @@ th{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:8px;
-  margin-top:auto;
   width:100%;
+  min-width:0;
+  margin-top:0;
+  justify-self:end;
 }
 .save-slot-actions button{
   width:100%;
@@ -4741,9 +4751,17 @@ th{
   border-style:dashed;
   background:rgba(255,255,255,.025);
 }
-@media (max-width:780px){
-  .save-slot-grid{grid-template-columns:1fr;}
-  .save-slot-card{min-height:0;}
+.save-slot-card.save-slot-challenge{
+  border-color:rgba(96,165,250,.18);
+}
+@media (max-width:860px){
+  .save-slot-card{
+    grid-template-columns:1fr;
+    align-items:stretch;
+  }
+  .save-slot-actions{
+    justify-self:stretch;
+  }
 }
 @media (max-width:420px){
   .save-slot-actions{grid-template-columns:1fr;}

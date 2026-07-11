@@ -1,13 +1,12 @@
-# Fútbol Manager MVP - V5.78
+# Fútbol Manager MVP - V5.79
 
-## V5.78 - Cartas globales por slots
+## V5.79 - Corrección definitiva del menú de slots
 
-- Las cartas especiales ahora pertenecen a un inventario global del navegador.
-- Las cartas obtenidas pueden usarse en cualquier carrera o reto.
-- Cada carta tiene 10 activaciones posibles.
-- Al activar una carta, consume 1 uso y queda fija por 50 días.
-- Si una carta está activa en un slot, no se muestra ni queda disponible en otros slots.
-- Los puntos de habilidad siguen siendo propios de cada partida.
-- Al agotarse sus usos, la carta sale de la reserva global.
+- El menú de slots ahora usa un listado vertical estable.
+- Cada carrera ocupa una fila completa.
+- Se elimina la grilla que podía comprimir tarjetas y mostrar textos apilados.
+- Los botones de cada slot quedan dentro de su propia fila.
+- El reto Campo destruido queda separado y sin superponerse con las carreras.
+- No cambia la lógica de guardado, carreras, retos ni cartas globales.
 
-Subí todos los archivos del ZIP completo o, si ya tenés V5.77, aplicá el incremental V5.78 y forzá recarga con Control + F5.
+Subí todos los archivos del ZIP completo o, si ya tenés V5.78, aplicá el incremental V5.79 y forzá recarga con Control + F5.

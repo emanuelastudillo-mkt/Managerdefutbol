@@ -1,3 +1,3 @@
-V5.78
+V5.79
 
-Cartas globales por slots, 10 activaciones por carta y bloqueo de 50 días.
+Corrección definitiva del menú de slots: listado vertical estable sin superposición ni tarjetas comprimidas.

@@ -1,18 +1,17 @@
-# Características de la versión V5.78
+# Características de la versión V5.79
 
-## V5.78 - Cartas globales por slots
+## V5.79 - Corrección definitiva del menú de slots
 
 Cambios principales:
 
-- Inventario global de cartas compartido entre slots de carrera y retos.
-- Las cartas activadas en una partida quedan bloqueadas para las demás partidas.
-- Cada carta tiene 10 activaciones posibles.
-- El bloqueo de cambio de cartas baja de 100 a 50 días.
-- Las cartas muestran sus usos restantes.
-- Las cartas obtenidas en cualquier slot se suman a la reserva global del navegador.
-- Los puntos de habilidad permanecen separados por partida.
+- Reemplacé la grilla de tarjetas de slots por un listado vertical.
+- Las tarjetas de Carrera 1 a Carrera 5 ya no pueden quedar comprimidas en columnas mínimas.
+- Los nombres largos de equipo y temporada hacen salto de línea dentro de su propia tarjeta.
+- Las acciones Entrar / Crear / Nueva quedan alineadas a la derecha en escritorio y debajo en pantallas chicas.
+- El reto Campo destruido queda en su propia fila.
 
 Compatibilidad:
 
-- Las cartas existentes de las carreras y retos se migran automáticamente al inventario global al cargar.
-- No requiere reiniciar partidas.
+- No modifica partidas guardadas.
+- No modifica la separación de slots.
+- No modifica el inventario global de cartas agregado en V5.78.

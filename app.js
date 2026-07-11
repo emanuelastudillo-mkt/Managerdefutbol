@@ -1,2 +1,2 @@
-/* V5.78 · Punto de entrada. Corrección visual de slots. */
+/* V5.79 · Punto de entrada. Corrección definitiva de slots en listado. */
 init();

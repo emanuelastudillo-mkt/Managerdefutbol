@@ -152,11 +152,20 @@ function sponsorSpecialProgressText(challenge={}){
   if(challenge.id === 'lose_5_5') return `${Number(challenge.losses || 0)}/${Number(cfg.derrotasObjetivo || 5)} derrotas · ${Number(challenge.matchesObserved || 0)}/${Number(cfg.partidosObjetivo || 5)} partidos`;
   return `${Number(challenge.matchesObserved || challenge.daysObserved || 0)} avances`;
 }
-function sponsorSpecialChallengeMarkup(challenge=null, compact=false){
+function sponsorSpecialBonusPotential(source=null){
+  const challenge = source?.specialChallenge || source || {};
+  if(!challenge?.id) return 0;
+  const base = Math.max(0, Math.round(Number(source?.total || source?.dailyTotal || source?.upfrontTotal || 0)));
+  const multiplier = Number(challenge.bonusMultiplier || SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3);
+  return Math.max(0, Math.round(base * multiplier));
+}
+function sponsorSpecialChallengeMarkup(challenge=null, compact=false, source=null){
   if(!challenge?.id) return '';
   const tone = challenge.status === 'fulfilled' ? 'ok' : challenge.status === 'failed' ? 'danger' : 'warn';
   const label = compact ? sponsorSpecialProgressText(challenge) : challenge.description;
-  return `<span class="pill ${tone}">Sponsor especial x${Number(challenge.bonusMultiplier || SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3)}</span><span class="muted small">${escapeHtml(label || '')}${compact ? '' : ` · ${escapeHtml(sponsorSpecialProgressText(challenge))}`}</span>`;
+  const bonus = sponsorSpecialBonusPotential(source || challenge);
+  const bonusLine = bonus > 0 ? ` · Bono si cumple: ${formatMoney(bonus)}` : '';
+  return `<span class="pill ${tone}">Sponsor especial x${Number(challenge.bonusMultiplier || SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3)}</span><span class="muted small">${escapeHtml(label || '')}${compact ? '' : ` · ${escapeHtml(sponsorSpecialProgressText(challenge))}`}${bonusLine}</span>`;
 }
 function ownMatchSponsorContext(match){
   const clubId = Number(game?.selectedClubId || 0);
@@ -453,7 +462,7 @@ function sponsorOffersMarkup(){
       : `${formatMoney(offer.total)} total`;
     const payText = offer.paymentType === 'daily' ? 'Diario' : 'Todo al inicio';
     return `<tr>
-      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span>${offer.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(offer.specialChallenge)}</span>` : ''}</td>
+      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span>${offer.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(offer.specialChallenge, false, offer)}</span>` : ''}</td>
       <td>${escapeHtml(offer.placeName)}</td>
       <td>${formatDays(offer.durationDays || turnsToDays(offer.turns))}</td>
       <td><span class="pill ${offer.paymentType === 'daily' ? 'ok' : ''}">${payText}</span></td>
@@ -469,7 +478,7 @@ function activeSponsorsMarkup(){
   if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Pago</th><th>Días restantes</th><th>Cobrado</th></tr></thead><tbody>${active.map(item => {
     const payment = item.paymentType === 'daily' ? `${formatMoney(item.dailyAmount || 0)} / día` : 'Todo al inicio';
-    const special = item.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(item.specialChallenge, true)}</span>` : '';
+    const special = item.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(item.specialChallenge, true, item)}</span>` : '';
     return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong>${special}</td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }

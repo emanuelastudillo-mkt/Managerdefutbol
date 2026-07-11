@@ -447,9 +447,9 @@ function renderHome(){
       ${injuredList.length ? `<div class="injured-home-list">${injuredList.map(item => injuredHomeCard(item)).join('')}</div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
     </div>
     <div class="split" style="margin-top:14px">
-      <div class="card">
-        <h3>Próximo partido</h3>
-        ${next ? matchPreview(next) : (isPostseason() ? '<p class="muted">Postemporada en curso. No hay partidos oficiales.</p>' : '<p class="muted">Temporada finalizada.</p>')}
+      <div class="card compact-standings-card">
+        <div class="row"><h3>Tabla cercana</h3><span class="pill">Tu zona</span></div>
+        ${compactHomeStandingsMarkup()}
       </div>
       <div class="card">
         <h3>Últimos partidos</h3>
@@ -602,6 +602,23 @@ function compactMatch(m){
   const gc = isHome ? m.awayGoals : m.homeGoals;
   const cls = gf > gc ? 'ok' : gf < gc ? 'bad' : 'warn';
   return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${clubBadge(m.homeId)} ${m.homeGoals} - ${m.awayGoals} ${clubBadge(m.awayId)}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
+}
+
+function compactHomeStandingsMarkup(){
+  const club = seed.clubs.find(c => Number(c.id) === Number(game.selectedClubId));
+  const table = sortedStandings(club?.divisionId || null);
+  if(!Array.isArray(table) || !table.length) return '<p class="muted">La tabla todavía no está disponible.</p>';
+  const ownIndex = table.findIndex(row => Number(row.clubId) === Number(game.selectedClubId));
+  if(ownIndex < 0) return '<p class="muted">Tu club aún no aparece en la tabla.</p>';
+  const windowSize = Math.min(3, table.length);
+  const start = Math.max(0, Math.min(ownIndex - 1, table.length - windowSize));
+  const rows = table.slice(start, start + windowSize);
+  return `<div class="compact-standings-list">${rows.map((row, index) => {
+    const pos = start + index + 1;
+    const own = Number(row.clubId) === Number(game.selectedClubId);
+    const dg = Number(row.dg || 0);
+    return `<button class="stat-rank clickable plain compact-standing-row ${own ? 'own-club-row' : ''}" data-club-id="${escapeHtml(row.clubId)}"><span><span class="rank-num">${pos}°</span>${clubBadge(row.clubId)} ${escapeHtml(clubName(row.clubId))}</span><strong>${Number(row.pts || 0)} pts <span class="muted small">DG ${dg >= 0 ? '+' : ''}${dg}</span></strong></button>`;
+  }).join('')}</div>`;
 }
 
 

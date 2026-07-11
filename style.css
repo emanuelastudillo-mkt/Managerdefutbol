@@ -4944,3 +4944,30 @@ th{
   .help-grid,.help-grid.compact{grid-template-columns:1fr}
   .help-card,.help-grid.compact .help-card{min-height:auto}
 }
+
+
+/* V6.11 · Ajustes de simulador vivo y tabla compacta */
+.compact-standings-card .row{margin-bottom:8px}
+.compact-standing-row{padding:9px 0}
+.compact-standing-row.own-club-row{border-radius:12px;padding-left:8px;padding-right:8px}
+.live-instruction-buttons.compact button[data-live-instruction="none"]{
+  flex-basis:100%;
+  max-width:240px;
+  margin-left:auto;
+  margin-right:auto;
+}
+.live-instruction-buttons.compact button[data-live-instruction="goal_anyway"]{
+  border-color:rgba(248,113,113,.34);
+}
+.live-instruction-buttons.compact button[data-live-instruction="clean_play"]{
+  border-color:rgba(34,197,94,.28);
+}
+.live-bottom-controls .live-action-row #liveFinishBtn{
+  grid-column:2 / 4;
+  justify-self:center;
+  max-width:220px;
+}
+@media (max-width:760px){
+  .live-instruction-buttons.compact button[data-live-instruction="none"]{max-width:none}
+  .live-bottom-controls .live-action-row #liveFinishBtn{grid-column:auto;max-width:none}
+}

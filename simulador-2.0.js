@@ -49,10 +49,14 @@
   ];
   const LIVE_MANAGER_INSTRUCTIONS = [
     { value:'none', label:'Sin instrucciones', desc:'Sin bonus ni penalización.' },
-    { value:'all_attack', label:'Todos al ataque', desc:'Bono pequeño de ataque. Aumenta el riesgo defensivo.' },
-    { value:'huevos', label:'PONGAN HUEVO!!!', desc:'+10% ataque y defensa. Consume 20% extra de estado físico.' },
+    { value:'all_defense', label:'Todos a defender', desc:'Bono alto de defensa. Ataque propio casi anulado.' },
     { value:'hold_result', label:'Cuidar el resultado', desc:'Bono de posesión y control.' },
-    { value:'all_defense', label:'Todos a defender', desc:'Bono alto de defensa. Ataque propio casi anulado.' }
+    { value:'counter', label:'Contraataque', desc:'Menos posesión y volumen, más peligro en llegadas claras.' },
+    { value:'lower_tempo', label:'Bajar el ritmo', desc:'Menos ataques y posesión. Reduce el riesgo de lesión.' },
+    { value:'clean_play', label:'Jugar limpio', desc:'Reduce fuerte el riesgo de tarjetas y mejora la posesión.' },
+    { value:'fight', label:'Luchar', desc:'Más intensidad y presión. Aumenta desgaste y roces.' },
+    { value:'attack', label:'Ataque', desc:'Más ataques y ocasiones. Más exposición defensiva.' },
+    { value:'goal_anyway', label:'Gol como sea!', desc:'Máxima búsqueda ofensiva. Genera más ocasiones y más ataques rivales.' }
   ];
   const SIM_PITCH_CONDITIONS = {
     'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
@@ -262,6 +266,8 @@
       chanceMultiplier:1,
       conversionMultiplier:1,
       foulAdd:0,
+      cardMultiplier:1,
+      injuryMultiplier:1,
       errorRiskMultiplier:1,
       rivalAttackMultiplier:1,
       rivalChanceMultiplier:1,
@@ -685,7 +691,8 @@
   }
   function makeCardsV2(clubId, power, fouls){
     const cards = [];
-    const yellowCount = simClamp(poissonV2((fouls * SIM_CARD_RATE_MULTIPLIER) / 7.6), 0, 6);
+    const cardMultiplier = simClamp(Number(power?.styleEffects?.cardMultiplier || 1), 0.20, 2.50);
+    const yellowCount = simClamp(poissonV2((fouls * SIM_CARD_RATE_MULTIPLIER * cardMultiplier) / 7.6), 0, 6);
     const byPlayer = new Map();
     for(let i=0;i<yellowCount;i++){
       const p = weightedPickV2(power.lineup, cardWeightV2);
@@ -696,7 +703,7 @@
       else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(simRnd(35,90)) });
     }
     const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
-    const directChance = simClamp(((power.aggression - 60) / 290) * SIM_CARD_RATE_MULTIPLIER, 0.001, 0.13);
+    const directChance = simClamp(((power.aggression - 60) / 290) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier, 0.0002, 0.13);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(20,90)) });
@@ -707,7 +714,8 @@
     const injuries = [];
     const candidates = (ownPower.lineup || []).filter(player => !isUnavailable(player.id));
     candidates.forEach(player => {
-      const chance = injuryChanceForPlayer(player.id, context.pitch);
+      const injuryMultiplier = simClamp(Number(ownPower?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
+      const chance = injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier;
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
@@ -767,6 +775,9 @@
 
   function liveNormalizeInstruction(value){
     const clean = String(value || '').trim();
+    if(clean === 'all_attack') return 'attack';
+    if(clean === 'huevos') return 'fight';
+    if(clean === 'lower') return 'lower_tempo';
     return LIVE_MANAGER_INSTRUCTIONS.some(opt => opt.value === clean) ? clean : 'none';
   }
   function liveInstructionLabel(value){
@@ -783,28 +794,7 @@
   function applyLiveInstructionToPower(power, instruction){
     const copy = clonePowerForLive(power);
     const style = copy.styleEffects;
-    if(instruction === 'all_attack'){
-      copy.attack *= 1.08;
-      copy.midfield *= 1.01;
-      copy.defense *= 0.94;
-      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.07, 0.45, 1.55);
-      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.06, 0.45, 1.55);
-      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.08, 0.55, 1.40);
-      style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.06, 0.55, 1.40);
-    }else if(instruction === 'huevos'){
-      copy.attack *= 1.10;
-      copy.defense *= 1.10;
-      copy.keeper *= 1.04;
-      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.10, 0.45, 1.55);
-      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 0.96, 0.55, 1.40);
-      style.foulAdd = simClamp((style.foulAdd || 0) + 0.35, -1.2, 3.0);
-    }else if(instruction === 'hold_result'){
-      copy.midfield *= 1.07;
-      copy.defense *= 1.03;
-      copy.attack *= 0.96;
-      style.possessionAdd = simClamp((style.possessionAdd || 0) + 5, -12, 18);
-      style.errorRiskMultiplier = simClamp((style.errorRiskMultiplier || 1) * 0.93, 0.45, 1.55);
-    }else if(instruction === 'all_defense'){
+    if(instruction === 'all_defense'){
       copy.defense *= 1.20;
       copy.keeper *= 1.08;
       copy.midfield *= 0.95;
@@ -816,14 +806,72 @@
       style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 0.58, 0.35, 1.22);
       style.rivalConversionMultiplier = simClamp((style.rivalConversionMultiplier || 1) * 0.82, 0.60, 1.22);
       style.possessionAdd = simClamp((style.possessionAdd || 0) - 8, -18, 18);
+    }else if(instruction === 'hold_result'){
+      copy.midfield *= 1.07;
+      copy.defense *= 1.03;
+      copy.attack *= 0.96;
+      style.possessionAdd = simClamp((style.possessionAdd || 0) + 5, -12, 18);
+      style.errorRiskMultiplier = simClamp((style.errorRiskMultiplier || 1) * 0.93, 0.45, 1.55);
+    }else if(instruction === 'counter'){
+      copy.attack *= 1.02;
+      copy.midfield *= 0.94;
+      copy.defense *= 1.02;
+      style.possessionAdd = simClamp((style.possessionAdd || 0) - 7, -18, 18);
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 0.82, 0.35, 1.55);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.18, 0.45, 1.65);
+      style.conversionMultiplier = simClamp((style.conversionMultiplier || 1) * 1.08, 0.40, 1.55);
+    }else if(instruction === 'lower_tempo'){
+      copy.attack *= 0.92;
+      copy.midfield *= 0.95;
+      copy.defense *= 0.97;
+      style.possessionAdd = simClamp((style.possessionAdd || 0) - 4, -18, 18);
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 0.78, 0.35, 1.55);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 0.82, 0.35, 1.55);
+      style.conversionMultiplier = simClamp((style.conversionMultiplier || 1) * 0.90, 0.35, 1.55);
+      style.injuryMultiplier = simClamp((style.injuryMultiplier || 1) * 0.72, 0.35, 2.20);
+    }else if(instruction === 'clean_play'){
+      copy.midfield *= 1.02;
+      copy.defense *= 0.98;
+      style.possessionAdd = simClamp((style.possessionAdd || 0) + 4, -18, 18);
+      style.foulAdd = simClamp((style.foulAdd || 0) - 0.85, -2.2, 3.0);
+      style.cardMultiplier = simClamp((style.cardMultiplier || 1) * 0.50, 0.20, 2.50);
+    }else if(instruction === 'fight'){
+      copy.attack *= 1.08;
+      copy.defense *= 1.07;
+      copy.keeper *= 1.03;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.06, 0.45, 1.55);
+      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 0.97, 0.55, 1.40);
+      style.foulAdd = simClamp((style.foulAdd || 0) + 0.45, -1.2, 3.0);
+    }else if(instruction === 'attack'){
+      copy.attack *= 1.08;
+      copy.midfield *= 1.01;
+      copy.defense *= 0.94;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.07, 0.45, 1.55);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.06, 0.45, 1.55);
+      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.08, 0.55, 1.40);
+      style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.06, 0.55, 1.40);
+    }else if(instruction === 'goal_anyway'){
+      copy.attack *= 1.16;
+      copy.midfield *= 1.02;
+      copy.defense *= 0.86;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.18, 0.45, 1.70);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.18, 0.45, 1.70);
+      style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.18, 0.55, 1.50);
+      style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.14, 0.55, 1.50);
+      style.possessionAdd = simClamp((style.possessionAdd || 0) - 3, -18, 18);
+      style.foulAdd = simClamp((style.foulAdd || 0) + 0.20, -1.2, 3.0);
     }
     copy.liveInstruction = instruction;
     copy.liveInstructionLabel = liveInstructionLabel(instruction);
     return copy;
   }
   function liveInstructionConditionDelta(value){
-    if(value === 'all_attack') return -1;
-    if(value === 'huevos') return 0;
+    if(value === 'goal_anyway') return -2;
+    if(value === 'attack') return -1;
+    if(value === 'fight') return -1;
+    if(value === 'counter') return -1;
+    if(value === 'lower_tempo') return 1;
+    if(value === 'clean_play') return 0;
     if(value === 'hold_result') return 0;
     if(value === 'all_defense') return 1;
     return 0;
@@ -948,8 +996,8 @@
     const genetics = liveHiddenValue(player, ['genetics','genetica','genética','genetic','growth','gen'], 50);
     const pos = String(player.position || '').toUpperCase();
     const posLoad = pos === 'POR' ? 0.55 : (['MC','MCD','MCO','MI','MD','LD','LI','ED','EI'].includes(pos) ? 1.08 : 1.00);
-    const instructionLoad = ({ all_attack:0.045, huevos:0.000, hold_result:-0.010, all_defense:0.000, push:0.025, lower:-0.018 })[instruction] || 0;
-    const instructionMultiplier = instruction === 'huevos' ? 1.20 : 1.00;
+    const instructionLoad = ({ attack:0.045, goal_anyway:0.070, fight:0.020, counter:0.015, clean_play:-0.006, hold_result:-0.010, all_defense:0.000, lower_tempo:-0.030, push:0.025, lower:-0.018 })[instruction] || 0;
+    const instructionMultiplier = instruction === 'fight' ? 1.18 : (instruction === 'goal_anyway' ? 1.12 : 1.00);
     const base = 0.055 + (100 - resistance) * 0.0018 + (100 - genetics) * 0.0012;
     return simClamp((base + instructionLoad) * posLoad * LIVE_FATIGUE_MULTIPLIER * instructionMultiplier, 0.07, 0.72);
   }
@@ -1268,7 +1316,8 @@
     const cards = [];
     const locallySent = new Set();
     const eligibleLineup = (power.lineup || []).filter(p => p && !liveIsUnavailableForPlay(session, p.id));
-    const yellowCount = simClamp(probabilisticRoundV2((Math.max(0, Number(fouls || 0)) * SIM_CARD_RATE_MULTIPLIER) / 3.4), 0, 2);
+    const cardMultiplier = simClamp(Number(power?.styleEffects?.cardMultiplier || 1), 0.20, 2.50);
+    const yellowCount = simClamp(probabilisticRoundV2((Math.max(0, Number(fouls || 0)) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier) / 3.4), 0, 2);
     session.yellowByPlayer = session.yellowByPlayer || {};
     for(let i=0;i<yellowCount;i++){
       const p = weightedPickV2(eligibleLineup.filter(item => !locallySent.has(Number(item.id))), cardWeightV2);
@@ -1283,7 +1332,7 @@
       }else cards.push({ clubId, playerId:p.id, type:'yellow', minute });
     }
     const directRedCandidates = eligibleLineup.filter(p => !locallySent.has(Number(p.id)) && p.position !== 'POR' && hiddenStats(p).aggression >= 78);
-    const directChance = simClamp(((power.aggression - 62) / 900) * SIM_CARD_RATE_MULTIPLIER, 0.0005, 0.045);
+    const directChance = simClamp(((power.aggression - 62) / 900) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier, 0.0001, 0.045);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(block.from, block.to + 1)) });
@@ -1294,7 +1343,8 @@
     const injuries = [];
     const candidates = (power.lineup || []).filter(player => !isUnavailable(player.id) && !liveIsUnavailableForPlay(session, player.id));
     candidates.forEach(player => {
-      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90;
+      const injuryMultiplier = simClamp(Number(power?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
+      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90 * injuryMultiplier;
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));

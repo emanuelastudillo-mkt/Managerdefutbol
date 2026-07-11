@@ -309,7 +309,7 @@
       ${instructionButtons()}
       <div class="live-action-row">
         <button id="liveTacticBtn" class="ghost ${liveTacticOpen ? 'active' : ''}" ${liveState.finished ? 'disabled' : ''}>Táctica</button>
-        <button id="livePauseBtn" class="ghost">${livePaused ? 'Auto' : 'Pausar'}</button>
+        <button id="livePauseBtn" class="ghost">${livePaused ? 'Avance automático' : 'Pausar'}</button>
         <button id="liveNextBlockBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>${ehtml(liveState?.nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto')}</button>
         <button id="liveInstantFinishBtn" class="ghost" ${liveState.finished ? 'disabled' : ''}>Terminar partido</button>
         <button id="liveFinishBtn" class="primary" ${liveState.finished ? '' : 'disabled'}>Cerrar y guardar</button>

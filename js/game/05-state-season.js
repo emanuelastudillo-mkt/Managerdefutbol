@@ -503,7 +503,9 @@ function managerAvailableClubCard(club, options={}){
   if(!club) return '';
   const division = clubDivision(club.id);
   const budget = formatMoney(Number(club?.budget || game?.clubBudgets?.[club.id] || 0));
-  const supporters = typeof supporterCountForClub === 'function' ? supporterCountForClub(club.id) : Number(club?.supporters || 0);
+  const supporters = typeof clubFansBase === 'function'
+    ? clubFansBase(club.id)
+    : Math.max(0, Math.round(Number(club?.fansBase || club?.fansInitial || club?.supporters || 0)));
   const actionAttr = options.selectable ? ` data-select-job-club="${Number(club.id)}"` : ` data-open-job-club="${Number(club.id)}"`;
   const actionLabel = options.selectable ? 'Seleccionar' : 'Ver opción';
   return `<button type="button" class="card available-club-card"${actionAttr}>
@@ -3038,7 +3040,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const skillPoints = Math.max(0, Math.round(Number(raw.skillPoints ?? raw.puntos_habilidad ?? raw.puntosHabilidad ?? 0)));
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName;
   return {
-    version:'V6.21',
+    version:'V6.22',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -3058,7 +3060,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V6.21';
+    clean.version = 'V6.22';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -3096,7 +3098,7 @@ function persistSharedManagerProfileFromGame(options={}){
   let special = game.special;
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const profile = {
-    version:'V6.21',
+    version:'V6.22',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,

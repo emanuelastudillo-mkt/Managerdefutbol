@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.21
+# Fútbol Manager MVP - V6.22
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.20**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.21**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -10,6 +10,14 @@ La versión vigente se identifica desde:
 - `config.js`
 - `index.html`
 
+
+
+## V6.22 - Hinchas base en clubes disponibles y ranking JSON estable
+
+- En las tarjetas de **Clubes disponibles** se muestra el valor base de hinchas del club, tomado de la base de hinchadas aplicada al seed.
+- Corregido el caso donde esas tarjetas mostraban `0 hinchas` antes de iniciar o al quedar sin club.
+- Ajustado el envío de **Subir carrera** para priorizar JSON plano estable hacia Cloudflare Worker + D1 y evitar caer en formatos form legacy que podían devolver `JSON inválido`.
+- El payload de ranking ahora se sanitiza antes de enviarse y mantiene alias de compatibilidad para versiones previas del backend.
 
 ## V6.21 - Perfil global del manager y cartas activas compartidas
 
@@ -206,24 +214,24 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.21
+## Archivos modificados en V6.22
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
+- `js/game/13-ranking-online.js`
 - `js/game/15-especial.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.21**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.22**.
 
-Para actualizar desde V6.20, aplicar el ZIP incremental **V6.21** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.21, aplicar el ZIP incremental **V6.22** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.21 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.22 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.21
+## Validación V6.22
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

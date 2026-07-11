@@ -1,4 +1,4 @@
-/* V5.51 · Ranking online con login sin contraseña y recuperación de sesión. */
+/* V6.22 · Ranking online con envío JSON estable para carrera. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -632,6 +632,48 @@ function rankingApiRowToGameRow(row){
   mapped.managerExperience = rankingValue(row, 'managerExperience', 'manager_experience', 'experiencia_manager');
   return mapped;
 }
+
+function rankingPlainObject(value){
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function rankingJsonSafeValue(value){
+  if(value === undefined || value === null) return '';
+  if(typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if(typeof value === 'boolean') return value;
+  if(Array.isArray(value)) return value.map(rankingJsonSafeValue);
+  if(typeof value === 'object'){
+    const out = {};
+    Object.entries(value).forEach(([key, val]) => { out[key] = rankingJsonSafeValue(val); });
+    return out;
+  }
+  return String(value);
+}
+function rankingJsonSafeObject(obj){
+  const out = {};
+  Object.entries(rankingPlainObject(obj)).forEach(([key, value]) => { out[key] = rankingJsonSafeValue(value); });
+  return out;
+}
+function rankingPathPrefersJson(path){
+  const route = String(path || '').toLowerCase();
+  return route.includes('career') || route.includes('ranking') || route.includes('records') || route.includes('scores') || route.includes('submit');
+}
+function rankingRequestVariantsForPath(path, apiBody, fullPayload){
+  const token = String(RANKING_TOKEN || '').trim();
+  const cleanApiBody = rankingJsonSafeObject(apiBody);
+  const cleanFullPayload = rankingJsonSafeObject(fullPayload);
+  const jsonHeaders = rankingRequestHeaders(true);
+  const formHeaders = { ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' };
+  const jsonVariants = [
+    { label:'json-flat', headers:jsonHeaders, body:JSON.stringify(cleanApiBody) },
+    { label:'json-action-flat', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...cleanApiBody }) },
+    { label:'json-payload-object', headers:jsonHeaders, body:JSON.stringify({ action:'submit', payload:cleanFullPayload, token }) }
+  ];
+  const formVariants = [
+    { label:'form-payload', headers:formHeaders, body:new URLSearchParams({ action:'submit', payload:JSON.stringify(cleanFullPayload), token }).toString() },
+    { label:'form-flat', headers:formHeaders, body:new URLSearchParams(Object.entries({ action:'submit', ...cleanApiBody, token }).reduce((acc, [key, value]) => { acc[key] = value === undefined || value === null ? '' : String(value); return acc; }, {})).toString() }
+  ];
+  return rankingPathPrefersJson(path) ? jsonVariants : jsonVariants.concat(formVariants);
+}
 function rankingPayloadToApiBody(payload){
   const body = {
     // Nombres del Worker Cloudflare + D1.
@@ -685,6 +727,8 @@ function rankingPayloadToApiBody(payload){
     titles: payload.titles,
     title: payload.title ? 1 : 0,
     manager_score: payload.managerScore,
+    managerScore: payload.managerScore,
+    puntaje_manager: payload.managerScore,
     submitted_at: payload.submittedAt || new Date().toISOString(),
     event_type: payload.eventType || 'career_snapshot',
     event_label: payload.eventLabel || rankingEventLabel(payload.eventType),
@@ -692,6 +736,8 @@ function rankingPayloadToApiBody(payload){
     season_day: payload.seasonDay || 0,
     submission_key: payload.submissionKey || '',
     save_code: payload.saveCode || '',
+    codigo_partida: payload.saveCode || '',
+    saveHash: payload.saveCode || '',
     version: payload.version || APP_VERSION
   };
   if(String(RANKING_TOKEN || '').trim()) body.token = String(RANKING_TOKEN).trim();
@@ -1006,25 +1052,14 @@ function submitRankingAutomatically(eventType='season_end', options={}){
 }
 async function submitRankingToCloudflare(endpoint, payload, handlers={}){
   const paths = rankingConfiguredPaths('submit');
-  const apiBody = rankingPayloadToApiBody(payload);
-  const fullPayload = { ...payload, ...apiBody };
-  const token = String(RANKING_TOKEN || '').trim();
-  const jsonHeaders = rankingRequestHeaders(true);
-  const formHeaders = { ...rankingRequestHeaders(false), 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' };
-  const requestBodies = [
-    // Formato principal del Worker Cloudflare + D1: POST /ranking/career con JSON plano y Authorization Bearer.
-    { label:'cloudflare-season-json', headers:jsonHeaders, body:JSON.stringify(apiBody) },
-    // Respaldos compatibles con versiones anteriores.
-    { label:'json-flat-action', headers:jsonHeaders, body:JSON.stringify({ action:'submit', ...apiBody }) },
-    { label:'json-payload', headers:jsonHeaders, body:JSON.stringify({ action:'submit', payload:fullPayload, token }) },
-    { label:'form-payload', headers:formHeaders, body:new URLSearchParams({ action:'submit', payload:JSON.stringify(fullPayload), token }).toString() },
-    { label:'form-flat', headers:formHeaders, body:new URLSearchParams(Object.entries({ action:'submit', ...apiBody, token }).reduce((acc, [key, value]) => { acc[key] = value === undefined || value === null ? '' : String(value); return acc; }, {})).toString() }
-  ];
+  const apiBody = rankingJsonSafeObject(rankingPayloadToApiBody(payload));
+  const fullPayload = rankingJsonSafeObject({ ...payload, ...apiBody });
   let lastMessage = '';
   const attemptedRoutes = new Set();
   for(let i = 0; i < paths.length; i++){
     const path = paths[i];
     attemptedRoutes.add(rankingRouteLabel(path));
+    const requestBodies = rankingRequestVariantsForPath(path, apiBody, fullPayload);
     for(let j = 0; j < requestBodies.length; j++){
       const req = requestBodies[j];
       try{

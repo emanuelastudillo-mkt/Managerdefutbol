@@ -1,4 +1,4 @@
-/* V5.54 · Menú ESPECIAL: cartas activas, bonus acumulables y efectos inmediatos de cohesión. */
+/* V5.65 · Menú ESPECIAL: cartas, códigos canjeables y bonus acumulables. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -27,7 +27,8 @@ function createInitialSpecialState(managerName=''){
     fecha_ultimo_cambio_cartas: null,
     bloqueado_hasta: null,
     historial_ultimas_cartas: [],
-    puntos_log: []
+    puntos_log: [],
+    codigos_reclamados: {}
   };
 }
 function normalizeSpecialCard(card, index=0){
@@ -78,6 +79,7 @@ function normalizeSpecialState(state=null, managerName=''){
     ? normalized.historial_ultimas_cartas.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).slice(0, 30)
     : [];
   normalized.puntos_log = Array.isArray(normalized.puntos_log) ? normalized.puntos_log.slice(-80) : [];
+  normalized.codigos_reclamados = (normalized.codigos_reclamados && typeof normalized.codigos_reclamados === 'object' && !Array.isArray(normalized.codigos_reclamados)) ? normalized.codigos_reclamados : {};
   normalized.fecha_ultimo_cambio_cartas = validIsoDate(normalized.fecha_ultimo_cambio_cartas) ? normalized.fecha_ultimo_cambio_cartas : null;
   normalized.bloqueado_hasta = validIsoDate(normalized.bloqueado_hasta) ? normalized.bloqueado_hasta : null;
   return normalized;
@@ -292,6 +294,96 @@ function awardSpecialChampionPoints(division){
   const order = Math.max(1, Math.round(Number(division?.order || 1)));
   const id = order <= 1 ? 'salir_campeon_division_1' : (order === 2 ? 'salir_campeon_division_2' : 'salir_campeon_division_3');
   return awardSpecialPoints(id, { divisionId:division?.id || '', divisionName:division?.name || '' });
+}
+
+function specialCodesConfig(){
+  const cfg = window.GAME_CONFIG?.codigosEspeciales || {};
+  const active = cfg.activo !== false;
+  const codes = Array.isArray(cfg.codigos) ? cfg.codigos.filter(item => item && typeof item === 'object') : [];
+  return { active, codes };
+}
+function normalizeSpecialCodeValue(value=''){
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+function specialCodeKey(code){
+  return normalizeSpecialCodeValue(code?.codigo || code?.code || code?.id || '');
+}
+function specialRedeemableCodes(){
+  const cfg = specialCodesConfig();
+  if(!cfg.active) return [];
+  return cfg.codes
+    .map(item => ({ ...item, _key:specialCodeKey(item) }))
+    .filter(item => item._key);
+}
+function specialClaimedCodes(){
+  const state = ensureSpecialState();
+  return state?.codigos_reclamados && typeof state.codigos_reclamados === 'object' ? state.codigos_reclamados : {};
+}
+function specialCodeBenefitText(code){
+  const benefits = code?.beneficios || code?.benefits || {};
+  const parts = [];
+  const prestige = Math.round(Number(benefits.prestigio ?? benefits.prestige ?? 0));
+  const points = Math.round(Number(benefits.puntosHabilidad ?? benefits.skillPoints ?? benefits.puntos_habilidad ?? 0));
+  if(prestige > 0) parts.push(`+${prestige} prestigio`);
+  if(points > 0) parts.push(`+${formatPlainNumber(points)} puntos de habilidad`);
+  return parts.join(' · ') || 'Sin beneficio definido';
+}
+function redeemSpecialCode(){
+  const input = document.getElementById('special-code-input');
+  const raw = input ? input.value : '';
+  const key = normalizeSpecialCodeValue(raw);
+  if(!key){ showNotice('Escribí un código para canjear.'); return; }
+  const state = ensureSpecialState();
+  const codes = specialRedeemableCodes();
+  const code = codes.find(item => item._key === key);
+  if(!code){ showNotice('Código inválido o no disponible.'); return; }
+  state.codigos_reclamados = (state.codigos_reclamados && typeof state.codigos_reclamados === 'object' && !Array.isArray(state.codigos_reclamados)) ? state.codigos_reclamados : {};
+  if(state.codigos_reclamados[key]){ showNotice('Ese código ya fue reclamado en esta partida.'); return; }
+  const benefits = code.beneficios || code.benefits || {};
+  const prestige = Math.max(0, Math.round(Number(benefits.prestigio ?? benefits.prestige ?? 0)));
+  const points = Math.max(0, Math.round(Number(benefits.puntosHabilidad ?? benefits.skillPoints ?? benefits.puntos_habilidad ?? 0)));
+  const applied = [];
+  if(prestige > 0 && typeof addManagerPrestige === 'function'){
+    addManagerPrestige(prestige, `Código especial: ${code.nombre || key}`);
+    applied.push(`+${prestige} prestigio`);
+  }
+  if(points > 0){
+    state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + points));
+    state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
+    state.puntos_log.push({ actionId:'codigo_especial', points, code:key, ...turnStamp({ date:game?.currentDate || '' }) });
+    if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+    specialPointsAnimation = { id:`code-${Date.now()}-${Math.random()}`, points };
+    applied.push(`+${formatPlainNumber(points)} puntos de habilidad`);
+  }
+  if(!applied.length){ showNotice('El código existe, pero no tiene beneficios configurados.'); return; }
+  state.codigos_reclamados[key] = {
+    codigo:key,
+    nombre:String(code.nombre || key),
+    beneficios:{ prestigio:prestige, puntosHabilidad:points },
+    season:Number(game?.seasonNumber || 1),
+    date:game?.currentDate || '',
+    createdAt:new Date().toISOString()
+  };
+  game.special = state;
+  pushGameMessage({ type:'especial', priority:'normal', title:'Código especial reclamado', body:`${code.nombre || key}: ${applied.join(' · ')}.`, id:`special-code-${key}-${game?.seasonNumber || 1}` });
+  saveLocal(true);
+  renderSpecial();
+  showNotice(`Código aplicado: ${applied.join(' · ')}.`);
+}
+function specialCodeRedeemMarkup(){
+  const cfg = specialCodesConfig();
+  const claimed = specialClaimedCodes();
+  const claimedCount = Object.keys(claimed).length;
+  const disabled = cfg.active ? '' : 'disabled';
+  return `<div class="card special-code-card">
+    <div class="row"><div><p class="label">Códigos</p><h3>Canjear beneficio</h3></div><span class="pill">Usados: ${claimedCount}</span></div>
+    <p class="muted small">Ingresá un código especial. Cada código se puede reclamar una sola vez por partida.</p>
+    <div class="row gap-sm special-code-row">
+      <input id="special-code-input" class="input" type="text" placeholder="Escribir código" autocomplete="off" ${disabled} />
+      <button class="primary" id="special-code-redeem-btn" ${disabled}>Canjear</button>
+    </div>
+    ${cfg.active ? '<p class="muted small">Los códigos disponibles se configuran en <strong>config.js</strong>.</p>' : '<p class="muted small">El canje de códigos está desactivado.</p>'}
+  </div>`;
 }
 
 function specialPackRevealStepMs(){
@@ -633,6 +725,7 @@ function renderSpecial(opened=[], options={}){
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
       <div class="card"><p class="label">Cambios</p><strong>${escapeHtml(locked.locked ? 'Bloqueados' : 'Libres')}</strong></div>
     </div>
+    ${specialCodeRedeemMarkup()}
     ${specialOpenedMarkup(opened, options)}
     <div class="card special-active-drop" data-special-drop-active="1">
       <div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${escapeHtml(lockText)}</span></div>
@@ -646,6 +739,10 @@ function renderSpecial(opened=[], options={}){
     </div>
   `;
   document.querySelectorAll('[data-open-special-pack]').forEach(btn => btn.addEventListener('click', () => openSpecialPack(btn.dataset.openSpecialPack)));
+  const codeInput = document.getElementById('special-code-input');
+  const codeButton = document.getElementById('special-code-redeem-btn');
+  if(codeButton) codeButton.addEventListener('click', redeemSpecialCode);
+  if(codeInput) codeInput.addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); redeemSpecialCode(); } });
   document.querySelectorAll('.special-card[draggable="true"]').forEach(card => {
     card.addEventListener('dragstart', ev => ev.dataTransfer?.setData('text/special-card-id', card.dataset.specialCardId || ''));
   });

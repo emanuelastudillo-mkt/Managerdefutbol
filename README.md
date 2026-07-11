@@ -1,4 +1,18 @@
-# Fútbol Manager MVP - V5.64
+# Fútbol Manager MVP - V5.65
+
+## V5.65 - Códigos especiales en menú Especial
+
+- En el menú **Especial** se agrega un espacio para escribir y canjear códigos.
+- Los códigos se configuran desde `config.js`, bloque `codigosEspeciales`.
+- Cada código se puede reclamar una sola vez por partida.
+- Se agregan dos códigos base:
+  - `PRESTIGIO20`: suma +20 prestigio al manager.
+  - `PUNTOS50000`: suma +50.000 puntos de habilidad.
+- Los beneficios se guardan en la partida y generan mensaje interno.
+- Compatibilidad de partida: se implementa solo.
+
+---
+
 
 ## V5.64 - Botón de auto avance
 

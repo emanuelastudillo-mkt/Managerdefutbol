@@ -1,2 +1,2 @@
-/* V5.64 · Punto de entrada. Auto avance manual. */
+/* V5.65 · Punto de entrada. Códigos especiales en menú Especial. */
 init();

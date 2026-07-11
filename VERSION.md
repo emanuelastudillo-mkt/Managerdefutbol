@@ -1,8 +1,8 @@
 # Versión actual
 
-V5.64
+V5.65
 
 ## Cambios
-- Se agregó botón de auto avance debajo de Avanzar día.
-- El auto avance respeta cooldowns y bloqueos normales del juego.
-- Se detiene ante táctica incompleta, revisión obligatoria, ventanas abiertas, manager sin club o temporada finalizada.
+- Se agrega canje de códigos dentro del menú Especial.
+- Los códigos se configuran en `config.js` y cada uno se reclama una sola vez por partida.
+- Códigos iniciales: `PRESTIGIO20` (+20 prestigio) y `PUNTOS50000` (+50.000 puntos de habilidad).

@@ -4610,3 +4610,9 @@ th{
   color:#fecaca!important;
   box-shadow:0 0 0 1px rgba(239,68,68,.12),0 12px 28px rgba(239,68,68,.08);
 }
+
+
+/* V5.65 · Códigos especiales */
+.special-code-card{border-color:rgba(59,130,246,.18);background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(239,246,255,.74))}
+.special-code-row{align-items:center;flex-wrap:wrap}
+.special-code-row input{min-width:220px;flex:1 1 220px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}

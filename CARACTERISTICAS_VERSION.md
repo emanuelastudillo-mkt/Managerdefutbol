@@ -1,4 +1,21 @@
-# Características de la versión V5.64
+# Características de la versión V5.65
+
+## V5.65 - Códigos especiales en menú Especial
+
+### Cambios principales
+- Se agrega una tarjeta de canje de códigos dentro del menú **Especial**.
+- Los códigos disponibles quedan configurables en `config.js`.
+- Cada código se reclama una sola vez por partida guardada.
+- El beneficio puede sumar prestigio de manager y/o puntos de habilidad.
+- Se incluyen dos códigos iniciales: `PRESTIGIO20` y `PUNTOS50000`.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta únicamente al menú Especial y al estado guardado de códigos reclamados.
+
+---
+
 
 ## V5.64 - Botón de auto avance
 

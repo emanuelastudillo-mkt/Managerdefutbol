@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.64',
+  version: 'V5.65',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -123,6 +123,24 @@ window.GAME_CONFIG = {
     bonusPartidosPromedioGeneral120: 2,
     bonusPartidosPromedioGeneral150: 5,
     bonusPartidosPromedioGeneral190: 12
+  },
+  codigosEspeciales: {
+    activo: true,
+    // Cada código se puede reclamar una sola vez por partida guardada.
+    codigos: [
+      {
+        codigo: 'PRESTIGIO20',
+        nombre: 'Impulso de prestigio',
+        descripcion: 'Suma 20 puntos de prestigio al manager.',
+        beneficios: { prestigio: 20 }
+      },
+      {
+        codigo: 'PUNTOS50000',
+        nombre: 'Puntos de habilidad',
+        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 50000 }
+      }
+    ]
   },
   plantel: {
     nacionalidades: {

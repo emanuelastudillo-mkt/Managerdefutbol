@@ -1084,21 +1084,17 @@ function updateAdvanceAutoClickerButton(){
   const btn = $('advanceAutoClickerBtn');
   if(!btn) return;
   const active = isAdvanceAutoClickerActive();
-  btn.classList.toggle('is-active', active);
+  const label = btn.querySelector('[data-auto-advance-state]');
   const seasonEnded = Boolean(game?.seasonFinalized || (typeof seasonPhase === 'function' && seasonPhase() === 'finalized'));
-  if(active){
-    btn.textContent = 'Detener auto avance';
-    btn.disabled = false;
-  }else if(seasonEnded){
-    btn.textContent = 'Auto avance no disponible';
-    btn.disabled = true;
-  }else if(game?.gameOver?.active){
-    btn.textContent = 'Auto avance no disponible';
-    btn.disabled = true;
-  }else{
-    btn.textContent = 'Auto avance: apagado';
-    btn.disabled = false;
-  }
+  const unavailable = Boolean(seasonEnded || game?.gameOver?.active);
+  btn.classList.toggle('is-active', active);
+  btn.classList.toggle('is-on', active);
+  btn.classList.toggle('is-off', !active);
+  btn.classList.toggle('is-disabled', unavailable);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  btn.title = unavailable ? 'Avance automático no disponible' : (active ? 'Desactivar avance automático' : 'Activar avance automático');
+  if(label) label.textContent = active ? 'ON' : 'OFF';
+  btn.disabled = unavailable;
 }
 function stopAdvanceAutoClicker(reason='', silent=false){
   if(advanceAutoClickerState.timer){

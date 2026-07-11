@@ -4823,3 +4823,90 @@ th{
 .special-card-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
 .special-uses-pill{font-size:.68rem!important;white-space:nowrap}
 .special-card-grid.compact .special-uses-pill{font-size:.64rem!important}
+
+/* V6.04 · Ojeo y avance automático */
+.scouting-player-meta-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  margin:8px 0 10px;
+}
+.scouting-player-meta-row p{margin:0}
+.scouting-signing-chance{
+  min-width:132px;
+  display:grid;
+  gap:2px;
+  padding:9px 11px;
+  border-radius:14px;
+  border:1px solid rgba(148,163,184,.16);
+  background:rgba(15,23,42,.58);
+  text-align:right;
+}
+.scouting-signing-chance span{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.scouting-signing-chance strong{font-size:22px;letter-spacing:-.04em;line-height:1}
+.scouting-signing-chance small{color:var(--muted);font-size:10.5px;line-height:1.15}
+.scouting-signing-chance.ok{border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.10)}
+.scouting-signing-chance.warn{border-color:rgba(245,158,11,.28);background:rgba(245,158,11,.10)}
+.scouting-signing-chance.bad{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.10)}
+.scouting-signing-chance.own{opacity:.72;text-align:right}
+.auto-advance-switch-panel{
+  display:grid;
+  gap:6px;
+  justify-items:stretch;
+  width:100%;
+}
+.auto-advance-switch-panel .label{margin:0;text-align:center}
+.auto-advance-switch{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:14px;
+  border:1px solid rgba(239,68,68,.28);
+  background:rgba(239,68,68,.12);
+  font-weight:900;
+  transition:background .16s ease,border-color .16s ease,transform .12s ease,opacity .12s ease;
+}
+.auto-advance-switch:hover:not(:disabled){transform:translateY(-1px)}
+.auto-advance-switch-track{
+  position:relative;
+  width:46px;
+  height:24px;
+  border-radius:999px;
+  background:rgba(239,68,68,.78);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);
+  transition:background .16s ease;
+}
+.auto-advance-switch-track i{
+  position:absolute;
+  top:4px;
+  left:4px;
+  width:16px;
+  height:16px;
+  border-radius:999px;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);
+  transition:left .16s ease;
+}
+.auto-advance-switch strong{min-width:32px;text-align:left;font-size:13px;letter-spacing:.08em}
+.auto-advance-switch.is-on{
+  border-color:rgba(34,197,94,.32);
+  background:rgba(34,197,94,.14);
+}
+.auto-advance-switch.is-on .auto-advance-switch-track{background:rgba(34,197,94,.86)}
+.auto-advance-switch.is-on .auto-advance-switch-track i{left:26px}
+.auto-advance-switch.is-disabled{opacity:.5}
+@media(max-width:700px){
+  .scouting-player-meta-row{grid-template-columns:1fr}
+  .scouting-signing-chance{text-align:left;min-width:0}
+}
+.auto-advance-switch{width:100%}

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.03',
+  version: 'V6.04',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -597,14 +597,14 @@ window.GAME_CONFIG = {
     // El Worker actual exige sesión para subir récords. El front guarda el token en localStorage tras iniciar sesión.
     requiereLogin: true,
     // Rutas compatibles con Worker Cloudflare + D1 actual y variantes anteriores.
-    // La ruta principal de carga es /ranking/season.
-    submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
+    // La ruta principal de carga es /ranking/career. Se mantienen rutas antiguas como respaldo.
+    submitPaths: ['ranking/career','api/ranking/career','career','records/career','api/records/career','ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
     // Rutas de login/verificación compatibles con el Worker Cloudflare + D1.
     // También prueba rutas de registro/sesión para cuentas creadas originalmente sin contraseña.
     loginPaths: ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'],
     mePaths: ['auth/me','me','api/auth/me','api/me','user','api/user'],
-    // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
-    readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],
+    // La lectura principal usa /ranking/career; /ranking/season queda como respaldo para instalaciones antiguas.
+    readPaths: ['ranking/career','api/ranking/career','career','records/career','api/records/career','ranking/season','api/ranking/season','ranking','records','scores','api/ranking','api/records','api/scores',''],
     resultadosPorPagina: 100,
     cooldownCargaDias: 50,
     nombreRanking: 'Ranking Online'

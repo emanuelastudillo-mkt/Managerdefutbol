@@ -324,7 +324,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     </div>
     <div class="office-side-card">
       ${nextBox}
-      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button><button id="advanceAutoClickerBtn" class="secondary advance-auto-toggle" type="button">Auto avance: apagado</button></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button><div class="auto-advance-switch-panel"><p class="label">Avance automático</p><button id="advanceAutoClickerBtn" class="auto-advance-switch is-off" type="button" aria-pressed="false"><span class="auto-advance-switch-track"><i></i></span><strong data-auto-advance-state>OFF</strong></button></div></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
   </div>`;
 }

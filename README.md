@@ -1,50 +1,61 @@
-# Fútbol Manager MVP - V6.03
+# Fútbol Manager MVP - V6.04
 
-## V6.03 - Dificultad competitiva
+## V6.04 - Ojeo, avance automático y ranking de carrera
 
-Esta entrega continúa la línea Manager V6 y toma V6.02 como base.
+Esta entrega continúa la línea Manager V6 y toma V6.03 como base.
 
 ### Cambios principales
 
-- Se agrega adaptación rival cuando el usuario repite demasiadas veces la misma forma de jugar.
-- La repetición se mide por formación, mentalidades por puesto, instrucciones de partido y estilos sectoriales, no por nombres de jugadores.
-- Los primeros 3 partidos con el mismo patrón no tienen penalización; desde el cuarto, el rival recibe un bonus progresivo y limitado.
-- Se agrega riesgo alto de lesión larga para jugadores con participación excesiva.
-- La referencia de temporada queda en 34 partidos: desde el 80% de participación, el riesgo de lesión larga sube de forma fuerte.
-- Las lesiones por alta participación priorizan lesiones de larga duración.
-- Se agrega contador progresivo de partidos sin jugar para suplentes.
-- Los jugadores disponibles que no participan pierden cada vez más moral según la cantidad consecutiva de partidos que se pierden.
-- Los jugadores lesionados o suspendidos no acumulan castigo por no jugar.
-- Se actualiza versión visible, caché de scripts/estilos y documentación a V6.03.
+- En el Centro de Ojeo se muestra la **probabilidad de fichaje** de cada jugador externo.
+- La probabilidad de fichaje usa la misma lógica real del mercado: media del jugador contra prestigio del club comprador.
+- Los jugadores propios aparecen sin porcentaje de fichaje porque no corresponde calcular aceptación para comprar un jugador propio.
+- El avance automático ahora se muestra como bloque claro: título **Avance automático** y debajo un switch **ON/OFF**.
+- El switch cambia visualmente según estado:
+  - verde cuando está activo;
+  - rojo cuando está apagado;
+  - deshabilitado si la temporada terminó o el manager está sin club.
+- El ranking online ahora arma como payload principal la **carrera completa del mánager**, no solamente la temporada actual.
+- La carrera subida incluye partidos totales, puntos de carrera, récord G-E-P, goles, títulos, temporadas jugadas, club actual, clubes dirigidos, prestigio, experiencia, presupuesto y puntaje de carrera.
+- La clave de envío de ranking pasa a ser estable por partida/carrera: `SAVE-CODE-CAREER`.
+- La tabla del ranking deduplica resultados por código de partida antes de ordenar, evitando filas repetidas de la misma carrera.
+- Se priorizan rutas `/ranking/career` para lectura y carga, manteniendo rutas antiguas como respaldo.
+- `apps-script-ranking.gs` queda actualizado para guardar una sola fila por carrera.
+- Se actualiza versión visible, caché de scripts/estilos y documentación a V6.04.
 
-### Parámetros editables
+### Archivos modificados
 
-Los nuevos valores se pueden ajustar desde `balance-modificadores.js` o `config.js`, dentro de `dificultad`:
-
-- `partidosReferenciaTemporada`: 34.
-- `umbralParticipacionLesionLarga`: 0.80.
-- `probabilidadLesionLargaMin`: 0.35.
-- `probabilidadLesionLargaMax`: 0.65.
-- `pesoLesionLargaAltaParticipacion`: 0.90.
-- `adaptacionTactica.partidosSinPenalizacion`: 3.
-- `adaptacionTactica.bonusRivalPorRepeticion`: 0.03.
-- `adaptacionTactica.bonusRivalMaximo`: 0.12.
-- `moralSuplentes.perdidaPorPartidoPerdido`: 1.
-- `moralSuplentes.perdidaMaximaPorPartido`: 12.
+- `index.html`
+- `app.js`
+- `config.js`
+- `apps-script-ranking.gs`
+- `style.css`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/13-ranking-online.js`
+- `js/game/16-scouting-center.js`
+- `js/ui/06-render-home-messages.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`
 
 ### Validaciones realizadas
 
-- Sintaxis JavaScript validada con `node --check` en los archivos modificados.
+- Sintaxis JavaScript validada con `node --check` en los archivos JS modificados.
 - Parseo JSON validado en todos los archivos dentro de `data/`.
-- Se mantiene la carga dividida de `data/jugadores` agregada en V6.02.
+- Validación de estructura del ZIP completo e incremental.
 
 ### Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo V6.03.
+Para instalación limpia, subir todo el contenido del ZIP completo V6.04.
 
-Para actualizar desde V6.02, aplicar el ZIP incremental V6.03 sobre la carpeta existente y forzar recarga con Control + F5.
+Para actualizar desde V6.03, aplicar el ZIP incremental V6.04 sobre la carpeta existente y forzar recarga con Control + F5.
 
 ## Historial inmediato
+
+### V6.03 - Dificultad competitiva
+
+- Adaptación rival por repetición táctica.
+- Lesiones largas por sobreuso desde 80% de participación.
+- Moral progresiva negativa para jugadores disponibles que no juegan.
 
 ### V6.02 - División de `data/jugadores.json`
 

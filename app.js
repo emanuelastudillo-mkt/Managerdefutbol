@@ -1,2 +1,2 @@
-/* V6.03 · Punto de entrada. Dificultad competitiva, adaptación rival y carga de partidos. */
+/* V6.04 · Punto de entrada. Ojeo, avance automático y ranking de carrera. */
 init();

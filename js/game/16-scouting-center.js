@@ -565,6 +565,31 @@ function scoutingPlayerKnownSkillRows(player){
     <div class="scouting-known-section"><p class="label">Habilidades visibles</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, visibleMap)}</div></div>
     <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>`;
 }
+function scoutingPlayerSigningChance(player){
+  if(!player || scoutingIsOwnPlayer(player)) return null;
+  if(typeof marketPlayerAcceptanceChance === 'function') return marketPlayerAcceptanceChance(player);
+  return null;
+}
+function scoutingPlayerSigningChanceLabel(player){
+  const chance = scoutingPlayerSigningChance(player);
+  if(chance === null || chance === undefined || !Number.isFinite(Number(chance))) return '—';
+  const clean = Math.round(Number(chance) * 10) / 10;
+  return `${clean}%`;
+}
+function scoutingPlayerSigningChanceTone(chance){
+  const value = Number(chance || 0);
+  if(value >= 65) return 'ok';
+  if(value >= 30) return 'warn';
+  return 'bad';
+}
+function scoutingPlayerSigningChanceMarkup(player){
+  const chance = scoutingPlayerSigningChance(player);
+  if(chance === null || chance === undefined || !Number.isFinite(Number(chance))){
+    return `<div class="scouting-signing-chance own"><span>Prob. fichaje</span><strong>—</strong><small>Jugador propio</small></div>`;
+  }
+  const tone = scoutingPlayerSigningChanceTone(chance);
+  return `<div class="scouting-signing-chance ${tone}"><span>Prob. fichaje</span><strong>${scoutingPlayerSigningChanceLabel(player)}</strong><small>Según media y prestigio del club</small></div>`;
+}
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);
   const known = scoutingKnownCount(player.id);
@@ -580,7 +605,10 @@ function scoutingPlayerCard(player){
       <button class="ghost small-btn" data-remove-scouting-player="${player.id}">Quitar</button>
     </div>
     <div class="project-progress scouting-report-progress"><span style="width:${pct}%"></span></div>
-    <p class="muted small">Habilidades conocidas: ${known}/${total} · Ocultas reveladas: ${hiddenKnown}/${hiddenTotal} · Días observado: ${Number(report.daysObserved || 0)}</p>
+    <div class="scouting-player-meta-row">
+      <p class="muted small">Habilidades conocidas: ${known}/${total} · Ocultas reveladas: ${hiddenKnown}/${hiddenTotal} · Días observado: ${Number(report.daysObserved || 0)}</p>
+      ${scoutingPlayerSigningChanceMarkup(player)}
+    </div>
     ${scoutingPlayerKnownSkillRows(player)}
   </div>`;
 }
@@ -617,6 +645,7 @@ function scoutingPlayerReportListRow(entry){
     <td>${escapeHtml(clubName(player.clubId))}</td>
     <td>${known}/${total}</td>
     <td>${hiddenKnown}/${hiddenTotal}</td>
+    <td>${scoutingPlayerSigningChanceLabel(player)}</td>
     <td>${Number(report.daysObserved || 0)}</td>
     <td>${status}</td>
   </tr>`;
@@ -631,7 +660,7 @@ function scoutingReportsModalMarkup(mode='all'){
   return `<div class="scouting-reports-modal">
     <div class="scouting-reports-head"><p class="label">Centro de Ojeo</p><h2>${escapeHtml(title)}</h2></div>
     <p class="muted small">Sólo se listan jugadores. Los informes de equipo son dinámicos y no se archivan.</p>
-    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
+    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Prob. fichaje</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
   </div>`;
 }
 function openScoutingReportsModal(mode='all'){

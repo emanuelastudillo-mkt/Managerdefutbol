@@ -1,5 +1,5 @@
 /*
-  Fútbol Manager · Ranking Online V3.20
+  Fútbol Manager · Ranking Online V6.04
   Apps Script para pegar en https://script.google.com/
 
   Pasos:
@@ -20,11 +20,14 @@ const RANKING_TOKEN = ''; // opcional. Si usás token, copiá el mismo valor en 
 const HEADERS = [
   'Fecha de envío',
   'Nombre del manager',
-  'Club usado',
-  'Temporada',
-  'División',
-  'Posición final',
-  'Puntos',
+  'Tipo de registro',
+  'Club actual',
+  'Clubes dirigidos',
+  'Temporadas jugadas',
+  'Partidos de carrera',
+  'División actual',
+  'Mejor posición',
+  'Puntos de carrera',
   'Partidos ganados',
   'Partidos empatados',
   'Partidos perdidos',
@@ -35,8 +38,12 @@ const HEADERS = [
   'Presupuesto final',
   'Variación de presupuesto',
   'Cantidad de títulos',
+  'Prestigio manager',
+  'Experiencia manager',
   'Puntaje manager',
   'Código de partida',
+  'Clave de envío',
+  'Evento',
   'Versión'
 ];
 
@@ -85,8 +92,12 @@ function parsePayload_(raw){
 
 function validatePayload_(payload){
   if(!payload.managerName) return 'Falta nombre del manager.';
-  if(!payload.club) return 'Falta club.';
   if(!payload.saveCode) return 'Falta código de partida.';
+  if(String(payload.recordScope || 'career') === 'career'){
+    if(!Number(payload.careerMatches || 0)) return 'La carrera todavía no tiene partidos oficiales.';
+    return '';
+  }
+  if(!payload.club) return 'Falta club.';
   if(!payload.season) return 'Falta temporada.';
   if(payload.position === undefined || payload.position === null) return 'Falta posición final.';
   return '';
@@ -108,11 +119,15 @@ function sheet_(){
 
 function appendRankingRow_(payload){
   const sheet = sheet_();
+  const recordScope = String(payload.recordScope || 'career');
   const row = [
     payload.submittedAt || new Date().toISOString(),
     payload.managerName || '',
-    payload.club || '',
-    Number(payload.season || 0),
+    recordScope,
+    payload.currentClub || payload.club || '',
+    Array.isArray(payload.clubsManaged) ? payload.clubsManaged.join(' | ') : String(payload.clubsManaged || ''),
+    Number(payload.seasonsPlayed || payload.season || 0),
+    Number(payload.careerMatches || payload.played || 0),
     payload.division || '',
     Number(payload.position || 0),
     Number(payload.points || 0),
@@ -126,11 +141,15 @@ function appendRankingRow_(payload){
     Number(payload.finalBudget || 0),
     Number(payload.budgetVariation || 0),
     Number(payload.titles || 0),
+    Number(payload.managerPrestige || 0),
+    Number(payload.managerExperience || 0),
     Number(payload.managerScore || 0),
     payload.saveCode || '',
+    payload.submissionKey || (payload.saveCode ? payload.saveCode + '-CAREER' : ''),
+    payload.eventLabel || payload.eventType || '',
     payload.version || ''
   ];
-  const existingRow = findExistingSubmissionRow_(sheet, payload.saveCode, payload.season);
+  const existingRow = findExistingSubmissionRow_(sheet, payload);
   if(existingRow){
     sheet.getRange(existingRow, 1, 1, HEADERS.length).setValues([row]);
   }else{
@@ -138,15 +157,19 @@ function appendRankingRow_(payload){
   }
 }
 
-function findExistingSubmissionRow_(sheet, saveCode, season){
-  if(!saveCode || !season) return 0;
+function findExistingSubmissionRow_(sheet, payload){
+  const saveCode = String(payload.saveCode || '');
+  const submissionKey = String(payload.submissionKey || (saveCode ? saveCode + '-CAREER' : ''));
+  if(!saveCode && !submissionKey) return 0;
   const lastRow = sheet.getLastRow();
   if(lastRow < 2) return 0;
   const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
   const codeIndex = HEADERS.indexOf('Código de partida');
-  const seasonIndex = HEADERS.indexOf('Temporada');
+  const keyIndex = HEADERS.indexOf('Clave de envío');
   for(let i = 0; i < values.length; i++){
-    if(String(values[i][codeIndex]) === String(saveCode) && Number(values[i][seasonIndex]) === Number(season)){
+    const rowCode = codeIndex >= 0 ? String(values[i][codeIndex]) : '';
+    const rowKey = keyIndex >= 0 ? String(values[i][keyIndex]) : '';
+    if((submissionKey && rowKey === submissionKey) || (saveCode && rowCode === saveCode)){
       return i + 2;
     }
   }

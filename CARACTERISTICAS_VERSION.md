@@ -1,4 +1,19 @@
-# Características de la versión V5.70
+# Características de la versión V5.71
+
+## V5.71 - Corrección de renuncia y despido
+
+### Cambios principales
+- Al quedar sin club por renuncia o despido, se limpian modales abiertos para evitar que tapen opciones importantes.
+- Se agrega una función de cierre forzado de modal para transiciones críticas de carrera.
+- La pantalla sin club muestra **Buscar otro club**, **Fundar club** y **Guardar carrera** cuando corresponde.
+- El acceso a Modo Fundador ya no queda escondido detrás de una ventana previa.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta únicamente la navegación al quedar sin club.
+
+---
 
 ## V5.70 - Códigos compactos en Especial
 

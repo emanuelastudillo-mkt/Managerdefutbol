@@ -375,11 +375,13 @@ function renderGameOverScreen(){
       </div>
       <div class="row game-over-actions">
         <button class="primary" id="btnGameOverNewGame">Buscar otro club</button>
+        ${typeof founderModeEnabled === 'function' && founderModeEnabled() ? '<button class="ghost" id="btnGameOverFounder">Fundar club</button>' : ''}
         <button class="ghost" id="btnGameOverSave">Guardar carrera</button>
       </div>
     </div>
   </div>`;
-  $('btnGameOverNewGame')?.addEventListener('click', () => openNewGameModal(true));
+  $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
+  $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
   $('btnGameOverSave')?.addEventListener('click', saveLocal);
 }
 

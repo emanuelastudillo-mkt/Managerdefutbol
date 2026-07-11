@@ -102,6 +102,18 @@ function managerClubRehireBlockLabel(clubOrId){
   const cause = info.type === 'resignation' ? 'renuncia' : 'despido';
   return `Bloqueado por ${cause} hasta temporada ${info.untilSeason}`;
 }
+
+function prepareManagerWithoutClubUi(reason='sin_club'){
+  try{
+    if(typeof forceCloseModal === 'function') forceCloseModal();
+    else if(typeof closeModal === 'function') closeModal();
+  }catch(error){}
+  if(window.__autoAdvanceState && typeof stopAutoAdvance === 'function'){
+    try{ stopAutoAdvance('sin_club'); }catch(error){}
+  }
+  window.__liveMatchCloseLocked = false;
+  activeTab = 'home';
+}
 function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), options={}){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return false;
@@ -3071,7 +3083,7 @@ function checkManagerObjectiveGameOver(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
-  activeTab = 'home';
+  prepareManagerWithoutClubUi('dismissal');
   recordDismissedCareerStep();
   pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:`La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`, id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
   queueAutomaticRankingSubmission('dismissal');
@@ -3166,8 +3178,8 @@ function resignCurrentClub(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
+  prepareManagerWithoutClubUi('resignation');
   recordDismissedCareerStep();
-  activeTab = 'home';
   pushGameMessage({ type:'directiva', priority:'high', title:'Renuncia del manager', body:'Presentaste la renuncia. El mundo de la partida sigue activo y podés buscar otro club.', id:`resignation-${game.seasonNumber || 1}-${game.selectedClubId}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();

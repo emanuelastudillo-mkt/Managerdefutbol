@@ -1,2 +1,2 @@
-/* V5.70 · Punto de entrada. Códigos compactos en menú Especial. */
+/* V5.71 · Punto de entrada. Códigos compactos en menú Especial. */
 init();

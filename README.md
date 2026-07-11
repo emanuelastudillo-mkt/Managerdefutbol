@@ -1,4 +1,14 @@
-# Fútbol Manager MVP - V5.70
+# Fútbol Manager MVP - V5.71
+
+## V5.71 - Corrección de renuncia y despido
+
+- Al renunciar o ser despedido, el juego fuerza el cierre de ventanas/modales superpuestos.
+- La pantalla sin club queda limpia para poder elegir nuevo destino.
+- Se agrega botón visible **Fundar club** en la pantalla sin club cuando el Modo Fundador está activo.
+- El botón **Buscar otro club** también limpia cualquier modal anterior antes de abrir la búsqueda.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.70 - Códigos compactos en Especial
 

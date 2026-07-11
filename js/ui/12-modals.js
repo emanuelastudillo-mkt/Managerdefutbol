@@ -1313,4 +1313,10 @@ function closeModal(){
   const root = $('modalRoot');
   if(root) root.remove();
 }
+function forceCloseModal(){
+  try{ clearMatchRevealTimers(); }catch(error){}
+  const root = $('modalRoot');
+  if(root) root.remove();
+  document.querySelectorAll('.modal-backdrop').forEach(node => node.remove());
+}
 

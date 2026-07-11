@@ -1,8 +1,9 @@
 # Versión actual
 
-V5.70
+V5.71
 
 ## Cambios
-- El canje de códigos del menú Especial queda reducido a input y botón.
-- Se eliminan textos auxiliares y contador visible.
+- Renuncia y despido fuerzan el cierre de modales superpuestos.
+- La pantalla sin club muestra botón visible para Buscar otro club y Fundar club.
+- No cambia la lógica de carrera, sólo la navegación al quedar sin club.
 - El bloque queda abajo de todo, alineado a la izquierda.

@@ -4,31 +4,37 @@ function renderWelcomeScreen(){
   const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
   const divisionCount = (seed?.divisions || []).length;
   const challengeAvailable = typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
+  const careerIds = typeof careerSaveSlotIds === 'function' ? careerSaveSlotIds() : [SAVE_SLOT_CAREER];
+  const careerCards = careerIds.map(slotId => {
+    const base = typeof baseSaveSlotLabel === 'function' ? baseSaveSlotLabel(slotId) : 'Carrera';
+    return `
+        <div class="card save-slot-card" data-save-slot-card="${escapeHtml(slotId)}">
+          <p class="label">Carrera normal</p>
+          <h3 data-save-slot-title>${escapeHtml(base)} · Revisando...</h3>
+          <p class="muted" data-save-slot-detail>Buscando datos del slot guardado.</p>
+          <div class="row" style="margin-top:14px">
+            <button class="primary" data-slot-continue="${escapeHtml(slotId)}">Entrar</button>
+            <button class="ghost danger" data-slot-new="${escapeHtml(slotId)}">Nueva</button>
+          </div>
+        </div>`;
+  }).join('');
   view.innerHTML = `
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div>
           <p class="label">Slots de partida</p>
           <h2>Elegí qué jugar</h2>
-          <p class="tagline"><strong>Mi Carrera</strong> conserva la partida normal de siempre. Los retos se guardan separados y no pisan tu carrera principal.</p>
+          <p class="tagline">Las carreras normales se guardan separadas. El nombre visible se actualiza solo con el club y la temporada guardada.</p>
         </div>
         <div class="welcome-summary">
           <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
           <div><span>Ligas</span><strong>${formatPlainNumber(divisionCount)}</strong></div>
-          <div><span>Slot normal</span><strong>Mi Carrera</strong></div>
+          <div><span>Carreras</span><strong>${formatPlainNumber(careerIds.length)}</strong></div>
         </div>
       </div>
 
       <div class="grid cols-2 save-slot-grid">
-        <div class="card save-slot-card">
-          <p class="label">Slot principal</p>
-          <h3>Mi Carrera</h3>
-          <p class="muted">Tu partida normal. Renuncias, despidos, Modo Fundador, ranking, historial y temporadas largas quedan acá.</p>
-          <div class="row" style="margin-top:14px">
-            <button id="btnSlotCareerContinue" class="primary">Entrar a Mi Carrera</button>
-            <button id="btnSlotCareerNew" class="ghost danger">Nueva Mi Carrera</button>
-          </div>
-        </div>
+        ${careerCards}
 
         <div class="card save-slot-card ${challengeAvailable ? '' : 'blocker'}">
           <p class="label">Reto predeterminado</p>
@@ -42,16 +48,27 @@ function renderWelcomeScreen(){
       </div>
 
       <div class="welcome-features">
-        <span>Mi Carrera no se pisa</span>
+        <span>5 carreras normales</span>
+        <span>Nombres automáticos</span>
         <span>Retos separados</span>
-        <span>Campo destruido</span>
         <span>Volver al menú al ganar o perder</span>
       </div>
     </section>`;
-  $('btnSlotCareerContinue')?.addEventListener('click', () => { if(typeof loadCareerSlotOrNew === 'function') loadCareerSlotOrNew(); else openNewGameModal(true); });
-  $('btnSlotCareerNew')?.addEventListener('click', () => { if(typeof startNewCareerFromSlot === 'function') startNewCareerFromSlot(); else openNewGameModal(true); });
+  document.querySelectorAll('[data-slot-continue]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slotId = btn.getAttribute('data-slot-continue') || SAVE_SLOT_CAREER;
+      if(typeof loadCareerSlotOrNew === 'function') loadCareerSlotOrNew(slotId); else openNewGameModal(true);
+    });
+  });
+  document.querySelectorAll('[data-slot-new]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slotId = btn.getAttribute('data-slot-new') || SAVE_SLOT_CAREER;
+      if(typeof startNewCareerFromSlot === 'function') startNewCareerFromSlot(slotId); else openNewGameModal(true);
+    });
+  });
   $('btnSlotCampoNew')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
   $('btnSlotCampoContinue')?.addEventListener('click', () => { if(typeof continueCampoDestruidoSlot === 'function') continueCampoDestruidoSlot(); });
+  if(typeof hydrateCareerSlotCards === 'function') hydrateCareerSlotCards().catch(()=>{});
 }
 
 function renderAll(){

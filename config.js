@@ -4,7 +4,11 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.75',
+  version: 'V5.76',
+  partidas: {
+    // V5.76: cantidad de carreras normales separadas. El nombre visible se arma solo con club y temporada.
+    slotsCarrera: 5
+  },
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -268,7 +272,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.75: sistema fijo por temporada + sponsor especial con condición.
+    // V5.72+: sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
@@ -337,7 +341,7 @@ window.GAME_CONFIG = {
     costoParchearCampo: 200000,
     diasParchearCampo: 21,
     mejoraParchePorAvance: 5,
-    // Balance V5.75: el deterioro normal del campo se multiplica por este valor.
+    // Balance V5.75+: el deterioro normal del campo se multiplica por este valor.
     deterioroCampoMultiplicador: 2,
     // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
     deterioroCapacidadPorTemporadaPct: 1,

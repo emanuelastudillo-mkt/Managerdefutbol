@@ -1,16 +1,17 @@
-# Fútbol Manager MVP - V5.75
+# Fútbol Manager MVP - V5.76
 
-## V5.75 - Balance de campo, estadio y edad
+## V5.76 - Slots de carreras con nombres automáticos
 
-Cambios principales:
+Esta versión amplía el sistema de slots: ahora hay varias carreras normales separadas y sus nombres visibles se generan automáticamente con el equipo y la temporada de cada partida.
 
-- Se duplicó el deterioro normal del campo de juego.
-- El estadio del club dirigido pierde 1% de capacidad al cambiar de temporada.
-- Desde los 32 años los jugadores reciben una penalización anual acumulada de -1 a -4 en todas sus habilidades.
-- La ficha del jugador muestra el deterioro por edad en rojo a la izquierda del valor base y el boost de entrenamiento en verde a la derecha.
-- Las habilidades efectivas siguen limitadas entre 1 y 99.
+### Cambios principales
 
-Compatibilidad:
+- 5 slots de carrera normal.
+- Nombre automático por slot: Carrera N · Equipo · Temporada.
+- Slots vacíos visibles como disponibles.
+- Compatibilidad con partidas anteriores: la partida principal pasa a Carrera 1.
+- Los retos siguen separados de las carreras normales.
 
-- Las partidas existentes normalizan el nuevo estado `playerAgeSkillPenalties` al cargar.
-- El deterioro por edad se aplica en los siguientes cambios de temporada.
+### Uso
+
+Abrir **Slots / Nueva partida** y elegir una carrera normal o el reto disponible.

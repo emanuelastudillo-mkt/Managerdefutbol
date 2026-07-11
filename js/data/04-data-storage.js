@@ -262,8 +262,29 @@ let currentSaveSlotId = (() => {
 
 function normalizeSaveSlotId(slotId=''){
   const raw = String(slotId || '').trim();
-  if(raw === SAVE_SLOT_CAMPO_DESTRUIDO || raw === 'campo_destruido' || raw === 'reto_campo_destruido') return SAVE_SLOT_CAMPO_DESTRUIDO;
+  const lower = raw.toLowerCase();
+  if(lower === SAVE_SLOT_CAMPO_DESTRUIDO || lower === 'campo_destruido' || lower === 'reto_campo_destruido') return SAVE_SLOT_CAMPO_DESTRUIDO;
+  if(lower === SAVE_SLOT_LEGACY_CAREER || lower === 'main' || lower === 'mi_carrera' || lower === 'mi-carrera') return SAVE_SLOT_CAREER;
+  const match = lower.match(/^career[:_-]?(\d+)$/) || lower.match(/^carrera[:_-]?(\d+)$/);
+  if(match){
+    const slotNumber = Math.max(1, Math.min(SAVE_CAREER_SLOT_COUNT, Math.round(Number(match[1]) || 1)));
+    return `${SAVE_SLOT_CAREER_PREFIX_ID}${slotNumber}`;
+  }
   return SAVE_SLOT_CAREER;
+}
+function isCareerSaveSlot(slotId=''){
+  return normalizeSaveSlotId(slotId).startsWith(SAVE_SLOT_CAREER_PREFIX_ID);
+}
+function careerSaveSlotNumber(slotId=''){
+  const clean = normalizeSaveSlotId(slotId);
+  if(!clean.startsWith(SAVE_SLOT_CAREER_PREFIX_ID)) return 0;
+  return Math.max(1, Math.min(SAVE_CAREER_SLOT_COUNT, Math.round(Number(clean.split(':')[1]) || 1)));
+}
+function careerSaveSlotIds(){
+  return Array.from({ length:SAVE_CAREER_SLOT_COUNT }, (_, index) => `${SAVE_SLOT_CAREER_PREFIX_ID}${index + 1}`);
+}
+function legacyCareerSlotKey(){
+  return `${SAVE_SLOT_PREFIX}${SAVE_SLOT_LEGACY_CAREER}`;
 }
 function saveSlotKey(slotId=''){
   return `${SAVE_SLOT_PREFIX}${normalizeSaveSlotId(slotId)}`;
@@ -277,10 +298,24 @@ function setCurrentSaveSlot(slotId='career'){
   if(game) game.saveSlotId = currentSaveSlotId;
   return currentSaveSlotId;
 }
-function saveSlotLabel(slotId=''){
+function baseSaveSlotLabel(slotId=''){
   const clean = normalizeSaveSlotId(slotId);
   if(clean === SAVE_SLOT_CAMPO_DESTRUIDO) return 'Reto Campo destruido';
-  return 'Mi Carrera';
+  const number = careerSaveSlotNumber(clean);
+  return number ? `Carrera ${number}` : 'Carrera';
+}
+function saveSlotRecordAutoLabel(slotId='', record=null){
+  const clean = normalizeSaveSlotId(slotId);
+  if(clean === SAVE_SLOT_CAMPO_DESTRUIDO) return 'Reto Campo destruido';
+  const base = baseSaveSlotLabel(clean);
+  if(!record) return `${base} · Vacía`;
+  const clubId = Number(record.selectedClubId || 0);
+  const club = clubId ? clubName(clubId) : 'Sin club';
+  const year = Math.round(Number(record.seasonYear || 0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(record.seasonNumber || 1) : (record.seasonNumber || 1));
+  return `${base} · ${club} · Temporada ${year}`;
+}
+function saveSlotLabel(slotId='', record=null){
+  return saveSlotRecordAutoLabel(slotId, record);
 }
 function gameSlotId(){
   return normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
@@ -307,13 +342,53 @@ async function localSlotExists(slotId='career'){
   const slot = normalizeSaveSlotId(slotId);
   const record = await readSaveRecordByKey(saveSlotKey(slot)).catch(()=>null);
   if(record) return true;
-  if(slot === SAVE_SLOT_CAREER) return Boolean(await readSaveRecordByKey(SAVE_KEY).catch(()=>null));
+  if(slot === SAVE_SLOT_CAREER){
+    const legacySlot = await readSaveRecordByKey(legacyCareerSlotKey()).catch(()=>null);
+    if(legacySlot) return true;
+    return Boolean(await readSaveRecordByKey(SAVE_KEY).catch(()=>null));
+  }
   return false;
 }
 async function deleteLocalSaveSlot(slotId='career'){
   const slot = normalizeSaveSlotId(slotId);
   await deleteSaveRecordByKey(saveSlotKey(slot));
-  if(slot === SAVE_SLOT_CAREER) await deleteSaveRecordByKey(SAVE_KEY);
+  if(slot === SAVE_SLOT_CAREER){
+    await deleteSaveRecordByKey(legacyCareerSlotKey()).catch(()=>{});
+    await deleteSaveRecordByKey(SAVE_KEY).catch(()=>{});
+  }
+}
+async function readSaveSlotSummary(slotId='career'){
+  const slot = normalizeSaveSlotId(slotId);
+  const record = await readLocalSaveRecord(slot).catch(()=>null);
+  return {
+    slotId:slot,
+    exists:Boolean(record),
+    label:saveSlotLabel(slot, record),
+    clubId:Number(record?.selectedClubId || 0),
+    clubName:record?.selectedClubId ? clubName(record.selectedClubId) : '',
+    seasonNumber:Number(record?.seasonNumber || 0),
+    seasonYear:Number(record?.seasonYear || 0),
+    currentDate:String(record?.currentDate || '')
+  };
+}
+async function hydrateCareerSlotCards(){
+  const ids = typeof careerSaveSlotIds === 'function' ? careerSaveSlotIds() : [SAVE_SLOT_CAREER];
+  const summaries = await Promise.all(ids.map(id => readSaveSlotSummary(id).catch(()=>({ slotId:id, exists:false, label:saveSlotLabel(id, null) }))));
+  summaries.forEach(summary => {
+    const card = document.querySelector(`[data-save-slot-card="${summary.slotId}"]`);
+    if(!card) return;
+    const title = card.querySelector('[data-save-slot-title]');
+    const detail = card.querySelector('[data-save-slot-detail]');
+    const continueBtn = card.querySelector('[data-slot-continue]');
+    if(title) title.textContent = summary.label;
+    if(detail){
+      detail.textContent = summary.exists
+        ? `Guardada${summary.currentDate ? ` · ${summary.currentDate}` : ''}`
+        : 'Slot libre para iniciar una carrera normal.';
+    }
+    if(continueBtn) continueBtn.textContent = summary.exists ? 'Entrar' : 'Crear';
+    card.classList.toggle('empty-slot', !summary.exists);
+  });
 }
 async function loadBaseSeedForSlotStart(){
   seed = await loadInitialSeed({ skipPlayersDatabase:false });
@@ -330,28 +405,30 @@ async function goToSaveSlotsMenu(options={}){
   renderAll();
   if(opts.notice) showNotice(opts.notice);
 }
-async function loadCareerSlotOrNew(){
-  const loaded = await loadLocal(true, SAVE_SLOT_CAREER);
-  if(loaded){ showNotice('Mi Carrera cargada.'); return true; }
-  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+async function loadCareerSlotOrNew(slotId=SAVE_SLOT_CAREER){
+  const slot = normalizeSaveSlotId(slotId);
+  const loaded = await loadLocal(true, slot);
+  if(loaded){ showNotice(`${baseSaveSlotLabel(slot)} cargada.`); return true; }
+  setCurrentSaveSlot(slot);
   await loadBaseSeedForSlotStart().catch(()=>{});
   game = null;
   renderAll();
-  openNewGameModal(true, { saveSlotId:SAVE_SLOT_CAREER });
+  openNewGameModal(true, { saveSlotId:slot });
   return false;
 }
-async function startNewCareerFromSlot(){
-  const exists = await localSlotExists(SAVE_SLOT_CAREER).catch(()=>false);
+async function startNewCareerFromSlot(slotId=SAVE_SLOT_CAREER){
+  const slot = normalizeSaveSlotId(slotId);
+  const exists = await localSlotExists(slot).catch(()=>false);
   if(exists){
-    const ok = window.confirm('Esto inicia una nueva Mi Carrera y pisa el slot normal guardado en este navegador. ¿Continuar?');
+    const ok = window.confirm(`Esto inicia una nueva ${baseSaveSlotLabel(slot)} y pisa ese slot guardado en este navegador. ¿Continuar?`);
     if(!ok) return false;
-    await deleteLocalSaveSlot(SAVE_SLOT_CAREER).catch(()=>{});
+    await deleteLocalSaveSlot(slot).catch(()=>{});
   }
-  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+  setCurrentSaveSlot(slot);
   await loadBaseSeedForSlotStart().catch(()=>{});
   game = null;
   renderAll();
-  openNewGameModal(true, { saveSlotId:SAVE_SLOT_CAREER });
+  openNewGameModal(true, { saveSlotId:slot });
   return true;
 }
 async function continueCampoDestruidoSlot(){
@@ -1875,7 +1952,11 @@ async function readLocalSaveRecord(slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
   const record = await readSaveRecordByKey(saveSlotKey(slot));
   if(record) return record;
-  if(slot === SAVE_SLOT_CAREER) return await readSaveRecordByKey(SAVE_KEY);
+  if(slot === SAVE_SLOT_CAREER){
+    const legacySlot = await readSaveRecordByKey(legacyCareerSlotKey()).catch(()=>null);
+    if(legacySlot) return legacySlot;
+    return await readSaveRecordByKey(SAVE_KEY);
+  }
   return null;
 }
 async function openDb(){
@@ -1896,11 +1977,14 @@ async function saveLocal(silent=false){
     const tx = db.transaction(DB_STORE, 'readwrite');
     const store = tx.objectStore(DB_STORE);
     store.put(payload, saveSlotKey(slot));
-    if(slot === SAVE_SLOT_CAREER) store.put(payload, SAVE_KEY);
+    if(slot === SAVE_SLOT_CAREER){
+      store.put(payload, SAVE_KEY);
+      store.put(payload, legacyCareerSlotKey());
+    }
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
-  if(!silent) showNotice(`${saveSlotLabel(slot)} guardada en este navegador.`);
+  if(!silent) showNotice(`${saveSlotLabel(slot, payload)} guardada en este navegador.`);
 }
 async function loadLocal(silent=false, slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
@@ -1933,7 +2017,7 @@ async function loadLocal(silent=false, slotId=null){
     if(!silent){
       const notice = repairedStadiumFields || stadiumRepair.repaired
         ? 'Partida cargada. Se corrigieron campos bots inválidos.'
-        : (needsAutosave ? `${saveSlotLabel(slot)} cargada. Se corrigió el arrastre de lesiones.` : `${saveSlotLabel(slot)} cargada.`);
+        : (needsAutosave ? `${saveSlotLabel(slot, saved)} cargada. Se corrigió el arrastre de lesiones.` : `${saveSlotLabel(slot, saved)} cargada.`);
       showNotice(notice);
     }
     return true;

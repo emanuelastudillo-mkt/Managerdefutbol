@@ -334,31 +334,58 @@ function activeSponsorsMarkup(){
   }).join('')}</tbody></table></div>`;
 }
 
+function fanDateKey(value){
+  const d = new Date(value || game?.currentDate || '');
+  if(Number.isNaN(d.getTime())) return String(value || game?.currentDate || '');
+  return d.toISOString().slice(0,10);
+}
+function fanRecentStats(clubId=game?.selectedClubId){
+  ensureFanState();
+  const id = Number(clubId || 0);
+  const todayKey = fanDateKey(game?.currentDate || '');
+  const today = new Date(game?.currentDate || '');
+  const minDate = new Date(today);
+  if(!Number.isNaN(minDate.getTime())) minDate.setDate(minDate.getDate() - 29);
+  let todayDelta = 0;
+  let last30 = 0;
+  const addIfRelevant = (entry) => {
+    if(Number(entry?.clubId || 0) !== id) return;
+    const delta = Math.round(Number(entry?.delta || 0));
+    if(!delta) return;
+    const key = fanDateKey(entry?.date || '');
+    if(key === todayKey) todayDelta += delta;
+    const d = new Date(entry?.date || '');
+    if(Number.isNaN(today.getTime()) || Number.isNaN(d.getTime()) || d >= minDate) last30 += delta;
+  };
+  (game?.fans?.history || []).forEach(addIfRelevant);
+  (game?.fans?.memberCampaignHistory || []).forEach(addIfRelevant);
+  return { todayDelta, last30 };
+}
+
 
 function memberCampaignsMarkup(){
   ensureFanState();
   const active = typeof activeMemberCampaignsForClub === 'function' ? activeMemberCampaignsForClub(game.selectedClubId) : [];
-  const activeRows = active.length ? `<div class="member-campaign-active-list">${active.map(campaign => {
-    const total = Math.max(1, Number(campaign.durationDays || campaign.daysLeft || 1));
-    const left = Math.max(0, Number(campaign.daysLeft || 0));
-    const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
-    return `<div class="member-campaign-active">
-      <div class="row"><div><strong>${escapeHtml(campaign.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(campaign.investment || 0)} · Duración ${formatDays(campaign.durationDays || total)}</p></div><span class="pill">${formatDays(left)} restantes</span></div>
-      <div class="project-progress"><span style="width:${progress}%"></span></div>
-    </div>`;
-  }).join('')}</div>` : '<p class="muted small">No hay campañas activas.</p>';
   const options = (STADIUM_MEMBER_CAMPAIGNS || []).map(item => {
+    const activeCampaign = active.find(campaign => String(campaign.templateId || '') === String(item.id));
     const canPay = Number(game?.budget || 0) >= Number(item.cost || 0);
+    if(activeCampaign){
+      const total = Math.max(1, Number(activeCampaign.durationDays || activeCampaign.daysLeft || item.durationDays || 1));
+      const left = Math.max(0, Number(activeCampaign.daysLeft || 0));
+      const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
+      return `<div class="member-campaign-option member-campaign-running">
+        <div><strong>${escapeHtml(item.name || activeCampaign.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(item.cost || activeCampaign.investment || 0)} · Duración ${formatDays(item.durationDays || activeCampaign.durationDays || 0)}</p></div>
+        <div class="member-campaign-progress-inline"><span class="pill ok">${formatDays(left)} restantes</span><div class="project-progress"><span style="width:${progress}%"></span></div></div>
+      </div>`;
+    }
     return `<div class="member-campaign-option ${canPay ? '' : 'dim-row'}">
       <div><strong>${escapeHtml(item.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(item.cost || 0)} · Duración ${formatDays(item.durationDays || 0)}</p></div>
       <button class="ghost small-btn" data-start-member-campaign="${escapeHtml(item.id)}" ${canPay ? '' : 'disabled'}>Iniciar</button>
     </div>`;
   }).join('');
   return `<div class="member-campaigns-box">
-    <div class="row"><div><h4>Hacer campañas para sumar socios</h4><p class="muted small">Sólo se muestra inversión y duración. El crecimiento diario y el total de socios captados quedan ocultos.</p></div></div>
+    <div class="row"><div><h4>Hacer campañas para sumar socios</h4><p class="muted small">Se muestra inversión, duración y progreso. La captación diaria exacta de cada campaña queda oculta.</p></div></div>
     <div class="stack">${options || '<p class="muted small">No hay campañas configuradas.</p>'}</div>
-    <h4 style="margin-top:12px">Campañas activas</h4>
-    ${activeRows}
   </div>`;
 }
 
@@ -449,6 +476,9 @@ function renderStadium(){
   const ticketPrice = ticketPriceForClub(game.selectedClubId);
   const lastFanDelta = Math.round(Number(game?.fans?.clubs?.[game.selectedClubId]?.lastDelta || 0));
   const lastFanClass = lastFanDelta >= 0 ? 'ok' : 'bad';
+  const fanStats = fanRecentStats(game.selectedClubId);
+  const todayFanClass = fanStats.todayDelta >= 0 ? 'ok' : 'bad';
+  const monthFanClass = fanStats.last30 >= 0 ? 'ok' : 'bad';
   const replantActive = project.replantingTurnsLeft > 0;
   const patchActive = project.patchingTurnsLeft > 0;
   const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
@@ -490,6 +520,9 @@ function renderStadium(){
           <div><p class="label">Hinchas Totales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
           <div><p class="label">Vitalicios</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
           <div><p class="label">Nuevos socios</p><strong class="${lastFanClass}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
+          <div><p class="label">Nuevos socios diarios</p><strong class="${todayFanClass}">${fanStats.todayDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(fanStats.todayDelta)}</strong></div>
+          <div><p class="label">Socios últimos 30 días</p><strong class="${monthFanClass}">${fanStats.last30 >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(fanStats.last30)}</strong></div>
+          <div><p class="label">Socios campaña activos</p><strong>${new Intl.NumberFormat('es-AR').format((game?.fans?.memberCampaigns || []).filter(campaign => Number(campaign.clubId || 0) === Number(game.selectedClubId) && Number(campaign.daysLeft || 0) > 0).length)}</strong></div>
         </div>
         <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
         <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">

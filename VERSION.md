@@ -1,8 +1,8 @@
 # Versión actual
 
-V5.68
+V5.69
 
 ## Cambios
-- Se agrega en Estadio un bloque para iniciar campañas de socios.
-- Las campañas muestran inversión y duración; socios diarios y totales quedan ocultos.
-- Las campañas suman socios día a día y registran el costo en Finanzas.
+- Hinchada muestra nuevos socios diarios, socios de los últimos 30 días y campañas activas.
+- Las campañas de socios activas reemplazan el botón Iniciar por barra de progreso y días restantes.
+- Las tres campañas reciben nombres más realistas y no pueden duplicarse mientras están activas.

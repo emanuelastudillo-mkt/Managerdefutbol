@@ -1,4 +1,14 @@
-# Fútbol Manager MVP - V5.68
+# Fútbol Manager MVP - V5.69
+
+## V5.69 - Hinchada ampliada y campañas de socios en línea
+
+- En **Hinchada y entradas** se agregan nuevos datos visibles: nuevos socios diarios, socios de los últimos 30 días y campañas activas.
+- Las campañas de socios ahora muestran progreso y días restantes en el mismo lugar donde estaba el botón **Iniciar**.
+- Mientras una campaña está activa, su botón desaparece y no se puede iniciar duplicada hasta que termine.
+- Las campañas reciben nombres más realistas: Campaña barrial de socios, Campaña masiva de afiliación y Operativo relámpago de socios.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.68 - Campo y mantenimiento unidos
 

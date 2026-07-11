@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.68',
+  version: 'V5.69',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -262,7 +262,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.68: sistema fijo por temporada.
+    // V5.69: sistema fijo por temporada.
     factorValorBase: 1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
@@ -366,9 +366,9 @@ window.GAME_CONFIG = {
 
     // Campañas para sumar socios. La UI muestra inversión y duración; los socios diarios y totales quedan ocultos.
     campaniasSocios: [
-      { id:'marketing_50m_60d', nombre:'Campaña de Marketing', inversion: 50000000, diasDuracion: 60, sociosDiaMin: 10, sociosDiaMax: 15 },
-      { id:'marketing_500m_90d', nombre:'Campaña de Marketing', inversion: 500000000, diasDuracion: 90, sociosDiaMin: 35, sociosDiaMax: 50 },
-      { id:'marketing_100m_10d', nombre:'Campaña de Marketing', inversion: 100000000, diasDuracion: 10, sociosDiaMin: 30, sociosDiaMax: 50 }
+      { id:'marketing_50m_60d', nombre:'Campaña barrial de socios', inversion: 50000000, diasDuracion: 60, sociosDiaMin: 10, sociosDiaMax: 15 },
+      { id:'marketing_500m_90d', nombre:'Campaña masiva de afiliación', inversion: 500000000, diasDuracion: 90, sociosDiaMin: 35, sociosDiaMax: 50 },
+      { id:'marketing_100m_10d', nombre:'Operativo relámpago de socios', inversion: 100000000, diasDuracion: 10, sociosDiaMin: 30, sociosDiaMax: 50 }
     ]
   },
   empleados: {

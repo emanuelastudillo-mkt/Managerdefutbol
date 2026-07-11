@@ -1,4 +1,20 @@
-# Características de la versión V5.68
+# Características de la versión V5.69
+
+## V5.69 - Hinchada ampliada y campañas de socios en línea
+
+### Cambios principales
+- El bloque **Hinchada y entradas** suma métricas de nuevos socios diarios, socios acumulados en los últimos 30 días y cantidad de campañas activas.
+- Las tres campañas de marketing muestran su barra de progreso y días restantes dentro de su propia fila.
+- Al iniciar una campaña, desaparece el botón **Iniciar** de esa campaña hasta que finalice.
+- Se evita iniciar la misma campaña dos veces en simultáneo.
+- Las campañas tienen nombres más realistas.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Las partidas existentes mantienen sus campañas activas y las muestran en el nuevo formato.
+
+---
 
 ## V5.68 - Campo y mantenimiento unidos
 

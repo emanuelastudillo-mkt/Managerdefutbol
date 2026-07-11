@@ -4617,7 +4617,7 @@ th{
 .special-code-row{align-items:center;flex-wrap:wrap}
 .special-code-row input{min-width:220px;flex:1 1 220px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
 
-/* V5.67 · Campañas de socios */
+/* V5.69 · Campañas de socios y métricas de hinchada */
 .member-campaigns-box{
   margin-top:16px;
   padding-top:14px;
@@ -4634,3 +4634,15 @@ th{
   display:grid;
   gap:8px;
 }
+.member-campaign-progress-inline{
+  min-width:180px;
+  flex:1 1 220px;
+  display:grid;
+  gap:7px;
+  justify-items:end;
+}
+.member-campaign-running{
+  border-color:rgba(34,197,94,.22);
+  background:rgba(34,197,94,.055);
+}
+.member-campaign-running .project-progress{width:100%;min-width:160px}

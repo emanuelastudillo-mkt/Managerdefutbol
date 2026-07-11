@@ -1072,6 +1072,8 @@ function startMemberCampaign(campaignId){
   ensureFanState();
   const template = (STADIUM_MEMBER_CAMPAIGNS || []).find(item => String(item.id) === String(campaignId));
   if(!template){ showNotice('Campaña inválida.'); return; }
+  const alreadyActive = activeMemberCampaignsForClub(game.selectedClubId).some(campaign => String(campaign.templateId || '') === String(template.id));
+  if(alreadyActive){ showNotice('Esa campaña ya está activa. Esperá a que termine para volver a iniciarla.'); return; }
   if((game.budget || 0) < Number(template.cost || 0)){ showNotice('Presupuesto insuficiente para iniciar esta campaña.'); return; }
   const campaign = {
     id:`member-campaign-${game.seasonNumber || 1}-${currentTurnIndex()}-${template.id}-${Math.floor(Math.random() * 100000)}`,

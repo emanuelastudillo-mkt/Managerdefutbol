@@ -255,12 +255,6 @@ function occupiedSponsorPlaces(){
   ensureSponsorState();
   return new Set((game.sponsors.active || []).filter(item => Number(item.turnsRemaining || 0) > 0).map(item => item.placeId));
 }
-function sponsorPlaceById(id){
-  return (sponsorsDatabase?.lugares_sponsor || []).find(place => place.id_lugar === id) || null;
-}
-function sponsorBrandById(id){
-  return (sponsorsDatabase?.sponsors || []).find(sponsor => sponsor.id_sponsor === id) || null;
-}
 function sponsorArrivalGroupSize(remaining){
   if(remaining <= 1) return 1;
   if(remaining >= 3 && Math.random() < SPONSOR_TRIPLE_ARRIVAL_CHANCE) return 3;
@@ -376,24 +370,6 @@ function releaseDueSponsorOffers(options={}){
     }
   }
   return released;
-}
-function generateSponsorOffers(forcedCount=null, options={}){
-  // Compatibilidad: libera ofertas del plan fijo de temporada.
-  if(Number.isFinite(Number(forcedCount)) && Number(forcedCount) > 0){
-    ensureSponsorState();
-    const tempPlan = { id:`SPONMAN-${Date.now()}`, count:Number(forcedCount), arrivalTurn:currentSeasonTurnNumber(), released:true };
-    const released = [];
-    for(let i=0;i<Number(forcedCount);i+=1){
-      const offer = createSponsorOfferFromPlan(tempPlan);
-      if(offer) released.push(offer);
-    }
-    game.sponsors.offers = [...(game.sponsors.offers || []), ...released];
-    if(released.length && options.silent !== true){
-      pushGameMessage({ type:'finanzas', title:options.title || 'Nuevas ofertas de sponsors', body:options.body || `Llegaron ${released.length} oferta(s) de patrocinio.`, priority:options.priority || 'normal' });
-    }
-    return released;
-  }
-  return releaseDueSponsorOffers(options);
 }
 function generateOpeningSponsorOffers(force=false){
   ensureSponsorSeasonPlan();

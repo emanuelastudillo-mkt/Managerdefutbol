@@ -183,25 +183,15 @@ function probAceptarOferta(mediaJugador, prestigioClubOfertante){
   }
   return 1;
 }
-function probRechazarOferta(mediaJugador, prestigioClubOfertante){
-  return 100 - probAceptarOferta(mediaJugador, prestigioClubOfertante);
-}
 function marketPlayerAcceptanceChance(player=null){
   const media = player ? visibleOverall(player) : marketOfferClubPrestige();
   const chance = probAceptarOferta(media, marketOfferClubPrestige());
   return clamp(Math.round(chance * 10) / 10, 0.5, 95);
 }
-function marketPlayerRejectionChance(player=null){
-  return clamp(Math.round(probRechazarOferta(player ? visibleOverall(player) : marketOfferClubPrestige(), marketOfferClubPrestige()) * 10) / 10, 5, 99.5);
-}
 function freeAgentAcceptanceChance(player=null){
   const base = marketPlayerAcceptanceChance(player);
   const bonus = typeof specialActiveBonus === 'function' ? Number(specialActiveBonus('especialista_libres') || 0) : 0;
   return clamp(Math.round((base + bonus) * 10) / 10, 0.5, 99.5);
-}
-function marketAcceptanceLabel(player=null){
-  const chance = marketPlayerAcceptanceChance(player);
-  return Number.isInteger(chance) ? String(chance) : chance.toFixed(1);
 }
 function marketAcceptanceHiddenLabel(){
   return 'Interés oculto';
@@ -316,9 +306,6 @@ function bindMarketFilters(){
     marketVisibleLimit = 20;
     renderMarket();
   });
-}
-function marketHasActiveFilters(){
-  return Boolean(Number(marketFilters.mediaMin || 0) || Number(marketFilters.mediaMax || 0) || Number(marketFilters.ageMin || 0) || Number(marketFilters.ageMax || 0) || Number(marketFilters.priceMax || 0) || String(marketFilters.position || 'all') !== 'all');
 }
 function marketVisiblePlayers(players){
   const limit = Math.max(20, Number(marketVisibleLimit || 20));
@@ -696,9 +683,6 @@ function tacticPlayerCard(p, extra='', zone='reserve', index=-1){
     <span class="tactic-card-meters" aria-label="Estado físico y moral">${tacticMetricCircle(conditionBar(p.id))}${tacticMetricCircle(moraleBar(p.id))}</span>
   </button>`;
 }
-function playerDragCard(p, extra=''){
-  return tacticPlayerCard(p, extra);
-}
 function tacticSelectionHint(){
   if(!tacticClickSelection?.playerId) return 'Click en un jugador para seleccionarlo. Después hacé click en otro jugador o en un puesto vacío para intercambiar.';
   const p = playerById(tacticClickSelection.playerId);
@@ -925,28 +909,6 @@ function renderTactics(){
   bindSavedTacticButtons();
   bindTacticClickEvents();
 }
-function tacticPlayerRow(p){
-  const current = game.tactic.starters.includes(p.id) ? 'starter' : game.tactic.bench.includes(p.id) ? 'bench' : 'reserve';
-  const unavailable = isUnavailable(p.id);
-  const benchAllowed = canBeBench(p.id);
-  const roleDisabled = isSuspended(p.id) || (isInjured(p.id) && !benchAllowed);
-  const mentalityText = current === 'starter' ? playerMentality(p.id) : '—';
-  return `<tr class="${unavailable ? 'dim-row' : ''}">
-    <td><button class="linklike" data-player-id="${p.id}"><strong>${playerNameWithScoutingEye(p)}</strong></button></td>
-    <td>#${jerseyNumber(p.id)}</td>
-    <td>${Number(p.age || 0) || '—'}</td>
-    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
-    <td><strong>${visibleOverall(p)}</strong></td>
-    <td>${currentCondition(p.id)}/99</td>
-    <td>${availabilityStatusMarkup(p.id)}</td>
-    <td><select class="role-select" data-role-player="${p.id}" ${roleDisabled ? 'disabled' : ''}>
-      <option value="reserve" ${current==='reserve'?'selected':''}>Reserva</option>
-      <option value="starter" ${current==='starter'?'selected':''}>Titular</option>
-      <option value="bench" ${current==='bench'?'selected':''}>Suplente</option>
-    </select></td>
-    <td>${current === 'starter' ? mentalityMarker(mentalityText) + ' ' + escapeHtml(mentalityLabel(mentalityText)) : '<span class="muted">Sólo titulares</span>'}</td>
-  </tr>`;
-}
 function sectorStyleControls(){
   const current = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(game.tactic?.sectorStyles) : (game.tactic?.sectorStyles || { defense:'posicional', midfield:'posicional', attack:'posicional' });
   const options = typeof TACTIC_SECTOR_STYLE_OPTIONS !== 'undefined' ? TACTIC_SECTOR_STYLE_OPTIONS : [
@@ -970,18 +932,6 @@ function sectorStyleControls(){
     </div>`;
   };
   return row('defense','Defensa') + row('midfield','Medios') + row('attack','Delanteros');
-}
-function matchInstructionControls(){
-  const current = window.Simulator20?.normalizeMatchInstructions
-    ? window.Simulator20.normalizeMatchInstructions(game.tactic?.matchInstructions)
-    : { winning:'normal', drawing:'normal', losing:'normal' };
-  const options = window.MATCH_INSTRUCTION_OPTIONS || [
-    { value:'lower', label:'Bajar el ritmo' },
-    { value:'normal', label:'Normal' },
-    { value:'push', label:'Subir ritmo' }
-  ];
-  const row = (key, label) => `<div class="instruction-control"><label>${label}</label><select data-match-instruction="${key}">${options.map(opt=>`<option value="${opt.value}" ${current[key]===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select></div>`;
-  return row('winning','Ganando') + row('drawing','Empatando') + row('losing','Perdiendo');
 }
 function autoSubRow(index){
   const rule = game.tactic.autoSubs[index] || { outId:0, inId:0, trigger:'tired' };

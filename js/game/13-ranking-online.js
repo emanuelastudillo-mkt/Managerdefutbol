@@ -10,9 +10,6 @@ function rankingStoredManagerName(){
   try{ return (game?.rankingManagerName || localStorage.getItem('fmRankingManagerName') || '').trim(); }
   catch(_){ return (game?.rankingManagerName || '').trim(); }
 }
-function setRankingStoredEndpoint(value){
-  try{ localStorage.setItem('fmRankingEndpoint', String(value || '').trim()); }catch(_){ /* sin almacenamiento */ }
-}
 function setRankingStoredManagerName(value){
   const clean = String(value || '').trim().slice(0, 40);
   try{ localStorage.setItem('fmRankingManagerName', clean); }catch(_){ /* sin almacenamiento */ }
@@ -648,9 +645,6 @@ function rankingSeasonPreviewMarkup(payload){
     <div><span>Puntaje manager</span><strong>${payload.managerScore}</strong></div>
   </div>`;
 }
-function rankingEndpointPanelMarkup(endpoint){
-  return '';
-}
 function rankingUploadEntries(){
   const uploads = game?.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
   return Object.entries(uploads).map(([key, value]) => ({ key, ...(value || {}) })).sort((a,b)=> String(b.submittedAt || b.attemptedAt || '').localeCompare(String(a.submittedAt || a.attemptedAt || '')));
@@ -918,17 +912,4 @@ async function loadRankingOnline(silent=false){
   }finally{
     rankingLoading = false;
   }
-}
-
-
-function retryPendingAutomaticRankingUploads(){
-  if(!game?.rankingUploads || typeof submitRankingAutomatically !== 'function') return 0;
-  let count = 0;
-  Object.values(game.rankingUploads).forEach(entry => {
-    if(entry?.status !== 'pending' && entry?.status !== 'error') return;
-    if(!['season_end','dismissal'].includes(String(entry.eventType || ''))) return;
-    submitRankingAutomatically(entry.eventType, { notifyErrors:false, forceRetry:true });
-    count += 1;
-  });
-  return count;
 }

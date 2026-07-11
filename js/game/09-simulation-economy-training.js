@@ -84,12 +84,6 @@ function cohesionValue(clubId){
   ensureTeamCohesion();
   return clamp(Math.round(game?.teamCohesion?.[clubId] ?? TEAM_COHESION_START), 0, 100);
 }
-function cohesionMultiplier(clubId){
-  const c = cohesionValue(clubId);
-  if(c <= 30) return clamp(0.50 + (c / 30) * 0.20, 0.50, 0.70);
-  if(c <= 50) return clamp(0.70 + ((c - 30) / 20) * 0.30, 0.70, 1.00);
-  return clamp(1.00 + ((c - 50) / 50) * 0.20, 1.00, 1.20);
-}
 function tacticSignature(tactic){
   if(!tactic) return '';
   const normalizeIds = arr => (arr || []).map(Number).filter(Boolean).join(',');
@@ -124,29 +118,6 @@ function applyMatchCohesionResult(match, substitutions=[], cards=[]){
     const loss = (subCount + redCount) * TEAM_COHESION_PLAYER_CHANGE_LOSS;
     game.teamCohesion[clubId] = clamp((game.teamCohesion[clubId] ?? TEAM_COHESION_START) + TEAM_COHESION_MATCH_GAIN - loss, 0, 100);
   });
-}
-function teamPower(clubId, tactic){
-  const formation = tactic?.formation || '4-4-2';
-  const lineup = selectLineup(clubId, tactic);
-  const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
-  const assigned = lineup.map((player, i) => ({ player, slot:slots[i] || player.position, factor:zoneFactor(player, slots[i] || player.position) }));
-  const bySlotGroup = (group) => assigned.filter(a => slotGroup(a.slot) === group);
-  const ms = (a, skill) => matchSkill(a.player, skill) * a.factor;
-  const defs = bySlotGroup('def');
-  const mids = bySlotGroup('mid');
-  const atts = bySlotGroup('att');
-  const gk = assigned.find(a => a.slot === 'POR');
-  let defense = avg(defs.map(a=> avg([ms(a,'marca'),ms(a,'entradas'),ms(a,'posicionamiento'),ms(a,'fuerza')])));
-  let midfield = avg(mids.map(a=> avg([ms(a,'paseCorto'),ms(a,'vision'),ms(a,'tecnica'),ms(a,'trabajoEquipo')])));
-  let attack = avg(atts.map(a=> avg([ms(a,'remate'),ms(a,'regate'),ms(a,'velocidad'),ms(a,'serenidad')])));
-  let discipline = avg(lineup.map(p=>p.skills.disciplina));
-  let stamina = avg(lineup.map(p=>matchSkill(p,'resistencia')));
-  let aggression = avg(lineup.map(p=>hiddenStats(p).aggression));
-  let keeper = gk ? avg([ms(gk,'porteria'),ms(gk,'posicionamiento'),ms(gk,'serenidad')]) : 40;
-  const rep = seed.clubs.find(c=>c.id===clubId).reputation;
-  const adjust = applyMentalityBonus(tactic || DEFAULT_TACTIC, assigned);
-  const cohesion = cohesionMultiplier(clubId);
-  return { clubId, lineup, assigned, defense:(defense+adjust.defense)*cohesion, midfield:(midfield+adjust.midfield)*cohesion, attack:(attack+adjust.attack)*cohesion, discipline, stamina:stamina*cohesion, aggression, keeper:keeper*cohesion, reputation:rep };
 }
 function applyMentalityBonus(tactic, assigned){
   const bonus = { attack:0, midfield:0, defense:0 };
@@ -321,11 +292,6 @@ function rememberCalendarDate(){
   }
   game.lastCalendarDate = game.currentDate;
 }
-function nextRegularRound(){
-  if(!game || !isRegularSeason()) return null;
-  if(game.matchdayIndex >= game.fixtures.length) return null;
-  return game.fixtures[game.matchdayIndex] || null;
-}
 function isCurrentDateBeforeIso(targetIso){
   const today = currentCalendarDate();
   return validIsoDate(targetIso) && daysBetweenIsoDates(today, targetIso) > 0;
@@ -376,10 +342,6 @@ function nextPendingMatchInfo(){
     if(found) return found;
   }
   return null;
-}
-function hasOwnMatchDueOnOrBefore(date){
-  if(!validIsoDate(date) || !game?.fixtures) return false;
-  return game.fixtures.some(round => (round.matches || []).some(match => !match.played && ownClubInMatch(match) && daysBetweenIsoDates(scheduledDateForMatch(match, round), date) >= 0));
 }
 function collectDueMatchesUntil(targetDate, options={}){
   if(!validIsoDate(targetDate) || !game?.fixtures) return [];
@@ -1880,21 +1842,6 @@ function budgetConcept(entry){
   if(entry.matchId) return 'Resultado de partido';
   return 'Movimiento de presupuesto';
 }
-function financeCategory(entry){
-  const type = String(entry?.type || '').toLowerCase();
-  const concept = String(entry?.concept || '').toLowerCase();
-  if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
-  if(type.includes('season_prize') || concept.includes('premio por campeonato') || concept.includes('premio por ascenso')) return 'Premios temporada';
-  if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
-  if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
-  if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
-  if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
-  if(type.includes('stadium') || concept.includes('campo') || concept.includes('estadio')) return 'Estadio';
-  if(type.includes('academy_residence') || concept.includes('residencia')) return 'Residencias juveniles';
-  if(type.includes('academy') || concept.includes('academia') || concept.includes('captación') || concept.includes('juvenil')) return 'Academia';
-  if(type.includes('staff') || concept.includes('contratación de')) return 'Empleados';
-  return null;
-}
 function financeBudgetCategory(entry){
   const type = String(entry?.type || '').toLowerCase();
   const concept = String(entry?.concept || '').toLowerCase();
@@ -2517,9 +2464,6 @@ function applyMoraleUpdates(results){
 function trainingOptionByValue(value){
   return TRAINING_OPTIONS.find(opt => opt.value === value) || null;
 }
-function trainingLabel(value){
-  return trainingOptionByValue(value)?.label || trainingOptionByValue(DEFAULT_TRAINING_TYPE).label;
-}
 function trainingTone(value){
   return trainingOptionByValue(value)?.tone || trainingOptionByValue(DEFAULT_TRAINING_TYPE)?.tone || 'regen';
 }
@@ -2549,9 +2493,6 @@ function playerTrainingType(playerId){
   if(!game.trainingPlan) game.trainingPlan = {};
   game.trainingPlan[playerId] = safeIndividualTrainingType(game.trainingPlan[playerId]);
   return game.trainingPlan[playerId];
-}
-function trainingOptionsMarkup(current){
-  return TRAINING_OPTIONS.map(opt => `<option value="${opt.value}" ${current===opt.value?'selected':''}>${opt.label}</option>`).join('');
 }
 function individualTrainingOptionsMarkup(current, includeEmpty=false){
   const safeCurrent = includeEmpty && !current ? '' : safeIndividualTrainingType(current);
@@ -2628,11 +2569,6 @@ function trainingScheduleCounts(){
     acc[item.type] = (acc[item.type] || 0) + 1;
     return acc;
   }, {});
-}
-function trainingLoadMultiplier(){
-  const weeklySlots = Math.max(1, TRAINING_DAY_LABELS.length * TRAINING_DAY_SLOTS.length);
-  const baselineSlots = Math.max(1, TRAINING_DAY_LABELS.length);
-  return (weeklySlots * TRAINING_SLOT_EFFECTIVENESS) / baselineSlots;
 }
 function trainableSkillsForPlayer(player){
   if(player.position === 'POR') return ['porteria','posicionamiento','serenidad','aceleracion','cabezazo','fuerza','liderazgo','trabajoEquipo','paseCorto','paseLargo','resistencia'];

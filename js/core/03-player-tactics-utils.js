@@ -102,7 +102,6 @@ function formatDays(value){
 function formatDaysFromTurns(value){
   return formatDays(turnsToDays(value));
 }
-function pad2(value){ return String(Math.max(0, Math.round(Number(value) || 0))).padStart(2, '0'); }
 function makeUtcDate(year, month, day){ return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))); }
 function isoDateFromUtc(date){ return date.toISOString().slice(0, 10); }
 function validIsoDate(value){ return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')); }
@@ -525,52 +524,6 @@ function squadFitnessAverage(clubId){
   const squad = playersByClub(clubId);
   return Math.round(avg(squad.map(p => currentCondition(p.id)))) || 0;
 }
-
-function lastOwnMatch(){
-  if(!game?.matchHistory?.length) return null;
-  return game.matchHistory.filter(m => m.homeId === game.selectedClubId || m.awayId === game.selectedClubId).slice(-1)[0] || null;
-}
-function mainBannerForLastMatch(){
-  const match = lastOwnMatch();
-  if(!match){
-    return {
-      src:'img/principales/banner_bienvenido.jpg',
-      label:'Bienvenido al club'
-    };
-  }
-  const ownId = game.selectedClubId;
-  const ownInjuries = (match.injuries || []).filter(i => i.clubId === ownId);
-  if(ownInjuries.some(i => Number(i.matchesOut || 0) > 25)){
-    return { src:'img/principales/banner_noticia_lesion_grave.jpg', label:'Lesión grave en el último partido' };
-  }
-  if(ownInjuries.some(i => Number(i.matchesOut || 0) > 10)){
-    return { src:'img/principales/banner_noticia_lesion_intermedia.jpg', label:'Lesión intermedia en el último partido' };
-  }
-  if(ownInjuries.some(i => Number(i.matchesOut || 0) < 5)){
-    return { src:'img/principales/banner_noticias_lesion_leve.jpg', label:'Lesión leve en el último partido' };
-  }
-  if(ownInjuries.length){
-    return { src:'img/principales/banner_noticia_lesion_intermedia.jpg', label:'Lesión intermedia en el último partido' };
-  }
-  const isHome = match.homeId === ownId;
-  const gf = isHome ? match.homeGoals : match.awayGoals;
-  const gc = isHome ? match.awayGoals : match.homeGoals;
-  if(gf > gc) return { src:'img/principales/banner_entrenamiento_triunfo.jpg', label:'Entrenamiento posterior al triunfo' };
-  return { src:'img/principales/banner_entrenamiento_normal.jpg', label:'Entrenamiento posterior al empate o derrota' };
-}
-function mainBannerMarkup(){
-  const banner = mainBannerForLastMatch();
-  if(!banner){
-    return `<div class="main-visual-placeholder"><strong>Inicio de temporada</strong><span>La imagen contextual aparecerá después del primer partido.</span></div>`;
-  }
-  const fallbackAttr = banner.fallbackSrc ? ` data-fallback-src="${escapeHtml(banner.fallbackSrc)}"` : '';
-  const errorHandler = "const fb=this.getAttribute('data-fallback-src');if(fb&&!this.dataset.triedFallback){this.dataset.triedFallback='1';this.src=fb;}else{this.closest('.main-visual-banner').classList.add('is-missing');this.remove();}";
-  return `<div class="main-visual-banner"><img src="${escapeHtml(banner.src)}" alt="${escapeHtml(banner.label)}"${fallbackAttr} onerror="${errorHandler}"><span>${escapeHtml(banner.label)}</span></div>`;
-}
-
-function injuryRulesTable(){
-  return INJURY_TABLE.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.probability}%</td><td>${formatDaysFromTurns(item.minTurns)} a ${formatDaysFromTurns(item.maxTurns)}</td></tr>`).join('');
-}
 function conditionFactor(playerId){
   return 0.5 + 0.5 * (currentCondition(playerId) / 99);
 }
@@ -605,15 +558,6 @@ function squadMoraleAverage(clubId){
   const squad = playersByClub(clubId);
   return Math.round(avg(squad.map(p => currentMorale(p.id)))) || 0;
 }
-function dashboardDonut(label, value, max=100){
-  const cleanMax = Math.max(1, Number(max) || 100);
-  const cleanValue = clamp(Math.round(Number(value) || 0), 0, cleanMax);
-  const deg = Math.round((cleanValue / cleanMax) * 360);
-  return `<div class="dashboard-donut-card card">
-    <div class="donut-chart" style="--value-deg:${deg}deg" aria-label="${escapeHtml(label)} ${cleanValue} de ${cleanMax}"><span>${cleanValue}</span></div>
-    <div><p class="label">${escapeHtml(label)}</p><strong>${cleanValue}/${cleanMax}</strong></div>
-  </div>`;
-}
 function matchSkill(p, skillName){
   return clamp(Math.round(effectiveSkill(p, skillName) * conditionFactor(p.id) * moraleFactor(p.id) * injuredSubPenaltyFactor(p.id)), 1, 99);
 }
@@ -627,10 +571,6 @@ function jerseyNumber(playerId){
 function playerLastName(name){
   const parts = String(name || '').trim().split(/\s+/);
   return parts[parts.length-1] || name || 'Jugador';
-}
-function playerDisplayName(playerId){
-  const p = playerById(playerId);
-  return p ? `${playerLastName(p.name)} #${jerseyNumber(p.id)}` : 'Jugador';
 }
 function countryCode(nationality){
   const map = {
@@ -1095,17 +1035,6 @@ function clubRequirementIssues(clubId){
   if(counts.ATT < req.ATT) issues.push(`necesita ${req.ATT} delanteros y tiene ${counts.ATT}`);
   return issues;
 }
-function invalidClubRequirements(options={}){
-  const onlySelected = Boolean(options.onlySelected);
-  const clubs = onlySelected && game?.selectedClubId
-    ? seed.clubs.filter(c => Number(c.id) === Number(game.selectedClubId))
-    : seed.clubs;
-  return clubs.map(c => ({ club:c, issues:clubRequirementIssues(c.id) })).filter(x => x.issues.length);
-}
-function isClubRequirementsBlocking(){
-  // Los bots se reparan automáticamente. La advertencia ya no debe bloquear toda la interfaz.
-  return false;
-}
 function nextEmergencyPlayerId(){
   const ids = (seed?.players || []).map(p => Number(p.id) || 0);
   return Math.max(0, ...ids) + 1;
@@ -1417,29 +1346,6 @@ function formationCoordinates(formation){
   });
   return coords;
 }
-function roleCompatibility(position, slot){
-  if(position === slot) return 16;
-  if(sideEquivalentRole(position, slot)) return 10;
-  const near = {
-    LD:['LI','DFC'], LI:['LD','DFC'], DFC:['LD','LI'],
-    MCD:['MC','VOL'], MC:['MCD','VOL','MCO','MI','MD'], VOL:['MC','MCD','MCO'], MCO:['MC','VOL'],
-    MI:['EI','MC','MCO','MD'], MD:['ED','MC','MCO','MI'],
-    ED:['MD','EI','DC','MCO'], EI:['MI','ED','DC','MCO'],
-    DC:['ED','EI','MCO'], POR:[]
-  };
-  return (near[slot] || []).includes(position) ? 6 : -10;
-}
-function assignPlayersToRoleSequence(players, formation){
-  const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
-  const remaining = players.slice();
-  const assigned = [];
-  slots.forEach(slot => {
-    remaining.sort((a,b)=>(visibleOverall(b) + roleCompatibility(b.position, slot)) - (visibleOverall(a) + roleCompatibility(a.position, slot)));
-    const pick = remaining.shift();
-    if(pick) assigned.push({ player:pick, slot });
-  });
-  return assigned;
-}
 function pitchSlots(tactic){
   const slots = FORMATIONS[tactic?.formation] || FORMATIONS['4-4-2'];
   const coords = formationCoordinates(tactic?.formation || '4-4-2');
@@ -1447,24 +1353,6 @@ function pitchSlots(tactic){
     const player = playerById((tactic?.starters || [])[i]);
     return { player, slot, index:i, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: player ? playerMentality(player.id, tactic) : 'posicional' };
   });
-}
-function fitnessRingSvg(playerId){
-  const condition = currentCondition(playerId);
-  const active = Math.max(0, Math.min(8, Math.ceil(condition / 12.5)));
-  const colors = ['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#16a34a','#15803d'];
-  const cx = 34, cy = 34, r = 31;
-  const segments = [];
-  for(let i=0;i<8;i++){
-    const a0 = (-120 + i * 45) * Math.PI / 180;
-    const a1 = (-120 + i * 45 + 30) * Math.PI / 180;
-    const x1 = cx + Math.cos(a0) * r;
-    const y1 = cy + Math.sin(a0) * r;
-    const x2 = cx + Math.cos(a1) * r;
-    const y2 = cy + Math.sin(a1) * r;
-    const color = i < active ? colors[i] : 'rgba(148,163,184,.22)';
-    segments.push(`<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${color}" stroke-width="4" fill="none" stroke-linecap="round"/>`);
-  }
-  return `<svg class="fitness-ring" viewBox="0 0 68 68" aria-hidden="true">${segments.join('')}</svg>`;
 }
 
 

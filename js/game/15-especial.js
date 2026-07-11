@@ -504,19 +504,6 @@ function specialRedeemableCodes(){
     .map(item => ({ ...item, _key:specialCodeKey(item) }))
     .filter(item => item._key);
 }
-function specialClaimedCodes(){
-  const state = ensureSpecialState();
-  return state?.codigos_reclamados && typeof state.codigos_reclamados === 'object' ? state.codigos_reclamados : {};
-}
-function specialCodeBenefitText(code){
-  const benefits = code?.beneficios || code?.benefits || {};
-  const parts = [];
-  const prestige = Math.round(Number(benefits.prestigio ?? benefits.prestige ?? 0));
-  const points = Math.round(Number(benefits.puntosHabilidad ?? benefits.skillPoints ?? benefits.puntos_habilidad ?? 0));
-  if(prestige > 0) parts.push(`+${prestige} prestigio`);
-  if(points > 0) parts.push(`+${formatPlainNumber(points)} puntos de habilidad`);
-  return parts.join(' · ') || 'Sin beneficio definido';
-}
 function redeemSpecialCode(){
   const input = document.getElementById('special-code-input');
   const raw = input ? input.value : '';

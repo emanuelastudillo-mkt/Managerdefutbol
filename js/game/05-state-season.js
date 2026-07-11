@@ -17,12 +17,6 @@ function championPrestigeRewardByDivisionOrder(order){
   if(value === 2) return 10;
   return 5;
 }
-function badSeasonPrestigePenaltyByDivisionOrder(order){
-  const value = Math.round(Number(order || 3));
-  if(value <= 1) return 10;
-  if(value === 2) return 10;
-  return 5;
-}
 function managerPrestigeBreakdown(stats=game?.managerStats){
   const src = stats || {};
   const totals = src.totals || {};
@@ -480,83 +474,6 @@ function formatBudgetMillions(value){
   const millions = Number(value || 0) / 1000000;
   const digits = millions >= 100 ? 0 : 1;
   return `$${millions.toLocaleString('es-AR', { maximumFractionDigits:digits })} M`;
-}
-function clubStarterDetails(club){
-  const id = Number(club?.id || 0);
-  return {
-    country:clubCountry(club),
-    league:clubDivision(id).name,
-    capacity:clubStadiumCapacity(id),
-    fans:clubFansBase(id),
-    budget:Number(club?.budget || 0)
-  };
-}
-function availableManagerClubs(prestige=currentManagerPrestige()){
-  return (seed?.clubs || [])
-    .filter(club => managerCanSelectClub(club, prestige))
-    .sort((a,b)=>{
-      const country = clubCountry(a).localeCompare(clubCountry(b), 'es', { sensitivity:'base' });
-      if(country) return country;
-      const div = (a.divisionOrder || 99) - (b.divisionOrder || 99);
-      if(div) return div;
-      const rep = clubPrestigeValue(b) - clubPrestigeValue(a);
-      if(rep) return rep;
-      return String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
-    });
-}
-function starterClubCardMarkup(club, options={}){
-  const prestige = Number.isFinite(Number(options.prestige)) ? Number(options.prestige) : currentManagerPrestige();
-  const available = managerCanSelectClub(club, prestige);
-  const details = clubStarterDetails(club);
-  const buttonAttr = options.buttonDataAttr || 'data-job-club';
-  const buttonLabel = options.buttonLabel || 'Elegir club';
-  const compact = Boolean(options.compact);
-  const status = clubAvailabilityLabel(club, prestige);
-  if(compact){
-    return `<article class="starter-club-card ${available ? 'available' : 'locked'} compact" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
-      <div class="starter-club-head compact">
-        ${clubBadge(club.id)}
-        <div>
-          <strong>${escapeHtml(club.name)}</strong>
-          <p class="starter-club-line">${escapeHtml(details.country)} · ${escapeHtml(details.league)}</p>
-          <p class="starter-club-line starter-club-stats"><span>Estadio ${formatPlainNumber(details.capacity)}</span><span>Hinchas ${formatPlainNumber(details.fans)}</span><span>${formatBudgetMillions(details.budget)}</span></p>
-        </div>
-        <span class="pill ok-pill starter-prestige-pill">Prestigio ${clubPrestigeValue(club)}</span>
-      </div>
-      <div class="starter-club-actions compact">
-        <span class="muted small">${escapeHtml(status)}</span>
-        <button type="button" class="primary" ${buttonAttr}="${club.id}" ${available ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
-      </div>
-    </article>`;
-  }
-  return `<article class="starter-club-card ${available ? 'available' : 'locked'}" style="--starter-club-color:${escapeHtml(clubColor(club.id))}">
-    <div class="starter-club-head">
-      ${clubBadge(club.id)}
-      <div>
-        <strong>${escapeHtml(club.name)}</strong>
-        <p class="muted small">${escapeHtml(details.country)} · ${escapeHtml(details.league)}</p>
-      </div>
-      <span class="pill ${available ? 'ok-pill' : 'bad-pill'}">Prestigio ${clubPrestigeValue(club)}</span>
-    </div>
-    <div class="starter-club-meta">
-      <div><span>Capacidad</span><strong>${formatPlainNumber(details.capacity)}</strong></div>
-      <div><span>Hinchas</span><strong>${formatPlainNumber(details.fans)}</strong></div>
-      <div><span>Presupuesto</span><strong>${formatBudgetMillions(details.budget)}</strong></div>
-    </div>
-    <div class="starter-club-actions">
-      <span class="muted small">${escapeHtml(status)}</span>
-      <button type="button" class="primary" ${buttonAttr}="${club.id}" ${available ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
-    </div>
-  </article>`;
-}
-function clubAvailabilityListMarkup(country='Argentina', leagueId=''){
-  const clubs = clubsByCountryLeague(country, leagueId);
-  const prestige = currentManagerPrestige();
-  if(!clubs.length) return '<p class="muted small">No hay clubes para esta liga.</p>';
-  return `<div class="job-club-list">${clubs.map(club => {
-    const available = managerCanSelectClub(club, prestige);
-    return `<button type="button" class="job-club-list-row ${available ? '' : 'locked'}" data-job-club="${club.id}" ${available ? '' : 'disabled'}><strong>${escapeHtml(club.name)}</strong><span>Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(clubAvailabilityLabel(club, prestige))}</span></button>`;
-  }).join('')}</div>`;
 }
 function storedManagerName(){
   try{ return String(game?.rankingManagerName || localStorage.getItem('fmRankingManagerName') || '').trim(); }
@@ -1909,12 +1826,6 @@ function normalizeSavedTrainingPlansState(src){
   }
   return { slots };
 }
-function repairSavedTrainingPlansState(){
-  if(!game) return { repaired:false };
-  const before = JSON.stringify(game.savedTrainingPlans || {});
-  game.savedTrainingPlans = normalizeSavedTrainingPlansState(game.savedTrainingPlans || {});
-  return { repaired: before !== JSON.stringify(game.savedTrainingPlans || {}) };
-}
 function resetSavedTrainingPlans(){
   if(!game) return false;
   game.savedTrainingPlans = normalizeSavedTrainingPlansState({});
@@ -2280,53 +2191,6 @@ function ensurePlayerStateForAll(){
   });
 }
 
-function assignPlayerToStarterSlot(playerId, slotIndex){
-  if(!canBeStarter(playerId)){
-    showNotice('Los lesionados no pueden ser titulares. Los de recuperación menor a 70 días sólo pueden ir al banco.');
-    return;
-  }
-  const player = playerById(playerId);
-  const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[slotIndex];
-  if(!canAssignPlayerToSlot(player, slot)){
-    showNotice(slot === 'POR' ? 'El puesto de portero sólo acepta porteros.' : 'Los porteros sólo pueden ocupar el puesto de portero.');
-    return;
-  }
-  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
-  const starters = game.tactic.starters.slice(0,11);
-  while(starters.length < 11) starters.push(0);
-  let bench = game.tactic.bench.slice(0,10).filter(id => id !== playerId);
-  const previousIndex = starters.indexOf(playerId);
-  if(previousIndex >= 0) starters[previousIndex] = 0;
-  const displaced = starters[slotIndex];
-  starters[slotIndex] = playerId;
-  if(displaced && displaced !== playerId && bench.length < 10) bench.push(displaced);
-  game.tactic.starters = starters.slice(0,11);
-  game.tactic.bench = bench.filter(Boolean).slice(0,10);
-  game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
-  game.tactic = applyStarterMentalities(game.tactic);
-  saveLocal(true);
-  renderTactics();
-}
-function movePlayerToPool(playerId, pool){
-  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
-  const starters = game.tactic.starters.slice(0,11);
-  while(starters.length < 11) starters.push(0);
-  const idx = starters.indexOf(playerId);
-  if(idx >= 0) starters[idx] = 0;
-  game.tactic.starters = starters;
-  game.tactic.bench = game.tactic.bench.filter(id => id !== playerId);
-  if(pool === 'bench'){
-    if(!canBeBench(playerId)){
-      showNotice('Sólo se pueden convocar al banco jugadores disponibles o lesionados con recuperación menor a 70 días.');
-    } else if(game.tactic.bench.length < 10) game.tactic.bench.push(playerId);
-    else showNotice('El banco ya tiene 10 suplentes. El jugador quedó como reserva.');
-  }
-  game.tactic.autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:game.tactic.starters.includes(rule.outId)?rule.outId:0, inId:game.tactic.bench.includes(rule.inId)?rule.inId:0}));
-  game.tactic = applyStarterMentalities(game.tactic);
-  saveLocal(true);
-  renderTactics();
-}
-
 function tacticLocationOfPlayer(playerId){
   game.tactic = normalizeTactic(game.selectedClubId, game.tactic);
   const id = Number(playerId || 0);
@@ -2381,12 +2245,6 @@ function clearTacticLocation(location){
     while(game.tactic.bench.length <= location.index) game.tactic.bench.push(0);
     game.tactic.bench[location.index] = 0;
   }
-}
-function removeTacticPlayer(playerId){
-  const id = Number(playerId || 0);
-  game.tactic.starters = (game.tactic.starters || []).map(current => Number(current) === id ? 0 : Number(current || 0)).slice(0,11);
-  while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
-  game.tactic.bench = (game.tactic.bench || []).map(current => Number(current) === id ? 0 : Number(current || 0)).slice(0,10);
 }
 function cleanupTacticAfterClickSwap(){
   const starterIds = new Set((game.tactic.starters || []).map(Number).filter(Boolean));
@@ -3278,12 +3136,6 @@ function managerGeneralPPG(){
 }
 function managerCurrentPPG(){
   return ppgFromTotals(managerSeasonObjectiveTotals());
-}
-function managerObjectiveExtraMatches(generalPpg=managerGeneralPPG()){
-  if(generalPpg > 1.9) return MANAGER_OBJECTIVE_EXTRA_190;
-  if(generalPpg > 1.5) return MANAGER_OBJECTIVE_EXTRA_150;
-  if(generalPpg > 1.2) return MANAGER_OBJECTIVE_EXTRA_120;
-  return 0;
 }
 function managerObjectiveProgressInfo(){
   const seasonTotals = managerSeasonObjectiveTotals();

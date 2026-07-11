@@ -37,11 +37,6 @@ function playerRequiresScouting(player){
   if(!player || !game) return false;
   return Number(player.clubId || 0) !== Number(game.selectedClubId || 0);
 }
-function playerScoutingWeekKey(){
-  if(!game) return 'no-game';
-  const week = Math.floor(Math.max(0, Number(currentTurnIndex ? currentTurnIndex() : 0)) / 7);
-  return `${game.seasonNumber || 1}-${seasonPhase ? seasonPhase() : 'regular'}-w${week}`;
-}
 function scoutedVisibleKeySet(player){
   const map = scoutingStatMap(player);
   const visible = new Set();
@@ -52,14 +47,6 @@ function scoutedVisibleKeySet(player){
     scoutingKnownSet(player.id).forEach(key => visible.add(key));
   }
   return visible;
-}
-function scoutingValueForKey(player, key){
-  const map = scoutingStatMap(player);
-  return map[key];
-}
-function scoutedStatCell(player, key){
-  const visible = scoutedVisibleKeySet(player);
-  return visible.has(key) ? `<strong>${scoutingValueForKey(player, key)}</strong>` : '<span class="muted">—</span>';
 }
 function scoutedOverallLabel(player){
   if(!playerRequiresScouting(player)) return String(visibleOverall(player));
@@ -485,16 +472,6 @@ function processPendingTransfers(){
     pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.`, priority:'high' });
   });
   if(changed) saveLocal(true);
-}
-
-function statPairs(obj, baseObj=null){
-  return Object.entries(obj).map(([k,v])=>{
-    const base = baseObj ? Number(baseObj[k]) : NaN;
-    const current = Number(v);
-    const trained = Number.isFinite(base) ? Math.max(0, current - base) : 0;
-    const valueMarkup = trained > 0 ? `${base}<span class="trained-boost">+${trained}</span>` : `${current}`;
-    return `<div class="stat-rank"><span>${escapeHtml(k)}</span><strong>${valueMarkup}</strong></div>`;
-  }).join('');
 }
 function radarSvg(stats){
   const entries = Object.entries(stats);
@@ -1112,9 +1089,6 @@ function clubTacticPreview(formation){
     <div class="pill">Formación estimada: ${escapeHtml(formation)}</div>
     <div class="club-lines">${layout.map((count,i)=>`<div class="club-line"><strong>${count}</strong><span>${labels[i]}</span></div>`).join('')}</div>
   </div>`;
-}
-function scoutingTurnKey(){
-  return typeof playerScoutingWeekKey === 'function' ? playerScoutingWeekKey() : 'no-game';
 }
 function scoutingVisibleKeys(player){
   return typeof scoutedVisibleKeySet === 'function' ? scoutedVisibleKeySet(player) : new Set(Object.keys(scoutingStatMap(player)));

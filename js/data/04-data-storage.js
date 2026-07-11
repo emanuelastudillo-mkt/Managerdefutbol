@@ -272,9 +272,6 @@ function normalizeSaveSlotId(slotId=''){
   }
   return SAVE_SLOT_CAREER;
 }
-function isCareerSaveSlot(slotId=''){
-  return normalizeSaveSlotId(slotId).startsWith(SAVE_SLOT_CAREER_PREFIX_ID);
-}
 function careerSaveSlotNumber(slotId=''){
   const clean = normalizeSaveSlotId(slotId);
   if(!clean.startsWith(SAVE_SLOT_CAREER_PREFIX_ID)) return 0;
@@ -288,9 +285,6 @@ function legacyCareerSlotKey(){
 }
 function saveSlotKey(slotId=''){
   return `${SAVE_SLOT_PREFIX}${normalizeSaveSlotId(slotId)}`;
-}
-function currentSaveSlotKey(){
-  return saveSlotKey(currentSaveSlotId || SAVE_SLOT_CAREER);
 }
 function setCurrentSaveSlot(slotId='career'){
   currentSaveSlotId = normalizeSaveSlotId(slotId);
@@ -999,14 +993,6 @@ function teamPrestige(team, divisionName, index, total){
   const value = tierBase + (tierTop - tierBase) * rankRatio + hashNumber(`${teamName(team)}-${divisionName}`, 7) - 3;
   return clamp(Math.round(value), 20, 99);
 }
-function fieldConditionByPrestige(prestige){
-  const p = Number(prestige) || 50;
-  if(p >= 82) return 'Excelente';
-  if(p >= 62) return 'Normal';
-  if(p >= 45) return 'Regular';
-  if(p >= 30) return 'Muy malo';
-  return 'Injugable';
-}
 function initialFieldScore(club){
   return clamp(60 + hashNumber(`field-start-${club?.name || club?.id || ''}`, 21), 60, 80);
 }
@@ -1051,9 +1037,6 @@ function ensureStadiumState(){
 function fieldScoreForClub(clubId){
   ensureStadiumState();
   return clamp(Math.round(game?.stadium?.fields?.[clubId] ?? 60), 1, 100);
-}
-function fieldNameForClub(clubId){
-  return fieldConditionName(fieldScoreForClub(clubId));
 }
 function stadiumProjectForClub(clubId){
   ensureStadiumState();
@@ -1522,9 +1505,6 @@ function applyFanChangesAfterMatches(results=[]){
 function isManagedClubField(clubId, managedClubId=null){
   return Number(clubId) === Number(managedClubId || game?.selectedClubId || 0);
 }
-function isBotFieldClub(clubId, state=game, managedClubId=null){
-  return Number(clubId) !== Number(managedClubId || state?.selectedClubId || 0);
-}
 function botFieldRecoveryScoreForClub(club, state=game){
   const season = Number(state?.seasonNumber || game?.seasonNumber || 1);
   const reputation = clamp(Number(club?.reputation || 60), 1, 100);
@@ -1704,22 +1684,12 @@ function generateClubPlayers(club, prestige, startId, generationContext=null){
     });
   });
 }
-function playerBaseMedia(prestige, id, group){
-  const groupBoost = group === 'POR' ? 1 : group === 'ATT' ? 0 : group === 'MID' ? 0.5 : -0.5;
-  return clamp(Math.round(42 + prestige * 0.48 + groupBoost + hashNumber(`media-${id}`, 13) - 6), 35, 94);
-}
 const FIRST_NAMES = ['Agustín','Mateo','Lautaro','Santiago','Julián','Tomás','Nicolás','Franco','Lucas','Bruno','Facundo','Ezequiel','Ramiro','Iván','Gonzalo','Emiliano','Brian','Thiago','Alan','Pablo','Martín','Leandro'];
 const LAST_NAMES = ['Gómez','Rodríguez','Fernández','López','Martínez','Pérez','García','Sánchez','Romero','Torres','Díaz','Alvarez','Ruiz','Ramírez','Aguirre','Molina','Castro','Silva','Rojas','Vera','Acosta','Morales','Herrera','Medina'];
 function generatedPlayerName(id, clubNameValue){
   const first = FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-first`, FIRST_NAMES.length)];
   const last = LAST_NAMES[hashNumber(`${clubNameValue}-${id}-last`, LAST_NAMES.length)];
   return `${first} ${last}`;
-}
-function generatedNationality(id, divisionName){
-  return pickNationalityForGeneration(id, divisionName || 'Jugador', null);
-}
-function skillValue(base, id, label, offset=0){
-  return clamp(Math.round(base + offset + hashNumber(`${id}-${label}`, 15) - 7), 1, 99);
 }
 function skillTierValue(base, id, label, tier='common'){
   const multipliers = { key:1.30, common:1.00, rare:0.65, weak:0.35 };

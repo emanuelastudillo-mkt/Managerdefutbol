@@ -1,104 +1,89 @@
-/*
-  V6.01 · Modificadores de balance del simulador y entrenamiento.
-  Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
-  Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
-*/
-window.GAME_BALANCE_MODIFICADORES = {
-  metadataBalance: {
-    version: 'V6.01',
-    nombre: 'Balance centralizado de modificadores V6.01',
-    nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
-  },
+# Revisión de código V6.01
 
-  entrenamiento: {
-    // V5.40: al avanzar 1 día se aplican sólo los 4 bloques del día actual, no los 28 turnos de toda la semana.
-    aplicarSoloDiaActual: true,
-    efectividadPorCasilla: 0.25,
-    entrenamientoIndividualDiario: true,
-    efectividadIndividualPorDia: 0.25,
-    curvaHabilidadActual: true,
-    probabilidadMinimaSubidaHabilidad: 0,
-    multiplicadorSubidaHabilidades: 3,
-    desgaste: {
-      activo: true,
-      maximo: 98,
-      desgasteMinPartido: 2,
-      desgasteMaxPartido: 4,
-      desgastePorTurnoIntenso: 1,
-      recuperacionPorTurnoMasajista: 1
-    }
-  },
+Base revisada: `futbol-manager-mvp-V5.80-completa-correccion-slots-vacios(1).zip`.
 
-  cohesion: {
-    valorInicial: 10,
-    gananciaPorPartido: 7,
-    perdidaPorCambioTactico: 8,
-    perdidaPorCambioJugador: 1,
-    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-    gananciaEntrenamientoTacticoPorCasilla: 1
-  },
+## Resultado general
 
-  lesiones: {
-    // Se mantiene así: un lesionado usado como suplente rinde casi nada.
-    penalizacionLesionadoSuplente: 0.30
-  },
+La estructura general del proyecto es consistente: HTML único, módulos JS cargados en orden, configuración central en `config.js`, modificadores separados en `balance-modificadores.js` y datos externos en `data/*.json`.
 
-  simulador: {
-    pesoColectivo: 0.70,
-    pesoIndividual: 0.30,
-    probabilidadPelotaParada: 0.14,
-    escalaRiesgoErrorJugador: 0.72,
-    probabilidadGolAtribuyeErrorGol: 0.60,
-    maximoErroresPorEquipo: 5,
-    fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 1.10,
-    rojasDerrotaDefault: 5,
-    recuperacionAutomaticaPostPartidoMin: 4,
-    recuperacionAutomaticaPostPartidoMax: 6,
-    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
-    // El rango 61-70 queda como puente para evitar saltos bruscos.
-    recuperacionPostPartidoUsaResistencia: true,
-    recuperacionPostPartidoPorResistencia: [
-      { minResistencia: 1, maxResistencia: 40, recuperacionMin: 0, recuperacionMax: 1 },
-      { minResistencia: 41, maxResistencia: 60, recuperacionMin: 2, recuperacionMax: 4 },
-      { minResistencia: 61, maxResistencia: 70, recuperacionMin: 3, recuperacionMax: 5 },
-      { minResistencia: 71, maxResistencia: 80, recuperacionMin: 4, recuperacionMax: 7 },
-      { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
-      { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
-    ],
-    desgastePartidoMin: 40,
-    desgastePartidoMax: 78,
-    factorDesgasteArquero: 0.5
-  },
+No se detectaron errores de sintaxis JavaScript ni errores de parseo JSON.
 
-  equilibrioBots: {
-    // Los bots no entrenan. Este bloque sólo ajusta su simulación rápida de partido.
-    tacticaRapida: {
-      sobreexigenciaSiPierde: true,
-      // V5.42: reglas progresivas según diferencia de goles en contra del bot.
-      // desgasteFisicoPct se aplica como pérdida extra de estado físico sobre la fatiga normal del partido.
-      // bonusAtaquePct aumenta la presión ofensiva mientras el bot va perdiendo.
-      reglasDiferencia: [
-        { diferenciaMin: 1, diferenciaMax: 1, desgasteFisicoPct: 0.20, bonusAtaquePct: 0.10 },
-        { diferenciaMin: 2, diferenciaMax: 2, desgasteFisicoPct: 0.30, bonusAtaquePct: 0.20 },
-        { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.30 }
-      ],
-      maxGolesExtraPorEquipo: 1,
-      // Valores heredados: quedan como respaldo si se borra reglasDiferencia.
-      xgExtraSiPierde: 0.35,
-      probabilidadGolExtraSiPierde: 0.34,
-      desgasteExtraPorSobreexigencia: 2,
-      condicionExtraDelta: -2
-    }
-  },
+## Limpieza aplicada
 
-  estadio: {
-    deterioroCampoMultiplicador: 2,
-    deterioroCapacidadPorTemporadaPct: 1,
-    clima: {
-      lluviaDeterioroActivo: true,
-      lluviaLeveExtraDeterioro: 3,
-      lluviaIntensaExtraDeterioro: 7
-    }
-  }
-};
+Se eliminaron funciones declaradas que no tenían referencias internas detectables en el proyecto. La limpieza reduce ruido y evita mantener ramas antiguas de UI, mercado, scouting, simulación y utilidades que ya no participan del flujo actual.
+
+Áreas limpiadas:
+
+- Utilidades UI antiguas.
+- Helpers de banners/resúmenes no utilizados.
+- Helpers de requisitos de clubes reemplazados por flujos actuales.
+- Helpers viejos de táctica por tabla.
+- Helpers de mercado que ya no se muestran por interés oculto.
+- Helpers de scouting no conectados a la UI vigente.
+- Helpers de sponsors y ranking sin llamada activa.
+- Helpers residuales del simulador vivo.
+
+También se eliminó el archivo vacío `err`.
+
+## Contradicciones detectadas
+
+### Tarjetas del simulador
+
+`config.js` definía:
+
+- `simulador.multiplicadorTarjetas: 0.50`
+
+Pero `balance-modificadores.js`, que se carga antes y pisa valores de `config.js`, definía:
+
+- `simulador.multiplicadorTarjetas: 1.50`
+
+Resultado real antes de esta revisión: el juego usaba `1.50`, no `0.50`.
+
+En V6.01 queda definido en:
+
+- `balance-modificadores.js`: `multiplicadorTarjetas: 1.10`
+
+### Metadata de balance
+
+La metadata de `balance-modificadores.js` seguía figurando como V5.47 aunque el archivo ya tenía ajustes posteriores. Se actualizó a V6.01.
+
+## Rendimiento y optimización
+
+### Punto más pesado
+
+`data/jugadores.json` pesa aproximadamente 4.4 MB y contiene 4050 jugadores. Es correcto para el diseño actual, pero es el principal costo de carga inicial.
+
+Recomendación futura:
+
+- Dividir jugadores por país/liga.
+- Cargar primero clubes/liga inicial y luego jugadores bajo demanda.
+- Mantener jugadores libres o manuales en un archivo separado pequeño.
+
+### Carga actual de ligas
+
+El juego carga y combina todas las ligas configuradas. Es funcional, pero cuando siga creciendo conviene separar carga inicial de carga secundaria.
+
+### Imágenes manuales faltantes
+
+`data/jugadores_manuales.json` declara rutas en `img/jugadores/manual/`, pero esas imágenes no están incluidas. El código tiene fallback visual, por lo tanto no rompe la carga, pero no mostrará esas fotos específicas hasta agregarlas.
+
+## Validaciones realizadas
+
+- `node --check` en:
+  - `app.js`
+  - `balance-manager.js`
+  - `balance-modificadores.js`
+  - `config.js`
+  - `simulador-2.0.js`
+  - todos los archivos `js/**/*.js`
+- Parseo de todos los JSON en `data/`.
+- Revisión de referencias de imágenes en JSON.
+- Revisión estática de funciones declaradas sin referencias internas.
+- Carga secuencial de scripts en entorno de prueba con VM para verificar inicialización global.
+
+## Pendientes sugeridos para próximas versiones
+
+- Dividir `data/jugadores.json` para reducir carga inicial.
+- Separar módulos críticos de módulos secundarios.
+- Decidir si las fotos manuales de jugadores se incluirán en el ZIP o si deben quedar como personalización externa.
+- Mantener el balance de tarjetas centralizado en un solo archivo para evitar nuevas contradicciones entre `config.js` y `balance-modificadores.js`.

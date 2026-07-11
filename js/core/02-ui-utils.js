@@ -81,14 +81,11 @@ function formatMoney(value){
   const formatted = new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Math.abs(num));
   return num < 0 ? `-${formatted}` : formatted;
 }
-function moneyTone(value){ return Number(value || 0) < 0 ? 'bad budget-negative' : 'ok'; }
 function budgetTone(value){ return Number(value || 0) < 0 ? 'budget-negative bad' : ''; }
 function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
 function isFoundedClub(club){ return Boolean(club?.isFoundedClub || club?.founderClub || club?.modoFundador); }
 function isFoundedClubId(clubId){ return isFoundedClub(seed?.clubs?.find(c => Number(c.id) === Number(clubId))); }
 function currentGameIsFounderMode(state=game){ return Boolean(state?.founderMode || isFoundedClubId(state?.selectedClubId)); }
-function clubShort(id){ return seed.clubs.find(c => c.id === id)?.short || clubName(id).slice(0,3).toUpperCase(); }
-function clubColor(id){ return seed.clubs.find(c => c.id === id)?.primaryColor || '#3b82f6'; }
 
 function defaultClubTheme(){
   return { base:[59,130,246], accent:[96,165,250], accent2:[125,211,252] };
@@ -240,7 +237,6 @@ function clubBadge(id){
 }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }
-function clubAbbrev(id){ return clubBadge(id); }
 function divisionOptions(selected='all'){
   const divisions = seed?.divisions || [{ id:'default', name:'Liga única' }];
   return [`<option value="all" ${selected==='all'?'selected':''}>Todas las divisiones</option>`]

@@ -115,7 +115,6 @@ function staffContract(staffId){
 }
 function staffActive(staffId){ return Boolean(staffContract(staffId)); }
 function staffPerformanceMultiplier(staffId){ return Math.max(1, Number(staffContract(staffId)?.performanceMultiplier || 1)); }
-function staffCategoryName(staffId){ return staffCategory(staffContract(staffId)?.category || 'regular').nombre; }
 function staffImagePath(staffId, categoryId='regular'){
   const def = staffDefinition(staffId);
   const category = staffCategory(categoryId).id;
@@ -128,11 +127,6 @@ function staffImageMarkup(staffId, categoryId='regular', className='staff-employ
   const def = staffDefinition(staffId);
   const alt = `${def?.nombre || 'Empleado'} ${staffCategory(categoryId).nombre}`;
   return `<img class="${escapeHtml(className)}" src="${escapeHtml(staffImagePath(staffId, categoryId))}" alt="${escapeHtml(alt)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='grid');"><span class="staff-photo-fallback" style="display:none">${escapeHtml((def?.nombre || 'E').slice(0,1).toUpperCase())}</span>`;
-}
-function staffActivePill(staffId){
-  const contract = staffContract(staffId);
-  if(!contract) return '';
-  return `<span class="pill ok">${escapeHtml(staffCategoryName(staffId))} · contratado</span>`;
 }
 function staffContractCardMarkup(staffId, mode='compact'){
   const contract = staffContract(staffId);

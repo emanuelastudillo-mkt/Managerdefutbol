@@ -130,20 +130,6 @@ function renderAll(){
     document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof openIntegrityChecker === 'function') openIntegrityChecker(); });
   }
 }
-function renderClubRequirementsWarning(){
-  const invalid = invalidClubRequirements();
-  const rows = invalid.map(item => {
-    const squad = playersByClub(item.club.id);
-    const keepers = squad.filter(p=>p.position==='POR').length;
-    return `<tr><td><strong>${escapeHtml(item.club.name)}</strong></td><td>${squad.length}</td><td>${keepers}</td><td><span class="bad">${escapeHtml(item.issues.join(' · '))}</span></td></tr>`;
-  }).join('');
-  view.innerHTML = `
-    <div class="card blocker requirement-warning">
-      <h2>Advertencia de estructura de planteles</h2>
-      <p>Cada club debe tener como mínimo <strong>${MIN_PLAYERS_PER_CLUB} jugadores</strong>, <strong>${BOT_MIN_GOALKEEPERS} porteros</strong>, <strong>${BOT_MIN_DEFENDERS} defensores</strong>, <strong>${BOT_MIN_MIDFIELDERS} mediocampistas</strong> y <strong>${BOT_MIN_ATTACKERS} delanteros</strong>. Los bots se reparan automáticamente; esta advertencia sólo debería quedar para el club del usuario si su plantel queda incompleto.</p>
-      <div class="table-wrap"><table><thead><tr><th>Club</th><th>Jugadores</th><th>Porteros</th><th>Problema</th></tr></thead><tbody>${rows}</tbody></table></div>
-    </div>`;
-}
 function getNextMatchForSelected(){
   if(!game || game.matchdayIndex >= game.fixtures.length) return null;
   if(typeof nextOwnMatchInfo === 'function') return nextOwnMatchInfo()?.match || null;

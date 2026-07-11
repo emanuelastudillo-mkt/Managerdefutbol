@@ -1,4 +1,4 @@
-/* V5.46 · Centro de Ojeo: avances sólo sobre información faltante y observación diaria estable. */
+/* V6.07 · Centro de Ojeo: probabilidad de fichaje tratada como dato revelable. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
@@ -121,6 +121,30 @@ function scoutingChiefMaxOffices(){
 function scoutingIsOwnPlayer(player){
   return Boolean(player && game && Number(player.clubId || 0) === Number(game.selectedClubId || 0));
 }
+const SCOUTING_SIGNING_CHANCE_KEY = 'market.signingChance';
+function scoutingSigningChanceKey(){ return SCOUTING_SIGNING_CHANCE_KEY; }
+function scoutingSigningChanceMap(player){
+  if(!player || scoutingIsOwnPlayer(player)) return {};
+  const chance = typeof marketPlayerAcceptanceChance === 'function' ? marketPlayerAcceptanceChance(player) : null;
+  if(chance === null || chance === undefined || !Number.isFinite(Number(chance))) return {};
+  return { [SCOUTING_SIGNING_CHANCE_KEY]: Math.round(Number(chance) * 10) / 10 };
+}
+function playerHasScoutedSigningChance(playerOrId){
+  const player = typeof playerOrId === 'object' ? playerOrId : (typeof playerById === 'function' ? playerById(Number(playerOrId || 0)) : null);
+  if(!player || scoutingIsOwnPlayer(player)) return false;
+  const known = typeof scoutingKnownSet === 'function' ? scoutingKnownSet(player.id) : new Set();
+  return known.has(SCOUTING_SIGNING_CHANCE_KEY);
+}
+function scoutingSigningChanceValue(player){
+  const map = scoutingSigningChanceMap(player);
+  return map[SCOUTING_SIGNING_CHANCE_KEY];
+}
+function scoutingSigningChanceLabel(player){
+  const value = scoutingSigningChanceValue(player);
+  if(value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+  const clean = Math.round(Number(value) * 10) / 10;
+  return `${clean}%`;
+}
 function scoutingVisibleStatMap(player){
   return typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player?.skills || {});
 }
@@ -134,7 +158,7 @@ function scoutingHiddenStatMap(player){
   };
 }
 function scoutingFullStatMap(player){
-  return { ...scoutingVisibleStatMap(player), ...scoutingHiddenStatMap(player) };
+  return { ...scoutingVisibleStatMap(player), ...scoutingHiddenStatMap(player), ...scoutingSigningChanceMap(player) };
 }
 function scoutingHiddenSkillKeys(player){
   return Object.keys(scoutingHiddenStatMap(player) || {});
@@ -550,31 +574,33 @@ function scoutingSummaryTile({ label, value, hint='', icon='', extra='' }){
   </div>`;
 }
 
+function scoutingPlayerSkillValueMarkup(player, key, value, known){
+  if(!known) return '—';
+  if(key === SCOUTING_SIGNING_CHANCE_KEY) return scoutingSigningChanceLabel(player);
+  return escapeHtml(String(value ?? '—'));
+}
 function scoutingPlayerSkillRows(player, map){
   const known = scoutingKnownSet(player.id);
   return Object.entries(map || {}).map(([key,value]) => {
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${known.has(key) ? value : '—'}</strong></div>`;
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${scoutingPlayerSkillValueMarkup(player, key, value, known.has(key))}</strong></div>`;
   }).join('');
 }
 function scoutingPlayerKnownSkillRows(player){
+  const knownSet = scoutingKnownSet(player.id);
   const visibleMap = scoutingVisibleStatMap(player);
   const hiddenMap = scoutingHiddenStatMap(player);
-  const hiddenKnown = Object.keys(hiddenMap).filter(key => scoutingKnownSet(player.id).has(key)).length;
+  const signingMap = scoutingSigningChanceMap(player);
+  const hiddenKnown = Object.keys(hiddenMap).filter(key => knownSet.has(key)).length;
+  const signingKeys = Object.keys(signingMap);
+  const signingKnown = signingKeys.filter(key => knownSet.has(key)).length;
+  const signingSection = signingKeys.length
+    ? `<div class="scouting-known-section scouting-market-section"><p class="label">Mercado ${signingKnown}/${signingKeys.length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, signingMap)}</div></div>`
+    : '';
   return `
     <div class="scouting-known-section"><p class="label">Habilidades visibles</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, visibleMap)}</div></div>
-    <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>`;
-}
-function scoutingPlayerSigningChance(player){
-  if(!player || scoutingIsOwnPlayer(player)) return null;
-  if(typeof marketPlayerAcceptanceChance === 'function') return marketPlayerAcceptanceChance(player);
-  return null;
-}
-function scoutingPlayerSigningChanceLabel(player){
-  const chance = scoutingPlayerSigningChance(player);
-  if(chance === null || chance === undefined || !Number.isFinite(Number(chance))) return '—';
-  const clean = Math.round(Number(chance) * 10) / 10;
-  return `${clean}%`;
+    <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>
+    ${signingSection}`;
 }
 function scoutingPlayerSigningChanceTone(chance){
   const value = Number(chance || 0);
@@ -583,12 +609,15 @@ function scoutingPlayerSigningChanceTone(chance){
   return 'bad';
 }
 function scoutingPlayerSigningChanceMarkup(player){
-  const chance = scoutingPlayerSigningChance(player);
-  if(chance === null || chance === undefined || !Number.isFinite(Number(chance))){
+  if(!player || scoutingIsOwnPlayer(player)){
     return `<div class="scouting-signing-chance own"><span>Prob. fichaje</span><strong>—</strong><small>Jugador propio</small></div>`;
   }
+  if(!playerHasScoutedSigningChance(player)){
+    return `<div class="scouting-signing-chance hidden"><span>Prob. fichaje</span><strong>—</strong><small>Dato pendiente de ojeo</small></div>`;
+  }
+  const chance = scoutingSigningChanceValue(player);
   const tone = scoutingPlayerSigningChanceTone(chance);
-  return `<div class="scouting-signing-chance ${tone}"><span>Prob. fichaje</span><strong>${scoutingPlayerSigningChanceLabel(player)}</strong><small>Según media y prestigio del club</small></div>`;
+  return `<div class="scouting-signing-chance ${tone}"><span>Prob. fichaje</span><strong>${scoutingSigningChanceLabel(player)}</strong><small>Revelado por ojeo</small></div>`;
 }
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);
@@ -638,6 +667,7 @@ function scoutingPlayerReportListRow(entry){
   const hiddenMap = scoutingHiddenStatMap(player);
   const hiddenKnown = Object.keys(hiddenMap).filter(key => (report.visibleSkills || []).includes(key)).length;
   const hiddenTotal = Object.keys(hiddenMap).length;
+  const signingText = playerHasScoutedSigningChance(player) ? scoutingSigningChanceLabel(player) : '<span class="muted">Oculto</span>';
   const status = entry.active ? '<span class="pill ok">Activo</span>' : '<span class="pill">Archivado</span>';
   return `<tr>
     <td><button class="linklike" data-scouting-report-player="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
@@ -645,7 +675,7 @@ function scoutingPlayerReportListRow(entry){
     <td>${escapeHtml(clubName(player.clubId))}</td>
     <td>${known}/${total}</td>
     <td>${hiddenKnown}/${hiddenTotal}</td>
-    <td>${scoutingPlayerSigningChanceLabel(player)}</td>
+    <td>${signingText}</td>
     <td>${Number(report.daysObserved || 0)}</td>
     <td>${status}</td>
   </tr>`;

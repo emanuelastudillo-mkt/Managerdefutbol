@@ -1,4 +1,4 @@
-/* V5.45 · Modales: resultado de partido ordenado e informes de ojeo navegables. */
+/* V6.07 · Modales: etiquetas de ojeo con probabilidad de fichaje revelable. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -1106,7 +1106,8 @@ function scoutingSkillDisplayLabel(player, key){
     'Tiro/Potencia': keeper ? 'Potencia' : 'Tiro',
     'hidden.aggression':'Agresividad',
     'hidden.genetics':'Genética',
-    'hidden.surprise':'Factor sorpresa'
+    'hidden.surprise':'Factor sorpresa',
+    'market.signingChance':'Prob. fichaje'
   };
   return labels[key] || key;
 }

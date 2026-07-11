@@ -1,35 +1,22 @@
-# Características de la versión V6.06
+# Características de la versión V6.07
 
-## V6.06 - Botón de ayuda y guía de interfaz
+## V6.07 - Probabilidad de fichaje como dato de ojeo
 
-### Objetivo
+### Centro de Ojeo
 
-Agregar una ayuda integrada para que el jugador pueda entender rápidamente la jerarquía de menús, las funciones principales y el flujo recomendado de uso sin depender de imágenes ni de explicaciones técnicas internas.
+- La probabilidad de ser fichado pasa a funcionar como un dato revelable.
+- Se incorpora al informe de jugadores externos dentro del bloque de Mercado.
+- El dato queda oculto hasta que el proceso de ojeo lo descubra.
+- Al revelarse, aparece como porcentaje en el informe activo y en los informes guardados.
 
-### Cambios
+### Mercado
 
-- Nuevo botón **Ayuda** en la barra superior, antes de Guardar, Cargar y Renunciar.
-- Nueva ventana modal de ayuda con guía jerárquica.
-- Repaso de menús laterales por importancia:
-  - revisión diaria;
-  - gestión de plantel;
-  - crecimiento del club;
-  - seguimiento estadístico;
-  - ranking y funciones especiales.
-- Repaso de funciones superiores:
-  - Guardar;
-  - Cargar;
-  - Renunciar;
-  - Avance automático.
-- Botones internos de salto a secciones cuando la partida está activa.
-- Estilos específicos para que la ayuda sea legible en desktop y mobile.
-
-### Criterio de redacción
-
-La ayuda explica cómo orientarse, dónde buscar cada cosa y cómo usar el flujo general del juego. No muestra valores internos exactos ni fórmulas de balance.
+- La columna de aceptación deja de mostrar información automática.
+- Mientras el dato no esté ojeado, se mantiene `Interés oculto`.
+- Cuando el ojeo revela la probabilidad, el mercado muestra `Prob. fichaje`.
 
 ### Validaciones
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.
-- Verificado que la versión completa V6.06 no contiene `apps-script-ranking.gs`.
+- ZIP completo e incremental verificados.

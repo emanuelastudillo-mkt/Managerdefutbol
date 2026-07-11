@@ -4855,6 +4855,7 @@ th{
 .scouting-signing-chance.ok{border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.10)}
 .scouting-signing-chance.warn{border-color:rgba(245,158,11,.28);background:rgba(245,158,11,.10)}
 .scouting-signing-chance.bad{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.10)}
+.scouting-signing-chance.hidden{opacity:.78;border-style:dashed;background:rgba(148,163,184,.055)}
 .scouting-signing-chance.own{opacity:.72;text-align:right}
 .auto-advance-switch-panel{
   display:grid;

@@ -1,4 +1,4 @@
-/* V3.44 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
+/* V6.07 · Primer equipo, mercado y táctica: probabilidad de fichaje visible sólo si fue ojeada. */
 
 function firstTeamTabsMarkup(current){
   const tabs = [
@@ -193,11 +193,18 @@ function freeAgentAcceptanceChance(player=null){
   const bonus = typeof specialActiveBonus === 'function' ? Number(specialActiveBonus('especialista_libres') || 0) : 0;
   return clamp(Math.round((base + bonus) * 10) / 10, 0.5, 99.5);
 }
-function marketAcceptanceHiddenLabel(){
+function marketPlayerSigningChanceRevealed(player){
+  return Boolean(player && typeof playerHasScoutedSigningChance === 'function' && playerHasScoutedSigningChance(player));
+}
+function marketAcceptanceLabel(player){
+  if(marketPlayerSigningChanceRevealed(player) && typeof scoutingSigningChanceLabel === 'function') return `Prob. fichaje ${scoutingSigningChanceLabel(player)}`;
   return 'Interés oculto';
 }
+function marketAcceptanceToneClass(player){
+  return marketPlayerSigningChanceRevealed(player) ? 'ok' : 'muted';
+}
 function marketAcceptanceHiddenHint(){
-  return 'El jugador puede aceptar o rechazar según su media real y el prestigio del club, pero la probabilidad exacta permanece oculta.';
+  return 'La probabilidad de fichaje funciona como un dato de ojeo: permanece oculta hasta que el Centro de Ojeo la revele en el informe del jugador.';
 }
 function marketScoutedOverallCell(player){
   if(typeof scoutedOverallLabel === 'function') return scoutedOverallLabel(player);
@@ -341,7 +348,7 @@ function renderMarket(){
     <td>${marketScoutedMoraleCell(p)}</td>
     <td>${formatMoney(marketPlayerPrice(p))}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
+    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small ${marketAcceptanceToneClass(p)}">${marketAcceptanceLabel(p)}</span></td>
   </tr>`).join('');
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
@@ -374,7 +381,7 @@ function renderContractedMarket(){
     <td>${marketScoutedOverallCell(p)}</td>
     <td>${formatMoney(p.clause || p.value || 0)}</td>
     <td>${formatMoney(p.salary || 0)}</td>
-    <td><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
+    <td><span class="small ${marketAcceptanceToneClass(p)}">${marketAcceptanceLabel(p)}</span></td>
     <td><button class="primary small-btn" data-make-player-offer="${p.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></td>
   </tr>`;
   }).join('');

@@ -1690,8 +1690,20 @@ function matchFieldSummaryMarkup(match){
   </div>`;
 }
 function clubBudgetByPrestige(prestige, prizeMultiplier=1){
-  const base = 7000000 + Math.pow(Number(prestige) || 50, 2) * 18000;
-  return Math.round(base * (0.75 + prizeMultiplier * 0.65));
+  const rep = clamp(Number(prestige) || 50, 1, 99);
+  // V6.18: presupuesto inicial calibrado principalmente por prestigio.
+  // Anclas de diseño: 20 => $4.500.000, 80 => $100.000.000, 95 => $800.000.000.
+  // El parámetro prizeMultiplier se conserva por compatibilidad, pero ya no altera la caja inicial.
+  const lowAnchorPrestige = 20;
+  const midAnchorPrestige = 80;
+  const highAnchorPrestige = 95;
+  const lowAnchorBudget = 4500000;
+  const midAnchorBudget = 100000000;
+  const highAnchorBudget = 800000000;
+  const lowCurve = lowAnchorBudget * Math.pow(midAnchorBudget / lowAnchorBudget, (rep - lowAnchorPrestige) / (midAnchorPrestige - lowAnchorPrestige));
+  const highCurve = midAnchorBudget * Math.pow(highAnchorBudget / midAnchorBudget, (rep - midAnchorPrestige) / (highAnchorPrestige - midAnchorPrestige));
+  const raw = rep <= midAnchorPrestige ? lowCurve : highCurve;
+  return Math.max(1000000, Math.round(raw / 100000) * 100000);
 }
 function clubShortFromName(name){
   const words = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean);
@@ -1990,6 +2002,7 @@ async function openDb(){
 }
 async function saveLocal(silent=false){
   if(!game) return showNotice('No hay partida para guardar.');
+  if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'save_local' });
   const slot = setCurrentSaveSlot(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
   const payload = currentSavePayload();
   payload.saveSlotId = slot;
@@ -2022,6 +2035,7 @@ async function loadLocal(silent=false, slotId=null){
     setCurrentSaveSlot(slot);
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
     game.saveSlotId = slot;
+    const sharedProfileApplied = typeof applySharedManagerProfileToGame === 'function' ? applySharedManagerProfileToGame({ reason:'load_local' }) : null;
     const needsAutosave = Boolean(game._needsAutosave);
     const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
     delete game._needsAutosave;
@@ -2029,7 +2043,7 @@ async function loadLocal(silent=false, slotId=null){
     const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [] });
     const botRepair = repairBotRosters({ reason:'load_game' });
     const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
-    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired;
+    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired || Boolean(sharedProfileApplied?.changed);
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
     activeTab = 'home';
@@ -2084,6 +2098,7 @@ async function init(){
     bindEvents();
     startUiTicker();
     if(typeof migrateAllSavedSpecialCardsToGlobal === 'function') await migrateAllSavedSpecialCardsToGlobal().catch(()=>{});
+    if(typeof migrateAllSavedManagerProfilesToGlobal === 'function') await migrateAllSavedManagerProfilesToGlobal().catch(()=>{});
     let loaded = await loadLocal(true, preferredSlot);
     if(!loaded && preferredSlot !== SAVE_SLOT_CAREER) loaded = await loadLocal(true, SAVE_SLOT_CAREER);
     if(!loaded){

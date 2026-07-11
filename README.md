@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.20
+# Fútbol Manager MVP - V6.21
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.19**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.20**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -10,6 +10,25 @@ La versión vigente se identifica desde:
 - `config.js`
 - `index.html`
 
+
+## V6.21 - Perfil global del manager y cartas activas compartidas
+
+### Cambios principales
+
+- El perfil del manager se comparte entre partidas locales.
+- Se comparten entre slots:
+  - prestigio del manager;
+  - puntos de experiencia;
+  - puntos de habilidad;
+  - carrera laboral / historial de clubes;
+  - estadísticas acumuladas y logros del manager.
+- Al crear una nueva partida, el juego toma el prestigio global para determinar qué clubes puede elegir el manager.
+- Al cargar una partida vieja, se sincroniza con el perfil global sin borrar la temporada actual de ese slot.
+- Al guardar, el perfil global se actualiza con el progreso actual del manager.
+- Las cartas activas dejan de estar limitadas al slot donde se activaron.
+- Una carta activada aparece como activa en el resto de partidas y mantiene usos compartidos.
+- Si una carta activa se consume, se desactiva o se destruye, ese estado se refleja en todos los slots.
+- Las cartas de reserva siguen compartidas como inventario global.
 
 ## V6.20 - Táctica, sponsors y reputación de manager
 
@@ -187,29 +206,24 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.20
+## Archivos modificados en V6.21
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `style.css`
-- `data/sponsors.json`
-- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/07-render-team-market.js`
-- `js/ui/12-modals.js`
+- `js/game/15-especial.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.20**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.21**.
 
-Para actualizar desde V6.19, aplicar el ZIP incremental **V6.20** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.20, aplicar el ZIP incremental **V6.21** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.20 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.21 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.20
+## Validación V6.21
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

@@ -55,10 +55,19 @@ function managerClubAccessPrestige(value=currentManagerPrestige()){
 }
 function currentManagerPrestige(){
   if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;
+  if(typeof readManagerGlobalProfileState === 'function'){
+    const profile = readManagerGlobalProfileState();
+    if(profile && !profile.empty && profile.managerStats) return managerPrestigeBreakdown(profile.managerStats).total;
+  }
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
 }
 function currentManagerExperience(){
-  return Math.max(0, Math.round(Number(game?.managerStats?.experience || 0)));
+  if(game?.managerStats) return Math.max(0, Math.round(Number(game.managerStats.experience || 0)));
+  if(typeof readManagerGlobalProfileState === 'function'){
+    const profile = readManagerGlobalProfileState();
+    if(profile && !profile.empty && profile.managerStats) return Math.max(0, Math.round(Number(profile.managerStats.experience || 0)));
+  }
+  return 0;
 }
 function managerClubRehireBlockInfo(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -2665,6 +2674,7 @@ function newGame(selectedClubId, options={}){
     bankruptcy: null,
     challenge: null
   };
+  if(typeof applySharedManagerProfileToGame === 'function') applySharedManagerProfileToGame({ reason:'new_game' });
   assignInitialBotFieldStates(selectedClubId);
   if(options.founderMode){
     const selected = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
@@ -3004,6 +3014,137 @@ function normalizeManagerStats(stats){
   };
   normalized.prestige = managerPrestigeBreakdown(normalized).total;
   return normalized;
+}
+
+
+const MANAGER_GLOBAL_PROFILE_STORAGE_KEY = 'futbolManager.managerProfileGlobal.v1';
+
+function managerProfileStatsHasProgress(stats=null){
+  const src = stats || {};
+  const totals = src.totals || {};
+  return Boolean(
+    Number(src.experience || 0) > 0
+    || Number(src.titles || 0) > 0
+    || Number(totals.played || 0) > 0
+    || (Array.isArray(src.seasons) && src.seasons.length > 0)
+    || (Array.isArray(src.careerHistory) && src.careerHistory.length > 0)
+    || (Array.isArray(src.prestigeAdjustments) && src.prestigeAdjustments.length > 0)
+    || (src.achievements?.unlocked && Object.keys(src.achievements.unlocked || {}).length > 0)
+  );
+}
+function normalizeManagerGlobalProfile(profile=null){
+  const raw = profile && typeof profile === 'object' && !Array.isArray(profile) ? profile : {};
+  const stats = normalizeManagerStats(raw.managerStats || createInitialManagerStats());
+  const skillPoints = Math.max(0, Math.round(Number(raw.skillPoints ?? raw.puntos_habilidad ?? raw.puntosHabilidad ?? 0)));
+  const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName;
+  return {
+    version:'V6.21',
+    managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
+    saveCode:String(raw.saveCode || raw.manager_id || ''),
+    managerStats:stats,
+    skillPoints,
+    updatedAt:raw.updatedAt || null,
+    empty
+  };
+}
+function readManagerGlobalProfileState(){
+  try{
+    const raw = localStorage.getItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return normalizeManagerGlobalProfile(parsed);
+  }catch(err){ console.warn('No se pudo leer el perfil global del manager.', err); }
+  return normalizeManagerGlobalProfile(null);
+}
+function writeManagerGlobalProfileState(profile){
+  try{
+    const clean = normalizeManagerGlobalProfile(profile);
+    clean.version = 'V6.21';
+    clean.updatedAt = new Date().toISOString();
+    clean.empty = false;
+    localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
+    return clean;
+  }catch(err){ console.warn('No se pudo guardar el perfil global del manager.', err); return null; }
+}
+function applySharedManagerProfileToGame(options={}){
+  if(!game) return { changed:false };
+  const profile = readManagerGlobalProfileState();
+  if(!profile || profile.empty) return { changed:false };
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const clubId = Number(game.selectedClubId || 0);
+  const previousStats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
+  const previousCurrent = previousStats.currentSeason || emptyManagerSeasonStats(season, clubId);
+  const nextStats = normalizeManagerStats(profile.managerStats || previousStats);
+  nextStats.currentSeason = { ...emptyManagerSeasonStats(season, clubId), ...previousCurrent, season, clubId };
+  game.managerStats = ensureManagerCurrentSeasonStats(nextStats, season, clubId);
+  if(profile.managerName && !game.rankingManagerName) game.rankingManagerName = profile.managerName;
+  if(profile.saveCode && !game.saveCode) game.saveCode = profile.saveCode;
+  if(typeof normalizeSpecialState === 'function'){
+    game.special = normalizeSpecialState(game.special || createInitialSpecialState(game.rankingManagerName || profile.managerName || storedManagerName() || 'Manager'), game.rankingManagerName || profile.managerName || storedManagerName() || 'Manager');
+  } else if(!game.special) {
+    game.special = { puntos_habilidad:0, cartas_activas:[], cartas_reserva:[] };
+  }
+  if(game.special && typeof game.special === 'object'){
+    game.special.puntos_habilidad = Math.max(0, Math.round(Number(profile.skillPoints || 0)));
+    game.special.manager_id = String(game.saveCode || profile.saveCode || game.special.manager_id || '');
+    game.special.nombre_manager = String(game.rankingManagerName || profile.managerName || game.special.nombre_manager || storedManagerName() || 'Manager');
+  }
+  return { changed:true, profile };
+}
+function persistSharedManagerProfileFromGame(options={}){
+  if(!game) return null;
+  const stats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
+  let special = game.special;
+  if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
+  const profile = {
+    version:'V6.21',
+    managerName:String(game.rankingManagerName || storedManagerName() || ''),
+    saveCode:String(game.saveCode || ''),
+    managerStats:stats,
+    skillPoints:Math.max(0, Math.round(Number(special?.puntos_habilidad || 0))),
+    updatedAt:new Date().toISOString()
+  };
+  return writeManagerGlobalProfileState(profile);
+}
+
+function managerGlobalProfileScore(profile=null){
+  const clean = normalizeManagerGlobalProfile(profile);
+  const stats = clean.managerStats || {};
+  const totals = stats.totals || {};
+  return (Number(stats.experience || 0) * 1000)
+    + (Number(totals.played || 0) * 25)
+    + ((Array.isArray(stats.seasons) ? stats.seasons.length : 0) * 500)
+    + ((Array.isArray(stats.careerHistory) ? stats.careerHistory.length : 0) * 200)
+    + (Number(stats.titles || 0) * 1000)
+    + Number(clean.skillPoints || 0);
+}
+async function migrateAllSavedManagerProfilesToGlobal(){
+  if(typeof readLocalSaveRecord !== 'function') return false;
+  const candidates = [];
+  const currentGlobal = readManagerGlobalProfileState();
+  if(currentGlobal && !currentGlobal.empty) candidates.push(currentGlobal);
+  const slotIds = [];
+  if(typeof careerSaveSlotIds === 'function') slotIds.push(...careerSaveSlotIds());
+  else slotIds.push(typeof SAVE_SLOT_CAREER !== 'undefined' ? SAVE_SLOT_CAREER : 'career:1');
+  if(typeof SAVE_SLOT_CAMPO_DESTRUIDO !== 'undefined') slotIds.push(SAVE_SLOT_CAMPO_DESTRUIDO);
+  for(const rawSlot of Array.from(new Set(slotIds))){
+    const slotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(rawSlot) : rawSlot;
+    const record = await readLocalSaveRecord(slotId).catch(()=>null);
+    if(!record || typeof record !== 'object') continue;
+    const profile = normalizeManagerGlobalProfile({
+      managerName:record.rankingManagerName || storedManagerName() || '',
+      saveCode:record.saveCode || '',
+      managerStats:record.managerStats || createInitialManagerStats(),
+      skillPoints:Math.max(0, Math.round(Number(record.special?.puntos_habilidad || 0)))
+    });
+    if(!profile.empty) candidates.push(profile);
+  }
+  if(!candidates.length) return false;
+  candidates.sort((a,b) => managerGlobalProfileScore(b) - managerGlobalProfileScore(a));
+  const best = candidates[0];
+  const currentScore = managerGlobalProfileScore(currentGlobal);
+  if(currentGlobal && !currentGlobal.empty && currentScore >= managerGlobalProfileScore(best)) return false;
+  writeManagerGlobalProfileState(best);
+  return true;
 }
 
 function normalizeManagerAchievementsState(state){

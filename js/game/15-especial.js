@@ -1,4 +1,4 @@
-/* V5.78 · Cartas globales por slots con 10 activaciones y bloqueo de 50 días. */
+/* V6.21 · Cartas y cartas activas globales por manager con usos compartidos. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -130,22 +130,16 @@ function specialGlobalUpsertCard(rawCard, options={}){
     destruida:Boolean(card.destruida || existing.destruida)
   };
   if(asActive){
-    if(existing.active_slot_id && existing.active_slot_id !== slotId){
-      global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
-      global.cards[existing.id_carta] = existing;
-      if(!options.globalState) writeSpecialGlobalCardsState(global);
-      return existing;
-    }
     merged.activa = true;
-    merged.active_slot_id = slotId;
+    merged.active_slot_id = String(existing.active_slot_id || card.active_slot_id || slotId || 'global');
     merged.ultimo_slot_activacion = slotId;
     if(merged.activaciones_usadas <= 0) merged.activaciones_usadas = 1;
-  } else if(!existing.active_slot_id || existing.active_slot_id === slotId){
-    merged.activa = false;
-    merged.active_slot_id = '';
-  } else {
+  } else if(existing.active_slot_id){
     merged.activa = true;
     merged.active_slot_id = existing.active_slot_id;
+  } else {
+    merged.activa = false;
+    merged.active_slot_id = '';
   }
   global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
   global.cards[merged.id_carta] = normalizeSpecialGlobalCard(merged) || merged;
@@ -158,9 +152,6 @@ function specialGlobalReleaseCard(rawCard, options={}){
   const slotId = options.slotId ? String(options.slotId) : currentSpecialSaveSlotId();
   const global = readSpecialGlobalCardsState();
   const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
-  if(existing.active_slot_id && existing.active_slot_id !== slotId){
-    return existing;
-  }
   const released = { ...existing, ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null };
   if(options.destroy || options.exhausted || specialCardRemainingUses(released) <= 0){
     released.destruida = true;
@@ -177,8 +168,7 @@ function specialGlobalCardsForSlot(slotId=currentSpecialSaveSlotId()){
     .map((card, index) => normalizeSpecialGlobalCard(card, index))
     .filter(Boolean)
     .filter(card => !card.destruida)
-    .filter(card => specialCardRemainingUses(card) > 0 || card.active_slot_id === slot)
-    .filter(card => !card.active_slot_id || card.active_slot_id === slot);
+    .filter(card => specialCardRemainingUses(card) > 0 || Boolean(card.active_slot_id));
 }
 function syncSpecialStateWithGlobalCards(state){
   if(!state || typeof state !== 'object') return state;
@@ -187,11 +177,11 @@ function syncSpecialStateWithGlobalCards(state){
   global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
   (Array.isArray(state.cartas_reserva) ? state.cartas_reserva : []).forEach((rawCard, index) => {
     const card = normalizeSpecialGlobalCard(rawCard, index);
-    if(card && !card.destruida) specialGlobalUpsertCard({ ...card, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+    if(card && !card.destruida && !global.cards[card.id_carta]) specialGlobalUpsertCard({ ...card, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
   });
   (Array.isArray(state.cartas_activas) ? state.cartas_activas : []).forEach((rawCard, index) => {
     const card = normalizeSpecialGlobalCard(rawCard, index);
-    if(card && !card.destruida) specialGlobalUpsertCard({ ...card, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
+    if(card && !card.destruida && !global.cards[card.id_carta]) specialGlobalUpsertCard({ ...card, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
   });
   writeSpecialGlobalCardsState(global);
   const available = specialGlobalCardsForSlot(slotId);
@@ -200,7 +190,7 @@ function syncSpecialStateWithGlobalCards(state){
   available.forEach((card, index) => {
     const clean = normalizeSpecialGlobalCard(card, index);
     if(!clean || clean.destruida) return;
-    if(clean.active_slot_id === slotId){
+    if(clean.active_slot_id){
       clean.activa = true;
       active.push(clean);
     } else if(!clean.active_slot_id && specialCardRemainingUses(clean) > 0){
@@ -228,11 +218,11 @@ async function migrateAllSavedSpecialCardsToGlobal(){
     if(!special || typeof special !== 'object') continue;
     (Array.isArray(special.cartas_reserva) ? special.cartas_reserva : []).forEach((card, index) => {
       const clean = normalizeSpecialGlobalCard(card, index);
-      if(clean && !clean.destruida) specialGlobalUpsertCard({ ...clean, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+      if(clean && !clean.destruida && !global.cards[clean.id_carta]) specialGlobalUpsertCard({ ...clean, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
     });
     (Array.isArray(special.cartas_activas) ? special.cartas_activas : []).forEach((card, index) => {
       const clean = normalizeSpecialGlobalCard(card, index);
-      if(clean && !clean.destruida) specialGlobalUpsertCard({ ...clean, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
+      if(clean && !clean.destruida && !global.cards[clean.id_carta]) specialGlobalUpsertCard({ ...clean, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
     });
   }
   writeSpecialGlobalCardsState(global);
@@ -466,6 +456,7 @@ function awardSpecialPoints(actionId, context={}){
   state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
   state.puntos_log.push({ actionId, points, ...turnStamp({ date:game?.currentDate || '', ...context }) });
   if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'award_special_points' });
   return points;
 }
 function awardSpecialPointsForOwnMatch(match){
@@ -528,6 +519,7 @@ function redeemSpecialCode(){
     state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
     state.puntos_log.push({ actionId:'codigo_especial', points, code:key, ...turnStamp({ date:game?.currentDate || '' }) });
     if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+    if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'special_code_points' });
     specialPointsAnimation = { id:`code-${Date.now()}-${Math.random()}`, points };
     applied.push(`+${formatPlainNumber(points)} puntos de habilidad`);
   }
@@ -704,6 +696,7 @@ async function openSpecialPack(packId){
   state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
   state.puntos_log.push({ actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
   if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'open_special_pack_cost' });
   game.special = state;
   specialPointsAnimation = { id:`spend-${Date.now()}-${Math.random()}`, points:-cost };
   renderSpecial([], { revealCount:0, opening:true, packName:pack.nombre || 'Sobre' });
@@ -775,7 +768,12 @@ function activateSpecialCard(cardId){
   if(index < 0){ showNotice('Carta no encontrada en reserva.'); return; }
   const card = state.cartas_reserva[index];
   const globalCard = readSpecialGlobalCardsState().cards?.[card.id_carta];
-  if(globalCard?.active_slot_id && globalCard.active_slot_id !== slotId){ showNotice('Esta carta está activa en otra partida.'); return; }
+  if(globalCard?.active_slot_id){
+    game.special = syncSpecialStateWithGlobalCards(state);
+    renderSpecial();
+    showNotice('Esta carta ya está activa y se comparte entre partidas.');
+    return;
+  }
   if(!card.activable){ showNotice('Esta carta no se puede activar.'); return; }
   if(!limits.allowRepeatedActive && state.cartas_activas.some(active => active.id_base === card.id_base)){ showNotice('Esta carta ya está activa.'); return; }
   if(specialCardRemainingUses(card) <= 0){ showNotice('Esta carta ya no tiene activaciones disponibles.'); return; }
@@ -837,6 +835,7 @@ function destroySpecialCard(cardId){
   state.cartas_reserva.splice(index, 1);
   specialGlobalReleaseCard(card, { slotId:currentSpecialSaveSlotId(), destroy:true });
   state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + recovery));
+  if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'destroy_special_card' });
   state.historial_ultimas_cartas = [{ ...card, destruida:true, recuperacion_puntos:recovery }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
   specialPointsAnimation = { id:`destroy-${Date.now()}-${Math.random()}`, points:recovery };
   saveLocal(true);
@@ -913,7 +912,7 @@ function renderSpecial(opened=[], options={}){
     ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${escapeHtml(specialBonusSummaryText(item))}</span>`).join('')
     : '<span class="pill">Sin bonus activo</span>';
   view.innerHTML = `
-    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos de esta partida e inventario global de cartas por slots.</p></div></div>
+    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, reserva y cartas activas compartidas por el perfil del manager.</p></div></div>
     <div class="grid cols-4 compact-team-stats special-summary">
       <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
       <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>

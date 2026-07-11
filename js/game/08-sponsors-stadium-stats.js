@@ -285,6 +285,47 @@ function occupiedSponsorPlaces(){
   ensureSponsorState();
   return new Set((game.sponsors.active || []).filter(item => Number(item.turnsRemaining || 0) > 0).map(item => item.placeId));
 }
+
+const SPONSOR_BASE_PLACE_IDS = ['LUG001','LUG002','LUG003','LUG005','LUG006','LUG015','LUG016','LUG017'];
+function sponsorPlacesOrdered(){
+  const places = Array.isArray(sponsorsDatabase?.lugares_sponsor) ? sponsorsDatabase.lugares_sponsor : [];
+  const baseOrder = new Map(SPONSOR_BASE_PLACE_IDS.map((id, index) => [id, index]));
+  const orderValue = place => baseOrder.has(place.id_lugar) ? baseOrder.get(place.id_lugar) : 1000 + Math.max(0, Number(String(place.id_lugar || '').replace(/\D/g, '')) || 0);
+  return places.slice().sort((a,b) => orderValue(a) - orderValue(b) || String(a.nombre || '').localeCompare(String(b.nombre || '')));
+}
+function sponsorUnlockedPlaceCount(clubId=game?.selectedClubId){
+  const capacity = typeof clubStadiumCapacity === 'function' ? Number(clubStadiumCapacity(clubId) || 0) : 0;
+  const count = 8 + Math.floor(Math.max(0, capacity) / 5000);
+  return clamp(count, 8, 32);
+}
+function sponsorUnlockedPlaces(clubId=game?.selectedClubId){
+  return sponsorPlacesOrdered().slice(0, sponsorUnlockedPlaceCount(clubId));
+}
+function sponsorPlaceIsUnlocked(placeId, clubId=game?.selectedClubId){
+  return sponsorUnlockedPlaces(clubId).some(place => String(place.id_lugar) === String(placeId));
+}
+function sponsorOfferPlacePool(){
+  const occupied = occupiedSponsorPlaces();
+  return sponsorUnlockedPlaces().filter(place => !occupied.has(place.id_lugar));
+}
+function sponsorPlaceTypeLabel(type=''){
+  if(type === 'equipacion') return 'Equipación';
+  if(type === 'estadio') return 'Estadio';
+  return 'Club';
+}
+function sponsorPlacesMarkup(){
+  const places = sponsorPlacesOrdered();
+  if(!places.length) return '<p class="muted small">No hay lugares de sponsor cargados.</p>';
+  const unlockedCount = sponsorUnlockedPlaceCount();
+  const occupied = occupiedSponsorPlaces();
+  return `<div class="sponsor-places-card"><div class="row"><div><h4>Lugares disponibles</h4><p class="muted small">Tenés ${unlockedCount} de 32 lugares habilitados. Las ampliaciones de estadio pueden abrir más espacios comerciales.</p></div></div><div class="sponsor-places-grid">${places.map((place, index) => {
+    const unlocked = index < unlockedCount;
+    const active = occupied.has(place.id_lugar);
+    const tone = !unlocked ? 'locked' : active ? 'occupied' : 'available';
+    const label = !unlocked ? 'No disponible, amplia tu estadio para conseguir más lugares para sponsors' : active ? 'Ocupado' : 'Disponible';
+    return `<div class="sponsor-place-item ${tone}"><strong>${escapeHtml(place.nombre)}</strong><span>${sponsorPlaceTypeLabel(place.tipo)}</span><em>${escapeHtml(label)}</em></div>`;
+  }).join('')}</div></div>`;
+}
 function sponsorArrivalGroupSize(remaining){
   if(remaining <= 1) return 1;
   if(remaining >= 3 && Math.random() < SPONSOR_TRIPLE_ARRIVAL_CHANCE) return 3;
@@ -323,7 +364,7 @@ function ensureSponsorSeasonPlan(){
   return game.sponsors.seasonPlan || [];
 }
 function createSponsorOfferFromPlan(planItem){
-  const lugares = (sponsorsDatabase?.lugares_sponsor || []);
+  const lugares = sponsorOfferPlacePool();
   const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
   if(!lugares.length || !sponsors.length) return null;
   const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
@@ -440,6 +481,10 @@ function acceptSponsorOffer(offerId){
   const index = game.sponsors.offers.findIndex(offer => offer.id === offerId);
   if(index < 0) return;
   const offer = game.sponsors.offers[index];
+  if(!sponsorPlaceIsUnlocked(offer.placeId)){
+    showNotice('Ese lugar todavía no está disponible. Ampliá el estadio para habilitar más sponsors.');
+    return;
+  }
   if(occupiedSponsorPlaces().has(offer.placeId)){
     showNotice('Ese lugar ya está ocupado por otro sponsor. Rechazá esta oferta o esperá a que finalice el contrato activo.');
     return;
@@ -721,6 +766,7 @@ function renderStadium(){
     ${botFieldAuditMarkup()}
     <div class="card sponsors-card" style="margin-top:14px">
       <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan entre 20 y 40 ofertas por temporada. Cada propuesta vence en 5 días y puede pagar todo al inicio o por día.</p></div></div>
+      ${sponsorPlacesMarkup()}
       <h4>Ofertas disponibles</h4>
       ${sponsorOffersMarkup()}
       <h4 style="margin-top:14px">Contratos activos</h4>

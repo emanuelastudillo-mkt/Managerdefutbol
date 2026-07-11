@@ -1022,6 +1022,14 @@ function playerTacticFitLabel(player, slot){
   if(level === 'role') return '75%';
   return '50%';
 }
+function playerTacticFitPercent(player, slot){
+  return Math.round(playerTacticFitFactor(player, slot) * 100);
+}
+function tacticFitBar(player, slot){
+  const percent = playerTacticFitPercent(player, slot);
+  const value = Math.max(0, Math.min(99, Math.round((percent / 100) * 99)));
+  return compactValueCircle(value, 'performance', `Rendimiento táctico ${percent}%`);
+}
 function playerTacticFitTitle(player, slot){
   const level = playerTacticFitLevel(player, slot);
   if(level === 'exact') return 'Rol exacto: rinde al 100%';

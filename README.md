@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.19
+# Fútbol Manager MVP - V6.20
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.18**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.19**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -10,6 +10,23 @@ La versión vigente se identifica desde:
 - `config.js`
 - `index.html`
 
+
+## V6.20 - Táctica, sponsors y reputación de manager
+
+### Cambios principales
+
+- En **Táctica**, la lista de titulares agrega columna **Rol** para mostrar el rol natural del jugador.
+- En la columna **Edad** de Táctica se muestra sólo el número, sin el texto `años`.
+- La columna **Estado** fue renombrada como **Rendimiento** y ahora usa un visor circular como Físico y Moral.
+- El rendimiento táctico muestra **100%** si el jugador está en su rol exacto, **75%** si juega en una posición compatible y **50%** si está fuera de zona natural.
+- El sistema de sponsors ahora trabaja con **32 lugares comerciales**.
+- Todos los clubes tienen **8 lugares base** habilitados: 5 de equipación y 3 de estadio.
+- El resto de lugares aparece bloqueado en gris con la etiqueta de ampliación de estadio.
+- La generación de ofertas de sponsors sólo usa lugares habilitados y no ocupados.
+- En la barra superior se agregó el switch textual **Recibir mensajes de tu ayudante / No recibir mensajes del ayudante**.
+- Si el switch está desactivado, no se generan nuevos consejos del asistente.
+- La probabilidad de fichar jugadores suma linealmente el prestigio del manager. Ejemplo: base 4% + 20 de prestigio = 24%.
+- Los mensajes de rechazo del jugador cambian según relación entre prestigio del manager, prestigio del club y nivel del jugador.
 
 ## V6.19 - Sponsors por división y pagos por duración
 
@@ -170,22 +187,29 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.19
+## Archivos modificados en V6.20
 
 - `index.html`
 - `config.js`
 - `README.md`
+- `style.css`
+- `data/sponsors.json`
+- `js/core/03-player-tactics-utils.js`
+- `js/game/05-state-season.js`
 - `js/game/08-sponsors-stadium-stats.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/07-render-team-market.js`
+- `js/ui/12-modals.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.19**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.20**.
 
-Para actualizar desde V6.18, aplicar el ZIP incremental **V6.19** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.19, aplicar el ZIP incremental **V6.20** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.19 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.20 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.19
+## Validación V6.20
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

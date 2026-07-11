@@ -96,6 +96,7 @@ function renderAll(){
   }
   refreshSidebarDate();
   $('btnSave').disabled = !game;
+  updateAssistantMessagesToggle();
   if($('topResignClubBtn')){
     $('topResignClubBtn').disabled = !game || game.gameOver?.active;
     $('topResignClubBtn').classList.toggle('hidden', !game || game.gameOver?.active);
@@ -669,6 +670,18 @@ function unreadMessagesCount(){
 function unreadAssistantMessagesCount(){
   return (game?.messages || []).filter(m => !m.read && String(m.type || '').toLowerCase() === 'asistente').length;
 }
+function assistantMessagesEnabled(){
+  return !game || game.assistantMessagesEnabled !== false;
+}
+function assistantMessagesButtonLabel(){
+  return assistantMessagesEnabled() ? 'Recibir mensajes de tu ayudante' : 'No recibir mensajes del ayudante';
+}
+function updateAssistantMessagesToggle(){
+  const btn = document.getElementById('btnAssistantMessagesToggle');
+  if(!btn) return;
+  btn.textContent = assistantMessagesButtonLabel();
+  btn.disabled = !game;
+}
 function pushGameMessage(message){
   if(!game) return null;
   game.messages = Array.isArray(game.messages) ? game.messages : [];
@@ -730,7 +743,7 @@ function pickAssistantAdviceIndex(pool, state, reason='daily'){
 function maybePushAssistantAdviceMessage(reason='daily', options={}){
   if(!game) return null;
   const cfg = window.GAME_CONFIG?.mensajesAsistente || {};
-  if(cfg.activo === false) return null;
+  if(cfg.activo === false || game.assistantMessagesEnabled === false) return null;
   const pool = assistantAdvicePool();
   if(!pool.length) return null;
   const state = ensureAssistantAdviceState();

@@ -411,7 +411,7 @@ function submitPurchaseOffer(playerId, kind){
   const playerAccepted = Math.random() * 100 < Number(playerChance || 0);
   if(!playerAccepted){
     markPurchaseOfferRejected(player.id, kind, cfg.amount, playerChance, 'player');
-    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:`${player.name} rechazó jugar en ${clubName(game.selectedClubId)}. La decisión depende de su media real y del prestigio del club. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:typeof marketPlayerRejectionBody === 'function' ? marketPlayerRejectionBody(player) : `${player.name} no tiene interés en jugar en tu club ni le gusta tu forma de dirigir. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);

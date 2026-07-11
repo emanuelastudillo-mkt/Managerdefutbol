@@ -186,7 +186,8 @@ function probAceptarOferta(mediaJugador, prestigioClubOfertante){
 function marketPlayerAcceptanceChance(player=null){
   const media = player ? visibleOverall(player) : marketOfferClubPrestige();
   const chance = probAceptarOferta(media, marketOfferClubPrestige());
-  return clamp(Math.round(chance * 10) / 10, 0.5, 95);
+  const managerPrestigeBonus = typeof currentManagerPrestige === 'function' ? Number(currentManagerPrestige() || 0) : 0;
+  return clamp(Math.round((chance + managerPrestigeBonus) * 10) / 10, 0.5, 99.5);
 }
 function freeAgentAcceptanceChance(player=null){
   const base = marketPlayerAcceptanceChance(player);
@@ -205,6 +206,20 @@ function marketAcceptanceToneClass(player){
 }
 function marketAcceptanceHiddenHint(){
   return 'La probabilidad de fichaje funciona como un dato de ojeo: permanece oculta hasta que el Centro de Ojeo la revele en el informe del jugador.';
+}
+function marketPlayerRejectionBody(player=null){
+  const playerName = player?.name || 'El jugador';
+  const club = clubName(game?.selectedClubId);
+  const clubPrestige = marketOfferClubPrestige();
+  const managerPrestige = typeof currentManagerPrestige === 'function' ? Number(currentManagerPrestige() || 0) : 0;
+  const playerLevel = player ? visibleOverall(player) : 0;
+  if(managerPrestige > clubPrestige){
+    return `${playerName} no le interesa jugar en tu club, y aunque le gusta tu estilo de llevar los equipos, no cree que sea buen momento. Queda bloqueado para tu club hasta la próxima temporada.`;
+  }
+  if(clubPrestige > playerLevel){
+    return `${playerName} no ve con malos ojos jugar en ${club}, pero sí está seguro de que no le interesa ser dirigido por alguien sin ninguna reputación. Queda bloqueado para tu club hasta la próxima temporada.`;
+  }
+  return `${playerName} no tiene interés en jugar en tu club ni le gusta tu forma de dirigir. Queda bloqueado para tu club hasta la próxima temporada.`;
 }
 function marketScoutedOverallCell(player){
   if(typeof scoutedOverallLabel === 'function') return scoutedOverallLabel(player);
@@ -410,7 +425,7 @@ function hireFreeAgent(playerId){
   if(roll >= chance){
     const rejected = game.marketPlayers[idx];
     markFreeAgentOfferRejected(playerId, chance);
-    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:`${rejected?.name || 'El jugador'} rechazó negociar con ${clubName(game.selectedClubId)}. La decisión depende de su media real y del prestigio del club. Podrás volver a intentar la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:marketPlayerRejectionBody(rejected), priority:'normal' });
     saveLocal(true);
     showNotice(`${rejected?.name || 'Jugador'} rechazó la oferta.`);
     renderMarket();
@@ -818,11 +833,12 @@ function renderTactics(){
     return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<strong>${playerNameWithScoutingEye(p)}</strong>` : '<span class="muted">Vacío</span>'}</span>
-      <span class="age-cell lineup-center-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
+      <span class="lineup-center-cell">${p ? roleBadge(p.position) : '—'}</span>
+      <span class="age-cell lineup-center-cell">${p ? (Number(p.age || 0) || '—') : '—'}</span>
       <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(conditionBar(p.id)) : ''}</span>
       <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(moraleBar(p.id)) : ''}</span>
-      <strong class="lineup-center-cell">${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
+      <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(tacticFitBar(p, slot.slot)) : ''}</span>
     </div>`;
   }).join('');
   view.innerHTML = `
@@ -846,7 +862,7 @@ function renderTactics(){
         <div class="grid cols-2 tactic-lists tactic-grid-card">
           <div class="card tactic-lineup-card">
             <h3>Titulares</h3>
-            <div class="lineup-row lineup-head tactic-lineup-head"><span>Pos.</span><span>Jugador</span><span class="lineup-center-cell">Edad</span><span class="lineup-center-cell">Media</span><span class="lineup-center-cell">Físico</span><span class="lineup-center-cell">Moral</span><span class="lineup-center-cell">Estado</span></div>
+            <div class="lineup-row lineup-head tactic-lineup-head"><span>Pos.</span><span>Jugador</span><span class="lineup-center-cell">Rol</span><span class="lineup-center-cell">Edad</span><span class="lineup-center-cell">Media</span><span class="lineup-center-cell">Físico</span><span class="lineup-center-cell">Moral</span><span class="lineup-center-cell">Rendimiento</span></div>
             <div class="lineup-list">${starterList}</div>
           </div>
           <div class="card tactic-roster-card">

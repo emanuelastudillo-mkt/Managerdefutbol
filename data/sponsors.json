@@ -1,7 +1,7 @@
 {
-  "version": "V5.66",
+  "version": "V6.20",
   "archivo": "data/sponsors.json",
-  "descripcion": "Base de sponsors con lugares y marcas para ofertas fijas por temporada.",
+  "descripcion": "Lugares de sponsor ampliados a 32 con desbloqueo progresivo por estadio.",
   "moneda": "dinero_juego",
   "reglas_calculo": {
     "pago_oferta": "Cada oferta sortea una sola forma de pago: todo al inicio o pago diario. Las ofertas de pago inicial son 50% más bajas que el total equivalente de pago diario.",
@@ -185,6 +185,90 @@
       "nombre": "Cartel de ingreso al estadio",
       "tipo": "estadio",
       "multiplicador_lugar": 0.65,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG021",
+      "nombre": "Pantalla LED principal",
+      "tipo": "estadio",
+      "multiplicador_lugar": 1.1,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG022",
+      "nombre": "Túnel de salida al campo",
+      "tipo": "estadio",
+      "multiplicador_lugar": 1.05,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG023",
+      "nombre": "Arco de ingreso al campo",
+      "tipo": "estadio",
+      "multiplicador_lugar": 0.95,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG024",
+      "nombre": "Zona mixta de prensa",
+      "tipo": "estadio",
+      "multiplicador_lugar": 0.85,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG025",
+      "nombre": "Sala de conferencias",
+      "tipo": "club",
+      "multiplicador_lugar": 0.8,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG026",
+      "nombre": "Micro oficial del plantel",
+      "tipo": "club",
+      "multiplicador_lugar": 0.9,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG027",
+      "nombre": "Panel de entrevistas postpartido",
+      "tipo": "estadio",
+      "multiplicador_lugar": 0.9,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG028",
+      "nombre": "Cartelería de platea preferencial",
+      "tipo": "estadio",
+      "multiplicador_lugar": 0.75,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG029",
+      "nombre": "Palcos VIP",
+      "tipo": "estadio",
+      "multiplicador_lugar": 1.15,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG030",
+      "nombre": "App oficial del club",
+      "tipo": "club",
+      "multiplicador_lugar": 0.7,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG031",
+      "nombre": "Newsletter para socios",
+      "tipo": "club",
+      "multiplicador_lugar": 0.55,
+      "requiere_exclusividad": false
+    },
+    {
+      "id_lugar": "LUG032",
+      "nombre": "Fan zone del estadio",
+      "tipo": "estadio",
+      "multiplicador_lugar": 0.8,
       "requiere_exclusividad": false
     }
   ],
@@ -2191,11 +2275,7 @@
     }
   ],
   "validacion": {
-    "cantidad_lugares_sponsor": 20,
-    "cantidad_sponsors": 200,
-    "valor_minimo_base_por_7_dias": 150000,
-    "valor_maximo_base_por_7_dias": 1590000,
-    "duracion_minima_generada": 3,
-    "duracion_maxima_generada": 35
+    "lugares_sponsor": 32,
+    "sponsors": 200
   }
 }

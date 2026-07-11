@@ -1623,6 +1623,13 @@ function bindEvents(){
   $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnHelp')?.addEventListener('click', () => { if(typeof openGameHelpModal === 'function') openGameHelpModal(); });
+  $('btnAssistantMessagesToggle')?.addEventListener('click', () => {
+    if(!game) return;
+    game.assistantMessagesEnabled = game.assistantMessagesEnabled === false;
+    saveLocal(true);
+    if(typeof updateAssistantMessagesToggle === 'function') updateAssistantMessagesToggle();
+    showNotice(game.assistantMessagesEnabled === false ? 'Mensajes del ayudante desactivados.' : 'Mensajes del ayudante activados.');
+  });
   $('btnSave').addEventListener('click', saveLocal);
   $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else loadLocal(false); });
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);

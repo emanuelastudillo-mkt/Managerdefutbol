@@ -3919,7 +3919,7 @@ th{
 }
 .tactic-lineup-row,
 .tactic-lineup-head{
-  grid-template-columns:58px minmax(118px,1.35fr) 48px 48px 42px 42px 70px!important;
+  grid-template-columns:58px minmax(118px,1.35fr) 48px 42px 48px 42px 42px 72px!important;
   gap:6px;
   padding:7px 8px;
   min-height:38px;
@@ -4053,11 +4053,11 @@ th{
 @media (max-width:720px){
   .tactic-actions-card .tactic-autopick-row{grid-template-columns:1fr}
   .tactic-lineup-head{display:none}
-  .tactic-lineup-row{grid-template-columns:52px minmax(0,1fr) 42px 42px!important}
+  .tactic-lineup-row{grid-template-columns:52px minmax(0,1fr) 42px 38px 42px!important}
   .tactic-lineup-row .age-cell,
   .tactic-lineup-row .metric-only,
-  .tactic-lineup-row .lineup-center-cell:nth-child(4){grid-column:auto}
-  .tactic-lineup-row .lineup-center-cell:last-child{grid-column:1 / -1;justify-content:flex-start}
+  .tactic-lineup-row .lineup-center-cell{grid-column:auto}
+  .tactic-lineup-row .lineup-center-cell:nth-child(n+6){grid-column:span 1}
   .drag-player.tactic-click-player{grid-template-columns:auto minmax(0,1fr)}
   .tactic-card-meters{grid-column:1 / -1;justify-content:flex-start;padding-left:39px}
 }
@@ -5012,3 +5012,36 @@ th{
 .game-over-screen{grid-template-columns:minmax(0,1fr) minmax(280px,380px);gap:16px;place-items:stretch;align-items:start}
 .game-over-screen>.available-clubs-panel{width:100%;margin-top:0}
 @media (max-width:980px){.job-search-layout,.game-over-screen{grid-template-columns:1fr}.available-clubs-grid{grid-template-columns:1fr}.available-clubs-panel{max-height:none}}
+
+
+/* V6.20 · lugares de sponsor desbloqueables */
+.sponsor-places-card{
+  margin:12px 0 14px;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(15,23,42,.42);
+  border:1px solid rgba(148,163,184,.14);
+}
+.sponsor-places-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+.sponsor-place-item{
+  display:grid;
+  gap:3px;
+  padding:10px;
+  border-radius:12px;
+  background:rgba(15,23,42,.62);
+  border:1px solid rgba(148,163,184,.16);
+  min-height:82px;
+}
+.sponsor-place-item strong{font-size:13px;color:#e5edf7;line-height:1.18}
+.sponsor-place-item span{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9fb0c9;font-weight:900}
+.sponsor-place-item em{font-style:normal;font-size:11px;line-height:1.25;color:#9fb0c9}
+.sponsor-place-item.available{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.06)}
+.sponsor-place-item.occupied{border-color:rgba(59,130,246,.25);background:rgba(59,130,246,.07)}
+.sponsor-place-item.locked{opacity:.48;filter:grayscale(.45);border-style:dashed}
+.sponsor-place-item.locked strong,.sponsor-place-item.locked span,.sponsor-place-item.locked em{color:#7f8da3}
+@media (max-width:720px){.sponsor-places-grid{grid-template-columns:1fr}}

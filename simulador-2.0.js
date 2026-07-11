@@ -1323,7 +1323,7 @@
     const locallySent = new Set();
     const eligibleLineup = (power.lineup || []).filter(p => p && !liveIsUnavailableForPlay(session, p.id));
     const cardMultiplier = simClamp(Number(power?.styleEffects?.cardMultiplier || 1), 0.20, 2.50);
-    const yellowCount = simClamp(probabilisticRoundV2((Math.max(0, Number(fouls || 0)) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier) / 3.4), 0, 2);
+    const yellowCount = simClamp(probabilisticRoundV2((Math.max(0, Number(fouls || 0)) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier) / 7.6), 0, 2);
     session.yellowByPlayer = session.yellowByPlayer || {};
     for(let i=0;i<yellowCount;i++){
       const p = weightedPickV2(eligibleLineup.filter(item => !locallySent.has(Number(item.id))), cardWeightV2);

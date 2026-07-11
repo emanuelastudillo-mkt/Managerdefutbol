@@ -1,14 +1,23 @@
-# Fútbol Manager MVP - V6.13
+# Fútbol Manager MVP - V6.14
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.12**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.13**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+## V6.14 - Tarjetas del simulador vivo alineadas con simulación rápida
+
+### Cambios principales
+
+- El simulador vivo mantiene el mismo `multiplicadorTarjetas` global, pero ahora usa la misma escala base de amarillas que la simulación rápida.
+- Se reemplazó la escala interna más agresiva del vivo para que, ante una cantidad similar de faltas, genere una cantidad de tarjetas más cercana a la simulación rápida.
+- No se modificó el valor activo de balance: `balance-modificadores.js` sigue pisando el valor base de `config.js`.
+- Las instrucciones y estilos que reducen o aumentan tarjetas siguen funcionando sobre el multiplicador final.
 
 ## V6.13 - Media visible en simulador vivo
 
@@ -96,22 +105,22 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.13
+## Archivos modificados en V6.14
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `js/game/17-live-match.js`
+- `simulador-2.0.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.13**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.14**.
 
-Para actualizar desde V6.12, aplicar el ZIP incremental **V6.13** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.13, aplicar el ZIP incremental **V6.14** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.13 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.14 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.13
+## Validación V6.14
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

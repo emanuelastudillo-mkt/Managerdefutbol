@@ -1,20 +1,44 @@
-/* V3.28 · Sponsors, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/* V5.66 · Sponsors fijos por temporada, estadio, calendario, tabla, estadísticas y finanzas visuales. */
 
 function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
 }
 function createInitialSponsorState(){
-  return { active:[], offers:[], matchesSinceOffer:0, nextOfferAfter:randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX), lastOfferTurn:-1, openingOffersSeason:0 };
+  return {
+    active:[],
+    offers:[],
+    seasonPlan:[],
+    seasonPlanSeason:0,
+    seasonOfferTarget:0,
+    generatedOfferCount:0,
+    lastOfferTurn:-1,
+    expiredOffers:0
+  };
 }
 function normalizeSponsorState(state){
   const base = createInitialSponsorState();
   const clean = { ...base, ...(state || {}) };
   clean.active = Array.isArray(clean.active) ? clean.active : [];
   clean.offers = Array.isArray(clean.offers) ? clean.offers : [];
-  clean.matchesSinceOffer = Number.isFinite(clean.matchesSinceOffer) ? clean.matchesSinceOffer : 0;
-  clean.nextOfferAfter = Number.isFinite(clean.nextOfferAfter) ? clean.nextOfferAfter : randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
-  clean.lastOfferTurn = Number.isFinite(clean.lastOfferTurn) ? clean.lastOfferTurn : -1;
-  clean.openingOffersSeason = Number.isFinite(clean.openingOffersSeason) ? clean.openingOffersSeason : 0;
+  clean.seasonPlan = Array.isArray(clean.seasonPlan) ? clean.seasonPlan : [];
+  clean.seasonPlanSeason = Number.isFinite(Number(clean.seasonPlanSeason)) ? Number(clean.seasonPlanSeason) : 0;
+  clean.seasonOfferTarget = Number.isFinite(Number(clean.seasonOfferTarget)) ? Number(clean.seasonOfferTarget) : 0;
+  clean.generatedOfferCount = Number.isFinite(Number(clean.generatedOfferCount)) ? Number(clean.generatedOfferCount) : 0;
+  clean.lastOfferTurn = Number.isFinite(Number(clean.lastOfferTurn)) ? Number(clean.lastOfferTurn) : -1;
+  clean.expiredOffers = Number.isFinite(Number(clean.expiredOffers)) ? Number(clean.expiredOffers) : 0;
+  delete clean.matchesSinceOffer;
+  delete clean.nextOfferAfter;
+  delete clean.openingOffersSeason;
+  const now = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
+  clean.offers = clean.offers.map(offer => {
+    const createdTurn = Number.isFinite(Number(offer.createdTurn)) ? Number(offer.createdTurn) : now;
+    const expiresTurn = Number.isFinite(Number(offer.expiresTurn)) ? Number(offer.expiresTurn) : createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
+    return { ...offer, createdTurn, expiresTurn };
+  });
+  clean.active = clean.active.map(contract => {
+    const turnsRemaining = Number.isFinite(Number(contract.turnsRemaining)) ? Number(contract.turnsRemaining) : daysToTurns(Number(contract.durationDays || contract.diasDuracion || 0));
+    return { ...contract, turnsRemaining:Math.max(0, turnsRemaining), paidToDate:Math.round(Number(contract.paidToDate || 0)) };
+  }).filter(contract => Number(contract.turnsRemaining || 0) > 0);
   return clean;
 }
 function ensureSponsorState(){
@@ -41,15 +65,31 @@ function sponsorMoraleBonus(){
 function sponsorCohesionBonus(){
   return (cohesionValue(game.selectedClubId) / 100) * 0.10;
 }
-function sponsorOfferValue(baseSponsor, lugar){
+function sponsorSeasonWindowTurns(){
+  const total = typeof totalSeasonTurnCount === 'function' ? totalSeasonTurnCount() : 365;
+  return Math.max(30, Number(total || 365));
+}
+function sponsorOfferValue(baseSponsor, lugar, paymentType='daily'){
   const base = Number(baseSponsor?.valor_base_por_7_dias || 0);
   const place = Number(lugar?.multiplicador_lugar || 1);
   const specialBonusPct = typeof specialActiveBonus === 'function' ? specialActiveBonus('sponsors_extra') : 0;
   const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus()) * (1 + (specialBonusPct / 100));
-  const perTurn = Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier);
-  const durationDays = Number(baseSponsor?.dias_duracion_oferta || 0);
-  const turns = clamp(Math.round(durationDays > 0 ? durationDays / DAYS_PER_ADVANCE : randomInt(3,35)), 3, 35);
-  return { perTurn, turns, total:perTurn * turns };
+  const valuePer7Days = Math.max(0, Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier));
+  const dailyAmount = Math.max(0, Math.round(valuePer7Days / 7));
+  const durationDays = randomInt(SPONSOR_DURATION_MIN_DAYS, SPONSOR_DURATION_MAX_DAYS);
+  const turns = Math.max(1, daysToTurns(durationDays));
+  const dailyTotal = Math.round(dailyAmount * durationDays);
+  const upfrontTotal = Math.round(dailyTotal * Math.max(0, 1 - SPONSOR_UPFRONT_DISCOUNT));
+  return {
+    valuePer7Days,
+    dailyAmount,
+    durationDays,
+    turns,
+    paymentType,
+    total:paymentType === 'upfront' ? upfrontTotal : dailyTotal,
+    upfrontTotal,
+    dailyTotal
+  };
 }
 function occupiedSponsorPlaces(){
   ensureSponsorState();
@@ -61,97 +101,194 @@ function sponsorPlaceById(id){
 function sponsorBrandById(id){
   return (sponsorsDatabase?.sponsors || []).find(sponsor => sponsor.id_sponsor === id) || null;
 }
-function generateSponsorOffers(forcedCount=null, options={}){
-  ensureSponsorState();
-  const lugares = (sponsorsDatabase?.lugares_sponsor || []).filter(place => !occupiedSponsorPlaces().has(place.id_lugar));
-  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
-  if(!lugares.length || !sponsors.length) return [];
-  const requestedCount = Number.isFinite(Number(forcedCount)) ? Number(forcedCount) : randomInt(SPONSOR_OFFER_COUNT_MIN, SPONSOR_OFFER_COUNT_MAX);
-  const count = Math.min(Math.max(1, Math.round(requestedCount)), lugares.length, sponsors.length);
-  const usedPlaces = new Set();
-  const usedSponsors = new Set();
-  const offers = [];
-  let guard = 0;
-  while(offers.length < count && guard < 200){
-    guard += 1;
-    const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
-    const place = lugares[randomInt(0, lugares.length - 1)];
-    if(!sponsor || !place || usedSponsors.has(sponsor.id_sponsor) || usedPlaces.has(place.id_lugar)) continue;
-    usedSponsors.add(sponsor.id_sponsor);
-    usedPlaces.add(place.id_lugar);
-    const value = sponsorOfferValue(sponsor, place);
-    offers.push({
-      id:`SPON-${game.seasonNumber || 1}-${currentSeasonTurnNumber()}-${sponsor.id_sponsor}-${place.id_lugar}-${hashNumber(String(Math.random()), 100000)}`,
-      sponsorId:sponsor.id_sponsor,
-      sponsorName:sponsor.nombre_marca,
-      category:sponsor.categoria,
-      placeId:place.id_lugar,
-      placeName:place.nombre,
-      placeType:place.tipo,
-      perTurn:value.perTurn,
-      turns:value.turns,
-      total:value.total,
-      createdTurn:currentTurnIndex(),
-      season:game.seasonNumber || 1
-    });
-  }
-  game.sponsors.offers = offers;
-  game.sponsors.matchesSinceOffer = 0;
-  game.sponsors.nextOfferAfter = randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
-  game.sponsors.lastOfferTurn = currentTurnIndex();
-  if(offers.length && options.silent !== true){
-    pushGameMessage({
-      type:'finanzas',
-      title:options.title || 'Nuevas ofertas de sponsors',
-      body:options.body || `Llegaron ${offers.length} oferta(s) de patrocinio para el club.`,
-      priority:options.priority || 'normal'
-    });
-  }
-  return offers;
+function sponsorArrivalGroupSize(remaining){
+  if(remaining <= 1) return 1;
+  if(remaining >= 3 && Math.random() < SPONSOR_TRIPLE_ARRIVAL_CHANCE) return 3;
+  return Math.min(remaining, randomInt(SPONSOR_OFFERS_PER_ARRIVAL_MIN, SPONSOR_OFFERS_PER_ARRIVAL_MAX));
 }
-function generateOpeningSponsorOffers(force=false){
+function buildSponsorSeasonPlan(){
   ensureSponsorState();
   const season = Number(game?.seasonNumber || 1);
-  if(!force && Number(game.sponsors.openingOffersSeason || 0) === season) return game.sponsors.offers || [];
-  const offers = generateSponsorOffers(SPONSOR_OPENING_OFFER_COUNT, {
-    title:'Ofertas iniciales de sponsors',
-    body:'Llegaron 2 ofertas de patrocinio para el inicio de temporada.'
-  });
-  if(offers.length){
-    game.sponsors.openingOffersSeason = season;
-    game.sponsors.matchesSinceOffer = 0;
-    game.sponsors.nextOfferAfter = randomInt(SPONSOR_OFFER_MATCH_MIN, SPONSOR_OFFER_MATCH_MAX);
+  const totalOffers = randomInt(SPONSOR_SEASON_OFFERS_MIN, SPONSOR_SEASON_OFFERS_MAX);
+  const plan = [];
+  let remaining = totalOffers;
+  const windowTurns = sponsorSeasonWindowTurns();
+  const currentTurn = Math.max(1, Math.min(windowTurns, typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1));
+  let guard = 0;
+  while(remaining > 0 && guard < 500){
+    guard += 1;
+    const count = Math.min(remaining, sponsorArrivalGroupSize(remaining));
+    const latestArrival = Math.max(currentTurn, windowTurns - Math.max(0, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)));
+    const arrivalTurn = randomInt(currentTurn, latestArrival);
+    plan.push({ id:`SPONPLAN-${season}-${plan.length + 1}-${hashNumber(String(Math.random()), 100000)}`, arrivalTurn, count, released:false });
+    remaining -= count;
   }
-  return offers;
+  plan.sort((a,b) => Number(a.arrivalTurn || 0) - Number(b.arrivalTurn || 0));
+  game.sponsors.seasonPlan = plan;
+  game.sponsors.seasonPlanSeason = season;
+  game.sponsors.seasonOfferTarget = totalOffers;
+  game.sponsors.generatedOfferCount = 0;
+  return plan;
+}
+function ensureSponsorSeasonPlan(){
+  ensureSponsorState();
+  const season = Number(game?.seasonNumber || 1);
+  if(Number(game.sponsors.seasonPlanSeason || 0) !== season || !Array.isArray(game.sponsors.seasonPlan) || !game.sponsors.seasonPlan.length){
+    buildSponsorSeasonPlan();
+  }
+  return game.sponsors.seasonPlan || [];
+}
+function createSponsorOfferFromPlan(planItem){
+  const lugares = (sponsorsDatabase?.lugares_sponsor || []);
+  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
+  if(!lugares.length || !sponsors.length) return null;
+  const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
+  const place = lugares[randomInt(0, lugares.length - 1)];
+  if(!sponsor || !place) return null;
+  const paymentType = Math.random() < SPONSOR_UPFRONT_PAYMENT_CHANCE ? 'upfront' : 'daily';
+  const value = sponsorOfferValue(sponsor, place, paymentType);
+  const createdTurn = currentSeasonTurnNumber();
+  const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
+  const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
+  game.sponsors.generatedOfferCount = serial;
+  return {
+    id:`SPON-${game.seasonNumber || 1}-${serial}-${sponsor.id_sponsor}-${place.id_lugar}-${hashNumber(String(Math.random()), 100000)}`,
+    sponsorId:sponsor.id_sponsor,
+    sponsorName:sponsor.nombre_marca,
+    category:sponsor.categoria,
+    placeId:place.id_lugar,
+    placeName:place.nombre,
+    placeType:place.tipo,
+    paymentType,
+    paymentLabel:paymentType === 'upfront' ? 'Pago total inicial' : 'Pago diario',
+    valuePer7Days:value.valuePer7Days,
+    dailyAmount:value.dailyAmount,
+    durationDays:value.durationDays,
+    turns:value.turns,
+    total:value.total,
+    dailyTotal:value.dailyTotal,
+    upfrontTotal:value.upfrontTotal,
+    createdTurn,
+    expiresTurn,
+    arrivalPlanId:planItem?.id || '',
+    season:game.seasonNumber || 1
+  };
+}
+function expireSponsorOffers(silent=true){
+  ensureSponsorState();
+  const currentTurn = currentSeasonTurnNumber();
+  const before = game.sponsors.offers.length;
+  game.sponsors.offers = (game.sponsors.offers || []).filter(offer => Number(offer.expiresTurn || 0) >= currentTurn);
+  const expired = before - game.sponsors.offers.length;
+  if(expired > 0){
+    game.sponsors.expiredOffers = Number(game.sponsors.expiredOffers || 0) + expired;
+    if(!silent) showNotice(`${expired} oferta(s) de sponsor vencieron.`);
+  }
+  return expired;
+}
+function releaseDueSponsorOffers(options={}){
+  ensureSponsorSeasonPlan();
+  expireSponsorOffers(true);
+  const currentTurn = currentSeasonTurnNumber();
+  const released = [];
+  (game.sponsors.seasonPlan || []).forEach(planItem => {
+    if(planItem.released) return;
+    if(Number(planItem.arrivalTurn || 0) > currentTurn) return;
+    planItem.released = true;
+    const count = Math.max(1, Math.round(Number(planItem.count || 1)));
+    for(let i=0;i<count;i+=1){
+      const offer = createSponsorOfferFromPlan(planItem);
+      if(offer) released.push(offer);
+    }
+  });
+  if(released.length){
+    game.sponsors.offers = [...(game.sponsors.offers || []), ...released];
+    game.sponsors.lastOfferTurn = currentTurnIndex();
+    if(options.silent !== true){
+      pushGameMessage({
+        type:'finanzas',
+        title:'Nuevas ofertas de sponsors',
+        body:`Llegaron ${released.length} oferta(s) de patrocinio. Tenés ${SPONSOR_OFFER_EXPIRE_DAYS} día(s) para aceptar o rechazar antes de que desaparezcan.`,
+        priority:'normal'
+      });
+    }
+  }
+  return released;
+}
+function generateSponsorOffers(forcedCount=null, options={}){
+  // Compatibilidad: libera ofertas del plan fijo de temporada.
+  if(Number.isFinite(Number(forcedCount)) && Number(forcedCount) > 0){
+    ensureSponsorState();
+    const tempPlan = { id:`SPONMAN-${Date.now()}`, count:Number(forcedCount), arrivalTurn:currentSeasonTurnNumber(), released:true };
+    const released = [];
+    for(let i=0;i<Number(forcedCount);i+=1){
+      const offer = createSponsorOfferFromPlan(tempPlan);
+      if(offer) released.push(offer);
+    }
+    game.sponsors.offers = [...(game.sponsors.offers || []), ...released];
+    if(released.length && options.silent !== true){
+      pushGameMessage({ type:'finanzas', title:options.title || 'Nuevas ofertas de sponsors', body:options.body || `Llegaron ${released.length} oferta(s) de patrocinio.`, priority:options.priority || 'normal' });
+    }
+    return released;
+  }
+  return releaseDueSponsorOffers(options);
+}
+function generateOpeningSponsorOffers(force=false){
+  ensureSponsorSeasonPlan();
+  return releaseDueSponsorOffers({ silent:!force });
 }
 function advanceSponsorMatchCounter(){
-  ensureSponsorState();
-  game.sponsors.matchesSinceOffer = Number(game.sponsors.matchesSinceOffer || 0) + 1;
-  if(game.sponsors.matchesSinceOffer >= Number(game.sponsors.nextOfferAfter || SPONSOR_OFFER_MATCH_MIN)){
-    generateSponsorOffers();
-  }
+  // V5.66: los sponsors se liberan por plan fijo de temporada.
+  return releaseDueSponsorOffers({ silent:true });
 }
 function processSponsorContracts(){
   ensureSponsorState();
-  game.sponsors.active = (game.sponsors.active || []).map(contract => ({ ...contract, turnsRemaining:Math.max(0, Number(contract.turnsRemaining || 0) - 1) })).filter(contract => Number(contract.turnsRemaining || 0) > 0);
+  releaseDueSponsorOffers({ silent:false });
+  const currentDate = game?.currentDate || '';
+  const nextActive = [];
+  (game.sponsors.active || []).forEach(contract => {
+    const remaining = Math.max(0, Number(contract.turnsRemaining || 0));
+    if(remaining <= 0) return;
+    let updated = { ...contract };
+    if(updated.paymentType === 'daily'){
+      const amount = Math.max(0, Math.round(Number(updated.dailyAmount || 0)));
+      if(amount > 0){
+        recordBudgetChange(amount, `Sponsor diario: ${updated.sponsorName} / ${updated.placeName}`, { type:'sponsor_daily', sponsorId:updated.sponsorId, placeId:updated.placeId, sponsorContractId:updated.id });
+        updated.paidToDate = Math.round(Number(updated.paidToDate || 0) + amount);
+        updated.lastDailyPaymentDate = currentDate;
+      }
+    }
+    updated.turnsRemaining = Math.max(0, remaining - 1);
+    if(updated.turnsRemaining > 0) nextActive.push(updated);
+  });
+  game.sponsors.active = nextActive;
 }
 function acceptSponsorOffer(offerId){
   ensureSponsorState();
+  expireSponsorOffers(true);
   const index = game.sponsors.offers.findIndex(offer => offer.id === offerId);
   if(index < 0) return;
   const offer = game.sponsors.offers[index];
   if(occupiedSponsorPlaces().has(offer.placeId)){
-    showNotice('Ese lugar ya está ocupado por otro sponsor.');
+    showNotice('Ese lugar ya está ocupado por otro sponsor. Rechazá esta oferta o esperá a que finalice el contrato activo.');
     return;
   }
   game.sponsors.offers.splice(index, 1);
-  game.sponsors.active.push({
+  const contract = {
     ...offer,
     acceptedTurn:currentTurnIndex(),
-    turnsRemaining:offer.turns
-  });
-  recordBudgetChange(offer.total, `Sponsor: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor', sponsorId:offer.sponsorId, placeId:offer.placeId });
-  pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(offer.total)} por ${offer.placeName}.`, priority:'normal' });
+    acceptedDate:game?.currentDate || '',
+    turnsRemaining:offer.turns,
+    paidToDate:0
+  };
+  if(offer.paymentType === 'upfront'){
+    contract.paidToDate = Math.round(Number(offer.total || 0));
+    recordBudgetChange(contract.paidToDate, `Sponsor pago inicial: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor_upfront', sponsorId:offer.sponsorId, placeId:offer.placeId, sponsorContractId:offer.id });
+    pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(contract.paidToDate)} al inicio por ${offer.placeName}.`, priority:'normal' });
+  } else {
+    pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagará ${formatMoney(offer.dailyAmount)} por día durante ${formatDays(offer.durationDays)} por ${offer.placeName}.`, priority:'normal' });
+  }
+  game.sponsors.active.push(contract);
   saveLocal(true);
   showNotice(`Sponsor aceptado: ${offer.sponsorName}.`);
   renderStadium();
@@ -164,24 +301,37 @@ function rejectSponsorOffer(offerId){
 }
 function sponsorOffersMarkup(){
   ensureSponsorState();
+  expireSponsorOffers(true);
   const offers = game.sponsors.offers || [];
   if(!offers.length){
-    return `<p class="muted small">Sin ofertas disponibles. Intenta ganar partidos para tentar a las marcas a anunciarse con nosotros.</p>`;
+    return `<p class="muted small">Sin ofertas disponibles. Las marcas enviarán entre ${SPONSOR_SEASON_OFFERS_MIN} y ${SPONSOR_SEASON_OFFERS_MAX} propuestas durante la temporada.</p>`;
   }
-  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Días</th><th>Por 7 días</th><th>Pago inmediato</th><th></th></tr></thead><tbody>${offers.map(offer => `<tr>
-    <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
-    <td>${escapeHtml(offer.placeName)}</td>
-    <td>${formatDaysFromTurns(offer.turns)}</td>
-    <td>${formatMoney(offer.perTurn)}</td>
-    <td><strong class="ok">${formatMoney(offer.total)}</strong></td>
-    <td><button class="primary small-btn" data-accept-sponsor="${escapeHtml(offer.id)}">Aceptar</button><button class="ghost small-btn" data-reject-sponsor="${escapeHtml(offer.id)}">Rechazar</button></td>
-  </tr>`).join('')}</tbody></table></div>`;
+  const currentTurn = currentSeasonTurnNumber();
+  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Duración</th><th>Pago</th><th>Valor</th><th>Vence</th><th></th></tr></thead><tbody>${offers.map(offer => {
+    const daysLeft = Math.max(0, turnsToDays(Number(offer.expiresTurn || currentTurn) - currentTurn + 1));
+    const valueText = offer.paymentType === 'daily'
+      ? `${formatMoney(offer.dailyAmount)} / día`
+      : `${formatMoney(offer.total)} total`;
+    const payText = offer.paymentType === 'daily' ? 'Diario' : 'Todo al inicio';
+    return `<tr>
+      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
+      <td>${escapeHtml(offer.placeName)}</td>
+      <td>${formatDays(offer.durationDays || turnsToDays(offer.turns))}</td>
+      <td><span class="pill ${offer.paymentType === 'daily' ? 'ok' : ''}">${payText}</span></td>
+      <td><strong class="ok">${valueText}</strong><span class="muted small">Base: ${formatMoney(offer.valuePer7Days || 0)} cada 7 días</span></td>
+      <td>${formatDays(daysLeft)}</td>
+      <td><button class="primary small-btn" data-accept-sponsor="${escapeHtml(offer.id)}">Aceptar</button><button class="ghost small-btn" data-reject-sponsor="${escapeHtml(offer.id)}">Rechazar</button></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
 }
 function activeSponsorsMarkup(){
   ensureSponsorState();
   const active = game.sponsors.active || [];
   if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
-  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Días restantes</th><th>Pago recibido</th></tr></thead><tbody>${active.map(item => `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.total || 0)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Pago</th><th>Días restantes</th><th>Cobrado</th></tr></thead><tbody>${active.map(item => {
+    const payment = item.paymentType === 'daily' ? `${formatMoney(item.dailyAmount || 0)} / día` : 'Todo al inicio';
+    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
 }
 
 function botFieldAuditMarkup(){
@@ -322,7 +472,7 @@ function renderStadium(){
     ${stadiumExpansionsMarkup()}
     ${botFieldAuditMarkup()}
     <div class="card sponsors-card" style="margin-top:14px">
-      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Cada algunos partidos tendras ofertas publicitarias. El pago se recibe completo al aceptar.</p></div></div>
+      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan entre 20 y 40 ofertas por temporada. Cada propuesta vence en 5 días y puede pagar todo al inicio o por día.</p></div></div>
       <h4>Ofertas disponibles</h4>
       ${sponsorOffersMarkup()}
       <h4 style="margin-top:14px">Contratos activos</h4>

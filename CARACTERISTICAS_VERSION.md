@@ -1,4 +1,24 @@
-# Características de la versión V5.65
+# Características de la versión V5.66
+
+## V5.66 - Sponsors fijos por temporada
+
+### Cambios principales
+- Se reemplaza el sistema de aparición por partidos por un plan fijo de temporada.
+- Cada temporada genera entre 20 y 40 ofertas de sponsors.
+- Las ofertas vencen a los 5 días si no se aceptan o rechazan.
+- Pueden llegar hasta 3 ofertas juntas y pueden competir por el mismo espacio publicitario.
+- Los 20 lugares posibles siguen disponibles como destino de oferta.
+- Cada oferta define una sola forma de pago: pago total inicial o pago diario.
+- Las ofertas con pago total inicial pagan 50% menos que el total equivalente por día.
+- Las duraciones pasan a 200-500 días.
+- Los multiplicadores vigentes se conservan: división, puesto, moral, cohesión, lugar, valor base y cartas de sponsors.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Las partidas existentes normalizan el estado de sponsors al cargar.
+
+---
 
 ## V5.65 - Códigos especiales en menú Especial
 

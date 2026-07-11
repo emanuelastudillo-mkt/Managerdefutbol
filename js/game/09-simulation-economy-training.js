@@ -237,7 +237,7 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, trig
     items.push({ label:'Eventos', text:`${triggeredEvents.length} evento(s) activado(s). Revisá Mensajes.`, tone:'warn' });
   }
   const offers = game.sponsors?.offers?.length || 0;
-  if(offers) items.push({ label:'Sponsors', text:`Hay ${offers} oferta(s) de patrocinio disponibles.`, tone:'ok' });
+  if(offers) items.push({ label:'Sponsors', text:`Hay ${offers} oferta(s) de patrocinio disponibles con vencimiento.`, tone:'ok' });
   if(ownProblems?.length){
     items.push({ label:'Revisión obligatoria', text:`${ownProblems.length} jugador(es) requieren cambios en la táctica.`, tone:'bad' });
   }else if(!regularEnded){
@@ -1529,7 +1529,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
     game.currentDate = dateForSeasonState(game);
     rememberCalendarDate();
     setAdvanceLock(0);
-    if(Number(game.sponsors?.openingOffersSeason || 0) !== Number(game.seasonNumber || 1)){
+    if(Number(game.sponsors?.seasonPlanSeason || 0) !== Number(game.seasonNumber || 1)){
       generateOpeningSponsorOffers(true);
     }
     setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly);

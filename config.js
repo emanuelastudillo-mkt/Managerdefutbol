@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.65',
+  version: 'V5.66',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -129,16 +129,16 @@ window.GAME_CONFIG = {
     // Cada código se puede reclamar una sola vez por partida guardada.
     codigos: [
       {
-        codigo: 'PRESTIGIO30',
+        codigo: 'PRESTIGIO20',
         nombre: 'Impulso de prestigio',
-        descripcion: 'Suma 30 puntos de prestigio al manager.',
-        beneficios: { prestigio: 30 }
+        descripcion: 'Suma 20 puntos de prestigio al manager.',
+        beneficios: { prestigio: 20 }
       },
       {
-        codigo: 'PUNTOS60000',
+        codigo: 'PUNTOS50000',
         nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 60.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 60000 }
+        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 50000 }
       }
     ]
   },
@@ -262,13 +262,18 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // Multiplica los valores base de data/sponsors.json. 1 mantiene el valor del archivo.
+    // V5.66: sistema fijo por temporada.
     factorValorBase: 1,
-    partidosMinimosEntreTandas: 4,
-    partidosMaximosEntreTandas: 7,
-    ofertasMinimasPorTanda: 2,
-    ofertasMaximasPorTanda: 5,
-    ofertasInicialesFecha1: 2
+    ofertasMinimasPorTemporada: 20,
+    ofertasMaximasPorTemporada: 40,
+    ofertasVencenEnDias: 5,
+    ofertasPorLlegadaMin: 1,
+    ofertasPorLlegadaMax: 3,
+    probabilidadLlegadaTriple: 0.45,
+    duracionOfertaMinDias: 200,
+    duracionOfertaMaxDias: 500,
+    probabilidadPagoUnico: 0.50,
+    descuentoPagoUnico: 0.50
   },
   mercado: {
     // Impuesto federativo sobre ventas de jugadores. 0.30 = el club recibe 70% neto.

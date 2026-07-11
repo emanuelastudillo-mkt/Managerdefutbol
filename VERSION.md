@@ -1,6 +1,6 @@
 # Versión actual
 
-V5.65
+V5.66
 
 ## Cambios
 - Se agrega canje de códigos dentro del menú Especial.

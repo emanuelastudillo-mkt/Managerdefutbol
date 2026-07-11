@@ -1,4 +1,19 @@
-# Fútbol Manager MVP - V5.65
+# Fútbol Manager MVP - V5.66
+
+## V5.66 - Sponsors fijos por temporada
+
+- Se elimina el sistema de sponsors por partidos y tandas.
+- Cada temporada genera un plan fijo de entre 20 y 40 ofertas.
+- Las ofertas llegan durante la temporada y vencen en 5 días si no se aceptan o rechazan.
+- Una misma llegada puede traer 1 a 3 ofertas juntas.
+- Las ofertas pueden competir por el mismo lugar de sponsor.
+- Cada oferta sortea una forma de pago: todo al inicio o pago diario.
+- Las ofertas de pago total inicial pagan un 50% menos que el total equivalente por día.
+- Las duraciones se sortean entre 200 y 500 días.
+- Los multiplicadores actuales siguen activos: división, puesto en liga, moral, cohesión, lugar y cartas de sponsors.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.65 - Códigos especiales en menú Especial
 

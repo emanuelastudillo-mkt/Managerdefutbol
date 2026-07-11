@@ -234,7 +234,7 @@ function visualAlertItems(){
     items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Podés aceptar o rechazar desde Mensajes.', tab:'messages' });
   }
   if(sponsorOffers){
-    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Hay ingresos inmediatos posibles.', tab:'stadium' });
+    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Tenés ofertas con vencimiento para aceptar o rechazar.', tab:'stadium' });
   }
   if(scoutingJobs.length){
     const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));

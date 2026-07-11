@@ -1,2 +1,2 @@
-/* V5.65 · Punto de entrada. Códigos especiales en menú Especial. */
+/* V5.66 · Punto de entrada. Sponsors fijos por temporada. */
 init();

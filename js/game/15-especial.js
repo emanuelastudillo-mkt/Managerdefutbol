@@ -1,4 +1,4 @@
-/* V5.65 · Menú ESPECIAL: cartas, códigos canjeables y bonus acumulables. */
+/* V5.70 · Menú ESPECIAL: códigos compactos abajo a la izquierda. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -372,17 +372,10 @@ function redeemSpecialCode(){
 }
 function specialCodeRedeemMarkup(){
   const cfg = specialCodesConfig();
-  const claimed = specialClaimedCodes();
-  const claimedCount = Object.keys(claimed).length;
   const disabled = cfg.active ? '' : 'disabled';
-  return `<div class="card special-code-card">
-    <div class="row"><div><p class="label">Códigos</p><h3>Canjear beneficio</h3></div><span class="pill">Usados: ${claimedCount}</span></div>
-    <p class="muted small">Ingresá un código especial. Cada código se puede reclamar una sola vez por partida.</p>
-    <div class="row gap-sm special-code-row">
-      <input id="special-code-input" class="input" type="text" placeholder="Escribir código" autocomplete="off" ${disabled} />
-      <button class="primary" id="special-code-redeem-btn" ${disabled}>Canjear</button>
-    </div>
-    ${cfg.active ? '<p class="muted small">Los códigos disponibles se configuran en <strong>config.js</strong>.</p>' : '<p class="muted small">El canje de códigos está desactivado.</p>'}
+  return `<div class="special-code-mini">
+    <input id="special-code-input" class="input" type="text" placeholder="Código" autocomplete="off" ${disabled} />
+    <button class="primary" id="special-code-redeem-btn" ${disabled}>Canjear</button>
   </div>`;
 }
 
@@ -725,7 +718,6 @@ function renderSpecial(opened=[], options={}){
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
       <div class="card"><p class="label">Cambios</p><strong>${escapeHtml(locked.locked ? 'Bloqueados' : 'Libres')}</strong></div>
     </div>
-    ${specialCodeRedeemMarkup()}
     ${specialOpenedMarkup(opened, options)}
     <div class="card special-active-drop" data-special-drop-active="1">
       <div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${escapeHtml(lockText)}</span></div>
@@ -737,6 +729,7 @@ function renderSpecial(opened=[], options={}){
       <div class="card"><div class="row"><div><p class="label">Sobres</p><h3>Abrir</h3></div><span class="pill">Reserva libre: ${Math.max(0, limits.reserveMax - reserveAll.length)}</span></div><div class="grid cols-1">${packs.length ? packs.map(specialPackMarkup).join('') : '<p class="muted">No hay sobres configurados.</p>'}</div></div>
       <div class="card"><div class="row"><div><p class="label">Reserva</p><h3>Inventario</h3></div><span class="pill">${reserve.length}/${limits.reserveMax}</span></div><div class="special-card-grid compact">${reserve.length ? reserve.map(card => specialCardMarkup(card, 'reserve')).join('') : '<p class="muted">No hay cartas en reserva.</p>'}</div></div>
     </div>
+    ${specialCodeRedeemMarkup()}
   `;
   document.querySelectorAll('[data-open-special-pack]').forEach(btn => btn.addEventListener('click', () => openSpecialPack(btn.dataset.openSpecialPack)));
   const codeInput = document.getElementById('special-code-input');

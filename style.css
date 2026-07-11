@@ -4612,10 +4612,26 @@ th{
 }
 
 
-/* V5.65 · Códigos especiales */
-.special-code-card{border-color:rgba(59,130,246,.18);background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(239,246,255,.74))}
-.special-code-row{align-items:center;flex-wrap:wrap}
-.special-code-row input{min-width:220px;flex:1 1 220px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+/* V5.70 · Códigos especiales compactos */
+.special-code-mini{
+  margin-top:14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:360px;
+  justify-content:flex-start;
+}
+.special-code-mini input{
+  min-width:0;
+  width:210px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:800;
+}
+.special-code-mini button{
+  flex:0 0 auto;
+  padding-inline:14px;
+}
 
 /* V5.69 · Campañas de socios y métricas de hinchada */
 .member-campaigns-box{

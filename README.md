@@ -1,4 +1,14 @@
-# Fútbol Manager MVP - V5.69
+# Fútbol Manager MVP - V5.70
+
+## V5.70 - Códigos compactos en Especial
+
+- En el menú **Especial**, el bloque de códigos queda reducido a input y botón **Canjear**.
+- Se eliminaron textos explicativos, contador de usados y aviso de configuración.
+- El canje queda abajo de todo, alineado a la izquierda.
+- No cambia la lógica de códigos ni beneficios.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.69 - Hinchada ampliada y campañas de socios en línea
 

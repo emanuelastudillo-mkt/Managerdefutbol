@@ -1,4 +1,18 @@
-# Características de la versión V5.69
+# Características de la versión V5.70
+
+## V5.70 - Códigos compactos en Especial
+
+### Cambios principales
+- El espacio de códigos del menú Especial queda mínimo: campo de texto y botón **Canjear**.
+- Se eliminan los textos visibles de ayuda, contador de usados y referencia a `config.js`.
+- El bloque se ubica abajo de todo y alineado a la izquierda para no ocupar espacio principal.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta sólo la presentación del canje de códigos.
+
+---
 
 ## V5.69 - Hinchada ampliada y campañas de socios en línea
 

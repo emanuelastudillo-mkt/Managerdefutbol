@@ -1,2 +1,2 @@
-/* V5.69 · Punto de entrada. Hinchada ampliada y campañas de socios en línea. */
+/* V5.70 · Punto de entrada. Códigos compactos en menú Especial. */
 init();

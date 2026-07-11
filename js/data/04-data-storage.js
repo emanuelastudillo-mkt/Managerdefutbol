@@ -1020,6 +1020,8 @@ function ensureFanState(targetGame=game){
   targetGame.fans = targetGame.fans && typeof targetGame.fans === 'object' && !Array.isArray(targetGame.fans) ? targetGame.fans : createInitialFanState();
   targetGame.fans.clubs = targetGame.fans.clubs && typeof targetGame.fans.clubs === 'object' && !Array.isArray(targetGame.fans.clubs) ? targetGame.fans.clubs : {};
   targetGame.fans.history = Array.isArray(targetGame.fans.history) ? targetGame.fans.history : [];
+  targetGame.fans.memberCampaigns = Array.isArray(targetGame.fans.memberCampaigns) ? targetGame.fans.memberCampaigns : [];
+  targetGame.fans.memberCampaignHistory = Array.isArray(targetGame.fans.memberCampaignHistory) ? targetGame.fans.memberCampaignHistory : [];
   seed.clubs.forEach(club => {
     const base = clubFansBase(club.id);
     const row = targetGame.fans.clubs[club.id] || {};
@@ -1039,6 +1041,88 @@ function setClubFansCurrent(clubId, value, reason=''){
   const row = game.fans.clubs[id] || { base:clubFansBase(id) };
   game.fans.clubs[id] = { ...row, current, lastDelta:current - previous, lastReason:String(reason || '') };
   return current - previous;
+}
+function addHiddenMemberCampaignFans(clubId, amount, campaign=null){
+  ensureFanState();
+  const id = Number(clubId);
+  const delta = Math.max(0, Math.round(Number(amount || 0)));
+  if(delta <= 0) return 0;
+  const previous = clubFansCurrent(id);
+  const row = game.fans.clubs[id] || { base:clubFansBase(id) };
+  game.fans.clubs[id] = { ...row, current:previous + delta };
+  game.fans.memberCampaignHistory.push({
+    season:game.seasonNumber || 1,
+    date:game.currentDate || '',
+    clubId:id,
+    campaignId:campaign?.templateId || campaign?.id || '',
+    campaignName:campaign?.name || '',
+    delta,
+    current:previous + delta
+  });
+  game.fans.memberCampaignHistory = game.fans.memberCampaignHistory.slice(-365);
+  return delta;
+}
+function activeMemberCampaignsForClub(clubId=game?.selectedClubId){
+  ensureFanState();
+  const id = Number(clubId || 0);
+  return (game.fans.memberCampaigns || []).filter(campaign => Number(campaign.clubId || 0) === id && Number(campaign.daysLeft || 0) > 0);
+}
+function startMemberCampaign(campaignId){
+  if(!game?.selectedClubId) return;
+  ensureFanState();
+  const template = (STADIUM_MEMBER_CAMPAIGNS || []).find(item => String(item.id) === String(campaignId));
+  if(!template){ showNotice('Campaña inválida.'); return; }
+  if((game.budget || 0) < Number(template.cost || 0)){ showNotice('Presupuesto insuficiente para iniciar esta campaña.'); return; }
+  const campaign = {
+    id:`member-campaign-${game.seasonNumber || 1}-${currentTurnIndex()}-${template.id}-${Math.floor(Math.random() * 100000)}`,
+    templateId:template.id,
+    name:template.name,
+    clubId:Number(game.selectedClubId),
+    investment:Math.round(Number(template.cost || 0)),
+    durationDays:Math.round(Number(template.durationDays || 1)),
+    daysLeft:Math.round(Number(template.durationDays || 1)),
+    dailyMembersMin:Math.round(Number(template.dailyMembersMin || 0)),
+    dailyMembersMax:Math.round(Number(template.dailyMembersMax || template.dailyMembersMin || 0)),
+    startedDate:game.currentDate || '',
+    startedTurn:currentTurnIndex(),
+    totalHiddenMembers:0
+  };
+  recordBudgetChange(-campaign.investment, `Campaña de socios: ${campaign.name}`, { type:'member_campaign', campaignId:campaign.id, templateId:campaign.templateId });
+  game.fans.memberCampaigns.push(campaign);
+  saveLocal(true);
+  showNotice(`Campaña iniciada. Inversión: ${formatMoney(campaign.investment)}. Duración: ${formatDays(campaign.durationDays)}.`);
+  if(typeof renderStadium === 'function') renderStadium();
+}
+function processMemberCampaigns(days=1){
+  ensureFanState();
+  const elapsed = Math.max(0, Math.round(Number(days || 0)));
+  if(elapsed <= 0 || !game.fans.memberCampaigns.length) return { added:0, finished:0 };
+  let totalAdded = 0;
+  const remaining = [];
+  const finished = [];
+  game.fans.memberCampaigns.forEach(raw => {
+    const campaign = { ...raw };
+    let daysLeft = Math.max(0, Math.round(Number(campaign.daysLeft || 0)));
+    const daysToProcess = Math.min(daysLeft, elapsed);
+    for(let day=0; day<daysToProcess; day += 1){
+      const min = Math.max(0, Math.round(Number(campaign.dailyMembersMin || 0)));
+      const max = Math.max(min, Math.round(Number(campaign.dailyMembersMax || min)));
+      const gained = rnd(min, max);
+      totalAdded += addHiddenMemberCampaignFans(campaign.clubId, gained, campaign);
+      campaign.totalHiddenMembers = Math.round(Number(campaign.totalHiddenMembers || 0) + gained);
+    }
+    daysLeft = Math.max(0, daysLeft - daysToProcess);
+    campaign.daysLeft = daysLeft;
+    if(daysLeft > 0) remaining.push(campaign);
+    else finished.push(campaign);
+  });
+  game.fans.memberCampaigns = remaining;
+  finished.forEach(campaign => {
+    if(Number(campaign.clubId) === Number(game.selectedClubId) && typeof pushGameMessage === 'function'){
+      pushGameMessage({ type:'estadio', title:'Campaña de socios finalizada', body:`Finalizó la campaña con inversión de ${formatMoney(campaign.investment)} y duración de ${formatDays(campaign.durationDays)}.`, priority:'normal' });
+    }
+  });
+  return { added:totalAdded, finished:finished.length };
 }
 function ticketPriceForClub(clubId){
   ensureStadiumState();

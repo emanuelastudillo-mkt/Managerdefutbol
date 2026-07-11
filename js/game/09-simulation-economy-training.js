@@ -897,6 +897,7 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   const recovered = clearRecoveredDailyInjuries();
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
+  if(typeof processMemberCampaigns === 'function') processMemberCampaigns(1);
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily();
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('daily');
   processMonthlyClubExpensesDaily();
@@ -1511,6 +1512,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
+  if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
   processBankLoanDailySchedule();
   game.pendingFriendlyOpponentId = 0;
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
@@ -1612,6 +1614,7 @@ function simulatePostseasonTurn(){
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
+  if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
   processBankLoanDailySchedule();
   game.phaseTurn = Number(game.phaseTurn || 0) + 1;
   game.currentDate = dateForSeasonState(game);
@@ -2356,6 +2359,7 @@ function advanceStadiumAfterMatches(results){
   });
   processStadiumProjects();
   processSponsorContracts();
+  if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
 }
 function processStadiumProjects(){
   ensureStadiumState();

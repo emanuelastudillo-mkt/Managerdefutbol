@@ -1,4 +1,26 @@
-# Características de la versión V5.66
+# Características de la versión V5.67
+
+## V5.67 - Campañas de socios en Estadio
+
+### Cambios principales
+- Se agrega un bloque de campañas para sumar socios dentro del menú **Estadio**.
+- Las campañas muestran inversión y duración, pero ocultan los socios diarios y el total de captación.
+- Las campañas activas se procesan día a día y suman socios al club manejado.
+- El costo se descuenta al iniciar y queda registrado en Finanzas.
+- Los valores quedan configurables desde `config.js`, bloque `estadio.campaniasSocios`.
+
+### Campañas iniciales
+| Campaña | Inversión | Duración | Captación oculta |
+|---|---:|---:|---:|
+| Marketing | $50.000.000 | 60 días | 10 a 15 socios/día |
+| Marketing | $500.000.000 | 90 días | 35 a 50 socios/día |
+| Marketing | $100.000.000 | 10 días | 30 a 50 socios/día |
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+
+---
 
 ## V5.66 - Sponsors fijos por temporada
 

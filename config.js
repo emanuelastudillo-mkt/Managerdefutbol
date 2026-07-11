@@ -1,787 +1,703 @@
-/* V5.66 · Sponsors fijos por temporada, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/*
+  Configuración editable del juego.
+  Cambiar estos valores no requiere tocar app.js.
+  Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
+*/
+window.GAME_CONFIG = {
+  version: 'V5.67',
+  data: {
+    seedUrl: 'data/seed.json',
+    // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
+    cacheMode: 'default',
+    // El juego carga y combina todos los JSON válidos de esta lista.
+    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    playersUrl: 'data/jugadores.json',
+    manualPlayersUrl: 'data/jugadores_manuales.json',
+    sponsorsUrl: 'data/sponsors.json',
+    employeesUrl: 'data/empleados.json',
+    eventsUrl: 'data/eventos.json',
+    specialSkillsUrl: 'data/habilidades_especiales.json',
+    managerAchievementsUrl: 'data/hitos_manager.json',
+    estadiosUrl: 'data/estadios_argentina.json',
+    hinchasUrl: 'data/hinchas_argentina.json',
+    estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
+    hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
+    estadiosArgentinaUrl: 'data/estadios_argentina.json',
+    hinchasArgentinaUrl: 'data/hinchas_argentina.json',
+    estadiosChileUrl: 'data/estadios_chile.json',
+    hinchasChileUrl: 'data/hinchas_chile.json',
+    estadiosBrasilUrl: 'data/estadios_brasil.json',
+    hinchasBrasilUrl: 'data/hinchas_brasil.json',
+    estadiosInglaterraUrl: 'data/estadios_inglaterra.json',
+    hinchasInglaterraUrl: 'data/hinchas_inglaterra.json',
+    estadiosEspanaUrl: 'data/estadios_espana.json',
+    hinchasEspanaUrl: 'data/hinchas_espana.json',
+    estadiosItaliaUrl: 'data/estadios_italia.json',
+    hinchasItaliaUrl: 'data/hinchas_italia.json',
+    estadiosRumaniaUrl: 'data/estadios_rumania.json',
+    hinchasRumaniaUrl: 'data/hinchas_rumania.json',
+    instalacionesUrl: 'data/instalaciones.json',
+    relatosPartidoUrl: 'data/relatos_partido.json'
+  },
+  calendario: {
+    // Cada avance equivale a 1 día calendario. La temporada se procesa día por día.
+    diasPorAvance: 1,
+    // Año inicial del calendario. Cada temporada usa un año calendario completo y respeta años bisiestos.
+    anioInicial: 2026,
+    mesInicioTemporada: 1,
+    diaInicioTemporada: 1,
+    // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
+    ligaIdaYVuelta: true,
+    diasEntreFechasLiga: 7,
+    fechaPausaLuegoDe: 17,
+    diasVacacionesMitadTemporada: 28,
+    // Distribución de partidos por días para no simular todas las ligas juntas.
+    // offset: -2 = viernes, -1 = sábado, 0 = domingo respecto de la fecha base de cada jornada.
+    diasPorLiga: [
+      { paises:['España','Italia','Inglaterra','Rumania'], offset:-2 },
+      { paises:['Argentina'], ordenes:[2,3], offset:-1 },
+      { paises:['Chile','Brasil'], offset:0 },
+      { paises:['Argentina'], ordenes:[1], offset:0 }
+    ],
+    // Los partidos sin manager usan simulación rápida para reducir bloqueos.
+    simulacionRapidaBots: true,
 
-function randomInt(min,max){
-  return Math.floor(rnd(min, max + 1));
-}
-function createInitialSponsorState(){
-  return {
-    active:[],
-    offers:[],
-    seasonPlan:[],
-    seasonPlanSeason:0,
-    seasonOfferTarget:0,
-    generatedOfferCount:0,
-    lastOfferTurn:-1,
-    expiredOffers:0
-  };
-}
-function normalizeSponsorState(state){
-  const base = createInitialSponsorState();
-  const clean = { ...base, ...(state || {}) };
-  clean.active = Array.isArray(clean.active) ? clean.active : [];
-  clean.offers = Array.isArray(clean.offers) ? clean.offers : [];
-  clean.seasonPlan = Array.isArray(clean.seasonPlan) ? clean.seasonPlan : [];
-  clean.seasonPlanSeason = Number.isFinite(Number(clean.seasonPlanSeason)) ? Number(clean.seasonPlanSeason) : 0;
-  clean.seasonOfferTarget = Number.isFinite(Number(clean.seasonOfferTarget)) ? Number(clean.seasonOfferTarget) : 0;
-  clean.generatedOfferCount = Number.isFinite(Number(clean.generatedOfferCount)) ? Number(clean.generatedOfferCount) : 0;
-  clean.lastOfferTurn = Number.isFinite(Number(clean.lastOfferTurn)) ? Number(clean.lastOfferTurn) : -1;
-  clean.expiredOffers = Number.isFinite(Number(clean.expiredOffers)) ? Number(clean.expiredOffers) : 0;
-  delete clean.matchesSinceOffer;
-  delete clean.nextOfferAfter;
-  delete clean.openingOffersSeason;
-  const now = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
-  clean.offers = clean.offers.map(offer => {
-    const createdTurn = Number.isFinite(Number(offer.createdTurn)) ? Number(offer.createdTurn) : now;
-    const expiresTurn = Number.isFinite(Number(offer.expiresTurn)) ? Number(offer.expiresTurn) : createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
-    return { ...offer, createdTurn, expiresTurn };
-  });
-  clean.active = clean.active.map(contract => {
-    const turnsRemaining = Number.isFinite(Number(contract.turnsRemaining)) ? Number(contract.turnsRemaining) : daysToTurns(Number(contract.durationDays || contract.diasDuracion || 0));
-    return { ...contract, turnsRemaining:Math.max(0, turnsRemaining), paidToDate:Math.round(Number(contract.paidToDate || 0)) };
-  }).filter(contract => Number(contract.turnsRemaining || 0) > 0);
-  return clean;
-}
-function ensureSponsorState(){
-  if(!game) return;
-  game.sponsors = normalizeSponsorState(game.sponsors);
-}
-function sponsorDivisionMultiplier(){
-  const club = seed.clubs.find(c => c.id === game.selectedClubId) || {};
-  const order = Number(club.divisionOrder || clubDivision(game.selectedClubId).order || 1);
-  if(order <= 1) return 10;
-  if(order === 2) return 4;
-  return 1;
-}
-function sponsorPositionBonus(){
-  const division = clubDivision(game.selectedClubId);
-  const table = sortedStandings(division.id);
-  const index = table.findIndex(row => row.clubId === game.selectedClubId);
-  if(index < 0 || table.length <= 1) return 0;
-  return ((table.length - (index + 1)) / (table.length - 1)) * 0.20;
-}
-function sponsorMoraleBonus(){
-  return (squadMoraleAverage(game.selectedClubId) / 100) * 0.10;
-}
-function sponsorCohesionBonus(){
-  return (cohesionValue(game.selectedClubId) / 100) * 0.10;
-}
-function sponsorSeasonWindowTurns(){
-  const total = typeof totalSeasonTurnCount === 'function' ? totalSeasonTurnCount() : 365;
-  return Math.max(30, Number(total || 365));
-}
-function sponsorOfferValue(baseSponsor, lugar, paymentType='daily'){
-  const base = Number(baseSponsor?.valor_base_por_7_dias || 0);
-  const place = Number(lugar?.multiplicador_lugar || 1);
-  const specialBonusPct = typeof specialActiveBonus === 'function' ? specialActiveBonus('sponsors_extra') : 0;
-  const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus()) * (1 + (specialBonusPct / 100));
-  const valuePer7Days = Math.max(0, Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier));
-  const dailyAmount = Math.max(0, Math.round(valuePer7Days / 7));
-  const durationDays = randomInt(SPONSOR_DURATION_MIN_DAYS, SPONSOR_DURATION_MAX_DAYS);
-  const turns = Math.max(1, daysToTurns(durationDays));
-  const dailyTotal = Math.round(dailyAmount * durationDays);
-  const upfrontTotal = Math.round(dailyTotal * Math.max(0, 1 - SPONSOR_UPFRONT_DISCOUNT));
-  return {
-    valuePer7Days,
-    dailyAmount,
-    durationDays,
-    turns,
-    paymentType,
-    total:paymentType === 'upfront' ? upfrontTotal : dailyTotal,
-    upfrontTotal,
-    dailyTotal
-  };
-}
-function occupiedSponsorPlaces(){
-  ensureSponsorState();
-  return new Set((game.sponsors.active || []).filter(item => Number(item.turnsRemaining || 0) > 0).map(item => item.placeId));
-}
-function sponsorPlaceById(id){
-  return (sponsorsDatabase?.lugares_sponsor || []).find(place => place.id_lugar === id) || null;
-}
-function sponsorBrandById(id){
-  return (sponsorsDatabase?.sponsors || []).find(sponsor => sponsor.id_sponsor === id) || null;
-}
-function sponsorArrivalGroupSize(remaining){
-  if(remaining <= 1) return 1;
-  if(remaining >= 3 && Math.random() < SPONSOR_TRIPLE_ARRIVAL_CHANCE) return 3;
-  return Math.min(remaining, randomInt(SPONSOR_OFFERS_PER_ARRIVAL_MIN, SPONSOR_OFFERS_PER_ARRIVAL_MAX));
-}
-function buildSponsorSeasonPlan(){
-  ensureSponsorState();
-  const season = Number(game?.seasonNumber || 1);
-  const totalOffers = randomInt(SPONSOR_SEASON_OFFERS_MIN, SPONSOR_SEASON_OFFERS_MAX);
-  const plan = [];
-  let remaining = totalOffers;
-  const windowTurns = sponsorSeasonWindowTurns();
-  const currentTurn = Math.max(1, Math.min(windowTurns, typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1));
-  let guard = 0;
-  while(remaining > 0 && guard < 500){
-    guard += 1;
-    const count = Math.min(remaining, sponsorArrivalGroupSize(remaining));
-    const latestArrival = Math.max(currentTurn, windowTurns - Math.max(0, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)));
-    const arrivalTurn = randomInt(currentTurn, latestArrival);
-    plan.push({ id:`SPONPLAN-${season}-${plan.length + 1}-${hashNumber(String(Math.random()), 100000)}`, arrivalTurn, count, released:false });
-    remaining -= count;
-  }
-  plan.sort((a,b) => Number(a.arrivalTurn || 0) - Number(b.arrivalTurn || 0));
-  game.sponsors.seasonPlan = plan;
-  game.sponsors.seasonPlanSeason = season;
-  game.sponsors.seasonOfferTarget = totalOffers;
-  game.sponsors.generatedOfferCount = 0;
-  return plan;
-}
-function ensureSponsorSeasonPlan(){
-  ensureSponsorState();
-  const season = Number(game?.seasonNumber || 1);
-  if(Number(game.sponsors.seasonPlanSeason || 0) !== season || !Array.isArray(game.sponsors.seasonPlan) || !game.sponsors.seasonPlan.length){
-    buildSponsorSeasonPlan();
-  }
-  return game.sponsors.seasonPlan || [];
-}
-function createSponsorOfferFromPlan(planItem){
-  const lugares = (sponsorsDatabase?.lugares_sponsor || []);
-  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
-  if(!lugares.length || !sponsors.length) return null;
-  const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
-  const place = lugares[randomInt(0, lugares.length - 1)];
-  if(!sponsor || !place) return null;
-  const paymentType = Math.random() < SPONSOR_UPFRONT_PAYMENT_CHANCE ? 'upfront' : 'daily';
-  const value = sponsorOfferValue(sponsor, place, paymentType);
-  const createdTurn = currentSeasonTurnNumber();
-  const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
-  const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
-  game.sponsors.generatedOfferCount = serial;
-  return {
-    id:`SPON-${game.seasonNumber || 1}-${serial}-${sponsor.id_sponsor}-${place.id_lugar}-${hashNumber(String(Math.random()), 100000)}`,
-    sponsorId:sponsor.id_sponsor,
-    sponsorName:sponsor.nombre_marca,
-    category:sponsor.categoria,
-    placeId:place.id_lugar,
-    placeName:place.nombre,
-    placeType:place.tipo,
-    paymentType,
-    paymentLabel:paymentType === 'upfront' ? 'Pago total inicial' : 'Pago diario',
-    valuePer7Days:value.valuePer7Days,
-    dailyAmount:value.dailyAmount,
-    durationDays:value.durationDays,
-    turns:value.turns,
-    total:value.total,
-    dailyTotal:value.dailyTotal,
-    upfrontTotal:value.upfrontTotal,
-    createdTurn,
-    expiresTurn,
-    arrivalPlanId:planItem?.id || '',
-    season:game.seasonNumber || 1
-  };
-}
-function expireSponsorOffers(silent=true){
-  ensureSponsorState();
-  const currentTurn = currentSeasonTurnNumber();
-  const before = game.sponsors.offers.length;
-  game.sponsors.offers = (game.sponsors.offers || []).filter(offer => Number(offer.expiresTurn || 0) >= currentTurn);
-  const expired = before - game.sponsors.offers.length;
-  if(expired > 0){
-    game.sponsors.expiredOffers = Number(game.sponsors.expiredOffers || 0) + expired;
-    if(!silent) showNotice(`${expired} oferta(s) de sponsor vencieron.`);
-  }
-  return expired;
-}
-function releaseDueSponsorOffers(options={}){
-  ensureSponsorSeasonPlan();
-  expireSponsorOffers(true);
-  const currentTurn = currentSeasonTurnNumber();
-  const released = [];
-  (game.sponsors.seasonPlan || []).forEach(planItem => {
-    if(planItem.released) return;
-    if(Number(planItem.arrivalTurn || 0) > currentTurn) return;
-    planItem.released = true;
-    const count = Math.max(1, Math.round(Number(planItem.count || 1)));
-    for(let i=0;i<count;i+=1){
-      const offer = createSponsorOfferFromPlan(planItem);
-      if(offer) released.push(offer);
+    // Cooldown único tras cada avance/partido. 10000 = 10 segundos.
+    bloqueoEntreAvancesMs: 10000,
+    // El avance diario usa el mismo cooldown para evitar dobles flujos de calendario.
+    bloqueoAvanceDiaMs: 10000,
+    // Duración visual de la transición al avanzar días.
+    transicionAvanceMs: 3400,
+    diasPretemporada: 30,
+    // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
+    diasPostemporada: 0,
+    amistososMaximosPretemporada: 5
+  },
+
+  centroOjeo: {
+    activo: true,
+    cupoBaseOjeadores: 2,
+    cupoBaseJugadores: 5,
+    ojeadoresPorOficina: 3,
+    jugadoresPorOficina: 10,
+    costoOjeadorDiario: 200000,
+    costoOficinaMensual: 1000000,
+    jefes: {
+      regular: { nombre:'Regular', sueldoMensual: 500000, maxOficinas: 1, revelacionesMin: 0, revelacionesMax: 1 },
+      bueno: { nombre:'Bueno', sueldoMensual: 12000000, maxOficinas: 2, revelacionesMin: 0, revelacionesMax: 1 },
+      elite: { nombre:'Elite', sueldoMensual: 180000000, maxOficinas: 5, revelacionesMin: 1, revelacionesMax: 2 }
     }
-  });
-  if(released.length){
-    game.sponsors.offers = [...(game.sponsors.offers || []), ...released];
-    game.sponsors.lastOfferTurn = currentTurnIndex();
-    if(options.silent !== true){
-      pushGameMessage({
-        type:'finanzas',
-        title:'Nuevas ofertas de sponsors',
-        body:`Llegaron ${released.length} oferta(s) de patrocinio. Tenés ${SPONSOR_OFFER_EXPIRE_DAYS} día(s) para aceptar o rechazar antes de que desaparezcan.`,
-        priority:'normal'
-      });
-    }
-  }
-  return released;
-}
-function generateSponsorOffers(forcedCount=null, options={}){
-  // Compatibilidad: libera ofertas del plan fijo de temporada.
-  if(Number.isFinite(Number(forcedCount)) && Number(forcedCount) > 0){
-    ensureSponsorState();
-    const tempPlan = { id:`SPONMAN-${Date.now()}`, count:Number(forcedCount), arrivalTurn:currentSeasonTurnNumber(), released:true };
-    const released = [];
-    for(let i=0;i<Number(forcedCount);i+=1){
-      const offer = createSponsorOfferFromPlan(tempPlan);
-      if(offer) released.push(offer);
-    }
-    game.sponsors.offers = [...(game.sponsors.offers || []), ...released];
-    if(released.length && options.silent !== true){
-      pushGameMessage({ type:'finanzas', title:options.title || 'Nuevas ofertas de sponsors', body:options.body || `Llegaron ${released.length} oferta(s) de patrocinio.`, priority:options.priority || 'normal' });
-    }
-    return released;
-  }
-  return releaseDueSponsorOffers(options);
-}
-function generateOpeningSponsorOffers(force=false){
-  ensureSponsorSeasonPlan();
-  return releaseDueSponsorOffers({ silent:!force });
-}
-function advanceSponsorMatchCounter(){
-  // V5.66: los sponsors se liberan por plan fijo de temporada.
-  return releaseDueSponsorOffers({ silent:true });
-}
-function processSponsorContracts(){
-  ensureSponsorState();
-  releaseDueSponsorOffers({ silent:false });
-  const currentDate = game?.currentDate || '';
-  const nextActive = [];
-  (game.sponsors.active || []).forEach(contract => {
-    const remaining = Math.max(0, Number(contract.turnsRemaining || 0));
-    if(remaining <= 0) return;
-    let updated = { ...contract };
-    if(updated.paymentType === 'daily'){
-      const amount = Math.max(0, Math.round(Number(updated.dailyAmount || 0)));
-      if(amount > 0){
-        recordBudgetChange(amount, `Sponsor diario: ${updated.sponsorName} / ${updated.placeName}`, { type:'sponsor_daily', sponsorId:updated.sponsorId, placeId:updated.placeId, sponsorContractId:updated.id });
-        updated.paidToDate = Math.round(Number(updated.paidToDate || 0) + amount);
-        updated.lastDailyPaymentDate = currentDate;
+  },
+  modoFundador: {
+    activo: true,
+    prestigioClubInicial: 10,
+    presupuestoInicial: 0,
+    capacidadEstadioInicial: 0,
+    hinchasIniciales: 500,
+    campoInicial: 30,
+    libresMinimosTotales: 80,
+    libresMinimosPorteros: 8,
+    libresMinimosDefensores: 20,
+    libresMinimosMediocampistas: 24,
+    libresMinimosDelanteros: 16
+  },
+  manager: {
+    // Prestigio inicial del manager. Un manager nuevo arranca en 0.
+    prestigioInicial: 0,
+    // Clubes con este prestigio o menos aceptan cualquier manager, incluso con prestigio 0.
+    prestigioClubLibreMinimo: 20,
+    // Al renunciar o ser despedido, el club bloquea al manager por esta cantidad de temporadas.
+    temporadasBloqueoRecontratacion: 1,
+    // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
+    // Valores válidos: 0.3 a 2.0.
+    objetivoPuntosPorPartido: null,
+    // Objetivos automáticos por división cuando objetivoPuntosPorPartido queda vacío.
+    objetivoDivision1: 1.4,
+    objetivoDivision2: 1.1,
+    objetivoDivision3: 0.9,
+    // Base de evaluación: la directiva revisa desde los 5 partidos oficiales de la temporada actual.
+    partidosMinimosEvaluacionObjetivo: 5,
+    // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
+    congelarEvaluacionObjetivoPorTemporada: true,
+    // Prórroga por promedio general histórico del manager.
+    bonusPartidosPromedioGeneral120: 2,
+    bonusPartidosPromedioGeneral150: 5,
+    bonusPartidosPromedioGeneral190: 12
+  },
+  codigosEspeciales: {
+    activo: true,
+    // Cada código se puede reclamar una sola vez por partida guardada.
+    codigos: [
+      {
+        codigo: 'PRESTIGIO20',
+        nombre: 'Impulso de prestigio',
+        descripcion: 'Suma 20 puntos de prestigio al manager.',
+        beneficios: { prestigio: 20 }
+      },
+      {
+        codigo: 'PUNTOS50000',
+        nombre: 'Puntos de habilidad',
+        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 50000 }
       }
+    ]
+  },
+  plantel: {
+    nacionalidades: {
+      local: 0.70,
+      sudamerica: 0.20,
+      restoDelMundo: 0.10,
+      porPais: {
+        Argentina: 'Argentina',
+        Chile: 'Chile',
+        Brasil: 'Brasil',
+        Inglaterra: 'Inglaterra',
+        España: 'España',
+        Italia: 'Italia',
+        Rumania: 'Rumania'
+      },
+      sudamericaPaises: ['Argentina','Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'],
+      restoDelMundoPaises: ['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana','Rumania']
+    },
+    // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
+    jugadoresMinimosPorClub: 18,
+    jugadoresInicialesPorClub: 25,
+    jugadoresMaximosPorClub: 42,
+    // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
+    reparacionAutomaticaBots: true,
+    botsMinimoPorteros: 2,
+    botsMinimoDefensores: 5,
+    botsMinimoMediocampistas: 5,
+    botsMinimoDelanteros: 3,
+    botsMediaEmergenciaMin: 28,
+    botsMediaEmergenciaMax: 52,
+    botsFactorSueldoEmergencia: 0.35,
+    agentesLibresIniciales: 300,
+    agentesLibresMaximosTotales: 300,
+    agentesLibresMediaMin: 40,
+    agentesLibresMediaMax: 62,
+    agentesLibresEdadMin: 19,
+    agentesLibresEdadMax: 30,
+    agentesLibresMaximosPorTemporada: 300,
+    agentesLibresPosiciones: {
+      POR: 0.10,
+      DEF: 0.35,
+      MED: 0.35,
+      DEL: 0.20
+    },
+    rellenarLibresHastaMaximoPorTemporada: true,
+    limpiarLibresViejosAlCambiarTemporada: true,
+    jovenesLibresNuevosPorEquipoTemporada: 0,
+    jovenesLibresEdadMin: 17,
+    jovenesLibresEdadMax: 18,
+    jovenesLibresPorTemporada: 0
+  },
+  cohesion: {
+    // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
+    valorInicial: 50,
+    gananciaPorPartido: 7,
+    perdidaPorCambioTactico: 8,
+    perdidaPorCambioJugador: 1,
+    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
+    gananciaEntrenamientoTacticoPorCasilla: 1
+  },
+  equilibrioBots: {
+    // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
+    activo: true,
+    // suave | normal | dificil
+    dificultad: 'dificil',
+    soloDivisionManager: true,
+    nivelarAlInicioTemporada: true,
+    mantenerDuranteTemporada: true,
+    intervaloMantenimientoFechas: 2,
+    // Los mejores bots de la temporada anterior reciben un plus; los peores, un margen menor.
+    bonusMaximoPorPosicion: 8,
+    pisoMoral: 65,
+    pisoFisico: 76,
+    pisoCohesion: 70,
+    margenMoral: 8,
+    margenFisico: 6,
+    margenCohesion: 10,
+    recuperacionFisicaPorMantenimiento: 8,
+    recuperacionMoralPorMantenimiento: 5,
+    recuperacionCohesionPorMantenimiento: 4,
+    desarrolloPlantelPorTemporada: 0.18,
+    bonusDesarrolloPorPosicion: 0.08,
+    maximoBoostBotPorHabilidad: 18
+  },
+  economia: {
+    gastosMensuales: {
+      activo: true,
+      diaCobro: 1,
+      impuestoGananciasPct: 0.01,
+      electricidadBasePorPartido: 100000,
+      electricidadPorCapacidadPorPartido: 10,
+      limpiezaPorHinchaPorPartido: 10
+    },
+    escalaSueldosYClausulas: 0.10,
+    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
+    escalaClausulas: 0.10,
+    reduccionBaseSueldoFinTemporada: 0.05,
+    bonusSueldoPorPartidoJugado: 0.01,
+    banco: {
+      activo: true,
+      bancos: [
+        { nombre:'Banco Nación', interes:0.32 },
+        { nombre:'Banco Provincia', interes:0.36 },
+        { nombre:'Banco Galicia', interes:0.41 },
+        { nombre:'Santander', interes:0.44 },
+        { nombre:'BBVA', interes:0.43 },
+        { nombre:'Banco Macro', interes:0.47 },
+        { nombre:'Banco Credicoop', interes:0.34 },
+        { nombre:'ICBC', interes:0.39 },
+        { nombre:'Banco Supervielle', interes:0.46 },
+        { nombre:'Banco Comafi', interes:0.50 }
+      ],
+      montos: [
+        { monto:50000000, prestigio:1 },
+        { monto:500000000, prestigio:5 },
+        { monto:1500000000, prestigio:20 }
+      ],
+      plazosSemanas: [24,48,172]
     }
-    updated.turnsRemaining = Math.max(0, remaining - 1);
-    if(updated.turnsRemaining > 0) nextActive.push(updated);
-  });
-  game.sponsors.active = nextActive;
-}
-function acceptSponsorOffer(offerId){
-  ensureSponsorState();
-  expireSponsorOffers(true);
-  const index = game.sponsors.offers.findIndex(offer => offer.id === offerId);
-  if(index < 0) return;
-  const offer = game.sponsors.offers[index];
-  if(occupiedSponsorPlaces().has(offer.placeId)){
-    showNotice('Ese lugar ya está ocupado por otro sponsor. Rechazá esta oferta o esperá a que finalice el contrato activo.');
-    return;
+  },
+  sponsors: {
+    // V5.67: sistema fijo por temporada.
+    factorValorBase: 1,
+    ofertasMinimasPorTemporada: 20,
+    ofertasMaximasPorTemporada: 40,
+    ofertasVencenEnDias: 5,
+    ofertasPorLlegadaMin: 1,
+    ofertasPorLlegadaMax: 3,
+    probabilidadLlegadaTriple: 0.45,
+    duracionOfertaMinDias: 200,
+    duracionOfertaMaxDias: 500,
+    probabilidadPagoUnico: 0.50,
+    descuentoPagoUnico: 0.50
+  },
+  mercado: {
+    // Impuesto federativo sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
+    impuestoAfaTraspasos: 0.30,
+    // Siglas usadas en mensajes de ofertas según país/liga del club comprador.
+    federacionesTraspaso: {
+      Argentina:'AFA',
+      Chile:'ANFP',
+      Brasil:'CBF',
+      Inglaterra:'FA',
+      España:'RFEF',
+      Italia:'FIGC',
+      Rumania:'FRF'
+    },
+    // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
+    ofertaJugadoresMinPorcentajeClausula: 0.05,
+    ofertaJugadoresMaxPorcentajeClausula: 0.15,
+    ofertasJugadoresRequierenPartidos: true,
+    ofertasJugadoresRequierenGolOAsistencia: true,
+
+    // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
+    presupuestoFichajesActivo: true,
+    presupuestoFichajesMaximoPorcentaje: 0.50,
+    presupuestoFichajesDivision3: 0.25,
+    presupuestoFichajesDivision2: 0.35,
+    presupuestoFichajesDivision1: 0.40,
+    desbloqueoSuperarObjetivo: 0.05,
+    desbloqueoPromedio15: 0.05,
+    desbloqueoPromedio19: 0.10,
+    desbloqueoAscenso: 0.10,
+    desbloqueoCampeon: 0.15,
+    porcentajeVentaLiberadoFichajes: 0.70,
+
+    // Oferta especial de cláusula: entre 1 y 2 veces en las últimas fechas, un club de la misma liga puede pagar la cláusula de uno de los 3 mejores jugadores del plantel.
+    ofertaClausulaEspecialActiva: true,
+    ofertaClausulaEspecialFechasFinales: 10,
+    ofertaClausulaEspecialMinPorTemporada: 1,
+    ofertaClausulaEspecialMaxPorTemporada: 2,
+    ofertaClausulaEspecialTopJugadores: 3
+  },
+  estadio: {
+    costoReplantarCesped: 2000000,
+    diasReplantarCesped: 35,
+    costoParchearCampo: 200000,
+    diasParchearCampo: 21,
+    mejoraParchePorAvance: 5,
+    // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
+    botsCampoFijoPorTemporada: true,
+    botsCampoMinimo: 30,
+    botsCampoMaximo: 95,
+    botsCampoBaseInicial: 58,
+    botsCampoRangoPorPosicion: 42,
+    // Reparación defensiva: si los campos bots quedan debajo del mínimo, se consideran datos corruptos y se regeneran.
+    botsCampoAutoRepararEstadosInvalidos: true,
+    botsCampoUmbralInvalido: 29,
+    botsCampoPorcentajeMasivoInjugable: 0.60,
+    // Entradas, hinchadas y ventaja local.
+    precioEntradaInicial: 100,
+    precioEntradaMinimo: 10,
+    precioEntradaMaximo: 500,
+    // Precio automático sólo para clubes bots locales según prestigio del rival.
+    // Bajo: precio base. Medio: +50% a +100%. Alto: +100% a +500%.
+    precioEntradaBotAutomatico: true,
+    precioEntradaBotPrestigioBajoHasta: 39,
+    precioEntradaBotPrestigioMedioHasta: 69,
+    precioEntradaBotMultiplicadorMedioMin: 1.50,
+    precioEntradaBotMultiplicadorMedioMax: 2.00,
+    precioEntradaBotMultiplicadorAltoMin: 2.00,
+    precioEntradaBotMultiplicadorAltoMax: 5.00,
+    precioEntradaBotRedondeo: 10,
+    porcentajeVisitanteMinimo: 0.07,
+    porcentajeVisitanteMaximo: 0.10,
+    porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
+    hinchasPorPuntoBonusLocal: 1000,
+    bonusLocalMaximo: 50,
+    gananciaHinchasPorVictoriaBase: 0.001,
+    perdidaHinchasPorDerrotaActual: 0.005,
+    posicionTablaPuntoNeutro: 10,
+    posicionTablaPaso: 0.001,
+    posicionTablaGananciaMaxima: 0.005,
+    precioEntradaEfectoMaximo: 0.01,
+    // Aumento de demanda de entradas por prestigio del rival. 0.35 = hasta +35% de público potencial.
+    bonusAsistenciaPrestigioRivalMaximo: 0.35,
+    // Desde este prestigio del rival empieza a notarse el aumento de interés por el partido.
+    bonusAsistenciaPrestigioRivalDesde: 20,
+    // Proporción del bonus que también empuja demanda visitante/neutral.
+    bonusAsistenciaPrestigioRivalVisitante: 0.50,
+    // Multiplica la duración base de las ampliaciones de estadio. Ejemplo: 1 día base x 30 = 30 días reales de obra.
+    multiplicadorDiasObras: 30,
+
+    // Campañas para sumar socios. La UI muestra inversión y duración; los socios diarios y totales quedan ocultos.
+    campaniasSocios: [
+      { id:'marketing_50m_60d', nombre:'Campaña de Marketing', inversion: 50000000, diasDuracion: 60, sociosDiaMin: 10, sociosDiaMax: 15 },
+      { id:'marketing_500m_90d', nombre:'Campaña de Marketing', inversion: 500000000, diasDuracion: 90, sociosDiaMin: 35, sociosDiaMax: 50 },
+      { id:'marketing_100m_10d', nombre:'Campaña de Marketing', inversion: 100000000, diasDuracion: 10, sociosDiaMin: 30, sociosDiaMax: 50 }
+    ]
+  },
+  empleados: {
+    // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.
+    psicologoCosto: 500000,
+    psicologoProbabilidadExito: 0.90,
+    psicologoCooldownDias: 35,
+    kinesiologoCosto: 1000000,
+    kinesiologoProbabilidadFallo: 0.20,
+    // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.
+    kinesiologoHorasExtrasPorcentajeSueldo: 0.01,
+    preparadorJuvenilesCosto: 1000000
+  },
+  academia: {
+    costoCaptacion: 1000000,
+    diasCaptacion: 35,
+    jugadoresMinimosPorCaptacion: 5,
+    jugadoresMaximosPorCaptacion: 10,
+    costoJugadorPorAvance: 10000,
+    diaCobroSemanalJuveniles: 1, // 1 = lunes. Los juveniles cobran una vez por semana.
+    compensacionDespido: 50000,
+    multiplicadorEntrenamiento: 5,
+    multiplicadorEntrenamientoJuvenilExcepcional: 5,
+    juvenilExcepcionalPorTemporada: true,
+    edadJuvenilExcepcional: 16,
+    edadJuvenilMin: 12,
+    edadJuvenilMax: 16,
+    edadUltimaTemporadaAcademia: 17,
+    mediaJuvenilExcepcionalMin: 12,
+    mediaJuvenilExcepcionalMax: 40,
+    mediaMaximaCreacionBase: 30,
+    mediaMaximaCreacionBonusEdad: 3,
+    crecimientoTemporadaMin: 7,
+    crecimientoTemporadaMax: 11,
+    crecimientoExcepcionalTemporadaMin: 15,
+    crecimientoExcepcionalTemporadaMax: 20,
+    cupoBaseJuveniles: 10,
+    residenciaCuposJuveniles: 20,
+    residenciaCostoMensual: 560000,
+    // Cantidad base de habilidades reveladas por informe del preparador.
+    multiplicadorConsultaJuveniles: 1,
+    // Lesiones juveniles por temporada. Mientras están lesionados no entrenan.
+    lesionesJuvenilesMinPorTemporada: 1,
+    lesionesJuvenilesMaxPorTemporada: 2,
+    lesionJuvenilDiasMin: 14,
+    lesionJuvenilDiasMax: 42,
+    costoTratamientoLesionJuvenil: 50000
+  },
+  entrenamiento: {
+    // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
+    efectividadPorCasilla: 0.25,
+    // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
+    entrenamientoIndividualDiario: true,
+    efectividadIndividualPorDia: 0.25,
+    entrenamientoIndividualInicial: 'balanced',
+    // Curva de dificultad: una habilidad alta reduce la probabilidad final de subir +1.
+    // Ejemplo: habilidad 80 => 20% de probabilidad final si ya superó la tirada base.
+    curvaHabilidadActual: true,
+    probabilidadMinimaSubidaHabilidad: 0,
+    // Multiplicador directo de velocidad para boosts temporales de habilidades profesionales.
+    // Las habilidades base del profesional no cambian; los boosts se reducen al 30% al cerrar temporada.
+    multiplicadorSubidaHabilidades: 3,
+    planSemanalInicial: {
+      pre: 'regenerative',
+      morning: 'intense',
+      afternoon: 'tactical',
+      night: 'dayoff'
+    },
+    desgaste: {
+      activo: true,
+      maximo: 98,
+      desgasteMinPartido: 2,
+      desgasteMaxPartido: 4,
+      desgastePorTurnoIntenso: 1,
+      recuperacionPorTurnoMasajista: 1
+    }
+  },
+
+  simulador: {
+    // V3.43: enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
+    pesoColectivo: 0.70,
+    pesoIndividual: 0.30,
+    // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
+    probabilidadPelotaParada: 0.14,
+    // V3.45: los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
+    // El riesgo real de error es 1 - seguridad, para que mejores valores reduzcan errores.
+    formulaErroresJugador: true,
+    escalaRiesgoErrorJugador: 0.72,
+    // Cuando un gol rival ocurre, esta probabilidad lo atribuye también como error de gol a un defensor o arquero.
+    probabilidadGolAtribuyeErrorGol: 0.60,
+    // Probabilidad base anterior mantenida como respaldo si se desactiva formulaErroresJugador.
+    probabilidadErrorTerminaEnGol: 0.28,
+    // Máximo de errores usado para evitar partidos rotos por errores constantes.
+    maximoErroresPorEquipo: 5,
+    // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
+    fatigaVivaMultiplicador: 2,
+    // V5.27: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
+    multiplicadorTarjetas: 0.50,
+    // V5.27: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
+    rojasDerrotaDefault: 5,
+    // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
+    estrellasMaximasPorEquipo: 3,
+    estrellasPartidosVentana: 10,
+    estrellaGoleadorPartidosConGol: 3,
+    estrellaArqueroPartidosConTapadaClave: 3,
+    estrellaMediocampistaAsistencias: 3,
+    estrellaBonusReferencia: 0.30,
+    // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
+    recuperacionAutomaticaPostPartidoMin: 4,
+    recuperacionAutomaticaPostPartidoMax: 6,
+    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
+    // El rango 61-70 queda como puente para evitar saltos bruscos.
+    recuperacionPostPartidoUsaResistencia: true,
+    recuperacionPostPartidoPorResistencia: [
+      { minResistencia: 1, maxResistencia: 40, recuperacionMin: 0, recuperacionMax: 1 },
+      { minResistencia: 41, maxResistencia: 60, recuperacionMin: 2, recuperacionMax: 4 },
+      { minResistencia: 61, maxResistencia: 70, recuperacionMin: 3, recuperacionMax: 5 },
+      { minResistencia: 71, maxResistencia: 80, recuperacionMin: 4, recuperacionMax: 7 },
+      { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
+      { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
+    ],
+    desgastePartidoMin: 25,
+    desgastePartidoMax: 46,
+    factorDesgasteArquero: 0.5
+  },
+
+  tactica: {
+    estilosSector: {
+      activo: true,
+      defensaInicial: 'posicional',
+      mediosInicial: 'posicional',
+      delanterosInicial: 'posicional',
+      // Intensidad general del impacto de estilos sectoriales en el simulador. 1 = normal, 0.5 = suave.
+      intensidadEfecto: 0.85,
+      // Cansancio diario aplicado al finalizar el partido por estilos exigentes.
+      cansancioPresionAlta: -3,
+      cansancioRotacion: -1,
+      cansancioRepliegue: -1
+    }
+  },
+  lesiones: {
+    // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
+    multiplicadorProbabilidad: 0.20,
+    lesionBase: 0.05,
+    fatigaPaso: 5,
+    fatigaBonus: 0.01,
+    // Duraciones en días. El motor las convierte a turnos según diasPorAvance.
+    contusionMinDias: 7,
+    contusionMaxDias: 21,
+    distensionMinDias: 21,
+    distensionMaxDias: 56,
+    desgarroMinDias: 28,
+    desgarroMaxDias: 84,
+    esguinceMinDias: 35,
+    esguinceMaxDias: 105,
+    roturaMinDias: 90,
+    roturaMaxDias: 210,
+    fracturaMinDias: 180,
+    fracturaMaxDias: 400,
+    lesionadoSuplenteDiasMax: 63,
+    penalizacionLesionadoSuplente: 0.10
+  },
+
+  ranking: {
+    // URL publicada para enviar y leer resultados del ranking online.
+    appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
+    // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
+    token: '',
+    // El Worker actual exige sesión para subir récords. El front guarda el token en localStorage tras iniciar sesión.
+    requiereLogin: true,
+    // Rutas compatibles con Worker Cloudflare + D1 actual y variantes anteriores.
+    // La ruta principal de carga es /ranking/season.
+    submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
+    // Rutas de login/verificación compatibles con el Worker Cloudflare + D1.
+    // También prueba rutas de registro/sesión para cuentas creadas originalmente sin contraseña.
+    loginPaths: ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'],
+    mePaths: ['auth/me','me','api/auth/me','api/me','user','api/user'],
+    // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
+    readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],
+    resultadosPorPagina: 100,
+    cooldownCargaDias: 50,
+    nombreRanking: 'Ranking Online'
+  },
+
+  mensajesAsistente: {
+    activo: true,
+    frecuenciaDias: 12,
+    titulo: 'Consejo del asistente',
+    consejos: [
+      'Hola #usuario#, cómo vas con eso de las cláusulas? Son una locura. Al menos nos protegen de que nos quiten jugadores, pero realmente nadie nunca las paga. Si ves que necesitás dinero, que no te asuste que paguen poco. Saludos.',
+      'Siempre es bueno estar en los partidos. No digas que te dije, pero tu ayudante no tiene el espíritu para sacar lo mejor del equipo. Desde la cabina de video y GPS vemos todo.',
+      '#usuario#, mirá de reojo el estado físico. A veces un jugador pide cancha con la cara, pero las piernas ya están negociando la rendición.',
+      'Hay jugadores que parecen suplentes eternos hasta que los necesitás. No los castigues de más por una mala semana; el vestuario también se arma desde el banco.',
+      'Si un jugador quiere irse, escuchalo antes de pelearte con todos. A veces una charla calma más que una multa o una promesa grande.',
+      'La academia no siempre entrega estrellas. A veces entrega paciencia. Y la paciencia, aunque no salga en los informes, también gana partidos.',
+      'Cuidado con comprar sólo por media. Hay jugadores que ordenan, otros que corren, otros que no se esconden. La planilla no siempre cuenta toda la historia.',
+      'Cuando el equipo gana, todos parecen tácticamente brillantes. Cuando pierde, todos piden cambios. La verdad suele estar en algún punto bastante incómodo.',
+      'No te cases con una formación sólo porque funcionó una vez. Los rivales miran, aprenden y después te esperan donde antes te dejaban pasar.',
+      'Las ofertas bajas molestan, pero también miden el mercado. Si nadie pregunta por un jugador, quizá el problema no es la oferta sino nuestra expectativa.',
+      'Si vas a cuidar el resultado, que el equipo lo sepa. Defender sin orden no es defender; es regalarle tiempo al rival para pensar.',
+      'Hay días para entrenar fuerte y días para no romper lo que todavía sirve. El preparador físico no grita, pero suele tener razón.',
+      'No subestimes la moral. Un plantel convencido corre un poco más, discute un poco menos y perdona mejor los errores del compañero.',
+      'El mercado libre parece barato hasta que llenás el vestuario de contratos que nadie quiere pagar después. Revisá dos veces antes de entusiasmarte.',
+      'Un arquero en buen momento cambia el humor de todos. Si lo ves seguro, no lo muevas sólo por ansiedad.',
+      'Cuando un juvenil se lesiona, no lo apures. Todavía está aprendiendo a ser jugador y a veces el cuerpo va más lento que la ilusión.',
+      'Hay partidos que se pierden antes de salir a la cancha: mala forma, mala moral, mala táctica y demasiada confianza. Revisar no cuesta nada.',
+      'Si el estadio empieza a pedir arreglos, no lo dejes para siempre. El club también compite con lo que muestra alrededor de la cancha.',
+      'Ojear no es descubrir una verdad absoluta; es reducir el margen de error. Igual, en este trabajo, reducir errores ya es bastante.',
+      'Si el equipo está raro, mirá primero lo simple: cansancio, roles, moral y lesionados. La épica queda mejor cuando lo básico está ordenado.',
+      'Antes de fichar por impulso, mandá un ojeador. Una media atractiva puede esconder poca genética, mala agresividad o un factor sorpresa que no aparece a simple vista.',
+      'Ojear jugadores propios también sirve. No es desconfianza: es saber quién puede rendir más de lo que muestra y quién está viviendo de una media cómoda.',
+      'Si un jugador libre aparece barato, preguntate por qué sigue libre. El ojeo no te da certezas absolutas, pero evita contratos largos por entusiasmo corto.',
+      'Cuando mires un equipo rival, no busques nombres solamente. Defensa, medios y delantera te dicen dónde atacar y dónde conviene no regalar la pelota.',
+      'Un informe incompleto no es inútil. A veces una sola habilidad oculta revelada alcanza para decidir si esperar, fichar o salir corriendo.',
+      'Si vas a ojear varios jugadores a la vez, ordená prioridades. No todo rumor merece oficina, ojeador y café gratis.',
+      'Los jugadores propios con informe completo te ayudan a elegir titulares sin mirar sólo la media. Algunos tienen más partido que cartel.',
+      'Un equipo ojeado puede cambiar si vende, ficha o recompone plantel. Guardar el informe sirve, pero volver a mirar antes del partido evita sorpresas.',
+      'No confundas jugador conocido con jugador conveniente. Conocer sus datos sólo elimina niebla; todavía hay que mirar sueldo, edad, puesto y necesidad real.',
+      'Si el mercado muestra pocos nombres, no es pobreza: es foco. Primero aparecen los ojeados y después una ventana razonable para no perder media vida scrolleando.',
+      'Un delantero con factor sorpresa alto puede convertir partidos cerrados en problemas nuevos para el rival. No siempre es regular, pero puede romper planes.',
+      'Un defensor con mala agresividad oculta puede regalar amarillas aunque la media lo defienda. El informe de ojeo existe para descubrir esas trampas.',
+      'La genética no mete goles, pero explica por qué algunos jugadores aguantan mejor los golpes de una temporada larga.',
+      'Ojear al rival antes de cambiar la táctica es más sano que inventar soluciones después del segundo gol en contra.',
+      'Si un jugador propio ya está ojeado, usá ese ojo junto al nombre como ventaja. Ya pagaste por esa información; no la ignores.',
+      'Los informes archivados no son decoración. Sirven para volver rápido a jugadores que antes parecían interesantes y hoy quizá encajan mejor.',
+      'No gastes todos los cupos en estrellas obvias. A veces el buen fichaje está en el jugador mediano que revela justo la oculta correcta.',
+      'Ojear equipos no reemplaza mirar la tabla. Un club puede tener buena delantera y aun así estar mal por campo, moral o plantel corto.',
+      'Si un jugador contratado tiene buenas visibles pero ocultas flojas, puede rendir bien en la ficha y mal cuando el partido se ensucia.',
+      'El ojeo no compra jugadores; compra contexto. Y en un mercado caro, el contexto suele ser más barato que corregir un contrato malo.'
+    ]
+  },
+  ui: {
+    duracionAvisoMs: 5200,
+    fasesSimulacionPartido: 90,
+    duracionSimulacionPartidoMs: 270000,
+    duracionMinimaFaseSimulacionMs: 3000,
+    // Simulador vivo: demora entre minutos cuando se usa el botón Auto. V5.13 duplica la pausa anterior.
+    simulacionVivaAutoMs: 840,
+    relatoMantenerFases: 1,
+    // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
+    accionesFeedbackCargaMs: 750,
+    accionesFeedbackResultadoMs: 900,
+    // Tiempo entre tratamientos cuando se usa "Tratar a todos". Evita que todas las animaciones se disparen a la vez.
+    kinesiologoTratamientoProgresivoMs: 650,
+    // Tiempo entre cartas al abrir sobres del menú ESPECIAL.
+    especialAperturaCartaMs: 2700,
+    frasesProgresoAvanceIntervaloMs: 10000,
+    temaClubActivo: true,
+    temaClubFondoOpacidad: 0.18,
+    temaClubPanelOpacidad: 0.05,
+    temaClubAcentoSuavizado: 0.18,
+    frasesProgresoAvance: [
+      'Recogiendo pelotas detrás del arco',
+      'Regando el césped por sectores',
+      'Midiendo la humedad del campo',
+      'Marcando las líneas laterales',
+      'Revisando redes de los arcos',
+      'Ajustando los banderines del córner',
+      'Ordenando conos de entrenamiento',
+      'Contando pecheras disponibles',
+      'Lavando botines embarrados',
+      'Secando guantes de arquero',
+      'Pesando pelotas oficiales',
+      'Inflando pelotas a presión reglamentaria',
+      'Verificando tapones de botines',
+      'Revisando vendas y tobilleras',
+      'Controlando hielo en la enfermería',
+      'Preparando bebidas isotónicas',
+      'Cortando cinta deportiva',
+      'Limpiando pizarras tácticas',
+      'Acomodando bancos de suplentes',
+      'Revisando planillas de cambios',
+      'Calculando desgaste del césped',
+      'Separando camisetas por talle',
+      'Chequeando números de dorsales',
+      'Probando silbatos del árbitro',
+      'Revisando iluminación del estadio',
+      'Calibrando GPS de entrenamiento',
+      'Registrando cargas musculares',
+      'Controlando peso post-entrenamiento',
+      'Analizando pisadas en el barro',
+      'Ordenando pelotas por estado útil',
+      'Aceitando bicicletas del gimnasio',
+      'Recogiendo basura del estadio',
+      'Visitando a padres de los talentos',
+      'Filtrando rumores a la prensa',
+      'Revisando cerraduras del vestuario',
+      'Cambiando focos del túnel',
+      'Contando bidones de agua',
+      'Limpiando bancos de suplentes',
+      'Ordenando medias por talle',
+      'Revisando contratos vencidos',
+      'Llamando representantes insistentes',
+      'Separando pelotas pinchadas',
+      'Desinfectando colchonetas del gimnasio',
+      'Ajustando cintas de correr',
+      'Imprimiendo planillas de entrenamiento',
+      'Revisando permisos de juveniles',
+      'Actualizando fichas médicas',
+      'Controlando botiquines del estadio',
+      'Pintando números en los conos',
+      'Reparando redes de entrenamiento',
+      'Barriendo tierra de los accesos',
+      'Acomodando vallas publicitarias',
+      'Verificando micrófonos de conferencia',
+      'Revisando cámaras del estadio',
+      'Cargando videos del último partido',
+      'Buscando camisetas extraviadas',
+      'Probando parlantes de la cancha',
+      'Revisando carnets de socios',
+      'Coordinando traslado de juveniles',
+      'Archivando quejas de hinchas'
+    ]
   }
-  game.sponsors.offers.splice(index, 1);
-  const contract = {
-    ...offer,
-    acceptedTurn:currentTurnIndex(),
-    acceptedDate:game?.currentDate || '',
-    turnsRemaining:offer.turns,
-    paidToDate:0
+};
+
+
+(function aplicarModificadoresBalanceSeparados(){
+  const balance = window.GAME_BALANCE_MODIFICADORES;
+  if(!balance || typeof balance !== 'object') return;
+  const mergeDeep = (base, extra) => {
+    Object.entries(extra || {}).forEach(([key, value]) => {
+      if(value && typeof value === 'object' && !Array.isArray(value)){
+        base[key] = mergeDeep(base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]) ? base[key] : {}, value);
+      }else{
+        base[key] = value;
+      }
+    });
+    return base;
   };
-  if(offer.paymentType === 'upfront'){
-    contract.paidToDate = Math.round(Number(offer.total || 0));
-    recordBudgetChange(contract.paidToDate, `Sponsor pago inicial: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor_upfront', sponsorId:offer.sponsorId, placeId:offer.placeId, sponsorContractId:offer.id });
-    pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(contract.paidToDate)} al inicio por ${offer.placeName}.`, priority:'normal' });
-  } else {
-    pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagará ${formatMoney(offer.dailyAmount)} por día durante ${formatDays(offer.durationDays)} por ${offer.placeName}.`, priority:'normal' });
-  }
-  game.sponsors.active.push(contract);
-  saveLocal(true);
-  showNotice(`Sponsor aceptado: ${offer.sponsorName}.`);
-  renderStadium();
-}
-function rejectSponsorOffer(offerId){
-  ensureSponsorState();
-  game.sponsors.offers = (game.sponsors.offers || []).filter(offer => offer.id !== offerId);
-  saveLocal(true);
-  renderStadium();
-}
-function sponsorOffersMarkup(){
-  ensureSponsorState();
-  expireSponsorOffers(true);
-  const offers = game.sponsors.offers || [];
-  if(!offers.length){
-    return `<p class="muted small">Sin ofertas disponibles. Las marcas enviarán entre ${SPONSOR_SEASON_OFFERS_MIN} y ${SPONSOR_SEASON_OFFERS_MAX} propuestas durante la temporada.</p>`;
-  }
-  const currentTurn = currentSeasonTurnNumber();
-  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Duración</th><th>Pago</th><th>Valor</th><th>Vence</th><th></th></tr></thead><tbody>${offers.map(offer => {
-    const daysLeft = Math.max(0, turnsToDays(Number(offer.expiresTurn || currentTurn) - currentTurn + 1));
-    const valueText = offer.paymentType === 'daily'
-      ? `${formatMoney(offer.dailyAmount)} / día`
-      : `${formatMoney(offer.total)} total`;
-    const payText = offer.paymentType === 'daily' ? 'Diario' : 'Todo al inicio';
-    return `<tr>
-      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
-      <td>${escapeHtml(offer.placeName)}</td>
-      <td>${formatDays(offer.durationDays || turnsToDays(offer.turns))}</td>
-      <td><span class="pill ${offer.paymentType === 'daily' ? 'ok' : ''}">${payText}</span></td>
-      <td><strong class="ok">${valueText}</strong><span class="muted small">Base: ${formatMoney(offer.valuePer7Days || 0)} cada 7 días</span></td>
-      <td>${formatDays(daysLeft)}</td>
-      <td><button class="primary small-btn" data-accept-sponsor="${escapeHtml(offer.id)}">Aceptar</button><button class="ghost small-btn" data-reject-sponsor="${escapeHtml(offer.id)}">Rechazar</button></td>
-    </tr>`;
-  }).join('')}</tbody></table></div>`;
-}
-function activeSponsorsMarkup(){
-  ensureSponsorState();
-  const active = game.sponsors.active || [];
-  if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
-  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Pago</th><th>Días restantes</th><th>Cobrado</th></tr></thead><tbody>${active.map(item => {
-    const payment = item.paymentType === 'daily' ? `${formatMoney(item.dailyAmount || 0)} / día` : 'Todo al inicio';
-    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
-  }).join('')}</tbody></table></div>`;
-}
-
-
-function memberCampaignsMarkup(){
-  ensureFanState();
-  const active = typeof activeMemberCampaignsForClub === 'function' ? activeMemberCampaignsForClub(game.selectedClubId) : [];
-  const activeRows = active.length ? `<div class="member-campaign-active-list">${active.map(campaign => {
-    const total = Math.max(1, Number(campaign.durationDays || campaign.daysLeft || 1));
-    const left = Math.max(0, Number(campaign.daysLeft || 0));
-    const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
-    return `<div class="member-campaign-active">
-      <div class="row"><div><strong>${escapeHtml(campaign.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(campaign.investment || 0)} · Duración ${formatDays(campaign.durationDays || total)}</p></div><span class="pill">${formatDays(left)} restantes</span></div>
-      <div class="project-progress"><span style="width:${progress}%"></span></div>
-    </div>`;
-  }).join('')}</div>` : '<p class="muted small">No hay campañas activas.</p>';
-  const options = (STADIUM_MEMBER_CAMPAIGNS || []).map(item => {
-    const canPay = Number(game?.budget || 0) >= Number(item.cost || 0);
-    return `<div class="member-campaign-option ${canPay ? '' : 'dim-row'}">
-      <div><strong>${escapeHtml(item.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(item.cost || 0)} · Duración ${formatDays(item.durationDays || 0)}</p></div>
-      <button class="ghost small-btn" data-start-member-campaign="${escapeHtml(item.id)}" ${canPay ? '' : 'disabled'}>Iniciar</button>
-    </div>`;
-  }).join('');
-  return `<div class="member-campaigns-box">
-    <div class="row"><div><h4>Hacer campañas para sumar socios</h4><p class="muted small">Sólo se muestra inversión y duración. El crecimiento diario y el total de socios captados quedan ocultos.</p></div></div>
-    <div class="stack">${options || '<p class="muted small">No hay campañas configuradas.</p>'}</div>
-    <h4 style="margin-top:12px">Campañas activas</h4>
-    ${activeRows}
-  </div>`;
-}
-
-function botFieldAuditMarkup(){
-  const audit = botFieldAudit(game);
-  const needsPetition = audit.invalid > 0 || audit.massUnplayable;
-  const tone = needsPetition ? 'warn' : 'ok';
-  const detail = audit.massUnplayable
-    ? `Varios clubes rivales tienen el campo en condiciones inaceptables. La dirigencia puede pedir que se cumplan las condiciones mínimas antes de los próximos partidos.`
-    : needsPetition
-      ? `Se detectaron ${audit.invalid} estadios rivales por debajo de las condiciones mínimas. La dirigencia puede elevar un reclamo formal.`
-      : `La revisión de estadios rivales no encontró campos en condiciones inaceptables.`;
-  return `<div class="card stadium-card bot-field-audit ${tone}" style="margin-top:14px">
-    <div class="row"><div><h3>Petitorio a la Federación Argentina</h3><p class="muted small">${escapeHtml(detail)}</p></div><span class="pill ${tone}">${needsPetition ? 'Reclamo disponible' : 'Sin reclamo'}</span></div>
-    <div class="row" style="margin-top:10px"><button id="btnRepairBotFields" class="ghost">Presentar petitorio a la Federación Argentina</button></div>
-  </div>`;
-}
-function repairBotFieldsFromUi(){
-  const result = repairInvalidBotFieldStates(game, 'manual_stadium_audit', { message:true });
-  if(result.repaired){
-    saveLocal(true);
-    renderStadium();
-    showNotice(`La Federación Argentina recibió el petitorio. Campos corregidos: ${result.repaired}.`);
-  } else {
-    showNotice('La Federación Argentina no encontró campos rivales fuera de reglamento.');
-  }
-}
-
-
-
-function stadiumExpansionProjectMarkup(project){
-  const total = Math.max(1, Number(project.totalDays || project.daysLeft || 1));
-  const left = Math.max(0, Number(project.daysLeft || 0));
-  const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
-  return `<div class="stadium-expansion-active">
-    <div class="row"><div><strong>${escapeHtml(project.name)}</strong><p class="muted small">Slot ${escapeHtml(project.slot || '—')} · +${new Intl.NumberFormat('es-AR').format(project.capacityGain || 0)} lugares</p></div><span class="pill">${left} día(s)</span></div>
-    <div class="project-progress"><span style="width:${progress}%"></span></div>
-  </div>`;
-}
-function stadiumExpansionCard(expansion){
-  const status = stadiumExpansionStartStatus(game.selectedClubId, expansion);
-  const durationDays = typeof stadiumExpansionDurationDays === 'function' ? stadiumExpansionDurationDays(expansion) : Number(expansion.days || 1);
-  return `<div class="stadium-expansion-option ${status.ok ? '' : 'dim-row'}">
-    <div>
-      <strong>#${expansion.id} · ${escapeHtml(expansion.name)}</strong>
-      <p class="muted small">Desde ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${durationDays} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
-      <p class="small ${status.ok ? 'ok' : 'muted'}">${status.ok ? `Costo ${formatMoney(expansion.cost)}` : escapeHtml(status.reason)}</p>
-    </div>
-    <button class="primary" data-start-stadium-expansion="${expansion.id}" ${status.ok ? '' : 'disabled'}>Iniciar</button>
-  </div>`;
-}
-function stadiumExpansionsMarkup(){
-  const clubId = game.selectedClubId;
-  const capacity = clubStadiumCapacity(clubId);
-  const baseCapacity = baseStadiumCapacityForClub(clubId);
-  const active = activeStadiumExpansionProjects(clubId);
-  const available = availableStadiumExpansionsForClub(clubId).slice(0, 12);
-  const maxWorks = maxSimultaneousStadiumWorks(capacity);
-  const penalty = stadiumConstructionAttendancePenalty(clubId);
-  const nextLocked = (STADIUM_EXPANSIONS || []).filter(item => capacity < Number(item.minCapacity || 0)).slice(0, 3);
-  return `<div class="card stadium-card stadium-expansions-card" style="margin-top:14px">
-    <div class="row"><div><h3>Ampliaciones</h3><p class="muted small">La capacidad nueva cuenta recién cuando la obra termina. No se pueden repetir slots y las obras integrales bloquean cualquier otra obra. Duración configurada: x${STADIUM_EXPANSION_DAYS_MULTIPLIER} sobre la tabla base.</p></div><span class="pill">${active.length}/${maxWorks} obra(s) activas</span></div>
-    <div class="grid cols-4 stadium-expansion-summary">
-      <div><p class="label">Capacidad base</p><strong>${new Intl.NumberFormat('es-AR').format(baseCapacity)}</strong></div>
-      <div><p class="label">Capacidad actual</p><strong>${new Intl.NumberFormat('es-AR').format(capacity)}</strong></div>
-      <div><p class="label">Máximo</p><strong>${new Intl.NumberFormat('es-AR').format(STADIUM_EXPANSION_MAX_CAPACITY)}</strong></div>
-      <div><p class="label">Penalización asistencia</p><strong class="${penalty > 0 ? 'warn' : ''}">${Math.round(penalty * 100)}%</strong></div>
-    </div>
-    ${active.length ? `<h4>Obras en construcción</h4><div class="stack">${active.map(stadiumExpansionProjectMarkup).join('')}</div>` : '<p class="muted small">No hay obras activas.</p>'}
-    <h4 style="margin-top:14px">Obras disponibles</h4>
-    <div class="stack">${available.length ? available.map(stadiumExpansionCard).join('') : '<p class="muted small">No hay ampliaciones disponibles para la capacidad actual o el estadio llegó al máximo.</p>'}</div>
-    ${nextLocked.length ? `<p class="muted small" style="margin-top:12px">Próximos umbrales: ${nextLocked.map(item => `${escapeHtml(item.name)} desde ${new Intl.NumberFormat('es-AR').format(item.minCapacity)}`).join(' · ')}</p>` : ''}
-  </div>`;
-}
-function renderStadium(){
-  ensureStadiumState();
-  ensureSponsorState();
-  const club = seed.clubs.find(c=>c.id===game.selectedClubId);
-  const score = fieldScoreForClub(game.selectedClubId);
-  const label = fieldConditionName(score);
-  const project = stadiumProjectForClub(game.selectedClubId);
-  ensureFanState();
-  const currentFans = clubFansCurrent(game.selectedClubId);
-  const baseFans = clubFansBase(game.selectedClubId);
-  const capacity = clubStadiumCapacity(game.selectedClubId);
-  const constructionPenalty = stadiumConstructionAttendancePenalty(game.selectedClubId);
-  const effectiveCapacity = Math.max(0, Math.floor(capacity * (1 - constructionPenalty)));
-  const ticketPrice = ticketPriceForClub(game.selectedClubId);
-  const lastFanDelta = Math.round(Number(game?.fans?.clubs?.[game.selectedClubId]?.lastDelta || 0));
-  const lastFanClass = lastFanDelta >= 0 ? 'ok' : 'bad';
-  const replantActive = project.replantingTurnsLeft > 0;
-  const patchActive = project.patchingTurnsLeft > 0;
-  const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
-  const patchProgress = patchActive ? Math.round(((PATCH_TURNS - project.patchingTurnsLeft) / PATCH_TURNS) * 100) : 0;
-  view.innerHTML = `
-    <div class="row section-title">
-      <div>
-        <h2>Estadio</h2>
-        <p class="tagline">Estado del campo de ${escapeHtml(clubName(game.selectedClubId))}. Cada partido como local nuestro campo de juego empeora, dale mantenimiento para evitar lesiones y dificultades para dar pases precisos.</p>
-      </div>
-      <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
-    </div>
-    <div class="grid cols-2">
-      <div class="card stadium-card">
-        <h3>Campo de juego</h3>
-        <p class="label">Estado actual</p>
-        <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
-        ${fieldBar(score, label)}
-        <p class="stadium-identity-line">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
-
-      </div>
-      <div class="card stadium-card">
-        <h3>Hinchada y entradas</h3>
-        <div class="grid cols-3">
-          <div><p class="label">Hinchas Totales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
-          <div><p class="label">Vitalicios</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
-          <div><p class="label">Nuevos socios</p><strong class="${lastFanClass}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
-        </div>
-        <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
-        <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
-        <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. Entradas baratas protegen caídas por mala posición; entradas caras limitan el crecimiento de hinchas.</p>
-        ${memberCampaignsMarkup()}
-      </div>
-      <div class="card stadium-card">
-        <h3>Mantenimiento</h3>
-        <div class="stack">
-          <div class="maintenance-option">
-            <div><strong>Replantar todo</strong><p class="muted small">Costo ${formatMoney(REPLANT_COST)}. Durante 35 días el campo queda muy malo; al finalizar sube a 99.</p></div>
-            <button id="btnReplant" class="primary" ${replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
-          </div>
-          <div class="maintenance-option">
-            <div><strong>Regar y parchar campo de juego</strong><p class="muted small">Costo ${formatMoney(PATCH_COST)}. Mejora el campo durante los próximos 21 días.</p></div>
-            <button id="btnPatch" class="ghost" ${replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${formatDaysFromTurns(project.replantingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
-    ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${formatDaysFromTurns(project.patchingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
-    ${stadiumExpansionsMarkup()}
-    ${botFieldAuditMarkup()}
-    <div class="card sponsors-card" style="margin-top:14px">
-      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan entre 20 y 40 ofertas por temporada. Cada propuesta vence en 5 días y puede pagar todo al inicio o por día.</p></div></div>
-      <h4>Ofertas disponibles</h4>
-      ${sponsorOffersMarkup()}
-      <h4 style="margin-top:14px">Contratos activos</h4>
-      ${activeSponsorsMarkup()}
-    </div>
-  `;
-  $('ticketPriceInput')?.addEventListener('change', event => {
-    const price = setTicketPriceForClub(game.selectedClubId, event.target.value);
-    saveLocal(true);
-    renderStadium();
-    showNotice(`Precio de entrada actualizado a ${formatMoney(price)}.`);
-  });
-  $('btnReplant')?.addEventListener('click', startReplantingField);
-  $('btnPatch')?.addEventListener('click', startPatchingField);
-  $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);
-  document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
-  document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
-  document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
-  document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));
-}
-
-function promotionPlayoffTieForMatch(match){
-  const tieId = String(match?.playoffTieId || '');
-  if(!tieId) return null;
-  const ties = game?.argentinaPlayoffs?.ties;
-  return Array.isArray(ties) ? ties.find(tie => String(tie.id) === tieId) || null : null;
-}
-function matchVisibleInFixtureDivision(match, division){
-  if(!match || !division) return false;
-  const divisionId = String(division.id || '');
-  const directDivisionId = String(match.divisionId || seed.clubs.find(c=>c.id===match.homeId)?.divisionId || 'default');
-  if(directDivisionId === divisionId) return true;
-  if(match.promotionPlayoff || match.playoffTieId){
-    if(String(match.upperDivisionId || '') === divisionId || String(match.lowerDivisionId || '') === divisionId) return true;
-    const tie = promotionPlayoffTieForMatch(match);
-    if(tie && (String(tie.upperDivisionId || '') === divisionId || String(tie.lowerDivisionId || '') === divisionId)) return true;
-  }
-  return false;
-}
-function fixtureRoundTitle(round){
-  if(round?.playoffRound || round?.matches?.some(m => m?.promotionPlayoff)){
-    const stage = String(round.playoffStage || round.matches?.find(m => m?.promotionPlayoff)?.playoffStage || '').toUpperCase();
-    if(stage.includes('VUELTA')) return 'Playoffs VUELTA';
-    if(stage.includes('IDA')) return 'Playoffs IDA';
-  }
-  return round?.title || (typeof playoffRoundMatchdayLabel === 'function' ? playoffRoundMatchdayLabel(round?.matchday) : `Fecha ${round?.matchday || ''}`);
-}
-
-function renderFixture(){
-  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
-  const ownClubId = Number(game?.selectedClubId || 0);
-  const showMine = fixtureViewMode !== 'league';
-  const visibleDivisions = selectedFixtureDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedFixtureDivision);
-  const html = game.fixtures.map(round=>{
-    if(showMine){
-      const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
-      if(!matches.length) return '';
-      return `<div class="card own-fixture-round"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
-    }
-    const groups = visibleDivisions.map(division => {
-      const matches = round.matches.filter(m => matchVisibleInFixtureDivision(m, division));
-      if(!matches.length) return '';
-      return `<div class="fixture-division-block"><h4>${escapeHtml(division.name)}</h4><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
-    }).join('');
-    return `<div class="card"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div>${groups || '<p class="muted">Sin partidos para esta división.</p>'}</div>`;
-  }).filter(Boolean).join('');
-  view.innerHTML = `
-    <div class="row section-title fixture-title-row">
-      <div><h2>Calendario</h2><p class="tagline">Por defecto se muestra el calendario de tu club. Los partidos jugados son clickeables para ver estadísticas y eventos.</p></div>
-      <div class="fixture-controls row">
-        <button type="button" id="btnMyFixture" class="${showMine ? 'primary' : 'ghost'}">Mi calendario</button>
-        <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
-      </div>
-    </div>
-    <div class="stack">${html || '<div class="card"><p class="muted">Sin partidos para mostrar.</p></div>'}</div>`;
-  $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
-  $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
-}
-function matchCard(m){
-  const events = game.matchHistory.find(x=>x.id===m.id);
-  const clickable = m.played ? 'clickable' : '';
-  const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
-  const playoffNote = m.promotionPlayoff ? `<div class="match-date-line playoff-note">${escapeHtml(`Playoffs ${String(m.playoffStage || '').toUpperCase() || ''}`.trim())} · mismo partido en ambas ligas</div>` : '';
-  return `<button class="match-card ${clickable}" ${attr}>
-    <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
-    ${playoffNote}
-    <div class="match-line">
-      <div>${clubSpan(m.homeId)}</div>
-      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}` : 'vs'}</strong>
-      <div>${clubSpan(m.awayId)}</div>
-    </div>
-    ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}
-  </button>`;
-}
-
-function standingsHistoryEntries(){
-  const history = typeof normalizeStandingsHistoryState === 'function' ? normalizeStandingsHistoryState(game?.standingsHistory || {}) : (game?.standingsHistory || { seasons:[] });
-  return Array.isArray(history.seasons) ? history.seasons.slice().sort((a,b)=>Number(b.year || 0)-Number(a.year || 0)) : [];
-}
-function currentStandingsYearKey(){
-  return `current-${Number(game?.seasonYear || seasonYearForNumber?.(game?.seasonNumber || 1) || new Date().getFullYear())}`;
-}
-function standingsYearOptionsMarkup(selected){
-  const currentYear = Number(game?.seasonYear || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(game?.seasonNumber || 1) : new Date().getFullYear()));
-  const currentKey = currentStandingsYearKey();
-  const opts = [`<option value="${escapeHtml(currentKey)}" ${selected === currentKey || selected === 'current' ? 'selected' : ''}>${currentYear} · actual</option>`];
-  standingsHistoryEntries().forEach(entry => {
-    const key = `history-${Number(entry.season || 0)}-${Number(entry.year || 0)}`;
-    opts.push(`<option value="${escapeHtml(key)}" ${selected === key ? 'selected' : ''}>${Number(entry.year || 0)} · Temp. ${Number(entry.season || 0)}</option>`);
-  });
-  return `<div class="division-filter standings-year-filter"><label for="standingsYearFilter">Año</label><select id="standingsYearFilter">${opts.join('')}</select></div>`;
-}
-function selectedStandingsHistoryEntry(){
-  const selected = String(selectedStandingsYear || 'current');
-  if(!selected.startsWith('history-')) return null;
-  const parts = selected.split('-');
-  const season = Number(parts[1] || 0);
-  const year = Number(parts[2] || 0);
-  return standingsHistoryEntries().find(entry => Number(entry.season || 0) === season && Number(entry.year || 0) === year) || null;
-}
-function standingsRowsForDisplay(divisionId){
-  const historical = selectedStandingsHistoryEntry();
-  if(historical){
-    return Array.isArray(historical.divisions?.[divisionId]) ? historical.divisions[divisionId].slice().sort((a,b)=>Number(a.position || 999)-Number(b.position || 999)) : [];
-  }
-  return sortedStandings(divisionId);
-}
-function standingsDisplaySubtitle(){
-  const historical = selectedStandingsHistoryEntry();
-  if(!historical) return '';
-  return `<p class="muted small">Tabla histórica guardada al cierre de la temporada ${Number(historical.season || 0)}.</p>`;
-}
-
-function renderStandings(){
-  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
-  const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
-  const currentKey = currentStandingsYearKey();
-  const validYearKeys = new Set([currentKey, 'current', ...standingsHistoryEntries().map(entry => `history-${Number(entry.season || 0)}-${Number(entry.year || 0)}`)]);
-  if(!validYearKeys.has(String(selectedStandingsYear || 'current'))) selectedStandingsYear = currentKey;
-  if(selectedStandingsDivision !== 'all' && !divisions.some(d => d.id === selectedStandingsDivision)){
-    selectedStandingsDivision = managerDivision;
-  }
-  const visibleDivisions = selectedStandingsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStandingsDivision);
-  const blocks = visibleDivisions.map(division => {
-    const tableRows = standingsRowsForDisplay(division.id);
-    const rows = tableRows.map((s,i)=>{
-      const statusClass = standingsStatusClass(division.id, i, tableRows.length);
-      const ownClass = s.clubId===game.selectedClubId ? 'own-club-row' : '';
-      return `<tr class="${ownClass} ${statusClass}">
-        <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
-      </tr>`;
-    }).join('');
-    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-  }).join('');
-  view.innerHTML = `
-    <div class="row section-title">
-      <div><h2>Tabla de posiciones</h2>${standingsDisplaySubtitle()}</div>
-      <div class="row filters-row">${standingsYearOptionsMarkup(selectedStandingsYear)}${divisionFilterMarkup('standingsDivisionFilter', selectedStandingsDivision)}</div>
-    </div>
-    <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>`;
-  $('standingsYearFilter')?.addEventListener('change', event => { selectedStandingsYear = event.target.value; renderStandings(); });
-  $('standingsDivisionFilter')?.addEventListener('change', event => { selectedStandingsDivision = event.target.value; renderStandings(); });
-}
-
-
-function standingsStatusClass(divisionId, index, total){
-  if(typeof argentineStandingStatusClass === 'function'){
-    const argClass = argentineStandingStatusClass(divisionId, index, total);
-    if(argClass) return argClass;
-  }
-  const divisions = divisionOrderList();
-  const current = divisions.findIndex(d => d.id === divisionId);
-  if(index === 0) return current > 0 ? 'promotion-row' : 'champion-row';
-  if(index === total - 1 && current >= 0 && current < divisions.length - 1) return 'relegation-row';
-  return '';
-}
-
-function renderManagerStats(){
-  game.managerStats = normalizeManagerStats(game.managerStats);
-  const totals = game.managerStats.totals;
-  const seasons = game.managerStats.seasons.slice().sort((a,b)=>(b.season || 0)-(a.season || 0));
-  const career = (game.managerStats.careerHistory || []).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  const breakdown = typeof managerPrestigeBreakdown === 'function' ? managerPrestigeBreakdown(game.managerStats) : { total:Number(game.managerStats.prestige || 0), experiencePrestige:0, winPrestige:0, objectivePrestige:0, championPrestige:0, badSeasonPenalty:0, dismissalPenalty:0 };
-  const prestige = breakdown.total;
-  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
-  const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
-  const experience = Number(game.managerStats.experience || 0);
-  const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];
-  const achievementTotal = typeof managerAchievementsCatalog === 'function' ? managerAchievementsCatalog().length : unlockedAchievements.length;
-  const achievementRows = unlockedAchievements.map(item => `<div class="achievement-unlocked-card"><span class="achievement-icon">${escapeHtml(item.icono || '★')}</span><div><strong>${escapeHtml(item.titulo || 'Hito')}</strong><p class="small muted">${escapeHtml(item.descripcion || '')}</p><span class="pill">${escapeHtml(item.categoria || 'Manager')}</span></div></div>`).join('');
-  const rows = seasons.map(item => {
-    const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${Number(item.objectivePpg).toFixed(2)} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : '—';
-    const deltaLabel = Number.isFinite(Number(item.objectiveDelta)) ? ` <span class="small muted">${Number(item.objectiveDelta) >= 0 ? '+' : ''}${Number(item.objectiveDelta).toFixed(2)}</span>` : '';
-    const prestigeLabel = Number.isFinite(Number(item.managerPrestigeObjectiveReward)) && Number(item.managerPrestigeObjectiveReward) !== 0 ? ` <span class="small ${Number(item.managerPrestigeObjectiveReward) > 0 ? 'ok' : 'danger'}">${Number(item.managerPrestigeObjectiveReward) > 0 ? '+' : ''}${Number(item.managerPrestigeObjectiveReward)}</span>` : '';
-    return `<tr>
-    <td>${item.season}</td>
-    <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
-    <td>${escapeHtml(item.divisionName || '—')}</td>
-    <td><strong>${escapeHtml(item.label || (item.position === 1 ? 'Campeón' : `${item.position || '—'}°`))}</strong></td>
-    <td>${objectiveLabel}${deltaLabel}${prestigeLabel}</td>
-    <td>${Number(item.ppg || 0).toFixed(2)}</td>
-    <td>${item.pts || 0}</td><td>${item.pg || 0}</td><td>${item.pe || 0}</td><td>${item.pp || 0}</td><td>${item.gf || 0}</td><td>${item.gc || 0}</td>
-  </tr>`;
-  }).join('');
-  const careerRows = career.map(item => `<tr>
-    <td>${item.season || '—'}</td>
-    <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
-    <td>${escapeHtml(item.divisionName || '—')}</td>
-    <td>${item.position ? `${item.position}°` : '—'}</td>
-    <td>${item.played || 0}</td>
-    <td>${Number(item.ppg || 0).toFixed(2)}</td>
-    <td>${escapeHtml(item.type === 'dismissal' ? 'Despido' : item.type || 'Cambio')}</td>
-  </tr>`).join('');
-  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado, experiencia y prestigio del manager.</p></div></div>
-    <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Acceso por carrera: prestigio ${prestigeAccess}. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
-      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">+${typeof formatManagerPrestigeDecimal === 'function' ? formatManagerPrestigeDecimal(Number(breakdown.experiencePrestige || 0)) : Number(breakdown.experiencePrestige || 0).toFixed(3)} prestigio</span></div>
-      <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
-      <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
-      <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>
-      <div class="card"><p class="label">Perdidos</p><strong>${totals.lost || 0}</strong></div>
-      <div class="card"><p class="label">GF / GC</p><strong>${totals.gf || 0} / ${totals.gc || 0}</strong></div>
-      <div class="card"><p class="label">Títulos obtenidos</p><strong>${game.managerStats.titles || 0}</strong></div>
-      <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
-      <div class="card"><p class="label">Objetivos / directiva</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">dinámico por PPG vs objetivo</span></div>
-      <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
-      <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">lista oculta: se revela al conseguirlos</span></div>
-    </div>
-    <div class="card manager-achievements-card" style="margin-top:14px"><h3>Hitos y récords personales</h3><p class="muted small">Sólo se muestran los logros ya conseguidos. Los pendientes permanecen ocultos.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">Todavía no desbloqueaste hitos personales.</p>'}</div></div>
-    <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
-      <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
-    </div>
-    <div class="card" style="margin-top:14px"><h3>Carrera laboral</h3>
-      <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>PJ</th><th>PPG</th><th>Evento</th></tr></thead><tbody>${careerRows || '<tr><td colspan="7" class="muted">Sin cambios de club todavía.</td></tr>'}</tbody></table></div>
-    </div>`;
-}
-
-function renderStats(){
-  const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
-  const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
-  if(selectedStatsDivision !== 'all' && !divisions.some(d => d.id === selectedStatsDivision)){
-    selectedStatsDivision = managerDivision;
-  }
-  const visibleDivisions = selectedStatsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStatsDivision);
-  const blocks = visibleDivisions.map(division => {
-    const allowedClubs = new Set(seed.clubs.filter(c => (c.divisionId || 'default') === division.id).map(c => c.id));
-    const stats = Object.values(game.playerStats).filter(s => allowedClubs.has(s.clubId));
-    const scorers = stats.filter(s=>s.goals>0).sort((a,b)=>b.goals-a.goals).slice(0,20);
-    const assists = stats.filter(s=>s.assists>0).sort((a,b)=>b.assists-a.assists).slice(0,20);
-    const cards = stats.filter(s=>s.yellow>0 || s.red>0).sort((a,b)=>(b.red*3+b.yellow)-(a.red*3+a.yellow)).slice(0,20);
-    const injuries = stats.filter(s=>s.injuries>0).sort((a,b)=>b.injuries-a.injuries).slice(0,20);
-    return `<div class="card stats-division-block"><h3>${escapeHtml(division.name)}</h3><div class="grid cols-4">
-      <div class="card inner"><h3>Goleadores</h3>${rankList(scorers,'goals')}</div>
-      <div class="card inner"><h3>Asistidores</h3>${rankList(assists,'assists')}</div>
-      <div class="card inner"><h3>Tarjetas</h3>${cardList(cards)}</div>
-      <div class="card inner"><h3>Lesiones</h3>${rankList(injuries,'injuries')}</div>
-    </div></div>`;
-  }).join('');
-  view.innerHTML = `
-    <div class="row section-title">
-      <div><h2>Estadísticas</h2><p class="tagline">Rankings separados por división.</p></div>
-      ${divisionFilterMarkup('statsDivisionFilter', selectedStatsDivision)}
-    </div>
-    <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>
-  `;
-  $('statsDivisionFilter')?.addEventListener('change', event => { selectedStatsDivision = event.target.value; renderStats(); });
-}
-function rankList(list,key){
-  if(!list.length) return '<p class="muted">Sin datos todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${clubBadge(s.clubId)}</span></span><strong>${s[key]}</strong></div>`; }).join('');
-}
-function cardList(list){
-  if(!list.length) return '<p class="muted">Sin tarjetas todavía.</p>';
-  return list.map((s,i)=>{ const p=playerById(s.playerId); return `<div class="stat-rank ${s.clubId===game.selectedClubId ? 'own-player-rank' : ''}"><span><span class="rank-num">${i+1}</span><button class="linklike" data-player-id="${s.playerId}">${escapeHtml(p?.name||'Jugador')}</button> <span class="pill ${s.clubId===game.selectedClubId ? 'club-pill-own' : ''}">${clubBadge(s.clubId)}</span></span><strong><span class="yellow-card">■</span> ${s.yellow} / <span class="red-card">■</span> ${s.red}</strong></div>`; }).join('');
-}
-function sortedStandings(divisionId=null){
-  if(!game) return [];
-  const allowed = divisionId ? new Set(seed.clubs.filter(c => (c.divisionId || 'default') === divisionId).map(c => c.id)) : null;
-  return Object.values(game.standings)
-    .filter(s => !allowed || allowed.has(s.clubId))
-    .sort((a,b)=> b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubName(a.clubId).localeCompare(clubName(b.clubId)) );
-}
-
+  window.GAME_CONFIG = mergeDeep(window.GAME_CONFIG || {}, balance);
+})();

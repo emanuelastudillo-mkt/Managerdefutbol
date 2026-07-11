@@ -380,6 +380,20 @@ const TICKET_PRICE_MAX_EFFECT_RATE = configNumber('estadio.precioEntradaEfectoMa
 const RIVAL_PRESTIGE_ATTENDANCE_MAX_RATE = configNumber('estadio.bonusAsistenciaPrestigioRivalMaximo', 0.35, 0, 2);
 const RIVAL_PRESTIGE_ATTENDANCE_START = Math.round(configNumber('estadio.bonusAsistenciaPrestigioRivalDesde', 20, 0, 99));
 const RIVAL_PRESTIGE_AWAY_DEMAND_SHARE = configNumber('estadio.bonusAsistenciaPrestigioRivalVisitante', 0.50, 0, 1);
+const STADIUM_MEMBER_CAMPAIGNS = (Array.isArray(configValue('estadio.campaniasSocios', [])) ? configValue('estadio.campaniasSocios', []) : []).map((item, index) => {
+  const cost = Math.max(0, Math.round(Number(item?.inversion ?? item?.cost ?? 0)));
+  const durationDays = Math.max(1, Math.round(Number(item?.diasDuracion ?? item?.durationDays ?? 1)));
+  const minDaily = Math.max(0, Math.round(Number(item?.sociosDiaMin ?? item?.dailyMembersMin ?? 0)));
+  const maxDaily = Math.max(minDaily, Math.round(Number(item?.sociosDiaMax ?? item?.dailyMembersMax ?? minDaily)));
+  return {
+    id:String(item?.id || `member_campaign_${index + 1}`),
+    name:String(item?.nombre || item?.name || 'Campaña de Marketing'),
+    cost,
+    durationDays,
+    dailyMembersMin:minDaily,
+    dailyMembersMax:maxDaily
+  };
+}).filter(item => item.id && item.cost > 0 && item.durationDays > 0);
 const MARKET_FREE_AGENT_COUNT = Math.min(300, configNumber('plantel.agentesLibresIniciales', 300, 0));
 const MARKET_FREE_AGENT_HARD_MAX = Math.max(0, Math.min(300, Math.round(configNumber('plantel.agentesLibresMaximosTotales', 300, 0))));
 const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 40, 1, 99);

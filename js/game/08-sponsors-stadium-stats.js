@@ -334,6 +334,34 @@ function activeSponsorsMarkup(){
   }).join('')}</tbody></table></div>`;
 }
 
+
+function memberCampaignsMarkup(){
+  ensureFanState();
+  const active = typeof activeMemberCampaignsForClub === 'function' ? activeMemberCampaignsForClub(game.selectedClubId) : [];
+  const activeRows = active.length ? `<div class="member-campaign-active-list">${active.map(campaign => {
+    const total = Math.max(1, Number(campaign.durationDays || campaign.daysLeft || 1));
+    const left = Math.max(0, Number(campaign.daysLeft || 0));
+    const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
+    return `<div class="member-campaign-active">
+      <div class="row"><div><strong>${escapeHtml(campaign.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(campaign.investment || 0)} · Duración ${formatDays(campaign.durationDays || total)}</p></div><span class="pill">${formatDays(left)} restantes</span></div>
+      <div class="project-progress"><span style="width:${progress}%"></span></div>
+    </div>`;
+  }).join('')}</div>` : '<p class="muted small">No hay campañas activas.</p>';
+  const options = (STADIUM_MEMBER_CAMPAIGNS || []).map(item => {
+    const canPay = Number(game?.budget || 0) >= Number(item.cost || 0);
+    return `<div class="member-campaign-option ${canPay ? '' : 'dim-row'}">
+      <div><strong>${escapeHtml(item.name || 'Campaña de Marketing')}</strong><p class="muted small">Inversión ${formatMoney(item.cost || 0)} · Duración ${formatDays(item.durationDays || 0)}</p></div>
+      <button class="ghost small-btn" data-start-member-campaign="${escapeHtml(item.id)}" ${canPay ? '' : 'disabled'}>Iniciar</button>
+    </div>`;
+  }).join('');
+  return `<div class="member-campaigns-box">
+    <div class="row"><div><h4>Hacer campañas para sumar socios</h4><p class="muted small">Sólo se muestra inversión y duración. El crecimiento diario y el total de socios captados quedan ocultos.</p></div></div>
+    <div class="stack">${options || '<p class="muted small">No hay campañas configuradas.</p>'}</div>
+    <h4 style="margin-top:12px">Campañas activas</h4>
+    ${activeRows}
+  </div>`;
+}
+
 function botFieldAuditMarkup(){
   const audit = botFieldAudit(game);
   const needsPetition = audit.invalid > 0 || audit.massUnplayable;
@@ -452,6 +480,7 @@ function renderStadium(){
         <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
         <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
         <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. Entradas baratas protegen caídas por mala posición; entradas caras limitan el crecimiento de hinchas.</p>
+        ${memberCampaignsMarkup()}
       </div>
       <div class="card stadium-card">
         <h3>Mantenimiento</h3>
@@ -491,6 +520,7 @@ function renderStadium(){
   document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
   document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
   document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
+  document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));
 }
 
 function promotionPlayoffTieForMatch(match){

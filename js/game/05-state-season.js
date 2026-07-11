@@ -3243,6 +3243,7 @@ function updateManagerMatchStats(match){
   game.managerStats.currentSeason = seasonTotals;
   updateManagerPrestigeFromWins();
   if(typeof updateTransferBudgetPerformanceUnlocks === 'function') updateTransferBudgetPerformanceUnlocks();
+  if(typeof processSponsorSpecialAfterOwnMatch === 'function') processSponsorSpecialAfterOwnMatch(match);
   if(currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
   checkManagerAchievements({ silent:false });
   checkManagerObjectiveGameOver();

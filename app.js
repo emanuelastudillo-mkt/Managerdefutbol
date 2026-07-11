@@ -1,2 +1,2 @@
-/* V5.71 · Punto de entrada. Códigos compactos en menú Especial. */
+/* V5.72 · Punto de entrada. Sponsors especiales con condiciones. */
 init();

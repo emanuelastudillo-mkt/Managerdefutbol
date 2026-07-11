@@ -1,9 +1,8 @@
 # Versión actual
 
-V5.71
+V5.72
 
 ## Cambios
-- Renuncia y despido fuerzan el cierre de modales superpuestos.
-- La pantalla sin club muestra botón visible para Buscar otro club y Fundar club.
-- No cambia la lógica de carrera, sólo la navegación al quedar sin club.
-- El bloque queda abajo de todo, alineado a la izquierda.
+- Algunas ofertas de sponsor pueden incluir condición especial.
+- Si la condición se cumple, el sponsor paga un bono x3 adicional.
+- El progreso del sponsor especial se ve en ofertas y contratos activos.

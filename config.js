@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.71',
+  version: 'V5.72',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -262,7 +262,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.71: sistema fijo por temporada.
+    // V5.72: sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
@@ -273,7 +273,18 @@ window.GAME_CONFIG = {
     duracionOfertaMinDias: 200,
     duracionOfertaMaxDias: 500,
     probabilidadPagoUnico: 0.50,
-    descuentoPagoUnico: 0.50
+    descuentoPagoUnico: 0.50,
+    sponsorEspecialActivo: true,
+    probabilidadSponsorEspecial: 0.22,
+    multiplicadorBonoEspecial: 3,
+    condicionesEspeciales: [
+      { id:'low_player_starter_6_10', nombre:'Apuesta al tapado', descripcion:'Un jugador de muy bajo nivel debe ser titular 6 de los próximos 10 partidos.', partidosObjetivo:10, titularesObjetivo:6, mediaMaxima:55 },
+      { id:'clean_sheets_4', nombre:'Valla invicta', descripcion:'No recibir goles en los próximos 4 partidos.', partidosObjetivo:4 },
+      { id:'win_4_5', nombre:'Racha ganadora', descripcion:'Ganar 4 de los próximos 5 partidos.', partidosObjetivo:5, victoriasObjetivo:4 },
+      { id:'no_reds_5', nombre:'Juego limpio', descripcion:'No recibir tarjetas rojas en los próximos 5 partidos.', partidosObjetivo:5 },
+      { id:'field_98_30', nombre:'Campo impecable', descripcion:'Mantener el campo de juego por encima de 98 durante 30 días.', diasObjetivo:30, minimoCampo:98 },
+      { id:'lose_5_5', nombre:'Campaña incómoda', descripcion:'Perder los próximos 5 partidos.', partidosObjetivo:5, derrotasObjetivo:5 }
+    ]
   },
   mercado: {
     // Impuesto federativo sobre ventas de jugadores. 0.30 = el club recibe 70% neto.

@@ -4662,3 +4662,7 @@ th{
   background:rgba(34,197,94,.055);
 }
 .member-campaign-running .project-progress{width:100%;min-width:160px}
+
+/* V5.72 · Sponsors especiales */
+.sponsor-special-line{display:block;margin-top:6px;line-height:1.35}
+.sponsor-special-line .pill{margin-right:6px}

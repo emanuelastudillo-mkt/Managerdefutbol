@@ -1,4 +1,28 @@
-# Características de la versión V5.71
+# Características de la versión V5.72
+
+## V5.72 - Sponsors especiales con condiciones
+
+### Cambios principales
+- Se agrega la variante **Sponsor especial**.
+- Una oferta especial paga normal, pero puede entregar un bono x3 si el manager cumple su condición.
+- Las condiciones se controlan después de aceptar la oferta.
+- El progreso de la condición se muestra en sponsors activos.
+- El bono se registra en Finanzas como `Bono sponsor especial`.
+
+### Condiciones iniciales
+- Un jugador de muy bajo nivel debe ser titular 6 de los próximos 10 partidos.
+- No recibir goles en los próximos 4 partidos.
+- Ganar 4 de los próximos 5 partidos.
+- No recibir tarjetas rojas en los próximos 5 partidos.
+- Mantener el campo de juego por encima de 98 durante 30 días.
+- Perder los próximos 5 partidos.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Afecta ofertas futuras de sponsors.
+
+---
 
 ## V5.71 - Corrección de renuncia y despido
 

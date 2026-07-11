@@ -1,4 +1,4 @@
-/* V5.66 · Sponsors fijos por temporada, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/* V5.66 · Sponsors especiales con condiciones, estadio, calendario, tabla, estadísticas y finanzas visuales. */
 
 function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
@@ -91,6 +91,166 @@ function sponsorOfferValue(baseSponsor, lugar, paymentType='daily'){
     dailyTotal
   };
 }
+function sponsorSpecialConditionPool(){
+  return (SPONSOR_SPECIAL_CONDITIONS || []).filter(item => item && item.id && item.descripcion);
+}
+function sponsorSpecialPickCondition(){
+  const pool = sponsorSpecialConditionPool();
+  if(!SPONSOR_SPECIAL_ENABLED || !pool.length || Math.random() >= SPONSOR_SPECIAL_CHANCE) return null;
+  return pool[randomInt(0, pool.length - 1)] || null;
+}
+function sponsorLowLevelCandidate(condition={}){
+  const squad = playersByClub(game?.selectedClubId || 0).filter(Boolean);
+  if(!squad.length) return null;
+  const maxOverall = Number(condition.mediaMaxima || 55);
+  const low = squad.filter(player => Number(effectiveOverall(player) || player.overall || 0) <= maxOverall);
+  const pool = low.length ? low : squad;
+  return [...pool].sort((a,b) => Number(effectiveOverall(a) || a.overall || 0) - Number(effectiveOverall(b) || b.overall || 0))[0] || null;
+}
+function createSponsorSpecialChallenge(condition=null){
+  const item = condition || sponsorSpecialPickCondition();
+  if(!item) return null;
+  const challenge = {
+    id:String(item.id || ''),
+    name:String(item.nombre || 'Sponsor especial'),
+    description:String(item.descripcion || ''),
+    status:'active',
+    matchesObserved:0,
+    wins:0,
+    losses:0,
+    cleanSheets:0,
+    redCards:0,
+    targetStarts:0,
+    daysObserved:0,
+    createdDate:game?.currentDate || '',
+    createdTurn:currentTurnIndex(),
+    fulfilledDate:'',
+    failedDate:'',
+    bonusMultiplier:Number(SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3),
+    specialBonusPaid:false,
+    config:{ ...item }
+  };
+  if(challenge.id === 'low_player_starter_6_10'){
+    const player = sponsorLowLevelCandidate(item);
+    if(!player) return null;
+    challenge.targetPlayerId = Number(player.id || 0);
+    challenge.targetPlayerName = player.name || 'Jugador elegido';
+    challenge.description = `${challenge.targetPlayerName} debe ser titular ${Number(item.titularesObjetivo || 6)} de los próximos ${Number(item.partidosObjetivo || 10)} partidos.`;
+  }
+  return challenge;
+}
+function sponsorSpecialProgressText(challenge={}){
+  if(!challenge?.id) return '';
+  if(challenge.status === 'fulfilled') return 'Cumplido';
+  if(challenge.status === 'failed') return 'Fallido';
+  const cfg = challenge.config || {};
+  if(challenge.id === 'low_player_starter_6_10') return `${Number(challenge.targetStarts || 0)}/${Number(cfg.titularesObjetivo || 6)} titularidades · ${Number(challenge.matchesObserved || 0)}/${Number(cfg.partidosObjetivo || 10)} partidos`;
+  if(challenge.id === 'clean_sheets_4') return `${Number(challenge.cleanSheets || 0)}/${Number(cfg.partidosObjetivo || 4)} vallas invictas`;
+  if(challenge.id === 'win_4_5') return `${Number(challenge.wins || 0)}/${Number(cfg.victoriasObjetivo || 4)} victorias · ${Number(challenge.matchesObserved || 0)}/${Number(cfg.partidosObjetivo || 5)} partidos`;
+  if(challenge.id === 'no_reds_5') return `${Number(challenge.matchesObserved || 0)}/${Number(cfg.partidosObjetivo || 5)} partidos sin rojas`;
+  if(challenge.id === 'field_98_30') return `${Number(challenge.daysObserved || 0)}/${Number(cfg.diasObjetivo || 30)} días con campo > ${Number(cfg.minimoCampo || 98)}`;
+  if(challenge.id === 'lose_5_5') return `${Number(challenge.losses || 0)}/${Number(cfg.derrotasObjetivo || 5)} derrotas · ${Number(challenge.matchesObserved || 0)}/${Number(cfg.partidosObjetivo || 5)} partidos`;
+  return `${Number(challenge.matchesObserved || challenge.daysObserved || 0)} avances`;
+}
+function sponsorSpecialChallengeMarkup(challenge=null, compact=false){
+  if(!challenge?.id) return '';
+  const tone = challenge.status === 'fulfilled' ? 'ok' : challenge.status === 'failed' ? 'danger' : 'warn';
+  const label = compact ? sponsorSpecialProgressText(challenge) : challenge.description;
+  return `<span class="pill ${tone}">Sponsor especial x${Number(challenge.bonusMultiplier || SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3)}</span><span class="muted small">${escapeHtml(label || '')}${compact ? '' : ` · ${escapeHtml(sponsorSpecialProgressText(challenge))}`}</span>`;
+}
+function ownMatchSponsorContext(match){
+  const clubId = Number(game?.selectedClubId || 0);
+  const isHome = Number(match?.homeId || 0) === clubId;
+  const isAway = Number(match?.awayId || 0) === clubId;
+  if(!clubId || (!isHome && !isAway)) return null;
+  const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
+  const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);
+  const starters = (isHome ? match.starterIdsHome : match.starterIdsAway) || [];
+  const redCards = (match.cards || []).filter(card => Number(card.clubId || 0) === clubId && ['red','secondYellowRed'].includes(String(card.type || ''))).length;
+  return { clubId, gf, gc, won:gf > gc, lost:gf < gc, drawn:gf === gc, starters:starters.map(Number), redCards };
+}
+function paySponsorSpecialBonus(contract, reason=''){
+  if(!contract || contract.specialBonusPaid) return 0;
+  const base = Math.max(0, Math.round(Number(contract.total || contract.dailyTotal || contract.upfrontTotal || 0)));
+  const amount = Math.max(0, Math.round(base * Number(contract.specialChallenge?.bonusMultiplier || SPONSOR_SPECIAL_BONUS_MULTIPLIER || 3)));
+  if(amount <= 0) return 0;
+  recordBudgetChange(amount, `Bono sponsor especial: ${contract.sponsorName} / ${contract.placeName}`, { type:'sponsor_special_bonus', sponsorId:contract.sponsorId, placeId:contract.placeId, sponsorContractId:contract.id, challengeId:contract.specialChallenge?.id || '' });
+  contract.specialBonusPaid = true;
+  contract.paidToDate = Math.round(Number(contract.paidToDate || 0) + amount);
+  pushGameMessage({ type:'finanzas', title:'Bono de sponsor especial', body:`${contract.sponsorName} pagó un bono de ${formatMoney(amount)} por cumplir: ${contract.specialChallenge?.description || reason || 'condición especial'}.`, priority:'high' });
+  return amount;
+}
+function completeSponsorChallenge(contract, success, detail=''){
+  if(!contract?.specialChallenge || contract.specialChallenge.status !== 'active') return;
+  contract.specialChallenge.status = success ? 'fulfilled' : 'failed';
+  if(success){
+    contract.specialChallenge.fulfilledDate = game?.currentDate || '';
+    paySponsorSpecialBonus(contract, detail);
+  }else{
+    contract.specialChallenge.failedDate = game?.currentDate || '';
+    if(detail) contract.specialChallenge.failureReason = detail;
+    pushGameMessage({ type:'finanzas', title:'Sponsor especial perdido', body:`${contract.sponsorName} no pagará bono especial: ${detail || contract.specialChallenge.description || 'condición incumplida'}.`, priority:'normal' });
+  }
+}
+function processSponsorSpecialAfterOwnMatch(match){
+  if(!game?.sponsors?.active?.length) return;
+  const ctx = ownMatchSponsorContext(match);
+  if(!ctx) return;
+  (game.sponsors.active || []).forEach(contract => {
+    const ch = contract.specialChallenge;
+    if(!ch || ch.status !== 'active') return;
+    const cfg = ch.config || {};
+    if(ch.id === 'low_player_starter_6_10'){
+      ch.matchesObserved = Number(ch.matchesObserved || 0) + 1;
+      if(ctx.starters.includes(Number(ch.targetPlayerId || 0))) ch.targetStarts = Number(ch.targetStarts || 0) + 1;
+      if(Number(ch.targetStarts || 0) >= Number(cfg.titularesObjetivo || 6)) completeSponsorChallenge(contract, true, 'titularidades cumplidas');
+      else if(Number(ch.matchesObserved || 0) >= Number(cfg.partidosObjetivo || 10)) completeSponsorChallenge(contract, false, 'no se alcanzaron las titularidades requeridas');
+    }else if(ch.id === 'clean_sheets_4'){
+      ch.matchesObserved = Number(ch.matchesObserved || 0) + 1;
+      if(ctx.gc > 0) completeSponsorChallenge(contract, false, 'el equipo recibió goles');
+      else {
+        ch.cleanSheets = Number(ch.cleanSheets || 0) + 1;
+        if(Number(ch.cleanSheets || 0) >= Number(cfg.partidosObjetivo || 4)) completeSponsorChallenge(contract, true, 'valla invicta cumplida');
+      }
+    }else if(ch.id === 'win_4_5'){
+      ch.matchesObserved = Number(ch.matchesObserved || 0) + 1;
+      if(ctx.won) ch.wins = Number(ch.wins || 0) + 1;
+      if(Number(ch.wins || 0) >= Number(cfg.victoriasObjetivo || 4)) completeSponsorChallenge(contract, true, 'racha ganadora cumplida');
+      else if(Number(ch.matchesObserved || 0) >= Number(cfg.partidosObjetivo || 5)) completeSponsorChallenge(contract, false, 'no se alcanzaron las victorias requeridas');
+    }else if(ch.id === 'no_reds_5'){
+      ch.matchesObserved = Number(ch.matchesObserved || 0) + 1;
+      ch.redCards = Number(ch.redCards || 0) + Number(ctx.redCards || 0);
+      if(ctx.redCards > 0) completeSponsorChallenge(contract, false, 'el equipo recibió una tarjeta roja');
+      else if(Number(ch.matchesObserved || 0) >= Number(cfg.partidosObjetivo || 5)) completeSponsorChallenge(contract, true, 'juego limpio cumplido');
+    }else if(ch.id === 'lose_5_5'){
+      ch.matchesObserved = Number(ch.matchesObserved || 0) + 1;
+      if(ctx.lost) ch.losses = Number(ch.losses || 0) + 1;
+      if(Number(ch.matchesObserved || 0) >= Number(cfg.partidosObjetivo || 5)){
+        if(Number(ch.losses || 0) >= Number(cfg.derrotasObjetivo || 5)) completeSponsorChallenge(contract, true, 'derrotas requeridas cumplidas');
+        else completeSponsorChallenge(contract, false, 'no se alcanzaron las derrotas requeridas');
+      }
+    }
+  });
+}
+function processSponsorSpecialDaily(){
+  if(!game?.sponsors?.active?.length) return;
+  const today = game?.currentDate || String(currentTurnIndex());
+  (game.sponsors.active || []).forEach(contract => {
+    const ch = contract.specialChallenge;
+    if(!ch || ch.status !== 'active' || ch.id !== 'field_98_30') return;
+    if(ch.lastDailyCheckDate === today) return;
+    ch.lastDailyCheckDate = today;
+    const cfg = ch.config || {};
+    const minField = Number(cfg.minimoCampo || 98);
+    const score = fieldScoreForClub(game.selectedClubId);
+    if(score <= minField){
+      completeSponsorChallenge(contract, false, `el campo bajó a ${score}/100`);
+      return;
+    }
+    ch.daysObserved = Number(ch.daysObserved || 0) + 1;
+    if(Number(ch.daysObserved || 0) >= Number(cfg.diasObjetivo || 30)) completeSponsorChallenge(contract, true, 'campo impecable sostenido');
+  });
+}
 function occupiedSponsorPlaces(){
   ensureSponsorState();
   return new Set((game.sponsors.active || []).filter(item => Number(item.turnsRemaining || 0) > 0).map(item => item.placeId));
@@ -147,6 +307,7 @@ function createSponsorOfferFromPlan(planItem){
   if(!sponsor || !place) return null;
   const paymentType = Math.random() < SPONSOR_UPFRONT_PAYMENT_CHANCE ? 'upfront' : 'daily';
   const value = sponsorOfferValue(sponsor, place, paymentType);
+  const specialChallenge = createSponsorSpecialChallenge();
   const createdTurn = currentSeasonTurnNumber();
   const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
   const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
@@ -171,7 +332,8 @@ function createSponsorOfferFromPlan(planItem){
     createdTurn,
     expiresTurn,
     arrivalPlanId:planItem?.id || '',
-    season:game.seasonNumber || 1
+    season:game.seasonNumber || 1,
+    specialChallenge
   };
 }
 function expireSponsorOffers(silent=true){
@@ -244,6 +406,7 @@ function advanceSponsorMatchCounter(){
 function processSponsorContracts(){
   ensureSponsorState();
   releaseDueSponsorOffers({ silent:false });
+  processSponsorSpecialDaily();
   const currentDate = game?.currentDate || '';
   const nextActive = [];
   (game.sponsors.active || []).forEach(contract => {
@@ -314,7 +477,7 @@ function sponsorOffersMarkup(){
       : `${formatMoney(offer.total)} total`;
     const payText = offer.paymentType === 'daily' ? 'Diario' : 'Todo al inicio';
     return `<tr>
-      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span></td>
+      <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span>${offer.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(offer.specialChallenge)}</span>` : ''}</td>
       <td>${escapeHtml(offer.placeName)}</td>
       <td>${formatDays(offer.durationDays || turnsToDays(offer.turns))}</td>
       <td><span class="pill ${offer.paymentType === 'daily' ? 'ok' : ''}">${payText}</span></td>
@@ -330,7 +493,8 @@ function activeSponsorsMarkup(){
   if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Pago</th><th>Días restantes</th><th>Cobrado</th></tr></thead><tbody>${active.map(item => {
     const payment = item.paymentType === 'daily' ? `${formatMoney(item.dailyAmount || 0)} / día` : 'Todo al inicio';
-    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong></td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
+    const special = item.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(item.specialChallenge, true)}</span>` : '';
+    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong>${special}</td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 

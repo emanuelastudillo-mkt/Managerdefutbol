@@ -1,4 +1,20 @@
-# Fútbol Manager MVP - V5.71
+# Fútbol Manager MVP - V5.72
+
+## V5.72 - Sponsors especiales con condiciones
+
+- Algunas ofertas de sponsor ahora pueden ser **especiales**.
+- Pagan normal según el sistema actual, pero agregan un bono x3 si se cumple la condición.
+- Condiciones iniciales:
+  - jugador de bajo nivel titular 6 de los próximos 10 partidos,
+  - no recibir goles en los próximos 4 partidos,
+  - ganar 4 de los próximos 5 partidos,
+  - no recibir rojas en los próximos 5 partidos,
+  - mantener el campo por encima de 98 durante 30 días,
+  - perder los próximos 5 partidos.
+- Las condiciones quedan configurables en `config.js`, bloque `sponsors.condicionesEspeciales`.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.71 - Corrección de renuncia y despido
 

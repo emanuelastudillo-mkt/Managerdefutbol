@@ -1,2 +1,2 @@
-/* V5.67 · Punto de entrada. Campañas de socios en estadio. */
+/* V5.68 · Punto de entrada. Campo y mantenimiento unificados en estadio. */
 init();

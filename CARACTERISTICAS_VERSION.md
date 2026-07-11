@@ -1,4 +1,18 @@
-# Características de la versión V5.67
+# Características de la versión V5.68
+
+## V5.68 - Campo y mantenimiento unidos
+
+### Cambios principales
+- En la pantalla **Estadio**, el estado actual del campo y las acciones de mantenimiento ahora comparten una misma tarjeta.
+- Los botones **Replantar** y **Regar y parchar** quedan debajo del estado del campo.
+- Se reduce la cantidad de bloques visuales sin modificar reglas, costos ni tiempos.
+
+### Compatibilidad
+- Se implementa solo.
+- No requiere reiniciar partida.
+- Es un ajuste visual del menú Estadio.
+
+---
 
 ## V5.67 - Campañas de socios en Estadio
 

@@ -1,6 +1,6 @@
 # Versión actual
 
-V5.67
+V5.68
 
 ## Cambios
 - Se agrega en Estadio un bloque para iniciar campañas de socios.

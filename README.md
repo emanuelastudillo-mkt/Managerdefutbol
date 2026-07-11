@@ -1,4 +1,13 @@
-# Fútbol Manager MVP - V5.67
+# Fútbol Manager MVP - V5.68
+
+## V5.68 - Campo y mantenimiento unidos
+
+- En Estadio, el bloque **Campo de juego / Estado actual** queda unido con los botones de **Mantenimiento**.
+- Se eliminó la tarjeta separada de mantenimiento para compactar la pantalla.
+- Se mantienen iguales los costos, duración y reglas de replantar/regarear y parchar.
+- Compatibilidad de partida: se implementa solo.
+
+---
 
 ## V5.67 - Campañas de socios en Estadio
 

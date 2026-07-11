@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.26
+# Fútbol Manager MVP - V6.27
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.25**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.26**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -13,6 +13,15 @@ La versión vigente se identifica desde:
 
 
 
+
+
+## V6.27 - Cartas al cambiar de club y bonus de prestigio en fichajes
+
+- Al comenzar en un nuevo club, las cartas activas vuelven automáticamente a la reserva.
+- Las cartas devueltas conservan los usos ya consumidos; no se destruyen salvo que no tengan usos restantes.
+- El bonus de prestigio del manager sobre la probabilidad de fichar jugadores ahora escala a +5 puntos porcentuales cada 10 de prestigio.
+- El bonus máximo por prestigio es +30 puntos porcentuales desde prestigio 60 en adelante.
+- Ejemplo: una probabilidad base de 4% pasa a 14% con 20 de prestigio.
 
 ## V6.26 - Bloqueos sin club y mercado laboral más claro
 
@@ -247,19 +256,16 @@ Cambios principales:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.26
+## Archivos modificados en V6.27
 
 - `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/16-scouting-center.js`
-- `js/ui/06-render-home-messages.js`
+- `js/game/15-especial.js`
 - `js/ui/07-render-team-market.js`
-- `js/ui/12-modals.js`
 - `index.html`
 - `config.js`
 - `README.md`
 
-## Validación V6.26
+## Validación V6.27
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

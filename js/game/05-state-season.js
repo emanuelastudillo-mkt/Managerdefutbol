@@ -3064,6 +3064,7 @@ function newGame(selectedClubId, options={}){
     challenge: null
   };
   if(typeof applySharedManagerProfileToGame === 'function') applySharedManagerProfileToGame({ reason:'new_game' });
+  const newClubSpecialReset = typeof resetActiveSpecialCardsToReserveForNewClub === 'function' ? resetActiveSpecialCardsToReserveForNewClub({ reason:'new_game' }) : null;
   assignInitialBotFieldStates(selectedClubId);
   if(options.founderMode){
     const selected = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
@@ -3104,6 +3105,9 @@ function newGame(selectedClubId, options={}){
     pushGameMessage({ type:'reto', title:'Reto activo', body:'La partida empezó desde un escenario predeterminado. Revisá las reglas del reto en Inicio antes de avanzar.', priority:'high' });
   } else {
     pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
+  }
+  if(newClubSpecialReset?.returned){
+    pushGameMessage({ type:'especial', title:'Cartas activas devueltas', body:`Al comenzar en un nuevo club, ${newClubSpecialReset.returned} carta(s) activa(s) volvieron a la reserva. Los usos consumidos se conservaron.`, priority:'normal' });
   }
   if(typeof queueInitialAssistantAdviceMessages === 'function') queueInitialAssistantAdviceMessages();
   activeTab = 'home';
@@ -4185,6 +4189,7 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.selectedClubId = Number(newClub.id);
   game.selectedCountry = clubCountry(newClub);
   game.selectedLeagueId = newClub.divisionId || 'default';
+  const newClubSpecialReset = typeof resetActiveSpecialCardsToReserveForNewClub === 'function' ? resetActiveSpecialCardsToReserveForNewClub({ reason:'new_job' }) : null;
   game.budget = budgetForCareerClub(newClub.id);
   game.seasonInitialBudget = Math.round(Number(game.budget || 0));
   game.lastBudgetDelta = 0;
@@ -4218,7 +4223,8 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.mustReviewTactics = true;
   activeTab = 'home';
   closeModal();
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  const specialResetText = newClubSpecialReset?.returned ? ` ${newClubSpecialReset.returned} carta(s) activa(s) volvieron a la reserva.` : '';
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.${specialResetText}` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.${specialResetText}`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

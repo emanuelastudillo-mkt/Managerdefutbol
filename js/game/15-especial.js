@@ -203,6 +203,51 @@ function syncSpecialStateWithGlobalCards(state){
   state.cartas_globales_version = 'V5.78';
   return state;
 }
+
+function resetActiveSpecialCardsToReserveForNewClub(options={}){
+  // V6.27: al comenzar en un nuevo club, ninguna carta queda activa automáticamente.
+  // Los usos ya consumidos se mantienen; la carta vuelve a reserva si aún tiene usos disponibles.
+  if(!game) return { changed:0, returned:0, destroyed:0 };
+  const state = ensureSpecialState();
+  if(!state) return { changed:0, returned:0, destroyed:0 };
+  const active = Array.isArray(state.cartas_activas) ? state.cartas_activas.slice() : [];
+  if(!active.length) return { changed:0, returned:0, destroyed:0 };
+  const slotId = currentSpecialSaveSlotId();
+  state.cartas_activas = [];
+  state.cartas_reserva = Array.isArray(state.cartas_reserva) ? state.cartas_reserva : [];
+  const reserveIds = new Set(state.cartas_reserva.map(card => String(card.id_carta || '')));
+  let returned = 0;
+  let destroyed = 0;
+  active.forEach((rawCard, index) => {
+    const card = normalizeSpecialGlobalCard(rawCard, index);
+    if(!card || card.destruida) return;
+    const remaining = specialCardRemainingUses(card);
+    if(remaining > 0){
+      const released = {
+        ...card,
+        activa:false,
+        active_slot_id:'',
+        activada_en:null,
+        bloqueada_hasta:null,
+        activada_en_turno:null,
+        bloqueada_hasta_turno:null,
+        ultimo_slot_activacion:String(slotId || card.ultimo_slot_activacion || '')
+      };
+      specialGlobalReleaseCard(released, { slotId, reason:options.reason || 'new_club' });
+      if(!reserveIds.has(String(released.id_carta || ''))){
+        state.cartas_reserva.push(released);
+        reserveIds.add(String(released.id_carta || ''));
+      }
+      returned += 1;
+    } else {
+      specialGlobalReleaseCard(card, { slotId, exhausted:true, reason:options.reason || 'new_club' });
+      state.historial_ultimas_cartas = [{ ...card, activa:false, destruida:true, agotada_por_usos:true, motivo:'Cambio de club' }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
+      destroyed += 1;
+    }
+  });
+  game.special = syncSpecialStateWithGlobalCards(state);
+  return { changed:returned + destroyed, returned, destroyed };
+}
 async function migrateAllSavedSpecialCardsToGlobal(){
   if(typeof readLocalSaveRecord !== 'function') return false;
   const slotIds = [];

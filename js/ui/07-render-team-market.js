@@ -183,10 +183,16 @@ function probAceptarOferta(mediaJugador, prestigioClubOfertante){
   }
   return 1;
 }
+function managerPrestigeSigningChanceBonus(){
+  // V6.27: +5 puntos porcentuales cada 10 de prestigio. Máximo +30.
+  const prestige = typeof currentManagerPrestige === 'function' ? Number(currentManagerPrestige() || 0) : 0;
+  const bonus = Math.max(0, Number.isFinite(prestige) ? prestige * 0.5 : 0);
+  return clamp(Math.round(bonus * 10) / 10, 0, 30);
+}
 function marketPlayerAcceptanceChance(player=null){
   const media = player ? visibleOverall(player) : marketOfferClubPrestige();
   const chance = probAceptarOferta(media, marketOfferClubPrestige());
-  const managerPrestigeBonus = typeof currentManagerPrestige === 'function' ? Number(currentManagerPrestige() || 0) : 0;
+  const managerPrestigeBonus = managerPrestigeSigningChanceBonus();
   return clamp(Math.round((chance + managerPrestigeBonus) * 10) / 10, 0.5, 99.5);
 }
 function freeAgentAcceptanceChance(player=null){

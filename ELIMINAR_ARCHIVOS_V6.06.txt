@@ -1,6 +1,0 @@
-Limpieza opcional al actualizar por incremental:
-
-- Si todavía existe apps-script-ranking.gs en la raíz, eliminarlo.
-- Si quedó ELIMINAR_ARCHIVOS_V6.05.txt de un incremental anterior, también puede eliminarse.
-
-La versión completa V6.06 ya no incluye esos archivos.

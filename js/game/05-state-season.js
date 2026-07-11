@@ -304,6 +304,7 @@ function applyChallengePreset(challengeId, selectedClubId){
   return false;
 }
 function startCampoDestruidoChallenge(selectedClubId, options={}){
+  if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO);
   const club = seed?.clubs?.find(item => Number(item.id) === Number(selectedClubId));
   if(!club){ showNotice('Club no encontrado para el reto.'); return; }
   if(!campoDestruidoChallengeClubs().some(item => Number(item.id) === Number(selectedClubId))){
@@ -315,6 +316,7 @@ function startCampoDestruidoChallenge(selectedClubId, options={}){
     country:clubCountry(club),
     leagueId:club.divisionId || 'default',
     challengeId:'campo_destruido',
+    saveSlotId:SAVE_SLOT_CAMPO_DESTRUIDO,
     ignorePrestige:true
   });
 }
@@ -354,6 +356,7 @@ function finalizeActiveManagerChallenge(record=null){
       : `Resultado: ${champion ? 'campeón' : `posición ${record?.position || '—'}`}. Maradona ${maradonaOk ? 'no se lesionó' : 'se volvió a lesionar'}.`,
     id:`challenge-result-campo-destruido-${game.seasonNumber || 1}-${game.selectedClubId}`
   });
+  if(typeof closeCompletedChallengeSlot === 'function') setTimeout(() => closeCompletedChallengeSlot(challenge), 600);
   return challenge;
 }
 function managerChallengeHomeMarkup(){
@@ -815,6 +818,7 @@ function createFounderGame(options={}){
     country:created.clean.country,
     leagueId:created.club.divisionId || 'default',
     founderMode:true,
+    saveSlotId:SAVE_SLOT_CAREER,
     founderReleasedPlayers:created.releasedPlayers,
     founderReplacedClub:created.club.founderReplacedClub
   });
@@ -1648,10 +1652,10 @@ function confirmResetLocal(){
   if(ok) resetLocal();
 }
 function bindEvents(){
-  $('btnOpenNewGame')?.addEventListener('click', openNewGameModal);
+  $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnSave').addEventListener('click', saveLocal);
-  $('btnLoad').addEventListener('click', ()=>loadLocal(false));
+  $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else loadLocal(false); });
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
   $('btnVerifyIntegrity')?.addEventListener('click', () => showGameIntegrityModal(inspectGameIntegrity(), false));
   $('btnForceNewSeason')?.addEventListener('click', openForceNewSeasonModal);
@@ -2063,6 +2067,7 @@ function deriveSeasonInitialBudgetFromHistory(saved, season){
 function normalizeGame(saved){
   const normalized = {...saved};
   normalized.version = APP_VERSION;
+  normalized.saveSlotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(normalized.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER) : (normalized.saveSlotId || 'career');
   normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
   normalized.savedTactics = normalizeSavedTacticsState(normalized.savedTactics || {});
@@ -2460,9 +2465,12 @@ function newGame(selectedClubId, options={}){
     return;
   }
   const managerName = persistManagerName(options.managerName || storedManagerName());
+  const saveSlotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(options.saveSlotId || currentSaveSlotId || (options.challengeId ? SAVE_SLOT_CAMPO_DESTRUIDO : SAVE_SLOT_CAREER)) : (options.challengeId ? 'challenge:campo_destruido' : 'career');
+  if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(saveSlotId);
   const tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
   game = {
     version:APP_VERSION,
+    saveSlotId,
     seedSignature:seed?.meta?.signature || '',
     selectedClubId,
     selectedCountry: options.country || clubCountry(selectedClub),
@@ -2589,6 +2597,7 @@ function newGame(selectedClubId, options={}){
   closeModal();
   newGameModalShown = true;
   renderAll();
+  if(typeof saveLocal === 'function') saveLocal(true).catch?.(()=>{});
   showNotice(options.founderMode ? 'Club fundado. Armá el plantel desde Mercado antes de competir.' : (options.challengeId ? 'Reto creado. Dirigí los 5 partidos y buscá el campeonato.' : 'Carrera creada. Revisá táctica, titulares y mentalidades antes de avanzar.'));
 }
 

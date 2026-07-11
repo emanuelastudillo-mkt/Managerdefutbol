@@ -1224,7 +1224,9 @@ function openFounderModeModal(){
 
 
 
-function openCampoDestruidoChallengeModal(){
+function openCampoDestruidoChallengeModal(options={}){
+  options = options && typeof options === 'object' ? options : {};
+  if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO);
   if(game && !game.gameOver?.active){
     showNotice('Los retos predeterminados se inician como partida nueva o desde una carrera sin club.');
     return;
@@ -1245,7 +1247,7 @@ function openCampoDestruidoChallengeModal(){
   </div>`);
   document.querySelectorAll('[data-start-campo-destruido]').forEach(btn => btn.addEventListener('click', () => {
     const clubId = Number(btn.dataset.startCampoDestruido || 0);
-    if(typeof startCampoDestruidoChallenge === 'function') startCampoDestruidoChallenge(clubId, { managerName:storedManagerName() });
+    if(typeof startCampoDestruidoChallenge === 'function') startCampoDestruidoChallenge(clubId, { managerName:storedManagerName(), saveSlotId:SAVE_SLOT_CAMPO_DESTRUIDO });
   }));
 }
 
@@ -1255,6 +1257,7 @@ function openNewGameModal(force=false, options={}){
     force = false;
   }
   options = options && typeof options === 'object' ? options : {};
+  if(!game && typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(options.saveSlotId || SAVE_SLOT_CAREER);
   const requestedClub = options.selectedClubId ? seed?.clubs?.find(club => Number(club.id) === Number(options.selectedClubId)) : null;
   const hasCareer = Boolean(game);
   const canChooseJob = !game || Boolean(game?.gameOver?.active);
@@ -1322,10 +1325,11 @@ function openNewGameModal(force=false, options={}){
     else if(!game) newGame(selected, {
       managerName:$('modalManagerName')?.value || '',
       country:countrySelect?.value || '',
-      leagueId:leagueSelect?.value || ''
+      leagueId:leagueSelect?.value || '',
+      saveSlotId:options.saveSlotId || SAVE_SLOT_CAREER
     });
   });
-  $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', openCampoDestruidoChallengeModal);
+  $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
   newGameModalShown = true;
 }
 function openModal(html){

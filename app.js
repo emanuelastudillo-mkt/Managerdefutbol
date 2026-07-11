@@ -1,2 +1,2 @@
-/* V5.73 · Punto de entrada. Retos predeterminados: Campo destruido. */
+/* V5.74 · Punto de entrada. Slots de carrera y retos separados. */
 init();

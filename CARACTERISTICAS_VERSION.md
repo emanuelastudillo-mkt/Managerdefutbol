@@ -1,4 +1,21 @@
-# Características de la versión V5.73
+# Características de la versión V5.74
+
+## V5.74 - Slots de carrera y retos separados
+
+### Cambios principales
+- Se incorpora una pantalla de **slots de partida**.
+- El slot **Mi Carrera** queda reservado para la partida normal.
+- El reto **Campo destruido** pasa a ejecutarse en un slot propio: `challenge:campo_destruido`.
+- Iniciar un reto ya no pisa la carrera normal.
+- Cargar una partida permite volver al menú de slots.
+- Si el reto termina ganado o perdido, el juego borra/cierra el slot del reto y vuelve automáticamente al menú.
+
+### Compatibilidad
+- El guardado histórico `main` se mantiene como fallback de **Mi Carrera**.
+- Las partidas existentes siguen cargando como carrera normal.
+- No cambia la lógica deportiva del reto ni de las partidas normales.
+
+---
 
 ## V5.73 - Retos predeterminados: Campo destruido
 

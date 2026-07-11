@@ -1,58 +1,57 @@
 /* V3.47 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
 
 function renderWelcomeScreen(){
-  const prestige = currentManagerPrestige();
-  const prestigeLabel = formatManagerPrestige(prestige);
-  const clubs = availableManagerClubs(prestige);
   const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
   const divisionCount = (seed?.divisions || []).length;
+  const challengeAvailable = typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
   view.innerHTML = `
-    <section class="welcome-screen">
+    <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div>
-          <p class="label">Nueva carrera</p>
-          <h2>Bienvenido a Manager de Fútbol</h2>
-          <p class="tagline">Empezás con prestigio ${escapeHtml(prestigeLabel)}. Elegí un club que acepte tu perfil, armá el plantel, definí la táctica, administrá finanzas, sponsors, estadio, academia, empleados y mercado durante la temporada.</p>
+          <p class="label">Slots de partida</p>
+          <h2>Elegí qué jugar</h2>
+          <p class="tagline"><strong>Mi Carrera</strong> conserva la partida normal de siempre. Los retos se guardan separados y no pisan tu carrera principal.</p>
         </div>
         <div class="welcome-summary">
           <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
           <div><span>Ligas</span><strong>${formatPlainNumber(divisionCount)}</strong></div>
-          <div><span>Clubes disponibles</span><strong>${formatPlainNumber(clubs.length)}</strong></div>
+          <div><span>Slot normal</span><strong>Mi Carrera</strong></div>
         </div>
       </div>
+
+      <div class="grid cols-2 save-slot-grid">
+        <div class="card save-slot-card">
+          <p class="label">Slot principal</p>
+          <h3>Mi Carrera</h3>
+          <p class="muted">Tu partida normal. Renuncias, despidos, Modo Fundador, ranking, historial y temporadas largas quedan acá.</p>
+          <div class="row" style="margin-top:14px">
+            <button id="btnSlotCareerContinue" class="primary">Entrar a Mi Carrera</button>
+            <button id="btnSlotCareerNew" class="ghost danger">Nueva Mi Carrera</button>
+          </div>
+        </div>
+
+        <div class="card save-slot-card ${challengeAvailable ? '' : 'blocker'}">
+          <p class="label">Reto predeterminado</p>
+          <h3>Campo destruido</h3>
+          <p class="muted">Campo propio 15/100, sin mantenimiento, sin fichajes, sin empleados, últimas 5 fechas obligatorias dirigidas y objetivo campeón.</p>
+          <div class="row" style="margin-top:14px">
+            <button id="btnSlotCampoNew" class="primary" ${challengeAvailable ? '' : 'disabled'}>Iniciar reto</button>
+            <button id="btnSlotCampoContinue" class="ghost" ${challengeAvailable ? '' : 'disabled'}>Continuar reto</button>
+          </div>
+        </div>
+      </div>
+
       <div class="welcome-features">
-        <span>Plantel y táctica</span>
-        <span>Mercado</span>
-        <span>Finanzas y sponsors</span>
-        <span>Estadio e hinchas</span>
-        <span>Academia</span>
-        <span>Empleados</span>
-        <span>Mensajes</span>
-        <span>Sistema ESPECIAL</span>
+        <span>Mi Carrera no se pisa</span>
+        <span>Retos separados</span>
+        <span>Campo destruido</span>
+        <span>Volver al menú al ganar o perder</span>
       </div>
-      <div class="founder-mode-card card">
-        <div>
-          <p class="label">Modo alternativo</p>
-          <h3>Fundar tu propio club</h3>
-          <p class="muted">Empezás sin jugadores, sin dinero, con estadio de capacidad 0, prestigio 10 y 500 hinchas. No tendrás objetivos de directiva ni despidos, pero deberás construir todo desde Mercado, Estadio y Finanzas.</p>
-          <p class="warn small"><strong>Modo no recomendado para tu primera partida.</strong></p>
-        </div>
-        <button id="welcomeFounderMode" class="primary" type="button">Modo Fundador</button>
-      </div>
-      <div class="row welcome-section-title">
-        <div>
-          <p class="label">Clubes que aceptan tu prestigio actual</p>
-          <h3>Opciones disponibles para empezar</h3>
-        </div>
-        <button id="welcomeOpenSearch" class="ghost">Abrir búsqueda completa</button>
-      </div>
-      ${clubs.length ? `<div class="starter-club-grid">${clubs.map(club => starterClubCardMarkup(club, { prestige, compact:true, buttonDataAttr:'data-welcome-club', buttonLabel:'Empezar' })).join('')}</div>` : '<div class="card"><p class="muted">No hay clubes disponibles con tu prestigio actual.</p></div>'}
     </section>`;
-  $('welcomeOpenSearch')?.addEventListener('click', () => openNewGameModal(true));
-  $('welcomeFounderMode')?.addEventListener('click', () => openFounderModeModal());
-  document.querySelectorAll('[data-welcome-club]').forEach(button => {
-    button.addEventListener('click', () => openNewGameModal(false, { selectedClubId:Number(button.dataset.welcomeClub || 0) }));
-  });
+  $('btnSlotCareerContinue')?.addEventListener('click', () => { if(typeof loadCareerSlotOrNew === 'function') loadCareerSlotOrNew(); else openNewGameModal(true); });
+  $('btnSlotCareerNew')?.addEventListener('click', () => { if(typeof startNewCareerFromSlot === 'function') startNewCareerFromSlot(); else openNewGameModal(true); });
+  $('btnSlotCampoNew')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
+  $('btnSlotCampoContinue')?.addEventListener('click', () => { if(typeof continueCampoDestruidoSlot === 'function') continueCampoDestruidoSlot(); });
 }
 
 function renderAll(){

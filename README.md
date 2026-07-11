@@ -1,4 +1,17 @@
-# Fútbol Manager MVP - V5.73
+# Fútbol Manager MVP - V5.74
+
+## V5.74 - Slots de carrera y retos separados
+
+- Se agrega un menú de **slots de partida** cuando no hay una partida activa.
+- **Mi Carrera** conserva la partida normal de siempre.
+- Los retos predeterminados se guardan en slots separados.
+- El reto **Campo destruido** puede iniciarse sin pisar Mi Carrera.
+- Si el reto se gana o se pierde, el slot del reto se elimina/cierra y el juego vuelve al menú de slots.
+- El botón **Cargar** lleva al menú de slots y guarda antes la partida activa.
+- El botón **Buscar club** también puede volver al menú de slots desde una partida activa.
+- Compatibilidad: las partidas guardadas anteriormente como `main` se leen como **Mi Carrera**.
+
+---
 
 ## V5.73 - Retos predeterminados: Campo destruido
 

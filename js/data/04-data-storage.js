@@ -254,6 +254,134 @@ function syncManualPlayersIntoSeed(options={}){
   return { inserted:Math.max(0, (seed.players?.length || 0) - before) };
 }
 
+
+let currentSaveSlotId = (() => {
+  try{ return normalizeSaveSlotId(localStorage.getItem(SAVE_ACTIVE_SLOT_STORAGE_KEY) || SAVE_SLOT_CAREER); }
+  catch(_){ return SAVE_SLOT_CAREER; }
+})();
+
+function normalizeSaveSlotId(slotId=''){
+  const raw = String(slotId || '').trim();
+  if(raw === SAVE_SLOT_CAMPO_DESTRUIDO || raw === 'campo_destruido' || raw === 'reto_campo_destruido') return SAVE_SLOT_CAMPO_DESTRUIDO;
+  return SAVE_SLOT_CAREER;
+}
+function saveSlotKey(slotId=''){
+  return `${SAVE_SLOT_PREFIX}${normalizeSaveSlotId(slotId)}`;
+}
+function currentSaveSlotKey(){
+  return saveSlotKey(currentSaveSlotId || SAVE_SLOT_CAREER);
+}
+function setCurrentSaveSlot(slotId='career'){
+  currentSaveSlotId = normalizeSaveSlotId(slotId);
+  try{ localStorage.setItem(SAVE_ACTIVE_SLOT_STORAGE_KEY, currentSaveSlotId); }catch(_){ /* sin almacenamiento */ }
+  if(game) game.saveSlotId = currentSaveSlotId;
+  return currentSaveSlotId;
+}
+function saveSlotLabel(slotId=''){
+  const clean = normalizeSaveSlotId(slotId);
+  if(clean === SAVE_SLOT_CAMPO_DESTRUIDO) return 'Reto Campo destruido';
+  return 'Mi Carrera';
+}
+function gameSlotId(){
+  return normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
+}
+async function readSaveRecordByKey(key){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function deleteSaveRecordByKey(key){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function localSlotExists(slotId='career'){
+  const slot = normalizeSaveSlotId(slotId);
+  const record = await readSaveRecordByKey(saveSlotKey(slot)).catch(()=>null);
+  if(record) return true;
+  if(slot === SAVE_SLOT_CAREER) return Boolean(await readSaveRecordByKey(SAVE_KEY).catch(()=>null));
+  return false;
+}
+async function deleteLocalSaveSlot(slotId='career'){
+  const slot = normalizeSaveSlotId(slotId);
+  await deleteSaveRecordByKey(saveSlotKey(slot));
+  if(slot === SAVE_SLOT_CAREER) await deleteSaveRecordByKey(SAVE_KEY);
+}
+async function loadBaseSeedForSlotStart(){
+  seed = await loadInitialSeed({ skipPlayersDatabase:false });
+  fillClubSelect();
+  return seed;
+}
+async function goToSaveSlotsMenu(options={}){
+  const opts = options && typeof options === 'object' ? options : {};
+  if(opts.saveCurrent && game) await saveLocal(true).catch(()=>{});
+  if(opts.reloadSeed !== false) await loadBaseSeedForSlotStart().catch(()=>{});
+  game = null;
+  activeTab = 'home';
+  try{ if(typeof forceCloseModal === 'function') forceCloseModal(); else if(typeof closeModal === 'function') closeModal(); }catch(_){ }
+  renderAll();
+  if(opts.notice) showNotice(opts.notice);
+}
+async function loadCareerSlotOrNew(){
+  const loaded = await loadLocal(true, SAVE_SLOT_CAREER);
+  if(loaded){ showNotice('Mi Carrera cargada.'); return true; }
+  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+  await loadBaseSeedForSlotStart().catch(()=>{});
+  game = null;
+  renderAll();
+  openNewGameModal(true, { saveSlotId:SAVE_SLOT_CAREER });
+  return false;
+}
+async function startNewCareerFromSlot(){
+  const exists = await localSlotExists(SAVE_SLOT_CAREER).catch(()=>false);
+  if(exists){
+    const ok = window.confirm('Esto inicia una nueva Mi Carrera y pisa el slot normal guardado en este navegador. ¿Continuar?');
+    if(!ok) return false;
+    await deleteLocalSaveSlot(SAVE_SLOT_CAREER).catch(()=>{});
+  }
+  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+  await loadBaseSeedForSlotStart().catch(()=>{});
+  game = null;
+  renderAll();
+  openNewGameModal(true, { saveSlotId:SAVE_SLOT_CAREER });
+  return true;
+}
+async function continueCampoDestruidoSlot(){
+  const loaded = await loadLocal(true, SAVE_SLOT_CAMPO_DESTRUIDO);
+  if(loaded){ showNotice('Reto Campo destruido cargado.'); return true; }
+  showNotice('No hay un reto guardado. Iniciá uno nuevo.');
+  return false;
+}
+async function startNewCampoDestruidoSlot(){
+  const exists = await localSlotExists(SAVE_SLOT_CAMPO_DESTRUIDO).catch(()=>false);
+  if(exists){
+    const ok = window.confirm('Ya existe un reto Campo destruido guardado. Si iniciás otro, se pisa ese reto. ¿Continuar?');
+    if(!ok) return false;
+    await deleteLocalSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO).catch(()=>{});
+  }
+  setCurrentSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO);
+  await loadBaseSeedForSlotStart().catch(()=>{});
+  game = null;
+  renderAll();
+  if(typeof openCampoDestruidoChallengeModal === 'function') openCampoDestruidoChallengeModal({ saveSlotId:SAVE_SLOT_CAMPO_DESTRUIDO });
+  return true;
+}
+async function closeCompletedChallengeSlot(challenge=null){
+  const slot = normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAMPO_DESTRUIDO);
+  if(slot === SAVE_SLOT_CAMPO_DESTRUIDO) await deleteLocalSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO).catch(()=>{});
+  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+  const ok = challenge?.success ? 'Reto ganado. El slot del reto se cerró.' : 'Reto perdido. El slot del reto se cerró.';
+  await goToSaveSlotsMenu({ reloadSeed:true, notice:`${ok} Podés volver a Mi Carrera o iniciar otro reto.` });
+}
+
 async function loadSponsorsDatabase(){
   const raw = await fetchJsonIfExists(SPONSORS_DATABASE_URL);
   if(!raw) return { lugares_sponsor:[], sponsors:[], reglas_calculo:{} };
@@ -569,6 +697,7 @@ function currentSavePayload(){
   const payload = structuredClone(game);
   delete payload._needsAutosave;
   delete payload._stadiumFieldsAutoRepaired;
+  payload.saveSlotId = normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
   payload.seedSignature = seed?.meta?.signature || payload.seedSignature || '';
   payload.playersSnapshot = structuredClone(seed?.players || []);
   payload.clubsSnapshot = structuredClone(seed?.clubs || []);
@@ -1722,14 +1851,12 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
 function savedHasDatabaseSnapshots(saved){
   return Boolean(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length && Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length);
 }
-async function readLocalSaveRecord(){
-  const db = await openDb();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction(DB_STORE, 'readonly');
-    const req = tx.objectStore(DB_STORE).get(SAVE_KEY);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
+async function readLocalSaveRecord(slotId=null){
+  const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
+  const record = await readSaveRecordByKey(saveSlotKey(slot));
+  if(record) return record;
+  if(slot === SAVE_SLOT_CAREER) return await readSaveRecordByKey(SAVE_KEY);
+  return null;
 }
 async function openDb(){
   return new Promise((resolve,reject)=>{
@@ -1741,17 +1868,23 @@ async function openDb(){
 }
 async function saveLocal(silent=false){
   if(!game) return showNotice('No hay partida para guardar.');
+  const slot = setCurrentSaveSlot(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
+  const payload = currentSavePayload();
+  payload.saveSlotId = slot;
   const db = await openDb();
   await new Promise((resolve,reject)=>{
     const tx = db.transaction(DB_STORE, 'readwrite');
-    tx.objectStore(DB_STORE).put(currentSavePayload(), SAVE_KEY);
+    const store = tx.objectStore(DB_STORE);
+    store.put(payload, saveSlotKey(slot));
+    if(slot === SAVE_SLOT_CAREER) store.put(payload, SAVE_KEY);
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
-  if(!silent) showNotice('Partida guardada en este navegador.');
+  if(!silent) showNotice(`${saveSlotLabel(slot)} guardada en este navegador.`);
 }
-async function loadLocal(silent=false){
-  const saved = await readLocalSaveRecord();
+async function loadLocal(silent=false, slotId=null){
+  const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
+  const saved = await readLocalSaveRecord(slot);
   if(saved){
     const currentSignature = seed?.meta?.signature;
     if(currentSignature && saved.seedSignature !== currentSignature && !savedHasDatabaseSnapshots(saved)){
@@ -1761,7 +1894,9 @@ async function loadLocal(silent=false){
     if(currentSignature && saved.seedSignature !== currentSignature){
       saved._needsAutosave = true;
     }
+    setCurrentSaveSlot(slot);
     game = normalizeGame(applySavedDatabaseSnapshots(saved));
+    game.saveSlotId = slot;
     const needsAutosave = Boolean(game._needsAutosave);
     const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
     delete game._needsAutosave;
@@ -1778,34 +1913,31 @@ async function loadLocal(silent=false){
     if(!silent){
       const notice = repairedStadiumFields || stadiumRepair.repaired
         ? 'Partida cargada. Se corrigieron campos bots inválidos.'
-        : (needsAutosave ? 'Partida cargada. Se corrigió el arrastre de lesiones.' : 'Partida cargada.');
+        : (needsAutosave ? `${saveSlotLabel(slot)} cargada. Se corrigió el arrastre de lesiones.` : `${saveSlotLabel(slot)} cargada.`);
       showNotice(notice);
     }
     return true;
   }
-  if(!silent) showNotice('No hay partida guardada en este navegador.');
+  if(!silent) showNotice(`No hay partida guardada en el slot ${saveSlotLabel(slot)}.`);
   return false;
 }
 async function resetLocal(){
-  const db = await openDb();
-  await new Promise((resolve,reject)=>{
-    const tx = db.transaction(DB_STORE, 'readwrite');
-    tx.objectStore(DB_STORE).delete(SAVE_KEY);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
+  const slot = gameSlotId();
+  await deleteLocalSaveSlot(slot);
+  if(slot === SAVE_SLOT_CAMPO_DESTRUIDO) setCurrentSaveSlot(SAVE_SLOT_CAREER);
   game = null;
   seed = await loadInitialSeed({ skipPlayersDatabase:false });
   fillClubSelect();
   activeTab = 'home';
   renderAll();
-  showNotice('Partida local eliminada.');
-  setTimeout(()=>openNewGameModal(true), 0);
+  showNotice(`${saveSlotLabel(slot)} eliminada.`);
 }
 
 async function init(){
   try{
-    const savedRecord = await readLocalSaveRecord().catch(() => null);
+    const preferredSlot = normalizeSaveSlotId(currentSaveSlotId || SAVE_SLOT_CAREER);
+    let savedRecord = await readLocalSaveRecord(preferredSlot).catch(() => null);
+    if(!savedRecord && preferredSlot !== SAVE_SLOT_CAREER) savedRecord = await readLocalSaveRecord(SAVE_SLOT_CAREER).catch(() => null);
     const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
     const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedMatchCommentary] = await Promise.all([
       loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
@@ -1826,14 +1958,16 @@ async function init(){
     fillClubSelect();
     bindEvents();
     startUiTicker();
-    const loaded = await loadLocal(true);
+    let loaded = await loadLocal(true, preferredSlot);
+    if(!loaded && preferredSlot !== SAVE_SLOT_CAREER) loaded = await loadLocal(true, SAVE_SLOT_CAREER);
     if(!loaded){
       if(useSavedSnapshots){
         seed = await loadInitialSeed({ skipPlayersDatabase:false });
         fillClubSelect();
       }
+      game = null;
+      activeTab = 'home';
       renderAll();
-      setTimeout(()=>openNewGameModal(true), 0);
     }
   }catch(error){
     console.error(error);

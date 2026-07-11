@@ -1,7 +1,8 @@
-/* V5.70 · Menú ESPECIAL: códigos compactos abajo a la izquierda. */
+/* V5.78 · Cartas globales por slots con 10 activaciones y bloqueo de 50 días. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
+const SPECIAL_GLOBAL_CARDS_STORAGE_KEY = 'futbolManager.specialCardsGlobal.v1';
 
 function specialDatabase(){
   return specialSkillsDatabase && typeof specialSkillsDatabase === 'object' ? specialSkillsDatabase : { limites:{}, sobres:{}, cartas_base:[], puntos_ocultos:{ acciones:{} }, destruir_cartas:{ recuperacion_puntos:{} }, apilamiento_bonus:{} };
@@ -11,7 +12,8 @@ function specialLimits(){
   return {
     activeMax: Math.max(1, Math.round(Number(db.limites?.cartas_activas_max || 5))),
     reserveMax: Math.max(1, Math.round(Number(db.limites?.cartas_reserva_max || 50))),
-    lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 100))),
+    lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 50))),
+    maxUsesPerCard: Math.max(1, Math.round(Number(db.limites?.activaciones_por_carta || 10))),
     allowOpenWhenReserveFull: db.limites?.permitir_abrir_sobres_con_reserva_llena === true,
     allowRepeatedActive: db.limites?.permitir_cartas_repetidas_activas !== false,
     stackBonuses: db.limites?.bonus_se_apilan !== false
@@ -28,7 +30,8 @@ function createInitialSpecialState(managerName=''){
     bloqueado_hasta: null,
     historial_ultimas_cartas: [],
     puntos_log: [],
-    codigos_reclamados: {}
+    codigos_reclamados: {},
+    cartas_globales_version: 'V5.78'
   };
 }
 function normalizeSpecialCard(card, index=0){
@@ -37,6 +40,9 @@ function normalizeSpecialCard(card, index=0){
   const id = String(card.id_carta || card.id || `CARD-${Date.now()}-${index}-${hashNumber(JSON.stringify(card), 100000)}`);
   const activatedTurn = Number.isFinite(Number(card.activada_en_turno ?? card.activatedTurn)) ? Math.max(0, Math.round(Number(card.activada_en_turno ?? card.activatedTurn))) : null;
   const lockedUntilTurn = Number.isFinite(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn)) ? Math.max(0, Math.round(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn))) : null;
+  const maxUses = Math.max(1, Math.round(Number(card.activaciones_max ?? card.maxUses ?? specialLimits().maxUsesPerCard ?? 10)));
+  const usedRaw = Number(card.activaciones_usadas ?? card.usedActivations ?? card.usos_usados ?? 0);
+  const used = clamp(Math.round(Number.isFinite(usedRaw) ? usedRaw : 0), 0, maxUses);
   return {
     id_carta:id,
     id_base:String(card.id_base || base.id_base || ''),
@@ -55,8 +61,182 @@ function normalizeSpecialCard(card, index=0){
     activada_en:validIsoDate(card.activada_en) ? card.activada_en : null,
     bloqueada_hasta:validIsoDate(card.bloqueada_hasta) ? card.bloqueada_hasta : null,
     activada_en_turno:activatedTurn,
-    bloqueada_hasta_turno:lockedUntilTurn
+    bloqueada_hasta_turno:lockedUntilTurn,
+    activaciones_max:maxUses,
+    activaciones_usadas:used,
+    active_slot_id:String(card.active_slot_id || card.activeSaveSlotId || card.slot_activo || ''),
+    ultimo_slot_activacion:String(card.ultimo_slot_activacion || card.lastActivationSlot || '')
   };
+}
+
+function currentSpecialSaveSlotId(){
+  if(typeof gameSlotId === 'function') return gameSlotId();
+  if(typeof normalizeSaveSlotId === 'function') return normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
+  return String(game?.saveSlotId || 'career:1');
+}
+function readSpecialGlobalCardsState(){
+  try{
+    const raw = localStorage.getItem(SPECIAL_GLOBAL_CARDS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if(parsed && typeof parsed === 'object' && !Array.isArray(parsed)){
+      return {
+        version:String(parsed.version || 'V5.78'),
+        cards:(parsed.cards && typeof parsed.cards === 'object' && !Array.isArray(parsed.cards)) ? parsed.cards : {},
+        updatedAt:parsed.updatedAt || null
+      };
+    }
+  }catch(err){ console.warn('No se pudo leer inventario global de cartas.', err); }
+  return { version:'V5.78', cards:{}, updatedAt:null };
+}
+function writeSpecialGlobalCardsState(state){
+  try{
+    const clean = state && typeof state === 'object' ? state : { version:'V5.78', cards:{} };
+    clean.version = 'V5.78';
+    clean.updatedAt = new Date().toISOString();
+    localStorage.setItem(SPECIAL_GLOBAL_CARDS_STORAGE_KEY, JSON.stringify(clean));
+    return true;
+  }catch(err){ console.warn('No se pudo guardar inventario global de cartas.', err); return false; }
+}
+function specialCardRemainingUses(card){
+  const max = Math.max(1, Math.round(Number(card?.activaciones_max || specialLimits().maxUsesPerCard || 10)));
+  const used = clamp(Math.round(Number(card?.activaciones_usadas || 0)), 0, max);
+  return Math.max(0, max - used);
+}
+function normalizeSpecialGlobalCard(raw, index=0){
+  const card = normalizeSpecialCard(raw, index);
+  if(!card) return null;
+  const limits = specialLimits();
+  card.activaciones_max = Math.max(1, Math.round(Number(card.activaciones_max || limits.maxUsesPerCard || 10)));
+  card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)), 0, card.activaciones_max);
+  card.active_slot_id = String(card.active_slot_id || '');
+  card.ultimo_slot_activacion = String(card.ultimo_slot_activacion || '');
+  if(specialCardRemainingUses(card) <= 0 && !card.active_slot_id) card.destruida = true;
+  return card;
+}
+function specialGlobalUpsertCard(rawCard, options={}){
+  const card = normalizeSpecialGlobalCard(rawCard);
+  if(!card?.id_carta) return null;
+  const slotId = options.slotId ? String(options.slotId) : currentSpecialSaveSlotId();
+  const asActive = options.zone === 'active' || options.active === true || card.activa;
+  const global = options.globalState || readSpecialGlobalCardsState();
+  const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
+  const maxUses = Math.max(Number(existing.activaciones_max || 0), Number(card.activaciones_max || 0), specialLimits().maxUsesPerCard || 10);
+  const used = Math.max(Number(existing.activaciones_usadas || 0), Number(card.activaciones_usadas || 0));
+  const merged = {
+    ...existing,
+    ...card,
+    activaciones_max:maxUses,
+    activaciones_usadas:clamp(Math.round(used), 0, maxUses),
+    destruida:Boolean(card.destruida || existing.destruida)
+  };
+  if(asActive){
+    if(existing.active_slot_id && existing.active_slot_id !== slotId){
+      global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+      global.cards[existing.id_carta] = existing;
+      if(!options.globalState) writeSpecialGlobalCardsState(global);
+      return existing;
+    }
+    merged.activa = true;
+    merged.active_slot_id = slotId;
+    merged.ultimo_slot_activacion = slotId;
+    if(merged.activaciones_usadas <= 0) merged.activaciones_usadas = 1;
+  } else if(!existing.active_slot_id || existing.active_slot_id === slotId){
+    merged.activa = false;
+    merged.active_slot_id = '';
+  } else {
+    merged.activa = true;
+    merged.active_slot_id = existing.active_slot_id;
+  }
+  global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  global.cards[merged.id_carta] = normalizeSpecialGlobalCard(merged) || merged;
+  if(!options.globalState) writeSpecialGlobalCardsState(global);
+  return global.cards[merged.id_carta];
+}
+function specialGlobalReleaseCard(rawCard, options={}){
+  const card = normalizeSpecialGlobalCard(rawCard);
+  if(!card?.id_carta) return null;
+  const slotId = options.slotId ? String(options.slotId) : currentSpecialSaveSlotId();
+  const global = readSpecialGlobalCardsState();
+  const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
+  if(existing.active_slot_id && existing.active_slot_id !== slotId){
+    return existing;
+  }
+  const released = { ...existing, ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null };
+  if(options.destroy || options.exhausted || specialCardRemainingUses(released) <= 0){
+    released.destruida = true;
+  }
+  global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  global.cards[released.id_carta] = normalizeSpecialGlobalCard(released) || released;
+  writeSpecialGlobalCardsState(global);
+  return global.cards[released.id_carta];
+}
+function specialGlobalCardsForSlot(slotId=currentSpecialSaveSlotId()){
+  const slot = String(slotId || currentSpecialSaveSlotId());
+  const global = readSpecialGlobalCardsState();
+  return Object.values(global.cards || {})
+    .map((card, index) => normalizeSpecialGlobalCard(card, index))
+    .filter(Boolean)
+    .filter(card => !card.destruida)
+    .filter(card => specialCardRemainingUses(card) > 0 || card.active_slot_id === slot)
+    .filter(card => !card.active_slot_id || card.active_slot_id === slot);
+}
+function syncSpecialStateWithGlobalCards(state){
+  if(!state || typeof state !== 'object') return state;
+  const slotId = currentSpecialSaveSlotId();
+  const global = readSpecialGlobalCardsState();
+  global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  (Array.isArray(state.cartas_reserva) ? state.cartas_reserva : []).forEach((rawCard, index) => {
+    const card = normalizeSpecialGlobalCard(rawCard, index);
+    if(card && !card.destruida) specialGlobalUpsertCard({ ...card, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+  });
+  (Array.isArray(state.cartas_activas) ? state.cartas_activas : []).forEach((rawCard, index) => {
+    const card = normalizeSpecialGlobalCard(rawCard, index);
+    if(card && !card.destruida) specialGlobalUpsertCard({ ...card, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
+  });
+  writeSpecialGlobalCardsState(global);
+  const available = specialGlobalCardsForSlot(slotId);
+  const active = [];
+  const reserve = [];
+  available.forEach((card, index) => {
+    const clean = normalizeSpecialGlobalCard(card, index);
+    if(!clean || clean.destruida) return;
+    if(clean.active_slot_id === slotId){
+      clean.activa = true;
+      active.push(clean);
+    } else if(!clean.active_slot_id && specialCardRemainingUses(clean) > 0){
+      clean.activa = false;
+      reserve.push(clean);
+    }
+  });
+  state.cartas_activas = active;
+  state.cartas_reserva = reserve;
+  state.cartas_globales_version = 'V5.78';
+  return state;
+}
+async function migrateAllSavedSpecialCardsToGlobal(){
+  if(typeof readLocalSaveRecord !== 'function') return false;
+  const slotIds = [];
+  if(typeof careerSaveSlotIds === 'function') slotIds.push(...careerSaveSlotIds());
+  else slotIds.push(typeof SAVE_SLOT_CAREER !== 'undefined' ? SAVE_SLOT_CAREER : 'career:1');
+  if(typeof SAVE_SLOT_CAMPO_DESTRUIDO !== 'undefined') slotIds.push(SAVE_SLOT_CAMPO_DESTRUIDO);
+  const global = readSpecialGlobalCardsState();
+  global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  for(const rawSlot of Array.from(new Set(slotIds))){
+    const slotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(rawSlot) : rawSlot;
+    const record = await readLocalSaveRecord(slotId).catch(()=>null);
+    const special = record?.special;
+    if(!special || typeof special !== 'object') continue;
+    (Array.isArray(special.cartas_reserva) ? special.cartas_reserva : []).forEach((card, index) => {
+      const clean = normalizeSpecialGlobalCard(card, index);
+      if(clean && !clean.destruida) specialGlobalUpsertCard({ ...clean, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+    });
+    (Array.isArray(special.cartas_activas) ? special.cartas_activas : []).forEach((card, index) => {
+      const clean = normalizeSpecialGlobalCard(card, index);
+      if(clean && !clean.destruida) specialGlobalUpsertCard({ ...clean, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
+    });
+  }
+  writeSpecialGlobalCardsState(global);
+  return true;
 }
 function normalizeSpecialState(state=null, managerName=''){
   const base = createInitialSpecialState(managerName);
@@ -82,7 +262,7 @@ function normalizeSpecialState(state=null, managerName=''){
   normalized.codigos_reclamados = (normalized.codigos_reclamados && typeof normalized.codigos_reclamados === 'object' && !Array.isArray(normalized.codigos_reclamados)) ? normalized.codigos_reclamados : {};
   normalized.fecha_ultimo_cambio_cartas = validIsoDate(normalized.fecha_ultimo_cambio_cartas) ? normalized.fecha_ultimo_cambio_cartas : null;
   normalized.bloqueado_hasta = validIsoDate(normalized.bloqueado_hasta) ? normalized.bloqueado_hasta : null;
-  return normalized;
+  return syncSpecialStateWithGlobalCards(normalized);
 }
 function repairSpecialReserveFromHistory(state){
   if(!state || !Array.isArray(state.historial_ultimas_cartas) || !state.historial_ultimas_cartas.length) return 0;
@@ -164,7 +344,16 @@ function normalizeSpecialCardLockTurns(card){
   const nowTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
   if(Number.isFinite(Number(card.bloqueada_hasta_turno))){
     card.bloqueada_hasta_turno = Math.max(0, Math.round(Number(card.bloqueada_hasta_turno || 0)));
-    if(!Number.isFinite(Number(card.activada_en_turno))) card.activada_en_turno = Math.max(0, card.bloqueada_hasta_turno - lockDays);
+    if(Number.isFinite(Number(card.activada_en_turno))){
+      card.activada_en_turno = Math.max(0, Math.round(Number(card.activada_en_turno || 0)));
+      card.bloqueada_hasta_turno = Math.min(card.bloqueada_hasta_turno, card.activada_en_turno + lockDays);
+    } else {
+      card.activada_en_turno = Math.max(0, card.bloqueada_hasta_turno - lockDays);
+      card.bloqueada_hasta_turno = Math.min(card.bloqueada_hasta_turno, card.activada_en_turno + lockDays);
+    }
+    if(validIsoDate(card.activada_en) && (!validIsoDate(card.bloqueada_hasta) || daysBetweenIsoDates(card.activada_en, card.bloqueada_hasta) > lockDays)){
+      card.bloqueada_hasta = addDaysToIsoDate(card.activada_en, lockDays);
+    }
     return card;
   }
   let remaining = lockDays;
@@ -434,6 +623,10 @@ function createSpecialCardInstance(base, packId){
     unidad:base.unidad || '',
     activable:Boolean(base.activable),
     texto:base.texto || '',
+    activaciones_max:specialLimits().maxUsesPerCard,
+    activaciones_usadas:0,
+    active_slot_id:'',
+    ultimo_slot_activacion:'',
     activa:false,
     destruida:false,
     obtenida_en_turno:currentTurnIndex(),
@@ -461,10 +654,11 @@ function ensureSpecialCardsInReserve(cards=[]){
     if(!card || card.destruida) return;
     const id = String(card.id_carta || '');
     if(!id || activeIds.has(id) || reserveIds.has(id)) return;
-    const clean = { ...card, activa:false, destruida:false };
-    state.cartas_reserva.push(clean);
+    const clean = { ...card, activa:false, destruida:false, active_slot_id:'' };
+    const globalCard = specialGlobalUpsertCard(clean, { slotId:currentSpecialSaveSlotId(), zone:'reserve' }) || clean;
+    state.cartas_reserva.push({ ...globalCard, activa:false });
     reserveIds.add(id);
-    added.push(clean);
+    added.push({ ...globalCard, activa:false });
   });
   return added;
 }
@@ -584,6 +778,7 @@ async function openSpecialPack(packId){
 function activateSpecialCard(cardId){
   const state = ensureSpecialState();
   const limits = specialLimits();
+  const slotId = currentSpecialSaveSlotId();
   if((state.cartas_activas || []).length >= limits.activeMax){ showNotice(`Ya tenés ${limits.activeMax} cartas activas. Desactivá una carta que ya haya cumplido su plazo para reemplazarla.`); return; }
   let index = state.cartas_reserva.findIndex(card => card.id_carta === cardId);
   if(index < 0){
@@ -592,23 +787,30 @@ function activateSpecialCard(cardId){
   }
   if(index < 0){ showNotice('Carta no encontrada en reserva.'); return; }
   const card = state.cartas_reserva[index];
+  const globalCard = readSpecialGlobalCardsState().cards?.[card.id_carta];
+  if(globalCard?.active_slot_id && globalCard.active_slot_id !== slotId){ showNotice('Esta carta está activa en otra partida.'); return; }
   if(!card.activable){ showNotice('Esta carta no se puede activar.'); return; }
   if(!limits.allowRepeatedActive && state.cartas_activas.some(active => active.id_base === card.id_base)){ showNotice('Esta carta ya está activa.'); return; }
+  if(specialCardRemainingUses(card) <= 0){ showNotice('Esta carta ya no tiene activaciones disponibles.'); return; }
   state.cartas_reserva.splice(index, 1);
-  const activatedCard = { ...card, activa:true, destruida:false };
+  const maxUses = Math.max(1, Math.round(Number(card.activaciones_max || limits.maxUsesPerCard || 10)));
+  const used = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
+  const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, active_slot_id:slotId, ultimo_slot_activacion:slotId };
   lockSpecialCardChanges(activatedCard, state);
   state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
+  specialGlobalUpsertCard(activatedCard, { slotId, zone:'active' });
   const cohesionGain = applySpecialCohesionActivationBonus(activatedCard);
-  game.special = state;
+  game.special = syncSpecialStateWithGlobalCards(state);
   saveLocal(true);
   renderSpecial();
   const extra = cohesionGain > 0 ? ` Cohesión +${cohesionGain}.` : '';
-  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}.${extra}`);
+  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}. Usos restantes: ${specialCardRemainingUses(activatedCard)}.${extra}`);
 }
 function deactivateSpecialCard(cardId){
   const state = ensureSpecialState();
   const limits = specialLimits();
+  const slotId = currentSpecialSaveSlotId();
   if(state.cartas_reserva.length >= limits.reserveMax){ showNotice('Reserva llena. No se puede desactivar una carta hasta liberar espacio.'); return; }
   const index = state.cartas_activas.findIndex(card => card.id_carta === cardId);
   if(index < 0){ showNotice('Carta activa no encontrada.'); return; }
@@ -616,10 +818,20 @@ function deactivateSpecialCard(cardId){
   const cardLock = specialCardActiveLockInfo(card);
   if(cardLock.locked){ showNotice(`Esta carta debe permanecer activa ${formatDays(cardLock.remaining)} más.`); return; }
   state.cartas_activas.splice(index, 1);
-  state.cartas_reserva.push({ ...card, activa:false, activada_en:null, bloqueada_hasta:null });
+  const remaining = specialCardRemainingUses(card);
+  if(remaining > 0){
+    const released = { ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null };
+    specialGlobalReleaseCard(released, { slotId });
+    state.cartas_reserva.push(released);
+    showNotice(`Carta desactivada: ${card.nombre}. Usos restantes: ${remaining}.`);
+  } else {
+    specialGlobalReleaseCard(card, { slotId, exhausted:true });
+    state.historial_ultimas_cartas = [{ ...card, activa:false, destruida:true, agotada_por_usos:true }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
+    showNotice(`Carta agotada: ${card.nombre}. No tiene más activaciones.`);
+  }
+  game.special = syncSpecialStateWithGlobalCards(state);
   saveLocal(true);
   renderSpecial();
-  showNotice(`Carta desactivada: ${card.nombre}.`);
 }
 function destroySpecialCard(cardId){
   const state = ensureSpecialState();
@@ -636,6 +848,7 @@ function destroySpecialCard(cardId){
   const configuredRecovery = Math.max(0, Math.round(Number(db.destruir_cartas?.recuperacion_puntos?.[card.rareza] || 0)));
   const recovery = Number.isFinite(fixedRecovery[card.rareza]) ? fixedRecovery[card.rareza] : configuredRecovery;
   state.cartas_reserva.splice(index, 1);
+  specialGlobalReleaseCard(card, { slotId:currentSpecialSaveSlotId(), destroy:true });
   state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + recovery));
   state.historial_ultimas_cartas = [{ ...card, destruida:true, recuperacion_puntos:recovery }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
   specialPointsAnimation = { id:`destroy-${Date.now()}-${Math.random()}`, points:recovery };
@@ -648,6 +861,8 @@ function specialCardMarkup(card, zone='reserve'){
   const canActivate = zone === 'reserve' && card.activable;
   const activeLock = zone === 'active' ? specialCardActiveLockInfo(card) : { locked:false, remaining:0, until:null };
   const lockPill = zone === 'active' && activeLock.locked ? `<span class="pill warn">${formatDays(activeLock.remaining)}</span>` : '';
+  const usesText = `${specialCardRemainingUses(card)}/${Math.max(1, Math.round(Number(card.activaciones_max || specialLimits().maxUsesPerCard || 10)))}`;
+  const usesPill = card.activable ? `<span class="pill special-uses-pill">Usos ${escapeHtml(usesText)}</span>` : '';
   const bonus = specialCardBonusText(card);
   const action = zone === 'active'
     ? `<button class="ghost small-btn" data-special-deactivate="${escapeHtml(card.id_carta)}" ${activeLock.locked ? 'disabled' : ''}>${activeLock.locked ? 'Fija' : 'Quitar'}</button>`
@@ -655,7 +870,7 @@ function specialCardMarkup(card, zone='reserve'){
       ? `<span class="pill">Guardada</span>`
       : `<div class="row gap-xs"><button class="primary small-btn" data-special-activate="${escapeHtml(card.id_carta)}" ${canActivate ? '' : 'disabled'}>Activar</button><button class="ghost small-btn" data-special-destroy="${escapeHtml(card.id_carta)}">Destruir</button></div>`);
   return `<div class="special-card rarity-${escapeHtml(rarity)} ${zone === 'active' ? 'active' : ''} ${zone === 'opened' ? 'opened' : ''}" data-special-card-id="${escapeHtml(card.id_carta)}" draggable="${canActivate ? 'true' : 'false'}"> 
-    <div class="special-card-head"><span class="pill rarity-pill rarity-${escapeHtml(rarity)}">${escapeHtml(specialRarityLabel(rarity))}</span>${lockPill}</div>
+    <div class="special-card-head"><span class="pill rarity-pill rarity-${escapeHtml(rarity)}">${escapeHtml(specialRarityLabel(rarity))}</span><span class="special-card-head-actions">${usesPill}${lockPill}</span></div>
     <h3>${escapeHtml(card.nombre)}</h3>
     ${card.texto ? `<p>${escapeHtml(card.texto)}</p>` : ''}
     <strong>${escapeHtml(bonus)}</strong>
@@ -711,12 +926,12 @@ function renderSpecial(opened=[], options={}){
     ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${escapeHtml(specialBonusSummaryText(item))}</span>`).join('')
     : '<span class="pill">Sin bonus activo</span>';
   view.innerHTML = `
-    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, sobres y bonus activos del manager.</p></div></div>
+    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos de esta partida e inventario global de cartas por slots.</p></div></div>
     <div class="grid cols-4 compact-team-stats special-summary">
       <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
       <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
-      <div class="card"><p class="label">Cambios</p><strong>${escapeHtml(locked.locked ? 'Bloqueados' : 'Libres')}</strong></div>
+      <div class="card"><p class="label">Bloqueo</p><strong>${escapeHtml(locked.locked ? '50 días' : 'Libre')}</strong></div>
     </div>
     ${specialOpenedMarkup(opened, options)}
     <div class="card special-active-drop" data-special-drop-active="1">

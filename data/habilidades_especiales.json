@@ -2,7 +2,7 @@
   "version": "V5.54",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "Agrega cartas de Ídolo del Club, Entrenador Táctico, Especialista en Libres y Preparación Física con valores balanceados por rareza.",
+  "caracteristicas_version": "V5.78: inventario global de cartas por slots, 10 activaciones por carta y bloqueo reducido a 50 días.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -19,10 +19,11 @@
   "limites": {
     "cartas_activas_max": 5,
     "cartas_reserva_max": 50,
-    "dias_bloqueo_cambio_cartas": 100,
+    "dias_bloqueo_cambio_cartas": 50,
     "permitir_abrir_sobres_con_reserva_llena": false,
     "permitir_cartas_repetidas_activas": true,
-    "bonus_se_apilan": true
+    "bonus_se_apilan": true,
+    "activaciones_por_carta": 10
   },
   "rareza_orden_visual": [
     "inutil",
@@ -640,6 +641,10 @@
     "activa": false,
     "destruida": false,
     "obtenida_en_turno": null,
-    "obtenida_desde_sobre": ""
+    "obtenida_desde_sobre": "",
+    "activaciones_max": 10,
+    "activaciones_usadas": 0,
+    "active_slot_id": "",
+    "ultimo_slot_activacion": ""
   }
 }

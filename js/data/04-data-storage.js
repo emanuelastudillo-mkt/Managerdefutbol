@@ -2062,6 +2062,7 @@ async function init(){
     fillClubSelect();
     bindEvents();
     startUiTicker();
+    if(typeof migrateAllSavedSpecialCardsToGlobal === 'function') await migrateAllSavedSpecialCardsToGlobal().catch(()=>{});
     let loaded = await loadLocal(true, preferredSlot);
     if(!loaded && preferredSlot !== SAVE_SLOT_CAREER) loaded = await loadLocal(true, SAVE_SLOT_CAREER);
     if(!loaded){

@@ -1,3 +1,3 @@
-# Versión actual
+V5.78
 
-V5.77
+Cartas globales por slots, 10 activaciones por carta y bloqueo de 50 días.

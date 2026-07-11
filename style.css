@@ -4748,3 +4748,8 @@ th{
 @media (max-width:420px){
   .save-slot-actions{grid-template-columns:1fr;}
 }
+
+/* V5.78 · Inventario global de cartas por slots */
+.special-card-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+.special-uses-pill{font-size:.68rem!important;white-space:nowrap}
+.special-card-grid.compact .special-uses-pill{font-size:.64rem!important}

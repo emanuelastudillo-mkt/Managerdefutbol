@@ -1,14 +1,26 @@
-# Fútbol Manager MVP - V6.15
+# Fútbol Manager MVP - V6.16
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.14**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.15**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+## V6.16 - Imágenes de jugadores por nacionalidad
+
+### Cambios principales
+
+- La imagen genérica de jugadores deja de elegirse por región/FACES.
+- Ahora cada jugador usa una imagen base según su nacionalidad.
+- La ruta esperada es `img/jugadores/nacionalidades/<nacionalidad-en-slug>.webp`.
+- Ejemplos: `argentina.webp`, `brasil.webp`, `espana.webp`, `paises-bajos.webp`, `corea-del-sur.webp`, `estados-unidos.webp`.
+- Si no existe `.webp`, el juego intenta `.png`, `.jpg` y `.jpeg`.
+- Si no existe imagen para esa nacionalidad, intenta `img/jugadores/nacionalidades/generico.webp` y sus variantes.
+- Las fotos manuales explícitas en datos de jugadores siguen funcionando como prioridad; si fallan, caen a la imagen por nacionalidad.
 
 ## V6.15 - Ajustes de interfaz, sponsors y mercado
 
@@ -118,27 +130,24 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.15
+## Archivos modificados en V6.16
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `style.css`
 - `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/06-render-home-messages.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.15**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.16**.
 
-Para actualizar desde V6.14, aplicar el ZIP incremental **V6.15** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.15, aplicar el ZIP incremental **V6.16** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.15 mantiene la documentación unificada sólo en `README.md`.
+Las imágenes por nacionalidad deben estar publicadas en GitHub dentro de `img/jugadores/nacionalidades/` con nombres tipo slug.
 
-## Validación V6.15
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.16 mantiene la documentación unificada sólo en `README.md`.
+
+## Validación V6.16
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

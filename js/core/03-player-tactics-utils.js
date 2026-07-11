@@ -887,25 +887,42 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
 function generationRosterBlueprint(){
   return ['POR','POR','POR','LD','LI','DFC','DFC','DFC','LD','LI','MCD','MCD','MC','MC','MCO','MCO','MI','MD','ED','EI','ED','EI','DC','DC','DC'];
 }
-function nationalityRegion(nationality){
-  const value = String(nationality || '').toLowerCase();
-  const america = ['argentina','bolivia','brasil','chile','colombia','ecuador','paraguay','perú','peru','uruguay','venezuela','méxico','mexico','estados unidos','canadá','canada','costa rica','panamá','panama'];
-  const europe = ['españa','espana','italia','francia','alemania','portugal','inglaterra','croacia','serbia','polonia','países bajos','paises bajos','holanda','bélgica','belgica','suiza','dinamarca','noruega','suecia'];
-  const africa = ['marruecos','senegal','nigeria','ghana','camerún','camerun','argelia','egipto','costa de marfil','túnez','tunez','sudáfrica','sudafrica'];
-  const asia = ['japón','japon','corea','china','irán','iran','arabia saudita','qatar','australia'];
-  if(america.includes(value)) return 'America';
-  if(europe.includes(value)) return 'Europa';
-  if(africa.includes(value)) return 'africa';
-  if(asia.includes(value)) return 'Asia';
-  return 'Otros';
+function playerNationalityImageSlug(nationality){
+  const raw = String(nationality || '').trim();
+  const normalized = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/ñ/g, 'n')
+    .replace(/&/g, ' y ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const aliases = {
+    'espana':'espana',
+    'paises-bajos':'paises-bajos',
+    'pais-bajos':'paises-bajos',
+    'holanda':'paises-bajos',
+    'corea':'corea-del-sur',
+    'corea-sur':'corea-del-sur',
+    'corea-del-sur':'corea-del-sur',
+    'estados-unidos':'estados-unidos',
+    'eeuu':'estados-unidos',
+    'eua':'estados-unidos',
+    'usa':'estados-unidos',
+    'mexico':'mexico',
+    'peru':'peru',
+    'japon':'japon'
+  };
+  return aliases[normalized] || normalized || 'generico';
 }
-function faceMaxForRegion(region){
-  return region === 'Otros' ? 20 : 10;
+function playerNationalityImageBase(player){
+  return `img/jugadores/nacionalidades/${playerNationalityImageSlug(player?.nationality)}`;
+}
+function playerGenericImageBase(){
+  return 'img/jugadores/nacionalidades/generico';
 }
 function faceBaseForPlayer(player){
-  const region = nationalityRegion(player?.nationality);
-  const index = hashNumber(`face-${player?.id || 0}-${region}`, faceMaxForRegion(region)) + 1;
-  return `img/faces/${region} (${index})`;
+  return playerNationalityImageBase(player);
 }
 function playerPhotoPath(player){
   const custom = player?.photoPath || player?.fotoPath || player?.imagePath || player?.photo || player?.foto || '';
@@ -920,20 +937,31 @@ function versionedCustomPhotoPath(path){
 }
 function faceImg(player, className='photo-thumb'){
   const base = faceBaseForPlayer(player);
+  const fallbackBase = playerGenericImageBase();
   const customPath = playerPhotoPath(player);
   const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
+  const fallbackAttr = fallbackBase && fallbackBase !== base ? ` data-face-fallback-base="${escapeHtml(fallbackBase)}"` : '';
   if(customPath){
-    return `<img class="${escapeHtml(className)}" src="${escapeHtml(versionedCustomPhotoPath(customPath))}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1" onerror="tryNextFaceExt(this)">`;
+    return `<img class="${escapeHtml(className)}" src="${escapeHtml(versionedCustomPhotoPath(customPath))}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1"${fallbackAttr} onerror="tryNextFaceExt(this)">`;
   }
-  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.png" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0" onerror="tryNextFaceExt(this)">`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr} onerror="tryNextFaceExt(this)">`;
 }
 function tryNextFaceExt(img){
-  const exts = ['.png','.jpg','.jpeg','.webp'];
-  const index = Number(img.dataset.faceExtIndex || 0) + 1;
+  const exts = ['.webp','.png','.jpg','.jpeg'];
+  const currentIndex = Number(img.dataset.faceExtIndex || 0);
+  const nextIndex = currentIndex + 1;
   const base = img.dataset.faceBase;
-  if(base && index < exts.length){
-    img.dataset.faceExtIndex = String(index);
-    img.src = `${base}${exts[index]}`;
+  if(base && nextIndex < exts.length){
+    img.dataset.faceExtIndex = String(nextIndex);
+    img.src = `${base}${exts[nextIndex]}`;
+    return;
+  }
+  const fallbackBase = img.dataset.faceFallbackBase;
+  if(fallbackBase && img.dataset.faceFallbackUsed !== '1'){
+    img.dataset.faceFallbackUsed = '1';
+    img.dataset.faceBase = fallbackBase;
+    img.dataset.faceExtIndex = '0';
+    img.src = `${fallbackBase}${exts[0]}`;
     return;
   }
   img.onerror = null;

@@ -427,6 +427,35 @@
       discipline, stamina, aggression, reputation:rep
     };
   }
+  function applyManagerTacticalAdaptationPairV2(home, away, match=null, context=null){
+    if(!match?.id || match.friendly) return { home, away };
+    if(typeof tacticalAdaptationInfoForMatch !== 'function') return { home, away };
+    const ownId = Number(game?.selectedClubId || 0);
+    if(!ownId || (Number(match.homeId) !== ownId && Number(match.awayId) !== ownId)) return { home, away };
+    const managerIsHome = Number(match.homeId) === ownId;
+    const managerPower = managerIsHome ? home : away;
+    const rivalPower = managerIsHome ? away : home;
+    const info = tacticalAdaptationInfoForMatch(managerPower?.tactic || game?.tactic || null);
+    const bonus = Number(info?.bonus || 0);
+    if(!info?.active || bonus <= 0) return { home, away };
+    rivalPower.defense *= 1 + bonus;
+    rivalPower.midfield *= 1 + bonus * 0.75;
+    rivalPower.attack *= 1 + bonus * 0.45;
+    rivalPower.keeper *= 1 + bonus * 0.35;
+    rivalPower.tacticalAdaptationBonus = info;
+    if(context && typeof context === 'object'){
+      context.tacticalAdaptation = {
+        clubId:ownId,
+        rivalId:managerIsHome ? Number(match.awayId) : Number(match.homeId),
+        streak:info.prospectiveStreak || info.streak || 0,
+        freeMatches:info.freeMatches || 0,
+        bonus,
+        bonusPct:Math.round(bonus * 100)
+      };
+    }
+    return { home, away };
+  }
+
   function makeMatchContextV2(match){
     const weatherOptions = ['Soleado', 'Nublado', 'Lluvia leve', 'Lluvia intensa', 'Viento moderado', 'Calor húmedo'];
     const weather = weatherOptions[hashNumber(`${match.id}-weather-${game?.matchdayIndex || 0}`, weatherOptions.length)];
@@ -680,7 +709,7 @@
     candidates.forEach(player => {
       const chance = injuryChanceForPlayer(player.id, context.pitch);
       if(Math.random() < chance){
-        const injury = pickInjuryType();
+        const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
         const duringMatch = Math.random() < 0.72;
         injuries.push({
@@ -693,7 +722,11 @@
           chance:Math.round(chance * 100),
           matchesOut,
           minute:duringMatch ? Math.floor(simRnd(8,89)) : 90,
-          phase:duringMatch ? 'durante' : 'final'
+          phase:duringMatch ? 'durante' : 'final',
+          highLoad:Boolean(injury.highLoad),
+          highLoadRatio:injury.highLoadRatio,
+          highLoadPlayed:injury.highLoadPlayed,
+          highLoadReference:injury.highLoadReference
         });
       }
     });
@@ -1263,7 +1296,7 @@
     candidates.forEach(player => {
       const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90;
       if(Math.random() < chance){
-        const injury = pickInjuryType();
+        const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
         injuries.push({
           clubId,
@@ -1275,7 +1308,11 @@
           chance:Math.round(chance * 100),
           matchesOut,
           minute:Math.floor(simRnd(block.from, block.to + 1)),
-          phase:'durante'
+          phase:'durante',
+          highLoad:Boolean(injury.highLoad),
+          highLoadRatio:injury.highLoadRatio,
+          highLoadPlayed:injury.highLoadPlayed,
+          highLoadReference:injury.highLoadReference
         });
       }
     });
@@ -1315,7 +1352,7 @@
     const sentOffIds = liveUnavailableIds(session);
     const home = teamPowerV2(session.match.homeId, session.homeTactic, { crowdBonus:session.matchContext.homeCrowdBonus || 0, conditionResolver, sentOffIds });
     const away = teamPowerV2(session.match.awayId, session.awayTactic, { crowdBonus:0, conditionResolver, sentOffIds });
-    return { home, away };
+    return applyManagerTacticalAdaptationPairV2(home, away, session.match, session.matchContext);
   }
   function createLiveMatchSession(match){
     const homeTactic = ensureLiveTacticShape(getTacticForClubV2(match.homeId), match.homeId);
@@ -1643,8 +1680,9 @@
     applyTacticCohesionPenalty(match.homeId, homeTactic);
     applyTacticCohesionPenalty(match.awayId, awayTactic);
     const matchContext = makeMatchContextV2(match);
-    const home = teamPowerV2(match.homeId, homeTactic, { crowdBonus:matchContext.homeCrowdBonus || 0 });
-    const away = teamPowerV2(match.awayId, awayTactic, { crowdBonus:0 });
+    let home = teamPowerV2(match.homeId, homeTactic, { crowdBonus:matchContext.homeCrowdBonus || 0 });
+    let away = teamPowerV2(match.awayId, awayTactic, { crowdBonus:0 });
+    ({ home, away } = applyManagerTacticalAdaptationPairV2(home, away, match, matchContext));
     const homeTotals = emptyStats();
     const awayTotals = emptyStats();
     const incidents = { keySaves:[], errors:[] };

@@ -1,3 +1,3 @@
-V6.02
+V6.03
 
-División de `data/jugadores.json` en chunks por país/liga. El archivo principal queda como manifest liviano y la carga acepta tanto formato legacy como lista `playersUrls`.
+Dificultad competitiva: adaptación rival, lesiones por alta participación y moral progresiva de suplentes.

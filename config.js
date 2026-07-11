@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.02',
+  version: 'V6.03',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -546,6 +546,26 @@ window.GAME_CONFIG = {
       cansancioRepliegue: -1
     }
   },
+  dificultad: {
+    partidosReferenciaTemporada: 34,
+    umbralParticipacionLesionLarga: 0.80,
+    probabilidadLesionLargaMin: 0.35,
+    probabilidadLesionLargaMax: 0.65,
+    pesoLesionLargaAltaParticipacion: 0.90,
+    lesionLargaMinDias: 90,
+    adaptacionTactica: {
+      activo: true,
+      partidosSinPenalizacion: 3,
+      bonusRivalPorRepeticion: 0.03,
+      bonusRivalMaximo: 0.12
+    },
+    moralSuplentes: {
+      perdidaPorPartidoPerdido: 1,
+      perdidaMaximaPorPartido: 12,
+      partidosSinJugarMaximoContador: 20
+    }
+  },
+
   lesiones: {
     // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
     multiplicadorProbabilidad: 0.20,

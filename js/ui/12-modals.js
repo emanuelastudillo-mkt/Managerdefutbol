@@ -532,6 +532,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
           <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong>${context.ticketPriceAutoBot ? `<p class="muted small">Bot auto · rival ${escapeHtml(context.ticketPricePrestigeTier || '')} · x${Number(context.ticketPriceMultiplier || 1).toFixed(2)}</p>` : ''}</div>
           <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
           ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Demanda extra por rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Asistencia · prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
+          ${context.tacticalAdaptation ? `<div><p class="label">Adaptación rival</p><strong>+${Number(context.tacticalAdaptation.bonusPct || 0)}%</strong><p class="muted small">Patrón repetido ${Number(context.tacticalAdaptation.streak || 0)} partido(s)</p></div>` : ''}
         </div>
       </div>
       <div id="matchRevealDynamic"></div>
@@ -980,6 +981,7 @@ function showMatchModal(matchId){
         <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong>${context.ticketPriceAutoBot ? `<p class="muted small">Bot auto · rival ${escapeHtml(context.ticketPricePrestigeTier || '')} · x${Number(context.ticketPriceMultiplier || 1).toFixed(2)}</p>` : ''}</div>
         <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
         ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Demanda extra por rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Asistencia · prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
+        ${context.tacticalAdaptation ? `<div><p class="label">Adaptación rival</p><strong>+${Number(context.tacticalAdaptation.bonusPct || 0)}%</strong><p class="muted small">Patrón repetido ${Number(context.tacticalAdaptation.streak || 0)} partido(s)</p></div>` : ''}
       </div>
     </div>
     <div class="match-team-columns">
@@ -1039,7 +1041,8 @@ function injuryLine(i){
   const p = playerById(i.playerId);
   const label = i.injuryLabel || i.name || i.severity || 'Lesión';
   const phase = i.phase === 'final' ? 'al final' : 'durante';
-  return `<div class="stat-rank event-line"><span>${i.minute}' <span class="injury-event-icon">✚</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${phase}</strong></div>`;
+  const load = i.highLoad ? ' · alta carga' : '';
+  return `<div class="stat-rank event-line"><span>${i.minute}' <span class="injury-event-icon">✚</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${phase}${load}</strong></div>`;
 }
 function showClubModal(clubId){
   const club = seed.clubs.find(c => c.id === Number(clubId));

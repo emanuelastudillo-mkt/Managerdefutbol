@@ -1,12 +1,12 @@
 /*
-  V6.02 · Modificadores de balance del simulador y entrenamiento.
+  V6.03 · Modificadores de balance del simulador y entrenamiento.
   Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
   Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V6.02',
-    nombre: 'Balance centralizado de modificadores V6.02',
+    version: 'V6.03',
+    nombre: 'Balance centralizado de modificadores V6.03',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -69,6 +69,27 @@ window.GAME_BALANCE_MODIFICADORES = {
     desgastePartidoMin: 40,
     desgastePartidoMax: 78,
     factorDesgasteArquero: 0.5
+  },
+
+  dificultad: {
+    // V6.03: aumenta la dificultad sin azar arbitrario.
+    partidosReferenciaTemporada: 34,
+    umbralParticipacionLesionLarga: 0.80,
+    probabilidadLesionLargaMin: 0.35,
+    probabilidadLesionLargaMax: 0.65,
+    pesoLesionLargaAltaParticipacion: 0.90,
+    lesionLargaMinDias: 90,
+    adaptacionTactica: {
+      activo: true,
+      partidosSinPenalizacion: 3,
+      bonusRivalPorRepeticion: 0.03,
+      bonusRivalMaximo: 0.12
+    },
+    moralSuplentes: {
+      perdidaPorPartidoPerdido: 1,
+      perdidaMaximaPorPartido: 12,
+      partidosSinJugarMaximoContador: 20
+    }
   },
 
   equilibrioBots: {

@@ -125,6 +125,10 @@ function applyAvailability(cards, injuries){
       injuredUntilTurn: currentTurnIndex() + injuryDays,
       injuryLabel: label,
       injuryChance: i.chance,
+      highLoadInjury: Boolean(i.highLoad),
+      highLoadRatio: i.highLoadRatio,
+      highLoadPlayed: i.highLoadPlayed,
+      highLoadReference: i.highLoadReference,
       injuredAtMatchday: game.matchdayIndex,
       injuredAtTurn: currentTurnIndex()
     };

@@ -473,10 +473,27 @@ function currentCondition(playerId){
 function fatiguePoints(playerId){
   return clamp(99 - currentCondition(playerId), 0, 99);
 }
+function seasonParticipationRatioForPlayer(playerId){
+  const played = Math.max(0, Math.round(Number(game?.playerStats?.[playerId]?.played || 0)));
+  return played / Math.max(1, HIGH_PARTICIPATION_REFERENCE_MATCHES);
+}
+function highParticipationInjuryRiskForPlayer(playerId){
+  const played = Math.max(0, Math.round(Number(game?.playerStats?.[playerId]?.played || 0)));
+  const ratio = played / Math.max(1, HIGH_PARTICIPATION_REFERENCE_MATCHES);
+  if(ratio < HIGH_PARTICIPATION_INJURY_THRESHOLD){
+    return { active:false, played, reference:HIGH_PARTICIPATION_REFERENCE_MATCHES, ratio, chance:0, overload:0 };
+  }
+  const denominator = Math.max(0.01, 1 - HIGH_PARTICIPATION_INJURY_THRESHOLD);
+  const overload = clamp((ratio - HIGH_PARTICIPATION_INJURY_THRESHOLD) / denominator, 0, 1);
+  const chance = clamp(HIGH_PARTICIPATION_INJURY_CHANCE_MIN + (HIGH_PARTICIPATION_INJURY_CHANCE_MAX - HIGH_PARTICIPATION_INJURY_CHANCE_MIN) * overload, 0, 0.95);
+  return { active:true, played, reference:HIGH_PARTICIPATION_REFERENCE_MATCHES, ratio, chance, overload };
+}
 function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
   const pitch = PITCH_CONDITIONS[pitchCondition] || PITCH_CONDITIONS.Normal;
   const rawChance = BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus;
-  return clamp(rawChance * INJURY_CHANCE_MULTIPLIER, 0, 0.65);
+  const baseChance = clamp(rawChance * INJURY_CHANCE_MULTIPLIER, 0, 0.65);
+  const highLoad = highParticipationInjuryRiskForPlayer(playerId);
+  return clamp(Math.max(baseChance, highLoad.active ? highLoad.chance : 0), 0, 0.95);
 }
 function tacticStatusIcon(playerId){
   if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';
@@ -495,14 +512,30 @@ function availabilityStatusMarkup(playerId){
   if(icons) return `<span class="availability-status ${unavailable ? 'bad' : 'ok'}">${icons}<span>${escapeHtml(statusText(playerId))}</span></span>`;
   return `<span class="${unavailable ? 'bad' : 'ok'}">${escapeHtml(statusText(playerId))}</span>`;
 }
-function pickInjuryType(){
-  const total = INJURY_TABLE.reduce((sum, item) => sum + item.probability, 0);
-  let roll = Math.random() * total;
-  for(const item of INJURY_TABLE){
-    roll -= item.probability;
+function weightedInjuryPickFrom(table){
+  const source = Array.isArray(table) && table.length ? table : INJURY_TABLE;
+  const total = source.reduce((sum, item) => sum + Number(item.probability || 0), 0);
+  let roll = Math.random() * Math.max(1, total);
+  for(const item of source){
+    roll -= Number(item.probability || 0);
     if(roll <= 0) return item;
   }
-  return INJURY_TABLE[INJURY_TABLE.length - 1];
+  return source[source.length - 1];
+}
+function pickInjuryType(){
+  return weightedInjuryPickFrom(INJURY_TABLE);
+}
+function pickLongInjuryType(){
+  const longTable = INJURY_TABLE.filter(item => Number(item.maxTurns || 0) >= HIGH_PARTICIPATION_LONG_INJURY_MIN_TURNS || ['Rotura','Fractura'].includes(item.name));
+  return weightedInjuryPickFrom(longTable.length ? longTable : INJURY_TABLE);
+}
+function pickInjuryTypeForPlayer(playerId){
+  const highLoad = highParticipationInjuryRiskForPlayer(playerId);
+  if(highLoad.active && Math.random() < HIGH_PARTICIPATION_LONG_INJURY_RATE){
+    const injury = pickLongInjuryType();
+    return { ...injury, highLoad:true, highLoadChance:highLoad.chance, highLoadRatio:highLoad.ratio, highLoadPlayed:highLoad.played, highLoadReference:highLoad.reference };
+  }
+  return pickInjuryType();
 }
 function injuredPlayersByClub(clubId){
   return playersByClub(clubId)

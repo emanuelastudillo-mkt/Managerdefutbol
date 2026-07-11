@@ -101,6 +101,70 @@ function tacticSignature(tactic){
   const sectorSig = ['defense','midfield','attack'].map(key => `${key}:${sectorStyles[key] || 'posicional'}`).join('|');
   return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig, sectorSig].join('::');
 }
+function managerTacticalAdaptationState(){
+  if(!game) return { season:1, signature:'', streak:0, lastBonus:0 };
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  if(!game.managerTacticalAdaptation || typeof game.managerTacticalAdaptation !== 'object' || Array.isArray(game.managerTacticalAdaptation) || Number(game.managerTacticalAdaptation.season || season) !== season){
+    game.managerTacticalAdaptation = { season, signature:'', streak:0, lastBonus:0, lastProspectiveStreak:0 };
+  }
+  return game.managerTacticalAdaptation;
+}
+function tacticRepetitionSignature(tactic){
+  const clean = tactic || {};
+  const formation = FORMATIONS[clean.formation] ? clean.formation : DEFAULT_TACTIC.formation;
+  const slots = FORMATIONS[formation] || FORMATIONS[DEFAULT_TACTIC.formation] || [];
+  const starters = Array.isArray(clean.starters) ? clean.starters.slice(0, 11).map(Number) : [];
+  while(starters.length < 11) starters.push(0);
+  const mentalities = starters.map((id, index) => {
+    const mode = id ? normalizeMentality(clean.playerMentalities?.[id]) : 'normal';
+    return `${slots[index] || 'slot'}:${mode}`;
+  }).join('|');
+  const instructions = window.Simulator20?.normalizeMatchInstructions
+    ? window.Simulator20.normalizeMatchInstructions(clean.matchInstructions)
+    : (clean.matchInstructions || DEFAULT_TACTIC.matchInstructions || {});
+  const instructionSig = ['winning','drawing','losing'].map(key => `${key}:${instructions[key] || 'normal'}`).join('|');
+  const sectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(clean.sectorStyles) : (clean.sectorStyles || {});
+  const sectorSig = ['defense','midfield','attack'].map(key => `${key}:${sectorStyles[key] || 'posicional'}`).join('|');
+  return [formation, mentalities, instructionSig, sectorSig].join('::');
+}
+function tacticalAdaptationInfoForMatch(tactic){
+  if(!game || !configBoolean('dificultad.adaptacionTactica.activo', true)) return { active:false, bonus:0, streak:0 };
+  const state = managerTacticalAdaptationState();
+  const signature = tacticRepetitionSignature(tactic || game.tactic || DEFAULT_TACTIC);
+  const prospectiveStreak = state.signature === signature ? Math.max(0, Math.round(Number(state.streak || 0))) + 1 : 1;
+  const freeMatches = Math.max(1, Math.round(configNumber('dificultad.adaptacionTactica.partidosSinPenalizacion', 3, 1, 20)));
+  const bonusPerRepeat = configNumber('dificultad.adaptacionTactica.bonusRivalPorRepeticion', 0.03, 0, 0.20);
+  const maxBonus = configNumber('dificultad.adaptacionTactica.bonusRivalMaximo', 0.12, 0, 0.50);
+  const overLimit = Math.max(0, prospectiveStreak - freeMatches);
+  const bonus = clamp(Number((overLimit * bonusPerRepeat).toFixed(4)), 0, maxBonus);
+  return {
+    active:bonus > 0,
+    signature,
+    streak:prospectiveStreak,
+    prospectiveStreak,
+    freeMatches,
+    overLimit,
+    bonus,
+    bonusPct:Math.round(bonus * 100)
+  };
+}
+function registerManagerTacticalPatternAfterMatch(result=null){
+  if(!game || result?.friendly || !configBoolean('dificultad.adaptacionTactica.activo', true)) return null;
+  const ownId = Number(game.selectedClubId || 0);
+  if(result && Number(result.homeId) !== ownId && Number(result.awayId) !== ownId) return null;
+  const info = tacticalAdaptationInfoForMatch(game.tactic || DEFAULT_TACTIC);
+  const state = managerTacticalAdaptationState();
+  state.signature = info.signature || '';
+  state.streak = Math.max(1, Math.round(Number(info.prospectiveStreak || info.streak || 1)));
+  state.lastBonus = Number(info.bonus || 0);
+  state.lastBonusPct = Math.round(Number(info.bonus || 0) * 100);
+  state.lastProspectiveStreak = state.streak;
+  state.updatedAtMatchday = Number(game.matchdayIndex || 0);
+  state.updatedAtTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game.globalTurn || 0);
+  game.lastTacticalAdaptation = info;
+  return info;
+}
+
 function applyTacticCohesionPenalty(clubId, tactic){
   ensureTeamCohesion();
   const signature = tacticSignature(tactic);
@@ -473,7 +537,9 @@ function quickBuildInjuries(clubId, lineup, context){
   candidates.forEach(player => {
     const chance = Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70;
     if(Math.random() >= chance) return;
-    const injury = typeof pickInjuryType === 'function' ? pickInjuryType() : { name:'Lesión muscular', minTurns:7, maxTurns:28, probability:1 };
+    const injury = typeof pickInjuryTypeForPlayer === 'function'
+      ? pickInjuryTypeForPlayer(player.id)
+      : (typeof pickInjuryType === 'function' ? pickInjuryType() : { name:'Lesión muscular', minTurns:7, maxTurns:28, probability:1 });
     const matchesOut = Math.max(1, Math.round(rnd(Number(injury.minTurns || 7), Number(injury.maxTurns || 28) + 1)));
     injuries.push({
       clubId:Number(clubId),
@@ -486,7 +552,11 @@ function quickBuildInjuries(clubId, lineup, context){
       matchesOut,
       minute:clamp(Math.round(rnd(12, 90)), 1, 90),
       phase:'durante',
-      quick:true
+      quick:true,
+      highLoad:Boolean(injury.highLoad),
+      highLoadRatio:injury.highLoadRatio,
+      highLoadPlayed:injury.highLoadPlayed,
+      highLoadReference:injury.highLoadReference
     });
   });
   return injuries.sort((a,b) => a.minute - b.minute);
@@ -1185,6 +1255,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   maybeGenerateTransferOffer(ownResult);
   advanceSponsorMatchCounter();
   if(typeof awardSpecialPointsForOwnMatch === 'function') awardSpecialPointsForOwnMatch(ownResult);
+  registerManagerTacticalPatternAfterMatch(ownResult);
   const summaryRound = game.fixtures[fromRoundIndex] || ownInfo?.round || pendingInfo?.round || { matchday:'—', date:targetDate, matches:[] };
   const triggeredEvents = processGameEventsAfterMatches({ round:summaryRound, results, ownResult });
   const ownProblems = collectOwnProblems(ownResult);
@@ -1399,6 +1470,7 @@ function simulateNextMatchday(options={}){
     maybeGenerateTransferOffer(ownResult);
     advanceSponsorMatchCounter();
     if(typeof awardSpecialPointsForOwnMatch === 'function') awardSpecialPointsForOwnMatch(ownResult);
+    registerManagerTacticalPatternAfterMatch(ownResult);
   } else {
     processNonOwnResultsAfterSimulation(results);
   }
@@ -2391,6 +2463,37 @@ function applyPlayerWearFromMatches(results=[]){
   });
   return applied;
 }
+function playerBenchedStreakState(){
+  if(!game) return { season:1, players:{} };
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  if(!game.playerBenchedStreak || typeof game.playerBenchedStreak !== 'object' || Array.isArray(game.playerBenchedStreak) || Number(game.playerBenchedStreak.season || season) !== season){
+    game.playerBenchedStreak = { season, players:{} };
+  }
+  if(!game.playerBenchedStreak.players || typeof game.playerBenchedStreak.players !== 'object' || Array.isArray(game.playerBenchedStreak.players)){
+    game.playerBenchedStreak.players = {};
+  }
+  return game.playerBenchedStreak;
+}
+function registerPlayerPlayedForMorale(playerId){
+  const state = playerBenchedStreakState();
+  state.players[playerId] = 0;
+  return 0;
+}
+function registerPlayerMissedForMorale(playerId){
+  const state = playerBenchedStreakState();
+  const maxTracked = Math.max(1, Math.round(configNumber('dificultad.moralSuplentes.partidosSinJugarMaximoContador', 20, 1, 80)));
+  const current = Math.max(0, Math.round(Number(state.players[playerId] || 0)));
+  const next = clamp(current + 1, 0, maxTracked);
+  state.players[playerId] = next;
+  return next;
+}
+function missedMatchMoralePenalty(playerId){
+  const missed = registerPlayerMissedForMorale(playerId);
+  const perMiss = configNumber('dificultad.moralSuplentes.perdidaPorPartidoPerdido', 1, 0, 10);
+  const maxPenalty = Math.max(0, Math.round(configNumber('dificultad.moralSuplentes.perdidaMaximaPorPartido', 12, 0, 50)));
+  return clamp(Math.round(missed * perMiss), 0, maxPenalty);
+}
+
 function applyConditionUpdates(results){
   if(!game.playerCondition) game.playerCondition = {};
   seed.players.forEach(player => {
@@ -2448,12 +2551,23 @@ function applyMoraleUpdates(results){
       const playedSet = new Set((team.playedIds || []).map(Number));
       squad.forEach(player => {
         let next = currentMorale(player.id);
-        if(starterSet.has(player.id)) next += rnd(3,6);
-        else if(playedSet.has(player.id)) next += rnd(1,2);
-        else next -= 2;
+        const starter = starterSet.has(player.id);
+        const played = playedSet.has(player.id);
+        const unavailable = typeof isUnavailable === 'function' && isUnavailable(player.id);
+        if(starter){
+          registerPlayerPlayedForMorale(player.id);
+          next += rnd(3,6);
+        }
+        else if(played){
+          registerPlayerPlayedForMorale(player.id);
+          next += rnd(1,2);
+        }
+        else if(!unavailable){
+          next -= missedMatchMoralePenalty(player.id);
+        }
         if(team.gf > team.gc) next += rnd(1,3);
         else if(team.gf < team.gc){
-          next -= starterSet.has(player.id) ? rnd(5,8) : rnd(3,4);
+          next -= starter ? rnd(5,8) : rnd(3,4);
         }
         game.playerMorale[player.id] = clamp(Math.round(next), 1, 99);
       });

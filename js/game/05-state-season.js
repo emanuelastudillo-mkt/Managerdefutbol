@@ -2148,6 +2148,16 @@ function normalizeGame(saved){
   normalized.sponsors = normalizeSponsorState(normalized.sponsors);
   normalized.teamCohesion = normalized.teamCohesion || {};
   normalized.lastMatchTactics = normalized.lastMatchTactics || {};
+  const normalizedSeasonForDifficulty = Math.max(1, Math.round(Number(normalized.seasonNumber || 1)));
+  if(!normalized.managerTacticalAdaptation || typeof normalized.managerTacticalAdaptation !== 'object' || Array.isArray(normalized.managerTacticalAdaptation) || Number(normalized.managerTacticalAdaptation.season || normalizedSeasonForDifficulty) !== normalizedSeasonForDifficulty){
+    normalized.managerTacticalAdaptation = { season:normalizedSeasonForDifficulty, signature:'', streak:0, lastBonus:0, lastProspectiveStreak:0 };
+  }
+  if(!normalized.playerBenchedStreak || typeof normalized.playerBenchedStreak !== 'object' || Array.isArray(normalized.playerBenchedStreak) || Number(normalized.playerBenchedStreak.season || normalizedSeasonForDifficulty) !== normalizedSeasonForDifficulty){
+    normalized.playerBenchedStreak = { season:normalizedSeasonForDifficulty, players:{} };
+  }
+  if(!normalized.playerBenchedStreak.players || typeof normalized.playerBenchedStreak.players !== 'object' || Array.isArray(normalized.playerBenchedStreak.players)){
+    normalized.playerBenchedStreak.players = {};
+  }
   normalized.botRosterRepairLog = Array.isArray(normalized.botRosterRepairLog) ? normalized.botRosterRepairLog : [];
   normalized.botBalanceLog = Array.isArray(normalized.botBalanceLog) ? normalized.botBalanceLog : [];
   seed.clubs.forEach(c => { if(!Number.isFinite(normalized.teamCohesion[c.id])) normalized.teamCohesion[c.id] = TEAM_COHESION_START; });
@@ -2417,6 +2427,8 @@ function newGame(selectedClubId, options={}){
     sponsors: createInitialSponsorState(),
     teamCohesion: Object.fromEntries(seed.clubs.map(c => [c.id, TEAM_COHESION_START])),
     lastMatchTactics: {},
+    managerTacticalAdaptation: { season:1, signature:'', streak:0, lastBonus:0, lastProspectiveStreak:0 },
+    playerBenchedStreak: { season:1, players:{} },
     founderMode: Boolean(options.founderMode),
     founderClubId: options.founderMode ? Number(selectedClubId) : 0,
     founderReplacedClub: options.founderReplacedClub || null,
@@ -4758,6 +4770,8 @@ function startNextSeason(selectedClubId){
   game.playerImpactWindows = normalizePlayerImpactWindows(game.playerImpactWindows || {});
   syncPlayerStarsWithClubs(game);
   game.matchHistory = [];
+  game.managerTacticalAdaptation = { season:game.seasonNumber || 1, signature:'', streak:0, lastBonus:0, lastProspectiveStreak:0 };
+  game.playerBenchedStreak = { season:game.seasonNumber || 1, players:{} };
   game.lastOwnProblems = [];
   game.lastTurnSummary = null;
   game.mustReviewTactics = false;

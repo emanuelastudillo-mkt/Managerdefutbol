@@ -1,0 +1,6 @@
+Eliminar manualmente este archivo si existe en la raíz del proyecto al actualizar desde una versión anterior:
+
+apps-script-ranking.gs
+
+Motivo:
+El ranking activo usa Cloudflare Worker + D1. El archivo de Google Apps Script quedó legacy y ya no se incluye en la versión completa V6.05.

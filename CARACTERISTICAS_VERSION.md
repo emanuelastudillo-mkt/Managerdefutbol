@@ -1,54 +1,31 @@
-# Características de la versión V6.04
+# Características de la versión V6.05
 
-## V6.04 - Ojeo, avance automático y ranking de carrera
+## V6.05 - Limpieza de backend legacy de ranking
 
-Esta versión toma V6.03 como base y agrega tres mejoras de lectura y competencia online.
+### Objetivo
 
-### Cambios aplicados
+Eliminar del proyecto el archivo heredado de Google Apps Script para evitar confusión con la implementación actual de ranking online basada en Cloudflare Worker + D1.
 
-- Centro de Ojeo:
-  - cada jugador externo muestra `Prob. fichaje`;
-  - el cálculo usa `marketPlayerAcceptanceChance`, por lo tanto respeta la relación entre media del jugador y prestigio del club ofertante;
-  - la probabilidad se muestra con tono visual alto/medio/bajo;
-  - los informes guardados también incorporan columna de probabilidad de fichaje.
+### Cambios
 
-- Avance automático:
-  - se reemplaza el botón textual por un bloque más claro;
-  - arriba dice `Avance automático`;
-  - abajo se muestra un switch `ON/OFF`;
-  - el switch queda verde cuando está activo y rojo cuando está apagado;
-  - conserva la lógica anterior de bloqueo por temporada finalizada, manager sin club, táctica inválida o ventana modal abierta.
+- Se elimina `apps-script-ranking.gs` de la versión completa.
+- Se documenta que el ranking activo usa Cloudflare Worker + D1.
+- Se conserva la lógica V6.04 de ranking de carrera completa.
+- Se mantiene deduplicación por código estable de partida.
+- Se actualizan versión visible y caché a V6.05.
 
-- Ranking online:
-  - la carga principal pasa de temporada a carrera completa;
-  - el payload incluye partidos totales, puntos de carrera, récord G-E-P, goles, títulos, temporadas jugadas, club actual, clubes dirigidos, prestigio, experiencia, presupuesto y puntaje de carrera;
-  - la clave `submissionKey` queda estable como `SAVE-CODE-CAREER`;
-  - la tabla deduplica por código de partida antes de ordenar;
-  - el ranking muestra una fila por carrera;
-  - se priorizan rutas `/ranking/career` y se mantienen rutas anteriores como respaldo;
-  - `apps-script-ranking.gs` se actualiza para guardar o reemplazar una sola fila por carrera.
+### Nota de incremental
 
-### Archivos modificados
+El incremental incluye `ELIMINAR_ARCHIVOS_V6.05.txt` porque descomprimir un ZIP incremental encima de una carpeta existente no borra archivos viejos.
 
-- `index.html`
-- `app.js`
-- `config.js`
-- `apps-script-ranking.gs`
-- `style.css`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/13-ranking-online.js`
-- `js/game/16-scouting-center.js`
-- `js/ui/06-render-home-messages.js`
-- `README.md`
-- `VERSION.md`
-- `CARACTERISTICAS_VERSION.md`
+Archivo a borrar manualmente si todavía existe:
 
-### Archivos agregados
+```txt
+apps-script-ranking.gs
+```
 
-- `REVISION_CODIGO_V6.04.md`
+### Validaciones
 
-### Resultado técnico
-
-- El ojeo ahora informa no solo cuánto se conoce del jugador, sino qué tan viable es ficharlo.
-- El avance automático es más legible y menos ambiguo.
-- El ranking deja de competir por registros aislados de temporada y pasa a comparar carreras completas, evitando duplicados visibles por partida.
+- Sintaxis JS validada con `node --check`.
+- JSON de `data/` parseados correctamente.
+- Verificado que la versión completa V6.05 no contiene `apps-script-ranking.gs`.

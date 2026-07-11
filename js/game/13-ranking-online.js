@@ -58,7 +58,7 @@ function rankingConfiguredPaths(kind){
   const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
   const defaults = kind === 'submit'
     ? [
-        // Worker Cloudflare + D1 V6.04: carga principal de carrera.
+        // Worker Cloudflare + D1 V6.05: carga principal de carrera.
         'ranking/career','api/ranking/career','career','records/career','api/records/career',
         // Compatibilidad con variantes anteriores.
         'ranking/season','api/ranking/season','season','records/season','api/records/season',

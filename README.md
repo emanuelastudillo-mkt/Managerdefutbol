@@ -1,72 +1,70 @@
-# Fútbol Manager MVP - V6.04
+# Fútbol Manager MVP - V6.05
 
-## V6.04 - Ojeo, avance automático y ranking de carrera
+## V6.05 - Limpieza de backend legacy de ranking
 
-Esta entrega continúa la línea Manager V6 y toma V6.03 como base.
+Esta versión toma como base la V6.04 y elimina del paquete el archivo heredado de Google Apps Script para ranking.
 
 ### Cambios principales
 
-- En el Centro de Ojeo se muestra la **probabilidad de fichaje** de cada jugador externo.
-- La probabilidad de fichaje usa la misma lógica real del mercado: media del jugador contra prestigio del club comprador.
-- Los jugadores propios aparecen sin porcentaje de fichaje porque no corresponde calcular aceptación para comprar un jugador propio.
-- El avance automático ahora se muestra como bloque claro: título **Avance automático** y debajo un switch **ON/OFF**.
-- El switch cambia visualmente según estado:
-  - verde cuando está activo;
-  - rojo cuando está apagado;
-  - deshabilitado si la temporada terminó o el manager está sin club.
-- El ranking online ahora arma como payload principal la **carrera completa del mánager**, no solamente la temporada actual.
-- La carrera subida incluye partidos totales, puntos de carrera, récord G-E-P, goles, títulos, temporadas jugadas, club actual, clubes dirigidos, prestigio, experiencia, presupuesto y puntaje de carrera.
-- La clave de envío de ranking pasa a ser estable por partida/carrera: `SAVE-CODE-CAREER`.
-- La tabla del ranking deduplica resultados por código de partida antes de ordenar, evitando filas repetidas de la misma carrera.
-- Se priorizan rutas `/ranking/career` para lectura y carga, manteniendo rutas antiguas como respaldo.
-- `apps-script-ranking.gs` queda actualizado para guardar una sola fila por carrera.
-- Se actualiza versión visible, caché de scripts/estilos y documentación a V6.04.
+- Se elimina `apps-script-ranking.gs` de la versión completa.
+- El ranking queda documentado como sistema basado en Cloudflare Worker + D1.
+- Se mantiene la carga de ranking de carrera agregada en V6.04.
+- Se actualiza versión visible, caché de scripts/estilos y documentación a V6.05.
 
-### Archivos modificados
+### Nota para actualización incremental
+
+Un ZIP incremental no puede borrar archivos que ya existen en una carpeta del usuario. Si actualizás desde una versión anterior y todavía tenés este archivo en la raíz del proyecto, eliminar manualmente:
+
+```txt
+apps-script-ranking.gs
+```
+
+La versión completa V6.05 ya no lo incluye.
+
+## Estado funcional heredado de V6.04
+
+- Centro de Ojeo con probabilidad de fichaje visible.
+- Avance automático con bloque ON/OFF y color de estado.
+- Ranking online de carrera completa del mánager.
+- Ranking deduplicado por código estable de partida.
+- Base de jugadores dividida en chunks.
+- Dificultad competitiva V6.03 activa:
+  - adaptación rival por repetir táctica;
+  - lesiones largas por sobreuso desde 80% de participación;
+  - pérdida progresiva de moral para jugadores disponibles sin minutos.
+
+## Archivos principales
 
 - `index.html`
+- `style.css`
 - `app.js`
 - `config.js`
-- `apps-script-ranking.gs`
-- `style.css`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/13-ranking-online.js`
-- `js/game/16-scouting-center.js`
-- `js/ui/06-render-home-messages.js`
-- `README.md`
-- `VERSION.md`
-- `CARACTERISTICAS_VERSION.md`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `simulador-2.0.js`
+- `js/`
+- `data/`
+- `assets/`
+- `img/` si se agregan recursos visuales externos
 
-### Validaciones realizadas
+## Ranking online
 
-- Sintaxis JavaScript validada con `node --check` en los archivos JS modificados.
-- Parseo JSON validado en todos los archivos dentro de `data/`.
-- Validación de estructura del ZIP completo e incremental.
+El ranking usa el endpoint configurado en `config.js`:
 
-### Instalación
+```js
+CONFIG.ranking.appsScriptUrl
+```
 
-Para instalación limpia, subir todo el contenido del ZIP completo V6.04.
+Aunque el nombre interno de la propiedad conserva compatibilidad histórica, actualmente apunta al Worker de Cloudflare:
 
-Para actualizar desde V6.03, aplicar el ZIP incremental V6.04 sobre la carpeta existente y forzar recarga con Control + F5.
+```txt
+https://rankingdemanagers.emanuelastudillo.workers.dev
+```
 
-## Historial inmediato
+El backend activo esperado es Cloudflare Worker + D1, no Google Apps Script.
 
-### V6.03 - Dificultad competitiva
+## Instalación
 
-- Adaptación rival por repetición táctica.
-- Lesiones largas por sobreuso desde 80% de participación.
-- Moral progresiva negativa para jugadores disponibles que no juegan.
+Para instalación limpia, subir todo el contenido del ZIP completo V6.05.
 
-### V6.02 - División de `data/jugadores.json`
-
-- `data/jugadores.json` pasa a funcionar como manifest liviano.
-- La base completa de 4.050 jugadores queda dividida en 9 archivos dentro de `data/jugadores/`.
-- Se agrega soporte de carga por `playersUrls` en `config.js`.
-- Se mantiene compatibilidad con el formato anterior de jugadores.
-
-### V6.01 - Revisión exhaustiva y limpieza inicial de Manager V6
-
-- Se abrió la línea Manager V6 tomando como base V5.80.
-- Se actualizaron versión visible y caché a V6.01.
-- Se eliminaron funciones internas sin referencias detectables por análisis estático.
-- Se corrigió la contradicción de balance de tarjetas y quedó activo `1.10` desde `balance-modificadores.js`.
+Para actualizar desde V6.04, aplicar el ZIP incremental V6.05 sobre la carpeta existente, eliminar `apps-script-ranking.gs` si todavía existe y forzar recarga con Control + F5.

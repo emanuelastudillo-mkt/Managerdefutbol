@@ -413,18 +413,39 @@ function renderGameOverScreen(){
         ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
       </div>
       <div class="row game-over-actions">
-        <button class="primary" id="btnGameOverNewGame">Buscar otro club</button>
+        <button class="primary" id="advanceUnifiedBtn">Avanzar día</button>
+        <button class="ghost" id="btnGameOverNewGame">Buscar otro club</button>
         ${typeof founderModeEnabled === 'function' && founderModeEnabled() ? '<button class="ghost" id="btnGameOverFounder">Fundar club</button>' : ''}
         <button class="ghost" id="btnGameOverScoutingArchive">Archivo de jugadores ojeados</button>
         <button class="ghost" id="btnGameOverSave">Guardar carrera</button>
       </div>
+      <div id="advanceProgressBox" style="margin-top:10px">${typeof advanceProgressMarkup === 'function' ? advanceProgressMarkup() : ''}</div>
+      ${typeof managerJobMarketMarkup === 'function' ? managerJobMarketMarkup() : ''}
+      ${lastTurnSummaryMarkup()}
     </div>
     ${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'game-over', selectable:false }) : ''}
   </div>`;
+  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
   $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
   $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
   $('btnGameOverScoutingArchive')?.addEventListener('click', () => { if(typeof openScoutingReportsModal === 'function') openScoutingReportsModal('all'); else showNotice('El archivo de ojeo no está disponible todavía.'); });
   $('btnGameOverSave')?.addEventListener('click', saveLocal);
+  document.querySelectorAll('[data-accept-job-offer]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof acceptManagerJobOffer === 'function') acceptManagerJobOffer(btn.dataset.acceptJobOffer || '');
+  }));
+  document.querySelectorAll('[data-reject-job-offer]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof rejectManagerJobOffer === 'function') rejectManagerJobOffer(btn.dataset.rejectJobOffer || '');
+  }));
+  document.querySelectorAll('[data-apply-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof applyForManagerJob === 'function') applyForManagerJob(Number(btn.dataset.applyJobClub || 0));
+  }));
+  if(typeof updateAdvanceButtonState === 'function') updateAdvanceButtonState();
   document.querySelectorAll('[data-open-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -531,7 +552,7 @@ function updateAdvanceButtonState(){
     text = `Espera ${formatClock(lockLeft)}`;
     disabled = true;
   }else if(game.gameOver?.active){
-    text = 'Buscar club';
+    text = 'Avanzar día';
     disabled = false;
   }else if(isRegularSeason() && ownDueToday){
     text = 'Jugar partido de hoy';

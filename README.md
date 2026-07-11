@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.23
+# Fútbol Manager MVP - V6.24
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.22**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.23**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -13,13 +13,17 @@ La versión vigente se identifica desde:
 
 
 
-## V6.23 - Prestigio propio por slot
+## V6.24 - Carrera sin club activa y mercado laboral
 
-- El **prestigio del manager deja de compartirse entre slots/carreras**.
-- Al crear una nueva carrera, la selección de clubes vuelve a usar el prestigio propio de ese slot, no el perfil global.
-- Al cargar una carrera vieja, el perfil global ya no pisa `managerStats` ni altera el prestigio acumulado de esa partida.
-- Se mantienen compartidos los puntos de habilidad y las cartas globales/activas.
-- La pantalla de estadísticas aclara que el prestigio es propio de la carrera actual.
+Cambios principales:
+- Al renunciar o ser despedido, el manager queda sin club pero puede seguir avanzando días con el botón Avanzar día.
+- Mientras no hay club, el calendario, tablas y estadísticas siguen actualizándose; los partidos del mundo se simulan sin bloquear al club saliente como equipo propio.
+- Los clubes pueden enviar ofertas laborales según prestigio del manager y reputación del club; llegan entre 3 y 7 días y vencen a los 20 días.
+- Se pueden enviar solicitudes a clubes hasta 20 puntos por encima del prestigio actual. Responden en 3 días.
+- Si la solicitud a un club superior es aceptada, el contrato exige un objetivo deportivo superior al normal y aplica una restricción fuerte al presupuesto de fichajes.
+- Si el manager ya tiene prestigio suficiente, puede firmar de forma normal con clubes disponibles.
+- Al salir de un club por renuncia o despido, el club saliente reinicia economía, empleados, academia, préstamos, lista activa de ojeo y sponsors.
+- La pantalla Sin club muestra ofertas recibidas, solicitudes pendientes y opciones para postularse.
 
 ## V6.22 - Hinchas base en clubes disponibles y ranking JSON estable
 
@@ -222,25 +226,16 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.23
+## Archivos modificados en V6.24
 
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/ui/06-render-home-messages.js`
 - `index.html`
 - `config.js`
 - `README.md`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/13-ranking-online.js`
-- `js/game/15-especial.js`
 
-## Instalación
-
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.23**.
-
-Para actualizar desde V6.22, aplicar el ZIP incremental **V6.23** sobre la carpeta existente y forzar recarga del navegador.
-
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.23 mantiene la documentación unificada sólo en `README.md`.
-
-## Validación V6.23
+## Validación V6.24
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

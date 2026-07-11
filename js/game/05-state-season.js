@@ -54,7 +54,7 @@ function managerClubAccessPrestige(value=currentManagerPrestige()){
   return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
 }
 function currentManagerPrestige(){
-  // V6.23: el prestigio vuelve a ser propio de cada slot/carrera.
+  // V6.24: el prestigio vuelve a ser propio de cada slot/carrera.
   // No se usa el perfil global para abrir clubes ni para calcular reputación activa.
   if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
@@ -397,6 +397,10 @@ function prepareManagerWithoutClubUi(reason='sin_club'){
   }
   window.__liveMatchCloseLocked = false;
   activeTab = 'home';
+  if(game?.gameOver?.active && typeof ensureManagerJobMarketState === 'function'){
+    const state = ensureManagerJobMarketState();
+    if(!state.nextIncomingOfferDate && typeof managerJobScheduleNextIncomingOffer === 'function') managerJobScheduleNextIncomingOffer(currentCalendarDate?.() || game.currentDate || '');
+  }
 }
 function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), options={}){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -527,6 +531,333 @@ function managerAvailableClubsPanelMarkup(options={}){
     <p class="muted small">Muestra aleatoria de hasta 8 equipos que aceptarían tu contrato con prestigio ${escapeHtml(prestigeLabel)}.</p>
     <div class="available-clubs-grid">${clubs.map(club => managerAvailableClubCard(club, options)).join('')}</div>
   </aside>`;
+}
+
+
+function normalizeManagerJobMarketState(state={}){
+  const src = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const normalizeOffer = offer => {
+    const clubId = Number(offer?.clubId || 0);
+    if(!clubId || !seed?.clubs?.some(club => Number(club.id) === clubId)) return null;
+    const createdDate = validIsoDate(offer?.createdDate) ? offer.createdDate : (game?.currentDate || currentCalendarDate?.() || '');
+    const expiresDate = validIsoDate(offer?.expiresDate) ? offer.expiresDate : addDaysToIsoDate(createdDate, 20);
+    return {
+      id:String(offer?.id || `job-offer-${clubId}-${createdDate}-${hashNumber(`${clubId}-${createdDate}`, 99999)}`),
+      clubId,
+      source:String(offer?.source || 'incoming'),
+      contractType:String(offer?.contractType || 'normal'),
+      createdDate,
+      expiresDate,
+      managerPrestigeAtOffer:Math.max(0, Math.round(Number(offer?.managerPrestigeAtOffer ?? currentManagerPrestige()))),
+      objectiveBonus:Number.isFinite(Number(offer?.objectiveBonus)) ? Number(offer.objectiveBonus) : (String(offer?.contractType || '') === 'high_risk' ? 0.25 : 0),
+      transferBudgetRate:Number.isFinite(Number(offer?.transferBudgetRate)) ? Number(offer.transferBudgetRate) : (String(offer?.contractType || '') === 'high_risk' ? 0.05 : null),
+      note:String(offer?.note || '')
+    };
+  };
+  const normalizeApplication = app => {
+    const clubId = Number(app?.clubId || 0);
+    if(!clubId || !seed?.clubs?.some(club => Number(club.id) === clubId)) return null;
+    const requestedDate = validIsoDate(app?.requestedDate) ? app.requestedDate : (game?.currentDate || currentCalendarDate?.() || '');
+    return {
+      id:String(app?.id || `job-app-${clubId}-${requestedDate}-${hashNumber(`${clubId}-${requestedDate}`, 99999)}`),
+      clubId,
+      requestedDate,
+      responseDate:validIsoDate(app?.responseDate) ? app.responseDate : addDaysToIsoDate(requestedDate, 3),
+      managerPrestigeAtRequest:Math.max(0, Math.round(Number(app?.managerPrestigeAtRequest ?? currentManagerPrestige()))),
+      status:String(app?.status || 'pending')
+    };
+  };
+  return {
+    offers:(Array.isArray(src.offers) ? src.offers : []).map(normalizeOffer).filter(Boolean).slice(-12),
+    applications:(Array.isArray(src.applications) ? src.applications : []).map(normalizeApplication).filter(Boolean).slice(-12),
+    nextIncomingOfferDate:validIsoDate(src.nextIncomingOfferDate) ? src.nextIncomingOfferDate : null,
+    lastProcessedDate:validIsoDate(src.lastProcessedDate) ? src.lastProcessedDate : null,
+    log:Array.isArray(src.log) ? src.log.slice(-25) : []
+  };
+}
+function ensureManagerJobMarketState(){
+  if(!game) return normalizeManagerJobMarketState({});
+  game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
+  return game.managerJobMarket;
+}
+function managerJobScheduleNextIncomingOffer(fromDate=currentCalendarDate()){
+  if(!game?.gameOver?.active) return null;
+  const state = ensureManagerJobMarketState();
+  const base = validIsoDate(fromDate) ? fromDate : currentCalendarDate();
+  const offset = 3 + hashNumber(`job-offer-wait-${game.saveCode || ''}-${game.seasonNumber || 1}-${game.globalTurn || 0}-${base}`, 5);
+  state.nextIncomingOfferDate = addDaysToIsoDate(base, offset);
+  return state.nextIncomingOfferDate;
+}
+function managerJobAvailableOfferCandidates(){
+  const prestige = currentManagerPrestige();
+  return (seed?.clubs || [])
+    .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
+    .filter(club => managerCanSelectClub(club, prestige))
+    .filter(club => !managerClubRehireBlockInfo(club).blocked)
+    .sort((a,b) => clubPrestigeValue(b) - clubPrestigeValue(a) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' }));
+}
+function managerJobApplicationCandidates(limit=8){
+  const prestige = managerClubAccessPrestige(currentManagerPrestige());
+  const state = ensureManagerJobMarketState();
+  const busy = new Set([
+    ...state.offers.map(o => Number(o.clubId || 0)),
+    ...state.applications.filter(a => a.status === 'pending').map(a => Number(a.clubId || 0))
+  ]);
+  const pool = (seed?.clubs || [])
+    .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
+    .filter(club => !busy.has(Number(club.id)))
+    .filter(club => !managerClubRehireBlockInfo(club).blocked)
+    .filter(club => {
+      const cp = clubPrestigeValue(club);
+      return cp > prestige && cp <= prestige + 20;
+    });
+  const keyBase = `job-app-options-${game?.saveCode || ''}-${game?.seasonNumber || 1}-${game?.globalTurn || 0}-${prestige}`;
+  return pool
+    .map((club,index)=>({ club, score:hashNumber(`${keyBase}-${club.id}-${index}`, 1000000) }))
+    .sort((a,b)=>a.score-b.score || clubPrestigeValue(a.club)-clubPrestigeValue(b.club))
+    .slice(0, Math.max(1, Math.min(8, Number(limit || 8))))
+    .map(item=>item.club);
+}
+function managerJobCreateOffer(clubId, options={}){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  if(!club || !game?.gameOver?.active) return null;
+  const state = ensureManagerJobMarketState();
+  if(state.offers.some(o => Number(o.clubId) === Number(club.id))) return null;
+  const today = currentCalendarDate();
+  const contractType = String(options.contractType || 'normal');
+  const offer = {
+    id:`job-offer-${club.id}-${today}-${Date.now()}-${hashNumber(`${club.id}-${today}-${contractType}`, 9999)}`,
+    clubId:Number(club.id),
+    source:String(options.source || 'incoming'),
+    contractType,
+    createdDate:today,
+    expiresDate:addDaysToIsoDate(today, 20),
+    managerPrestigeAtOffer:currentManagerPrestige(),
+    objectiveBonus:contractType === 'high_risk' ? 0.25 : 0,
+    transferBudgetRate:contractType === 'high_risk' ? 0.05 : null,
+    note:String(options.note || '')
+  };
+  state.offers.push(offer);
+  state.log.push({ type:'offer', clubId:offer.clubId, contractType, date:today, source:offer.source });
+  return offer;
+}
+function managerJobIncomingOfferClub(){
+  const candidates = managerJobAvailableOfferCandidates();
+  if(!candidates.length) return null;
+  const prestige = currentManagerPrestige();
+  const weighted = candidates.map(club => {
+    const cp = clubPrestigeValue(club);
+    const closeness = Math.max(1, 25 - Math.abs(cp - prestige));
+    const reputation = Math.max(1, cp / 10);
+    const jitter = 1 + (hashNumber(`job-incoming-${game?.saveCode || ''}-${game?.globalTurn || 0}-${club.id}`, 100) / 100);
+    return { club, weight:closeness * reputation * jitter };
+  });
+  const total = weighted.reduce((sum,item)=>sum + item.weight, 0);
+  let pick = hashNumber(`job-incoming-pick-${game?.saveCode || ''}-${game?.globalTurn || 0}-${currentCalendarDate()}`, Math.max(1, Math.round(total * 1000))) / 1000;
+  for(const item of weighted){ pick -= item.weight; if(pick <= 0) return item.club; }
+  return weighted[0]?.club || null;
+}
+function processManagerJobMarketDaily(){
+  if(!game?.gameOver?.active) return { offers:0, expired:0, applications:0 };
+  const state = ensureManagerJobMarketState();
+  const today = currentCalendarDate();
+  let expired = 0;
+  const before = state.offers.length;
+  state.offers = state.offers.filter(offer => {
+    if(validIsoDate(offer.expiresDate) && daysBetweenIsoDates(offer.expiresDate, today) > 0){
+      expired += 1;
+      return false;
+    }
+    return true;
+  });
+  if(expired){
+    pushGameMessage({ type:'directiva', priority:'normal', title:'Ofertas laborales vencidas', body:`${expired} oferta(s) para dirigir vencieron porque no fueron respondidas a tiempo.`, id:`job-offers-expired-${today}-${game.globalTurn || 0}` });
+  }
+  let applicationResponses = 0;
+  const remainingApplications = [];
+  state.applications.forEach(app => {
+    if(app.status !== 'pending'){ remainingApplications.push(app); return; }
+    if(!validIsoDate(app.responseDate) || daysBetweenIsoDates(app.responseDate, today) < 0){ remainingApplications.push(app); return; }
+    applicationResponses += 1;
+    const club = seed.clubs.find(c => Number(c.id) === Number(app.clubId));
+    if(!club) return;
+    const managerPrestige = currentManagerPrestige();
+    const clubPrestige = clubPrestigeValue(club);
+    const diff = clubPrestige - managerClubAccessPrestige(managerPrestige);
+    if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
+      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.' });
+      pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
+    }else if(diff > 0 && diff <= 20){
+      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.' });
+      pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud en evaluación aceptada', body:`${club.name} analiza tu perfil pese a la diferencia de prestigio. Te ofrece contrato con objetivo superior al normal y una restricción de fichajes muy alta. Tenés 20 días para aceptar.`, id:`job-application-risk-${club.id}-${today}` });
+    }else{
+      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} respondió que la diferencia de reputación todavía es demasiado grande para ofrecerte el cargo.`, id:`job-application-rejected-${club.id}-${today}` });
+    }
+  });
+  state.applications = remainingApplications.slice(-12);
+  let offers = 0;
+  if(!state.nextIncomingOfferDate) managerJobScheduleNextIncomingOffer(today);
+  const hasIncomingOffer = state.offers.some(offer => offer.source === 'incoming');
+  if(!hasIncomingOffer && state.nextIncomingOfferDate && daysBetweenIsoDates(state.nextIncomingOfferDate, today) >= 0){
+    const club = managerJobIncomingOfferClub();
+    if(club){
+      managerJobCreateOffer(club.id, { source:'incoming', contractType:'normal', note:'Oferta enviada por el club.' });
+      offers += 1;
+      pushGameMessage({ type:'directiva', priority:'high', title:'Oferta para dirigir', body:`${club.name} quiere contratarte como manager. Tenés 20 días para responder antes de que la oferta desaparezca.`, id:`job-offer-incoming-${club.id}-${today}` });
+      managerJobScheduleNextIncomingOffer(today);
+    }else{
+      managerJobScheduleNextIncomingOffer(today);
+    }
+  }
+  state.lastProcessedDate = today;
+  return { offers, expired, applications:applicationResponses, previousOffers:before };
+}
+function managerJobOfferCard(offer){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(offer.clubId));
+  if(!club) return '';
+  const division = clubDivision(club.id);
+  const highRisk = String(offer.contractType || '') === 'high_risk';
+  const tag = highRisk ? 'Contrato exigente' : 'Contrato normal';
+  const note = highRisk
+    ? 'Objetivo superior al normal y fichajes muy restringidos.'
+    : 'Condiciones normales según reputación y división.';
+  return `<article class="card job-offer-card ${highRisk ? 'warn' : ''}">
+    <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
+    <p class="muted small">${escapeHtml(division?.name || 'Liga')} · Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(note)}</p>
+    <div class="row message-actions"><button class="primary" data-accept-job-offer="${escapeHtml(offer.id)}">Aceptar cargo</button><button class="ghost" data-reject-job-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
+  </article>`;
+}
+function managerJobApplicationCard(app){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(app.clubId));
+  if(!club) return '';
+  return `<article class="card job-application-card"><p class="label">Solicitud enviada</p><h3>${escapeHtml(club.name)}</h3><p class="muted small">Responden el ${escapeHtml(app.responseDate || '—')}. Prestigio club ${clubPrestigeValue(club)} · tu prestigio ${formatManagerPrestige(currentManagerPrestige())}.</p></article>`;
+}
+function managerJobApplicationOptionCard(club){
+  const prestige = managerClubAccessPrestige(currentManagerPrestige());
+  const diff = clubPrestigeValue(club) - prestige;
+  return `<button type="button" class="card available-club-card job-application-option" data-apply-job-club="${Number(club.id)}">
+    <div class="available-club-head"><span class="available-club-badge">${clubBadge(club.id) || '▣'}</span><strong>${escapeHtml(club.name || 'Club')}</strong></div>
+    <p class="muted small">Prestigio ${clubPrestigeValue(club)} · ${diff > 0 ? `+${diff} sobre tu reputación` : 'alcanzable'}</p>
+    <small>Enviar solicitud · respuesta en 3 días</small>
+  </button>`;
+}
+function managerJobMarketMarkup(){
+  if(!game?.gameOver?.active) return '';
+  const state = ensureManagerJobMarketState();
+  if(!state.nextIncomingOfferDate) managerJobScheduleNextIncomingOffer(currentCalendarDate());
+  const offers = state.offers || [];
+  const applications = (state.applications || []).filter(app => app.status === 'pending');
+  const options = managerJobApplicationCandidates(8);
+  return `<section class="card job-market-panel">
+    <div class="row"><div><p class="label">Mercado laboral</p><h3>Ofertas y solicitudes</h3></div><span class="pill">Próxima oferta: ${escapeHtml(state.nextIncomingOfferDate || '—')}</span></div>
+    <p class="muted small">Mientras estás sin club, el calendario sigue corriendo. Los clubes pueden enviarte ofertas y también podés solicitar trabajo a equipos hasta 20 puntos por encima de tu prestigio.</p>
+    <div class="grid cols-2 job-market-grid" style="margin-top:12px">
+      <div><h4>Ofertas recibidas</h4>${offers.length ? offers.map(managerJobOfferCard).join('') : '<p class="muted small">No hay ofertas activas. Entre 3 y 7 días puede llegar una nueva.</p>'}</div>
+      <div><h4>Solicitudes pendientes</h4>${applications.length ? applications.map(managerJobApplicationCard).join('') : '<p class="muted small">No hay solicitudes en espera.</p>'}</div>
+    </div>
+    <div style="margin-top:12px"><h4>Solicitar trabajo a clubes superiores</h4><div class="available-clubs-grid">${options.length ? options.map(managerJobApplicationOptionCard).join('') : '<p class="muted small">No hay clubes dentro del margen de 20 puntos o ya tienen una solicitud/oferta activa.</p>'}</div></div>
+  </section>`;
+}
+function applyForManagerJob(clubId){
+  if(!game?.gameOver?.active){ showNotice('Sólo podés solicitar trabajo cuando estás sin club.'); return false; }
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
+  if(!club){ showNotice('Club no encontrado.'); return false; }
+  const rehireBlock = managerClubRehireBlockInfo(club);
+  if(rehireBlock.blocked){ showNotice(managerClubRehireBlockLabel(club)); return false; }
+  if(managerCanSelectClub(club, currentManagerPrestige())){
+    showNotice(`${club.name} ya acepta contratarte de forma normal. Podés firmar desde Buscar otro club.`);
+    return false;
+  }
+  const diff = clubPrestigeValue(club) - managerClubAccessPrestige(currentManagerPrestige());
+  if(diff <= 0 || diff > 20){ showNotice(`${club.name} está fuera del margen de solicitud. Diferencia actual: ${diff} puntos.`); return false; }
+  const state = ensureManagerJobMarketState();
+  if(state.applications.some(app => Number(app.clubId) === Number(club.id) && app.status === 'pending')){ showNotice('Ya enviaste una solicitud a ese club.'); return false; }
+  if(state.offers.some(offer => Number(offer.clubId) === Number(club.id))){ showNotice('Ese club ya tiene una oferta activa para vos.'); return false; }
+  const today = currentCalendarDate();
+  state.applications.push({
+    id:`job-app-${club.id}-${today}-${Date.now()}`,
+    clubId:Number(club.id),
+    requestedDate:today,
+    responseDate:addDaysToIsoDate(today, 3),
+    managerPrestigeAtRequest:currentManagerPrestige(),
+    status:'pending'
+  });
+  pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud enviada', body:`Enviaste una solicitud para dirigir a ${club.name}. Responderán en 3 días.`, id:`job-application-sent-${club.id}-${today}` });
+  saveLocal(true);
+  renderAll();
+  return true;
+}
+function removeManagerJobOffer(offerId){
+  const state = ensureManagerJobMarketState();
+  const before = state.offers.length;
+  state.offers = state.offers.filter(offer => String(offer.id) !== String(offerId));
+  return before !== state.offers.length;
+}
+function rejectManagerJobOffer(offerId){
+  const state = ensureManagerJobMarketState();
+  const offer = state.offers.find(item => String(item.id) === String(offerId));
+  if(!offer){ showNotice('La oferta ya no está disponible.'); return; }
+  const club = seed.clubs.find(c => Number(c.id) === Number(offer.clubId));
+  removeManagerJobOffer(offerId);
+  pushGameMessage({ type:'directiva', priority:'normal', title:'Oferta rechazada', body:`Rechazaste la oferta de ${club?.name || 'un club'}.`, id:`job-offer-rejected-${offer.clubId}-${currentCalendarDate()}` });
+  saveLocal(true);
+  renderAll();
+}
+function acceptManagerJobOffer(offerId){
+  const state = ensureManagerJobMarketState();
+  const offer = state.offers.find(item => String(item.id) === String(offerId));
+  if(!offer){ showNotice('La oferta ya no está disponible.'); return; }
+  continueCareerAtClub(offer.clubId, { jobOffer:offer, allowHighRiskContract:String(offer.contractType || '') === 'high_risk' });
+}
+function managerJobContractForClubSeason(clubId=game?.selectedClubId, season=game?.seasonNumber || 1){
+  const contract = game?.managerJobContract;
+  if(!contract || typeof contract !== 'object') return null;
+  if(Number(contract.clubId || 0) !== Number(clubId || 0)) return null;
+  if(Number(contract.season || 0) !== Number(season || 1)) return null;
+  return contract;
+}
+function applyManagerJobContractToObjectiveFields(fields, clubId=game?.selectedClubId, season=game?.seasonNumber || 1){
+  const clean = { ...(fields || {}) };
+  const contract = managerJobContractForClubSeason(clubId, season);
+  if(!contract || String(contract.contractType || '') !== 'high_risk') return clean;
+  const bonus = Number.isFinite(Number(contract.objectiveBonus)) ? Number(contract.objectiveBonus) : 0.25;
+  const base = Number(clean.objectivePpg ?? clean.objectiveBasePpg ?? 0);
+  if(Number.isFinite(base)){
+    clean.objectivePpg = Number(Math.min(2.75, base + bonus).toFixed(3));
+    clean.objectiveJobContractBonus = Number(bonus.toFixed(3));
+    clean.objectiveSource = 'contrato_exigente';
+    clean.objectiveExpectation = 'Contrato exigente por reputación';
+    clean.objectiveLabel = `${clean.objectivePpg.toFixed(2)} · contrato exigente`;
+  }
+  return clean;
+}
+function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, reason='exit'){
+  if(!game || !clubId) return;
+  const id = Number(clubId);
+  const club = seed?.clubs?.find(c => Number(c.id) === id);
+  ensureClubBudgetsState();
+  const baseBudget = Math.max(0, Math.round(Number(club?.budget || 0)));
+  game.clubBudgets[id] = baseBudget;
+  if(Number(game.selectedClubId || 0) === id){
+    game.budget = baseBudget;
+    game.lastBudgetDelta = 0;
+  }
+  game.staffActions = {};
+  game.staffContracts = {};
+  game.monthlyExpenses = {};
+  game.academy = typeof createInitialAcademyState === 'function' ? createInitialAcademyState() : { players:[], scoutingJobs:[], residences:0 };
+  if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(id);
+  game.pendingTransfers = [];
+  game.lastOwnPlayerOffer = null;
+  game.rejectedPurchaseOffers = {};
+  game.rejectedFreeAgentOffers = {};
+  game.specialClauseOffers = null;
+  game.bankLoan = typeof createBankLoanState === 'function' ? createBankLoanState(game.seasonNumber || 1) : null;
+  game.sponsors = typeof createInitialSponsorState === 'function' ? createInitialSponsorState() : (typeof normalizeSponsorState === 'function' ? normalizeSponsorState({}) : {});
+  game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(id, game.seasonNumber || 1, 0) : game.transferBudget;
+  game.managerJobContract = null;
+  game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
+  pushGameMessage({ type:'sistema', priority:'normal', title:'Club saliente reiniciado', body:`${club?.name || 'El club anterior'} reinició economía, empleados, academia, préstamos, lista activa de ojeo y sponsors tras tu salida.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
 }
 
 function formatPlainNumber(value){
@@ -2106,12 +2437,14 @@ function normalizeGame(saved){
   normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
   normalized.managerSharedProfile = (normalized.managerSharedProfile && typeof normalized.managerSharedProfile === 'object' && !Array.isArray(normalized.managerSharedProfile)) ? {
-    version:String(normalized.managerSharedProfile.version || 'V6.23'),
+    version:String(normalized.managerSharedProfile.version || 'V6.24'),
     experience:Math.max(0, Math.round(Number(normalized.managerSharedProfile.experience || 0))),
     careerHistory:Array.isArray(normalized.managerSharedProfile.careerHistory) ? normalized.managerSharedProfile.careerHistory : [],
     updatedAt:normalized.managerSharedProfile.updatedAt || null
   } : null;
   normalized.gameOver = normalizeGameOverState(normalized.gameOver);
+  normalized.managerJobMarket = typeof normalizeManagerJobMarketState === 'function' ? normalizeManagerJobMarketState(normalized.managerJobMarket || {}) : (normalized.managerJobMarket || {});
+  normalized.managerJobContract = (normalized.managerJobContract && typeof normalized.managerJobContract === 'object' && !Array.isArray(normalized.managerJobContract)) ? normalized.managerJobContract : null;
   normalized.founderMode = Boolean(normalized.founderMode || isFoundedClubId(normalized.selectedClubId));
   normalized.founderClubId = normalized.founderMode ? Number(normalized.founderClubId || normalized.selectedClubId || 0) : 0;
   normalized.founderReplacedClub = normalized.founderReplacedClub || null;
@@ -3046,7 +3379,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const skillPoints = Math.max(0, Math.round(Number(raw.skillPoints ?? raw.puntos_habilidad ?? raw.puntosHabilidad ?? 0)));
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName;
   return {
-    version:'V6.23',
+    version:'V6.24',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -3066,7 +3399,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V6.23';
+    clean.version = 'V6.24';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -3079,13 +3412,13 @@ function applySharedManagerProfileToGame(options={}){
   if(!profile || profile.empty) return { changed:false };
   const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
   const clubId = Number(game.selectedClubId || 0);
-  // V6.23: no reemplazar managerStats por el perfil global.
+  // V6.24: no reemplazar managerStats por el perfil global.
   // managerStats contiene el prestigio de esta carrera/slot; si se pisa, el prestigio se comparte.
   const previousStats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V6.23',
+    version:'V6.24',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -3110,7 +3443,7 @@ function persistSharedManagerProfileFromGame(options={}){
   let special = game.special;
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const profile = {
-    version:'V6.23',
+    version:'V6.24',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -3479,7 +3812,7 @@ function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1
   const objective = applyManagerObjectiveReduction(baseObjective, clubId);
   const baseMatches = managerObjectiveMinMatchesForObjective(objective);
   const extraMatches = 0;
-  return {
+  const fields = {
     objectiveBasePpg:Number.isFinite(Number(baseObjective)) ? Number(baseObjective) : null,
     objectivePpg:Number.isFinite(Number(objective)) ? objective : null,
     objectiveBonusReduction:managerObjectiveReductionForClub(clubId),
@@ -3497,6 +3830,7 @@ function buildManagerObjectiveSeasonFields(stats, season=game?.seasonNumber || 1
     objectiveModifierPpg:Number.isFinite(Number(dynamicInfo?.modifierPpg)) ? Number(dynamicInfo.modifierPpg) : 0,
     objectiveDivisionKey:dynamicInfo?.divisionKey || ''
   };
+  return typeof applyManagerJobContractToObjectiveFields === 'function' ? applyManagerJobContractToObjectiveFields(fields, clubId, season) : fields;
 }
 function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const clean = { ...(current || {}) };
@@ -3524,7 +3858,7 @@ function applyManagerObjectiveSeasonFields(current, stats, season=game?.seasonNu
     clean.objectiveModifierPpg = Number.isFinite(Number(clean.objectiveModifierPpg)) ? Number(clean.objectiveModifierPpg) : (Number.isFinite(Number(dynamicInfo?.modifierPpg)) ? Number(dynamicInfo.modifierPpg) : 0);
     clean.objectiveSource = clean.objectiveSource || dynamicInfo?.source || 'division';
   }
-  return clean;
+  return typeof applyManagerJobContractToObjectiveFields === 'function' ? applyManagerJobContractToObjectiveFields(clean, clubId, season) : clean;
 }
 function ensureManagerCurrentSeasonStats(stats, season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   const normalized = normalizeManagerStats(stats);
@@ -3678,6 +4012,7 @@ function checkManagerObjectiveGameOver(){
   if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('dismissal');
   recordDismissedCareerStep();
+  if(typeof resetOutgoingClubStateAfterManagerExit === 'function') resetOutgoingClubStateAfterManagerExit(game.selectedClubId, 'dismissal');
   pushGameMessage({ type:'directiva', priority:'high', title:'Despido del manager', body:`La directiva decidió terminar el ciclo por falta de resultados y pérdida de confianza. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`, id:`dismissal-${game.seasonNumber || 1}-${game.selectedClubId}-${info.played}` });
   queueAutomaticRankingSubmission('dismissal');
   return true;
@@ -3774,6 +4109,7 @@ function resignCurrentClub(){
   if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('resignation');
   recordDismissedCareerStep();
+  if(typeof resetOutgoingClubStateAfterManagerExit === 'function') resetOutgoingClubStateAfterManagerExit(game.selectedClubId, 'resignation');
   pushGameMessage({ type:'directiva', priority:'high', title:'Renuncia del manager', body:'Presentaste la renuncia. El mundo de la partida sigue activo y podés buscar otro club.', id:`resignation-${game.seasonNumber || 1}-${game.selectedClubId}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
@@ -3789,7 +4125,9 @@ function continueCareerAtClub(selectedClubId, options={}){
     showNotice(`${newClub.name} no acepta tu regreso todavía: bloqueo por ${cause} hasta la temporada ${rehireBlock.untilSeason}.`);
     return;
   }
-  if(!managerCanSelectClub(newClub, currentManagerPrestige())){
+  const canSignNormally = managerCanSelectClub(newClub, currentManagerPrestige());
+  const highRiskOffer = options.jobOffer && String(options.jobOffer.contractType || '') === 'high_risk';
+  if(!canSignNormally && !(options.allowHighRiskContract && highRiskOffer)){
     showNotice(`Ese club requiere prestigio ${clubPrestigeValue(newClub)}. Tu prestigio actual es ${formatManagerPrestige(currentManagerPrestige())}.`);
     return;
   }
@@ -3806,11 +4144,33 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(newClub.id, game.seasonNumber || 1, 0) : game.transferBudget;
   resetClubSpecificCareerStateForNewClub(newClub.id);
+  if(highRiskOffer){
+    game.managerJobContract = {
+      clubId:Number(newClub.id),
+      season:Number(game.seasonNumber || 1),
+      contractType:'high_risk',
+      signedDate:game.currentDate || '',
+      objectiveBonus:Number(options.jobOffer.objectiveBonus || 0.25),
+      transferBudgetRate:Number(options.jobOffer.transferBudgetRate || 0.05),
+      source:String(options.jobOffer.source || 'application')
+    };
+    if(game.transferBudget && typeof game.transferBudget === 'object'){
+      game.transferBudget.baseRate = Math.min(Number(game.transferBudget.baseRate || 1), Number(game.managerJobContract.transferBudgetRate || 0.05));
+      game.transferBudget.unlockedRate = 0;
+      game.transferBudget.history = Array.isArray(game.transferBudget.history) ? game.transferBudget.history : [];
+      game.transferBudget.history.push({ type:'job_restriction', text:'Contrato exigente: presupuesto de fichajes muy restringido', amount:0, rate:game.transferBudget.baseRate, date:game.currentDate || '' });
+    }
+  }else{
+    game.managerJobContract = null;
+  }
+  game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
+  if(typeof removeManagerJobOffer === 'function' && options.jobOffer?.id) removeManagerJobOffer(options.jobOffer.id);
+  if(game.managerJobMarket){ game.managerJobMarket.applications = []; }
   game.gameOver = null;
   game.mustReviewTactics = true;
   activeTab = 'home';
   closeModal();
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body:`Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

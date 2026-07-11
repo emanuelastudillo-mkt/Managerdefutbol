@@ -378,6 +378,7 @@ function setDailyAdvanceSummary(fromDate, toDate, simulatedCount=0){
   };
 }
 function ownClubInMatch(match){
+  if(game?.gameOver?.active) return false;
   const ownId = Number(game?.selectedClubId || 0);
   return ownId && (Number(match?.homeId) === ownId || Number(match?.awayId) === ownId);
 }
@@ -923,10 +924,22 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   if(!game) return { botResults:[], recovered:0, bankPayment:0 };
   const skipTraining = Boolean(options.skipTraining);
   const simulateBots = options.simulateBots !== false;
-  const includeOwn = options.includeOwn === true;
+  const managerWithoutClub = Boolean(game?.gameOver?.active || options.managerWithoutClub);
+  const includeOwn = managerWithoutClub ? true : options.includeOwn === true;
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(managerWithoutClub){
+    const recovered = clearRecoveredDailyInjuries();
+    const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
+    if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
+    const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
+      ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state_sin_club', silent:true })
+      : { fixed:0, remaining:0 };
+    const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state_sin_club' });
+    const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
+    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, jobMarket };
+  }
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
@@ -1178,9 +1191,42 @@ function toggleAdvanceAutoClicker(){
   if(isAdvanceAutoClickerActive()) stopAdvanceAutoClicker('desactivado manualmente');
   else startAdvanceAutoClicker();
 }
+function advanceWithoutClubCalendarOneStep(){
+  if(!game || !game.gameOver?.active) return false;
+  if(game.seasonFinalized){ showNotice('La temporada está finalizada. Firmá con un club o usá el cierre de temporada cuando corresponda.'); return true; }
+  if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return true; }
+  const fromDate = currentCalendarDate();
+  const nextDate = addDaysToIsoDate(fromDate, 1);
+  const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:true, managerWithoutClub:true });
+  let regularEnded = game.matchdayIndex >= game.fixtures.length;
+  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
+  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  if(regularEnded && isRegularSeason()){
+    startPostseasonPhase(nextDate);
+    setAdvanceLock(0);
+  }else{
+    applyUnifiedAdvanceCooldown('daily');
+  }
+  setDailyAdvanceSummary(fromDate, nextDate, dayResult.botResults.length);
+  if(game.lastTurnSummary){
+    game.lastTurnSummary.title = 'Avance sin club';
+    game.lastTurnSummary.items = [
+      { label:'Calendario', text:dayResult.botResults.length ? `Se simularon ${dayResult.botResults.length} partido(s) del mundo.` : 'El mundo avanzó un día sin partidos pendientes.', tone:dayResult.botResults.length ? 'ok' : 'info' },
+      { label:'Mercado laboral', text:dayResult.jobMarket?.offers ? 'Llegó una nueva oferta para dirigir.' : 'Se revisaron ofertas y solicitudes laborales.', tone:dayResult.jobMarket?.offers ? 'ok' : 'info' }
+    ];
+  }
+  activeTab = 'home';
+  saveLocal(true);
+  renderAll();
+  if(dayResult.jobMarket?.offers) showNotice(`Avanzaste al ${nextDate}. Llegó una oferta laboral.`);
+  else if(dayResult.jobMarket?.applications) showNotice(`Avanzaste al ${nextDate}. Respondieron una solicitud laboral.`);
+  else showNotice(`Avanzaste al ${nextDate}. Calendario y tablas actualizados.`);
+  return true;
+}
+
 function advanceCalendarOneStep(){
   if(!game || game.seasonFinalized) return;
-  if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
+  if(game.gameOver?.active){ advanceWithoutClubCalendarOneStep(); return; }
   if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está procesando el calendario.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   repairBotRosters({ reason:'before_unified_day_advance' });

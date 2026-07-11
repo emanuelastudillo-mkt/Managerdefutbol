@@ -48,8 +48,8 @@ function ensureSponsorState(){
 function sponsorDivisionMultiplier(){
   const club = seed.clubs.find(c => c.id === game.selectedClubId) || {};
   const order = Number(club.divisionOrder || clubDivision(game.selectedClubId).order || 1);
-  if(order <= 1) return 10;
-  if(order === 2) return 4;
+  if(order <= 1) return 3;
+  if(order === 2) return 1.5;
   return 1;
 }
 function sponsorPositionBonus(){
@@ -69,26 +69,47 @@ function sponsorSeasonWindowTurns(){
   const total = typeof totalSeasonTurnCount === 'function' ? totalSeasonTurnCount() : 365;
   return Math.max(30, Number(total || 365));
 }
-function sponsorOfferValue(baseSponsor, lugar, paymentType='daily'){
+function sponsorPaymentTypeForDuration(durationDays=0){
+  const days = Math.max(1, Math.round(Number(durationDays || 0)));
+  if(days <= 60) return 'upfront';
+  if(days <= 200) return 'mixed';
+  return 'daily';
+}
+function sponsorPaymentLabel(paymentType='daily'){
+  if(paymentType === 'upfront') return 'Todo al inicio';
+  if(paymentType === 'mixed') return '20% al firmar + diario';
+  return 'Diario';
+}
+function sponsorOfferValue(baseSponsor, lugar){
   const base = Number(baseSponsor?.valor_base_por_7_dias || 0);
   const place = Number(lugar?.multiplicador_lugar || 1);
   const specialBonusPct = typeof specialActiveBonus === 'function' ? specialActiveBonus('sponsors_extra') : 0;
   const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus()) * (1 + (specialBonusPct / 100));
   const valuePer7Days = Math.max(0, Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier));
-  const dailyAmount = Math.max(0, Math.round(valuePer7Days / 7));
+  const baseDailyAmount = Math.max(0, Math.round(valuePer7Days / 7));
   const durationDays = randomInt(SPONSOR_DURATION_MIN_DAYS, SPONSOR_DURATION_MAX_DAYS);
   const turns = Math.max(1, daysToTurns(durationDays));
-  const dailyTotal = Math.round(dailyAmount * durationDays);
-  const upfrontTotal = Math.round(dailyTotal * Math.max(0, 1 - SPONSOR_UPFRONT_DISCOUNT));
+  const paymentType = sponsorPaymentTypeForDuration(durationDays);
+  const dailyTotal = Math.round(baseDailyAmount * durationDays);
+  const upfrontAmount = paymentType === 'upfront'
+    ? dailyTotal
+    : paymentType === 'mixed'
+      ? Math.round(dailyTotal * 0.20)
+      : 0;
+  const remainingDailyTotal = Math.max(0, dailyTotal - upfrontAmount);
+  const dailyAmount = paymentType === 'upfront' ? 0 : Math.max(0, Math.round(remainingDailyTotal / durationDays));
   return {
     valuePer7Days,
+    baseDailyAmount,
     dailyAmount,
     durationDays,
     turns,
     paymentType,
-    total:paymentType === 'upfront' ? upfrontTotal : dailyTotal,
-    upfrontTotal,
-    dailyTotal
+    total:dailyTotal,
+    upfrontAmount,
+    upfrontTotal:upfrontAmount,
+    dailyTotal,
+    remainingDailyTotal
   };
 }
 function sponsorSpecialConditionPool(){
@@ -308,8 +329,8 @@ function createSponsorOfferFromPlan(planItem){
   const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
   const place = lugares[randomInt(0, lugares.length - 1)];
   if(!sponsor || !place) return null;
-  const paymentType = Math.random() < SPONSOR_UPFRONT_PAYMENT_CHANCE ? 'upfront' : 'daily';
-  const value = sponsorOfferValue(sponsor, place, paymentType);
+  const value = sponsorOfferValue(sponsor, place);
+  const paymentType = value.paymentType;
   const specialChallenge = createSponsorSpecialChallenge();
   const createdTurn = currentSeasonTurnNumber();
   const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
@@ -324,7 +345,7 @@ function createSponsorOfferFromPlan(planItem){
     placeName:place.nombre,
     placeType:place.tipo,
     paymentType,
-    paymentLabel:paymentType === 'upfront' ? 'Pago total inicial' : 'Pago diario',
+    paymentLabel:sponsorPaymentLabel(paymentType),
     valuePer7Days:value.valuePer7Days,
     dailyAmount:value.dailyAmount,
     durationDays:value.durationDays,
@@ -332,6 +353,8 @@ function createSponsorOfferFromPlan(planItem){
     total:value.total,
     dailyTotal:value.dailyTotal,
     upfrontTotal:value.upfrontTotal,
+    upfrontAmount:value.upfrontAmount,
+    remainingDailyTotal:value.remainingDailyTotal,
     createdTurn,
     expiresTurn,
     arrivalPlanId:planItem?.id || '',
@@ -398,7 +421,7 @@ function processSponsorContracts(){
     const remaining = Math.max(0, Number(contract.turnsRemaining || 0));
     if(remaining <= 0) return;
     let updated = { ...contract };
-    if(updated.paymentType === 'daily'){
+    if(updated.paymentType === 'daily' || updated.paymentType === 'mixed'){
       const amount = Math.max(0, Math.round(Number(updated.dailyAmount || 0)));
       if(amount > 0){
         recordBudgetChange(amount, `Sponsor diario: ${updated.sponsorName} / ${updated.placeName}`, { type:'sponsor_daily', sponsorId:updated.sponsorId, placeId:updated.placeId, sponsorContractId:updated.id });
@@ -433,6 +456,13 @@ function acceptSponsorOffer(offerId){
     contract.paidToDate = Math.round(Number(offer.total || 0));
     recordBudgetChange(contract.paidToDate, `Sponsor pago inicial: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor_upfront', sponsorId:offer.sponsorId, placeId:offer.placeId, sponsorContractId:offer.id });
     pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(contract.paidToDate)} al inicio por ${offer.placeName}.`, priority:'normal' });
+  } else if(offer.paymentType === 'mixed'){
+    const upfront = Math.max(0, Math.round(Number(offer.upfrontAmount || offer.upfrontTotal || 0)));
+    contract.paidToDate = upfront;
+    if(upfront > 0){
+      recordBudgetChange(upfront, `Sponsor 20% inicial: ${offer.sponsorName} / ${offer.placeName}`, { type:'sponsor_upfront_partial', sponsorId:offer.sponsorId, placeId:offer.placeId, sponsorContractId:offer.id });
+    }
+    pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagó ${formatMoney(upfront)} al firmar y pagará ${formatMoney(offer.dailyAmount)} por día durante ${formatDays(offer.durationDays)} por ${offer.placeName}.`, priority:'normal' });
   } else {
     pushGameMessage({ type:'finanzas', title:'Sponsor aceptado', body:`${offer.sponsorName} pagará ${formatMoney(offer.dailyAmount)} por día durante ${formatDays(offer.durationDays)} por ${offer.placeName}.`, priority:'normal' });
   }
@@ -457,10 +487,12 @@ function sponsorOffersMarkup(){
   const currentTurn = currentSeasonTurnNumber();
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Duración</th><th>Pago</th><th>Valor</th><th>Vence</th><th></th></tr></thead><tbody>${offers.map(offer => {
     const daysLeft = Math.max(0, turnsToDays(Number(offer.expiresTurn || currentTurn) - currentTurn + 1));
-    const valueText = offer.paymentType === 'daily'
-      ? `${formatMoney(offer.dailyAmount)} / día`
-      : `${formatMoney(offer.total)} total`;
-    const payText = offer.paymentType === 'daily' ? 'Diario' : 'Todo al inicio';
+    const valueText = offer.paymentType === 'upfront'
+      ? `${formatMoney(offer.total)} total`
+      : offer.paymentType === 'mixed'
+        ? `${formatMoney(offer.upfrontAmount || offer.upfrontTotal || 0)} inicial + ${formatMoney(offer.dailyAmount)} / día`
+        : `${formatMoney(offer.dailyAmount)} / día`;
+    const payText = sponsorPaymentLabel(offer.paymentType);
     return `<tr>
       <td><strong>${escapeHtml(offer.sponsorName)}</strong><span class="muted small">${escapeHtml(offer.category || '')}</span>${offer.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(offer.specialChallenge, false, offer)}</span>` : ''}</td>
       <td>${escapeHtml(offer.placeName)}</td>
@@ -477,9 +509,9 @@ function activeSponsorsMarkup(){
   const active = game.sponsors.active || [];
   if(!active.length) return '<p class="muted small">Todavía no hay contratos activos.</p>';
   return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Pago</th><th>Días restantes</th><th>Cobrado</th></tr></thead><tbody>${active.map(item => {
-    const payment = item.paymentType === 'daily' ? `${formatMoney(item.dailyAmount || 0)} / día` : 'Todo al inicio';
+    const payment = item.paymentType === 'upfront' ? 'Todo al inicio' : item.paymentType === 'mixed' ? `${formatMoney(item.upfrontAmount || item.upfrontTotal || 0)} inicial + ${formatMoney(item.dailyAmount || 0)} / día` : `${formatMoney(item.dailyAmount || 0)} / día`;
     const special = item.specialChallenge ? `<span class="sponsor-special-line">${sponsorSpecialChallengeMarkup(item.specialChallenge, true, item)}</span>` : '';
-    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong>${special}</td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(item.paidToDate || item.total || 0)}</td></tr>`;
+    return `<tr><td><strong>${escapeHtml(item.sponsorName)}</strong>${special}</td><td>${escapeHtml(item.placeName)}</td><td>${payment}</td><td>${formatDaysFromTurns(item.turnsRemaining)}</td><td>${formatMoney(Number(item.paidToDate || 0))}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 

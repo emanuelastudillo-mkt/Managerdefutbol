@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.17',
+  version: 'V6.19',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -304,10 +304,10 @@ window.GAME_CONFIG = {
     ofertasPorLlegadaMin: 1,
     ofertasPorLlegadaMax: 3,
     probabilidadLlegadaTriple: 0.45,
-    duracionOfertaMinDias: 200,
-    duracionOfertaMaxDias: 500,
-    probabilidadPagoUnico: 0.50,
-    descuentoPagoUnico: 0.50,
+    duracionOfertaMinDias: 30,
+    duracionOfertaMaxDias: 700,
+    probabilidadPagoUnico: 0.50, // Legacy: el esquema V6.19 determina el pago por duración.
+    descuentoPagoUnico: 0.50, // Legacy: los contratos medios cobran 20% inicial y resto diario.
     sponsorEspecialActivo: true,
     probabilidadSponsorEspecial: 0.22,
     multiplicadorBonoEspecial: 3,

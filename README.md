@@ -1,14 +1,42 @@
-# Fútbol Manager MVP - V6.17
+# Fútbol Manager MVP - V6.19
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.16**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.18**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
 - `README.md`
 - `config.js`
 - `index.html`
+
+
+## V6.19 - Sponsors por división y pagos por duración
+
+### Cambios principales
+
+- Se redujeron los multiplicadores de valor por división en sponsors:
+  - Primera: de `x10` a `x3`.
+  - Segunda: de `x4` a `x1.5`.
+  - Tercera: se mantiene en `x1`.
+- La duración de nuevas ofertas de sponsors ahora va de **30 a 700 días**.
+- El tipo de pago ya no se sortea al azar: depende de la duración del contrato.
+- Contratos de **30 a 60 días**: pagan el **100% al firmar**.
+- Contratos de **61 a 200 días**: pagan **20% al firmar** y el resto se cobra por día.
+- Contratos de **201 a 700 días**: no pagan anticipo; se cobran sólo por día.
+- Se corrigió la columna **Cobrado** de sponsors activos para mostrar sólo lo realmente cobrado hasta la fecha.
+- `sponsors.factorValorBase` se mantiene en `0.1`.
+
+## V6.18 - Presupuesto inicial por prestigio extremo
+
+### Cambios principales
+
+- Se reemplazó la fórmula de presupuesto inicial de clubes por una curva exponencial basada principalmente en prestigio.
+- La nueva curva usa anclas de diseño: prestigio **20 => $4.500.000**, prestigio **80 => $100.000.000** y prestigio **95 => $800.000.000**.
+- El presupuesto inicial deja de multiplicarse por división para evitar que clubes de igual prestigio arranquen con cajas muy distintas.
+- El parámetro interno `prizeMultiplier` se conserva por compatibilidad con datos existentes, pero ya no altera la caja inicial.
+- El modo **Bancarrota, Renacer** mantiene su regla especial de inicio en **-$500.000.000**.
+- El modo **Fundador** mantiene su regla especial de inicio en **$0**.
 
 ## V6.17 - Sin club, opciones laborales y ojeo persistente
 
@@ -142,26 +170,22 @@ La versión vigente se identifica desde:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.17
+## Archivos modificados en V6.19
 
 - `index.html`
 - `config.js`
 - `README.md`
-- `style.css`
-- `js/game/05-state-season.js`
-- `js/game/16-scouting-center.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/12-modals.js`
+- `js/game/08-sponsors-stadium-stats.js`
 
 ## Instalación
 
-Para instalación limpia, subir todo el contenido del ZIP completo **V6.17**.
+Para instalación limpia, subir todo el contenido del ZIP completo **V6.19**.
 
-Para actualizar desde V6.16, aplicar el ZIP incremental **V6.17** sobre la carpeta existente y forzar recarga del navegador.
+Para actualizar desde V6.18, aplicar el ZIP incremental **V6.19** sobre la carpeta existente y forzar recarga del navegador.
 
-Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.17 mantiene la documentación unificada sólo en `README.md`.
+Si se actualiza con incremental, los archivos documentales viejos que ya existan en la carpeta no se borran solos. La versión completa V6.19 mantiene la documentación unificada sólo en `README.md`.
 
-## Validación V6.17
+## Validación V6.19
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

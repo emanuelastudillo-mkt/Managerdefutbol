@@ -648,6 +648,7 @@ function renderStadium(){
   const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
   const patchProgress = patchActive ? Math.round(((PATCH_TURNS - project.patchingTurnsLeft) / PATCH_TURNS) * 100) : 0;
   const fieldMaintenanceBlocked = typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance');
+  const lastCapacityDecay = Array.isArray(game?.stadium?.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory.slice().reverse().find(item => Number(item.clubId || 0) === Number(game.selectedClubId)) : null;
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -669,6 +670,7 @@ function renderStadium(){
         ${fieldBar(score, label)}
         ${fieldMaintenanceBlocked ? '<p class="muted small danger">Reto activo: no se puede replantar ni reparar el campo.</p>' : ''}
         <p class="stadium-identity-line">${escapeHtml(clubStadiumName(game.selectedClubId))} · Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}${constructionPenalty > 0 ? ` · Aforo partido con obras ${new Intl.NumberFormat('es-AR').format(effectiveCapacity)}` : ''}</p>
+        <p class="muted small">Deterioro anual del estadio: -${Number(STADIUM_CAPACITY_SEASON_DECAY_PCT || 0)}% de capacidad al cambiar de temporada.${lastCapacityDecay ? ` Último deterioro: -${new Intl.NumberFormat('es-AR').format(lastCapacityDecay.lost || 0)} lugares.` : ''}</p>
         <div class="stack" style="margin-top:14px">
           <div class="maintenance-option">
             <div><strong>Replantar todo</strong><p class="muted small">Costo ${formatMoney(REPLANT_COST)}. Durante 35 días el campo queda muy malo; al finalizar sube a 99.</p></div>

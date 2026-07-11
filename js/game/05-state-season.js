@@ -2207,10 +2207,12 @@ function normalizeGame(saved){
     else if(!Number.isFinite(normalized.playerMorale[p.id])) normalized.playerMorale[p.id] = PLAYER_MORALE_START;
   });
   normalized.playerSkillBoosts = normalized.playerSkillBoosts || {};
+  normalized.playerAgeSkillPenalties = (normalized.playerAgeSkillPenalties && typeof normalized.playerAgeSkillPenalties === 'object' && !Array.isArray(normalized.playerAgeSkillPenalties)) ? normalized.playerAgeSkillPenalties : {};
   normalized.trainingPlan = normalized.trainingPlan || {};
   normalized.trainingSchedule = normalizeTrainingSchedule(normalized.trainingSchedule);
   seed.players.forEach(p => {
     if(!normalized.playerSkillBoosts[p.id]) normalized.playerSkillBoosts[p.id] = {};
+    normalized.playerAgeSkillPenalties[p.id] = clamp(Math.round(Number(normalized.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
     normalized.trainingPlan[p.id] = safeIndividualTrainingType(normalized.trainingPlan[p.id]);
   });
   normalized.staffActions = normalized.staffActions || {};
@@ -2241,6 +2243,8 @@ function normalizeGame(saved){
   if(!normalized.stadium.fields) normalized.stadium.fields = {};
   if(!normalized.stadium.projects) normalized.stadium.projects = {};
   if(!normalized.stadium.ticketPrices) normalized.stadium.ticketPrices = {};
+  if(!normalized.stadium.capacityOverrides || typeof normalized.stadium.capacityOverrides !== 'object' || Array.isArray(normalized.stadium.capacityOverrides)) normalized.stadium.capacityOverrides = {};
+  if(!Array.isArray(normalized.stadium.capacityDeteriorationHistory)) normalized.stadium.capacityDeteriorationHistory = [];
   seed.clubs.forEach(c => {
     if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c);
     if(!Number.isFinite(Number(normalized.stadium.ticketPrices[c.id]))) normalized.stadium.ticketPrices[c.id] = TICKET_PRICE_INITIAL;
@@ -2258,6 +2262,7 @@ function ensurePlayerStateForAll(){
   game.playerCondition = game.playerCondition || {};
   game.playerMorale = game.playerMorale || {};
   game.playerSkillBoosts = game.playerSkillBoosts || {};
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   game.trainingPlan = game.trainingPlan || {};
   game.trainingSchedule = normalizeTrainingSchedule(game.trainingSchedule);
   game.playerStats = game.playerStats || {};
@@ -2268,6 +2273,7 @@ function ensurePlayerStateForAll(){
     if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerMorale[p.id] = 5; }
     else if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
+    game.playerAgeSkillPenalties[p.id] = clamp(Math.round(Number(game.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
     normalizePlayerStatRecord(game.playerStats[p.id]);
@@ -2542,6 +2548,7 @@ function newGame(selectedClubId, options={}){
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
     playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
     playerSkillBoosts: Object.fromEntries(seed.players.map(p => [p.id, {}])),
+    playerAgeSkillPenalties: Object.fromEntries(seed.players.map(p => [p.id, 0])),
     trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL)])),
     trainingSchedule: defaultTrainingSchedule(),
     staffActions: {},
@@ -3907,14 +3914,42 @@ function decayTrainedSkillBoosts(){
   });
   return { players, lost, remaining };
 }
+function ageDecayRollForPlayer(player, season){
+  const min = Math.max(0, Math.round(Number(PLAYER_AGE_DECAY_MIN_ANNUAL || 0)));
+  const max = Math.max(min, Math.round(Number(PLAYER_AGE_DECAY_MAX_ANNUAL || min)));
+  if(max <= 0) return 0;
+  return min + hashNumber(`age-decay-${season}-${player?.id || 0}-${player?.age || 0}`, (max - min) + 1);
+}
+function applySeasonalAgeSkillDecay(season){
+  if(!game || !PLAYER_AGE_DECAY_ENABLED) return { players:0, added:0, maxPenalty:0 };
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+  let players = 0;
+  let added = 0;
+  let maxPenalty = 0;
+  seed.players.forEach(player => {
+    const age = Math.round(Number(player.age || 18));
+    if(age < PLAYER_AGE_DECAY_START_AGE){
+      game.playerAgeSkillPenalties[player.id] = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+      return;
+    }
+    const roll = ageDecayRollForPlayer(player, season);
+    const before = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    const after = clamp(before + roll, 0, PLAYER_AGE_DECAY_CAP);
+    game.playerAgeSkillPenalties[player.id] = after;
+    if(after > before){ players += 1; added += (after - before); }
+    maxPenalty = Math.max(maxPenalty, after);
+  });
+  return { players, added, maxPenalty };
+}
 function applySeasonalAging(){
-  if(!game) return 0;
+  if(!game) return { aged:0, ageDecay:{ players:0, added:0, maxPenalty:0 } };
   let count = 0;
   seed.players.forEach(player => {
     player.age = Math.max(15, Number(player.age || 18) + 1);
     count += 1;
   });
-  return count;
+  const decay = applySeasonalAgeSkillDecay(game.seasonNumber || 1);
+  return { aged:count, ageDecay:decay };
 }
 
 function applySeasonSalaryAdjustments(){
@@ -3983,6 +4018,7 @@ function retireSeasonVeterans(){
     delete game.playerCondition?.[player.id];
     delete game.playerMorale?.[player.id];
     delete game.playerSkillBoosts?.[player.id];
+    delete game.playerAgeSkillPenalties?.[player.id];
     delete game.trainingPlan?.[player.id];
     delete game.playerStats?.[player.id];
     delete game.playerStatus?.[player.id];
@@ -3994,7 +4030,7 @@ function retireSeasonVeterans(){
     if(typeof initializeFreePlayerState === 'function') initializeFreePlayerState(manualRespawned);
     game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
     game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
-    manualRespawned.forEach(player => { player.respawnedAsFreeAgent = true; });
+    manualRespawned.forEach(player => { player.respawnedAsFreeAgent = true; if(game.playerAgeSkillPenalties) game.playerAgeSkillPenalties[player.id] = 0; });
   }
   const ownRetirees = retirees.filter(player => !player.freeAgent);
   const freeRetirees = retirees.filter(player => player.freeAgent);
@@ -4060,6 +4096,7 @@ function removeFreeMarketPlayersById(ids=[]){
     delete game.playerCondition?.[player.id];
     delete game.playerMorale?.[player.id];
     delete game.playerSkillBoosts?.[player.id];
+    delete game.playerAgeSkillPenalties?.[player.id];
     delete game.trainingPlan?.[player.id];
     delete game.playerStats?.[player.id];
     delete game.playerStatus?.[player.id];
@@ -4109,6 +4146,7 @@ function initializeFreePlayerState(players=[]){
   game.playerCondition = game.playerCondition || {};
   game.playerMorale = game.playerMorale || {};
   game.playerSkillBoosts = game.playerSkillBoosts || {};
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   game.trainingPlan = game.trainingPlan || {};
   game.playerStats = game.playerStats || {};
   players.forEach(p => {
@@ -4823,6 +4861,7 @@ function startNextSeason(selectedClubId){
   const appliedPostseasonRecovery = injuryRecoveryTurnsRegistered(game.seasonNumber || 1, 'postseason');
   const missingPostseasonRecovery = Math.max(0, configuredPostseasonRecovery - appliedPostseasonRecovery);
   applySeasonStartAvailabilityRebase(previousMatchdayIndex, missingPostseasonRecovery);
+  const stadiumCapacityDecay = typeof applyManagedStadiumCapacityDeterioration === 'function' ? applyManagedStadiumCapacityDeterioration(previousClubId, game.seasonNumber || 1) : null;
   assignBotFieldStatesForNextSeason(nextClubId, previousClubId);
   repairInvalidBotFieldStates(game, 'season_transition', { message:false });
   applySeasonMovements();
@@ -4886,6 +4925,12 @@ function startNextSeason(selectedClubId){
   balanceBotsForSeasonStart(nextClubId, previousBotBalanceRanks);
   generateOpeningSponsorOffers(true);
   pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
+  if(stadiumCapacityDecay && Number(stadiumCapacityDecay.lost || 0) > 0){
+    pushGameMessage({ type:'estadio', title:'Deterioro anual del estadio', body:`El estadio de ${clubName(stadiumCapacityDecay.clubId)} perdió ${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.lost)} lugares por deterioro estructural anual (${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.before)} → ${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.after)}).`, priority:'normal' });
+  }
+  if(aging?.ageDecay?.players > 0){
+    pushGameMessage({ type:'deportivo', title:'Deterioro por edad aplicado', body:`${aging.ageDecay.players} jugador(es) de 32 años o más recibieron penalización anual de habilidades. Total aplicado: -${aging.ageDecay.added} puntos acumulados.`, priority:'normal' });
+  }
   activeTab = 'home';
   closeModal();
   saveLocal(true);

@@ -1,2 +1,2 @@
-/* V5.74 · Punto de entrada. Slots de carrera y retos separados. */
+/* V5.75 · Punto de entrada. Balance de campo, estadio y edad. */
 init();

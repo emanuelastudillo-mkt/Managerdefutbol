@@ -951,7 +951,7 @@ function createInitialStadiumState(){
     fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     ticketPrices[club.id] = TICKET_PRICE_INITIAL;
   });
-  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, expansionProjects:{}, completedExpansions:{}, botSeasonNumber:0 };
+  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, capacityDeteriorationHistory:[], expansionProjects:{}, completedExpansions:{}, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
@@ -960,6 +960,7 @@ function ensureStadiumState(){
   if(!game.stadium.projects) game.stadium.projects = {};
   if(!game.stadium.ticketPrices) game.stadium.ticketPrices = {};
   if(!game.stadium.capacityOverrides) game.stadium.capacityOverrides = {};
+  if(!game.stadium.capacityDeteriorationHistory) game.stadium.capacityDeteriorationHistory = [];
   if(!game.stadium.expansionProjects) game.stadium.expansionProjects = {};
   if(!game.stadium.completedExpansions) game.stadium.completedExpansions = {};
   seed.clubs.forEach(club => {
@@ -993,6 +994,25 @@ function clubStadiumCapacity(clubId){
   const override = Number(game?.stadium?.capacityOverrides?.[clubId]);
   if(Number.isFinite(override) && (override > 0 || founded)) return clamp(Math.round(override), founded ? 0 : 500, STADIUM_EXPANSION_MAX_CAPACITY);
   return baseStadiumCapacityForClub(clubId);
+}
+function applyManagedStadiumCapacityDeterioration(clubId, season=game?.seasonNumber || 1){
+  if(!game?.stadium || STADIUM_CAPACITY_SEASON_DECAY_PCT <= 0) return null;
+  const id = Number(clubId || 0);
+  if(!id) return null;
+  ensureStadiumState();
+  const before = clubStadiumCapacity(id);
+  const minCapacity = isFoundedClubId(id) ? 0 : 500;
+  if(before <= minCapacity) return null;
+  let after = Math.floor(before * (1 - (STADIUM_CAPACITY_SEASON_DECAY_PCT / 100)));
+  if(after >= before && before > minCapacity) after = before - 1;
+  after = clamp(after, minCapacity, STADIUM_EXPANSION_MAX_CAPACITY);
+  if(after === before) return null;
+  game.stadium.capacityOverrides[id] = after;
+  game.stadium.capacityDeteriorationHistory = Array.isArray(game.stadium.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory : [];
+  const record = { clubId:id, season:Number(season || game.seasonNumber || 1), before, after, lost:before - after, pct:STADIUM_CAPACITY_SEASON_DECAY_PCT, date:game.currentDate || '' };
+  game.stadium.capacityDeteriorationHistory.push(record);
+  game.stadium.capacityDeteriorationHistory = game.stadium.capacityDeteriorationHistory.slice(-40);
+  return record;
 }
 function stadiumExpansionBaseById(expansionId){
   return (STADIUM_EXPANSIONS || []).find(item => Number(item.id) === Number(expansionId));

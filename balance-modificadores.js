@@ -51,7 +51,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     probabilidadGolAtribuyeErrorGol: 0.60,
     maximoErroresPorEquipo: 5,
     fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 0.70,
+    multiplicadorTarjetas: 1.50,
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
@@ -93,6 +93,8 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   estadio: {
+    deterioroCampoMultiplicador: 2,
+    deterioroCapacidadPorTemporadaPct: 1,
     clima: {
       lluviaDeterioroActivo: true,
       lluviaLeveExtraDeterioro: 3,

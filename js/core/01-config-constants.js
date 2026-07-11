@@ -352,6 +352,7 @@ const BOT_FIELDS_FIXED_BY_SEASON = configBoolean('estadio.botsCampoFijoPorTempor
 const RAIN_FIELD_DETERIORATION_ENABLED = configBoolean('estadio.clima.lluviaDeterioroActivo', true);
 const RAIN_FIELD_DETERIORATION_LIGHT = configNumber('estadio.clima.lluviaLeveExtraDeterioro', 2, 0, 20);
 const RAIN_FIELD_DETERIORATION_HEAVY = configNumber('estadio.clima.lluviaIntensaExtraDeterioro', 4, 0, 30);
+const FIELD_DETERIORATION_MULTIPLIER = configNumber('estadio.deterioroCampoMultiplicador', 1, 0, 10);
 const BOT_FIELD_MIN_SCORE = configNumber('estadio.botsCampoMinimo', 30, 1, 100);
 const BOT_FIELD_MAX_SCORE = Math.max(BOT_FIELD_MIN_SCORE, configNumber('estadio.botsCampoMaximo', 95, 1, 100));
 const BOT_FIELD_INITIAL_BASE = configNumber('estadio.botsCampoBaseInicial', 58, 1, 100);
@@ -404,6 +405,11 @@ const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin'
 const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 62, 1, 99));
 const MARKET_FREE_AGENT_AGE_MIN = configNumber('plantel.agentesLibresEdadMin', 19, 15, 45);
 const MARKET_FREE_AGENT_AGE_MAX = Math.max(MARKET_FREE_AGENT_AGE_MIN, configNumber('plantel.agentesLibresEdadMax', 30, 15, 55));
+const PLAYER_AGE_DECAY_ENABLED = configBoolean('plantel.deterioroEdadActivo', true);
+const PLAYER_AGE_DECAY_START_AGE = Math.max(1, Math.round(configNumber('plantel.edadInicioDeterioro', 32, 1, 80)));
+const PLAYER_AGE_DECAY_MIN_ANNUAL = Math.max(0, Math.round(configNumber('plantel.deterioroEdadMinAnual', 1, 0, 20)));
+const PLAYER_AGE_DECAY_MAX_ANNUAL = Math.max(PLAYER_AGE_DECAY_MIN_ANNUAL, Math.round(configNumber('plantel.deterioroEdadMaxAnual', 4, 0, 20)));
+const PLAYER_AGE_DECAY_CAP = 98;
 const MARKET_FREE_AGENT_POSITION_GROUPS = [
   { id:'POR', probability:configNumber('plantel.agentesLibresPosiciones.POR', 0.10, 0), positions:['POR'] },
   { id:'DEF', probability:configNumber('plantel.agentesLibresPosiciones.DEF', 0.35, 0), positions:['LD','LI','DFC'] },
@@ -571,6 +577,7 @@ const STADIUM_EXPANSIONS = [
 ];
 const STADIUM_EXPANSION_MAX_CAPACITY = 120000;
 const STADIUM_EXPANSION_DAYS_MULTIPLIER = Math.max(1, configNumber('estadio.multiplicadorDiasObras', 30, 1, 365));
+const STADIUM_CAPACITY_SEASON_DECAY_PCT = configNumber('estadio.deterioroCapacidadPorTemporadaPct', 1, 0, 25);
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_PER_PROJECT = configNumber('estadio.penalizacionAsistenciaPorObraActiva', 0.05, 0, 0.50);
 const STADIUM_EXPANSION_ATTENDANCE_PENALTY_MAX = configNumber('estadio.penalizacionAsistenciaObrasMaxima', 0.20, 0, 0.80);
 const PLAYER_GENERATION_RULES_VERSION = 'V2.31';

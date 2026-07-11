@@ -1211,6 +1211,23 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
   color:#22c55e;
   font-weight:900;
 }
+.skill-breakdown{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  justify-content:flex-end;
+  white-space:nowrap;
+}
+.age-skill-penalty{
+  display:inline-block;
+  margin-right:3px;
+  color:#ef4444;
+  font-weight:900;
+}
+.skill-base-value{
+  color:#e5e7eb;
+  font-weight:900;
+}
 
 /* V2.12: botones de autoselección táctica */
 .tactic-autopick-row{

@@ -2352,7 +2352,8 @@ function advanceStadiumAfterMatches(results){
     if(project.replantingTurnsLeft > 0){
       game.stadium.fields[clubId] = 30;
     } else {
-      const rawDeterioration = rnd(5,8) + Number(homeWeatherDeterioration.get(Number(clubId)) || 0);
+      const baseDeterioration = rnd(5,8) + Number(homeWeatherDeterioration.get(Number(clubId)) || 0);
+      const rawDeterioration = baseDeterioration * Math.max(0, Number(FIELD_DETERIORATION_MULTIPLIER || 1));
       const reductionPct = (typeof specialActiveBonus === 'function' && Number(clubId) === Number(game?.selectedClubId)) ? specialActiveBonus('deterioro_campo') : 0;
       const adjustedDeterioration = Math.max(0, rawDeterioration * (1 - (clamp(reductionPct, 0, 95) / 100)));
       game.stadium.fields[clubId] = clamp(Math.round(fieldScoreForClub(clubId) - adjustedDeterioration), 1, 100);

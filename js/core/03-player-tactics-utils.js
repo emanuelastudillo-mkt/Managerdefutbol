@@ -349,13 +349,28 @@ function hashNumber(seedValue, max){
   }
   return Math.abs(h >>> 0) % max;
 }
+function playerAgeSkillPenalty(playerOrId){
+  if(!PLAYER_AGE_DECAY_ENABLED || !game) return 0;
+  const id = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId);
+  if(!id) return 0;
+  const value = Math.round(Number(game?.playerAgeSkillPenalties?.[id] || 0));
+  return clamp(value, 0, PLAYER_AGE_DECAY_CAP);
+}
+function playerTrainingSkillBoost(p, skillName){
+  if(!p || !game) return 0;
+  return Math.max(0, Math.round(Number(game?.playerSkillBoosts?.[p.id]?.[skillName] || 0)));
+}
+function rawSkillValue(p, skillName){
+  return clamp(Math.round(p?.skills?.[skillName] ?? p?.overall ?? 50), 1, 99);
+}
 function baseSkill(p, skillName){
-  const base = Math.round(p.skills?.[skillName] ?? p.overall ?? 50);
-  const boost = Number(game?.playerSkillBoosts?.[p.id]?.[skillName] || 0);
-  return clamp(base + boost, 1, 99);
+  const base = rawSkillValue(p, skillName);
+  const boost = playerTrainingSkillBoost(p, skillName);
+  const agePenalty = playerAgeSkillPenalty(p);
+  return clamp(base - agePenalty + boost, 1, 99);
 }
 function rawVisibleSkill(p, skillName){
-  return clamp(Math.round(p.skills?.[skillName] ?? p.overall ?? 50), 1, 99);
+  return rawSkillValue(p, skillName);
 }
 function hiddenStats(p){
   const manualAggression = Number(p?.skills?.agresividad);
@@ -401,7 +416,7 @@ function lockedManualOverall(p){
 }
 function visibleOverall(p){
   const locked = lockedManualOverall(p);
-  if(locked !== null) return locked;
+  if(locked !== null) return clamp(locked - playerAgeSkillPenalty(p), 1, 99);
   return clamp(Math.round(avg(Object.values(visibleStats(p)))), 1, 99);
 }
 function rawVisibleOverall(p){
@@ -411,7 +426,7 @@ function rawVisibleOverall(p){
 }
 function effectiveOverall(p){
   const locked = lockedManualOverall(p);
-  if(locked !== null) return locked;
+  if(locked !== null) return clamp(locked - playerAgeSkillPenalty(p), 1, 99);
   const simulated = {
     Ataque: Math.round(avg([effectiveSkill(p,'remate'), effectiveSkill(p,'regate'), effectiveSkill(p,'posicionamiento')])) || p.overall,
     Defensa: Math.round(avg([effectiveSkill(p,'marca'), effectiveSkill(p,'entradas'), effectiveSkill(p,'posicionamiento')])) || p.overall,

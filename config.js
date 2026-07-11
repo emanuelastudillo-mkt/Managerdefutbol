@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.74',
+  version: 'V5.75',
   data: {
     seedUrl: 'data/seed.json',
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
@@ -164,6 +164,11 @@ window.GAME_CONFIG = {
     jugadoresMinimosPorClub: 18,
     jugadoresInicialesPorClub: 25,
     jugadoresMaximosPorClub: 42,
+    // Envejecimiento profesional: desde esta edad se aplica un boost negativo anual acumulado a todas las habilidades.
+    deterioroEdadActivo: true,
+    edadInicioDeterioro: 32,
+    deterioroEdadMinAnual: 1,
+    deterioroEdadMaxAnual: 4,
     // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
     reparacionAutomaticaBots: true,
     botsMinimoPorteros: 2,
@@ -263,7 +268,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.74: sistema fijo por temporada + sponsor especial con condición.
+    // V5.75: sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
@@ -332,6 +337,10 @@ window.GAME_CONFIG = {
     costoParchearCampo: 200000,
     diasParchearCampo: 21,
     mejoraParchePorAvance: 5,
+    // Balance V5.75: el deterioro normal del campo se multiplica por este valor.
+    deterioroCampoMultiplicador: 2,
+    // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
+    deterioroCapacidadPorTemporadaPct: 1,
     // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
     botsCampoFijoPorTemporada: true,
     botsCampoMinimo: 30,

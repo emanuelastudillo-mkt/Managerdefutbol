@@ -104,6 +104,19 @@ function scoutingStatMapWithResolver(player, resolver=baseSkill){
     'Resistencia': stats.Resistencia
   };
 }
+function skillBreakdownMarkup(player, key, currentValue, rawValue){
+  const raw = Number(rawValue);
+  const current = Number(currentValue);
+  if(!Number.isFinite(raw) || !Number.isFinite(current)) return escapeHtml(String(currentValue ?? '—'));
+  const agePenalty = typeof playerAgeSkillPenalty === 'function' ? playerAgeSkillPenalty(player) : 0;
+  const withoutTraining = clamp(Math.round(raw - agePenalty), 1, 99);
+  const trained = Math.max(0, Math.round(current - withoutTraining));
+  const parts = [];
+  if(agePenalty > 0) parts.push(`<span class="age-skill-penalty" title="Penalización acumulada por edad">-${agePenalty}</span>`);
+  parts.push(`<span class="skill-base-value">${raw}</span>`);
+  if(trained > 0) parts.push(`<span class="trained-boost" title="Boost de entrenamiento">+${trained}</span>`);
+  return `<span class="skill-breakdown" title="Actual efectivo: ${clamp(Math.round(current), 1, 99)}/99">${parts.join('')}</span>`;
+}
 function scoutedStatsMarkup(player){
   const map = scoutingStatMap(player);
   const rawMap = scoutingStatMapWithResolver(player, rawVisibleSkill);
@@ -111,14 +124,15 @@ function scoutedStatsMarkup(player){
   const rows = Object.entries(map).map(([key, value]) => {
     const raw = Number(rawMap[key]);
     const current = Number(value);
-    const boost = Number.isFinite(raw) && Number.isFinite(current) ? Math.max(0, current - raw) : 0;
     const shown = !playerRequiresScouting(player) || visible.has(key);
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    const valueMarkup = shown ? (boost > 0 ? `${raw}<span class="trained-boost">+${boost}</span>` : `${current}`) : '—';
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong>${shown && boost > 0 ? `` : ''}</div>`;
+    const valueMarkup = shown ? skillBreakdownMarkup(player, key, current, raw) : '—';
+    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong></div>`;
   }).join('');
+  const agePenalty = typeof playerAgeSkillPenalty === 'function' ? playerAgeSkillPenalty(player) : 0;
+  const ageNote = agePenalty > 0 ? `<p class="muted small"><span class="age-skill-penalty">-${agePenalty}</span> indica deterioro acumulado por edad. El valor base queda al centro y el entrenamiento aparece a la derecha en verde.</p>` : '';
   const note = playerRequiresScouting(player) ? '<p class="muted small">Sólo se muestran datos guardados en el Centro de Ojeo. Sin informe, la habilidad queda oculta.</p>' : '';
-  return `${rows}${note}`;
+  return `${rows}${ageNote}${note}`;
 }
 function scoutedRadarMarkup(player){
   if(!playerRequiresScouting(player)) return radarSvg(visibleStats(player));
@@ -1146,7 +1160,8 @@ function scoutingPlayerRow(player, options={}){
   const map = scoutingStatMap(player);
   const visible = scoutingVisibleKeys(player);
   const clickable = Boolean(options?.clickable);
-  const cell = key => visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
+  const rawMap = typeof scoutingStatMapWithResolver === 'function' ? scoutingStatMapWithResolver(player, rawVisibleSkill) : map;
+  const cell = key => visible.has(key) ? `<strong>${typeof skillBreakdownMarkup === 'function' ? skillBreakdownMarkup(player, key, map[key], rawMap[key]) : map[key]}</strong>` : '<span class="muted">—</span>';
   const nameMarkup = clickable
     ? `<button class="linklike" data-player-id="${Number(player.id)}"><strong>${typeof playerNameWithScoutingEye === 'function' ? playerNameWithScoutingEye(player) : escapeHtml(player.name)}</strong></button>`
     : `<strong>${escapeHtml(player.name)}</strong>`;

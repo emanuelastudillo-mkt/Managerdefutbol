@@ -4685,7 +4685,7 @@ th{
 .sponsor-special-line .pill{margin-right:6px}
 
 
-/* V5.79 · Slots en listado estable */
+/* V5.80 · Slots alineados y aislados de la clase global empty-slot */
 .save-slots-screen{
   gap:14px;
 }
@@ -4747,7 +4747,17 @@ th{
   white-space:normal;
   line-height:1.15;
 }
+.save-slot-card.save-slot-empty,
 .save-slot-card.empty-slot{
+  width:100%;
+  height:auto;
+  min-height:0;
+  border-radius:18px;
+  display:grid!important;
+  place-items:initial;
+  text-align:left;
+  padding:16px;
+  color:var(--text);
   border-style:dashed;
   background:rgba(255,255,255,.025);
 }
@@ -4765,6 +4775,48 @@ th{
 }
 @media (max-width:420px){
   .save-slot-actions{grid-template-columns:1fr;}
+}
+
+
+/* V5.80 · Protección: los slots vacíos no heredan el estilo circular de huecos tácticos */
+.save-slots-screen .save-slot-card.save-slot-empty,
+.save-slots-screen .save-slot-card.empty-slot{
+  width:100%;
+  height:auto;
+  min-height:72px;
+  max-width:none;
+  border-radius:18px;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(230px,360px);
+  align-items:center;
+  justify-items:stretch;
+  place-items:unset;
+  text-align:left;
+  padding:16px;
+}
+.save-slots-screen .save-slot-card.save-slot-empty .save-slot-main,
+.save-slots-screen .save-slot-card.empty-slot .save-slot-main{
+  justify-self:stretch;
+  text-align:left;
+}
+.save-slots-screen .save-slot-card.save-slot-empty h3,
+.save-slots-screen .save-slot-card.empty-slot h3{
+  text-align:left;
+  white-space:normal;
+}
+.save-slots-screen .save-slot-card.save-slot-empty .save-slot-actions,
+.save-slots-screen .save-slot-card.empty-slot .save-slot-actions{
+  justify-self:end;
+}
+@media (max-width:860px){
+  .save-slots-screen .save-slot-card.save-slot-empty,
+  .save-slots-screen .save-slot-card.empty-slot{
+    grid-template-columns:1fr;
+  }
+  .save-slots-screen .save-slot-card.save-slot-empty .save-slot-actions,
+  .save-slots-screen .save-slot-card.empty-slot .save-slot-actions{
+    justify-self:stretch;
+  }
 }
 
 /* V5.78 · Inventario global de cartas por slots */

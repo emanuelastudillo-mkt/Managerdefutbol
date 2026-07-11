@@ -387,7 +387,8 @@ async function hydrateCareerSlotCards(){
         : 'Slot libre para iniciar una carrera normal.';
     }
     if(continueBtn) continueBtn.textContent = summary.exists ? 'Entrar' : 'Crear';
-    card.classList.toggle('empty-slot', !summary.exists);
+    card.classList.toggle('save-slot-empty', !summary.exists);
+    card.classList.remove('empty-slot');
   });
 }
 async function loadBaseSeedForSlotStart(){

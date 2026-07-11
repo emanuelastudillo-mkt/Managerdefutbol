@@ -4,9 +4,9 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V5.79',
+  version: 'V5.80',
   partidas: {
-    // V5.79: cantidad de carreras normales separadas. El nombre visible se arma solo con club y temporada.
+    // V5.80: cantidad de carreras normales separadas. El nombre visible se arma solo con club y temporada.
     slotsCarrera: 5
   },
   data: {

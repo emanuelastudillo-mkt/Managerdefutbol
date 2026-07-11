@@ -1,12 +1,12 @@
-# Fútbol Manager MVP - V5.79
+# Fútbol Manager MVP - V5.80
 
-## V5.79 - Corrección definitiva del menú de slots
+## V5.80 - Slots vacíos alineados
 
-- El menú de slots ahora usa un listado vertical estable.
-- Cada carrera ocupa una fila completa.
-- Se elimina la grilla que podía comprimir tarjetas y mostrar textos apilados.
-- Los botones de cada slot quedan dentro de su propia fila.
-- El reto Campo destruido queda separado y sin superponerse con las carreras.
-- No cambia la lógica de guardado, carreras, retos ni cartas globales.
+- Corrige el problema visual donde las carreras vacías se comprimían y quedaban centradas/superpuestas.
+- Los slots vacíos ahora usan la misma estructura visual que los slots ocupados y el reto.
+- Se reemplaza la dependencia de la clase global `empty-slot` por una clase específica de guardados.
+- Se agrega una protección CSS para que, aunque un navegador tenga caché anterior, los slots no hereden el estilo circular de la pizarra táctica.
 
-Subí todos los archivos del ZIP completo o, si ya tenés V5.78, aplicá el incremental V5.79 y forzá recarga con Control + F5.
+## Instalación
+
+Subí todos los archivos del ZIP completo o, si ya tenés V5.79, aplicá el incremental V5.80 y forzá recarga con Control + F5.

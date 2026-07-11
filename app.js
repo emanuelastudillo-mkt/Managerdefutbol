@@ -1,2 +1,2 @@
-/* V5.79 · Punto de entrada. Corrección definitiva de slots en listado. */
+/* V5.80 · Punto de entrada. Slots vacíos alineados como filas normales. */
 init();

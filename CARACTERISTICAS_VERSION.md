@@ -1,17 +1,21 @@
-# Características de la versión V5.79
+# Características de la versión V5.80
 
-## V5.79 - Corrección definitiva del menú de slots
+## V5.80 - Corrección de slots vacíos
 
-Cambios principales:
+Ajuste visual específico para el menú de slots:
 
-- Reemplacé la grilla de tarjetas de slots por un listado vertical.
-- Las tarjetas de Carrera 1 a Carrera 5 ya no pueden quedar comprimidas en columnas mínimas.
-- Los nombres largos de equipo y temporada hacen salto de línea dentro de su propia tarjeta.
-- Las acciones Entrar / Crear / Nueva quedan alineadas a la derecha en escritorio y debajo en pantallas chicas.
-- El reto Campo destruido queda en su propia fila.
+- Las carreras vacías ya no usan la clase global `empty-slot`, que estaba pensada para huecos de la pizarra táctica.
+- Los slots vacíos se muestran como filas completas, igual que Carrera 1 y el reto Campo destruido.
+- Se mantiene el listado vertical estable.
+- No se modifican guardados, slots, retos, cartas ni lógica de carrera.
 
-Compatibilidad:
+## Archivos modificados
 
-- No modifica partidas guardadas.
-- No modifica la separación de slots.
-- No modifica el inventario global de cartas agregado en V5.78.
+- `style.css`
+- `js/data/04-data-storage.js`
+- `index.html`
+- `app.js`
+- `config.js`
+- `README.md`
+- `VERSION.md`
+- `CARACTERISTICAS_VERSION.md`

@@ -1,3 +1,3 @@
-V5.79
+V5.80
 
-Corrección definitiva del menú de slots: listado vertical estable sin superposición ni tarjetas comprimidas.
+Corrección de slots vacíos: se aíslan del estilo global de huecos tácticos y quedan alineados como filas normales.

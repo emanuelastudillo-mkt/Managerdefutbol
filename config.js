@@ -1,728 +1,1029 @@
-/*
-  Configuración editable del juego.
-  Cambiar estos valores no requiere tocar app.js.
-  Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
-*/
-window.GAME_CONFIG = {
-  version: 'V5.80',
-  partidas: {
-    // V5.80: cantidad de carreras normales separadas. El nombre visible se arma solo con club y temporada.
-    slotsCarrera: 5
-  },
-  data: {
-    seedUrl: 'data/seed.json',
-    // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
-    cacheMode: 'default',
-    // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
-    playersUrl: 'data/jugadores.json',
-    manualPlayersUrl: 'data/jugadores_manuales.json',
-    sponsorsUrl: 'data/sponsors.json',
-    employeesUrl: 'data/empleados.json',
-    eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json',
-    managerAchievementsUrl: 'data/hitos_manager.json',
-    retosManagerUrl: 'data/retos_manager.json',
-    estadiosUrl: 'data/estadios_argentina.json',
-    hinchasUrl: 'data/hinchas_argentina.json',
-    estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
-    hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
-    estadiosArgentinaUrl: 'data/estadios_argentina.json',
-    hinchasArgentinaUrl: 'data/hinchas_argentina.json',
-    estadiosChileUrl: 'data/estadios_chile.json',
-    hinchasChileUrl: 'data/hinchas_chile.json',
-    estadiosBrasilUrl: 'data/estadios_brasil.json',
-    hinchasBrasilUrl: 'data/hinchas_brasil.json',
-    estadiosInglaterraUrl: 'data/estadios_inglaterra.json',
-    hinchasInglaterraUrl: 'data/hinchas_inglaterra.json',
-    estadiosEspanaUrl: 'data/estadios_espana.json',
-    hinchasEspanaUrl: 'data/hinchas_espana.json',
-    estadiosItaliaUrl: 'data/estadios_italia.json',
-    hinchasItaliaUrl: 'data/hinchas_italia.json',
-    estadiosRumaniaUrl: 'data/estadios_rumania.json',
-    hinchasRumaniaUrl: 'data/hinchas_rumania.json',
-    instalacionesUrl: 'data/instalaciones.json',
-    relatosPartidoUrl: 'data/relatos_partido.json'
-  },
-  calendario: {
-    // Cada avance equivale a 1 día calendario. La temporada se procesa día por día.
-    diasPorAvance: 1,
-    // Año inicial del calendario. Cada temporada usa un año calendario completo y respeta años bisiestos.
-    anioInicial: 2026,
-    mesInicioTemporada: 1,
-    diaInicioTemporada: 1,
-    // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
-    ligaIdaYVuelta: true,
-    diasEntreFechasLiga: 7,
-    fechaPausaLuegoDe: 17,
-    diasVacacionesMitadTemporada: 28,
-    // Distribución de partidos por días para no simular todas las ligas juntas.
-    // offset: -2 = viernes, -1 = sábado, 0 = domingo respecto de la fecha base de cada jornada.
-    diasPorLiga: [
-      { paises:['España','Italia','Inglaterra','Rumania'], offset:-2 },
-      { paises:['Argentina'], ordenes:[2,3], offset:-1 },
-      { paises:['Chile','Brasil'], offset:0 },
-      { paises:['Argentina'], ordenes:[1], offset:0 }
-    ],
-    // Los partidos sin manager usan simulación rápida para reducir bloqueos.
-    simulacionRapidaBots: true,
+/* V3.44 · Primer equipo, mercado, plantel, táctica y validación de alineación. */
 
-    // Cooldown único tras cada avance/partido. 10000 = 10 segundos.
-    bloqueoEntreAvancesMs: 10000,
-    // El avance diario usa el mismo cooldown para evitar dobles flujos de calendario.
-    bloqueoAvanceDiaMs: 10000,
-    // Duración visual de la transición al avanzar días.
-    transicionAvanceMs: 3400,
-    diasPretemporada: 30,
-    // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
-    diasPostemporada: 0,
-    amistososMaximosPretemporada: 5
-  },
-
-  centroOjeo: {
-    activo: true,
-    cupoBaseOjeadores: 2,
-    cupoBaseJugadores: 5,
-    ojeadoresPorOficina: 3,
-    jugadoresPorOficina: 10,
-    costoOjeadorDiario: 200000,
-    costoOficinaMensual: 1000000,
-    jefes: {
-      regular: { nombre:'Regular', sueldoMensual: 500000, maxOficinas: 1, revelacionesMin: 0, revelacionesMax: 1 },
-      bueno: { nombre:'Bueno', sueldoMensual: 12000000, maxOficinas: 2, revelacionesMin: 0, revelacionesMax: 1 },
-      elite: { nombre:'Elite', sueldoMensual: 180000000, maxOficinas: 5, revelacionesMin: 1, revelacionesMax: 2 }
-    }
-  },
-  modoFundador: {
-    activo: true,
-    prestigioClubInicial: 10,
-    presupuestoInicial: 0,
-    capacidadEstadioInicial: 0,
-    hinchasIniciales: 500,
-    campoInicial: 30,
-    libresMinimosTotales: 80,
-    libresMinimosPorteros: 8,
-    libresMinimosDefensores: 20,
-    libresMinimosMediocampistas: 24,
-    libresMinimosDelanteros: 16
-  },
-  manager: {
-    // Prestigio inicial del manager. Un manager nuevo arranca en 0.
-    prestigioInicial: 0,
-    // Clubes con este prestigio o menos aceptan cualquier manager, incluso con prestigio 0.
-    prestigioClubLibreMinimo: 20,
-    // Al renunciar o ser despedido, el club bloquea al manager por esta cantidad de temporadas.
-    temporadasBloqueoRecontratacion: 1,
-    // Objetivo opcional de puntos por partido. null o vacío = objetivo automático por división.
-    // Valores válidos: 0.3 a 2.0.
-    objetivoPuntosPorPartido: null,
-    // Objetivos automáticos por división cuando objetivoPuntosPorPartido queda vacío.
-    objetivoDivision1: 1.4,
-    objetivoDivision2: 1.1,
-    objetivoDivision3: 0.9,
-    // Base de evaluación: la directiva revisa desde los 5 partidos oficiales de la temporada actual.
-    partidosMinimosEvaluacionObjetivo: 5,
-    // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
-    congelarEvaluacionObjetivoPorTemporada: true,
-    // Prórroga por promedio general histórico del manager.
-    bonusPartidosPromedioGeneral120: 2,
-    bonusPartidosPromedioGeneral150: 5,
-    bonusPartidosPromedioGeneral190: 12
-  },
-  codigosEspeciales: {
-    activo: true,
-    // Cada código se puede reclamar una sola vez por partida guardada.
-    codigos: [
-      {
-        codigo: 'PRESTIGIO20',
-        nombre: 'Impulso de prestigio',
-        descripcion: 'Suma 20 puntos de prestigio al manager.',
-        beneficios: { prestigio: 20 }
-      },
-      {
-        codigo: 'PUNTOS50000',
-        nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 50000 }
-      }
-    ]
-  },
-  plantel: {
-    nacionalidades: {
-      local: 0.70,
-      sudamerica: 0.20,
-      restoDelMundo: 0.10,
-      porPais: {
-        Argentina: 'Argentina',
-        Chile: 'Chile',
-        Brasil: 'Brasil',
-        Inglaterra: 'Inglaterra',
-        España: 'España',
-        Italia: 'Italia',
-        Rumania: 'Rumania'
-      },
-      sudamericaPaises: ['Argentina','Brasil','Uruguay','Paraguay','Chile','Bolivia','Perú','Ecuador','Colombia','Venezuela'],
-      restoDelMundoPaises: ['España','Italia','Francia','Alemania','Portugal','Inglaterra','México','Estados Unidos','Japón','Corea del Sur','Marruecos','Nigeria','Ghana','Rumania']
-    },
-    // Límites del primer equipo. El máximo bloquea fichajes y promociones desde academia.
-    jugadoresMinimosPorClub: 18,
-    jugadoresInicialesPorClub: 25,
-    jugadoresMaximosPorClub: 42,
-    // Envejecimiento profesional: desde esta edad se aplica un boost negativo anual acumulado a todas las habilidades.
-    deterioroEdadActivo: true,
-    edadInicioDeterioro: 32,
-    deterioroEdadMinAnual: 1,
-    deterioroEdadMaxAnual: 4,
-    // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
-    reparacionAutomaticaBots: true,
-    botsMinimoPorteros: 2,
-    botsMinimoDefensores: 5,
-    botsMinimoMediocampistas: 5,
-    botsMinimoDelanteros: 3,
-    botsMediaEmergenciaMin: 28,
-    botsMediaEmergenciaMax: 52,
-    botsFactorSueldoEmergencia: 0.35,
-    agentesLibresIniciales: 300,
-    agentesLibresMaximosTotales: 300,
-    agentesLibresMediaMin: 40,
-    agentesLibresMediaMax: 62,
-    agentesLibresEdadMin: 19,
-    agentesLibresEdadMax: 30,
-    agentesLibresMaximosPorTemporada: 300,
-    agentesLibresPosiciones: {
-      POR: 0.10,
-      DEF: 0.35,
-      MED: 0.35,
-      DEL: 0.20
-    },
-    rellenarLibresHastaMaximoPorTemporada: true,
-    limpiarLibresViejosAlCambiarTemporada: true,
-    jovenesLibresNuevosPorEquipoTemporada: 0,
-    jovenesLibresEdadMin: 17,
-    jovenesLibresEdadMax: 18,
-    jovenesLibresPorTemporada: 0
-  },
-  cohesion: {
-    // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
-    valorInicial: 50,
-    gananciaPorPartido: 7,
-    perdidaPorCambioTactico: 8,
-    perdidaPorCambioJugador: 1,
-    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-    gananciaEntrenamientoTacticoPorCasilla: 1
-  },
-  equilibrioBots: {
-    // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.
-    activo: true,
-    // suave | normal | dificil
-    dificultad: 'dificil',
-    soloDivisionManager: true,
-    nivelarAlInicioTemporada: true,
-    mantenerDuranteTemporada: true,
-    intervaloMantenimientoFechas: 2,
-    // Los mejores bots de la temporada anterior reciben un plus; los peores, un margen menor.
-    bonusMaximoPorPosicion: 8,
-    pisoMoral: 65,
-    pisoFisico: 76,
-    pisoCohesion: 70,
-    margenMoral: 8,
-    margenFisico: 6,
-    margenCohesion: 10,
-    recuperacionFisicaPorMantenimiento: 8,
-    recuperacionMoralPorMantenimiento: 5,
-    recuperacionCohesionPorMantenimiento: 4,
-    desarrolloPlantelPorTemporada: 0.18,
-    bonusDesarrolloPorPosicion: 0.08,
-    maximoBoostBotPorHabilidad: 18
-  },
-  economia: {
-    gastosMensuales: {
-      activo: true,
-      diaCobro: 1,
-      impuestoGananciasPct: 0.01,
-      electricidadBasePorPartido: 100000,
-      electricidadPorCapacidadPorPartido: 10,
-      limpiezaPorHinchaPorPartido: 10
-    },
-    escalaSueldosYClausulas: 0.10,
-    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
-    escalaClausulas: 0.10,
-    reduccionBaseSueldoFinTemporada: 0.05,
-    bonusSueldoPorPartidoJugado: 0.01,
-    banco: {
-      activo: true,
-      bancos: [
-        { nombre:'Banco Nación', interes:0.32 },
-        { nombre:'Banco Provincia', interes:0.36 },
-        { nombre:'Banco Galicia', interes:0.41 },
-        { nombre:'Santander', interes:0.44 },
-        { nombre:'BBVA', interes:0.43 },
-        { nombre:'Banco Macro', interes:0.47 },
-        { nombre:'Banco Credicoop', interes:0.34 },
-        { nombre:'ICBC', interes:0.39 },
-        { nombre:'Banco Supervielle', interes:0.46 },
-        { nombre:'Banco Comafi', interes:0.50 }
-      ],
-      montos: [
-        { monto:50000000, prestigio:1 },
-        { monto:500000000, prestigio:5 },
-        { monto:1500000000, prestigio:20 }
-      ],
-      plazosSemanas: [24,48,172]
-    }
-  },
-  sponsors: {
-    // V5.72+: sistema fijo por temporada + sponsor especial con condición.
-    factorValorBase: 1,
-    ofertasMinimasPorTemporada: 20,
-    ofertasMaximasPorTemporada: 40,
-    ofertasVencenEnDias: 5,
-    ofertasPorLlegadaMin: 1,
-    ofertasPorLlegadaMax: 3,
-    probabilidadLlegadaTriple: 0.45,
-    duracionOfertaMinDias: 200,
-    duracionOfertaMaxDias: 500,
-    probabilidadPagoUnico: 0.50,
-    descuentoPagoUnico: 0.50,
-    sponsorEspecialActivo: true,
-    probabilidadSponsorEspecial: 0.22,
-    multiplicadorBonoEspecial: 3,
-    condicionesEspeciales: [
-      { id:'low_player_starter_6_10', nombre:'Apuesta al tapado', descripcion:'Un jugador de muy bajo nivel debe ser titular 6 de los próximos 10 partidos.', partidosObjetivo:10, titularesObjetivo:6, mediaMaxima:55 },
-      { id:'clean_sheets_4', nombre:'Valla invicta', descripcion:'No recibir goles en los próximos 4 partidos.', partidosObjetivo:4 },
-      { id:'win_4_5', nombre:'Racha ganadora', descripcion:'Ganar 4 de los próximos 5 partidos.', partidosObjetivo:5, victoriasObjetivo:4 },
-      { id:'no_reds_5', nombre:'Juego limpio', descripcion:'No recibir tarjetas rojas en los próximos 5 partidos.', partidosObjetivo:5 },
-      { id:'field_98_30', nombre:'Campo impecable', descripcion:'Mantener el campo de juego por encima de 98 durante 30 días.', diasObjetivo:30, minimoCampo:98 },
-      { id:'lose_5_5', nombre:'Campaña incómoda', descripcion:'Perder los próximos 5 partidos.', partidosObjetivo:5, derrotasObjetivo:5 }
-    ]
-  },
-  mercado: {
-    // Impuesto federativo sobre ventas de jugadores. 0.30 = el club recibe 70% neto.
-    impuestoAfaTraspasos: 0.30,
-    // Siglas usadas en mensajes de ofertas según país/liga del club comprador.
-    federacionesTraspaso: {
-      Argentina:'AFA',
-      Chile:'ANFP',
-      Brasil:'CBF',
-      Inglaterra:'FA',
-      España:'RFEF',
-      Italia:'FIGC',
-      Rumania:'FRF'
-    },
-    // Ofertas automáticas y ofertas al ofrecer jugadores: nunca superan este % de la cláusula.
-    ofertaJugadoresMinPorcentajeClausula: 0.05,
-    ofertaJugadoresMaxPorcentajeClausula: 0.15,
-    ofertasJugadoresRequierenPartidos: true,
-    ofertasJugadoresRequierenGolOAsistencia: true,
-
-    // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.
-    presupuestoFichajesActivo: true,
-    presupuestoFichajesMaximoPorcentaje: 0.50,
-    presupuestoFichajesDivision3: 0.25,
-    presupuestoFichajesDivision2: 0.35,
-    presupuestoFichajesDivision1: 0.40,
-    desbloqueoSuperarObjetivo: 0.05,
-    desbloqueoPromedio15: 0.05,
-    desbloqueoPromedio19: 0.10,
-    desbloqueoAscenso: 0.10,
-    desbloqueoCampeon: 0.15,
-    porcentajeVentaLiberadoFichajes: 0.70,
-
-    // Oferta especial de cláusula: entre 1 y 2 veces en las últimas fechas, un club de la misma liga puede pagar la cláusula de uno de los 3 mejores jugadores del plantel.
-    ofertaClausulaEspecialActiva: true,
-    ofertaClausulaEspecialFechasFinales: 10,
-    ofertaClausulaEspecialMinPorTemporada: 1,
-    ofertaClausulaEspecialMaxPorTemporada: 2,
-    ofertaClausulaEspecialTopJugadores: 3
-  },
-  estadio: {
-    costoReplantarCesped: 2000000,
-    diasReplantarCesped: 35,
-    costoParchearCampo: 200000,
-    diasParchearCampo: 21,
-    mejoraParchePorAvance: 5,
-    // Balance V5.75+: el deterioro normal del campo se multiplica por este valor.
-    deterioroCampoMultiplicador: 2,
-    // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
-    deterioroCapacidadPorTemporadaPct: 1,
-    // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
-    botsCampoFijoPorTemporada: true,
-    botsCampoMinimo: 30,
-    botsCampoMaximo: 95,
-    botsCampoBaseInicial: 58,
-    botsCampoRangoPorPosicion: 42,
-    // Reparación defensiva: si los campos bots quedan debajo del mínimo, se consideran datos corruptos y se regeneran.
-    botsCampoAutoRepararEstadosInvalidos: true,
-    botsCampoUmbralInvalido: 29,
-    botsCampoPorcentajeMasivoInjugable: 0.60,
-    // Entradas, hinchadas y ventaja local.
-    precioEntradaInicial: 100,
-    precioEntradaMinimo: 10,
-    precioEntradaMaximo: 500,
-    // Precio automático sólo para clubes bots locales según prestigio del rival.
-    // Bajo: precio base. Medio: +50% a +100%. Alto: +100% a +500%.
-    precioEntradaBotAutomatico: true,
-    precioEntradaBotPrestigioBajoHasta: 39,
-    precioEntradaBotPrestigioMedioHasta: 69,
-    precioEntradaBotMultiplicadorMedioMin: 1.50,
-    precioEntradaBotMultiplicadorMedioMax: 2.00,
-    precioEntradaBotMultiplicadorAltoMin: 2.00,
-    precioEntradaBotMultiplicadorAltoMax: 5.00,
-    precioEntradaBotRedondeo: 10,
-    porcentajeVisitanteMinimo: 0.07,
-    porcentajeVisitanteMaximo: 0.10,
-    porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
-    hinchasPorPuntoBonusLocal: 1000,
-    bonusLocalMaximo: 50,
-    gananciaHinchasPorVictoriaBase: 0.001,
-    perdidaHinchasPorDerrotaActual: 0.005,
-    posicionTablaPuntoNeutro: 10,
-    posicionTablaPaso: 0.001,
-    posicionTablaGananciaMaxima: 0.005,
-    precioEntradaEfectoMaximo: 0.01,
-    // Aumento de demanda de entradas por prestigio del rival. 0.35 = hasta +35% de público potencial.
-    bonusAsistenciaPrestigioRivalMaximo: 0.35,
-    // Desde este prestigio del rival empieza a notarse el aumento de interés por el partido.
-    bonusAsistenciaPrestigioRivalDesde: 20,
-    // Proporción del bonus que también empuja demanda visitante/neutral.
-    bonusAsistenciaPrestigioRivalVisitante: 0.50,
-    // Multiplica la duración base de las ampliaciones de estadio. Ejemplo: 1 día base x 30 = 30 días reales de obra.
-    multiplicadorDiasObras: 30,
-
-    // Campañas para sumar socios. La UI muestra inversión y duración; los socios diarios y totales quedan ocultos.
-    campaniasSocios: [
-      { id:'marketing_50m_60d', nombre:'Campaña barrial de socios', inversion: 50000000, diasDuracion: 60, sociosDiaMin: 10, sociosDiaMax: 15 },
-      { id:'marketing_500m_90d', nombre:'Campaña masiva de afiliación', inversion: 500000000, diasDuracion: 90, sociosDiaMin: 35, sociosDiaMax: 50 },
-      { id:'marketing_100m_10d', nombre:'Operativo relámpago de socios', inversion: 100000000, diasDuracion: 10, sociosDiaMin: 30, sociosDiaMax: 50 }
-    ]
-  },
-  empleados: {
-    // Los valores base de empleados regulares se mantienen; las categorías se cargan desde data/empleados.json.
-    psicologoCosto: 500000,
-    psicologoProbabilidadExito: 0.90,
-    psicologoCooldownDias: 35,
-    kinesiologoCosto: 1000000,
-    kinesiologoProbabilidadFallo: 0.20,
-    // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.
-    kinesiologoHorasExtrasPorcentajeSueldo: 0.01,
-    preparadorJuvenilesCosto: 1000000
-  },
-  academia: {
-    costoCaptacion: 1000000,
-    diasCaptacion: 35,
-    jugadoresMinimosPorCaptacion: 5,
-    jugadoresMaximosPorCaptacion: 10,
-    costoJugadorPorAvance: 10000,
-    diaCobroSemanalJuveniles: 1, // 1 = lunes. Los juveniles cobran una vez por semana.
-    compensacionDespido: 50000,
-    multiplicadorEntrenamiento: 5,
-    multiplicadorEntrenamientoJuvenilExcepcional: 5,
-    juvenilExcepcionalPorTemporada: true,
-    edadJuvenilExcepcional: 16,
-    edadJuvenilMin: 12,
-    edadJuvenilMax: 16,
-    edadUltimaTemporadaAcademia: 17,
-    mediaJuvenilExcepcionalMin: 12,
-    mediaJuvenilExcepcionalMax: 40,
-    mediaMaximaCreacionBase: 30,
-    mediaMaximaCreacionBonusEdad: 3,
-    crecimientoTemporadaMin: 7,
-    crecimientoTemporadaMax: 11,
-    crecimientoExcepcionalTemporadaMin: 15,
-    crecimientoExcepcionalTemporadaMax: 20,
-    cupoBaseJuveniles: 10,
-    residenciaCuposJuveniles: 20,
-    residenciaCostoMensual: 560000,
-    // Cantidad base de habilidades reveladas por informe del preparador.
-    multiplicadorConsultaJuveniles: 1,
-    // Lesiones juveniles por temporada. Mientras están lesionados no entrenan.
-    lesionesJuvenilesMinPorTemporada: 1,
-    lesionesJuvenilesMaxPorTemporada: 2,
-    lesionJuvenilDiasMin: 14,
-    lesionJuvenilDiasMax: 42,
-    costoTratamientoLesionJuvenil: 50000
-  },
-  entrenamiento: {
-    // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
-    efectividadPorCasilla: 0.25,
-    // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
-    entrenamientoIndividualDiario: true,
-    efectividadIndividualPorDia: 0.25,
-    entrenamientoIndividualInicial: 'balanced',
-    // Curva de dificultad: una habilidad alta reduce la probabilidad final de subir +1.
-    // Ejemplo: habilidad 80 => 20% de probabilidad final si ya superó la tirada base.
-    curvaHabilidadActual: true,
-    probabilidadMinimaSubidaHabilidad: 0,
-    // Multiplicador directo de velocidad para boosts temporales de habilidades profesionales.
-    // Las habilidades base del profesional no cambian; los boosts se reducen al 30% al cerrar temporada.
-    multiplicadorSubidaHabilidades: 3,
-    planSemanalInicial: {
-      pre: 'regenerative',
-      morning: 'intense',
-      afternoon: 'tactical',
-      night: 'dayoff'
-    },
-    desgaste: {
-      activo: true,
-      maximo: 98,
-      desgasteMinPartido: 2,
-      desgasteMaxPartido: 4,
-      desgastePorTurnoIntenso: 1,
-      recuperacionPorTurnoMasajista: 1
-    }
-  },
-
-  simulador: {
-    // V3.43: enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
-    pesoColectivo: 0.70,
-    pesoIndividual: 0.30,
-    // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
-    probabilidadPelotaParada: 0.14,
-    // V3.45: los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
-    // El riesgo real de error es 1 - seguridad, para que mejores valores reduzcan errores.
-    formulaErroresJugador: true,
-    escalaRiesgoErrorJugador: 0.72,
-    // Cuando un gol rival ocurre, esta probabilidad lo atribuye también como error de gol a un defensor o arquero.
-    probabilidadGolAtribuyeErrorGol: 0.60,
-    // Probabilidad base anterior mantenida como respaldo si se desactiva formulaErroresJugador.
-    probabilidadErrorTerminaEnGol: 0.28,
-    // Máximo de errores usado para evitar partidos rotos por errores constantes.
-    maximoErroresPorEquipo: 5,
-    // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
-    fatigaVivaMultiplicador: 2,
-    // V5.27: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
-    multiplicadorTarjetas: 0.50,
-    // V5.27: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
-    rojasDerrotaDefault: 5,
-    // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
-    estrellasMaximasPorEquipo: 3,
-    estrellasPartidosVentana: 10,
-    estrellaGoleadorPartidosConGol: 3,
-    estrellaArqueroPartidosConTapadaClave: 3,
-    estrellaMediocampistaAsistencias: 3,
-    estrellaBonusReferencia: 0.30,
-    // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
-    recuperacionAutomaticaPostPartidoMin: 4,
-    recuperacionAutomaticaPostPartidoMax: 6,
-    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
-    // El rango 61-70 queda como puente para evitar saltos bruscos.
-    recuperacionPostPartidoUsaResistencia: true,
-    recuperacionPostPartidoPorResistencia: [
-      { minResistencia: 1, maxResistencia: 40, recuperacionMin: 0, recuperacionMax: 1 },
-      { minResistencia: 41, maxResistencia: 60, recuperacionMin: 2, recuperacionMax: 4 },
-      { minResistencia: 61, maxResistencia: 70, recuperacionMin: 3, recuperacionMax: 5 },
-      { minResistencia: 71, maxResistencia: 80, recuperacionMin: 4, recuperacionMax: 7 },
-      { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
-      { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
-    ],
-    desgastePartidoMin: 25,
-    desgastePartidoMax: 46,
-    factorDesgasteArquero: 0.5
-  },
-
-  tactica: {
-    estilosSector: {
-      activo: true,
-      defensaInicial: 'posicional',
-      mediosInicial: 'posicional',
-      delanterosInicial: 'posicional',
-      // Intensidad general del impacto de estilos sectoriales en el simulador. 1 = normal, 0.5 = suave.
-      intensidadEfecto: 0.85,
-      // Cansancio diario aplicado al finalizar el partido por estilos exigentes.
-      cansancioPresionAlta: -3,
-      cansancioRotacion: -1,
-      cansancioRepliegue: -1
-    }
-  },
-  lesiones: {
-    // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
-    multiplicadorProbabilidad: 0.20,
-    lesionBase: 0.05,
-    fatigaPaso: 5,
-    fatigaBonus: 0.01,
-    // Duraciones en días. El motor las convierte a turnos según diasPorAvance.
-    contusionMinDias: 7,
-    contusionMaxDias: 21,
-    distensionMinDias: 21,
-    distensionMaxDias: 56,
-    desgarroMinDias: 28,
-    desgarroMaxDias: 84,
-    esguinceMinDias: 35,
-    esguinceMaxDias: 105,
-    roturaMinDias: 90,
-    roturaMaxDias: 210,
-    fracturaMinDias: 180,
-    fracturaMaxDias: 400,
-    lesionadoSuplenteDiasMax: 63,
-    penalizacionLesionadoSuplente: 0.10
-  },
-
-  ranking: {
-    // URL publicada para enviar y leer resultados del ranking online.
-    appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
-    // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
-    token: '',
-    // El Worker actual exige sesión para subir récords. El front guarda el token en localStorage tras iniciar sesión.
-    requiereLogin: true,
-    // Rutas compatibles con Worker Cloudflare + D1 actual y variantes anteriores.
-    // La ruta principal de carga es /ranking/season.
-    submitPaths: ['ranking/season','api/ranking/season','season','records/season','api/records/season','records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''],
-    // Rutas de login/verificación compatibles con el Worker Cloudflare + D1.
-    // También prueba rutas de registro/sesión para cuentas creadas originalmente sin contraseña.
-    loginPaths: ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'],
-    mePaths: ['auth/me','me','api/auth/me','api/me','user','api/user'],
-    // La lectura principal usa /ranking/season; /ranking/career queda como respaldo si se expone.
-    readPaths: ['ranking/season','ranking/career','api/ranking/season','api/ranking/career','ranking','records','scores','api/ranking','api/records','api/scores',''],
-    resultadosPorPagina: 100,
-    cooldownCargaDias: 50,
-    nombreRanking: 'Ranking Online'
-  },
-
-  mensajesAsistente: {
-    activo: true,
-    frecuenciaDias: 12,
-    titulo: 'Consejo del asistente',
-    consejos: [
-      'Hola #usuario#, cómo vas con eso de las cláusulas? Son una locura. Al menos nos protegen de que nos quiten jugadores, pero realmente nadie nunca las paga. Si ves que necesitás dinero, que no te asuste que paguen poco. Saludos.',
-      'Siempre es bueno estar en los partidos. No digas que te dije, pero tu ayudante no tiene el espíritu para sacar lo mejor del equipo. Desde la cabina de video y GPS vemos todo.',
-      '#usuario#, mirá de reojo el estado físico. A veces un jugador pide cancha con la cara, pero las piernas ya están negociando la rendición.',
-      'Hay jugadores que parecen suplentes eternos hasta que los necesitás. No los castigues de más por una mala semana; el vestuario también se arma desde el banco.',
-      'Si un jugador quiere irse, escuchalo antes de pelearte con todos. A veces una charla calma más que una multa o una promesa grande.',
-      'La academia no siempre entrega estrellas. A veces entrega paciencia. Y la paciencia, aunque no salga en los informes, también gana partidos.',
-      'Cuidado con comprar sólo por media. Hay jugadores que ordenan, otros que corren, otros que no se esconden. La planilla no siempre cuenta toda la historia.',
-      'Cuando el equipo gana, todos parecen tácticamente brillantes. Cuando pierde, todos piden cambios. La verdad suele estar en algún punto bastante incómodo.',
-      'No te cases con una formación sólo porque funcionó una vez. Los rivales miran, aprenden y después te esperan donde antes te dejaban pasar.',
-      'Las ofertas bajas molestan, pero también miden el mercado. Si nadie pregunta por un jugador, quizá el problema no es la oferta sino nuestra expectativa.',
-      'Si vas a cuidar el resultado, que el equipo lo sepa. Defender sin orden no es defender; es regalarle tiempo al rival para pensar.',
-      'Hay días para entrenar fuerte y días para no romper lo que todavía sirve. El preparador físico no grita, pero suele tener razón.',
-      'No subestimes la moral. Un plantel convencido corre un poco más, discute un poco menos y perdona mejor los errores del compañero.',
-      'El mercado libre parece barato hasta que llenás el vestuario de contratos que nadie quiere pagar después. Revisá dos veces antes de entusiasmarte.',
-      'Un arquero en buen momento cambia el humor de todos. Si lo ves seguro, no lo muevas sólo por ansiedad.',
-      'Cuando un juvenil se lesiona, no lo apures. Todavía está aprendiendo a ser jugador y a veces el cuerpo va más lento que la ilusión.',
-      'Hay partidos que se pierden antes de salir a la cancha: mala forma, mala moral, mala táctica y demasiada confianza. Revisar no cuesta nada.',
-      'Si el estadio empieza a pedir arreglos, no lo dejes para siempre. El club también compite con lo que muestra alrededor de la cancha.',
-      'Ojear no es descubrir una verdad absoluta; es reducir el margen de error. Igual, en este trabajo, reducir errores ya es bastante.',
-      'Si el equipo está raro, mirá primero lo simple: cansancio, roles, moral y lesionados. La épica queda mejor cuando lo básico está ordenado.',
-      'Antes de fichar por impulso, mandá un ojeador. Una media atractiva puede esconder poca genética, mala agresividad o un factor sorpresa que no aparece a simple vista.',
-      'Ojear jugadores propios también sirve. No es desconfianza: es saber quién puede rendir más de lo que muestra y quién está viviendo de una media cómoda.',
-      'Si un jugador libre aparece barato, preguntate por qué sigue libre. El ojeo no te da certezas absolutas, pero evita contratos largos por entusiasmo corto.',
-      'Cuando mires un equipo rival, no busques nombres solamente. Defensa, medios y delantera te dicen dónde atacar y dónde conviene no regalar la pelota.',
-      'Un informe incompleto no es inútil. A veces una sola habilidad oculta revelada alcanza para decidir si esperar, fichar o salir corriendo.',
-      'Si vas a ojear varios jugadores a la vez, ordená prioridades. No todo rumor merece oficina, ojeador y café gratis.',
-      'Los jugadores propios con informe completo te ayudan a elegir titulares sin mirar sólo la media. Algunos tienen más partido que cartel.',
-      'Un equipo ojeado puede cambiar si vende, ficha o recompone plantel. Guardar el informe sirve, pero volver a mirar antes del partido evita sorpresas.',
-      'No confundas jugador conocido con jugador conveniente. Conocer sus datos sólo elimina niebla; todavía hay que mirar sueldo, edad, puesto y necesidad real.',
-      'Si el mercado muestra pocos nombres, no es pobreza: es foco. Primero aparecen los ojeados y después una ventana razonable para no perder media vida scrolleando.',
-      'Un delantero con factor sorpresa alto puede convertir partidos cerrados en problemas nuevos para el rival. No siempre es regular, pero puede romper planes.',
-      'Un defensor con mala agresividad oculta puede regalar amarillas aunque la media lo defienda. El informe de ojeo existe para descubrir esas trampas.',
-      'La genética no mete goles, pero explica por qué algunos jugadores aguantan mejor los golpes de una temporada larga.',
-      'Ojear al rival antes de cambiar la táctica es más sano que inventar soluciones después del segundo gol en contra.',
-      'Si un jugador propio ya está ojeado, usá ese ojo junto al nombre como ventaja. Ya pagaste por esa información; no la ignores.',
-      'Los informes archivados no son decoración. Sirven para volver rápido a jugadores que antes parecían interesantes y hoy quizá encajan mejor.',
-      'No gastes todos los cupos en estrellas obvias. A veces el buen fichaje está en el jugador mediano que revela justo la oculta correcta.',
-      'Ojear equipos no reemplaza mirar la tabla. Un club puede tener buena delantera y aun así estar mal por campo, moral o plantel corto.',
-      'Si un jugador contratado tiene buenas visibles pero ocultas flojas, puede rendir bien en la ficha y mal cuando el partido se ensucia.',
-      'El ojeo no compra jugadores; compra contexto. Y en un mercado caro, el contexto suele ser más barato que corregir un contrato malo.'
-    ]
-  },
-  ui: {
-    duracionAvisoMs: 5200,
-    fasesSimulacionPartido: 90,
-    duracionSimulacionPartidoMs: 270000,
-    duracionMinimaFaseSimulacionMs: 3000,
-    // Simulador vivo: demora entre minutos cuando se usa el botón Auto. V5.13 duplica la pausa anterior.
-    simulacionVivaAutoMs: 840,
-    relatoMantenerFases: 1,
-    // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
-    accionesFeedbackCargaMs: 750,
-    accionesFeedbackResultadoMs: 900,
-    // Tiempo entre tratamientos cuando se usa "Tratar a todos". Evita que todas las animaciones se disparen a la vez.
-    kinesiologoTratamientoProgresivoMs: 650,
-    // Tiempo entre cartas al abrir sobres del menú ESPECIAL.
-    especialAperturaCartaMs: 2700,
-    frasesProgresoAvanceIntervaloMs: 10000,
-    temaClubActivo: true,
-    temaClubFondoOpacidad: 0.18,
-    temaClubPanelOpacidad: 0.05,
-    temaClubAcentoSuavizado: 0.18,
-    frasesProgresoAvance: [
-      'Recogiendo pelotas detrás del arco',
-      'Regando el césped por sectores',
-      'Midiendo la humedad del campo',
-      'Marcando las líneas laterales',
-      'Revisando redes de los arcos',
-      'Ajustando los banderines del córner',
-      'Ordenando conos de entrenamiento',
-      'Contando pecheras disponibles',
-      'Lavando botines embarrados',
-      'Secando guantes de arquero',
-      'Pesando pelotas oficiales',
-      'Inflando pelotas a presión reglamentaria',
-      'Verificando tapones de botines',
-      'Revisando vendas y tobilleras',
-      'Controlando hielo en la enfermería',
-      'Preparando bebidas isotónicas',
-      'Cortando cinta deportiva',
-      'Limpiando pizarras tácticas',
-      'Acomodando bancos de suplentes',
-      'Revisando planillas de cambios',
-      'Calculando desgaste del césped',
-      'Separando camisetas por talle',
-      'Chequeando números de dorsales',
-      'Probando silbatos del árbitro',
-      'Revisando iluminación del estadio',
-      'Calibrando GPS de entrenamiento',
-      'Registrando cargas musculares',
-      'Controlando peso post-entrenamiento',
-      'Analizando pisadas en el barro',
-      'Ordenando pelotas por estado útil',
-      'Aceitando bicicletas del gimnasio',
-      'Recogiendo basura del estadio',
-      'Visitando a padres de los talentos',
-      'Filtrando rumores a la prensa',
-      'Revisando cerraduras del vestuario',
-      'Cambiando focos del túnel',
-      'Contando bidones de agua',
-      'Limpiando bancos de suplentes',
-      'Ordenando medias por talle',
-      'Revisando contratos vencidos',
-      'Llamando representantes insistentes',
-      'Separando pelotas pinchadas',
-      'Desinfectando colchonetas del gimnasio',
-      'Ajustando cintas de correr',
-      'Imprimiendo planillas de entrenamiento',
-      'Revisando permisos de juveniles',
-      'Actualizando fichas médicas',
-      'Controlando botiquines del estadio',
-      'Pintando números en los conos',
-      'Reparando redes de entrenamiento',
-      'Barriendo tierra de los accesos',
-      'Acomodando vallas publicitarias',
-      'Verificando micrófonos de conferencia',
-      'Revisando cámaras del estadio',
-      'Cargando videos del último partido',
-      'Buscando camisetas extraviadas',
-      'Probando parlantes de la cancha',
-      'Revisando carnets de socios',
-      'Coordinando traslado de juveniles',
-      'Archivando quejas de hinchas'
-    ]
-  }
-};
-
-
-(function aplicarModificadoresBalanceSeparados(){
-  const balance = window.GAME_BALANCE_MODIFICADORES;
-  if(!balance || typeof balance !== 'object') return;
-  const mergeDeep = (base, extra) => {
-    Object.entries(extra || {}).forEach(([key, value]) => {
-      if(value && typeof value === 'object' && !Array.isArray(value)){
-        base[key] = mergeDeep(base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]) ? base[key] : {}, value);
-      }else{
-        base[key] = value;
-      }
+function firstTeamTabsMarkup(current){
+  const tabs = [
+    ['tactics','Táctica'],
+    ['squad','Plantel'],
+    ['training','Entrenamiento']
+  ];
+  return `<div class="card first-team-tabs"><div class="subtabs">${tabs.map(([key,label])=>`<button class="${current===key?'active':''}" data-first-team-tab="${key}">${label}</button>`).join('')}</div></div>`;
+}
+function bindFirstTeamTabs(){
+  document.querySelectorAll('[data-first-team-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      firstTeamTab = btn.dataset.firstTeamTab || 'tactics';
+      renderFirstTeam();
     });
-    return base;
+  });
+}
+function prependFirstTeamTabs(current){
+  if(activeTab !== 'firstTeam') return;
+  firstTeamTab = current;
+  view.insertAdjacentHTML('afterbegin', firstTeamTabsMarkup(current));
+  bindFirstTeamTabs();
+}
+function renderFirstTeam(){
+  if(firstTeamTab === 'squad') return renderSquad();
+  if(firstTeamTab === 'training') return renderTraining();
+  return renderTactics();
+}
+
+function marketTabsMarkup(){
+  return `<div class="card market-tabs"><div class="subtabs"><button class="${marketSubTab==='free'?'active':''}" data-market-tab="free">Jugadores libres</button><button class="${marketSubTab==='contracted'?'active':''}" data-market-tab="contracted">Jugadores contratados</button></div></div>`;
+}
+function bindMarketTabs(){
+  document.querySelectorAll('[data-market-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      marketSubTab = btn.dataset.marketTab || 'free';
+      renderMarket();
+    });
+  });
+}
+
+function playerHasScoutingReport(playerOrId){
+  const id = typeof playerOrId === 'object' ? Number(playerOrId?.id || 0) : Number(playerOrId || 0);
+  if(!id || !game?.scoutingCenter) return false;
+  const state = game.scoutingCenter || {};
+  if(Array.isArray(state.listedPlayerIds) && state.listedPlayerIds.map(Number).includes(id)) return true;
+  const report = state.reports?.[String(id)];
+  const visible = Array.isArray(report?.visibleSkills) ? report.visibleSkills.filter(Boolean) : [];
+  return visible.length > 0;
+}
+function playerScoutingEyeMarkup(playerOrId){
+  return playerHasScoutingReport(playerOrId) ? '<span class="scouted-eye" title="Jugador ojeado">👁</span>' : '';
+}
+function playerNameWithScoutingEye(player){
+  const base = typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player?.name || 'Jugador');
+  return `${base}${playerScoutingEyeMarkup(player)}`;
+}
+function marketDiscoveryKey(context='market'){
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game?.matchdayIndex || 0);
+  const week = Math.floor(Math.max(0, Number(turn || 0)) / 7);
+  return `${context}-${game?.saveCode || 'save'}-${game?.seasonNumber || 1}-w${week}-${game?.selectedClubId || 0}`;
+}
+function marketLocalCountry(){
+  const selected = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  if(!selected) return String(game?.selectedCountry || '').trim();
+  return typeof clubCountry === 'function' ? clubCountry(selected) : String(selected.country || selected.pais || game?.selectedCountry || '').trim();
+}
+function marketIsLocalFreeAgent(player){
+  const country = marketLocalCountry().toLowerCase();
+  const nat = String(player?.nationality || '').trim().toLowerCase();
+  return Boolean(country && nat && nat.includes(country));
+}
+function marketDiscoveryPool(players, context='free'){
+  const all = Array.isArray(players) ? players.filter(Boolean) : [];
+  const seen = new Set();
+  const scouted = [];
+  const addUnique = (list, player) => {
+    const id = Number(player?.id || 0);
+    if(!id || seen.has(id)) return false;
+    seen.add(id);
+    list.push(player);
+    return true;
   };
-  window.GAME_CONFIG = mergeDeep(window.GAME_CONFIG || {}, balance);
-})();
+  all.filter(playerHasScoutingReport).forEach(player => addUnique(scouted, player));
+  const selectedClub = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  const sameDivisionId = String(selectedClub?.divisionId || '');
+  const unscouted = all.filter(p => !seen.has(Number(p?.id || 0)));
+  const sameLocal = [];
+  const other = [];
+  unscouted.forEach(player => {
+    const isLocal = context === 'contracted'
+      ? String(seed?.clubs?.find(c => Number(c.id) === Number(player.clubId || 0))?.divisionId || '') === sameDivisionId
+      : marketIsLocalFreeAgent(player);
+    (isLocal ? sameLocal : other).push(player);
+  });
+  const key = marketDiscoveryKey(context);
+  const byHash = salt => (a,b) => hashNumber(`${key}-${salt}-${a?.id || 0}`, 1000000) - hashNumber(`${key}-${salt}-${b?.id || 0}`, 1000000);
+  sameLocal.sort(byHash('local'));
+  other.sort(byHash('other'));
+  const picked = [];
+  const addPicked = player => addUnique(picked, player);
+  const localQuota = 35;
+  sameLocal.slice(0, localQuota).forEach(addPicked);
+  other.slice(0, Math.max(0, 50 - picked.length)).forEach(addPicked);
+  if(picked.length < 50) sameLocal.slice(localQuota).forEach(player => { if(picked.length < 50) addPicked(player); });
+  return scouted.concat(picked);
+}
+function marketDiscoverySummary(total, visiblePool, context='free'){
+  const scoutedCount = visiblePool.filter(playerHasScoutingReport).length;
+  const extraCount = Math.max(0, visiblePool.length - scoutedCount);
+  const localText = context === 'contracted' ? 'priorizando la misma liga/división del manager' : 'priorizando nacionalidad local del país del club';
+  return `Mercado reducido: ${scoutedCount} ojeado(s) siempre visibles + ${extraCount} aleatorio(s), ${localText}. Total global disponible: ${total}.`;
+}
+
+function contractedMarketPlayers(){
+  const all = seed.players
+    .filter(p => !p.retired && !p.sold && Number(p.clubId || 0) > 0 && Number(p.clubId) !== Number(game.selectedClubId));
+  return marketDiscoveryPool(all, 'contracted')
+    .slice()
+    .sort((a,b)=>marketScoutedOverallNumber(b)-marketScoutedOverallNumber(a) || visibleOverall(b)-visibleOverall(a) || a.name.localeCompare(b.name,'es'));
+}
+function contractedMarketAllPlayers(){
+  return seed.players
+    .filter(p => !p.retired && !p.sold && Number(p.clubId || 0) > 0 && Number(p.clubId) !== Number(game.selectedClubId));
+}
+
+function marketPositionOptions(){
+  const options = [
+    ['all','Todas'],
+    ['POR','POR'],
+    ['DEF','DEF'],
+    ['LD','LD'],
+    ['LI','LI'],
+    ['DFC','DFC'],
+    ['MED','MED'],
+    ['MCD','MCD'],
+    ['MC','MC'],
+    ['MI','MI'],
+    ['MD','MD'],
+    ['MCO','MCO'],
+    ['DEL','DEL'],
+    ['ED','ED'],
+    ['EI','EI'],
+    ['DC','DC']
+  ];
+  return options.map(([value, label]) => `<option value="${value}" ${marketFilters.position===value?'selected':''}>${label}</option>`).join('');
+}
+function marketNumberFilterValue(key){
+  const value = marketFilters?.[key];
+  return value === undefined || value === null ? '' : String(value);
+}
+function marketPlayerPrice(player){
+  return Number(player?.clause || player?.value || 0);
+}
+
+function marketOfferClubPrestige(){
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  const rawPrestige = Number(club?.reputation ?? club?.prestigio ?? club?.prestige ?? 0);
+  return clamp(Math.round(Number.isFinite(rawPrestige) ? rawPrestige : 0), 0, 99);
+}
+function probAceptarOferta(mediaJugador, prestigioClubOfertante){
+  const media = Number(mediaJugador || 0);
+  const prestige = Number(prestigioClubOfertante || 0);
+  const diferencia = media - prestige;
+  const puntos = [
+    { d:-30, p:95 },
+    { d:0, p:80 },
+    { d:30, p:20 },
+    { d:50, p:3 },
+    { d:70, p:1 },
+    { d:100, p:0.5 }
+  ];
+  if(diferencia <= puntos[0].d) return puntos[0].p;
+  if(diferencia >= puntos[puntos.length - 1].d) return puntos[puntos.length - 1].p;
+  for(let i=0; i<puntos.length - 1; i++){
+    const a = puntos[i];
+    const b = puntos[i + 1];
+    if(diferencia >= a.d && diferencia <= b.d){
+      const t = (diferencia - a.d) / (b.d - a.d);
+      return a.p + t * (b.p - a.p);
+    }
+  }
+  return 1;
+}
+function marketPlayerAcceptanceChance(player=null){
+  const media = player ? visibleOverall(player) : marketOfferClubPrestige();
+  const chance = probAceptarOferta(media, marketOfferClubPrestige());
+  return clamp(Math.round(chance * 10) / 10, 0.5, 95);
+}
+function freeAgentAcceptanceChance(player=null){
+  const base = marketPlayerAcceptanceChance(player);
+  const bonus = typeof specialActiveBonus === 'function' ? Number(specialActiveBonus('especialista_libres') || 0) : 0;
+  return clamp(Math.round((base + bonus) * 10) / 10, 0.5, 99.5);
+}
+function marketAcceptanceHiddenLabel(){
+  return 'Interés oculto';
+}
+function marketAcceptanceHiddenHint(){
+  return 'El jugador puede aceptar o rechazar según su media real y el prestigio del club, pero la probabilidad exacta permanece oculta.';
+}
+function marketScoutedOverallCell(player){
+  if(typeof scoutedOverallLabel === 'function') return scoutedOverallLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutedOverallNumber(player){
+  if(!player) return 0;
+  if(typeof playerRequiresScouting === 'function' && !playerRequiresScouting(player)) return visibleOverall(player);
+  if(typeof scoutingStatMap !== 'function' || typeof scoutingVisibleKeys !== 'function') return 0;
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  const values = Object.entries(map).filter(([key]) => visible.has(key)).map(([,value]) => Number(value || 0)).filter(Number.isFinite);
+  return values.length >= 2 ? clamp(Math.round(avg(values)), 1, 99) : 0;
+}
+function marketScoutedPhysicalCell(player){
+  if(typeof scoutedPhysicalLabel === 'function') return scoutedPhysicalLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutedMoraleCell(player){
+  if(typeof scoutedMoraleLabel === 'function') return scoutedMoraleLabel(player);
+  return '<span class="muted">—</span>';
+}
+function marketScoutingHintText(){
+  return 'Las estadísticas de jugadores libres y contratados están ocultas. Sólo aparecen habilidades reveladas por el Centro de Ojeo.';
+}
+function freeAgentOfferRecord(playerId){
+  if(!game) return null;
+  const key = String(playerId);
+  const record = game.rejectedFreeAgentOffers?.[key] || null;
+  if(!record) return null;
+  if(Number(record.season || 0) !== Number(game.seasonNumber || 1)) return null;
+  if(Number(record.clubId || 0) !== Number(game.selectedClubId || 0)) return null;
+  return record;
+}
+function isFreeAgentOfferBlockedThisSeason(playerId){
+  return Boolean(freeAgentOfferRecord(playerId));
+}
+function markFreeAgentOfferRejected(playerId, chance){
+  if(!game) return;
+  game.rejectedFreeAgentOffers = (game.rejectedFreeAgentOffers && typeof game.rejectedFreeAgentOffers === 'object' && !Array.isArray(game.rejectedFreeAgentOffers)) ? game.rejectedFreeAgentOffers : {};
+  game.rejectedFreeAgentOffers[String(playerId)] = {
+    playerId:Number(playerId),
+    clubId:Number(game.selectedClubId || 0),
+    season:Number(game.seasonNumber || 1),
+    prestigeChance:Math.round(Number(chance || 0)),
+    createdAt:Date.now()
+  };
+}
+function freeAgentOfferButtonLabel(playerId){
+  return isFreeAgentOfferBlockedThisSeason(playerId) ? 'Rechazó hasta próxima temp.' : 'Hacer oferta';
+}
+function marketPlayerMatchesPosition(player){
+  const filter = String(marketFilters.position || 'all').toUpperCase();
+  if(filter === 'ALL') return true;
+  const pos = normalizePlayerPosition(player.position, player.id);
+  const group = playerRoleGroup(pos);
+  if(filter === 'DEF') return group === 'DEF';
+  if(filter === 'MED') return group === 'MID';
+  if(filter === 'DEL') return group === 'ATT';
+  return pos === filter;
+}
+function marketPlayerMatchesFilters(player){
+  const media = marketScoutedOverallNumber(player);
+  const age = Number(player.age || 0);
+  const price = marketPlayerPrice(player);
+  const minMedia = Number(marketFilters.mediaMin || 0);
+  const maxMedia = Number(marketFilters.mediaMax || 0);
+  const minAge = Number(marketFilters.ageMin || 0);
+  const maxAge = Number(marketFilters.ageMax || 0);
+  const maxPrice = Number(marketFilters.priceMax || 0);
+  if((minMedia || maxMedia) && !media) return false;
+  if(minMedia && media < minMedia) return false;
+  if(maxMedia && media > maxMedia) return false;
+  if(minAge && age < minAge) return false;
+  if(maxAge && age > maxAge) return false;
+  if(maxPrice && price > maxPrice) return false;
+  if(!marketPlayerMatchesPosition(player)) return false;
+  return true;
+}
+function marketFiltersMarkup(total, shown){
+  return `<div class="card market-filters-card">
+    <div class="row market-filters-head"><div><p class="label">Buscar coincidencias</p><h3>Filtros de mercado</h3></div><span class="pill">${shown}/${total} jugador(es)</span></div>
+    <div class="market-filter-grid">
+      <label>Media desde<input data-market-filter="mediaMin" type="number" min="1" max="99" placeholder="Min. scouteada" value="${escapeHtml(marketNumberFilterValue('mediaMin'))}"></label>
+      <label>Media hasta<input data-market-filter="mediaMax" type="number" min="1" max="99" placeholder="Max. scouteada" value="${escapeHtml(marketNumberFilterValue('mediaMax'))}"></label>
+      <label>Edad desde<input data-market-filter="ageMin" type="number" min="15" max="45" placeholder="Min." value="${escapeHtml(marketNumberFilterValue('ageMin'))}"></label>
+      <label>Edad hasta<input data-market-filter="ageMax" type="number" min="15" max="45" placeholder="Max." value="${escapeHtml(marketNumberFilterValue('ageMax'))}"></label>
+      <label>Precio hasta<input data-market-filter="priceMax" type="number" min="0" step="100000" placeholder="Máximo" value="${escapeHtml(marketNumberFilterValue('priceMax'))}"></label>
+      <label>Posición<select data-market-filter="position">${marketPositionOptions()}</select></label>
+      <button id="clearMarketFilters" class="ghost" type="button">Limpiar filtros</button>
+    </div>
+  </div>`;
+}
+function bindMarketFilters(){
+  document.querySelectorAll('[data-market-filter]').forEach(input => {
+    input.addEventListener('change', () => {
+      const key = input.dataset.marketFilter;
+      if(!key) return;
+      marketFilters[key] = input.value || (key === 'position' ? 'all' : '');
+      marketVisibleLimit = 20;
+      renderMarket();
+    });
+  });
+  $('clearMarketFilters')?.addEventListener('click', () => {
+    marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'', position:'all' };
+    marketVisibleLimit = 20;
+    renderMarket();
+  });
+}
+function marketVisiblePlayers(players){
+  const limit = Math.max(20, Number(marketVisibleLimit || 20));
+  return players.slice(0, limit);
+}
+function marketMoreButtonMarkup(total, shown){
+  if(shown >= total) return '';
+  return `<div class="row market-more-row"><button id="marketLoadMoreBtn" class="ghost" type="button">Ver más</button><span class="small muted">Mostrando ${shown} de ${total}. Se agregan 20 jugadores por vez.</span></div>`;
+}
+function bindMarketMoreButton(){
+  $('marketLoadMoreBtn')?.addEventListener('click', () => {
+    marketVisibleLimit = Math.max(20, Number(marketVisibleLimit || 20)) + 20;
+    renderMarket();
+  });
+}
+function renderMarket(){
+  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  ensurePlayerStateForAll();
+  if(marketSubTab !== 'contracted') marketSubTab = 'free';
+  if(marketSubTab === 'contracted') return renderContractedMarket();
+  const freeAll = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold);
+  const freeBase = marketDiscoveryPool(freeAll, 'free').slice().sort((a,b)=>marketScoutedOverallNumber(b)-marketScoutedOverallNumber(a) || visibleOverall(b)-visibleOverall(a));
+  const freeFiltered = freeBase.filter(marketPlayerMatchesFilters);
+  const free = marketVisiblePlayers(freeFiltered);
+  const rows = free.map(p => `<tr>
+    <td>${faceImg(p, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${playerNameWithScoutingEye(p)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
+    <td>${marketScoutedOverallCell(p)}</td>
+    <td>${marketScoutedPhysicalCell(p)}</td>
+    <td>${marketScoutedMoraleCell(p)}</td>
+    <td>${formatMoney(marketPlayerPrice(p))}</td>
+    <td>${formatMoney(p.salary || 0)}</td>
+    <td><button class="primary small-btn" data-hire-free-agent="${p.id}" ${isFreeAgentOfferBlockedThisSeason(p.id) ? 'disabled' : ''}>${escapeHtml(freeAgentOfferButtonLabel(p.id))}</button><br><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
+  </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
+    ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
+    ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
+    <div class="market-limit-note small muted">${marketDiscoverySummary(freeAll.length, freeBase, 'free')} Se muestran ${free.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()} ${marketAcceptanceHiddenHint()}</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Media scouteada</th><th>Físico</th><th>Moral</th><th>Valor</th><th>Sueldo</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores libres que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    ${marketMoreButtonMarkup(freeFiltered.length, free.length)}`;
+  bindMarketTabs();
+  bindMarketFilters();
+  bindMarketMoreButton();
+  document.querySelectorAll('[data-hire-free-agent]').forEach(btn => btn.addEventListener('click', () => hireFreeAgent(Number(btn.dataset.hireFreeAgent))));
+}
+function renderContractedMarket(){
+  const allContractedPlayers = contractedMarketAllPlayers();
+  const basePlayers = contractedMarketPlayers();
+  const filteredPlayers = basePlayers.filter(marketPlayerMatchesFilters);
+  const players = marketVisiblePlayers(filteredPlayers);
+  const rows = players.map(p => {
+    const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id);
+    const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
+    return `<tr>
+    <td>${faceImg(p, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${p.id}"><strong>${playerNameWithScoutingEye(p)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+    <td>${Number(p.age || 0) || '—'}</td>
+    <td>${nationalityShortMarkup(p.nationality)}</td>
+    <td>${clubBadge(p.clubId)} ${escapeHtml(clubName(p.clubId))}</td>
+    <td>${marketScoutedOverallCell(p)}</td>
+    <td>${formatMoney(p.clause || p.value || 0)}</td>
+    <td>${formatMoney(p.salary || 0)}</td>
+    <td><span class="small muted">${marketAcceptanceHiddenLabel()}</span></td>
+    <td><button class="primary small-btn" data-make-player-offer="${p.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button></td>
+  </tr>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
+    ${marketTabsMarkup()}
+    ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
+    ${marketFiltersMarkup(basePlayers.length, filteredPlayers.length)}
+    <div class="market-limit-note small muted">${marketDiscoverySummary(allContractedPlayers.length, basePlayers, 'contracted')} Se muestran ${players.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()}</div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Jugador</th><th>Rol</th><th>Edad</th><th>Nac.</th><th>Equipo</th><th>Media scouteada</th><th>Cláusula</th><th>Sueldo</th><th>Aceptación</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="11" class="muted">No hay jugadores contratados que coincidan con los filtros.</td></tr>'}</tbody></table></div>
+    ${marketMoreButtonMarkup(filteredPlayers.length, players.length)}`;
+  bindMarketTabs();
+  bindMarketFilters();
+  bindMarketMoreButton();
+  document.querySelectorAll('[data-make-player-offer]').forEach(btn => btn.addEventListener('click', () => openPurchaseOfferModal(Number(btn.dataset.makePlayerOffer))));
+}
+
+function hireFreeAgent(playerId){
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
+  const idx = (game.marketPlayers || []).findIndex(p => Number(p.id) === Number(playerId) && Number(p.clubId || 0) === 0 && !p.sold);
+  if(idx < 0) return;
+  if(isFreeAgentOfferBlockedThisSeason(playerId)){ showNotice('El jugador ya rechazó una oferta de este club. Podrás volver a intentar la próxima temporada.'); return; }
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
+  const chance = freeAgentAcceptanceChance(game.marketPlayers[idx]);
+  const roll = Math.random() * 100;
+  if(roll >= chance){
+    const rejected = game.marketPlayers[idx];
+    markFreeAgentOfferRejected(playerId, chance);
+    pushGameMessage({ type:'mercado', title:'Libre rechazó la oferta', body:`${rejected?.name || 'El jugador'} rechazó negociar con ${clubName(game.selectedClubId)}. La decisión depende de su media real y del prestigio del club. Podrás volver a intentar la próxima temporada.`, priority:'normal' });
+    saveLocal(true);
+    showNotice(`${rejected?.name || 'Jugador'} rechazó la oferta.`);
+    renderMarket();
+    return;
+  }
+  game.marketPlayers[idx].clubId = game.selectedClubId;
+  game.marketPlayers[idx].freeAgent = false;
+  game.marketPlayers[idx].transferListed = false;
+  game.marketPlayers[idx].intransferible = false;
+  mergeMarketPlayersIntoSeed(game.marketPlayers);
+  const player = playerById(playerId);
+  if(player){
+    player.clubId = game.selectedClubId;
+    player.freeAgent = false;
+    player.transferListed = false;
+    player.intransferible = false;
+    player.salaryPaidCount = 0;
+    player.lastSalaryPaidSeason = 0;
+    refreshPlayerClause(player);
+  }
+  game.marketPlayers[idx].salaryPaidCount = 0;
+  game.marketPlayers[idx].lastSalaryPaidSeason = 0;
+  refreshPlayerClause(game.marketPlayers[idx]);
+  game.playerCondition[playerId] = clamp(game.playerCondition[playerId] || (15 + hashNumber(`free-cond-${playerId}`, 15)), 1, 29);
+  if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
+  ensurePlayerStateForAll();
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} aceptó la oferta y se incorporó al plantel como agente libre.`, priority:'normal' });
+  saveLocal(true);
+  showNotice(`${player?.name || 'Jugador'} contratado.`);
+  renderMarket();
+}
+
+function sortPlayersForView(players, sortKey){
+  const byName = (a,b) => a.name.localeCompare(b.name, 'es');
+  const byNameDesc = (a,b) => b.name.localeCompare(a.name, 'es');
+  const byNationality = (a,b) => a.nationality.localeCompare(b.nationality, 'es') || byName(a,b);
+  const byNationalityDesc = (a,b) => b.nationality.localeCompare(a.nationality, 'es') || byName(a,b);
+  const byValueAsc = (a,b) => (a.value || 0) - (b.value || 0) || byName(a,b);
+  const byValueDesc = (a,b) => (b.value || 0) - (a.value || 0) || byName(a,b);
+  const byAgeAsc = (a,b) => Number(a.age || 0) - Number(b.age || 0) || byName(a,b);
+  const byAgeDesc = (a,b) => Number(b.age || 0) - Number(a.age || 0) || byName(a,b);
+  const byDorsalAsc = (a,b) => jerseyNumber(a.id) - jerseyNumber(b.id) || byName(a,b);
+  const byDorsalDesc = (a,b) => jerseyNumber(b.id) - jerseyNumber(a.id) || byName(a,b);
+  const positionRank = (player) => {
+    const group = playerRoleGroup(player.position);
+    return { POR:1, DEF:2, MID:3, ATT:4 }[group] || 99;
+  };
+  const positionVariantRank = (player) => {
+    const pos = normalizePlayerPosition(player.position, player.id);
+    const order = { POR:1, LD:2, LI:3, DFC:4, MCD:5, MC:6, MI:7, MD:8, MCO:9, ED:10, EI:11, DC:12 };
+    return order[pos] || 99;
+  };
+  const byPositionAsc = (a,b) => positionRank(a) - positionRank(b) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
+  const byPositionDesc = (a,b) => positionRank(b) - positionRank(a) || positionVariantRank(a) - positionVariantRank(b) || visibleOverall(b) - visibleOverall(a) || byName(a,b);
+  const byStatusAvailable = (a,b) => Number(isUnavailable(a.id)) - Number(isUnavailable(b.id)) || byName(a,b);
+  const byStatusUnavailable = (a,b) => Number(isUnavailable(b.id)) - Number(isUnavailable(a.id)) || byName(a,b);
+  const sorters = {
+    nombre_asc:byName,
+    nombre_desc:byNameDesc,
+    dorsal_asc:byDorsalAsc,
+    dorsal_desc:byDorsalDesc,
+    posicion_asc:byPositionAsc,
+    posicion_desc:byPositionDesc,
+    media_desc:(a,b)=>visibleOverall(b)-visibleOverall(a) || byName(a,b),
+    media_asc:(a,b)=>visibleOverall(a)-visibleOverall(b) || byName(a,b),
+    condicion_desc:(a,b)=>currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
+    condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
+    moral_desc:(a,b)=>currentMorale(b.id)-currentMorale(a.id) || byName(a,b),
+    moral_asc:(a,b)=>currentMorale(a.id)-currentMorale(b.id) || byName(a,b),
+    resistencia_desc:(a,b)=>visibleStats(b).Resistencia-visibleStats(a).Resistencia || byName(a,b),
+    resistencia_asc:(a,b)=>visibleStats(a).Resistencia-visibleStats(b).Resistencia || byName(a,b),
+    estado_disponible:byStatusAvailable,
+    estado_no_disponible:byStatusUnavailable,
+    valor_asc:byValueAsc,
+    valor_desc:byValueDesc,
+    edad_asc:byAgeAsc,
+    edad_desc:byAgeDesc,
+    nacionalidad_asc:byNationality,
+    nacionalidad_desc:byNationalityDesc
+  };
+  return players.slice().sort(sorters[sortKey] || sorters.media_desc);
+}
+function sortedSquadPlayers(){
+  return sortPlayersForView(playersByClub(game.selectedClubId), squadSort);
+}
+function sortedTrainingPlayers(){
+  return sortPlayersForView(playersByClub(game.selectedClubId), trainingSort);
+}
+function columnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-squad-sort>${opts}</select></div>`;
+}
+
+function trainingColumnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-training-sort>${opts}</select></div>`;
+}
+
+function worldPlayerTeamMarkup(player){
+  const clubId = Number(player.clubId || 0);
+  if(clubId > 0){
+    return `<button class="linklike team-cell" data-club-id="${clubId}">${clubBadge(clubId)}<span>${escapeHtml(clubName(clubId))}</span></button>`;
+  }
+  if(clubId < 0 || player.sold) return '<span class="pill">Exterior</span>';
+  return '<span class="pill">Agente libre</span>';
+}
+function worldPlayersPositionOptions(){
+  const positions = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
+  return positions.map(pos => `<option value="${pos}" ${worldPlayersPositionFilter===pos?'selected':''}>${pos==='all'?'Todas':pos}</option>`).join('');
+}
+function worldPlayersClubOptions(){
+  const clubs = (seed.clubs || []).slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  const fixed = [
+    `<option value="all" ${worldPlayersClubFilter==='all'?'selected':''}>Todos</option>`,
+    `<option value="free" ${worldPlayersClubFilter==='free'?'selected':''}>Agentes libres</option>`,
+    `<option value="foreign" ${worldPlayersClubFilter==='foreign'?'selected':''}>Exterior</option>`
+  ];
+  return fixed.concat(clubs.map(c => `<option value="${c.id}" ${String(worldPlayersClubFilter)===String(c.id)?'selected':''}>${escapeHtml(c.name)}</option>`)).join('');
+}
+function worldPlayerFilterList(players){
+  return players.filter(player => {
+    if(worldPlayersPositionFilter !== 'all' && player.position !== worldPlayersPositionFilter) return false;
+    const clubId = Number(player.clubId || 0);
+    if(worldPlayersClubFilter === 'free') return clubId === 0 && !player.sold;
+    if(worldPlayersClubFilter === 'foreign') return clubId < 0 || player.sold;
+    if(worldPlayersClubFilter !== 'all') return clubId === Number(worldPlayersClubFilter);
+    return true;
+  });
+}
+function worldPlayersColumnSort(label, options){
+  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
+  return `<div class="th-filter"><span>${label}</span><select data-world-sort>${opts}</select></div>`;
+}
+function worldStatCell(player, key){
+  const map = scoutingStatMap(player);
+  const visible = scoutingVisibleKeys(player);
+  return visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
+}
+function worldPlayerRow(player){
+  return `<tr class="${Number(player.clubId || 0) === game.selectedClubId ? 'own-player-row' : ''}">
+    <td>${faceImg(player, 'photo-thumb')}</td>
+    <td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
+    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+    <td>${Number(player.age || 0) || '—'}</td>
+    <td>${worldPlayerTeamMarkup(player)}</td>
+    <td>${formatMoney(player.clause || player.value || 0)}</td>
+    <td>${formatMoney(player.salary || 0)}</td>
+    <td>${worldStatCell(player,'Ataque/Salto')}</td>
+    <td>${worldStatCell(player,'Defensa')}</td>
+    <td>${worldStatCell(player,'Pase')}</td>
+    <td>${worldStatCell(player,'Velocidad/Reflejos')}</td>
+    <td>${worldStatCell(player,'Cabezazo/Mando')}</td>
+    <td>${worldStatCell(player,'Tiro/Potencia')}</td>
+    <td>${worldStatCell(player,'Resistencia')}</td>
+  </tr>`;
+}
+function renderWorldPlayers(){
+  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
+  ensurePlayerStateForAll();
+  const basePlayers = seed.players.filter(p => !p.retired);
+  const filtered = worldPlayerFilterList(basePlayers);
+  const players = sortPlayersForView(filtered, worldPlayersSort);
+  const rows = players.map(worldPlayerRow).join('');
+  view.innerHTML = `
+    <div class="section-title">
+      <h2>Jugadores</h2>
+      <p class="tagline">Listado mundial. Las habilidades externas sólo aparecen si fueron reveladas por el Centro de Ojeo.</p>
+    </div>
+    <div class="card world-player-filters">
+      <label>Posición<select id="worldPositionFilter">${worldPlayersPositionOptions()}</select></label>
+      <label>Equipo<select id="worldClubFilter">${worldPlayersClubOptions()}</select></label>
+      <span class="pill">${players.length} jugador(es)</span>
+    </div>
+    <div class="table-wrap world-players-wrap"><table class="world-players-table"><thead><tr>
+      <th>Foto</th>
+      <th>${worldPlayersColumnSort('Nombre', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${worldPlayersColumnSort('Pos.', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
+      <th>${worldPlayersColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th>
+      <th>Equipo</th>
+      <th>${worldPlayersColumnSort('Cláusula', [['valor_desc','Mayor'],['valor_asc','Menor']])}</th>
+      <th>Sueldo</th>
+      <th>Ataque/Salto</th>
+      <th>Defensa</th>
+      <th>Pase</th>
+      <th>Vel./Ref.</th>
+      <th>Cab./Mando</th>
+      <th>Tiro/Pot.</th>
+      <th>Resist.</th>
+    </tr></thead><tbody>${rows || '<tr><td colspan="14" class="muted">No hay jugadores para mostrar.</td></tr>'}</tbody></table></div>`;
+  $('worldPositionFilter')?.addEventListener('change', event => { worldPlayersPositionFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  $('worldClubFilter')?.addEventListener('change', event => { worldPlayersClubFilter = event.target.value || 'all'; renderWorldPlayers(); });
+  document.querySelectorAll('[data-world-sort]').forEach(select => {
+    select.addEventListener('change', () => {
+      if(select.value){ worldPlayersSort = select.value; renderWorldPlayers(); }
+    });
+  });
+}
+
+function renderSquad(){
+  const players = sortedSquadPlayers();
+  const rows = players.map(p=>`
+    <tr class="${isUnavailable(p.id) ? 'dim-row' : ''}">
+      <td>${faceImg(p, 'photo-thumb')}</td>
+      <td><button class="linklike" data-player-id="${p.id}"><strong>${playerNameWithScoutingEye(p)}</strong></button></td>
+      <td>#${jerseyNumber(p.id)}</td>
+      <td>${Number(p.age || 0) || '—'}</td>
+      <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
+      <td>${nationalityShortMarkup(p.nationality)}</td>
+      <td><strong>${visibleOverall(p)}</strong></td>
+      <td>${conditionBar(p.id)}</td>
+      <td>${moraleBar(p.id)}</td>
+      <td>${visibleStats(p).Resistencia}</td>
+      <td>${availabilityStatusMarkup(p.id)}</td>
+      <td>${formatMoney(p.clause || p.value || 0)}</td>
+    </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Plantel</h2><p class="tagline">Cada jugador es clickeable. La media se calcula sólo con habilidades visibles. Los controles de orden están en la cabecera de cada columna.</p></div>
+    <div class="squad-scroll-top" id="squadScrollTop"><div></div></div>
+    <div class="table-wrap squad-table-wrap" id="squadTableWrap"><table class="squad-table"><thead><tr>
+      <th>Foto</th>
+      <th>${columnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${columnSort('Dorsal', [['dorsal_asc','Menor a mayor'],['dorsal_desc','Mayor a menor']])}</th>
+      <th>${columnSort('Edad', [['edad_asc','Menor a mayor'],['edad_desc','Mayor a menor']])}</th>
+      <th>${columnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
+      <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
+      <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
+      <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
+      <th>${columnSort('Cláusula', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+  `;
+  prependFirstTeamTabs('squad');
+  document.querySelectorAll('[data-squad-sort]').forEach(select => {
+    select.addEventListener('change', e => {
+      if(e.target.value){ squadSort = e.target.value; renderSquad(); }
+    });
+  });
+  bindSquadTopScrollbar();
+}
+function bindSquadTopScrollbar(){
+  const top = $('squadScrollTop');
+  const wrap = $('squadTableWrap');
+  const table = wrap?.querySelector('table');
+  if(!top || !wrap || !table) return;
+  const inner = top.querySelector('div');
+  if(inner) inner.style.width = `${table.scrollWidth}px`;
+  let syncing = false;
+  top.addEventListener('scroll', () => {
+    if(syncing) return;
+    syncing = true;
+    wrap.scrollLeft = top.scrollLeft;
+    syncing = false;
+  });
+  wrap.addEventListener('scroll', () => {
+    if(syncing) return;
+    syncing = true;
+    top.scrollLeft = wrap.scrollLeft;
+    syncing = false;
+  });
+}
+function tacticSelectionClass(playerId){
+  return tacticClickSelection && Number(tacticClickSelection.playerId) === Number(playerId) ? ' tactic-selected' : '';
+}
+function tacticMetricCircle(markup){
+  return `<span class="tactic-metric-circle">${markup || ''}</span>`;
+}
+function tacticPlayerCard(p, extra='', zone='reserve', index=-1){
+  const statusIcons = availabilityIcons(p.id);
+  const unavailableClass = isUnavailable(p.id) ? 'injured-card' : '';
+  const playableInjuredClass = canUseInjuredAsSub(p.id) ? 'playable-injured-card' : '';
+  return `<button type="button" class="drag-player tactic-click-player ${playerGroupClass(p.position)} ${extra} ${unavailableClass} ${playableInjuredClass}${tacticSelectionClass(p.id)}" data-tactic-player="${p.id}" data-tactic-zone="${zone}" data-tactic-index="${index}" title="Click para seleccionar o intercambiar">
+    ${faceImg(p, 'drag-face')}
+    <span class="tactic-card-text"><strong>${statusIcons}${escapeHtml(playerLastName(p.name))}</strong><span class="tactic-card-meta">#${jerseyNumber(p.id)} · ${roleBadge(p.position)} · ${Number(p.age || 0) || '—'} años · Media ${visibleOverall(p)}</span></span>
+    <span class="tactic-card-meters" aria-label="Estado físico y moral">${tacticMetricCircle(conditionBar(p.id))}${tacticMetricCircle(moraleBar(p.id))}</span>
+  </button>`;
+}
+function tacticSelectionHint(){
+  if(!tacticClickSelection?.playerId) return 'Click en un jugador para seleccionarlo. Después hacé click en otro jugador o en un puesto vacío para intercambiar.';
+  const p = playerById(tacticClickSelection.playerId);
+  return `${p ? escapeHtml(playerLastName(p.name)) : 'Jugador'} seleccionado. Hacé click en otro jugador para intercambiar, o volvé a hacer click para cancelar.`;
+}
+function bindTacticClickEvents(){
+  document.querySelectorAll('[data-tactic-player]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const playerId = Number(el.dataset.tacticPlayer || 0);
+      if(!playerId) return;
+      if(el.classList.contains('player-chip') && el.dataset.tacticZone === 'starter'){
+        game.tactic = applyStarterMentalities(game.tactic);
+        setPlayerMentality(playerId, nextMentality(playerMentality(playerId)), game.tactic);
+        tacticClickSelection = null;
+        saveLocal(true);
+        renderTactics();
+        return;
+      }
+      if(!tacticClickSelection){
+        tacticClickSelection = { playerId };
+        renderTactics();
+        return;
+      }
+      if(Number(tacticClickSelection.playerId) === playerId){
+        tacticClickSelection = null;
+        renderTactics();
+        return;
+      }
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), tacticLocationOfPlayer(playerId));
+    });
+  });
+  document.querySelectorAll('[data-tactic-empty-slot]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if(!tacticClickSelection?.playerId){
+        showNotice('Primero seleccioná un jugador y después elegí el puesto vacío.');
+        return;
+      }
+      const index = Number(el.dataset.tacticEmptySlot || -1);
+      if(index < 0) return;
+      swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), { type:'starter', index, playerId:0 });
+    });
+  });
+}
+
+
+function savedTacticsPanelMarkup(){
+  const maxSlots = Number.isFinite(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3)) ? Number(TACTIC_SAVE_SLOT_COUNT) : 3;
+  const slots = [];
+  for(let i=1; i<=maxSlots; i++){
+    const info = typeof tacticSlotStatus === 'function' ? tacticSlotStatus(i) : { exists:false, label:'Vacía', details:'Sin táctica guardada.' };
+    slots.push(`<div class="saved-tactic-slot ${info.exists ? 'filled' : 'empty'}">
+      <div><strong>Táctica ${i}</strong><span>${escapeHtml(info.label)}</span><em>${escapeHtml(info.details)}</em></div>
+      <div class="saved-tactic-actions">
+        <button type="button" class="ghost" data-save-tactic-slot="${i}">Guardar ${i}</button>
+        <button type="button" class="primary" data-load-tactic-slot="${i}" ${info.exists ? '' : 'disabled'}>Cargar ${i}</button>
+      </div>
+    </div>`);
+  }
+  return `<div class="card saved-tactics-card" style="margin-top:14px">
+    <div class="row"><div><h3>Tácticas personalizadas</h3></div></div>
+    <div class="saved-tactics-grid">${slots.join('')}</div>
+  </div>`;
+}
+function bindSavedTacticButtons(){
+  document.querySelectorAll('[data-save-tactic-slot]').forEach(btn => {
+    btn.addEventListener('click', () => saveCurrentTacticSlot(Number(btn.dataset.saveTacticSlot || 1)));
+  });
+  document.querySelectorAll('[data-load-tactic-slot]').forEach(btn => {
+    btn.addEventListener('click', () => loadSavedTacticSlot(Number(btn.dataset.loadTacticSlot || 1)));
+  });
+}
+
+
+function tacticSectorSkillVisors(){
+  const slots = pitchSlots(game.tactic || DEFAULT_TACTIC);
+  const groupPlayers = { defense:[], midfield:[], attack:[] };
+  slots.forEach(slot => {
+    if(!slot.player) return;
+    const group = slotGroup(slot.slot);
+    if(group === 'def') groupPlayers.defense.push(slot.player);
+    else if(group === 'mid') groupPlayers.midfield.push(slot.player);
+    else if(group === 'att') groupPlayers.attack.push(slot.player);
+  });
+  const stat = (players, type) => {
+    if(!players.length) return 0;
+    if(type === 'defense') return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.marca ?? 0), Number(p.skills?.entradas ?? 0), Number(p.skills?.posicionamiento ?? 0)])))), 0, 99);
+    if(type === 'midfield') return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.paseCorto ?? 0), Number(p.skills?.paseLargo ?? 0), Number(p.skills?.vision ?? 0)])))), 0, 99);
+    return clamp(Math.round(avg(players.map(p => avg([Number(p.skills?.remate ?? 0), Number(p.skills?.cabezazo ?? 0)])))), 0, 99);
+  };
+  const rows = [
+    { key:'defense', label:'Defensa', value:stat(groupPlayers.defense, 'defense'), detail:'' },
+    { key:'midfield', label:'Medios', value:stat(groupPlayers.midfield, 'midfield'), detail:'' },
+    { key:'attack', label:'Delantera', value:stat(groupPlayers.attack, 'attack'), detail:'' }
+  ];
+  return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div>${row.detail ? `<small class="muted">${escapeHtml(row.detail)}</small>` : ''}</div>`).join('')}</div>`;
+}
+function renderTactics(){
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
+  const starters = game.tactic.starters.map(playerById).filter(Boolean);
+  const bench = game.tactic.bench.map(playerById).filter(Boolean);
+  const starterSet = new Set(game.tactic.starters);
+  const benchSet = new Set(game.tactic.bench);
+  const reserves = playersByClub(game.selectedClubId)
+    .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
+    .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  const pitch = pitchSlots(game.tactic).map(slot => {
+    const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
+    const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
+    const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
+    const chip = slot.player ? `
+      <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(slot.player.id)} ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)} · Click para cambiar estado: ${escapeHtml(mentalityLabel(playerMentality(slot.player.id)))}">
+        <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
+        <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
+        ${mentalityMarker(slot.mentality)}
+      </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
+    return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
+  }).join('');
+  const starterList = pitchSlots(game.tactic).map(slot => {
+    const p = slot.player;
+    const fit = p ? playerFitsSlot(p, slot.slot) : false;
+    return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
+      <span class="pill">${slot.index+1}. ${slot.slot}</span>
+      <span>${p ? `<strong>${playerNameWithScoutingEye(p)}</strong>` : '<span class="muted">Vacío</span>'}</span>
+      <span class="age-cell lineup-center-cell">${p ? `${Number(p.age || 0) || '—'} años` : '—'}</span>
+      <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
+      <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(conditionBar(p.id)) : ''}</span>
+      <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(moraleBar(p.id)) : ''}</span>
+      <strong class="lineup-center-cell">${p ? (isInjured(p.id) ? tacticStatusIcon(p.id) : playerTacticFitLabel(p, slot.slot)) : 'Click'}</strong>
+    </div>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="section-title tactic-section-title"><h2>Táctica y convocatoria</h2></div>
+    <div class="tactic-workspace">
+      <main class="tactic-left-stack">
+        <div class="card tactic-board-card tactic-grid-card">
+          <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div></div>
+          <div class="tactic-click-help">${tacticSelectionHint()}</div>
+          <div class="pitch-board-wrap">
+            <div class="pitch-board centered">${pitch}</div>
+            <div class="tactic-state-legend">
+              <span>${mentalityMarker('muy_defensivo')} Muy defensivo</span>
+              <span>${mentalityMarker('defensivo')} Defensivo</span>
+              <span>${mentalityMarker('normal')} Normal</span>
+              <span>${mentalityMarker('ofensivo')} Ofensivo</span>
+              <span>${mentalityMarker('muy_ofensivo')} Muy ofensivo</span>
+            </div>
+          </div>
+        </div>
+        <div class="grid cols-2 tactic-lists tactic-grid-card">
+          <div class="card tactic-lineup-card">
+            <h3>Titulares</h3>
+            <div class="lineup-row lineup-head tactic-lineup-head"><span>Pos.</span><span>Jugador</span><span class="lineup-center-cell">Edad</span><span class="lineup-center-cell">Media</span><span class="lineup-center-cell">Físico</span><span class="lineup-center-cell">Moral</span><span class="lineup-center-cell">Estado</span></div>
+            <div class="lineup-list">${starterList}</div>
+          </div>
+          <div class="card tactic-roster-card">
+            <h3>Suplentes / reservas</h3>
+            <div class="drop-pool" data-drop-pool="bench"><h4>Suplentes (${bench.length}/10)</h4><div class="drag-list">${bench.length ? bench.map((p,i)=>tacticPlayerCard(p,'bench-card','bench',i)).join('') : '<p class="muted small">Sin suplentes.</p>'}</div></div>
+            <div class="drop-pool" data-drop-pool="reserve"><h4>Reservas</h4><div class="drag-list">${reserves.length ? reserves.map((p,i)=>tacticPlayerCard(p,'reserve-card','reserve',i)).join('') : '<p class="muted small">Sin reservas.</p>'}</div></div>
+          </div>
+        </div>
+        <div class="card tactic-autosub-card tactic-grid-card">
+          <h3>Cambios automáticos</h3>
+          <p class="muted small">Elegí reglas simples: cansados, mejores suplentes o sólo cambios obligados por lesión.</p>
+          <div class="autosub-grid">${[0,1,2,3,4].map(i => autoSubRow(i)).join('')}</div>
+        </div>
+      </main>
+      <aside class="tactic-right-rail">
+        <div class="card tactic-actions-card tactic-grid-card">
+          <h3>Acciones</h3>
+          <div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div>
+          <div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div>
+          <button id="saveTactic" class="primary full">Confirmar equipo</button>
+          <span id="tacticErrors" class="bad small"></span>
+        </div>
+        <div class="card tactic-board-side tactic-board-right tactic-sector-card tactic-grid-card">
+          <h3>Visores tácticos</h3>
+          <div class="tactic-board-visors" aria-label="Visores tácticos">${tacticSectorSkillVisors()}</div>
+          <h3>Instrucciones zonales</h3>
+          <p class="muted small">Defensa, medios y delanteros. Pueden contraponerse o no con la mentalidad individual de cada jugador.</p>
+          <div class="sector-style-grid vertical">${sectorStyleControls()}</div>
+        </div>
+        ${savedTacticsPanelMarkup()}
+      </aside>
+    </div>
+  `;
+  prependFirstTeamTabs('tactics');
+  $('formation').addEventListener('change', () => {
+    const tentative = {...game.tactic, formation:$('formation').value};
+    const autoStarters = autoSelectStarters(game.selectedClubId, tentative).map(p=>p.id);
+    game.tactic.starters = autoStarters;
+    game.tactic.bench = autoSelectBench(game.selectedClubId, autoStarters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic.formation = tentative.formation;
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('autoPickBestBtn').addEventListener('click', () => {
+    game.tactic.formation = $('formation').value;
+    const starters = autoSelectStarters(game.selectedClubId, game.tactic).map(p=>p.id);
+    game.tactic.starters = starters;
+    game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('autoPickConditionBtn').addEventListener('click', () => {
+    game.tactic.formation = $('formation').value;
+    const starters = autoSelectByBestCondition(game.selectedClubId).map(p=>p.id);
+    game.tactic.starters = starters;
+    game.tactic.bench = autoSelectBenchByBestCondition(game.selectedClubId, starters).map(p=>p.id);
+    game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
+    game.tactic = applyStarterMentalities(game.tactic);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('saveTactic').addEventListener('click', saveTacticFromScreen);
+  bindSavedTacticButtons();
+  bindTacticClickEvents();
+}
+function sectorStyleControls(){
+  const current = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(game.tactic?.sectorStyles) : (game.tactic?.sectorStyles || { defense:'posicional', midfield:'posicional', attack:'posicional' });
+  const options = typeof TACTIC_SECTOR_STYLE_OPTIONS !== 'undefined' ? TACTIC_SECTOR_STYLE_OPTIONS : [
+    { value:'presion_alta', label:'Presión alta', tone:'intense' },
+    { value:'rotacion', label:'Rotación', tone:'massage' },
+    { value:'posicional', label:'Posicional', tone:'tactical' },
+    { value:'repliegue', label:'Repliegue', tone:'regen' }
+  ];
+  const descriptions = {
+    defense:'',
+    midfield:'',
+    attack:''
+  };
+  const row = (key, label) => {
+    const selected = current[key] || 'posicional';
+    const selectedOption = options.find(opt => opt.value === selected) || options.find(opt => opt.value === 'posicional') || options[0];
+    return `<div class="sector-style-control training-tone-${selectedOption?.tone || 'tactical'}">
+      <label>${label}</label>
+      <select class="training-individual-select training-tone-${selectedOption?.tone || 'tactical'}" data-sector-style="${key}">${options.map(opt=>`<option value="${opt.value}" ${selected===opt.value?'selected':''}>${opt.label}</option>`).join('')}</select>
+      ${descriptions[key] ? `<span>${escapeHtml(descriptions[key] || '')}</span>` : ''}
+    </div>`;
+  };
+  return row('defense','Defensa') + row('midfield','Medios') + row('attack','Delanteros');
+}
+function autoSubRow(index){
+  const rule = game.tactic.autoSubs[index] || { outId:0, inId:0, trigger:'tired' };
+  const starterOpts = [`<option value="0">Sin cambio</option>`].concat(game.tactic.starters.map(id=>{
+    const p = playerById(id);
+    return `<option value="${id}" ${Number(rule.outId)===id?'selected':''}>${escapeHtml(p?.name || 'Jugador')} (${p?.position || ''})</option>`;
+  })).join('');
+  const benchOpts = [`<option value="0">Sin jugador</option>`].concat(game.tactic.bench.map(id=>{
+    const p = playerById(id);
+    return `<option value="${id}" ${Number(rule.inId)===id?'selected':''}>${escapeHtml(p?.name || 'Jugador')} (${p?.position || ''})</option>`;
+  })).join('');
+  const triggerOpts = SUB_TRIGGERS.map(t=>`<option value="${t.value}" ${rule.trigger===t.value?'selected':''}>${t.label}</option>`).join('');
+  return `<div class="autosub-row">
+    <span class="rank-num">${index+1}</span>
+    <div><label>Sale</label><select data-sub-out="${index}">${starterOpts}</select></div>
+    <div><label>Entra</label><select data-sub-in="${index}">${benchOpts}</select></div>
+    <div><label>Tipo</label><select data-sub-trigger="${index}">${triggerOpts}</select></div>
+  </div>`;
+}
+function saveTacticFromScreen(){
+  const autoSubs = [0,1,2,3,4].map(i => ({
+    outId: Number(document.querySelector(`[data-sub-out="${i}"]`)?.value || 0),
+    inId: Number(document.querySelector(`[data-sub-in="${i}"]`)?.value || 0),
+    trigger: document.querySelector(`[data-sub-trigger="${i}"]`)?.value || 'tired'
+  }));
+  const selectedInstructions = { winning:'normal', drawing:'normal', losing:'normal' };
+  const selectedSectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles({
+    defense: document.querySelector('[data-sector-style="defense"]')?.value || 'posicional',
+    midfield: document.querySelector('[data-sector-style="midfield"]')?.value || 'posicional',
+    attack: document.querySelector('[data-sector-style="attack"]')?.value || 'posicional'
+  }) : {
+    defense: document.querySelector('[data-sector-style="defense"]')?.value || 'posicional',
+    midfield: document.querySelector('[data-sector-style="midfield"]')?.value || 'posicional',
+    attack: document.querySelector('[data-sector-style="attack"]')?.value || 'posicional'
+  };
+  const nextTactic = applyStarterMentalities({
+    formation:$('formation')?.value || game.tactic.formation,
+    starters:game.tactic.starters.slice(0,11),
+    bench:game.tactic.bench.slice(0,10),
+    autoSubs,
+    playerMentalities:{ ...(game.playerMentalities || {}), ...(game.tactic.playerMentalities || {}) },
+    matchInstructions: window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(selectedInstructions) : selectedInstructions,
+    sectorStyles:selectedSectorStyles
+  });
+  const errors = validateTactic(nextTactic);
+  if(errors.length){
+    $('tacticErrors').textContent = errors.join(' ');
+    showNotice('Equipo no confirmado. Corregí titulares, suplentes o jugadores no disponibles.');
+    return;
+  }
+  game.tactic = nextTactic;
+  game.mustReviewTactics = false;
+  game.lastOwnProblems = [];
+  saveLocal(true);
+  showNotice('Equipo confirmado. Ya podés avanzar cuando termine el bloqueo.');
+  renderAll();
+}
+function validateCurrentTactic(showErrors=true){
+  const errors = validateTactic(game.tactic);
+  if(showErrors && errors.length) showNotice(errors.join(' '));
+  return errors;
+}
+function validateTactic(tactic){
+  const errors = [];
+  const starters = (tactic.starters || []).map(Number).filter(Boolean);
+  const bench = (tactic.bench || []).map(Number).filter(Boolean);
+  const uniqueStarters = new Set(starters);
+  const uniqueBench = new Set(bench);
+  if(starters.length !== 11 || uniqueStarters.size !== 11) errors.push('Necesitás exactamente 11 titulares.');
+  if(bench.length !== 10 || uniqueBench.size !== 10) errors.push('Necesitás exactamente 10 suplentes.');
+  const duplicated = [...uniqueStarters].filter(id => uniqueBench.has(id));
+  if(duplicated.length) errors.push('Un jugador no puede ser titular y suplente a la vez.');
+  const unavailableStarters = [...uniqueStarters].filter(id => !canBeStarter(id));
+  if(unavailableStarters.length) errors.push('Hay lesionados o suspendidos entre los titulares.');
+  const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
+  if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con recuperación menor a 70 días.');
+  const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];
+  slots.forEach((slot, index) => {
+    const player = playerById(starters[index]);
+    if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero.' : 'Un portero no puede jugar como jugador de campo.');
+  });
+  (tactic.autoSubs || []).forEach((rule, i)=>{
+    if(rule.outId || rule.inId){
+      if(!uniqueStarters.has(Number(rule.outId))) errors.push(`Cambio ${i+1}: el jugador que sale debe ser titular.`);
+      if(!uniqueBench.has(Number(rule.inId))) errors.push(`Cambio ${i+1}: el jugador que entra debe ser suplente.`);
+      if(Number(rule.outId) === Number(rule.inId)) errors.push(`Cambio ${i+1}: entrada y salida no pueden ser el mismo jugador.`);
+    }
+  });
+  return errors;
+}
+function positionOrder(pos){
+  const order = {POR:1, LD:2, DFC:3, LI:4, MCD:5, MC:6, MCO:7, ED:8, EI:9, DC:10};
+  return order[pos] || 99;
+}
+

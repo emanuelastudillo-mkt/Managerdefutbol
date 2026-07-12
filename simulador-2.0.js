@@ -1005,6 +1005,9 @@
     const normalizeClub = (clubId, tactic) => {
       const cleanClubId = Number(clubId || 0);
       if(!cleanClubId || cleanClubId === ownId) return;
+      if(typeof normalizeBotWearAndConditionForClub === 'function'){
+        normalizeBotWearAndConditionForClub(cleanClubId, { reason:'before_live_match' });
+      }
       const ids = collectTacticIds(tactic);
       if(!ids.size){
         playersByClub(cleanClubId).slice(0, 18).forEach(player => ids.add(Number(player.id || 0)));

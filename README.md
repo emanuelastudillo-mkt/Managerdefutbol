@@ -1,8 +1,30 @@
-# Fútbol Manager MVP - V6.28
+# Fútbol Manager MVP - V6.29
+
+
+## V6.29 - Desgaste acumulado de bots corregido
+
+Cambios principales:
+
+- El problema de rivales con forma 1 no se trataba sólo como forma física: también podía venir de desgaste acumulado (`playerWear`) que dejaba el tope físico en 1.
+- Antes del simulador vivo o de un partido programado, los equipos bot normalizan desgaste excesivo y condición mínima razonable.
+- Los bots recuperan desgaste diariamente, ya sea después de partidos bot o en días sin partidos.
+- Se eliminó un doble procesamiento de partidos bot en el avance diario que podía duplicar desgaste.
+- La corrección no toca el equipo manejado por el usuario mientras tiene club.
+- En modo sin club, el calendario mundial también recupera desgaste de bots al avanzar.
+
+Parámetros editables en `config.js`:
+
+```js
+equilibrioBots: {
+  recuperacionDesgasteDiariaBot: 4,
+  desgasteMaximoBotAntesDePartido: 38,
+  pisoFisicoBotAntesDePartido: 58
+}
+```
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.27**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.28**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -282,3 +304,19 @@ Cambios principales:
 - JSON de `data/` parseados correctamente.
 - ZIP completo verificado sin documentos separados de revisión, versión o características.
 - ZIP incremental preparado sólo con archivos necesarios para este cambio.
+
+
+## Archivos modificados en V6.29
+
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `simulador-2.0.js`
+- `README.md`
+
+## Validación V6.29
+
+- `node --check` en todos los archivos JS.
+- Parseo correcto de todos los JSON de `data/`.
+- Verificación ZIP incremental y ZIP completo sin errores.

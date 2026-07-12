@@ -5522,6 +5522,117 @@ function balanceBotsForSeasonStart(selectedClubId=game?.selectedClubId, rankMap=
   game.botBalanceLog = game.botBalanceLog.slice(0, 20);
   return summary;
 }
+
+function botBalanceEligibleClubIdsForWear(options={}){
+  if(!game || !seed?.clubs) return [];
+  const ownId = Number(game?.selectedClubId || 0);
+  const forceAll = Boolean(options.allClubs || game?.gameOver?.active || !ownId);
+  if(forceAll){
+    return (seed.clubs || []).map(club => Number(club.id || 0)).filter(Boolean);
+  }
+  return botBalanceClubIds(ownId);
+}
+function normalizeBotWearAndConditionForClub(clubId, options={}){
+  if(!game || !PLAYER_WEAR_ENABLED || !clubId) return { players:0, wearReduced:0, conditionRaised:0 };
+  const cleanClubId = Number(clubId || 0);
+  const ownId = Number(game?.selectedClubId || 0);
+  if(!options.includeManagedClub && ownId && cleanClubId === ownId && !game?.gameOver?.active) return { players:0, wearReduced:0, conditionRaised:0 };
+  const wearCap = clamp(Math.round(Number(options.wearCap ?? BOT_BALANCE_MATCH_WEAR_CAP ?? 38)), 0, PLAYER_WEAR_MAX);
+  const conditionFloor = clamp(Math.round(Number(options.conditionFloor ?? BOT_BALANCE_EMERGENCY_CONDITION_FLOOR ?? BOT_BALANCE_CONDITION_FLOOR ?? 58)), 0, 99);
+  let players = 0;
+  let wearReduced = 0;
+  let conditionRaised = 0;
+  playersByClub(cleanClubId).forEach(player => {
+    if(!player || player.freeAgent || player.retired || isInjured(player.id) || isSuspended(player.id)) return;
+    const beforeWear = currentPlayerWear(player.id);
+    if(beforeWear > wearCap){
+      wearReduced += Math.abs(Math.min(0, adjustPlayerWear(player.id, wearCap - beforeWear)));
+    }
+    const maxAllowed = maxConditionForPlayer(player.id);
+    const target = Math.min(conditionFloor, maxAllowed);
+    const beforeCondition = currentCondition(player.id);
+    if(beforeCondition < target){
+      game.playerCondition[player.id] = clamp(Math.round(target), 0, maxAllowed);
+      conditionRaised += Math.max(0, Math.round(target - beforeCondition));
+    }
+    if(beforeWear > wearCap || beforeCondition < target) players += 1;
+  });
+  return { players, wearReduced, conditionRaised };
+}
+function normalizeBotWearAndConditionForMatch(match, options={}){
+  if(!match) return { clubs:0, players:0, wearReduced:0, conditionRaised:0 };
+  const clubIds = [Number(match.homeId || 0), Number(match.awayId || 0)].filter(Boolean);
+  const summary = { clubs:0, players:0, wearReduced:0, conditionRaised:0 };
+  clubIds.forEach(clubId => {
+    const result = normalizeBotWearAndConditionForClub(clubId, options);
+    if(result.players > 0){
+      summary.clubs += 1;
+      summary.players += result.players;
+      summary.wearReduced += result.wearReduced;
+      summary.conditionRaised += result.conditionRaised;
+    }
+  });
+  if(summary.players > 0){
+    game.botWearRepairLog = Array.isArray(game.botWearRepairLog) ? game.botWearRepairLog : [];
+    game.botWearRepairLog.unshift({
+      season:game.seasonNumber || 1,
+      date:game.currentDate || '',
+      matchId:match.id || null,
+      reason:options.reason || 'before_match',
+      ...summary,
+      createdAt:Date.now()
+    });
+    game.botWearRepairLog = game.botWearRepairLog.slice(0, 20);
+  }
+  return summary;
+}
+function recoverBotWearDaily(options={}){
+  if(!game || !PLAYER_WEAR_ENABLED || !BOT_BALANCE_ENABLED) return { clubs:0, players:0, wearReduced:0, conditionRaised:0 };
+  const recovery = clamp(Math.round(Number(options.recovery ?? BOT_BALANCE_DAILY_WEAR_RECOVERY ?? 0)), 0, PLAYER_WEAR_MAX);
+  if(recovery <= 0) return { clubs:0, players:0, wearReduced:0, conditionRaised:0 };
+  const conditionGain = clamp(Math.round(Number(options.conditionGain ?? Math.max(1, Math.round(recovery * 1.5)))), 0, 99);
+  const clubIds = botBalanceEligibleClubIdsForWear(options);
+  const summary = { clubs:0, players:0, wearReduced:0, conditionRaised:0 };
+  clubIds.forEach(clubId => {
+    let clubPlayers = 0;
+    playersByClub(clubId).forEach(player => {
+      if(!player || player.freeAgent || player.retired) return;
+      const beforeWear = currentPlayerWear(player.id);
+      if(beforeWear <= 0) return;
+      const reduced = Math.abs(Math.min(0, adjustPlayerWear(player.id, -recovery)));
+      if(reduced > 0){
+        summary.wearReduced += reduced;
+        clubPlayers += 1;
+      }
+      if(!isInjured(player.id) && !isSuspended(player.id)){
+        const beforeCondition = currentCondition(player.id);
+        const maxAllowed = maxConditionForPlayer(player.id);
+        const target = Math.min(maxAllowed, beforeCondition + conditionGain);
+        if(target > beforeCondition){
+          game.playerCondition[player.id] = clamp(Math.round(target), 0, maxAllowed);
+          summary.conditionRaised += Math.round(target - beforeCondition);
+        }
+      }
+    });
+    if(clubPlayers > 0){
+      summary.clubs += 1;
+      summary.players += clubPlayers;
+    }
+  });
+  if(summary.players > 0){
+    game.botWearRecoveryLog = Array.isArray(game.botWearRecoveryLog) ? game.botWearRecoveryLog : [];
+    game.botWearRecoveryLog.unshift({
+      season:game.seasonNumber || 1,
+      date:game.currentDate || '',
+      reason:options.reason || 'daily',
+      ...summary,
+      createdAt:Date.now()
+    });
+    game.botWearRecoveryLog = game.botWearRecoveryLog.slice(0, 20);
+  }
+  return summary;
+}
+
 function maintainBotBalanceDuringSeason(options={}){
   if(!game || !BOT_BALANCE_ENABLED || !BOT_BALANCE_DURING_SEASON) return null;
   const force = Boolean(options.force);
@@ -5546,9 +5657,14 @@ function maintainBotBalanceDuringSeason(options={}){
     playersByClub(clubId).forEach(player => {
       if(player.freeAgent || player.retired) return;
       let changed = false;
+      if(PLAYER_WEAR_ENABLED && currentPlayerWear(player.id) > BOT_BALANCE_MATCH_WEAR_CAP){
+        adjustPlayerWear(player.id, -(currentPlayerWear(player.id) - BOT_BALANCE_MATCH_WEAR_CAP));
+        changed = true;
+      }
       const cond = currentCondition(player.id);
       if(cond < targetCondition){
-        game.playerCondition[player.id] = clamp(Math.round(Math.min(targetCondition, cond + BOT_BALANCE_MAINTENANCE_CONDITION_GAIN)), 0, 99);
+        const maxAllowed = maxConditionForPlayer(player.id);
+        game.playerCondition[player.id] = clamp(Math.round(Math.min(targetCondition, cond + BOT_BALANCE_MAINTENANCE_CONDITION_GAIN, maxAllowed)), 0, maxAllowed);
         changed = true;
       }
       const morale = currentMorale(player.id);

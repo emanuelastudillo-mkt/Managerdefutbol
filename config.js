@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.28',
+  version: 'V6.29',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -255,6 +255,10 @@ window.GAME_CONFIG = {
     recuperacionFisicaPorMantenimiento: 8,
     recuperacionMoralPorMantenimiento: 5,
     recuperacionCohesionPorMantenimiento: 4,
+    // Recupera desgaste acumulado de equipos bots. Evita que lleguen al simulador con tope físico 1 por arrastre de temporada.
+    recuperacionDesgasteDiariaBot: 4,
+    desgasteMaximoBotAntesDePartido: 38,
+    pisoFisicoBotAntesDePartido: 58,
     desarrolloPlantelPorTemporada: 0.18,
     bonusDesarrolloPorPosicion: 0.08,
     maximoBoostBotPorHabilidad: 18

@@ -725,6 +725,9 @@ function quickSimulateBotMatch(match){
   return { ...match, played:true, engine:'bot-rapido-v5.41-sobreexigencia-progresiva', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas, botOverexertionEvents:overexertionEvents };
 }
 function simulateScheduledMatch(match){
+  if(typeof normalizeBotWearAndConditionForMatch === 'function'){
+    normalizeBotWearAndConditionForMatch(match, { reason:'before_scheduled_match' });
+  }
   if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
   return simulateMatch(match);
 }
@@ -768,6 +771,7 @@ function processNonOwnResultsAfterSimulation(results=[]){
   const list = Array.isArray(results) ? results.filter(Boolean) : [];
   if(!list.length) return 0;
   applyPlayerWearFromMatches(list);
+  if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'after_bot_matchday' });
   if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(list);
   if(typeof processBotDismissals === 'function') processBotDismissals();
   advanceStadiumAfterMatches(list);
@@ -933,6 +937,7 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
     if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
+    else if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'daily_sin_club_rest', allClubs:true });
     const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
       ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state_sin_club', silent:true })
       : { fixed:0, remaining:0 };
@@ -953,6 +958,7 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
   processMonthlyClubExpensesDaily();
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
+  else if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'daily_rest' });
   const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
     ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state', silent:true })
     : { fixed:0, remaining:0 };
@@ -1295,6 +1301,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   applyMoraleUpdates(results);
   if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
   maintainBotBalanceDuringSeason();
+  if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'after_own_matchday' });
   if(typeof processBotDismissals === 'function') processBotDismissals();
   advanceStadiumAfterMatches(results);
   applyEconomyResult(ownResult);
@@ -1510,6 +1517,7 @@ function simulateNextMatchday(options={}){
     applyMoraleUpdates(results);
     if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
     maintainBotBalanceDuringSeason();
+    if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'after_own_matchday' });
     if(typeof processBotDismissals === 'function') processBotDismissals();
     advanceStadiumAfterMatches(results);
     applyEconomyResult(ownResult);

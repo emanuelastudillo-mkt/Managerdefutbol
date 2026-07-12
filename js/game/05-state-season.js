@@ -4570,6 +4570,7 @@ const CLUB_WORLD_CUP_CONFIG = {
   groupSize:4,
   invitedCount:4,
   startDaysAfterLeague:18,
+  fixtureReadySeasonDay:295,
   daysBetweenRounds:5,
   finalExtraDaysAfterSemifinal:1,
   thirdPlaceDaysBeforeFinal:1,
@@ -4805,12 +4806,21 @@ function createClubWorldCupGroupFixtures(){
   });
   return true;
 }
+function clubWorldCupFixtureReadySeasonDay(){
+  return Math.max(1, Math.round(Number(CLUB_WORLD_CUP_CONFIG.fixtureReadySeasonDay || 295)));
+}
+function clubWorldCupCanCreateFixtureNow(){
+  if(!game || !regularFixturesComplete()) return false;
+  const readyDay = clubWorldCupFixtureReadySeasonDay();
+  const currentDay = typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : Number(seasonDayFromDate(currentCalendarDate?.() || dateForSeasonState(game), currentSeasonYear()) || 0);
+  return currentDay >= readyDay;
+}
 function createClubWorldCupIfNeeded(){
   if(!game || !CLUB_WORLD_CUP_CONFIG.enabled || game.seasonFinalized || !Array.isArray(game.fixtures)) return false;
   const season = Number(game.seasonNumber || 1);
   const state = clubWorldCupState();
   if(state) return false;
-  if(!regularFixturesComplete()) return false;
+  if(!clubWorldCupCanCreateFixtureNow()) return false;
   ensureClubWorldCupInvitedData();
   const leagueIds = clubWorldCupLeagueQualifiers();
   const invitedIds = clubWorldCupSelectedInvites(season);
@@ -4829,7 +4839,8 @@ function createClubWorldCupIfNeeded(){
     prizesPaid:{},
     championId:0,
     runnerUpId:0,
-    createdAt:Date.now()
+    createdAt:Date.now(),
+    fixtureReadySeasonDay:clubWorldCupFixtureReadySeasonDay()
   };
   createClubWorldCupGroupFixtures();
   awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
@@ -5048,11 +5059,18 @@ function advanceClubWorldCupIfNeeded(){
 function createPostRegularCompetitionsIfNeeded(){
   if(!game || game.seasonFinalized || !Array.isArray(game.fixtures)) return null;
   if(typeof managerChallengeIs === 'function' && managerChallengeIs()) return null;
+  const createdKinds = [];
   if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
-    return { created:true, kind:'promotion_playoff', message:'Se creó el calendario de playoffs de promoción.' };
+    createdKinds.push('promotion_playoff');
   }
   if(createClubWorldCupIfNeeded()){
-    return { created:true, kind:'club_world_cup', message:'Se creó la Copa Mundial de Clubes de la FIFA.' };
+    createdKinds.push('club_world_cup');
+  }
+  if(createdKinds.length){
+    const messages = [];
+    if(createdKinds.includes('promotion_playoff')) messages.push('Se creó el calendario de playoffs de promoción');
+    if(createdKinds.includes('club_world_cup')) messages.push(`se sorteó la Copa Mundial de Clubes de la FIFA con fixture listo desde el día ${clubWorldCupFixtureReadySeasonDay()}`);
+    return { created:true, kind:createdKinds.join('+'), message:`${messages.join(' y ')}.` };
   }
   if(advanceClubWorldCupIfNeeded()){
     const state = clubWorldCupState();

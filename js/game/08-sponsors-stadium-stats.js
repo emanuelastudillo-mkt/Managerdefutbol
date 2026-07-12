@@ -833,7 +833,7 @@ function renderFixture(){
           <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
         </div>
       </div>
-      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">Se crea al final de las ligas, con rondas cada 5 días desde 18 días después de la última fecha; la final se juega 1 día después del 3er puesto.</p></div>'}</div>`;
+      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">El sorteo y fixture quedan listos en el día 295 si las ligas ya terminaron. La primera fecha se juega 18 días después de la última jornada de liga; luego las rondas van cada 5 días y la final se juega 1 día después del 3er puesto.</p></div>'}</div>`;
     $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
     $('btnClubWorldCupFixture')?.addEventListener('click', () => { fixtureViewMode = 'clubWorldCup'; renderFixture(); });
     $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });

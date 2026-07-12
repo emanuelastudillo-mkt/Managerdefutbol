@@ -997,8 +997,9 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
       ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state_sin_club', silent:true })
       : { fixed:0, remaining:0 };
     const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state_sin_club' });
+    const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
-    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, jobMarket };
+    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket };
   }
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
@@ -1018,7 +1019,8 @@ function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
     ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state', silent:true })
     : { fixed:0, remaining:0 };
   const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
-  return { botResults, recovered, bankPayment, integrityRepair, scheduledVerifier };
+  const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  return { botResults, recovered, bankPayment, integrityRepair, scheduledVerifier, postCompetition };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

@@ -1,19 +1,22 @@
-# Fútbol Manager MVP - V6.42
+# Fútbol Manager MVP - V6.43
 
-## V6.42 - Fallback de escudo para clubes fundados viejos
+## V6.43 - Fixture del Mundial de Clubes listo en día 295
 
-- Los clubes fundados de partidas antiguas que no tengan escudo válido guardado ahora usan automáticamente `img/escudos/fundador-1.webp`.
-- La migración se aplica al cargar snapshots de clubes guardados.
-- La UI de escudos también incorpora ese fallback para evitar imágenes rotas.
+Cambios principales:
+- La Copa Mundial de Clubes de la FIFA ya no queda esperando hasta el primer partido o hasta que terminen otros post-regulares.
+- Si las ligas ya terminaron, el sorteo y fixture del Mundial de Clubes se generan automáticamente desde el **día 295** de la temporada.
+- Los playoffs de promoción y el Mundial de Clubes pueden crearse en el mismo control de cierre de ligas, manteniendo el orden de fechas.
+- El calendario informa que el fixture queda listo el día 295, aunque el primer partido se juegue 18 días después de la última fecha de liga.
 
-### Archivos modificados en V6.42
+### Archivos modificados en V6.43
 - `index.html`
 - `config.js`
-- `js/data/04-data-storage.js`
-- `js/core/02-ui-utils.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
 - `README.md`
 
-### Validación V6.42
+### Validación V6.43
 - `node --check` en todos los JS.
 - JSON de `data/` parseados correctamente.
 - ZIP incremental y completo verificados sin errores.

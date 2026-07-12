@@ -1,8 +1,8 @@
-# Fútbol Manager MVP - V6.27
+# Fútbol Manager MVP - V6.28
 
 ## Estado de la versión
 
-Esta versión toma como base la **V6.26**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
+Esta versión toma como base la **V6.27**. La documentación se mantiene unificada en este `README.md`: no se entregan archivos separados de revisión, versión o características.
 
 La versión vigente se identifica desde:
 
@@ -14,6 +14,17 @@ La versión vigente se identifica desde:
 
 
 
+
+
+## V6.28 - Forma rival en simulador y charlas motivacionales moderadas
+
+Cambios principales:
+- Al iniciar el simulador vivo, si el rival bot llega con jugadores en forma física extremadamente baja por arrastre de temporada, se normaliza sólo a ese rival con un piso razonable antes del partido.
+- La normalización no toca la forma física del club manejado por el usuario.
+- Los lesionados o suspendidos del rival no se reparan artificialmente.
+- Se guarda un registro interno breve de reparaciones de forma bot para diagnóstico.
+- Las charlas motivacionales exitosas ya no suben entre 18 y 25 puntos de moral base; ahora suben entre 6 y 10 puntos antes del multiplicador del empleado.
+- Se agregaron parámetros editables en `config.js`: `psicologoMoralMin` y `psicologoMoralMax`.
 
 ## V6.27 - Cartas al cambiar de club y bonus de prestigio en fichajes
 
@@ -256,16 +267,16 @@ Cambios principales:
 - El simulador vivo incorporó el orden de instrucciones extremas y el botón **Avance automático**.
 - Se centró el botón **Cerrar y guardar**.
 
-## Archivos modificados en V6.27
+## Archivos modificados en V6.28
 
-- `js/game/05-state-season.js`
-- `js/game/15-especial.js`
-- `js/ui/07-render-team-market.js`
+- `simulador-2.0.js`
+- `js/core/01-config-constants.js`
+- `js/game/10-academy-employees.js`
 - `index.html`
 - `config.js`
 - `README.md`
 
-## Validación V6.27
+## Validación V6.28
 
 - Sintaxis JS validada con `node --check`.
 - JSON de `data/` parseados correctamente.

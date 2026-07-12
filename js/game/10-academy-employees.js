@@ -1333,8 +1333,10 @@ function callMotivationalPsychologist(button=null){
     const success = Math.random() < PSYCHOLOGIST_SUCCESS_CHANCE;
     const moraleMultiplier = staffPerformanceMultiplier('psychologist');
     if(success){
+      const minGain = Math.min(PSYCHOLOGIST_MORALE_GAIN_MIN, PSYCHOLOGIST_MORALE_GAIN_MAX);
+      const maxGain = Math.max(PSYCHOLOGIST_MORALE_GAIN_MIN, PSYCHOLOGIST_MORALE_GAIN_MAX);
       playersByClub(game.selectedClubId).forEach(player => {
-        game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(18,25) * moraleMultiplier), 1, 99);
+        game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(minGain, maxGain) * moraleMultiplier), 1, 99);
       });
     }
     game.staffActions = game.staffActions || {};

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.27',
+  version: 'V6.28',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -426,6 +426,9 @@ window.GAME_CONFIG = {
     psicologoCosto: 500000,
     psicologoProbabilidadExito: 0.90,
     psicologoCooldownDias: 35,
+    // Ganancia de moral por charla exitosa antes del multiplicador de categoría del empleado.
+    psicologoMoralMin: 6,
+    psicologoMoralMax: 10,
     kinesiologoCosto: 1000000,
     kinesiologoProbabilidadFallo: 0.20,
     // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.

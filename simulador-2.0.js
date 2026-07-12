@@ -981,6 +981,57 @@
     try{ return simClamp(Number(currentCondition(playerId) || 75), 1, 100); }
     catch(_){ return 75; }
   }
+  function liveBotConditionFloor(clubId, player){
+    const club = seed?.clubs?.find(item => Number(item.id || 0) === Number(clubId || 0));
+    const reputation = Number(club?.reputation || club?.prestige || 50);
+    const position = String(player?.position || '').toUpperCase();
+    const positionBase = position === 'POR' ? 64 : 58;
+    const reputationBonus = (reputation - 45) * 0.22;
+    const randomOffset = simRnd(0, 12);
+    return simClamp(Math.round(positionBase + reputationBonus + randomOffset), 55, 84);
+  }
+  function normalizeLiveBotConditionsForMatch(match, homeTactic, awayTactic){
+    if(!game || !match) return { players:0, clubs:0 };
+    game.playerCondition = game.playerCondition || {};
+    const ownId = Number(game?.selectedClubId || 0);
+    let adjustedPlayers = 0;
+    let adjustedClubs = 0;
+    const collectTacticIds = tactic => {
+      const ids = new Set();
+      (tactic?.starters || []).forEach(id => { const clean = Number(id || 0); if(clean) ids.add(clean); });
+      (tactic?.bench || []).forEach(id => { const clean = Number(id || 0); if(clean) ids.add(clean); });
+      return ids;
+    };
+    const normalizeClub = (clubId, tactic) => {
+      const cleanClubId = Number(clubId || 0);
+      if(!cleanClubId || cleanClubId === ownId) return;
+      const ids = collectTacticIds(tactic);
+      if(!ids.size){
+        playersByClub(cleanClubId).slice(0, 18).forEach(player => ids.add(Number(player.id || 0)));
+      }
+      let clubAdjusted = 0;
+      ids.forEach(id => {
+        const player = playerById(id);
+        if(!player || player.freeAgent || player.retired || isInjured(player.id) || isSuspended(player.id)) return;
+        const current = liveBaseCondition(player.id);
+        const floor = liveBotConditionFloor(cleanClubId, player);
+        if(current < floor){
+          game.playerCondition[player.id] = floor;
+          adjustedPlayers += 1;
+          clubAdjusted += 1;
+        }
+      });
+      if(clubAdjusted > 0) adjustedClubs += 1;
+    };
+    normalizeClub(match.homeId, homeTactic);
+    normalizeClub(match.awayId, awayTactic);
+    if(adjustedPlayers > 0){
+      game.liveBotConditionRepairLog = Array.isArray(game.liveBotConditionRepairLog) ? game.liveBotConditionRepairLog : [];
+      game.liveBotConditionRepairLog.unshift({ date:game.currentDate || '', matchId:match.id || null, players:adjustedPlayers, clubs:adjustedClubs, createdAt:Date.now() });
+      game.liveBotConditionRepairLog = game.liveBotConditionRepairLog.slice(0, 20);
+    }
+    return { players:adjustedPlayers, clubs:adjustedClubs };
+  }
   function liveHiddenValue(player, keys, fallback=50){
     try{
       const h = typeof hiddenStats === 'function' ? hiddenStats(player) : {};
@@ -1413,6 +1464,7 @@
   function createLiveMatchSession(match){
     const homeTactic = ensureLiveTacticShape(getTacticForClubV2(match.homeId), match.homeId);
     const awayTactic = ensureLiveTacticShape(getTacticForClubV2(match.awayId), match.awayId);
+    const botConditionRepair = normalizeLiveBotConditionsForMatch(match, homeTactic, awayTactic);
     applyTacticCohesionPenalty(match.homeId, homeTactic);
     applyTacticCohesionPenalty(match.awayId, awayTactic);
     const matchContext = makeMatchContextV2(match);
@@ -1448,6 +1500,7 @@
       injuredGhostByPlayer:{},
       injuredGhostByClub:{},
       injuryPauseRequest:null,
+      botConditionRepair,
       instructionConditionDeltas:{},
       liveConditionDeltas:{},
       instructionLog:[],

@@ -45,10 +45,6 @@ function formatManagerPrestige(value=currentManagerPrestige()){
   const n = Math.max(0, Math.floor(Number(value || 0)));
   return n.toLocaleString('es-AR', { maximumFractionDigits:0 });
 }
-function formatManagerPrestigeDecimal(value=0){
-  const n = Math.max(0, Number(value || 0));
-  return n.toLocaleString('es-AR', { minimumFractionDigits:0, maximumFractionDigits:3 });
-}
 function managerClubAccessPrestige(value=currentManagerPrestige()){
   const n = Number(value || 0);
   return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
@@ -387,14 +383,13 @@ function managerChallengeHomeMarkup(){
   </div>`;
 }
 
-function prepareManagerWithoutClubUi(reason='sin_club'){
+function prepareManagerWithoutClubUi(){
   try{
     if(typeof forceCloseModal === 'function') forceCloseModal();
     else if(typeof closeModal === 'function') closeModal();
   }catch(error){}
-  if(window.__autoAdvanceState && typeof stopAutoAdvance === 'function'){
-    try{ stopAutoAdvance('sin_club'); }catch(error){}
-  }
+  if(typeof stopAdvanceAutoClicker === 'function') stopAdvanceAutoClicker();
+  if(typeof closeAutoAdvanceOverlay === 'function') closeAutoAdvanceOverlay();
   window.__liveMatchCloseLocked = false;
   activeTab = 'home';
   if(game?.gameOver?.active && typeof ensureManagerJobMarketState === 'function'){
@@ -691,10 +686,10 @@ function processManagerJobMarketDaily(){
     if(rejection.rejected){
       pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud. La decisión interna fue negativa aunque estabas dentro del margen evaluable. Probabilidad de rechazo aplicada: ${Math.round(rejection.chance)}%.`, id:`job-application-random-rejected-${club.id}-${today}` });
     }else if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
-      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
+      managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
     }else if(diff > 0 && diff <= 20){
-      const offer = managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.', rejectionChance:rejection.chance });
+      managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud en evaluación aceptada', body:`${club.name} analiza tu perfil pese a la diferencia de prestigio. Te ofrece contrato con objetivo superior al normal y una restricción de fichajes muy alta. Tenés 20 días para aceptar.`, id:`job-application-risk-${club.id}-${today}` });
     }else{
       pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} respondió que la diferencia de reputación todavía es demasiado grande para ofrecerte el cargo.`, id:`job-application-rejected-${club.id}-${today}` });
@@ -901,9 +896,6 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
 }
 
 
-function managerHasActiveClub(){
-  return Boolean(game && !game.gameOver?.active && Number(game.selectedClubId || 0) > 0);
-}
 function managerWithoutClubActive(){
   return Boolean(game?.gameOver?.active);
 }
@@ -1539,7 +1531,7 @@ function integrityBuildRepairGoals(clubId, lineup, count){
   }
   return goals.sort((a,b) => a.minute - b.minute);
 }
-function integrityBuildRepairStats(match, score, homeLineup, awayLineup){
+function integrityBuildRepairStats(match, score){
   const homeRating = typeof quickClubRating === 'function' ? quickClubRating(match.homeId) : 55;
   const awayRating = typeof quickClubRating === 'function' ? quickClubRating(match.awayId) : 55;
   const homeChances = Math.max(score.homeGoals, Math.round(4 + score.homeGoals * 2 + Math.random() * 6));
@@ -1575,7 +1567,7 @@ function integrityGenerateBotFixtureDetails(match, round){
     substitutions:Array.isArray(match.substitutions) ? match.substitutions : [],
     keySaves:Array.isArray(match.keySaves) ? match.keySaves : [],
     errors:Array.isArray(match.errors) ? match.errors : [],
-    matchStats:integrityBuildRepairStats(match, score, homeLineup, awayLineup),
+    matchStats:integrityBuildRepairStats(match, score),
     matchContext:match.matchContext || { weather:'Normal', pitch:'Normal', integrityRepair:true },
     starterIdsHome,
     starterIdsAway,
@@ -3009,7 +3001,7 @@ function createBankruptcyAcademyPlayers(count=BANKRUPTCY_ACADEMY_PLAYERS){
   created.forEach(player => { game.academy.trainingPlan[player.id] = game.academy.trainingPlan[player.id] || (typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL) : 'balanced'); });
   return created;
 }
-function applyBankruptcyModeSetup(selectedClubId, options={}){
+function applyBankruptcyModeSetup(selectedClubId){
   if(!game || !bankruptcyModeEnabled()) return null;
   const club = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
   if(!club) return null;
@@ -3210,7 +3202,6 @@ function newGame(selectedClubId, options={}){
   if(typeof queueInitialAssistantAdviceMessages === 'function') queueInitialAssistantAdviceMessages();
   activeTab = 'home';
   closeModal();
-  newGameModalShown = true;
   renderAll();
   if(typeof saveLocal === 'function') saveLocal(true).catch?.(()=>{});
   showNotice(options.founderMode ? 'Club fundado. Armá el plantel desde Mercado antes de competir.' : (options.bankruptcyMode ? 'Modo Bancarrota iniciado. Revisá Finanzas, Academia, Estadio y Táctica antes de avanzar.' : (options.challengeId ? 'Reto creado. Dirigí los 5 partidos y buscá el campeonato.' : 'Carrera creada. Revisá táctica, titulares y mentalidades antes de avanzar.')));
@@ -3556,7 +3547,7 @@ function writeManagerGlobalProfileState(profile){
     return clean;
   }catch(err){ console.warn('No se pudo guardar el perfil global del manager.', err); return null; }
 }
-function applySharedManagerProfileToGame(options={}){
+function applySharedManagerProfileToGame(){
   if(!game) return { changed:false };
   const profile = readManagerGlobalProfileState();
   if(!profile || profile.empty) return { changed:false };
@@ -3587,7 +3578,7 @@ function applySharedManagerProfileToGame(options={}){
   }
   return { changed:true, profile };
 }
-function persistSharedManagerProfileFromGame(options={}){
+function persistSharedManagerProfileFromGame(){
   if(!game) return null;
   const stats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
   let special = game.special;
@@ -4741,7 +4732,7 @@ function clubWorldCupLeagueQualifiers(){
   return ids;
 }
 function clubWorldCupCountryForClub(clubId){
-  const club = clubById(clubId);
+  const club = seed?.clubs?.find(item => Number(item.id) === Number(clubId));
   return normalizeScheduleText(club?.country || club?.pais || 'sin-pais');
 }
 function clubWorldCupGroupsForParticipants(participantIds=[], season=game?.seasonNumber || 1){
@@ -5191,7 +5182,7 @@ function advanceClubWorldCupIfNeeded(){
     });
     awardClubWorldCupPrizeIfManaged(runnerUpId, 'runnerUp');
     awardClubWorldCupPrizeIfManaged(championId, 'champion');
-    if(Number(game.selectedClubId || 0) === championId && typeof addManagerPrestigeAdjustment === 'function') addManagerPrestigeAdjustment(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
+    if(Number(game.selectedClubId || 0) === championId && typeof addManagerPrestige === 'function') addManagerPrestige(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
     pushGameMessage({ type:'deportivo', priority:'high', title:`Campeón: ${clubName(championId)}`, body:`${clubName(championId)} ganó la ${CLUB_WORLD_CUP_CONFIG.name}.`, id:`club-world-cup-${state.season}-champion` });
     return true;
   }
@@ -5495,7 +5486,7 @@ function clubWorldCupStandingStatusClass(divisionId, index){
   if(quota > 0 && Number(index || 0) < quota) return 'continental-row';
   return '';
 }
-function argentineStandingStatusClass(divisionId, index, total){
+function argentineStandingStatusClass(divisionId, index){
   const division = (seed?.divisions || []).find(d => d.id === divisionId);
   if(!divisionUsesArgentinaRules(division)) return '';
   const position = Number(index || 0) + 1;

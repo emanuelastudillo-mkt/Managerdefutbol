@@ -596,104 +596,6 @@ function skillColumnSort(label){
   return `<div class="th-filter compact-sort skill-sort"><span>${label}</span><select class="skill-sort-select" data-squad-skill-sort>${squadSkillOptionsMarkup()}</select><div class="sort-arrows"><button type="button" class="sort-arrow${squadSort==='habilidad_asc'?' active':''}" data-squad-sort="habilidad_asc" title="Menor a mayor" aria-label="Ordenar habilidad de menor a mayor">↑</button><button type="button" class="sort-arrow${squadSort==='habilidad_desc'?' active':''}" data-squad-sort="habilidad_desc" title="Mayor a menor" aria-label="Ordenar habilidad de mayor a menor">↓</button></div></div>`;
 }
 
-function worldPlayerTeamMarkup(player){
-  const clubId = Number(player.clubId || 0);
-  if(clubId > 0){
-    return `<button class="linklike team-cell" data-club-id="${clubId}">${clubBadge(clubId)}<span>${escapeHtml(clubName(clubId))}</span></button>`;
-  }
-  if(clubId < 0 || player.sold) return '<span class="pill">Exterior</span>';
-  return '<span class="pill">Agente libre</span>';
-}
-function worldPlayersPositionOptions(){
-  const positions = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
-  return positions.map(pos => `<option value="${pos}" ${worldPlayersPositionFilter===pos?'selected':''}>${pos==='all'?'Todas':pos}</option>`).join('');
-}
-function worldPlayersClubOptions(){
-  const clubs = (seed.clubs || []).slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
-  const fixed = [
-    `<option value="all" ${worldPlayersClubFilter==='all'?'selected':''}>Todos</option>`,
-    `<option value="free" ${worldPlayersClubFilter==='free'?'selected':''}>Agentes libres</option>`,
-    `<option value="foreign" ${worldPlayersClubFilter==='foreign'?'selected':''}>Exterior</option>`
-  ];
-  return fixed.concat(clubs.map(c => `<option value="${c.id}" ${String(worldPlayersClubFilter)===String(c.id)?'selected':''}>${escapeHtml(c.name)}</option>`)).join('');
-}
-function worldPlayerFilterList(players){
-  return players.filter(player => {
-    if(worldPlayersPositionFilter !== 'all' && player.position !== worldPlayersPositionFilter) return false;
-    const clubId = Number(player.clubId || 0);
-    if(worldPlayersClubFilter === 'free') return clubId === 0 && !player.sold;
-    if(worldPlayersClubFilter === 'foreign') return clubId < 0 || player.sold;
-    if(worldPlayersClubFilter !== 'all') return clubId === Number(worldPlayersClubFilter);
-    return true;
-  });
-}
-function worldPlayersColumnSort(label, options){
-  return compactSortButtons(label, options, worldPlayersSort, 'data-world-sort');
-}
-function worldStatCell(player, key){
-  const map = scoutingStatMap(player);
-  const visible = scoutingVisibleKeys(player);
-  return visible.has(key) ? `<strong>${map[key]}</strong>` : '<span class="muted">—</span>';
-}
-function worldPlayerRow(player){
-  return `<tr class="${Number(player.clubId || 0) === game.selectedClubId ? 'own-player-row' : ''}">
-    <td>${faceImg(player, 'photo-thumb')}</td>
-    <td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
-    <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
-    <td>${Number(player.age || 0) || '—'}</td>
-    <td>${worldPlayerTeamMarkup(player)}</td>
-    <td>${formatMoney(player.clause || player.value || 0)}</td>
-    <td>${formatMoney(player.salary || 0)}</td>
-    <td>${worldStatCell(player,'Ataque/Salto')}</td>
-    <td>${worldStatCell(player,'Defensa')}</td>
-    <td>${worldStatCell(player,'Pase')}</td>
-    <td>${worldStatCell(player,'Velocidad/Reflejos')}</td>
-    <td>${worldStatCell(player,'Cabezazo/Mando')}</td>
-    <td>${worldStatCell(player,'Tiro/Potencia')}</td>
-    <td>${worldStatCell(player,'Resistencia')}</td>
-  </tr>`;
-}
-function renderWorldPlayers(){
-  mergeMarketPlayersIntoSeed(game.marketPlayers || []);
-  ensurePlayerStateForAll();
-  const basePlayers = seed.players.filter(p => !p.retired);
-  const filtered = worldPlayerFilterList(basePlayers);
-  const players = sortPlayersForView(filtered, worldPlayersSort);
-  const rows = players.map(worldPlayerRow).join('');
-  view.innerHTML = `
-    <div class="section-title">
-      <h2>Jugadores</h2>
-      <p class="tagline">Listado mundial. Las habilidades externas sólo aparecen si fueron reveladas por el Centro de Ojeo.</p>
-    </div>
-    <div class="card world-player-filters">
-      <label>Posición<select id="worldPositionFilter">${worldPlayersPositionOptions()}</select></label>
-      <label>Equipo<select id="worldClubFilter">${worldPlayersClubOptions()}</select></label>
-      <span class="pill">${players.length} jugador(es)</span>
-    </div>
-    <div class="table-wrap world-players-wrap"><table class="world-players-table"><thead><tr>
-      <th>Foto</th>
-      <th>${worldPlayersColumnSort('Nombre', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
-      <th>${worldPlayersColumnSort('Pos.', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
-      <th>${worldPlayersColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th>
-      <th>Equipo</th>
-      <th>${worldPlayersColumnSort('Cláusula', [['valor_desc','Mayor'],['valor_asc','Menor']])}</th>
-      <th>Sueldo</th>
-      <th>Ataque/Salto</th>
-      <th>Defensa</th>
-      <th>Pase</th>
-      <th>Vel./Ref.</th>
-      <th>Cab./Mando</th>
-      <th>Tiro/Pot.</th>
-      <th>Resist.</th>
-    </tr></thead><tbody>${rows || '<tr><td colspan="14" class="muted">No hay jugadores para mostrar.</td></tr>'}</tbody></table></div>`;
-  $('worldPositionFilter')?.addEventListener('change', event => { worldPlayersPositionFilter = event.target.value || 'all'; renderWorldPlayers(); });
-  $('worldClubFilter')?.addEventListener('change', event => { worldPlayersClubFilter = event.target.value || 'all'; renderWorldPlayers(); });
-  document.querySelectorAll('[data-world-sort]').forEach(button => {
-    button.addEventListener('click', () => {
-      if(button.dataset.worldSort){ worldPlayersSort = button.dataset.worldSort; renderWorldPlayers(); }
-    });
-  });
-}
 
 function renderSquad(){
   const players = sortedSquadPlayers();
@@ -889,7 +791,6 @@ function tacticSectorSkillVisors(){
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
-  const starters = game.tactic.starters.map(playerById).filter(Boolean);
   const bench = game.tactic.bench.map(playerById).filter(Boolean);
   const starterSet = new Set(game.tactic.starters);
   const benchSet = new Set(game.tactic.bench);
@@ -897,7 +798,6 @@ function renderTactics(){
     .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
     .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
   const pitch = pitchSlots(game.tactic).map(slot => {
-    const fit = slot.player ? playerFitsSlot(slot.player, slot.slot) : true;
     const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
     const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
     const chip = slot.player ? `

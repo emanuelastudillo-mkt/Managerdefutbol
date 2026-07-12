@@ -1,2 +1,2 @@
-/* V6.04 · Punto de entrada. Ojeo, avance automático y ranking de carrera. */
+/* V7.01 · Punto de entrada del Manager de Fútbol. */
 init();

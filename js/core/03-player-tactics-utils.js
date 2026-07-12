@@ -472,10 +472,6 @@ function currentCondition(playerId){
 function fatiguePoints(playerId){
   return clamp(99 - currentCondition(playerId), 0, 99);
 }
-function seasonParticipationRatioForPlayer(playerId){
-  const played = Math.max(0, Math.round(Number(game?.playerStats?.[playerId]?.played || 0)));
-  return played / Math.max(1, HIGH_PARTICIPATION_REFERENCE_MATCHES);
-}
 function highParticipationInjuryRiskForPlayer(playerId){
   const played = Math.max(0, Math.round(Number(game?.playerStats?.[playerId]?.played || 0)));
   const ratio = played / Math.max(1, HIGH_PARTICIPATION_REFERENCE_MATCHES);
@@ -493,11 +489,6 @@ function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
   const baseChance = clamp(rawChance * INJURY_CHANCE_MULTIPLIER, 0, 0.65);
   const highLoad = highParticipationInjuryRiskForPlayer(playerId);
   return clamp(Math.max(baseChance, highLoad.active ? highLoad.chance : 0), 0, 0.95);
-}
-function tacticStatusIcon(playerId){
-  if(isInjured(playerId)) return '<span class="injury-cross" title="Lesionado">✚</span>';
-  if(isSuspended(playerId)) return '<span class="red-card status-red-card" title="Expulsado / suspendido">■</span>';
-  return '<span class="ok">OK</span>';
 }
 function availabilityIcons(playerId){
   const icons = [];
@@ -1029,13 +1020,6 @@ function playerTacticFitFactor(player, slot){
   if(level === 'emergency_gk') return 0.25;
   return 0.5;
 }
-function playerTacticFitLabel(player, slot){
-  const level = playerTacticFitLevel(player, slot);
-  if(level === 'exact') return 'OK';
-  if(level === 'role') return '75%';
-  if(level === 'emergency_gk') return '25%';
-  return '50%';
-}
 function playerTacticFitPercent(player, slot){
   return Math.round(playerTacticFitFactor(player, slot) * 100);
 }
@@ -1174,6 +1158,7 @@ function createEmergencyBotPlayer(club, group, report){
     salaryFactor:BOT_EMERGENCY_SALARY_FACTOR,
     freeAgent:false
   });
+  player.overall = media;
   player.origin = 'Emergencia bot';
   player.emergencyBot = true;
   normalizeEmergencyPlayerEconomics(player);

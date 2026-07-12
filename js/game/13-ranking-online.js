@@ -830,8 +830,6 @@ function rankingPayloadToApiBody(payload){
     division_id: payload.divisionId,
     division_order: payload.divisionOrder,
     position: payload.position,
-    match_points: matchPoints,
-    league_points: matchPoints,
     won: payload.won,
     drawn: payload.drawn,
     lost: payload.lost,

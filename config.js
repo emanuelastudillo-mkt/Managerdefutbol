@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.48',
+  version: 'V7.01',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -53,7 +53,6 @@ window.GAME_CONFIG = {
     hinchasItaliaUrl: 'data/hinchas_italia.json',
     estadiosRumaniaUrl: 'data/estadios_rumania.json',
     hinchasRumaniaUrl: 'data/hinchas_rumania.json',
-    instalacionesUrl: 'data/instalaciones.json',
     relatosPartidoUrl: 'data/relatos_partido.json'
   },
   calendario: {
@@ -143,7 +142,7 @@ window.GAME_CONFIG = {
   },
   clubes: {
     reputacionTemporada: {
-      // Fórmula V6.48: ajuste anual de reputación de club por rendimiento deportivo.
+      // Fórmula V7.01: ajuste anual de reputación de club por rendimiento deportivo.
       // Los descensos negativos nunca pueden bajar al club por debajo del mínimo de su liga.
       minimoPorDivisionOrden: { 1: 40, 2: 25, 3: 10 },
       posicion: {
@@ -180,10 +179,6 @@ window.GAME_CONFIG = {
     partidosMinimosEvaluacionObjetivo: 5,
     // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
     congelarEvaluacionObjetivoPorTemporada: true,
-    // Prórroga por promedio general histórico del manager.
-    bonusPartidosPromedioGeneral120: 2,
-    bonusPartidosPromedioGeneral150: 5,
-    bonusPartidosPromedioGeneral190: 12
   },
   codigosEspeciales: {
     activo: true,
@@ -196,10 +191,10 @@ window.GAME_CONFIG = {
         beneficios: { prestigio: 20 }
       },
       {
-        codigo: 'PUNTOS20000',
+        codigo: 'PUNTOS50000',
         nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
+        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 50000 }
       }
     ]
   },
@@ -298,7 +293,6 @@ window.GAME_CONFIG = {
   economia: {
     gastosMensuales: {
       activo: true,
-      diaCobro: 1,
       impuestoGananciasPct: 0.01,
       electricidadBasePorPartido: 100000,
       electricidadPorCapacidadPorPartido: 10,
@@ -342,8 +336,6 @@ window.GAME_CONFIG = {
     probabilidadLlegadaTriple: 0.45,
     duracionOfertaMinDias: 30,
     duracionOfertaMaxDias: 700,
-    probabilidadPagoUnico: 0.50, // Legacy: el esquema V6.24 determina el pago por duración.
-    descuentoPagoUnico: 0.50, // Legacy: los contratos medios cobran 20% inicial y resto diario.
     sponsorEspecialActivo: true,
     probabilidadSponsorEspecial: 0.22,
     multiplicadorBonoEspecial: 3,

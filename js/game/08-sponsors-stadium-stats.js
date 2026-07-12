@@ -750,7 +750,6 @@ function stadiumExpansionsMarkup(){
 function renderStadium(){
   ensureStadiumState();
   ensureSponsorState();
-  const club = seed.clubs.find(c=>c.id===game.selectedClubId);
   const score = fieldScoreForClub(game.selectedClubId);
   const label = fieldConditionName(score);
   const project = stadiumProjectForClub(game.selectedClubId);
@@ -1122,7 +1121,7 @@ function standingsStatusClass(divisionId, index, total){
     if(cupClass) return cupClass;
   }
   if(typeof argentineStandingStatusClass === 'function'){
-    const argClass = argentineStandingStatusClass(divisionId, index, total);
+    const argClass = argentineStandingStatusClass(divisionId, index);
     if(argClass) return argClass;
   }
   const divisions = divisionOrderList();
@@ -1140,7 +1139,6 @@ function renderManagerStats(){
   const breakdown = typeof managerPrestigeBreakdown === 'function' ? managerPrestigeBreakdown(game.managerStats) : { total:Number(game.managerStats.prestige || 0), experiencePrestige:0, winPrestige:0, objectivePrestige:0, championPrestige:0, badSeasonPenalty:0, dismissalPenalty:0 };
   const prestige = breakdown.total;
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
-  const prestigeAccess = typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(prestige) : Math.floor(Number(prestige || 0));
   const localExperience = Number(game.managerStats.experience || 0);
   const experience = typeof currentManagerExperience === 'function' ? currentManagerExperience() : localExperience;
   const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];

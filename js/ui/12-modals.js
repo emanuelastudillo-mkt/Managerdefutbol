@@ -199,7 +199,6 @@ function bindPlayerModalActions(playerId){
 function showPlayerModal(playerId){
   const p = playerById(playerId);
   if(!p) return;
-  const visible = visibleStats(p);
   const stats = game?.playerStats?.[p.id];
   const needsScouting = playerRequiresScouting(p);
   const meta = roleMeta(p.position);
@@ -486,20 +485,20 @@ function processPendingTransfers(){
 function radarSvg(stats){
   const entries = Object.entries(stats);
   const cx = 145, cy = 145, maxR = 98;
-  const points = entries.map(([_,value],i)=>{
+  const points = entries.map(([, value],i)=>{
     const angle = -Math.PI/2 + i * (Math.PI*2/entries.length);
     const r = maxR * clamp(value,0,99) / 99;
     return `${cx + Math.cos(angle)*r},${cy + Math.sin(angle)*r}`;
   }).join(' ');
   const grid = [33,66,99].map(level=>{
-    const pts = entries.map(([_,value],i)=>{
+    const pts = entries.map(([, ],i)=>{
       const angle = -Math.PI/2 + i * (Math.PI*2/entries.length);
       const r = maxR * level / 99;
       return `${cx + Math.cos(angle)*r},${cy + Math.sin(angle)*r}`;
     }).join(' ');
     return `<polygon points="${pts}" fill="none" stroke="rgba(148,163,184,.25)" stroke-width="1"/>`;
   }).join('');
-  const labels = entries.map(([label,value],i)=>{
+  const labels = entries.map(([label],i)=>{
     const angle = -Math.PI/2 + i * (Math.PI*2/entries.length);
     const r = maxR + 28;
     const x = cx + Math.cos(angle)*r;
@@ -548,7 +547,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
       <div id="matchRevealDynamic"></div>
     </div>`;
   openModal(html);
-  const stages = matchRevealStages(match);
+  const stages = matchRevealStages();
   const notifyRevealComplete = () => {
     if(revealCompleteNotified) return;
     revealCompleteNotified = true;
@@ -600,7 +599,7 @@ function matchRevealStageNote(minute, index, total){
   if(minute < 75) return 'El partido entra en una zona de mayor desgaste.';
   return 'Últimos riesgos, cambios y acciones decisivas.';
 }
-function matchRevealStages(match){
+function matchRevealStages(){
   const total = Math.max(6, Math.round(MATCH_REVEAL_PHASES || 60));
   const duration = Math.max(6000, Number(MATCH_REVEAL_DURATION_MS || 60000));
   const stages = [];
@@ -876,9 +875,9 @@ function matchRevealNarration(match, stage, index, total){
   return { tone:'ambient', text:pickRelatoPhrase('ambient', `ambient-${match.id}-${stage.minute}`), sub:stage.note || 'El partido sigue en desarrollo' };
 }
 function finalMatchNarration(match){
-  const h = Number(match.homeGoals || 0), a = Number(match.awayGoals || 0);
   const home = clubName(match.homeId);
   const away = clubName(match.awayId);
+  const h = Number(match.homeGoals || 0), a = Number(match.awayGoals || 0);
   const score = `${h} - ${a}`;
   let bucket = 'final_draw';
   if(h === 0 && a === 0) bucket = 'final_scoreless';
@@ -971,8 +970,6 @@ function revealEventLine(event){
 function showMatchModal(matchId){
   const match = game.matchHistory.find(m => m.id === matchId);
   if(!match) return;
-  const home = clubName(match.homeId);
-  const away = clubName(match.awayId);
   const context = match.matchContext || { weather:'No registrado', pitch:'No registrado', homeFans:0, awayFans:0 };
   const body = `
     <div class="match-result-shell">
@@ -1320,8 +1317,7 @@ function openBankruptcyModeModal(options={}){
   });
 }
 
-function openCampoDestruidoChallengeModal(options={}){
-  options = options && typeof options === 'object' ? options : {};
+function openCampoDestruidoChallengeModal(){
   if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO);
   if(game && !game.gameOver?.active){
     showNotice('Los retos predeterminados se inician como partida nueva o desde una carrera sin club.');
@@ -1392,7 +1388,6 @@ function openNewGameModal(force=false, options={}){
   const countrySelect = $('modalCountrySelect');
   const leagueSelect = $('modalLeagueSelect');
   const clubSelect = $('modalClubSelect');
-  const syncAvailability = () => {};
   const syncLeagues = () => {
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
@@ -1446,7 +1441,6 @@ function openNewGameModal(force=false, options={}){
   });
   $('btnOpenBankruptcyMode')?.addEventListener('click', () => openBankruptcyModeModal({ saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER }));
   $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
-  newGameModalShown = true;
 }
 function gameHelpGoButton(tab, label, subtab=''){
   const extra = subtab ? ` data-help-subtab="${escapeHtml(subtab)}"` : '';

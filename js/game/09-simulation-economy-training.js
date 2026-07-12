@@ -980,7 +980,7 @@ function runScheduledFiveDayGameVerifier(options={}){
   return summary;
 }
 
-function processDailyCalendarState(dateBefore='', dateAfter='', options={}){
+function processDailyCalendarState(dateAfter='', options={}){
   if(!game) return { botResults:[], recovered:0, bankPayment:0 };
   const skipTraining = Boolean(options.skipTraining);
   const simulateBots = options.simulateBots !== false;
@@ -1109,7 +1109,7 @@ function startAutoAdvanceToNextOwnMatch(){
       return;
     }
     const nextDate = addDaysToIsoDate(current, 1);
-    const dayResult = processDailyCalendarState(current, nextDate, { includeOwn:false });
+    const dayResult = processDailyCalendarState(nextDate, { includeOwn:false });
     processed.days += 1;
     processed.bots += dayResult.botResults.length;
     processed.recovered += dayResult.recovered;
@@ -1262,7 +1262,7 @@ function advanceWithoutClubCalendarOneStep(){
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return true; }
   const fromDate = currentCalendarDate();
   const nextDate = addDaysToIsoDate(fromDate, 1);
-  const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:true, managerWithoutClub:true });
+  const dayResult = processDailyCalendarState(nextDate, { includeOwn:true, managerWithoutClub:true });
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
   const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
@@ -1322,7 +1322,7 @@ function advanceCalendarOneStep(){
   }
   const fromDate = currentCalendarDate();
   const nextDate = addDaysToIsoDate(fromDate, 1);
-  const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
+  const dayResult = processDailyCalendarState(nextDate, { includeOwn:false });
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
   const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;

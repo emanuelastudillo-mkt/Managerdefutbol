@@ -105,11 +105,7 @@ window.GAME_BALANCE_MODIFICADORES = {
         { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.30 }
       ],
       maxGolesExtraPorEquipo: 1,
-      // Valores heredados: quedan como respaldo si se borra reglasDiferencia.
-      xgExtraSiPierde: 0.35,
-      probabilidadGolExtraSiPierde: 0.34,
-      desgasteExtraPorSobreexigencia: 2,
-      condicionExtraDelta: -2
+      // La sobreexigencia se define únicamente mediante reglasDiferencia.
     }
   },
 

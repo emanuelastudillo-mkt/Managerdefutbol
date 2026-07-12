@@ -807,6 +807,10 @@ function preserveBaseClubDivisionIntegrityMap(){
 function applySavedDatabaseSnapshots(saved){
   preserveBaseClubDivisionIntegrityMap();
   const clean = { ...(saved || {}) };
+  // La división guardada debe restaurarse antes que los clubes para conservar referencias coherentes.
+  if(Array.isArray(saved?.divisionsSnapshot) && saved.divisionsSnapshot.length){
+    seed.divisions = structuredClone(saved.divisionsSnapshot);
+  }
   if(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length){
     seed.clubs = saved.clubsSnapshot.map(club => ({ ...club, fieldConditionScore:Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club), fieldCondition:club.fieldCondition || fieldConditionName(club.fieldConditionScore || initialFieldScore(club)), crestPath:normalizeClubCrestPath(club, club.crestPath) }));
   }
@@ -1007,7 +1011,7 @@ function extractLeagueDivisions(raw){
     if(raw[name]) found.push({ name, teams:raw[name] });
   });
   if(found.length) return found;
-  const dynamic = Object.entries(raw).filter(([_, value]) => Array.isArray(value));
+  const dynamic = Object.entries(raw).filter(([, value]) => Array.isArray(value));
   return dynamic.map(([name, teams]) => ({ name, teams }));
 }
 function normalizeDivisionObject(item, index=0){
@@ -1697,11 +1701,10 @@ function matchFieldSummaryMarkup(match){
     <small>${escapeHtml(homeName)} · ${score}/100 · ${escapeHtml(fixedText)}</small>
   </div>`;
 }
-function clubBudgetByPrestige(prestige, prizeMultiplier=1){
+function clubBudgetByPrestige(prestige){
   const rep = clamp(Number(prestige) || 50, 1, 99);
   // V6.18: presupuesto inicial calibrado principalmente por prestigio.
   // Anclas de diseño: 20 => $4.500.000, 80 => $100.000.000, 95 => $800.000.000.
-  // El parámetro prizeMultiplier se conserva por compatibilidad, pero ya no altera la caja inicial.
   const lowAnchorPrestige = 20;
   const midAnchorPrestige = 80;
   const highAnchorPrestige = 95;
@@ -1772,12 +1775,6 @@ function setSkillTier(target, base, id, names, tier){
 }
 function positionSkillProfile(position){
   const pos = normalizePlayerPosition(position);
-  const base = {
-    key:[],
-    common:['resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'],
-    rare:[],
-    weak:['porteria']
-  };
   if(pos === 'POR'){
     return {
       key:['porteria','posicionamiento','serenidad','aceleracion'],

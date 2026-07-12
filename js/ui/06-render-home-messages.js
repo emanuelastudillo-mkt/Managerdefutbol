@@ -140,7 +140,7 @@ function renderAll(){
     }
     view.innerHTML = `<div class="card blocker"><h2>No se pudo abrir esta sección</h2><p>La partida no se borró. Probá volver a Inicio o usar el verificador.</p><p class="muted small">Detalle técnico: ${escapeHtml(err?.message || String(err || 'error'))}</p><div class="row"><button class="primary" data-render-fallback-home>Ir a Inicio</button><button class="ghost" data-render-fallback-verify>Verificar que todo esté bien</button></div></div>`;
     document.querySelector('[data-render-fallback-home]')?.addEventListener('click', () => { activeTab = 'home'; renderAll(); });
-    document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof openIntegrityChecker === 'function') openIntegrityChecker(); });
+    document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof inspectGameIntegrity === 'function' && typeof showGameIntegrityModal === 'function') showGameIntegrityModal(inspectGameIntegrity(), false); });
   }
 }
 function getNextMatchForSelected(){
@@ -180,7 +180,6 @@ function featuredPlayerCard(type, player, label, valueText){
   if(!player){
     return `<div class="card featured-player-card empty"><p class="label">${escapeHtml(label)}</p><p class="muted">Sin jugador destacado todavía.</p></div>`;
   }
-  const stats = game?.playerStats?.[player.id] || {};
   return `<button class="card featured-player-card clickable" data-player-id="${player.id}" type="button">
     ${faceImg(player, 'featured-player-face')}
     <div class="featured-player-info">
@@ -1271,7 +1270,6 @@ function specialClauseLeaveMessages(player, managerName){
 function showSpecialClauseResponseModal(player, text, status='stay'){
   if(typeof openModal !== 'function') return;
   const clubId = Number(game?.selectedClubId || player?.clubId || 0);
-  const title = status === 'leave' ? 'El jugador decidió irse' : 'El jugador se queda';
   const tone = status === 'leave' ? 'leave' : 'stay';
   const html = `<div class="special-clause-response-modal ${tone}">
     ${clubBadge(clubId)}

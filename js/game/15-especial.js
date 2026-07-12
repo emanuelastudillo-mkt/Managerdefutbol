@@ -152,7 +152,7 @@ function specialGlobalReleaseCard(rawCard, options={}){
   const slotId = options.slotId ? String(options.slotId) : currentSpecialSaveSlotId();
   const global = readSpecialGlobalCardsState();
   const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
-  const released = { ...existing, ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null };
+  const released = { ...existing, ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null, ultimo_slot_activacion:String(slotId || existing.ultimo_slot_activacion || '') };
   if(options.destroy || options.exhausted || specialCardRemainingUses(released) <= 0){
     released.destruida = true;
   }
@@ -200,6 +200,8 @@ function specialGlobalCardsForSlot(slotId=currentSpecialSaveSlotId()){
     .map((card, index) => normalizeSpecialGlobalCard(card, index))
     .filter(Boolean)
     .filter(card => !card.destruida)
+    // Las cartas activas son exclusivas del slot que las activó; las reservas siguen siendo globales.
+    .filter(card => !card.active_slot_id || String(card.active_slot_id) === slot)
     .filter(card => specialCardRemainingUses(card) > 0 || Boolean(card.active_slot_id));
 }
 function syncSpecialStateWithGlobalCards(state){

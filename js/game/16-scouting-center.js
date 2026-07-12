@@ -122,7 +122,6 @@ function scoutingIsOwnPlayer(player){
   return Boolean(player && game && Number(player.clubId || 0) === Number(game.selectedClubId || 0));
 }
 const SCOUTING_SIGNING_CHANCE_KEY = 'market.signingChance';
-function scoutingSigningChanceKey(){ return SCOUTING_SIGNING_CHANCE_KEY; }
 function stripScoutingSigningChanceFromReport(report){
   if(!report || typeof report !== 'object') return report;
   if(Array.isArray(report.visibleSkills)){

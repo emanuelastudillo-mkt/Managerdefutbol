@@ -378,12 +378,9 @@
     const match = liveState.match || {};
     const homeTitle = liveClubName(match.homeId);
     const awayTitle = liveClubName(match.awayId);
-    const currentMinute = Number(liveState.minute || 0);
     const totalPhases = Number(liveState.totalPhases || 105);
     const phasesPlayed = Number(liveState.phasesPlayed || 0);
     const progress = Math.max(0, Math.min(100, Math.round((phasesPlayed / Math.max(1,totalPhases)) * 100)));
-    const nextBlock = liveState.nextBlock;
-    const nextButtonLabel = nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto';
     const events = liveEvents();
     const narration = liveNarration(events);
     const recentEvents = events.slice().reverse().slice(0, 11);

@@ -378,11 +378,6 @@ function academyCapacity(){
 function academyAvailableSlots(){
   return Math.max(0, academyCapacity() - academyActivePlayers().length);
 }
-function academyAverageVisibleSkillsProgress(){
-  const active = academyActivePlayers();
-  if(!active.length) return 0;
-  return Math.round(avg(active.map(player => academyVisibleSkillsProgress(player).percent)));
-}
 function rentAcademyResidence(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
@@ -676,7 +671,7 @@ function processAcademyYouthInjuries(){
   pushGameMessage({ type:'academia', priority:'normal', title:'Juvenil lesionado', body:`${player.name} sufrió ${player.injuryName}. Mientras esté lesionado no entrenará habilidades.` });
   return 1;
 }
-function treatAcademyYouthInjuryCore(playerId, options={}){
+function treatAcademyYouthInjuryCore(playerId){
   if(!game) return { success:false, message:'No hay partida activa.' };
   game.academy = normalizeAcademyState(game.academy);
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
@@ -1045,7 +1040,6 @@ function renderAcademy(){
   const residences = academyResidenceCount();
   const capacity = academyCapacity();
   const availableSlots = academyAvailableSlots();
-  const avgVisible = academyAverageVisibleSkillsProgress();
   const scoutingDisabled = availableSlots <= 0;
   view.innerHTML = `
     <div class="row section-title">

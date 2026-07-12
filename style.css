@@ -1334,32 +1334,6 @@ tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
 .role-pill{letter-spacing:.02em}
 @media (max-width:900px){.featured-player-card{grid-template-columns:54px 1fr}.featured-player-face{width:54px;height:54px}}
 
-/* V2.17: menú global de jugadores */
-.world-player-filters{
-  display:flex;
-  gap:12px;
-  align-items:end;
-  flex-wrap:wrap;
-  margin-bottom:14px;
-}
-.world-player-filters label{
-  display:grid;
-  gap:6px;
-  min-width:190px;
-  font-size:12px;
-  color:#94a3b8;
-}
-.world-player-filters select{width:100%}
-.world-players-wrap{max-height:70vh;overflow:auto}
-.world-players-table th,
-.world-players-table td{white-space:nowrap}
-.world-players-table .team-cell{
-  display:inline-flex;
-  gap:6px;
-  align-items:center;
-}
-.own-player-row{background:rgba(34,197,94,.055)}
-
 /* V2.20: indicadores compactos, nacionalidad abreviada y sponsors */
 .value-circle{
   --value-deg:0deg;

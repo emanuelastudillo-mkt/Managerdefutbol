@@ -13,7 +13,7 @@ function pitchEffect(pitch){
   Este archivo conserva sólo los helpers globales que ese motor usa fuera de su IIFE:
   cambios, aplicación de resultados, estadísticas, sanciones, lesiones y limpieza de táctica.
 */
-function makeSubstitutions(clubId, tactic, goals){
+function makeSubstitutions(clubId, tactic){
   if(clubId !== game.selectedClubId || !tactic?.autoSubs?.length) return [];
   const events = [];
   const onPitch = new Set((tactic.starters || []).map(Number));
@@ -23,7 +23,6 @@ function makeSubstitutions(clubId, tactic, goals){
     const inId = Number(rule.inId || 0);
     if(!outId || !inId || !onPitch.has(outId) || alreadyIn.has(inId) || !canEnterMatch(inId)) continue;
     const minute = Math.random() < 0.10 ? 45 : Math.floor(rnd(60,91));
-    const score = scoreAtMinute(goals, minute, clubId);
     const outPlayer = playerById(outId);
     let execute = false;
     if(rule.trigger === 'injuryOnly') execute = false;
@@ -67,11 +66,6 @@ function makeInjurySubstitutions(clubId, tactic, injuries, existingSubs=[]){
     if(existingSubs.filter(s=>s.clubId===clubId).length + events.length >= 5) break;
   }
   return events;
-}
-function scoreAtMinute(goals, minute, clubId){
-  let gf = 0, gc = 0;
-  goals.filter(g => g.minute <= minute).forEach(g => { if(g.clubId === clubId) gf++; else gc++; });
-  return { gf, gc };
 }
 function applyResultToTables(match, hg, ag){
   if(match?.playoff || match?.knockout || match?.clubWorldCup) return;

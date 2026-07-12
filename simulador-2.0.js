@@ -97,7 +97,6 @@
   const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.70, 0, 1);
   const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
   const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
-  const SIM_ERROR_GOAL_RATE = simConfigNumber('simulador.probabilidadErrorTerminaEnGol', 0.28, 0, 1);
   const SIM_GOAL_ERROR_ATTRIBUTION_RATE = simConfigNumber('simulador.probabilidadGolAtribuyeErrorGol', 0.60, 0, 1);
   const SIM_PLAYER_ERROR_SCALE = simConfigNumber('simulador.escalaRiesgoErrorJugador', 0.72, 0, 2);
   const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
@@ -1838,8 +1837,8 @@
     }
     const injuries = defaultLoss ? [] : [...makeInjuriesV2(match.homeId, home, matchContext), ...makeInjuriesV2(match.awayId, away, matchContext)].sort((a,b)=>a.minute-b.minute);
     const regularSubs = [
-      ...makeSubstitutions(match.homeId, homeTactic, goals),
-      ...makeSubstitutions(match.awayId, awayTactic, goals)
+      ...makeSubstitutions(match.homeId, homeTactic),
+      ...makeSubstitutions(match.awayId, awayTactic)
     ];
     const injurySubs = [
       ...makeInjurySubstitutions(match.homeId, homeTactic, injuries, regularSubs),

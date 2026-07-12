@@ -4483,7 +4483,8 @@ const CLUB_WORLD_CUP_CONFIG = {
   groupSize:4,
   invitedCount:4,
   startDaysAfterLeague:18,
-  daysBetweenRounds:7,
+  daysBetweenRounds:5,
+  finalExtraDaysAfterSemifinal:1,
   thirdPlaceDaysBeforeFinal:1,
   stadiums:[
     { name:'MetLife Stadium', capacity:81118 },
@@ -4696,7 +4697,7 @@ function createClubWorldCupGroupFixtures(){
   const season = Number(state.season || game?.seasonNumber || 1);
   const anchor = lastRegularFixtureDate() || currentCalendarDate?.() || dateForSeasonState(game);
   const startOffset = Number(CLUB_WORLD_CUP_CONFIG.startDaysAfterLeague || 18);
-  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 7);
+  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
   const dates = [
     addDaysToIsoDate(anchor, startOffset),
     addDaysToIsoDate(anchor, startOffset + interval),
@@ -4796,7 +4797,7 @@ function createClubWorldCupKnockoutStage(stage, participants){
   if(!state || !Array.isArray(participants) || participants.length < 2) return false;
   const season = Number(state.season || game?.seasonNumber || 1);
   const stageTitles = { r16:'Octavos de final', qf:'Cuartos de final', sf:'Semifinales', final:'Final', thirdPlace:'Partido por el 3er puesto' };
-  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 7);
+  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
   const date = addDaysToIsoDate(clubWorldCupLatestDate() || lastFixtureMatchDate(), interval);
   const matches = [];
   for(let i=0;i<participants.length;i+=2){
@@ -4831,9 +4832,11 @@ function createClubWorldCupFinalStages(finalists=[], thirdPlaceClubs=[]){
   if(!state || !Array.isArray(finalists) || finalists.length < 2 || !Array.isArray(thirdPlaceClubs) || thirdPlaceClubs.length < 2) return false;
   const season = Number(state.season || game?.seasonNumber || 1);
   const baseDate = clubWorldCupLatestDate() || lastFixtureMatchDate();
-  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 7);
-  const thirdPlaceDate = addDaysToIsoDate(baseDate, Math.max(1, interval - Number(CLUB_WORLD_CUP_CONFIG.thirdPlaceDaysBeforeFinal || 1)));
-  const finalDate = addDaysToIsoDate(baseDate, interval);
+  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
+  const finalExtraDays = Math.max(0, Number(CLUB_WORLD_CUP_CONFIG.finalExtraDaysAfterSemifinal || 1));
+  const finalOffset = interval + finalExtraDays;
+  const thirdPlaceDate = addDaysToIsoDate(baseDate, Math.max(1, finalOffset - Number(CLUB_WORLD_CUP_CONFIG.thirdPlaceDaysBeforeFinal || 1)));
+  const finalDate = addDaysToIsoDate(baseDate, finalOffset);
   const thirdMatches = [clubWorldCupFixtureMatch({ season, stage:'thirdPlace', roundNumber:1, homeId:Number(thirdPlaceClubs[0]), awayId:Number(thirdPlaceClubs[1]), date:thirdPlaceDate, matchIndex:0 })];
   const finalMatches = [clubWorldCupFixtureMatch({ season, stage:'final', roundNumber:1, homeId:Number(finalists[0]), awayId:Number(finalists[1]), date:finalDate, matchIndex:1 })];
   const thirdCreated = appendClubWorldCupRound('thirdPlace', `${CLUB_WORLD_CUP_CONFIG.name} · Partido por el 3er puesto`, thirdPlaceDate, thirdMatches);

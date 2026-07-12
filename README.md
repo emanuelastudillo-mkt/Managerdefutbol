@@ -1,19 +1,31 @@
-# Fútbol Manager MVP - V6.32
+# Fútbol Manager MVP - V6.33
 
-## V6.32 - Calendario de Mundial de Clubes y clasificados visibles
+## V6.33 - Reprogramación compacta del Mundial de Clubes
 
-Esta versión ajusta la **Copa Mundial de Clubes de la FIFA** agregada en V6.31 para que se integre mejor al calendario general y a las tablas de liga.
+Esta versión ajusta el calendario de la **Copa Mundial de Clubes de la FIFA** para que el torneo cierre con más margen dentro de los 70 días posteriores al final de las ligas.
 
 ### Cambios principales
 
-- El acceso **Mundial de Clubes** se quitó del menú lateral.
-- Ahora se consulta desde **Calendario**, junto al botón **Mi calendario**.
-- El calendario del Mundial de Clubes queda separado dentro de Calendario para ver sus fechas, sedes y partidos.
-- Los partidos de la Copa Mundial de Clubes ahora se juegan cada **7 días**.
-- La fase de grupos comienza **18 días después de la última fecha regular de las ligas**.
-- Se agregó partido por el **3er puesto**.
-- El partido por el 3er puesto se juega **1 día antes de la final**.
-- La final se juega 7 días después de las semifinales.
+- La fase de grupos sigue comenzando **18 días después de la última fecha regular de las ligas**.
+- Las rondas del Mundial de Clubes ahora se juegan cada **5 días**.
+- La final es la excepción: se juega **6 días después de las semifinales**.
+- El partido por el **3er puesto** se juega **1 día antes de la final**.
+- Con esta planificación, la final cae en el **día 49** desde el cierre de las ligas.
+- Quedan aproximadamente **21 días de margen** antes del cambio de temporada.
+
+### Planificación del torneo
+
+| Fase | Día desde fin de ligas | Separación |
+|---|---:|---:|
+| Descanso previo | Día 1 al 17 | — |
+| Grupos - Fecha 1 | Día 18 | Inicio |
+| Grupos - Fecha 2 | Día 23 | +5 días |
+| Grupos - Fecha 3 | Día 28 | +5 días |
+| Octavos de final | Día 33 | +5 días |
+| Cuartos de final | Día 38 | +5 días |
+| Semifinales | Día 43 | +5 días |
+| Partido por 3er puesto | Día 48 | +5 días |
+| Final | Día 49 | +6 días desde semifinales / 1 día después del 3er puesto |
 
 ### Formato de la Copa Mundial de Clubes
 
@@ -26,8 +38,6 @@ Esta versión ajusta la **Copa Mundial de Clubes de la FIFA** agregada en V6.31 
 - Empates en eliminatorias definidos por penales.
 
 ### Clasificados por liga
-
-En las tablas de posiciones, los puestos que clasifican al Mundial de Clubes ahora usan el color de clasificación correspondiente.
 
 Clasifican:
 
@@ -71,16 +81,16 @@ Cada edición elige 4 invitados de esa lista.
 
 ### Ajustes técnicos
 
-- Se agregó configuración interna del Mundial de Clubes:
+- Configuración del Mundial de Clubes actualizada:
   - `startDaysAfterLeague: 18`;
-  - `daysBetweenRounds: 7`;
+  - `daysBetweenRounds: 5`;
+  - `finalExtraDaysAfterSemifinal: 1`;
   - `thirdPlaceDaysBeforeFinal: 1`.
-- `regularFixtureLength()` ahora detecta rondas de Copa Mundial de Clubes como postemporada para no confundirlas con fechas de liga.
-- Se agregó estado de 3er puesto dentro de `game.clubWorldCup`.
-- Se agregó detección de cupos clasificatorios por país/división para colorear las tablas.
-- El botón de Mundial de Clubes dentro de Calendario muestra sólo los fixtures del torneo.
+- El partido por el 3er puesto se programa 5 días después de semifinales.
+- La final se programa 6 días después de semifinales.
+- El texto de Calendario fue actualizado para reflejar la nueva planificación.
 
-## Archivos modificados en V6.32
+## Archivos modificados en V6.33
 
 - `index.html`
 - `config.js`
@@ -88,7 +98,7 @@ Cada edición elige 4 invitados de esa lista.
 - `js/game/08-sponsors-stadium-stats.js`
 - `README.md`
 
-## Validación V6.32
+## Validación V6.33
 
 - `node --check` ejecutado sobre todos los archivos JS.
 - JSON de `data/` parseados correctamente.

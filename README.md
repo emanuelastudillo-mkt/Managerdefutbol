@@ -1,4 +1,22 @@
-# Fútbol Manager MVP - V6.41
+# Fútbol Manager MVP - V6.42
+
+## V6.42 - Fallback de escudo para clubes fundados viejos
+
+- Los clubes fundados de partidas antiguas que no tengan escudo válido guardado ahora usan automáticamente `img/escudos/fundador-1.webp`.
+- La migración se aplica al cargar snapshots de clubes guardados.
+- La UI de escudos también incorpora ese fallback para evitar imágenes rotas.
+
+### Archivos modificados en V6.42
+- `index.html`
+- `config.js`
+- `js/data/04-data-storage.js`
+- `js/core/02-ui-utils.js`
+- `README.md`
+
+### Validación V6.42
+- `node --check` en todos los JS.
+- JSON de `data/` parseados correctamente.
+- ZIP incremental y completo verificados sin errores.
 
 ## V6.41 - Residencias y escudos de club fundador
 

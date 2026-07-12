@@ -643,7 +643,15 @@ function normalizeLegacyAssetMarkerEncoding(path){
 }
 function normalizeClubCrestPath(club, rawPath){
   const fallback = `img/escudos/${imageSlug(club?.name || '')}.png`;
+  const defaultFounderCrest = 'img/escudos/fundador-1.webp';
+  const foundedClub = Boolean(club?.isFoundedClub || club?.founderClub);
+  const rawClean = normalizeLegacyAssetMarkerEncoding(rawPath || '');
   const cleanPath = normalizeLegacyAssetMarkerEncoding(rawPath || fallback);
+  if(foundedClub){
+    const current = String(rawClean || '').trim();
+    const generatedByName = String(cleanPath || '').trim() === fallback;
+    if(!current || generatedByName) return defaultFounderCrest;
+  }
   const clubKey = lookupNameKey(club?.name || '');
   const countryKey = countryNameKey(club?.country || club?.pais || '');
   if(clubKey === 'everton' && String(cleanPath || '').endsWith('/everton.png')){

@@ -202,8 +202,10 @@ function clubBadgeSrcCandidates(club){
   const slug = clubAssetSlug(name);
   const underscore = typeof imageSlug === 'function' ? imageSlug(name) : String(name || '').trim().replace(/\s+/g,'_');
   const legacy = legacyEscudoSlug(name);
+  const foundedFallback = (club?.isFoundedClub || club?.founderClub) ? 'img/escudos/fundador-1.webp' : '';
   return uniqueBadgePaths([
     club?.crestPath,
+    foundedFallback,
     `img/escudos/${slug}.png`,
     `img/escudos/${slug}.webp`,
     `img/escudos/${underscore}.png`,

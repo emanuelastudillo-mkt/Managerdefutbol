@@ -5067,3 +5067,10 @@ th{
 .sponsor-place-item.locked{opacity:.48;filter:grayscale(.45);border-style:dashed}
 .sponsor-place-item.locked strong,.sponsor-place-item.locked span,.sponsor-place-item.locked em{color:#7f8da3}
 @media (max-width:720px){.sponsor-places-grid{grid-template-columns:1fr}}
+
+/* V6.40 · Estado compacto de plantel */
+.squad-status-cell{ text-align:center; }
+.squad-status-icon{ display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; font-weight:900; line-height:1; font-size:13px; }
+.squad-status-available{ color:#12b76a; border:1px solid rgba(18,183,106,.45); background:rgba(18,183,106,.10); }
+.squad-status-suspended{ color:#ef4444; border-radius:4px; border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.12); }
+.squad-status-injured{ color:#f59e0b; border:1px solid rgba(245,158,11,.45); background:rgba(245,158,11,.12); }

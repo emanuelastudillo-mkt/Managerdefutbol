@@ -3124,7 +3124,7 @@ function renderTraining(){
     </div>
     <div class="card" style="margin-top:14px">
       <div class="row training-player-plan-head"><div><h3>Estado del plantel</h3><span class="muted">El entrenamiento individual se aplica una vez por día a cada jugador en el próximo avance.</span></div><select class="training-individual-bulk" data-bulk-player-training>${individualTrainingOptionsMarkup('', true)}</select></div>
-      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>${trainingColumnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th><th>${trainingColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th><th>5º entrenamiento</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="training-table"><thead><tr><th>${trainingColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A'],['dorsal_asc','Dorsal ↑'],['dorsal_desc','Dorsal ↓']])}</th><th>${trainingColumnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th><th>${trainingColumnSort('Edad', [['edad_asc','Menor'],['edad_desc','Mayor']])}</th><th>${trainingColumnSort('Media', [['media_desc','Mayor'],['media_asc','Menor']])}</th><th>${trainingColumnSort('PJ', [['played_desc','Mayor'],['played_asc','Menor']])}</th><th>${trainingColumnSort('Estado físico', [['condicion_desc','Mayor'],['condicion_asc','Menor']])}</th><th>${trainingColumnSort('Moral', [['moral_desc','Mayor'],['moral_asc','Menor']])}</th><th>5º entrenamiento</th></tr></thead><tbody>
         ${squad.map(player => trainingPlayerRow(player)).join('')}
       </tbody></table></div>
     </div>
@@ -3174,6 +3174,7 @@ function trainingPlayerRow(player){
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${Number(player.age || 0) || '—'}</td>
     <td><strong>${visibleOverall(player)}</strong></td>
+    <td><strong>${typeof playerStatValue === 'function' ? playerStatValue(player.id, 'played') : Number(game?.playerStats?.[player.id]?.played || 0)}</strong></td>
     <td>${conditionBar(player.id)}</td>
     <td>${moraleBar(player.id)}</td>
     <td><select class="training-individual-select training-tone-${individualTrainingTone(individual)}" data-player-training="${player.id}">${individualTrainingOptionsMarkup(individual)}</select></td>

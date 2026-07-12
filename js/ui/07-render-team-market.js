@@ -468,6 +468,18 @@ function hireFreeAgent(playerId){
 
 const PLAYER_VISIBLE_SKILL_COLUMNS = ['Ataque/Salto','Defensa','Pase','Velocidad/Reflejos','Cabezazo/Mando','Tiro/Potencia','Resistencia'];
 
+function playerStatValue(playerId, key){
+  const stat = game?.playerStats?.[playerId] || {};
+  const value = Math.max(0, Math.round(Number(stat?.[key] || 0)));
+  return Number.isFinite(value) ? value : 0;
+}
+
+function squadAvailabilityIconMarkup(playerId){
+  if(isSuspended(playerId)) return '<span class="squad-status-icon squad-status-suspended" title="Suspendido" aria-label="Suspendido">■</span>';
+  if(isInjured(playerId)) return '<span class="squad-status-icon squad-status-injured" title="Lesionado" aria-label="Lesionado">✚</span>';
+  return '<span class="squad-status-icon squad-status-available" title="Disponible" aria-label="Disponible">✓</span>';
+}
+
 function playerVisibleSkillValue(player, key){
   const cleanKey = PLAYER_VISIBLE_SKILL_COLUMNS.includes(key) ? key : 'Resistencia';
   if(typeof scoutingStatMap === 'function'){
@@ -526,6 +538,12 @@ function sortPlayersForView(players, sortKey){
     condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
     moral_desc:(a,b)=>currentMorale(b.id)-currentMorale(a.id) || byName(a,b),
     moral_asc:(a,b)=>currentMorale(a.id)-currentMorale(b.id) || byName(a,b),
+    played_desc:(a,b)=>playerStatValue(b.id, 'played')-playerStatValue(a.id, 'played') || byName(a,b),
+    played_asc:(a,b)=>playerStatValue(a.id, 'played')-playerStatValue(b.id, 'played') || byName(a,b),
+    goals_desc:(a,b)=>playerStatValue(b.id, 'goals')-playerStatValue(a.id, 'goals') || byName(a,b),
+    goals_asc:(a,b)=>playerStatValue(a.id, 'goals')-playerStatValue(b.id, 'goals') || byName(a,b),
+    assists_desc:(a,b)=>playerStatValue(b.id, 'assists')-playerStatValue(a.id, 'assists') || byName(a,b),
+    assists_asc:(a,b)=>playerStatValue(a.id, 'assists')-playerStatValue(b.id, 'assists') || byName(a,b),
     habilidad_desc:(a,b)=>playerVisibleSkillValue(b, squadSkillSortKey)-playerVisibleSkillValue(a, squadSkillSortKey) || byName(a,b),
     habilidad_asc:(a,b)=>playerVisibleSkillValue(a, squadSkillSortKey)-playerVisibleSkillValue(b, squadSkillSortKey) || byName(a,b),
     resistencia_desc:(a,b)=>playerVisibleSkillValue(b, 'Resistencia')-playerVisibleSkillValue(a, 'Resistencia') || byName(a,b),
@@ -688,10 +706,13 @@ function renderSquad(){
       <td><span class="pill role-pill">${roleBadge(p.position)}</span></td>
       <td>${nationalityShortMarkup(p.nationality)}</td>
       <td><strong>${visibleOverall(p)}</strong></td>
+      <td><strong>${playerStatValue(p.id, 'played')}</strong></td>
+      <td><strong>${playerStatValue(p.id, 'goals')}</strong></td>
+      <td><strong>${playerStatValue(p.id, 'assists')}</strong></td>
       <td>${conditionBar(p.id)}</td>
       <td>${moraleBar(p.id)}</td>
       <td><strong>${playerVisibleSkillValue(p, squadSkillSortKey)}</strong></td>
-      <td>${availabilityStatusMarkup(p.id)}</td>
+      <td class="squad-status-cell">${squadAvailabilityIconMarkup(p.id)}</td>
       <td>${formatMoney(p.clause || p.value || 0)}</td>
     </tr>`).join('');
   view.innerHTML = `
@@ -705,6 +726,9 @@ function renderSquad(){
       <th>${columnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
       <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
+      <th>${columnSort('PJ', [['played_desc','Mayor a menor'],['played_asc','Menor a mayor']])}</th>
+      <th>${columnSort('G', [['goals_desc','Mayor a menor'],['goals_asc','Menor a mayor']])}</th>
+      <th>${columnSort('A', [['assists_desc','Mayor a menor'],['assists_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
       <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
       <th>${skillColumnSort('Habilidad')}</th>

@@ -1,4 +1,28 @@
-# Fútbol Manager MVP - V6.39
+# Fútbol Manager MVP - V6.40
+
+## V6.40 - Plantel con PJ/G/A y estado compacto
+
+Cambios principales:
+- En **Plantel** se agregaron columnas **PJ**, **G** y **A** para partidos jugados, goles y asistencias.
+- La columna **Estado** de Plantel ahora muestra sólo un icono: check verde disponible, tarjeta roja suspendido o icono de lesión sin especificar diagnóstico.
+- En **Entrenamiento** se agregó la columna **PJ**.
+- Las nuevas columnas pueden ordenarse con las flechas compactas del encabezado.
+
+### Archivos modificados en V6.40
+
+- `index.html`
+- `config.js`
+- `js/ui/07-render-team-market.js`
+- `js/game/09-simulation-economy-training.js`
+- `style.css`
+- `README.md`
+
+### Validación V6.40
+
+- `node --check` en todos los JavaScript.
+- JSON de `data/` parseados correctamente.
+- ZIP incremental y completo verificados sin errores.
+
 
 ## V6.39 - Ranking con `points` como puntaje total
 
@@ -8,7 +32,7 @@
 - Se agregó un cálculo defensivo de puntaje total si la partida tiene partidos reales pero los acumulados internos no estaban sincronizados.
 
 
-## V6.39 - Competiciones y palmarés histórico
+## V6.38 - Competiciones y palmarés histórico
 
 - El menú lateral **Tabla** ahora se llama **Competiciones**.
 - Dentro de Competiciones se agregó navegación interna con botones:
@@ -19,7 +43,7 @@
 - Al finalizar la Copa Mundial de Clubes de la FIFA se guarda su campeón, subcampeón y tercer puesto.
 - El historial se conserva dentro de la partida y también puede reconstruir campeones desde tablas históricas ya guardadas.
 
-### Archivos modificados en V6.39
+### Archivos modificados en V6.38
 
 - `index.html`
 - `config.js`
@@ -29,7 +53,7 @@
 - `js/ui/12-modals.js`
 - `README.md`
 
-### Validación V6.39
+### Validación V6.38
 
 - `node --check` en todos los JavaScript.
 - JSON de `data/` parseados correctamente.

@@ -1,4 +1,40 @@
-# Fútbol Manager MVP - V6.40
+# Fútbol Manager MVP - V6.41
+
+## V6.41 - Residencias y escudos de club fundador
+
+Cambios principales:
+- Para cancelar el alquiler de una residencia juvenil ahora deben existir al menos **20 cupos libres** en la academia.
+- El botón de cancelar residencia queda bloqueado si no hay cupos libres suficientes.
+- En **Fundar club** se agregó selección visual de escudo.
+- El modo fundador espera 9 archivos `.webp` de 256x256 px en:
+  - `img/escudos/fundador-1.webp`
+  - `img/escudos/fundador-2.webp`
+  - `img/escudos/fundador-3.webp`
+  - `img/escudos/fundador-4.webp`
+  - `img/escudos/fundador-5.webp`
+  - `img/escudos/fundador-6.webp`
+  - `img/escudos/fundador-7.webp`
+  - `img/escudos/fundador-8.webp`
+  - `img/escudos/fundador-9.webp`
+- El escudo elegido se guarda como `crestPath` del club fundado y queda persistente en la carrera.
+
+### Archivos modificados en V6.41
+
+- `index.html`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/12-modals.js`
+- `style.css`
+- `README.md`
+
+### Validación V6.41
+
+- `node --check` en todos los JavaScript.
+- JSON de `data/` parseados correctamente.
+- ZIP incremental y completo verificados sin errores.
+
 
 ## V6.40 - Plantel con PJ/G/A y estado compacto
 

@@ -161,6 +161,21 @@ const FOUNDER_FREE_AGENTS_MIN_GK = Math.max(0, Math.round(configNumber('modoFund
 const FOUNDER_FREE_AGENTS_MIN_DEF = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosDefensores', 20, 0, 200)));
 const FOUNDER_FREE_AGENTS_MIN_MID = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosMediocampistas', 24, 0, 200)));
 const FOUNDER_FREE_AGENTS_MIN_ATT = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosDelanteros', 16, 0, 200)));
+const FOUNDER_CREST_OPTIONS_RAW = configValue('modoFundador.escudosDisponibles', [
+  'img/escudos/fundador-1.webp',
+  'img/escudos/fundador-2.webp',
+  'img/escudos/fundador-3.webp',
+  'img/escudos/fundador-4.webp',
+  'img/escudos/fundador-5.webp',
+  'img/escudos/fundador-6.webp',
+  'img/escudos/fundador-7.webp',
+  'img/escudos/fundador-8.webp',
+  'img/escudos/fundador-9.webp'
+]);
+const FOUNDER_CREST_OPTIONS = (Array.isArray(FOUNDER_CREST_OPTIONS_RAW) ? FOUNDER_CREST_OPTIONS_RAW : [])
+  .map(path => String(path || '').trim())
+  .filter(path => path && /\.webp(\?.*)?$/i.test(path))
+  .slice(0, 9);
 const BANKRUPTCY_MODE_ENABLED = configBoolean('modoBancarrota.activo', true);
 const BANKRUPTCY_INITIAL_BUDGET = Math.round(configNumber('modoBancarrota.cajaInicial', -500000000, -999999999999, 999999999999));
 const BANKRUPTCY_PRESTIGE_REDUCTION = configNumber('modoBancarrota.reduccionPrestigio', 0.70, 0, 0.99);

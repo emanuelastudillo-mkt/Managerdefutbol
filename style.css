@@ -5074,3 +5074,16 @@ th{
 .squad-status-available{ color:#12b76a; border:1px solid rgba(18,183,106,.45); background:rgba(18,183,106,.10); }
 .squad-status-suspended{ color:#ef4444; border-radius:4px; border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.12); }
 .squad-status-injured{ color:#f59e0b; border:1px solid rgba(245,158,11,.45); background:rgba(245,158,11,.12); }
+
+
+/* V6.41: escudos de modo fundador */
+.founder-crest-selector{margin-top:14px}
+.founder-crest-grid{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:10px;margin-top:10px}
+.founder-crest-option{position:relative;display:flex;align-items:center;justify-content:center;min-height:72px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(15,23,42,.55);cursor:pointer;transition:border-color .16s ease, transform .16s ease, background .16s ease}
+.founder-crest-option:hover{transform:translateY(-1px);border-color:rgba(96,165,250,.42)}
+.founder-crest-option input{position:absolute;opacity:0;pointer-events:none}
+.founder-crest-option span{width:56px;height:56px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);overflow:hidden}
+.founder-crest-option img{width:56px;height:56px;object-fit:contain;display:block}
+.founder-crest-option:has(input:checked){border-color:rgba(34,197,94,.75);background:rgba(34,197,94,.10);box-shadow:0 0 0 1px rgba(34,197,94,.16) inset}
+.founder-crest-option.missing::after{content:'Falta imagen';position:absolute;left:6px;right:6px;bottom:5px;text-align:center;font-size:9px;color:#fbbf24;background:rgba(15,23,42,.86);border-radius:999px;padding:2px 4px}
+@media (max-width:900px){.founder-crest-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.founder-crest-option{min-height:82px}.founder-crest-option span,.founder-crest-option img{width:64px;height:64px}}

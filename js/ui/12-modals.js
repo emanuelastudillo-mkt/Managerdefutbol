@@ -1167,6 +1167,17 @@ function scoutingPlayerRow(player, options={}){
     <td>${cell('Resistencia')}</td>
   </tr>`;
 }
+function founderCrestOptionsMarkup(){
+  const options = Array.isArray(FOUNDER_CREST_OPTIONS) && FOUNDER_CREST_OPTIONS.length
+    ? FOUNDER_CREST_OPTIONS
+    : ['img/escudos/fundador-1.webp','img/escudos/fundador-2.webp','img/escudos/fundador-3.webp','img/escudos/fundador-4.webp','img/escudos/fundador-5.webp','img/escudos/fundador-6.webp','img/escudos/fundador-7.webp','img/escudos/fundador-8.webp','img/escudos/fundador-9.webp'];
+  return options.slice(0, 9).map((path, index) => {
+    const checked = index === 0 ? 'checked' : '';
+    const clean = escapeHtml(path);
+    return `<label class="founder-crest-option" title="Escudo ${index + 1}"><input type="radio" name="founderCrestPath" value="${clean}" ${checked}><span><img src="${clean}" alt="Escudo fundador ${index + 1}" onerror="var el=this.closest('.founder-crest-option');if(el)el.classList.add('missing')"></span></label>`;
+  }).join('');
+}
+
 function openFounderModeModal(){
   if(!founderModeEnabled()){
     showNotice('El modo fundador está desactivado en la configuración.');
@@ -1195,6 +1206,10 @@ function openFounderModeModal(){
         <label for="founderPrimaryColor">Color principal</label>
         <input id="founderPrimaryColor" type="color" value="#3b82f6">
       </div>
+      <div class="founder-crest-selector card">
+        <div class="row"><div><p class="label">Escudo fundador</p><h3>Elegí el escudo del club</h3><p class="muted small">Usa archivos .webp de 256x256 px. Ruta esperada: <code>img/escudos/fundador-1.webp</code> a <code>fundador-9.webp</code>.</p></div></div>
+        <div class="founder-crest-grid">${founderCrestOptionsMarkup()}</div>
+      </div>
       <div class="founder-preview card">
         <p class="label">Condiciones iniciales</p>
         <div class="founder-preview-grid">
@@ -1220,7 +1235,8 @@ function openFounderModeModal(){
       clubName,
       city,
       country:$('founderCountry')?.value || country,
-      primaryColor:$('founderPrimaryColor')?.value || '#3b82f6'
+      primaryColor:$('founderPrimaryColor')?.value || '#3b82f6',
+      crestPath:document.querySelector('input[name="founderCrestPath"]:checked')?.value || ''
     });
   });
 }

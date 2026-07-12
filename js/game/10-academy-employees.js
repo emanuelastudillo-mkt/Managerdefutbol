@@ -384,6 +384,12 @@ function cancelAcademyResidence(){
   game.academy = normalizeAcademyState(game.academy);
   const currentResidences = academyResidenceCount();
   if(currentResidences <= 0){ showNotice('No hay residencias alquiladas para cancelar.'); return; }
+  const freeSlots = academyAvailableSlots();
+  const requiredFreeSlots = Math.max(1, ACADEMY_RESIDENCE_CAPACITY);
+  if(freeSlots < requiredFreeSlots){
+    showNotice(`Para cancelar una residencia necesitás al menos ${requiredFreeSlots} cupos juveniles libres. Cupos libres actuales: ${freeSlots}.`);
+    return;
+  }
   const nextResidences = Math.max(0, currentResidences - 1);
   game.academy.residences = nextResidences;
   if(game.academy.residences <= 0) game.academy.residenceLastChargeDate = null;
@@ -1033,7 +1039,8 @@ function renderAcademy(){
         <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
         <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
       </div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && available >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+      ${residences > 0 && available < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${available}.</p>` : ''}
     </div>
     <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
       <div class="row">

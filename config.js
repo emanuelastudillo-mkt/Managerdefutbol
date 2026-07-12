@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.40',
+  version: 'V6.41',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -116,7 +116,18 @@ window.GAME_CONFIG = {
     libresMinimosPorteros: 8,
     libresMinimosDefensores: 20,
     libresMinimosMediocampistas: 24,
-    libresMinimosDelanteros: 16
+    libresMinimosDelanteros: 16,
+    escudosDisponibles: [
+      'img/escudos/fundador-1.webp',
+      'img/escudos/fundador-2.webp',
+      'img/escudos/fundador-3.webp',
+      'img/escudos/fundador-4.webp',
+      'img/escudos/fundador-5.webp',
+      'img/escudos/fundador-6.webp',
+      'img/escudos/fundador-7.webp',
+      'img/escudos/fundador-8.webp',
+      'img/escudos/fundador-9.webp'
+    ]
   },
   modoBancarrota: {
     activo: true,

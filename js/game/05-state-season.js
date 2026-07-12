@@ -951,7 +951,10 @@ function sanitizeFounderClubInput(options={}){
   const city = String(options.city || '').trim().slice(0, 42) || 'Ciudad propia';
   const colorRaw = String(options.primaryColor || '#3b82f6').trim();
   const color = /^#[0-9a-f]{6}$/i.test(colorRaw) ? colorRaw : '#3b82f6';
-  return { country, clubName, city, primaryColor:color, managerName:String(options.managerName || '').trim().slice(0, 40) };
+  const crestOptions = Array.isArray(FOUNDER_CREST_OPTIONS) ? FOUNDER_CREST_OPTIONS : [];
+  const crestRaw = String(options.crestPath || '').trim();
+  const crestPath = crestOptions.includes(crestRaw) ? crestRaw : (crestOptions[0] || '');
+  return { country, clubName, city, primaryColor:color, crestPath, managerName:String(options.managerName || '').trim().slice(0, 40) };
 }
 function releaseClubPlayersToFounderMarket(clubId){
   const released = [];
@@ -993,7 +996,7 @@ function createFoundedClubAtReplacement(options={}){
     fansBase:FOUNDER_CLUB_INITIAL_FANS,
     fieldConditionScore:FOUNDER_CLUB_INITIAL_FIELD,
     fieldCondition:fieldConditionName(FOUNDER_CLUB_INITIAL_FIELD),
-    crestPath:`img/escudos/${nameSlug}.png`,
+    crestPath:clean.crestPath || `img/escudos/${nameSlug}.png`,
     divisionId:division.id,
     divisionName:division.name,
     divisionOrder:division.order,

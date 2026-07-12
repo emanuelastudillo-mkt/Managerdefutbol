@@ -4783,14 +4783,7 @@ function createClubWorldCupGroupFixtures(){
   const state = clubWorldCupState();
   if(!state?.groups?.length) return false;
   const season = Number(state.season || game?.seasonNumber || 1);
-  const anchor = lastRegularFixtureDate() || currentCalendarDate?.() || dateForSeasonState(game);
-  const startOffset = Number(CLUB_WORLD_CUP_CONFIG.startDaysAfterLeague || 18);
-  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
-  const dates = [
-    addDaysToIsoDate(anchor, startOffset),
-    addDaysToIsoDate(anchor, startOffset + interval),
-    addDaysToIsoDate(anchor, startOffset + (interval * 2))
-  ];
+  const dates = clubWorldCupGroupDatesFromFirstDate(clubWorldCupMinFirstGroupDate());
   const pairings = [ [[0,1],[2,3]], [[0,2],[1,3]], [[0,3],[1,2]] ];
   pairings.forEach((roundPairings, roundIndex) => {
     const matches = [];
@@ -4808,6 +4801,80 @@ function createClubWorldCupGroupFixtures(){
 }
 function clubWorldCupFixtureReadySeasonDay(){
   return Math.max(1, Math.round(Number(CLUB_WORLD_CUP_CONFIG.fixtureReadySeasonDay || 295)));
+}
+function clubWorldCupIsoForSeasonDay(day, year=currentSeasonYear()){
+  const safeDay = clamp(Math.round(Number(day || 1)), 1, daysInSeasonYear(year));
+  return addDaysToIsoDate(seasonStartDateForYear(year), safeDay - 1);
+}
+function clubWorldCupMaxIsoDate(dates=[]){
+  const clean = (dates || []).filter(validIsoDate);
+  if(!clean.length) return '';
+  return clean.sort((a,b)=>daysBetweenIsoDates(a,b))[clean.length - 1];
+}
+function clubWorldCupMinFirstGroupDate(options={}){
+  const year = currentSeasonYear();
+  const regularAnchor = lastRegularFixtureDate() || currentCalendarDate?.() || dateForSeasonState(game);
+  const leagueRestDate = validIsoDate(regularAnchor) ? addDaysToIsoDate(regularAnchor, Number(CLUB_WORLD_CUP_CONFIG.startDaysAfterLeague || 18)) : '';
+  const today = validIsoDate(options.currentDate) ? options.currentDate : (currentCalendarDate?.() || game?.currentDate || dateForSeasonState(game));
+  const avoidPastDate = options.allowPast ? '' : (validIsoDate(today) ? addDaysToIsoDate(today, 1) : '');
+  return clubWorldCupMaxIsoDate([leagueRestDate, avoidPastDate]) || leagueRestDate || avoidPastDate || clubWorldCupIsoForSeasonDay(clubWorldCupFixtureReadySeasonDay(), year);
+}
+function clubWorldCupGroupDatesFromFirstDate(firstDate){
+  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
+  const first = validIsoDate(firstDate) ? firstDate : clubWorldCupMinFirstGroupDate();
+  return [first, addDaysToIsoDate(first, interval), addDaysToIsoDate(first, interval * 2)];
+}
+function clubWorldCupRoundNumberFromRound(round, fallback=1){
+  const nums = (round?.matches || []).map(match => Number(match?.clubWorldCupRound || 0)).filter(n => n > 0);
+  if(nums.length) return Math.min(...nums);
+  return Number(fallback || 1);
+}
+function repairClubWorldCupGroupFixtureDates(options={}){
+  if(!game?.fixtures || !clubWorldCupState?.()) return false;
+  const state = clubWorldCupState();
+  const rounds = clubWorldCupStageRounds('groups')
+    .slice()
+    .sort((a,b)=>clubWorldCupRoundNumberFromRound(a, 1)-clubWorldCupRoundNumberFromRound(b, 1) || daysBetweenIsoDates(a.date || '', b.date || ''));
+  if(!rounds.length) return false;
+  const interval = Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5);
+  const currentDate = currentCalendarDate?.() || game.currentDate || dateForSeasonState(game);
+  const allGroupMatches = rounds.flatMap(round => round.matches || []).filter(match => match?.clubWorldCup && match.clubWorldCupStage === 'groups');
+  const hasUnplayed = allGroupMatches.some(match => !match.played);
+  const existingDates = rounds.map(round => validIsoDate(round.date) ? round.date : '').filter(Boolean);
+  const duplicateDates = new Set(existingDates).size < existingDates.length;
+  const firstExisting = existingDates.length ? existingDates.slice().sort((a,b)=>daysBetweenIsoDates(a,b))[0] : '';
+  const minByLeague = clubWorldCupMinFirstGroupDate({ allowPast:true, currentDate });
+  const storedOrExistingFirst = validIsoDate(state.firstGroupDate) ? state.firstGroupDate : (firstExisting || minByLeague);
+  const expectedFirstBase = clubWorldCupMaxIsoDate([storedOrExistingFirst, minByLeague]);
+  const expectedDatesBase = clubWorldCupGroupDatesFromFirstDate(expectedFirstBase);
+  const invalidSpacing = rounds.some((round, index) => validIsoDate(round.date) && daysBetweenIsoDates(expectedDatesBase[index] || expectedDatesBase[0], round.date) !== 0);
+  const tooEarly = validIsoDate(firstExisting) && validIsoDate(minByLeague) && daysBetweenIsoDates(firstExisting, minByLeague) > 0;
+  const createdDate = validIsoDate(state.fixtureCreatedDate) ? state.fixtureCreatedDate : '';
+  const createdWithPastDates = hasUnplayed && validIsoDate(firstExisting) && validIsoDate(createdDate) && daysBetweenIsoDates(firstExisting, createdDate) > 0;
+  const shouldMoveFuture = hasUnplayed && (duplicateDates || invalidSpacing || tooEarly || createdWithPastDates);
+  const expectedFirst = shouldMoveFuture ? clubWorldCupMaxIsoDate([expectedFirstBase, clubWorldCupMinFirstGroupDate({ allowPast:false, currentDate })]) : expectedFirstBase;
+  const expectedDates = clubWorldCupGroupDatesFromFirstDate(expectedFirst);
+  const shouldRepair = Boolean(options.force || duplicateDates || invalidSpacing || tooEarly || createdWithPastDates);
+  if(!shouldRepair) return false;
+  rounds.forEach((round, index) => {
+    const date = expectedDates[index] || addDaysToIsoDate(expectedDates[0], interval * index);
+    round.date = date;
+    round.startDate = date;
+    round.endDate = date;
+    round.roundDate = date;
+    (round.matches || []).forEach(match => {
+      if(!match?.clubWorldCup || match.clubWorldCupStage !== 'groups') return;
+      match.date = date;
+      match.roundDate = date;
+      match.clubWorldCupRound = index + 1;
+      const history = (game.matchHistory || []).find(item => item?.id === match.id);
+      if(history) history.date = date;
+    });
+  });
+  state.firstGroupDate = expectedDates[0];
+  state.groupDates = expectedDates.slice();
+  state.fixtureDatesRepairedAt = Date.now();
+  return true;
 }
 function clubWorldCupCanCreateFixtureNow(){
   if(!game || !regularFixturesComplete()) return false;
@@ -4840,9 +4907,13 @@ function createClubWorldCupIfNeeded(){
     championId:0,
     runnerUpId:0,
     createdAt:Date.now(),
+    fixtureCreatedDate:currentCalendarDate?.() || game.currentDate || '',
+    firstGroupDate:clubWorldCupMinFirstGroupDate(),
+    groupDates:clubWorldCupGroupDatesFromFirstDate(clubWorldCupMinFirstGroupDate()),
     fixtureReadySeasonDay:clubWorldCupFixtureReadySeasonDay()
   };
   createClubWorldCupGroupFixtures();
+  repairClubWorldCupGroupFixtureDates({ force:true });
   awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
   pushGameMessage({
     type:'deportivo',
@@ -5067,11 +5138,13 @@ function createPostRegularCompetitionsIfNeeded(){
     createdKinds.push('club_world_cup');
   }
   if(createdKinds.length){
+    if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates({ force:true });
     const messages = [];
     if(createdKinds.includes('promotion_playoff')) messages.push('Se creó el calendario de playoffs de promoción');
     if(createdKinds.includes('club_world_cup')) messages.push(`se sorteó la Copa Mundial de Clubes de la FIFA con fixture listo desde el día ${clubWorldCupFixtureReadySeasonDay()}`);
     return { created:true, kind:createdKinds.join('+'), message:`${messages.join(' y ')}.` };
   }
+  if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   if(advanceClubWorldCupIfNeeded()){
     const state = clubWorldCupState();
     const done = state?.status === 'completed';
@@ -5080,6 +5153,7 @@ function createPostRegularCompetitionsIfNeeded(){
   return null;
 }
 function renderClubWorldCup(){
+  if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const state = clubWorldCupState();
   if(!state){
     view.innerHTML = `<div class="row section-title"><div><h2>${escapeHtml(CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Competición internacional de cierre de temporada.</p></div></div><div class="card"><p class="muted">Todavía no se generó esta edición. Se crea al final de la temporada, cuando ya están definidos los clasificados de cada primera división.</p><p>Formato: 32 equipos, 8 grupos de 4 y eliminatorias a partido único en sede neutral.</p></div>`;

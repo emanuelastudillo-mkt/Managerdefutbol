@@ -753,6 +753,7 @@ function markScheduledResult(item, result){
   Object.assign(item.match, scheduledMatchCopyFields(result), { played:true, homeGoals:result.homeGoals, awayGoals:result.awayGoals, date:item.date });
 }
 function simulateDueMatchesUntil(targetDate, options={}){
+  if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const due = collectDueMatchesUntil(targetDate, options);
   const results = [];
   due.forEach(item => {

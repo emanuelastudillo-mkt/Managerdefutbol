@@ -3074,9 +3074,9 @@ function renderTraining(){
   `;
   prependFirstTeamTabs('training');
   bindSavedTrainingPlanButtons();
-  document.querySelectorAll('[data-training-sort]').forEach(select => {
-    select.addEventListener('change', () => {
-      if(select.value){ trainingSort = select.value; renderTraining(); }
+  document.querySelectorAll('[data-training-sort]').forEach(button => {
+    button.addEventListener('click', () => {
+      if(button.dataset.trainingSort){ trainingSort = button.dataset.trainingSort; renderTraining(); }
     });
   });
   document.querySelectorAll('[data-open-training-picker]').forEach(button => {

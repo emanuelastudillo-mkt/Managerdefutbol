@@ -704,6 +704,7 @@ let activeTab = 'home';
 let squadSort = 'media_desc';
 let trainingSort = 'media_desc';
 let worldPlayersSort = 'media_desc';
+let squadSkillSortKey = 'Resistencia';
 let worldPlayersPositionFilter = 'all';
 let worldPlayersClubFilter = 'all';
 let marketSubTab = 'free';

@@ -327,15 +327,35 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 
 /* V1.09: ordenamiento por columna en Plantel */
 .squad-table th{vertical-align:top}
-.th-filter{display:grid;gap:6px;align-items:start;min-width:120px}
+.th-filter{display:grid;gap:6px;align-items:start;min-width:72px}
 .th-filter span{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#9fb0c9;font-weight:900}
-.th-filter select{
+.sort-arrows{display:flex;gap:4px;align-items:center;justify-content:center}
+.sort-arrow{
+  width:27px;
+  height:27px;
+  display:inline-grid;
+  place-items:center;
+  border-radius:8px;
+  border:1px solid rgba(148,163,184,.24);
+  background:rgba(15,23,42,.72);
+  color:#dbeafe;
+  font-size:13px;
+  font-weight:900;
+  line-height:1;
+  padding:0;
+  cursor:pointer;
+}
+.sort-arrow:hover{border-color:rgba(96,165,250,.55);background:rgba(30,41,59,.95)}
+.sort-arrow.active{border-color:rgba(34,197,94,.65);box-shadow:0 0 0 1px rgba(34,197,94,.14) inset}
+.skill-sort{min-width:118px}
+.skill-sort-select{
   margin:0;
-  min-width:118px;
-  padding:7px 9px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:700;
+  min-width:108px;
+  max-width:138px;
+  padding:5px 7px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:800;
   text-transform:none;
   letter-spacing:0;
   color:#dbeafe;
@@ -1196,7 +1216,7 @@ tr.own-club-row.champion-row td{box-shadow:inset 4px 0 0 rgba(34,197,94,.85)}
 tr.own-club-row.continental-row td{box-shadow:inset 4px 0 0 rgba(59,130,246,.85)}
 tr.own-club-row.playoff-row td{box-shadow:inset 4px 0 0 rgba(245,158,11,.85)}
 tr.own-club-row.relegation-row td{box-shadow:inset 4px 0 0 rgba(239,68,68,.85)}
-.training-table .th-filter select{min-width:110px;width:100%;margin-top:6px}
+.training-table .th-filter{min-width:62px}.training-table .sort-arrow{width:25px;height:25px}
 .compact-team-stats strong.ok{color:#86efac}
 .compact-team-stats strong.bad{color:#fca5a5}
 
@@ -2510,9 +2530,11 @@ button.action-failure{
 .squad-table .photo-thumb{width:34px;height:34px;border-radius:10px;font-size:15px}
 .squad-table .pill{padding:3px 6px;font-size:11px}
 .squad-table .condition-bar,.squad-table .morale-bar{min-width:82px}
-.squad-table .th-filter{min-width:88px;gap:4px}
-.squad-table .th-filter span{font-size:10px;letter-spacing:.06em}
-.squad-table .th-filter select{min-width:86px;padding:5px 7px;font-size:11px;border-radius:8px}
+.squad-table .th-filter{min-width:58px;gap:4px}
+.squad-table .th-filter span{font-size:10px;letter-spacing:.06em;text-align:center}
+.squad-table .sort-arrow{width:24px;height:24px;border-radius:7px;font-size:12px}
+.squad-table .skill-sort{min-width:118px}
+.squad-table .skill-sort-select{min-width:104px;max-width:128px;padding:4px 6px;font-size:10px;border-radius:7px}
 
 /* Academia: preparador superior y promedio visual */
 .academy-youth-preparer-card{border-color:rgba(34,197,94,.18);background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(255,255,255,.025))}

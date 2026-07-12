@@ -466,6 +466,29 @@ function hireFreeAgent(playerId){
   renderMarket();
 }
 
+const PLAYER_VISIBLE_SKILL_COLUMNS = ['Ataque/Salto','Defensa','Pase','Velocidad/Reflejos','Cabezazo/Mando','Tiro/Potencia','Resistencia'];
+
+function playerVisibleSkillValue(player, key){
+  const cleanKey = PLAYER_VISIBLE_SKILL_COLUMNS.includes(key) ? key : 'Resistencia';
+  if(typeof scoutingStatMap === 'function'){
+    const map = scoutingStatMap(player);
+    const value = Number(map?.[cleanKey]);
+    return Number.isFinite(value) ? value : 0;
+  }
+  const stats = visibleStats(player);
+  const fallback = {
+    'Ataque/Salto': player?.position === 'POR' ? stats.Salto : stats.Ataque,
+    'Defensa': stats.Defensa,
+    'Pase': stats.Pase,
+    'Velocidad/Reflejos': player?.position === 'POR' ? stats.Reflejos : stats.Velocidad,
+    'Cabezazo/Mando': player?.position === 'POR' ? stats.Mando : stats.Cabezazo,
+    'Tiro/Potencia': player?.position === 'POR' ? stats.Potencia : stats.Tiro,
+    'Resistencia': stats.Resistencia
+  };
+  const value = Number(fallback[cleanKey]);
+  return Number.isFinite(value) ? value : 0;
+}
+
 function sortPlayersForView(players, sortKey){
   const byName = (a,b) => a.name.localeCompare(b.name, 'es');
   const byNameDesc = (a,b) => b.name.localeCompare(a.name, 'es');
@@ -503,8 +526,10 @@ function sortPlayersForView(players, sortKey){
     condicion_asc:(a,b)=>currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
     moral_desc:(a,b)=>currentMorale(b.id)-currentMorale(a.id) || byName(a,b),
     moral_asc:(a,b)=>currentMorale(a.id)-currentMorale(b.id) || byName(a,b),
-    resistencia_desc:(a,b)=>visibleStats(b).Resistencia-visibleStats(a).Resistencia || byName(a,b),
-    resistencia_asc:(a,b)=>visibleStats(a).Resistencia-visibleStats(b).Resistencia || byName(a,b),
+    habilidad_desc:(a,b)=>playerVisibleSkillValue(b, squadSkillSortKey)-playerVisibleSkillValue(a, squadSkillSortKey) || byName(a,b),
+    habilidad_asc:(a,b)=>playerVisibleSkillValue(a, squadSkillSortKey)-playerVisibleSkillValue(b, squadSkillSortKey) || byName(a,b),
+    resistencia_desc:(a,b)=>playerVisibleSkillValue(b, 'Resistencia')-playerVisibleSkillValue(a, 'Resistencia') || byName(a,b),
+    resistencia_asc:(a,b)=>playerVisibleSkillValue(a, 'Resistencia')-playerVisibleSkillValue(b, 'Resistencia') || byName(a,b),
     estado_disponible:byStatusAvailable,
     estado_no_disponible:byStatusUnavailable,
     valor_asc:byValueAsc,
@@ -522,14 +547,35 @@ function sortedSquadPlayers(){
 function sortedTrainingPlayers(){
   return sortPlayersForView(playersByClub(game.selectedClubId), trainingSort);
 }
+function sortOptionByDirection(options, direction){
+  const suffix = direction === 'asc' ? '_asc' : '_desc';
+  const exact = options.find(([value]) => String(value).endsWith(suffix));
+  if(exact) return exact;
+  return direction === 'asc' ? options[0] : (options[1] || options[0]);
+}
+function compactSortButtons(label, options, activeValue, attrName){
+  const asc = sortOptionByDirection(options, 'asc');
+  const desc = sortOptionByDirection(options, 'desc');
+  const button = (item, symbol, title) => {
+    if(!item) return '';
+    const [value, text] = item;
+    const active = activeValue === value ? ' active' : '';
+    return `<button type="button" class="sort-arrow${active}" ${attrName}="${value}" title="${escapeHtml(title || text)}" aria-label="${escapeHtml(title || text)}">${symbol}</button>`;
+  };
+  return `<div class="th-filter compact-sort"><span>${label}</span><div class="sort-arrows">${button(asc, '↑', asc?.[1])}${button(desc, '↓', desc?.[1])}</div></div>`;
+}
 function columnSort(label, options){
-  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${squadSort===value?'selected':''}>${text}</option>`)).join('');
-  return `<div class="th-filter"><span>${label}</span><select data-squad-sort>${opts}</select></div>`;
+  return compactSortButtons(label, options, squadSort, 'data-squad-sort');
 }
 
 function trainingColumnSort(label, options){
-  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${trainingSort===value?'selected':''}>${text}</option>`)).join('');
-  return `<div class="th-filter"><span>${label}</span><select data-training-sort>${opts}</select></div>`;
+  return compactSortButtons(label, options, trainingSort, 'data-training-sort');
+}
+function squadSkillOptionsMarkup(){
+  return PLAYER_VISIBLE_SKILL_COLUMNS.map(key => `<option value="${escapeHtml(key)}" ${squadSkillSortKey===key?'selected':''}>${escapeHtml(key)}</option>`).join('');
+}
+function skillColumnSort(label){
+  return `<div class="th-filter compact-sort skill-sort"><span>${label}</span><select class="skill-sort-select" data-squad-skill-sort>${squadSkillOptionsMarkup()}</select><div class="sort-arrows"><button type="button" class="sort-arrow${squadSort==='habilidad_asc'?' active':''}" data-squad-sort="habilidad_asc" title="Menor a mayor" aria-label="Ordenar habilidad de menor a mayor">↑</button><button type="button" class="sort-arrow${squadSort==='habilidad_desc'?' active':''}" data-squad-sort="habilidad_desc" title="Mayor a menor" aria-label="Ordenar habilidad de mayor a menor">↓</button></div></div>`;
 }
 
 function worldPlayerTeamMarkup(player){
@@ -564,8 +610,7 @@ function worldPlayerFilterList(players){
   });
 }
 function worldPlayersColumnSort(label, options){
-  const opts = ['<option value="">—</option>'].concat(options.map(([value,text])=>`<option value="${value}" ${worldPlayersSort===value?'selected':''}>${text}</option>`)).join('');
-  return `<div class="th-filter"><span>${label}</span><select data-world-sort>${opts}</select></div>`;
+  return compactSortButtons(label, options, worldPlayersSort, 'data-world-sort');
 }
 function worldStatCell(player, key){
   const map = scoutingStatMap(player);
@@ -625,9 +670,9 @@ function renderWorldPlayers(){
     </tr></thead><tbody>${rows || '<tr><td colspan="14" class="muted">No hay jugadores para mostrar.</td></tr>'}</tbody></table></div>`;
   $('worldPositionFilter')?.addEventListener('change', event => { worldPlayersPositionFilter = event.target.value || 'all'; renderWorldPlayers(); });
   $('worldClubFilter')?.addEventListener('change', event => { worldPlayersClubFilter = event.target.value || 'all'; renderWorldPlayers(); });
-  document.querySelectorAll('[data-world-sort]').forEach(select => {
-    select.addEventListener('change', () => {
-      if(select.value){ worldPlayersSort = select.value; renderWorldPlayers(); }
+  document.querySelectorAll('[data-world-sort]').forEach(button => {
+    button.addEventListener('click', () => {
+      if(button.dataset.worldSort){ worldPlayersSort = button.dataset.worldSort; renderWorldPlayers(); }
     });
   });
 }
@@ -645,7 +690,7 @@ function renderSquad(){
       <td><strong>${visibleOverall(p)}</strong></td>
       <td>${conditionBar(p.id)}</td>
       <td>${moraleBar(p.id)}</td>
-      <td>${visibleStats(p).Resistencia}</td>
+      <td><strong>${playerVisibleSkillValue(p, squadSkillSortKey)}</strong></td>
       <td>${availabilityStatusMarkup(p.id)}</td>
       <td>${formatMoney(p.clause || p.value || 0)}</td>
     </tr>`).join('');
@@ -662,16 +707,21 @@ function renderSquad(){
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
       <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
-      <th>${columnSort('Resistencia', [['resistencia_desc','Mayor a menor'],['resistencia_asc','Menor a mayor']])}</th>
+      <th>${skillColumnSort('Habilidad')}</th>
       <th>${columnSort('Estado', [['estado_disponible','Disponibles primero'],['estado_no_disponible','No disponibles primero']])}</th>
       <th>${columnSort('Cláusula', [['valor_desc','Mayor a menor'],['valor_asc','Menor a mayor']])}</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
   `;
   prependFirstTeamTabs('squad');
-  document.querySelectorAll('[data-squad-sort]').forEach(select => {
-    select.addEventListener('change', e => {
-      if(e.target.value){ squadSort = e.target.value; renderSquad(); }
+  document.querySelectorAll('[data-squad-sort]').forEach(button => {
+    button.addEventListener('click', () => {
+      if(button.dataset.squadSort){ squadSort = button.dataset.squadSort; renderSquad(); }
     });
+  });
+  document.querySelector('[data-squad-skill-sort]')?.addEventListener('change', event => {
+    squadSkillSortKey = PLAYER_VISIBLE_SKILL_COLUMNS.includes(event.target.value) ? event.target.value : 'Resistencia';
+    if(!String(squadSort || '').startsWith('habilidad_')) squadSort = 'habilidad_desc';
+    renderSquad();
   });
   bindSquadTopScrollbar();
 }

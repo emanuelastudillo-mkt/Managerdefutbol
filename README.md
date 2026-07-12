@@ -1,4 +1,31 @@
-# Fútbol Manager MVP - V6.37
+# Fútbol Manager MVP - V6.38
+
+## V6.38 - Competiciones y palmarés histórico
+
+- El menú lateral **Tabla** ahora se llama **Competiciones**.
+- Dentro de Competiciones se agregó navegación interna con botones:
+  - **Tabla de posiciones**
+  - **Campeones**
+- La vista **Campeones** muestra el palmarés histórico por año/temporada.
+- Al cerrar una temporada se guarda el campeón de cada liga/división.
+- Al finalizar la Copa Mundial de Clubes de la FIFA se guarda su campeón, subcampeón y tercer puesto.
+- El historial se conserva dentro de la partida y también puede reconstruir campeones desde tablas históricas ya guardadas.
+
+### Archivos modificados en V6.38
+
+- `index.html`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/ui/12-modals.js`
+- `README.md`
+
+### Validación V6.38
+
+- `node --check` en todos los JavaScript.
+- JSON de `data/` parseados correctamente.
+- ZIP incremental y completo verificados sin errores.
 
 ## V6.37 - Ranking con puntaje total compatible
 

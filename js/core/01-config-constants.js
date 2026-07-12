@@ -715,6 +715,7 @@ let selectedFixtureDivision = 'all';
 let fixtureViewMode = 'mine';
 let selectedStandingsDivision = 'all';
 let selectedStandingsYear = 'current';
+let selectedCompetitionView = 'standings';
 let selectedStatsDivision = 'all';
 let uiTicker = null;
 let matchRevealTimers = [];

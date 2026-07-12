@@ -2396,6 +2396,88 @@ function normalizeStandingsHistoryState(src){
   }).filter(item => item.season && item.year && item.divisions && Object.keys(item.divisions).length);
   return { seasons:clean };
 }
+
+function normalizeCompetitionChampionsHistoryState(src){
+  const obj = (src && typeof src === 'object' && !Array.isArray(src)) ? src : {};
+  const entries = Array.isArray(obj.entries) ? obj.entries : (Array.isArray(obj.champions) ? obj.champions : []);
+  const clean = [];
+  const seen = new Set();
+  entries.forEach(item => {
+    const season = Math.max(1, Math.round(Number(item?.season || 0)) || 0);
+    const year = Math.round(Number(item?.year || 0)) || (season ? seasonYearForNumber(season) : 0);
+    const competitionId = String(item?.competitionId || item?.divisionId || item?.id || '').trim();
+    const championId = Number(item?.championId || item?.clubId || 0);
+    if(!season || !year || !competitionId || !championId) return;
+    const key = `${season}-${competitionId}`;
+    if(seen.has(key)) return;
+    seen.add(key);
+    clean.push({
+      season,
+      year,
+      type:String(item?.type || 'league'),
+      competitionId,
+      competitionName:String(item?.competitionName || item?.divisionName || item?.name || competitionId),
+      championId,
+      championName:String(item?.championName || item?.clubName || clubName(championId)),
+      runnerUpId:Number(item?.runnerUpId || 0),
+      runnerUpName:item?.runnerUpName ? String(item.runnerUpName) : (item?.runnerUpId ? clubName(item.runnerUpId) : ''),
+      thirdPlaceId:Number(item?.thirdPlaceId || 0),
+      thirdPlaceName:item?.thirdPlaceName ? String(item.thirdPlaceName) : (item?.thirdPlaceId ? clubName(item.thirdPlaceId) : ''),
+      createdAt:String(item?.createdAt || new Date().toISOString())
+    });
+  });
+  clean.sort((a,b)=>(Number(b.year || 0)-Number(a.year || 0)) || (Number(b.season || 0)-Number(a.season || 0)) || String(a.competitionName || '').localeCompare(String(b.competitionName || '')));
+  return { entries:clean };
+}
+function recordCompetitionChampion(entry){
+  if(!game || !entry) return false;
+  const season = Math.max(1, Math.round(Number(entry.season || game.seasonNumber || 1)) || 1);
+  const year = Math.round(Number(entry.year || game.seasonYear || seasonYearForNumber(season))) || seasonYearForNumber(season);
+  const competitionId = String(entry.competitionId || entry.divisionId || '').trim();
+  const championId = Number(entry.championId || entry.clubId || 0);
+  if(!competitionId || !championId) return false;
+  game.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState(game.competitionChampionsHistory || {});
+  const clean = {
+    season,
+    year,
+    type:String(entry.type || 'league'),
+    competitionId,
+    competitionName:String(entry.competitionName || entry.divisionName || competitionId),
+    championId,
+    championName:String(entry.championName || clubName(championId)),
+    runnerUpId:Number(entry.runnerUpId || 0),
+    runnerUpName:entry.runnerUpName ? String(entry.runnerUpName) : (entry.runnerUpId ? clubName(entry.runnerUpId) : ''),
+    thirdPlaceId:Number(entry.thirdPlaceId || 0),
+    thirdPlaceName:entry.thirdPlaceName ? String(entry.thirdPlaceName) : (entry.thirdPlaceId ? clubName(entry.thirdPlaceId) : ''),
+    createdAt:String(entry.createdAt || new Date().toISOString())
+  };
+  const key = `${season}-${competitionId}`;
+  const entries = (game.competitionChampionsHistory.entries || []).filter(item => `${Number(item.season || 0)}-${String(item.competitionId || '')}` !== key);
+  entries.push(clean);
+  game.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState({ entries });
+  return true;
+}
+function recordLeagueChampionsForCurrentSeason(){
+  if(!game || !seed?.divisions?.length) return 0;
+  let count = 0;
+  const season = Number(game.seasonNumber || 1);
+  const year = Number(game.seasonYear || seasonYearForNumber(season));
+  (seed.divisions || []).forEach(division => {
+    const rows = sortedStandings(division.id);
+    const champion = rows && rows[0];
+    if(!champion?.clubId) return;
+    if(recordCompetitionChampion({
+      season,
+      year,
+      type:'league',
+      competitionId:division.id,
+      competitionName:division.name,
+      championId:Number(champion.clubId),
+      championName:clubName(champion.clubId)
+    })) count += 1;
+  });
+  return count;
+}
 function snapshotStandingsHistoryForCurrentSeason(){
   if(!game || !seed?.divisions?.length) return false;
   game.standingsHistory = normalizeStandingsHistoryState(game.standingsHistory || {});
@@ -2440,6 +2522,7 @@ function normalizeGame(saved){
   normalized.savedTactics = normalizeSavedTacticsState(normalized.savedTactics || {});
   normalized.savedTrainingPlans = normalizeSavedTrainingPlansState(normalized.savedTrainingPlans || {});
   normalized.standingsHistory = normalizeStandingsHistoryState(normalized.standingsHistory || {});
+  normalized.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState(normalized.competitionChampionsHistory || {});
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.manualRetiredPlayerIds = Array.from(new Set((Array.isArray(normalized.manualRetiredPlayerIds) ? normalized.manualRetiredPlayerIds : (Array.isArray(normalized.retiredManualPlayerIds) ? normalized.retiredManualPlayerIds : [])).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
@@ -2981,6 +3064,7 @@ function newGame(selectedClubId, options={}){
     savedTactics: normalizeSavedTacticsState({}),
     savedTrainingPlans: normalizeSavedTrainingPlansState({}),
     standingsHistory: normalizeStandingsHistoryState({}),
+    competitionChampionsHistory: normalizeCompetitionChampionsHistoryState({}),
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -4940,6 +5024,16 @@ function advanceClubWorldCupIfNeeded(){
     state.runnerUpId = runnerUpId;
     state.thirdPlaceId = thirdPlaceId;
     state.status = 'completed';
+    recordCompetitionChampion({
+      season:state.season || game.seasonNumber || 1,
+      year:game.seasonYear || seasonYearForNumber(state.season || game.seasonNumber || 1),
+      type:'club_world_cup',
+      competitionId:'club-world-cup',
+      competitionName:state.name || CLUB_WORLD_CUP_CONFIG.name,
+      championId,
+      runnerUpId,
+      thirdPlaceId
+    });
     awardClubWorldCupPrizeIfManaged(runnerUpId, 'runnerUp');
     awardClubWorldCupPrizeIfManaged(championId, 'champion');
     if(Number(game.selectedClubId || 0) === championId && typeof addManagerPrestigeAdjustment === 'function') addManagerPrestigeAdjustment(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
@@ -5689,6 +5783,7 @@ function finalizeSeasonIfNeeded(){
   }
   if(typeof finalizeActiveManagerChallenge === 'function') finalizeActiveManagerChallenge(record);
   const seasonPrizeAwards = awardManagerSeasonPrizes(record);
+  recordLeagueChampionsForCurrentSeason();
   snapshotStandingsHistoryForCurrentSeason();
   const prestigeChanges = updateClubPrestigeAfterSeason();
   const movements = movementsPreview;

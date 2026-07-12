@@ -923,7 +923,103 @@ function standingsDisplaySubtitle(){
   return `<p class="muted small">Tabla histórica guardada al cierre de la temporada ${Number(historical.season || 0)}.</p>`;
 }
 
+
+function competitionsNavMarkup(active='standings'){
+  const current = String(active || 'standings');
+  return `<div class="row competition-controls">
+    <button type="button" id="btnCompetitionStandings" class="${current === 'standings' ? 'primary' : 'ghost'}">Tabla de posiciones</button>
+    <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
+  </div>`;
+}
+function bindCompetitionsNav(){
+  $('btnCompetitionStandings')?.addEventListener('click', () => { selectedCompetitionView = 'standings'; renderStandings(); });
+  $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
+}
+function competitionChampionEntriesFromStandingsHistory(){
+  const entries = [];
+  standingsHistoryEntries().forEach(entry => {
+    Object.entries(entry.divisions || {}).forEach(([divisionId, rows]) => {
+      if(!Array.isArray(rows) || !rows.length) return;
+      const champion = rows.slice().sort((a,b)=>Number(a.position || 999)-Number(b.position || 999))[0];
+      if(!champion?.clubId) return;
+      const division = (seed?.divisions || []).find(item => String(item.id || '') === String(divisionId));
+      entries.push({
+        season:Number(entry.season || 0),
+        year:Number(entry.year || 0),
+        type:'league',
+        competitionId:String(divisionId),
+        competitionName:division?.name || String(divisionId),
+        championId:Number(champion.clubId || 0),
+        championName:clubName(champion.clubId),
+        createdAt:String(entry.createdAt || '')
+      });
+    });
+  });
+  return entries;
+}
+function competitionChampionsHistoryEntries(){
+  const explicit = typeof normalizeCompetitionChampionsHistoryState === 'function'
+    ? normalizeCompetitionChampionsHistoryState(game?.competitionChampionsHistory || {}).entries
+    : (Array.isArray(game?.competitionChampionsHistory?.entries) ? game.competitionChampionsHistory.entries : []);
+  const merged = [];
+  const seen = new Set();
+  [...explicit, ...competitionChampionEntriesFromStandingsHistory()].forEach(entry => {
+    const season = Number(entry.season || 0);
+    const competitionId = String(entry.competitionId || entry.divisionId || '');
+    const championId = Number(entry.championId || entry.clubId || 0);
+    if(!season || !competitionId || !championId) return;
+    const key = `${season}-${competitionId}`;
+    if(seen.has(key)) return;
+    seen.add(key);
+    merged.push({
+      season,
+      year:Number(entry.year || seasonYearForNumber(season)),
+      type:String(entry.type || 'league'),
+      competitionId,
+      competitionName:String(entry.competitionName || entry.divisionName || competitionId),
+      championId,
+      championName:String(entry.championName || clubName(championId)),
+      runnerUpId:Number(entry.runnerUpId || 0),
+      runnerUpName:entry.runnerUpName ? String(entry.runnerUpName) : (entry.runnerUpId ? clubName(entry.runnerUpId) : ''),
+      thirdPlaceId:Number(entry.thirdPlaceId || 0),
+      thirdPlaceName:entry.thirdPlaceName ? String(entry.thirdPlaceName) : (entry.thirdPlaceId ? clubName(entry.thirdPlaceId) : '')
+    });
+  });
+  merged.sort((a,b)=>(Number(b.year || 0)-Number(a.year || 0)) || (Number(b.season || 0)-Number(a.season || 0)) || String(a.competitionName || '').localeCompare(String(b.competitionName || '')));
+  return merged;
+}
+function renderChampionsHistory(){
+  const entries = competitionChampionsHistoryEntries();
+  const grouped = new Map();
+  entries.forEach(entry => {
+    const key = `${Number(entry.year || 0)} · Temp. ${Number(entry.season || 0)}`;
+    if(!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(entry);
+  });
+  const blocks = Array.from(grouped.entries()).map(([label, items]) => {
+    const rows = items.map(entry => {
+      const extra = entry.type === 'club_world_cup'
+        ? `${entry.runnerUpId ? `Subcampeón: ${escapeHtml(entry.runnerUpName || clubName(entry.runnerUpId))}` : ''}${entry.thirdPlaceId ? `${entry.runnerUpId ? ' · ' : ''}3°: ${escapeHtml(entry.thirdPlaceName || clubName(entry.thirdPlaceId))}` : ''}`
+        : '';
+      return `<tr>
+        <td>${escapeHtml(entry.competitionName)}</td>
+        <td>${clubLink(entry.championId)}</td>
+        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : 'Liga'}</td>
+        <td class="muted small">${extra || '—'}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="card"><div class="row"><h3>${escapeHtml(label)}</h3><span class="pill">${items.length} competición(es)</span></div><div class="table-wrap"><table><thead><tr><th>Competición</th><th>Campeón</th><th>Tipo</th><th>Detalle</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="row section-title">
+      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: campeones de cada liga y de la Copa Mundial de Clubes por temporada.</p></div>
+      ${competitionsNavMarkup('champions')}
+    </div>
+    <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar el Mundial de Clubes.</p></div>'}</div>`;
+  bindCompetitionsNav();
+}
 function renderStandings(){
+  if(String(selectedCompetitionView || 'standings') === 'champions'){ renderChampionsHistory(); return; }
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
   const currentKey = currentStandingsYearKey();
@@ -946,10 +1042,11 @@ function renderStandings(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Tabla de posiciones</h2>${standingsDisplaySubtitle()}</div>
-      <div class="row filters-row">${standingsYearOptionsMarkup(selectedStandingsYear)}${divisionFilterMarkup('standingsDivisionFilter', selectedStandingsDivision)}</div>
+      <div><h2>Competiciones</h2><p class="tagline">Tablas de posiciones por liga y temporada.</p>${standingsDisplaySubtitle()}</div>
+      <div class="row filters-row">${competitionsNavMarkup('standings')}${standingsYearOptionsMarkup(selectedStandingsYear)}${divisionFilterMarkup('standingsDivisionFilter', selectedStandingsDivision)}</div>
     </div>
     <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>`;
+  bindCompetitionsNav();
   $('standingsYearFilter')?.addEventListener('change', event => { selectedStandingsYear = event.target.value; renderStandings(); });
   $('standingsDivisionFilter')?.addEventListener('change', event => { selectedStandingsDivision = event.target.value; renderStandings(); });
 }

@@ -1514,9 +1514,9 @@ function openGameHelpModal(){
           ${gameHelpGoButton('fixture','Abrir Calendario')}
         </article>
         <article class="help-card card">
-          <h4>Tabla</h4>
+          <h4>Competiciones</h4>
           <p>Muestra la posición del club en la liga. Es la referencia rápida para saber si estás cumpliendo expectativas o si el contexto empieza a presionar.</p>
-          ${gameHelpGoButton('standings','Abrir Tabla')}
+          ${gameHelpGoButton('standings','Abrir Competiciones')}
         </article>
       </div>
     </div>

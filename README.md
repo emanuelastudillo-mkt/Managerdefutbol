@@ -1,4 +1,24 @@
-# Fútbol Manager MVP - V6.36
+# Fútbol Manager MVP - V6.37
+
+## V6.37 - Ranking con puntaje total compatible
+
+- Corregido el envío de carrera al ranking cuando el backend respondía **“El puntaje total debe ser mayor a 0.”**.
+- El payload ahora envía aliases explícitos de puntaje: `total_score`, `totalScore`, `score`, `puntaje_total`, `career_score`, `manager_score` y `puntaje_manager`.
+- El cálculo de carrera ahora consolida también la tabla/temporada actual si los totales internos del manager no estaban sincronizados.
+- Agregado respaldo de puntaje positivo para carreras con partidos oficiales reales, evitando que una carrera con encuentros jugados se envíe con score 0.
+
+### Archivos modificados en V6.37
+
+- `index.html`
+- `config.js`
+- `js/game/13-ranking-online.js`
+- `README.md`
+
+### Validación V6.37
+
+- `node --check` en todos los JavaScript.
+- JSON de `data/` parseados correctamente.
+- ZIP incremental y completo verificados sin errores.
 
 ## V6.36 - Corrección de cuotas semanales de préstamos
 
@@ -63,4 +83,4 @@
 
 ## Notas de instalación
 
-Usar la versión completa para reemplazar todo el proyecto o aplicar el ZIP incremental sobre V6.34.
+Usar la versión completa para reemplazar todo el proyecto o aplicar el ZIP incremental sobre V6.36.

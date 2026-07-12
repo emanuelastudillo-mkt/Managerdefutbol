@@ -425,12 +425,16 @@ function calculateCareerManagerScore(payload){
   const gd = Number(payload.goalDifference || 0);
   const titles = Number(payload.titles || 0);
   const prestige = Number(payload.managerPrestige || 0);
+  const experience = Number(payload.managerExperience || 0);
   const seasons = Number(payload.seasonsPlayed || 0);
-  const played = Math.max(1, Number(payload.careerMatches || payload.played || 0));
-  const winRate = clamp(Math.round((Number(payload.won || 0) / played) * 100), 0, 100);
+  const playedRaw = Number(payload.careerMatches || payload.played || 0);
+  const played = Math.max(1, playedRaw);
+  const wins = Number(payload.won || 0);
+  const draws = Number(payload.drawn || 0);
+  const winRate = clamp(Math.round((wins / played) * 100), 0, 100);
   const budgetVariation = Number(payload.budgetVariation || 0);
   const negativePenalty = Number(payload.finalBudget || 0) < 0 ? -80 : 0;
-  return Math.round(
+  const calculated = Math.round(
     points +
     gd +
     (titles * 160) +
@@ -440,6 +444,24 @@ function calculateCareerManagerScore(payload){
     rankingBudgetScore(budgetVariation) +
     negativePenalty
   );
+  if(calculated > 0) return calculated;
+  // Respaldo para partidas antiguas o estados donde los totales del manager no se hayan consolidado todavía.
+  // El ranking online exige un puntaje positivo y una carrera con partidos reales no debe enviarse en cero.
+  return Math.max(1, Math.round((playedRaw * 5) + (wins * 12) + (draws * 4) + points + Math.max(0, prestige * 4) + Math.floor(Math.max(0, experience) / 10) + (titles * 160)));
+}
+function rankingScoreAliases(payload){
+  const value = Math.max(0, Math.round(Number(payload?.managerScore || payload?.totalScore || payload?.total_score || 0)));
+  return {
+    managerScore:value,
+    manager_score:value,
+    puntaje_manager:value,
+    totalScore:value,
+    total_score:value,
+    score:value,
+    puntaje_total:value,
+    careerScore:value,
+    career_score:value
+  };
 }
 function rankingCareerRecord(){
   if(!game) return null;
@@ -447,11 +469,36 @@ function rankingCareerRecord(){
   const stats = game.managerStats;
   const totals = stats.totals || {};
   const seasons = rankingCareerSeasons();
+  const currentRecord = rankingCurrentSeasonRecord();
+  const currentPlayed = Number(currentRecord?.pg || 0) + Number(currentRecord?.pe || 0) + Number(currentRecord?.pp || 0);
+  const currentKeyExists = seasons.some(item => Number(item.season || 0) === Number(currentRecord?.season || game.seasonNumber || 1) && Number(item.clubId || 0) === Number(currentRecord?.clubId || game.selectedClubId || 0));
+  if(currentPlayed > 0 && !currentKeyExists){
+    seasons.push({ ...currentRecord, divisionOrder:Number(clubDivision(currentRecord.clubId || game.selectedClubId).order || 1), current:true });
+  }
+  const aggregate = seasons.reduce((acc, item) => {
+    acc.pts += Number(item.pts || 0);
+    acc.pg += Number(item.pg || 0);
+    acc.pe += Number(item.pe || 0);
+    acc.pp += Number(item.pp || 0);
+    acc.gf += Number(item.gf || 0);
+    acc.gc += Number(item.gc || 0);
+    return acc;
+  }, { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 });
+  aggregate.played = aggregate.pg + aggregate.pe + aggregate.pp;
+  const useAggregate = aggregate.played > Number(totals.played || 0);
+  const merged = useAggregate ? aggregate : {
+    pts:Number(totals.won || 0) * 3 + Number(totals.drawn || 0),
+    pg:Number(totals.won || 0),
+    pe:Number(totals.drawn || 0),
+    pp:Number(totals.lost || 0),
+    gf:Number(totals.gf || 0),
+    gc:Number(totals.gc || 0),
+    played:Number(totals.played || 0)
+  };
   const clubs = rankingCareerClubNames(seasons);
   const division = clubDivision(game.selectedClubId);
   const bestPosition = rankingBestCareerPosition(seasons);
   const bestDivisionOrder = seasons.reduce((best, item) => Math.min(best, Number(item.divisionOrder || clubDivision(item.clubId).order || 99)), Number(division.order || 1));
-  const careerPoints = Number(totals.won || 0) * 3 + Number(totals.drawn || 0);
   return {
     season: Number(game.seasonNumber || 1),
     seasonsPlayed: Math.max(seasons.length, Number(game.seasonNumber || 1)),
@@ -464,13 +511,13 @@ function rankingCareerRecord(){
     divisionOrder: Number(division.order || 1),
     bestDivisionOrder,
     position: bestPosition,
-    pts: careerPoints,
-    pg: Number(totals.won || 0),
-    pe: Number(totals.drawn || 0),
-    pp: Number(totals.lost || 0),
-    gf: Number(totals.gf || 0),
-    gc: Number(totals.gc || 0),
-    played: Number(totals.played || 0),
+    pts: Number(merged.pts || 0),
+    pg: Number(merged.pg || 0),
+    pe: Number(merged.pe || 0),
+    pp: Number(merged.pp || 0),
+    gf: Number(merged.gf || 0),
+    gc: Number(merged.gc || 0),
+    played: Number(merged.played || 0),
     title: Number(stats.titles || 0) > 0,
     titles: Number(stats.titles || 0),
     experience: Number(stats.experience || 0),
@@ -595,6 +642,12 @@ function buildRankingPayload(managerName, options={}){
     eventLabel: options.eventLabel || rankingEventLabel(eventType)
   };
   payload.managerScore = scope === 'career' ? calculateCareerManagerScore(payload) : calculateManagerScore(payload);
+  if(Number(payload.managerScore || 0) <= 0){
+    const played = Number(payload.careerMatches || payload.played || 0);
+    const fallback = Math.round((played * 5) + Number(payload.points || 0) + (Number(payload.won || 0) * 12) + (Number(payload.drawn || 0) * 4) + (Number(payload.titles || 0) * 160) + Math.floor(Math.max(0, Number(payload.managerExperience || 0)) / 10));
+    payload.managerScore = Math.max(played > 0 ? 1 : 0, fallback);
+  }
+  Object.assign(payload, rankingScoreAliases(payload));
   payload.submissionKey = rankingSubmissionKey(payload, eventType);
   return payload;
 }
@@ -740,9 +793,7 @@ function rankingPayloadToApiBody(payload){
     budget_variation: payload.budgetVariation,
     titles: payload.titles,
     title: payload.title ? 1 : 0,
-    manager_score: payload.managerScore,
-    managerScore: payload.managerScore,
-    puntaje_manager: payload.managerScore,
+    ...rankingScoreAliases(payload),
     submitted_at: payload.submittedAt || new Date().toISOString(),
     event_type: payload.eventType || 'career_snapshot',
     event_label: payload.eventLabel || rankingEventLabel(payload.eventType),
@@ -963,6 +1014,7 @@ function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!managerName) return 'Ingresá un nombre de manager.';
   if(String(payload?.recordScope || '') !== 'career' && !payload?.position) return 'No se pudo calcular la posición actual.';
   if(String(payload?.recordScope || '') === 'career' && !Number(payload?.careerMatches || 0)) return 'La carrera todavía no tiene partidos oficiales para subir.';
+  if(Number(payload?.managerScore || payload?.total_score || 0) <= 0) return 'No se pudo calcular un puntaje válido para la carrera.';
   const previous = game.rankingUploads?.[payload.submissionKey];
   if(previous?.status === 'pending' && !options.forceRetry){
     const attemptedAt = Date.parse(previous.attemptedAt || 0);

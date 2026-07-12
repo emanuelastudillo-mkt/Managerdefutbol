@@ -1004,8 +1004,20 @@ function playerFitsSlot(player, slot){
 function playerExactRoleFitsSlot(player, slot){
   return String(player?.position || '').toUpperCase() === String(slot || '').toUpperCase();
 }
+function clubHasNaturalGoalkeeper(clubId){
+  const id = Number(clubId || 0);
+  if(!id || typeof playersByClub !== 'function') return true;
+  return playersByClub(id).some(p => String(p?.position || '').toUpperCase() === 'POR');
+}
+function emergencyFieldKeeperAllowed(player, slot){
+  if(!player || String(slot || '').toUpperCase() !== 'POR') return false;
+  if(isGoalkeeperPlayer(player)) return false;
+  const clubId = Number(player.clubId || game?.selectedClubId || 0);
+  return !clubHasNaturalGoalkeeper(clubId);
+}
 function playerTacticFitLevel(player, slot){
   if(!player) return 'empty';
+  if(emergencyFieldKeeperAllowed(player, slot)) return 'emergency_gk';
   if(playerExactRoleFitsSlot(player, slot)) return 'exact';
   if(playerFitsSlot(player, slot)) return 'role';
   return 'zone';
@@ -1014,12 +1026,14 @@ function playerTacticFitFactor(player, slot){
   const level = playerTacticFitLevel(player, slot);
   if(level === 'exact') return 1;
   if(level === 'role') return 0.75;
+  if(level === 'emergency_gk') return 0.25;
   return 0.5;
 }
 function playerTacticFitLabel(player, slot){
   const level = playerTacticFitLevel(player, slot);
   if(level === 'exact') return 'OK';
   if(level === 'role') return '75%';
+  if(level === 'emergency_gk') return '25%';
   return '50%';
 }
 function playerTacticFitPercent(player, slot){
@@ -1034,6 +1048,7 @@ function playerTacticFitTitle(player, slot){
   const level = playerTacticFitLevel(player, slot);
   if(level === 'exact') return 'Rol exacto: rinde al 100%';
   if(level === 'role') return 'Fuera de rol exacto, pero compatible: rinde al 75%';
+  if(level === 'emergency_gk') return 'Arquero de emergencia: jugador de campo al 25% porque el plantel no tiene porteros.';
   return 'Fuera de zona natural: rinde al 50%';
 }
 function isGoalkeeperSlot(slot){
@@ -1044,7 +1059,7 @@ function isGoalkeeperPlayer(player){
 }
 function canAssignPlayerToSlot(player, slot){
   if(!player) return false;
-  if(isGoalkeeperSlot(slot)) return isGoalkeeperPlayer(player);
+  if(isGoalkeeperSlot(slot)) return isGoalkeeperPlayer(player) || emergencyFieldKeeperAllowed(player, slot);
   return !isGoalkeeperPlayer(player);
 }
 function zoneFactor(player, slot){

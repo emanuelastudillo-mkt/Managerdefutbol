@@ -1115,7 +1115,7 @@ function validateTactic(tactic){
   const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];
   slots.forEach((slot, index) => {
     const player = playerById(starters[index]);
-    if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero.' : 'Un portero no puede jugar como jugador de campo.');
+    if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero, salvo emergencia si el plantel no tiene ningún POR.' : 'Un portero no puede jugar como jugador de campo.');
   });
   (tactic.autoSubs || []).forEach((rule, i)=>{
     if(rule.outId || rule.inId){

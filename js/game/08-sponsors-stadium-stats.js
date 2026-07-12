@@ -15,6 +15,60 @@ function createInitialSponsorState(){
     expiredOffers:0
   };
 }
+function sponsorTodayIso(){
+  if(typeof validIsoDate === 'function' && validIsoDate(game?.currentDate)) return game.currentDate;
+  if(typeof dateForSeasonState === 'function'){
+    const date = dateForSeasonState(game);
+    if(typeof validIsoDate === 'function' && validIsoDate(date)) return date;
+  }
+  return '';
+}
+function sponsorDefaultExpiryDate(createdDate, today=sponsorTodayIso()){
+  const base = (typeof validIsoDate === 'function' && validIsoDate(createdDate)) ? createdDate : today;
+  if(typeof validIsoDate !== 'function' || !validIsoDate(base) || typeof addDaysToIsoDate !== 'function') return '';
+  return addDaysToIsoDate(base, SPONSOR_OFFER_EXPIRE_DAYS);
+}
+function normalizeSponsorOfferExpiry(offer={}, today=sponsorTodayIso()){
+  const nowSeasonTurn = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
+  const nowGlobalTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  const createdTurn = Number.isFinite(Number(offer.createdTurn)) ? Number(offer.createdTurn) : nowSeasonTurn;
+  const createdGlobalTurn = Number.isFinite(Number(offer.createdGlobalTurn)) ? Number(offer.createdGlobalTurn) : nowGlobalTurn;
+  const createdDate = (typeof validIsoDate === 'function' && validIsoDate(offer.createdDate)) ? offer.createdDate : today;
+  let expiresDate = (typeof validIsoDate === 'function' && validIsoDate(offer.expiresDate)) ? offer.expiresDate : sponsorDefaultExpiryDate(createdDate, today);
+  if(typeof validIsoDate === 'function' && validIsoDate(today) && validIsoDate(expiresDate)){
+    const remainingDays = typeof daysBetweenIsoDates === 'function' ? daysBetweenIsoDates(today, expiresDate) : SPONSOR_OFFER_EXPIRE_DAYS;
+    if(remainingDays > SPONSOR_OFFER_EXPIRE_DAYS){
+      expiresDate = sponsorDefaultExpiryDate(today, today);
+    }
+  }
+  const expiresTurn = Number.isFinite(Number(offer.expiresTurn))
+    ? Number(offer.expiresTurn)
+    : createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
+  const expiresGlobalTurn = Number.isFinite(Number(offer.expiresGlobalTurn))
+    ? Number(offer.expiresGlobalTurn)
+    : createdGlobalTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS));
+  return { ...offer, createdTurn, expiresTurn, createdGlobalTurn, expiresGlobalTurn, createdDate, expiresDate };
+}
+function sponsorOfferIsExpired(offer={}, today=sponsorTodayIso()){
+  const normalized = normalizeSponsorOfferExpiry(offer, today);
+  if(typeof validIsoDate === 'function' && validIsoDate(today) && validIsoDate(normalized.expiresDate)){
+    return daysBetweenIsoDates(normalized.expiresDate, today) > 0;
+  }
+  const nowGlobalTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  if(Number.isFinite(Number(normalized.expiresGlobalTurn))) return Number(normalized.expiresGlobalTurn) < nowGlobalTurn;
+  const nowSeasonTurn = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
+  return Number(normalized.expiresTurn || 0) < nowSeasonTurn;
+}
+function sponsorOfferDaysLeft(offer={}, today=sponsorTodayIso()){
+  const normalized = normalizeSponsorOfferExpiry(offer, today);
+  if(typeof validIsoDate === 'function' && validIsoDate(today) && validIsoDate(normalized.expiresDate)){
+    return Math.max(0, daysBetweenIsoDates(today, normalized.expiresDate));
+  }
+  const nowGlobalTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  if(Number.isFinite(Number(normalized.expiresGlobalTurn))) return turnsToDays(Math.max(0, Number(normalized.expiresGlobalTurn) - nowGlobalTurn));
+  const nowSeasonTurn = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
+  return turnsToDays(Math.max(0, Number(normalized.expiresTurn || nowSeasonTurn) - nowSeasonTurn + 1));
+}
 function normalizeSponsorState(state){
   const base = createInitialSponsorState();
   const clean = { ...base, ...(state || {}) };
@@ -29,12 +83,8 @@ function normalizeSponsorState(state){
   delete clean.matchesSinceOffer;
   delete clean.nextOfferAfter;
   delete clean.openingOffersSeason;
-  const now = typeof currentSeasonTurnNumber === 'function' ? currentSeasonTurnNumber() : 1;
-  clean.offers = clean.offers.map(offer => {
-    const createdTurn = Number.isFinite(Number(offer.createdTurn)) ? Number(offer.createdTurn) : now;
-    const expiresTurn = Number.isFinite(Number(offer.expiresTurn)) ? Number(offer.expiresTurn) : createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
-    return { ...offer, createdTurn, expiresTurn };
-  });
+  const today = sponsorTodayIso();
+  clean.offers = clean.offers.map(offer => normalizeSponsorOfferExpiry(offer, today));
   clean.active = clean.active.map(contract => {
     const turnsRemaining = Number.isFinite(Number(contract.turnsRemaining)) ? Number(contract.turnsRemaining) : daysToTurns(Number(contract.durationDays || contract.diasDuracion || 0));
     return { ...contract, turnsRemaining:Math.max(0, turnsRemaining), paidToDate:Math.round(Number(contract.paidToDate || 0)) };
@@ -374,7 +424,11 @@ function createSponsorOfferFromPlan(planItem){
   const paymentType = value.paymentType;
   const specialChallenge = createSponsorSpecialChallenge();
   const createdTurn = currentSeasonTurnNumber();
+  const createdGlobalTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  const createdDate = sponsorTodayIso();
+  const expiresDate = sponsorDefaultExpiryDate(createdDate, createdDate);
   const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
+  const expiresGlobalTurn = createdGlobalTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS));
   const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
   game.sponsors.generatedOfferCount = serial;
   return {
@@ -398,6 +452,10 @@ function createSponsorOfferFromPlan(planItem){
     remainingDailyTotal:value.remainingDailyTotal,
     createdTurn,
     expiresTurn,
+    createdGlobalTurn,
+    expiresGlobalTurn,
+    createdDate,
+    expiresDate,
     arrivalPlanId:planItem?.id || '',
     season:game.seasonNumber || 1,
     specialChallenge
@@ -405,9 +463,11 @@ function createSponsorOfferFromPlan(planItem){
 }
 function expireSponsorOffers(silent=true){
   ensureSponsorState();
-  const currentTurn = currentSeasonTurnNumber();
+  const today = sponsorTodayIso();
   const before = game.sponsors.offers.length;
-  game.sponsors.offers = (game.sponsors.offers || []).filter(offer => Number(offer.expiresTurn || 0) >= currentTurn);
+  game.sponsors.offers = (game.sponsors.offers || [])
+    .map(offer => normalizeSponsorOfferExpiry(offer, today))
+    .filter(offer => !sponsorOfferIsExpired(offer, today));
   const expired = before - game.sponsors.offers.length;
   if(expired > 0){
     game.sponsors.expiredOffers = Number(game.sponsors.expiredOffers || 0) + expired;
@@ -529,9 +589,10 @@ function sponsorOffersMarkup(){
   if(!offers.length){
     return `<p class="muted small">Sin ofertas disponibles. Las marcas enviarán entre ${SPONSOR_SEASON_OFFERS_MIN} y ${SPONSOR_SEASON_OFFERS_MAX} propuestas durante la temporada.</p>`;
   }
-  const currentTurn = currentSeasonTurnNumber();
-  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Duración</th><th>Pago</th><th>Valor</th><th>Vence</th><th></th></tr></thead><tbody>${offers.map(offer => {
-    const daysLeft = Math.max(0, turnsToDays(Number(offer.expiresTurn || currentTurn) - currentTurn + 1));
+  const today = sponsorTodayIso();
+  return `<div class="table-wrap"><table class="sponsor-table"><thead><tr><th>Marca</th><th>Lugar</th><th>Duración</th><th>Pago</th><th>Valor</th><th>Vence</th><th></th></tr></thead><tbody>${offers.map(rawOffer => {
+    const offer = normalizeSponsorOfferExpiry(rawOffer, today);
+    const daysLeft = sponsorOfferDaysLeft(offer, today);
     const valueText = offer.paymentType === 'upfront'
       ? `${formatMoney(offer.total)} total`
       : offer.paymentType === 'mixed'

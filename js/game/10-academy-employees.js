@@ -1,11 +1,13 @@
 /* V3.33 · Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc' };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
   const clean = { ...base, ...(state || {}) };
+  const allowedSorts = new Set(['edad_asc','edad_desc','informe_desc','informe_asc']);
+  clean.sortMode = allowedSorts.has(String(clean.sortMode || '')) ? String(clean.sortMode) : 'edad_asc';
   clean.players = Array.isArray(clean.players) ? clean.players.map(normalizeAcademyPlayer).filter(Boolean) : [];
   clean.scoutingJobs = Array.isArray(clean.scoutingJobs) ? clean.scoutingJobs : [];
   clean.unlockedStats = clean.unlockedStats && typeof clean.unlockedStats === 'object' ? clean.unlockedStats : {};
@@ -348,6 +350,23 @@ function academyExactPositions(group){
 function academyActivePlayers(){
   game.academy = normalizeAcademyState(game.academy);
   return game.academy.players.filter(p => p.status === 'academy');
+}
+function academySortedPlayers(players){
+  const list = Array.isArray(players) ? players.slice() : [];
+  const mode = String(game?.academy?.sortMode || 'edad_asc');
+  return list.sort((a,b) => {
+    const pa = academyVisibleSkillsProgress(a).percent;
+    const pb = academyVisibleSkillsProgress(b).percent;
+    if(mode === 'edad_desc') return Number(b.age || 0) - Number(a.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    if(mode === 'informe_desc') return pb - pa || Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    if(mode === 'informe_asc') return pa - pb || Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    return Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+  });
+}
+function academySortControlsMarkup(){
+  const mode = String(game?.academy?.sortMode || 'edad_asc');
+  const option = (value, label) => `<option value="${value}" ${mode === value ? 'selected' : ''}>${label}</option>`;
+  return `<div class="card academy-sort-card" style="margin-top:14px"><div class="row"><div><p class="label">Ordenar juveniles</p><h3>Listado de academia</h3></div><select id="academySortMode" class="compact-select">${option('edad_asc','Edad ↑ menor primero')}${option('edad_desc','Edad ↓ mayor primero')}${option('informe_desc','Informe descubierto ↓ mayor primero')}${option('informe_asc','Informe descubierto ↑ menor primero')}</select></div></div>`;
 }
 function academyResidenceCount(){
   game.academy = normalizeAcademyState(game.academy);
@@ -1019,7 +1038,8 @@ function academyConsultAnimationMarkup(){
 }
 function renderAcademy(){
   game.academy = normalizeAcademyState(game.academy);
-  const active = academyActivePlayers();
+  const activeRaw = academyActivePlayers();
+  const active = academySortedPlayers(activeRaw);
   const activePreparer = academyYouthPreparerActive();
   const salaryTurn = active.length * ACADEMY_PLAYER_TURN_COST;
   const residences = academyResidenceCount();
@@ -1039,8 +1059,8 @@ function renderAcademy(){
         <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
         <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
       </div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && available >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
-      ${residences > 0 && available < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${available}.</p>` : ''}
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+      ${residences > 0 && availableSlots < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${availableSlots}.</p>` : ''}
     </div>
     <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
       <div class="row">
@@ -1056,6 +1076,7 @@ function renderAcademy(){
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
     <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, entrenable x5 y promovible de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    ${academySortControlsMarkup()}
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
@@ -1063,6 +1084,11 @@ function renderAcademy(){
   $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);
   $('btnHireYouthPreparer')?.addEventListener('click', hireYouthPreparer);
   $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);
+  $('academySortMode')?.addEventListener('change', (event) => {
+    game.academy.sortMode = event.target.value;
+    saveLocal(true);
+    renderAcademy();
+  });
   document.querySelectorAll('[data-dismiss-academy]').forEach(btn => btn.addEventListener('click', () => dismissAcademyPlayer(Number(btn.dataset.dismissAcademy))));
   document.querySelectorAll('[data-promote-academy]').forEach(btn => btn.addEventListener('click', () => openPromoteAcademyModal(Number(btn.dataset.promoteAcademy))));
   document.querySelectorAll('[data-treat-academy-injury]').forEach(btn => btn.addEventListener('click', () => treatAcademyYouthInjury(Number(btn.dataset.treatAcademyInjury))));

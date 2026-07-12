@@ -1,4 +1,4 @@
-/* V6.23 · Cartas y cartas activas globales por manager con usos compartidos. */
+/* V6.34 · Cartas globales: destrucción definitiva y sincronización reserva/activa. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -161,6 +161,38 @@ function specialGlobalReleaseCard(rawCard, options={}){
   writeSpecialGlobalCardsState(global);
   return global.cards[released.id_carta];
 }
+function specialGlobalDestroyCard(rawCard, options={}){
+  const card = normalizeSpecialGlobalCard(rawCard);
+  if(!card?.id_carta) return null;
+  const global = readSpecialGlobalCardsState();
+  const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
+  const destroyed = {
+    ...existing,
+    ...card,
+    activa:false,
+    active_slot_id:'',
+    activada_en:null,
+    bloqueada_hasta:null,
+    activada_en_turno:null,
+    bloqueada_hasta_turno:null,
+    destruida:true,
+    destruida_en:new Date().toISOString(),
+    motivo_destruccion:String(options.reason || 'destroy')
+  };
+  global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  global.cards[destroyed.id_carta] = normalizeSpecialGlobalCard(destroyed) || destroyed;
+  writeSpecialGlobalCardsState(global);
+  return global.cards[destroyed.id_carta];
+}
+function removeSpecialCardEverywhereInState(state, cardId){
+  if(!state || !cardId) return 0;
+  const id = String(cardId);
+  const beforeActive = Array.isArray(state.cartas_activas) ? state.cartas_activas.length : 0;
+  const beforeReserve = Array.isArray(state.cartas_reserva) ? state.cartas_reserva.length : 0;
+  state.cartas_activas = (Array.isArray(state.cartas_activas) ? state.cartas_activas : []).filter(card => String(card.id_carta || '') !== id);
+  state.cartas_reserva = (Array.isArray(state.cartas_reserva) ? state.cartas_reserva : []).filter(card => String(card.id_carta || '') !== id);
+  return Math.max(0, beforeActive - state.cartas_activas.length) + Math.max(0, beforeReserve - state.cartas_reserva.length);
+}
 function specialGlobalCardsForSlot(slotId=currentSpecialSaveSlotId()){
   const slot = String(slotId || currentSpecialSaveSlotId());
   const global = readSpecialGlobalCardsState();
@@ -175,13 +207,37 @@ function syncSpecialStateWithGlobalCards(state){
   const slotId = currentSpecialSaveSlotId();
   const global = readSpecialGlobalCardsState();
   global.cards = global.cards && typeof global.cards === 'object' ? global.cards : {};
+  const localReserveIds = new Set();
+  const localActiveIds = new Set();
   (Array.isArray(state.cartas_reserva) ? state.cartas_reserva : []).forEach((rawCard, index) => {
     const card = normalizeSpecialGlobalCard(rawCard, index);
-    if(card && !card.destruida && !global.cards[card.id_carta]) specialGlobalUpsertCard({ ...card, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+    if(!card?.id_carta || card.destruida) return;
+    localReserveIds.add(String(card.id_carta));
   });
   (Array.isArray(state.cartas_activas) ? state.cartas_activas : []).forEach((rawCard, index) => {
     const card = normalizeSpecialGlobalCard(rawCard, index);
-    if(card && !card.destruida && !global.cards[card.id_carta]) specialGlobalUpsertCard({ ...card, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
+    if(!card?.id_carta || card.destruida) return;
+    localActiveIds.add(String(card.id_carta));
+  });
+  (Array.isArray(state.cartas_reserva) ? state.cartas_reserva : []).forEach((rawCard, index) => {
+    const card = normalizeSpecialGlobalCard(rawCard, index);
+    if(!card?.id_carta || card.destruida) return;
+    const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || null);
+    if(existing?.destruida) return;
+    // Si una carta figura en reserva local, la reserva manda sobre una marca activa global vieja.
+    // Evita el caso: “está en reserva” pero el sistema dice “ya está activa”.
+    if(existing?.active_slot_id && !localActiveIds.has(String(card.id_carta))){
+      global.cards[card.id_carta] = normalizeSpecialGlobalCard({ ...existing, ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null }) || card;
+    } else if(!global.cards[card.id_carta]) {
+      specialGlobalUpsertCard({ ...card, activa:false, active_slot_id:'' }, { globalState:global, slotId, zone:'reserve' });
+    }
+  });
+  (Array.isArray(state.cartas_activas) ? state.cartas_activas : []).forEach((rawCard, index) => {
+    const card = normalizeSpecialGlobalCard(rawCard, index);
+    if(!card?.id_carta || card.destruida) return;
+    const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || null);
+    if(existing?.destruida) return;
+    specialGlobalUpsertCard({ ...existing, ...card, activa:true, active_slot_id:slotId }, { globalState:global, slotId, zone:'active' });
   });
   writeSpecialGlobalCardsState(global);
   const available = specialGlobalCardsForSlot(slotId);
@@ -812,12 +868,17 @@ function activateSpecialCard(cardId){
   }
   if(index < 0){ showNotice('Carta no encontrada en reserva.'); return; }
   const card = state.cartas_reserva[index];
-  const globalCard = readSpecialGlobalCardsState().cards?.[card.id_carta];
+  const globalCard = normalizeSpecialGlobalCard(readSpecialGlobalCardsState().cards?.[card.id_carta] || null);
   if(globalCard?.active_slot_id){
-    game.special = syncSpecialStateWithGlobalCards(state);
-    renderSpecial();
-    showNotice('Esta carta ya está activa y se comparte entre partidas.');
-    return;
+    const localActive = (state.cartas_activas || []).some(active => String(active.id_carta || '') === String(card.id_carta || ''));
+    if(localActive){
+      game.special = syncSpecialStateWithGlobalCards(state);
+      renderSpecial();
+      showNotice('Esta carta ya está activa y se comparte entre partidas.');
+      return;
+    }
+    // Si llegó hasta acá, la carta está en reserva. La reserva es la fuente válida y limpia una marca activa global vieja.
+    specialGlobalReleaseCard({ ...globalCard, ...card, activa:false, active_slot_id:'' }, { slotId, reason:'reserve_override_before_activation' });
   }
   if(!card.activable){ showNotice('Esta carta no se puede activar.'); return; }
   if(!limits.allowRepeatedActive && state.cartas_activas.some(active => active.id_base === card.id_base)){ showNotice('Esta carta ya está activa.'); return; }
@@ -867,21 +928,24 @@ function destroySpecialCard(cardId){
   const state = ensureSpecialState();
   const db = specialDatabase();
   if(db.destruir_cartas?.permitido === false){ showNotice('La destrucción de cartas está desactivada.'); return; }
-  let index = state.cartas_reserva.findIndex(card => card.id_carta === cardId);
+  const id = String(cardId || '');
+  let index = (state.cartas_reserva || []).findIndex(card => String(card.id_carta || '') === id);
   if(index < 0){
-    recoverSpecialCardToReserve(cardId);
-    index = state.cartas_reserva.findIndex(card => card.id_carta === cardId);
+    recoverSpecialCardToReserve(id);
+    index = (state.cartas_reserva || []).findIndex(card => String(card.id_carta || '') === id);
   }
   if(index < 0){ showNotice('Sólo se pueden destruir cartas en reserva.'); return; }
-  const card = state.cartas_reserva[index];
-  const fixedRecovery = { inutil:5, comun:20, rara:50, legendaria:1000 };
+  const card = normalizeSpecialGlobalCard(state.cartas_reserva[index], index);
+  if(!card?.id_carta){ showNotice('Carta inválida.'); return; }
+  const fixedRecovery = { inutil:5, comun:20, rara:50, epica:250, legendaria:1000 };
   const configuredRecovery = Math.max(0, Math.round(Number(db.destruir_cartas?.recuperacion_puntos?.[card.rareza] || 0)));
   const recovery = Number.isFinite(fixedRecovery[card.rareza]) ? fixedRecovery[card.rareza] : configuredRecovery;
-  state.cartas_reserva.splice(index, 1);
-  specialGlobalReleaseCard(card, { slotId:currentSpecialSaveSlotId(), destroy:true });
+  removeSpecialCardEverywhereInState(state, card.id_carta);
+  specialGlobalDestroyCard(card, { slotId:currentSpecialSaveSlotId(), reason:'destroy_special_card' });
   state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + recovery));
+  state.historial_ultimas_cartas = [{ ...card, activa:false, active_slot_id:'', destruida:true, recuperacion_puntos:recovery }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
+  game.special = syncSpecialStateWithGlobalCards(state);
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'destroy_special_card' });
-  state.historial_ultimas_cartas = [{ ...card, destruida:true, recuperacion_puntos:recovery }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
   specialPointsAnimation = { id:`destroy-${Date.now()}-${Math.random()}`, points:recovery };
   saveLocal(true);
   renderSpecial();

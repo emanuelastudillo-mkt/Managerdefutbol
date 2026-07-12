@@ -196,10 +196,10 @@ window.GAME_CONFIG = {
         beneficios: { prestigio: 20 }
       },
       {
-        codigo: 'PUNTOS50000',
+        codigo: 'PUNTOS20000',
         nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 50000 }
+        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 20000 }
       }
     ]
   },

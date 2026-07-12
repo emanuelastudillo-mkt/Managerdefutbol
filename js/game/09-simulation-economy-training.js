@@ -740,7 +740,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved'
   ];
   const data = {};
   fields.forEach(field => {
@@ -756,7 +756,8 @@ function simulateDueMatchesUntil(targetDate, options={}){
   const due = collectDueMatchesUntil(targetDate, options);
   const results = [];
   due.forEach(item => {
-    const result = simulateScheduledMatch(item.match);
+    const rawResult = simulateScheduledMatch(item.match);
+    const result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, rawResult) : rawResult;
     markScheduledResult(item, result);
     results.push(result);
   });
@@ -1081,10 +1082,11 @@ function startPostseasonPhase(anchorDate=null){
 function completeRegularSeasonIfNeeded(){
   if(!game || !isRegularSeason()) return false;
   if(game.matchdayIndex < game.fixtures.length) return false;
-  if(!(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+  const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  if(postCompetition?.created){
     saveLocal(true);
     renderAll();
-    showNotice('Se creó el calendario de playoffs de promoción. Ya podés avanzar al partido siguiente.', true);
+    showNotice(`${postCompetition.message || 'Se creó una competición de cierre de temporada.'} Ya podés avanzar al partido siguiente.`, true);
     return true;
   }
   startPostseasonPhase();
@@ -1205,9 +1207,9 @@ function advanceWithoutClubCalendarOneStep(){
   const nextDate = addDaysToIsoDate(fromDate, 1);
   const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:true, managerWithoutClub:true });
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
-  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
-  if(regularEnded && isRegularSeason()){
+  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  if(regularEnded && isRegularSeason() && !postCompetition?.created){
     startPostseasonPhase(nextDate);
     setAdvanceLock(0);
   }else{
@@ -1265,9 +1267,9 @@ function advanceCalendarOneStep(){
   const nextDate = addDaysToIsoDate(fromDate, 1);
   const dayResult = processDailyCalendarState(fromDate, nextDate, { includeOwn:false });
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
-  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
-  if(regularEnded){
+  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  if(regularEnded && !postCompetition?.created){
     startPostseasonPhase(nextDate);
     setAdvanceLock(0);
   }else{
@@ -1277,7 +1279,7 @@ function advanceCalendarOneStep(){
   activeTab = 'home';
   saveLocal(true);
   renderAll();
-  if(playoffCreated) showNotice('Se completó la liga y se creó el calendario de playoffs de promoción.', true);
+  if(postCompetition?.created) showNotice(postCompetition.message || 'Se creó una competición de cierre de temporada.', true);
   else if(regularEnded) showNotice('Se completaron los partidos pendientes y terminó la fase regular.', true);
   else if(dayResult.botResults.length) showNotice(`Avanzaste al ${nextDate}. Se procesaron ${dayResult.botResults.length} partido(s) bot durante el cooldown.`);
   else showNotice(`Avanzaste al ${nextDate}. Verificaciones listas; el botón queda en cooldown.`);
@@ -1293,6 +1295,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
     budgetBeforeTurn,
     fromRoundIndex
   } = context;
+  ownResult = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(ownInfo?.match, ownResult) : ownResult;
   const results = [ownResult];
   if(ownInfo?.match) markScheduledResult({ match:ownInfo.match, date:targetDate }, ownResult);
   game.matchHistory.push(ownResult);
@@ -1317,10 +1320,10 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   game.lastOwnProblems = ownProblems;
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
-  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - Number(budgetBeforeTurn || 0));
-  if(regularEnded){
+  if(regularEnded && !postCompetition?.created){
     startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   }else{
@@ -1328,12 +1331,12 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
     rememberCalendarDate();
     applyUnifiedAdvanceCooldown('match');
   }
-  setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
+  setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || Boolean(postCompetition?.created), triggeredEvents);
   activeTab = 'home';
   saveLocal(true);
   renderAll();
   if(game.mustReviewTactics) showNotice('Partido dirigido. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true);
-  else if(playoffCreated) showNotice('Terminó la liga regular y se creó el calendario de playoffs de promoción.', true);
+  else if(postCompetition?.created) showNotice(postCompetition.message || 'Se creó una competición de cierre de temporada.', true);
   else if(regularEnded) showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true);
   else showNotice(`Partido propio dirigido por bloques. Antes se procesaron ${(preOwnBotResults || []).length} partido(s) del mismo día o pendientes.`);
 }
@@ -1462,10 +1465,11 @@ function simulateNextMatchday(options={}){
     return;
   }
   if(game.matchdayIndex >= game.fixtures.length){
-    if(!(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+    const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+    if(postCompetition?.created){
       saveLocal(true);
       renderAll();
-      showNotice('Se creó el calendario de playoffs de promoción. Avanzá para jugar la ida.', true);
+      showNotice(`${postCompetition.message || 'Se creó una competición de cierre de temporada.'} Avanzá para jugar la siguiente fecha.`, true);
       return;
     }
     showTurnTransition('Cambio de fase');
@@ -1538,10 +1542,10 @@ function simulateNextMatchday(options={}){
     game.mustReviewTactics = game.lastOwnProblems.length > 0;
   }
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const playoffCreated = regularEnded && !(typeof managerChallengeIs === 'function' && managerChallengeIs()) && typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded();
-  if(playoffCreated) regularEnded = game.matchdayIndex >= game.fixtures.length;
+  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
-  if(regularEnded){
+  if(regularEnded && !postCompetition?.created){
     startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   } else {
@@ -1549,14 +1553,14 @@ function simulateNextMatchday(options={}){
     rememberCalendarDate();
     applyUnifiedAdvanceCooldown(ownResult ? 'match' : 'daily');
   }
-  if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || playoffCreated, triggeredEvents);
+  if(ownResult) setRegularTurnSummary(summaryRound, ownResult, ownProblems, regularEnded || Boolean(postCompetition?.created), triggeredEvents);
   else setDailyAdvanceSummary(currentCalendarDate(), targetDate, results.length);
   activeTab = 'home';
   saveLocal(true);
   renderAll();
   const finalNotice = () => {
     if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
-    else if(playoffCreated){ showNotice('Terminó la liga regular y se creó el calendario de playoffs de promoción.', true); }
+    else if(postCompetition?.created){ showNotice(postCompetition.message || 'Se creó una competición de cierre de temporada.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
     else if(ownResult){ showNotice(`Partido propio simulado. Antes se procesaron ${preOwnBotResults.length} partido(s) del mismo día o pendientes.`); }
     else { showNotice(`Se simularon ${results.length} partido(s) de calendario.`); }

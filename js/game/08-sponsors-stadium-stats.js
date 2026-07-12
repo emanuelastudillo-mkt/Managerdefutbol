@@ -850,12 +850,14 @@ function matchCard(m){
   const clickable = m.played ? 'clickable' : '';
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
   const playoffNote = m.promotionPlayoff ? `<div class="match-date-line playoff-note">${escapeHtml(`Playoffs ${String(m.playoffStage || '').toUpperCase() || ''}`.trim())} · mismo partido en ambas ligas</div>` : '';
+  const cupNote = m.clubWorldCup ? `<div class="match-date-line playoff-note">${escapeHtml(`${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}`)}</div>` : '';
+  const penalties = m.penaltyShootout ? ` <span class="small muted">(${Number(m.penaltyShootout.home || 0)}-${Number(m.penaltyShootout.away || 0)} pen.)</span>` : '';
   return `<button class="match-card ${clickable}" ${attr}>
     <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
-    ${playoffNote}
+    ${playoffNote}${cupNote}
     <div class="match-line">
       <div>${clubSpan(m.homeId)}</div>
-      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}` : 'vs'}</strong>
+      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}${penalties}` : 'vs'}</strong>
       <div>${clubSpan(m.awayId)}</div>
     </div>
     ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}

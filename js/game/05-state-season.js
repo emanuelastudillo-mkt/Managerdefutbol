@@ -2477,6 +2477,8 @@ function normalizeGame(saved){
   normalized.seasonFinalized = Boolean(normalized.seasonFinalized);
   normalized.seasonTransition = normalized.seasonTransition || null;
   normalized.argentinaPlayoffs = (normalized.argentinaPlayoffs && typeof normalized.argentinaPlayoffs === 'object' && !Array.isArray(normalized.argentinaPlayoffs)) ? normalized.argentinaPlayoffs : null;
+  normalized.clubWorldCup = (normalized.clubWorldCup && typeof normalized.clubWorldCup === 'object' && !Array.isArray(normalized.clubWorldCup)) ? normalized.clubWorldCup : null;
+  if(normalized.clubWorldCup && typeof ensureClubWorldCupInvitedData === 'function') ensureClubWorldCupInvitedData();
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
   normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
@@ -4461,7 +4463,480 @@ function createArgentinePromotionPlayoffsIfNeeded(){
     body:'Terminó la liga argentina. Se agregaron Playoffs IDA y Playoffs VUELTA entre Primera/Segunda y Segunda/Tercera. Asciende quien haga más goles en el global; si empatan, cada club permanece en su liga actual.',
     id:`arg-playoffs-${season}`
   });
+
   return true;
+}
+
+const CLUB_WORLD_CUP_CONFIG = {
+  enabled:true,
+  name:'Copa Mundial de Clubes de la FIFA',
+  divisionId:'club-world-cup',
+  invitedDivisionId:'club-world-cup-invitados',
+  invitedDivisionName:'Invitados Copa Mundial de Clubes',
+  groupCount:8,
+  groupSize:4,
+  invitedCount:4,
+  stadiums:[
+    { name:'MetLife Stadium', capacity:81118 },
+    { name:'Mercedes-Benz Stadium', capacity:66937 },
+    { name:'Lincoln Financial Field', capacity:65782 },
+    { name:'Camping World Stadium', capacity:43091 }
+  ],
+  invitedTeams:[
+    { name:'América de México', country:'México', city:'Ciudad de México', reputation:64, primaryColor:'#F4C430' },
+    { name:'Monterrey', country:'México', city:'Monterrey', reputation:61, primaryColor:'#005BAA' },
+    { name:'Cerro Porteño', country:'Paraguay', city:'Asunción', reputation:62, primaryColor:'#D71920' },
+    { name:'Olimpia', country:'Paraguay', city:'Asunción', reputation:64, primaryColor:'#FFFFFF' },
+    { name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:68, primaryColor:'#F7B5CD' },
+    { name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731' },
+    { name:'Wydad Casablanca', country:'China', city:'Casablanca', reputation:57, primaryColor:'#C8102E' },
+    { name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:63, primaryColor:'#E60012' }
+  ],
+  qualifiers:[
+    { country:'Argentina', order:1, count:6 },
+    { country:'Chile', order:1, count:2 },
+    { country:'Brasil', order:1, count:4 },
+    { country:'Inglaterra', order:1, count:6 },
+    { country:'España', order:1, count:5 },
+    { country:'Italia', order:1, count:4 },
+    { country:'Rumania', order:1, count:1 }
+  ],
+  prizes:{ participate:50000000, groups:70000000, qf:100000000, sf:140000000, runnerUp:180000000, champion:300000000 }
+};
+function clubWorldCupTeamKey(name){
+  return String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+function clubWorldCupInviteId(index){ return 910000 + Number(index || 0) + 1; }
+function ensureClubWorldCupInvitedData(){
+  if(!seed?.clubs || !seed?.players) return { clubs:0, players:0 };
+  const cfg = CLUB_WORLD_CUP_CONFIG;
+  const existingByKey = new Map((seed.clubs || []).map(club => [clubWorldCupTeamKey(club.name), club]));
+  let addedClubs = 0;
+  let addedPlayers = 0;
+  cfg.invitedTeams.forEach((team, index) => {
+    const key = clubWorldCupTeamKey(team.name);
+    let club = existingByKey.get(key);
+    if(!club){
+      const id = clubWorldCupInviteId(index);
+      club = {
+        id,
+        name:team.name,
+        short:typeof clubShortFromName === 'function' ? clubShortFromName(team.name) : String(team.name).slice(0,3).toUpperCase(),
+        city:team.city || '',
+        country:team.country || '',
+        reputation:Number(team.reputation || 50),
+        budget:typeof clubBudgetByPrestige === 'function' ? clubBudgetByPrestige(Number(team.reputation || 50), 1) : 0,
+        primaryColor:team.primaryColor || (typeof deterministicColor === 'function' ? deterministicColor(team.name) : '#888888'),
+        divisionId:cfg.invitedDivisionId,
+        divisionName:cfg.invitedDivisionName,
+        divisionOrder:99,
+        prizeMultiplier:1,
+        clubWorldCupInvite:true,
+        specialCompetitionOnly:true,
+        noOwnStadium:true,
+        fieldConditionScore:100,
+        fieldCondition:'Excelente',
+        crestPath:''
+      };
+      seed.clubs.push(club);
+      existingByKey.set(key, club);
+      addedClubs += 1;
+      if(game?.standings && !game.standings[club.id]) game.standings[club.id] = { clubId:club.id, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, dg:0, pts:0 };
+      if(game?.teamCohesion && !game.teamCohesion[club.id]) game.teamCohesion[club.id] = 65;
+    }else{
+      club.clubWorldCupInvite = true;
+      club.specialCompetitionOnly = true;
+      club.noOwnStadium = true;
+      club.divisionId = club.divisionId || cfg.invitedDivisionId;
+      club.divisionName = club.divisionName || cfg.invitedDivisionName;
+      club.divisionOrder = club.divisionOrder || 99;
+    }
+    const currentPlayers = playersByClub(club.id).filter(player => !player.retired && !player.sold);
+    const needed = Math.max(0, 24 - currentPlayers.length);
+    if(needed > 0 && typeof generateClubPlayers === 'function'){
+      const activePlayers = (seed.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
+      const context = typeof createPlayerGenerationContext === 'function' ? createPlayerGenerationContext(activePlayers.length + needed, activePlayers) : null;
+      const generated = generateClubPlayers(club, Number(club.reputation || team.reputation || 50), nextPlayerId(), context).slice(0, needed).map(player => ({
+        ...player,
+        clubId:club.id,
+        clubWorldCupInvitePlayer:true,
+        specialCompetitionOnly:true,
+        nationality:player.nationality || team.country || club.country || ''
+      }));
+      seed.players.push(...generated);
+      addedPlayers += generated.length;
+      if(game){
+        game.playerStats = game.playerStats || {};
+        generated.forEach(player => {
+          if(!game.playerStats[player.id]) game.playerStats[player.id] = createEmptyPlayerStat(player);
+          if(game.playerCondition) game.playerCondition[player.id] = Math.max(65, Number(game.playerCondition[player.id] || 0));
+          if(game.playerMorale) game.playerMorale[player.id] = Math.max(60, Number(game.playerMorale[player.id] || 0));
+          if(game.playerSkillBoosts) game.playerSkillBoosts[player.id] = game.playerSkillBoosts[player.id] || {};
+          if(game.trainingPlan) game.trainingPlan[player.id] = typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(game.trainingPlan[player.id]) : (game.trainingPlan[player.id] || 'balanced');
+        });
+      }
+    }
+  });
+  return { clubs:addedClubs, players:addedPlayers };
+}
+function clubWorldCupState(){
+  if(!game) return null;
+  const season = Number(game.seasonNumber || 1);
+  if(!game.clubWorldCup || Number(game.clubWorldCup.season || 0) !== season){
+    game.clubWorldCup = null;
+  }
+  return game.clubWorldCup;
+}
+function clubWorldCupStageRounds(stage){
+  return (game?.fixtures || []).filter(round => round?.clubWorldCupRound && String(round.clubWorldCupStage || '') === String(stage || ''));
+}
+function clubWorldCupStageMatches(stage){
+  return clubWorldCupStageRounds(stage).flatMap(round => round.matches || []).filter(match => match?.clubWorldCup);
+}
+function clubWorldCupStageComplete(stage){
+  const matches = clubWorldCupStageMatches(stage);
+  return matches.length > 0 && matches.every(match => match.played);
+}
+function clubWorldCupLatestDate(){
+  const dates = [];
+  (game?.fixtures || []).forEach(round => {
+    if(round?.clubWorldCupRound){
+      if(validIsoDate(round.date)) dates.push(round.date);
+      (round.matches || []).forEach(match => { if(validIsoDate(match.date)) dates.push(match.date); });
+    }
+  });
+  if(!dates.length) return lastFixtureMatchDate();
+  return dates.sort((a,b)=>daysBetweenIsoDates(a,b))[dates.length - 1];
+}
+function clubWorldCupSelectedInvites(season=game?.seasonNumber || 1){
+  ensureClubWorldCupInvitedData();
+  const cfg = CLUB_WORLD_CUP_CONFIG;
+  return (seed.clubs || [])
+    .filter(club => club.clubWorldCupInvite)
+    .sort((a,b)=>hashNumber(`cwc-invite-${season}-${a.name}`, 1000000) - hashNumber(`cwc-invite-${season}-${b.name}`, 1000000))
+    .slice(0, cfg.invitedCount)
+    .map(club => Number(club.id));
+}
+function clubWorldCupLeagueQualifiers(){
+  const ids = [];
+  const used = new Set();
+  const divisions = divisionOrderList();
+  CLUB_WORLD_CUP_CONFIG.qualifiers.forEach(rule => {
+    const targetCountry = normalizeScheduleText(rule.country || '');
+    const division = divisions.find(div => normalizeScheduleText(div.country || '') === targetCountry && Number(div.order || 0) === Number(rule.order || 1));
+    if(!division) return;
+    sortedStandings(division.id).slice(0, Number(rule.count || 0)).forEach(row => {
+      const id = Number(row.clubId || 0);
+      if(id && !used.has(id)){ used.add(id); ids.push(id); }
+    });
+  });
+  return ids;
+}
+function clubWorldCupGroupsForParticipants(participantIds=[], season=game?.seasonNumber || 1){
+  const shuffled = (participantIds || []).map(Number).filter(Boolean)
+    .sort((a,b)=>hashNumber(`cwc-draw-${season}-${a}`, 1000000) - hashNumber(`cwc-draw-${season}-${b}`, 1000000));
+  const groups = [];
+  const labels = ['A','B','C','D','E','F','G','H'];
+  for(let i=0;i<CLUB_WORLD_CUP_CONFIG.groupCount;i++){
+    groups.push({ id:labels[i], name:`Grupo ${labels[i]}`, clubIds:shuffled.slice(i * CLUB_WORLD_CUP_CONFIG.groupSize, (i + 1) * CLUB_WORLD_CUP_CONFIG.groupSize) });
+  }
+  return groups;
+}
+function clubWorldCupFixtureMatch({ season, stage, roundNumber, homeId, awayId, date, groupId='', matchIndex=0 }){
+  const stadium = CLUB_WORLD_CUP_CONFIG.stadiums[Math.abs(matchIndex) % CLUB_WORLD_CUP_CONFIG.stadiums.length];
+  return {
+    id:`cwc-s${season}-${stage}-${groupId || 'ko'}-r${roundNumber}-${homeId}-${awayId}-${matchIndex}`,
+    matchday:Number(game?.fixtures?.length || 0) + 1,
+    divisionId:CLUB_WORLD_CUP_CONFIG.divisionId,
+    divisionName:CLUB_WORLD_CUP_CONFIG.name,
+    homeId:Number(homeId),
+    awayId:Number(awayId),
+    played:false,
+    date,
+    roundDate:date,
+    neutral:true,
+    knockout:true,
+    clubWorldCup:true,
+    clubWorldCupStage:stage,
+    clubWorldCupGroup:groupId,
+    clubWorldCupRound:Number(roundNumber || 0),
+    clubWorldCupKnockout:stage !== 'groups',
+    stadiumName:stadium.name,
+    stadiumCapacity:stadium.capacity
+  };
+}
+function appendClubWorldCupRound(stage, title, date, matches){
+  if(!game?.fixtures || !Array.isArray(matches) || !matches.length) return false;
+  const matchday = game.fixtures.length + 1;
+  const normalized = matches.map((match, index) => ({ ...match, matchday, date:match.date || date, roundDate:date, matchIndex:index }));
+  game.fixtures.push({
+    matchday,
+    date,
+    startDate:date,
+    endDate:date,
+    title,
+    clubWorldCupRound:true,
+    clubWorldCupStage:stage,
+    matches:normalized
+  });
+  return true;
+}
+function createClubWorldCupGroupFixtures(){
+  const state = clubWorldCupState();
+  if(!state?.groups?.length) return false;
+  const season = Number(state.season || game?.seasonNumber || 1);
+  const anchor = lastFixtureMatchDate() || currentCalendarDate?.() || dateForSeasonState(game);
+  const dates = [addDaysToIsoDate(anchor, 5), addDaysToIsoDate(anchor, 8), addDaysToIsoDate(anchor, 11)];
+  const pairings = [ [[0,1],[2,3]], [[0,2],[1,3]], [[0,3],[1,2]] ];
+  pairings.forEach((roundPairings, roundIndex) => {
+    const matches = [];
+    state.groups.forEach((group, groupIndex) => {
+      roundPairings.forEach(pair => {
+        const homeId = group.clubIds[pair[0]];
+        const awayId = group.clubIds[pair[1]];
+        if(!homeId || !awayId) return;
+        matches.push(clubWorldCupFixtureMatch({ season, stage:'groups', roundNumber:roundIndex + 1, groupId:group.id, homeId, awayId, date:dates[roundIndex], matchIndex:(roundIndex * 20) + (groupIndex * 2) + matches.length }));
+      });
+    });
+    appendClubWorldCupRound('groups', `${CLUB_WORLD_CUP_CONFIG.name} · Grupos ${roundIndex + 1}/3`, dates[roundIndex], matches);
+  });
+  return true;
+}
+function createClubWorldCupIfNeeded(){
+  if(!game || !CLUB_WORLD_CUP_CONFIG.enabled || game.seasonFinalized || !Array.isArray(game.fixtures)) return false;
+  const season = Number(game.seasonNumber || 1);
+  const state = clubWorldCupState();
+  if(state) return false;
+  if(!regularFixturesComplete()) return false;
+  ensureClubWorldCupInvitedData();
+  const leagueIds = clubWorldCupLeagueQualifiers();
+  const invitedIds = clubWorldCupSelectedInvites(season);
+  const participantIds = [...leagueIds, ...invitedIds].slice(0, 32);
+  if(participantIds.length < 32) return false;
+  const groups = clubWorldCupGroupsForParticipants(participantIds, season);
+  game.clubWorldCup = {
+    season,
+    name:CLUB_WORLD_CUP_CONFIG.name,
+    status:'groups',
+    created:true,
+    participantClubIds:participantIds,
+    invitedClubIds:invitedIds,
+    leagueClubIds:leagueIds,
+    groups,
+    prizesPaid:{},
+    championId:0,
+    runnerUpId:0,
+    createdAt:Date.now()
+  };
+  createClubWorldCupGroupFixtures();
+  awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
+  pushGameMessage({
+    type:'deportivo',
+    priority:'high',
+    title:CLUB_WORLD_CUP_CONFIG.name,
+    body:`Se sortearon 8 grupos de 4 equipos. Participan los mejores clubes de primera división y 4 invitados especiales: ${invitedIds.map(clubName).join(', ')}.`,
+    id:`club-world-cup-${season}-created`
+  });
+  return true;
+}
+function clubWorldCupGroupStandings(groupId){
+  const state = clubWorldCupState();
+  const group = state?.groups?.find(item => String(item.id) === String(groupId));
+  if(!group) return [];
+  const rows = Object.fromEntries(group.clubIds.map(id => [Number(id), { clubId:Number(id), pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, dg:0, pts:0 }]));
+  clubWorldCupStageMatches('groups').filter(match => String(match.clubWorldCupGroup) === String(groupId) && match.played).forEach(match => {
+    const h = rows[Number(match.homeId)];
+    const a = rows[Number(match.awayId)];
+    if(!h || !a) return;
+    const hg = Number(match.homeGoals || 0);
+    const ag = Number(match.awayGoals || 0);
+    h.pj++; a.pj++;
+    h.gf += hg; h.gc += ag; a.gf += ag; a.gc += hg;
+    if(hg > ag){ h.pg++; a.pp++; h.pts += 3; }
+    else if(hg < ag){ a.pg++; h.pp++; a.pts += 3; }
+    else { h.pe++; a.pe++; h.pts += 1; a.pts += 1; }
+    h.dg = h.gf - h.gc; a.dg = a.gf - a.gc;
+  });
+  return Object.values(rows).sort((a,b)=>b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubPrestigeValue(b.clubId)-clubPrestigeValue(a.clubId) || clubName(a.clubId).localeCompare(clubName(b.clubId), 'es', { sensitivity:'base' }));
+}
+function clubWorldCupQualifiedFromGroups(){
+  const state = clubWorldCupState();
+  if(!state?.groups?.length) return [];
+  return state.groups.flatMap(group => clubWorldCupGroupStandings(group.id).slice(0,2).map(row => Number(row.clubId))).filter(Boolean);
+}
+function clubWorldCupKnockoutWinner(match){
+  if(!match?.played) return 0;
+  if(Number(match.winnerClubId || 0)) return Number(match.winnerClubId);
+  const hg = Number(match.homeGoals || 0);
+  const ag = Number(match.awayGoals || 0);
+  if(hg > ag) return Number(match.homeId || 0);
+  if(ag > hg) return Number(match.awayId || 0);
+  const pens = match.penaltyShootout || {};
+  if(Number(pens.home || 0) > Number(pens.away || 0)) return Number(match.homeId || 0);
+  if(Number(pens.away || 0) > Number(pens.home || 0)) return Number(match.awayId || 0);
+  return Number(match.homeId || 0);
+}
+function createClubWorldCupKnockoutStage(stage, participants){
+  const state = clubWorldCupState();
+  if(!state || !Array.isArray(participants) || participants.length < 2) return false;
+  const season = Number(state.season || game?.seasonNumber || 1);
+  const stageTitles = { r16:'Octavos de final', qf:'Cuartos de final', sf:'Semifinales', final:'Final' };
+  const stageOffsets = { r16:4, qf:4, sf:4, final:5 };
+  const date = addDaysToIsoDate(clubWorldCupLatestDate() || lastFixtureMatchDate(), stageOffsets[stage] || 4);
+  const matches = [];
+  for(let i=0;i<participants.length;i+=2){
+    const homeId = Number(participants[i]);
+    const awayId = Number(participants[i+1]);
+    if(!homeId || !awayId) continue;
+    matches.push(clubWorldCupFixtureMatch({ season, stage, roundNumber:1, homeId, awayId, date, matchIndex:i }));
+  }
+  const title = `${CLUB_WORLD_CUP_CONFIG.name} · ${stageTitles[stage] || stage}`;
+  const created = appendClubWorldCupRound(stage, title, date, matches);
+  if(created){
+    state.status = stage;
+    state[`${stage}ClubIds`] = participants.map(Number).filter(Boolean);
+    pushGameMessage({ type:'deportivo', priority:'normal', title, body:`Ya están definidos los cruces de ${stageTitles[stage] || stage}.`, id:`club-world-cup-${season}-${stage}` });
+  }
+  return created;
+}
+function clubWorldCupWinnersFromStage(stage){
+  return clubWorldCupStageMatches(stage).filter(match => match.played).map(clubWorldCupKnockoutWinner).filter(Boolean);
+}
+function awardClubWorldCupPrizeIfManaged(clubId, stage){
+  if(!game || !stage) return false;
+  const managedId = Number(game.selectedClubId || 0);
+  const cleanClubId = Number(clubId || 0);
+  if(!managedId || cleanClubId !== managedId) return false;
+  const state = clubWorldCupState();
+  if(!state) return false;
+  const amount = Number(CLUB_WORLD_CUP_CONFIG.prizes?.[stage] || 0);
+  if(amount <= 0) return false;
+  state.prizesPaid = state.prizesPaid || {};
+  const key = String(stage);
+  const paid = state.prizesPaid[managedId] || {};
+  if(paid[key]) return false;
+  paid[key] = amount;
+  state.prizesPaid[managedId] = paid;
+  game.budget = Math.round(Number(game.budget || 0) + amount);
+  game.lastBudgetDelta = Math.round(Number(game.lastBudgetDelta || 0) + amount);
+  const labels = { participate:'Participación', groups:'Pasar grupos', qf:'Cuartos', sf:'Semifinal', runnerUp:'Subcampeón', champion:'Campeón' };
+  pushGameMessage({
+    type:'finanzas',
+    priority:'normal',
+    title:`Premio ${CLUB_WORLD_CUP_CONFIG.name}`,
+    body:`${labels[key] || key}: ${formatMoney(amount)} acreditados a ${clubName(managedId)}.`,
+    id:`club-world-cup-prize-${state.season}-${managedId}-${key}`
+  });
+  return true;
+}
+function finalizeClubWorldCupMatchResult(match, result){
+  if(!match?.clubWorldCup || !result) return result;
+  const out = { ...result, clubWorldCup:true, clubWorldCupStage:match.clubWorldCupStage, clubWorldCupGroup:match.clubWorldCupGroup || '' };
+  if(match.clubWorldCupKnockout){
+    const hg = Number(out.homeGoals || 0);
+    const ag = Number(out.awayGoals || 0);
+    if(hg > ag) out.winnerClubId = Number(match.homeId);
+    else if(ag > hg) out.winnerClubId = Number(match.awayId);
+    else{
+      const homeRating = typeof quickClubRating === 'function' ? quickClubRating(match.homeId) : clubPrestigeValue(match.homeId);
+      const awayRating = typeof quickClubRating === 'function' ? quickClubRating(match.awayId) : clubPrestigeValue(match.awayId);
+      const homeChance = clamp(0.50 + ((homeRating - awayRating) / 160), 0.38, 0.62);
+      const homeWins = Math.random() < homeChance;
+      const baseHome = 3 + hashNumber(`${match.id}-ph`, 3);
+      const baseAway = 3 + hashNumber(`${match.id}-pa`, 3);
+      out.penaltyShootout = homeWins
+        ? { home:Math.max(baseHome, baseAway + 1), away:baseAway }
+        : { home:baseHome, away:Math.max(baseAway, baseHome + 1) };
+      out.winnerClubId = homeWins ? Number(match.homeId) : Number(match.awayId);
+    }
+    out.clubWorldCupResolved = true;
+  }
+  return out;
+}
+function advanceClubWorldCupIfNeeded(){
+  const state = clubWorldCupState();
+  if(!game || !state || state.status === 'completed') return false;
+  if(state.status === 'groups' && clubWorldCupStageComplete('groups')){
+    const qualified = clubWorldCupQualifiedFromGroups();
+    state.r16ClubIds = qualified;
+    if(qualified.includes(Number(game.selectedClubId))) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'groups');
+    const groupOrder = state.groups || [];
+    const participants = [];
+    for(let i=0;i<groupOrder.length;i+=2){
+      const g1 = clubWorldCupGroupStandings(groupOrder[i].id);
+      const g2 = clubWorldCupGroupStandings(groupOrder[i+1].id);
+      participants.push(g1[0]?.clubId, g2[1]?.clubId, g2[0]?.clubId, g1[1]?.clubId);
+    }
+    return createClubWorldCupKnockoutStage('r16', participants.filter(Boolean));
+  }
+  if(state.status === 'r16' && clubWorldCupStageComplete('r16')){
+    const winners = clubWorldCupWinnersFromStage('r16');
+    if(winners.includes(Number(game.selectedClubId))) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'qf');
+    return createClubWorldCupKnockoutStage('qf', winners);
+  }
+  if(state.status === 'qf' && clubWorldCupStageComplete('qf')){
+    const winners = clubWorldCupWinnersFromStage('qf');
+    if(winners.includes(Number(game.selectedClubId))) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'sf');
+    return createClubWorldCupKnockoutStage('sf', winners);
+  }
+  if(state.status === 'sf' && clubWorldCupStageComplete('sf')){
+    return createClubWorldCupKnockoutStage('final', clubWorldCupWinnersFromStage('sf'));
+  }
+  if(state.status === 'final' && clubWorldCupStageComplete('final')){
+    const final = clubWorldCupStageMatches('final')[0];
+    const championId = clubWorldCupKnockoutWinner(final);
+    const runnerUpId = championId === Number(final.homeId) ? Number(final.awayId) : Number(final.homeId);
+    state.championId = championId;
+    state.runnerUpId = runnerUpId;
+    state.status = 'completed';
+    awardClubWorldCupPrizeIfManaged(runnerUpId, 'runnerUp');
+    awardClubWorldCupPrizeIfManaged(championId, 'champion');
+    if(Number(game.selectedClubId || 0) === championId && typeof addManagerPrestigeAdjustment === 'function') addManagerPrestigeAdjustment(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
+    pushGameMessage({ type:'deportivo', priority:'high', title:`Campeón: ${clubName(championId)}`, body:`${clubName(championId)} ganó la ${CLUB_WORLD_CUP_CONFIG.name}.`, id:`club-world-cup-${state.season}-champion` });
+    return true;
+  }
+  return false;
+}
+function createPostRegularCompetitionsIfNeeded(){
+  if(!game || game.seasonFinalized || !Array.isArray(game.fixtures)) return null;
+  if(typeof managerChallengeIs === 'function' && managerChallengeIs()) return null;
+  if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
+    return { created:true, kind:'promotion_playoff', message:'Se creó el calendario de playoffs de promoción.' };
+  }
+  if(createClubWorldCupIfNeeded()){
+    return { created:true, kind:'club_world_cup', message:'Se creó la Copa Mundial de Clubes de la FIFA.' };
+  }
+  if(advanceClubWorldCupIfNeeded()){
+    const state = clubWorldCupState();
+    const done = state?.status === 'completed';
+    return { created:true, kind:'club_world_cup', completed:done, message:done ? 'Finalizó la Copa Mundial de Clubes de la FIFA.' : 'Se creó la siguiente fase de la Copa Mundial de Clubes de la FIFA.' };
+  }
+  return null;
+}
+function renderClubWorldCup(){
+  const state = clubWorldCupState();
+  if(!state){
+    view.innerHTML = `<div class="row section-title"><div><h2>${escapeHtml(CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Competición internacional de cierre de temporada.</p></div></div><div class="card"><p class="muted">Todavía no se generó esta edición. Se crea al final de la temporada, cuando ya están definidos los clasificados de cada primera división.</p><p>Formato: 32 equipos, 8 grupos de 4 y eliminatorias a partido único en sede neutral.</p></div>`;
+    return;
+  }
+  const invitedRows = (state.invitedClubIds || []).map(id => `<span class="pill">${clubBadge(id)} ${escapeHtml(clubName(id))}</span>`).join(' ');
+  const groupBlocks = (state.groups || []).map(group => {
+    const rows = clubWorldCupGroupStandings(group.id).map((row, index) => `<tr class="${index < 2 ? 'promotion-row' : ''}"><td><strong>${index + 1}</strong></td><td>${clubLink(row.clubId)}</td><td>${row.pj}</td><td>${row.pg}</td><td>${row.pe}</td><td>${row.pp}</td><td>${row.gf}</td><td>${row.gc}</td><td>${row.dg}</td><td><strong>${row.pts}</strong></td></tr>`).join('');
+    return `<div class="card inner"><h3>${escapeHtml(group.name)}</h3><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join('');
+  const stages = ['r16','qf','sf','final'];
+  const stageLabels = { r16:'Octavos', qf:'Cuartos', sf:'Semifinales', final:'Final' };
+  const knockoutBlocks = stages.map(stage => {
+    const matches = clubWorldCupStageMatches(stage);
+    if(!matches.length) return '';
+    return `<div class="card"><h3>${stageLabels[stage]}</h3><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
+  }).join('');
+  const champion = state.championId ? `<div class="card champion-card"><p class="label">Campeón</p><h2>${clubBadge(state.championId)} ${escapeHtml(clubName(state.championId))}</h2></div>` : '';
+  view.innerHTML = `<div class="row section-title"><div><h2>${escapeHtml(state.name || CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Sede neutral · 4 estadios · estado: ${escapeHtml(state.status || 'grupos')}</p></div><span class="pill">Temporada ${Number(state.season || game.seasonNumber || 1)}</span></div>
+    <div class="card"><h3>Invitados de esta edición</h3><p>${invitedRows || '—'}</p><p class="muted small">Los invitados se eligen aleatoriamente cada temporada entre la lista configurada.</p></div>
+    ${champion}
+    <div class="grid cols-2">${groupBlocks}</div>
+    <div class="stack" style="margin-top:14px">${knockoutBlocks || '<div class="card"><p class="muted">Las eliminatorias se generan cuando terminan los grupos.</p></div>'}</div>`;
 }
 function findPlayedMatchById(matchId){
   const id = String(matchId || '');
@@ -5715,6 +6190,7 @@ function startNextSeason(selectedClubId){
   game.seasonFinalized = false;
   game.seasonTransition = null;
   game.argentinaPlayoffs = null;
+  game.clubWorldCup = null;
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;

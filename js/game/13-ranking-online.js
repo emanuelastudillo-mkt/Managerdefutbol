@@ -1,4 +1,4 @@
-/* V6.25 · Ranking online con manager_name explícito y alias estables. */
+/* V6.39 · Ranking online con puntaje total explícito para Worker. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -449,18 +449,56 @@ function calculateCareerManagerScore(payload){
   // El ranking online exige un puntaje positivo y una carrera con partidos reales no debe enviarse en cero.
   return Math.max(1, Math.round((playedRaw * 5) + (wins * 12) + (draws * 4) + points + Math.max(0, prestige * 4) + Math.floor(Math.max(0, experience) / 10) + (titles * 160)));
 }
+function rankingScoreNumber(payload){
+  if(!payload || typeof payload !== 'object') return 0;
+  const candidates = [
+    payload.managerScore,
+    payload.manager_score,
+    payload.totalScore,
+    payload.total_score,
+    payload.score,
+    payload.puntaje_total,
+    payload.puntajeTotal,
+    payload.careerScore,
+    payload.career_score,
+    payload.total_points,
+    payload.totalPoints,
+    payload.puntos_totales,
+    payload.ranking_score,
+    payload.rankingScore
+  ];
+  const found = candidates
+    .map(value => Number(value))
+    .find(value => Number.isFinite(value) && value > 0);
+  if(Number.isFinite(found) && found > 0) return Math.max(1, Math.round(found));
+  const played = Number(payload.careerMatches || payload.played || 0);
+  const wins = Number(payload.won || payload.pg || 0);
+  const draws = Number(payload.drawn || payload.pe || 0);
+  const matchPoints = Number(payload.match_points || payload.league_points || payload.points || 0);
+  if(played > 0) return Math.max(1, Math.round((played * 5) + (wins * 12) + (draws * 4) + Math.max(0, matchPoints)));
+  return 0;
+}
 function rankingScoreAliases(payload){
-  const value = Math.max(0, Math.round(Number(payload?.managerScore || payload?.totalScore || payload?.total_score || 0)));
+  const value = rankingScoreNumber(payload);
   return {
     managerScore:value,
     manager_score:value,
     puntaje_manager:value,
     totalScore:value,
     total_score:value,
-    score:value,
+    total_points:value,
+    totalPoints:value,
+    puntos_totales:value,
     puntaje_total:value,
+    puntajeTotal:value,
+    puntaje:value,
+    score:value,
+    rankingScore:value,
+    ranking_score:value,
     careerScore:value,
-    career_score:value
+    career_score:value,
+    career_points_total:value,
+    manager_points:value
   };
 }
 function rankingCareerRecord(){
@@ -737,6 +775,8 @@ function rankingRequestVariantsForPath(path, apiBody, fullPayload){
 }
 function rankingPayloadToApiBody(payload){
   const cleanManagerName = rankingCleanManagerName(payload?.managerName || payload?.manager_name || payload?.nombre_manager);
+  const totalScore = rankingScoreNumber(payload);
+  const matchPoints = Number(payload?.points || payload?.match_points || payload?.league_points || 0);
   const body = {
     // Nombres del Worker Cloudflare + D1.
     record_scope: payload.recordScope || 'career',
@@ -757,7 +797,13 @@ function rankingPayloadToApiBody(payload){
     career_matches: payload.careerMatches || payload.played || 0,
     final_position: payload.position,
     best_position: payload.position || 0,
-    points: payload.points,
+    // El Worker actual valida el puntaje total con nombres distintos según versión.
+    // Por compatibilidad, `points` también lleva el puntaje total; los puntos deportivos van aparte.
+    points: totalScore,
+    total_points: totalScore,
+    match_points: matchPoints,
+    league_points: matchPoints,
+    career_match_points: matchPoints,
     wins: payload.won,
     draws: payload.drawn,
     losses: payload.lost,
@@ -784,7 +830,8 @@ function rankingPayloadToApiBody(payload){
     division_id: payload.divisionId,
     division_order: payload.divisionOrder,
     position: payload.position,
-    match_points: payload.points,
+    match_points: matchPoints,
+    league_points: matchPoints,
     won: payload.won,
     drawn: payload.drawn,
     lost: payload.lost,
@@ -1014,7 +1061,7 @@ function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!managerName) return 'Ingresá un nombre de manager.';
   if(String(payload?.recordScope || '') !== 'career' && !payload?.position) return 'No se pudo calcular la posición actual.';
   if(String(payload?.recordScope || '') === 'career' && !Number(payload?.careerMatches || 0)) return 'La carrera todavía no tiene partidos oficiales para subir.';
-  if(Number(payload?.managerScore || payload?.total_score || 0) <= 0) return 'No se pudo calcular un puntaje válido para la carrera.';
+  if(rankingScoreNumber(payload) <= 0) return 'No se pudo calcular un puntaje válido para la carrera.';
   const previous = game.rankingUploads?.[payload.submissionKey];
   if(previous?.status === 'pending' && !options.forceRetry){
     const attemptedAt = Date.parse(previous.attemptedAt || 0);

@@ -1,6 +1,14 @@
-# Fútbol Manager MVP - V6.38
+# Fútbol Manager MVP - V6.39
 
-## V6.38 - Competiciones y palmarés histórico
+## V6.39 - Ranking con `points` como puntaje total
+
+- Corregido el envío de carrera al ranking cuando el backend responde **“El puntaje total debe ser mayor a 0.”**.
+- Además de `total_score`, `score` y aliases previos, el payload ahora envía `points` como puntaje total, porque algunas versiones del Worker validan ese campo.
+- Los puntos deportivos de liga/carrera se conservan en `match_points`, `league_points` y `career_match_points`.
+- Se agregó un cálculo defensivo de puntaje total si la partida tiene partidos reales pero los acumulados internos no estaban sincronizados.
+
+
+## V6.39 - Competiciones y palmarés histórico
 
 - El menú lateral **Tabla** ahora se llama **Competiciones**.
 - Dentro de Competiciones se agregó navegación interna con botones:
@@ -11,7 +19,7 @@
 - Al finalizar la Copa Mundial de Clubes de la FIFA se guarda su campeón, subcampeón y tercer puesto.
 - El historial se conserva dentro de la partida y también puede reconstruir campeones desde tablas históricas ya guardadas.
 
-### Archivos modificados en V6.38
+### Archivos modificados en V6.39
 
 - `index.html`
 - `config.js`
@@ -21,7 +29,7 @@
 - `js/ui/12-modals.js`
 - `README.md`
 
-### Validación V6.38
+### Validación V6.39
 
 - `node --check` en todos los JavaScript.
 - JSON de `data/` parseados correctamente.

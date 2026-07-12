@@ -5872,33 +5872,110 @@ function renewFreeAgentMarketForSeason(retiredCount=0){
   }
   return { removed:finalPruned, youth:youth.concat(legacyExtra), regular };
 }
-function clubSeasonPrestigeDeltaByPosition(position){
-  const pos = Math.max(1, Math.round(Number(position || 0)));
-  if(pos >= 1 && pos <= 5) return 2;
-  if(pos >= 6 && pos <= 10) return 1;
-  if(pos >= 11 && pos <= 15) return -1;
-  if(pos >= 16 && pos <= 20) return -2;
-  return 0;
+function clubReputationSeasonConfig(){
+  const cfg = configValue('clubes.reputacionTemporada', {}) || {};
+  const position = cfg.posicion || {};
+  return {
+    floors: cfg.minimoPorDivisionOrden || { 1:40, 2:25, 3:10 },
+    position: {
+      champion: Math.round(Number(position.campeon ?? 2)),
+      high: Math.round(Number(position.zonaAlta ?? 1)),
+      middle: Math.round(Number(position.zonaMedia ?? 0)),
+      low: Math.round(Number(position.zonaBaja ?? -1)),
+      bottom: Math.round(Number(position.zonaFondo ?? -2)),
+      highUntil: Number(position.zonaAltaHasta ?? 0.25),
+      middleUntil: Number(position.zonaMediaHasta ?? 0.60),
+      lowUntil: Number(position.zonaBajaHasta ?? 0.85)
+    },
+    championBonus: cfg.bonusCampeonPorDivisionOrden || { 1:4, 2:3, 3:2 },
+    promotionBonus: cfg.bonusAscensoPorDivisionOrigenOrden || { 2:4, 3:5 },
+    relegationPenalty: cfg.penalizacionDescensoPorDivisionOrigenOrden || { 1:-3, 2:-2 }
+  };
 }
-function updateClubPrestigeAfterSeason(){
+function clubReputationDivisionOrder(division){
+  return Math.max(1, Math.round(Number(division?.order || divisionOrderFromName(division?.name) || 1)));
+}
+function clubReputationConfigValue(map, order, fallback=0){
+  if(!map || typeof map !== 'object') return Math.round(Number(fallback || 0));
+  const value = map[order] ?? map[String(order)] ?? fallback;
+  return Math.round(Number(value || 0));
+}
+function clubReputationMinimumForDivision(division){
+  const cfg = clubReputationSeasonConfig();
+  const order = clubReputationDivisionOrder(division);
+  return clamp(clubReputationConfigValue(cfg.floors, order, order === 1 ? 40 : order === 2 ? 25 : 10), 1, 99);
+}
+function clubSeasonPrestigeDeltaByPosition(position, totalTeams){
+  const cfg = clubReputationSeasonConfig().position;
+  const pos = Math.max(1, Math.round(Number(position || 0)));
+  const total = Math.max(pos, Math.round(Number(totalTeams || 0)) || pos);
+  if(pos === 1) return cfg.champion;
+  const ratio = pos / total;
+  if(ratio <= cfg.highUntil) return cfg.high;
+  if(ratio <= cfg.middleUntil) return cfg.middle;
+  if(ratio <= cfg.lowUntil) return cfg.low;
+  return cfg.bottom;
+}
+function clubReputationSeasonMovementForClub(movements, clubId, type){
+  return (Array.isArray(movements) ? movements : []).find(move => Number(move?.clubId) === Number(clubId) && move.type === type) || null;
+}
+function applyClubReputationFloor(oldValue, delta, floor){
+  let adjusted = Math.round(Number(delta || 0));
+  if(adjusted < 0){
+    if(Number(oldValue || 0) <= Number(floor || 1)) return 0;
+    adjusted = Math.max(adjusted, Math.round(Number(floor || 1)) - Math.round(Number(oldValue || 0)));
+  }
+  return adjusted;
+}
+function updateClubPrestigeAfterSeason(movements=[]){
   if(!game || !seed?.clubs) return [];
+  const cfg = clubReputationSeasonConfig();
   const changes = [];
   divisionOrderList().forEach(division => {
-    const multiplier = Math.max(1, Math.round(Number(division.order || 1)));
-    sortedStandings(division.id).forEach((row, index) => {
+    const order = clubReputationDivisionOrder(division);
+    const table = sortedStandings(division.id);
+    const totalTeams = table.length || 0;
+    const floor = clubReputationMinimumForDivision(division);
+    table.forEach((row, index) => {
       const club = seed.clubs.find(c => Number(c.id) === Number(row.clubId));
-      if(!club) return;
+      if(!club || club.specialCompetitionOnly || club.competitionOnly) return;
       const position = index + 1;
-      const rawDelta = clubSeasonPrestigeDeltaByPosition(position);
-      const delta = rawDelta * multiplier;
-      if(delta === 0) return;
+      const champion = position === 1;
+      const promoted = clubReputationSeasonMovementForClub(movements, club.id, 'promotion');
+      const relegated = clubReputationSeasonMovementForClub(movements, club.id, 'relegation');
+      const positionDelta = clubSeasonPrestigeDeltaByPosition(position, totalTeams);
+      const championDelta = champion ? clubReputationConfigValue(cfg.championBonus, order, order === 1 ? 4 : order === 2 ? 3 : 2) : 0;
+      const promotionDelta = promoted ? clubReputationConfigValue(cfg.promotionBonus, order, order === 2 ? 4 : order === 3 ? 5 : 0) : 0;
+      const relegationDelta = relegated ? clubReputationConfigValue(cfg.relegationPenalty, order, order === 1 ? -3 : order === 2 ? -2 : 0) : 0;
+      const rawDelta = positionDelta + championDelta + promotionDelta + relegationDelta;
       const oldValue = clubPrestigeValue(club);
+      const delta = applyClubReputationFloor(oldValue, rawDelta, floor);
+      if(delta === 0) return;
       const next = clamp(oldValue + delta, 1, 99);
       club.reputation = next;
       club.managerPrestige = next;
-      changes.push({ clubId:club.id, clubName:club.name, divisionId:division.id, divisionName:division.name, position, oldValue, next, delta:next-oldValue });
+      changes.push({
+        clubId:club.id,
+        clubName:club.name,
+        divisionId:division.id,
+        divisionName:division.name,
+        divisionOrder:order,
+        position,
+        oldValue,
+        next,
+        delta:next-oldValue,
+        floor,
+        champion,
+        promoted:Boolean(promoted),
+        relegated:Boolean(relegated),
+        details:{ positionDelta, championDelta, promotionDelta, relegationDelta, rawDelta }
+      });
     });
   });
+  game.clubReputationHistory = Array.isArray(game.clubReputationHistory) ? game.clubReputationHistory : [];
+  if(changes.length){
+    game.clubReputationHistory.push({ season:game.seasonNumber || 1, date:game.currentDate || '', changes });
+  }
   return changes;
 }
 
@@ -6070,7 +6147,7 @@ function finalizeSeasonIfNeeded(){
   const seasonPrizeAwards = awardManagerSeasonPrizes(record);
   recordLeagueChampionsForCurrentSeason();
   snapshotStandingsHistoryForCurrentSeason();
-  const prestigeChanges = updateClubPrestigeAfterSeason();
+  const prestigeChanges = updateClubPrestigeAfterSeason(movementsPreview);
   const movements = movementsPreview;
   if(currentGameIsFounderMode() && promoted){
     ensureFounderGoalsState();

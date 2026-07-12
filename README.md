@@ -1,32 +1,37 @@
-# Fútbol Manager MVP - V6.47
+# Fútbol Manager MVP - V6.48
 
-## V6.47 - Sponsors, portero de emergencia y orden de academia
+## V6.48 - Nueva fórmula de reputación de clubes
 
-Ajuste sobre V6.46 para corregir vencimientos de sponsors al cambiar de temporada y mejorar el manejo de planteles sin portero y de juveniles en academia.
+Ajuste sobre V6.47 para reemplazar la fórmula anual de reputación de clubes y sumar factores deportivos más claros: campeón, ascenso, descenso y piso mínimo por liga.
 
 ### Cambios principales
 
-- Las ofertas de sponsors ahora tienen vencimiento por fecha real de juego, no sólo por turno interno de temporada.
-- Las ofertas activas se normalizan para que nunca aparezcan con más de 5 días restantes por desconfiguración de cambio de temporada.
-- Las ofertas viejas o mal migradas se reparan automáticamente al abrir Sponsors.
-- Si un plantel no tiene ningún portero natural, se permite colocar un jugador de campo en el puesto POR.
-- El jugador de campo usado como portero de emergencia rinde al 25%.
-- La táctica puede confirmarse con ese portero de emergencia sólo cuando el club no tiene ningún POR.
-- En Academia se puede ordenar a los juveniles por edad o por porcentaje de informe descubierto.
-- Se corrigió la referencia interna de cupos libres al cancelar residencias juveniles.
+- La reputación de clubes ya no usa el multiplicador anterior por número de división.
+- La posición final ahora usa una fórmula por zonas:
+  - campeón: suma base;
+  - zona alta: suma leve;
+  - zona media: sin cambio;
+  - zona baja: resta leve;
+  - fondo de tabla: resta mayor.
+- Se agregó bonus extra de reputación por salir campeón.
+- Se agregó bonus extra de reputación por ascender.
+- Se agregó penalización configurable por descender.
+- Las restas de reputación respetan un mínimo por liga:
+  - Primera: no baja de 40 por cierre de temporada;
+  - Segunda: no baja de 25 por cierre de temporada;
+  - Tercera: no baja de 10 por cierre de temporada.
+- Si un club ya está por debajo del mínimo de su liga, no se le resta reputación por mala temporada.
+- La fórmula queda editable desde `config.js` en `clubes.reputacionTemporada`.
+- Se guarda un historial interno de cambios de reputación por temporada.
 
-### Archivos modificados en V6.47
+### Archivos modificados en V6.48
 
 - `index.html`
 - `config.js`
-- `js/core/03-player-tactics-utils.js`
 - `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/07-render-team-market.js`
 - `README.md`
 
-### Validación V6.47
+### Validación V6.48
 
 - JS revisado con `node --check`.
 - JSON de `data/` parseado correctamente.

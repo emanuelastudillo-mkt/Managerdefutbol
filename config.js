@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V6.47',
+  version: 'V6.48',
   partidas: {
     // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -141,6 +141,27 @@ window.GAME_CONFIG = {
     jugadoresLealesPrimerEquipo: 14,
     jugadoresLealesPorterosMinimos: 1
   },
+  clubes: {
+    reputacionTemporada: {
+      // Fórmula V6.48: ajuste anual de reputación de club por rendimiento deportivo.
+      // Los descensos negativos nunca pueden bajar al club por debajo del mínimo de su liga.
+      minimoPorDivisionOrden: { 1: 40, 2: 25, 3: 10 },
+      posicion: {
+        campeon: 2,
+        zonaAlta: 1,
+        zonaMedia: 0,
+        zonaBaja: -1,
+        zonaFondo: -2,
+        zonaAltaHasta: 0.25,
+        zonaMediaHasta: 0.60,
+        zonaBajaHasta: 0.85
+      },
+      bonusCampeonPorDivisionOrden: { 1: 4, 2: 3, 3: 2 },
+      bonusAscensoPorDivisionOrigenOrden: { 2: 4, 3: 5 },
+      penalizacionDescensoPorDivisionOrigenOrden: { 1: -3, 2: -2 }
+    }
+  },
+
   manager: {
     // Prestigio inicial del manager. Un manager nuevo arranca en 0.
     prestigioInicial: 0,

@@ -1,4 +1,12 @@
-# Fútbol Manager MVP - V6.29
+# Fútbol Manager MVP - V6.30
+
+## V6.30 - Corrección crítica de carga tras V6.29
+
+- Corregido un bloqueo crítico introducido en V6.29: `BOT_BALANCE_MATCH_WEAR_CAP` leía `PLAYER_WEAR_MAX` antes de que esa constante existiera.
+- Ese error podía detener la carga de `01-config-constants.js` y dejar el juego freezado o sin permitir avanzar.
+- Se mantiene la solución de desgaste bot de V6.29, pero con límite seguro fijo `98` al leer la configuración inicial.
+- No cambia la lógica jugable: sólo corrige el orden de inicialización para que el juego vuelva a cargar y avanzar.
+
 
 
 ## V6.29 - Desgaste acumulado de bots corregido
@@ -306,7 +314,7 @@ Cambios principales:
 - ZIP incremental preparado sólo con archivos necesarios para este cambio.
 
 
-## Archivos modificados en V6.29
+## Archivos modificados en V6.30
 
 - `config.js`
 - `js/core/01-config-constants.js`
@@ -315,7 +323,7 @@ Cambios principales:
 - `simulador-2.0.js`
 - `README.md`
 
-## Validación V6.29
+## Validación V6.30
 
 - `node --check` en todos los archivos JS.
 - Parseo correcto de todos los JSON de `data/`.

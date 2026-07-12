@@ -1860,9 +1860,10 @@ function sortedSeasonDivisions(divisions){
 function generateFixturesForDivisions(clubs, divisions, options={}){
   const seasonYear = Math.round(Number(options.seasonYear || SEASON_START_YEAR));
   const sortedDivisions = sortedSeasonDivisions(divisions);
+  const normalClubs = (clubs || []).filter(c => !(c?.specialCompetitionOnly || c?.clubWorldCupInvite || c?.clubWorldCupExternal));
   const schedules = sortedDivisions.map(division => ({
     division,
-    rounds:roundRobinSchedule(clubs.filter(c => c.divisionId === division.id), division)
+    rounds:roundRobinSchedule(normalClubs.filter(c => c.divisionId === division.id), division)
   }));
   const maxRounds = Math.max(...schedules.map(s => s.rounds.length), 0);
   const firstLeagueDate = leagueStartDateForSeason(seasonYear);

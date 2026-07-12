@@ -1200,6 +1200,12 @@ function divisionCountryKey(division){
 function clubCountryKeyForIntegrity(club){
   return integrityCountryKey(typeof clubCountry === 'function' ? clubCountry(club) : (club?.country || club?.pais || 'Argentina'));
 }
+function isSpecialCompetitionOnlyClub(club){
+  return Boolean(club?.specialCompetitionOnly || club?.clubWorldCupInvite || club?.clubWorldCupExternal || String(club?.divisionId || '') === String(CLUB_WORLD_CUP_CONFIG?.invitedDivisionId || 'club-world-cup-invitados'));
+}
+function integrityNormalClubs(){
+  return (seed?.clubs || []).filter(club => !isSpecialCompetitionOnlyClub(club));
+}
 function integrityDivisionById(){
   return Object.fromEntries((seed?.divisions || []).map(division => [String(division.id || 'default'), division]));
 }
@@ -1207,7 +1213,7 @@ function integrityDivisionsForClubCountry(club){
   const country = clubCountryKeyForIntegrity(club);
   const direct = (seed?.divisions || []).filter(division => divisionCountryKey(division) === country);
   if(direct.length) return direct.slice().sort((a,b)=>(a.order || 0)-(b.order || 0));
-  const inferredIds = new Set((seed?.clubs || [])
+  const inferredIds = new Set(integrityNormalClubs()
     .filter(item => item && Number(item.id) !== Number(club?.id) && clubCountryKeyForIntegrity(item) === country)
     .map(item => String(item.divisionId || 'default')));
   return (seed?.divisions || [])
@@ -1289,6 +1295,7 @@ function repairCrossCountryClubAssignments(options={}){
   const divisionsById = integrityDivisionById();
   let repaired = 0;
   (seed.clubs || []).forEach(club => {
+    if(isSpecialCompetitionOnlyClub(club)) return;
     const currentDivision = divisionsById[String(club.divisionId || 'default')];
     const countryMismatch = currentDivision && clubCountryKeyForIntegrity(club) !== divisionCountryKey(currentDivision);
     const invalidDivision = !currentDivision;
@@ -1327,14 +1334,15 @@ function rebuildSafeSeasonFixturesAfterStructureRepair(){
 function divisionCountIntegrityRows(){
   return (seed?.divisions || []).map(division => {
     const expected = expectedDivisionTeamCount(division);
-    const count = (seed?.clubs || []).filter(club => String(club.divisionId || 'default') === String(division.id || 'default')).length;
+    const count = integrityNormalClubs().filter(club => String(club.divisionId || 'default') === String(division.id || 'default')).length;
     return { id:division.id, name:division.name, country:division.country || '', order:division.order || 1, expected, count, delta:count - expected };
   });
 }
 function buildDivisionCountRepairPlan(){
   const divisions = (seed?.divisions || []).slice();
   const byId = Object.fromEntries(divisions.map(division => [String(division.id || 'default'), division]));
-  const assignments = new Map((seed?.clubs || []).map(club => [Number(club.id), String(club.divisionId || 'default')]));
+  const normalClubs = integrityNormalClubs();
+  const assignments = new Map(normalClubs.map(club => [Number(club.id), String(club.divisionId || 'default')]));
   const plan = [];
   const countries = Array.from(new Set(divisions.map(division => divisionCountryKey(division)).filter(Boolean)));
   countries.forEach(country => {
@@ -1343,7 +1351,7 @@ function buildDivisionCountRepairPlan(){
       .sort((a,b)=>(a.order || 0)-(b.order || 0));
     const expectedById = Object.fromEntries(countryDivisions.map(division => [String(division.id || 'default'), expectedDivisionTeamCount(division)]));
     const countFor = divisionId => Array.from(assignments.values()).filter(value => String(value) === String(divisionId)).length;
-    const countryClubIds = (seed?.clubs || [])
+    const countryClubIds = normalClubs
       .filter(club => clubCountryKeyForIntegrity(club) === country)
       .map(club => Number(club.id));
     countryDivisions.forEach(targetDivision => {
@@ -1680,7 +1688,7 @@ function inspectGameIntegrity(){
   }
   const crossCountryClubs = [];
   const invalidDivisionClubs = [];
-  (seed.clubs || []).forEach(club => {
+  integrityNormalClubs().forEach(club => {
     const divisionId = String(club.divisionId || 'default');
     const division = divisionsById[divisionId];
     if(!division){
@@ -1861,6 +1869,7 @@ async function applySafeGameIntegrityRepairs(){
   const remainingMismatch = divisionCountIntegrityRows().some(item => Number(item.count || 0) !== Number(item.expected || 0));
   if(remainingMismatch && baseClubDivisionIntegrityMap()){
     (seed?.clubs || []).forEach(club => {
+      if(isSpecialCompetitionOnlyClub(club)) return;
       const native = baseClubDivisionEntry(club);
       const target = native?.divisionId ? divisionsById[String(native.divisionId || '')] : null;
       if(!target || divisionCountryKey(target) !== clubCountryKeyForIntegrity(club)) return;
@@ -4358,6 +4367,7 @@ function applyClubDivisionOverrides(overrides={}){
   const divisions = divisionOrderList();
   const byId = Object.fromEntries(divisions.map(d => [d.id, d]));
   seed.clubs.forEach(club => {
+    if(typeof isSpecialCompetitionOnlyClub === 'function' && isSpecialCompetitionOnlyClub(club)) return;
     const override = overrides[club.id];
     const currentDivision = byId[club.divisionId] || divisions.find(d => d.name === club.divisionName);
     let division = currentDivision || null;

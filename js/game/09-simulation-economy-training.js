@@ -807,6 +807,61 @@ function clearRecoveredDailyInjuries(){
   });
   return cleared;
 }
+function bankLoanExpectedPaymentsByDate(loan, today){
+  if(!loan || !validIsoDate(today) || !validIsoDate(loan.startedDate)) return null;
+  const totalWeeks = Math.max(1, Math.round(Number(loan.totalWeeks || loan.weeks || 1)));
+  const elapsedDays = Math.max(0, daysBetweenIsoDates(loan.startedDate, today));
+  return clamp(Math.floor(elapsedDays / 7), 0, totalWeeks);
+}
+function repairBankLoanOverchargeIfNeeded(loan, today){
+  if(!game || !loan || !validIsoDate(today) || !validIsoDate(loan.startedDate)) return 0;
+  const expectedPayments = bankLoanExpectedPaymentsByDate(loan, today);
+  if(expectedPayments === null) return 0;
+  const totalWeeks = Math.max(1, Math.round(Number(loan.totalWeeks || loan.weeks || 1)));
+  const totalToRepay = Math.max(0, Math.round(Number(loan.totalToRepay || 0)));
+  const weeklyPayment = Math.max(1, Math.round(Number(loan.weeklyPayment || Math.ceil(totalToRepay / totalWeeks) || 1)));
+  const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
+  if(paid <= 0 || expectedPayments <= 0) return 0;
+  const expectedPaid = Math.min(totalToRepay, expectedPayments * weeklyPayment);
+  const tolerance = Math.max(1, Math.round(weeklyPayment * 0.05));
+  if(paid <= expectedPaid + tolerance) return 0;
+  const refund = Math.max(0, paid - expectedPaid);
+  loan.paid = expectedPaid;
+  loan.remainingDebt = Math.max(0, totalToRepay - expectedPaid);
+  loan.remainingWeeks = Math.max(0, totalWeeks - expectedPayments);
+  loan.lastPaymentDate = expectedPayments > 0 ? addDaysToIsoDate(loan.startedDate, expectedPayments * 7) : loan.startedDate;
+  loan.nextPaymentDate = loan.remainingWeeks > 0 ? addDaysToIsoDate(loan.lastPaymentDate, 7) : '';
+  loan.daysSincePayment = 0;
+  loan.overchargeRepairAppliedAt = today;
+  loan.overchargeRepairVersion = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V6.36';
+  recordBudgetChange(refund, `Devolución sobrecobro préstamo ${loan.bankName}`, { type:'bank_loan_overcharge_refund', bankName:loan.bankName, loanId:loan.id, expectedPayments, expectedPaid, previousPaid:paid, refund, paymentDate:today, nextPaymentDate:loan.nextPaymentDate });
+  pushGameMessage({ type:'finanzas', title:'Ajuste de préstamo bancario', body:`Se corrigió un sobrecobro de cuotas del préstamo de ${loan.bankName}. Se devolvieron ${formatMoney(refund)} al presupuesto del club.`, priority:'high' });
+  return refund;
+}
+function syncBankLoanScheduleWithPaidAmount(loan){
+  if(!loan || !validIsoDate(loan.startedDate)) return false;
+  const totalWeeks = Math.max(1, Math.round(Number(loan.totalWeeks || loan.weeks || 1)));
+  const totalToRepay = Math.max(0, Math.round(Number(loan.totalToRepay || 0)));
+  const weeklyPayment = Math.max(1, Math.round(Number(loan.weeklyPayment || Math.ceil(totalToRepay / totalWeeks) || 1)));
+  const paid = Math.max(0, Math.round(Number(loan.paid || 0)));
+  const paidInstallments = clamp(Math.floor(paid / weeklyPayment), 0, totalWeeks);
+  const expectedLast = paidInstallments > 0 ? addDaysToIsoDate(loan.startedDate, paidInstallments * 7) : loan.startedDate;
+  const expectedNext = paidInstallments < totalWeeks ? addDaysToIsoDate(loan.startedDate, (paidInstallments + 1) * 7) : '';
+  let changed = false;
+  if(!validIsoDate(loan.lastPaymentDate) || daysBetweenIsoDates(loan.lastPaymentDate, expectedLast) > 0){
+    loan.lastPaymentDate = expectedLast;
+    changed = true;
+  }
+  if(expectedNext && (!validIsoDate(loan.nextPaymentDate) || daysBetweenIsoDates(loan.nextPaymentDate, expectedNext) > 0)){
+    loan.nextPaymentDate = expectedNext;
+    changed = true;
+  }
+  if(!expectedNext && loan.nextPaymentDate){
+    loan.nextPaymentDate = '';
+    changed = true;
+  }
+  return changed;
+}
 function processBankLoanDailySchedule(){
   if(!game || !BANK_LOANS_ENABLED) return 0;
   const state = ensureBankLoanState();
@@ -814,16 +869,15 @@ function processBankLoanDailySchedule(){
   if(!loan) return 0;
   const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
   if(!validIsoDate(today)) return 0;
+  if(loan.lastScheduleCheckDate === today) return 0;
   if(!validIsoDate(loan.lastPaymentDate)) loan.lastPaymentDate = validIsoDate(loan.startedDate) ? loan.startedDate : today;
   if(!validIsoDate(loan.nextPaymentDate)) loan.nextPaymentDate = addDaysToIsoDate(loan.lastPaymentDate, 7);
-  let charged = 0;
-  let guard = 0;
-  while(state.active && validIsoDate(state.active.nextPaymentDate) && daysBetweenIsoDates(state.active.nextPaymentDate, today) >= 0 && guard < 10){
-    const paid = processBankLoanWeeklyPayment(state.active.nextPaymentDate);
-    charged += paid;
-    guard += 1;
-  }
-  return charged;
+  repairBankLoanOverchargeIfNeeded(loan, today);
+  syncBankLoanScheduleWithPaidAmount(loan);
+  loan.lastScheduleCheckDate = today;
+  if(!state.active || !validIsoDate(state.active.nextPaymentDate)) return 0;
+  if(daysBetweenIsoDates(state.active.nextPaymentDate, today) < 0) return 0;
+  return processBankLoanWeeklyPayment(state.active.nextPaymentDate);
 }
 
 function ensureMonthlyExpensesState(){
@@ -2193,6 +2247,9 @@ function normalizeBankLoanActiveLoan(loan){
     startedTurn:Number(loan.startedTurn || game?.globalTurn || 0),
     lastPaymentDate:validIsoDate(lastPaymentDate) ? lastPaymentDate : '',
     nextPaymentDate:validIsoDate(nextPaymentDate) ? nextPaymentDate : '',
+    lastScheduleCheckDate:validIsoDate(loan.lastScheduleCheckDate) ? loan.lastScheduleCheckDate : '',
+    overchargeRepairAppliedAt:validIsoDate(loan.overchargeRepairAppliedAt) ? loan.overchargeRepairAppliedAt : '',
+    overchargeRepairVersion:String(loan.overchargeRepairVersion || ''),
     daysSincePayment:legacyDaysSincePayment
   };
 }

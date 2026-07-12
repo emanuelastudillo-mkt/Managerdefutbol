@@ -1,22 +1,36 @@
-# Fútbol Manager MVP - V6.44
+# Fútbol Manager MVP - V6.45
 
-## V6.44 - Mundial de Clubes con fechas protegidas
+## V6.45 - Mundial de Clubes con llaves y estadísticas
 
-Ajuste sobre V6.43 para corregir la planificación del Mundial de Clubes cuando el fixture se crea tarde o una partida arrastra fechas inválidas.
+Ajuste sobre V6.44 para ordenar definitivamente la Copa Mundial de Clubes de la FIFA: sorteo visible, grupos A-H, calendario escalonado, cruces fijos y estadísticas propias del torneo.
 
 ### Cambios principales
 
-- El fixture del Mundial de Clubes sigue quedando listo desde el día 295 si las ligas ya terminaron.
-- La fase de grupos ahora calcula fechas protegidas:
-  - Fecha 1: mínimo 18 días después de la última fecha regular de liga.
-  - Fecha 2: 5 días después de la Fecha 1.
-  - Fecha 3: 5 días después de la Fecha 2.
-- Si el fixture se genera cuando alguna fecha ya quedó vencida, se mueve hacia adelante para evitar que el avance diario simule varias fechas juntas.
-- Se agregó reparación automática para fixtures viejos del Mundial con fechas repetidas o vencidas.
-- La reparación actualiza también las fechas de partidos ya registrados en historial, sin modificar resultados.
-- El calendario de Mundial de Clubes revisa y repara fechas antes de mostrarse.
+- El Mundial de Clubes se sortea y queda visible desde el día 295 si las ligas ya terminaron.
+- Los grupos se nombran de la A a la H y mantienen 4 equipos cada uno.
+- El sorteo intenta repartir clubes de distintos países en cada grupo cuando la cantidad de clasificados lo permite.
+- La Fecha 1 de grupos se programa como mínimo 18 días después del sorteo del día 295 y también respeta el descanso mínimo desde la última fecha de liga.
+- La Fecha 2 se juega 5 días después de la Fecha 1.
+- La Fecha 3 se juega 5 días después de la Fecha 2.
+- Las eliminatorias ya no se crean todas de golpe: se agregan fase por fase cuando termina la fase anterior.
+- Octavos de final quedan con cruces fijos:
+  - 1° Grupo A vs 2° Grupo B.
+  - 2° Grupo A vs 1° Grupo B.
+  - 1° Grupo C vs 2° Grupo D.
+  - 2° Grupo C vs 1° Grupo D.
+  - Se repite el mismo patrón para E/F y G/H.
+- Las llaves posteriores quedan predefinidas por orden de avance.
+- En partidos eliminatorios empatados, avanza el equipo que hizo menos faltas.
+- Si también empatan en faltas, se usa tarjetas como segundo criterio y un desempate determinístico final.
+- La vista del Mundial mantiene visible lo anterior: grupos, fases ya jugadas y nuevas fases creadas.
+- Se agregó un bloque de estadísticas del Mundial de Clubes:
+  - goleadores;
+  - asistidores;
+  - tarjetas;
+  - más partidos jugados;
+  - faltas por equipo.
 
-### Archivos modificados en V6.44
+### Archivos modificados en V6.45
 
 - `index.html`
 - `config.js`
@@ -25,8 +39,8 @@ Ajuste sobre V6.43 para corregir la planificación del Mundial de Clubes cuando 
 - `js/game/09-simulation-economy-training.js`
 - `README.md`
 
-### Validación V6.44
+### Validación V6.45
 
 - JS revisado con `node --check`.
-- JSON de `data/` parseados correctamente.
-- ZIP incremental y completo verificados sin errores.
+- JSON de `data/` parseado correctamente.
+- ZIP incremental y completo verificados con `unzip -tq`.

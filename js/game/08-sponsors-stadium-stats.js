@@ -834,7 +834,7 @@ function renderFixture(){
           <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
         </div>
       </div>
-      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">El sorteo y fixture quedan listos en el día 295 si las ligas ya terminaron. La primera fecha se programa como mínimo 18 días después de la última jornada de liga y nunca queda vencida al generarse; luego las rondas van cada 5 días y la final se juega 1 día después del 3er puesto.</p></div>'}</div>`;
+      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">El sorteo y fixture quedan listos en el día 295 si las ligas ya terminaron. Los grupos se muestran desde ese momento; la fecha 1 se programa como mínimo 18 días después del sorteo y de la última jornada de liga. Fechas 2 y 3 van cada 5 días; las eliminatorias se agregan fase por fase.</p></div>'}</div>`;
     $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
     $('btnClubWorldCupFixture')?.addEventListener('click', () => { fixtureViewMode = 'clubWorldCup'; renderFixture(); });
     $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
@@ -872,14 +872,16 @@ function matchCard(m){
   const clickable = m.played ? 'clickable' : '';
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
   const playoffNote = m.promotionPlayoff ? `<div class="match-date-line playoff-note">${escapeHtml(`Playoffs ${String(m.playoffStage || '').toUpperCase() || ''}`.trim())} · mismo partido en ambas ligas</div>` : '';
-  const cupNote = m.clubWorldCup ? `<div class="match-date-line playoff-note">${escapeHtml(`${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}`)}</div>` : '';
+  const cupMeta = m.clubWorldCup ? `${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}${m.clubWorldCupBracketKey ? ` · ${m.clubWorldCupBracketKey}` : ''}` : '';
+  const cupNote = m.clubWorldCup ? `<div class="match-date-line playoff-note">${escapeHtml(cupMeta)}</div>` : '';
   const penalties = m.penaltyShootout ? ` <span class="small muted">(${Number(m.penaltyShootout.home || 0)}-${Number(m.penaltyShootout.away || 0)} pen.)</span>` : '';
+  const foulsTie = m.clubWorldCupTiebreaker ? ` <span class="small muted">(desempate faltas ${Number(m.clubWorldCupTiebreaker.homeFouls || 0)}-${Number(m.clubWorldCupTiebreaker.awayFouls || 0)})</span>` : '';
   return `<button class="match-card ${clickable}" ${attr}>
     <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
     ${playoffNote}${cupNote}
     <div class="match-line">
       <div>${clubSpan(m.homeId)}</div>
-      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}${penalties}` : 'vs'}</strong>
+      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}${penalties}${foulsTie}` : 'vs'}</strong>
       <div>${clubSpan(m.awayId)}</div>
     </div>
     ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}

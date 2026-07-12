@@ -818,8 +818,27 @@ function fixtureRoundTitle(round){
 function renderFixture(){
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const ownClubId = Number(game?.selectedClubId || 0);
-  const showMine = fixtureViewMode !== 'league';
+  const showCup = fixtureViewMode === 'clubWorldCup';
+  const showMine = fixtureViewMode !== 'league' && !showCup;
   const visibleDivisions = selectedFixtureDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedFixtureDivision);
+  if(showCup){
+    const cupRounds = (game.fixtures || []).filter(round => round?.clubWorldCupRound || (round.matches || []).some(match => match?.clubWorldCup));
+    const cupHtml = cupRounds.map(round => `<div class="card"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${(round.matches || []).filter(match => match?.clubWorldCup).map(matchCard).join('')}</div></div>`).join('');
+    view.innerHTML = `
+      <div class="row section-title fixture-title-row">
+        <div><h2>Calendario</h2><p class="tagline">Mundial de Clubes: sede neutral, grupos y eliminatorias.</p></div>
+        <div class="fixture-controls row">
+          <button type="button" id="btnMyFixture" class="ghost">Mi calendario</button>
+          <button type="button" id="btnClubWorldCupFixture" class="primary">Mundial de Clubes</button>
+          <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
+        </div>
+      </div>
+      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">Se crea al final de las ligas, con partidos cada 7 días desde 18 días después de la última fecha.</p></div>'}</div>`;
+    $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
+    $('btnClubWorldCupFixture')?.addEventListener('click', () => { fixtureViewMode = 'clubWorldCup'; renderFixture(); });
+    $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
+    return;
+  }
   const html = game.fixtures.map(round=>{
     if(showMine){
       const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
@@ -838,11 +857,13 @@ function renderFixture(){
       <div><h2>Calendario</h2><p class="tagline">Por defecto se muestra el calendario de tu club. Los partidos jugados son clickeables para ver estadísticas y eventos.</p></div>
       <div class="fixture-controls row">
         <button type="button" id="btnMyFixture" class="${showMine ? 'primary' : 'ghost'}">Mi calendario</button>
+        <button type="button" id="btnClubWorldCupFixture" class="${showCup ? 'primary' : 'ghost'}">Mundial de Clubes</button>
         <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
       </div>
     </div>
     <div class="stack">${html || '<div class="card"><p class="muted">Sin partidos para mostrar.</p></div>'}</div>`;
   $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
+  $('btnClubWorldCupFixture')?.addEventListener('click', () => { fixtureViewMode = 'clubWorldCup'; renderFixture(); });
   $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
 }
 function matchCard(m){
@@ -935,6 +956,10 @@ function renderStandings(){
 
 
 function standingsStatusClass(divisionId, index, total){
+  if(typeof clubWorldCupStandingStatusClass === 'function'){
+    const cupClass = clubWorldCupStandingStatusClass(divisionId, index);
+    if(cupClass) return cupClass;
+  }
   if(typeof argentineStandingStatusClass === 'function'){
     const argClass = argentineStandingStatusClass(divisionId, index, total);
     if(argClass) return argClass;

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.06',
+  version: 'V7.07',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -292,7 +292,12 @@ window.GAME_CONFIG = {
     pisoFisicoBotAntesDePartido: 58,
     desarrolloPlantelPorTemporada: 0.18,
     bonusDesarrolloPorPosicion: 0.08,
-    maximoBoostBotPorHabilidad: 18
+    maximoBoostBotPorHabilidad: 18,
+    // Cada bot rota perfiles tácticos de forma determinista. Los clubes no parten todos del mismo perfil.
+    tacticasVariadas: {
+      activo: true,
+      rotacionCadaFechas: 1
+    }
   },
   economia: {
     pagosPorResultadoLiga: {

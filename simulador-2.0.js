@@ -106,6 +106,18 @@
   const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
   const BOT_OVEREXERTION_ENABLED_V2 = Boolean(simConfigValue('equilibrioBots.tacticaRapida.sobreexigenciaSiPierde', true));
   const BOT_OVEREXERTION_RULES_V2 = normalizeBotOverexertionRules(simConfigArray('equilibrioBots.tacticaRapida.reglasDiferencia', []));
+  const BOT_TACTIC_VARIETY_ENABLED = Boolean(simConfigValue('equilibrioBots.tacticasVariadas.activo', true));
+  const BOT_TACTIC_ROTATION_INTERVAL = Math.max(1, Math.round(simConfigNumber('equilibrioBots.tacticasVariadas.rotacionCadaFechas', 1, 1, 20)));
+  const BOT_TACTIC_PROFILES = {
+    balanced:{ formations:['4-4-2','4-2-3-1'], sectorStyles:{ defense:'posicional', midfield:'posicional', attack:'posicional' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } },
+    possession:{ formations:['4-2-3-1','4-1-4-1'], sectorStyles:{ defense:'rotacion', midfield:'posicional', attack:'rotacion' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } },
+    high_press:{ formations:['4-3-3','3-4-3'], sectorStyles:{ defense:'presion_alta', midfield:'presion_alta', attack:'presion_alta' }, matchInstructions:{ winning:'normal', drawing:'push', losing:'push' } },
+    direct:{ formations:['4-3-1-2','4-4-2'], sectorStyles:{ defense:'posicional', midfield:'rotacion', attack:'posicional' }, matchInstructions:{ winning:'normal', drawing:'normal', losing:'push' } },
+    wide:{ formations:['3-5-2','3-4-3'], sectorStyles:{ defense:'presion_alta', midfield:'rotacion', attack:'posicional' }, matchInstructions:{ winning:'normal', drawing:'push', losing:'push' } },
+    counter:{ formations:['4-5-1','5-3-2'], sectorStyles:{ defense:'repliegue', midfield:'posicional', attack:'rotacion' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } },
+    defensive:{ formations:['5-4-1','5-3-2'], sectorStyles:{ defense:'repliegue', midfield:'repliegue', attack:'posicional' }, matchInstructions:{ winning:'lower', drawing:'lower', losing:'normal' } },
+    cautious:{ formations:['4-1-4-1','4-5-1'], sectorStyles:{ defense:'posicional', midfield:'repliegue', attack:'rotacion' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } }
+  };
   const LIVE_BOT_SUB_MINUTES = [45, 60, 70, 78, 84];
   const LIVE_BOT_INJURY_SUB_ENABLED = true;
 
@@ -226,12 +238,52 @@
     return ({ muy_defensivo:1.22, defensivo:1.10, normal:1, ofensivo:0.92, muy_ofensivo:0.82 })[simPlayerMentality(player, tactic)] || 1;
   }
   function pitchEffectV2(pitch){ return SIM_PITCH_CONDITIONS[pitch] || SIM_PITCH_CONDITIONS.Normal; }
-  function getTacticForClubV2(clubId){
-    if(clubId === game.selectedClubId) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions), sectorStyles:normalizeSectorStylesV2(game.tactic?.sectorStyles) };
-    const club = seed.clubs.find(c=>c.id===clubId) || { reputation:60 };
-    const formation = club.reputation > 74 ? '4-3-3' : club.reputation < 61 ? '5-4-1' : '4-4-2';
-    return { formation, starters:[], bench:[], autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS}, sectorStyles:normalizeSectorStylesV2(null) };
+  function simStableHash(seedValue, max){
+    const limit = Math.max(1, Math.round(Number(max || 1)));
+    const text = String(seedValue || '');
+    let hash = 2166136261;
+    for(let i=0; i<text.length; i++){
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return Math.abs(hash >>> 0) % limit;
   }
+  function botTacticProfilePool(reputation){
+    if(Number(reputation || 0) >= 75) return ['high_press','possession','balanced','wide','direct'];
+    if(Number(reputation || 0) <= 60) return ['defensive','counter','cautious','balanced','direct'];
+    return ['balanced','possession','high_press','direct','wide','counter','defensive','cautious'];
+  }
+  function botTacticForClubV2(clubId){
+    const id = Number(clubId || 0);
+    if(id === Number(game?.selectedClubId || 0)) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions), sectorStyles:normalizeSectorStylesV2(game.tactic?.sectorStyles) };
+    const club = seed?.clubs?.find(c => Number(c.id) === id) || { reputation:60 };
+    if(!BOT_TACTIC_VARIETY_ENABLED){
+      const formation = Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2';
+      return { formation, starters:[], bench:[], autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS}, sectorStyles:normalizeSectorStylesV2(null), botProfile:'legacy' };
+    }
+    const season = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
+    const matchday = Math.max(0, Math.round(Number(game?.matchdayIndex || 0)));
+    const cycle = Math.floor(matchday / BOT_TACTIC_ROTATION_INTERVAL);
+    const pool = botTacticProfilePool(club.reputation);
+    const baseOffset = simStableHash(`bot-profile-base-${id}-${season}`, pool.length);
+    const profileId = pool[(baseOffset + cycle) % pool.length] || 'balanced';
+    const profile = BOT_TACTIC_PROFILES[profileId] || BOT_TACTIC_PROFILES.balanced;
+    const formations = Array.isArray(profile.formations) && profile.formations.length ? profile.formations : ['4-4-2'];
+    const formationOffset = simStableHash(`bot-formation-base-${id}-${season}-${profileId}`, formations.length);
+    const formation = formations[(formationOffset + cycle) % formations.length] || '4-4-2';
+    return {
+      formation,
+      starters:[],
+      bench:[],
+      autoSubs:[],
+      playerMentalities:{},
+      matchInstructions:normalizeMatchInstructions(profile.matchInstructions),
+      sectorStyles:normalizeSectorStylesV2(profile.sectorStyles),
+      botProfile:profileId,
+      botTacticCycle:cycle
+    };
+  }
+  function getTacticForClubV2(clubId){ return botTacticForClubV2(clubId); }
   function instructionForScore(tactic, gf, gc){
     const instructions = normalizeMatchInstructions(tactic?.matchInstructions);
     if(gf > gc) return instructions.winning;
@@ -1879,7 +1931,7 @@
       botOverexertionConditionDelta(match.homeId, homeGoals, awayGoals, starterIdsHome),
       botOverexertionConditionDelta(match.awayId, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0-v5.41-sobreexigencia-bot', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    return { ...match, played:true, engine:'simulador-2.0-v7.07-tacticas-bot-variables', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;
@@ -1895,6 +1947,7 @@
     livePublicState,
     pitchEffect:pitchEffectV2,
     normalizeMatchInstructions,
-    normalizeSectorStyles:normalizeSectorStylesV2
+    normalizeSectorStyles:normalizeSectorStylesV2,
+    botTacticForClub:botTacticForClubV2
   };
 })();

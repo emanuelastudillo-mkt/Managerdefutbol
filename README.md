@@ -1,84 +1,105 @@
-# Fútbol Manager MVP - V7.06
+# Fútbol Manager MVP - V7.07
 
-## V7.06 - Ranking de carrera completo y Worker D1 compatible
+## V7.07 - Tácticas variables para equipos bots
 
-Esta versión parte de V7.05 y conserva el sistema de guardado doble seguro, la economía anual por reputación de liga y la corrección de overrides del Mundial de Clubes.
+Esta versión parte de V7.06 y conserva el ranking de carrera, el guardado doble seguro, la economía anual por reputación de liga y las migraciones anteriores.
 
-### Ranking online
+La primera compilación de V7.07 incluía un cambio experimental en **Ofrecer a clubes**. Ese cambio fue retirado. La versión definitiva V7.07 modifica únicamente el comportamiento táctico de los equipos bots y conserva el funcionamiento de ofertas de V7.06.
 
-Se corrigió el envío, lectura y presentación del ranking de carreras.
+### Tácticas variables de equipos bots
 
-- **Índice carrera:** reemplaza visualmente a “Puntaje”. Combina puntos deportivos, diferencia de gol, títulos, prestigio, porcentaje de victorias, temporadas y rendimiento presupuestario.
-- **Pts. deportivos:** reemplaza visualmente a “Pts”. Son los puntos acumulados por resultados oficiales: 3 por victoria y 1 por empate.
-- Se guardan y muestran el club actual, la división, las temporadas, los partidos, la mejor posición, G-E-P, diferencia de gol, títulos y presupuestos.
-- La mejor posición acepta los campos `best_position`, `final_position` y sus aliases anteriores.
-- Los títulos aceptan tanto `titles` como el campo antiguo `title`.
-- Cuando existen varias filas de una misma partida, se conserva la carga más reciente. Ya no se conserva una fila antigua sólo porque tenía un índice mayor.
+Los equipos controlados por el juego ya no utilizan todos la misma estructura táctica fija.
 
-### Presupuestos
+Cada bot rota entre perfiles compatibles con la reputación de su club:
 
-- El presupuesto final y la variación admiten números negativos.
-- Se agregó `careerInitialBudget` para conservar el presupuesto real con el que comenzó la carrera.
-- Las partidas antiguas reconstruyen ese valor usando el inicio de la primera temporada disponible.
-- El cambio evita que una carrera con crecimiento económico muestre incorrectamente `+$0` por tomar el presupuesto actual como presupuesto inicial.
-- Al producirse un despido, el ranking utiliza la instantánea tomada antes de reiniciar la economía del club saliente. El presupuesto final ya no se reemplaza por cero.
+- Equilibrado.
+- Posesión.
+- Presión alta.
+- Juego directo.
+- Juego abierto.
+- Contraataque.
+- Defensivo.
+- Cauto.
 
-### Títulos oficiales
+Cada perfil puede modificar:
 
-El contador de títulos ahora utiliza un historial identificable por temporada y competición.
+- Formación.
+- Estilo defensivo.
+- Estilo del mediocampo.
+- Estilo ofensivo.
+- Instrucciones cuando el equipo gana, empata o pierde.
 
-Cuenta:
+Los clubes de reputación alta priorizan perfiles ofensivos, de presión y posesión. Los clubes de reputación baja priorizan perfiles defensivos, cautos y de contraataque. Los clubes de reputación media pueden utilizar toda la variedad.
 
-- Campeonatos de liga.
-- Mundial de Clubes.
-- Futuras competiciones oficiales registradas en el historial de campeones.
+La selección es determinista:
 
-No cuenta un ascenso como título salvo que el club también haya sido campeón de su división.
+- Cada club tiene un punto de inicio diferente.
+- El perfil cambia con el avance de las fechas.
+- Una misma partida conserva resultados tácticos consistentes al guardar y cargar.
+- El simulador rápido y el partido en vivo utilizan la misma táctica bot.
+- La observación de un rival muestra su formación estimada vigente.
 
-Las partidas anteriores reconstruyen los campeonatos de liga desde `managerStats.seasons` y los títulos internacionales desde `competitionChampionsHistory` cuando el club campeón era el dirigido por el manager.
+Configuración editable en `config.js`:
 
-### Worker Cloudflare y D1
+```js
+equilibrioBots: {
+  tacticasVariadas: {
+    activo: true,
+    rotacionCadaFechas: 1
+  }
+}
+```
 
-Se agregó la carpeta `cloudflare-ranking` con:
+Si `activo` se establece en `false`, se recupera la selección anterior basada únicamente en reputación:
 
-- `worker-v7.06.js`: Worker completo con login, sesiones, carga y lectura de carreras.
-- `migracion-d1-v7.06.sql`: creación segura de las tablas V2.
-- `PASOS-ACTUALIZACION.md`: procedimiento de actualización en Cloudflare.
+- Reputación alta: 4-3-3.
+- Reputación media: 4-4-2.
+- Reputación baja: 5-4-1.
 
-El Worker:
+### Ofrecer a clubes
 
-- No elimina las tablas anteriores.
-- Intenta importar automáticamente usuarios y registros existentes.
-- Actualiza una carrera por usuario y código de partida.
-- Conserva presupuestos negativos.
-- Separa `manager_score` de `match_points`.
-- Devuelve todos los campos que necesita la tabla del juego.
+La función conserva exactamente la lógica de V7.06:
 
-El binding D1 debe llamarse `DB`.
+- Requiere que el jugador haya recibido al menos un pago de sueldo.
+- Respeta los requisitos de partidos y rendimiento configurados.
+- Puede no encontrar clubes interesados.
+- Cuando encuentra una propuesta, la genera inmediatamente.
+- Conserva el cooldown general de tres turnos.
 
-### Guardado y migración local
+No se programan ofertas garantizadas para fechas futuras.
 
-Se mantiene el sistema de dos copias:
+Al cargar una partida creada con la compilación retirada de V7.07, cualquier registro técnico de búsqueda garantizada se descarta y no produce ofertas posteriores.
 
-- Carrera 1: `slot:career:1` y `main`.
-- Otros slots: copia principal y respaldo dedicado.
+### Ranking online y Cloudflare
 
-La migración de títulos y presupuesto inicial se realiza al cargar y marca la partida para autoguardado sólo cuando encuentra información que debe reconstruir.
+No se modificó la API del ranking. La carpeta `cloudflare-ranking` conserva el Worker operativo:
 
-### Archivos principales modificados en V7.06
+```text
+worker-v7.06.3-binding-db-sin-ddl.js
+```
+
+Binding utilizado:
+
+```text
+db -> ranking_manager_db
+```
+
+No es necesario volver a actualizar Cloudflare para instalar esta versión del juego.
+
+### Archivos principales modificados en V7.07
 
 - `README.md`
 - `index.html`
 - `config.js`
 - `balance-modificadores.js`
 - `data/retos_manager.json`
+- `simulador-2.0.js`
 - `js/core/01-config-constants.js`
 - `js/game/05-state-season.js`
-- `js/game/13-ranking-online.js`
-- `cloudflare-ranking/worker-v7.06.js`
-- `cloudflare-ranking/migracion-d1-v7.06.sql`
-- `cloudflare-ranking/PASOS-ACTUALIZACION.md`
+- `js/game/10-academy-employees.js`
+- `cloudflare-ranking/worker-v7.06.3-binding-db-sin-ddl.js`
+- `cloudflare-ranking/PASOS-HOTFIX-V7.06.3.md`
 
 ### Compatibilidad de partidas
 
-**V7.06 no rompe partidas anteriores.** Conserva planteles, calendarios, presupuestos, historial y progreso. Agrega campos de migración para el presupuesto inicial y el historial de títulos. El Worker nuevo utiliza tablas V2 y no borra las tablas anteriores.
+**V7.07 no rompe partidas anteriores.** Conserva planteles, calendarios, presupuestos, estadísticas, títulos y progreso. Las partidas guardadas con la compilación retirada de V7.07 también cargan: sólo se eliminan las búsquedas garantizadas de ofertas que ya no forman parte del juego.

@@ -1393,8 +1393,9 @@ function callMotivationalPsychologist(button=null){
 
 
 function getTacticForClub(clubId){
-  if(clubId === game.selectedClubId) return game.tactic;
-  const club = seed.clubs.find(c=>c.id===clubId);
-  const formation = club.reputation > 74 ? '4-3-3' : club.reputation < 61 ? '5-4-1' : '4-4-2';
+  if(Number(clubId) === Number(game.selectedClubId)) return game.tactic;
+  if(window.Simulator20?.botTacticForClub) return window.Simulator20.botTacticForClub(clubId);
+  const club = seed.clubs.find(c => Number(c.id) === Number(clubId)) || { reputation:60 };
+  const formation = Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2';
   return { formation, defense:'posicional', midfield:'posicional', attack:'posicional' };
 }

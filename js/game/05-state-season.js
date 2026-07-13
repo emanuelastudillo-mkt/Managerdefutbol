@@ -2670,6 +2670,8 @@ function normalizeGame(saved){
   normalized.scoutingCenter = (normalized.scoutingCenter && typeof normalized.scoutingCenter === 'object' && !Array.isArray(normalized.scoutingCenter)) ? normalized.scoutingCenter : {};
   normalized.monthlyExpenses = (normalized.monthlyExpenses && typeof normalized.monthlyExpenses === 'object' && !Array.isArray(normalized.monthlyExpenses)) ? normalized.monthlyExpenses : {};
   normalized.lastOwnPlayerOffer = normalized.lastOwnPlayerOffer || null;
+  // Limpia búsquedas pendientes creadas por la compilación retirada de V7.07.
+  if(Object.prototype.hasOwnProperty.call(normalized, 'forcedOwnPlayerOffers')) delete normalized.forcedOwnPlayerOffers;
   normalized.seasonEndPlayerOffers = normalized.seasonEndPlayerOffers || null;
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();

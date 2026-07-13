@@ -1,4 +1,47 @@
-# Fútbol Manager MVP - V7.17
+# Fútbol Manager MVP - V7.18
+
+## V7.18 - Reparación de penalizaciones por edad
+
+Se corrigió el caso en el que un jugador joven podía conservar una penalización por edad asociada a su ID. El deterioro continúa aplicándose únicamente desde los 32 años.
+
+### Limpieza automática de partidas
+
+- Al cargar una partida, todo jugador menor de 32 años queda con penalización por edad igual a 0.
+- Los registros asociados a IDs que ya no pertenecen a ningún jugador activo o del mercado se eliminan.
+- El cálculo visible vuelve a comprobar la edad del jugador antes de descontar puntos, de modo que un valor residual nunca afecte sus habilidades.
+- La limpieza se repite de forma segura al normalizar el estado, se guarda automáticamente en ambas copias del slot y no modifica penalizaciones válidas de jugadores de 32 años o más.
+
+### Jugadores nuevos y regenerados
+
+- Los juveniles promovidos al primer equipo se inicializan expresamente con penalización 0.
+- Los jugadores libres generados para una nueva temporada comienzan en 0.
+- Los jugadores creados para clubes invitados del Mundial de Clubes comienzan en 0.
+- Los jugadores de emergencia creados para planteles bots comienzan en 0.
+- Los jugadores manuales regenerados continúan reiniciando su penalización en 0.
+
+### Cambio de temporada
+
+- Si un jugador tiene menos de 32 años, cualquier penalización residual se elimina antes de continuar.
+- Un jugador que alcanza los 32 años al envejecer puede recibir por primera vez el deterioro anual configurado.
+- Los puntos obtenidos por entrenamiento no se modifican.
+
+### Archivos principales modificados en V7.18
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/game/05-state-season.js`
+- `js/game/10-academy-employees.js`
+
+### Compatibilidad de partidas
+
+**V7.18 no rompe partidas anteriores.** Al cargar, elimina exclusivamente penalizaciones por edad inválidas de jugadores menores de 32 años y registros huérfanos. Conserva entrenamiento, habilidades base, planteles, estadísticas, contratos y penalizaciones válidas de jugadores veteranos.
+
+---
 
 ## V7.17 - Valor de ofertas según rendimiento y ojeo
 

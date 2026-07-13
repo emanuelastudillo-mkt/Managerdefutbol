@@ -2757,9 +2757,13 @@ function normalizeGame(saved){
   normalized.trainingSchedule = normalizeTrainingSchedule(normalized.trainingSchedule);
   seed.players.forEach(p => {
     if(!normalized.playerSkillBoosts[p.id]) normalized.playerSkillBoosts[p.id] = {};
-    normalized.playerAgeSkillPenalties[p.id] = clamp(Math.round(Number(normalized.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    normalized.playerAgeSkillPenalties[p.id] = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
+      ? 0
+      : clamp(Math.round(Number(normalized.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
     normalized.trainingPlan[p.id] = safeIndividualTrainingType(normalized.trainingPlan[p.id]);
   });
+  const agePenaltyRepair = repairPlayerAgeSkillPenaltiesForState(normalized, seed.players);
+  if(agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) normalized._needsAutosave = true;
   normalized.staffActions = normalized.staffActions || {};
   normalized.staffContracts = normalizeStaffContracts(normalized.staffContracts || {});
   normalized.academy = normalizeAcademyState(normalized.academy);
@@ -2848,11 +2852,15 @@ function ensurePlayerStateForAll(){
     if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerMorale[p.id] = 5; }
     else if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = PLAYER_MORALE_START;
     if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
-    game.playerAgeSkillPenalties[p.id] = clamp(Math.round(Number(game.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    game.playerAgeSkillPenalties[p.id] = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
+      ? 0
+      : clamp(Math.round(Number(game.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
     normalizePlayerStatRecord(game.playerStats[p.id]);
   });
+  const agePenaltyRepair = repairPlayerAgeSkillPenaltiesForState(game, seed.players);
+  if(agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) game._needsAutosave = true;
 }
 
 function tacticLocationOfPlayer(playerId){
@@ -4894,6 +4902,8 @@ function ensureClubWorldCupInvitedData(){
           if(game.playerCondition) game.playerCondition[player.id] = Math.max(65, Number(game.playerCondition[player.id] || 0));
           if(game.playerMorale) game.playerMorale[player.id] = Math.max(60, Number(game.playerMorale[player.id] || 0));
           if(game.playerSkillBoosts) game.playerSkillBoosts[player.id] = game.playerSkillBoosts[player.id] || {};
+          game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+          game.playerAgeSkillPenalties[player.id] = 0;
           if(game.trainingPlan) game.trainingPlan[player.id] = typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(game.trainingPlan[player.id]) : (game.trainingPlan[player.id] || 'balanced');
         });
       }
@@ -6319,6 +6329,40 @@ function decayTrainedSkillBoosts(){
   });
   return { players, lost, remaining };
 }
+function repairPlayerAgeSkillPenaltiesForState(targetGame, players=null){
+  if(!targetGame) return { cleared:0, normalized:0, pruned:0 };
+  targetGame.playerAgeSkillPenalties = (targetGame.playerAgeSkillPenalties && typeof targetGame.playerAgeSkillPenalties === 'object' && !Array.isArray(targetGame.playerAgeSkillPenalties)) ? targetGame.playerAgeSkillPenalties : {};
+  const combined = [];
+  const seen = new Set();
+  const addPlayer = player => {
+    const id = Number(player?.id || 0);
+    if(!id || seen.has(id)) return;
+    seen.add(id);
+    combined.push(player);
+  };
+  (Array.isArray(players) ? players : (seed?.players || [])).forEach(addPlayer);
+  (targetGame.marketPlayers || []).forEach(addPlayer);
+  let cleared = 0;
+  let normalized = 0;
+  combined.forEach(player => {
+    const id = Number(player.id);
+    const before = clamp(Math.round(Number(targetGame.playerAgeSkillPenalties[id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    const age = Math.round(Number(player.age || 18));
+    const after = age < PLAYER_AGE_DECAY_START_AGE ? 0 : before;
+    if(before > 0 && after === 0) cleared += 1;
+    if(Number(targetGame.playerAgeSkillPenalties[id] || 0) !== after) normalized += 1;
+    targetGame.playerAgeSkillPenalties[id] = after;
+  });
+  let pruned = 0;
+  Object.keys(targetGame.playerAgeSkillPenalties).forEach(rawId => {
+    const id = Number(rawId || 0);
+    if(!id || !seen.has(id)){
+      delete targetGame.playerAgeSkillPenalties[rawId];
+      pruned += 1;
+    }
+  });
+  return { cleared, normalized, pruned };
+}
 function ageDecayRollForPlayer(player, season){
   const min = Math.max(0, Math.round(Number(PLAYER_AGE_DECAY_MIN_ANNUAL || 0)));
   const max = Math.max(min, Math.round(Number(PLAYER_AGE_DECAY_MAX_ANNUAL || min)));
@@ -6326,15 +6370,18 @@ function ageDecayRollForPlayer(player, season){
   return min + hashNumber(`age-decay-${season}-${player?.id || 0}-${player?.age || 0}`, (max - min) + 1);
 }
 function applySeasonalAgeSkillDecay(season){
-  if(!game || !PLAYER_AGE_DECAY_ENABLED) return { players:0, added:0, maxPenalty:0 };
+  if(!game || !PLAYER_AGE_DECAY_ENABLED) return { players:0, added:0, maxPenalty:0, cleared:0 };
   game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   let players = 0;
   let added = 0;
   let maxPenalty = 0;
+  let cleared = 0;
   seed.players.forEach(player => {
     const age = Math.round(Number(player.age || 18));
     if(age < PLAYER_AGE_DECAY_START_AGE){
-      game.playerAgeSkillPenalties[player.id] = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+      const before = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+      if(before > 0) cleared += 1;
+      game.playerAgeSkillPenalties[player.id] = 0;
       return;
     }
     const roll = ageDecayRollForPlayer(player, season);
@@ -6344,10 +6391,10 @@ function applySeasonalAgeSkillDecay(season){
     if(after > before){ players += 1; added += (after - before); }
     maxPenalty = Math.max(maxPenalty, after);
   });
-  return { players, added, maxPenalty };
+  return { players, added, maxPenalty, cleared };
 }
 function applySeasonalAging(){
-  if(!game) return { aged:0, ageDecay:{ players:0, added:0, maxPenalty:0 } };
+  if(!game) return { aged:0, ageDecay:{ players:0, added:0, maxPenalty:0, cleared:0 } };
   let count = 0;
   seed.players.forEach(player => {
     player.age = Math.max(15, Number(player.age || 18) + 1);
@@ -6558,6 +6605,7 @@ function initializeFreePlayerState(players=[]){
     game.playerCondition[p.id] = 5;
     game.playerMorale[p.id] = 5;
     game.playerSkillBoosts[p.id] = game.playerSkillBoosts[p.id] || {};
+    game.playerAgeSkillPenalties[p.id] = 0;
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     game.playerStats[p.id] = game.playerStats[p.id] || createEmptyPlayerStat(p);
     normalizePlayerStatRecord(game.playerStats[p.id]);

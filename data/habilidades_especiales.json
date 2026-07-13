@@ -1,8 +1,8 @@
 {
-  "version": "V7.17",
+  "version": "V7.18",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.17: partidos, goles, asistencias, rendimiento de temporada y ojeo aumentan el porcentaje de la cláusula ofrecido por otros clubes; se mantiene el mínimo de 6 partidos para ofrecer manualmente al jugador.",
+  "caracteristicas_version": "V7.18: elimina automáticamente penalizaciones por edad incorrectas en jugadores menores de 32 años y evita que juveniles, regenerados o jugadores nuevos hereden valores residuales.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

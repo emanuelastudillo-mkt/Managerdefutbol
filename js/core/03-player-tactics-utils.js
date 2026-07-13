@@ -349,8 +349,14 @@ function hashNumber(seedValue, max){
 }
 function playerAgeSkillPenalty(playerOrId){
   if(!PLAYER_AGE_DECAY_ENABLED || !game) return 0;
-  const id = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId);
+  const providedPlayer = typeof playerOrId === 'object' ? playerOrId : null;
+  const id = Number(providedPlayer?.id || playerOrId);
   if(!id) return 0;
+  const player = providedPlayer || (seed?.players || []).find(item => Number(item?.id) === id) || (game?.marketPlayers || []).find(item => Number(item?.id) === id) || null;
+  if(player && Math.round(Number(player.age || 18)) < PLAYER_AGE_DECAY_START_AGE){
+    if(game.playerAgeSkillPenalties && Number(game.playerAgeSkillPenalties[id] || 0) !== 0) game.playerAgeSkillPenalties[id] = 0;
+    return 0;
+  }
   const value = Math.round(Number(game?.playerAgeSkillPenalties?.[id] || 0));
   return clamp(value, 0, PLAYER_AGE_DECAY_CAP);
 }
@@ -1389,6 +1395,10 @@ function createEmergencyBotPlayer(club, group, report){
   player.emergencyBot = true;
   normalizeEmergencyPlayerEconomics(player);
   seed.players.push(player);
+  if(game){
+    game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+    game.playerAgeSkillPenalties[player.id] = 0;
+  }
   if(report) report.created += 1;
   ensurePlayerStateForAll();
   return player;

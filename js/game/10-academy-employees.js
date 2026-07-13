@@ -870,6 +870,8 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerCondition[official.id] = 70;
   game.playerMorale[official.id] = PLAYER_MORALE_START;
   game.playerSkillBoosts[official.id] = {};
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+  game.playerAgeSkillPenalties[official.id] = 0;
   game.trainingPlan[official.id] = safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL);
   game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
   player.status = 'promoted';

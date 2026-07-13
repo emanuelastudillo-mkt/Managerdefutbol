@@ -125,7 +125,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.04');
+const APP_VERSION = configValue('version', 'V7.05');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -655,6 +655,16 @@ const BANK_LOANS_ENABLED = configBoolean('economia.banco.activo', true);
 const BANK_LOAN_BANKS = Array.isArray(configValue('economia.banco.bancos', [])) ? configValue('economia.banco.bancos', []).filter(item => item && item.nombre).map((item, index) => ({ id:index + 1, name:String(item.nombre), interest:configNumber(`economia.banco.bancos.${index}.interes`, Number(item.interes || 0.40), 0, 5) })) : [];
 const BANK_LOAN_TIERS = Array.isArray(configValue('economia.banco.montos', [])) ? configValue('economia.banco.montos', []).filter(item => Number(item?.monto) > 0).map((item, index) => ({ id:index + 1, amount:Math.round(Number(item.monto || 0)), prestigeCost:Math.max(0, Math.round(Number(item.prestigio || 0))) })) : [];
 const BANK_LOAN_TERMS = Array.isArray(configValue('economia.banco.plazosSemanas', [])) ? configValue('economia.banco.plazosSemanas', []).map(value => Math.max(1, Math.round(Number(value || 0)))).filter(Boolean) : [24,48,172];
+
+const LEAGUE_RESULT_PAYMENTS_ENABLED = configBoolean('economia.pagosPorResultadoLiga.activo', true);
+const LEAGUE_RESULT_REPUTATION_MIN = configNumber('economia.pagosPorResultadoLiga.reputacionMinima', 10, 1, 100);
+const LEAGUE_RESULT_REPUTATION_MAX = Math.max(LEAGUE_RESULT_REPUTATION_MIN, configNumber('economia.pagosPorResultadoLiga.reputacionMaxima', 100, LEAGUE_RESULT_REPUTATION_MIN, 100));
+const LEAGUE_RESULT_WIN_PER_REPUTATION = Math.max(0, configNumber('economia.pagosPorResultadoLiga.pagoVictoriaPorPuntoReputacion', 8000, 0));
+const LEAGUE_RESULT_DRAW_PER_REPUTATION = Math.max(0, configNumber('economia.pagosPorResultadoLiga.pagoEmpatePorPuntoReputacion', 3000, 0));
+const LEAGUE_RESULT_VARIATION_MIN = configNumber('economia.pagosPorResultadoLiga.variacionMinima', 0.75, 0, 10);
+const LEAGUE_RESULT_VARIATION_MAX = Math.max(LEAGUE_RESULT_VARIATION_MIN, configNumber('economia.pagosPorResultadoLiga.variacionMaxima', 1.25, LEAGUE_RESULT_VARIATION_MIN, 10));
+const LEAGUE_RESULT_PAYMENT_ROUNDING = Math.max(1, Math.round(configNumber('economia.pagosPorResultadoLiga.redondeo', 5000, 1)));
+const LEAGUE_RESULT_LOSS_PAYMENT = Math.max(0, Math.round(configNumber('economia.pagosPorResultadoLiga.pagoDerrota', 0, 0)));
 
 const MONTHLY_EXPENSES_ENABLED = configBoolean('economia.gastosMensuales.activo', true);
 const MONTHLY_PROFIT_TAX_RATE = configNumber('economia.gastosMensuales.impuestoGananciasPct', 0.01, 0, 1);

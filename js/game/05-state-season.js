@@ -1771,6 +1771,7 @@ function inspectGameIntegrity(){
   const invalidOverrides = [];
   Object.entries(overrides).forEach(([clubId, override]) => {
     const club = (seed.clubs || []).find(item => Number(item.id) === Number(clubId));
+    if(club && isSpecialCompetitionOnlyClub(club)) return;
     const division = divisionsById[String(override?.divisionId || '')];
     if(!club || !division){
       invalidOverrides.push({ clubId, clubName:club?.name || 'Club inexistente', divisionId:override?.divisionId || '' });
@@ -2624,7 +2625,13 @@ function normalizeGame(saved){
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
   normalized.preseasonFriendliesPlayed = Number.isFinite(normalized.preseasonFriendliesPlayed) ? normalized.preseasonFriendliesPlayed : 0;
   normalized.pendingFriendlyOpponentId = Number.isFinite(normalized.pendingFriendlyOpponentId) ? normalized.pendingFriendlyOpponentId : 0;
-  normalized.clubDivisionOverrides = normalized.clubDivisionOverrides || {};
+  const rawDivisionOverrides = (normalized.clubDivisionOverrides && typeof normalized.clubDivisionOverrides === 'object' && !Array.isArray(normalized.clubDivisionOverrides)) ? normalized.clubDivisionOverrides : {};
+  normalized.clubDivisionOverrides = sanitizeClubDivisionOverrides(rawDivisionOverrides);
+  const removedSpecialOverrides = Object.keys(rawDivisionOverrides).length !== Object.keys(normalized.clubDivisionOverrides).length;
+  const economySeasonKey = String(Math.max(1, Math.round(Number(normalized.seasonNumber || 1))));
+  const hadLeagueEconomySnapshot = Boolean(normalized.leagueSeasonEconomy?.seasons?.[economySeasonKey]);
+  if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(normalized, normalized.seasonNumber, { reason:'save_migration' });
+  if(removedSpecialOverrides || !hadLeagueEconomySnapshot) normalized._needsAutosave = true;
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
   normalized.managerSharedProfile = (normalized.managerSharedProfile && typeof normalized.managerSharedProfile === 'object' && !Array.isArray(normalized.managerSharedProfile)) ? {
     version:String(normalized.managerSharedProfile.version || 'V6.24'),
@@ -3142,6 +3149,7 @@ function newGame(selectedClubId, options={}){
     preseasonFriendliesPlayed: 0,
     pendingFriendlyOpponentId: 0,
     clubDivisionOverrides: {},
+    leagueSeasonEconomy: { version:1, seasons:{} },
     managerStats: ensureManagerCurrentSeasonStats(createInitialManagerStats(), 1, selectedClubId),
     gameOver: null,
     messages: [],
@@ -3233,6 +3241,7 @@ function newGame(selectedClubId, options={}){
   ensurePlayerStateForAll();
   repairBotRosters({ reason: options.founderMode ? 'founder_new_game' : (options.challengeId ? 'challenge_new_game' : 'new_game') });
   if(options.challengeId && typeof applyChallengePreset === 'function') applyChallengePreset(options.challengeId, selectedClubId);
+  if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(game, 1, { force:true, reason:'new_game' });
   generateOpeningSponsorOffers(true);
   if(options.founderMode){
     ensureFounderGoalsState();
@@ -3248,6 +3257,10 @@ function newGame(selectedClubId, options={}){
     pushGameMessage({ type:'reto', title:'Reto activo', body:'La partida empezó desde un escenario predeterminado. Revisá las reglas del reto en Inicio antes de avanzar.', priority:'high' });
   } else {
     pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
+  }
+  const initialLeagueEconomyText = typeof leagueSeasonEconomyMessageForClub === 'function' ? leagueSeasonEconomyMessageForClub(selectedClubId, 1) : '';
+  if(initialLeagueEconomyText){
+    pushGameMessage({ type:'finanzas', title:'Economía anual de la liga', body:initialLeagueEconomyText, priority:'normal', id:`league-economy-1-${selectedClubId}` });
   }
   if(newClubSpecialReset?.returned){
     pushGameMessage({ type:'especial', title:'Cartas activas devueltas', body:`Al comenzar en un nuevo club, ${newClubSpecialReset.returned} carta(s) activa(s) volvieron a la reserva. Los usos consumidos se conservaron.`, priority:'normal' });
@@ -4427,8 +4440,17 @@ function applyClubDivisionOverrides(overrides={}){
     setClubIntegrityDivision(club, division);
   });
 }
+function sanitizeClubDivisionOverrides(overrides={}){
+  if(!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) return {};
+  return Object.fromEntries(Object.entries(overrides).filter(([clubId]) => {
+    const club = (seed?.clubs || []).find(item => Number(item.id) === Number(clubId));
+    return !(club && isSpecialCompetitionOnlyClub(club));
+  }));
+}
 function snapshotClubDivisionOverrides(){
-  return Object.fromEntries(seed.clubs.map(c => [c.id, { divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única' }]));
+  return Object.fromEntries((seed.clubs || [])
+    .filter(club => !isSpecialCompetitionOnlyClub(club))
+    .map(club => [club.id, { divisionId:club.divisionId || 'default', divisionName:club.divisionName || 'Liga única' }]));
 }
 function playoffRoundMatchdayLabel(index){
   const regularCount = regularFixtureLength();
@@ -4641,7 +4663,7 @@ const CLUB_WORLD_CUP_CONFIG = {
     { name:'Olimpia', country:'Paraguay', city:'Asunción', reputation:64, primaryColor:'#FFFFFF' },
     { name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:68, primaryColor:'#F7B5CD' },
     { name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731' },
-    { name:'Wydad Casablanca', country:'China', city:'Casablanca', reputation:57, primaryColor:'#C8102E' },
+    { name:'Wydad Casablanca', country:'Marruecos', city:'Casablanca', reputation:57, primaryColor:'#C8102E' },
     { name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:63, primaryColor:'#E60012' }
   ],
   qualifiers:[
@@ -4699,9 +4721,11 @@ function ensureClubWorldCupInvitedData(){
       club.clubWorldCupInvite = true;
       club.specialCompetitionOnly = true;
       club.noOwnStadium = true;
-      club.divisionId = club.divisionId || cfg.invitedDivisionId;
-      club.divisionName = club.divisionName || cfg.invitedDivisionName;
-      club.divisionOrder = club.divisionOrder || 99;
+      club.country = team.country || club.country || '';
+      club.city = team.city || club.city || '';
+      club.divisionId = cfg.invitedDivisionId;
+      club.divisionName = cfg.invitedDivisionName;
+      club.divisionOrder = 99;
     }
     const currentPlayers = playersByClub(club.id).filter(player => !player.retired && !player.sold);
     const needed = Math.max(0, 24 - currentPlayers.length);
@@ -6748,6 +6772,7 @@ function startNextSeason(selectedClubId){
     transferBudgetAddHistory('season_bonus', `Bonus de directiva: ${(transferUnlock.reasons || []).map(r => r.reason).filter(Boolean).join(' + ') || 'temporada anterior'}`, 0, transferUnlock.rate);
   }
   game.seasonYear = seasonYearForNumber(game.seasonNumber);
+  if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(game, game.seasonNumber, { force:true, reason:'season_start' });
   game.calendarVersion = SEASON_CALENDAR_VERSION;
   game.seasonInitialBudget = Math.max(0, Math.round(Number(game.budget || 0)));
   game.seasonBudgetStartBySeason = game.seasonBudgetStartBySeason || {};
@@ -6795,7 +6820,8 @@ function startNextSeason(selectedClubId){
   ensurePlayerStateForAll();
   balanceBotsForSeasonStart(nextClubId, previousBotBalanceRanks);
   generateOpeningSponsorOffers(true);
-  pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.`, priority:'normal' });
+  const leagueEconomyText = typeof leagueSeasonEconomyMessageForClub === 'function' ? leagueSeasonEconomyMessageForClub(game.selectedClubId, game.seasonNumber) : '';
+  pushGameMessage({ type:'deportivo', title:`Temporada ${game.seasonNumber} iniciada`, body:`Comienza una nueva temporada con ${clubName(game.selectedClubId)}.${leagueEconomyText ? ` ${leagueEconomyText}` : ''}`, priority:'normal' });
   if(stadiumCapacityDecay && Number(stadiumCapacityDecay.lost || 0) > 0){
     pushGameMessage({ type:'estadio', title:'Deterioro anual del estadio', body:`El estadio de ${clubName(stadiumCapacityDecay.clubId)} perdió ${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.lost)} lugares por deterioro estructural anual (${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.before)} → ${new Intl.NumberFormat('es-AR').format(stadiumCapacityDecay.after)}).`, priority:'normal' });
   }

@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.04',
-    nombre: 'Balance centralizado de modificadores V7.04',
+    version: 'V7.05',
+    nombre: 'Balance centralizado de modificadores V7.05',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -43,6 +43,20 @@ window.GAME_BALANCE_MODIFICADORES = {
 
   moral: {
     perdidaPlantelPorDespedirJugador: 1
+  },
+
+  economia: {
+    pagosPorResultadoLiga: {
+      activo: true,
+      reputacionMinima: 10,
+      reputacionMaxima: 100,
+      pagoVictoriaPorPuntoReputacion: 8000,
+      pagoEmpatePorPuntoReputacion: 3000,
+      variacionMinima: 0.75,
+      variacionMaxima: 1.25,
+      redondeo: 5000,
+      pagoDerrota: 0
+    }
   },
 
   lesiones: {

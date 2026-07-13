@@ -2454,30 +2454,124 @@ function paySeasonSalaries(){
   recordBudgetChange(-total, `Pago anual de sueldos de ${clubName(game.selectedClubId)}`, { type:'season_salary' });
   return total;
 }
+function normalizeLeagueSeasonEconomyState(state={}){
+  const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const seasons = source.seasons && typeof source.seasons === 'object' && !Array.isArray(source.seasons) ? source.seasons : {};
+  return { version:1, seasons };
+}
+function leagueResultRoundMoney(value){
+  const step = Math.max(1, Number(LEAGUE_RESULT_PAYMENT_ROUNDING || 1));
+  return Math.max(0, Math.round(Number(value || 0) / step) * step);
+}
+function leagueSeasonEconomyDivisionSnapshot(division, season){
+  if(!division?.id) return null;
+  const clubs = (seed?.clubs || []).filter(club => {
+    if(typeof isSpecialCompetitionOnlyClub === 'function' && isSpecialCompetitionOnlyClub(club)) return false;
+    return String(club?.divisionId || '') === String(division.id);
+  });
+  if(!clubs.length) return null;
+  const total = clubs.reduce((sum, club) => sum + Number(typeof clubPrestigeValue === 'function' ? clubPrestigeValue(club) : (club?.reputation || club?.prestigio || 0)), 0);
+  const reputation = Number((total / clubs.length).toFixed(2));
+  const effectiveReputation = clamp(reputation, LEAGUE_RESULT_REPUTATION_MIN, LEAGUE_RESULT_REPUTATION_MAX);
+  const winAverageRaw = effectiveReputation * LEAGUE_RESULT_WIN_PER_REPUTATION;
+  const drawAverageRaw = effectiveReputation * LEAGUE_RESULT_DRAW_PER_REPUTATION;
+  return {
+    season:Number(season || 1),
+    divisionId:String(division.id),
+    divisionName:String(division.name || division.id),
+    country:String(division.country || division.pais || ''),
+    clubCount:clubs.length,
+    reputation,
+    effectiveReputation:Number(effectiveReputation.toFixed(2)),
+    victoryAverage:leagueResultRoundMoney(winAverageRaw),
+    victoryMin:leagueResultRoundMoney(winAverageRaw * LEAGUE_RESULT_VARIATION_MIN),
+    victoryMax:leagueResultRoundMoney(winAverageRaw * LEAGUE_RESULT_VARIATION_MAX),
+    drawAverage:leagueResultRoundMoney(drawAverageRaw),
+    drawMin:leagueResultRoundMoney(drawAverageRaw * LEAGUE_RESULT_VARIATION_MIN),
+    drawMax:leagueResultRoundMoney(drawAverageRaw * LEAGUE_RESULT_VARIATION_MAX),
+    lossPayment:Math.max(0, Number(LEAGUE_RESULT_LOSS_PAYMENT || 0))
+  };
+}
+function ensureLeagueSeasonEconomyForSeason(targetGame=game, season=targetGame?.seasonNumber || 1, options={}){
+  if(!targetGame) return null;
+  targetGame.leagueSeasonEconomy = normalizeLeagueSeasonEconomyState(targetGame.leagueSeasonEconomy || {});
+  const seasonKey = String(Math.max(1, Math.round(Number(season || 1))));
+  const existing = targetGame.leagueSeasonEconomy.seasons[seasonKey];
+  if(existing && !options.force) return existing;
+  const divisions = {};
+  (seed?.divisions || []).forEach(division => {
+    const snapshot = leagueSeasonEconomyDivisionSnapshot(division, Number(seasonKey));
+    if(snapshot) divisions[String(division.id)] = snapshot;
+  });
+  const entry = {
+    season:Number(seasonKey),
+    createdAt:new Date().toISOString(),
+    reason:String(options.reason || 'season_start'),
+    divisions
+  };
+  targetGame.leagueSeasonEconomy.seasons[seasonKey] = entry;
+  return entry;
+}
+function leagueSeasonEconomyEntry(season=game?.seasonNumber || 1){
+  return ensureLeagueSeasonEconomyForSeason(game, season) || null;
+}
+function leagueSeasonEconomyForDivision(divisionId, season=game?.seasonNumber || 1){
+  const entry = leagueSeasonEconomyEntry(season);
+  return entry?.divisions?.[String(divisionId || '')] || null;
+}
+function leagueEconomyDivisionIdForMatch(match){
+  if(match?.clubWorldCup || String(match?.divisionId || '') === 'club-world-cup') return '';
+  const explicit = String(match?.divisionId || '').trim();
+  if(explicit && (seed?.divisions || []).some(division => String(division.id) === explicit)) return explicit;
+  const club = (seed?.clubs || []).find(item => Number(item.id) === Number(game?.selectedClubId));
+  return String(club?.divisionId || '');
+}
+function leagueSeasonEconomyMessageForClub(clubId=game?.selectedClubId, season=game?.seasonNumber || 1){
+  const club = (seed?.clubs || []).find(item => Number(item.id) === Number(clubId));
+  const snapshot = leagueSeasonEconomyForDivision(club?.divisionId, season);
+  if(!snapshot) return '';
+  return `La reputación anual de ${snapshot.divisionName} quedó en ${snapshot.reputation}; una victoria paga entre ${formatMoney(snapshot.victoryMin)} y ${formatMoney(snapshot.victoryMax)}, y un empate entre ${formatMoney(snapshot.drawMin)} y ${formatMoney(snapshot.drawMax)}.`;
+}
+function leagueResultPaymentForMatch(match, gf, gc){
+  if(!LEAGUE_RESULT_PAYMENTS_ENABLED) return { amount:0, result:'disabled', snapshot:null };
+  const divisionId = leagueEconomyDivisionIdForMatch(match);
+  const snapshot = divisionId ? leagueSeasonEconomyForDivision(divisionId) : null;
+  if(!snapshot) return { amount:0, result:'unavailable', snapshot:null };
+  const variation = rnd(LEAGUE_RESULT_VARIATION_MIN, LEAGUE_RESULT_VARIATION_MAX);
+  if(gf > gc) return { amount:leagueResultRoundMoney(snapshot.effectiveReputation * LEAGUE_RESULT_WIN_PER_REPUTATION * variation), result:'victory', snapshot };
+  if(gf === gc) return { amount:leagueResultRoundMoney(snapshot.effectiveReputation * LEAGUE_RESULT_DRAW_PER_REPUTATION * variation), result:'draw', snapshot };
+  return { amount:Math.max(0, Math.round(Number(snapshot.lossPayment || 0))), result:'loss', snapshot };
+}
 function applyEconomyResult(match){
   noteOwnMatchForMonthlyExpenses(match);
-  const isHome = match.homeId === game.selectedClubId;
-  const gf = isHome ? match.homeGoals : match.awayGoals;
-  const gc = isHome ? match.awayGoals : match.homeGoals;
-  const club = seed.clubs.find(c=>c.id===game.selectedClubId);
-  const multiplier = Number.isFinite(club?.prizeMultiplier) ? club.prizeMultiplier : divisionPrizeMultiplier(club?.divisionName || 'Liga Profesional');
-  let delta = 0;
-  if(gf > gc) delta = Math.round(rnd(300000, 500000));
-  else if(gf === gc) delta = Math.round(rnd(100000, 200000));
-  else delta = Math.round(rnd(-100000, 50000));
-  delta = Math.round(delta * multiplier);
-  const ticketRevenue = isHome ? Math.round(Number(match?.matchContext?.ticketRevenue || 0)) : 0;
-  const totalDelta = delta + ticketRevenue;
-  const concept = ticketRevenue > 0 ? 'Resultado de partido + recaudación de entradas' : 'Resultado de partido';
+  if(match?.clubWorldCup || String(match?.divisionId || '') === 'club-world-cup') return 0;
+  const isHome = Number(match.homeId) === Number(game.selectedClubId);
+  const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
+  const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);
+  const payment = leagueResultPaymentForMatch(match, gf, gc);
+  const resultPayment = Math.max(0, Math.round(Number(payment.amount || 0)));
+  const ticketRevenue = isHome ? Math.max(0, Math.round(Number(match?.matchContext?.ticketRevenue || 0))) : 0;
+  const totalDelta = resultPayment + ticketRevenue;
+  if(totalDelta <= 0) return 0;
+  const resultLabel = payment.result === 'victory' ? 'Victoria' : payment.result === 'draw' ? 'Empate' : payment.result === 'loss' ? 'Derrota' : 'Partido';
+  const concept = resultPayment > 0 && ticketRevenue > 0
+    ? `${resultLabel} + recaudación de entradas`
+    : resultPayment > 0 ? `Pago por ${resultLabel.toLowerCase()}` : 'Recaudación de entradas';
   recordBudgetChange(totalDelta, concept, {
-    matchId: match.id,
-    multiplier,
+    matchId:match.id,
+    divisionId:payment.snapshot?.divisionId || match?.divisionId || '',
+    divisionName:payment.snapshot?.divisionName || match?.divisionName || '',
+    leagueReputation:payment.snapshot?.reputation ?? null,
+    effectiveLeagueReputation:payment.snapshot?.effectiveReputation ?? null,
+    resultPayment,
+    resultType:payment.result,
     ticketRevenue,
     ticketPrice:match?.matchContext?.ticketPrice || 0,
     totalFans:match?.matchContext?.totalFans || 0,
     rivalPrestige:match?.matchContext?.rivalPrestige || 0,
     rivalPrestigeAttendanceBonusPct:match?.matchContext?.rivalPrestigeAttendanceBonusPct || 0
   });
+  return totalDelta;
 }
 function rainFieldDeteriorationForWeather(weather=''){
   if(!RAIN_FIELD_DETERIORATION_ENABLED) return 0;

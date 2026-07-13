@@ -1,48 +1,57 @@
-# Fútbol Manager MVP - V7.04
+# Fútbol Manager MVP - V7.05
 
-## V7.04 - Impacto de despedir jugadores
+## V7.05 - Economía anual por reputación de liga
 
-Esta versión parte de V7.03 y conserva el sistema de guardado doble seguro.
+Esta versión parte de V7.04 y conserva el sistema de guardado doble seguro.
 
-### Moral y cohesión al despedir
+### Reputación económica anual de cada liga
 
-Al despedir a un jugador del primer equipo se aplican inmediatamente estas consecuencias:
+Al comenzar cada temporada se calcula y guarda la reputación media de cada división doméstica usando la reputación de todos sus clubes en ese momento. El valor permanece fijo durante toda la temporada y se vuelve a calcular después de los ascensos, descensos y cambios de reputación, al iniciar el año siguiente.
 
-- La moral de cada jugador que permanece en el plantel baja 1 punto.
-- La cohesión del club baja 1 punto.
-- Los valores respetan sus límites: moral entre 1 y 99, cohesión entre 0 y 100.
-- La penalización se ejecuta sólo después de confirmar el despido y completar la salida del jugador.
-- No se aplica cuando el despido se cancela o cuando el plantel mínimo impide realizarlo.
+La fórmula activa es:
 
-Los valores pueden editarse desde `balance-modificadores.js`:
+- Victoria promedio: reputación de liga × $8.000.
+- Empate promedio: reputación de liga × $3.000.
+- Variación por partido: entre 75% y 125% del valor promedio.
+- Derrota: $0 por resultado.
+- Redondeo: múltiplos de $5.000.
+- Reputación utilizada: mínimo 10 y máximo 100.
 
-- `moral.perdidaPlantelPorDespedirJugador`
-- `cohesion.perdidaPorDespedirJugador`
+Una liga con reputación 50 paga aproximadamente:
 
-La moral del jugador despedido no se utiliza para calcular esta penalización: el efecto representa la reacción de los compañeros que continúan en el club.
+- Victoria: $300.000 a $500.000.
+- Empate: $115.000 a $190.000, según redondeo.
+- Derrota: $0.
 
-### Reglas de cohesión vigentes
+La recaudación de entradas continúa calculándose por separado. Por lo tanto, una derrota como local puede generar ingresos de entradas, pero nunca un pago positivo o negativo por el resultado deportivo.
 
-- Fichar un jugador: -2.
-- Vender un jugador: -3.
-- Despedir un jugador: -1.
-- Ofrecer contrato profesional a un juvenil: +3.
+Los valores pueden editarse desde `balance-modificadores.js`, dentro de `economia.pagosPorResultadoLiga`.
 
-### Código especial
+### Mundial de Clubes
 
-- El código vigente es `PUNTOS20000`.
-- Entrega 20.000 puntos de habilidad.
-- Puede reclamarse una sola vez por partida.
+El Mundial de Clubes queda excluido del pago por resultado de liga. Conserva exclusivamente sus premios propios por participación y avance de fase.
 
-### Guardado y compatibilidad
+### Integridad de divisiones
 
-- Se conserva el sistema de dos copias introducido en V7.02.
-- Carrera 1 mantiene `slot:career:1` y `main`.
-- Las demás carreras y el reto mantienen una copia principal y un respaldo propio.
-- No se modificó la estructura de los guardados existentes.
-- Las nuevas penalizaciones se aplican sólo a despidos realizados después de instalar V7.04.
+Los clubes invitados exclusivamente al Mundial de Clubes ya no se guardan dentro de `clubDivisionOverrides`, porque no pertenecen a una división doméstica cargada.
 
-### Archivos modificados en V7.04
+- El verificador ignora correctamente estos invitados.
+- Las ocho entradas antiguas se eliminan automáticamente al cargar una partida.
+- Los overrides nuevos sólo incluyen clubes de ligas domésticas.
+- La advertencia “Overrides de división inconsistentes” se mantiene para errores reales.
+
+También se corrigió el país de Wydad Casablanca de China a Marruecos en la lista interna de invitados.
+
+### Guardado y migración
+
+Las partidas anteriores reciben una instantánea económica para la temporada que esté en curso al cargarse por primera vez en V7.05. Desde la temporada siguiente, el cálculo se realiza normalmente al inicio de cada año.
+
+Se conserva el sistema de dos copias de guardado:
+
+- Carrera 1: `slot:career:1` y `main`.
+- Otros slots: copia principal y respaldo dedicado.
+
+### Archivos modificados en V7.05
 
 - `README.md`
 - `index.html`
@@ -50,9 +59,9 @@ La moral del jugador despedido no se utiliza para calcular esta penalización: e
 - `balance-modificadores.js`
 - `data/retos_manager.json`
 - `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/ui/12-modals.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
 
 ### Compatibilidad de partidas
 
-**V7.04 no rompe partidas anteriores.** Las partidas V7.03 y anteriores mantienen presupuesto, planteles, moral, cohesión y progreso. No se recalculan despidos anteriores.
+**V7.05 no rompe partidas anteriores.** Mantiene planteles, presupuesto, calendario, reputaciones y resultados. Sólo agrega la instantánea económica de liga y elimina overrides falsos de clubes exclusivos del Mundial de Clubes.

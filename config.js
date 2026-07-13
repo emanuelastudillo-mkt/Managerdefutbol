@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.04',
+  version: 'V7.05',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -295,6 +295,17 @@ window.GAME_CONFIG = {
     maximoBoostBotPorHabilidad: 18
   },
   economia: {
+    pagosPorResultadoLiga: {
+      activo: true,
+      reputacionMinima: 10,
+      reputacionMaxima: 100,
+      pagoVictoriaPorPuntoReputacion: 8000,
+      pagoEmpatePorPuntoReputacion: 3000,
+      variacionMinima: 0.75,
+      variacionMaxima: 1.25,
+      redondeo: 5000,
+      pagoDerrota: 0
+    },
     gastosMensuales: {
       activo: true,
       impuestoGananciasPct: 0.01,

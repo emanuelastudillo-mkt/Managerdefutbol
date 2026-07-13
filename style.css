@@ -3878,7 +3878,56 @@ th{
 }
 .captain-marker.inline{
   position:relative;
-  top:-1px;
+  top:0;
+}
+.tactic-player-name-status{
+  display:inline-flex;
+  align-items:center;
+  min-width:0;
+  max-width:100%;
+  vertical-align:middle;
+}
+.tactic-player-name-label{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.tactic-player-status-icons{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:4px;
+  flex:0 0 auto;
+  margin-left:6px;
+  vertical-align:middle;
+}
+.tactic-player-status-icons .scouted-eye,
+.tactic-player-status-icons .captain-marker{
+  margin-left:0;
+}
+.player-chip .tactic-player-status-icons{
+  gap:3px;
+  margin-left:4px;
+}
+.player-chip .tactic-player-name-status{
+  display:grid;
+  justify-items:center;
+  gap:2px;
+  width:100%;
+}
+.player-chip .tactic-player-name-label{
+  max-width:100%;
+}
+.player-chip .tactic-player-status-icons{
+  margin-left:0;
+}
+.player-chip .tactic-player-status-icons .scouted-eye,
+.player-chip .tactic-player-status-icons .captain-marker{
+  width:16px;
+  height:16px;
+  min-width:16px;
+  font-size:9px;
 }
 
 .tactic-captain-card{
@@ -3939,7 +3988,7 @@ th{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.tactic-captain-identity span{
+.tactic-captain-identity > span{
   color:#94a3b8;
   font-size:12px;
 }
@@ -3954,7 +4003,7 @@ th{
 }
 .tactic-captain-metrics{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:7px;
 }
 .tactic-captain-metrics > div{
@@ -3974,11 +4023,33 @@ th{
   color:#94a3b8;
   font-weight:900;
 }
-.tactic-captain-metrics .value-circle,
-.tactic-captain-metrics .condition-wear-wrap,
-.tactic-captain-metrics .condition-wear-max{
+.tactic-captain-metrics .value-circle{
   transform:scale(.86);
   transform-origin:center;
+}
+.tactic-captain-metrics .condition-wear-wrap{
+  width:34px;
+  min-width:34px;
+  height:34px;
+  gap:0;
+  justify-content:center;
+  justify-self:center;
+  transform:none;
+}
+.tactic-captain-metrics .condition-wear-wrap small{
+  display:none;
+}
+.tactic-captain-metrics .condition-wear-max{
+  left:0;
+  right:0;
+  top:0;
+  bottom:0;
+  margin:auto;
+  transform:scale(.86);
+  transform-origin:center;
+}
+.tactic-captain-identity strong .tactic-player-name-status{
+  width:100%;
 }
 .tactic-captain-progress{
   display:grid;

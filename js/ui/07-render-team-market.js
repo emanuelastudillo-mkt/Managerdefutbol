@@ -796,9 +796,24 @@ function captainSelectOptionsMarkup(){
   if(!starters.length) return '<option value="0">Sin titulares disponibles</option>';
   return starters.map(player => {
     const current = captaincyValue(player.id);
-    const maximum = captaincyMaximum(player);
-    return `<option value="${player.id}" ${selected === Number(player.id) ? 'selected' : ''}>${escapeHtml(playerLastName(player.name))} · ${roleBadge(player.position)} · Media ${visibleOverall(player)} · Cap. ${current}/${maximum}%</option>`;
+    return `<option value="${player.id}" ${selected === Number(player.id) ? 'selected' : ''}>${escapeHtml(playerLastName(player.name))} · ${roleBadge(player.position)} · Media ${visibleOverall(player)} · Capitanía ${current}%</option>`;
   }).join('');
+}
+function tacticPlayerStatusIconsMarkup(player){
+  if(!player) return '';
+  const eye = playerScoutingEyeMarkup(player);
+  const captain = Number(game?.tactic?.captainId || 0) === Number(player.id)
+    ? '<span class="captain-marker inline" title="Capitán" aria-label="Capitán">C</span>'
+    : '';
+  if(!eye && !captain) return '';
+  return `<span class="tactic-player-status-icons">${eye}${captain}</span>`;
+}
+function tacticPlayerNameWithStatus(player, lastNameOnly=false){
+  if(!player) return '';
+  const label = lastNameOnly
+    ? escapeHtml(playerLastName(player.name))
+    : (typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name || 'Jugador'));
+  return `<span class="tactic-player-name-status"><span class="tactic-player-name-label">${label}</span>${tacticPlayerStatusIconsMarkup(player)}</span>`;
 }
 function captaincyCircleMarkup(value){
   const clean = clamp(Math.round(Number(value || 0)), 0, 99);
@@ -813,9 +828,7 @@ function tacticCaptainCardMarkup(){
     return `<div class="card tactic-captain-card tactic-grid-card"><h3>Capitán</h3><p class="muted small">Armá el once titular para seleccionar al capitán.</p></div>`;
   }
   const current = captaincyValue(captain.id);
-  const maximum = captaincyMaximum(captain);
   const matches = captaincyMatches(captain.id);
-  const nextGain = current < maximum ? Math.min(captaincyProgressGain(captain), maximum - current) : 0;
   const effect = captaincyEffectForPercent(current);
   const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value));
   return `<div class="card tactic-captain-card tactic-grid-card">
@@ -824,18 +837,16 @@ function tacticCaptainCardMarkup(){
     <select id="captainSelect" class="tactic-captain-select">${captainSelectOptionsMarkup()}</select>
     <div class="tactic-captain-profile">
       ${faceImg(captain, 'captain-face')}
-      <div class="tactic-captain-identity"><strong>${escapeHtml(playerLastName(captain.name))}</strong><span>${roleBadge(captain.position)} · Media ${visibleOverall(captain)}</span></div>
+      <div class="tactic-captain-identity"><strong>${tacticPlayerNameWithStatus(captain, true)}</strong><span>${roleBadge(captain.position)} · Media ${visibleOverall(captain)}</span></div>
       <div class="tactic-captain-performance">${captaincyCircleMarkup(current)}</div>
     </div>
     <div class="tactic-captain-metrics">
       <div><span>Forma</span>${conditionBar(captain.id)}</div>
       <div><span>Moral</span>${moraleBar(captain.id)}</div>
-      <div><span>Máximo</span><strong>${maximum}%</strong></div>
     </div>
     <div class="tactic-captain-progress">
       <div class="row"><span>Rendimiento como capitán</span><strong>${current}%</strong></div>
       <div class="project-progress"><span style="width:${current}%"></span></div>
-      <small class="muted">${current >= maximum ? 'Alcanzó su máximo posible.' : `Próximo partido estimado: +${nextGain}%. Máximo posible: ${maximum}%.`}</small>
     </div>
     <div class="tactic-captain-effect ${effect.moral < 0 || effect.cohesion < 0 ? 'negative' : 'positive'}"><span>Impacto actual postpartido</span><strong>Moral ${signed(effect.moral)} · Cohesión ${signed(effect.cohesion)}</strong></div>
   </div>`;
@@ -855,7 +866,7 @@ function renderTactics(){
     const chip = slot.player ? `
       <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(slot.player.id)} ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)} · Click para cambiar estado: ${escapeHtml(mentalityLabel(playerMentality(slot.player.id)))}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
-        <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}${Number(game.tactic.captainId || 0) === Number(slot.player.id) ? '<span class="captain-marker" title="Capitán">C</span>' : ''}</span>
+        <span class="player-chip-name">${tacticPlayerNameWithStatus(slot.player, true)}</span>
         ${mentalityMarker(slot.mentality)}
       </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
     return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
@@ -865,7 +876,7 @@ function renderTactics(){
     const fit = p ? playerFitsSlot(p, slot.slot) : false;
     return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
-      <span>${p ? `<strong>${playerNameWithScoutingEye(p)}${Number(game.tactic.captainId || 0) === Number(p.id) ? '<span class="captain-marker inline" title="Capitán">C</span>' : ''}</strong>` : '<span class="muted">Vacío</span>'}</span>
+      <span>${p ? `<strong>${tacticPlayerNameWithStatus(p)}</strong>` : '<span class="muted">Vacío</span>'}</span>
       <span class="lineup-center-cell">${p ? roleBadge(p.position) : '—'}</span>
       <span class="age-cell lineup-center-cell">${p ? (Number(p.age || 0) || '—') : '—'}</span>
       <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>

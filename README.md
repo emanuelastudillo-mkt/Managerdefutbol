@@ -1,4 +1,48 @@
-# Fútbol Manager MVP - V7.10
+# Fútbol Manager MVP - V7.11
+
+## V7.11 - Ajustes visuales del capitán
+
+Esta versión corrige la presentación del sistema de capitanía dentro de **Táctica** sin modificar su cálculo interno ni sus efectos después del partido.
+
+### Tarjeta del capitán
+
+- Se corrigió la alineación del círculo de **Forma**, incluso cuando el jugador acumula desgaste físico.
+- Se eliminó de la interfaz la línea `Próximo partido estimado` y cualquier referencia al máximo posible.
+- La tarjeta conserva foto, apellido, rol, media, forma, moral, rendimiento actual, partidos como capitán e impacto postpartido.
+- El máximo individual continúa existiendo internamente para limitar el progreso, pero permanece oculto al usuario.
+
+### Selector de capitán
+
+Cada titular muestra únicamente su progreso actual:
+
+```text
+Apellido · Rol · Media 72 · Capitanía 34%
+```
+
+El selector ya no revela el máximo posible de ningún jugador.
+
+### Insignias
+
+- Se agregó una insignia circular **C** al capitán.
+- La insignia aparece junto al icono de jugador ojeado.
+- Cuando un jugador es capitán y además fue ojeado, ambos iconos permanecen visibles.
+- Las insignias se muestran en la tarjeta del capitán, la pizarra y la lista de titulares.
+
+### Archivos principales modificados en V7.11
+
+- `README.md`
+- `index.html`
+- `style.css`
+- `config.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/ui/07-render-team-market.js`
+
+### Compatibilidad de partidas
+
+**V7.11 no rompe partidas anteriores.** Es un ajuste de interfaz y versión. El capitán elegido, su progreso acumulado y los efectos de moral y cohesión se conservan sin cambios.
+
+---
 
 ## V7.10 - Capitán, moral y cohesión
 
@@ -16,12 +60,10 @@ En **Táctica** se agregó una tarjeta de Capitán con:
 - Forma física.
 - Moral.
 - Visor porcentual de rendimiento como capitán.
-- Máximo posible de capitanía.
 - Partidos disputados como capitán.
-- Progreso estimado para el próximo partido.
 - Efecto actual sobre moral y cohesión.
 
-El capitán también aparece identificado con una insignia `C` en la pizarra y en la lista de titulares.
+El capitán aparece identificado con una insignia `C` en la tarjeta, la pizarra y la lista de titulares. Cuando también fue ojeado, la `C` se muestra junto al icono de ojo sin reemplazarlo.
 
 Si el capitán queda fuera del once por lesión, suspensión, cambio de formación o modificación manual, el juego selecciona automáticamente otro titular válido. El usuario puede cambiarlo desde el selector antes de confirmar el equipo.
 

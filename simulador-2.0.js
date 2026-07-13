@@ -1931,7 +1931,7 @@
       botOverexertionConditionDelta(match.homeId, homeGoals, awayGoals, starterIdsHome),
       botOverexertionConditionDelta(match.awayId, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0-v7.07-tacticas-bot-variables', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    return { ...match, played:true, engine:'simulador-2.0-v7.08-tacticas-bot-variables', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

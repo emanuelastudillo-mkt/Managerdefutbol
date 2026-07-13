@@ -1,16 +1,52 @@
-# Fútbol Manager MVP - V7.07
+# Fútbol Manager MVP - V7.08
 
-## V7.07 - Tácticas variables para equipos bots
+## V7.08 - Premios y fechas del Mundial de Clubes
 
-Esta versión parte de V7.06 y conserva el ranking de carrera, el guardado doble seguro, la economía anual por reputación de liga y las migraciones anteriores.
+Esta versión parte de la V7.07 definitiva y mantiene las tácticas variables de los equipos bots, el ranking online, el guardado doble seguro y las migraciones anteriores.
 
-La primera compilación de V7.07 incluía un cambio experimental en **Ofrecer a clubes**. Ese cambio fue retirado. La versión definitiva V7.07 modifica únicamente el comportamiento táctico de los equipos bots y conserva el funcionamiento de ofertas de V7.06.
+### Premio de participación
+
+El premio de participación de la Copa Mundial de Clubes de la FIFA sólo se acredita cuando el club dirigido figura realmente dentro de los 32 participantes de esa edición.
+
+La comprobación se realiza en dos niveles:
+
+- Al crear el torneo, antes de intentar pagar el premio.
+- Dentro de la función general de premios, para impedir pagos a clubes ajenos a la competición aunque otra llamada intente concederlos.
+
+Un club que no se clasificó no puede cobrar premios de participación, clasificación de grupos, cuartos, semifinal, subcampeonato o campeonato.
+
+### Reparación de partidas con un premio incorrecto
+
+Al cargar una partida anterior se revisa el premio de participación de la edición activa.
+
+Si el club dirigido no aparece entre los participantes pero recibió el premio por el error anterior:
+
+- Se elimina el registro de premio pagado.
+- Se descuenta del presupuesto el importe acreditado incorrectamente.
+- Se sincroniza el presupuesto del club.
+- Se registra el movimiento en el historial financiero.
+- Se agrega un mensaje explicando la corrección.
+- La reparación queda marcada para no ejecutarse dos veces.
+
+La corrección sólo se aplica cuando existe una lista válida de participantes y un pago de participación registrado para el club no clasificado.
+
+### Fechas de la fase de grupos
+
+Las tres fechas de grupos continúan programándose con cinco días de separación:
+
+- Fecha 1: fecha inicial del torneo.
+- Fecha 2: cinco días después.
+- Fecha 3: diez días después de la primera.
+
+La fecha autorizada para cada partido ahora se obtiene del calendario oficial guardado en el estado del Mundial, usando el número de jornada de grupos. De esta forma, una fecha incorrecta o antigua dentro de un partido no puede adelantar su simulación.
+
+Además, cada ejecución del calendario puede resolver como máximo una jornada pendiente de la fase de grupos. Esto impide que las fechas 1, 2 y 3 se simulen juntas al llegar a la primera fecha.
+
+Si una partida quedó atrasada respecto del calendario, las jornadas pendientes se procesan ordenadamente, una por cada avance, empezando siempre por la más antigua.
 
 ### Tácticas variables de equipos bots
 
-Los equipos controlados por el juego ya no utilizan todos la misma estructura táctica fija.
-
-Cada bot rota entre perfiles compatibles con la reputación de su club:
+Se conserva sin cambios la alternancia incorporada en V7.07 entre los perfiles:
 
 - Equilibrado.
 - Posesión.
@@ -21,85 +57,31 @@ Cada bot rota entre perfiles compatibles con la reputación de su club:
 - Defensivo.
 - Cauto.
 
-Cada perfil puede modificar:
-
-- Formación.
-- Estilo defensivo.
-- Estilo del mediocampo.
-- Estilo ofensivo.
-- Instrucciones cuando el equipo gana, empata o pierde.
-
-Los clubes de reputación alta priorizan perfiles ofensivos, de presión y posesión. Los clubes de reputación baja priorizan perfiles defensivos, cautos y de contraataque. Los clubes de reputación media pueden utilizar toda la variedad.
-
-La selección es determinista:
-
-- Cada club tiene un punto de inicio diferente.
-- El perfil cambia con el avance de las fechas.
-- Una misma partida conserva resultados tácticos consistentes al guardar y cargar.
-- El simulador rápido y el partido en vivo utilizan la misma táctica bot.
-- La observación de un rival muestra su formación estimada vigente.
-
-Configuración editable en `config.js`:
-
-```js
-equilibrioBots: {
-  tacticasVariadas: {
-    activo: true,
-    rotacionCadaFechas: 1
-  }
-}
-```
-
-Si `activo` se establece en `false`, se recupera la selección anterior basada únicamente en reputación:
-
-- Reputación alta: 4-3-3.
-- Reputación media: 4-4-2.
-- Reputación baja: 5-4-1.
-
 ### Ofrecer a clubes
 
-La función conserva exactamente la lógica de V7.06:
-
-- Requiere que el jugador haya recibido al menos un pago de sueldo.
-- Respeta los requisitos de partidos y rendimiento configurados.
-- Puede no encontrar clubes interesados.
-- Cuando encuentra una propuesta, la genera inmediatamente.
-- Conserva el cooldown general de tres turnos.
-
-No se programan ofertas garantizadas para fechas futuras.
-
-Al cargar una partida creada con la compilación retirada de V7.07, cualquier registro técnico de búsqueda garantizada se descarta y no produce ofertas posteriores.
+Se mantiene la lógica original restaurada en V7.07. No existen ofertas garantizadas para fechas futuras.
 
 ### Ranking online y Cloudflare
 
-No se modificó la API del ranking. La carpeta `cloudflare-ranking` conserva el Worker operativo:
+No se modificó la API del ranking. No es necesario actualizar nuevamente el Worker de Cloudflare.
 
-```text
-worker-v7.06.3-binding-db-sin-ddl.js
-```
-
-Binding utilizado:
+La carpeta `cloudflare-ranking` conserva el Worker operativo V7.06.3 con el binding:
 
 ```text
 db -> ranking_manager_db
 ```
 
-No es necesario volver a actualizar Cloudflare para instalar esta versión del juego.
-
-### Archivos principales modificados en V7.07
+### Archivos principales modificados en V7.08
 
 - `README.md`
 - `index.html`
 - `config.js`
 - `balance-modificadores.js`
-- `data/retos_manager.json`
 - `simulador-2.0.js`
 - `js/core/01-config-constants.js`
 - `js/game/05-state-season.js`
-- `js/game/10-academy-employees.js`
-- `cloudflare-ranking/worker-v7.06.3-binding-db-sin-ddl.js`
-- `cloudflare-ranking/PASOS-HOTFIX-V7.06.3.md`
+- `js/game/09-simulation-economy-training.js`
 
 ### Compatibilidad de partidas
 
-**V7.07 no rompe partidas anteriores.** Conserva planteles, calendarios, presupuestos, estadísticas, títulos y progreso. Las partidas guardadas con la compilación retirada de V7.07 también cargan: sólo se eliminan las búsquedas garantizadas de ofertas que ya no forman parte del juego.
+**V7.08 no rompe partidas anteriores.** Conserva planteles, calendarios, estadísticas, títulos y progreso. Las partidas afectadas por el premio de participación incorrecto ajustan únicamente ese importe y guardan la reparación para no repetirla.

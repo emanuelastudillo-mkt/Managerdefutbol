@@ -391,6 +391,10 @@ function ownClubInMatch(match){
   return ownId && (Number(match?.homeId) === ownId || Number(match?.awayId) === ownId);
 }
 function scheduledDateForMatch(match, round=null){
+  if(match?.clubWorldCup && String(match?.clubWorldCupStage || '') === 'groups' && typeof clubWorldCupAuthoritativeGroupDate === 'function'){
+    const authoritativeDate = clubWorldCupAuthoritativeGroupDate(match, round);
+    if(validIsoDate(authoritativeDate)) return authoritativeDate;
+  }
   return validIsoDate(match?.date) ? match.date : (validIsoDate(round?.date) ? round.date : currentCalendarDate());
 }
 function nextOwnMatchInfo(){
@@ -431,7 +435,13 @@ function collectDueMatchesUntil(targetDate, options={}){
       }
     });
   }
-  return collected.sort((a,b)=>daysBetweenIsoDates(b.date, a.date) || a.roundIndex-b.roundIndex || String(a.match.id).localeCompare(String(b.match.id)));
+  const sorted = collected.sort((a,b)=>daysBetweenIsoDates(b.date, a.date) || a.roundIndex-b.roundIndex || String(a.match.id).localeCompare(String(b.match.id)));
+  if(options.limitClubWorldCupGroupRound === false) return sorted;
+  const dueGroupMatches = sorted.filter(item => item.match?.clubWorldCup && String(item.match?.clubWorldCupStage || '') === 'groups');
+  if(!dueGroupMatches.length) return sorted;
+  const earliestGroupDate = dueGroupMatches.map(item => item.date).filter(validIsoDate).sort()[0] || '';
+  if(!earliestGroupDate) return sorted;
+  return sorted.filter(item => !(item.match?.clubWorldCup && String(item.match?.clubWorldCupStage || '') === 'groups') || item.date === earliestGroupDate);
 }
 function currentRoundIsComplete(index=game?.matchdayIndex || 0){
   const round = game?.fixtures?.[index];

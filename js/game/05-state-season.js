@@ -2815,6 +2815,7 @@ function normalizeGame(saved){
     normalized.stadium.ticketPrices[c.id] = clamp(Math.round(Number(normalized.stadium.ticketPrices[c.id])), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
   });
   repairInvalidBotFieldStates(normalized, 'normalize_game', { message:true });
+  repairInvalidClubWorldCupParticipationPrizeForState(normalized);
   Object.values(normalized.playerStats).forEach(stat => normalizePlayerStatRecord(stat));
   repairLegacySeasonStartAvailability(normalized);
   return normalized;
@@ -4893,6 +4894,73 @@ function clubWorldCupState(){
   }
   return game.clubWorldCup;
 }
+function clubWorldCupParticipantIds(state=clubWorldCupState()){
+  return Array.from(new Set((Array.isArray(state?.participantClubIds) ? state.participantClubIds : []).map(Number).filter(Boolean)));
+}
+function clubWorldCupClubParticipates(clubId, state=clubWorldCupState()){
+  const id = Number(clubId || 0);
+  return id > 0 && clubWorldCupParticipantIds(state).includes(id);
+}
+function clubWorldCupAuthoritativeGroupDate(match, round=null, state=clubWorldCupState()){
+  if(!match?.clubWorldCup || String(match?.clubWorldCupStage || '') !== 'groups') return '';
+  const roundNumber = Math.max(1, Math.round(Number(match?.clubWorldCupRound || clubWorldCupRoundNumberFromRound(round, 1) || 1)));
+  const storedDates = Array.isArray(state?.groupDates) ? state.groupDates : [];
+  const stored = storedDates[roundNumber - 1];
+  if(validIsoDate(stored)) return stored;
+  const first = validIsoDate(state?.firstGroupDate) ? state.firstGroupDate : '';
+  if(validIsoDate(first)) return addDaysToIsoDate(first, Number(CLUB_WORLD_CUP_CONFIG.daysBetweenRounds || 5) * (roundNumber - 1));
+  if(validIsoDate(round?.date)) return round.date;
+  return validIsoDate(match?.date) ? match.date : '';
+}
+function repairInvalidClubWorldCupParticipationPrizeForState(state){
+  const cup = state?.clubWorldCup;
+  if(!cup || !Array.isArray(cup.participantClubIds) || !cup.participantClubIds.length) return false;
+  const managedId = Number(state?.selectedClubId || 0);
+  if(!managedId || clubWorldCupClubParticipates(managedId, cup)) return false;
+  const paid = cup.prizesPaid?.[managedId];
+  const amount = Math.max(0, Math.round(Number(paid?.participate || 0)));
+  if(amount <= 0) return false;
+  cup.invalidParticipationPrizeReversals = (cup.invalidParticipationPrizeReversals && typeof cup.invalidParticipationPrizeReversals === 'object' && !Array.isArray(cup.invalidParticipationPrizeReversals)) ? cup.invalidParticipationPrizeReversals : {};
+  const reversalKey = `${managedId}:participate`;
+  if(cup.invalidParticipationPrizeReversals[reversalKey]) return false;
+  delete paid.participate;
+  if(!Object.keys(paid).length) delete cup.prizesPaid[managedId];
+  cup.invalidParticipationPrizeReversals[reversalKey] = { clubId:managedId, amount, season:Number(cup.season || state.seasonNumber || 1), repairedAt:Date.now() };
+  state.budget = Math.round(Number(state.budget || 0) - amount);
+  state.clubBudgets = (state.clubBudgets && typeof state.clubBudgets === 'object' && !Array.isArray(state.clubBudgets)) ? state.clubBudgets : {};
+  state.clubBudgets[managedId] = state.budget;
+  state.lastBudgetDelta = -amount;
+  state.budgetHistory = Array.isArray(state.budgetHistory) ? state.budgetHistory : [];
+  state.budgetHistory.push({
+    season:Number(state.seasonNumber || cup.season || 1),
+    matchdayIndex:Number(state.matchdayIndex || 0),
+    date:state.currentDate || '',
+    concept:'Corrección de premio de participación no clasificado',
+    delta:-amount,
+    budget:state.budget,
+    type:'club_world_cup_prize_reversal',
+    category:'Premios Mundial de Clubes'
+  });
+  state.messages = Array.isArray(state.messages) ? state.messages : [];
+  const messageId = `club-world-cup-prize-reversal-${cup.season || state.seasonNumber || 1}-${managedId}`;
+  if(!state.messages.some(message => String(message?.id || '') === messageId)){
+    state.messages.unshift({
+      id:messageId,
+      turn:Number(state.matchdayIndex || 0),
+      season:Number(state.seasonNumber || cup.season || 1),
+      date:state.currentDate || '',
+      read:false,
+      priority:'normal',
+      type:'finanzas',
+      title:`Corrección ${CLUB_WORLD_CUP_CONFIG.name}`,
+      body:`Se revirtió ${formatMoney(amount)} porque ${clubName(managedId)} no estaba clasificado al torneo.`,
+      action:null,
+      createdAt:Date.now()
+    });
+  }
+  state._needsAutosave = true;
+  return true;
+}
 function clubWorldCupStageRounds(stage){
   return (game?.fixtures || []).filter(round => round?.clubWorldCupRound && String(round.clubWorldCupStage || '') === String(stage || ''));
 }
@@ -5168,7 +5236,7 @@ function createClubWorldCupIfNeeded(){
   };
   createClubWorldCupGroupFixtures();
   repairClubWorldCupGroupFixtureDates({ force:true });
-  awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
+  if(clubWorldCupClubParticipates(game.selectedClubId, game.clubWorldCup)) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
   pushGameMessage({
     type:'deportivo',
     priority:'high',
@@ -5292,7 +5360,7 @@ function awardClubWorldCupPrizeIfManaged(clubId, stage){
   const cleanClubId = Number(clubId || 0);
   if(!managedId || cleanClubId !== managedId) return false;
   const state = clubWorldCupState();
-  if(!state) return false;
+  if(!state || !clubWorldCupClubParticipates(cleanClubId, state)) return false;
   const amount = Number(CLUB_WORLD_CUP_CONFIG.prizes?.[stage] || 0);
   if(amount <= 0) return false;
   state.prizesPaid = state.prizesPaid || {};

@@ -2563,13 +2563,13 @@ function deriveSeasonInitialBudgetFromHistory(saved, season){
   const currentSeason = Number(season || saved?.seasonNumber || 1);
   const first = history.find(entry => Number(entry.season || currentSeason) === currentSeason && Number.isFinite(Number(entry.budget)));
   if(first){
-    return Math.max(0, Math.round(Number(first.budget || 0) - Number(first.delta || 0)));
+    return Math.round(Number(first.budget || 0) - Number(first.delta || 0));
   }
   if(currentSeason === 1){
     const club = seed?.clubs?.find(c => Number(c.id) === Number(saved?.selectedClubId));
-    if(club && Number.isFinite(Number(club.budget))) return Math.max(0, Math.round(Number(club.budget)));
+    if(club && Number.isFinite(Number(club.budget))) return Math.round(Number(club.budget));
   }
-  return Math.max(0, Math.round(Number(saved?.budget || 0)));
+  return Math.round(Number(saved?.budget || 0));
 }
 function normalizeGame(saved){
   const normalized = {...saved};
@@ -2614,7 +2614,11 @@ function normalizeGame(saved){
   if(!Number.isFinite(Number(normalized.seasonBudgetStartBySeason[normalized.seasonNumber]))){
     normalized.seasonBudgetStartBySeason[normalized.seasonNumber] = deriveSeasonInitialBudgetFromHistory(normalized, normalized.seasonNumber);
   }
-  normalized.seasonInitialBudget = Number.isFinite(Number(normalized.seasonInitialBudget)) ? Math.round(Number(normalized.seasonInitialBudget)) : Math.round(Number(normalized.seasonBudgetStartBySeason[normalized.seasonNumber] || deriveSeasonInitialBudgetFromHistory(normalized, normalized.seasonNumber)));
+  normalized.seasonInitialBudget = Number.isFinite(Number(normalized.seasonInitialBudget)) ? Math.round(Number(normalized.seasonInitialBudget)) : Math.round(Number(normalized.seasonBudgetStartBySeason[normalized.seasonNumber] ?? deriveSeasonInitialBudgetFromHistory(normalized, normalized.seasonNumber)));
+  const hadCareerInitialBudget = Number.isFinite(Number(normalized.careerInitialBudget));
+  const orderedBudgetStarts = Object.entries(normalized.seasonBudgetStartBySeason).map(([season, value]) => ({ season:Number(season), value:Number(value) })).filter(item => Number.isFinite(item.season) && Number.isFinite(item.value)).sort((a,b)=>a.season-b.season);
+  normalized.careerInitialBudget = hadCareerInitialBudget ? Math.round(Number(normalized.careerInitialBudget)) : Math.round(Number(orderedBudgetStarts[0]?.value ?? normalized.seasonInitialBudget ?? normalized.budget ?? 0));
+  if(!hadCareerInitialBudget) normalized._needsAutosave = true;
   normalized.seasonFinalized = Boolean(normalized.seasonFinalized);
   normalized.seasonTransition = normalized.seasonTransition || null;
   normalized.argentinaPlayoffs = (normalized.argentinaPlayoffs && typeof normalized.argentinaPlayoffs === 'object' && !Array.isArray(normalized.argentinaPlayoffs)) ? normalized.argentinaPlayoffs : null;
@@ -2632,7 +2636,10 @@ function normalizeGame(saved){
   const hadLeagueEconomySnapshot = Boolean(normalized.leagueSeasonEconomy?.seasons?.[economySeasonKey]);
   if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(normalized, normalized.seasonNumber, { reason:'save_migration' });
   if(removedSpecialOverrides || !hadLeagueEconomySnapshot) normalized._needsAutosave = true;
+  const previousTitleHistoryCount = Array.isArray(normalized.managerStats?.titleHistory) ? normalized.managerStats.titleHistory.length : 0;
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
+  const titlesRebuilt = syncManagerOfficialTitles(normalized);
+  if(titlesRebuilt || Number(normalized.managerStats?.titleHistory?.length || 0) !== previousTitleHistoryCount) normalized._needsAutosave = true;
   normalized.managerSharedProfile = (normalized.managerSharedProfile && typeof normalized.managerSharedProfile === 'object' && !Array.isArray(normalized.managerSharedProfile)) ? {
     version:String(normalized.managerSharedProfile.version || 'V6.24'),
     experience:Math.max(0, Math.round(Number(normalized.managerSharedProfile.experience || 0))),
@@ -3084,6 +3091,7 @@ function applyBankruptcyModeSetup(selectedClubId){
   game.clubBudgets[selectedClubId] = BANKRUPTCY_INITIAL_BUDGET;
   game.budget = BANKRUPTCY_INITIAL_BUDGET;
   game.seasonInitialBudget = BANKRUPTCY_INITIAL_BUDGET;
+  game.careerInitialBudget = BANKRUPTCY_INITIAL_BUDGET;
   game.seasonBudgetStartBySeason = { 1:BANKRUPTCY_INITIAL_BUDGET };
   if(game.stadium){
     game.stadium.capacityOverrides = game.stadium.capacityOverrides || {};
@@ -3184,6 +3192,7 @@ function newGame(selectedClubId, options={}){
     clubBudgets: Object.fromEntries(seed.clubs.map(c => [c.id, Math.round(Number(c.budget || 0))])),
     budget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     seasonInitialBudget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
+    careerInitialBudget: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0,
     seasonBudgetStartBySeason: { 1: seed.clubs.find(c=>c.id===selectedClubId)?.budget || 0 },
     lastBudgetDelta: 0,
     budgetHistory: [],
@@ -3229,6 +3238,7 @@ function newGame(selectedClubId, options={}){
     game.clubBudgets[selectedClubId] = FOUNDER_CLUB_INITIAL_BUDGET;
     game.budget = FOUNDER_CLUB_INITIAL_BUDGET;
     game.seasonInitialBudget = FOUNDER_CLUB_INITIAL_BUDGET;
+    game.careerInitialBudget = FOUNDER_CLUB_INITIAL_BUDGET;
     game.seasonBudgetStartBySeason = { 1: FOUNDER_CLUB_INITIAL_BUDGET };
     game.stadium.capacityOverrides[selectedClubId] = FOUNDER_CLUB_INITIAL_CAPACITY;
     game.stadium.fields[selectedClubId] = FOUNDER_CLUB_INITIAL_FIELD;
@@ -3521,12 +3531,115 @@ function updatePlayerStarTrackingForMatch(result){
   });
 }
 
+function normalizeManagerTitleHistory(items=[]){
+  const source = Array.isArray(items) ? items : [];
+  const clean = [];
+  const seen = new Set();
+  source.forEach(item => {
+    const season = Math.max(1, Math.round(Number(item?.season || 0)) || 1);
+    const type = String(item?.type || 'league').trim() || 'league';
+    const competitionId = String(item?.competitionId || item?.divisionId || item?.id || `${type}-${season}`).trim();
+    const clubId = Number(item?.clubId || item?.championId || 0);
+    const key = `${season}:${type}:${competitionId}`;
+    if(seen.has(key)) return;
+    seen.add(key);
+    clean.push({
+      key,
+      season,
+      year:Math.round(Number(item?.year || 0)) || seasonYearForNumber(season),
+      type,
+      competitionId,
+      competitionName:String(item?.competitionName || item?.divisionName || item?.name || competitionId),
+      clubId,
+      clubName:String(item?.clubName || (clubId ? clubName(clubId) : '')),
+      createdAt:String(item?.createdAt || new Date().toISOString())
+    });
+  });
+  clean.sort((a,b)=>Number(a.season || 0)-Number(b.season || 0) || String(a.competitionName || '').localeCompare(String(b.competitionName || ''), 'es', { sensitivity:'base' }));
+  return clean;
+}
+function recordManagerOfficialTitleForState(targetGame, entry={}){
+  if(!targetGame || !entry) return false;
+  targetGame.managerStats = normalizeManagerStats(targetGame.managerStats || createInitialManagerStats());
+  const stats = targetGame.managerStats;
+  const season = Math.max(1, Math.round(Number(entry.season || targetGame.seasonNumber || 1)) || 1);
+  const type = String(entry.type || 'league').trim() || 'league';
+  const competitionId = String(entry.competitionId || entry.divisionId || `${type}-${season}`).trim();
+  const key = `${season}:${type}:${competitionId}`;
+  stats.titleHistory = normalizeManagerTitleHistory(stats.titleHistory || []);
+  if(stats.titleHistory.some(item => item.key === key)) return false;
+  const previousTitles = Math.max(0, Math.round(Number(stats.titles || 0)));
+  stats.titleHistory.push({
+    key,
+    season,
+    year:Math.round(Number(entry.year || targetGame.seasonYear || 0)) || seasonYearForNumber(season),
+    type,
+    competitionId,
+    competitionName:String(entry.competitionName || entry.divisionName || competitionId),
+    clubId:Number(entry.clubId || entry.championId || targetGame.selectedClubId || 0),
+    clubName:String(entry.clubName || clubName(entry.clubId || entry.championId || targetGame.selectedClubId)),
+    createdAt:String(entry.createdAt || new Date().toISOString())
+  });
+  stats.titleHistory = normalizeManagerTitleHistory(stats.titleHistory);
+  stats.titles = Math.max(previousTitles + 1, stats.titleHistory.length);
+  targetGame.managerStats = stats;
+  return true;
+}
+function syncManagerOfficialTitles(targetGame=game){
+  if(!targetGame) return false;
+  targetGame.managerStats = normalizeManagerStats(targetGame.managerStats || createInitialManagerStats());
+  const stats = targetGame.managerStats;
+  let changed = false;
+  (stats.seasons || []).filter(item => Boolean(item?.title) || Number(item?.position || 0) === 1).forEach(item => {
+    if(recordManagerOfficialTitleForState(targetGame, {
+      season:item.season,
+      year:item.year,
+      type:'league',
+      competitionId:item.divisionId || `league-${item.season}`,
+      competitionName:item.divisionName || 'Liga',
+      clubId:item.clubId,
+      clubName:item.clubName
+    })) changed = true;
+  });
+  const managedBySeason = new Map();
+  (targetGame.managerStats?.seasons || []).forEach(item => {
+    const season = Number(item?.season || 0);
+    const clubId = Number(item?.clubId || 0);
+    if(season && clubId){
+      if(!managedBySeason.has(season)) managedBySeason.set(season, new Set());
+      managedBySeason.get(season).add(clubId);
+    }
+  });
+  if(Number(targetGame.selectedClubId || 0)){
+    const season = Number(targetGame.seasonNumber || 1);
+    if(!managedBySeason.has(season)) managedBySeason.set(season, new Set());
+    managedBySeason.get(season).add(Number(targetGame.selectedClubId));
+  }
+  const entries = normalizeCompetitionChampionsHistoryState(targetGame.competitionChampionsHistory || {}).entries || [];
+  entries.filter(item => String(item.type || '') !== 'league').forEach(item => {
+    const clubs = managedBySeason.get(Number(item.season || 0));
+    if(!clubs || !clubs.has(Number(item.championId || 0))) return;
+    if(recordManagerOfficialTitleForState(targetGame, {
+      season:item.season,
+      year:item.year,
+      type:item.type || 'official_competition',
+      competitionId:item.competitionId,
+      competitionName:item.competitionName,
+      clubId:item.championId,
+      clubName:item.championName,
+      createdAt:item.createdAt
+    })) changed = true;
+  });
+  return changed;
+}
+
 function createInitialManagerStats(){
   return {
     totals:{ played:0, won:0, drawn:0, lost:0, gf:0, gc:0 },
     currentSeason:{ season:1, clubId:0, played:0, won:0, drawn:0, lost:0, gf:0, gc:0 },
     seasons:[],
     titles:0,
+    titleHistory:[],
     experience:0,
     prestige:0,
     prestigeWinMilestones:0,
@@ -3547,11 +3660,23 @@ function normalizeManagerStats(stats){
   const prestigeWinMilestones = Math.max(0, Math.round(Number(src.prestigeWinMilestones || 0)));
   const experience = Math.max(0, Math.round(Number(src.experience || 0)));
   const prestigeAdjustments = Array.isArray(src.prestigeAdjustments) ? src.prestigeAdjustments : [];
+  const seasons = Array.isArray(src.seasons) ? src.seasons : [];
+  const legacyLeagueTitles = seasons.filter(item => Boolean(item?.title) || Number(item?.position || 0) === 1).map(item => ({
+    season:Number(item?.season || 1),
+    year:Number(item?.year || 0) || seasonYearForNumber(item?.season || 1),
+    type:'league',
+    competitionId:String(item?.divisionId || `league-${Number(item?.season || 1)}`),
+    competitionName:String(item?.divisionName || 'Liga'),
+    clubId:Number(item?.clubId || 0),
+    clubName:String(item?.clubName || '')
+  }));
+  const titleHistory = normalizeManagerTitleHistory([...(Array.isArray(src.titleHistory) ? src.titleHistory : []), ...legacyLeagueTitles]);
   const normalized = {
     totals,
     currentSeason,
-    seasons:Array.isArray(src.seasons) ? src.seasons : [],
-    titles:Number.isFinite(Number(src.titles)) ? Number(src.titles) : (Array.isArray(src.seasons) ? src.seasons.filter(s => s.position === 1).length : 0),
+    seasons,
+    titles:Math.max(Number.isFinite(Number(src.titles)) ? Number(src.titles) : 0, titleHistory.length, legacyLeagueTitles.length),
+    titleHistory,
     experience,
     prestige:0,
     prestigeWinMilestones,
@@ -4158,9 +4283,12 @@ function managerObjectiveProgressInfo(){
 function queueAutomaticRankingSubmission(eventType='season_end'){
   if(!game) return false;
   game.rankingUploads = game.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
+  const capturedPayload = String(eventType || '') === 'dismissal' && game?.gameOver?.snapshot
+    ? { ...game.gameOver.snapshot, eventType:'dismissal', eventLabel:'Carrera cerrada por despido', submittedAt:new Date().toISOString() }
+    : null;
   const run = () => {
     if(typeof submitRankingAutomatically === 'function'){
-      submitRankingAutomatically(eventType, { notifyErrors:true, forceRetry:true });
+      submitRankingAutomatically(eventType, { notifyErrors:true, forceRetry:true, payload:capturedPayload });
     }else if(typeof pushGameMessage === 'function'){
       pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking pendiente', body:'El módulo de ranking no estaba listo. Volvé a abrir la partida o la pantalla Ranking para reintentar el envío automático.', id:`ranking-module-missing-${eventType}-${game.seasonNumber || 1}` });
       if(typeof saveLocal === 'function') saveLocal(true);
@@ -5259,7 +5387,18 @@ function advanceClubWorldCupIfNeeded(){
     });
     awardClubWorldCupPrizeIfManaged(runnerUpId, 'runnerUp');
     awardClubWorldCupPrizeIfManaged(championId, 'champion');
-    if(Number(game.selectedClubId || 0) === championId && typeof addManagerPrestige === 'function') addManagerPrestige(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
+    if(Number(game.selectedClubId || 0) === championId){
+      if(typeof addManagerPrestige === 'function') addManagerPrestige(4, `Campeón de ${CLUB_WORLD_CUP_CONFIG.name}`);
+      recordManagerOfficialTitleForState(game, {
+        season:state.season || game.seasonNumber || 1,
+        year:game.seasonYear || seasonYearForNumber(state.season || game.seasonNumber || 1),
+        type:'club_world_cup',
+        competitionId:'club-world-cup',
+        competitionName:state.name || CLUB_WORLD_CUP_CONFIG.name,
+        clubId:championId,
+        clubName:clubName(championId)
+      });
+    }
     pushGameMessage({ type:'deportivo', priority:'high', title:`Campeón: ${clubName(championId)}`, body:`${clubName(championId)} ganó la ${CLUB_WORLD_CUP_CONFIG.name}.`, id:`club-world-cup-${state.season}-champion` });
     return true;
   }
@@ -6197,7 +6336,7 @@ function finalizeSeasonIfNeeded(){
     record.objectivePrestigeLabel = objectiveReward.label;
     record.ppg = seasonPpg;
     game.managerStats.seasons.push(record);
-    if(champion) game.managerStats.titles += 1;
+    if(champion) recordManagerOfficialTitleForState(game, { season:record.season, year:game.seasonYear, type:'league', competitionId:division.id, competitionName:division.name, clubId:game.selectedClubId, clubName:clubName(game.selectedClubId) });
     game.managerStats = normalizeManagerStats(game.managerStats);
     if(Number(objectiveReward.points || 0) !== 0){
       const sign = objectiveReward.points > 0 ? 'Suma' : 'Resta';
@@ -6774,7 +6913,7 @@ function startNextSeason(selectedClubId){
   game.seasonYear = seasonYearForNumber(game.seasonNumber);
   if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(game, game.seasonNumber, { force:true, reason:'season_start' });
   game.calendarVersion = SEASON_CALENDAR_VERSION;
-  game.seasonInitialBudget = Math.max(0, Math.round(Number(game.budget || 0)));
+  game.seasonInitialBudget = Math.round(Number(game.budget || 0));
   game.seasonBudgetStartBySeason = game.seasonBudgetStartBySeason || {};
   game.seasonBudgetStartBySeason[game.seasonNumber] = game.seasonInitialBudget;
   game.seasonFinalized = false;

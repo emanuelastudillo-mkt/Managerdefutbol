@@ -360,11 +360,11 @@ function rankingSeasonInitialBudget(season){
   if(!game) return 0;
   const seasonNumber = Number(season || game.seasonNumber || 1);
   const explicit = Number(game.seasonBudgetStartBySeason?.[seasonNumber]);
-  if(Number.isFinite(explicit)) return Math.max(0, Math.round(explicit));
-  if(Number.isFinite(Number(game.seasonInitialBudget))) return Math.max(0, Math.round(Number(game.seasonInitialBudget)));
+  if(Number.isFinite(explicit)) return Math.round(explicit);
+  if(Number.isFinite(Number(game.seasonInitialBudget))) return Math.round(Number(game.seasonInitialBudget));
   const first = (game.budgetHistory || []).find(entry => Number(entry.season || seasonNumber) === seasonNumber && Number.isFinite(Number(entry.budget)));
-  if(first) return Math.max(0, Math.round(Number(first.budget || 0) - Number(first.delta || 0)));
-  return Math.max(0, Math.round(Number(game.budget || 0)));
+  if(first) return Math.round(Number(first.budget || 0) - Number(first.delta || 0));
+  return Math.round(Number(game.budget || 0));
 }
 
 function rankingCareerSeasons(){
@@ -402,12 +402,13 @@ function rankingCareerSeasons(){
 }
 function rankingCareerInitialBudget(seasons=[]){
   if(!game) return 0;
+  if(Number.isFinite(Number(game.careerInitialBudget))) return Math.round(Number(game.careerInitialBudget));
   const ordered = seasons.slice().filter(item => Number(item.season || 0) > 0).sort((a,b)=>Number(a.season||0)-Number(b.season||0));
   const firstSeason = Number(ordered[0]?.season || 1);
   const explicit = Number(game.seasonBudgetStartBySeason?.[firstSeason]);
-  if(Number.isFinite(explicit)) return Math.max(0, Math.round(explicit));
+  if(Number.isFinite(explicit)) return Math.round(explicit);
   const firstHistory = (game.budgetHistory || []).slice().sort((a,b)=>String(a.date || '').localeCompare(String(b.date || '')) || Number(a.season || 0)-Number(b.season || 0))[0];
-  if(firstHistory && Number.isFinite(Number(firstHistory.budget))) return Math.max(0, Math.round(Number(firstHistory.budget || 0) - Number(firstHistory.delta || 0)));
+  if(firstHistory && Number.isFinite(Number(firstHistory.budget))) return Math.round(Number(firstHistory.budget || 0) - Number(firstHistory.delta || 0));
   return rankingSeasonInitialBudget(firstSeason);
 }
 function rankingBestCareerPosition(seasons=[]){
@@ -503,6 +504,7 @@ function rankingScoreAliases(payload){
 }
 function rankingCareerRecord(){
   if(!game) return null;
+  if(typeof syncManagerOfficialTitles === 'function') syncManagerOfficialTitles(game);
   game.managerStats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
   const stats = game.managerStats;
   const totals = stats.totals || {};
@@ -704,13 +706,14 @@ function rankingApiRowToGameRow(row){
   mapped.club = rankingValue(row, 'club', 'club_name', 'club_usado', 'current_club');
   mapped.division = rankingValue(row, 'division', 'division_name', 'league_name');
   mapped.season = rankingValue(row, 'season', 'temporada', 'season_number');
+  mapped.position = rankingValue(row, 'position', 'bestPosition', 'best_position', 'finalPosition', 'final_position', 'posicion_final');
   mapped.points = rankingValue(row, 'matchPoints', 'match_points', 'pts', 'puntos', 'points', 'career_points');
   mapped.managerScore = rankingValue(row, 'managerScore', 'manager_score', 'puntaje_manager', 'points');
   mapped.initialBudget = rankingValue(row, 'initialBudget', 'initial_budget', 'budget_initial', 'presupuesto_inicial');
   mapped.finalBudget = rankingValue(row, 'finalBudget', 'final_budget', 'budget_final', 'presupuesto_final');
   mapped.budgetVariation = rankingValue(row, 'budgetVariation', 'budget_variation', 'variacion_presupuesto');
-  mapped.titles = rankingValue(row, 'titles', 'titulos');
-  mapped.submittedAt = rankingValue(row, 'submittedAt', 'submitted_at', 'created_at', 'fecha_envio');
+  mapped.titles = rankingValue(row, 'titles', 'titulos', 'title', 'titulo');
+  mapped.submittedAt = rankingValue(row, 'submittedAt', 'submitted_at', 'updated_at', 'created_at', 'fecha_envio');
   mapped.saveCode = rankingValue(row, 'saveCode', 'save_code', 'save_hash', 'codigo_partida');
   mapped.version = rankingValue(row, 'version', 'game_version');
   mapped.eventType = rankingValue(row, 'eventType', 'event_type', 'evento_tipo');
@@ -724,7 +727,7 @@ function rankingApiRowToGameRow(row){
   mapped.recordScope = rankingValue(row, 'recordScope', 'record_scope', 'tipo_registro');
   mapped.seasonsPlayed = rankingValue(row, 'seasonsPlayed', 'seasons_played', 'temporadas_jugadas', 'season_number');
   mapped.careerMatches = rankingValue(row, 'careerMatches', 'career_matches', 'partidos_carrera', 'played');
-  mapped.currentClub = rankingValue(row, 'currentClub', 'current_club', 'club_actual', 'club_name');
+  mapped.currentClub = rankingValue(row, 'currentClub', 'current_club', 'club_actual', 'club_name', 'club');
   mapped.clubCount = rankingValue(row, 'clubCount', 'club_count', 'clubes_dirigidos');
   mapped.managerPrestige = rankingValue(row, 'managerPrestige', 'manager_prestige', 'prestigio_manager');
   mapped.managerExperience = rankingValue(row, 'managerExperience', 'manager_experience', 'experiencia_manager');
@@ -812,6 +815,9 @@ function rankingPayloadToApiBody(payload){
     goal_difference: payload.goalDifference,
     budget_initial: payload.initialBudget,
     budget_final: payload.finalBudget,
+    budget_variation: payload.budgetVariation,
+    titles: Number(payload.titles || 0),
+    manager_score: totalScore,
     manager_prestige: Number(payload.managerPrestige ?? game?.managerPrestige ?? game?.managerStats?.prestige ?? 0),
     manager_experience: Number(payload.managerExperience ?? game?.managerStats?.experience ?? 0),
     game_version: payload.version || APP_VERSION,
@@ -855,46 +861,57 @@ function rankingPayloadToApiBody(payload){
 }
 function normalizeRankingRow(row){
   row = rankingApiRowToGameRow(row);
+  const initialBudgetRaw = rankingValue(row, 'initialBudget', 'Presupuesto inicial', 'presupuesto_inicial', 'budget_initial', 'initial_budget');
+  const finalBudgetRaw = rankingValue(row, 'finalBudget', 'Presupuesto final', 'presupuesto_final', 'budget_final', 'final_budget');
+  const variationRaw = rankingValue(row, 'budgetVariation', 'Variación de presupuesto', 'variacion_presupuesto', 'budget_variation');
   const normalized = {
-    managerName: String(rankingValue(row, 'managerName', 'Nombre del manager', 'nombre_manager', 'manager') || '').trim(),
-    club: String(rankingValue(row, 'club', 'Club usado', 'club_usado') || '').trim(),
-    season: Number(rankingValue(row, 'season', 'Temporada', 'temporada') || 0),
-    division: String(rankingValue(row, 'division', 'División', 'division') || '').trim(),
-    position: Number(rankingValue(row, 'position', 'Posición final', 'posicion_final') || 0),
-    points: Number(rankingValue(row, 'points', 'Puntos', 'puntos') || 0),
-    won: Number(rankingValue(row, 'won', 'Partidos ganados', 'ganados') || 0),
-    drawn: Number(rankingValue(row, 'drawn', 'Partidos empatados', 'empatados') || 0),
-    lost: Number(rankingValue(row, 'lost', 'Partidos perdidos', 'perdidos') || 0),
+    managerName: String(rankingValue(row, 'managerName', 'Nombre del manager', 'nombre_manager', 'manager', 'manager_name') || '').trim(),
+    club: String(rankingValue(row, 'club', 'Club usado', 'club_usado', 'club_name', 'current_club') || '').trim(),
+    season: Number(rankingValue(row, 'season', 'Temporada', 'temporada', 'season_number') || 0),
+    division: String(rankingValue(row, 'division', 'División', 'division', 'league_name', 'division_name') || '').trim(),
+    position: Number(rankingValue(row, 'position', 'bestPosition', 'best_position', 'finalPosition', 'final_position', 'Posición final', 'posicion_final') || 0),
+    points: Number(rankingValue(row, 'points', 'matchPoints', 'match_points', 'league_points', 'career_match_points', 'Puntos', 'puntos') || 0),
+    won: Number(rankingValue(row, 'won', 'wins', 'Partidos ganados', 'ganados') || 0),
+    drawn: Number(rankingValue(row, 'drawn', 'draws', 'Partidos empatados', 'empatados') || 0),
+    lost: Number(rankingValue(row, 'lost', 'losses', 'Partidos perdidos', 'perdidos') || 0),
     goalsFor: Number(rankingValue(row, 'goalsFor', 'Goles a favor', 'gf', 'goals_for') || 0),
     goalsAgainst: Number(rankingValue(row, 'goalsAgainst', 'Goles en contra', 'gc', 'goals_against') || 0),
     goalDifference: Number(rankingValue(row, 'goalDifference', 'Diferencia de gol', 'dg', 'goal_difference') || 0),
-    initialBudget: Number(rankingValue(row, 'initialBudget', 'Presupuesto inicial', 'presupuesto_inicial') || 0),
-    finalBudget: Number(rankingValue(row, 'finalBudget', 'Presupuesto final', 'presupuesto_final') || 0),
-    budgetVariation: Number(rankingValue(row, 'budgetVariation', 'Variación de presupuesto', 'variacion_presupuesto') || 0),
-    titles: Number(rankingValue(row, 'titles', 'Cantidad de títulos', 'titulos') || 0),
-    submittedAt: String(rankingValue(row, 'submittedAt', 'Fecha de envío', 'fecha_envio') || '').trim(),
-    saveCode: String(rankingValue(row, 'saveCode', 'Código de partida', 'codigo_partida') || '').trim(),
-    managerScore: Number(rankingValue(row, 'managerScore', 'Puntaje manager', 'puntaje_manager') || 0),
-    eventType: String(rankingValue(row, 'eventType', 'evento_tipo') || '').trim(),
-    eventLabel: String(rankingValue(row, 'eventLabel', 'evento') || '').trim(),
-    recordScope: String(rankingValue(row, 'recordScope', 'tipo_registro') || 'career').trim(),
-    seasonsPlayed: Number(rankingValue(row, 'seasonsPlayed', 'temporadas_jugadas') || rankingValue(row, 'season', 'Temporada', 'temporada') || 0),
-    careerMatches: Number(rankingValue(row, 'careerMatches', 'partidos_carrera') || rankingValue(row, 'played', 'partidos_jugados') || 0),
-    currentClub: String(rankingValue(row, 'currentClub', 'club_actual') || '').trim(),
-    clubCount: Number(rankingValue(row, 'clubCount', 'clubes_dirigidos') || 0),
-    managerPrestige: Number(rankingValue(row, 'managerPrestige', 'prestigio_manager') || 0),
-    managerExperience: Number(rankingValue(row, 'managerExperience', 'experiencia_manager') || 0)
+    initialBudget: initialBudgetRaw === '' ? 0 : Number(initialBudgetRaw),
+    finalBudget: finalBudgetRaw === '' ? 0 : Number(finalBudgetRaw),
+    budgetVariation: variationRaw === '' ? 0 : Number(variationRaw),
+    titles: Number(rankingValue(row, 'titles', 'title', 'Cantidad de títulos', 'titulos', 'titulo') || 0),
+    submittedAt: String(rankingValue(row, 'submittedAt', 'submitted_at', 'updated_at', 'created_at', 'Fecha de envío', 'fecha_envio') || '').trim(),
+    saveCode: String(rankingValue(row, 'saveCode', 'save_code', 'save_hash', 'Código de partida', 'codigo_partida') || '').trim(),
+    managerScore: Number(rankingValue(row, 'managerScore', 'manager_score', 'total_score', 'puntaje_manager', 'Puntaje manager') || 0),
+    eventType: String(rankingValue(row, 'eventType', 'event_type', 'evento_tipo') || '').trim(),
+    eventLabel: String(rankingValue(row, 'eventLabel', 'event_label', 'evento') || '').trim(),
+    recordScope: String(rankingValue(row, 'recordScope', 'record_scope', 'tipo_registro') || 'career').trim(),
+    seasonsPlayed: Number(rankingValue(row, 'seasonsPlayed', 'seasons_played', 'temporadas_jugadas') || rankingValue(row, 'season', 'Temporada', 'temporada', 'season_number') || 0),
+    careerMatches: Number(rankingValue(row, 'careerMatches', 'career_matches', 'partidos_carrera') || rankingValue(row, 'played', 'partidos_jugados') || 0),
+    currentClub: String(rankingValue(row, 'currentClub', 'current_club', 'club_actual', 'club_name', 'club') || '').trim(),
+    clubCount: Number(rankingValue(row, 'clubCount', 'club_count', 'clubes_dirigidos') || 0),
+    managerPrestige: Number(rankingValue(row, 'managerPrestige', 'manager_prestige', 'prestigio_manager') || 0),
+    managerExperience: Number(rankingValue(row, 'managerExperience', 'manager_experience', 'experiencia_manager') || 0),
+    rowId:Number(rankingValue(row, 'id', 'record_id') || 0)
   };
-  if(!normalized.budgetVariation && normalized.finalBudget && normalized.initialBudget) normalized.budgetVariation = normalized.finalBudget - normalized.initialBudget;
+  if(!normalized.currentClub) normalized.currentClub = normalized.club;
+  if(!normalized.club) normalized.club = normalized.currentClub;
+  if(variationRaw === '' && (initialBudgetRaw !== '' || finalBudgetRaw !== '')) normalized.budgetVariation = normalized.finalBudget - normalized.initialBudget;
+  if(!normalized.careerMatches) normalized.careerMatches = Number(normalized.won || 0) + Number(normalized.drawn || 0) + Number(normalized.lost || 0);
   if(!normalized.managerScore) normalized.managerScore = normalized.recordScope === 'career' ? calculateCareerManagerScore(normalized) : calculateManagerScore(normalized);
   if(!normalized.eventLabel) normalized.eventLabel = rankingEventLabel(normalized.eventType || 'career_snapshot');
   return normalized;
 }
+
 function rankingDedupeKey(row){
   const saveCode = String(row?.saveCode || '').trim();
   if(saveCode) return `save:${saveCode}`;
   const manager = String(row?.managerName || '').trim().toLowerCase();
   return `manager:${manager || 'manager'}:${String(row?.currentClub || row?.club || '').trim().toLowerCase()}`;
+}
+function rankingRowCompleteness(row){
+  return [row?.currentClub, row?.division, row?.careerMatches, row?.position, row?.titles, row?.initialBudget, row?.finalBudget].reduce((sum, value) => sum + (value !== undefined && value !== null && value !== '' && Number(value) !== 0 ? 1 : 0), 0);
 }
 function dedupeRankingRows(rows=[]){
   const map = new Map();
@@ -902,14 +919,17 @@ function dedupeRankingRows(rows=[]){
     const key = rankingDedupeKey(row);
     const current = map.get(key);
     if(!current){ map.set(key, row); return; }
-    const rowScore = Number(row.managerScore || 0);
-    const currentScore = Number(current.managerScore || 0);
     const rowDate = Date.parse(row.submittedAt || '') || 0;
     const currentDate = Date.parse(current.submittedAt || '') || 0;
-    if(rowScore > currentScore || (rowScore === currentScore && rowDate >= currentDate)) map.set(key, row);
+    if(rowDate > currentDate){ map.set(key, row); return; }
+    if(rowDate < currentDate) return;
+    const rowId = Number(row.rowId || 0);
+    const currentId = Number(current.rowId || 0);
+    if(rowId > currentId || (rowId === currentId && rankingRowCompleteness(row) >= rankingRowCompleteness(current))) map.set(key, row);
   });
   return Array.from(map.values());
 }
+
 function sortRankingRows(rows, sortKey=rankingSort){
   const [key, dir='desc'] = String(sortKey || '').split('_');
   const direction = dir === 'asc' ? 1 : -1;
@@ -962,15 +982,15 @@ function rankingRowMarkup(row, index){
 function rankingRowsTable(rows){
   const sorted = sortRankingRows(rows).slice(0, RANKING_PAGE_SIZE);
   return `<div class="ranking-sortbar">
-    ${rankingSortButton('managerScore','Puntaje')}
+    ${rankingSortButton('managerScore','Índice carrera')}
     ${rankingSortButton('division','División')}
     ${rankingSortButton('club','Club')}
-    ${rankingSortButton('points','Puntos')}
+    ${rankingSortButton('points','Pts. deportivos')}
     ${rankingSortButton('finalBudget','Presupuesto final')}
     ${rankingSortButton('seasonsPlayed','Temporadas')}
     ${rankingSortButton('careerMatches','Partidos')}
   </div>
-  <div class="table-wrap ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Club actual</th><th>División</th><th>Temps.</th><th>Partidos</th><th>Mejor pos.</th><th>Puntaje</th><th>Pts</th><th>G-E-P</th><th>DG</th><th>Títulos</th><th>Presupuesto final</th></tr></thead><tbody>${sorted.length ? sorted.map(rankingRowMarkup).join('') : '<tr><td colspan="13" class="muted">Todavía no hay carreras cargadas.</td></tr>'}</tbody></table></div>`;
+  <p class="small muted"><strong>Índice carrera:</strong> combina rendimiento deportivo, títulos, prestigio, temporadas y economía. <strong>Pts. deportivos:</strong> 3 por victoria y 1 por empate acumulados en la carrera.</p><div class="table-wrap ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Club actual</th><th>División</th><th>Temps.</th><th>Partidos</th><th>Mejor pos.</th><th>Índice carrera</th><th>Pts. deportivos</th><th>G-E-P</th><th>DG</th><th>Títulos</th><th>Presupuesto final</th></tr></thead><tbody>${sorted.length ? sorted.map(rankingRowMarkup).join('') : '<tr><td colspan="13" class="muted">Todavía no hay carreras cargadas.</td></tr>'}</tbody></table></div>`;
 }
 function rankingSeasonPreviewMarkup(payload){
   if(!payload) return '<p class="muted">No hay partida activa para calcular una temporada.</p>';
@@ -981,11 +1001,11 @@ function rankingSeasonPreviewMarkup(payload){
     <div><span>Temporadas</span><strong>${Number(payload.seasonsPlayed || payload.season || 0)}</strong></div>
     <div><span>Partidos de carrera</span><strong>${Number(payload.careerMatches || 0)}</strong></div>
     <div><span>Mejor posición</span><strong>${payload.position ? `${payload.position}°` : '—'}</strong></div>
-    <div><span>Puntos carrera</span><strong>${payload.points}</strong></div>
+    <div><span>Pts. deportivos</span><strong>${payload.points}</strong></div>
     <div><span>Presupuesto inicial</span><strong>${formatMoney(payload.initialBudget)}</strong></div>
     <div><span>Presupuesto final</span><strong>${formatMoney(payload.finalBudget)}</strong></div>
     <div><span>Variación</span><strong class="${payload.budgetVariation >= 0 ? 'ok' : 'bad'}">${payload.budgetVariation >= 0 ? '+' : ''}${formatMoney(payload.budgetVariation)}</strong></div>
-    <div><span>Puntaje manager</span><strong>${payload.managerScore}</strong></div>
+    <div><span>Índice de carrera</span><strong>${payload.managerScore}</strong></div>
   </div>`;
 }
 function rankingUploadEntries(){
@@ -1130,7 +1150,17 @@ function rankingRecordUploadState(payload, status, extra={}){
 function submitRankingAutomatically(eventType='season_end', options={}){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
   const managerName = rankingCleanManagerName();
-  const payload = buildRankingPayload(managerName, { ...options, eventType });
+  let payload = options?.payload && typeof options.payload === 'object' ? { ...options.payload } : buildRankingPayload(managerName, { ...options, eventType });
+  if(payload){
+    payload.managerName = rankingCleanManagerName(payload.managerName || managerName);
+    payload.recordScope = payload.recordScope || 'career';
+    payload.eventType = eventType || payload.eventType || 'career_snapshot';
+    payload.eventLabel = options.eventLabel || payload.eventLabel || rankingEventLabel(payload.eventType);
+    payload.submittedAt = new Date().toISOString();
+    payload.managerScore = rankingScoreNumber(payload) || calculateCareerManagerScore(payload);
+    Object.assign(payload, rankingScoreAliases(payload));
+    payload.submissionKey = rankingSubmissionKey(payload, payload.eventType);
+  }
   const error = validateRankingSubmit(payload, managerName, endpoint, { automatic:true });
   if(error){
     if(!/ya fue enviado|pendiente/.test(error) && options.notifyErrors) showNotice(error);

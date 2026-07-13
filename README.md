@@ -1,57 +1,71 @@
-# Fútbol Manager MVP - V7.05
+# Fútbol Manager MVP - V7.06
 
-## V7.05 - Economía anual por reputación de liga
+## V7.06 - Ranking de carrera completo y Worker D1 compatible
 
-Esta versión parte de V7.04 y conserva el sistema de guardado doble seguro.
+Esta versión parte de V7.05 y conserva el sistema de guardado doble seguro, la economía anual por reputación de liga y la corrección de overrides del Mundial de Clubes.
 
-### Reputación económica anual de cada liga
+### Ranking online
 
-Al comenzar cada temporada se calcula y guarda la reputación media de cada división doméstica usando la reputación de todos sus clubes en ese momento. El valor permanece fijo durante toda la temporada y se vuelve a calcular después de los ascensos, descensos y cambios de reputación, al iniciar el año siguiente.
+Se corrigió el envío, lectura y presentación del ranking de carreras.
 
-La fórmula activa es:
+- **Índice carrera:** reemplaza visualmente a “Puntaje”. Combina puntos deportivos, diferencia de gol, títulos, prestigio, porcentaje de victorias, temporadas y rendimiento presupuestario.
+- **Pts. deportivos:** reemplaza visualmente a “Pts”. Son los puntos acumulados por resultados oficiales: 3 por victoria y 1 por empate.
+- Se guardan y muestran el club actual, la división, las temporadas, los partidos, la mejor posición, G-E-P, diferencia de gol, títulos y presupuestos.
+- La mejor posición acepta los campos `best_position`, `final_position` y sus aliases anteriores.
+- Los títulos aceptan tanto `titles` como el campo antiguo `title`.
+- Cuando existen varias filas de una misma partida, se conserva la carga más reciente. Ya no se conserva una fila antigua sólo porque tenía un índice mayor.
 
-- Victoria promedio: reputación de liga × $8.000.
-- Empate promedio: reputación de liga × $3.000.
-- Variación por partido: entre 75% y 125% del valor promedio.
-- Derrota: $0 por resultado.
-- Redondeo: múltiplos de $5.000.
-- Reputación utilizada: mínimo 10 y máximo 100.
+### Presupuestos
 
-Una liga con reputación 50 paga aproximadamente:
+- El presupuesto final y la variación admiten números negativos.
+- Se agregó `careerInitialBudget` para conservar el presupuesto real con el que comenzó la carrera.
+- Las partidas antiguas reconstruyen ese valor usando el inicio de la primera temporada disponible.
+- El cambio evita que una carrera con crecimiento económico muestre incorrectamente `+$0` por tomar el presupuesto actual como presupuesto inicial.
+- Al producirse un despido, el ranking utiliza la instantánea tomada antes de reiniciar la economía del club saliente. El presupuesto final ya no se reemplaza por cero.
 
-- Victoria: $300.000 a $500.000.
-- Empate: $115.000 a $190.000, según redondeo.
-- Derrota: $0.
+### Títulos oficiales
 
-La recaudación de entradas continúa calculándose por separado. Por lo tanto, una derrota como local puede generar ingresos de entradas, pero nunca un pago positivo o negativo por el resultado deportivo.
+El contador de títulos ahora utiliza un historial identificable por temporada y competición.
 
-Los valores pueden editarse desde `balance-modificadores.js`, dentro de `economia.pagosPorResultadoLiga`.
+Cuenta:
 
-### Mundial de Clubes
+- Campeonatos de liga.
+- Mundial de Clubes.
+- Futuras competiciones oficiales registradas en el historial de campeones.
 
-El Mundial de Clubes queda excluido del pago por resultado de liga. Conserva exclusivamente sus premios propios por participación y avance de fase.
+No cuenta un ascenso como título salvo que el club también haya sido campeón de su división.
 
-### Integridad de divisiones
+Las partidas anteriores reconstruyen los campeonatos de liga desde `managerStats.seasons` y los títulos internacionales desde `competitionChampionsHistory` cuando el club campeón era el dirigido por el manager.
 
-Los clubes invitados exclusivamente al Mundial de Clubes ya no se guardan dentro de `clubDivisionOverrides`, porque no pertenecen a una división doméstica cargada.
+### Worker Cloudflare y D1
 
-- El verificador ignora correctamente estos invitados.
-- Las ocho entradas antiguas se eliminan automáticamente al cargar una partida.
-- Los overrides nuevos sólo incluyen clubes de ligas domésticas.
-- La advertencia “Overrides de división inconsistentes” se mantiene para errores reales.
+Se agregó la carpeta `cloudflare-ranking` con:
 
-También se corrigió el país de Wydad Casablanca de China a Marruecos en la lista interna de invitados.
+- `worker-v7.06.js`: Worker completo con login, sesiones, carga y lectura de carreras.
+- `migracion-d1-v7.06.sql`: creación segura de las tablas V2.
+- `PASOS-ACTUALIZACION.md`: procedimiento de actualización en Cloudflare.
 
-### Guardado y migración
+El Worker:
 
-Las partidas anteriores reciben una instantánea económica para la temporada que esté en curso al cargarse por primera vez en V7.05. Desde la temporada siguiente, el cálculo se realiza normalmente al inicio de cada año.
+- No elimina las tablas anteriores.
+- Intenta importar automáticamente usuarios y registros existentes.
+- Actualiza una carrera por usuario y código de partida.
+- Conserva presupuestos negativos.
+- Separa `manager_score` de `match_points`.
+- Devuelve todos los campos que necesita la tabla del juego.
 
-Se conserva el sistema de dos copias de guardado:
+El binding D1 debe llamarse `DB`.
+
+### Guardado y migración local
+
+Se mantiene el sistema de dos copias:
 
 - Carrera 1: `slot:career:1` y `main`.
 - Otros slots: copia principal y respaldo dedicado.
 
-### Archivos modificados en V7.05
+La migración de títulos y presupuesto inicial se realiza al cargar y marca la partida para autoguardado sólo cuando encuentra información que debe reconstruir.
+
+### Archivos principales modificados en V7.06
 
 - `README.md`
 - `index.html`
@@ -60,8 +74,11 @@ Se conserva el sistema de dos copias de guardado:
 - `data/retos_manager.json`
 - `js/core/01-config-constants.js`
 - `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
+- `js/game/13-ranking-online.js`
+- `cloudflare-ranking/worker-v7.06.js`
+- `cloudflare-ranking/migracion-d1-v7.06.sql`
+- `cloudflare-ranking/PASOS-ACTUALIZACION.md`
 
 ### Compatibilidad de partidas
 
-**V7.05 no rompe partidas anteriores.** Mantiene planteles, presupuesto, calendario, reputaciones y resultados. Sólo agrega la instantánea económica de liga y elimina overrides falsos de clubes exclusivos del Mundial de Clubes.
+**V7.06 no rompe partidas anteriores.** Conserva planteles, calendarios, presupuestos, historial y progreso. Agrega campos de migración para el presupuesto inicial y el historial de títulos. El Worker nuevo utiliza tablas V2 y no borra las tablas anteriores.

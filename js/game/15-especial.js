@@ -519,7 +519,8 @@ function specialActiveBonus(type){
   const raw = (state.cartas_activas || [])
     .filter(card => card.tipo_bonus === type && !card.destruida)
     .reduce((sum, card) => sum + Number(card.valor_bonus || 0), 0);
-  const cap = Number(stack.tope_porcentaje);
+  const capRaw = stack.tope_porcentaje;
+  const cap = capRaw === null || capRaw === undefined || capRaw === '' ? null : Number(capRaw);
   return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
 }
 function specialActiveBonusSummary(){

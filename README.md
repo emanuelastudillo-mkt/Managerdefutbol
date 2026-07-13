@@ -1,5 +1,47 @@
-# Fútbol Manager MVP - V7.19
+# Fútbol Manager MVP - V7.20
 
+
+## V7.20 - Reparación del apilado y del límite físico de las cartas
+
+Se corrigieron dos errores que podían dejar a un jugador en 0 de forma aunque hubiera varias cartas legendarias activas.
+
+### Causas corregidas
+
+1. En `habilidades_especiales.json`, `tope_porcentaje: null` significa que el bonus no tiene límite. El cálculo convertía `null` en `0`, por lo que las cartas sin tope podían quedar anuladas completamente.
+2. Aunque el bonus se sumara, la forma final volvía a limitarse por el desgaste persistente del jugador: `forma máxima = 99 - desgaste`. Ese límite podía absorber casi toda la recuperación.
+
+### Nuevo comportamiento
+
+- `null`, campo vacío o ausencia de `tope_porcentaje` se interpretan correctamente como **sin límite**.
+- Cinco cartas legendarias de preparación física suman realmente **+90 puntos**.
+- Se calcula primero la forma final normal del partido y se limita como mínimo a 0.
+- Después se suman los puntos directos de las cartas activas.
+- Si el desgaste persistente bloquea el resultado, se reduce únicamente el desgaste necesario para habilitar esa forma.
+- El bonus se aplica una sola vez; no se duplica entre forma y desgaste.
+- Un jugador lesionado durante el encuentro también recibe la recuperación si disputó minutos. La duración de la lesión no se modifica.
+- Se mantiene el máximo general de 99 de forma.
+
+Un jugador cuyo cálculo normal termina en 0 y tiene cinco cartas legendarias activas queda en 90 inmediatamente después del partido.
+
+La corrección de `tope_porcentaje: null` también restablece otros bonus acumulables sin límite que estuvieran definidos con ese valor.
+
+### Archivos principales modificados en V7.20
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.20 no rompe partidas anteriores.** Conserva cartas, usos, bloqueos, planteles y desgaste guardado. La corrección se aplica desde el siguiente partido disputado.
+
+---
 
 ## V7.19 - Recuperación física directa de cartas
 

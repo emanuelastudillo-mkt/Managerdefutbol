@@ -1,8 +1,8 @@
 {
-  "version": "V7.19",
+  "version": "V7.20",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.19: las cartas de preparación física otorgan puntos directos de recuperación postpartido (+2, +5, +8 o +18) aplicados después del desgaste, sin pérdida por redondeo.",
+  "caracteristicas_version": "V7.20: corrige el apilado sin tope de las cartas y evita que el desgaste persistente anule la recuperación física postpartido.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

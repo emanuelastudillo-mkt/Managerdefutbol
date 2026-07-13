@@ -1306,6 +1306,17 @@ function postMatchPhysicalCardRecoveryForPlayer(player){
   if(typeof specialActiveBonus !== 'function') return 0;
   return clamp(Math.round(Number(specialActiveBonus('preparacion_fisica') || 0)), 0, 99);
 }
+function applyPostMatchPhysicalCardRecoveryForPlayer(player, conditionValue){
+  const baseCondition = clamp(Math.round(Number(conditionValue || 0)), 0, 99);
+  const bonus = postMatchPhysicalCardRecoveryForPlayer(player);
+  if(!player || bonus <= 0) return baseCondition;
+  const desiredCondition = clamp(baseCondition + bonus, 0, 99);
+  if(PLAYER_WEAR_ENABLED && desiredCondition > maxConditionForPlayer(player.id)){
+    const recoveryNeeded = desiredCondition - maxConditionForPlayer(player.id);
+    adjustPlayerWear(player.id, -recoveryNeeded);
+  }
+  return clamp(Math.min(desiredCondition, maxConditionForPlayer(player.id)), 0, 99);
+}
 function rosterGroupCounts(squad=[]){
   const counts = { POR:0, DEF:0, MID:0, ATT:0 };
   (squad || []).forEach(player => {

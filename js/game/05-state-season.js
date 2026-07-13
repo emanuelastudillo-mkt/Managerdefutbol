@@ -5434,7 +5434,7 @@ function repairClubWorldCupGroupFixtureDates(options={}){
   return true;
 }
 function clubWorldCupCanCreateFixtureNow(){
-  if(!game || !regularFixturesComplete()) return false;
+  if(!game) return false;
   const readyDay = clubWorldCupFixtureReadySeasonDay();
   const currentDay = typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : Number(seasonDayFromDate(currentCalendarDate?.() || dateForSeasonState(game), currentSeasonYear()) || 0);
   return currentDay >= readyDay;
@@ -5944,7 +5944,9 @@ function clubWorldCupBracketMarkup(edition, options={}){
 }
 function clubWorldCupEditionMarkup(edition, options={}){
   if(!edition){
-    return `<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en este año.</p><p class="small muted">Cuando se sortee la edición aparecerán los ocho grupos, sus tablas, todos los resultados y el cuadro eliminatorio.</p></div>`;
+    const readyDay = typeof clubWorldCupFixtureReadySeasonDay === 'function' ? clubWorldCupFixtureReadySeasonDay() : 295;
+    const currentNote = options.current ? ` El sorteo se genera automáticamente el día ${readyDay}, participe o no el club dirigido.` : '';
+    return `<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en este año.</p><p class="small muted">Cuando se sortee la edición aparecerán los ocho grupos, sus tablas, todos los resultados y el cuadro eliminatorio.${currentNote}</p></div>`;
   }
   const champion = Number(edition.championId || 0);
   const runnerUp = Number(edition.runnerUpId || 0);
@@ -5971,6 +5973,11 @@ function bindClubWorldCupYearFilter(renderFn){
   });
 }
 function renderClubWorldCup(){
+  let createdOnOpen = false;
+  if(!clubWorldCupState() && typeof createClubWorldCupIfNeeded === 'function'){
+    createdOnOpen = Boolean(createClubWorldCupIfNeeded());
+    if(createdOnOpen && typeof saveLocal === 'function') saveLocal(true).catch?.(()=>{});
+  }
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const selected = selectedClubWorldCupEditionForDisplay();
   view.innerHTML = `<div class="row section-title fixture-title-row">

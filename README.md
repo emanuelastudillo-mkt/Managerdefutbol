@@ -1,4 +1,39 @@
-# Fútbol Manager MVP - V7.13
+# Fútbol Manager MVP - V7.14
+
+## V7.14 - Generación automática del Mundial de Clubes
+
+El sorteo del Mundial de Clubes ahora se genera automáticamente al alcanzar el **día 295** de cada temporada, aunque el club dirigido por el usuario no esté clasificado y aunque todavía exista algún partido doméstico pendiente.
+
+### Funcionamiento
+
+- El día 295 se seleccionan los 32 participantes y se crean los ocho grupos de cuatro equipos.
+- La creación ya no depende de que todos los partidos de liga estén marcados como disputados.
+- La clasificación del club del manager no condiciona la existencia del torneo.
+- Si el club dirigido no participa, todos los partidos del Mundial se simulan entre equipos bots en sus fechas correspondientes.
+- Las fechas de grupos continúan separadas por cinco días.
+- La primera jornada se mantiene al menos 18 días después del sorteo y respeta el descanso posterior al último partido regular cuando corresponde.
+- Las partidas que ya superaron el día 295 sin haber creado el torneo lo generan al abrir **Calendario → Mundial de Clubes** o al realizar el siguiente avance.
+- La pantalla informa expresamente que el sorteo está programado para el día 295 cuando todavía no se alcanzó esa fecha.
+
+### Causa corregida
+
+La versión anterior exigía simultáneamente alcanzar el día 295 y que todos los encuentros regulares de todas las ligas estuvieran finalizados. Un partido pendiente podía impedir el sorteo completo, incluso cuando el usuario no participaba en la competición.
+
+### Archivos principales modificados en V7.14
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+
+### Compatibilidad de partidas
+
+**V7.14 no rompe partidas anteriores.** Una partida situada después del día 295 y sin Mundial creado generará la edición pendiente automáticamente, conservando planteles, presupuestos, calendarios, resultados e historiales.
+
+---
+
 
 ## V7.13 - Desbloqueo de cartas en 15 días
 

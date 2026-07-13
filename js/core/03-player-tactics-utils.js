@@ -571,6 +571,22 @@ function currentMorale(playerId){
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = PLAYER_MORALE_START;
   return clamp(Math.round(game.playerMorale[playerId]), 1, 99);
 }
+function adjustSquadMorale(clubId, delta, excludedPlayerId = 0){
+  if(!game || !Number(clubId)) return { affected:0, totalChange:0 };
+  game.playerMorale = game.playerMorale || {};
+  const change = Number(delta || 0);
+  let affected = 0;
+  let totalChange = 0;
+  playersByClub(clubId).forEach(player => {
+    if(Number(player.id) === Number(excludedPlayerId)) return;
+    const before = currentMorale(player.id);
+    const after = clamp(Math.round(before + change), 1, 99);
+    game.playerMorale[player.id] = after;
+    if(after !== before) affected += 1;
+    totalChange += after - before;
+  });
+  return { affected, totalChange };
+}
 function moraleFactor(playerId){
   return 0.92 + (currentMorale(playerId) / 99) * 0.16;
 }

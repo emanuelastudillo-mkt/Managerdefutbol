@@ -280,6 +280,7 @@ function dismissOwnPlayer(playerId){
   if(!player || Number(player.clubId) !== Number(game.selectedClubId)) return;
   if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
   if(!confirm(`Despedir a ${player.name} del plantel?`)) return;
+  const dismissedClubId = Number(game.selectedClubId);
   removePlayerFromCurrentTactic(player.id);
   player.clubId = 0;
   player.freeAgent = true;
@@ -294,11 +295,20 @@ function dismissOwnPlayer(playerId){
   const copy = { ...player, clubId:0, freeAgent:true, transferListed:false, intransferible:false, sold:false };
   if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
   else game.marketPlayers.push(copy);
-  pushGameMessage({ type:'mercado', title:'Jugador despedido', body:`${player.name} dejó el club y quedó como agente libre.`, priority:'normal' });
+  const moraleImpact = typeof adjustSquadMorale === 'function'
+    ? adjustSquadMorale(dismissedClubId, -TEAM_MORALE_DISMISSAL_LOSS, player.id)
+    : { affected:0, totalChange:0 };
+  const cohesionChange = typeof adjustTeamCohesion === 'function'
+    ? adjustTeamCohesion(dismissedClubId, -TEAM_COHESION_DISMISSAL_LOSS)
+    : 0;
+  const moraleText = moraleImpact.affected ? ' Moral del plantel -1.' : '';
+  const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
+  const impactText = `${moraleText}${cohesionText}`;
+  pushGameMessage({ type:'mercado', title:'Jugador despedido', body:`${player.name} dejó el club y quedó como agente libre.${impactText}`, priority:'normal' });
   closeModal();
   saveLocal(true);
   renderAll();
-  showNotice(`${player.name} fue despedido.`);
+  showNotice(`${player.name} fue despedido.${impactText}`);
 }
 function offerOwnPlayerToClubs(playerId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés ofrecer jugadores mientras estás sin club.'); return; }

@@ -1,40 +1,38 @@
-# Fútbol Manager MVP - V7.03
+# Fútbol Manager MVP - V7.04
 
-## V7.03 - Cohesión por movimientos de plantel y código PUNTOS20000
+## V7.04 - Impacto de despedir jugadores
 
-Esta versión parte de V7.02 y conserva el sistema de guardado doble seguro.
+Esta versión parte de V7.03 y conserva el sistema de guardado doble seguro.
 
-### Cohesión del plantel
+### Moral y cohesión al despedir
 
-Los movimientos efectivos del primer equipo ahora modifican la cohesión:
+Al despedir a un jugador del primer equipo se aplican inmediatamente estas consecuencias:
 
-- Fichar un jugador reduce 2 puntos de cohesión.
-- Vender un jugador reduce 3 puntos de cohesión.
-- Ofrecer contrato profesional a un juvenil aumenta 3 puntos de cohesión.
-- Vender 2 jugadores y fichar 2 jugadores produce una variación total de -10 puntos.
-- La cohesión continúa limitada al rango de 0 a 100.
+- La moral de cada jugador que permanece en el plantel baja 1 punto.
+- La cohesión del club baja 1 punto.
+- Los valores respetan sus límites: moral entre 1 y 99, cohesión entre 0 y 100.
+- La penalización se ejecuta sólo después de confirmar el despido y completar la salida del jugador.
+- No se aplica cuando el despido se cancela o cuando el plantel mínimo impide realizarlo.
 
-La penalización por fichaje se aplica cuando el jugador se incorpora realmente al plantel:
+Los valores pueden editarse desde `balance-modificadores.js`:
 
-- Los agentes libres la aplican al aceptar e incorporarse inmediatamente.
-- Los jugadores comprados la aplican al llegar al club el domingo correspondiente.
-- Una oferta rechazada o una transferencia todavía pendiente no modifica la cohesión.
+- `moral.perdidaPlantelPorDespedirJugador`
+- `cohesion.perdidaPorDespedirJugador`
 
-La penalización por venta se aplica cuando la operación se completa y el jugador deja el club. También se aplica cuando una cláusula especial termina en venta forzada.
+La moral del jugador despedido no se utiliza para calcular esta penalización: el efecto representa la reacción de los compañeros que continúan en el club.
 
-La promoción desde Academia utiliza su regla propia de +3 y no se considera un fichaje externo, por lo que no recibe la penalización de -2.
+### Reglas de cohesión vigentes
 
-Los valores se pueden editar desde el bloque `cohesion` de `balance-modificadores.js`:
-
-- `perdidaPorFichaje`
-- `perdidaPorVenta`
-- `gananciaPorContratoProfesionalJuvenil`
+- Fichar un jugador: -2.
+- Vender un jugador: -3.
+- Despedir un jugador: -1.
+- Ofrecer contrato profesional a un juvenil: +3.
 
 ### Código especial
 
-- El código anterior de puntos fue reemplazado por `PUNTOS20000`.
-- El beneficio fue ajustado para entregar 20.000 puntos de habilidad, coincidiendo con el nombre del código.
-- El código continúa pudiéndose reclamar una sola vez por partida.
+- El código vigente es `PUNTOS20000`.
+- Entrega 20.000 puntos de habilidad.
+- Puede reclamarse una sola vez por partida.
 
 ### Guardado y compatibilidad
 
@@ -42,9 +40,9 @@ Los valores se pueden editar desde el bloque `cohesion` de `balance-modificadore
 - Carrera 1 mantiene `slot:career:1` y `main`.
 - Las demás carreras y el reto mantienen una copia principal y un respaldo propio.
 - No se modificó la estructura de los guardados existentes.
-- Las nuevas reglas de cohesión comienzan a aplicarse únicamente a movimientos realizados después de instalar V7.03.
+- Las nuevas penalizaciones se aplican sólo a despidos realizados después de instalar V7.04.
 
-### Archivos modificados en V7.03
+### Archivos modificados en V7.04
 
 - `README.md`
 - `index.html`
@@ -52,12 +50,9 @@ Los valores se pueden editar desde el bloque `cohesion` de `balance-modificadore
 - `balance-modificadores.js`
 - `data/retos_manager.json`
 - `js/core/01-config-constants.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/07-render-team-market.js`
+- `js/core/03-player-tactics-utils.js`
 - `js/ui/12-modals.js`
 
 ### Compatibilidad de partidas
 
-**V7.03 no rompe partidas anteriores.** Las partidas V7.02 y anteriores mantienen presupuesto, planteles, cohesión y progreso. No se recalculan transferencias históricas ni promociones juveniles ya realizadas.
+**V7.04 no rompe partidas anteriores.** Las partidas V7.03 y anteriores mantienen presupuesto, planteles, moral, cohesión y progreso. No se recalculan despidos anteriores.

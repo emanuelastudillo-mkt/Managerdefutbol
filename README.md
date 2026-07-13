@@ -1,3 +1,43 @@
+# Fútbol Manager MVP - V7.12
+
+## V7.12 - Códigos especiales alfanuméricos
+
+Esta versión reemplaza los códigos descriptivos visibles por **10 códigos alfanuméricos individuales**.
+
+### Distribución
+
+- 2 códigos entregan **20 puntos de prestigio** cada uno.
+- 8 códigos entregan **20.000 puntos de habilidad** cada uno.
+- Cada código puede reclamarse una sola vez por partida guardada.
+- Canjear un código en una partida no lo invalida en otras partidas.
+
+### Protección de los códigos
+
+Los textos reales de los códigos no están incluidos en `config.js` ni en el README distribuido con el juego. La configuración almacena únicamente una huella **SHA-256** de cada código.
+
+Cuando el jugador escribe un código:
+
+1. Se normaliza a mayúsculas.
+2. Se calcula su huella SHA-256.
+3. Se compara con las huellas autorizadas.
+4. Se aplica el beneficio correspondiente.
+
+Los códigos descriptivos de versiones anteriores dejan de aceptar nuevos canjes. Los beneficios ya reclamados se conservan.
+
+### Archivos principales modificados en V7.12
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.12 no rompe partidas anteriores.** Conserva puntos, prestigio, cartas y códigos ya reclamados. Sólo cambia la lista de códigos aceptados para nuevos canjes.
+
+---
+
 # Fútbol Manager MVP - V7.11
 
 ## V7.11 - Ajustes visuales del capitán

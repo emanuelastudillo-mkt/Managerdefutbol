@@ -1,4 +1,4 @@
-/* V6.34 · Cartas globales: destrucción definitiva y sincronización reserva/activa. */
+/* Cartas globales: destrucción definitiva y sincronización reserva/activa. */
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
@@ -263,7 +263,7 @@ function syncSpecialStateWithGlobalCards(state){
 }
 
 function resetActiveSpecialCardsToReserveForNewClub(options={}){
-  // V6.27: al comenzar en un nuevo club, ninguna carta queda activa automáticamente.
+  // al comenzar en un nuevo club, ninguna carta queda activa automáticamente.
   // Los usos ya consumidos se mantienen; la carta vuelve a reserva si aún tiene usos disponibles.
   if(!game) return { changed:0, returned:0, destroyed:0 };
   const state = ensureSpecialState();

@@ -1,4 +1,4 @@
-/* V6.39 · Ranking online con puntaje total explícito para Worker. */
+/* Ranking online con puntaje total explícito para Worker. */
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -58,7 +58,7 @@ function rankingConfiguredPaths(kind){
   const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
   const defaults = kind === 'submit'
     ? [
-        // Worker Cloudflare + D1 V6.05: carga principal de carrera.
+        // Carga principal de carrera para el Worker Cloudflare + D1.
         'ranking/career','api/ranking/career','career','records/career','api/records/career',
         // Compatibilidad con variantes anteriores.
         'ranking/season','api/ranking/season','season','records/season','api/records/season',

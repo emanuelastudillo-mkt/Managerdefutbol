@@ -1,4 +1,4 @@
-/* V3.39 · Selección automática, calendario anual, economía, estadio, moral, entrenamiento, bots y eventos. */
+/* Selección automática, calendario anual, economía, estadio, moral, entrenamiento, bots y eventos. */
 
 function selectLineup(clubId, tactic){
   if(clubId === game?.selectedClubId && tactic?.starters?.length === 11){
@@ -1458,7 +1458,7 @@ function startLiveOwnMatchdayInteractive(context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.25] Error al iniciar simulación viva:', err);
+    console.error('Error al iniciar simulación viva:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar simulación viva: ${err?.message || err}`] });
     return 'blocked';
   }
@@ -1480,7 +1480,7 @@ function startLiveOwnMatchday(context){
   if(!match) return false;
   const status = liveMatchEngineStatus();
   if(!status.ok){
-    console.warn('[V5.25] Simulación viva bloqueada por carga incompleta:', status.missing);
+    console.warn('Simulación viva bloqueada por carga incompleta:', status.missing);
     showLiveMatchEngineBlocked(status);
     return 'blocked';
   }
@@ -1704,7 +1704,7 @@ function startLivePreseasonFriendlyInteractive(match, context){
     });
     if(started) return true;
   }catch(err){
-    console.error('[V5.25] Error al iniciar amistoso vivo:', err);
+    console.error('Error al iniciar amistoso vivo:', err);
     showLiveMatchEngineBlocked({ missing:[`Error al iniciar amistoso vivo: ${err?.message || err}`] });
     return 'blocked';
   }
@@ -1722,7 +1722,7 @@ function finishPreseasonFriendlyResultOnly(match, context){
 function startLivePreseasonFriendly(match, context){
   const status = liveMatchEngineStatus();
   if(!status.ok){
-    console.warn('[V5.25] Amistoso vivo bloqueado por carga incompleta:', status.missing);
+    console.warn('Amistoso vivo bloqueado por carga incompleta:', status.missing);
     showLiveMatchEngineBlocked(status);
     return 'blocked';
   }

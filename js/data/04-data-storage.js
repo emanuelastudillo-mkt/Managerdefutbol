@@ -1,4 +1,4 @@
-/* V5.01 · Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
+/* Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
 
 async function fetchJsonIfExists(url){
   try{
@@ -335,6 +335,10 @@ function legacyCareerSlotKey(){
 function saveSlotKey(slotId=''){
   return `${SAVE_SLOT_PREFIX}${normalizeSaveSlotId(slotId)}`;
 }
+function backupSaveSlotKey(slotId=''){
+  const slot = normalizeSaveSlotId(slotId);
+  return slot === SAVE_SLOT_CAREER ? SAVE_KEY : `${SAVE_BACKUP_PREFIX}${saveSlotKey(slot)}`;
+}
 function setCurrentSaveSlot(slotId='career'){
   currentSaveSlotId = normalizeSaveSlotId(slotId);
   try{ localStorage.setItem(SAVE_ACTIVE_SLOT_STORAGE_KEY, currentSaveSlotId); }catch(_){ /* sin almacenamiento */ }
@@ -382,23 +386,15 @@ async function deleteSaveRecordByKey(key){
   });
 }
 async function localSlotExists(slotId='career'){
-  const slot = normalizeSaveSlotId(slotId);
-  const record = await readSaveRecordByKey(saveSlotKey(slot)).catch(()=>null);
-  if(record) return true;
-  if(slot === SAVE_SLOT_CAREER){
-    const legacySlot = await readSaveRecordByKey(legacyCareerSlotKey()).catch(()=>null);
-    if(legacySlot) return true;
-    return Boolean(await readSaveRecordByKey(SAVE_KEY).catch(()=>null));
-  }
-  return false;
+  return Boolean(await readLocalSaveRecord(slotId).catch(()=>null));
 }
 async function deleteLocalSaveSlot(slotId='career'){
   const slot = normalizeSaveSlotId(slotId);
-  await deleteSaveRecordByKey(saveSlotKey(slot));
-  if(slot === SAVE_SLOT_CAREER){
-    await deleteSaveRecordByKey(legacyCareerSlotKey()).catch(()=>{});
-    await deleteSaveRecordByKey(SAVE_KEY).catch(()=>{});
-  }
+  await Promise.all([
+    deleteSaveRecordByKey(saveSlotKey(slot)).catch(()=>{}),
+    deleteSaveRecordByKey(backupSaveSlotKey(slot)).catch(()=>{})
+  ]);
+  if(slot === SAVE_SLOT_CAREER) await deleteSaveRecordByKey(legacyCareerSlotKey()).catch(()=>{});
 }
 async function readSaveSlotSummary(slotId='career'){
   const slot = normalizeSaveSlotId(slotId);
@@ -573,6 +569,14 @@ async function loadManagerAchievementsDatabase(){
   if(!raw || typeof raw !== 'object') return fallback;
   const hitos = Array.isArray(raw.hitos) ? raw.hitos.filter(item => item && item.id && item.metrica) : [];
   return { ...raw, hitos, source:MANAGER_ACHIEVEMENTS_DATABASE_URL };
+}
+
+async function loadManagerChallengesDatabase(){
+  const fallback = { metadata:{ version:APP_VERSION, sistema:'retos_manager', source:'fallback' }, retos:[] };
+  const raw = await fetchJsonIfExists(MANAGER_CHALLENGES_DATABASE_URL);
+  if(!raw || typeof raw !== 'object') return fallback;
+  const retos = Array.isArray(raw.retos) ? raw.retos.filter(item => item && item.id && item.activo !== false) : [];
+  return { ...raw, retos, source:MANAGER_CHALLENGES_DATABASE_URL };
 }
 
 function uniqueUrlList(list){
@@ -821,6 +825,9 @@ function applySavedDatabaseSnapshots(saved){
   delete clean.playersSnapshot;
   delete clean.clubsSnapshot;
   delete clean.divisionsSnapshot;
+  delete clean.localSaveMeta;
+  delete clean._storageReadSource;
+  delete clean._storageNeedsRefresh;
   return clean;
 }
 function currentSavePayload(){
@@ -835,6 +842,11 @@ function currentSavePayload(){
   payload.playersSnapshot = structuredClone(seed?.players || []);
   payload.clubsSnapshot = structuredClone(seed?.clubs || []);
   payload.divisionsSnapshot = structuredClone(seed?.divisions || []);
+  payload.localSaveMeta = {
+    schemaVersion:LOCAL_SAVE_SCHEMA_VERSION,
+    savedAt:new Date().toISOString(),
+    slotId:payload.saveSlotId
+  };
   return payload;
 }
 async function loadInitialSeed(options={}){
@@ -1703,7 +1715,7 @@ function matchFieldSummaryMarkup(match){
 }
 function clubBudgetByPrestige(prestige){
   const rep = clamp(Number(prestige) || 50, 1, 99);
-  // V6.18: presupuesto inicial calibrado principalmente por prestigio.
+  // presupuesto inicial calibrado principalmente por prestigio.
   // Anclas de diseño: 20 => $4.500.000, 80 => $100.000.000, 95 => $800.000.000.
   const lowAnchorPrestige = 20;
   const midAnchorPrestige = 80;
@@ -1987,16 +1999,39 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
 function savedHasDatabaseSnapshots(saved){
   return Boolean(Array.isArray(saved?.clubsSnapshot) && saved.clubsSnapshot.length && Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length);
 }
+function localSaveRecordTimestamp(record){
+  const raw = record?.localSaveMeta?.savedAt || '';
+  const value = Date.parse(raw);
+  return Number.isFinite(value) ? value : 0;
+}
+function usableLocalSaveRecord(record){
+  return Boolean(record && typeof record === 'object' && (Number(record.selectedClubId || 0) > 0 || (record.gameOver && record.managerStats)));
+}
 async function readLocalSaveRecord(slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
-  const record = await readSaveRecordByKey(saveSlotKey(slot));
-  if(record) return record;
-  if(slot === SAVE_SLOT_CAREER){
-    const legacySlot = await readSaveRecordByKey(legacyCareerSlotKey()).catch(()=>null);
-    if(legacySlot) return legacySlot;
-    return await readSaveRecordByKey(SAVE_KEY);
-  }
-  return null;
+  const candidates = [
+    { key:saveSlotKey(slot), source:'primary', priority:3 },
+    { key:backupSaveSlotKey(slot), source:'backup', priority:2 }
+  ];
+  if(slot === SAVE_SLOT_CAREER) candidates.push({ key:legacyCareerSlotKey(), source:'legacy', priority:1 });
+  const loaded = await Promise.all(candidates.map(async candidate => ({
+    ...candidate,
+    record:await readSaveRecordByKey(candidate.key).catch(()=>null)
+  })));
+  const usable = loaded.filter(item => usableLocalSaveRecord(item.record));
+  if(!usable.length) return null;
+  usable.sort((a,b) => localSaveRecordTimestamp(b.record) - localSaveRecordTimestamp(a.record) || b.priority - a.priority);
+  const selected = usable[0];
+  const primary = loaded.find(item => item.source === 'primary');
+  const backup = loaded.find(item => item.source === 'backup');
+  const selectedTimestamp = localSaveRecordTimestamp(selected.record);
+  const backupTimestamp = localSaveRecordTimestamp(backup?.record);
+  selected.record._storageReadSource = selected.source;
+  selected.record._storageNeedsRefresh = selected.source !== 'primary'
+    || !usableLocalSaveRecord(primary?.record)
+    || !usableLocalSaveRecord(backup?.record)
+    || (selectedTimestamp > 0 && backupTimestamp !== selectedTimestamp);
+  return selected.record;
 }
 async function openDb(){
   return new Promise((resolve,reject)=>{
@@ -2017,10 +2052,7 @@ async function saveLocal(silent=false){
     const tx = db.transaction(DB_STORE, 'readwrite');
     const store = tx.objectStore(DB_STORE);
     store.put(payload, saveSlotKey(slot));
-    if(slot === SAVE_SLOT_CAREER){
-      store.put(payload, SAVE_KEY);
-      store.put(payload, legacyCareerSlotKey());
-    }
+    store.put(payload, backupSaveSlotKey(slot));
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
@@ -2030,6 +2062,8 @@ async function loadLocal(silent=false, slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);
   const saved = await readLocalSaveRecord(slot);
   if(saved){
+    const recoveredFromBackup = saved._storageReadSource === 'backup' || saved._storageReadSource === 'legacy';
+    const storageNeedsRefresh = Boolean(saved._storageNeedsRefresh);
     const currentSignature = seed?.meta?.signature;
     if(currentSignature && saved.seedSignature !== currentSignature && !savedHasDatabaseSnapshots(saved)){
       if(!silent) showNotice('La base de datos cambió y la partida guardada no tiene snapshots suficientes. Creá una nueva partida para usar la base actual.');
@@ -2049,16 +2083,18 @@ async function loadLocal(silent=false, slotId=null){
     const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [] });
     const botRepair = repairBotRosters({ reason:'load_game' });
     const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
-    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired || Boolean(sharedProfileApplied?.changed);
+    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired || Boolean(sharedProfileApplied?.changed) || storageNeedsRefresh;
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
     activeTab = 'home';
     renderAll();
     if(shouldAutosave) saveLocal(true);
     if(!silent){
-      const notice = repairedStadiumFields || stadiumRepair.repaired
-        ? 'Partida cargada. Se corrigieron campos bots inválidos.'
-        : (needsAutosave ? `${saveSlotLabel(slot, saved)} cargada. Se corrigió el arrastre de lesiones.` : `${saveSlotLabel(slot, saved)} cargada.`);
+      const notice = recoveredFromBackup
+        ? `${saveSlotLabel(slot, saved)} recuperada desde la copia de seguridad y duplicada nuevamente.`
+        : (repairedStadiumFields || stadiumRepair.repaired
+          ? 'Partida cargada. Se corrigieron campos bots inválidos.'
+          : (needsAutosave ? `${saveSlotLabel(slot, saved)} cargada. Se corrigió el arrastre de lesiones.` : `${saveSlotLabel(slot, saved)} cargada.`));
       showNotice(notice);
     }
     return true;
@@ -2084,13 +2120,14 @@ async function init(){
     let savedRecord = await readLocalSaveRecord(preferredSlot).catch(() => null);
     if(!savedRecord && preferredSlot !== SAVE_SLOT_CAREER) savedRecord = await readLocalSaveRecord(SAVE_SLOT_CAREER).catch(() => null);
     const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
-    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedMatchCommentary] = await Promise.all([
+    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedManagerChallenges, loadedMatchCommentary] = await Promise.all([
       loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
       loadSponsorsDatabase(),
       loadEmployeesDatabase(),
       loadEventsDatabase(),
       loadSpecialSkillsDatabase(),
       loadManagerAchievementsDatabase(),
+      loadManagerChallengesDatabase(),
       loadMatchCommentaryDatabase()
     ]);
     seed = loadedSeed;
@@ -2099,6 +2136,7 @@ async function init(){
     eventsDatabase = loadedEvents;
     specialSkillsDatabase = loadedSpecialSkills;
     managerAchievementsDatabase = loadedManagerAchievements;
+    managerChallengesDatabase = loadedManagerChallenges;
     matchCommentaryDatabase = loadedMatchCommentary;
     fillClubSelect();
     bindEvents();

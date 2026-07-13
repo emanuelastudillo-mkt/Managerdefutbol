@@ -1,8 +1,9 @@
-/* V3.47 · Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
+/* Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
 
 function renderWelcomeScreen(){
   const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
   const divisionCount = (seed?.divisions || []).length;
+  const challengeDefinition = typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition() : null;
   const challengeAvailable = typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
   const careerIds = typeof careerSaveSlotIds === 'function' ? careerSaveSlotIds() : [SAVE_SLOT_CAREER];
   const careerCards = careerIds.map(slotId => {
@@ -41,8 +42,8 @@ function renderWelcomeScreen(){
         <div class="card save-slot-card save-slot-challenge ${challengeAvailable ? '' : 'blocker'}">
           <div class="save-slot-main">
             <p class="label">Reto predeterminado</p>
-            <h3>Campo destruido</h3>
-            <p class="muted">Campo propio 15/100, sin mantenimiento, sin fichajes, sin empleados, últimas 5 fechas obligatorias dirigidas y objetivo campeón.</p>
+            <h3>${escapeHtml(challengeDefinition?.nombre || 'Campo destruido')}</h3>
+            <p class="muted">${escapeHtml(challengeDefinition?.textos?.descripcionTarjeta || 'Reto no disponible.')}</p>
           </div>
           <div class="save-slot-actions">
             <button id="btnSlotCampoNew" class="primary" ${challengeAvailable ? '' : 'disabled'}>Iniciar reto</button>
@@ -974,7 +975,7 @@ function playerOfferPerformanceScore(player){
 }
 function playerOfferRange(player){
   const profile = playerOfferProfile(player);
-  // V6.15: las ofertas normales duplican el porcentaje previo sobre cláusula.
+  // las ofertas normales duplican el porcentaje previo sobre cláusula.
   // Las ofertas de cláusula completa mantienen su flujo separado.
   if(profile === 'star') return { min:70, max:100 };
   if(profile === 'young_good') return { min:36, max:70 };

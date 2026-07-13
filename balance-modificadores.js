@@ -1,5 +1,4 @@
-/*
-  V6.03 · Modificadores de balance del simulador y entrenamiento.
+/* Modificadores de balance del simulador y entrenamiento.
   Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
   Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
 */
@@ -11,7 +10,7 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   entrenamiento: {
-    // V5.40: al avanzar 1 día se aplican sólo los 4 bloques del día actual, no los 28 turnos de toda la semana.
+    // al avanzar 1 día se aplican sólo los 4 bloques del día actual, no los 28 turnos de toda la semana.
     aplicarSoloDiaActual: true,
     efectividadPorCasilla: 0.25,
     entrenamientoIndividualDiario: true,
@@ -55,7 +54,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     rojasDerrotaDefault: 5,
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
-    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
+    // si está activo, la recuperación postpartido usa la resistencia del jugador.
     // El rango 61-70 queda como puente para evitar saltos bruscos.
     recuperacionPostPartidoUsaResistencia: true,
     recuperacionPostPartidoPorResistencia: [
@@ -72,7 +71,7 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   dificultad: {
-    // V6.03: aumenta la dificultad sin azar arbitrario.
+    // aumenta la dificultad sin azar arbitrario.
     partidosReferenciaTemporada: 34,
     umbralParticipacionLesionLarga: 0.80,
     probabilidadLesionLargaMin: 0.35,
@@ -96,7 +95,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     // Los bots no entrenan. Este bloque sólo ajusta su simulación rápida de partido.
     tacticaRapida: {
       sobreexigenciaSiPierde: true,
-      // V5.42: reglas progresivas según diferencia de goles en contra del bot.
+      // reglas progresivas según diferencia de goles en contra del bot.
       // desgasteFisicoPct se aplica como pérdida extra de estado físico sobre la fatiga normal del partido.
       // bonusAtaquePct aumenta la presión ofensiva mientras el bot va perdiendo.
       reglasDiferencia: [

@@ -1,4 +1,4 @@
-/* V4.05 · Eventos, carrera, ranking automático y limpieza de estado al cambiar de club. */
+/* Eventos, carrera, ranking automático y limpieza de estado al cambiar de club. */
 
 function clubPrestigeValue(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
@@ -50,7 +50,7 @@ function managerClubAccessPrestige(value=currentManagerPrestige()){
   return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
 }
 function currentManagerPrestige(){
-  // V6.24: el prestigio vuelve a ser propio de cada slot/carrera.
+  // el prestigio vuelve a ser propio de cada slot/carrera.
   // No se usa el perfil global para abrir clubes ni para calcular reputación activa.
   if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
@@ -126,8 +126,17 @@ function managerChallengeBlockedMessage(kind=''){
   if(kind === 'resultOnly') return `${title}: Ver resultado está bloqueado. Debés dirigir el partido.`;
   return `${title}: acción bloqueada por las reglas del reto.`;
 }
+function managerChallengePresetById(id=''){
+  const key = String(id || '').trim();
+  const presets = Array.isArray(managerChallengesDatabase?.retos) ? managerChallengesDatabase.retos : [];
+  return presets.find(item => String(item?.id || '') === key && item?.activo !== false) || null;
+}
+function campoDestruidoChallengeDefinition(){
+  return managerChallengePresetById('campo_destruido');
+}
 function challengeClubNameCandidates(){
-  return ['River Plate','Boca Juniors','Estudiantes','San Lorenzo','Racing Club','Independiente'];
+  const definition = campoDestruidoChallengeDefinition();
+  return Array.isArray(definition?.clubesSeleccionables) ? definition.clubesSeleccionables.filter(Boolean).map(String) : [];
 }
 function challengeClubKey(name){
   if(typeof lookupNameKey === 'function') return lookupNameKey(name);
@@ -142,16 +151,27 @@ function campoDestruidoChallengeClubs(){
   return challengeClubNameCandidates().map(name => findClubByChallengeName(name)).filter(Boolean);
 }
 function campoDestruidoChallengeAvailable(){
+  const definition = campoDestruidoChallengeDefinition();
+  if(!definition) return false;
   const clubs = campoDestruidoChallengeClubs();
-  return clubs.length >= 6;
+  const matches = Math.max(1, Math.round(Number(definition?.calendario?.partidos || 0)));
+  return clubs.length >= matches + 1;
 }
 function createCampoDestruidoChallengeFixtures(selectedClubId, opponentIds=[]){
+  const definition = campoDestruidoChallengeDefinition();
+  if(!definition) return [];
+  const calendar = definition.calendario || {};
   const year = currentSeasonYear ? currentSeasonYear() : (game?.seasonYear || SEASON_START_YEAR || 2026);
-  const startDate = `${year}-10-18`;
-  return (opponentIds || []).slice(0,5).map((opponentId, index) => {
-    const date = addDaysToIsoDate(startDate, index * 7);
+  const month = String(Math.max(1, Math.min(12, Math.round(Number(calendar.mesInicio || 1))))).padStart(2, '0');
+  const day = String(Math.max(1, Math.min(31, Math.round(Number(calendar.diaInicio || 1))))).padStart(2, '0');
+  const startDate = `${year}-${month}-${day}`;
+  const matchesTotal = Math.max(1, Math.round(Number(calendar.partidos || 1)));
+  const intervalDays = Math.max(1, Math.round(Number(calendar.diasEntrePartidos || 7)));
+  const title = String(calendar.tituloFecha || 'Reto · Fecha');
+  return (opponentIds || []).slice(0, matchesTotal).map((opponentId, index) => {
+    const date = addDaysToIsoDate(startDate, index * intervalDays);
     const match = {
-      id:`reto-campo-destruido-${game?.seasonNumber || 1}-${index + 1}-${selectedClubId}-${opponentId}`,
+      id:`reto-${definition.id}-${game?.seasonNumber || 1}-${index + 1}-${selectedClubId}-${opponentId}`,
       matchday:index + 1,
       divisionId:clubDivision(selectedClubId).id,
       divisionName:clubDivision(selectedClubId).name,
@@ -162,29 +182,48 @@ function createCampoDestruidoChallengeFixtures(selectedClubId, opponentIds=[]){
       awayGoals:0,
       date,
       roundDate:date,
-      challengeId:'campo_destruido'
+      challengeId:definition.id
     };
-    return { matchday:index + 1, date, endDate:date, title:`Reto · Fecha ${index + 1}/5`, challengeRound:true, matches:[match] };
+    return { matchday:index + 1, date, endDate:date, title:`${title} ${index + 1}/${matchesTotal}`, challengeRound:true, matches:[match] };
   });
 }
 function resetChallengeDivisionStandings(selectedClubId, contenderIds=[]){
   if(!game || !seed?.clubs?.length) return;
+  const definition = campoDestruidoChallengeDefinition();
+  const tableConfig = definition?.condicionesIniciales?.tablaInicial;
+  if(!tableConfig) return;
   const division = clubDivision(selectedClubId);
   game.standings = createInitialStandings();
   const selected = Number(selectedClubId);
   const contenders = (contenderIds || []).map(Number).filter(Boolean);
   const chosenTop = contenders.slice(0,2);
+  const leaders = Array.isArray(tableConfig.lideres) ? tableConfig.lideres : [];
+  const selectedRow = tableConfig.clubSeleccionado || {};
+  const contender = tableConfig.contendiente || {};
+  const rest = tableConfig.resto || {};
   const sameDivision = seed.clubs.filter(club => String(club.divisionId || '') === String(division.id || ''));
   sameDivision.forEach((club, index) => {
     const id = Number(club.id);
-    let row = { clubId:id, pj:29, pg:11, pe:7, pp:11, gf:36 - (index % 7), gc:34 + (index % 9), dg:0, pts:40 + (index % 9) };
-    if(id === chosenTop[0]) row = { clubId:id, pj:29, pg:21, pe:5, pp:3, gf:60, gc:22, dg:38, pts:68 };
-    else if(id === chosenTop[1]) row = { clubId:id, pj:29, pg:20, pe:7, pp:2, gf:57, gc:20, dg:37, pts:67 };
-    else if(id === selected) row = { clubId:id, pj:29, pg:20, pe:6, pp:3, gf:55, gc:19, dg:36, pts:66 };
+    let row = {
+      clubId:id,
+      pj:Number(rest.pj || 0), pg:Number(rest.pg || 0), pe:Number(rest.pe || 0), pp:Number(rest.pp || 0),
+      gf:Number(rest.gfBase || 0) - (index % Math.max(1, Number(rest.gfVariacion || 1))),
+      gc:Number(rest.gcBase || 0) + (index % Math.max(1, Number(rest.gcVariacion || 1))),
+      dg:0,
+      pts:Number(rest.ptsBase || 0) + (index % Math.max(1, Number(rest.ptsVariacion || 1)))
+    };
+    const leaderIndex = chosenTop.indexOf(id);
+    if(leaderIndex >= 0 && leaders[leaderIndex]) row = { clubId:id, ...leaders[leaderIndex] };
+    else if(id === selected) row = { clubId:id, ...selectedRow };
     else if(contenders.includes(id)){
       const rank = contenders.indexOf(id);
-      row = { clubId:id, pj:29, pg:18 - Math.min(rank,3), pe:6, pp:5 + Math.min(rank,3), gf:48 - rank, gc:27 + rank, dg:0, pts:60 - rank };
-      row.dg = row.gf - row.gc;
+      const variation = Math.min(rank, Math.max(0, Number(contender.variacionMaxima || 0)));
+      row = {
+        clubId:id, pj:Number(contender.pj || 0), pg:Number(contender.pgBase || 0) - variation,
+        pe:Number(contender.pe || 0), pp:Number(contender.ppBase || 0) + variation,
+        gf:Number(contender.gfBase || 0) - rank, gc:Number(contender.gcBase || 0) + rank,
+        dg:0, pts:Number(contender.ptsBase || 0) - rank
+      };
     }
     row.dg = Number(row.gf || 0) - Number(row.gc || 0);
     game.standings[id] = row;
@@ -206,8 +245,9 @@ function lowerChallengeSquadLevel(selectedClubId, delta=10, exceptIds=[]){
   });
 }
 function moveMaradonaToChallengeClub(selectedClubId){
-  const byName = (seed?.players || []).find(player => challengeClubKey(player.name).includes('diego maradona'))
-    || (seed?.players || []).find(player => challengeClubKey(player.name).includes('maradona'));
+  const special = campoDestruidoChallengeDefinition()?.condicionesIniciales?.jugadorEspecial || {};
+  const names = Array.isArray(special.nombresBusqueda) ? special.nombresBusqueda.map(challengeClubKey).filter(Boolean) : [];
+  const byName = (seed?.players || []).find(player => names.some(name => challengeClubKey(player.name).includes(name)));
   if(!byName) return null;
   byName.clubId = Number(selectedClubId);
   byName.freeAgent = false;
@@ -215,91 +255,104 @@ function moveMaradonaToChallengeClub(selectedClubId){
   byName.intransferible = true;
   byName.sold = false;
   byName.retired = false;
-  if(Array.isArray(game?.marketPlayers)){
-    game.marketPlayers = game.marketPlayers.filter(player => Number(player.id) !== Number(byName.id));
-  }
+  if(Array.isArray(game?.marketPlayers)) game.marketPlayers = game.marketPlayers.filter(player => Number(player.id) !== Number(byName.id));
   return byName;
 }
 function applyCampoDestruidoChallengePreset(selectedClubId){
   if(!game) return false;
+  const definition = campoDestruidoChallengeDefinition();
+  if(!definition) return false;
+  const calendar = definition.calendario || {};
+  const initial = definition.condicionesIniciales || {};
+  const ownSquad = initial.plantelPropio || {};
+  const rivals = initial.rivales || {};
+  const special = initial.jugadorEspecial || {};
   const selected = Number(selectedClubId || game.selectedClubId || 0);
   const challengeClubs = campoDestruidoChallengeClubs();
   const allowedIds = challengeClubs.map(club => Number(club.id));
   if(!allowedIds.includes(selected)) return false;
-  const opponents = challengeClubs.filter(club => Number(club.id) !== selected);
+  const matchesTotal = Math.max(1, Math.round(Number(calendar.partidos || 1)));
+  const opponents = challengeClubs.filter(club => Number(club.id) !== selected).slice(0, matchesTotal);
   const opponentIds = opponents.map(club => Number(club.id));
   const maradona = moveMaradonaToChallengeClub(selected);
+  const year = game.seasonYear || seasonYearForNumber(game.seasonNumber || 1);
+  const month = String(Math.max(1, Math.min(12, Math.round(Number(calendar.mesInicio || 1))))).padStart(2, '0');
+  const day = String(Math.max(1, Math.min(31, Math.round(Number(calendar.diaInicio || 1))))).padStart(2, '0');
   game.seasonPhase = 'regular';
   game.phaseTurn = 0;
   game.matchdayIndex = 0;
-  game.globalTurn = 290;
-  game.currentDate = `${game.seasonYear || seasonYearForNumber(game.seasonNumber || 1)}-10-18`;
+  game.globalTurn = Math.max(0, Math.round(Number(calendar.turnoGlobalInicial || 0)));
+  game.currentDate = `${year}-${month}-${day}`;
   game.lastCalendarDate = game.currentDate;
   game.fixtures = createCampoDestruidoChallengeFixtures(selected, opponentIds);
   game.stadium = createInitialStadiumState();
-  game.stadium.fields[selected] = 15;
+  game.stadium.fields[selected] = clamp(Math.round(Number(initial.campoPropio || 1)), 0, 100);
   game.stadium.projects[selected] = { replantingTurnsLeft:0, patchingTurnsLeft:0 };
   resetChallengeDivisionStandings(selected, opponentIds);
   if(maradona){
     if(game.playerStats && game.playerStats[maradona.id]) game.playerStats[maradona.id].clubId = selected;
     game.playerStatus[maradona.id] = {
       ...(game.playerStatus[maradona.id] || {}),
-      injuredUntilTurn:currentTurnIndex() + 21,
-      injuredThrough:2,
-      injuryLabel:'Recuperación programada del reto',
+      injuredUntilTurn:currentTurnIndex() + Math.max(1, Math.round(Number(special.diasLesion || 1))),
+      injuredThrough:Math.max(0, Math.round(Number(special.lesionadoHastaFecha || 0))),
+      injuryLabel:String(special.etiquetaLesion || 'Recuperación programada del reto'),
       injuredAtMatchday:0,
       injuredAtTurn:currentTurnIndex(),
       challengeInitialInjury:true
     };
-    game.playerCondition[maradona.id] = 88;
-    game.playerMorale[maradona.id] = 90;
+    game.playerCondition[maradona.id] = clamp(Math.round(Number(special.condicionInicial || 80)), 1, 100);
+    game.playerMorale[maradona.id] = clamp(Math.round(Number(special.moralInicial || 80)), 1, 100);
   }
-  lowerChallengeSquadLevel(selected, 10, maradona ? [maradona.id] : []);
+  lowerChallengeSquadLevel(selected, Number(initial.reduccionMediaPlantel || 0), maradona ? [maradona.id] : []);
   playersByClub(selected).forEach(player => {
     if(maradona && Number(player.id) === Number(maradona.id)) return;
-    game.playerCondition[player.id] = clamp(Math.round(Number(game.playerCondition[player.id] || 60)), 45, 72);
-    game.playerMorale[player.id] = clamp(Math.round(Number(game.playerMorale[player.id] || 60)), 45, 75);
+    game.playerCondition[player.id] = clamp(Math.round(Number(game.playerCondition[player.id] || 60)), Number(ownSquad.condicionMin || 1), Number(ownSquad.condicionMax || 100));
+    game.playerMorale[player.id] = clamp(Math.round(Number(game.playerMorale[player.id] || 60)), Number(ownSquad.moralMin || 1), Number(ownSquad.moralMax || 100));
   });
   opponentIds.forEach(id => {
-    game.teamCohesion[id] = Math.max(Number(game.teamCohesion[id] || 0), 78);
+    game.teamCohesion[id] = Math.max(Number(game.teamCohesion[id] || 0), Number(rivals.cohesionMinima || 0));
     playersByClub(id).forEach(player => {
-      game.playerCondition[player.id] = Math.max(Number(game.playerCondition[player.id] || 0), 82);
-      game.playerMorale[player.id] = Math.max(Number(game.playerMorale[player.id] || 0), 78);
+      game.playerCondition[player.id] = Math.max(Number(game.playerCondition[player.id] || 0), Number(rivals.condicionMinima || 0));
+      game.playerMorale[player.id] = Math.max(Number(game.playerMorale[player.id] || 0), Number(rivals.moralMinima || 0));
     });
   });
-  game.teamCohesion[selected] = 55;
+  game.teamCohesion[selected] = clamp(Math.round(Number(initial.cohesionPropia || 50)), 0, 100);
+  const fallbackName = String(special.nombreFallback || 'Jugador especial');
   game.challenge = {
     active:true,
-    id:'campo_destruido',
-    nombre:'Campo destruido',
-    title:'Campo destruido',
-    difficulty:'Muy alta',
+    id:definition.id,
+    nombre:definition.nombre,
+    title:definition.nombre,
+    difficulty:definition.dificultad,
+    definitionVersion:managerChallengesDatabase?.metadata?.version || APP_VERSION,
     selectedClubId:selected,
     opponentIds,
     maradonaId:maradona ? Number(maradona.id) : 0,
-    maradonaName:maradona?.name || 'Diego Maradona',
+    maradonaName:maradona?.name || fallbackName,
     maradonaRecoveryTurn:maradona ? Number(game.playerStatus[maradona.id]?.injuredUntilTurn || 0) : 0,
     startTurn:currentTurnIndex(),
     startDate:game.currentDate,
-    fieldLocked:true,
-    requiredFieldScore:15,
-    matchesTotal:5,
+    fieldLocked:Boolean(definition?.bloqueos?.fieldMaintenance),
+    requiredFieldScore:Number(initial.campoPropio || 0),
+    matchesTotal,
     matchesPlayed:0,
     maradonaReinjured:false,
     completed:false,
     success:false,
-    objective:'Ser campeón y evitar que Maradona vuelva a lesionarse.',
-    blocked:{ fieldMaintenance:true, staff:true, players:true, resultOnly:true },
-    notes:['Campo propio en 15/100', 'No se puede replantar ni reparar', 'No se pueden contratar empleados ni jugadores', 'Ver resultado bloqueado: hay que dirigir todos los partidos']
+    objective:String(definition?.objetivo?.descripcion || ''),
+    blocked:{ ...(definition.bloqueos || {}) },
+    notes:Array.isArray(definition.notas) ? [...definition.notas] : []
   };
   game.tactic = normalizeTactic(selected, DEFAULT_TACTIC);
   game.mustReviewTactics = false;
   if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'injury', playerId:maradona?.id || 0 }]);
-  pushGameMessage({ type:'reto', priority:'high', title:'Reto iniciado: Campo destruido', body:`Elegiste ${clubName(selected)}. Quedan 5 fechas en tu campo contra ${opponents.map(club => club.name).join(', ')}. Campo 15/100, mantenimiento bloqueado, mercado/staff bloqueados y ${maradona?.name || 'Maradona'} vuelve para los últimos 2 partidos. Objetivo: salir campeón y que no vuelva a lesionarse.`, id:`challenge-campo-destruido-${selected}-${Date.now()}` });
+  const lastMatches = Math.max(1, Math.round(Number(special.vuelveParaUltimosPartidos || 1)));
+  pushGameMessage({ type:'reto', priority:'high', title:`Reto iniciado: ${definition.nombre}`, body:`Elegiste ${clubName(selected)}. Quedan ${matchesTotal} fechas en tu campo contra ${opponents.map(club => club.name).join(', ')}. Campo ${Number(initial.campoPropio || 0)}/100, mantenimiento bloqueado, mercado/staff bloqueados y ${maradona?.name || fallbackName} vuelve para los últimos ${lastMatches} partidos. Objetivo: ${String(definition?.objetivo?.descripcion || '').toLowerCase()}`, id:`challenge-${definition.id}-${selected}-${Date.now()}` });
   return true;
 }
 function applyChallengePreset(challengeId, selectedClubId){
-  if(String(challengeId || '') === 'campo_destruido') return applyCampoDestruidoChallengePreset(selectedClubId);
+  const id = String(challengeId || '');
+  if(id === campoDestruidoChallengeDefinition()?.id) return applyCampoDestruidoChallengePreset(selectedClubId);
   return false;
 }
 function startCampoDestruidoChallenge(selectedClubId, options={}){
@@ -314,7 +367,7 @@ function startCampoDestruidoChallenge(selectedClubId, options={}){
     managerName:options.managerName || storedManagerName(),
     country:clubCountry(club),
     leagueId:club.divisionId || 'default',
-    challengeId:'campo_destruido',
+    challengeId:campoDestruidoChallengeDefinition()?.id || 'campo_destruido',
     saveSlotId:SAVE_SLOT_CAMPO_DESTRUIDO,
     ignorePrestige:true
   });
@@ -349,7 +402,7 @@ function finalizeActiveManagerChallenge(record=null){
   pushGameMessage({
     type:'reto',
     priority:challenge.success ? 'high' : 'normal',
-    title:challenge.success ? 'Reto completado: Campo destruido' : 'Reto fallido: Campo destruido',
+    title:challenge.success ? `Reto completado: ${challenge.nombre || 'Campo destruido'}` : `Reto fallido: ${challenge.nombre || 'Campo destruido'}`,
     body:challenge.success
       ? `${clubName(game.selectedClubId)} salió campeón y ${challenge.maradonaName || 'Maradona'} no volvió a lesionarse.`
       : `Resultado: ${champion ? 'campeón' : `posición ${record?.position || '—'}`}. Maradona ${maradonaOk ? 'no se lesionó' : 'se volvió a lesionar'}.`,
@@ -371,7 +424,7 @@ function managerChallengeHomeMarkup(){
   const pct = clamp((Number(challenge.matchesPlayed || 0) / Math.max(1, Number(challenge.matchesTotal || 5))) * 100, 0, 100);
   return `<div class="card manager-challenge-card" style="margin-top:14px">
     <div class="row"><div><p class="label">Reto predeterminado</p><h3>${escapeHtml(challenge.nombre || 'Campo destruido')}</h3></div><span class="pill danger">Dificultad ${escapeHtml(challenge.difficulty || 'Alta')}</span></div>
-    <p class="tagline">Objetivo: <strong>ser campeón</strong> y que <strong>${escapeHtml(challenge.maradonaName || 'Maradona')}</strong> no vuelva a lesionarse. Ver resultado bloqueado: todos los partidos deben dirigirse.</p>
+    <p class="tagline">Objetivo: <strong>${escapeHtml(challenge.objective || 'Completar las condiciones del reto.')}</strong></p>
     <div class="grid cols-4 compact-team-stats">
       <div><p class="label">Campo</p><strong>${fieldScore}/100</strong></div>
       <div><p class="label">Posición</p><strong>${pos || '—'}°</strong></div>
@@ -3553,7 +3606,7 @@ function applySharedManagerProfileToGame(){
   if(!profile || profile.empty) return { changed:false };
   const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
   const clubId = Number(game.selectedClubId || 0);
-  // V6.24: no reemplazar managerStats por el perfil global.
+  // no reemplazar managerStats por el perfil global.
   // managerStats contiene el prestigio de esta carrera/slot; si se pisa, el prestigio se comparte.
   const previousStats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);

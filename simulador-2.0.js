@@ -1,4 +1,4 @@
-/* Motor de simulación V2.0 · V5.41 fatiga visitante y sobreexigencia bot progresiva
+/* Motor de simulación: fatiga visitante y sobreexigencia bot progresiva
    Archivo dedicado a la simulación de partidos y a los factores deportivos que influyen en el resultado.
    Mantiene valores internos ocultos fuera de la interfaz. */
 (function(){

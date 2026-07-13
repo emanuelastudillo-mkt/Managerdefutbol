@@ -1,4 +1,4 @@
-/* V5.28 · Puente del simulador 2.0 y helpers compartidos de partido. */
+/* Puente del simulador 2.0 y helpers compartidos de partido. */
 
 function simulateMatch(match){
   if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);

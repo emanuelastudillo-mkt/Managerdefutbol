@@ -4,9 +4,9 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.01',
+  version: 'V7.02',
   partidas: {
-    // V6.02: se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
+    // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
   },
   data: {
@@ -142,7 +142,7 @@ window.GAME_CONFIG = {
   },
   clubes: {
     reputacionTemporada: {
-      // Fórmula V7.01: ajuste anual de reputación de club por rendimiento deportivo.
+      // ajuste anual de reputación de club por rendimiento deportivo.
       // Los descensos negativos nunca pueden bajar al club por debajo del mínimo de su liga.
       minimoPorDivisionOrden: { 1: 40, 2: 25, 3: 10 },
       posicion: {
@@ -254,7 +254,7 @@ window.GAME_CONFIG = {
     jovenesLibresPorTemporada: 0
   },
   cohesion: {
-    // Balance de cohesión de equipo. Ajustado en V3.21 para que el equipo gane cohesión con mayor claridad.
+    // Balance de cohesión ajustado para que el equipo gane cohesión con mayor claridad.
     valorInicial: 50,
     gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
@@ -326,7 +326,7 @@ window.GAME_CONFIG = {
     }
   },
   sponsors: {
-    // V5.72+: sistema fijo por temporada + sponsor especial con condición.
+    // sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 0.1,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
@@ -394,7 +394,7 @@ window.GAME_CONFIG = {
     costoParchearCampo: 200000,
     diasParchearCampo: 21,
     mejoraParchePorAvance: 5,
-    // Balance V5.75+: el deterioro normal del campo se multiplica por este valor.
+    // El deterioro normal del campo se multiplica por este valor.
     deterioroCampoMultiplicador: 2,
     // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
     deterioroCapacidadPorTemporadaPct: 1,
@@ -529,12 +529,12 @@ window.GAME_CONFIG = {
   },
 
   simulador: {
-    // V3.43: enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
+    // enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
     pesoColectivo: 0.70,
     pesoIndividual: 0.30,
     // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
     probabilidadPelotaParada: 0.14,
-    // V3.45: los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
+    // los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.
     // El riesgo real de error es 1 - seguridad, para que mejores valores reduzcan errores.
     formulaErroresJugador: true,
     escalaRiesgoErrorJugador: 0.72,
@@ -544,11 +544,11 @@ window.GAME_CONFIG = {
     probabilidadErrorTerminaEnGol: 0.28,
     // Máximo de errores usado para evitar partidos rotos por errores constantes.
     maximoErroresPorEquipo: 5,
-    // V5.18: multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
+    // multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
     fatigaVivaMultiplicador: 2,
-    // V5.27: reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
+    // reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
     multiplicadorTarjetas: 0.50,
-    // V5.27: con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
+    // con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
     rojasDerrotaDefault: 5,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
     estrellasMaximasPorEquipo: 3,
@@ -557,10 +557,10 @@ window.GAME_CONFIG = {
     estrellaArqueroPartidosConTapadaClave: 3,
     estrellaMediocampistaAsistencias: 3,
     estrellaBonusReferencia: 0.30,
-    // V4.26: balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
+    // balance físico postpartido. Recuperación automática reducida a un tercio y desgaste ampliado.
     recuperacionAutomaticaPostPartidoMin: 4,
     recuperacionAutomaticaPostPartidoMax: 6,
-    // V5.44: si está activo, la recuperación postpartido usa la resistencia del jugador.
+    // si está activo, la recuperación postpartido usa la resistencia del jugador.
     // El rango 61-70 queda como puente para evitar saltos bruscos.
     recuperacionPostPartidoUsaResistencia: true,
     recuperacionPostPartidoPorResistencia: [
@@ -611,7 +611,7 @@ window.GAME_CONFIG = {
   },
 
   lesiones: {
-    // V3.42: reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
+    // reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
     multiplicadorProbabilidad: 0.20,
     lesionBase: 0.05,
     fatigaPaso: 5,
@@ -706,7 +706,7 @@ window.GAME_CONFIG = {
     fasesSimulacionPartido: 90,
     duracionSimulacionPartidoMs: 270000,
     duracionMinimaFaseSimulacionMs: 3000,
-    // Simulador vivo: demora entre minutos cuando se usa el botón Auto. V5.13 duplica la pausa anterior.
+    // Simulador vivo: demora entre minutos cuando se usa el botón Auto.
     simulacionVivaAutoMs: 840,
     relatoMantenerFases: 1,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.

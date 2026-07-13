@@ -1,2 +1,2 @@
-/* V7.01 · Punto de entrada del Manager de Fútbol. */
+/* Punto de entrada del Manager de Fútbol. */
 init();

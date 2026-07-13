@@ -1,4 +1,4 @@
-/* V6.07 · Centro de Ojeo: probabilidad de fichaje tratada como dato revelable. */
+/* Centro de Ojeo: probabilidad de fichaje tratada como dato revelable. */
 
 function createInitialScoutingCenterState(){
   return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };

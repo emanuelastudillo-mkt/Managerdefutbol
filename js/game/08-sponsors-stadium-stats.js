@@ -1,4 +1,4 @@
-/* V5.66 · Sponsors especiales con condiciones, estadio, calendario, tabla, estadísticas y finanzas visuales. */
+/* Sponsors especiales con condiciones, estadio, calendario, tabla, estadísticas y finanzas visuales. */
 
 function randomInt(min,max){
   return Math.floor(rnd(min, max + 1));
@@ -509,7 +509,7 @@ function generateOpeningSponsorOffers(force=false){
   return releaseDueSponsorOffers({ silent:!force });
 }
 function advanceSponsorMatchCounter(){
-  // V5.66: los sponsors se liberan por plan fijo de temporada.
+  // los sponsors se liberan por plan fijo de temporada.
   return releaseDueSponsorOffers({ silent:true });
 }
 function processSponsorContracts(){

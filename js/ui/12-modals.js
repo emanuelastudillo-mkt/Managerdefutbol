@@ -1,4 +1,4 @@
-/* V6.07 · Modales: etiquetas de ojeo con probabilidad de fichaje revelable. */
+/* Modales: etiquetas de ojeo con probabilidad de fichaje revelable. */
 
 function purchaseOfferRejectionRecord(playerId){
   if(!game) return null;
@@ -1323,18 +1323,19 @@ function openCampoDestruidoChallengeModal(){
     showNotice('Los retos predeterminados se inician como partida nueva o desde una carrera sin club.');
     return;
   }
+  const definition = typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition() : null;
   const clubs = typeof campoDestruidoChallengeClubs === 'function' ? campoDestruidoChallengeClubs() : [];
   if(!clubs.length){ showNotice('No se encontraron los clubes necesarios para el reto.'); return; }
   const cards = clubs.map(club => `<button class="card clickable plain challenge-club-card" data-start-campo-destruido="${Number(club.id)}">
     <h3>${clubBadge(club.id)} ${escapeHtml(club.name)}</h3>
-    <p class="muted small">Elegir como tu club. Los otros cinco serán tus rivales en las últimas fechas, todas en tu campo.</p>
+    <p class="muted small">${escapeHtml(definition?.textos?.descripcionClub || 'Elegir como tu club para iniciar el reto.')}</p>
     <span class="pill">Prestigio ${clubPrestigeValue(club)}</span>
   </button>`).join('');
   openModal(`<div class="new-game-modal challenge-modal">
     <p class="label">Reto predeterminado</p>
-    <h2>Campo destruido</h2>
-    <p class="muted">Campo propio en 15/100. No se puede replantar ni reparar. Quedan 5 fechas en tu campo contra los otros grandes. Maradona está lesionado y vuelve para los últimos 2 partidos.</p>
-    <div class="card blocker"><strong>Reglas del reto</strong><p class="muted small">No se pueden contratar empleados ni jugadores. Objetivo: ser campeón y que Maradona no vuelva a lesionarse. Ver resultado queda bloqueado: es obligatorio dirigir los partidos.</p></div>
+    <h2>${escapeHtml(definition?.nombre || 'Campo destruido')}</h2>
+    <p class="muted">${escapeHtml(definition?.textos?.descripcionModal || '')}</p>
+    <div class="card blocker"><strong>Reglas del reto</strong><p class="muted small">${escapeHtml(definition?.textos?.reglasModal || definition?.objetivo?.descripcion || '')}</p></div>
     <div class="grid cols-3" style="margin-top:14px">${cards}</div>
   </div>`);
   document.querySelectorAll('[data-start-campo-destruido]').forEach(btn => btn.addEventListener('click', () => {
@@ -1379,7 +1380,7 @@ function openNewGameModal(force=false, options={}){
           </div>
           <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
           ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
-          ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>Campo destruido</strong><p class="muted small">Últimas 5 fechas, campo 15/100, Maradona lesionado y obligación de dirigir.</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
+          ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>${escapeHtml(typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition()?.nombre || 'Campo destruido' : 'Campo destruido')}</strong><p class="muted small">${escapeHtml(typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition()?.textos?.descripcionTarjeta || '' : '')}</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
         </div>
         ${canChooseJob && typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'modal', selectable:true }) : ''}
       </div>

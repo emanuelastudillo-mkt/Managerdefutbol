@@ -1,4 +1,4 @@
-/* V5.24 · Simulación viva con resultado directo y terminar partido. */
+/* Simulación viva con resultado directo y terminar partido. */
 (function(){
   let liveSession = null;
   let liveOptions = null;

@@ -1,4 +1,4 @@
-/* V3.24 · Motor de eventos condicionales desde data/eventos.json. */
+/* Motor de eventos condicionales desde data/eventos.json. */
 
 function gameEventDefinitions(){
   const fromDatabase = Array.isArray(eventsDatabase?.eventos) ? eventsDatabase.eventos : [];

@@ -1,5 +1,4 @@
-/*
-  V5.57 · Balance del manager, objetivos, prestigio y premios.
+/* Balance del manager, objetivos, prestigio y premios.
   Archivo activo: centraliza objetivos deportivos sin tocar el simulador.
 */
 window.GAME_BALANCE_MANAGER = {

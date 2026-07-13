@@ -1,71 +1,55 @@
-# Fútbol Manager MVP - V7.01
+# Fútbol Manager MVP - V7.02
 
-## V7.01 - Auditoría integral, limpieza y estabilidad de guardados
+## V7.02 - Guardado doble seguro y retos configurables
 
-Esta versión inaugura la línea **Manager V7**. Parte de la versión completa V6.48 y conserva el formato de datos y guardado existente.
+Esta versión parte de V7.01 y mantiene intacta la estructura principal de las partidas.
 
-### Correcciones funcionales
+### Guardado local
 
-- Corregida la búsqueda de clubes al conformar los grupos del Mundial de Clubes. La lógica llamaba a una función inexistente y podía detener la creación del torneo.
-- Corregido el premio de prestigio del manager por ganar el Mundial de Clubes. Ahora usa la función vigente de prestigio.
-- Corregido el botón de verificación que aparece cuando una pantalla falla al renderizar. Ahora abre el verificador real de integridad.
-- Corregida la detención del avance automático al quedar sin club. Se eliminaron referencias a un sistema anterior que ya no existe.
-- Corregida la restauración de partidas: `divisionsSnapshot` ahora se aplica antes de `clubsSnapshot`. Esto evita clubes apuntando a divisiones inexistentes cuando una partida conserva una estructura de ligas anterior.
-- Corregido el generador de jugadores de emergencia para bots: la media configurada ahora se aplica realmente al jugador creado.
-- Eliminadas claves duplicadas en el objeto enviado al ranking online.
-- Corregido el aislamiento de cartas especiales entre slots: una carta activa sólo aparece en el slot que la activó; las cartas en reserva siguen siendo globales.
+- El slot principal dejó de escribirse tres veces y ahora mantiene dos copias actualizadas: una principal y una de respaldo.
+- La Carrera 1 conserva `main` como segunda copia. Esto mantiene compatibilidad con el formato histórico y permite recuperar partidas anteriores.
+- Las Carreras 2 a 5 y el reto utilizan una clave de respaldo propia.
+- Al cargar, el juego revisa la copia principal, la copia de respaldo y, para Carrera 1, la antigua clave `slot:career`.
+- Si la copia principal falta o no es válida, se recupera automáticamente la mejor copia disponible y se regeneran las dos copias vigentes.
+- Cada guardado nuevo incorpora fecha, versión de esquema y slot dentro de `localSaveMeta` para elegir correctamente la copia más reciente.
+- Al borrar un slot se eliminan también sus respaldos, evitando que una partida eliminada reaparezca.
 
-### Limpieza de código
+Este sistema reduce de tres a dos escrituras en Carrera 1. La mejora de rendimiento es moderada porque el contenido completo de la partida sigue duplicándose deliberadamente para priorizar seguridad.
 
-- Eliminada la pantalla global de jugadores que no estaba conectada a ningún menú ni renderer, junto con sus filtros, estado y estilos exclusivos.
-- Eliminadas funciones sin referencias: formato decimal de prestigio, comprobación duplicada de club activo, participación estacional sin uso, icono táctico antiguo, etiqueta táctica antigua y helper redundante de ojeo.
-- Eliminadas constantes y opciones de configuración sin consumo real: instalaciones, prórrogas antiguas de objetivos, cobro mensual por día fijo, pago único legacy de sponsors, fallback legacy de sobreexigencia bot, contador fijo de habilidades visibles y versión antigua de generación.
-- Eliminadas variables locales sin uso, parámetros obsoletos y helpers que quedaron sin consumidores después de la limpieza.
-- Reducción neta del código auditado: 176 líneas menos, sin eliminar datos ni archivos de contenido.
-- Simplificado el punto de entrada `app.js`.
+La copia doble protege frente a claves ausentes, datos inválidos y migraciones internas, pero no puede recuperar información si el usuario borra todos los datos del sitio o elimina el perfil del navegador.
 
-### Hallazgos conservados para una versión posterior
+### Retos desde JSON
 
-- El guardado del slot principal mantiene tres claves de IndexedDB por compatibilidad con versiones anteriores. Esto aumenta el uso de almacenamiento y el costo de clonado, pero retirarlo podría impedir volver a versiones antiguas.
-- `data/retos_manager.json` existe, pero el reto actual se define directamente en código y ese JSON no se carga.
-- `data/instalaciones.json` permanece como archivo reservado y actualmente está vacío; se retiró únicamente su configuración inactiva.
-- No se modificaron reglas deportivas, economía, calendarios, planteles ni bases de datos salvo las correcciones indicadas.
+- `data/retos_manager.json` ahora se carga al iniciar el juego.
+- El reto Campo destruido obtiene desde el JSON sus clubes, calendario, cantidad de partidos, estado del campo, reducción del plantel, cohesión, condición, moral, lesión de Maradona, tabla inicial, bloqueos, objetivo, notas y textos de interfaz.
+- El código JavaScript conserva únicamente la implementación del comportamiento del reto.
+- Si el JSON falta o no contiene un preset activo, el reto no se ofrece como disponible en lugar de usar una definición duplicada dentro del código.
+- El archivo queda preparado para incorporar nuevos retos configurables.
 
-### Validaciones realizadas
+### Instalaciones
 
-- Sintaxis de todos los archivos JavaScript con `node --check`.
-- Parseo de todos los archivos JSON.
-- Auditoría estructural de 162 clubes, 9 divisiones y 4.050 jugadores.
-- Cada división conserva 18 clubes y cada club 25 jugadores.
-- Sin referencias rotas entre clubes, divisiones, jugadores, estadios, hinchas y escudos.
-- Análisis estático sin referencias indefinidas, redeclaraciones, claves duplicadas ni funciones globales completamente huérfanas.
-- Integridad de los ZIP comprobada con `unzip -tq`.
+- `data/instalaciones.json` se conserva sin cambios como archivo reservado para el futuro sistema de instalaciones.
 
-### Archivos modificados en V7.01
+### Limpieza de comentarios
+
+- Se retiraron etiquetas históricas V3, V4, V5 y V6 de comentarios internos.
+- Se conservaron las explicaciones técnicas útiles sin referencias a versiones antiguas.
+- Esta limpieza reduce levemente el tamaño transferido y mejora la lectura del código; no produce una mejora perceptible en la ejecución.
+
+### Archivos modificados en V7.02
 
 - `README.md`
 - `index.html`
 - `app.js`
 - `config.js`
-- `balance-modificadores.js`
-- `simulador-2.0.js`
-- `style.css`
+- `data/retos_manager.json`
 - `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
 - `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/game/11-match-engine.js`
 - `js/ui/06-render-home-messages.js`
-- `js/ui/07-render-team-market.js`
 - `js/ui/12-modals.js`
-- `js/game/13-ranking-online.js`
-- `js/game/15-especial.js`
-- `js/game/16-scouting-center.js`
-- `js/game/17-live-match.js`
+- Otros archivos JavaScript sólo recibieron limpieza de etiquetas históricas en comentarios.
 
 ### Compatibilidad de partidas
 
-**V7.01 no rompe partidas anteriores.** Las partidas V6.48 mantienen su esquema. La restauración de divisiones guardadas mejora la compatibilidad cuando una carrera contiene snapshots de una estructura de ligas previa.
+**V7.02 no rompe partidas anteriores.** Puede cargar partidas V7.01 y anteriores desde `slot:career:1`, `main` o `slot:career`. Al primer guardado, la partida queda actualizada al sistema de dos copias. Volver luego a una versión antigua puede mostrar el último estado escrito en `main` para Carrera 1, pero las versiones antiguas no conocen los respaldos de los demás slots.

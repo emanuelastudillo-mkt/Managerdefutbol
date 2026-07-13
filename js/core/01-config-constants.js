@@ -1,4 +1,4 @@
-/* V5.02 · Configuración, calendario anual, constantes generales y estado global. */
+/* Configuración, calendario anual, constantes generales y estado global. */
 
 const GAME_CONFIG = window.GAME_CONFIG || {};
 function configValue(path, fallback){
@@ -31,6 +31,7 @@ const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
 const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
+const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
 const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas_argentina.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -54,6 +55,8 @@ const SAVE_SLOT_CAREER = 'career:1';
 const SAVE_CAREER_SLOT_COUNT = Math.max(1, Math.min(10, Math.round(configNumber('partidas.slotsCarrera', 5, 1, 10))));
 const SAVE_SLOT_CAMPO_DESTRUIDO = 'challenge:campo_destruido';
 const SAVE_SLOT_PREFIX = 'slot:';
+const SAVE_BACKUP_PREFIX = 'backup:';
+const LOCAL_SAVE_SCHEMA_VERSION = 2;
 const SAVE_ACTIVE_SLOT_STORAGE_KEY = 'fmActiveSaveSlot';
 const DAYS_PER_ADVANCE = configNumber('calendario.diasPorAvance', 7, 1, 30);
 const SEASON_START_YEAR = configNumber('calendario.anioInicial', 2026, 1900, 2200);
@@ -122,7 +125,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V5.78');
+const APP_VERSION = configValue('version', 'V7.02');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -698,6 +701,7 @@ let employeesDatabase = null;
 let eventsDatabase = null;
 let specialSkillsDatabase = null;
 let managerAchievementsDatabase = null;
+let managerChallengesDatabase = null;
 let stadiumsDatabase = null;
 let fansDatabase = null;
 let matchCommentaryDatabase = null;

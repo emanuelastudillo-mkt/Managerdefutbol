@@ -1,4 +1,4 @@
-/* V5.00 · Estado de jugadores, disponibilidad, calendario anual, habilidades y utilidades tácticas. */
+/* Estado de jugadores, disponibilidad, calendario anual, habilidades y utilidades tácticas. */
 
 function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }

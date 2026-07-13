@@ -1213,12 +1213,14 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SALE_LOSS) : 0;
   msg.action.status = options.status || 'accepted';
   msg.action.grossAmount = grossAmount;
   msg.action.taxAmount = taxAmount;
   msg.action.netAmount = netAmount;
   const federation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
-  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto ${federation}: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}`;
+  const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
+  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto ${federation}: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}${cohesionText}`;
   msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
   saveLocal(true);
   showNotice(options.notice || `${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);

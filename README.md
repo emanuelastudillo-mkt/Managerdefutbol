@@ -1,55 +1,63 @@
-# Fútbol Manager MVP - V7.02
+# Fútbol Manager MVP - V7.03
 
-## V7.02 - Guardado doble seguro y retos configurables
+## V7.03 - Cohesión por movimientos de plantel y código PUNTOS20000
 
-Esta versión parte de V7.01 y mantiene intacta la estructura principal de las partidas.
+Esta versión parte de V7.02 y conserva el sistema de guardado doble seguro.
 
-### Guardado local
+### Cohesión del plantel
 
-- El slot principal dejó de escribirse tres veces y ahora mantiene dos copias actualizadas: una principal y una de respaldo.
-- La Carrera 1 conserva `main` como segunda copia. Esto mantiene compatibilidad con el formato histórico y permite recuperar partidas anteriores.
-- Las Carreras 2 a 5 y el reto utilizan una clave de respaldo propia.
-- Al cargar, el juego revisa la copia principal, la copia de respaldo y, para Carrera 1, la antigua clave `slot:career`.
-- Si la copia principal falta o no es válida, se recupera automáticamente la mejor copia disponible y se regeneran las dos copias vigentes.
-- Cada guardado nuevo incorpora fecha, versión de esquema y slot dentro de `localSaveMeta` para elegir correctamente la copia más reciente.
-- Al borrar un slot se eliminan también sus respaldos, evitando que una partida eliminada reaparezca.
+Los movimientos efectivos del primer equipo ahora modifican la cohesión:
 
-Este sistema reduce de tres a dos escrituras en Carrera 1. La mejora de rendimiento es moderada porque el contenido completo de la partida sigue duplicándose deliberadamente para priorizar seguridad.
+- Fichar un jugador reduce 2 puntos de cohesión.
+- Vender un jugador reduce 3 puntos de cohesión.
+- Ofrecer contrato profesional a un juvenil aumenta 3 puntos de cohesión.
+- Vender 2 jugadores y fichar 2 jugadores produce una variación total de -10 puntos.
+- La cohesión continúa limitada al rango de 0 a 100.
 
-La copia doble protege frente a claves ausentes, datos inválidos y migraciones internas, pero no puede recuperar información si el usuario borra todos los datos del sitio o elimina el perfil del navegador.
+La penalización por fichaje se aplica cuando el jugador se incorpora realmente al plantel:
 
-### Retos desde JSON
+- Los agentes libres la aplican al aceptar e incorporarse inmediatamente.
+- Los jugadores comprados la aplican al llegar al club el domingo correspondiente.
+- Una oferta rechazada o una transferencia todavía pendiente no modifica la cohesión.
 
-- `data/retos_manager.json` ahora se carga al iniciar el juego.
-- El reto Campo destruido obtiene desde el JSON sus clubes, calendario, cantidad de partidos, estado del campo, reducción del plantel, cohesión, condición, moral, lesión de Maradona, tabla inicial, bloqueos, objetivo, notas y textos de interfaz.
-- El código JavaScript conserva únicamente la implementación del comportamiento del reto.
-- Si el JSON falta o no contiene un preset activo, el reto no se ofrece como disponible en lugar de usar una definición duplicada dentro del código.
-- El archivo queda preparado para incorporar nuevos retos configurables.
+La penalización por venta se aplica cuando la operación se completa y el jugador deja el club. También se aplica cuando una cláusula especial termina en venta forzada.
 
-### Instalaciones
+La promoción desde Academia utiliza su regla propia de +3 y no se considera un fichaje externo, por lo que no recibe la penalización de -2.
 
-- `data/instalaciones.json` se conserva sin cambios como archivo reservado para el futuro sistema de instalaciones.
+Los valores se pueden editar desde el bloque `cohesion` de `balance-modificadores.js`:
 
-### Limpieza de comentarios
+- `perdidaPorFichaje`
+- `perdidaPorVenta`
+- `gananciaPorContratoProfesionalJuvenil`
 
-- Se retiraron etiquetas históricas V3, V4, V5 y V6 de comentarios internos.
-- Se conservaron las explicaciones técnicas útiles sin referencias a versiones antiguas.
-- Esta limpieza reduce levemente el tamaño transferido y mejora la lectura del código; no produce una mejora perceptible en la ejecución.
+### Código especial
 
-### Archivos modificados en V7.02
+- El código anterior de puntos fue reemplazado por `PUNTOS20000`.
+- El beneficio fue ajustado para entregar 20.000 puntos de habilidad, coincidiendo con el nombre del código.
+- El código continúa pudiéndose reclamar una sola vez por partida.
+
+### Guardado y compatibilidad
+
+- Se conserva el sistema de dos copias introducido en V7.02.
+- Carrera 1 mantiene `slot:career:1` y `main`.
+- Las demás carreras y el reto mantienen una copia principal y un respaldo propio.
+- No se modificó la estructura de los guardados existentes.
+- Las nuevas reglas de cohesión comienzan a aplicarse únicamente a movimientos realizados después de instalar V7.03.
+
+### Archivos modificados en V7.03
 
 - `README.md`
 - `index.html`
-- `app.js`
 - `config.js`
+- `balance-modificadores.js`
 - `data/retos_manager.json`
 - `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
 - `js/ui/06-render-home-messages.js`
+- `js/ui/07-render-team-market.js`
 - `js/ui/12-modals.js`
-- Otros archivos JavaScript sólo recibieron limpieza de etiquetas históricas en comentarios.
 
 ### Compatibilidad de partidas
 
-**V7.02 no rompe partidas anteriores.** Puede cargar partidas V7.01 y anteriores desde `slot:career:1`, `main` o `slot:career`. Al primer guardado, la partida queda actualizada al sistema de dos copias. Volver luego a una versión antigua puede mostrar el último estado escrito en `main` para Carrera 1, pero las versiones antiguas no conocen los respaldos de los demás slots.
+**V7.03 no rompe partidas anteriores.** Las partidas V7.02 y anteriores mantienen presupuesto, planteles, cohesión y progreso. No se recalculan transferencias históricas ni promociones juveniles ya realizadas.

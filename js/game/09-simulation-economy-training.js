@@ -84,6 +84,14 @@ function cohesionValue(clubId){
   ensureTeamCohesion();
   return clamp(Math.round(game?.teamCohesion?.[clubId] ?? TEAM_COHESION_START), 0, 100);
 }
+function adjustTeamCohesion(clubId, delta){
+  if(!game || !Number(clubId)) return 0;
+  ensureTeamCohesion();
+  const before = cohesionValue(clubId);
+  const after = clamp(Math.round(before + Number(delta || 0)), 0, 100);
+  game.teamCohesion[clubId] = after;
+  return after - before;
+}
 function tacticSignature(tactic){
   if(!tactic) return '';
   const normalizeIds = arr => (arr || []).map(Number).filter(Boolean).join(',');

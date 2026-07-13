@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.02',
+  version: 'V7.03',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -191,10 +191,10 @@ window.GAME_CONFIG = {
         beneficios: { prestigio: 20 }
       },
       {
-        codigo: 'PUNTOS50000',
+        codigo: 'PUNTOS20000',
         nombre: 'Puntos de habilidad',
-        descripcion: 'Suma 50.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 50000 }
+        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
+        beneficios: { puntosHabilidad: 20000 }
       }
     ]
   },
@@ -259,6 +259,10 @@ window.GAME_CONFIG = {
     gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
+    // Movimientos de plantel: vender 2 y fichar 2 jugadores reduce 10 puntos en total.
+    perdidaPorFichaje: 2,
+    perdidaPorVenta: 3,
+    gananciaPorContratoProfesionalJuvenil: 3,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
     gananciaEntrenamientoTacticoPorCasilla: 1
   },

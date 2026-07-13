@@ -875,11 +875,13 @@ function promoteAcademyPlayer(playerId, exactPosition){
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();
   player.promotedPosition = position;
-  pushGameMessage({ type:'academia', title:'Juvenil promovido', body:`${official.name} firmó contrato profesional como ${position}.`, priority:'normal' });
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, TEAM_COHESION_YOUTH_CONTRACT_GAIN) : 0;
+  const cohesionText = cohesionChange ? ` Cohesión +${cohesionChange}.` : '';
+  pushGameMessage({ type:'academia', title:'Juvenil promovido', body:`${official.name} firmó contrato profesional como ${position}.${cohesionText}`, priority:'normal' });
   closeModal();
   saveLocal(true);
   renderAll();
-  showNotice(`${official.name} ya está en el primer equipo.`);
+  showNotice(`${official.name} ya está en el primer equipo.${cohesionText}`);
 }
 function expireFinalSeasonAcademyPlayers(){
   if(!game?.academy) return 0;

@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V6.03',
-    nombre: 'Balance centralizado de modificadores V6.03',
+    version: 'V7.03',
+    nombre: 'Balance centralizado de modificadores V7.03',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -33,6 +33,9 @@ window.GAME_BALANCE_MODIFICADORES = {
     gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
+    perdidaPorFichaje: 2,
+    perdidaPorVenta: 3,
+    gananciaPorContratoProfesionalJuvenil: 3,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
     gananciaEntrenamientoTacticoPorCasilla: 1
   },

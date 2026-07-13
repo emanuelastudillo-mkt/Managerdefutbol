@@ -460,9 +460,11 @@ function hireFreeAgent(playerId){
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
   ensurePlayerStateForAll();
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} aceptó la oferta y se incorporó al plantel como agente libre.`, priority:'normal' });
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SIGNING_LOSS) : 0;
+  const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
+  pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} aceptó la oferta y se incorporó al plantel como agente libre.${cohesionText}`, priority:'normal' });
   saveLocal(true);
-  showNotice(`${player?.name || 'Jugador'} contratado.`);
+  showNotice(`${player?.name || 'Jugador'} contratado.${cohesionText}`);
   renderMarket();
 }
 

@@ -476,9 +476,13 @@ function processPendingTransfers(){
     ensurePlayerStateForAll();
     if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
     if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(player) : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+    const cohesionChange = Number(player.clubId) === Number(game.selectedClubId) && typeof adjustTeamCohesion === 'function'
+      ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SIGNING_LOSS)
+      : 0;
+    const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
     t.status = 'arrived';
     changed = true;
-    pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.`, priority:'high' });
+    pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.${cohesionText}`, priority:'high' });
   });
   if(changed) saveLocal(true);
 }

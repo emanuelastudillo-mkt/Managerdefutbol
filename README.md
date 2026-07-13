@@ -1,4 +1,41 @@
-# Fútbol Manager MVP - V7.21
+# Fútbol Manager MVP - V7.22
+
+
+## V7.22 - Nuevos valores de recuperación física de cartas
+
+Se reajustaron los puntos directos que otorgan las cartas de preparación física después de calcular el desgaste completo del partido.
+
+### Valores por rareza
+
+- **Común:** +1 punto de forma física postpartido.
+- **Rara:** +3 puntos.
+- **Épica:** +5 puntos.
+- **Legendaria:** +12 puntos.
+
+Las cartas continúan apilándose. Cinco cartas legendarias activas suman **+60 puntos** a cada jugador del club del manager que haya disputado el encuentro, con un máximo final de 99 de forma.
+
+### Migración de cartas existentes
+
+- Las cartas ya obtenidas se normalizan automáticamente según su rareza.
+- Se conservan usos, estado activo, bloqueo, inventario y posición en reserva.
+- No se crean cartas nuevas ni se eliminan cartas existentes.
+- El cambio empieza a aplicarse desde el siguiente partido.
+
+### Archivos principales modificados en V7.22
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.22 no rompe partidas anteriores.** Actualiza automáticamente el valor de las cartas de preparación física existentes sin modificar usos, bloqueos, inventario ni activaciones.
+
+---
 
 
 ## V7.21 - Mundial de Clubes por día fijo de temporada
@@ -76,6 +113,8 @@ calendario: {
 
 ## V7.20 - Reparación del apilado y del límite físico de las cartas
 
+> Valores históricos de V7.20. Desde V7.22, cinco legendarias suman +60 puntos.
+
 Se corrigieron dos errores que podían dejar a un jugador en 0 de forma aunque hubiera varias cartas legendarias activas.
 
 ### Causas corregidas
@@ -117,6 +156,8 @@ La corrección de `tope_porcentaje: null` también restablece otros bonus acumul
 ---
 
 ## V7.19 - Recuperación física directa de cartas
+
+> Valores históricos de V7.19. Fueron reajustados posteriormente en V7.22.
 
 Las cartas de preparación física dejaron de aplicar un porcentaje sobre la recuperación base. Ahora suman puntos directos de forma física después de calcular el desgaste completo del partido, evitando que el efecto desaparezca por redondeo.
 

@@ -3,7 +3,7 @@
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
 const SPECIAL_GLOBAL_CARDS_STORAGE_KEY = 'futbolManager.specialCardsGlobal.v1';
-const SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY = Object.freeze({ comun:2, rara:5, epica:8, legendaria:18 });
+const SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY = Object.freeze({ comun:1, rara:3, epica:5, legendaria:12 });
 
 function specialPhysicalRecoveryPointsForRarity(rarity){
   return Math.max(0, Math.round(Number(SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY[String(rarity || '').toLowerCase()] || 0)));

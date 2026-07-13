@@ -112,6 +112,17 @@ function renderAll(){
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof ensureClubWorldCupCurrentSeason === 'function'){
+    const cupEnsure = ensureClubWorldCupCurrentSeason({ source:'render-all' });
+    if(cupEnsure?.changed && !game._clubWorldCupAutosavePending){
+      game._clubWorldCupAutosavePending = true;
+      setTimeout(() => {
+        Promise.resolve(typeof saveLocal === 'function' ? saveLocal(true) : null).catch(()=>{}).finally(() => {
+          if(game) game._clubWorldCupAutosavePending = false;
+        });
+      }, 0);
+    }
+  }
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
   if(game.gameOver?.active){

@@ -876,6 +876,10 @@ function fixtureRoundTitle(round){
 }
 
 function renderFixture(){
+  if(fixtureViewMode === 'clubWorldCup' && typeof ensureClubWorldCupCurrentSeason === 'function'){
+    const ensured = ensureClubWorldCupCurrentSeason({ source:'calendar-world-cup-view' });
+    if(ensured?.changed && typeof saveLocal === 'function') Promise.resolve(saveLocal(true)).catch(()=>{});
+  }
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const ownClubId = Number(game?.selectedClubId || 0);

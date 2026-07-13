@@ -1,8 +1,8 @@
 {
-  "version": "V7.14",
+  "version": "V7.15",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.14: Mundial de Clubes generado automáticamente desde el día 295, incluso sin participación del club dirigido; cartas bloqueadas durante 15 días.",
+  "caracteristicas_version": "V7.15: reparación robusta del Mundial de Clubes desde el día 295, incluso con estados incompletos; generación al abrir Calendario y relleno seguro de 32 participantes; cartas bloqueadas durante 15 días.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

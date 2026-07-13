@@ -5229,10 +5229,39 @@ function clubWorldCupSelectedInvites(season=game?.seasonNumber || 1){
     .slice(0, cfg.invitedCount)
     .map(club => Number(club.id));
 }
+function clubWorldCupExpectedLeagueQualifierCount(){
+  return CLUB_WORLD_CUP_CONFIG.qualifiers.reduce((sum, rule) => sum + Math.max(0, Math.round(Number(rule?.count || 0))), 0);
+}
+function clubWorldCupDomesticFallbackCandidates(){
+  const divisions = divisionOrderList().filter(division => Number(division?.order || 0) === 1);
+  const candidates = [];
+  const used = new Set();
+  divisions.forEach(division => {
+    const rows = typeof sortedStandings === 'function' ? sortedStandings(division.id) : [];
+    rows.forEach(row => {
+      const id = Number(row?.clubId || 0);
+      const club = seed?.clubs?.find(item => Number(item.id) === id);
+      if(!id || used.has(id) || !club || isSpecialCompetitionOnlyClub(club)) return;
+      used.add(id);
+      candidates.push(id);
+    });
+    (seed?.clubs || [])
+      .filter(club => String(club?.divisionId || '') === String(division.id || '') && !isSpecialCompetitionOnlyClub(club))
+      .sort((a,b)=>clubPrestigeValue(b.id)-clubPrestigeValue(a.id) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' }))
+      .forEach(club => {
+        const id = Number(club?.id || 0);
+        if(!id || used.has(id)) return;
+        used.add(id);
+        candidates.push(id);
+      });
+  });
+  return candidates;
+}
 function clubWorldCupLeagueQualifiers(){
   const ids = [];
   const used = new Set();
   const divisions = divisionOrderList();
+  const expected = clubWorldCupExpectedLeagueQualifierCount();
   CLUB_WORLD_CUP_CONFIG.qualifiers.forEach(rule => {
     const targetCountry = normalizeScheduleText(rule.country || '');
     const division = divisions.find(div => normalizeScheduleText(div.country || '') === targetCountry && Number(div.order || 0) === Number(rule.order || 1));
@@ -5242,7 +5271,14 @@ function clubWorldCupLeagueQualifiers(){
       if(id && !used.has(id)){ used.add(id); ids.push(id); }
     });
   });
-  return ids;
+  if(ids.length < expected){
+    clubWorldCupDomesticFallbackCandidates().forEach(id => {
+      if(ids.length >= expected || used.has(Number(id))) return;
+      used.add(Number(id));
+      ids.push(Number(id));
+    });
+  }
+  return ids.slice(0, expected);
 }
 function clubWorldCupCountryForClub(clubId){
   const club = seed?.clubs?.find(item => Number(item.id) === Number(clubId));
@@ -5439,18 +5475,136 @@ function clubWorldCupCanCreateFixtureNow(){
   const currentDay = typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : Number(seasonDayFromDate(currentCalendarDate?.() || dateForSeasonState(game), currentSeasonYear()) || 0);
   return currentDay >= readyDay;
 }
-function createClubWorldCupIfNeeded(){
-  if(!game || !CLUB_WORLD_CUP_CONFIG.enabled || game.seasonFinalized || !Array.isArray(game.fixtures)) return false;
+function clubWorldCupStateStructureInfo(state, season=game?.seasonNumber || 1){
+  const participantIds = clubWorldCupParticipantIds(state);
+  const groups = Array.isArray(state?.groups) ? state.groups : [];
+  const groupClubIds = groups.flatMap(group => Array.isArray(group?.clubIds) ? group.clubIds.map(Number).filter(Boolean) : []);
+  const completedLegacy = String(state?.status || '') === 'completed' && Number(state?.championId || 0) > 0;
+  const validGroups = groups.length === Number(CLUB_WORLD_CUP_CONFIG.groupCount || 8)
+    && groups.every(group => Array.isArray(group?.clubIds) && group.clubIds.map(Number).filter(Boolean).length === Number(CLUB_WORLD_CUP_CONFIG.groupSize || 4));
+  const uniqueGroupIds = new Set(groupClubIds);
+  const validParticipants = participantIds.length === Number(CLUB_WORLD_CUP_CONFIG.groupCount || 8) * Number(CLUB_WORLD_CUP_CONFIG.groupSize || 4)
+    && uniqueGroupIds.size === participantIds.length
+    && participantIds.every(id => uniqueGroupIds.has(Number(id)));
+  return {
+    sameSeason:Number(state?.season || 0) === Number(season || 1),
+    completedLegacy,
+    validGroups,
+    validParticipants,
+    usable:completedLegacy || (validGroups && validParticipants),
+    participantCount:participantIds.length,
+    groupCount:groups.length
+  };
+}
+function removeBrokenClubWorldCupFixtures(){
+  if(!Array.isArray(game?.fixtures)) return 0;
+  const before = game.fixtures.length;
+  game.fixtures = game.fixtures.filter(round => !round?.clubWorldCupRound && !(round?.matches || []).some(match => match?.clubWorldCup));
+  if(Array.isArray(game.matchHistory)) game.matchHistory = game.matchHistory.filter(match => !match?.clubWorldCup);
+  return before - game.fixtures.length;
+}
+function resetBrokenClubWorldCupState(reason='estructura incompleta'){
+  if(!game?.clubWorldCup) return false;
+  game.clubWorldCupGenerationRecoveries = Array.isArray(game.clubWorldCupGenerationRecoveries) ? game.clubWorldCupGenerationRecoveries.slice(-9) : [];
+  game.clubWorldCupGenerationRecoveries.push({
+    season:Number(game.seasonNumber || 1),
+    day:typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : 0,
+    reason:String(reason || 'estructura incompleta'),
+    removedRounds:removeBrokenClubWorldCupFixtures(),
+    repairedAt:Date.now()
+  });
+  game.clubWorldCup = null;
+  return true;
+}
+function ensureClubWorldCupCurrentSeason(options={}){
+  const result = { changed:false, created:false, repaired:false, reason:'' };
+  if(!game || !CLUB_WORLD_CUP_CONFIG.enabled || !Array.isArray(game.fixtures)) return result;
+  if(typeof managerChallengeIs === 'function' && managerChallengeIs()) return result;
+  if(!clubWorldCupCanCreateFixtureNow()) return result;
   const season = Number(game.seasonNumber || 1);
-  const state = clubWorldCupState();
-  if(state) return false;
+  const raw = game.clubWorldCup;
+  if(raw){
+    const info = clubWorldCupStateStructureInfo(raw, season);
+    if(!info.sameSeason){
+      resetBrokenClubWorldCupState('edición perteneciente a otra temporada');
+      result.changed = true;
+      result.repaired = true;
+    }else if(!info.usable){
+      const existingCupMatches = (game.fixtures || []).flatMap(round => round?.matches || []).filter(match => match?.clubWorldCup);
+      if(existingCupMatches.some(match => match?.played)){
+        result.reason = `estado incompleto con ${existingCupMatches.filter(match => match?.played).length} partido(s) ya jugado(s); no se reinició automáticamente`;
+        return result;
+      }
+      resetBrokenClubWorldCupState(`estado incompleto: ${info.participantCount} participantes y ${info.groupCount} grupos`);
+      result.changed = true;
+      result.repaired = true;
+    }else if(!info.completedLegacy && String(raw.status || '') === 'groups' && clubWorldCupStageMatches('groups').length === 0){
+      const createdFixtures = createClubWorldCupGroupFixtures();
+      if(createdFixtures){
+        repairClubWorldCupGroupFixtureDates({ force:true });
+        result.changed = true;
+        result.repaired = true;
+        result.reason = 'fixture de grupos reconstruido';
+      }
+      return result;
+    }else{
+      return result;
+    }
+  }
+  const created = createClubWorldCupIfNeeded({ skipEnsure:true });
+  result.created = Boolean(created);
+  result.changed = result.changed || result.created;
+  if(result.created) result.reason = 'edición generada';
+  return result;
+}
+function createClubWorldCupIfNeeded(options={}){
+  if(!game || !CLUB_WORLD_CUP_CONFIG.enabled || !Array.isArray(game.fixtures)) return false;
+  if(typeof managerChallengeIs === 'function' && managerChallengeIs()) return false;
+  const season = Number(game.seasonNumber || 1);
   if(!clubWorldCupCanCreateFixtureNow()) return false;
+  if(!options.skipEnsure){
+    const raw = game.clubWorldCup;
+    if(raw){
+      const info = clubWorldCupStateStructureInfo(raw, season);
+      if(info.sameSeason && info.usable) return false;
+      resetBrokenClubWorldCupState(info.sameSeason ? 'estado inválido al intentar el sorteo' : 'edición de otra temporada');
+    }
+  }
   ensureClubWorldCupInvitedData();
   const leagueIds = clubWorldCupLeagueQualifiers();
   const invitedIds = clubWorldCupSelectedInvites(season);
-  const participantIds = [...leagueIds, ...invitedIds].slice(0, 32);
-  if(participantIds.length < 32) return false;
+  const used = new Set();
+  const participantIds = [...leagueIds, ...invitedIds].map(Number).filter(id => id && !used.has(id) && used.add(id)).slice(0, 32);
+  if(participantIds.length < 32){
+    clubWorldCupDomesticFallbackCandidates().forEach(id => {
+      if(participantIds.length >= 32 || used.has(Number(id))) return;
+      used.add(Number(id));
+      participantIds.push(Number(id));
+    });
+  }
+  if(participantIds.length < 32){
+    game.clubWorldCupGenerationIssue = {
+      season,
+      day:typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : 0,
+      reason:`No se pudieron reunir 32 participantes. Disponibles: ${participantIds.length}.`,
+      leagueCount:leagueIds.length,
+      invitedCount:invitedIds.length,
+      checkedAt:Date.now()
+    };
+    return false;
+  }
   const groups = clubWorldCupGroupsForParticipants(participantIds, season);
+  const groupCount = groups.length;
+  const completeGroups = groups.filter(group => Array.isArray(group?.clubIds) && group.clubIds.length === CLUB_WORLD_CUP_CONFIG.groupSize).length;
+  if(groupCount !== CLUB_WORLD_CUP_CONFIG.groupCount || completeGroups !== CLUB_WORLD_CUP_CONFIG.groupCount){
+    game.clubWorldCupGenerationIssue = {
+      season,
+      day:typeof currentSeasonDayNumber === 'function' ? Number(currentSeasonDayNumber() || 0) : 0,
+      reason:`El sorteo produjo ${completeGroups}/${CLUB_WORLD_CUP_CONFIG.groupCount} grupos completos.`,
+      checkedAt:Date.now()
+    };
+    return false;
+  }
   const firstGroupDate = clubWorldCupMinFirstGroupDate();
   const groupDates = clubWorldCupGroupDatesFromFirstDate(firstGroupDate);
   game.clubWorldCup = {
@@ -5472,6 +5626,7 @@ function createClubWorldCupIfNeeded(){
     groupDates,
     fixtureReadySeasonDay:clubWorldCupFixtureReadySeasonDay()
   };
+  delete game.clubWorldCupGenerationIssue;
   createClubWorldCupGroupFixtures();
   repairClubWorldCupGroupFixtureDates({ force:true });
   if(clubWorldCupClubParticipates(game.selectedClubId, game.clubWorldCup)) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
@@ -5720,14 +5875,18 @@ function createPostRegularCompetitionsIfNeeded(){
   if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
     createdKinds.push('promotion_playoff');
   }
-  if(createClubWorldCupIfNeeded()){
+  const clubWorldCupEnsure = typeof ensureClubWorldCupCurrentSeason === 'function' ? ensureClubWorldCupCurrentSeason({ source:'post-regular-check' }) : { created:createClubWorldCupIfNeeded(), changed:false, repaired:false };
+  if(clubWorldCupEnsure?.created){
     createdKinds.push('club_world_cup');
+  }else if(clubWorldCupEnsure?.changed){
+    createdKinds.push('club_world_cup_repaired');
   }
   if(createdKinds.length){
     if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates({ force:true });
     const messages = [];
     if(createdKinds.includes('promotion_playoff')) messages.push('Se creó el calendario de playoffs de promoción');
     if(createdKinds.includes('club_world_cup')) messages.push(`se sorteó la Copa Mundial de Clubes de la FIFA con fixture listo desde el día ${clubWorldCupFixtureReadySeasonDay()}`);
+    if(createdKinds.includes('club_world_cup_repaired')) messages.push('se reparó y reconstruyó el calendario del Mundial de Clubes');
     return { created:true, kind:createdKinds.join('+'), message:`${messages.join(' y ')}.` };
   }
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
@@ -5946,7 +6105,8 @@ function clubWorldCupEditionMarkup(edition, options={}){
   if(!edition){
     const readyDay = typeof clubWorldCupFixtureReadySeasonDay === 'function' ? clubWorldCupFixtureReadySeasonDay() : 295;
     const currentNote = options.current ? ` El sorteo se genera automáticamente el día ${readyDay}, participe o no el club dirigido.` : '';
-    return `<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en este año.</p><p class="small muted">Cuando se sortee la edición aparecerán los ocho grupos, sus tablas, todos los resultados y el cuadro eliminatorio.${currentNote}</p></div>`;
+    const issue = options.current && game?.clubWorldCupGenerationIssue?.reason ? `<p class="small danger-text">Diagnóstico: ${escapeHtml(game.clubWorldCupGenerationIssue.reason)}</p>` : '';
+    return `<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en este año.</p><p class="small muted">Cuando se sortee la edición aparecerán los ocho grupos, sus tablas, todos los resultados y el cuadro eliminatorio.${currentNote}</p>${issue}</div>`;
   }
   const champion = Number(edition.championId || 0);
   const runnerUp = Number(edition.runnerUpId || 0);
@@ -5973,10 +6133,9 @@ function bindClubWorldCupYearFilter(renderFn){
   });
 }
 function renderClubWorldCup(){
-  let createdOnOpen = false;
-  if(!clubWorldCupState() && typeof createClubWorldCupIfNeeded === 'function'){
-    createdOnOpen = Boolean(createClubWorldCupIfNeeded());
-    if(createdOnOpen && typeof saveLocal === 'function') saveLocal(true).catch?.(()=>{});
+  if(typeof ensureClubWorldCupCurrentSeason === 'function'){
+    const ensured = ensureClubWorldCupCurrentSeason({ source:'open-world-cup-tab' });
+    if(ensured?.changed && typeof saveLocal === 'function') Promise.resolve(saveLocal(true)).catch(()=>{});
   }
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const selected = selectedClubWorldCupEditionForDisplay();

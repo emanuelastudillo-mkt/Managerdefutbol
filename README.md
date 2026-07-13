@@ -1,4 +1,46 @@
-# Fútbol Manager MVP - V7.14
+# Fútbol Manager MVP - V7.15
+
+## V7.15 - Reparación definitiva de generación del Mundial de Clubes
+
+Se corrigieron dos bloqueos que todavía podían impedir el sorteo después del día 295.
+
+### Causas encontradas
+
+- La vista **Calendario → Mundial de Clubes** mostraba la competencia, pero no ejecutaba la función de generación. La creación desde pantalla sólo estaba conectada a otra ruta interna.
+- Algunas partidas podían conservar un objeto `clubWorldCup` vacío o incompleto de la temporada actual. Como el código comprobaba únicamente si el objeto existía, ese estado inválido impedía volver a sortear la competencia.
+- La selección de clasificados podía detenerse silenciosamente si una división no devolvía suficientes posiciones válidas.
+
+### Correcciones
+
+- El Mundial se verifica al renderizar cualquier pantalla del juego desde el día 295.
+- También se verifica expresamente al abrir **Calendario → Mundial de Clubes**.
+- Un estado vacío o incompleto, sin partidos disputados, se elimina y se reconstruye automáticamente.
+- Si el estado es válido pero faltan los partidos de grupos, el fixture se reconstruye sin repetir el sorteo.
+- La selección conserva los cupos previstos por país y completa cualquier faltante con clubes de primeras divisiones ordenados por tabla y reputación.
+- La competencia ya no falla silenciosamente: si no pudiera reunir 32 clubes, la pantalla muestra el motivo técnico.
+- El club del manager no necesita estar clasificado. Si no participa, los 64 partidos se desarrollan únicamente entre bots.
+- Las partidas ubicadas en el día 313 o posterior generan el torneo al cargar/renderizar la partida, sin esperar otro partido del usuario.
+
+### Protección de partidas
+
+La reparación automática sólo reinicia un estado estructuralmente incompleto cuando no existen partidos del Mundial ya disputados. Si encuentra resultados jugados, no los elimina.
+
+### Archivos principales modificados en V7.15
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/ui/06-render-home-messages.js`
+
+### Compatibilidad de partidas
+
+**V7.15 no rompe partidas anteriores.** Repara estados vacíos del Mundial y conserva cualquier edición que ya tenga resultados disputados.
+
+---
 
 ## V7.14 - Generación automática del Mundial de Clubes
 

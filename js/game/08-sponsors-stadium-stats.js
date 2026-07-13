@@ -880,7 +880,8 @@ function renderFixture(){
     const ensured = ensureClubWorldCupCurrentSeason({ source:'calendar-world-cup-view' });
     if(ensured?.changed && typeof saveLocal === 'function') Promise.resolve(saveLocal(true)).catch(()=>{});
   }
-  if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
+  if(typeof repairClubWorldCupFixtureSchedule === 'function') repairClubWorldCupFixtureSchedule();
+  else if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const ownClubId = Number(game?.selectedClubId || 0);
   const showCup = fixtureViewMode === 'clubWorldCup';
@@ -937,7 +938,8 @@ function matchCard(m){
   const clickable = m.played ? 'clickable' : '';
   const attr = m.played ? `data-match-id="${escapeHtml(m.id)}"` : '';
   const playoffNote = m.promotionPlayoff ? `<div class="match-date-line playoff-note">${escapeHtml(`Playoffs ${String(m.playoffStage || '').toUpperCase() || ''}`.trim())} · mismo partido en ambas ligas</div>` : '';
-  const cupMeta = m.clubWorldCup ? `${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}${m.clubWorldCupBracketKey ? ` · ${m.clubWorldCupBracketKey}` : ''}` : '';
+  const cupSeasonDay = m.clubWorldCup && typeof clubWorldCupAuthoritativeSeasonDay === 'function' ? Number(clubWorldCupAuthoritativeSeasonDay(m, null) || m.seasonDay || 0) : Number(m.seasonDay || 0);
+  const cupMeta = m.clubWorldCup ? `${cupSeasonDay ? `Día ${cupSeasonDay} · ` : ''}${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}${m.clubWorldCupBracketKey ? ` · ${m.clubWorldCupBracketKey}` : ''}` : '';
   const cupNote = m.clubWorldCup ? `<div class="match-date-line playoff-note">${escapeHtml(cupMeta)}</div>` : '';
   const penalties = m.penaltyShootout ? ` <span class="small muted">(${Number(m.penaltyShootout.home || 0)}-${Number(m.penaltyShootout.away || 0)} pen.)</span>` : '';
   const foulsTie = m.clubWorldCupTiebreaker ? ` <span class="small muted">(desempate faltas ${Number(m.clubWorldCupTiebreaker.homeFouls || 0)}-${Number(m.clubWorldCupTiebreaker.awayFouls || 0)})</span>` : '';

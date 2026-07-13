@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.20',
+  version: 'V7.21',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -87,6 +87,19 @@ window.GAME_CONFIG = {
     diasPretemporada: 30,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
+    // Mundial de Clubes: calendario fijo por día fijo de temporada.
+    // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
+    mundialClubes: {
+      diaSorteo: 295,
+      diaGrupos1: 305,
+      diaGrupos2: 310,
+      diaGrupos3: 315,
+      diaOctavos: 320,
+      diaCuartos: 325,
+      diaSemifinales: 330,
+      diaTercerPuesto: 335,
+      diaFinal: 336
+    },
     amistososMaximosPretemporada: 5
   },
 

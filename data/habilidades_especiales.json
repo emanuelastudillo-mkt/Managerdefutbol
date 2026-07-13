@@ -1,8 +1,8 @@
 {
-  "version": "V7.20",
+  "version": "V7.21",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.20: corrige el apilado sin tope de las cartas y evita que el desgaste persistente anule la recuperación física postpartido.",
+  "caracteristicas_version": "V7.21: fija el Mundial de Clubes por día fijo de temporada y corrige automáticamente fechas de grupos y eliminatorias.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

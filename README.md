@@ -1,4 +1,77 @@
-# Fútbol Manager MVP - V7.20
+# Fútbol Manager MVP - V7.21
+
+
+## V7.21 - Mundial de Clubes por día fijo de temporada
+
+El calendario del Mundial de Clubes deja de calcularse a partir de fechas ISO, del final de las ligas o de la última ronda creada. Cada etapa utiliza un día fijo y autoritativo de la temporada.
+
+### Calendario oficial
+
+- **Día 295:** sorteo de los ocho grupos.
+- **Día 305:** primera fecha de grupos.
+- **Día 310:** segunda fecha de grupos.
+- **Día 315:** tercera fecha de grupos.
+- **Día 320:** octavos de final.
+- **Día 325:** cuartos de final.
+- **Día 330:** semifinales.
+- **Día 335:** partido por el tercer puesto.
+- **Día 336:** final.
+
+Los grupos continúan funcionando como ligas de cuatro equipos y clasifican los dos primeros de cada grupo.
+
+### Años bisiestos
+
+- Los días del Mundial no cambian: el sorteo sigue siendo el día 295 y la final el día 336.
+- La fecha ISO visible se deriva del número de día real de esa temporada.
+- En un año bisiesto existe el día 366, pero queda libre de competencias del Mundial.
+- Ninguna fase se desplaza mediante cálculos basados en el final de las ligas o en la última fecha creada.
+
+### Reparación automática
+
+- Las partidas con fechas incorrectas como `2028-02-27` se realinean al abrir la partida o el calendario.
+- Se corrigen las tres jornadas de grupos y todas las eliminatorias existentes.
+- Se guarda en cada partido y ronda el nuevo campo temporal `seasonDay`.
+- Los resultados ya disputados, clasificados, premios y estadísticas no se eliminan ni se vuelven a simular.
+- Los partidos pendientes sólo se procesan cuando el calendario alcanza el día fijo correspondiente.
+- La fecha ISO se mantiene únicamente para integrar el Mundial con el calendario general y se deriva siempre del día de temporada.
+
+### Configuración
+
+Los días pueden revisarse en `config.js`, dentro de:
+
+```js
+calendario: {
+  mundialClubes: {
+    diaSorteo: 295,
+    diaGrupos1: 305,
+    diaGrupos2: 310,
+    diaGrupos3: 315,
+    diaOctavos: 320,
+    diaCuartos: 325,
+    diaSemifinales: 330,
+    diaTercerPuesto: 335,
+    diaFinal: 336
+  }
+}
+```
+
+### Archivos principales modificados en V7.21
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+
+### Compatibilidad de partidas
+
+**V7.21 no rompe partidas anteriores.** Realinea fechas y días del Mundial existente sin borrar resultados. Las ediciones finalizadas permanecen en el historial y las etapas pendientes pasan a respetar el calendario fijo.
+
+---
 
 
 ## V7.20 - Reparación del apilado y del límite físico de las cartas

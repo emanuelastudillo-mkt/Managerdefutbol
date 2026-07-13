@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.23',
+  version: 'V7.24',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -31,6 +31,7 @@ window.GAME_CONFIG = {
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
+    installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
     specialSkillsUrl: 'data/habilidades_especiales.json',
     managerAchievementsUrl: 'data/hitos_manager.json',

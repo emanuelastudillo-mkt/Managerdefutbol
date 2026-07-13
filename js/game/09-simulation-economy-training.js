@@ -1039,6 +1039,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(1);
+  if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(1);
   const recovered = clearRecoveredDailyInjuries();
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
@@ -1694,6 +1695,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   reduceInjuryDurationsByTurns(1);
   registerInjuryRecoveryTurn('preseason');
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
+  if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
@@ -1796,6 +1798,7 @@ function simulatePostseasonTurn(){
   reduceInjuryDurationsByTurns(1);
   registerInjuryRecoveryTurn('postseason');
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
+  if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
@@ -2635,6 +2638,63 @@ function advanceStadiumAfterMatches(results){
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
 }
+function processClubFacilitiesDaily(days=1){
+  if(!game?.selectedClubId || typeof clubFacilitiesState !== 'function') return { completed:[], heatingDays:0, fieldGain:0, cost:0 };
+  const elapsed = Math.max(0, Math.round(Number(days || 0)));
+  if(elapsed <= 0) return { completed:[], heatingDays:0, fieldGain:0, cost:0 };
+  const clubId = Number(game.selectedClubId);
+  const state = clubFacilitiesState(clubId);
+  const heatingDef = pitchHeatingDefinition();
+  const completed = [];
+  let heatingDays = 0;
+  let fieldGain = 0;
+  let cost = 0;
+  for(let day=0; day<elapsed; day+=1){
+    const heatingReadyAtStart = Boolean(state.heating.built);
+    if(state.heating.construction){
+      state.heating.construction.daysLeft = Math.max(0, Number(state.heating.construction.daysLeft || 0) - 1);
+      if(state.heating.construction.daysLeft <= 0){
+        state.heating.construction = null;
+        state.heating.built = true;
+        state.heating.active = false;
+        completed.push('heating');
+      }
+    }
+    if(state.youthTraining.construction){
+      state.youthTraining.construction.daysLeft = Math.max(0, Number(state.youthTraining.construction.daysLeft || 0) - 1);
+      if(state.youthTraining.construction.daysLeft <= 0){
+        const targetLevel = Math.max(Number(state.youthTraining.level || 0), Number(state.youthTraining.construction.targetLevel || 0));
+        state.youthTraining.level = targetLevel;
+        state.youthTraining.construction = null;
+        completed.push(`youth:${targetLevel}`);
+      }
+    }
+    if(heatingReadyAtStart && state.heating.active){
+      if((Number(game.budget || 0) - cost) < heatingDef.dailyCost){
+        state.heating.active = false;
+        if(typeof pushGameMessage === 'function') pushGameMessage({ type:'estadio', priority:'high', title:'Calefacción de césped apagada', body:`No había presupuesto suficiente para pagar ${formatMoney(heatingDef.dailyCost)} del gasto diario. La instalación se apagó automáticamente.` });
+      }else{
+        cost += heatingDef.dailyCost;
+        heatingDays += 1;
+        const before = fieldScoreForClub(clubId);
+        const after = clamp(before + heatingDef.dailyFieldGain, 1, 100);
+        game.stadium.fields[clubId] = after;
+        fieldGain += Math.max(0, after - before);
+      }
+    }
+  }
+  if(cost > 0) recordBudgetChange(-cost, 'Calefacción diaria del césped', { type:'stadium_facility_heating_daily', clubId, days:heatingDays, fieldGain });
+  completed.forEach(item => {
+    if(item === 'heating' && typeof pushGameMessage === 'function') pushGameMessage({ type:'estadio', title:'Calefacción de césped finalizada', body:'La instalación quedó disponible en Estadio → Instalaciones. Está apagada hasta que decidas encenderla.', priority:'normal' });
+    if(String(item).startsWith('youth:') && typeof pushGameMessage === 'function'){
+      const level = Number(String(item).split(':')[1] || 0);
+      const definition = youthTrainingGroundLevelDefinition(level);
+      pushGameMessage({ type:'academia', title:`Predio juvenil nivel ${level} finalizado`, body:`El predio ${definition?.name || ''} quedó habilitado. Aporta +${Number(definition?.exceptionalBonus || 0)} juvenil(es) excepcional(es) adicional(es) por temporada.`, priority:'normal' });
+    }
+  });
+  return { completed, heatingDays, fieldGain, cost };
+}
+
 function processStadiumProjects(){
   ensureStadiumState();
   Object.entries(game.stadium.projects).forEach(([clubIdRaw, project]) => {

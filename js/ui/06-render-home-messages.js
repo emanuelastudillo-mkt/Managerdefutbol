@@ -821,6 +821,23 @@ function homeMessagesSummary(){
     <p class="tagline">${escapeHtml(latest.body)}</p>
   </div>`;
 }
+function messageHasPendingAction(message){
+  return Boolean(message?.action && String(message.action.status || 'pending') === 'pending');
+}
+function deletableOldMessages(){
+  return (game?.messages || []).filter(message => !messageHasPendingAction(message));
+}
+function deleteOldMessages(){
+  if(!game) return;
+  const deletable = deletableOldMessages();
+  if(!deletable.length){ showNotice('No hay mensajes cerrados para borrar.'); return; }
+  const ok = window.confirm(`Se borrarán ${deletable.length} mensaje(s) antiguos. Las ofertas y acciones pendientes se conservarán. ¿Continuar?`);
+  if(!ok) return;
+  game.messages = (game.messages || []).filter(message => messageHasPendingAction(message));
+  saveLocal(true);
+  renderMessages();
+  showNotice(`${deletable.length} mensaje(s) antiguo(s) eliminado(s).`);
+}
 function renderMessages(){
   markMessagesRead();
   const messages = Array.isArray(game.messages) ? game.messages : [];
@@ -828,8 +845,9 @@ function renderMessages(){
   const pendingOffers = messages.filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
   const highPriority = messages.filter(m => m.priority === 'high').length;
   const rows = messages.map(m => messageCard(m)).join('');
+  const deletableCount = deletableOldMessages().length;
   view.innerHTML = `
-    <div class="section-title compact-section-title"><h2>Mensajes</h2><p class="tagline">Bandeja compacta de avisos del club.</p></div>
+    <div class="row section-title compact-section-title"><div><h2>Mensajes</h2><p class="tagline">Bandeja compacta de avisos del club.</p></div><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar mensajes antiguos${deletableCount ? ` (${deletableCount})` : ''}</button></div>
     <div class="messages-shell">
       <div class="messages-toolbar card">
         <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
@@ -839,6 +857,7 @@ function renderMessages(){
       </div>
       <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
     </div>`;
+  document.querySelector('#btnDeleteOldMessages')?.addEventListener('click', deleteOldMessages);
   if(!(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active))){
     document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
     document.querySelectorAll('[data-convince-player]').forEach(btn => btn.addEventListener('click', () => convinceSpecialClausePlayer(btn.dataset.convincePlayer)));

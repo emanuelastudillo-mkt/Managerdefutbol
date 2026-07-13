@@ -1,10 +1,11 @@
 /* Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc' };
+  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc' };
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
+  const hadExceptionalCount = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'exceptionalYouthGrantedCount'));
   const clean = { ...base, ...(state || {}) };
   const allowedSorts = new Set(['edad_asc','edad_desc','informe_desc','informe_asc']);
   clean.sortMode = allowedSorts.has(String(clean.sortMode || '')) ? String(clean.sortMode) : 'edad_asc';
@@ -14,6 +15,8 @@ function normalizeAcademyState(state){
   clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
   clean.youthPreparer = clean.youthPreparer || null;
   clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
+  clean.exceptionalYouthGrantedCount = Math.max(0, Math.round(Number(clean.exceptionalYouthGrantedCount || 0)));
+  if(!hadExceptionalCount && clean.exceptionalYouthGrantedSeason) clean.exceptionalYouthGrantedCount = 1;
   clean.lastConsultReveal = clean.lastConsultReveal && typeof clean.lastConsultReveal === 'object' ? clean.lastConsultReveal : null;
   clean.youthInjurySeason = Number(clean.youthInjurySeason || 0) || null;
   clean.youthInjuriesTarget = Number.isFinite(Number(clean.youthInjuriesTarget)) ? Math.max(0, Math.round(Number(clean.youthInjuriesTarget))) : null;
@@ -221,6 +224,7 @@ function resetAcademySeasonState(){
   game.academy.lastConsultTurn = null;
   game.academy.lastConsultReveal = null;
   game.academy.exceptionalYouthGrantedSeason = null;
+  game.academy.exceptionalYouthGrantedCount = 0;
   resetAcademyGrowthForSeason();
   resetAcademyYouthInjurySeason();
 }
@@ -507,7 +511,7 @@ function startAcademyScouting(){
   const exceptionalYouth = grantSeasonalExceptionalAcademyYouth();
   saveLocal(true);
   renderAcademy();
-  showNotice(exceptionalYouth ? `Captación iniciada. Además llegó ${exceptionalYouth.name}, juvenil de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años listo para entrenar o subir.` : 'Captación iniciada. El informe llegará en 35 días.');
+  showNotice(exceptionalYouth.length ? `Captación iniciada. Además llegaron ${exceptionalYouth.length} juvenil(es) excepcional(es) listos para entrenar o subir.` : 'Captación iniciada. El informe llegará en 35 días.');
 }
 function createAcademyBatch(count){
   const players = [];
@@ -556,25 +560,39 @@ function createExceptionalAcademyYouth(){
   });
 }
 function grantSeasonalExceptionalAcademyYouth(){
-  if(!game?.academy || !ACADEMY_EXCEPTIONAL_YOUTH_ENABLED) return null;
+  if(!game?.academy || !ACADEMY_EXCEPTIONAL_YOUTH_ENABLED) return [];
   game.academy = normalizeAcademyState(game.academy);
   const season = Number(game.seasonNumber || 1);
-  if(Number(game.academy.exceptionalYouthGrantedSeason || 0) === season) return null;
-  if(academyAvailableSlots() <= 0){
-    pushGameMessage({ type:'academia', title:'Juvenil excepcional perdido', body:'La captación encontró un juvenil de 16 años, pero no había cupo disponible en la academia.', priority:'normal' });
-    game.academy.exceptionalYouthGrantedSeason = season;
-    return null;
+  const facilityBonus = typeof youthTrainingExceptionalBonus === 'function' ? youthTrainingExceptionalBonus(game.selectedClubId) : 0;
+  const target = 1 + Math.max(0, Math.round(Number(facilityBonus || 0)));
+  const sameSeason = Number(game.academy.exceptionalYouthGrantedSeason || 0) === season;
+  const alreadyResolved = sameSeason ? Math.max(0, Math.round(Number(game.academy.exceptionalYouthGrantedCount || 0))) : 0;
+  if(alreadyResolved >= target) return [];
+  const requested = target - alreadyResolved;
+  const available = academyAvailableSlots();
+  const toAdd = Math.min(requested, available);
+  const players = [];
+  for(let i=0; i<toAdd; i+=1){
+    const player = createExceptionalAcademyYouth();
+    game.academy.players.push(player);
+    players.push(player);
   }
-  const player = createExceptionalAcademyYouth();
-  game.academy.players.push(player);
+  const lost = Math.max(0, requested - toAdd);
   game.academy.exceptionalYouthGrantedSeason = season;
-  pushGameMessage({
-    type:'academia',
-    title:'Juvenil excepcional incorporado',
-    body:`La captación dejó una oportunidad inmediata: ${player.name}, ${academyGroupLabel(player.group)}, ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, ya puede entrenarse en academia o firmar contrato profesional.`,
-    priority:'normal'
-  });
-  return player;
+  game.academy.exceptionalYouthGrantedCount = target;
+  if(players.length){
+    const names = players.map(player => `${player.name} (${academyGroupLabel(player.group)})`).join(', ');
+    pushGameMessage({
+      type:'academia',
+      title:players.length === 1 ? 'Juvenil excepcional incorporado' : `${players.length} juveniles excepcionales incorporados`,
+      body:`La captación incorporó ${names}. Ya pueden entrenarse en academia o firmar contrato profesional.${facilityBonus ? ` El predio juvenil aportó +${facilityBonus} cupo(s) excepcional(es) de temporada.` : ''}`,
+      priority:'normal'
+    });
+  }
+  if(lost){
+    pushGameMessage({ type:'academia', title:'Juveniles excepcionales perdidos', body:`La captación encontró ${lost} juvenil(es) excepcional(es), pero no había cupos suficientes en la academia.`, priority:'normal' });
+  }
+  return players;
 }
 function processAcademyScoutingArrivals(){
   if(!game?.academy) return 0;
@@ -1045,6 +1063,7 @@ function renderAcademy(){
   const capacity = academyCapacity();
   const availableSlots = academyAvailableSlots();
   const scoutingDisabled = availableSlots <= 0;
+  const facilityExceptionalBonus = typeof youthTrainingExceptionalBonus === 'function' ? youthTrainingExceptionalBonus(game.selectedClubId) : 0;
   view.innerHTML = `
     <div class="row section-title">
       <div><h2>Academia</h2><p class="tagline">Captación, seguimiento y entrenamiento de juveniles antes de firmar contrato profesional.</p></div>
@@ -1073,7 +1092,7 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${scoutingDisabled ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada, la primera captación incorpora además un juvenil excepcional de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, entrenable x5 y promovible de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. Una vez por temporada se habilita un juvenil excepcional base de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años, más ${facilityExceptionalBonus} adicional(es) por el predio juvenil actual; se entregan mediante captaciones mientras haya cupos, son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     ${academySortControlsMarkup()}
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;

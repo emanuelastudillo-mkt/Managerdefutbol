@@ -5350,3 +5350,26 @@ button.cwc-group-result{cursor:pointer}
   .tactic-captain-title{display:grid}
   .tactic-captain-title .pill{justify-self:start}
 }
+
+
+/* V7.24 · Instalaciones del club y limpieza de mensajes */
+.stadium-facilities-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr);gap:14px;margin-top:14px}
+.stadium-facility-card{display:grid;gap:14px;align-content:start;min-width:0}
+.facility-card-head{align-items:flex-start}
+.facility-project{padding:12px;border-radius:14px;background:rgba(59,130,246,.08);border:1px solid rgba(96,165,250,.18)}
+.facility-actions{display:grid;gap:10px}
+.facility-switch-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(255,255,255,.035);cursor:pointer}
+.facility-switch-row span:first-child{display:grid;gap:3px}.facility-switch-row small{color:var(--muted)}
+.facility-switch-row input{position:absolute;opacity:0;pointer-events:none}
+.facility-switch{width:48px;height:26px;border-radius:999px;background:rgba(148,163,184,.35);position:relative;transition:.2s}
+.facility-switch:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.28)}
+.facility-switch-row input:checked + .facility-switch{background:rgba(34,197,94,.75)}
+.facility-switch-row input:checked + .facility-switch:after{transform:translateX(22px)}
+.facility-switch-row input:disabled + .facility-switch{opacity:.45}
+.facility-level-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.facility-level{display:grid;gap:8px;padding:12px;border-radius:14px;border:1px solid rgba(148,163,184,.15);background:rgba(255,255,255,.025)}
+.facility-level.completed{border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.06)}
+.facility-level.active{border-color:rgba(59,130,246,.34);background:rgba(59,130,246,.08)}
+.facility-level p,.facility-level small{margin:0}.facility-level small{color:var(--muted)}
+.facility-summary-grid .card{padding:12px 14px}.facility-summary-grid strong{font-size:22px}
+@media (max-width:900px){.stadium-facilities-grid{grid-template-columns:1fr}.facility-level-grid{grid-template-columns:1fr}.facility-switch-row{grid-template-columns:1fr auto}.facility-switch-row>span:first-child{grid-column:1}.facility-switch-row>.facility-switch{grid-column:2;grid-row:1}}

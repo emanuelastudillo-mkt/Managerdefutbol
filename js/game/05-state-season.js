@@ -2823,6 +2823,8 @@ function normalizeGame(saved){
   if(!normalized.stadium.ticketPrices) normalized.stadium.ticketPrices = {};
   if(!normalized.stadium.capacityOverrides || typeof normalized.stadium.capacityOverrides !== 'object' || Array.isArray(normalized.stadium.capacityOverrides)) normalized.stadium.capacityOverrides = {};
   if(!Array.isArray(normalized.stadium.capacityDeteriorationHistory)) normalized.stadium.capacityDeteriorationHistory = [];
+  if(!normalized.stadium.facilities || typeof normalized.stadium.facilities !== 'object' || Array.isArray(normalized.stadium.facilities)) normalized.stadium.facilities = {};
+  Object.keys(normalized.stadium.facilities).forEach(clubId => { normalized.stadium.facilities[clubId] = normalizeClubFacilitiesState(normalized.stadium.facilities[clubId]); });
   seed.clubs.forEach(c => {
     if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c);
     if(!Number.isFinite(Number(normalized.stadium.ticketPrices[c.id]))) normalized.stadium.ticketPrices[c.id] = TICKET_PRICE_INITIAL;

@@ -1,4 +1,66 @@
-# Fútbol Manager MVP - V7.23
+# Fútbol Manager MVP - V7.24
+
+
+## V7.24 - Mensajes antiguos e instalaciones del club
+
+### Borrar mensajes antiguos
+
+En **Mensajes** se agregó el botón `Borrar mensajes antiguos`. La acción solicita confirmación, elimina los avisos cerrados y conserva cualquier oferta o acción que continúe pendiente de respuesta.
+
+### Instalaciones en Estadio
+
+La cabecera de **Estadio** incorpora el botón `Instalaciones`, que abre una pantalla específica para construcciones permanentes vinculadas al club. Las instalaciones quedan asociadas al club y no al manager.
+
+#### Calefacción de césped
+
+- Construcción: **$200.000.000**.
+- Duración: **60 días**.
+- Una vez terminada dispone de un switch **ON/OFF**.
+- Encendida cobra **$10.000 por día**.
+- Cada día encendida mejora **+1** el estado del campo, hasta 100.
+- Si no hay presupuesto para el gasto diario, se apaga automáticamente y deja un mensaje.
+- Puede construirse en paralelo con el predio juvenil.
+
+#### Predio de entrenamiento juvenil
+
+| Nivel | Costo | Obra | Juveniles excepcionales adicionales |
+|---|---:|---:|---:|
+| 1 · Básico | $20.000.000 | 58 días | +0 |
+| 2 · Medio | $100.000.000 | 105 días | +1 |
+| 3 · Bueno | $300.000.000 | 180 días | +2 |
+| 4 · Excelente | $500.000.000 | 230 días | +3 |
+| 5 · Elite | $1.200.000.000 | 80 días | +5 |
+
+Los niveles deben construirse en orden. El bonus se suma al juvenil excepcional base de cada temporada. Los juveniles adicionales se entregan mediante captaciones mientras haya cupos disponibles. Si el predio mejora después de que ya se entregó el juvenil base, una captación posterior puede entregar la diferencia pendiente del nuevo nivel.
+
+### Persistencia y economía
+
+- Las obras conservan sus días restantes al guardar y cargar.
+- Las instalaciones terminadas permanecen entre temporadas.
+- Los gastos y construcciones aparecen en Finanzas dentro de la categoría Estadio.
+- Cambiar de club no traslada las instalaciones: cada club conserva las propias.
+
+### Archivos principales modificados en V7.24
+
+- `README.md`
+- `index.html`
+- `style.css`
+- `config.js`
+- `balance-modificadores.js`
+- `data/instalaciones.json`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/ui/06-render-home-messages.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+
+### Compatibilidad de partidas
+
+**V7.24 no rompe partidas anteriores.** Los guardados existentes reciben el estado inicial de instalaciones sin obras construidas y conservan mensajes, academia, estadio, presupuesto y progreso anteriores.
+
+---
 
 
 ## V7.23 - Nuevas cartas de apoyo, marketing, mercado y medicina

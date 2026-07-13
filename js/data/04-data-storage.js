@@ -528,6 +528,37 @@ async function loadEmployeesDatabase(){
 }
 
 
+function installationsDatabaseFallback(){
+  return {
+    version:APP_VERSION,
+    sistema:'instalaciones_club',
+    calefaccion_cesped:{
+      id:'pitch_heating', nombre:'Calefacción de césped', costo_construccion:200000000,
+      dias_construccion:60, costo_diario:10000, mejora_campo_diaria:1
+    },
+    predio_entrenamiento_juvenil:{
+      id:'youth_training_ground', nombre:'Predio de entrenamiento juvenil',
+      niveles:[
+        { nivel:1, nombre:'Básico', costo:20000000, dias_construccion:58, juveniles_excepcionales_adicionales:0 },
+        { nivel:2, nombre:'Medio', costo:100000000, dias_construccion:105, juveniles_excepcionales_adicionales:1 },
+        { nivel:3, nombre:'Bueno', costo:300000000, dias_construccion:180, juveniles_excepcionales_adicionales:2 },
+        { nivel:4, nombre:'Excelente', costo:500000000, dias_construccion:230, juveniles_excepcionales_adicionales:3 },
+        { nivel:5, nombre:'Elite', costo:1200000000, dias_construccion:80, juveniles_excepcionales_adicionales:5 }
+      ]
+    },
+    source:'fallback'
+  };
+}
+async function loadInstallationsDatabase(){
+  const raw = await fetchJsonIfExists(INSTALLATIONS_DATABASE_URL);
+  const fallback = installationsDatabaseFallback();
+  if(!raw || typeof raw !== 'object') return fallback;
+  const heating = raw.calefaccion_cesped && typeof raw.calefaccion_cesped === 'object' ? raw.calefaccion_cesped : fallback.calefaccion_cesped;
+  const youthRaw = raw.predio_entrenamiento_juvenil && typeof raw.predio_entrenamiento_juvenil === 'object' ? raw.predio_entrenamiento_juvenil : fallback.predio_entrenamiento_juvenil;
+  const levels = Array.isArray(youthRaw.niveles) && youthRaw.niveles.length ? youthRaw.niveles : fallback.predio_entrenamiento_juvenil.niveles;
+  return { ...raw, calefaccion_cesped:heating, predio_entrenamiento_juvenil:{ ...youthRaw, niveles:levels }, source:INSTALLATIONS_DATABASE_URL };
+}
+
 async function loadEventsDatabase(){
   const raw = await fetchJsonIfExists(EVENTS_DATABASE_URL);
   const fallback = { metadata:{ version:APP_VERSION, source:'fallback' }, eventos:[] };
@@ -1081,6 +1112,77 @@ function fieldConditionClass(score){
   const label = fieldConditionName(score);
   return label === 'Excelente' ? 'excellent' : label === 'Normal' ? 'normal' : label === 'Regular' ? 'regular' : label === 'Muy malo' ? 'bad' : 'unplayable';
 }
+function pitchHeatingDefinition(){
+  const fallback = installationsDatabaseFallback().calefaccion_cesped;
+  const raw = installationsDatabase?.calefaccion_cesped || fallback;
+  return {
+    id:String(raw.id || fallback.id),
+    name:String(raw.nombre || raw.name || fallback.nombre),
+    buildCost:Math.max(0, Math.round(Number(raw.costo_construccion ?? raw.buildCost ?? fallback.costo_construccion))),
+    buildDays:Math.max(1, Math.round(Number(raw.dias_construccion ?? raw.buildDays ?? fallback.dias_construccion))),
+    dailyCost:Math.max(0, Math.round(Number(raw.costo_diario ?? raw.dailyCost ?? fallback.costo_diario))),
+    dailyFieldGain:Math.max(0, Math.round(Number(raw.mejora_campo_diaria ?? raw.dailyFieldGain ?? fallback.mejora_campo_diaria)))
+  };
+}
+function youthTrainingGroundLevels(){
+  const fallback = installationsDatabaseFallback().predio_entrenamiento_juvenil.niveles;
+  const raw = installationsDatabase?.predio_entrenamiento_juvenil?.niveles;
+  return (Array.isArray(raw) && raw.length ? raw : fallback).map(item => ({
+    level:Math.max(1, Math.round(Number(item.nivel ?? item.level ?? 1))),
+    name:String(item.nombre || item.name || `Nivel ${item.nivel || item.level || 1}`),
+    cost:Math.max(0, Math.round(Number(item.costo ?? item.cost ?? 0))),
+    buildDays:Math.max(1, Math.round(Number(item.dias_construccion ?? item.buildDays ?? 1))),
+    exceptionalBonus:Math.max(0, Math.round(Number(item.juveniles_excepcionales_adicionales ?? item.exceptionalBonus ?? 0)))
+  })).sort((a,b) => a.level - b.level);
+}
+function youthTrainingGroundLevelDefinition(level){
+  return youthTrainingGroundLevels().find(item => Number(item.level) === Number(level)) || null;
+}
+function createClubFacilitiesState(){
+  return {
+    heating:{ built:false, active:false, construction:null },
+    youthTraining:{ level:0, construction:null }
+  };
+}
+function normalizeFacilityConstruction(project, extra={}){
+  if(!project || typeof project !== 'object') return null;
+  const totalDays = Math.max(1, Math.round(Number(project.totalDays || project.days || project.daysLeft || 1)));
+  const daysLeft = Math.max(0, Math.round(Number(project.daysLeft || 0)));
+  if(daysLeft <= 0) return null;
+  return { ...project, ...extra, totalDays, daysLeft };
+}
+function normalizeClubFacilitiesState(state){
+  const base = createClubFacilitiesState();
+  const clean = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const heatingRaw = clean.heating && typeof clean.heating === 'object' ? clean.heating : {};
+  const youthRaw = clean.youthTraining && typeof clean.youthTraining === 'object' ? clean.youthTraining : {};
+  const maxLevel = Math.max(0, ...youthTrainingGroundLevels().map(item => item.level));
+  const heatingBuilt = Boolean(heatingRaw.built);
+  const heatingConstruction = heatingBuilt ? null : normalizeFacilityConstruction(heatingRaw.construction);
+  const level = clamp(Math.round(Number(youthRaw.level || 0)), 0, maxLevel);
+  const targetLevel = Math.max(level + 1, Math.round(Number(youthRaw?.construction?.targetLevel || level + 1)));
+  const youthConstruction = normalizeFacilityConstruction(youthRaw.construction, { targetLevel });
+  return {
+    ...base,
+    ...clean,
+    heating:{ ...base.heating, ...heatingRaw, built:heatingBuilt, active:heatingBuilt && Boolean(heatingRaw.active), construction:heatingConstruction },
+    youthTraining:{ ...base.youthTraining, ...youthRaw, level, construction:youthConstruction }
+  };
+}
+function clubFacilitiesState(clubId=game?.selectedClubId){
+  ensureStadiumState();
+  const id = Number(clubId || 0);
+  if(!id) return createClubFacilitiesState();
+  game.stadium.facilities[id] = normalizeClubFacilitiesState(game.stadium.facilities[id]);
+  return game.stadium.facilities[id];
+}
+function youthTrainingGroundLevel(clubId=game?.selectedClubId){
+  return Math.max(0, Math.round(Number(clubFacilitiesState(clubId)?.youthTraining?.level || 0)));
+}
+function youthTrainingExceptionalBonus(clubId=game?.selectedClubId){
+  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel(clubId));
+  return Math.max(0, Math.round(Number(definition?.exceptionalBonus || 0)));
+}
 function createInitialStadiumState(){
   const fields = {};
   const ticketPrices = {};
@@ -1088,7 +1190,7 @@ function createInitialStadiumState(){
     fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     ticketPrices[club.id] = TICKET_PRICE_INITIAL;
   });
-  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, capacityDeteriorationHistory:[], expansionProjects:{}, completedExpansions:{}, botSeasonNumber:0 };
+  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, capacityDeteriorationHistory:[], expansionProjects:{}, completedExpansions:{}, facilities:{}, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
@@ -1100,6 +1202,7 @@ function ensureStadiumState(){
   if(!game.stadium.capacityDeteriorationHistory) game.stadium.capacityDeteriorationHistory = [];
   if(!game.stadium.expansionProjects) game.stadium.expansionProjects = {};
   if(!game.stadium.completedExpansions) game.stadium.completedExpansions = {};
+  if(!game.stadium.facilities || typeof game.stadium.facilities !== 'object' || Array.isArray(game.stadium.facilities)) game.stadium.facilities = {};
   seed.clubs.forEach(club => {
     if(!Number.isFinite(game.stadium.fields[club.id])) game.stadium.fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     if(!Number.isFinite(Number(game.stadium.ticketPrices[club.id]))) game.stadium.ticketPrices[club.id] = TICKET_PRICE_INITIAL;
@@ -2130,10 +2233,11 @@ async function init(){
     let savedRecord = await readLocalSaveRecord(preferredSlot).catch(() => null);
     if(!savedRecord && preferredSlot !== SAVE_SLOT_CAREER) savedRecord = await readLocalSaveRecord(SAVE_SLOT_CAREER).catch(() => null);
     const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
-    const [loadedSeed, loadedSponsors, loadedEmployees, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedManagerChallenges, loadedMatchCommentary] = await Promise.all([
+    const [loadedSeed, loadedSponsors, loadedEmployees, loadedInstallations, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedManagerChallenges, loadedMatchCommentary] = await Promise.all([
       loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
       loadSponsorsDatabase(),
       loadEmployeesDatabase(),
+      loadInstallationsDatabase(),
       loadEventsDatabase(),
       loadSpecialSkillsDatabase(),
       loadManagerAchievementsDatabase(),
@@ -2143,6 +2247,7 @@ async function init(){
     seed = loadedSeed;
     sponsorsDatabase = loadedSponsors;
     employeesDatabase = loadedEmployees;
+    installationsDatabase = loadedInstallations;
     eventsDatabase = loadedEvents;
     specialSkillsDatabase = loadedSpecialSkills;
     managerAchievementsDatabase = loadedManagerAchievements;

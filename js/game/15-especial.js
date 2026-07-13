@@ -688,10 +688,14 @@ function redeemSpecialCode(){
   const code = codes.find(item => item._key === key);
   if(!code){ showNotice('Código inválido o no disponible.'); return; }
   state.codigos_reclamados = (state.codigos_reclamados && typeof state.codigos_reclamados === 'object' && !Array.isArray(state.codigos_reclamados)) ? state.codigos_reclamados : {};
-  if(state.codigos_reclamados[key]){ showNotice('Ese código ya fue reclamado en esta partida.'); return; }
+  const reusable = code.reutilizable === true || code.reusable === true || code.usosIlimitados === true;
+  const previousClaim = state.codigos_reclamados[key];
+  const previousRedemption = previousClaim && typeof previousClaim === 'object' ? previousClaim : null;
+  if(previousClaim && !reusable){ showNotice('Ese código ya fue reclamado en esta partida.'); return; }
   const benefits = code.beneficios || code.benefits || {};
   const prestige = Math.max(0, Math.round(Number(benefits.prestigio ?? benefits.prestige ?? 0)));
   const points = Math.max(0, Math.round(Number(benefits.puntosHabilidad ?? benefits.skillPoints ?? benefits.puntos_habilidad ?? 0)));
+  const clubMoney = Math.max(0, Math.round(Number(benefits.dineroClub ?? benefits.clubMoney ?? benefits.presupuestoClub ?? benefits.money ?? 0)));
   const applied = [];
   if(prestige > 0 && typeof addManagerPrestige === 'function'){
     addManagerPrestige(prestige, `Código especial: ${code.nombre || key}`);
@@ -706,17 +710,57 @@ function redeemSpecialCode(){
     specialPointsAnimation = { id:`code-${Date.now()}-${Math.random()}`, points };
     applied.push(`+${formatPlainNumber(points)} puntos de habilidad`);
   }
+  if(clubMoney > 0){
+    const concept = `Código especial: ${code.nombre || key}`;
+    if(typeof recordBudgetChange === 'function'){
+      recordBudgetChange(clubMoney, concept, { type:'special_code', category:'Código especial', code:key, reusable });
+    } else {
+      game.budgetHistory = Array.isArray(game.budgetHistory) ? game.budgetHistory : [];
+      game.budget = Math.round(Number(game.budget || 0) + clubMoney);
+      game.lastBudgetDelta = clubMoney;
+      game.budgetHistory.push({
+        season:game.seasonNumber || 1,
+        matchdayIndex:game.matchdayIndex || 0,
+        date:game.currentDate || '',
+        concept,
+        delta:clubMoney,
+        budget:game.budget,
+        type:'special_code',
+        category:'Código especial',
+        code:key,
+        reusable
+      });
+    }
+    game.clubBudgets = (game.clubBudgets && typeof game.clubBudgets === 'object' && !Array.isArray(game.clubBudgets)) ? game.clubBudgets : {};
+    if(Number.isFinite(Number(game.selectedClubId))) game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
+    applied.push(`+${formatMoney(clubMoney)} al presupuesto del club`);
+  }
   if(!applied.length){ showNotice('El código existe, pero no tiene beneficios configurados.'); return; }
-  state.codigos_reclamados[key] = {
+  const nowIso = new Date().toISOString();
+  state.codigos_reclamados[key] = reusable ? {
     codigo:key,
     nombre:String(code.nombre || key),
-    beneficios:{ prestigio:prestige, puntosHabilidad:points },
+    beneficios:{ prestigio:prestige, puntosHabilidad:points, dineroClub:clubMoney },
+    reutilizable:true,
+    usos:Math.max(0, Math.round(Number(previousRedemption?.usos || 0))) + 1,
     season:Number(game?.seasonNumber || 1),
     date:game?.currentDate || '',
-    createdAt:new Date().toISOString()
+    primerUso:previousRedemption?.primerUso || previousRedemption?.createdAt || nowIso,
+    ultimoUso:nowIso,
+    createdAt:previousRedemption?.createdAt || nowIso
+  } : {
+    codigo:key,
+    nombre:String(code.nombre || key),
+    beneficios:{ prestigio:prestige, puntosHabilidad:points, dineroClub:clubMoney },
+    reutilizable:false,
+    usos:1,
+    season:Number(game?.seasonNumber || 1),
+    date:game?.currentDate || '',
+    createdAt:nowIso
   };
   game.special = state;
-  pushGameMessage({ type:'especial', priority:'normal', title:'Código especial reclamado', body:`${code.nombre || key}: ${applied.join(' · ')}.`, id:`special-code-${key}-${game?.seasonNumber || 1}` });
+  const redemptionUse = Math.max(1, Math.round(Number(state.codigos_reclamados[key]?.usos || 1)));
+  pushGameMessage({ type:'especial', priority:'normal', title:'Código especial reclamado', body:`${code.nombre || key}: ${applied.join(' · ')}${reusable ? ` · Uso ${redemptionUse}` : ''}.`, id:`special-code-${key}-${game?.seasonNumber || 1}-${reusable ? redemptionUse : 1}` });
   saveLocal(true);
   renderSpecial();
   showNotice(`Código aplicado: ${applied.join(' · ')}.`);

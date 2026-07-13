@@ -1,5 +1,34 @@
-# Fútbol Manager MVP - V7.24
+# Fútbol Manager MVP - V7.25
 
+## V7.25 - Código reutilizable de fondos para el club
+
+Se agregó un código especial alfanumérico que acredita **$100.000.000** al presupuesto del club dirigido cada vez que se canjea.
+
+### Funcionamiento
+
+- El código puede utilizarse una cantidad ilimitada de veces dentro de la misma partida.
+- Cada uso acredita $100.000.000 al club actual del manager.
+- El movimiento queda registrado en Finanzas como `Código especial`.
+- El presupuesto persistente del club se actualiza junto con el presupuesto activo de la partida.
+- El historial del código guarda la cantidad de usos, pero no bloquea nuevos canjes.
+- Los diez códigos anteriores continúan siendo de un solo uso por partida.
+- El código real no está incluido en los ZIP públicos; la configuración conserva solamente su huella SHA-256.
+
+### Archivos principales modificados en V7.25
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/instalaciones.json`
+- `js/core/01-config-constants.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.25 no rompe partidas anteriores.** Agrega un nuevo código reutilizable y conserva códigos reclamados, cartas, presupuestos, planteles y progreso existentes.
+
+---
 
 ## V7.24 - Mensajes antiguos e instalaciones del club
 

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.24',
+  version: 'V7.25',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -197,7 +197,7 @@ window.GAME_CONFIG = {
   codigosEspeciales: {
     activo: true,
     // Los códigos válidos no se guardan en texto visible: sólo se conservan sus huellas SHA-256.
-    // Cada código se puede reclamar una sola vez por partida guardada.
+    // Los códigos normales se pueden reclamar una sola vez por partida. Los marcados como reutilizables no tienen límite de usos.
     codigos: [
       {
         huella: 'BAC19BFA1A8CA06D178B9E63A44064B2EB7CFF0D9B568A9D8D0413E2AFE6A3CE',
@@ -258,6 +258,13 @@ window.GAME_CONFIG = {
         nombre: 'Código de habilidad 8',
         descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
         beneficios: { puntosHabilidad: 20000 }
+      },
+      {
+        huella: 'FBDED1D38270713AF1002D4757F5D5674B3869D5F03CDB26121073245C1B8EA5',
+        nombre: 'Código de fondos del club',
+        descripcion: 'Acredita $100.000.000 al presupuesto del club. Puede utilizarse sin límite.',
+        reutilizable: true,
+        beneficios: { dineroClub: 100000000 }
       }
     ]
   },

@@ -2174,6 +2174,7 @@ function normalizeSavedTacticsState(src){
       clubId:Number(raw.clubId || 0),
       clubName:String(raw.clubName || ''),
       formation:FORMATIONS[raw.formation] ? raw.formation : DEFAULT_TACTIC.formation,
+      captainId:starters.includes(Number(raw.captainId || 0)) ? Number(raw.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
       starters,
       bench,
       autoSubs:Array.isArray(raw.autoSubs) ? raw.autoSubs.slice(0,5).map(rule => ({ outId:Number(rule?.outId || 0), inId:Number(rule?.inId || 0), trigger:String(rule?.trigger || 'tired') })) : [],
@@ -2193,7 +2194,9 @@ function tacticSlotStatus(slot){
   if(!saved) return { exists:false, label:'Vacía', details:'Sin táctica guardada.' };
   const validStarters = (saved.starters || []).filter(Boolean).length;
   const clubText = saved.clubName ? ` · ${saved.clubName}` : '';
-  return { exists:true, label:`${saved.formation}${clubText}`, details:`${validStarters}/11 titulares guardados` };
+  const captain = playerById(saved.captainId);
+  const captainText = captain ? ` · Capitán ${playerLastName(captain.name)}` : '';
+  return { exists:true, label:`${saved.formation}${clubText}`, details:`${validStarters}/11 titulares guardados${captainText}` };
 }
 function snapshotCurrentTacticForSlot(slot){
   const current = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic || DEFAULT_TACTIC));
@@ -2209,6 +2212,7 @@ function snapshotCurrentTacticForSlot(slot){
     clubId:Number(game.selectedClubId || 0),
     clubName:clubName(game.selectedClubId),
     formation:current.formation || DEFAULT_TACTIC.formation,
+    captainId:normalizedCaptainIdForTactic(game.selectedClubId, current),
     starters,
     bench,
     autoSubs:(current.autoSubs || []).slice(0,5).map(rule => ({ outId:Number(rule.outId || 0), inId:Number(rule.inId || 0), trigger:String(rule.trigger || 'tired') })),
@@ -2255,6 +2259,7 @@ function sanitizeSavedTacticForCurrentClub(saved){
   return applyStarterMentalities({
     ...DEFAULT_TACTIC,
     formation:FORMATIONS[saved.formation] ? saved.formation : DEFAULT_TACTIC.formation,
+    captainId:starters.includes(Number(saved.captainId || 0)) ? Number(saved.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
     starters,
     bench,
     autoSubs,
@@ -2577,6 +2582,9 @@ function normalizeGame(saved){
   normalized.saveSlotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(normalized.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER) : (normalized.saveSlotId || 'career');
   normalized.seedSignature = normalized.seedSignature || seed?.meta?.signature || '';
   normalized.tactic = normalizeTactic(normalized.selectedClubId, normalized.tactic || DEFAULT_TACTIC);
+  normalized.captaincyProgress = normalizeCaptaincyProgressState(normalized.captaincyProgress || {});
+  normalized.captaincyAppliedMatches = (normalized.captaincyAppliedMatches && typeof normalized.captaincyAppliedMatches === 'object' && !Array.isArray(normalized.captaincyAppliedMatches)) ? normalized.captaincyAppliedMatches : {};
+  normalized.lastCaptaincyEffect = normalized.lastCaptaincyEffect && typeof normalized.lastCaptaincyEffect === 'object' ? normalized.lastCaptaincyEffect : null;
   normalized.savedTactics = normalizeSavedTacticsState(normalized.savedTactics || {});
   normalized.savedTrainingPlans = normalizeSavedTrainingPlansState(normalized.savedTrainingPlans || {});
   normalized.standingsHistory = normalizeStandingsHistoryState(normalized.standingsHistory || {});
@@ -2913,7 +2921,7 @@ function cleanupTacticAfterClickSwap(){
     outId:game.tactic.starters.includes(Number(rule.outId)) ? Number(rule.outId) : 0,
     inId:game.tactic.bench.includes(Number(rule.inId)) ? Number(rule.inId) : 0
   }));
-  game.tactic = applyStarterMentalities(game.tactic);
+  game.tactic = ensureTacticCaptain(applyStarterMentalities(game.tactic), game.selectedClubId);
 }
 function swapTacticClickTargets(source, target){
   if(!game || !source || !target || !source.playerId) return false;
@@ -2974,7 +2982,8 @@ function normalizeTactic(clubId, tactic){
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
     : { winning:'normal', drawing:'normal', losing:'normal' };
   const sectorStyles = normalizeSectorStyles(base.sectorStyles);
-  const normalized = { formation:base.formation, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
+  const normalized = { formation:base.formation, captainId:0, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
+  normalized.captainId = normalizedCaptainIdForTactic(clubId, { ...normalized, captainId:base.captainId });
   return applyStarterMentalities(normalized);
 }
 
@@ -3183,6 +3192,9 @@ function newGame(selectedClubId, options={}){
     currentDate: firstAdvanceDateForSeason(seasonYearForNumber(1)),
     matchdayIndex: 0,
     tactic,
+    captaincyProgress: {},
+    captaincyAppliedMatches: {},
+    lastCaptaincyEffect: null,
     standings: createInitialStandings(),
     playerStats: createInitialPlayerStats(),
     playerStatus: {},

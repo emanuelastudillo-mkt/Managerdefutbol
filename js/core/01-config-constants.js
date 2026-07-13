@@ -125,7 +125,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.09');
+const APP_VERSION = configValue('version', 'V7.10');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -202,6 +202,11 @@ const TEAM_COHESION_SALE_LOSS = configNumber('cohesion.perdidaPorVenta', 3, 0, 1
 const TEAM_COHESION_DISMISSAL_LOSS = configNumber('cohesion.perdidaPorDespedirJugador', 1, 0, 100);
 const TEAM_COHESION_YOUTH_CONTRACT_GAIN = configNumber('cohesion.gananciaPorContratoProfesionalJuvenil', 3, 0, 100);
 const TEAM_MORALE_DISMISSAL_LOSS = configNumber('moral.perdidaPlantelPorDespedirJugador', 1, 0, 98);
+const CAPTAINCY_ENABLED = configBoolean('capitania.activo', true);
+const CAPTAINCY_TARGET_MATCHES = Math.max(1, Math.round(configNumber('capitania.partidosObjetivoAprox', 10, 1, 50)));
+const CAPTAINCY_MAX_PERCENT = Math.max(1, Math.min(99, Math.round(configNumber('capitania.maximoPorcentaje', 99, 1, 99))));
+const CAPTAINCY_LEARNING_FACTOR_MIN = configNumber('capitania.aprendizaje.factorMinimo', 0.80, 0.10, 3);
+const CAPTAINCY_LEARNING_FACTOR_MAX = configNumber('capitania.aprendizaje.factorMaximo', 1.20, CAPTAINCY_LEARNING_FACTOR_MIN, 3);
 const TEAM_COHESION_TACTICAL_TRAINING_CHANCE = configNumber('cohesion.probabilidadEntrenamientoTacticoPorCasilla', 0.35, 0, 1);
 const TEAM_COHESION_TACTICAL_TRAINING_GAIN = configNumber('cohesion.gananciaEntrenamientoTacticoPorCasilla', 1, 0, 100);
 const BOT_BALANCE_ENABLED = configBoolean('equilibrioBots.activo', true);
@@ -701,6 +706,7 @@ const TRAINING_SAVE_SLOT_COUNT = 3;
 
 const DEFAULT_TACTIC = {
   formation:'4-4-2',
+  captainId:0,
   starters:[],
   bench:[],
   autoSubs:[],

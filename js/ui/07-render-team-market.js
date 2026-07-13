@@ -790,6 +790,56 @@ function tacticSectorSkillVisors(){
   ];
   return `<div class="tactic-skill-visor-list">${rows.map(row => `<div class="tactic-skill-visor ${row.key}"><div class="row"><span>${escapeHtml(row.label)}</span><strong>${row.value}%</strong></div><div class="project-progress"><span style="width:${row.value}%"></span></div>${row.detail ? `<small class="muted">${escapeHtml(row.detail)}</small>` : ''}</div>`).join('')}</div>`;
 }
+function captainSelectOptionsMarkup(){
+  const selected = Number(game?.tactic?.captainId || 0);
+  const starters = (game?.tactic?.starters || []).map(playerById).filter(Boolean);
+  if(!starters.length) return '<option value="0">Sin titulares disponibles</option>';
+  return starters.map(player => {
+    const current = captaincyValue(player.id);
+    const maximum = captaincyMaximum(player);
+    return `<option value="${player.id}" ${selected === Number(player.id) ? 'selected' : ''}>${escapeHtml(playerLastName(player.name))} · ${roleBadge(player.position)} · Media ${visibleOverall(player)} · Cap. ${current}/${maximum}%</option>`;
+  }).join('');
+}
+function captaincyCircleMarkup(value){
+  const clean = clamp(Math.round(Number(value || 0)), 0, 99);
+  const colorClass = clean < 40 ? 'low' : clean < 70 ? 'mid' : 'high';
+  const deg = Math.round((clean / 99) * 360);
+  return `<span class="value-circle performance-circle captaincy-circle ${colorClass}" style="--value-deg:${deg}deg" title="Rendimiento como capitán: ${clean}%"><strong>${clean}%</strong></span>`;
+}
+function tacticCaptainCardMarkup(){
+  const captainId = Number(game?.tactic?.captainId || 0);
+  const captain = playerById(captainId);
+  if(!captain){
+    return `<div class="card tactic-captain-card tactic-grid-card"><h3>Capitán</h3><p class="muted small">Armá el once titular para seleccionar al capitán.</p></div>`;
+  }
+  const current = captaincyValue(captain.id);
+  const maximum = captaincyMaximum(captain);
+  const matches = captaincyMatches(captain.id);
+  const nextGain = current < maximum ? Math.min(captaincyProgressGain(captain), maximum - current) : 0;
+  const effect = captaincyEffectForPercent(current);
+  const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value));
+  return `<div class="card tactic-captain-card tactic-grid-card">
+    <div class="tactic-captain-title"><div><h3>Capitán</h3><p class="muted small">El efecto se aplica al plantel después de cada partido.</p></div><span class="pill">${matches} PJ como capitán</span></div>
+    <label class="tactic-captain-select-label" for="captainSelect">Jugador designado</label>
+    <select id="captainSelect" class="tactic-captain-select">${captainSelectOptionsMarkup()}</select>
+    <div class="tactic-captain-profile">
+      ${faceImg(captain, 'captain-face')}
+      <div class="tactic-captain-identity"><strong>${escapeHtml(playerLastName(captain.name))}</strong><span>${roleBadge(captain.position)} · Media ${visibleOverall(captain)}</span></div>
+      <div class="tactic-captain-performance">${captaincyCircleMarkup(current)}</div>
+    </div>
+    <div class="tactic-captain-metrics">
+      <div><span>Forma</span>${conditionBar(captain.id)}</div>
+      <div><span>Moral</span>${moraleBar(captain.id)}</div>
+      <div><span>Máximo</span><strong>${maximum}%</strong></div>
+    </div>
+    <div class="tactic-captain-progress">
+      <div class="row"><span>Rendimiento como capitán</span><strong>${current}%</strong></div>
+      <div class="project-progress"><span style="width:${current}%"></span></div>
+      <small class="muted">${current >= maximum ? 'Alcanzó su máximo posible.' : `Próximo partido estimado: +${nextGain}%. Máximo posible: ${maximum}%.`}</small>
+    </div>
+    <div class="tactic-captain-effect ${effect.moral < 0 || effect.cohesion < 0 ? 'negative' : 'positive'}"><span>Impacto actual postpartido</span><strong>Moral ${signed(effect.moral)} · Cohesión ${signed(effect.cohesion)}</strong></div>
+  </div>`;
+}
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
@@ -805,7 +855,7 @@ function renderTactics(){
     const chip = slot.player ? `
       <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(slot.player.id)} ${playerGroupClass(slot.player.position)} ${fitClass}${tacticSelectionClass(slot.player.id)}" data-tactic-player="${slot.player.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}" title="${playerTacticFitTitle(slot.player, slot.slot)} · Click para cambiar estado: ${escapeHtml(mentalityLabel(playerMentality(slot.player.id)))}">
         <span class="jersey-dot">${jerseyNumber(slot.player.id)}</span>
-        <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}</span>
+        <span class="player-chip-name">${escapeHtml(playerLastName(slot.player.name))}${Number(game.tactic.captainId || 0) === Number(slot.player.id) ? '<span class="captain-marker" title="Capitán">C</span>' : ''}</span>
         ${mentalityMarker(slot.mentality)}
       </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
     return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
@@ -815,7 +865,7 @@ function renderTactics(){
     const fit = p ? playerFitsSlot(p, slot.slot) : false;
     return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
-      <span>${p ? `<strong>${playerNameWithScoutingEye(p)}</strong>` : '<span class="muted">Vacío</span>'}</span>
+      <span>${p ? `<strong>${playerNameWithScoutingEye(p)}${Number(game.tactic.captainId || 0) === Number(p.id) ? '<span class="captain-marker inline" title="Capitán">C</span>' : ''}</strong>` : '<span class="muted">Vacío</span>'}</span>
       <span class="lineup-center-cell">${p ? roleBadge(p.position) : '—'}</span>
       <span class="age-cell lineup-center-cell">${p ? (Number(p.age || 0) || '—') : '—'}</span>
       <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
@@ -868,6 +918,7 @@ function renderTactics(){
           <button id="saveTactic" class="primary full">Confirmar equipo</button>
           <span id="tacticErrors" class="bad small"></span>
         </div>
+        ${tacticCaptainCardMarkup()}
         <div class="card tactic-board-side tactic-board-right tactic-sector-card tactic-grid-card">
           <h3>Visores tácticos</h3>
           <div class="tactic-board-visors" aria-label="Visores tácticos">${tacticSectorSkillVisors()}</div>
@@ -887,7 +938,7 @@ function renderTactics(){
     game.tactic.bench = autoSelectBench(game.selectedClubId, autoStarters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
     game.tactic.formation = tentative.formation;
-    game.tactic = applyStarterMentalities(game.tactic);
+    game.tactic = ensureTacticCaptain(applyStarterMentalities(game.tactic), game.selectedClubId);
     saveLocal(true);
     renderTactics();
   });
@@ -897,7 +948,7 @@ function renderTactics(){
     game.tactic.starters = starters;
     game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
-    game.tactic = applyStarterMentalities(game.tactic);
+    game.tactic = ensureTacticCaptain(applyStarterMentalities(game.tactic), game.selectedClubId);
     saveLocal(true);
     renderTactics();
   });
@@ -907,7 +958,13 @@ function renderTactics(){
     game.tactic.starters = starters;
     game.tactic.bench = autoSelectBenchByBestCondition(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
-    game.tactic = applyStarterMentalities(game.tactic);
+    game.tactic = ensureTacticCaptain(applyStarterMentalities(game.tactic), game.selectedClubId);
+    saveLocal(true);
+    renderTactics();
+  });
+  $('captainSelect')?.addEventListener('change', event => {
+    const captainId = Number(event.target.value || 0);
+    game.tactic = ensureTacticCaptain({ ...game.tactic, captainId }, game.selectedClubId);
     saveLocal(true);
     renderTactics();
   });
@@ -975,6 +1032,7 @@ function saveTacticFromScreen(){
   };
   const nextTactic = applyStarterMentalities({
     formation:$('formation')?.value || game.tactic.formation,
+    captainId:Number($('captainSelect')?.value || game.tactic.captainId || 0),
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
     autoSubs,
@@ -1012,6 +1070,8 @@ function validateTactic(tactic){
   if(duplicated.length) errors.push('Un jugador no puede ser titular y suplente a la vez.');
   const unavailableStarters = [...uniqueStarters].filter(id => !canBeStarter(id));
   if(unavailableStarters.length) errors.push('Hay lesionados o suspendidos entre los titulares.');
+  const captainId = Number(tactic.captainId || 0);
+  if(!captainId || !uniqueStarters.has(captainId)) errors.push('Elegí un capitán entre los once titulares.');
   const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
   if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con recuperación menor a 70 días.');
   const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];

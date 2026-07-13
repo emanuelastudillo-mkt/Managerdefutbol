@@ -1207,6 +1207,7 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   recordBudgetChange(netAmount, `Venta de ${player.name} (neto ${saleFederation})`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, federation:saleFederation, origin:msg.action.origin || 'offer' });
   const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
   const destinationClubId = Number(msg.action.sourceClubId || -1);
+  if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, game.selectedClubId);
   player.clubId = destinationClubId > 0 ? destinationClubId : -1;
   player.transferListed = false;
   player.intransferible = false;
@@ -1325,7 +1326,8 @@ function removePlayerFromCurrentTactic(playerId){
   const starters = (game.tactic.starters || []).map(x => Number(x) === id ? 0 : x);
   const bench = (game.tactic.bench || []).filter(x => Number(x) !== id);
   const autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:Number(rule.outId)===id?0:rule.outId, inId:Number(rule.inId)===id?0:rule.inId}));
-  game.tactic = applyStarterMentalities({ ...game.tactic, starters, bench, autoSubs });
+  const captainId = Number(game.tactic.captainId || 0) === id ? 0 : Number(game.tactic.captainId || 0);
+  game.tactic = ensureTacticCaptain(applyStarterMentalities({ ...game.tactic, captainId, starters, bench, autoSubs }), game.selectedClubId);
 }
 
 

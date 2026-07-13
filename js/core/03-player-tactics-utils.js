@@ -379,6 +379,216 @@ function hiddenStats(p){
   const surprise = Number.isFinite(manualSurprise) ? clamp(Math.round(manualSurprise), 0, 20) : clamp(hashNumber(`su${p.id}`, 21), 0, 20);
   return { aggression, genetics, surprise };
 }
+
+function captaincyMaximum(p){
+  if(!p || !CAPTAINCY_ENABLED) return 0;
+  const components = [
+    [baseSkill(p, 'liderazgo'), configNumber('capitania.pesosMaximo.liderazgo', 0.35, 0, 1)],
+    [baseSkill(p, 'serenidad'), configNumber('capitania.pesosMaximo.serenidad', 0.20, 0, 1)],
+    [baseSkill(p, 'disciplina'), configNumber('capitania.pesosMaximo.disciplina', 0.15, 0, 1)],
+    [baseSkill(p, 'trabajoEquipo'), configNumber('capitania.pesosMaximo.trabajoEquipo', 0.15, 0, 1)],
+    [baseSkill(p, 'posicionamiento'), configNumber('capitania.pesosMaximo.posicionamiento', 0.10, 0, 1)],
+    [baseSkill(p, 'resistencia'), configNumber('capitania.pesosMaximo.resistencia', 0.05, 0, 1)]
+  ];
+  const totalWeight = components.reduce((sum, item) => sum + Number(item[1] || 0), 0) || 1;
+  const score = components.reduce((sum, item) => sum + Number(item[0] || 0) * Number(item[1] || 0), 0) / totalWeight;
+  return clamp(Math.round(score), 1, CAPTAINCY_MAX_PERCENT);
+}
+function captaincyLearningScore(p){
+  if(!p) return 1;
+  const leadershipWeight = configNumber('capitania.aprendizaje.pesoLiderazgo', 0.40, 0, 1);
+  const serenityWeight = configNumber('capitania.aprendizaje.pesoSerenidad', 0.25, 0, 1);
+  const disciplineWeight = configNumber('capitania.aprendizaje.pesoDisciplina', 0.20, 0, 1);
+  const teamworkWeight = configNumber('capitania.aprendizaje.pesoTrabajoEquipo', 0.15, 0, 1);
+  const total = leadershipWeight + serenityWeight + disciplineWeight + teamworkWeight || 1;
+  return clamp(Math.round((
+    baseSkill(p,'liderazgo') * leadershipWeight
+    + baseSkill(p,'serenidad') * serenityWeight
+    + baseSkill(p,'disciplina') * disciplineWeight
+    + baseSkill(p,'trabajoEquipo') * teamworkWeight
+  ) / total), 1, 99);
+}
+function captaincyProgressGain(p){
+  const maximum = captaincyMaximum(p);
+  if(!maximum) return 0;
+  const learning = captaincyLearningScore(p);
+  const factor = CAPTAINCY_LEARNING_FACTOR_MIN + ((learning - 1) / 98) * (CAPTAINCY_LEARNING_FACTOR_MAX - CAPTAINCY_LEARNING_FACTOR_MIN);
+  return Math.max(1, Math.ceil((maximum / CAPTAINCY_TARGET_MATCHES) * factor));
+}
+function normalizeCaptaincyProgressState(source={}){
+  const src = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
+  const clean = {};
+  Object.entries(src).forEach(([key, raw]) => {
+    const playerId = Number(key || raw?.playerId || 0);
+    if(!playerId) return;
+    const player = seed?.players?.find(item => Number(item.id) === playerId);
+    if(!player) return;
+    const entry = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : { percent:Number(raw || 0) };
+    const clubId = Number(entry.clubId || player.clubId || 0);
+    if(!clubId || Number(player.clubId || 0) !== clubId) return;
+    clean[playerId] = {
+      playerId,
+      clubId,
+      percent:clamp(Math.round(Number(entry.percent || entry.value || 0)), 0, CAPTAINCY_MAX_PERCENT),
+      matches:Math.max(0, Math.round(Number(entry.matches || 0))),
+      updatedSeason:Math.max(1, Math.round(Number(entry.updatedSeason || game?.seasonNumber || 1))),
+      updatedAt:String(entry.updatedAt || '')
+    };
+  });
+  return clean;
+}
+function ensureCaptaincyProgressState(){
+  if(!game) return {};
+  game.captaincyProgress = normalizeCaptaincyProgressState(game.captaincyProgress || {});
+  if(!game.captaincyAppliedMatches || typeof game.captaincyAppliedMatches !== 'object' || Array.isArray(game.captaincyAppliedMatches)) game.captaincyAppliedMatches = {};
+  return game.captaincyProgress;
+}
+function captaincyEntry(playerId, create=true){
+  if(!game || !CAPTAINCY_ENABLED) return null;
+  const id = Number(playerId || 0);
+  const player = playerById(id);
+  if(!id || !player || !Number(player.clubId || 0)) return null;
+  const store = ensureCaptaincyProgressState();
+  let entry = store[id];
+  if(entry && Number(entry.clubId) !== Number(player.clubId)){
+    delete store[id];
+    entry = null;
+  }
+  if(!entry && create){
+    entry = { playerId:id, clubId:Number(player.clubId), percent:0, matches:0, updatedSeason:Number(game.seasonNumber || 1), updatedAt:'' };
+    store[id] = entry;
+  }
+  return entry || null;
+}
+function resetPlayerCaptaincyProgress(playerId, clubId=0){
+  if(!game?.captaincyProgress) return false;
+  const id = Number(playerId || 0);
+  const entry = game.captaincyProgress[id];
+  if(!entry) return false;
+  if(clubId && Number(entry.clubId || 0) !== Number(clubId)) return false;
+  delete game.captaincyProgress[id];
+  return true;
+}
+function captaincyValue(playerId){
+  const player = playerById(playerId);
+  if(!player) return 0;
+  const entry = captaincyEntry(playerId, false);
+  return clamp(Math.round(Math.min(Number(entry?.percent || 0), captaincyMaximum(player))), 0, CAPTAINCY_MAX_PERCENT);
+}
+function captaincyMatches(playerId){
+  return Math.max(0, Math.round(Number(captaincyEntry(playerId, false)?.matches || 0)));
+}
+function bestCaptainForStarterIds(ids=[]){
+  const candidates = (ids || []).map(Number).filter(Boolean).map(playerById).filter(Boolean);
+  return candidates.sort((a,b) => captaincyMaximum(b) - captaincyMaximum(a) || baseSkill(b,'liderazgo') - baseSkill(a,'liderazgo') || baseSkill(b,'serenidad') - baseSkill(a,'serenidad') || visibleOverall(b) - visibleOverall(a) || Number(a.id)-Number(b.id))[0] || null;
+}
+function normalizedCaptainIdForTactic(clubId, tactic){
+  if(!CAPTAINCY_ENABLED) return 0;
+  const starters = (tactic?.starters || []).map(Number).filter(Boolean);
+  const starterSet = new Set(starters);
+  const selected = Number(tactic?.captainId || 0);
+  const player = playerById(selected);
+  if(selected && starterSet.has(selected) && player && Number(player.clubId || 0) === Number(clubId || 0)) return selected;
+  return Number(bestCaptainForStarterIds(starters)?.id || 0);
+}
+function ensureTacticCaptain(tactic, clubId=game?.selectedClubId){
+  const clean = tactic && typeof tactic === 'object' ? tactic : {};
+  return { ...clean, captainId:normalizedCaptainIdForTactic(clubId, clean) };
+}
+function captaincyEffectForPercent(percent){
+  const value = clamp(Math.round(Number(percent || 0)), 0, CAPTAINCY_MAX_PERCENT);
+  const fallback = [
+    { minimo:80, maximo:99, moral:1, cohesion:2 },
+    { minimo:40, maximo:79, moral:0, cohesion:1 },
+    { minimo:20, maximo:39, moral:-1, cohesion:0 },
+    { minimo:0, maximo:19, moral:-3, cohesion:-2 }
+  ];
+  const effects = configValue('capitania.efectos', fallback);
+  const list = Array.isArray(effects) && effects.length ? effects : fallback;
+  const found = list.find(item => value >= Number(item?.minimo ?? 0) && value <= Number(item?.maximo ?? 99)) || fallback[fallback.length-1];
+  return { moral:Math.round(Number(found.moral || 0)), cohesion:Math.round(Number(found.cohesion || 0)), minimum:Number(found.minimo || 0), maximum:Number(found.maximo || 99) };
+}
+function captaincyMatchKey(match){
+  return `${Number(game?.seasonNumber || 1)}:${String(match?.id || `${match?.date || game?.currentDate || ''}-${match?.homeId || 0}-${match?.awayId || 0}-${match?.homeGoals ?? 'x'}-${match?.awayGoals ?? 'x'}`)}`;
+}
+function applyCaptaincyAfterMatch(match){
+  if(!game || !CAPTAINCY_ENABLED || game.gameOver?.active || !match?.played) return null;
+  const ownClubId = Number(game.selectedClubId || 0);
+  const isHome = Number(match.homeId || 0) === ownClubId;
+  const isAway = Number(match.awayId || 0) === ownClubId;
+  if(!ownClubId || (!isHome && !isAway)) return null;
+  ensureCaptaincyProgressState();
+  const matchKey = captaincyMatchKey(match);
+  if(game.captaincyAppliedMatches[matchKey]){
+    game.lastCaptaincyEffect = game.captaincyAppliedMatches[matchKey];
+    return game.lastCaptaincyEffect;
+  }
+  game.lastCaptaincyEffect = null;
+  const starters = (isHome ? (match.starterIdsHome || []) : (match.starterIdsAway || [])).map(Number).filter(Boolean);
+  const storedCaptain = Number(isHome ? match.captainIdHome : match.captainIdAway);
+  let captainId = storedCaptain || Number(game.tactic?.captainId || 0);
+  if(!starters.includes(captainId)) captainId = Number(bestCaptainForStarterIds(starters)?.id || 0);
+  const captain = playerById(captainId);
+  if(!captain || Number(captain.clubId || 0) !== ownClubId || !starters.includes(captainId)) return null;
+  const entry = captaincyEntry(captainId, true);
+  const maximum = captaincyMaximum(captain);
+  const before = clamp(Math.round(Number(entry.percent || 0)), 0, maximum);
+  const gain = before >= maximum ? 0 : Math.min(captaincyProgressGain(captain), maximum - before);
+  const after = clamp(before + gain, 0, maximum);
+  entry.percent = after;
+  entry.matches = Math.max(0, Math.round(Number(entry.matches || 0))) + 1;
+  entry.updatedSeason = Number(game.seasonNumber || 1);
+  entry.updatedAt = new Date().toISOString();
+  const effect = captaincyEffectForPercent(after);
+  let moraleAffected = 0;
+  playersByClub(ownClubId).forEach(player => {
+    if(!game.playerMorale) game.playerMorale = {};
+    game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + effect.moral), 1, 99);
+    moraleAffected += 1;
+  });
+  const cohesionApplied = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(ownClubId, effect.cohesion) : 0;
+  if(isHome) match.captainIdHome = captainId;
+  else match.captainIdAway = captainId;
+  const result = {
+    matchKey,
+    season:Number(game.seasonNumber || 1),
+    clubId:ownClubId,
+    playerId:captainId,
+    playerName:String(captain.name || ''),
+    before,
+    after,
+    maximum,
+    gain,
+    matches:entry.matches,
+    moral:effect.moral,
+    cohesion:cohesionApplied,
+    requestedCohesion:effect.cohesion,
+    moraleAffected,
+    date:String(match.date || game.currentDate || '')
+  };
+  match.captaincyEffect = { ...result };
+  game.captaincyAppliedMatches[matchKey] = result;
+  const keys = Object.keys(game.captaincyAppliedMatches);
+  if(keys.length > 500) keys.slice(0, keys.length - 500).forEach(key => delete game.captaincyAppliedMatches[key]);
+  game.lastCaptaincyEffect = result;
+  return result;
+}
+function applyCaptaincyAfterMatches(results=[]){
+  let applied = null;
+  (results || []).forEach(match => {
+    const result = applyCaptaincyAfterMatch(match);
+    if(result) applied = result;
+  });
+  return applied;
+}
+function captaincyEffectSummary(effect=game?.lastCaptaincyEffect){
+  if(!effect) return '';
+  const morale = Number(effect.moral || 0);
+  const cohesion = Number(effect.cohesion || 0);
+  const sign = value => value > 0 ? `+${value}` : String(value);
+  return `${playerLastName(effect.playerName || 'Capitán')} alcanzó ${Number(effect.after || 0)}% de capitanía (${Number(effect.before || 0)}% → ${Number(effect.after || 0)}%). Moral ${sign(morale)} · cohesión ${sign(cohesion)}.`;
+}
+
 function effectiveSkill(p, skillName){
   const raw = baseSkill(p, skillName);
   return clamp(raw + hiddenStats(p).surprise, 1, 99);

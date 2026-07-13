@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.09',
+  version: 'V7.10',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -265,6 +265,34 @@ window.GAME_CONFIG = {
     gananciaPorContratoProfesionalJuvenil: 3,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
     gananciaEntrenamientoTacticoPorCasilla: 1
+  },
+  capitania: {
+    activo: true,
+    partidosObjetivoAprox: 10,
+    maximoPorcentaje: 99,
+    // Sólo usa habilidades que ya existen en todos los jugadores de la base.
+    pesosMaximo: {
+      liderazgo: 0.35,
+      serenidad: 0.20,
+      disciplina: 0.15,
+      trabajoEquipo: 0.15,
+      posicionamiento: 0.10,
+      resistencia: 0.05
+    },
+    aprendizaje: {
+      factorMinimo: 0.80,
+      factorMaximo: 1.20,
+      pesoLiderazgo: 0.40,
+      pesoSerenidad: 0.25,
+      pesoDisciplina: 0.20,
+      pesoTrabajoEquipo: 0.15
+    },
+    efectos: [
+      { minimo: 80, maximo: 99, moral: 1, cohesion: 2 },
+      { minimo: 40, maximo: 79, moral: 0, cohesion: 1 },
+      { minimo: 20, maximo: 39, moral: -1, cohesion: 0 },
+      { minimo: 0, maximo: 19, moral: -3, cohesion: -2 }
+    ]
   },
   equilibrioBots: {
     // Nivelación competitiva de equipos bots. Evita que desde la segunda temporada queden muy por debajo del club manejado.

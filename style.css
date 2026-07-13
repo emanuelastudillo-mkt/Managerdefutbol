@@ -3795,6 +3795,7 @@ th{
 }
 .tactic-board-headline h3,
 .tactic-actions-card h3,
+.tactic-captain-card h3,
 .tactic-sector-card h3,
 .tactic-lineup-card h3,
 .tactic-roster-card h3,
@@ -3856,6 +3857,160 @@ th{
 }
 .tactic-actions-card .primary{
   margin-top:2px;
+}
+
+.captain-marker{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:17px;
+  height:17px;
+  margin-left:5px;
+  border-radius:50%;
+  font-size:10px;
+  font-weight:950;
+  line-height:1;
+  color:#082f49;
+  background:#facc15;
+  border:1px solid rgba(254,240,138,.85);
+  box-shadow:0 1px 4px rgba(0,0,0,.28);
+  vertical-align:middle;
+}
+.captain-marker.inline{
+  position:relative;
+  top:-1px;
+}
+
+.tactic-captain-card{
+  display:grid;
+  gap:10px;
+  overflow:hidden;
+}
+.tactic-captain-title{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.tactic-captain-title h3,
+.tactic-captain-title p{
+  margin:0;
+}
+.tactic-captain-title .pill{
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+.tactic-captain-select-label{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#94a3b8;
+}
+.tactic-captain-select{
+  width:100%;
+  margin:0;
+}
+.tactic-captain-profile{
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr) 54px;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border:1px solid rgba(148,163,184,.14);
+  border-radius:14px;
+  background:rgba(15,23,42,.38);
+}
+.tactic-captain-profile .captain-face{
+  width:58px;
+  height:58px;
+  border-radius:14px;
+  object-fit:cover;
+  border:1px solid rgba(56,189,248,.32);
+}
+.tactic-captain-identity{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.tactic-captain-identity strong{
+  font-size:17px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.tactic-captain-identity span{
+  color:#94a3b8;
+  font-size:12px;
+}
+.tactic-captain-performance{
+  display:flex;
+  justify-content:flex-end;
+}
+.tactic-captain-performance .value-circle{
+  width:52px;
+  height:52px;
+  min-width:52px;
+}
+.tactic-captain-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+.tactic-captain-metrics > div{
+  min-width:0;
+  display:grid;
+  justify-items:center;
+  gap:5px;
+  padding:8px 5px;
+  border-radius:12px;
+  background:rgba(15,23,42,.32);
+  border:1px solid rgba(148,163,184,.12);
+}
+.tactic-captain-metrics > div > span{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  color:#94a3b8;
+  font-weight:900;
+}
+.tactic-captain-metrics .value-circle,
+.tactic-captain-metrics .condition-wear-wrap,
+.tactic-captain-metrics .condition-wear-max{
+  transform:scale(.86);
+  transform-origin:center;
+}
+.tactic-captain-progress{
+  display:grid;
+  gap:6px;
+}
+.tactic-captain-progress .row{
+  font-size:12px;
+}
+.tactic-captain-progress .project-progress{
+  width:100%;
+}
+.tactic-captain-effect{
+  display:grid;
+  gap:3px;
+  padding:9px 10px;
+  border-radius:12px;
+  border:1px solid rgba(34,197,94,.22);
+  background:rgba(34,197,94,.08);
+}
+.tactic-captain-effect.negative{
+  border-color:rgba(248,113,113,.24);
+  background:rgba(248,113,113,.08);
+}
+.tactic-captain-effect span{
+  color:#94a3b8;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.tactic-captain-effect strong{
+  font-size:13px;
 }
 .tactic-sector-card{
   display:grid;
@@ -5116,4 +5271,11 @@ button.cwc-group-result{cursor:pointer}
   .cwc-group-result span:nth-child(4){grid-column:2 / 4;text-align:right;font-size:.74rem}
   .cwc-overview-grid{grid-template-columns:1fr}
   .cwc-year-filter{width:100%}
+}
+
+@media (max-width:700px){
+  .tactic-captain-profile{grid-template-columns:50px minmax(0,1fr) 50px}
+  .tactic-captain-profile .captain-face{width:50px;height:50px}
+  .tactic-captain-title{display:grid}
+  .tactic-captain-title .pill{justify-self:start}
 }

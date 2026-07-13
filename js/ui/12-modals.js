@@ -282,6 +282,7 @@ function dismissOwnPlayer(playerId){
   if(!confirm(`Despedir a ${player.name} del plantel?`)) return;
   const dismissedClubId = Number(game.selectedClubId);
   removePlayerFromCurrentTactic(player.id);
+  if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, dismissedClubId);
   player.clubId = 0;
   player.freeAgent = true;
   player.transferListed = false;

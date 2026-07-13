@@ -272,6 +272,11 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, trig
       const bonusText = rivalBonus > 0 ? ` · rival +${rivalBonus}%` : '';
       items.push({ label:'Recaudación de entradas', text:`${formatMoney(ticketRevenue)} por ${totalFans} entradas vendidas${bonusText}.`, tone:'ok' });
     }
+    const captainText = typeof captaincyEffectSummary === 'function' ? captaincyEffectSummary(game.lastCaptaincyEffect) : '';
+    if(captainText){
+      const captainTone = Number(game.lastCaptaincyEffect?.moral || 0) < 0 || Number(game.lastCaptaincyEffect?.cohesion || 0) < 0 ? 'bad' : 'ok';
+      items.push({ label:'Capitán', text:captainText, tone:captainTone });
+    }
   }
   items.push({ label:'Economía', text:turnFinanceSummary(), tone:Number(game.lastBudgetDelta || 0) >= 0 ? 'ok' : 'bad' });
   const academy = activeAcademyScoutingSummary();
@@ -299,6 +304,11 @@ function setPreseasonTurnSummary(friendlyResult, opponentId, canFriendly){
   const items = [];
   if(friendlyResult){
     items.push({ label:'Amistoso', text:ownResultLine(friendlyResult), tone:ownResultTone(friendlyResult) });
+    const captainText = typeof captaincyEffectSummary === 'function' ? captaincyEffectSummary(game.lastCaptaincyEffect) : '';
+    if(captainText){
+      const captainTone = Number(game.lastCaptaincyEffect?.moral || 0) < 0 || Number(game.lastCaptaincyEffect?.cohesion || 0) < 0 ? 'bad' : 'ok';
+      items.push({ label:'Capitán', text:captainText, tone:captainTone });
+    }
   }else{
     items.push({ label:'Entrenamiento', text:'Semana aplicada sin amistoso.', tone:'info' });
   }
@@ -758,7 +768,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot'
   ];
   const data = {};
   fields.forEach(field => {
@@ -2808,6 +2818,7 @@ function applyMoraleUpdates(results){
       });
     });
   });
+  if(typeof applyCaptaincyAfterMatches === 'function') applyCaptaincyAfterMatches(results || []);
 }
 
 function trainingOptionByValue(value){

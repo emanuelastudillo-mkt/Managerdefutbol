@@ -152,6 +152,7 @@ function removeOwnUnavailableFromTactic(problems=[]){
     inId: ids.has(Number(rule.inId)) ? 0 : Number(rule.inId || 0)
   }));
   if(changed || bench.length !== (game.tactic.bench || []).length){
-    game.tactic = applyStarterMentalities({ ...game.tactic, starters, bench, autoSubs });
+    const captainId = ids.has(Number(game.tactic.captainId || 0)) ? 0 : Number(game.tactic.captainId || 0);
+    game.tactic = ensureTacticCaptain(applyStarterMentalities({ ...game.tactic, captainId, starters, bench, autoSubs }), game.selectedClubId);
   }
 }

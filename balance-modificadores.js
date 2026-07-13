@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.09',
-    nombre: 'Balance centralizado de modificadores V7.09',
+    version: 'V7.10',
+    nombre: 'Balance centralizado de modificadores V7.10',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -43,6 +43,35 @@ window.GAME_BALANCE_MODIFICADORES = {
 
   moral: {
     perdidaPlantelPorDespedirJugador: 1
+  },
+
+  capitania: {
+    activo: true,
+    partidosObjetivoAprox: 10,
+    maximoPorcentaje: 99,
+    // Sólo usa habilidades que ya existen en todos los jugadores de la base.
+    pesosMaximo: {
+      liderazgo: 0.35,
+      serenidad: 0.20,
+      disciplina: 0.15,
+      trabajoEquipo: 0.15,
+      posicionamiento: 0.10,
+      resistencia: 0.05
+    },
+    aprendizaje: {
+      factorMinimo: 0.80,
+      factorMaximo: 1.20,
+      pesoLiderazgo: 0.40,
+      pesoSerenidad: 0.25,
+      pesoDisciplina: 0.20,
+      pesoTrabajoEquipo: 0.15
+    },
+    efectos: [
+      { minimo: 80, maximo: 99, moral: 1, cohesion: 2 },
+      { minimo: 40, maximo: 79, moral: 0, cohesion: 1 },
+      { minimo: 20, maximo: 39, moral: -1, cohesion: 0 },
+      { minimo: 0, maximo: 19, moral: -3, cohesion: -2 }
+    ]
   },
 
   economia: {

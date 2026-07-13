@@ -1,4 +1,39 @@
-# Fútbol Manager MVP - V7.15
+# Fútbol Manager MVP - V7.16
+
+## V7.16 - Ofertas por cláusula y jugadores ofrecidos
+
+Se ajustaron las decisiones disponibles ante una oferta que paga la cláusula completa y los requisitos para ofrecer manualmente un jugador del plantel.
+
+### Ofertas por cláusula completa
+
+- Las ofertas identificadas como pago de cláusula ya no muestran la opción **Rechazar**.
+- Las únicas decisiones disponibles son **Aceptar oferta** o **Convencer al jugador de quedarse**.
+- La función interna de rechazo también bloquea estas ofertas, evitando que una partida antigua o una llamada residual pueda rechazarlas.
+- Las ofertas normales inferiores a la cláusula conservan las opciones **Aceptar** y **Rechazar**.
+
+### Ofrecer un jugador propio
+
+- Un jugador puede ofrecerse manualmente a otros clubes cuando disputó **6 partidos o más** en la temporada actual.
+- Ya no es necesario haberle pagado un sueldo.
+- Tampoco se exige que haya convertido goles o asistencias para usar la acción manual.
+- Se mantienen el bloqueo por jugador intransferible, el mínimo estructural del plantel y la espera general de tres turnos entre búsquedas.
+- Si todavía no alcanzó los seis partidos, la interfaz informa cuántos lleva y cuántos necesita.
+
+### Archivos principales modificados en V7.16
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/12-modals.js`
+
+### Compatibilidad de partidas
+
+**V7.16 no rompe partidas anteriores.** Las ofertas pendientes por cláusula conservan su información, pero dejan de permitir rechazo; los partidos ya registrados de cada jugador se utilizan inmediatamente para habilitar la acción de ofrecerlo.
+
+---
 
 ## V7.15 - Reparación definitiva de generación del Mundial de Clubes
 

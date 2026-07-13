@@ -320,12 +320,10 @@ function offerOwnPlayerToClubs(playerId){
     showNotice('Este jugador está marcado como intransferible. Sólo se aceptan ofertas por cláusula completa.');
     return;
   }
-  if(!hasPlayerSalaryPaid(player)){
-    showNotice('Primero debemos haberle pagado al menos un sueldo.');
-    return;
-  }
-  if(typeof playerQualifiesForTransferOffers === 'function' && !playerQualifiesForTransferOffers(player)){
-    showNotice('No hay clubes interesados: necesita partidos jugados, rendimiento visible o estar en venta con sueldo ya pagado.');
+  const played = Number(game?.playerStats?.[player.id]?.played || 0);
+  const requiredMatches = Math.max(0, Number(typeof OWN_PLAYER_OFFER_MIN_MATCHES !== 'undefined' ? OWN_PLAYER_OFFER_MIN_MATCHES : 6));
+  if(played < requiredMatches){
+    showNotice(`Para ofrecerlo a otros clubes debe disputar al menos ${requiredMatches} partidos. Actualmente tiene ${played}.`);
     return;
   }
   if(turnCooldownLeft(game.lastOwnPlayerOffer, OWN_PLAYER_OFFER_COOLDOWN_TURNS) > 0){

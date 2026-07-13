@@ -261,7 +261,7 @@ function visualAlertItems(){
     items.push({ tone:'info', icon:'✉', title:`${unread} mensaje(s) nuevo(s)`, text:'Hay eventos pendientes para leer.', tab:'messages' });
   }
   if(pendingTransferOffers){
-    items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Podés aceptar o rechazar desde Mensajes.', tab:'messages' });
+    items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Gestioná las ofertas desde Mensajes.', tab:'messages' });
   }
   if(sponsorOffers){
     items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Tenés ofertas con vencimiento para aceptar o rechazar.', tab:'stadium' });
@@ -900,12 +900,12 @@ function transferOfferStatusLabel(status){
   return map[status] || String(status || 'Cerrada');
 }
 function messageCard(m){
-  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && m.action?.origin === 'special_clause';
+  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
   const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
   const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
     ? (isWithoutClub
       ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
-      : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : ''}<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button></div>`)
+      : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
     : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '');
   const toneClass = messageToneClass(m.type, m.priority);
   const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
@@ -1327,6 +1327,10 @@ function rejectTransferOffer(messageId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés gestionar ofertas de jugadores mientras estás sin club.'); return; }
   const msg = (game.messages || []).find(m => m.id === messageId);
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
+  if(msg.action?.origin === 'special_clause' || msg.action?.canConvince === true){
+    showNotice('Una oferta por la cláusula completa no puede rechazarse. Podés aceptarla o intentar convencer al jugador.');
+    return;
+  }
   msg.action.status = 'rejected';
   saveLocal(true);
   renderMessages();

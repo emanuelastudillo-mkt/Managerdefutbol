@@ -125,7 +125,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.15');
+const APP_VERSION = configValue('version', 'V7.16');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -482,6 +482,7 @@ const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPor
 const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.15, 0, 1));
 const PLAYER_OFFERS_REQUIRE_MATCHES = configBoolean('mercado.ofertasJugadoresRequierenPartidos', true);
 const PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST = configBoolean('mercado.ofertasJugadoresRequierenGolOAsistencia', true);
+const OWN_PLAYER_OFFER_MIN_MATCHES = Math.max(0, Math.round(configNumber('mercado.partidosNecesariosParaOfrecerJugador', 6, 0, 100)));
 const SPECIAL_CLAUSE_OFFER_ENABLED = configBoolean('mercado.ofertaClausulaEspecialActiva', true);
 const SPECIAL_CLAUSE_OFFER_LAST_MATCHDAYS = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaEspecialFechasFinales', 10, 1, 38)));
 const SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON = Math.max(0, Math.round(configNumber('mercado.ofertaClausulaEspecialMinPorTemporada', 1, 0, 10)));

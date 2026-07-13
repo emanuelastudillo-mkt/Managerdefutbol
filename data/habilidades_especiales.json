@@ -1,8 +1,8 @@
 {
-  "version": "V5.54",
+  "version": "V7.13",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V5.78: inventario global de cartas por slots, 10 activaciones por carta y bloqueo reducido a 50 días.",
+  "caracteristicas_version": "V7.13: inventario global de cartas por slots, 10 activaciones por carta y bloqueo de cambio reducido a 15 días.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -19,7 +19,7 @@
   "limites": {
     "cartas_activas_max": 5,
     "cartas_reserva_max": 50,
-    "dias_bloqueo_cambio_cartas": 50,
+    "dias_bloqueo_cambio_cartas": 15,
     "permitir_abrir_sobres_con_reserva_llena": false,
     "permitir_cartas_repetidas_activas": true,
     "bonus_se_apilan": true,

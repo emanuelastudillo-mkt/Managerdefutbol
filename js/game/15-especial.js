@@ -12,7 +12,7 @@ function specialLimits(){
   return {
     activeMax: Math.max(1, Math.round(Number(db.limites?.cartas_activas_max || 5))),
     reserveMax: Math.max(1, Math.round(Number(db.limites?.cartas_reserva_max || 50))),
-    lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 50))),
+    lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 15))),
     maxUsesPerCard: Math.max(1, Math.round(Number(db.limites?.activaciones_por_carta || 10))),
     allowOpenWhenReserveFull: db.limites?.permitir_abrir_sobres_con_reserva_llena === true,
     allowRepeatedActive: db.limites?.permitir_cartas_repetidas_activas !== false,
@@ -1088,7 +1088,7 @@ function renderSpecial(opened=[], options={}){
       <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
       <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
       <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
-      <div class="card"><p class="label">Bloqueo</p><strong>${escapeHtml(locked.locked ? '50 días' : 'Libre')}</strong></div>
+      <div class="card"><p class="label">Bloqueo</p><strong>${escapeHtml(locked.locked ? formatDays(limits.lockDays) : 'Libre')}</strong></div>
     </div>
     ${specialOpenedMarkup(opened, options)}
     <div class="card special-active-drop" data-special-drop-active="1">

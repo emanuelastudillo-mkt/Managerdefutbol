@@ -1,4 +1,33 @@
-# Fútbol Manager MVP - V7.12
+# Fútbol Manager MVP - V7.13
+
+## V7.13 - Desbloqueo de cartas en 15 días
+
+El plazo durante el cual una carta activa queda fija se redujo de **50 a 15 días de juego**.
+
+### Funcionamiento
+
+- Toda carta activada a partir de esta versión queda bloqueada durante 15 días.
+- Al cumplirse el plazo puede retirarse o reemplazarse normalmente.
+- La pantalla de Cartas muestra el plazo configurado de forma dinámica y ya no contiene el texto fijo `50 días`.
+- Las cartas que ya estaban activas en una partida anterior ajustan automáticamente su vencimiento al nuevo máximo de 15 días.
+- Si una carta ya permaneció activa durante 15 días o más, queda disponible al cargar la partida.
+- El cambio no modifica la cantidad de usos, rareza, bonificaciones, inventario ni puntos de habilidad.
+
+### Archivos principales modificados en V7.13
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.13 no rompe partidas anteriores.** Conserva todas las cartas y reduce, sin extender, los bloqueos activos al nuevo máximo de 15 días.
+
+---
 
 ## V7.12 - Códigos especiales alfanuméricos
 

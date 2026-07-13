@@ -1,4 +1,52 @@
-# Fútbol Manager MVP - V7.18
+# Fútbol Manager MVP - V7.19
+
+
+## V7.19 - Recuperación física directa de cartas
+
+Las cartas de preparación física dejaron de aplicar un porcentaje sobre la recuperación base. Ahora suman puntos directos de forma física después de calcular el desgaste completo del partido, evitando que el efecto desaparezca por redondeo.
+
+### Valores por rareza
+
+- **Común:** +2 puntos de forma física postpartido.
+- **Rara:** +5 puntos.
+- **Épica:** +8 puntos.
+- **Legendaria:** +18 puntos.
+
+### Aplicación
+
+- El bonus se aplica únicamente a jugadores del club del manager que hayan disputado el partido.
+- Primero se calcula la recuperación base por Resistencia.
+- Luego se descuentan el desgaste del encuentro, el estado del campo y los ajustes físicos de las instrucciones tácticas.
+- Finalmente se suman los puntos directos de las cartas activas.
+- Las cartas del mismo tipo continúan apilándose.
+- Un jugador que habría terminado con 0 de forma puede finalizar con 2, 5, 8 o 18 según la carta activa, salvo que alcance el límite máximo de 99.
+
+### Migración de cartas existentes
+
+- Las cartas obtenidas en versiones anteriores se actualizan automáticamente según su rareza.
+- Una carta común antigua de +1% pasa a +2 puntos.
+- Una rara de +3% pasa a +5 puntos.
+- Una épica de +5% pasa a +8 puntos.
+- Una legendaria de +9% pasa a +18 puntos.
+- Se conservan activaciones utilizadas, bloqueo, inventario y estado activo.
+
+### Archivos principales modificados en V7.19
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/15-especial.js`
+
+### Compatibilidad de partidas
+
+**V7.19 no rompe partidas anteriores.** Actualiza automáticamente el valor y la unidad de las cartas de preparación física existentes sin eliminar cartas, usos ni bloqueos.
+
+---
 
 ## V7.18 - Reparación de penalizaciones por edad
 

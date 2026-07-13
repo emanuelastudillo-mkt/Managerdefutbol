@@ -3,6 +3,11 @@
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
 const SPECIAL_GLOBAL_CARDS_STORAGE_KEY = 'futbolManager.specialCardsGlobal.v1';
+const SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY = Object.freeze({ comun:2, rara:5, epica:8, legendaria:18 });
+
+function specialPhysicalRecoveryPointsForRarity(rarity){
+  return Math.max(0, Math.round(Number(SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY[String(rarity || '').toLowerCase()] || 0)));
+}
 
 function specialDatabase(){
   return specialSkillsDatabase && typeof specialSkillsDatabase === 'object' ? specialSkillsDatabase : { limites:{}, sobres:{}, cartas_base:[], puntos_ocultos:{ acciones:{} }, destruir_cartas:{ recuperacion_puntos:{} }, apilamiento_bonus:{} };
@@ -43,17 +48,20 @@ function normalizeSpecialCard(card, index=0){
   const maxUses = Math.max(1, Math.round(Number(card.activaciones_max ?? card.maxUses ?? specialLimits().maxUsesPerCard ?? 10)));
   const usedRaw = Number(card.activaciones_usadas ?? card.usedActivations ?? card.usos_usados ?? 0);
   const used = clamp(Math.round(Number.isFinite(usedRaw) ? usedRaw : 0), 0, maxUses);
+  const rarity = String(card.rareza || base.rareza || 'inutil');
+  const bonusType = card.tipo_bonus ?? base.tipo_bonus ?? null;
+  const physicalRecoveryPoints = bonusType === 'preparacion_fisica' ? specialPhysicalRecoveryPointsForRarity(rarity) : null;
   return {
     id_carta:id,
     id_base:String(card.id_base || base.id_base || ''),
     manager_id:String(card.manager_id || game?.saveCode || ''),
     nombre:String(card.nombre || base.nombre || 'Carta'),
-    rareza:String(card.rareza || base.rareza || 'inutil'),
-    tipo_bonus:card.tipo_bonus ?? base.tipo_bonus ?? null,
-    valor_bonus:Number(card.valor_bonus ?? base.valor_bonus ?? 0) || 0,
-    unidad:String(card.unidad || base.unidad || ''),
+    rareza:rarity,
+    tipo_bonus:bonusType,
+    valor_bonus:physicalRecoveryPoints !== null ? physicalRecoveryPoints : (Number(card.valor_bonus ?? base.valor_bonus ?? 0) || 0),
+    unidad:physicalRecoveryPoints !== null ? 'puntos' : String(card.unidad || base.unidad || ''),
     activable:card.activable !== undefined ? Boolean(card.activable) : Boolean(base.activable),
-    texto:String(card.texto || base.texto || ''),
+    texto:physicalRecoveryPoints !== null ? `Suma +${physicalRecoveryPoints} puntos de recuperación física después del partido.` : String(card.texto || base.texto || ''),
     activa:Boolean(card.activa),
     destruida:Boolean(card.destruida),
     obtenida_en_turno:card.obtenida_en_turno ?? currentTurnIndex(),
@@ -522,7 +530,9 @@ function specialActiveBonusSummary(){
 function specialBonusSummaryText(item){
   if(!item) return '';
   const sign = ['deterioro_campo','objetivo_mas_bajo'].includes(item.type) ? '-' : '+';
-  const suffix = item.type === 'probabilidad_legendaria' ? '% relativo acumulado' : '% acumulado';
+  const suffix = item.type === 'probabilidad_legendaria'
+    ? '% relativo acumulado'
+    : (item.type === 'preparacion_fisica' ? ' pts postpartido acumulados' : '% acumulado');
   return `${sign}${Number(item.value || 0)}${suffix}`;
 }
 function applySpecialCohesionActivationBonus(card){

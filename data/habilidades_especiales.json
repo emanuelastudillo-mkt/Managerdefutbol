@@ -1,8 +1,8 @@
 {
-  "version": "V7.18",
+  "version": "V7.19",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.18: elimina automáticamente penalizaciones por edad incorrectas en jugadores menores de 32 años y evita que juveniles, regenerados o jugadores nuevos hereden valores residuales.",
+  "caracteristicas_version": "V7.19: las cartas de preparación física otorgan puntos directos de recuperación postpartido (+2, +5, +8 o +18) aplicados después del desgaste, sin pérdida por redondeo.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -171,8 +171,8 @@
       "se_apila": true,
       "metodo": "suma_directa_sin_tope",
       "tope_porcentaje": null,
-      "aplica_a": "recuperacion_postpartido_del_club_del_manager",
-      "descripcion": "Aumenta porcentualmente la recuperación física postpartido."
+      "aplica_a": "recuperacion_directa_postpartido_de_jugadores_que_disputaron_el_partido_en_el_club_del_manager",
+      "descripcion": "Suma puntos directos de forma física después de aplicar el desgaste del partido."
     },
     "cohesion_activar": {
       "se_apila": true,
@@ -220,10 +220,10 @@
       "legendaria": 10
     },
     "preparacion_fisica": {
-      "comun": 1,
-      "rara": 3,
-      "epica": 5,
-      "legendaria": 9
+      "comun": 2,
+      "rara": 5,
+      "epica": 8,
+      "legendaria": 18
     }
   },
   "cartas_base": [
@@ -584,40 +584,40 @@
       "nombre": "Rutina de recuperación",
       "rareza": "comun",
       "tipo_bonus": "preparacion_fisica",
-      "valor_bonus": 1,
-      "unidad": "porcentaje",
+      "valor_bonus": 2,
+      "unidad": "puntos",
       "activable": true,
-      "texto": "Aumenta un 1% la recuperación física postpartido."
+      "texto": "Suma +2 puntos de recuperación física después del partido."
     },
     {
       "id_base": "PREPARACION_FISICA_RARA_001",
       "nombre": "Preparación física",
       "rareza": "rara",
       "tipo_bonus": "preparacion_fisica",
-      "valor_bonus": 3,
-      "unidad": "porcentaje",
+      "valor_bonus": 5,
+      "unidad": "puntos",
       "activable": true,
-      "texto": "Aumenta un 3% la recuperación física postpartido."
+      "texto": "Suma +5 puntos de recuperación física después del partido."
     },
     {
       "id_base": "PREPARACION_FISICA_EPICA_001",
       "nombre": "Laboratorio físico",
       "rareza": "epica",
       "tipo_bonus": "preparacion_fisica",
-      "valor_bonus": 5,
-      "unidad": "porcentaje",
+      "valor_bonus": 8,
+      "unidad": "puntos",
       "activable": true,
-      "texto": "Aumenta un 5% la recuperación física postpartido."
+      "texto": "Suma +8 puntos de recuperación física después del partido."
     },
     {
       "id_base": "PREPARACION_FISICA_LEGENDARIA_001",
       "nombre": "Cuerpo técnico de élite",
       "rareza": "legendaria",
       "tipo_bonus": "preparacion_fisica",
-      "valor_bonus": 9,
-      "unidad": "porcentaje",
+      "valor_bonus": 18,
+      "unidad": "puntos",
       "activable": true,
-      "texto": "Aumenta un 9% la recuperación física postpartido."
+      "texto": "Suma +18 puntos de recuperación física después del partido."
     }
   ],
   "estructura_datos_manager": {

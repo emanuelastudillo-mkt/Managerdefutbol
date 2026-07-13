@@ -2773,6 +2773,7 @@ function applyConditionUpdates(results){
       if(played.has(player.id)) next -= conditionLossForPlayer(player) + (pitchFatigueByPlayer.get(player.id) || 0);
       else next += rnd(8,10);
       next += instructionConditionByPlayer.get(player.id) || 0;
+      if(played.has(player.id)) next += postMatchPhysicalCardRecoveryForPlayer(player);
     }
     game.playerCondition[player.id] = clamp(Math.min(Math.round(next), maxConditionForPlayer(player.id)), 0, 99);
   });

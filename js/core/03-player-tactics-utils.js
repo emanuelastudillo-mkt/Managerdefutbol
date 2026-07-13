@@ -1299,11 +1299,12 @@ function postMatchRecoveryForPlayer(player){
   } else {
     recovery = rnd(POST_MATCH_RECOVERY_MIN, POST_MATCH_RECOVERY_MAX);
   }
-  if(player && Number(player.clubId || 0) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
-    const bonus = Number(specialActiveBonus('preparacion_fisica') || 0);
-    if(bonus > 0) recovery = Math.round(recovery * (1 + bonus / 100));
-  }
   return clamp(Math.round(recovery), 0, 99);
+}
+function postMatchPhysicalCardRecoveryForPlayer(player){
+  if(!player || Number(player.clubId || 0) !== Number(game?.selectedClubId || 0)) return 0;
+  if(typeof specialActiveBonus !== 'function') return 0;
+  return clamp(Math.round(Number(specialActiveBonus('preparacion_fisica') || 0)), 0, 99);
 }
 function rosterGroupCounts(squad=[]){
   const counts = { POR:0, DEF:0, MID:0, ATT:0 };

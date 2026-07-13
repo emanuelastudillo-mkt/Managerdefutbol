@@ -1,4 +1,41 @@
-# Fútbol Manager MVP - V7.16
+# Fútbol Manager MVP - V7.17
+
+## V7.17 - Valor de ofertas según rendimiento y ojeo
+
+Se mantuvo el requisito mínimo de seis partidos para ofrecer manualmente un jugador, pero esos seis partidos ya no fijan por sí solos el monto. El porcentaje de la cláusula que ofrece un club se incrementa mediante datos existentes de la temporada y del Centro de Ojeo.
+
+### Factores que aumentan la oferta
+
+- **Partidos jugados:** progresan hasta un máximo de **+8 puntos porcentuales** al llegar a 24 partidos.
+- **Goles:** agregan **+1,5 puntos porcentuales por gol**, con máximo de +12.
+- **Asistencias:** agregan **+1,25 puntos porcentuales por asistencia**, con máximo de +10.
+- **Rendimiento de temporada:** agrega hasta **+8 puntos porcentuales**. Se calcula con partidos, producción según posición, atajadas clave y regularidad, utilizando estadísticas ya guardadas.
+- **Ojeo:** agrega hasta **+5 puntos porcentuales** según cuántas habilidades ocultas del jugador propio fueron reveladas en el Centro de Ojeo.
+
+El porcentaje final continúa limitado por el rango del perfil del jugador y nunca supera el 100% de la cláusula. Las ofertas especiales que pagan la cláusula completa siguen funcionando de manera separada.
+
+### Alcance
+
+- La fórmula se utiliza al ofrecer manualmente un jugador.
+- También se utiliza en ofertas automáticas durante la temporada.
+- También se utiliza en ofertas generadas al finalizar la temporada.
+- No se agregan habilidades, atributos ni estadísticas nuevas a los jugadores.
+- El rendimiento y el ojeo se derivan exclusivamente de información existente en la partida.
+
+### Archivos principales modificados en V7.17
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/ui/06-render-home-messages.js`
+
+### Compatibilidad de partidas
+
+**V7.17 no rompe partidas anteriores.** Los partidos, goles, asistencias y avances de ojeo ya guardados empiezan a influir inmediatamente en las nuevas ofertas.
+
+---
 
 ## V7.16 - Ofertas por cláusula y jugadores ofrecidos
 

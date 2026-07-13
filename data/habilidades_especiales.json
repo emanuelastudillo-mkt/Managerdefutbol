@@ -1,8 +1,8 @@
 {
-  "version": "V7.16",
+  "version": "V7.17",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.16: las ofertas por cláusula completa sólo permiten aceptar o convencer al jugador; los jugadores propios pueden ofrecerse desde 6 partidos sin exigir sueldo pagado; cartas bloqueadas durante 15 días.",
+  "caracteristicas_version": "V7.17: partidos, goles, asistencias, rendimiento de temporada y ojeo aumentan el porcentaje de la cláusula ofrecido por otros clubes; se mantiene el mínimo de 6 partidos para ofrecer manualmente al jugador.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

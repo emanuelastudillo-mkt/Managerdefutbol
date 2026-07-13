@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.16',
+  version: 'V7.17',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -465,6 +465,18 @@ window.GAME_CONFIG = {
     ofertasJugadoresRequierenGolOAsistencia: true,
     // Un jugador del club puede ofrecerse manualmente cuando disputó 6 partidos o más. No exige haber cobrado un sueldo.
     partidosNecesariosParaOfrecerJugador: 6,
+    // Bonificaciones porcentuales sobre la cláusula al calcular una oferta.
+    // Se derivan de estadísticas ya existentes; no agregan atributos nuevos al jugador.
+    valorOfertaJugador: {
+      partidosParaBonoMaximo: 24,
+      bonoMaximoPartidos: 8,
+      bonoPorGol: 1.5,
+      bonoMaximoGoles: 12,
+      bonoPorAsistencia: 1.25,
+      bonoMaximoAsistencias: 10,
+      bonoMaximoRendimiento: 8,
+      bonoMaximoOjeo: 5
+    },
     ofertaMinimaEstrellaParaVentaPct: 60,
 
     // Bloqueo de presupuesto para fichajes. Sólo limita compras de jugadores; el resto del presupuesto queda disponible para gastos del club.

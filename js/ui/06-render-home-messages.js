@@ -984,10 +984,67 @@ function playerOfferPerformanceScore(player){
   const reliabilityPenalty = (st.injuries * 10) + (st.red * 12) + (st.goalErrors * 18) + (st.errors * 4);
   return Math.max(0, (visibleOverall(player) * 0.42) + (st.played * 2) + production + youthBonus + starBonus - listedPenalty - reliabilityPenalty);
 }
+function playerOfferSeasonPerformancePercent(player){
+  const st = playerSeasonStatsForOffers(player);
+  const played = Math.max(0, Number(st.played || 0));
+  if(played <= 0) return 0;
+  const group = typeof playerGroup === 'function' ? playerGroup(player?.position) : String(player?.position || '');
+  let contribution = 0;
+  if(group === 'gk'){
+    contribution = (st.keySaves * 1.8) + (st.assists * 1.2) + (st.goals * 3);
+  }else if(group === 'def'){
+    contribution = (st.goals * 2.3) + (st.assists * 1.8) + (st.keySaves * 0.4);
+  }else if(group === 'mid'){
+    contribution = (st.goals * 2.1) + (st.assists * 2.5) + (st.keySaves * 0.3);
+  }else{
+    contribution = (st.goals * 2.8) + (st.assists * 1.8) + (st.keySaves * 0.2);
+  }
+  const reliability = Math.max(0, 1 - ((st.red * 0.08) + (st.goalErrors * 0.12) + (st.errors * 0.025) + (st.injuries * 0.02)));
+  const productionPerMatch = contribution / played;
+  const activity = Math.min(1, played / 12);
+  return clamp(Math.round((35 + (productionPerMatch * 34) + (activity * 22)) * reliability), 0, 100);
+}
+function playerOfferScoutingPercent(player){
+  if(!player || !game) return 0;
+  const report = game?.scoutingCenter?.reports?.[String(Number(player.id || 0))];
+  const known = new Set(Array.isArray(report?.visibleSkills) ? report.visibleSkills.map(String) : []);
+  const hiddenKeys = typeof scoutingHiddenSkillKeys === 'function'
+    ? scoutingHiddenSkillKeys(player)
+    : ['hidden.aggression','hidden.genetics','hidden.surprise'];
+  const uniqueHidden = Array.from(new Set((hiddenKeys || []).map(String))).filter(Boolean);
+  if(!uniqueHidden.length) return 0;
+  const revealed = uniqueHidden.filter(key => known.has(key)).length;
+  return clamp(Math.round((revealed / uniqueHidden.length) * 100), 0, 100);
+}
+function playerOfferValueFactors(player){
+  const st = playerSeasonStatsForOffers(player);
+  const played = Math.max(0, Number(st.played || 0));
+  const goals = Math.max(0, Number(st.goals || 0));
+  const assists = Math.max(0, Number(st.assists || 0));
+  const performancePercent = playerOfferSeasonPerformancePercent(player);
+  const scoutingPercent = playerOfferScoutingPercent(player);
+  const matchesBonus = Math.min(Number(PLAYER_OFFER_MATCH_BONUS_MAX || 0), (played / Math.max(1, Number(PLAYER_OFFER_MATCHES_FOR_MAX_BONUS || 24))) * Number(PLAYER_OFFER_MATCH_BONUS_MAX || 0));
+  const goalsBonus = Math.min(Number(PLAYER_OFFER_GOAL_BONUS_MAX || 0), goals * Number(PLAYER_OFFER_GOAL_BONUS || 0));
+  const assistsBonus = Math.min(Number(PLAYER_OFFER_ASSIST_BONUS_MAX || 0), assists * Number(PLAYER_OFFER_ASSIST_BONUS || 0));
+  const performanceBonus = (performancePercent / 100) * Number(PLAYER_OFFER_PERFORMANCE_BONUS_MAX || 0);
+  const scoutingBonus = (scoutingPercent / 100) * Number(PLAYER_OFFER_SCOUTING_BONUS_MAX || 0);
+  return {
+    played,
+    goals,
+    assists,
+    performancePercent,
+    scoutingPercent,
+    matchesBonus,
+    goalsBonus,
+    assistsBonus,
+    performanceBonus,
+    scoutingBonus,
+    totalBonus:matchesBonus + goalsBonus + assistsBonus + performanceBonus + scoutingBonus
+  };
+}
 function playerOfferRange(player){
   const profile = playerOfferProfile(player);
-  // las ofertas normales duplican el porcentaje previo sobre cláusula.
-  // Las ofertas de cláusula completa mantienen su flujo separado.
+  // Las ofertas por cláusula completa mantienen su flujo separado.
   if(profile === 'star') return { min:70, max:100 };
   if(profile === 'young_good') return { min:36, max:70 };
   if(profile === 'transfer_listed') return { min:12, max:36 };
@@ -1000,10 +1057,11 @@ function playerOfferPercent(player, salt=''){
   const minPct = Math.max(1, Math.round(range.min || 5));
   const maxPct = Math.max(minPct, Math.round(range.max || 15));
   const span = Math.max(0, maxPct - minPct);
-  const score = playerOfferPerformanceScore(player);
-  const scoreBonus = Math.min(span, Math.floor(score / 42));
-  const noise = span > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, span + 1) : 0;
-  return clamp(minPct + Math.max(scoreBonus, Math.floor(noise * 0.55)), minPct, Math.min(100, maxPct));
+  const factors = playerOfferValueFactors(player);
+  const randomRoom = Math.min(4, Math.max(0, Math.floor(span * 0.20)));
+  const noise = randomRoom > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, randomRoom + 1) : 0;
+  const earnedBonus = Math.max(0, Math.round(factors.totalBonus));
+  return clamp(minPct + noise + earnedBonus, minPct, Math.min(100, maxPct));
 }
 function buildTransferOfferFinancials(player, pct){
   const clause = refreshPlayerClause(player);

@@ -1,8 +1,8 @@
 {
-  "version": "V7.22",
+  "version": "V7.23",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.22: ajusta la recuperación física directa postpartido de las cartas a +1, +3, +5 y +12 según rareza.",
+  "caracteristicas_version": "V7.23: agrega cartas de apoyo al capitán, director de marketing, director deportivo y médico milagroso.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -180,6 +180,34 @@
       "tope_porcentaje": null,
       "aplica_a": "cohesion_del_club_al_activar_la_carta",
       "descripcion": "Suma cohesión una sola vez al activar la carta. Puede volver a aplicar si se desactiva y reactiva después del bloqueo."
+    },
+    "apoyo_capitan": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "progreso_de_capitania_obtenido_por_partido",
+      "descripcion": "Suma puntos porcentuales directos al progreso de capitanía obtenido por el capitán después del partido."
+    },
+    "director_marketing": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "asistencia_e_ingresos_de_partidos_como_local_del_club_del_manager",
+      "descripcion": "Aumenta la asistencia local hasta la capacidad del estadio y aplica el mismo porcentaje extra sobre la recaudación de entradas."
+    },
+    "director_deportivo": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "porcentaje_de_clausula_en_ofertas_recibidas_por_jugadores_propios",
+      "descripcion": "Suma puntos porcentuales al porcentaje de cláusula ofrecido por otros clubes, sin modificar ofertas de cláusula completa."
+    },
+    "medico_milagroso": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "dias_reducidos_en_tratamientos_medicos_exitosos",
+      "descripcion": "Resta días adicionales a una lesión cuando el tratamiento del kinesiólogo resulta exitoso."
     }
   },
   "bonus_por_rareza": {
@@ -224,6 +252,30 @@
       "rara": 3,
       "epica": 5,
       "legendaria": 12
+    },
+    "apoyo_capitan": {
+      "comun": 1,
+      "rara": 3,
+      "epica": 5,
+      "legendaria": 12
+    },
+    "director_marketing": {
+      "comun": 1,
+      "rara": 3,
+      "epica": 5,
+      "legendaria": 12
+    },
+    "director_deportivo": {
+      "comun": 1,
+      "rara": 2,
+      "epica": 3,
+      "legendaria": 7
+    },
+    "medico_milagroso": {
+      "comun": 1,
+      "rara": 2,
+      "epica": 3,
+      "legendaria": 5
     }
   },
   "cartas_base": [
@@ -618,6 +670,166 @@
       "unidad": "puntos",
       "activable": true,
       "texto": "Suma +12 puntos de recuperación física después del partido."
+    },
+    {
+      "id_base": "APOYO_CAPITAN_COMUN_001",
+      "nombre": "Todo al apoyo a mi capitán",
+      "rareza": "comun",
+      "tipo_bonus": "apoyo_capitan",
+      "valor_bonus": 1,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +1% al progreso de capitanía obtenido por partido."
+    },
+    {
+      "id_base": "APOYO_CAPITAN_RARA_001",
+      "nombre": "Todo al apoyo a mi capitán",
+      "rareza": "rara",
+      "tipo_bonus": "apoyo_capitan",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +3% al progreso de capitanía obtenido por partido."
+    },
+    {
+      "id_base": "APOYO_CAPITAN_EPICA_001",
+      "nombre": "Todo al apoyo a mi capitán",
+      "rareza": "epica",
+      "tipo_bonus": "apoyo_capitan",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +5% al progreso de capitanía obtenido por partido."
+    },
+    {
+      "id_base": "APOYO_CAPITAN_LEGENDARIA_001",
+      "nombre": "Todo al apoyo a mi capitán",
+      "rareza": "legendaria",
+      "tipo_bonus": "apoyo_capitan",
+      "valor_bonus": 12,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +12% al progreso de capitanía obtenido por partido."
+    },
+    {
+      "id_base": "DIRECTOR_MARKETING_COMUN_001",
+      "nombre": "Director de marketing",
+      "rareza": "comun",
+      "tipo_bonus": "director_marketing",
+      "valor_bonus": 1,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 1% la asistencia y la recaudación de los partidos como local."
+    },
+    {
+      "id_base": "DIRECTOR_MARKETING_RARA_001",
+      "nombre": "Director de marketing",
+      "rareza": "rara",
+      "tipo_bonus": "director_marketing",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 3% la asistencia y la recaudación de los partidos como local."
+    },
+    {
+      "id_base": "DIRECTOR_MARKETING_EPICA_001",
+      "nombre": "Director de marketing",
+      "rareza": "epica",
+      "tipo_bonus": "director_marketing",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 5% la asistencia y la recaudación de los partidos como local."
+    },
+    {
+      "id_base": "DIRECTOR_MARKETING_LEGENDARIA_001",
+      "nombre": "Director de marketing",
+      "rareza": "legendaria",
+      "tipo_bonus": "director_marketing",
+      "valor_bonus": 12,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Aumenta un 12% la asistencia y la recaudación de los partidos como local."
+    },
+    {
+      "id_base": "DIRECTOR_DEPORTIVO_COMUN_001",
+      "nombre": "Director deportivo",
+      "rareza": "comun",
+      "tipo_bonus": "director_deportivo",
+      "valor_bonus": 1,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +1% al porcentaje de cláusula ofrecido por otros clubes."
+    },
+    {
+      "id_base": "DIRECTOR_DEPORTIVO_RARA_001",
+      "nombre": "Director deportivo",
+      "rareza": "rara",
+      "tipo_bonus": "director_deportivo",
+      "valor_bonus": 2,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +2% al porcentaje de cláusula ofrecido por otros clubes."
+    },
+    {
+      "id_base": "DIRECTOR_DEPORTIVO_EPICA_001",
+      "nombre": "Director deportivo",
+      "rareza": "epica",
+      "tipo_bonus": "director_deportivo",
+      "valor_bonus": 3,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +3% al porcentaje de cláusula ofrecido por otros clubes."
+    },
+    {
+      "id_base": "DIRECTOR_DEPORTIVO_LEGENDARIA_001",
+      "nombre": "Director deportivo",
+      "rareza": "legendaria",
+      "tipo_bonus": "director_deportivo",
+      "valor_bonus": 7,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Suma +7% al porcentaje de cláusula ofrecido por otros clubes."
+    },
+    {
+      "id_base": "MEDICO_MILAGROSO_COMUN_001",
+      "nombre": "Médico Milagroso",
+      "rareza": "comun",
+      "tipo_bonus": "medico_milagroso",
+      "valor_bonus": 1,
+      "unidad": "dias",
+      "activable": true,
+      "texto": "Resta 1 día adicional a una lesión cuando el tratamiento es exitoso."
+    },
+    {
+      "id_base": "MEDICO_MILAGROSO_RARA_001",
+      "nombre": "Médico Milagroso",
+      "rareza": "rara",
+      "tipo_bonus": "medico_milagroso",
+      "valor_bonus": 2,
+      "unidad": "dias",
+      "activable": true,
+      "texto": "Resta 2 días adicionales a una lesión cuando el tratamiento es exitoso."
+    },
+    {
+      "id_base": "MEDICO_MILAGROSO_EPICA_001",
+      "nombre": "Médico Milagroso",
+      "rareza": "epica",
+      "tipo_bonus": "medico_milagroso",
+      "valor_bonus": 3,
+      "unidad": "dias",
+      "activable": true,
+      "texto": "Resta 3 días adicionales a una lesión cuando el tratamiento es exitoso."
+    },
+    {
+      "id_base": "MEDICO_MILAGROSO_LEGENDARIA_001",
+      "nombre": "Médico Milagroso",
+      "rareza": "legendaria",
+      "tipo_bonus": "medico_milagroso",
+      "valor_bonus": 5,
+      "unidad": "dias",
+      "activable": true,
+      "texto": "Resta 5 días adicionales a una lesión cuando el tratamiento es exitoso."
     }
   ],
   "estructura_datos_manager": {

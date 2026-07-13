@@ -1028,6 +1028,9 @@ function playerOfferValueFactors(player){
   const assistsBonus = Math.min(Number(PLAYER_OFFER_ASSIST_BONUS_MAX || 0), assists * Number(PLAYER_OFFER_ASSIST_BONUS || 0));
   const performanceBonus = (performancePercent / 100) * Number(PLAYER_OFFER_PERFORMANCE_BONUS_MAX || 0);
   const scoutingBonus = (scoutingPercent / 100) * Number(PLAYER_OFFER_SCOUTING_BONUS_MAX || 0);
+  const sportingDirectorBonus = typeof specialActiveBonus === 'function'
+    ? Math.max(0, Number(specialActiveBonus('director_deportivo') || 0))
+    : 0;
   return {
     played,
     goals,
@@ -1039,7 +1042,8 @@ function playerOfferValueFactors(player){
     assistsBonus,
     performanceBonus,
     scoutingBonus,
-    totalBonus:matchesBonus + goalsBonus + assistsBonus + performanceBonus + scoutingBonus
+    sportingDirectorBonus,
+    totalBonus:matchesBonus + goalsBonus + assistsBonus + performanceBonus + scoutingBonus + sportingDirectorBonus
   };
 }
 function playerOfferRange(player){
@@ -1060,8 +1064,10 @@ function playerOfferPercent(player, salt=''){
   const factors = playerOfferValueFactors(player);
   const randomRoom = Math.min(4, Math.max(0, Math.floor(span * 0.20)));
   const noise = randomRoom > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, randomRoom + 1) : 0;
-  const earnedBonus = Math.max(0, Math.round(factors.totalBonus));
-  return clamp(minPct + noise + earnedBonus, minPct, Math.min(100, maxPct));
+  const sportingDirectorBonus = Math.max(0, Math.round(Number(factors.sportingDirectorBonus || 0)));
+  const earnedBonus = Math.max(0, Math.round(Number(factors.totalBonus || 0) - sportingDirectorBonus));
+  const basePercent = clamp(minPct + noise + earnedBonus, minPct, Math.min(100, maxPct));
+  return clamp(basePercent + sportingDirectorBonus, minPct, 100);
 }
 function buildTransferOfferFinancials(player, pct){
   const clause = refreshPlayerClause(player);

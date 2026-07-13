@@ -1227,8 +1227,12 @@ function applyKinesioTreatment(playerId, kind='first'){
   const key = `${currentTurnIndex()}:${playerId}`;
   if(game.staffActions.kinesiologyTreatments[key]){ return { success:false, message:'Este jugador ya recibió tratamiento esta semana.' }; }
   const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
-  const recoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
-  game.staffActions.kinesiologyTreatments[key] = { success, ...turnStamp({ playerId }) };
+  const baseRecoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
+  const miraculousDoctorBonus = typeof specialActiveBonus === 'function'
+    ? Math.max(0, Math.round(Number(specialActiveBonus('medico_milagroso') || 0)))
+    : 0;
+  const recoveryReductionTurns = baseRecoveryReductionTurns + miraculousDoctorBonus;
+  game.staffActions.kinesiologyTreatments[key] = { success, baseRecoveryReductionTurns, miraculousDoctorBonus, recoveryReductionTurns, ...turnStamp({ playerId }) };
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId, success });
   if(success){
     const st = playerStatus(playerId);
@@ -1251,11 +1255,14 @@ function applyKinesioTreatment(playerId, kind='first'){
       }
     }
   }
+  const bonusText = miraculousDoctorBonus > 0 ? ` Incluye ${formatDaysFromTurns(miraculousDoctorBonus)} extra por Médico Milagroso.` : '';
   return {
     success,
     recoveryReductionTurns,
+    baseRecoveryReductionTurns,
+    miraculousDoctorBonus,
     buttonLabel: success ? 'Tratamiento realizado' : 'Tratamiento fallido',
-    message: success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.` : 'El tratamiento falló. La lesión no se redujo.'
+    message: success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.${bonusText}` : 'El tratamiento falló. La lesión no se redujo.'
   };
 }
 function treatInjuredPlayer(playerId, button=null, kind='first'){

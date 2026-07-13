@@ -539,7 +539,11 @@ function applyCaptaincyAfterMatch(match){
   const entry = captaincyEntry(captainId, true);
   const maximum = captaincyMaximum(captain);
   const before = clamp(Math.round(Number(entry.percent || 0)), 0, maximum);
-  const gain = before >= maximum ? 0 : Math.min(captaincyProgressGain(captain), maximum - before);
+  const baseGain = before >= maximum ? 0 : captaincyProgressGain(captain);
+  const captainSupportBonus = typeof specialActiveBonus === 'function'
+    ? Math.max(0, Math.round(Number(specialActiveBonus('apoyo_capitan') || 0)))
+    : 0;
+  const gain = before >= maximum ? 0 : Math.min(baseGain + captainSupportBonus, maximum - before);
   const after = clamp(before + gain, 0, maximum);
   entry.percent = after;
   entry.matches = Math.max(0, Math.round(Number(entry.matches || 0))) + 1;
@@ -565,6 +569,8 @@ function applyCaptaincyAfterMatch(match){
     after,
     maximum,
     gain,
+    baseGain,
+    captainSupportBonus,
     matches:entry.matches,
     moral:effect.moral,
     cohesion:cohesionApplied,
@@ -592,7 +598,8 @@ function captaincyEffectSummary(effect=game?.lastCaptaincyEffect){
   const morale = Number(effect.moral || 0);
   const cohesion = Number(effect.cohesion || 0);
   const sign = value => value > 0 ? `+${value}` : String(value);
-  return `${playerLastName(effect.playerName || 'Capitán')} alcanzó ${Number(effect.after || 0)}% de capitanía (${Number(effect.before || 0)}% → ${Number(effect.after || 0)}%). Moral ${sign(morale)} · cohesión ${sign(cohesion)}.`;
+  const support = Number(effect.captainSupportBonus || 0) > 0 ? ` · cartas +${Number(effect.captainSupportBonus || 0)}%` : '';
+  return `${playerLastName(effect.playerName || 'Capitán')} alcanzó ${Number(effect.after || 0)}% de capitanía (${Number(effect.before || 0)}% → ${Number(effect.after || 0)}%${support}). Moral ${sign(morale)} · cohesión ${sign(cohesion)}.`;
 }
 
 function effectiveSkill(p, skillName){

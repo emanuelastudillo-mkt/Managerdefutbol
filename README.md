@@ -1,4 +1,75 @@
-# Fútbol Manager MVP - V7.22
+# Fútbol Manager MVP - V7.23
+
+
+## V7.23 - Nuevas cartas de apoyo, marketing, mercado y medicina
+
+Se incorporaron cuatro familias nuevas al sistema de cartas especiales. Cada familia contiene una carta común, rara, épica y legendaria, por lo que se agregan **16 cartas nuevas** al conjunto disponible en los sobres.
+
+### Todo al apoyo a mi capitán
+
+- **Común:** +1 punto porcentual de progreso por partido.
+- **Rara:** +3 puntos.
+- **Épica:** +5 puntos.
+- **Legendaria:** +12 puntos.
+
+El bonus se suma al progreso normal obtenido por el jugador que disputó el encuentro como capitán. Las cartas se apilan y el resultado nunca supera el máximo individual de capitanía del jugador.
+
+### Director de marketing
+
+- **Común:** +1%.
+- **Rara:** +3%.
+- **Épica:** +5%.
+- **Legendaria:** +12%.
+
+En partidos donde el club del manager actúa como local, el porcentaje acumulado aumenta la demanda de hinchas locales hasta la capacidad disponible del estadio. El mismo porcentaje también se aplica sobre la recaudación de entradas, por lo que conserva utilidad aun cuando el estadio esté completo.
+
+### Director deportivo
+
+- **Común:** +1 punto porcentual.
+- **Rara:** +2 puntos.
+- **Épica:** +3 puntos.
+- **Legendaria:** +7 puntos.
+
+El bonus se suma al porcentaje de cláusula calculado para las ofertas recibidas por jugadores propios. Se combina con partidos, goles, asistencias, rendimiento y ojeo. No modifica las ofertas que ya pagan la cláusula completa.
+
+### Médico Milagroso
+
+- **Común:** resta 1 día adicional.
+- **Rara:** resta 2 días adicionales.
+- **Épica:** resta 3 días adicionales.
+- **Legendaria:** resta 5 días adicionales.
+
+El bonus se aplica cuando el tratamiento del kinesiólogo resulta exitoso. Se suma a la reducción normal del empleado y puede aplicarse también al tratamiento conjunto de todos los lesionados. No convierte un tratamiento fallido en exitoso y no altera lesiones juveniles que ya se curan completamente mediante su tratamiento específico.
+
+### Apilamiento y usos
+
+- Las cuatro familias respetan el límite general de cinco cartas activas.
+- Las cartas repetidas continúan permitidas y sus efectos se suman.
+- Mantienen el sistema normal de 10 activaciones y el bloqueo de 15 días.
+- Las cartas nuevas pueden aparecer en sobres según la probabilidad de su rareza.
+- No se modifican ni reemplazan cartas obtenidas en versiones anteriores.
+
+### Archivos principales modificados en V7.23
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `data/habilidades_especiales.json`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `js/game/15-especial.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/12-modals.js`
+
+### Compatibilidad de partidas
+
+**V7.23 no rompe partidas anteriores.** Agrega nuevas cartas al conjunto de sobres y conserva íntegramente cartas activas, reserva, usos, bloqueos, progreso de capitanía, lesiones, presupuestos y ofertas existentes.
+
+---
 
 
 ## V7.22 - Nuevos valores de recuperación física de cartas

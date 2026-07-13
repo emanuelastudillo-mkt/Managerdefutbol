@@ -1483,7 +1483,11 @@ function attendanceContextForMatch(match){
   const homeDemandBase = clubFansCurrent(match.homeId);
   const awayDemandBase = clubFansCurrent(match.awayId);
   const rivalPrestigeBonus = rivalPrestigeAttendanceBonusInfo(match.awayId);
-  const homeDemand = Math.round(homeDemandBase * (1 + rivalPrestigeBonus.rate));
+  const marketingBonusPct = Number(match.homeId || 0) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'
+    ? Math.max(0, Number(specialActiveBonus('director_marketing') || 0))
+    : 0;
+  const homeDemandBeforeMarketing = Math.round(homeDemandBase * (1 + rivalPrestigeBonus.rate));
+  const homeDemand = Math.round(homeDemandBeforeMarketing * (1 + (marketingBonusPct / 100)));
   const awayDemand = Math.round(awayDemandBase * (1 + (rivalPrestigeBonus.rate * RIVAL_PRESTIGE_AWAY_DEMAND_SHARE)));
   const awayMinRate = awayFansMinimumRateForMatch(match);
   const awayReservedMinimum = Math.round(capacity * awayMinRate);
@@ -1500,7 +1504,9 @@ function attendanceContextForMatch(match){
   const homeCrowdBonus = clamp(Math.max(ratioBonus, diffBonus), 0, HOME_CROWD_BONUS_MAX);
   const ticketPriceInfo = ticketPriceInfoForMatch(match, rivalPrestigeBonus.prestige);
   const ticketPrice = ticketPriceInfo.price;
-  const ticketRevenue = Math.round(totalFans * ticketPrice);
+  const ticketRevenueBeforeMarketing = Math.round(totalFans * ticketPrice);
+  const ticketRevenue = Math.round(ticketRevenueBeforeMarketing * (1 + (marketingBonusPct / 100)));
+  const marketingRevenueBonus = Math.max(0, ticketRevenue - ticketRevenueBeforeMarketing);
   return {
     stadiumName:clubStadiumName(match.homeId),
     capacity,
@@ -1519,9 +1525,13 @@ function attendanceContextForMatch(match){
     ticketPriceAutoBot:Boolean(ticketPriceInfo.isAutomaticBot),
     ticketPricePrestigeTier:ticketPriceInfo.prestigeTier || '',
     ticketRevenue,
+    ticketRevenueBeforeMarketing,
+    marketingRevenueBonus,
+    marketingBonusPct:Number(marketingBonusPct || 0),
     homeDemandBase,
     awayDemandBase,
     homeDemand,
+    homeDemandBeforeMarketing,
     awayDemand,
     rivalPrestige:Number(rivalPrestigeBonus.prestige || 0),
     rivalPrestigeAttendanceBonusRate:Number(rivalPrestigeBonus.rate || 0),

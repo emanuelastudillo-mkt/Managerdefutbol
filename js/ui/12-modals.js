@@ -554,6 +554,7 @@ function showMatchRevealModal(match, onRevealComplete=null){
           <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong>${context.ticketPriceAutoBot ? `<p class="muted small">Bot auto · rival ${escapeHtml(context.ticketPricePrestigeTier || '')} · x${Number(context.ticketPriceMultiplier || 1).toFixed(2)}</p>` : ''}</div>
           <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
           ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Demanda extra por rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Asistencia · prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
+          ${Number(context.marketingBonusPct || 0) > 0 ? `<div><p class="label">Director de marketing</p><strong>+${Number(context.marketingBonusPct || 0)}%</strong><p class="muted small">Asistencia y recaudación</p></div>` : ''}
           ${context.tacticalAdaptation ? `<div><p class="label">Adaptación rival</p><strong>+${Number(context.tacticalAdaptation.bonusPct || 0)}%</strong><p class="muted small">Patrón repetido ${Number(context.tacticalAdaptation.streak || 0)} partido(s)</p></div>` : ''}
         </div>
       </div>
@@ -1001,6 +1002,7 @@ function showMatchModal(matchId){
         <div><p class="label">Precio entrada</p><strong>${formatMoney(context.ticketPrice || 0)}</strong>${context.ticketPriceAutoBot ? `<p class="muted small">Bot auto · rival ${escapeHtml(context.ticketPricePrestigeTier || '')} · x${Number(context.ticketPriceMultiplier || 1).toFixed(2)}</p>` : ''}</div>
         <div><p class="label">Recaudación entradas</p><strong class="ok">${formatMoney(context.ticketRevenue || 0)}</strong></div>
         ${Number(context.rivalPrestigeAttendanceBonusPct || 0) > 0 ? `<div><p class="label">Demanda extra por rival</p><strong>+${Number(context.rivalPrestigeAttendanceBonusPct || 0)}%</strong><p class="muted small">Asistencia · prestigio rival ${Number(context.rivalPrestige || 0)}</p></div>` : ''}
+        ${Number(context.marketingBonusPct || 0) > 0 ? `<div><p class="label">Director de marketing</p><strong>+${Number(context.marketingBonusPct || 0)}%</strong><p class="muted small">Asistencia y recaudación</p></div>` : ''}
         ${context.tacticalAdaptation ? `<div><p class="label">Adaptación rival</p><strong>+${Number(context.tacticalAdaptation.bonusPct || 0)}%</strong><p class="muted small">Patrón repetido ${Number(context.tacticalAdaptation.streak || 0)} partido(s)</p></div>` : ''}
       </div>
     </div>

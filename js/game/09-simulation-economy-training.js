@@ -269,7 +269,11 @@ function setRegularTurnSummary(round, ownResult, ownProblems, regularEnded, trig
     if(Number(ownResult.homeId) === Number(game.selectedClubId) && ticketRevenue > 0){
       const totalFans = new Intl.NumberFormat('es-AR').format(Number(ownResult?.matchContext?.totalFans || 0));
       const rivalBonus = Number(ownResult?.matchContext?.rivalPrestigeAttendanceBonusPct || 0);
-      const bonusText = rivalBonus > 0 ? ` · rival +${rivalBonus}%` : '';
+      const marketingBonus = Number(ownResult?.matchContext?.marketingBonusPct || 0);
+      const bonusParts = [];
+      if(rivalBonus > 0) bonusParts.push(`rival +${rivalBonus}%`);
+      if(marketingBonus > 0) bonusParts.push(`marketing +${marketingBonus}%`);
+      const bonusText = bonusParts.length ? ` · ${bonusParts.join(' · ')}` : '';
       items.push({ label:'Recaudación de entradas', text:`${formatMoney(ticketRevenue)} por ${totalFans} entradas vendidas${bonusText}.`, tone:'ok' });
     }
     const captainText = typeof captaincyEffectSummary === 'function' ? captaincyEffectSummary(game.lastCaptaincyEffect) : '';
@@ -2587,6 +2591,9 @@ function applyEconomyResult(match){
     resultPayment,
     resultType:payment.result,
     ticketRevenue,
+    ticketRevenueBeforeMarketing:match?.matchContext?.ticketRevenueBeforeMarketing || ticketRevenue,
+    marketingRevenueBonus:match?.matchContext?.marketingRevenueBonus || 0,
+    marketingBonusPct:match?.matchContext?.marketingBonusPct || 0,
     ticketPrice:match?.matchContext?.ticketPrice || 0,
     totalFans:match?.matchContext?.totalFans || 0,
     rivalPrestige:match?.matchContext?.rivalPrestige || 0,

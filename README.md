@@ -1,87 +1,95 @@
-# Fútbol Manager MVP - V7.08
+# Fútbol Manager MVP - V7.09
 
-## V7.08 - Premios y fechas del Mundial de Clubes
+## V7.09 - Historial anual del Mundial de Clubes
 
-Esta versión parte de la V7.07 definitiva y mantiene las tácticas variables de los equipos bots, el ranking online, el guardado doble seguro y las migraciones anteriores.
+Esta versión parte de la V7.08 y conserva las correcciones de premios y fechas del Mundial de Clubes, las tácticas variables de los bots, el ranking online y el guardado doble seguro.
 
-### Premio de participación
+### Selector de año
 
-El premio de participación de la Copa Mundial de Clubes de la FIFA sólo se acredita cuando el club dirigido figura realmente dentro de los 32 participantes de esa edición.
+En **Calendario → Mundial de Clubes** se agregó un selector de año similar al utilizado en las tablas de las ligas.
 
-La comprobación se realiza en dos niveles:
+Permite consultar:
 
-- Al crear el torneo, antes de intentar pagar el premio.
-- Dentro de la función general de premios, para impedir pagos a clubes ajenos a la competición aunque otra llamada intente concederlos.
+- La edición actual.
+- Cada edición anterior guardada.
+- El campeón, subcampeón y tercer puesto.
+- Las tablas finales de los grupos.
+- Los partidos y resultados de cada grupo.
+- Octavos, cuartos, semifinales, tercer puesto y final.
 
-Un club que no se clasificó no puede cobrar premios de participación, clasificación de grupos, cuartos, semifinal, subcampeonato o campeonato.
+La edición actual continúa actualizándose a medida que se disputan los partidos.
 
-### Reparación de partidas con un premio incorrecto
+### Fase de grupos
 
-Al cargar una partida anterior se revisa el premio de participación de la edición activa.
+Los ocho grupos se muestran como pequeñas ligas de cuatro equipos.
 
-Si el club dirigido no aparece entre los participantes pero recibió el premio por el error anterior:
+Cada tabla incluye:
 
-- Se elimina el registro de premio pagado.
-- Se descuenta del presupuesto el importe acreditado incorrectamente.
-- Se sincroniza el presupuesto del club.
-- Se registra el movimiento en el historial financiero.
-- Se agrega un mensaje explicando la corrección.
-- La reparación queda marcada para no ejecutarse dos veces.
+- Posición.
+- Equipo.
+- Partidos jugados.
+- Diferencia de gol.
+- Puntos.
 
-La corrección sólo se aplica cuando existe una lista válida de participantes y un pago de participación registrado para el club no clasificado.
+Los dos primeros aparecen destacados como clasificados a octavos. Cada grupo también contiene un desplegable con sus seis partidos y resultados.
 
-### Fechas de la fase de grupos
+### Cuadro eliminatorio
 
-Las tres fechas de grupos continúan programándose con cinco días de separación:
+Debajo de los grupos se muestra un cuadro horizontal con:
 
-- Fecha 1: fecha inicial del torneo.
-- Fecha 2: cinco días después.
-- Fecha 3: diez días después de la primera.
+- Octavos de final.
+- Cuartos de final.
+- Semifinales.
+- Final.
+- Partido por el tercer puesto.
 
-La fecha autorizada para cada partido ahora se obtiene del calendario oficial guardado en el estado del Mundial, usando el número de jornada de grupos. De esta forma, una fecha incorrecta o antigua dentro de un partido no puede adelantar su simulación.
+Los partidos ya disputados muestran el marcador y el ganador. Los encuentros de la edición actual continúan siendo clickeables para abrir su ficha completa. Los resultados históricos se muestran como registros de consulta y no dependen del calendario activo.
 
-Además, cada ejecución del calendario puede resolver como máximo una jornada pendiente de la fase de grupos. Esto impide que las fechas 1, 2 y 3 se simulen juntas al llegar a la primera fecha.
+### Historial guardado
 
-Si una partida quedó atrasada respecto del calendario, las jornadas pendientes se procesan ordenadamente, una por cada avance, empezando siempre por la más antigua.
+Al finalizar una edición se guarda una instantánea independiente con:
 
-### Tácticas variables de equipos bots
+- Temporada y año.
+- Participantes e invitados.
+- Grupos y posiciones finales.
+- Partidos de la fase de grupos.
+- Cruces y resultados eliminatorios.
+- Podio final.
 
-Se conserva sin cambios la alternancia incorporada en V7.07 entre los perfiles:
+Antes de iniciar una nueva temporada también se realiza una copia preventiva de la edición saliente.
 
-- Equilibrado.
-- Posesión.
-- Presión alta.
-- Juego directo.
-- Juego abierto.
-- Contraataque.
-- Defensivo.
-- Cauto.
+### Migración de partidas anteriores
 
-### Ofrecer a clubes
+Las partidas anteriores a V7.09 no almacenaban el fixture completo de Mundiales ya eliminados al cambiar de temporada.
 
-Se mantiene la lógica original restaurada en V7.07. No existen ofertas garantizadas para fechas futuras.
+Por ese motivo:
 
-### Ranking online y Cloudflare
+- Si la edición todavía está presente en la partida, se reconstruye y guarda automáticamente.
+- Si sólo existe el registro histórico del campeón, se crea una entrada resumida con campeón, subcampeón y tercer puesto disponibles.
+- Los grupos y marcadores antiguos que ya no existían en el guardado no se inventan.
+- Desde V7.09 todas las nuevas ediciones conservarán el detalle completo.
 
-No se modificó la API del ranking. No es necesario actualizar nuevamente el Worker de Cloudflare.
+### Correcciones conservadas de V7.08
 
-La carpeta `cloudflare-ranking` conserva el Worker operativo V7.06.3 con el binding:
+- Un club no clasificado no cobra premios del Mundial de Clubes.
+- Las tres jornadas de grupos respetan sus fechas oficiales.
+- Sólo se procesa una jornada pendiente de grupos por avance.
 
-```text
-db -> ranking_manager_db
-```
+### Cloudflare y ranking online
 
-### Archivos principales modificados en V7.08
+No se modificó la API del ranking. No es necesario actualizar el Worker de Cloudflare.
+
+### Archivos principales modificados en V7.09
 
 - `README.md`
 - `index.html`
+- `style.css`
 - `config.js`
 - `balance-modificadores.js`
-- `simulador-2.0.js`
 - `js/core/01-config-constants.js`
 - `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
+- `js/game/08-sponsors-stadium-stats.js`
 
 ### Compatibilidad de partidas
 
-**V7.08 no rompe partidas anteriores.** Conserva planteles, calendarios, estadísticas, títulos y progreso. Las partidas afectadas por el premio de participación incorrecto ajustan únicamente ese importe y guardan la reparación para no repetirla.
+**V7.09 no rompe partidas anteriores.** Agrega el historial del Mundial como una estructura nueva. Las partidas existentes conservan planteles, calendarios, presupuestos, títulos, estadísticas y progreso. Las ediciones antiguas sin fixture disponible se muestran únicamente con la información histórica que realmente estaba guardada.

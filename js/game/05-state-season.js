@@ -2623,7 +2623,9 @@ function normalizeGame(saved){
   normalized.seasonTransition = normalized.seasonTransition || null;
   normalized.argentinaPlayoffs = (normalized.argentinaPlayoffs && typeof normalized.argentinaPlayoffs === 'object' && !Array.isArray(normalized.argentinaPlayoffs)) ? normalized.argentinaPlayoffs : null;
   normalized.clubWorldCup = (normalized.clubWorldCup && typeof normalized.clubWorldCup === 'object' && !Array.isArray(normalized.clubWorldCup)) ? normalized.clubWorldCup : null;
+  normalized.clubWorldCupHistory = normalizeClubWorldCupHistoryState(normalized.clubWorldCupHistory || {});
   if(normalized.clubWorldCup && typeof ensureClubWorldCupInvitedData === 'function') ensureClubWorldCupInvitedData();
+  if(syncClubWorldCupHistoryForState(normalized)) normalized._needsAutosave = true;
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
   normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
@@ -3140,6 +3142,7 @@ function newGame(selectedClubId, options={}){
     savedTrainingPlans: normalizeSavedTrainingPlansState({}),
     standingsHistory: normalizeStandingsHistoryState({}),
     competitionChampionsHistory: normalizeCompetitionChampionsHistoryState({}),
+    clubWorldCupHistory: normalizeClubWorldCupHistoryState({}),
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -4886,6 +4889,229 @@ function ensureClubWorldCupInvitedData(){
   });
   return { clubs:addedClubs, players:addedPlayers };
 }
+function normalizeClubWorldCupMatchSnapshot(match){
+  const src = (match && typeof match === 'object' && !Array.isArray(match)) ? match : {};
+  const homeId = Number(src.homeId || 0);
+  const awayId = Number(src.awayId || 0);
+  const homeGoals = Number(src.homeGoals || 0);
+  const awayGoals = Number(src.awayGoals || 0);
+  const played = Boolean(src.played);
+  const penalties = src.penaltyShootout && typeof src.penaltyShootout === 'object' ? { home:Number(src.penaltyShootout.home || 0), away:Number(src.penaltyShootout.away || 0) } : null;
+  const tiebreaker = src.clubWorldCupTiebreaker && typeof src.clubWorldCupTiebreaker === 'object' ? {
+    type:String(src.clubWorldCupTiebreaker.type || ''),
+    homeFouls:Number(src.clubWorldCupTiebreaker.homeFouls || 0),
+    awayFouls:Number(src.clubWorldCupTiebreaker.awayFouls || 0),
+    homeCards:Number(src.clubWorldCupTiebreaker.homeCards || 0),
+    awayCards:Number(src.clubWorldCupTiebreaker.awayCards || 0),
+    winnerClubId:Number(src.clubWorldCupTiebreaker.winnerClubId || 0)
+  } : null;
+  let winnerClubId = Number(src.winnerClubId || tiebreaker?.winnerClubId || 0);
+  if(!winnerClubId && played){
+    if(homeGoals > awayGoals) winnerClubId = homeId;
+    else if(awayGoals > homeGoals) winnerClubId = awayId;
+    else if(penalties && penalties.home !== penalties.away) winnerClubId = penalties.home > penalties.away ? homeId : awayId;
+  }
+  return {
+    id:String(src.id || ''),
+    date:validIsoDate(src.date) ? src.date : '',
+    stage:String(src.clubWorldCupStage || src.stage || ''),
+    groupId:String(src.clubWorldCupGroup || src.groupId || ''),
+    roundNumber:Math.max(0, Math.round(Number(src.clubWorldCupRound || src.roundNumber || 0))),
+    homeId,
+    awayId,
+    homeGoals,
+    awayGoals,
+    played,
+    winnerClubId,
+    stadiumName:String(src.stadiumName || ''),
+    bracketKey:String(src.clubWorldCupBracketKey || src.bracketKey || ''),
+    bracketSlot:String(src.clubWorldCupBracketSlot || src.bracketSlot || ''),
+    penaltyShootout:penalties,
+    tiebreaker
+  };
+}
+function normalizeClubWorldCupStandingSnapshot(row, position=0){
+  const src = (row && typeof row === 'object' && !Array.isArray(row)) ? row : {};
+  return {
+    clubId:Number(src.clubId || 0),
+    pj:Number(src.pj || 0), pg:Number(src.pg || 0), pe:Number(src.pe || 0), pp:Number(src.pp || 0),
+    gf:Number(src.gf || 0), gc:Number(src.gc || 0), dg:Number(src.dg || 0), pts:Number(src.pts || 0),
+    position:Math.max(1, Math.round(Number(src.position || position || 1)))
+  };
+}
+function normalizeClubWorldCupEditionSnapshot(item){
+  const src = (item && typeof item === 'object' && !Array.isArray(item)) ? item : {};
+  const season = Math.max(1, Math.round(Number(src.season || 1)));
+  const year = Math.round(Number(src.year || 0)) || seasonYearForNumber(season);
+  const groups = (Array.isArray(src.groups) ? src.groups : []).map((group, groupIndex) => ({
+    id:String(group?.id || String.fromCharCode(65 + groupIndex)),
+    name:String(group?.name || `Grupo ${group?.id || String.fromCharCode(65 + groupIndex)}`),
+    clubIds:Array.from(new Set((Array.isArray(group?.clubIds) ? group.clubIds : []).map(Number).filter(Boolean))),
+    standings:(Array.isArray(group?.standings) ? group.standings : []).map((row, index) => normalizeClubWorldCupStandingSnapshot(row, index + 1)).filter(row => row.clubId),
+    matches:(Array.isArray(group?.matches) ? group.matches : []).map(normalizeClubWorldCupMatchSnapshot).filter(match => match.homeId && match.awayId)
+  })).filter(group => group.clubIds.length || group.standings.length || group.matches.length);
+  const stages = {};
+  ['r16','qf','sf','thirdPlace','final'].forEach(stage => {
+    stages[stage] = (Array.isArray(src?.stages?.[stage]) ? src.stages[stage] : []).map(normalizeClubWorldCupMatchSnapshot).filter(match => match.homeId && match.awayId);
+  });
+  return {
+    season,
+    year,
+    name:String(src.name || CLUB_WORLD_CUP_CONFIG?.name || 'Copa Mundial de Clubes de la FIFA'),
+    status:String(src.status || (src.championId ? 'completed' : 'groups')),
+    createdAt:String(src.createdAt || ''),
+    archivedAt:String(src.archivedAt || ''),
+    drawDate:validIsoDate(src.drawDate) ? src.drawDate : '',
+    firstGroupDate:validIsoDate(src.firstGroupDate) ? src.firstGroupDate : '',
+    groupDates:(Array.isArray(src.groupDates) ? src.groupDates : []).filter(validIsoDate).slice(0,3),
+    participantClubIds:Array.from(new Set((Array.isArray(src.participantClubIds) ? src.participantClubIds : []).map(Number).filter(Boolean))),
+    invitedClubIds:Array.from(new Set((Array.isArray(src.invitedClubIds) ? src.invitedClubIds : []).map(Number).filter(Boolean))),
+    groups,
+    stages,
+    championId:Number(src.championId || 0),
+    runnerUpId:Number(src.runnerUpId || 0),
+    thirdPlaceId:Number(src.thirdPlaceId || 0),
+    summaryOnly:Boolean(src.summaryOnly),
+    sourceVersion:String(src.sourceVersion || APP_VERSION || '')
+  };
+}
+function normalizeClubWorldCupHistoryState(src){
+  const obj = (src && typeof src === 'object' && !Array.isArray(src)) ? src : {};
+  const editions = Array.isArray(obj.editions) ? obj.editions : (Array.isArray(obj.seasons) ? obj.seasons : []);
+  const byKey = new Map();
+  editions.map(normalizeClubWorldCupEditionSnapshot).forEach(edition => {
+    if(!edition.season || !edition.year) return;
+    const key = `${edition.season}-${edition.year}`;
+    const previous = byKey.get(key);
+    const score = Number(edition.groups.length > 0) * 100 + Object.values(edition.stages).reduce((sum, rows) => sum + rows.length, 0) + Number(Boolean(edition.championId));
+    const previousScore = previous ? Number(previous.groups.length > 0) * 100 + Object.values(previous.stages).reduce((sum, rows) => sum + rows.length, 0) + Number(Boolean(previous.championId)) : -1;
+    if(!previous || score >= previousScore) byKey.set(key, edition);
+  });
+  return { editions:Array.from(byKey.values()).sort((a,b)=>Number(b.year || 0)-Number(a.year || 0) || Number(b.season || 0)-Number(a.season || 0)) };
+}
+function clubWorldCupMatchesForState(targetState, cupState=null){
+  const target = targetState || game || {};
+  const cup = cupState || target.clubWorldCup || null;
+  const season = Number(cup?.season || target.seasonNumber || 0);
+  return (Array.isArray(target.fixtures) ? target.fixtures : [])
+    .filter(round => round?.clubWorldCupRound || (round?.matches || []).some(match => match?.clubWorldCup))
+    .flatMap(round => round?.matches || [])
+    .filter(match => match?.clubWorldCup && (!season || String(match.id || '').includes(`cwc-s${season}-`) || Number(match.season || season) === season));
+}
+function clubWorldCupStandingsFromMatches(clubIds=[], matches=[]){
+  const rows = Object.fromEntries((clubIds || []).map(Number).filter(Boolean).map(id => [id, { clubId:id, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, dg:0, pts:0 }]));
+  (matches || []).filter(match => match?.played).forEach(match => {
+    const h = rows[Number(match.homeId)];
+    const a = rows[Number(match.awayId)];
+    if(!h || !a) return;
+    const hg = Number(match.homeGoals || 0);
+    const ag = Number(match.awayGoals || 0);
+    h.pj += 1; a.pj += 1;
+    h.gf += hg; h.gc += ag; a.gf += ag; a.gc += hg;
+    if(hg > ag){ h.pg += 1; a.pp += 1; h.pts += 3; }
+    else if(hg < ag){ a.pg += 1; h.pp += 1; a.pts += 3; }
+    else { h.pe += 1; a.pe += 1; h.pts += 1; a.pts += 1; }
+    h.dg = h.gf - h.gc; a.dg = a.gf - a.gc;
+  });
+  return Object.values(rows)
+    .sort((a,b)=>b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubPrestigeValue(b.clubId)-clubPrestigeValue(a.clubId) || clubName(a.clubId).localeCompare(clubName(b.clubId), 'es', { sensitivity:'base' }))
+    .map((row,index)=>({ ...row, position:index + 1 }));
+}
+function clubWorldCupEditionSnapshotForState(targetState, cupState=null){
+  const target = targetState || game || {};
+  const cup = cupState || target.clubWorldCup;
+  if(!cup || typeof cup !== 'object') return null;
+  const season = Math.max(1, Math.round(Number(cup.season || target.seasonNumber || 1)));
+  const year = Math.round(Number(cup.year || (Number(target.seasonNumber || 0) === season ? target.seasonYear : 0) || seasonYearForNumber(season))) || seasonYearForNumber(season);
+  const allMatches = clubWorldCupMatchesForState(target, cup).map(normalizeClubWorldCupMatchSnapshot);
+  const groups = (Array.isArray(cup.groups) ? cup.groups : []).map((group, groupIndex) => {
+    const id = String(group?.id || String.fromCharCode(65 + groupIndex));
+    const clubIds = Array.from(new Set((Array.isArray(group?.clubIds) ? group.clubIds : []).map(Number).filter(Boolean)));
+    const matches = allMatches.filter(match => match.stage === 'groups' && String(match.groupId) === id);
+    return {
+      id,
+      name:String(group?.name || `Grupo ${id}`),
+      clubIds,
+      standings:clubWorldCupStandingsFromMatches(clubIds, matches),
+      matches
+    };
+  });
+  const stages = {};
+  ['r16','qf','sf','thirdPlace','final'].forEach(stage => { stages[stage] = allMatches.filter(match => match.stage === stage); });
+  return normalizeClubWorldCupEditionSnapshot({
+    season,
+    year,
+    name:cup.name || CLUB_WORLD_CUP_CONFIG.name,
+    status:cup.status || 'groups',
+    createdAt:(()=>{ if(!cup.createdAt) return ''; const value = Number(cup.createdAt) || cup.createdAt; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(cup.createdAt) : date.toISOString(); })(),
+    archivedAt:'',
+    drawDate:cup.drawDate || '',
+    firstGroupDate:cup.firstGroupDate || '',
+    groupDates:cup.groupDates || [],
+    participantClubIds:cup.participantClubIds || [],
+    invitedClubIds:cup.invitedClubIds || [],
+    groups,
+    stages,
+    championId:cup.championId || 0,
+    runnerUpId:cup.runnerUpId || 0,
+    thirdPlaceId:cup.thirdPlaceId || 0,
+    summaryOnly:false,
+    sourceVersion:APP_VERSION
+  });
+}
+function archiveClubWorldCupEditionForState(targetState, options={}){
+  const target = targetState || game;
+  if(!target?.clubWorldCup) return false;
+  const snapshot = clubWorldCupEditionSnapshotForState(target, target.clubWorldCup);
+  if(!snapshot) return false;
+  if(!options.allowIncomplete && snapshot.status !== 'completed' && !snapshot.championId) return false;
+  target.clubWorldCupHistory = normalizeClubWorldCupHistoryState(target.clubWorldCupHistory || {});
+  const key = `${snapshot.season}-${snapshot.year}`;
+  const previous = (target.clubWorldCupHistory.editions || []).find(item => `${Number(item.season || 0)}-${Number(item.year || 0)}` === key) || null;
+  snapshot.archivedAt = String(previous?.archivedAt || new Date().toISOString());
+  target.clubWorldCupHistory.editions = (target.clubWorldCupHistory.editions || []).filter(item => `${Number(item.season || 0)}-${Number(item.year || 0)}` !== key);
+  target.clubWorldCupHistory.editions.push(snapshot);
+  target.clubWorldCupHistory = normalizeClubWorldCupHistoryState(target.clubWorldCupHistory);
+  return true;
+}
+function syncClubWorldCupHistoryForState(targetState){
+  const target = targetState || game;
+  if(!target) return false;
+  const before = JSON.stringify(target.clubWorldCupHistory || {});
+  target.clubWorldCupHistory = normalizeClubWorldCupHistoryState(target.clubWorldCupHistory || {});
+  if(target.clubWorldCup && (String(target.clubWorldCup.status || '') === 'completed' || Number(target.clubWorldCup.championId || 0))){
+    archiveClubWorldCupEditionForState(target, { allowIncomplete:false });
+  }
+  const champions = normalizeCompetitionChampionsHistoryState(target.competitionChampionsHistory || {}).entries || [];
+  champions.filter(entry => String(entry.type || '') === 'club_world_cup' || String(entry.competitionId || '') === 'club-world-cup').forEach(entry => {
+    const season = Number(entry.season || 0);
+    const year = Number(entry.year || 0) || seasonYearForNumber(season);
+    const exists = (target.clubWorldCupHistory.editions || []).some(item => Number(item.season || 0) === season && Number(item.year || 0) === year);
+    if(exists) return;
+    target.clubWorldCupHistory.editions.push(normalizeClubWorldCupEditionSnapshot({
+      season,
+      year,
+      name:entry.competitionName || CLUB_WORLD_CUP_CONFIG.name,
+      status:'completed',
+      championId:entry.championId,
+      runnerUpId:entry.runnerUpId,
+      thirdPlaceId:entry.thirdPlaceId,
+      summaryOnly:true,
+      sourceVersion:'legacy'
+    }));
+  });
+  target.clubWorldCupHistory = normalizeClubWorldCupHistoryState(target.clubWorldCupHistory);
+  return JSON.stringify(target.clubWorldCupHistory || {}) !== before;
+}
+function clubWorldCupHistoryEntries(){
+  if(!game) return [];
+  syncClubWorldCupHistoryForState(game);
+  return (game.clubWorldCupHistory?.editions || []).slice().sort((a,b)=>Number(b.year || 0)-Number(a.year || 0) || Number(b.season || 0)-Number(a.season || 0));
+}
+function clubWorldCupCurrentEditionSnapshot(){
+  const state = clubWorldCupState();
+  return state ? clubWorldCupEditionSnapshotForState(game, state) : null;
+}
 function clubWorldCupState(){
   if(!game) return null;
   const season = Number(game.seasonNumber || 1);
@@ -5445,6 +5671,7 @@ function advanceClubWorldCupIfNeeded(){
     state.runnerUpId = runnerUpId;
     state.thirdPlaceId = thirdPlaceId;
     state.status = 'completed';
+    archiveClubWorldCupEditionForState(game, { allowIncomplete:false });
     recordCompetitionChampion({
       season:state.season || game.seasonNumber || 1,
       year:game.seasonYear || seasonYearForNumber(state.season || game.seasonNumber || 1),
@@ -5616,34 +5843,130 @@ function clubWorldCupStatsBlock(){
   </div><div class="card inner" style="margin-top:12px"><h3>Faltas por equipo</h3>${clubWorldCupTeamFoulsList(fouls)}</div></div>`;
 }
 
+function clubWorldCupEditionHistoryKey(edition){
+  return `history-${Number(edition?.season || 0)}-${Number(edition?.year || 0)}`;
+}
+function clubWorldCupYearOptionsMarkup(selected=selectedClubWorldCupYear){
+  const currentYear = Number(game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1));
+  const current = clubWorldCupCurrentEditionSnapshot();
+  const options = [`<option value="current" ${String(selected || 'current') === 'current' ? 'selected' : ''}>${currentYear} · actual${current ? '' : ' · sin sorteo'}</option>`];
+  clubWorldCupHistoryEntries()
+    .filter(edition => !current || Number(edition.season || 0) !== Number(current.season || 0) || Number(edition.year || 0) !== Number(current.year || 0))
+    .forEach(edition => {
+      const key = clubWorldCupEditionHistoryKey(edition);
+      options.push(`<option value="${escapeHtml(key)}" ${String(selected || '') === key ? 'selected' : ''}>${Number(edition.year || 0)} · Temp. ${Number(edition.season || 0)}</option>`);
+    });
+  return `<div class="division-filter cwc-year-filter"><label for="clubWorldCupYearFilter">Año</label><select id="clubWorldCupYearFilter">${options.join('')}</select></div>`;
+}
+function selectedClubWorldCupEditionForDisplay(){
+  const selected = String(selectedClubWorldCupYear || 'current');
+  if(selected === 'current') return { edition:clubWorldCupCurrentEditionSnapshot(), current:true };
+  const match = selected.match(/^history-(\d+)-(\d+)$/);
+  if(!match){ selectedClubWorldCupYear = 'current'; return { edition:clubWorldCupCurrentEditionSnapshot(), current:true }; }
+  const season = Number(match[1] || 0);
+  const year = Number(match[2] || 0);
+  const edition = clubWorldCupHistoryEntries().find(item => Number(item.season || 0) === season && Number(item.year || 0) === year) || null;
+  if(!edition){ selectedClubWorldCupYear = 'current'; return { edition:clubWorldCupCurrentEditionSnapshot(), current:true }; }
+  return { edition, current:false };
+}
+function clubWorldCupStageLabel(stage){
+  return ({ r16:'Octavos', qf:'Cuartos', sf:'Semifinales', thirdPlace:'3er puesto', final:'Final' })[String(stage || '')] || String(stage || '');
+}
+function clubWorldCupEditionMatchScore(match){
+  if(!match?.played) return 'vs';
+  const penalties = match.penaltyShootout ? ` (${Number(match.penaltyShootout.home || 0)}-${Number(match.penaltyShootout.away || 0)} pen.)` : '';
+  const tie = match.tiebreaker ? ` · faltas ${Number(match.tiebreaker.homeFouls || 0)}-${Number(match.tiebreaker.awayFouls || 0)}` : '';
+  return `${Number(match.homeGoals || 0)} - ${Number(match.awayGoals || 0)}${penalties}${tie}`;
+}
+function clubWorldCupEditionMatchCard(match, options={}){
+  const interactive = Boolean(options.interactive && match?.played && match?.id);
+  const tag = interactive ? 'button' : 'div';
+  const attr = interactive ? ` data-match-id="${escapeHtml(match.id)}"` : '';
+  const className = `match-card cwc-edition-match ${interactive ? 'clickable' : ''} ${match?.played ? 'played' : 'pending'}`;
+  const meta = [match?.date ? matchDateLabel(match.date) : '', match?.stadiumName || '', match?.bracketKey || ''].filter(Boolean).join(' · ');
+  return `<${tag} class="${className}"${attr}>
+    <div class="match-date-line">${escapeHtml(meta || 'Fecha pendiente')}</div>
+    <div class="match-line">
+      <div class="cwc-match-team ${Number(match?.winnerClubId || 0) === Number(match?.homeId || 0) ? 'winner' : ''}">${clubBadge(match?.homeId)} <span>${escapeHtml(clubName(match?.homeId))}</span></div>
+      <strong class="score">${escapeHtml(clubWorldCupEditionMatchScore(match))}</strong>
+      <div class="cwc-match-team ${Number(match?.winnerClubId || 0) === Number(match?.awayId || 0) ? 'winner' : ''}">${clubBadge(match?.awayId)} <span>${escapeHtml(clubName(match?.awayId))}</span></div>
+    </div>
+  </${tag}>`;
+}
+function clubWorldCupCompactGroupMatch(match, interactive=false){
+  const attr = interactive && match?.played && match?.id ? ` data-match-id="${escapeHtml(match.id)}"` : '';
+  const tag = attr ? 'button' : 'div';
+  return `<${tag} class="cwc-group-result ${attr ? 'clickable' : ''}"${attr}>
+    <span class="cwc-group-result-date">${escapeHtml(match?.date ? matchDateLabel(match.date) : 'Pendiente')}</span>
+    <span>${clubBadge(match?.homeId)} ${escapeHtml(clubName(match?.homeId))}</span>
+    <strong>${escapeHtml(clubWorldCupEditionMatchScore(match))}</strong>
+    <span>${escapeHtml(clubName(match?.awayId))} ${clubBadge(match?.awayId)}</span>
+  </${tag}>`;
+}
+function clubWorldCupGroupsMarkup(edition, options={}){
+  const groups = Array.isArray(edition?.groups) ? edition.groups : [];
+  if(!groups.length) return '<div class="card"><p class="muted">No hay tablas de grupos guardadas para esta edición.</p></div>';
+  return `<div class="cwc-section-heading"><div><h3>Fase de grupos</h3><p class="muted small">Cada grupo funciona como una liga de cuatro equipos. Los dos primeros avanzan a octavos.</p></div><span class="pill">8 grupos · 16 clasificados</span></div>
+    <div class="cwc-groups-grid">${groups.map(group => {
+      const standings = (Array.isArray(group.standings) ? group.standings : []).slice().sort((a,b)=>Number(a.position || 999)-Number(b.position || 999));
+      const rows = standings.map((row,index) => `<tr class="${index < 2 ? 'promotion-row cwc-qualified-row' : ''}"><td><strong>${index + 1}</strong></td><td>${clubLink(row.clubId)}</td><td>${Number(row.pj || 0)}</td><td>${Number(row.dg || 0)}</td><td><strong>${Number(row.pts || 0)}</strong></td></tr>`).join('');
+      const matches = (Array.isArray(group.matches) ? group.matches : []).slice().sort((a,b)=>daysBetweenIsoDates(a.date || '', b.date || '') || Number(a.roundNumber || 0)-Number(b.roundNumber || 0));
+      return `<article class="card inner cwc-group-card">
+        <div class="row cwc-group-title"><h3>${escapeHtml(group.name || `Grupo ${group.id}`)}</h3><span class="pill">1° y 2° clasifican</span></div>
+        <div class="table-wrap"><table class="cwc-group-table"><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <details class="cwc-group-results"><summary>Partidos y resultados</summary><div class="cwc-group-result-list">${matches.map(match => clubWorldCupCompactGroupMatch(match, Boolean(options.interactive))).join('') || '<p class="muted small">Todavía no hay partidos.</p>'}</div></details>
+      </article>`;
+    }).join('')}</div>`;
+}
+function clubWorldCupBracketMarkup(edition, options={}){
+  const stages = edition?.stages || {};
+  const stageDefs = [ ['r16','Octavos'], ['qf','Cuartos'], ['sf','Semifinales'], ['final','Final'] ];
+  const columns = stageDefs.map(([stage,label]) => {
+    const matches = Array.isArray(stages[stage]) ? stages[stage] : [];
+    return `<section class="cwc-bracket-stage cwc-bracket-${stage}"><h3>${label}</h3><div class="cwc-bracket-matches">${matches.length ? matches.map(match => clubWorldCupEditionMatchCard(match, { interactive:Boolean(options.interactive) })).join('') : '<div class="cwc-bracket-placeholder">Pendiente</div>'}</div></section>`;
+  }).join('');
+  const third = Array.isArray(stages.thirdPlace) ? stages.thirdPlace : [];
+  return `<div class="cwc-section-heading"><div><h3>Cuadro eliminatorio</h3><p class="muted small">Cruces a partido único desde octavos hasta la final.</p></div></div>
+    <div class="cwc-bracket-scroll"><div class="cwc-bracket">${columns}</div></div>
+    ${third.length ? `<div class="card cwc-third-place"><h3>Partido por el 3er puesto</h3><div class="grid cols-2">${third.map(match => clubWorldCupEditionMatchCard(match, { interactive:Boolean(options.interactive) })).join('')}</div></div>` : ''}`;
+}
+function clubWorldCupEditionMarkup(edition, options={}){
+  if(!edition){
+    return `<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en este año.</p><p class="small muted">Cuando se sortee la edición aparecerán los ocho grupos, sus tablas, todos los resultados y el cuadro eliminatorio.</p></div>`;
+  }
+  const champion = Number(edition.championId || 0);
+  const runnerUp = Number(edition.runnerUpId || 0);
+  const third = Number(edition.thirdPlaceId || 0);
+  const championBlock = champion ? `<div class="card champion-card cwc-champion-card"><p class="label">Campeón ${Number(edition.year || 0)}</p><h2>${clubBadge(champion)} ${escapeHtml(clubName(champion))}</h2><p class="muted">${runnerUp ? `Subcampeón: ${escapeHtml(clubName(runnerUp))}` : ''}${third ? `${runnerUp ? ' · ' : ''}3°: ${escapeHtml(clubName(third))}` : ''}</p></div>` : '';
+  const statusLabels = { groups:'Fase de grupos', r16:'Octavos', qf:'Cuartos', sf:'Semifinales', final:'Final', completed:'Finalizado' };
+  const dates = Array.isArray(edition.groupDates) ? edition.groupDates : [];
+  const overview = `<div class="grid cols-3 cwc-overview-grid">
+    <div class="card inner"><p class="label">Edición</p><h3>${Number(edition.year || 0)}</h3><p class="muted small">Temporada ${Number(edition.season || 0)}</p></div>
+    <div class="card inner"><p class="label">Estado</p><h3>${escapeHtml(statusLabels[edition.status] || edition.status || '—')}</h3><p class="muted small">${Number(edition.participantClubIds?.length || 0) || 32} participantes</p></div>
+    <div class="card inner"><p class="label">Formato</p><h3>8 grupos de 4</h3><p class="muted small">Clasifican los dos primeros</p></div>
+  </div>`;
+  const calendar = edition.drawDate || dates.length ? `<div class="card cwc-calendar-summary"><h3>Calendario</h3><p class="muted small">${edition.drawDate ? `Sorteo: ${escapeHtml(matchDateLabel(edition.drawDate))}. ` : ''}${dates[0] ? `Fecha 1: ${escapeHtml(matchDateLabel(dates[0]))}. ` : ''}${dates[1] ? `Fecha 2: ${escapeHtml(matchDateLabel(dates[1]))}. ` : ''}${dates[2] ? `Fecha 3: ${escapeHtml(matchDateLabel(dates[2]))}.` : ''}</p></div>` : '';
+  if(edition.summaryOnly){
+    return `${overview}${championBlock}<div class="card"><p class="muted">Esta edición proviene de una partida anterior a V7.09. Se conserva el campeón y el podio, pero los grupos y resultados detallados ya no estaban disponibles en el guardado.</p></div>`;
+  }
+  const stats = options.showStats && options.current ? clubWorldCupStatsBlock() : '';
+  return `${overview}${calendar}${championBlock}${clubWorldCupGroupsMarkup(edition, { interactive:Boolean(options.interactive) })}${clubWorldCupBracketMarkup(edition, { interactive:Boolean(options.interactive) })}${stats ? `<div class="stack cwc-stats-history">${stats}</div>` : ''}`;
+}
+function bindClubWorldCupYearFilter(renderFn){
+  $('clubWorldCupYearFilter')?.addEventListener('change', event => {
+    selectedClubWorldCupYear = event.target.value;
+    if(typeof renderFn === 'function') renderFn();
+  });
+}
 function renderClubWorldCup(){
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
-  const state = clubWorldCupState();
-  if(!state){
-    view.innerHTML = `<div class="row section-title"><div><h2>${escapeHtml(CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Competición internacional de cierre de temporada.</p></div></div><div class="card"><p class="muted">Todavía no se generó esta edición. Se crea al final de la temporada, cuando ya están definidos los clasificados de cada primera división.</p><p>Formato: 32 equipos, 8 grupos de 4 y eliminatorias a partido único en sede neutral.</p></div>`;
-    return;
-  }
-  const invitedRows = (state.invitedClubIds || []).map(id => `<span class="pill">${clubBadge(id)} ${escapeHtml(clubName(id))}</span>`).join(' ');
-  const datePlan = Array.isArray(state.groupDates) && state.groupDates.length ? state.groupDates : clubWorldCupGroupDatesFromFirstDate(state.firstGroupDate);
-  const schedulePlan = `<div class="card"><h3>Calendario del torneo</h3><p class="muted small">Sorteo: ${escapeHtml(matchDateLabel(state.drawDate || clubWorldCupDrawDate()))}. Fecha 1: ${escapeHtml(matchDateLabel(datePlan[0] || ''))}. Fecha 2: ${escapeHtml(matchDateLabel(datePlan[1] || ''))}. Fecha 3: ${escapeHtml(matchDateLabel(datePlan[2] || ''))}. Las eliminatorias se agregan de a una fase, 5 días después de la fase anterior.</p></div>`;
-  const groupBlocks = (state.groups || []).map(group => {
-    const rows = clubWorldCupGroupStandings(group.id).map((row, index) => `<tr class="${index < 2 ? 'promotion-row' : ''}"><td><strong>${index + 1}</strong></td><td>${clubLink(row.clubId)}</td><td>${row.pj}</td><td>${row.pg}</td><td>${row.pe}</td><td>${row.pp}</td><td>${row.gf}</td><td>${row.gc}</td><td>${row.dg}</td><td><strong>${row.pts}</strong></td></tr>`).join('');
-    return `<div class="card inner"><h3>${escapeHtml(group.name)}</h3><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-  }).join('');
-  const stages = ['r16','qf','sf','thirdPlace','final'];
-  const stageLabels = { r16:'Octavos', qf:'Cuartos', sf:'Semifinales', thirdPlace:'3er puesto', final:'Final' };
-  const knockoutBlocks = stages.map(stage => {
-    const matches = clubWorldCupStageMatches(stage);
-    if(!matches.length) return '';
-    return `<div class="card"><h3>${stageLabels[stage]}</h3><div class="grid cols-2">${matches.map(matchCard).join('')}</div></div>`;
-  }).join('');
-  const champion = state.championId ? `<div class="card champion-card"><p class="label">Campeón</p><h2>${clubBadge(state.championId)} ${escapeHtml(clubName(state.championId))}</h2></div>` : '';
-  view.innerHTML = `<div class="row section-title"><div><h2>${escapeHtml(state.name || CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Sede neutral · 4 estadios · estado: ${escapeHtml(state.status || 'grupos')}</p></div><span class="pill">Temporada ${Number(state.season || game.seasonNumber || 1)}</span></div>
-    <div class="card"><h3>Invitados de esta edición</h3><p>${invitedRows || '—'}</p><p class="muted small">Los invitados se eligen aleatoriamente cada temporada entre la lista configurada.</p></div>
-    ${schedulePlan}
-    ${champion}
-    <div class="grid cols-2">${groupBlocks}</div>
-    <div class="stack" style="margin-top:14px">${clubWorldCupStatsBlock()}${knockoutBlocks || '<div class="card"><p class="muted">Las eliminatorias se generan cuando terminan los grupos.</p></div>'}</div>`;
+  const selected = selectedClubWorldCupEditionForDisplay();
+  view.innerHTML = `<div class="row section-title fixture-title-row">
+      <div><h2>${escapeHtml(CLUB_WORLD_CUP_CONFIG.name)}</h2><p class="tagline">Historial anual de grupos, clasificados y cuadro eliminatorio.</p></div>
+      <div class="fixture-controls row">${clubWorldCupYearOptionsMarkup(selectedClubWorldCupYear)}</div>
+    </div>
+    <div class="stack cwc-edition-view">${clubWorldCupEditionMarkup(selected.edition, { current:selected.current, interactive:selected.current, showStats:true })}</div>`;
+  bindClubWorldCupYearFilter(renderClubWorldCup);
 }
 function findPlayedMatchById(matchId){
   const id = String(matchId || '');
@@ -6953,6 +7276,7 @@ function maintainBotBalanceDuringSeason(options={}){
 
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
+  archiveClubWorldCupEditionForState(game, { allowIncomplete:true });
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = Number(game.selectedClubId || 0);
   const nextClubId = Number(selectedClubId || game.selectedClubId);

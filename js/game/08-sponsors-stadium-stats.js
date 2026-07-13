@@ -883,21 +883,22 @@ function renderFixture(){
   const showMine = fixtureViewMode !== 'league' && !showCup;
   const visibleDivisions = selectedFixtureDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedFixtureDivision);
   if(showCup){
-    const cupRounds = (game.fixtures || []).filter(round => round?.clubWorldCupRound || (round.matches || []).some(match => match?.clubWorldCup));
-    const cupHtml = cupRounds.map(round => `<div class="card"><div class="row"><h3>${escapeHtml(fixtureRoundTitle(round))}</h3><span class="pill">${round.startDate && round.endDate && round.startDate !== round.endDate ? `${round.startDate} → ${round.endDate}` : round.date}</span></div><div class="grid cols-2">${(round.matches || []).filter(match => match?.clubWorldCup).map(matchCard).join('')}</div></div>`).join('');
+    const selectedCup = typeof selectedClubWorldCupEditionForDisplay === 'function' ? selectedClubWorldCupEditionForDisplay() : { edition:null, current:true };
     view.innerHTML = `
       <div class="row section-title fixture-title-row">
-        <div><h2>Calendario</h2><p class="tagline">Mundial de Clubes: sede neutral, grupos y eliminatorias.</p></div>
+        <div><h2>Calendario</h2><p class="tagline">Mundial de Clubes: grupos de cuatro equipos, dos clasificados por grupo y cuadro eliminatorio.</p></div>
         <div class="fixture-controls row">
           <button type="button" id="btnMyFixture" class="ghost">Mi calendario</button>
           <button type="button" id="btnClubWorldCupFixture" class="primary">Mundial de Clubes</button>
+          ${typeof clubWorldCupYearOptionsMarkup === 'function' ? clubWorldCupYearOptionsMarkup(selectedClubWorldCupYear) : ''}
           <div class="division-filter"><label for="fixtureDivisionFilter">Liga</label><select id="fixtureDivisionFilter">${divisionOptions(selectedFixtureDivision)}</select></div>
         </div>
       </div>
-      <div class="stack">${cupHtml || '<div class="card"><p class="muted">El Mundial de Clubes todavía no se generó en esta temporada.</p><p class="small muted">El sorteo y fixture quedan listos en el día 295 si las ligas ya terminaron. Los grupos se muestran desde ese momento; la fecha 1 se programa como mínimo 18 días después del sorteo y de la última jornada de liga. Fechas 2 y 3 van cada 5 días; las eliminatorias se agregan fase por fase.</p></div>'}</div>`;
+      <div class="stack cwc-edition-view">${typeof clubWorldCupEditionMarkup === 'function' ? clubWorldCupEditionMarkup(selectedCup.edition, { current:selectedCup.current, interactive:selectedCup.current, showStats:false }) : '<div class="card"><p class="muted">Sin datos del Mundial de Clubes.</p></div>'}</div>`;
     $('btnMyFixture')?.addEventListener('click', () => { fixtureViewMode = 'mine'; renderFixture(); });
     $('btnClubWorldCupFixture')?.addEventListener('click', () => { fixtureViewMode = 'clubWorldCup'; renderFixture(); });
     $('fixtureDivisionFilter')?.addEventListener('change', event => { selectedFixtureDivision = event.target.value; fixtureViewMode = 'league'; renderFixture(); });
+    if(typeof bindClubWorldCupYearFilter === 'function') bindClubWorldCupYearFilter(renderFixture);
     return;
   }
   const html = game.fixtures.map(round=>{

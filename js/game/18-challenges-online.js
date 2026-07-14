@@ -87,7 +87,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.31') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.32') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -198,7 +198,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.31'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.32'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -311,15 +311,21 @@ function challengeHistoryCard(row){
   const awayManager = String(row.opponentUsername || 'Manager');
   return `<article class="card challenge-card challenge-history-card challenge-history-simple" data-challenge-view="${escapeHtml(row.id)}" title="Ver detalle del partido">
     <div class="challenge-history-simple-side challenge-history-simple-home">
-      <strong title="${escapeHtml(homeClub)}">${escapeHtml(homeClub)}</strong>
-      <span title="${escapeHtml(homeManager)}">${escapeHtml(homeManager)}</span>
+      ${challengeCrestMarkup(home, 'challenge-history-simple-crest')}
+      <div class="challenge-history-simple-copy">
+        <strong title="${escapeHtml(homeClub)}">${escapeHtml(homeClub)}</strong>
+        <span title="${escapeHtml(homeManager)}">${escapeHtml(homeManager)}</span>
+      </div>
     </div>
     <div class="challenge-history-simple-score" aria-label="Resultado ${Number(result.homeGoals || 0)} a ${Number(result.awayGoals || 0)}">
       <b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b>
     </div>
     <div class="challenge-history-simple-side challenge-history-simple-away">
-      <strong title="${escapeHtml(awayClub)}">${escapeHtml(awayClub)}</strong>
-      <span title="${escapeHtml(awayManager)}">${escapeHtml(awayManager)}</span>
+      ${challengeCrestMarkup(away, 'challenge-history-simple-crest')}
+      <div class="challenge-history-simple-copy">
+        <strong title="${escapeHtml(awayClub)}">${escapeHtml(awayClub)}</strong>
+        <span title="${escapeHtml(awayManager)}">${escapeHtml(awayManager)}</span>
+      </div>
     </div>
   </article>`;
 }

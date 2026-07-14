@@ -5541,7 +5541,7 @@ button.cwc-group-result{cursor:pointer}
 }
 
 
-/* V7.31 · historial de desafíos reducido a clubes, managers y resultado */
+/* V7.32 · historial simplificado con escudos, clubes, managers y resultado */
 .challenge-history-simple{
   display:grid;
   grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);
@@ -5552,9 +5552,17 @@ button.cwc-group-result{cursor:pointer}
   padding:20px 22px;
 }
 .challenge-history-simple-side{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.challenge-history-simple-away{flex-direction:row-reverse;text-align:right}
+.challenge-history-simple-copy{
   display:grid;
   gap:6px;
   min-width:0;
+  flex:1 1 auto;
 }
 .challenge-history-simple-side strong,
 .challenge-history-simple-side span{
@@ -5573,8 +5581,12 @@ button.cwc-group-result{cursor:pointer}
   color:var(--muted);
   font-size:.82rem;
 }
-.challenge-history-simple-home{text-align:left}
-.challenge-history-simple-away{text-align:right}
+.challenge-history-simple .challenge-history-simple-crest{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  border-radius:14px;
+}
 .challenge-history-simple-score{
   display:flex;
   align-items:center;
@@ -5595,6 +5607,13 @@ button.cwc-group-result{cursor:pointer}
     grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);
     gap:10px;
     padding:16px 14px;
+  }
+  .challenge-history-simple-side{gap:8px}
+  .challenge-history-simple .challenge-history-simple-crest{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+    border-radius:11px;
   }
   .challenge-history-simple-score{min-width:72px;height:50px}
   .challenge-history-simple-score b{font-size:1.45rem}

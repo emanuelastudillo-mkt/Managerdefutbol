@@ -1,20 +1,24 @@
-# Fútbol Manager MVP - V7.31
+# Fútbol Manager MVP - V7.32
 
-## V7.31 - Partidos disputados simplificados
+## V7.32 - Escudos en Partidos disputados
 
-La pestaña **Desafíos Online → Partidos disputados** deja de mostrar datos secundarios dentro de cada tarjeta. Cada enfrentamiento presenta únicamente:
+La pestaña **Desafíos Online → Partidos disputados** conserva el formato simplificado y vuelve a mostrar el escudo de cada club.
 
+Cada enfrentamiento presenta únicamente:
+
+- Escudo del club local.
 - Nombre del club local.
 - Nombre del manager local.
 - Resultado final.
+- Escudo del club visitante.
 - Nombre del club visitante.
 - Nombre del manager visitante.
 
-Se retiraron de estas tarjetas los escudos, estadio, capacidad, hinchas, fecha, asistencia, valores económicos y formación. La tarjeta completa continúa siendo clickeable y abre la ficha detallada del partido, donde se conservan estadísticas, eventos y puntajes individuales.
+Los escudos mantienen un tamaño fijo para no comprimir los nombres ni desplazar el marcador. El equipo local permanece a la izquierda y el visitante a la derecha. La tarjeta completa continúa siendo clickeable y abre la ficha detallada del partido.
 
-El formato usa tres zonas estables —local, marcador y visitante— con recorte por puntos suspensivos para nombres extensos. No se modificaron el simulador, el resultado, el ranking, los desafíos guardados ni Cloudflare.
+No se modificaron el simulador, los resultados, el ranking, los desafíos guardados ni Cloudflare.
 
-### Archivos principales modificados en V7.31
+### Archivos principales modificados en V7.32
 
 - `README.md`
 - `index.html`
@@ -26,7 +30,7 @@ El formato usa tres zonas estables —local, marcador y visitante— con recorte
 
 ### Compatibilidad de partidas
 
-**V7.31 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
+**V7.32 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
 
 ---
 

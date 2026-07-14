@@ -1,5 +1,43 @@
-# Fútbol Manager MVP - V7.43
+# Fútbol Manager MVP - V7.44
 
+## V7.44 - 30 retos de carrera itinerante
+
+### Catálogo ampliado
+
+- El sistema pasa de 60 a **90 hitos** visibles.
+- Se agregaron 30 retos centrados en cambiar de club, continuar después de despidos o renuncias y ganar títulos en distintos destinos.
+- Los nuevos hitos se calculan con el historial laboral y el historial oficial de títulos ya guardados.
+
+### Cambios de club y salidas
+
+- Retos por dirigir 2, 3, 5, 7 y 10 clubes distintos.
+- Retos por sufrir 1, 3, 5 y 10 despidos.
+- Retos por registrar 1, 3 y 5 renuncias.
+- Los hitos se revisan inmediatamente al dejar un club, aceptar un nuevo cargo o fundar un club durante una carrera existente.
+
+### Campeón itinerante
+
+- Títulos de liga con 2, 3, 5 y 7 clubes diferentes.
+- Títulos en 2, 3, 5, 7 y las 9 ligas o divisiones jugables.
+- Títulos en 2, 3, 5 y los 7 países disponibles.
+- Máxima categoría conquistada en 3 países y en los 7 países.
+- 1, 2 y 3 Mundiales de Clubes ganados.
+
+### Corrección relacionada
+
+- El hito `Leyenda del banco` pasa de exigir prestigio 100 a prestigio 99, porque el prestigio del manager tiene un máximo efectivo de 99.
+
+### Archivos principales modificados en V7.44
+
+- `data/hitos_manager.json`
+- `data/retos_manager.json`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- archivos de versión y caché
+
+### Compatibilidad
+
+**V7.44 no rompe partidas anteriores.** Los 30 retos nuevos se reconstruyen usando `seasons`, `careerHistory` y `titleHistory`. Una carrera anterior puede desbloquear varios hitos al abrir Tus estadísticas. Los títulos muy antiguos que no hayan quedado registrados en esos historiales no pueden reconstruirse retroactivamente.
 
 ## V7.43 - Hitos visibles y premio único de Campo destruido
 

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "V7.43",
+    "version": "V7.44",
     "sistema": "hitos_manager",
-    "descripcion": "Catálogo visible de hitos personales del manager. Los conseguidos se destacan y los pendientes se muestran oscuros y desaturados."
+    "descripcion": "Catálogo visible de 90 hitos personales del manager. Incluye progresión de carrera, cambios de club, despidos, renuncias, títulos en distintos clubes, ligas y países, y Mundial de Clubes."
   },
   "hitos": [
     {
@@ -598,11 +598,311 @@
     {
       "id": "prestigio_100",
       "titulo": "Leyenda del banco",
-      "descripcion": "Alcanzaste 100 puntos de prestigio como manager.",
+      "descripcion": "Alcanzá el máximo de 99 puntos de prestigio.",
       "categoria": "Desafíos extremos",
       "metrica": "prestige",
-      "objetivo": 100,
+      "objetivo": 99,
       "icono": "🌌",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dirigir_dos_clubes",
+      "titulo": "Primer cambio de aire",
+      "descripcion": "Dirigí al menos 2 clubes distintos en una misma carrera.",
+      "categoria": "Carrera itinerante",
+      "metrica": "managedClubs",
+      "objetivo": 2,
+      "icono": "🔄",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dirigir_tres_clubes",
+      "titulo": "Manager itinerante",
+      "descripcion": "Dirigí 3 clubes distintos en una misma carrera.",
+      "categoria": "Carrera itinerante",
+      "metrica": "managedClubs",
+      "objetivo": 3,
+      "icono": "🧳",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dirigir_cinco_clubes",
+      "titulo": "Cinco vestuarios",
+      "descripcion": "Dirigí 5 clubes distintos.",
+      "categoria": "Carrera itinerante",
+      "metrica": "managedClubs",
+      "objetivo": 5,
+      "icono": "🗺️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dirigir_siete_clubes",
+      "titulo": "Pasaporte completo",
+      "descripcion": "Dirigí 7 clubes distintos.",
+      "categoria": "Carrera itinerante",
+      "metrica": "managedClubs",
+      "objetivo": 7,
+      "icono": "🌍",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dirigir_diez_clubes",
+      "titulo": "Trotamundos del banco",
+      "descripcion": "Dirigí 10 clubes distintos en tu carrera.",
+      "categoria": "Carrera itinerante",
+      "metrica": "managedClubs",
+      "objetivo": 10,
+      "icono": "✈️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "primer_despido",
+      "titulo": "La primera puerta",
+      "descripcion": "Sufrí tu primer despido y continuá la carrera.",
+      "categoria": "Despidos",
+      "metrica": "dismissals",
+      "objetivo": 1,
+      "icono": "🚪",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "tres_despidos",
+      "titulo": "Volver a levantarse",
+      "descripcion": "Acumulá 3 despidos sin abandonar la carrera.",
+      "categoria": "Despidos",
+      "metrica": "dismissals",
+      "objetivo": 3,
+      "icono": "🧱",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "cinco_despidos",
+      "titulo": "Carrera resistente",
+      "descripcion": "Acumulá 5 despidos.",
+      "categoria": "Despidos",
+      "metrica": "dismissals",
+      "objetivo": 5,
+      "icono": "🛡️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "diez_despidos",
+      "titulo": "Incombustible",
+      "descripcion": "Continuá tu carrera después de 10 despidos.",
+      "categoria": "Despidos",
+      "metrica": "dismissals",
+      "objetivo": 10,
+      "icono": "🔥",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "primera_renuncia",
+      "titulo": "Decisión propia",
+      "descripcion": "Renunciá por primera vez a un club.",
+      "categoria": "Renuncias",
+      "metrica": "resignations",
+      "objetivo": 1,
+      "icono": "📝",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "tres_renuncias",
+      "titulo": "Elegir el camino",
+      "descripcion": "Renunciá a 3 clubes durante la carrera.",
+      "categoria": "Renuncias",
+      "metrica": "resignations",
+      "objetivo": 3,
+      "icono": "🧭",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "cinco_renuncias",
+      "titulo": "Dueño de su destino",
+      "descripcion": "Renunciá a 5 clubes y seguí compitiendo.",
+      "categoria": "Renuncias",
+      "metrica": "resignations",
+      "objetivo": 5,
+      "icono": "🛤️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_dos_clubes",
+      "titulo": "Campeón en dos clubes",
+      "descripcion": "Ganá títulos de liga con 2 clubes distintos.",
+      "categoria": "Campeón itinerante",
+      "metrica": "leagueTitleClubs",
+      "objetivo": 2,
+      "icono": "🏆",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_tres_clubes",
+      "titulo": "Tres proyectos ganadores",
+      "descripcion": "Ganá títulos de liga con 3 clubes distintos.",
+      "categoria": "Campeón itinerante",
+      "metrica": "leagueTitleClubs",
+      "objetivo": 3,
+      "icono": "🥇",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_cinco_clubes",
+      "titulo": "Constructor de campeones",
+      "descripcion": "Ganá títulos de liga con 5 clubes distintos.",
+      "categoria": "Campeón itinerante",
+      "metrica": "leagueTitleClubs",
+      "objetivo": 5,
+      "icono": "🏗️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_siete_clubes",
+      "titulo": "Siete coronas distintas",
+      "descripcion": "Ganá títulos de liga con 7 clubes distintos.",
+      "categoria": "Campeón itinerante",
+      "metrica": "leagueTitleClubs",
+      "objetivo": 7,
+      "icono": "👑",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_dos_ligas",
+      "titulo": "Campeón en dos ligas",
+      "descripcion": "Ganá al menos una vez en 2 ligas o divisiones distintas.",
+      "categoria": "Dominio de ligas",
+      "metrica": "leagueTitleLeagues",
+      "objetivo": 2,
+      "icono": "🏅",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_tres_ligas",
+      "titulo": "Triple dominio",
+      "descripcion": "Ganá títulos en 3 ligas o divisiones distintas.",
+      "categoria": "Dominio de ligas",
+      "metrica": "leagueTitleLeagues",
+      "objetivo": 3,
+      "icono": "🥉",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_cinco_ligas",
+      "titulo": "Cinco ligas conquistadas",
+      "descripcion": "Ganá títulos en 5 ligas o divisiones distintas.",
+      "categoria": "Dominio de ligas",
+      "metrica": "leagueTitleLeagues",
+      "objetivo": 5,
+      "icono": "🏆",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_siete_ligas",
+      "titulo": "Siete ligas conquistadas",
+      "descripcion": "Ganá títulos en 7 ligas o divisiones distintas.",
+      "categoria": "Dominio de ligas",
+      "metrica": "leagueTitleLeagues",
+      "objetivo": 7,
+      "icono": "🏛️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_todas_ligas",
+      "titulo": "Campeón de todas las ligas",
+      "descripcion": "Ganá las 9 ligas y divisiones jugables de los siete países.",
+      "categoria": "Dominio de ligas",
+      "metrica": "leagueTitleLeagues",
+      "objetivo": 9,
+      "icono": "🌐",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_dos_paises",
+      "titulo": "Campeón internacional",
+      "descripcion": "Ganá títulos de liga en 2 países distintos.",
+      "categoria": "Dominio internacional",
+      "metrica": "leagueTitleCountries",
+      "objetivo": 2,
+      "icono": "🌎",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_tres_paises",
+      "titulo": "Tres países conquistados",
+      "descripcion": "Ganá títulos de liga en 3 países distintos.",
+      "categoria": "Dominio internacional",
+      "metrica": "leagueTitleCountries",
+      "objetivo": 3,
+      "icono": "🗺️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_cinco_paises",
+      "titulo": "Rey continental",
+      "descripcion": "Ganá títulos de liga en 5 países distintos.",
+      "categoria": "Dominio internacional",
+      "metrica": "leagueTitleCountries",
+      "objetivo": 5,
+      "icono": "👑",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "campeon_todos_paises",
+      "titulo": "Campeón de los siete países",
+      "descripcion": "Ganá al menos una liga en Argentina, Brasil, Chile, España, Inglaterra, Italia y Rumania.",
+      "categoria": "Dominio internacional",
+      "metrica": "leagueTitleCountries",
+      "objetivo": 7,
+      "icono": "🌍",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "primer_mundial_clubes",
+      "titulo": "Campeón del mundo",
+      "descripcion": "Ganá por primera vez el Mundial de Clubes.",
+      "categoria": "Mundial de Clubes",
+      "metrica": "clubWorldCupTitles",
+      "objetivo": 1,
+      "icono": "🌟",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dos_mundiales_clubes",
+      "titulo": "Bicampeón mundial",
+      "descripcion": "Ganá 2 ediciones del Mundial de Clubes.",
+      "categoria": "Mundial de Clubes",
+      "metrica": "clubWorldCupTitles",
+      "objetivo": 2,
+      "icono": "🌟",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "tres_mundiales_clubes",
+      "titulo": "Dinastía mundial",
+      "descripcion": "Ganá 3 ediciones del Mundial de Clubes.",
+      "categoria": "Mundial de Clubes",
+      "metrica": "clubWorldCupTitles",
+      "objetivo": 3,
+      "icono": "🌠",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "primera_tres_paises",
+      "titulo": "Primera División en tres países",
+      "descripcion": "Ganá la máxima categoría de 3 países distintos.",
+      "categoria": "Cimas nacionales",
+      "metrica": "topDivisionTitleCountries",
+      "objetivo": 3,
+      "icono": "⛰️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "primera_todos_paises",
+      "titulo": "Todas las cimas",
+      "descripcion": "Ganá la máxima categoría de los 7 países jugables.",
+      "categoria": "Cimas nacionales",
+      "metrica": "topDivisionTitleCountries",
+      "objetivo": 7,
+      "icono": "🏔️",
       "visibleInicialmente": true
     }
   ]

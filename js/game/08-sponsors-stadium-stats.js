@@ -1321,7 +1321,7 @@ function renderManagerStats(){
       <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
       <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">conseguidos y pendientes visibles</span></div>
     </div>
-    <div class="card manager-achievements-card" style="margin-top:14px"><h3>Hitos y récords personales</h3><p class="muted small">Los hitos conseguidos se destacan. Los pendientes permanecen visibles con colores oscuros y desaturados.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">No hay hitos configurados.</p>'}</div></div>
+    <div class="card manager-achievements-card" style="margin-top:14px"><h3>Hitos y récords personales</h3><p class="muted small">Los hitos conseguidos se destacan. Los pendientes permanecen visibles con colores oscuros y desaturados. Los retos de carrera registran clubes dirigidos, despidos, renuncias y títulos obtenidos en distintos destinos.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">No hay hitos configurados.</p>'}</div></div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
       <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
     </div>

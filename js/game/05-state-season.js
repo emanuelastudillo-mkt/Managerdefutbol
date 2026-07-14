@@ -1608,6 +1608,7 @@ function startFounderCareerAfterSeason(created, transition={}){
   game.tactic = normalizeTactic(clubId, DEFAULT_TACTIC);
   game.mustReviewTactics = true;
   ensureFounderGoalsState();
+  if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
   const resetText = specialReset?.returned ? ` ${specialReset.returned} carta(s) activa(s) volvieron a la reserva.` : '';
   pushGameMessage({
     type:'fundador',
@@ -4348,11 +4349,55 @@ function managerAchievementsCatalog(){
   const db = managerAchievementsDatabase && typeof managerAchievementsDatabase === 'object' ? managerAchievementsDatabase : null;
   return Array.isArray(db?.hitos) ? db.hitos : [];
 }
+function managerAchievementCareerSummary(statsInput=null){
+  const stats = normalizeManagerStats(statsInput || game?.managerStats || createInitialManagerStats());
+  const seasons = Array.isArray(stats.seasons) ? stats.seasons : [];
+  const career = Array.isArray(stats.careerHistory) ? stats.careerHistory : [];
+  const titles = Array.isArray(stats.titleHistory) ? stats.titleHistory : [];
+  const managedClubIds = new Set();
+  seasons.forEach(item => { const id = Number(item?.clubId || 0); if(id) managedClubIds.add(id); });
+  career.forEach(item => { const id = Number(item?.clubId || 0); if(id) managedClubIds.add(id); });
+  const currentClubId = Number(game?.selectedClubId || 0);
+  if(currentClubId) managedClubIds.add(currentClubId);
+
+  const leagueTitles = titles.filter(item => String(item?.type || '') === 'league');
+  const leagueClubIds = new Set();
+  const leagueIds = new Set();
+  const leagueCountries = new Set();
+  const topDivisionCountries = new Set();
+  leagueTitles.forEach(item => {
+    const clubId = Number(item?.clubId || 0);
+    if(clubId) leagueClubIds.add(clubId);
+    const competitionId = String(item?.competitionId || '').trim();
+    if(competitionId) leagueIds.add(competitionId);
+    else if(item?.competitionName) leagueIds.add(String(item.competitionName).trim().toLowerCase());
+    const club = (seed?.clubs || []).find(candidate => Number(candidate.id) === clubId);
+    const division = (seed?.divisions || []).find(candidate => String(candidate.id || '') === competitionId);
+    const country = String(division?.country || division?.pais || club?.country || club?.pais || '').trim();
+    if(country) leagueCountries.add(country.toLowerCase());
+    const divisionOrder = Number(division?.order || (String(club?.divisionId || '') === competitionId ? club?.divisionOrder : 0) || 0);
+    if(country && divisionOrder === 1) topDivisionCountries.add(country.toLowerCase());
+  });
+  const clubWorldCupTitles = titles.filter(item => String(item?.type || '') === 'club_world_cup' || String(item?.competitionId || '') === 'club-world-cup').length;
+  return {
+    managedClubs:managedClubIds.size,
+    dismissals:career.filter(item => String(item?.type || '') === 'dismissal').length,
+    resignations:career.filter(item => String(item?.type || '') === 'resignation').length,
+    leagueTitleClubs:leagueClubIds.size,
+    leagueTitleLeagues:leagueIds.size,
+    leagueTitleCountries:leagueCountries.size,
+    topDivisionTitleCountries:topDivisionCountries.size,
+    clubWorldCupTitles
+  };
+}
 function managerAchievementMetricValue(metric){
   const stats = normalizeManagerStats(game?.managerStats || createInitialManagerStats());
   const totals = stats.totals || {};
   const seasons = Array.isArray(stats.seasons) ? stats.seasons : [];
   const key = String(metric || '');
+  if(['managedClubs','dismissals','resignations','leagueTitleClubs','leagueTitleLeagues','leagueTitleCountries','topDivisionTitleCountries','clubWorldCupTitles'].includes(key)){
+    return Number(managerAchievementCareerSummary(stats)[key] || 0);
+  }
   if(key === 'totals.played') return Number(totals.played || 0);
   if(key === 'totals.won') return Number(totals.won || 0);
   if(key === 'totals.drawn') return Number(totals.drawn || 0);
@@ -4894,6 +4939,7 @@ function recordDismissedCareerStep(){
     createdAt:new Date().toISOString()
   });
   game.managerStats = normalizeManagerStats(game.managerStats);
+  if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
 }
 function resetClubSpecificCareerStateForNewClub(newClubId){
   if(!game) return;
@@ -5003,6 +5049,7 @@ function continueCareerAtClub(selectedClubId, options={}){
     game.managerJobContract = null;
   }
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
+  if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
   if(typeof removeManagerJobOffer === 'function' && options.jobOffer?.id) removeManagerJobOffer(options.jobOffer.id);
   if(game.managerJobMarket){ game.managerJobMarket.applications = []; }
   game.gameOver = null;
@@ -6694,6 +6741,7 @@ function advanceClubWorldCupIfNeeded(){
         clubId:championId,
         clubName:clubName(championId)
       });
+      if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
     }
     pushGameMessage({ type:'deportivo', priority:'high', title:`Campeón: ${clubName(championId)}`, body:`${clubName(championId)} ganó la ${CLUB_WORLD_CUP_CONFIG.name}.`, id:`club-world-cup-${state.season}-champion` });
     return true;
@@ -7791,6 +7839,7 @@ function finalizeSeasonIfNeeded(options={}){
       game.managerStats.seasons.push(record);
       if(champion) recordManagerOfficialTitleForState(game, { season:record.season, year:game.seasonYear, type:'league', competitionId:division.id, competitionName:division.name, clubId:game.selectedClubId, clubName:clubName(game.selectedClubId) });
       game.managerStats = normalizeManagerStats(game.managerStats);
+      if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
       if(Number(objectiveReward.points || 0) !== 0){
         const sign = objectiveReward.points > 0 ? 'Suma' : 'Resta';
         pushGameMessage({ type:'directiva', priority:objectiveReward.points > 0 ? 'normal' : 'high', title:objectiveReward.label, body:`${record.clubName}: ${seasonPpg.toFixed(2)} PPG / objetivo ${Number(objective || 0).toFixed(2)}. ${sign} ${Math.abs(objectiveReward.points)} punto(s) de prestigio de manager.`, id:`objective-prestige-${record.season}-${record.clubId}` });

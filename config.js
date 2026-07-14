@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.41',
+  version: 'V7.42',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -548,7 +548,10 @@ window.GAME_CONFIG = {
     ofertaClausulaEspecialFechasFinales: 10,
     ofertaClausulaEspecialMinPorTemporada: 1,
     ofertaClausulaEspecialMaxPorTemporada: 2,
-    ofertaClausulaEspecialTopJugadores: 3
+    ofertaClausulaEspecialTopJugadores: 3,
+    // Una oferta por cláusula completa que quede sin respuesta se ejecuta automáticamente en estos días de temporada.
+    ofertaClausulaAutoAceptarPrimerDia: 162,
+    ofertaClausulaAutoAceptarSegundoDia: 355
   },
   estadio: {
     costoReplantarCesped: 2000000,

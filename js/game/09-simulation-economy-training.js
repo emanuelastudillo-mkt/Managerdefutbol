@@ -1132,6 +1132,9 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
+  const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
+    ? processUnansweredSpecialClauseOffers({ silent:true, source:'daily_calendar' })
+    : { accepted:0, closed:0 };
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(1);
   if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(1);
   const recovered = clearRecoveredDailyInjuries();
@@ -1151,7 +1154,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
   const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-  return { botResults, recovered, bankPayment, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
+  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1674,6 +1677,10 @@ function simulateNextMatchday(options={}){
     showNotice('Comienza la postemporada. Se usarán los días restantes del año antes del cierre de temporada.');
     return;
   }
+  const automaticClauseSalesBeforeMatch = typeof processUnansweredSpecialClauseOffers === 'function'
+    ? processUnansweredSpecialClauseOffers({ silent:true, source:'before_matchday' })
+    : { accepted:0 };
+  if(automaticClauseSalesBeforeMatch.accepted > 0) saveLocal(true);
   if(game.mustReviewTactics){ showNotice('Debes confirmar tu equipo: hay lesionados o suspendidos propios que deben ser reemplazados.'); return; }
   const errors = validateCurrentTactic(false);
   if(errors.length){ showNotice(errors.join(' ')); return; }
@@ -1922,6 +1929,9 @@ function simulatePostseasonTurn(){
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('postseason');
   processAcademyTurn();
   processPendingTransfers();
+  const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
+    ? processUnansweredSpecialClauseOffers({ silent:true, source:'postseason' })
+    : { accepted:0, closed:0 };
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(game.phaseTurn >= postseasonTurnsForCurrentSeason()){
     game.seasonPhase = 'finalizing';

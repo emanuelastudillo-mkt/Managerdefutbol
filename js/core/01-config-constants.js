@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.41');
+const APP_VERSION = configValue('version', 'V7.42');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -507,6 +507,8 @@ const SPECIAL_CLAUSE_OFFER_LAST_MATCHDAYS = Math.max(1, Math.round(configNumber(
 const SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON = Math.max(0, Math.round(configNumber('mercado.ofertaClausulaEspecialMinPorTemporada', 1, 0, 10)));
 const SPECIAL_CLAUSE_OFFER_MAX_PER_SEASON = Math.max(SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON, Math.round(configNumber('mercado.ofertaClausulaEspecialMaxPorTemporada', 2, 0, 10)));
 const SPECIAL_CLAUSE_OFFER_TOP_PLAYERS = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaEspecialTopJugadores', 3, 1, 10)));
+const SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaAutoAceptarPrimerDia', 162, 1, 366)));
+const SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY = Math.max(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY, Math.round(configNumber('mercado.ofertaClausulaAutoAceptarSegundoDia', 355, 1, 366)));
 const STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT = configNumber('mercado.ofertaMinimaEstrellaParaVentaPct', 40, 0, 100);
 const BOT_TRANSFER_OFFER_BASE_CHANCE = configNumber('mercado.probabilidadOfertaBotBase', 0.28, 0, 1);
 const BOT_TRANSFER_LISTED_EXTRA_CHANCE = configNumber('mercado.probabilidadExtraTransferible', 0.22, 0, 1);

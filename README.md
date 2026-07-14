@@ -1,4 +1,47 @@
-# Fútbol Manager MVP - V7.41
+# Fútbol Manager MVP - V7.42
+
+
+
+## V7.42 - Aceptación automática de ofertas por cláusula sin respuesta
+
+### Controles de los días 162 y 355
+
+Las ofertas especiales en las que otro club paga el `100%` de la cláusula ya no pueden quedar pendientes indefinidamente:
+
+- Si la oferta existe antes o durante el día **162**, se acepta automáticamente al llegar al día 162 cuando el manager no eligió **Aceptar oferta** ni **Convencer al jugador de quedarse**.
+- Si el día 162 ya había sido superado cuando la oferta apareció o cuando una partida anterior incorpora esta regla, el segundo control queda programado para el día **355**.
+- El procesamiento usa `>=` sobre el día previsto para cubrir avances que crucen el control sin detenerse exactamente en esa fecha.
+- Una oferta generada después del día 355 se resuelve en el siguiente procesamiento del calendario.
+- La venta automática ejecuta la cláusula completa, aplica el impuesto federativo, acredita el ingreso neto y retira al jugador del plantel y de la táctica.
+
+Cada oferta nueva informa dentro del mensaje el día en que se ejecutará automáticamente si queda sin respuesta. Las ofertas pendientes creadas en versiones anteriores reciben esta información al volver a abrir Mensajes o al avanzar el calendario.
+
+### Descontento del jugador
+
+Se agregaron **5 respuestas personalizadas** para la salida por falta de comunicación. Incluyen nombre del manager, jugador y club, y expresan que el futbolista se marcha porque nadie respondió ni habló con él sobre la oferta.
+
+Cuando se ejecuta la salida:
+
+- La oferta original cambia al estado **Aceptada automáticamente: sin respuesta**.
+- Se agrega un nuevo mensaje importante titulado con el apellido del jugador.
+- La operación es idempotente: una oferta cerrada no puede vender al mismo jugador por segunda vez.
+- Si el manager ya cambió de club o el jugador dejó de pertenecer al plantel, la oferta se cierra sin ejecutar una venta incorrecta.
+
+### Archivos principales modificados en V7.42
+
+- `config.js`
+- `index.html`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/ui/06-render-home-messages.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/18-challenges-online.js`
+- `README.md`
+
+### Compatibilidad
+
+**V7.42 no rompe partidas anteriores.** Las ofertas especiales ya respondidas conservan su resultado. Las ofertas antiguas todavía pendientes se programan para el día 162 si la partida aún no lo alcanzó; si ese día ya pasó, esperan al control del día 355. No se modifican otras ofertas de transferencia.
 
 
 

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.32',
+  version: 'V7.33',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -325,7 +325,7 @@ window.GAME_CONFIG = {
   },
   cohesion: {
     // Balance de cohesión ajustado para que el equipo gane cohesión con mayor claridad.
-    valorInicial: 50,
+    valorInicial: 10,
     gananciaPorPartido: 7,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
@@ -677,9 +677,9 @@ window.GAME_CONFIG = {
     // Máximo de errores usado para evitar partidos rotos por errores constantes.
     maximoErroresPorEquipo: 5,
     // multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
-    fatigaVivaMultiplicador: 2,
+    fatigaVivaMultiplicador: 5,
     // reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
-    multiplicadorTarjetas: 0.50,
+    multiplicadorTarjetas: 1.10,
     // con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
     rojasDerrotaDefault: 5,
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.
@@ -703,8 +703,8 @@ window.GAME_CONFIG = {
       { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
       { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
     ],
-    desgastePartidoMin: 25,
-    desgastePartidoMax: 46,
+    desgastePartidoMin: 40,
+    desgastePartidoMax: 78,
     factorDesgasteArquero: 0.5
   },
 
@@ -762,7 +762,7 @@ window.GAME_CONFIG = {
     fracturaMinDias: 180,
     fracturaMaxDias: 400,
     lesionadoSuplenteDiasMax: 63,
-    penalizacionLesionadoSuplente: 0.10
+    penalizacionLesionadoSuplente: 0.30
   },
 
   ranking: {

@@ -14,7 +14,7 @@
   let liveSelectedBoardSlot = -1;
 
   function ehtml(value){
-    return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value ?? '').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
+    return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
   }
   function fmtNumber(value){ return new Intl.NumberFormat('es-AR').format(Number(value || 0)); }
   function lastName(name){ return typeof playerLastName === 'function' ? playerLastName(name) : String(name || 'Jugador').trim().split(/\s+/).slice(-1)[0]; }

@@ -1,4 +1,77 @@
-# Fútbol Manager MVP - V7.32
+# Fútbol Manager MVP - V7.33
+
+
+## V7.33 - Auditoría de código, calendario y rendimiento
+
+Se realizó una revisión estática y una prueba completa de ejecución sobre la base V7.32. Esta versión corrige una contradicción de calendario, elimina código confirmado como inactivo y reduce operaciones repetitivas en búsquedas de clubes y jugadores.
+
+### Corrección de fechas y playoffs
+
+- Se corrigieron comparadores cronológicos que ordenaban fechas en sentido inverso.
+- La última fecha de la fase regular ahora se calcula usando la fecha realmente más avanzada del calendario.
+- Los playoffs argentinos de promoción se programan 7 y 14 días después de la última fecha regular.
+- Al cargar una partida anterior, los playoffs de promoción todavía no disputados se corrigen automáticamente si habían quedado ubicados antes de tiempo.
+- Los playoffs que ya tengan al menos un partido disputado no se reprograman, para conservar el historial de la carrera.
+- También se corrigió el desempate por fecha en la visualización de partidos de grupos del Mundial de Clubes.
+
+### Limpieza de código sin uso
+
+La auditoría confirmó que las siguientes funciones no tenían ninguna referencia en HTML ni JavaScript y fueron eliminadas:
+
+- `clubWorldCupAuthoritativeGroupDate`
+- `clubWorldCupLatestDate`
+- `clubWorldCupMinFirstGroupDate`
+- `clubWorldCupStageLabel`
+- `rankingStoredAuthExpiresAt`
+
+No se eliminaron archivos completos. `app.js`, `balance-manager.js` y los módulos históricos de datos siguen siendo necesarios. Las versiones internas V3.x presentes en algunos JSON corresponden al esquema o generación de esos datos y no a la versión pública del juego.
+
+### Rendimiento y carga
+
+- `playerById` y `clubById` ahora utilizan índices en memoria y dejan de recorrer las listas completas en cada consulta.
+- En la prueba de 100.000 búsquedas de jugadores, el tiempo bajó de aproximadamente **177 ms** a **7 ms** en el entorno de auditoría.
+- Los 24 scripts externos se cargan con `defer`, conservando su orden de ejecución y evitando bloquear el análisis inicial del HTML.
+- Se sincronizaron los valores de respaldo de `config.js` con el balance efectivo para evitar diferencias si el archivo de modificadores no pudiera cargarse.
+
+### Contradicciones corregidas
+
+- `config.js` y `balance-modificadores.js` diferían en seis valores activos: cohesión inicial, penalización del suplente lesionado, fatiga viva, tarjetas y desgaste mínimo/máximo de partido. Los valores de respaldo ahora coinciden con el balance efectivo; con la carga normal no cambia el balance jugable.
+- El objeto enviado al Ranking Online repetía las claves `budget_variation` y `titles`. Se conservaron una sola vez y `titles` se normaliza como número.
+- Los metadatos activos de balance fueron actualizados a V7.33. Los valores deportivos de `balance-manager.js` no fueron modificados.
+
+### Verificaciones realizadas
+
+- Sintaxis válida en todos los archivos JavaScript.
+- Lectura válida de todos los archivos JSON.
+- Auditoría estática sin claves duplicadas, código inalcanzable ni advertencias activas.
+- Carga completa de 162 clubes y más de 4.000 jugadores.
+- Creación de una partida nueva y renderizado de las 16 secciones sin errores de consola.
+- Prueba de reparación de playoffs pendientes y conservación de playoffs ya disputados.
+- Paquetes generados sin archivos de imagen.
+
+### Archivos principales modificados en V7.33
+
+- `README.md`
+- `index.html`
+- `config.js`
+- `balance-modificadores.js`
+- `balance-manager.js`
+- `js/core/01-config-constants.js`
+- `js/core/02-ui-utils.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/10-academy-employees.js`
+- `js/game/13-ranking-online.js`
+- `js/game/15-especial.js`
+- `js/game/17-live-match.js`
+- `js/game/18-challenges-online.js`
+
+### Compatibilidad de partidas
+
+**V7.33 no rompe partidas anteriores.** No cambia el esquema del guardado. Las carreras existentes se cargan normalmente; únicamente se reubican de forma automática los playoffs argentinos de promoción que todavía no tengan partidos disputados y hayan sido generados con fechas incorrectas.
+
+---
 
 ## V7.32 - Escudos en Partidos disputados
 

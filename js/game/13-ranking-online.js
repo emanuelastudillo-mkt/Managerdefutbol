@@ -101,10 +101,6 @@ function rankingStoredAuthUsername(){
   try{ return String(localStorage.getItem('fmRankingAuthUser') || localStorage.getItem('fmRankingUsername') || '').trim(); }
   catch(_){ return ''; }
 }
-function rankingStoredAuthExpiresAt(){
-  try{ return String(localStorage.getItem('fmRankingAuthExpiresAt') || '').trim(); }
-  catch(_){ return ''; }
-}
 function rankingAuthPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   const raw = kind === 'me' ? cfg.mePaths : cfg.loginPaths;
@@ -837,8 +833,6 @@ function rankingPayloadToApiBody(payload){
     lost: payload.lost,
     initial_budget: payload.initialBudget,
     final_budget: payload.finalBudget,
-    budget_variation: payload.budgetVariation,
-    titles: payload.titles,
     title: payload.title ? 1 : 0,
     ...rankingScoreAliases(payload),
     submitted_at: payload.submittedAt || new Date().toISOString(),

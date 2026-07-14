@@ -1,6 +1,29 @@
 /* Estado de jugadores, disponibilidad, calendario anual, habilidades y utilidades tácticas. */
 
-function playerById(id){ return seed.players.find(p => p.id === Number(id)); }
+let playerLookupSource = null;
+let playerLookupLength = -1;
+let playerLookupIndex = new Map();
+function refreshPlayerLookupIndex(){
+  const players = Array.isArray(seed?.players) ? seed.players : [];
+  if(playerLookupSource === players && playerLookupLength === players.length) return players;
+  playerLookupSource = players;
+  playerLookupLength = players.length;
+  playerLookupIndex = new Map(players.map((player,index) => [Number(player.id), index]));
+  return players;
+}
+function playerById(id){
+  const playerId = Number(id);
+  if(!Number.isFinite(playerId)) return undefined;
+  const players = refreshPlayerLookupIndex();
+  let index = playerLookupIndex.get(playerId);
+  let player = Number.isInteger(index) ? players[index] : undefined;
+  if(player && Number(player.id) === playerId) return player;
+  playerLookupSource = null;
+  refreshPlayerLookupIndex();
+  index = playerLookupIndex.get(playerId);
+  player = Number.isInteger(index) ? playerLookupSource[index] : undefined;
+  return player && Number(player.id) === playerId ? player : undefined;
+}
 function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
 function pendingIncomingTransfersCount(clubId=game?.selectedClubId){
   return (game?.pendingTransfers || []).filter(t => t.status === 'pending' && Number(t.toClubId) === Number(clubId)).length;
@@ -193,20 +216,25 @@ function nextUnplayedMatchDate(state=game){
   return '';
 }
 function lastFixtureMatchDate(state=game){
-  const fixtures = state?.fixtures || [];
-  for(let i=fixtures.length-1; i>=0; i--){
-    const dates = (fixtures[i].matches || []).map(m => validIsoDate(m.date) ? m.date : fixtures[i].date).filter(validIsoDate);
-    if(dates.length){ const sortedDates = dates.sort((a,b)=>daysBetweenIsoDates(a,b)); return sortedDates[sortedDates.length - 1]; }
-    if(validIsoDate(fixtures[i].date)) return fixtures[i].date;
-  }
-  return '';
+  const dates = [];
+  (state?.fixtures || []).forEach(round => {
+    if(validIsoDate(round?.endDate)) dates.push(round.endDate);
+    if(validIsoDate(round?.date)) dates.push(round.date);
+    (round?.matches || []).forEach(match => {
+      const date = validIsoDate(match?.date) ? match.date : round?.date;
+      if(validIsoDate(date)) dates.push(date);
+    });
+  });
+  if(!dates.length) return '';
+  dates.sort((a,b)=>daysBetweenIsoDates(b,a));
+  return dates[dates.length - 1];
 }
 function latestIsoDateInSeason(dates=[], year=currentSeasonYear()){
   const start = seasonStartDateForYear(year);
   const end = seasonEndDateForYear(year);
   const clean = (dates || []).filter(validIsoDate).filter(date => daysBetweenIsoDates(start, date) >= 0 && daysBetweenIsoDates(date, end) >= 0);
   if(!clean.length) return '';
-  clean.sort((a,b)=>daysBetweenIsoDates(a,b));
+  clean.sort((a,b)=>daysBetweenIsoDates(b,a));
   return clean[clean.length - 1];
 }
 function latestKnownCalendarDateForState(state=game, year=currentSeasonYear()){

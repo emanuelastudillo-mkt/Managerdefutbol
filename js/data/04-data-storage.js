@@ -1326,7 +1326,7 @@ function maxSimultaneousStadiumWorks(capacity){
   return 1;
 }
 function stadiumSlotTokens(slot){
-  return String(slot || '').split(/[\/,+]/).map(s => s.trim()).filter(Boolean);
+  return String(slot || '').split(/[/,+]/).map(s => s.trim()).filter(Boolean);
 }
 function stadiumSlotsConflict(slotA, slotB){
   const a = stadiumSlotTokens(slotA);

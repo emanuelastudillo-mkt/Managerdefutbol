@@ -1307,7 +1307,7 @@ function treatInjuredPlayer(playerId, button=null, kind='first'){
     failureLabel:'Tratamiento fallido'
   });
 }
-function kinesioDelay(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+function kinesioDelay(ms){ return new Promise(resolve => { setTimeout(resolve, ms); }); }
 function setKinesioTreatmentRowState(playerId, state, label='', kind='first'){
   const key = `${kind}:${playerId}`;
   const row = document.querySelector(`[data-treatment-row="${key}"]`) || document.querySelector(`[data-treatment-row="${playerId}"]`);

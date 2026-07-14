@@ -82,9 +82,33 @@ function formatMoney(value){
   return num < 0 ? `-${formatted}` : formatted;
 }
 function budgetTone(value){ return Number(value || 0) < 0 ? 'budget-negative bad' : ''; }
-function clubName(id){ return seed.clubs.find(c => c.id === id)?.name || '—'; }
+let clubLookupSource = null;
+let clubLookupLength = -1;
+let clubLookupIndex = new Map();
+function refreshClubLookupIndex(){
+  const clubs = Array.isArray(seed?.clubs) ? seed.clubs : [];
+  if(clubLookupSource === clubs && clubLookupLength === clubs.length) return clubs;
+  clubLookupSource = clubs;
+  clubLookupLength = clubs.length;
+  clubLookupIndex = new Map(clubs.map((club,index) => [Number(club.id), index]));
+  return clubs;
+}
+function clubById(id){
+  const clubId = Number(id);
+  if(!Number.isFinite(clubId)) return undefined;
+  const clubs = refreshClubLookupIndex();
+  let index = clubLookupIndex.get(clubId);
+  let club = Number.isInteger(index) ? clubs[index] : undefined;
+  if(club && Number(club.id) === clubId) return club;
+  clubLookupSource = null;
+  refreshClubLookupIndex();
+  index = clubLookupIndex.get(clubId);
+  club = Number.isInteger(index) ? clubLookupSource[index] : undefined;
+  return club && Number(club.id) === clubId ? club : undefined;
+}
+function clubName(id){ return clubById(id)?.name || '—'; }
 function isFoundedClub(club){ return Boolean(club?.isFoundedClub || club?.founderClub || club?.modoFundador); }
-function isFoundedClubId(clubId){ return isFoundedClub(seed?.clubs?.find(c => Number(c.id) === Number(clubId))); }
+function isFoundedClubId(clubId){ return isFoundedClub(clubById(clubId)); }
 function currentGameIsFounderMode(state=game){ return Boolean(state?.founderMode || isFoundedClubId(state?.selectedClubId)); }
 
 function defaultClubTheme(){

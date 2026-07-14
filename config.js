@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.28',
+  version: 'V7.29',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -794,7 +794,9 @@ window.GAME_CONFIG = {
     resultadosPorPagina: 40,
     actualizacionMs: 30000,
     maximosAbiertos: 3,
-    vencimientoDias: 7
+    vencimientoDias: 7,
+    // Bloqueo local compartido entre publicar y aceptar para evitar acciones repetidas.
+    cooldownAccionMinutos: 10
   },
 
   mensajesAsistente: {

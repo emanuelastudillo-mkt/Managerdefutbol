@@ -163,12 +163,8 @@ function rankingClearAuthSession(){
 function rankingAuthStatusMarkup(endpoint){
   const token = rankingStoredAuthToken();
   const user = rankingStoredAuthUsername() || rankingStoredManagerName();
-  const expiresAt = rankingStoredAuthExpiresAt();
-  if(!endpoint) return '<span class="bad">Ranking sin endpoint configurado.</span>';
-  if(token){
-    const source = String(RANKING_TOKEN || '').trim() ? 'config.js' : 'sesión local';
-    return `<span class="ok">Sesión activa${user ? ` · ${escapeHtml(user)}` : ''}</span><span class="small muted">Token desde ${escapeHtml(source)}${expiresAt ? ` · vence ${escapeHtml(expiresAt)}` : ''}</span>`;
-  }
+  if(!endpoint) return '<span class="bad">Ranking online no disponible.</span>';
+  if(token) return `<span class="ok">Sesión activa${user ? ` · ${escapeHtml(user)}` : ''}</span>`;
   if(RANKING_REQUIRES_LOGIN) return '<span class="warn">Sin sesión. Iniciá sesión para subir récords.</span>';
   return '<span class="muted">Login opcional.</span>';
 }
@@ -178,16 +174,16 @@ function rankingLoginPanelMarkup(endpoint){
   const user = rankingStoredAuthUsername() || rankingStoredManagerName() || '';
   return `<div class="card ranking-login-card">
     <div class="row"><div><p class="label">Cuenta online</p><h3>Login del ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
-    <p class="muted">La partida puede estar empezada. El login sólo guarda el token en este navegador y lo usa para subir récords.</p>
+    <p class="muted">Usá tu cuenta para publicar tu carrera y participar en las funciones online.</p>
     <div id="rankingAuthStatus" class="ranking-auth-status small">${rankingAuthStatusMarkup(endpoint)}</div>
     <form id="rankingLoginForm" class="ranking-login-form">
       <input id="rankingLoginUser" name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
       <input id="rankingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Contraseña opcional" ${disabled} />
-      <button class="primary" type="submit" ${disabled}>Iniciar / recuperar sesión</button>
+      <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
       <button id="rankingCheckSession" class="ghost" type="button" ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
       <button id="rankingLogout" class="danger" type="button" ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
     </form>
-    <div id="rankingLoginStatus" class="small muted">${token ? 'Token guardado. Ya podés subir datos si el cooldown lo permite.' : 'La contraseña es opcional. Si tu cuenta fue creada sin contraseña, ingresá sólo el usuario.'}</div>
+    <div id="rankingLoginStatus" class="small muted">${token ? 'La cuenta está lista para publicar tu carrera.' : 'Ingresá tu usuario para continuar. La contraseña puede ser opcional según tu cuenta.'}</div>
   </div>`;
 }
 function rankingLoginRequestBodies(username, password){
@@ -1035,7 +1031,7 @@ function rankingSubmitPanelMarkup(payload, endpoint){
     ? `Última carga manual: día ${seasonDayFromDate(info.last, game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1))} (${info.last}).`
     : 'Todavía no hiciste una carga manual en esta partida.';
   return `<div class="card ranking-submit-card">
-    <div class="row"><div><p class="label">Carga manual y automática</p><h3>Carrera del mánager</h3></div><span class="pill">${game ? `Temp. ${game.seasonNumber || 1}` : 'Sin partida'}</span></div>
+    <div class="row"><div><p class="label">Publicar carrera</p><h3>Carrera del mánager</h3></div><span class="pill">${game ? `Temp. ${game.seasonNumber || 1}` : 'Sin partida'}</span></div>
     <p class="muted">Podés subir manualmente la carrera completa del mánager cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Al finalizar la temporada o ante un despido, el juego actualiza la misma carrera sin duplicar registros.</p>
     <div class="ranking-manual-actions">
       <button id="submitRankingManual" class="primary" type="button" ${canUpload ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
@@ -1051,12 +1047,12 @@ function renderRankingOnline(){
   const manualEventType = rankingManualEventType();
   const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
   const payload = buildRankingPayload(managerName, { eventType:manualEventType, eventLabel:`Carrera actualizada manualmente · día ${manualDay || '—'}` });
-  view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Tabla comunitaria online de carreras de mánager. Se muestra una sola fila por partida/manager, ordenada sin duplicados.</p></div>
+  view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Compará tu carrera con otros managers de la comunidad.</p></div>
     ${rankingLoginPanelMarkup(endpoint)}
     ${rankingSubmitPanelMarkup(payload, endpoint)}
     <div class="card ranking-list-card">
-      <div class="row"><div><p class="label">Lectura pública</p><h3>Ranking de carreras</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
-      <div id="rankingStatus" class="small muted">${endpoint ? `Listo para cargar hasta ${RANKING_PAGE_SIZE} registros.` : 'Ranking online no disponible por el momento.'}</div>
+      <div class="row"><div><p class="label">Comunidad</p><h3>Ranking de carreras</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
+      <div id="rankingStatus" class="small muted">${endpoint ? (rankingRowsCache.length ? 'Ranking actualizado.' : 'Buscando carreras publicadas...') : 'Ranking online no disponible por el momento.'}</div>
       <div id="rankingTableBox">${rankingRowsTable(rankingRowsCache)}</div>
     </div>`;
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
@@ -1240,7 +1236,7 @@ async function loadRankingOnline(silent=false){
   if(!endpoint){ if(status) status.textContent = 'Ranking online no disponible por el momento.'; return; }
   if(rankingLoading) return;
   rankingLoading = true;
-  if(status) status.textContent = 'Cargando ranking online...';
+  if(status) status.textContent = 'Actualizando ranking...';
   let lastMessage = '';
   try{
     const paths = rankingConfiguredPaths('read');
@@ -1266,12 +1262,12 @@ async function loadRankingOnline(silent=false){
       rankingRowsCache = dedupeRankingRows(rows.map(normalizeRankingRow).filter(row => row.managerName || row.club || row.saveCode));
       const box = $('rankingTableBox');
       if(box) box.innerHTML = rankingRowsTable(rankingRowsCache);
-      if(status) status.textContent = `${rankingRowsCache.length} registro(s) cargado(s).`;
+      if(status) status.textContent = rankingRowsCache.length ? 'Ranking actualizado.' : 'Todavía no hay carreras publicadas.';
       return;
     }
     throw new Error(lastMessage || 'No se encontró una ruta válida para leer el ranking.');
   }catch(error){
-    if(status) status.textContent = 'No se pudo leer el ranking online.';
+    if(status) status.textContent = 'No se pudo actualizar el ranking.';
     if(!silent) showNotice(error?.message || 'No se pudo cargar el ranking online.');
   }finally{
     rankingLoading = false;

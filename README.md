@@ -1,108 +1,58 @@
-# Fútbol Manager MVP - V7.28
+# Fútbol Manager MVP - V7.29
 
-## V7.28 - Presentación de desafíos, residencias y cartas por rareza
+## V7.29 - Pausa de desafíos y Ranking Online para usuarios finales
 
-### Estadísticas del simulador
+### Pausa entre acciones de desafíos
 
-Se unificaron los nombres visibles con el resumen rápido, sin modificar cálculos ni probabilidades:
+Publicar o aceptar un desafío activa una pausa local compartida de **10 minutos**:
 
-- `Total de ataques` ahora se muestra como **Disparos**.
-- `Ocasiones de gol` ahora se muestra como **Tiros a Puerta**.
-- Las propiedades internas `attacks` y `chances` siguen siendo las mismas.
+- Durante ese tiempo se bloquean los botones **Publicar desafío** y **Aceptar desafío**.
+- Los botones muestran el tiempo restante en formato `MM:SS`.
+- La pausa se conserva al recargar la página o cerrar y volver a abrir el juego.
+- Se guarda por cuenta iniciada en ese navegador.
+- El bloqueo comienza después de publicar correctamente o después de reservar correctamente un desafío al aceptarlo.
+- La simulación y el guardado del partido aceptado continúan normalmente.
 
-### Predio juvenil y residencias
+La pausa es local y no modifica el servidor ni las partidas guardadas.
 
-Cada nivel construido del predio de entrenamiento juvenil habilita espacio para **2 residencias juveniles adicionales**:
+### Ranking Online simplificado
 
-| Nivel | Residencias máximas |
-|---:|---:|
-| 0 | 0 |
-| 1 | 2 |
-| 2 | 4 |
-| 3 | 6 |
-| 4 | 8 |
-| 5 | 10 |
+La pantalla fue reacondicionada para un usuario final:
 
-Las residencias que ya existan en una partida antigua no se eliminan si superan temporalmente el límite actual. No podrán alquilarse nuevas hasta mejorar el predio o quedar por debajo del máximo permitido.
+- Se oculta el origen interno de la sesión.
+- Se oculta la fecha técnica de vencimiento de la credencial.
+- Se elimina el contador técnico de registros descargados.
+- Se reemplazan explicaciones de almacenamiento y red por mensajes simples.
+- La pantalla sólo informa si la sesión está activa, si el ranking se actualizó o si todavía no hay carreras publicadas.
 
-### Jugadores intransferibles
+### Paquetes
 
-Los jugadores marcados como intransferibles muestran un icono **🔒** junto a su nombre. El icono conserva una descripción emergente indicando que sólo se escuchan ofertas por la cláusula completa.
+Desde V7.29 los ZIP del juego no incluyen carpetas, migraciones, Workers ni instrucciones de Cloudflare. Esta actualización no requiere cambios externos.
 
-### Usos de cartas
-
-Los usos máximos pasan a depender de la rareza:
-
-| Rareza | Usos |
-|---|---:|
-| Común | 1 |
-| Rara | 2 |
-| Épica | 3 |
-| Legendaria | 5 |
-
-Las cartas existentes se normalizan automáticamente. Los usos ya consumidos se conservan hasta el nuevo máximo. Una carta activa que haya agotado sus usos permanece activa hasta que pueda retirarse; al desactivarla pasa al historial como agotada.
-
-### Desafíos Online
-
-Se mejoró la presentación de **Disponibles**, **Mis desafíos** y **Partidos disputados**:
-
-- Escudo del club.
-- Nombre del estadio.
-- Capacidad.
-- Cantidad de hinchas.
-- Media, formación, valor y salarios de la convocatoria.
-- Sede del partido claramente identificada.
-
-La ficha del encuentro ahora usa una estructura de tres columnas:
-
-```text
-Puntajes del local | Estadísticas y eventos | Puntajes del visitante
-```
-
-Los jugadores no repiten el nombre del club en cada fila. El equipo local permanece a la izquierda y el visitante a la derecha.
-
-### Cloudflare
-
-No requiere una migración D1 nueva. Para que las fotografías nuevas guarden el nombre del estadio, hay que reemplazar el Worker por:
-
-```text
-cloudflare-desafios/worker-ranking-desafios-v1.js
-```
-
-Versión esperada:
-
-```text
-V7.28-desafios-presentacion-v1
-```
-
-Los desafíos anteriores continúan funcionando; si no tenían nombre de estadio guardado se muestra un nombre de respaldo.
-
-### Archivos principales modificados en V7.28
+### Archivos principales modificados en V7.29
 
 - `README.md`
 - `index.html`
 - `style.css`
 - `config.js`
 - `balance-modificadores.js`
-- `data/instalaciones.json`
-- `data/habilidades_especiales.json`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/12-modals.js`
-- `js/game/15-especial.js`
+- `js/core/01-config-constants.js`
+- `js/game/13-ranking-online.js`
 - `js/game/18-challenges-online.js`
-- `cloudflare-desafios/worker-ranking-desafios-v1.js`
-- `cloudflare-desafios/PASOS-INSTALACION-DESAFIOS.md`
-- `cloudflare-desafios/PRUEBAS-DESAFIOS.md`
 
 ### Compatibilidad de partidas
 
-**V7.28 no rompe partidas anteriores.** Conserva resultados, cartas, residencias, instalaciones, planteles y desafíos existentes. Sólo ajusta límites y presentación.
+**V7.29 no rompe partidas anteriores.** La pausa se guarda en el navegador y no altera carreras, desafíos publicados, resultados ni datos del club.
 
 ---
+
+## V7.28 - Presentación de desafíos, residencias y cartas por rareza
+
+- Se unificaron los nombres visibles del simulador como **Disparos** y **Tiros a Puerta**.
+- Cada nivel del predio juvenil habilita dos residencias acumulativas.
+- Los jugadores intransferibles muestran un candado.
+- Los usos de cartas dependen de la rareza: 1, 2, 3 y 5.
+- Desafíos Online incorporó escudos, estadio, capacidad, hinchas y detalle en tres columnas.
 
 ## V7.27 - Ranking de desafíos y listas estables
 

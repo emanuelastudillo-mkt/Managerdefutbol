@@ -6,6 +6,8 @@ let challengeLoadedTabs = { available:false, mine:false, history:false, ranking:
 let challengeLoading = false;
 let challengeDetail = null;
 let challengePollTimer = null;
+let challengeCooldownTimer = null;
+let challengeActionBusy = false;
 
 function challengeConfig(){
   const cfg = window.GAME_CONFIG?.desafiosOnline || {};
@@ -14,17 +16,78 @@ function challengeConfig(){
     endpoint:String(cfg.endpoint || rankingStoredEndpoint?.() || RANKING_APPS_SCRIPT_URL || '').trim(),
     simulatorVersion:String(cfg.versionSimulador || window.ChallengeSimulator?.version || 'challenge-sim-v1'),
     pageSize:Math.max(5, Math.min(100, Math.round(Number(cfg.resultadosPorPagina || 40)))),
-    pollMs:Math.max(10000, Math.round(Number(cfg.actualizacionMs || 30000)))
+    pollMs:Math.max(10000, Math.round(Number(cfg.actualizacionMs || 30000))),
+    actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000))
   };
 }
 function challengeEndpoint(){ return normalizeRankingEndpoint(challengeConfig().endpoint); }
 function challengeToken(){ return typeof rankingStoredAuthToken === 'function' ? rankingStoredAuthToken() : ''; }
+function challengeActionCooldownStorageKey(){
+  let owner = 'local';
+  try{
+    owner = String(localStorage.getItem('fmRankingAuthUserId') || localStorage.getItem('fmRankingAuthUser') || localStorage.getItem('fmRankingUsername') || 'local').trim() || 'local';
+  }catch(_){ owner = 'local'; }
+  return `fmChallengeActionCooldownUntil:${owner}`;
+}
+function challengeActionCooldownInfo(now=Date.now()){
+  let until = 0;
+  try{ until = Number(localStorage.getItem(challengeActionCooldownStorageKey()) || 0); }catch(_){ until = 0; }
+  if(!Number.isFinite(until) || until <= now){
+    try{ localStorage.removeItem(challengeActionCooldownStorageKey()); }catch(_){ /* sin almacenamiento */ }
+    return { active:false, until:0, remainingMs:0 };
+  }
+  return { active:true, until, remainingMs:Math.max(0, until - now) };
+}
+function challengeActionCooldownLabel(remainingMs){
+  const totalSeconds = Math.max(0, Math.ceil(Number(remainingMs || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+function challengeStartActionCooldown(){
+  const until = Date.now() + challengeConfig().actionCooldownMs;
+  try{ localStorage.setItem(challengeActionCooldownStorageKey(), String(until)); }catch(_){ /* sin almacenamiento */ }
+  challengeRefreshActionCooldown();
+  return until;
+}
+function challengeActionUiState(defaultLabel){
+  const cooldown = challengeActionCooldownInfo();
+  const authenticated = Boolean(challengeToken());
+  return {
+    disabled:challengeActionBusy || !authenticated || cooldown.active,
+    label:challengeActionBusy ? 'Procesando...' : cooldown.active ? `Disponible en ${challengeActionCooldownLabel(cooldown.remainingMs)}` : defaultLabel,
+    cooldown
+  };
+}
+function challengeRefreshActionCooldown(){
+  clearTimeout(challengeCooldownTimer);
+  const cooldown = challengeActionCooldownInfo();
+  const authenticated = Boolean(challengeToken());
+  document.querySelectorAll('[data-challenge-cooldown-action]').forEach(button => {
+    const defaultLabel = String(button.dataset.defaultLabel || 'Continuar');
+    button.disabled = challengeActionBusy || !authenticated || cooldown.active;
+    button.textContent = challengeActionBusy ? 'Procesando...' : cooldown.active ? `Disponible en ${challengeActionCooldownLabel(cooldown.remainingMs)}` : defaultLabel;
+  });
+  const note = document.getElementById('challengeActionCooldownNote');
+  if(note){
+    note.textContent = cooldown.active
+      ? `Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`
+      : 'Publicar o aceptar un desafío habilita una pausa de 10 minutos antes de la siguiente acción.';
+  }
+  if(cooldown.active && activeTab === 'challenges') challengeCooldownTimer = setTimeout(challengeRefreshActionCooldown, 1000);
+}
+function challengeEnsureActionAvailable(){
+  const cooldown = challengeActionCooldownInfo();
+  if(!cooldown.active) return true;
+  showNotice(`Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`);
+  return false;
+}
 function challengeApiUrl(path='', query=''){
   const clean = String(path || '').replace(/^\/+|\/+$/g, '');
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.28') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.29') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -135,7 +198,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.28'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.29'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -208,11 +271,12 @@ function challengeVenueMarkup(homeSnapshot={}){
 }
 function challengeOpenCard(row){
   const snapshot = row.creatorSnapshot || row.snapshot || {};
+  const action = challengeActionUiState('Aceptar desafío');
   return `<article class="card challenge-card challenge-open-card">
     <div class="row challenge-card-top"><div><p class="label">${escapeHtml(row.creatorUsername || 'Manager')}</p><h3>Desafío disponible</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
     ${challengeClubSummary(snapshot)}
     <p class="small muted">Publicado ${escapeHtml(challengeDateLabel(row.createdAt))} · vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</p>
-    <button class="primary" data-challenge-accept="${escapeHtml(row.id)}">Aceptar desafío</button>
+    <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="Aceptar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
   </article>`;
 }
 function challengeMineCard(row){
@@ -272,6 +336,7 @@ function challengeCurrentTeamCard(){
   let snapshot;
   try{ snapshot = buildChallengeSnapshot(); }
   catch(error){ return `<div class="card blocker"><h3>No se puede publicar el equipo</h3><p>${escapeHtml(error.message)}</p><button class="ghost" data-go-tab="firstTeam">Ir a Primer Equipo</button></div>`; }
+  const action = challengeActionUiState('Publicar desafío');
   return `<div class="card challenge-publish-card">
     <div class="challenge-publish-head">${challengeCrestMarkup(snapshot,'large')}<div><p class="label">Tu equipo actual</p><h3>${escapeHtml(snapshot.club.name)}</h3><p class="muted small">${escapeHtml(challengeVenueName(snapshot))} · ${formatPlainNumber(snapshot.club.stadiumCapacity)} lugares · ${formatPlainNumber(snapshot.club.fans)} hinchas</p></div><span class="pill">${escapeHtml(snapshot.tactic.formation)}</span></div>
     <div class="grid cols-4 challenge-team-metrics">
@@ -281,7 +346,8 @@ function challengeCurrentTeamCard(){
       <div><span>Cohesión</span><strong>${snapshot.team.cohesion}%</strong></div>
     </div>
     <p class="muted small">Se envía una fotografía de los titulares, suplentes, táctica, forma, moral, valores y sueldos. El amistoso no modifica la carrera.</p>
-    <button id="btnPublishChallenge" class="primary" ${challengeToken() ? '' : 'disabled'}>Publicar desafío</button>
+    <button id="btnPublishChallenge" class="primary" data-challenge-cooldown-action="publish" data-default-label="Publicar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
+    <p id="challengeActionCooldownNote" class="muted small challenge-cooldown-note"></p>
   </div>`;
 }
 
@@ -303,6 +369,7 @@ function challengeListMarkup(){
 }
 function renderOnlineChallenges(){
   clearTimeout(challengePollTimer);
+  clearTimeout(challengeCooldownTimer);
   const cfg = challengeConfig();
   if(!cfg.active){ view.innerHTML = '<div class="card blocker"><h2>Desafíos desactivados</h2><p>La función está deshabilitada en config.js.</p></div>'; return; }
   if(challengeDetail){ renderChallengeDetail(challengeDetail); return; }
@@ -321,6 +388,7 @@ function renderOnlineChallenges(){
     <div id="challengeStatus" class="small muted"></div>
     <div id="challengeList">${challengeListMarkup()}</div>`;
   bindChallengeEvents();
+  challengeRefreshActionCooldown();
   if(!challengeLoadedTabs[challengeViewTab] && !challengeLoading) setTimeout(() => loadChallenges(challengeViewTab), 0);
   if(challengeToken()) challengePollTimer = setTimeout(() => { if(activeTab === 'challenges' && !challengeDetail) loadChallenges('mine', { silent:true, keepTab:true }); }, cfg.pollMs);
 }
@@ -367,35 +435,45 @@ async function loadChallenges(tab=challengeViewTab, options={}){
   }
 }
 async function publishChallenge(){
-  const button = $('btnPublishChallenge');
+  if(!challengeEnsureActionAvailable()) return;
   try{
-    if(button) button.disabled = true;
+    challengeActionBusy = true;
+    challengeRefreshActionCooldown();
     const snapshot = buildChallengeSnapshot();
     showNotice('Publicando fotografía del equipo...');
     await challengeRequest('challenges', { method:'POST', body:{ snapshot } });
+    challengeStartActionCooldown();
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
     challengeLoadedTabs.available = false;
     challengeLoadedTabs.mine = false;
     challengeViewTab = 'mine';
-    showNotice('Desafío publicado. El equipo quedó congelado para este encuentro.');
+    showNotice('Desafío publicado. Podrás publicar o aceptar otro dentro de 10 minutos.');
     await loadChallenges('mine', { force:true });
-  }catch(error){ showNotice(error.message); if(button) button.disabled = false; }
+  }catch(error){ showNotice(error.message); }
+  finally{
+    challengeActionBusy = false;
+    challengeRefreshActionCooldown();
+  }
 }
 async function acceptChallenge(challengeId){
+  if(!challengeEnsureActionAvailable()) return;
   if(!confirm('¿Aceptar este desafío con la táctica y convocatoria actuales?')) return;
   const status = $('challengeStatus');
   try{
+    challengeActionBusy = true;
+    challengeRefreshActionCooldown();
     const snapshot = buildChallengeSnapshot();
     if(status) status.textContent = 'Reservando desafío y enviando tu equipo...';
     const accepted = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/accept`, { method:'POST', body:{ snapshot } });
+    challengeStartActionCooldown();
     if(status) status.textContent = 'Simulando el partido en este navegador...';
     const result = window.ChallengeSimulator.simulateChallengeMatch({
       homeSnapshot:accepted.homeSnapshot,
       awaySnapshot:accepted.awaySnapshot,
       seed:accepted.seed
     });
-    if(status) status.textContent = 'Guardando el resultado en Cloudflare...';
+    if(status) status.textContent = 'Guardando el resultado...';
     const saved = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/result`, { method:'POST', body:{ result } });
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
@@ -411,6 +489,9 @@ async function acceptChallenge(challengeId){
   }catch(error){
     if(status) status.textContent = '';
     showNotice(error.message);
+  }finally{
+    challengeActionBusy = false;
+    challengeRefreshActionCooldown();
   }
 }
 async function cancelChallenge(challengeId){

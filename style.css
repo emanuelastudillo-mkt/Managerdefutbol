@@ -5497,3 +5497,7 @@ button.cwc-group-result{cursor:pointer}
   .challenge-club-facts{grid-template-columns:1fr}
   .challenge-venue-line{justify-content:flex-start}
 }
+
+/* V7.29 · pausa local de acciones online */
+.challenge-cooldown-note{margin:2px 0 0;min-height:1.2em}
+[data-challenge-cooldown-action][disabled]{cursor:not-allowed;opacity:.68}

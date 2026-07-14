@@ -1,0 +1,609 @@
+{
+  "metadata": {
+    "version": "V7.43",
+    "sistema": "hitos_manager",
+    "descripcion": "Catálogo visible de hitos personales del manager. Los conseguidos se destacan y los pendientes se muestran oscuros y desaturados."
+  },
+  "hitos": [
+    {
+      "id": "primer_partido",
+      "titulo": "Primer partido",
+      "descripcion": "Dirigí tu primer partido oficial.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 1,
+      "icono": "⚽",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primer_triunfo",
+      "titulo": "Primer triunfo",
+      "descripcion": "Ganaste tu primer partido oficial.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.won",
+      "objetivo": 1,
+      "icono": "🏁",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cinco_partidos",
+      "titulo": "Cinco partidos",
+      "descripcion": "Llegaste a 5 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 5,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "diez_partidos",
+      "titulo": "Diez partidos",
+      "descripcion": "Llegaste a 10 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 10,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "veinticinco_partidos",
+      "titulo": "Rodaje inicial",
+      "descripcion": "Llegaste a 25 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 25,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cincuenta_partidos",
+      "titulo": "Media centena",
+      "descripcion": "Llegaste a 50 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 50,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cien_partidos",
+      "titulo": "Cien partidos",
+      "descripcion": "Llegaste a 100 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 100,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "doscientos_partidos",
+      "titulo": "Carrera larga",
+      "descripcion": "Llegaste a 200 partidos dirigidos.",
+      "categoria": "Primeros pasos",
+      "metrica": "totals.played",
+      "objetivo": 200,
+      "icono": "📋",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cinco_victorias",
+      "titulo": "Cinco victorias",
+      "descripcion": "Ganaste 5 partidos oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.won",
+      "objetivo": 5,
+      "icono": "✅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "diez_victorias",
+      "titulo": "Diez victorias",
+      "descripcion": "Ganaste 10 partidos oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.won",
+      "objetivo": 10,
+      "icono": "✅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "veinticinco_victorias",
+      "titulo": "Veinticinco victorias",
+      "descripcion": "Ganaste 25 partidos oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.won",
+      "objetivo": 25,
+      "icono": "✅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cincuenta_victorias",
+      "titulo": "Cincuenta victorias",
+      "descripcion": "Ganaste 50 partidos oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.won",
+      "objetivo": 50,
+      "icono": "✅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cien_victorias",
+      "titulo": "Cien victorias",
+      "descripcion": "Ganaste 100 partidos oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.won",
+      "objetivo": 100,
+      "icono": "✅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primer_empate",
+      "titulo": "Primer empate",
+      "descripcion": "Empataste tu primer partido oficial.",
+      "categoria": "Resultados",
+      "metrica": "totals.drawn",
+      "objetivo": 1,
+      "icono": "➖",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "diez_empates",
+      "titulo": "Partidos cerrados",
+      "descripcion": "Llegaste a 10 empates oficiales.",
+      "categoria": "Resultados",
+      "metrica": "totals.drawn",
+      "objetivo": 10,
+      "icono": "➖",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primera_derrota",
+      "titulo": "Primera derrota",
+      "descripcion": "Sufriste tu primera derrota oficial.",
+      "categoria": "Resultados",
+      "metrica": "totals.lost",
+      "objetivo": 1,
+      "icono": "⚠️",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primer_gol",
+      "titulo": "Primer gol",
+      "descripcion": "Tu equipo convirtió su primer gol oficial.",
+      "categoria": "Goles",
+      "metrica": "totals.gf",
+      "objetivo": 1,
+      "icono": "🥅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "diez_goles",
+      "titulo": "Diez goles",
+      "descripcion": "Tu equipo convirtió 10 goles oficiales.",
+      "categoria": "Goles",
+      "metrica": "totals.gf",
+      "objetivo": 10,
+      "icono": "🥅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cincuenta_goles",
+      "titulo": "Cincuenta goles",
+      "descripcion": "Tu equipo convirtió 50 goles oficiales.",
+      "categoria": "Goles",
+      "metrica": "totals.gf",
+      "objetivo": 50,
+      "icono": "🥅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cien_goles",
+      "titulo": "Cien goles",
+      "descripcion": "Tu equipo convirtió 100 goles oficiales.",
+      "categoria": "Goles",
+      "metrica": "totals.gf",
+      "objetivo": 100,
+      "icono": "🥅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "doscientos_goles",
+      "titulo": "Doscientos goles",
+      "descripcion": "Tu equipo convirtió 200 goles oficiales.",
+      "categoria": "Goles",
+      "metrica": "totals.gf",
+      "objetivo": 200,
+      "icono": "🥅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "dg_positivo_10",
+      "titulo": "Diferencia positiva",
+      "descripcion": "Lograste diferencia de gol acumulada +10.",
+      "categoria": "Goles",
+      "metrica": "goalDiff",
+      "objetivo": 10,
+      "icono": "📈",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "dg_positivo_25",
+      "titulo": "Ataque y defensa",
+      "descripcion": "Lograste diferencia de gol acumulada +25.",
+      "categoria": "Goles",
+      "metrica": "goalDiff",
+      "objetivo": 25,
+      "icono": "📈",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "dg_positivo_50",
+      "titulo": "Dominio acumulado",
+      "descripcion": "Lograste diferencia de gol acumulada +50.",
+      "categoria": "Goles",
+      "metrica": "goalDiff",
+      "objetivo": 50,
+      "icono": "📈",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primera_temporada",
+      "titulo": "Primera temporada cerrada",
+      "descripcion": "Finalizaste tu primera temporada.",
+      "categoria": "Temporadas",
+      "metrica": "seasonsCompleted",
+      "objetivo": 1,
+      "icono": "📅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "tres_temporadas",
+      "titulo": "Tres temporadas",
+      "descripcion": "Finalizaste 3 temporadas.",
+      "categoria": "Temporadas",
+      "metrica": "seasonsCompleted",
+      "objetivo": 3,
+      "icono": "📅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cinco_temporadas",
+      "titulo": "Cinco temporadas",
+      "descripcion": "Finalizaste 5 temporadas.",
+      "categoria": "Temporadas",
+      "metrica": "seasonsCompleted",
+      "objetivo": 5,
+      "icono": "📅",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primer_objetivo",
+      "titulo": "Objetivo cumplido",
+      "descripcion": "Cumpliste un objetivo de directiva al cierre de temporada.",
+      "categoria": "Directiva",
+      "metrica": "objectivesAchieved",
+      "objetivo": 1,
+      "icono": "🎯",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "tres_objetivos",
+      "titulo": "Directiva conforme",
+      "descripcion": "Cumpliste 3 objetivos de directiva.",
+      "categoria": "Directiva",
+      "metrica": "objectivesAchieved",
+      "objetivo": 3,
+      "icono": "🎯",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "ppg_150",
+      "titulo": "Temporada competitiva",
+      "descripcion": "Cerraste una temporada con 1.50 PPG o más.",
+      "categoria": "Temporadas",
+      "metrica": "bestSeasonPpg",
+      "objetivo": 1.5,
+      "icono": "📊",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "primer_titulo",
+      "titulo": "Primer título",
+      "descripcion": "Ganaste tu primer título.",
+      "categoria": "Títulos",
+      "metrica": "titles",
+      "objetivo": 1,
+      "icono": "🏆",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "tres_titulos",
+      "titulo": "Tres títulos",
+      "descripcion": "Ganaste 3 títulos.",
+      "categoria": "Títulos",
+      "metrica": "titles",
+      "objetivo": 3,
+      "icono": "🏆",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cinco_titulos",
+      "titulo": "Cinco títulos",
+      "descripcion": "Ganaste 5 títulos.",
+      "categoria": "Títulos",
+      "metrica": "titles",
+      "objetivo": 5,
+      "icono": "🏆",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "xp_100",
+      "titulo": "Primer aprendizaje",
+      "descripcion": "Llegaste a 100 puntos de experiencia.",
+      "categoria": "Manager",
+      "metrica": "experience",
+      "objetivo": 100,
+      "icono": "⭐",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "xp_500",
+      "titulo": "Manager formado",
+      "descripcion": "Llegaste a 500 puntos de experiencia.",
+      "categoria": "Manager",
+      "metrica": "experience",
+      "objetivo": 500,
+      "icono": "⭐",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "xp_1000",
+      "titulo": "Manager experimentado",
+      "descripcion": "Llegaste a 1.000 puntos de experiencia.",
+      "categoria": "Manager",
+      "metrica": "experience",
+      "objetivo": 1000,
+      "icono": "⭐",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "prestigio_5",
+      "titulo": "Nombre conocido",
+      "descripcion": "Llegaste a 5 de prestigio de manager.",
+      "categoria": "Manager",
+      "metrica": "prestige",
+      "objetivo": 5,
+      "icono": "🌟",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "prestigio_10",
+      "titulo": "Prestigio 10",
+      "descripcion": "Llegaste a 10 de prestigio de manager.",
+      "categoria": "Manager",
+      "metrica": "prestige",
+      "objetivo": 10,
+      "icono": "🌟",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "prestigio_25",
+      "titulo": "Prestigio 25",
+      "descripcion": "Llegaste a 25 de prestigio de manager.",
+      "categoria": "Manager",
+      "metrica": "prestige",
+      "objetivo": 25,
+      "icono": "🌟",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "presupuesto_100m",
+      "titulo": "Caja estable",
+      "descripcion": "Tu presupuesto llegó a $100.000.000.",
+      "categoria": "Club",
+      "metrica": "currentBudget",
+      "objetivo": 100000000,
+      "icono": "💰",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "presupuesto_500m",
+      "titulo": "Club sólido",
+      "descripcion": "Tu presupuesto llegó a $500.000.000.",
+      "categoria": "Club",
+      "metrica": "currentBudget",
+      "objetivo": 500000000,
+      "icono": "💰",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "estadio_5000",
+      "titulo": "Estadio de barrio",
+      "descripcion": "Tu estadio llegó a 5.000 de capacidad.",
+      "categoria": "Club",
+      "metrica": "stadiumCapacity",
+      "objetivo": 5000,
+      "icono": "🏟️",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "estadio_20000",
+      "titulo": "Estadio competitivo",
+      "descripcion": "Tu estadio llegó a 20.000 de capacidad.",
+      "categoria": "Club",
+      "metrica": "stadiumCapacity",
+      "objetivo": 20000,
+      "icono": "🏟️",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "hinchas_10000",
+      "titulo": "Diez mil hinchas",
+      "descripcion": "Tu club llegó a 10.000 hinchas.",
+      "categoria": "Club",
+      "metrica": "fans",
+      "objetivo": 10000,
+      "icono": "👥",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "puntos_habilidad_1000",
+      "titulo": "Puntos para cartas",
+      "descripcion": "Llegaste a 1.000 puntos de habilidad.",
+      "categoria": "Cartas",
+      "metrica": "skillPoints",
+      "objetivo": 1000,
+      "icono": "🃏",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "cartas_activas_1",
+      "titulo": "Primera carta activa",
+      "descripcion": "Activaste tu primera carta de habilidad.",
+      "categoria": "Cartas",
+      "metrica": "activeSpecialCards",
+      "objetivo": 1,
+      "icono": "🃏",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "ojeo_1",
+      "titulo": "Primer informe",
+      "descripcion": "Guardaste tu primer informe de ojeo de jugador.",
+      "categoria": "Ojeo",
+      "metrica": "savedScoutingReports",
+      "objetivo": 1,
+      "icono": "🔎",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "ojeo_5",
+      "titulo": "Cinco informes",
+      "descripcion": "Guardaste 5 informes de ojeo de jugadores.",
+      "categoria": "Ojeo",
+      "metrica": "savedScoutingReports",
+      "objetivo": 5,
+      "icono": "🔎",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "ojeo_equipo_1",
+      "titulo": "Primer rival ojeado",
+      "descripcion": "Ojeaste tu primer equipo rival.",
+      "categoria": "Ojeo",
+      "metrica": "scoutedTeams",
+      "objetivo": 1,
+      "icono": "👁️",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "academia_1",
+      "titulo": "Primer juvenil",
+      "descripcion": "Tu academia tuvo al menos 1 juvenil.",
+      "categoria": "Academia",
+      "metrica": "academyPlayers",
+      "objetivo": 1,
+      "icono": "🌱",
+      "visibleInicialmente": false
+    },
+    {
+      "id": "quinientos_partidos",
+      "titulo": "Quinientos partidos",
+      "descripcion": "Llegaste a 500 partidos oficiales dirigidos.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.played",
+      "objetivo": 500,
+      "icono": "🧭",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "mil_partidos",
+      "titulo": "Una vida en el banco",
+      "descripcion": "Llegaste a 1.000 partidos oficiales dirigidos.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.played",
+      "objetivo": 1000,
+      "icono": "♾️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "doscientas_cincuenta_victorias",
+      "titulo": "Ganador serial",
+      "descripcion": "Ganaste 250 partidos oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.won",
+      "objetivo": 250,
+      "icono": "⚔️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "quinientas_victorias",
+      "titulo": "Dinastía competitiva",
+      "descripcion": "Ganaste 500 partidos oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.won",
+      "objetivo": 500,
+      "icono": "👑",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "mil_goles",
+      "titulo": "Mil goles dirigidos",
+      "descripcion": "Tus equipos convirtieron 1.000 goles oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.gf",
+      "objetivo": 1000,
+      "icono": "💥",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dg_positivo_300",
+      "titulo": "Dominio histórico",
+      "descripcion": "Alcanzaste una diferencia de gol acumulada de +300.",
+      "categoria": "Desafíos extremos",
+      "metrica": "goalDiff",
+      "objetivo": 300,
+      "icono": "📐",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "diez_temporadas",
+      "titulo": "Una década de carrera",
+      "descripcion": "Finalizaste 10 temporadas completas.",
+      "categoria": "Desafíos extremos",
+      "metrica": "seasonsCompleted",
+      "objetivo": 10,
+      "icono": "🗓️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "quince_objetivos",
+      "titulo": "Directiva inquebrantable",
+      "descripcion": "Cumpliste 15 objetivos de directiva al cierre de temporada.",
+      "categoria": "Desafíos extremos",
+      "metrica": "objectivesAchieved",
+      "objetivo": 15,
+      "icono": "🎯",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "diez_titulos",
+      "titulo": "Colección de trofeos",
+      "descripcion": "Ganaste 10 títulos oficiales como manager.",
+      "categoria": "Desafíos extremos",
+      "metrica": "titles",
+      "objetivo": 10,
+      "icono": "🏛️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "prestigio_100",
+      "titulo": "Leyenda del banco",
+      "descripcion": "Alcanzaste 100 puntos de prestigio como manager.",
+      "categoria": "Desafíos extremos",
+      "metrica": "prestige",
+      "objetivo": 100,
+      "icono": "🌌",
+      "visibleInicialmente": true
+    }
+  ]
+}

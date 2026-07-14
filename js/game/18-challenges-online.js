@@ -87,7 +87,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.38') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.39') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -198,7 +198,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.38'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.39'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -277,27 +277,71 @@ function challengeVenueMarkup(homeSnapshot={}){
   const club = homeSnapshot?.club || {};
   return `<div class="challenge-venue-line"><span>🏟</span><strong>${escapeHtml(challengeVenueName(homeSnapshot))}</strong><span>Capacidad ${formatPlainNumber(Number(club.stadiumCapacity || 0))}</span><span>Hinchas ${formatPlainNumber(Number(club.fans || 0))}</span></div>`;
 }
+function challengeSnapshotSalary(snapshot={}){
+  const team = snapshot?.team || {};
+  return Math.max(0, Math.round(challengeSafeNumber(team.matchSquadSalaryTotal ?? team.startingXiSalaryTotal, 0)));
+}
+function challengeSimpleTeamSide(snapshot={}, managerName='Manager', side='home', options={}){
+  const clubName = String(snapshot?.club?.name || options.fallbackClub || (side === 'away' ? 'Club visitante' : 'Club local'));
+  const salaryMarkup = options.showSalary === true
+    ? `<small class="challenge-history-simple-salary" title="Sueldos de la convocatoria">Sueldos ${formatMoney(challengeSnapshotSalary(snapshot))}</small>`
+    : '';
+  return `<div class="challenge-history-simple-side challenge-history-simple-${side}">
+    ${challengeCrestMarkup(snapshot, 'challenge-history-simple-crest')}
+    <div class="challenge-history-simple-copy">
+      <strong title="${escapeHtml(clubName)}">${escapeHtml(clubName)}</strong>
+      <span title="${escapeHtml(managerName || 'Manager')}">${escapeHtml(managerName || 'Manager')}</span>
+      ${salaryMarkup}
+    </div>
+  </div>`;
+}
+function challengeSimpleScore(result={}, label='Final'){
+  const hasScore = result && (result.homeGoals != null || result.awayGoals != null);
+  return `<div class="challenge-history-simple-score ${label ? 'with-label' : ''} ${hasScore ? '' : 'challenge-history-simple-status'}" ${hasScore ? `aria-label="Resultado ${Number(result.homeGoals || 0)} a ${Number(result.awayGoals || 0)}"` : ''}>
+    ${label ? `<small>${escapeHtml(label)}</small>` : ''}
+    <b>${hasScore ? `${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}` : 'VS'}</b>
+  </div>`;
+}
 function challengeOpenCard(row){
   const snapshot = row.creatorSnapshot || row.snapshot || {};
   const action = challengeActionUiState('Aceptar desafío');
-  return `<article class="card challenge-card challenge-open-card">
-    <div class="row challenge-card-top"><div><p class="label">${escapeHtml(row.creatorUsername || 'Manager')}</p><h3>Desafío disponible</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
-    ${challengeClubSummary(snapshot)}
-    <p class="small muted">Publicado ${escapeHtml(challengeDateLabel(row.createdAt))} · vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</p>
-    <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="Aceptar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
+  return `<article class="card challenge-card challenge-open-card challenge-simple-single-card">
+    ${challengeSimpleTeamSide(snapshot, row.creatorUsername || 'Manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club' })}
+    <div class="challenge-simple-card-actions">
+      <span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span>
+      <small>Publicado ${escapeHtml(challengeDateLabel(row.createdAt))}</small>
+      <small>Vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</small>
+      <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="Aceptar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
+    </div>
   </article>`;
 }
 function challengeMineCard(row){
   const home = row.creatorSnapshot || {};
   const away = row.opponentSnapshot || {};
   const result = row.match || null;
-  return `<article class="card challenge-card">
-    <div class="row"><div><p class="label">Tu desafío</p><h3>${escapeHtml(home?.club?.name || row.creatorClubName || 'Club')}</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
-    ${result ? `<div class="challenge-history-matchup"><div class="challenge-match-team challenge-match-team-home"><span class="challenge-side-label">Local</span>${challengeClubSummary(home,{compact:true})}</div><div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div><div class="challenge-match-team challenge-match-team-away"><span class="challenge-side-label">Visitante</span>${challengeClubSummary(away,{compact:true})}</div></div>${challengeVenueMarkup(home)}` : challengeClubSummary(home)}
-    <p class="small muted">${row.opponentUsername ? `Aceptado por ${escapeHtml(row.opponentUsername)}` : 'Esperando rival'} · ${escapeHtml(challengeDateLabel(row.createdAt))}</p>
-    <div class="row challenge-actions">
-      ${row.status === 'open' ? `<button class="ghost danger" data-challenge-cancel="${escapeHtml(row.id)}">Cancelar</button>` : ''}
-      ${row.status === 'completed' ? `<button class="primary" data-challenge-view="${escapeHtml(row.id)}">Ver partido</button>` : ''}
+  const hasOpponent = Boolean(row.opponentUsername || away?.club?.name);
+  const actions = `${row.status === 'open' ? `<button class="ghost danger" data-challenge-cancel="${escapeHtml(row.id)}">Cancelar</button>` : ''}${row.status === 'completed' ? `<button class="primary" data-challenge-view="${escapeHtml(row.id)}">Ver partido</button>` : ''}`;
+  if(!hasOpponent){
+    return `<article class="card challenge-card challenge-simple-single-card challenge-mine-simple-card">
+      ${challengeSimpleTeamSide(home, row.creatorUsername || 'Tu manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club' })}
+      <div class="challenge-simple-card-actions">
+        <span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span>
+        <small>Esperando rival</small>
+        <small>${escapeHtml(challengeDateLabel(row.createdAt))}</small>
+        ${actions}
+      </div>
+    </article>`;
+  }
+  const center = result ? challengeSimpleScore(result, 'Final') : challengeSimpleScore({}, challengeStatusLabel(row.status));
+  return `<article class="card challenge-card challenge-mine-simple-card challenge-simple-match-card">
+    <div class="challenge-history-simple challenge-mine-simple-matchup">
+      ${challengeSimpleTeamSide(home, row.creatorUsername || 'Manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club local' })}
+      ${center}
+      ${challengeSimpleTeamSide(away, row.opponentUsername || 'Manager', 'away', { showSalary:true, fallbackClub:row.opponentClubName || 'Club visitante' })}
+    </div>
+    <div class="challenge-simple-card-footer">
+      <span>${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span>
+      <div class="challenge-actions">${actions}</div>
     </div>
   </article>`;
 }
@@ -305,28 +349,10 @@ function challengeHistoryCard(row){
   const home = row.creatorSnapshot || {};
   const away = row.opponentSnapshot || {};
   const result = row.match || {};
-  const homeClub = String(home?.club?.name || row.creatorClubName || 'Club local');
-  const awayClub = String(away?.club?.name || row.opponentClubName || 'Club visitante');
-  const homeManager = String(row.creatorUsername || 'Manager');
-  const awayManager = String(row.opponentUsername || 'Manager');
   return `<article class="card challenge-card challenge-history-card challenge-history-simple" data-challenge-view="${escapeHtml(row.id)}" title="Ver detalle del partido">
-    <div class="challenge-history-simple-side challenge-history-simple-home">
-      ${challengeCrestMarkup(home, 'challenge-history-simple-crest')}
-      <div class="challenge-history-simple-copy">
-        <strong title="${escapeHtml(homeClub)}">${escapeHtml(homeClub)}</strong>
-        <span title="${escapeHtml(homeManager)}">${escapeHtml(homeManager)}</span>
-      </div>
-    </div>
-    <div class="challenge-history-simple-score" aria-label="Resultado ${Number(result.homeGoals || 0)} a ${Number(result.awayGoals || 0)}">
-      <b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b>
-    </div>
-    <div class="challenge-history-simple-side challenge-history-simple-away">
-      ${challengeCrestMarkup(away, 'challenge-history-simple-crest')}
-      <div class="challenge-history-simple-copy">
-        <strong title="${escapeHtml(awayClub)}">${escapeHtml(awayClub)}</strong>
-        <span title="${escapeHtml(awayManager)}">${escapeHtml(awayManager)}</span>
-      </div>
-    </div>
+    ${challengeSimpleTeamSide(home, row.creatorUsername || 'Manager', 'home', { fallbackClub:row.creatorClubName || 'Club local' })}
+    ${challengeSimpleScore(result, '')}
+    ${challengeSimpleTeamSide(away, row.opponentUsername || 'Manager', 'away', { fallbackClub:row.opponentClubName || 'Club visitante' })}
   </article>`;
 }
 

@@ -5618,3 +5618,81 @@ button.cwc-group-result{cursor:pointer}
   .challenge-history-simple-score{min-width:72px;height:50px}
   .challenge-history-simple-score b{font-size:1.45rem}
 }
+
+/* V7.39 · Disponibles y Mis desafíos con el lenguaje visual del historial */
+.challenge-history-simple-salary{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--accent);
+  font-size:.75rem;
+  font-weight:800;
+  line-height:1.2;
+}
+.challenge-simple-single-card{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(180px,auto);
+  align-items:center;
+  gap:20px;
+  min-width:0;
+  min-height:112px;
+  padding:20px 22px;
+}
+.challenge-simple-card-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:center;
+  gap:7px;
+  min-width:180px;
+  text-align:right;
+}
+.challenge-simple-card-actions small{color:var(--muted);font-size:.74rem}
+.challenge-simple-card-actions button{min-width:180px;margin-top:3px}
+.challenge-simple-match-card{padding:0}
+.challenge-mine-simple-matchup{width:100%}
+.challenge-simple-card-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:54px;
+  padding:10px 22px;
+  border-top:1px solid rgba(148,163,184,.14);
+  background:rgba(2,6,23,.16);
+}
+.challenge-simple-card-footer>span{color:var(--muted);font-size:.76rem}
+.challenge-simple-card-footer .challenge-actions{display:flex;justify-content:flex-end;gap:8px}
+.challenge-history-simple-score.with-label{flex-direction:column;gap:3px}
+.challenge-history-simple-score small{
+  color:var(--muted);
+  font-size:.61rem;
+  font-weight:800;
+  line-height:1;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.challenge-history-simple-status b{font-size:1.2rem;letter-spacing:.06em}
+.challenge-available-grid,.challenge-mine-grid{grid-template-columns:minmax(0,1fr)}
+@media (min-width:1500px){
+  .challenge-available-grid,.challenge-mine-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:680px){
+  .challenge-simple-single-card{
+    grid-template-columns:minmax(0,1fr);
+    gap:14px;
+    padding:16px 14px;
+  }
+  .challenge-simple-card-actions{
+    align-items:stretch;
+    min-width:0;
+    padding-top:12px;
+    border-top:1px solid rgba(148,163,184,.14);
+    text-align:left;
+  }
+  .challenge-simple-card-actions .pill{align-self:flex-start}
+  .challenge-simple-card-actions button{width:100%;min-width:0}
+  .challenge-simple-card-footer{align-items:flex-start;padding:10px 14px}
+}

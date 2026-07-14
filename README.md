@@ -1,5 +1,48 @@
-# Fútbol Manager MVP - V7.38
+# Fútbol Manager MVP - V7.39
 
+
+## V7.39 - Tarjetas unificadas de Desafíos Online y referencia salarial
+
+### Disponibles
+
+- Las tarjetas de **Disponibles** adoptan el lenguaje visual horizontal de **Partidos disputados**.
+- Cada desafío muestra escudo, nombre del club, nombre del manager y sueldos totales de la convocatoria publicada.
+- El estado, la fecha de publicación, el vencimiento y el botón para aceptar quedan agrupados en un bloque lateral, sin volver a mostrar estadio, capacidad, hinchas, valor de plantel ni formación.
+
+### Mis desafíos
+
+- Un desafío todavía abierto utiliza la misma tarjeta horizontal, con escudo, club, manager y sueldos de la convocatoria propia.
+- Cuando ya existe rival, la tarjeta muestra ambos clubes y managers enfrentados, los sueldos de ambas convocatorias y el resultado final o el estado `VS` mientras se procesa.
+- Se mantienen los botones **Cancelar** y **Ver partido**, junto con la apertura del detalle completo del encuentro.
+
+### Referencia de nivel
+
+- El valor mostrado como **Sueldos** corresponde a `matchSquadSalaryTotal`, es decir, la suma salarial de titulares y suplentes incluidos en la fotografía del desafío.
+- Como respaldo para fotografías antiguas sin ese campo, se utiliza `startingXiSalaryTotal`.
+- El historial de **Partidos disputados** conserva su contenido simplificado anterior y no agrega información adicional.
+
+### Diseño adaptable
+
+- Disponibles, Mis desafíos y Partidos disputados comparten proporciones, tamaño fijo de escudos, recorte seguro de nombres y distribución horizontal.
+- En pantallas amplias pueden mostrarse dos tarjetas por fila.
+- En pantallas angostas, las acciones pasan debajo del club y los enfrentamientos mantienen la adaptación móvil ya existente.
+
+### Archivos principales modificados en V7.39
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `style.css`
+- `js/core/01-config-constants.js`
+- `js/game/18-challenges-online.js`
+- `README.md`
+
+**V7.39 no rompe partidas anteriores.** No modifica partidas, snapshots existentes ni la estructura del servicio online. Las fotografías antiguas siguen siendo compatibles; si no incluyen la masa salarial completa de la convocatoria, se muestra el total salarial del once inicial disponible en esa fotografía.
+
+---
+
+## Historial anterior
 
 ## V7.38 - Corrección del alquiler de oficinas de ojeo
 
@@ -35,8 +78,6 @@
 **V7.38 no rompe partidas anteriores.** No cambia la estructura de guardado. Las oficinas ya registradas continúan funcionando y las partidas donde el cobro fallido no llegó a guardar una oficina simplemente podrán alquilarla nuevamente.
 
 ---
-
-## Historial anterior
 
 ## V7.37 - Auditoría táctica bot y cobertura del top 5
 

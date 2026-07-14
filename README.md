@@ -1,76 +1,74 @@
-# Fútbol Manager MVP - V7.26
+# Fútbol Manager MVP - V7.27
 
-## V7.26 - Desafíos online con simulación local y Cloudflare D1
+## V7.27 - Ranking de desafíos y listas estables
 
-Se agregó una nueva sección **Desafíos Online** que reutiliza el login del Ranking Online. Un manager puede publicar una fotografía de su equipo y otro usuario puede aceptarla con su propio plantel. El navegador del jugador que acepta ejecuta una simulación determinista y envía el resultado al Worker para dejarlo publicado.
+Se ajustó la pantalla **Desafíos Online** y se agregó un ranking público de puntaje.
 
-### Información enviada por cada equipo
+### Corrección visual
 
-- Club, escudo, hinchas, estadio y estado del campo.
-- Formación, capitán, mentalidad e instrucciones tácticas.
-- Once titular y hasta diez suplentes.
-- Media, forma y moral de cada jugador.
-- Habilidades agregadas necesarias para la simulación.
-- Valor del once titular.
-- Suma de los sueldos del once titular.
-- Valor de toda la convocatoria.
-- Suma de los sueldos de toda la convocatoria.
+- La pestaña **Disponibles** ya no parpadea cuando está vacía.
+- La pestaña **Partidos disputados** ya no se recarga visualmente en bucle cuando no hay registros.
+- Cada pestaña conserva un estado de carga propio.
+- El refresco automático de **Mis desafíos** ya no fuerza el redibujado de las demás pestañas vacías.
 
-Después del partido se guardan además el valor y la suma de sueldos de los jugadores que realmente disputaron minutos.
+### Ranking de desafíos
 
-### Flujo
+Se agregó una cuarta pestaña:
 
-1. El creador publica el equipo y Cloudflare guarda una fotografía inalterable.
-2. Otro usuario acepta y envía su fotografía.
-3. El Worker reserva el desafío y entrega una semilla.
-4. `simulador-desafios.js` simula el encuentro sin tocar la carrera.
-5. El resultado se guarda en `manager_desafios_db`.
-6. El jugador que aceptó ve la ficha inmediatamente.
-7. El creador y el resto de la comunidad pueden consultar el partido después.
+```text
+Ranking
+```
 
-### Resultado publicado
+El ranking se calcula desde los partidos completados guardados en Cloudflare.
 
-- Marcador, goleadores y asistencias.
-- Tarjetas amarillas y rojas.
-- Lesiones simuladas.
-- Cambios.
-- Posesión, tiros, tiros al arco, córners y faltas.
-- Hinchas locales y visitantes y asistencia total.
-- Rendimientos individuales y figura del partido.
-- Valor y masa salarial de cada convocatoria.
-- Valor y masa salarial de los jugadores utilizados.
+El puntaje considera:
+
+- Resultado.
+- Media del equipo propio.
+- Media del rival.
+- Diferencia de goles.
+
+Una victoria con un equipo muy superior entrega pocos puntos. Una victoria con un equipo claramente inferior entrega muchos puntos. En empate, ambos suman, pero el equipo más débil recibe más.
+
+### Fórmula resumida
+
+```text
+Victoria = 12 + 188 × (1 - probabilidad esperada) + bonus de diferencia de gol
+Empate = 10 + 70 × (1 - probabilidad esperada)
+Derrota = 0
+```
+
+Ejemplo conceptual:
+
+- Equipo 99 vence a equipo 34: puntaje mínimo.
+- Equipo 34 vence a equipo 99: puntaje muy alto.
+- Equipo 34 empata con equipo 99: puntaje alto para el equipo 34 y bajo para el equipo 99.
+
+No se crea una tabla nueva para el ranking. El Worker lo calcula con los resultados ya guardados en `fm_challenge_matches_v1` y las fotografías de equipos existentes.
 
 ### Cloudflare
 
-La carpeta `cloudflare-desafios/` incluye:
+No hace falta ejecutar una migración nueva si ya instalaste V7.26.
 
-- `migracion-desafios-v1.sql`.
-- `worker-ranking-desafios-v1.js`.
-- `PASOS-INSTALACION-DESAFIOS.md`.
-- `PRUEBAS-DESAFIOS.md`.
-
-El Worker combinado conserva la base actual:
+Sólo hay que reemplazar el Worker combinado por:
 
 ```text
-db -> ranking_manager_db
+cloudflare-desafios/worker-ranking-desafios-v1.js
 ```
 
-Y requiere una segunda vinculación:
+Nueva ruta pública:
 
 ```text
-DESAFIOS_DB -> manager_desafios_db
+GET /challenges/ranking
 ```
 
-### Reglas iniciales
+Versión esperada del Worker:
 
-- Máximo tres desafíos abiertos por usuario.
-- Vencimiento a los siete días.
-- No se pueden aceptar desafíos propios.
-- Sólo el primer usuario que acepta reserva el encuentro.
-- Los partidos son amistosos y no modifican forma, lesiones, moral, cohesión, dinero, cartas ni estadísticas oficiales.
-- La simulación se ejecuta localmente; por eso no entrega recompensas competitivas.
+```text
+V7.27-desafios-ranking-v1
+```
 
-### Archivos principales modificados en V7.26
+### Archivos principales modificados en V7.27
 
 - `README.md`
 - `index.html`
@@ -79,14 +77,14 @@ DESAFIOS_DB -> manager_desafios_db
 - `balance-modificadores.js`
 - `data/instalaciones.json`
 - `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
-- `simulador-desafios.js`
 - `js/game/18-challenges-online.js`
-- `cloudflare-desafios/*`
+- `cloudflare-desafios/worker-ranking-desafios-v1.js`
+- `cloudflare-desafios/PASOS-INSTALACION-DESAFIOS.md`
+- `cloudflare-desafios/PRUEBAS-DESAFIOS.md`
 
 ### Compatibilidad de partidas
 
-**V7.26 no rompe partidas anteriores.** Los desafíos utilizan fotografías separadas y una nueva base D1. No agregan datos obligatorios al guardado local de la carrera.
+**V7.27 no rompe partidas anteriores.** Sólo modifica la interfaz de Desafíos Online y agrega un cálculo público de ranking desde los resultados guardados.
 
 ---
 

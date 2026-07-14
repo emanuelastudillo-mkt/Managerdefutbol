@@ -1,7 +1,8 @@
 /* Desafíos online: fotografías del equipo, simulación local y resultados públicos. */
 
 let challengeViewTab = 'available';
-let challengeRowsCache = { available:[], mine:[], history:[] };
+let challengeRowsCache = { available:[], mine:[], history:[], ranking:[] };
+let challengeLoadedTabs = { available:false, mine:false, history:false, ranking:false };
 let challengeLoading = false;
 let challengeDetail = null;
 let challengePollTimer = null;
@@ -23,7 +24,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.26') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.27') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -134,7 +135,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.26'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.27'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -220,6 +221,26 @@ function challengeHistoryCard(row){
     <p class="small muted">Asistencia ${formatPlainNumber(Number(result.attendance || 0))} · Valor usado ${formatMoney(Number(result.homeUsedPlayersValue || 0))} vs ${formatMoney(Number(result.awayUsedPlayersValue || 0))}</p>
   </article>`;
 }
+
+function challengeRankingMarkup(rows){
+  return `<div class="card challenge-ranking-card">
+    <div class="row"><div><h3>Ranking de desafíos</h3><p class="muted small">Puntaje calculado por resultado y diferencia de media entre equipos. Ganar con un equipo inferior suma mucho más.</p></div><span class="pill">Amistoso online</span></div>
+    <div class="table-wrap"><table class="challenge-ranking-table"><thead><tr><th>#</th><th>Manager</th><th>PJ</th><th>G/E/P</th><th>GF-GC</th><th>Media</th><th>Rival prom.</th><th>Mejor partido</th><th>PTS</th></tr></thead><tbody>
+      ${rows.map((row,index) => `<tr>
+        <td>${Number(row.rank || index + 1)}</td>
+        <td><strong>${escapeHtml(row.username || 'Manager')}</strong></td>
+        <td>${Number(row.played || 0)}</td>
+        <td>${Number(row.wins || 0)}/${Number(row.draws || 0)}/${Number(row.losses || 0)}</td>
+        <td>${Number(row.goalsFor || 0)}-${Number(row.goalsAgainst || 0)}</td>
+        <td>${Number(row.averageTeamRating || 0).toFixed(1)}</td>
+        <td>${Number(row.averageOpponentRating || 0).toFixed(1)}</td>
+        <td>${Number(row.bestMatchPoints || 0)}</td>
+        <td><strong>${Number(row.points || 0)}</strong></td>
+      </tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted small">Victoria favorita: pocos puntos. Victoria de equipo inferior: puntaje alto. Empate: ambos suman, con más premio para el equipo más débil.</p>
+  </div>`;
+}
 function challengeDateLabel(value){
   const date = new Date(String(value || ''));
   return Number.isFinite(date.getTime()) ? date.toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' }) : '—';
@@ -246,10 +267,14 @@ function challengeLoginWarning(){
 }
 function challengeListMarkup(){
   const rows = challengeRowsCache[challengeViewTab] || [];
-  if(challengeLoading && !rows.length) return '<div class="card"><p class="muted">Cargando desafíos...</p></div>';
-  if(!rows.length) return `<div class="card empty"><h3>Sin registros</h3><p>No hay ${challengeViewTab === 'available' ? 'desafíos disponibles' : challengeViewTab === 'mine' ? 'desafíos propios' : 'partidos disputados'} para mostrar.</p></div>`;
+  if(challengeLoading && !rows.length && !challengeLoadedTabs[challengeViewTab]) return '<div class="card"><p class="muted">Cargando desafíos...</p></div>';
+  if(!rows.length){
+    const label = challengeViewTab === 'available' ? 'desafíos disponibles' : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? 'puntajes de ranking' : 'partidos disputados';
+    return `<div class="card empty"><h3>Sin registros</h3><p>No hay ${label} para mostrar.</p></div>`;
+  }
   if(challengeViewTab === 'available') return `<div class="challenge-grid">${rows.map(challengeOpenCard).join('')}</div>`;
   if(challengeViewTab === 'mine') return `<div class="challenge-grid">${rows.map(challengeMineCard).join('')}</div>`;
+  if(challengeViewTab === 'ranking') return challengeRankingMarkup(rows);
   return `<div class="challenge-grid">${rows.map(challengeHistoryCard).join('')}</div>`;
 }
 function renderOnlineChallenges(){
@@ -267,11 +292,12 @@ function renderOnlineChallenges(){
       <button data-challenge-tab="available" class="${challengeViewTab === 'available' ? 'active' : ''}">Disponibles</button>
       <button data-challenge-tab="mine" class="${challengeViewTab === 'mine' ? 'active' : ''}">Mis desafíos</button>
       <button data-challenge-tab="history" class="${challengeViewTab === 'history' ? 'active' : ''}">Partidos disputados</button>
+      <button data-challenge-tab="ranking" class="${challengeViewTab === 'ranking' ? 'active' : ''}">Ranking</button>
     </div>
     <div id="challengeStatus" class="small muted"></div>
     <div id="challengeList">${challengeListMarkup()}</div>`;
   bindChallengeEvents();
-  if(!challengeRowsCache[challengeViewTab].length && !challengeLoading) setTimeout(() => loadChallenges(challengeViewTab), 0);
+  if(!challengeLoadedTabs[challengeViewTab] && !challengeLoading) setTimeout(() => loadChallenges(challengeViewTab), 0);
   if(challengeToken()) challengePollTimer = setTimeout(() => { if(activeTab === 'challenges' && !challengeDetail) loadChallenges('mine', { silent:true, keepTab:true }); }, cfg.pollMs);
 }
 function bindChallengeEvents(){
@@ -289,20 +315,23 @@ function bindChallengeEvents(){
   document.querySelectorAll('[data-go-tab]').forEach(button => button.addEventListener('click', () => { activeTab=button.dataset.goTab; renderAll(); }));
 }
 async function loadChallenges(tab=challengeViewTab, options={}){
-  if(!challengeToken() && tab === 'mine') return;
+  if(!challengeToken() && tab === 'mine'){ challengeLoadedTabs.mine = true; return; }
+  if(options.force) challengeLoadedTabs[tab] = false;
   challengeLoading = true;
   if(!options.silent && activeTab === 'challenges') renderOnlineChallenges();
   try{
-    const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : 'challenges/history';
+    const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : tab === 'ranking' ? 'challenges/ranking' : 'challenges/history';
     const data = await challengeRequest(path, { query:`?limit=${challengeConfig().pageSize}` });
-    let rows = Array.isArray(data.challenges) ? data.challenges : [];
+    let rows = Array.isArray(data.challenges) ? data.challenges : Array.isArray(data.ranking) ? data.ranking : [];
     if(tab === 'available'){
       let ownUserId = 0;
       try{ ownUserId = Number(localStorage.getItem('fmRankingAuthUserId') || 0); }catch(_){ ownUserId = 0; }
       if(ownUserId) rows = rows.filter(row => Number(row.creatorUserId || 0) !== ownUserId);
     }
     challengeRowsCache[tab] = rows;
+    challengeLoadedTabs[tab] = true;
   }catch(error){
+    challengeLoadedTabs[tab] = true;
     if(!options.silent) showNotice(error.message);
   }finally{
     challengeLoading = false;
@@ -322,6 +351,8 @@ async function publishChallenge(){
     await challengeRequest('challenges', { method:'POST', body:{ snapshot } });
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
+    challengeLoadedTabs.available = false;
+    challengeLoadedTabs.mine = false;
     challengeViewTab = 'mine';
     showNotice('Desafío publicado. El equipo quedó congelado para este encuentro.');
     await loadChallenges('mine', { force:true });
@@ -345,6 +376,11 @@ async function acceptChallenge(challengeId){
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
     challengeRowsCache.history = [];
+    challengeRowsCache.ranking = [];
+    challengeLoadedTabs.available = false;
+    challengeLoadedTabs.mine = false;
+    challengeLoadedTabs.history = false;
+    challengeLoadedTabs.ranking = false;
     challengeDetail = saved.challenge || null;
     showNotice('Partido simulado y guardado.');
     renderOnlineChallenges();
@@ -359,6 +395,8 @@ async function cancelChallenge(challengeId){
     await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/cancel`, { method:'POST', body:{} });
     challengeRowsCache.mine = [];
     challengeRowsCache.available = [];
+    challengeLoadedTabs.mine = false;
+    challengeLoadedTabs.available = false;
     showNotice('Desafío cancelado.');
     await loadChallenges('mine', { force:true });
   }catch(error){ showNotice(error.message); }

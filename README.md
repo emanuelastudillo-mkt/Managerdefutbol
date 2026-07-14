@@ -1,4 +1,34 @@
-# Fútbol Manager MVP - V7.30
+# Fútbol Manager MVP - V7.31
+
+## V7.31 - Partidos disputados simplificados
+
+La pestaña **Desafíos Online → Partidos disputados** deja de mostrar datos secundarios dentro de cada tarjeta. Cada enfrentamiento presenta únicamente:
+
+- Nombre del club local.
+- Nombre del manager local.
+- Resultado final.
+- Nombre del club visitante.
+- Nombre del manager visitante.
+
+Se retiraron de estas tarjetas los escudos, estadio, capacidad, hinchas, fecha, asistencia, valores económicos y formación. La tarjeta completa continúa siendo clickeable y abre la ficha detallada del partido, donde se conservan estadísticas, eventos y puntajes individuales.
+
+El formato usa tres zonas estables —local, marcador y visitante— con recorte por puntos suspensivos para nombres extensos. No se modificaron el simulador, el resultado, el ranking, los desafíos guardados ni Cloudflare.
+
+### Archivos principales modificados en V7.31
+
+- `README.md`
+- `index.html`
+- `style.css`
+- `config.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/game/18-challenges-online.js`
+
+### Compatibilidad de partidas
+
+**V7.31 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
+
+---
 
 ## V7.30 - Reacondicionamiento de tarjetas de Desafíos Online
 

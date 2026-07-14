@@ -1,4 +1,91 @@
-# Fútbol Manager MVP - V7.44
+# Fútbol Manager MVP - V7.45
+
+## V7.45 - Cursos y licencias progresivas de manager
+
+### Nuevo acceso superior
+
+- Se agregó el botón **Cursos de manager** inmediatamente a la izquierda de **Ayuda**.
+- El curso puede abrirse con o sin una partida activa.
+- El progreso pertenece al perfil global del manager, por lo que se conserva al cambiar de club, carrera o slot dentro del mismo navegador y dominio.
+
+### Licencia de manager Básica
+
+Incluye diez módulos introductorios con explicación y checklist **Ya entiendo cómo funciona**:
+
+- Táctica y formación.
+- Puestos naturales y adaptación.
+- Titulares y suplentes.
+- Capitanía.
+- Estado físico y rotación.
+- Moral y cohesión.
+- Estado del campo de juego.
+- Entrenamiento.
+- Lesiones y suspensiones.
+- Rutina diaria del manager.
+
+Al marcar los diez controles, la licencia queda aprobada y se habilita la Licencia Nacional.
+
+### Licencia de manager Nacional
+
+Profundiza en:
+
+- Identidad y alternativas tácticas.
+- Mentalidad e instrucciones.
+- Rotación según calendario.
+- Plan de entrenamiento.
+- Ojeo y decisiones con información incompleta.
+- Mercado, contratos y cláusulas.
+- Academia.
+- Empleados.
+- Estadio, sponsors y finanzas.
+- Objetivos y planificación de temporada.
+
+Al aprobar sus diez controles se habilita la Licencia Internacional.
+
+### Licencia de manager Internacional
+
+Desarrolla conceptos de carrera avanzada:
+
+- Cambios de club y prestigio.
+- Adaptación a otras ligas.
+- Construcción de planteles internacionales.
+- Mundial de Clubes.
+- Partidos en sede neutral.
+- Ojeo internacional.
+- Gestión de figuras y cláusulas.
+- Preparación según el rival.
+- Cartas y recursos especiales.
+- Legado en distintos clubes, ligas y países.
+
+Las explicaciones son orientativas y utilizan ejemplos prácticos, pero no muestran fórmulas, porcentajes internos ni cálculos ocultos de simulación.
+
+### Premio final
+
+- Al aprobar por primera vez la Licencia Internacional se acreditan **1.000 puntos de habilidad**.
+- La recompensa es única por perfil global.
+- Completar nuevamente una licencia o cambiar de slot no vuelve a pagar el premio.
+- Si no existe una partida activa, los puntos quedan guardados en el perfil y se aplican al iniciar o cargar una carrera.
+
+### Interfaz y persistencia
+
+- Las tres licencias se muestran dentro de un desplegable progresivo.
+- Cada nivel indica estado, cantidad de temas comprendidos y barra de progreso.
+- Las licencias bloqueadas muestran claramente cuál debe completarse primero.
+- Cada aprobación abre una pantalla de certificado y habilita el siguiente nivel.
+- La aprobación internacional abre una felicitación especial con el premio obtenido.
+
+### Archivos principales modificados en V7.45
+
+- `index.html`
+- `js/game/05-state-season.js`
+- `js/ui/19-manager-courses.js`
+- `style.css`
+- `README.md`
+- archivos de versión y caché
+
+### Compatibilidad
+
+**V7.45 no rompe partidas anteriores.** No modifica calendarios, planteles, tácticas, economía ni simulación. Las partidas V7.44 cargan normalmente y comienzan con las tres licencias sin completar. El progreso de cursos y el premio se guardan en el perfil global del navegador.
 
 ## V7.44 - 30 retos de carrera itinerante
 

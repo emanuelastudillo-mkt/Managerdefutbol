@@ -2487,6 +2487,7 @@ function confirmResetLocal(){
 function bindEvents(){
   $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
+  $('btnManagerCourses')?.addEventListener('click', () => { if(typeof openManagerCoursesModal === 'function') openManagerCoursesModal(); });
   $('btnHelp')?.addEventListener('click', () => { if(typeof openGameHelpModal === 'function') openGameHelpModal(); });
   $('btnAssistantMessagesToggle')?.addEventListener('click', () => {
     if(!game) return;
@@ -4210,14 +4211,19 @@ function normalizeManagerGlobalProfile(profile=null){
   const raw = profile && typeof profile === 'object' && !Array.isArray(profile) ? profile : {};
   const stats = normalizeManagerStats(raw.managerStats || createInitialManagerStats());
   const skillPoints = Math.max(0, Math.round(Number(raw.skillPoints ?? raw.puntos_habilidad ?? raw.puntosHabilidad ?? 0)));
-  const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName;
+  const managerCourses = typeof normalizeManagerCoursesState === 'function'
+    ? normalizeManagerCoursesState(raw.managerCourses || raw.cursosManager)
+    : (raw.managerCourses || raw.cursosManager || null);
+  const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
+  const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V6.24',
+    version:'V7.45',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
     skillPoints,
     challengeRewards:normalizeManagerChallengeRewardsState(raw.challengeRewards || raw.recompensasRetos),
+    managerCourses,
     updatedAt:raw.updatedAt || null,
     empty
   };
@@ -4233,7 +4239,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V6.24';
+    clean.version = 'V7.45';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4252,7 +4258,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V6.24',
+    version:'V7.45',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4278,12 +4284,13 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V6.24',
+    version:'V7.45',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
     skillPoints:Math.max(0, Math.round(Number(special?.puntos_habilidad || 0))),
     challengeRewards:normalizeManagerChallengeRewardsState(existingProfile?.challengeRewards),
+    managerCourses:typeof normalizeManagerCoursesState === 'function' ? normalizeManagerCoursesState(existingProfile?.managerCourses) : existingProfile?.managerCourses,
     updatedAt:new Date().toISOString()
   };
   return writeManagerGlobalProfileState(profile);
@@ -4293,11 +4300,15 @@ function managerGlobalProfileScore(profile=null){
   const clean = normalizeManagerGlobalProfile(profile);
   const stats = clean.managerStats || {};
   const totals = stats.totals || {};
+  const completedCourses = typeof normalizeManagerCoursesState === 'function'
+    ? Object.values(normalizeManagerCoursesState(clean.managerCourses).completed || {}).filter(Boolean).length
+    : 0;
   return (Number(stats.experience || 0) * 1000)
     + (Number(totals.played || 0) * 25)
     + ((Array.isArray(stats.seasons) ? stats.seasons.length : 0) * 500)
     + ((Array.isArray(stats.careerHistory) ? stats.careerHistory.length : 0) * 200)
     + (Number(stats.titles || 0) * 1000)
+    + (completedCourses * 100)
     + Number(clean.skillPoints || 0);
 }
 async function migrateAllSavedManagerProfilesToGlobal(){
@@ -4326,7 +4337,13 @@ async function migrateAllSavedManagerProfilesToGlobal(){
   const best = candidates[0];
   const currentScore = managerGlobalProfileScore(currentGlobal);
   if(currentGlobal && !currentGlobal.empty && currentScore >= managerGlobalProfileScore(best)) return false;
-  writeManagerGlobalProfileState({ ...best, challengeRewards:normalizeManagerChallengeRewardsState(currentGlobal?.challengeRewards) });
+  writeManagerGlobalProfileState({
+    ...best,
+    challengeRewards:normalizeManagerChallengeRewardsState(currentGlobal?.challengeRewards),
+    managerCourses:typeof normalizeManagerCoursesState === 'function'
+      ? normalizeManagerCoursesState(currentGlobal?.managerCourses || best?.managerCourses)
+      : (currentGlobal?.managerCourses || best?.managerCourses)
+  });
   return true;
 }
 

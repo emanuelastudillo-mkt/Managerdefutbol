@@ -1313,6 +1313,92 @@ function canAssignPlayerToSlot(player, slot){
   if(isGoalkeeperSlot(slot)) return isGoalkeeperPlayer(player) || emergencyFieldKeeperAllowed(player, slot);
   return !isGoalkeeperPlayer(player);
 }
+
+function botFormationPlayerScore(player, slot){
+  if(!player || !slot || !canAssignPlayerToSlot(player, slot)) return -100000;
+  const fit = playerTacticFitFactor(player, slot);
+  const overall = Math.max(1, Number(effectiveOverall(player) || 0));
+  const condition = Math.max(0, Number(currentCondition(player.id) || 0));
+  const morale = Math.max(1, Number(currentMorale(player.id) || 0));
+  const exactBonus = playerExactRoleFitsSlot(player, slot) ? 7 : (playerFitsSlot(player, slot) ? 2 : 0);
+  return (overall * fit) + (condition * 0.12) + (morale * 0.05) + exactBonus;
+}
+function optimalBotLineupForFormation(squad=[], slots=[], clubId=0, formation=''){
+  const rowCount = slots.length;
+  const realPlayers = squad.slice();
+  const columnCount = Math.max(rowCount, realPlayers.length);
+  if(!rowCount || !columnCount) return { lineup:[], score:-110000, missing:rowCount || 11 };
+  const scoreFor = (row, column) => {
+    if(column >= realPlayers.length) return -10000 - row;
+    const player = realPlayers[column];
+    const slot = slots[row];
+    const base = botFormationPlayerScore(player, slot);
+    const tie = hashNumber(`bot-lineup-tie-${game?.seasonNumber || 1}-${clubId}-${formation}-${slot}-${player.id}`, 1000) / 1000000;
+    return base + tie;
+  };
+  const u = Array(rowCount + 1).fill(0);
+  const v = Array(columnCount + 1).fill(0);
+  const p = Array(columnCount + 1).fill(0);
+  const way = Array(columnCount + 1).fill(0);
+  for(let i=1; i<=rowCount; i+=1){
+    p[0] = i;
+    let j0 = 0;
+    const minv = Array(columnCount + 1).fill(Infinity);
+    const used = Array(columnCount + 1).fill(false);
+    do{
+      used[j0] = true;
+      const i0 = p[j0];
+      let delta = Infinity;
+      let j1 = 0;
+      for(let j=1; j<=columnCount; j+=1){
+        if(used[j]) continue;
+        const current = -scoreFor(i0 - 1, j - 1) - u[i0] - v[j];
+        if(current < minv[j]){ minv[j] = current; way[j] = j0; }
+        if(minv[j] < delta){ delta = minv[j]; j1 = j; }
+      }
+      for(let j=0; j<=columnCount; j+=1){
+        if(used[j]){ u[p[j]] += delta; v[j] -= delta; }
+        else minv[j] -= delta;
+      }
+      j0 = j1;
+    }while(p[j0] !== 0);
+    do{
+      const j1 = way[j0];
+      p[j0] = p[j1];
+      j0 = j1;
+    }while(j0 !== 0);
+  }
+  const assignedColumns = Array(rowCount).fill(-1);
+  for(let j=1; j<=columnCount; j+=1){
+    if(p[j] > 0 && p[j] <= rowCount) assignedColumns[p[j] - 1] = j - 1;
+  }
+  let score = 0;
+  let missing = 0;
+  const lineup = [];
+  assignedColumns.forEach((column, row) => {
+    const player = column >= 0 && column < realPlayers.length ? realPlayers[column] : null;
+    const playerScore = player ? botFormationPlayerScore(player, slots[row]) : -100000;
+    if(!player || playerScore <= -50000){ missing += 1; score -= 10000 + row; return; }
+    lineup.push(player);
+    score += playerScore;
+  });
+  return { lineup, score:score - (missing * 10000), missing };
+}
+function bestBotFormationSelection(clubId, options={}){
+  const id = Number(clubId || 0);
+  const squad = playersByClub(id)
+    .filter(player => player && !player.retired && !player.sold && !player.freeAgent)
+    .filter(player => options.includeUnavailable || !isUnavailable(player.id));
+  const formationNames = Object.keys(FORMATIONS || {});
+  let best = { formation:'4-4-2', lineup:[], score:-Infinity, missing:11 };
+  formationNames.forEach(formation => {
+    const selection = optimalBotLineupForFormation(squad, FORMATIONS[formation] || [], id, formation);
+    const tie = hashNumber(`best-bot-formation-${game?.seasonNumber || 1}-${id}-${formation}`, 1000) / 1000000;
+    const finalScore = selection.score + tie;
+    if(finalScore > best.score){ best = { formation, lineup:selection.lineup, score:finalScore, missing:selection.missing }; }
+  });
+  return best;
+}
 function zoneFactor(player, slot){
   return playerTacticFitFactor(player, slot);
 }

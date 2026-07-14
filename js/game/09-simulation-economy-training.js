@@ -476,17 +476,18 @@ function quickBotPoisson(lambda){
   do { k++; p *= Math.random(); } while(p > limit && k < 10);
   return clamp(k - 1, 0, 8);
 }
-function quickClubRating(clubId){
+function quickClubRating(clubId, lineup=null){
   const club = seed.clubs.find(c => Number(c.id) === Number(clubId)) || { reputation:50 };
-  const squad = playersByClub(clubId).slice().sort((a,b)=>effectiveOverall(b)-effectiveOverall(a)).slice(0, 14);
-  const top = squad.slice(0, 11);
+  const top = Array.isArray(lineup) && lineup.length ? lineup.slice(0, 11) : quickBotLineup(clubId);
   const squadAvg = top.length ? avg(top.map(effectiveOverall)) : Number(club.reputation || 50);
-  const morale = squad.length ? avg(squad.map(p => currentMorale(p.id))) : 50;
-  const condition = squad.length ? avg(squad.map(p => currentCondition(p.id))) : 70;
+  const morale = top.length ? avg(top.map(p => currentMorale(p.id))) : 50;
+  const condition = top.length ? avg(top.map(p => currentCondition(p.id))) : 70;
   const cohesion = typeof cohesionValue === 'function' ? cohesionValue(clubId) : Number(game?.teamCohesion?.[clubId] || 50);
   return squadAvg * 0.62 + Number(club.reputation || 50) * 0.22 + morale * 0.08 + condition * 0.04 + cohesion * 0.04;
 }
-function quickBotLineup(clubId){
+function quickBotLineup(clubId, selection=null){
+  const best = selection || (typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(clubId) : null);
+  if(best?.lineup?.length) return best.lineup.slice(0, 11);
   const squad = playersByClub(clubId)
     .filter(player => !isUnavailable(player.id))
     .sort((a,b) => effectiveOverall(b) - effectiveOverall(a));
@@ -671,19 +672,30 @@ function quickEnsureStatsForPlayers(players=[]){
   });
 }
 function quickSimulateBotMatch(match){
-  const homeRating = quickClubRating(match.homeId);
-  const awayRating = quickClubRating(match.awayId);
-  const homeLineup = quickBotLineup(match.homeId);
-  const awayLineup = quickBotLineup(match.awayId);
+  const homeSelection = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(match.homeId) : null;
+  const awaySelection = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(match.awayId) : null;
+  const homeLineup = quickBotLineup(match.homeId, homeSelection);
+  const awayLineup = quickBotLineup(match.awayId, awaySelection);
+  const homeRating = quickClubRating(match.homeId, homeLineup);
+  const awayRating = quickClubRating(match.awayId, awayLineup);
   quickEnsureStatsForPlayers(homeLineup.concat(awayLineup));
+  const neutralTournament = Boolean(match?.clubWorldCup || match?.neutral);
+  const neutralPitchScore = neutralTournament ? 100 : fieldScoreForClub(match.homeId);
   const context = typeof attendanceContextForMatch === 'function'
-    ? { weather:'Normal', pitch:fieldConditionName(fieldScoreForClub(match.homeId)), pitchScore:fieldScoreForClub(match.homeId), ...attendanceContextForMatch(match) }
-    : { weather:'Normal', pitch:'Normal', pitchScore:70, totalFans:0, homeCrowdBonus:0 };
-  const crowdEdge = Number(context.homeCrowdBonus || 0) / 22;
+    ? { weather:'Normal', pitch:fieldConditionName(neutralPitchScore), pitchScore:neutralPitchScore, neutral:neutralTournament, clubWorldCup:Boolean(match?.clubWorldCup), ...attendanceContextForMatch(match) }
+    : { weather:'Normal', pitch:'Normal', pitchScore:70, totalFans:0, homeCrowdBonus:0, neutral:neutralTournament };
+  const crowdEdge = neutralTournament ? 0 : Number(context.homeCrowdBonus || 0) / 22;
   const pitchPenalty = (pitchEffect(context.pitch).chanceMultiplier || 1) - 1;
   const edge = (homeRating - awayRating) / 28;
-  let homeXg = clamp(1.20 + edge + 0.18 + crowdEdge + pitchPenalty + rnd(-0.20, 0.25), 0.15, 4.40);
-  let awayXg = clamp(1.05 - edge * 0.86 + pitchPenalty + rnd(-0.20, 0.24), 0.12, 4.10);
+  const homeBaseXg = neutralTournament ? 1.125 : 1.20;
+  const awayBaseXg = neutralTournament ? 1.125 : 1.05;
+  const awayRatingEdge = neutralTournament ? edge : edge * 0.86;
+  const homeNoise = neutralTournament ? rnd(-0.22, 0.22) : rnd(-0.20, 0.25);
+  const awayNoise = neutralTournament ? rnd(-0.22, 0.22) : rnd(-0.20, 0.24);
+  const neutralMinXg = 0.14;
+  const neutralMaxXg = 4.25;
+  let homeXg = clamp(homeBaseXg + edge + crowdEdge + pitchPenalty + homeNoise, neutralTournament ? neutralMinXg : 0.15, neutralTournament ? neutralMaxXg : 4.40);
+  let awayXg = clamp(awayBaseXg - awayRatingEdge + pitchPenalty + awayNoise, neutralTournament ? neutralMinXg : 0.12, neutralTournament ? neutralMaxXg : 4.10);
   let homeGoals = quickBotPoisson(homeXg);
   let awayGoals = quickBotPoisson(awayXg);
   if(homeGoals === 0 && awayGoals === 0 && Math.random() < 0.38){
@@ -715,7 +727,7 @@ function quickSimulateBotMatch(match){
     const extra = applyTrailingBotOverexertion('away', awayLineup, awayGoals, homeGoals, awayXg);
     if(extra.extraGoals > 0 || extra.xgExtra > 0){ awayGoals += extra.extraGoals; awayXg = clamp(awayXg + extra.xgExtra, 0.12, 4.60); }
   }
-  const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + 3 + rnd(-7,7)), 31, 69);
+  const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + (neutralTournament ? 0 : 3) + rnd(-7,7)), 31, 69);
   const awayPoss = 100 - homePoss;
   const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), Math.max(1, homeGoals), 18);
   const awayChances = clamp(Math.round(awayXg * rnd(4.0, 6.5)), Math.max(1, awayGoals), 18);
@@ -1022,6 +1034,8 @@ function processDailyCalendarState(dateAfter='', options={}){
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'daily_calendar' });
+  if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar' });
   if(managerWithoutClub){
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
@@ -1033,7 +1047,8 @@ function processDailyCalendarState(dateAfter='', options={}){
     const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state_sin_club' });
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
-    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket };
+    const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
+    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation };
   }
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
@@ -1055,7 +1070,8 @@ function processDailyCalendarState(dateAfter='', options={}){
     : { fixed:0, remaining:0 };
   const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
   const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
-  return { botResults, recovered, bankPayment, integrityRepair, scheduledVerifier, postCompetition };
+  const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
+  return { botResults, recovered, bankPayment, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1538,6 +1554,8 @@ function startLiveOwnMatchday(context){
 function simulateNextMatchday(options={}){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
+  if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'before_matchday' });
+  if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'before_matchday' });
   repairBotRosters({ reason:'before_turn' });
   if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
     const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_matchday_advance', force:true, silent:true });

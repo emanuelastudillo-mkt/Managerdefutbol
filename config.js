@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.33',
+  version: 'V7.34',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -99,7 +99,11 @@ window.GAME_CONFIG = {
       diaCuartos: 325,
       diaSemifinales: 330,
       diaTercerPuesto: 335,
-      diaFinal: 336
+      diaFinal: 336,
+      diasPreparacionAntesPrimerPartido: 1,
+      jugadoresMinimosPorPartido: 21,
+      boostEntrenamientoCampeonMin: 10,
+      boostEntrenamientoCampeonMax: 30
     },
     amistososMaximosPretemporada: 5
   },

@@ -4851,6 +4851,10 @@ const CLUB_WORLD_CUP_CONFIG = {
     thirdPlace:configNumber('calendario.mundialClubes.diaTercerPuesto', 335, 1, 365),
     final:configNumber('calendario.mundialClubes.diaFinal', 336, 1, 365)
   },
+  preparationDaysBeforeFirstMatch:configNumber('calendario.mundialClubes.diasPreparacionAntesPrimerPartido', 1, 1, 10),
+  minimumMatchSquad:configNumber('calendario.mundialClubes.jugadoresMinimosPorPartido', 21, 11, 42),
+  championTrainingBoostMin:configNumber('calendario.mundialClubes.boostEntrenamientoCampeonMin', 10, 0, 99),
+  championTrainingBoostMax:configNumber('calendario.mundialClubes.boostEntrenamientoCampeonMax', 30, 0, 99),
   stadiums:[
     { name:'MetLife Stadium', capacity:81118 },
     { name:'Mercedes-Benz Stadium', capacity:66937 },
@@ -5217,6 +5221,206 @@ function clubWorldCupParticipantIds(state=clubWorldCupState()){
 function clubWorldCupClubParticipates(clubId, state=clubWorldCupState()){
   const id = Number(clubId || 0);
   return id > 0 && clubWorldCupParticipantIds(state).includes(id);
+}
+
+function clubWorldCupPreparationSeasonDay(){
+  const firstGroupDay = Math.max(1, Number(clubWorldCupGroupSeasonDays()[0] || 1));
+  return Math.max(1, firstGroupDay - Math.max(1, Number(CLUB_WORLD_CUP_CONFIG.preparationDaysBeforeFirstMatch || 1)));
+}
+function clearClubWorldCupPlayerInjury(playerId){
+  if(!game?.playerStatus) return false;
+  const id = Number(playerId || 0);
+  const before = game.playerStatus[id];
+  const injuryFields = ['injuredThrough','injuredUntilTurn','injuryLabel','injuryChance','injuredAtMatchday','injuredAtTurn','carriedFromPreviousSeason','carriedFromSeason','rebasedForSeason'];
+  if(!before || !injuryFields.some(key => Object.prototype.hasOwnProperty.call(before, key))) return false;
+  const clean = typeof removeInjuryFieldsFromStatus === 'function' ? removeInjuryFieldsFromStatus(before) : (() => {
+    const next = { ...before };
+    injuryFields.forEach(key => delete next[key]);
+    return next;
+  })();
+  if(Object.keys(clean).length) game.playerStatus[id] = clean;
+  else delete game.playerStatus[id];
+  return true;
+}
+function clubWorldCupActiveSquad(clubId){
+  return playersByClub(Number(clubId || 0)).filter(player => player && !player.retired && !player.sold && !player.freeAgent);
+}
+function clubWorldCupEligibleSquad(clubId){
+  return clubWorldCupActiveSquad(clubId).filter(player => !isUnavailable(player.id));
+}
+function clubWorldCupNextRosterGroup(clubId){
+  const squad = clubWorldCupEligibleSquad(clubId);
+  const counts = rosterGroupCounts(squad);
+  const req = minimumRosterRequirements();
+  const deficits = [
+    ['POR', Math.max(0, Number(req.POR || 0) - Number(counts.POR || 0))],
+    ['DEF', Math.max(0, Number(req.DEF || 0) - Number(counts.DEF || 0))],
+    ['MID', Math.max(0, Number(req.MID || 0) - Number(counts.MID || 0))],
+    ['ATT', Math.max(0, Number(req.ATT || 0) - Number(counts.ATT || 0))]
+  ].sort((a,b)=>b[1]-a[1]);
+  if(deficits[0][1] > 0) return deficits[0][0];
+  return ['DEF','MID','ATT','POR'].sort((a,b)=>Number(counts[a] || 0)-Number(counts[b] || 0))[0] || 'MID';
+}
+function ensureClubWorldCupParticipantRoster(clubId, minimumPlayers=CLUB_WORLD_CUP_CONFIG.minimumMatchSquad, report=null){
+  const id = Number(clubId || 0);
+  const club = seed?.clubs?.find(item => Number(item.id) === id);
+  if(!club || id === Number(game?.selectedClubId || 0)) return { eligible:clubWorldCupEligibleSquad(id).length, added:0 };
+  const localReport = report || { created:0, converted:0, signedFreeAgents:0 };
+  if(typeof repairBotRoster === 'function') repairBotRoster(club, localReport);
+  let added = 0;
+  let guard = 0;
+  while(clubWorldCupEligibleSquad(id).length < Math.max(11, Number(minimumPlayers || 21)) && guard < 48){
+    const before = clubWorldCupActiveSquad(id).length;
+    const group = clubWorldCupNextRosterGroup(id);
+    if(typeof addOrConvertEmergencyBotPlayer !== 'function') break;
+    const player = addOrConvertEmergencyBotPlayer(club, group, localReport);
+    if(!player) break;
+    added += clubWorldCupActiveSquad(id).length > before ? 1 : 0;
+    guard += 1;
+  }
+  return { eligible:clubWorldCupEligibleSquad(id).length, added };
+}
+function clubWorldCupLeagueChampionIds(state=clubWorldCupState()){
+  const participants = new Set(clubWorldCupParticipantIds(state));
+  const champions = new Set();
+  const season = Number(state?.season || game?.seasonNumber || 1);
+  const recorded = normalizeCompetitionChampionsHistoryState(game?.competitionChampionsHistory || {}).entries || [];
+  recorded.filter(entry => Number(entry.season || 0) === season && String(entry.type || 'league') === 'league').forEach(entry => {
+    const id = Number(entry.championId || 0);
+    if(participants.has(id)) champions.add(id);
+  });
+  (seed?.divisions || []).forEach(division => {
+    if(String(division?.id || '') === String(CLUB_WORLD_CUP_CONFIG.divisionId) || String(division?.id || '') === String(CLUB_WORLD_CUP_CONFIG.invitedDivisionId)) return;
+    const championId = Number(sortedStandings(division.id)?.[0]?.clubId || 0);
+    if(participants.has(championId)) champions.add(championId);
+  });
+  return Array.from(champions).filter(id => id && id !== Number(game?.selectedClubId || 0));
+}
+function applyClubWorldCupChampionTrainingBoost(clubId, state=clubWorldCupState()){
+  const id = Number(clubId || 0);
+  const season = Number(state?.season || game?.seasonNumber || 1);
+  const minBoost = Math.min(Number(CLUB_WORLD_CUP_CONFIG.championTrainingBoostMin || 10), Number(CLUB_WORLD_CUP_CONFIG.championTrainingBoostMax || 30));
+  const maxBoost = Math.max(Number(CLUB_WORLD_CUP_CONFIG.championTrainingBoostMin || 10), Number(CLUB_WORLD_CUP_CONFIG.championTrainingBoostMax || 30));
+  const spread = Math.max(1, Math.round(maxBoost - minBoost + 1));
+  game.playerSkillBoosts = game.playerSkillBoosts || {};
+  let players = 0;
+  let gains = 0;
+  clubWorldCupActiveSquad(id).forEach(player => {
+    const target = Math.round(minBoost + hashNumber(`cwc-champion-boost-${season}-${id}-${player.id}`, spread));
+    const skills = (typeof trainableSkillsForPlayer === 'function' ? trainableSkillsForPlayer(player) : botBalanceSkillPool(player)).filter(Boolean);
+    if(!skills.length || target <= 0) return;
+    game.playerSkillBoosts[player.id] = game.playerSkillBoosts[player.id] && typeof game.playerSkillBoosts[player.id] === 'object' && !Array.isArray(game.playerSkillBoosts[player.id]) ? game.playerSkillBoosts[player.id] : {};
+    let applied = 0;
+    let safety = 0;
+    while(applied < target && safety < target * Math.max(4, skills.length)){
+      const skill = skills[hashNumber(`cwc-champion-skill-${season}-${id}-${player.id}-${safety}`, skills.length)];
+      const current = Math.max(0, Math.round(Number(game.playerSkillBoosts[player.id][skill] || 0)));
+      if(current < 30 && baseSkill(player, skill) < 99){
+        game.playerSkillBoosts[player.id][skill] = current + 1;
+        applied += 1;
+      }
+      safety += 1;
+    }
+    if(applied > 0){ players += 1; gains += applied; }
+  });
+  return { clubId:id, players, gains };
+}
+function prepareClubWorldCupParticipantsIfNeeded(options={}){
+  const state = clubWorldCupState();
+  const result = { applied:false, changed:false, reason:'', clubs:0, players:0, injuriesCleared:0, rosterAdded:0, championClubs:0, championPlayers:0, championGains:0 };
+  if(!game || !state || state.status === 'completed') return result;
+  const season = Number(state.season || game.seasonNumber || 1);
+  const source = String(options.source || '');
+  const preparationRecord = state.hostCityPreparation;
+  const alreadyApplied = Boolean(preparationRecord?.applied && Number(preparationRecord.season || 0) === season);
+  const readinessValidationSources = new Set(['daily_calendar','daily_calendar_complete','before_matchday']);
+  if(alreadyApplied && !options.forceReadiness && !readinessValidationSources.has(source)) return result;
+  const currentDay = clubWorldCupCurrentSeasonDay();
+  const preparationDay = clubWorldCupPreparationSeasonDay();
+  if(currentDay < preparationDay) return result;
+  const playedCupMatches = clubWorldCupPlayedMatches();
+  if(playedCupMatches.length){ result.reason = 'el torneo ya tiene partidos disputados'; return result; }
+  ensurePlayerStateForAll();
+  ensureTeamCohesion();
+  game.playerStatus = game.playerStatus || {};
+  game.playerWear = game.playerWear || {};
+  game.lastMatchTactics = game.lastMatchTactics || {};
+  const participantIds = clubWorldCupParticipantIds(state).filter(id => Number(id) !== Number(game.selectedClubId || 0));
+  const rosterReport = { created:0, converted:0, signedFreeAgents:0 };
+  let readinessChanged = false;
+  const normalizeReadyPlayer = player => {
+    if(clearClubWorldCupPlayerInjury(player.id)){ result.injuriesCleared += 1; readinessChanged = true; }
+    if(Number(game.playerWear[player.id] || 0) !== 0) readinessChanged = true;
+    if(Number(game.playerCondition[player.id]) !== 99) readinessChanged = true;
+    if(Number(game.playerMorale[player.id]) !== 99) readinessChanged = true;
+    game.playerWear[player.id] = 0;
+    game.playerCondition[player.id] = 99;
+    game.playerMorale[player.id] = 99;
+  };
+  participantIds.forEach(clubId => {
+    if(Number(game.teamCohesion[clubId]) !== 100) readinessChanged = true;
+    game.teamCohesion[clubId] = 100;
+    clubWorldCupActiveSquad(clubId).forEach(normalizeReadyPlayer);
+    const roster = ensureClubWorldCupParticipantRoster(clubId, CLUB_WORLD_CUP_CONFIG.minimumMatchSquad, rosterReport);
+    result.rosterAdded += Number(roster.added || 0);
+    if(Number(roster.added || 0) > 0) readinessChanged = true;
+    const readySquad = clubWorldCupActiveSquad(clubId);
+    readySquad.forEach(normalizeReadyPlayer);
+    result.players += readySquad.length;
+    const preparedTactic = window.Simulator20?.botTacticForClub?.(clubId);
+    if(preparedTactic && typeof tacticSignature === 'function'){
+      const signature = tacticSignature(preparedTactic);
+      if(game.lastMatchTactics[clubId] !== signature) readinessChanged = true;
+      game.lastMatchTactics[clubId] = signature;
+    }
+    result.clubs += 1;
+  });
+  if(!alreadyApplied){
+    const championIds = clubWorldCupLeagueChampionIds(state);
+    championIds.forEach(clubId => {
+      const boost = applyClubWorldCupChampionTrainingBoost(clubId, state);
+      result.championClubs += 1;
+      result.championPlayers += Number(boost.players || 0);
+      result.championGains += Number(boost.gains || 0);
+    });
+    state.hostCityPreparation = {
+      applied:true,
+      season,
+      preparationSeasonDay:preparationDay,
+      appliedSeasonDay:currentDay,
+      appliedDate:game.currentDate || '',
+      participantClubCount:participantIds.length,
+      minimumMatchSquad:Number(CLUB_WORLD_CUP_CONFIG.minimumMatchSquad || 21),
+      rosterReport:{ ...rosterReport },
+      summary:{ ...result, applied:true, changed:true },
+      version:APP_VERSION
+    };
+    pushGameMessage({
+      type:'deportivo',
+      priority:'normal',
+      title:CLUB_WORLD_CUP_CONFIG.name,
+      body:'Los equipos ya están listos en la ciudad anfitriona.',
+      id:`club-world-cup-${season}-host-city-ready`
+    });
+    result.applied = true;
+    result.changed = true;
+    game._needsAutosave = true;
+    return result;
+  }
+  if(readinessChanged){
+    state.hostCityPreparation.lastValidatedSeasonDay = currentDay;
+    state.hostCityPreparation.lastValidatedDate = game.currentDate || '';
+    state.hostCityPreparation.validationCount = Math.max(0, Number(state.hostCityPreparation.validationCount || 0)) + 1;
+    state.hostCityPreparation.lastValidationSummary = {
+      clubs:result.clubs,
+      players:result.players,
+      injuriesCleared:result.injuriesCleared,
+      rosterAdded:result.rosterAdded
+    };
+    result.changed = true;
+    game._needsAutosave = true;
+  }
+  return result;
 }
 function clubWorldCupAuthoritativeSeasonDay(match, round=null, state=clubWorldCupState()){
   if(!match?.clubWorldCup) return 0;
@@ -5673,12 +5877,20 @@ function ensureClubWorldCupCurrentSeason(options={}){
         result.repaired = true;
         result.reason = 'fixture de grupos reconstruido';
       }
+      if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function'){
+        const prep = prepareClubWorldCupParticipantsIfNeeded({ source:options.source || 'ensure_rebuilt_fixture' });
+        if(prep.changed) result.changed = true;
+      }
       return result;
     }else{
       if(repairClubWorldCupFixtureSchedule()){
         result.changed = true;
         result.repaired = true;
         result.reason = 'calendario realineado por día de temporada';
+      }
+      if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function'){
+        const prep = prepareClubWorldCupParticipantsIfNeeded({ source:options.source || 'ensure_existing' });
+        if(prep.changed) result.changed = true;
       }
       return result;
     }
@@ -5687,6 +5899,10 @@ function ensureClubWorldCupCurrentSeason(options={}){
   result.created = Boolean(created);
   result.changed = result.changed || result.created;
   if(result.created) result.reason = 'edición generada';
+  if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function'){
+    const prep = prepareClubWorldCupParticipantsIfNeeded({ source:options.source || 'ensure_created' });
+    if(prep.changed) result.changed = true;
+  }
   return result;
 }
 function createClubWorldCupIfNeeded(options={}){
@@ -7171,9 +7387,11 @@ function statusObjectIsEmpty(status){
 function removeInjuryFieldsFromStatus(status){
   const clean = { ...(status || {}) };
   delete clean.injuredThrough;
+  delete clean.injuredUntilTurn;
   delete clean.injuryLabel;
   delete clean.injuryChance;
   delete clean.injuredAtMatchday;
+  delete clean.injuredAtTurn;
   delete clean.carriedFromPreviousSeason;
   delete clean.carriedFromSeason;
   delete clean.rebasedForSeason;

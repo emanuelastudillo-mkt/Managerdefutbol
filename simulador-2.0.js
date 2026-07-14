@@ -258,8 +258,11 @@
     if(id === Number(game?.selectedClubId || 0)) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions), sectorStyles:normalizeSectorStylesV2(game.tactic?.sectorStyles) };
     const club = seed?.clubs?.find(c => Number(c.id) === id) || { reputation:60 };
     if(!BOT_TACTIC_VARIETY_ENABLED){
-      const formation = Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2';
-      return { formation, starters:[], bench:[], autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS}, sectorStyles:normalizeSectorStylesV2(null), botProfile:'legacy' };
+      const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id) : null;
+      const formation = best?.formation || (Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2');
+      const starters = (best?.lineup || []).slice(0, 11).map(player => Number(player.id));
+      const bench = typeof autoSelectBench === 'function' ? autoSelectBench(id, starters).map(player => Number(player.id)).slice(0, 10) : [];
+      return { formation, starters, bench, autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS}, sectorStyles:normalizeSectorStylesV2(null), botProfile:'legacy' };
     }
     const season = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
     const matchday = Math.max(0, Math.round(Number(game?.matchdayIndex || 0)));
@@ -270,11 +273,15 @@
     const profile = BOT_TACTIC_PROFILES[profileId] || BOT_TACTIC_PROFILES.balanced;
     const formations = Array.isArray(profile.formations) && profile.formations.length ? profile.formations : ['4-4-2'];
     const formationOffset = simStableHash(`bot-formation-base-${id}-${season}-${profileId}`, formations.length);
-    const formation = formations[(formationOffset + cycle) % formations.length] || '4-4-2';
+    const fallbackFormation = formations[(formationOffset + cycle) % formations.length] || '4-4-2';
+    const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id) : null;
+    const formation = best?.formation || fallbackFormation;
+    const starters = (best?.lineup || []).slice(0, 11).map(player => Number(player.id));
+    const bench = typeof autoSelectBench === 'function' ? autoSelectBench(id, starters).map(player => Number(player.id)).slice(0, 10) : [];
     return {
       formation,
-      starters:[],
-      bench:[],
+      starters,
+      bench,
       autoSubs:[],
       playerMentalities:{},
       matchInstructions:normalizeMatchInstructions(profile.matchInstructions),
@@ -518,13 +525,14 @@
     const weather = weatherOptions[hashNumber(`${match.id}-weather-${game?.matchdayIndex || 0}`, weatherOptions.length)];
     const homeClub = seed.clubs.find(c=>c.id===match.homeId);
     const awayClub = seed.clubs.find(c=>c.id===match.awayId);
-    const pitchScore = fieldScoreForClub(match.homeId);
+    const neutralTournament = Boolean(match?.clubWorldCup || match?.neutral);
+    const pitchScore = neutralTournament ? 100 : fieldScoreForClub(match.homeId);
     const pitch = fieldConditionName(pitchScore);
     const effect = pitchEffectV2(pitch);
     const attendance = typeof attendanceContextForMatch === 'function'
       ? attendanceContextForMatch(match)
       : { homeFans:Math.max(800, Math.round((homeClub?.reputation || 60) * simRnd(210,360))), awayFans:Math.max(120, Math.round((awayClub?.reputation || 60) * simRnd(18,70))), totalFans:0, capacity:0, homeCrowdBonus:0, ticketPrice:0, ticketRevenue:0 };
-    return { weather, pitch, pitchScore, ...attendance, pitchEffect:effect };
+    return { weather, pitch, pitchScore, neutral:neutralTournament, clubWorldCup:Boolean(match?.clubWorldCup), ...attendance, pitchEffect:effect };
   }
   function blockStatsForTeam(own, rival, context, ownInstruction, rivalInstruction, isHome, block=null){
     const effect = pitchEffectV2(context.pitch);
@@ -537,11 +545,13 @@
     const rivalStyle = rival.styleEffects || emptySectorStyleEffectsV2();
     const effectiveMid = simClamp((own.midfield * ownInstr.midfield) + pitchPass + own.profile.possession + ownStyle.possessionAdd, 1, 150);
     const rivalMid = simClamp((rival.midfield * rivalInstr.midfield) + pitchPass + rival.profile.possession + rivalStyle.possessionAdd, 1, 150);
-    const possession = simClamp(Math.round((effectiveMid / Math.max(1, effectiveMid + rivalMid)) * 100 + (isHome ? 2 : -1) + simRnd(-4,4)), 28, 72);
+    const neutralVenue = Boolean(context?.neutral || context?.clubWorldCup);
+    const homePossessionEdge = neutralVenue ? 0 : (isHome ? 2 : -1);
+    const possession = simClamp(Math.round((effectiveMid / Math.max(1, effectiveMid + rivalMid)) * 100 + homePossessionEdge + simRnd(-4,4)), 28, 72);
     const midfieldAttack = effectiveMid / 17;
     const attackPressure = (own.attack * ownInstr.attack) / 22;
     const defenseBrake = (rival.defense * rivalInstr.defense) / 34;
-    const baseAttacks = 3.5 + midfieldAttack + attackPressure - defenseBrake + own.profile.attacks + (possession - 50) / 12 + (isHome ? 0.6 : 0) + simRnd(-1.6,1.9);
+    const baseAttacks = 3.5 + midfieldAttack + attackPressure - defenseBrake + own.profile.attacks + (possession - 50) / 12 + (!neutralVenue && isHome ? 0.6 : 0) + simRnd(-1.6,1.9);
     const fullBlockAttacks = simClamp(baseAttacks * ownInstr.attacks * ownStyle.attackMultiplier * rivalStyle.rivalAttackMultiplier, 0, 13);
     const attacks = simClamp(probabilisticRoundV2(fullBlockAttacks * phaseFactor), 0, 5);
     const forwardCount = Math.max(1, own.counts.att || 1);
@@ -556,7 +566,7 @@
     const expectedChances = Math.max(0, attacks * chanceRate + pressureEdge * phaseFactor + chanceNoise);
     const chances = simClamp(probabilisticRoundV2(expectedChances), 0, 3);
     const xgPerChance = simClamp((0.14 + (own.attackQuality - rival.keeperQuality) / 650 + forwardCount * 0.018 - defenderCount * 0.009) * ownStyle.conversionMultiplier * rivalStyle.rivalConversionMultiplier, 0.05, 0.46);
-    const xg = simClamp(chances * xgPerChance + (fullBlockAttacks > 8 ? 0.04 * phaseFactor : 0) + (isHome ? 0.03 * phaseFactor : 0), 0, 0.55);
+    const xg = simClamp(chances * xgPerChance + (fullBlockAttacks > 8 ? 0.04 * phaseFactor : 0) + (!neutralVenue && isHome ? 0.03 * phaseFactor : 0), 0, 0.55);
     const fullBlockFouls = Math.max(0, 1.1 + own.aggression/46 + (100-own.discipline)/62 + ownStyle.foulAdd + (ownInstruction === 'push' ? 0.55 : ownInstruction === 'lower' ? -0.35 : 0) + simRnd(-0.7,0.9));
     const fouls = simClamp(probabilisticRoundV2(fullBlockFouls * phaseFactor), 0, 3);
     return { attacks, chances, possession, fouls, passScore:Math.round(effectiveMid), xg };

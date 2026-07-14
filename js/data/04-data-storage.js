@@ -1591,9 +1591,56 @@ function rivalPrestigeAttendanceBonusInfo(rivalClubId){
   const rate = clamp(progress * Number(RIVAL_PRESTIGE_ATTENDANCE_MAX_RATE || 0), 0, 2);
   return { prestige, rate, pct:Math.round(rate * 100) };
 }
+function neutralTournamentAttendanceContext(match){
+  ensureFanState();
+  const capacity = Math.max(0, Math.round(Number(match?.stadiumCapacity || 0)));
+  const homeDemand = Math.max(0, clubFansCurrent(match?.homeId));
+  const awayDemand = Math.max(0, clubFansCurrent(match?.awayId));
+  const totalDemand = homeDemand + awayDemand;
+  const totalFans = Math.min(capacity, totalDemand);
+  let homeFans = 0;
+  let awayFans = 0;
+  if(totalDemand > 0 && totalFans > 0){
+    homeFans = Math.round(totalFans * (homeDemand / totalDemand));
+    awayFans = Math.max(0, totalFans - homeFans);
+  }
+  return {
+    stadiumName:String(match?.stadiumName || 'Sede neutral'),
+    capacity,
+    nominalCapacity:capacity,
+    constructionPenalty:0,
+    homeFans,
+    awayFans,
+    totalFans,
+    awayReservedMinimum:0,
+    awaySectionRate:totalFans > 0 ? Number(((awayFans / totalFans) * 100).toFixed(1)) : 0,
+    awayMax:capacity,
+    homeCrowdBonus:0,
+    ticketPrice:0,
+    ticketBasePrice:0,
+    ticketPriceMultiplier:1,
+    ticketPriceAutoBot:false,
+    ticketPricePrestigeTier:'neutral',
+    ticketRevenue:0,
+    ticketRevenueBeforeMarketing:0,
+    marketingRevenueBonus:0,
+    marketingBonusPct:0,
+    homeDemandBase:homeDemand,
+    awayDemandBase:awayDemand,
+    homeDemand,
+    homeDemandBeforeMarketing:homeDemand,
+    awayDemand,
+    rivalPrestige:Number(typeof clubPrestigeValue === 'function' ? clubPrestigeValue(match?.awayId) : 0),
+    rivalPrestigeAttendanceBonusRate:0,
+    rivalPrestigeAttendanceBonusPct:0,
+    neutral:true,
+    clubWorldCup:Boolean(match?.clubWorldCup)
+  };
+}
 function attendanceContextForMatch(match){
   ensureFanState();
   ensureStadiumState();
+  if(match?.clubWorldCup || (match?.neutral && Number(match?.stadiumCapacity || 0) > 0)) return neutralTournamentAttendanceContext(match);
   const nominalCapacity = clubStadiumCapacity(match.homeId);
   const constructionPenalty = stadiumConstructionAttendancePenalty(match.homeId);
   const capacity = Math.max(0, Math.floor(nominalCapacity * (1 - constructionPenalty)));

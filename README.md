@@ -1,4 +1,56 @@
-# Fútbol Manager MVP - V7.33
+# Fútbol Manager MVP - V7.34
+
+## V7.34 - Preparación del Mundial, sedes neutrales y mejor once bot
+
+Un día antes de la primera fecha del Mundial de Clubes se ejecuta una preparación automática y silenciosa sobre todos los participantes controlados por la CPU. El único mensaje visible es: **“Los equipos ya están listos en la ciudad anfitriona.”**
+
+### Preparación previa al torneo
+
+- Los participantes bot quedan con forma física y moral al máximo interno del juego (`99/99`, equivalente al 100%), cohesión `100/100` y desgaste acumulado en cero.
+- Se eliminan todas las lesiones activas de sus planteles. Las suspensiones no se borran.
+- Cada participante bot debe disponer de 21 jugadores elegibles para completar once titular y diez suplentes. Si no alcanza esa cantidad, ficha agentes libres; sólo genera un jugador de emergencia cuando no existe una opción libre adecuada.
+- Los clubes participantes que sean campeones de una liga en esa temporada reciben, por jugador, entre 10 y 30 puntos totales de boost de entrenamiento distribuidos entre habilidades entrenables. El club del manager queda excluido de todas estas ayudas.
+- La preparación se registra una sola vez por edición. La forma, moral, cohesión, lesiones y disponibilidad se vuelven a validar silenciosamente antes del debut para evitar que un partido doméstico del día anterior deshaga la puesta a punto. El boost de entrenamiento y el mensaje no se repiten.
+- En partidas anteriores situadas antes del primer partido se aplica automáticamente; si el Mundial ya tiene resultados disputados, no modifica retrospectivamente el torneo.
+
+### Formación de los equipos bot
+
+- Todos los equipos bot evalúan las formaciones disponibles y eligen la que produce su mejor once según media efectiva, adaptación al puesto, forma y moral. La asignación de jugadores a los once puestos se resuelve de forma global para evitar selecciones parciales inferiores.
+- La misma selección se usa en la simulación rápida y en la simulación completa.
+- Los bots convocan hasta diez suplentes adicionales cuando disponen de 21 jugadores elegibles.
+
+### Sedes y público del Mundial de Clubes
+
+- Los partidos utilizan exclusivamente los estadios definidos para el torneo: **MetLife Stadium**, **Mercedes-Benz Stadium**, **Lincoln Financial Field** y **Camping World Stadium**.
+- No se utiliza el estadio, el campo ni la capacidad del club marcado administrativamente como local.
+- Se retiraron todas las ventajas de localía del Mundial, tanto en posesión, ataques, xG y público como en la simulación rápida.
+- La asistencia se distribuye proporcionalmente entre las hinchadas totales de ambos clubes y se limita por la capacidad de la sede neutral.
+- Los partidos del Mundial no generan recaudación de entradas para ninguno de los clubes.
+
+### Corrección adicional
+
+- La limpieza genérica de lesiones ahora elimina también `injuredUntilTurn` e `injuredAtTurn`. Esos campos podían mantener una lesión activa después de borrar sus datos de fecha de partido.
+
+### Archivos principales modificados en V7.34
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/18-challenges-online.js`
+- `simulador-2.0.js`
+- `README.md`
+
+**V7.34 no rompe partidas anteriores.** Conserva el esquema de guardado. Las carreras existentes aplican la preparación sólo si la edición actual del Mundial aún no disputó ningún partido; un torneo ya iniciado no recibe cambios retroactivos.
+
+---
+
+## Historial anterior
 
 
 ## V7.33 - Auditoría de código, calendario y rendimiento

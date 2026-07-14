@@ -1344,6 +1344,10 @@ function openCampoDestruidoChallengeModal(){
   const definition = typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition() : null;
   const clubs = typeof campoDestruidoChallengeClubs === 'function' ? campoDestruidoChallengeClubs() : [];
   if(!clubs.length){ showNotice('No se encontraron los clubes necesarios para el reto.'); return; }
+  const rewardAlreadyClaimed = typeof managerChallengeRewardAlreadyClaimed === 'function' ? managerChallengeRewardAlreadyClaimed('campo_destruido') : false;
+  const rewardStatus = rewardAlreadyClaimed
+    ? 'Premio único ya reclamado: superar nuevamente el reto no entrega puntos adicionales.'
+    : 'Premio disponible: 10.000 puntos de habilidad la primera vez que superes el reto.';
   const cards = clubs.map(club => `<button class="card clickable plain challenge-club-card" data-start-campo-destruido="${Number(club.id)}">
     <h3>${clubBadge(club.id)} ${escapeHtml(club.name)}</h3>
     <p class="muted small">${escapeHtml(definition?.textos?.descripcionClub || 'Elegir como tu club para iniciar el reto.')}</p>
@@ -1353,7 +1357,7 @@ function openCampoDestruidoChallengeModal(){
     <p class="label">Reto predeterminado</p>
     <h2>${escapeHtml(definition?.nombre || 'Campo destruido')}</h2>
     <p class="muted">${escapeHtml(definition?.textos?.descripcionModal || '')}</p>
-    <div class="card blocker"><strong>Reglas del reto</strong><p class="muted small">${escapeHtml(definition?.textos?.reglasModal || definition?.objetivo?.descripcion || '')}</p></div>
+    <div class="card blocker"><strong>Reglas del reto</strong><p class="muted small">${escapeHtml(definition?.textos?.reglasModal || definition?.objetivo?.descripcion || '')}</p><p class="small ${rewardAlreadyClaimed ? 'muted' : 'ok'}"><strong>${escapeHtml(rewardStatus)}</strong></p></div>
     <div class="grid cols-3" style="margin-top:14px">${cards}</div>
   </div>`);
   document.querySelectorAll('[data-start-campo-destruido]').forEach(btn => btn.addEventListener('click', () => {

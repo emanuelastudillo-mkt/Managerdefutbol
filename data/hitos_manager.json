@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "V5.55",
+    "version": "V7.43",
     "sistema": "hitos_manager",
-    "descripcion": "Lista oculta de hitos personales del manager. Se muestran en Tus estadísticas sólo al desbloquearse."
+    "descripcion": "Catálogo visible de hitos personales del manager. Los conseguidos se destacan y los pendientes se muestran oscuros y desaturados."
   },
   "hitos": [
     {
@@ -504,6 +504,106 @@
       "objetivo": 1,
       "icono": "🌱",
       "visibleInicialmente": false
+    },
+    {
+      "id": "quinientos_partidos",
+      "titulo": "Quinientos partidos",
+      "descripcion": "Llegaste a 500 partidos oficiales dirigidos.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.played",
+      "objetivo": 500,
+      "icono": "🧭",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "mil_partidos",
+      "titulo": "Una vida en el banco",
+      "descripcion": "Llegaste a 1.000 partidos oficiales dirigidos.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.played",
+      "objetivo": 1000,
+      "icono": "♾️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "doscientas_cincuenta_victorias",
+      "titulo": "Ganador serial",
+      "descripcion": "Ganaste 250 partidos oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.won",
+      "objetivo": 250,
+      "icono": "⚔️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "quinientas_victorias",
+      "titulo": "Dinastía competitiva",
+      "descripcion": "Ganaste 500 partidos oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.won",
+      "objetivo": 500,
+      "icono": "👑",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "mil_goles",
+      "titulo": "Mil goles dirigidos",
+      "descripcion": "Tus equipos convirtieron 1.000 goles oficiales.",
+      "categoria": "Desafíos extremos",
+      "metrica": "totals.gf",
+      "objetivo": 1000,
+      "icono": "💥",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "dg_positivo_300",
+      "titulo": "Dominio histórico",
+      "descripcion": "Alcanzaste una diferencia de gol acumulada de +300.",
+      "categoria": "Desafíos extremos",
+      "metrica": "goalDiff",
+      "objetivo": 300,
+      "icono": "📐",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "diez_temporadas",
+      "titulo": "Una década de carrera",
+      "descripcion": "Finalizaste 10 temporadas completas.",
+      "categoria": "Desafíos extremos",
+      "metrica": "seasonsCompleted",
+      "objetivo": 10,
+      "icono": "🗓️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "quince_objetivos",
+      "titulo": "Directiva inquebrantable",
+      "descripcion": "Cumpliste 15 objetivos de directiva al cierre de temporada.",
+      "categoria": "Desafíos extremos",
+      "metrica": "objectivesAchieved",
+      "objetivo": 15,
+      "icono": "🎯",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "diez_titulos",
+      "titulo": "Colección de trofeos",
+      "descripcion": "Ganaste 10 títulos oficiales como manager.",
+      "categoria": "Desafíos extremos",
+      "metrica": "titles",
+      "objetivo": 10,
+      "icono": "🏛️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "prestigio_100",
+      "titulo": "Leyenda del banco",
+      "descripcion": "Alcanzaste 100 puntos de prestigio como manager.",
+      "categoria": "Desafíos extremos",
+      "metrica": "prestige",
+      "objetivo": 100,
+      "icono": "🌌",
+      "visibleInicialmente": true
     }
   ]
 }

@@ -515,6 +515,44 @@ function grantManagerChallengeSkillPoints(points=0, context={}){
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'challenge_campo_destruido_reward' });
   return amount;
 }
+function completedChallengeResultModalActive(){
+  const root = typeof $ === 'function' ? $('modalRoot') : document.getElementById('modalRoot');
+  return Boolean(root?.dataset?.completedChallengeResult === '1');
+}
+async function closeCompletedChallengeResultScreen(){
+  const challenge = game?.challenge;
+  if(!challenge?.completed) return false;
+  if(typeof forceCloseModal === 'function') forceCloseModal();
+  else if(typeof closeModal === 'function') closeModal();
+  if(typeof closeCompletedChallengeSlot === 'function') await closeCompletedChallengeSlot(challenge);
+  return true;
+}
+function showCampoDestruidoCompletionScreen(challenge){
+  if(!challenge?.completed || !challenge?.success || typeof openModal !== 'function') return false;
+  const result = challenge.result || {};
+  const firstReward = Number(result.skillPointsAwarded || 0) > 0;
+  const dg = Number(result.dg || 0);
+  const dgLabel = dg > 0 ? `+${dg}` : String(dg);
+  const rewardAmount = Math.max(0, Math.round(Number(result.skillPointsAwarded || 0)));
+  openModal(`<div class="challenge-completion-screen ${firstReward ? 'challenge-first-reward' : 'challenge-repeat-win'}">
+    <div class="challenge-completion-emblem" aria-hidden="true">${firstReward ? '🏆' : '✓'}</div>
+    <p class="label">Campo destruido</p>
+    <h2>${firstReward ? '¡Reto superado!' : 'Reto superado nuevamente'}</h2>
+    <p class="challenge-completion-lead">Terminaste primero con <strong>${Number(result.pts || 0)} puntos</strong> y diferencia de gol <strong>${dgLabel}</strong>.</p>
+    ${firstReward
+      ? `<div class="challenge-reward-box"><span>Premio único</span><strong>+${formatPlainNumber(rewardAmount)} puntos de habilidad</strong><p>Felicitaciones. Superaste por primera vez uno de los retos más exigentes del Manager.</p></div>`
+      : `<div class="challenge-reward-box is-claimed"><span>Premio ya reclamado</span><strong>Sin recompensa adicional</strong><p>El reto puede repetirse, pero los 10.000 puntos de habilidad se entregan una sola vez por perfil.</p></div>`}
+    <button class="primary challenge-result-continue" data-close-completed-challenge>Volver a crear partida</button>
+  </div>`);
+  const root = typeof $ === 'function' ? $('modalRoot') : document.getElementById('modalRoot');
+  if(root) root.dataset.completedChallengeResult = '1';
+  document.querySelector('[data-close-completed-challenge]')?.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeCompletedChallengeResultScreen();
+  });
+  return true;
+}
 function finalizeActiveManagerChallenge(record=null){
   const challenge = activeManagerChallenge();
   if(!challenge || challenge.completed) return null;
@@ -527,8 +565,9 @@ function finalizeActiveManagerChallenge(record=null){
   const champion = position === 1;
   const definition = campoDestruidoChallengeDefinition();
   const configuredReward = Math.max(0, Math.round(Number(definition?.recompensas?.puntosHabilidadPrimerPuesto || 10000)));
+  const rewardAlreadyClaimed = managerChallengeRewardAlreadyClaimed(challenge.id);
   let awarded = 0;
-  if(champion && !challenge.skillPointsAwarded){
+  if(champion && !rewardAlreadyClaimed && !challenge.skillPointsAwarded){
     awarded = grantManagerChallengeSkillPoints(configuredReward, { challengeId:challenge.id, clubId:game.selectedClubId, position, pts:Number(ownRow.pts || 0), dg:Number(ownRow.dg || 0) });
     challenge.skillPointsAwarded = awarded;
   }
@@ -543,11 +582,15 @@ function finalizeActiveManagerChallenge(record=null){
     dg:Number(ownRow.dg || 0),
     gf:Number(ownRow.gf || 0),
     gc:Number(ownRow.gc || 0),
-    skillPointsAwarded:awarded
+    skillPointsAwarded:awarded,
+    rewardAlreadyClaimed:Boolean(rewardAlreadyClaimed)
   };
+  recordManagerChallengeCompletion(challenge.id, { success:champion, rewardClaimed:awarded > 0, rewardAmount:awarded });
   const dgLabel = Number(ownRow.dg || 0) > 0 ? `+${Number(ownRow.dg || 0)}` : String(Number(ownRow.dg || 0));
   challenge.closeNotice = champion
-    ? `La directiva te da las gracias: terminaste 1° con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}. Recibiste ${formatPlainNumber(awarded || configuredReward)} puntos de habilidad.`
+    ? (awarded > 0
+      ? `La directiva te da las gracias: terminaste 1° con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}. Recibiste el premio único de ${formatPlainNumber(awarded)} puntos de habilidad.`
+      : `La directiva te da las gracias: volviste a terminar 1° con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}. El premio único ya había sido reclamado.`)
     : `La directiva decidió despedirte: terminaste ${position || 'fuera del primer puesto'} con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}.`;
   pushGameMessage({
     type:'reto',
@@ -556,9 +599,13 @@ function finalizeActiveManagerChallenge(record=null){
     body:challenge.closeNotice,
     id:`challenge-result-campo-destruido-${game.seasonNumber || 1}-${game.selectedClubId}`
   });
-  showNotice(challenge.closeNotice, true);
   if(typeof saveLocal === 'function') saveLocal(true);
-  if(typeof closeCompletedChallengeSlot === 'function') setTimeout(() => closeCompletedChallengeSlot(challenge), 1400);
+  if(champion){
+    showCampoDestruidoCompletionScreen(challenge);
+  } else {
+    showNotice(challenge.closeNotice, true);
+    if(typeof closeCompletedChallengeSlot === 'function') setTimeout(() => closeCompletedChallengeSlot(challenge), 1400);
+  }
   return challenge;
 }
 function managerChallengeHomeMarkup(){
@@ -575,6 +622,8 @@ function managerChallengeHomeMarkup(){
   const pct = clamp((Number(challenge.matchesPlayed || 0) / Math.max(1, Number(challenge.matchesTotal || 5))) * 100, 0, 100);
   const currentRow = table.find(row => Number(row.clubId) === Number(game.selectedClubId)) || {};
   const remainingLeagueMatches = (game?.fixtures || []).flatMap(round => round.matches || []).filter(item => String(item?.challengeId || '') === 'campo_destruido' && !item.played).length;
+  const rewardAlreadyClaimed = managerChallengeRewardAlreadyClaimed('campo_destruido');
+  const rewardStatus = rewardAlreadyClaimed ? 'Premio único ya reclamado: podés repetir el reto, pero no volverá a pagar puntos.' : 'Premio disponible: 10.000 puntos de habilidad la primera vez que terminás primero.';
   return `<div class="card manager-challenge-card" style="margin-top:14px">
     <div class="row"><div><p class="label">Reto predeterminado</p><h3>${escapeHtml(challenge.nombre || 'Campo destruido')}</h3></div><span class="pill danger">Dificultad ${escapeHtml(challenge.difficulty || 'Alta')}</span></div>
     <p class="tagline">Objetivo: <strong>${escapeHtml(challenge.objective || 'Completar las condiciones del reto.')}</strong></p>
@@ -585,7 +634,7 @@ function managerChallengeHomeMarkup(){
       <div><p class="label">Partidos propios</p><strong>${Number(challenge.matchesPlayed || 0)}/${Number(challenge.matchesTotal || 5)}</strong></div>
     </div>
     <div class="project-progress" style="margin-top:10px"><span style="width:${pct}%"></span></div>
-    <p class="muted small">Tabla actual: ${Number(currentRow.pts || 0)} puntos · DG ${Number(currentRow.dg || 0) > 0 ? '+' : ''}${Number(currentRow.dg || 0)}. Quedan ${remainingLeagueMatches} partidos de liga por resolver. Premio: 10.000 puntos de habilidad si terminás primero.</p>
+    <p class="muted small">Tabla actual: ${Number(currentRow.pts || 0)} puntos · DG ${Number(currentRow.dg || 0) > 0 ? '+' : ''}${Number(currentRow.dg || 0)}. Quedan ${remainingLeagueMatches} partidos de liga por resolver. ${escapeHtml(rewardStatus)}</p>
     <p class="muted small">Bloqueos activos: mantenimiento de campo, fichajes, empleados y resultado directo.</p>
   </div>`;
 }
@@ -2485,9 +2534,16 @@ function bindEvents(){
       return;
     }
     const close = event.target.closest('[data-close-modal]');
-    if(close || event.target.classList.contains('modal-backdrop')) closeModal();
+    if(close || event.target.classList.contains('modal-backdrop')){
+      if(typeof completedChallengeResultModalActive === 'function' && completedChallengeResultModalActive()) closeCompletedChallengeResultScreen();
+      else closeModal();
+    }
   });
-  document.addEventListener('keydown', (event)=>{ if(event.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (event)=>{
+    if(event.key !== 'Escape') return;
+    if(typeof completedChallengeResultModalActive === 'function' && completedChallengeResultModalActive()) closeCompletedChallengeResultScreen();
+    else closeModal();
+  });
 }
 
 function startUiTicker(){
@@ -4103,6 +4159,52 @@ function managerProfileStatsHasProgress(stats=null){
     || (src.achievements?.unlocked && Object.keys(src.achievements.unlocked || {}).length > 0)
   );
 }
+function normalizeManagerChallengeRewardsState(value=null){
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const clean = {};
+  Object.entries(raw).forEach(([id, item]) => {
+    const key = String(id || '').trim();
+    if(!key) return;
+    const src = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+    clean[key] = {
+      completions:Math.max(0, Math.round(Number(src.completions || 0))),
+      successfulCompletions:Math.max(0, Math.round(Number(src.successfulCompletions || 0))),
+      rewardClaimed:Boolean(src.rewardClaimed),
+      rewardAmount:Math.max(0, Math.round(Number(src.rewardAmount || 0))),
+      rewardClaimedAt:src.rewardClaimedAt || null,
+      lastCompletedAt:src.lastCompletedAt || null
+    };
+  });
+  return clean;
+}
+function managerChallengeRewardRecord(challengeId=''){
+  const id = String(challengeId || '').trim();
+  if(!id) return null;
+  const profile = readManagerGlobalProfileState();
+  return profile?.challengeRewards?.[id] || null;
+}
+function managerChallengeRewardAlreadyClaimed(challengeId=''){
+  return Boolean(managerChallengeRewardRecord(challengeId)?.rewardClaimed);
+}
+function recordManagerChallengeCompletion(challengeId='', options={}){
+  const id = String(challengeId || '').trim();
+  if(!id) return null;
+  const profile = readManagerGlobalProfileState();
+  const rewards = normalizeManagerChallengeRewardsState(profile?.challengeRewards);
+  const previous = rewards[id] || { completions:0, successfulCompletions:0, rewardClaimed:false, rewardAmount:0, rewardClaimedAt:null, lastCompletedAt:null };
+  const success = options.success === true;
+  const rewardClaimedNow = options.rewardClaimed === true;
+  rewards[id] = {
+    completions:Math.max(0, Number(previous.completions || 0)) + 1,
+    successfulCompletions:Math.max(0, Number(previous.successfulCompletions || 0)) + (success ? 1 : 0),
+    rewardClaimed:Boolean(previous.rewardClaimed || rewardClaimedNow),
+    rewardAmount:Math.max(Number(previous.rewardAmount || 0), Math.max(0, Math.round(Number(options.rewardAmount || 0)))),
+    rewardClaimedAt:previous.rewardClaimedAt || (rewardClaimedNow ? new Date().toISOString() : null),
+    lastCompletedAt:new Date().toISOString()
+  };
+  return writeManagerGlobalProfileState({ ...profile, challengeRewards:rewards });
+}
+
 function normalizeManagerGlobalProfile(profile=null){
   const raw = profile && typeof profile === 'object' && !Array.isArray(profile) ? profile : {};
   const stats = normalizeManagerStats(raw.managerStats || createInitialManagerStats());
@@ -4114,6 +4216,7 @@ function normalizeManagerGlobalProfile(profile=null){
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
     skillPoints,
+    challengeRewards:normalizeManagerChallengeRewardsState(raw.challengeRewards || raw.recompensasRetos),
     updatedAt:raw.updatedAt || null,
     empty
   };
@@ -4172,12 +4275,14 @@ function persistSharedManagerProfileFromGame(){
   const stats = normalizeManagerStats(game.managerStats || createInitialManagerStats());
   let special = game.special;
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
+  const existingProfile = readManagerGlobalProfileState();
   const profile = {
     version:'V6.24',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
     skillPoints:Math.max(0, Math.round(Number(special?.puntos_habilidad || 0))),
+    challengeRewards:normalizeManagerChallengeRewardsState(existingProfile?.challengeRewards),
     updatedAt:new Date().toISOString()
   };
   return writeManagerGlobalProfileState(profile);
@@ -4220,7 +4325,7 @@ async function migrateAllSavedManagerProfilesToGlobal(){
   const best = candidates[0];
   const currentScore = managerGlobalProfileScore(currentGlobal);
   if(currentGlobal && !currentGlobal.empty && currentScore >= managerGlobalProfileScore(best)) return false;
-  writeManagerGlobalProfileState(best);
+  writeManagerGlobalProfileState({ ...best, challengeRewards:normalizeManagerChallengeRewardsState(currentGlobal?.challengeRewards) });
   return true;
 }
 

@@ -1113,7 +1113,9 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
   const group = playerRoleGroup(cleanPosition);
   const generationDivision = Number.isFinite(Number(divisionOrder)) ? Number(divisionOrder) : generationDivisionOrder(clubId, divisionName);
   let media;
-  if(Number.isFinite(Number(mediaMin)) && Number.isFinite(Number(mediaMax))){
+  const hasFixedMediaRange = mediaMin !== null && mediaMin !== undefined && mediaMax !== null && mediaMax !== undefined
+    && Number.isFinite(Number(mediaMin)) && Number.isFinite(Number(mediaMax));
+  if(hasFixedMediaRange){
     const min = clamp(Math.round(Number(mediaMin)), 1, 99);
     const max = Math.max(min, clamp(Math.round(Number(mediaMax)), 1, 99));
     media = min + hashNumber(`${nameContext}-${id}-${group}-fixed-media`, Math.max(1, max - min + 1));
@@ -1122,15 +1124,16 @@ function generatedPlayerFactory({ id, position, clubId=0, age=18, prestige=50, n
   }
   const skills = skillsForPosition(cleanPosition, media, id);
   const visible = averageGeneratedVisible(cleanPosition, skills);
+  const nationality = nationalityOverride || pickNationalityForGeneration(id, divisionName || nameContext, generationContext, { localCountry:localCountry || (Number(clubId || 0) > 0 ? clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(clubId))) : null) });
   const player = {
     id,
-    name:generatedPlayerName(id, nameContext),
+    name:generatedPlayerName(id, nameContext, nationality),
     age,
     position:cleanPosition,
     clubId,
     freeAgent:Boolean(freeAgent),
     youthFreeAgent:Boolean(youthFreeAgent),
-    nationality:nationalityOverride || pickNationalityForGeneration(id, divisionName || nameContext, generationContext, { localCountry:localCountry || (Number(clubId || 0) > 0 ? clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(clubId))) : null) }),
+    nationality,
     overall:visible,
     skills,
     salary:initialAnnualSalaryForMedia(visible, salaryFactor),

@@ -1,4 +1,48 @@
-# Fútbol Manager MVP - V7.35
+# Fútbol Manager MVP - V7.36
+
+## V7.36 - Respuestas por cláusula y nombres por nacionalidad
+
+### Respuestas personalizadas ante ofertas por cláusula
+
+- El banco específico tenía 10 respuestas: 5 cuando el jugador aceptaba quedarse y 5 cuando rechazaba la charla y ejecutaba su salida.
+- Ahora contiene 20 respuestas: 10 de permanencia y 10 de salida.
+- Las respuestas incorporan dinámicamente el nombre del jugador, el nombre del manager y el club actual.
+- Se mantiene la misma probabilidad deportiva de convencer al jugador; sólo aumenta la variedad narrativa.
+- Los 40 consejos generales del asistente no fueron modificados.
+
+### Nombres y apellidos por nacionalidad
+
+- Se corrigió una contradicción: los jugadores profesionales generados recibían una nacionalidad propia, pero su nombre se elegía desde un único banco argentino.
+- Profesionales generados, agentes libres, refuerzos de emergencia bot y juveniles usan ahora bancos de nombres y apellidos asociados a su nacionalidad.
+- Argentina pasa de 60 nombres y 60 apellidos juveniles a 180 y 180.
+- Chile, Brasil, Inglaterra, España, Italia y Rumania pasan de 30 nombres y 30 apellidos a 90 y 90 por país.
+- También se incorporaron bancos de 90 nombres y 90 apellidos para las demás nacionalidades presentes en la base y en la generación dinámica, incluidas Uruguay, Colombia, Francia, Portugal, Serbia, Croacia, Países Bajos, Senegal y otras.
+- Los 4.050 jugadores de la base inicial fueron renombrados de forma determinista según su nacionalidad, sin cambiar ids, edad, club, posición, habilidades, sueldo, cláusula ni valor.
+- Los jugadores manuales y personalizados conservan sus nombres definidos en `data/jugadores_manuales.json`.
+- Se corrigió una validación de rango: cuando `mediaMin` y `mediaMax` estaban en `null`, JavaScript los interpretaba como cero y podía crear juveniles libres o planteles de respaldo con media 1. Ahora sólo se usa un rango fijo cuando ambos valores fueron proporcionados realmente; en los demás casos se aplican las reglas de media por liga y prestigio.
+
+### Archivos principales modificados en V7.36
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-player-name-pools.js`
+- `js/data/04-data-storage.js`
+- `js/game/10-academy-employees.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/06-render-home-messages.js`
+- `data/jugadores.json`
+- `data/jugadores/*.json`
+- `README.md`
+
+**V7.36 no rompe partidas anteriores.** Las partidas guardadas conservan los nombres ya almacenados en su snapshot. Los bancos ampliados se aplican a nuevos jugadores generados y a partidas nuevas; no se cambian nombres de jugadores dentro de una carrera ya iniciada.
+
+---
+
+## Historial anterior
 
 ## V7.35 - Fundar club al crear manager y continuidad después de renunciar
 
@@ -44,8 +88,6 @@ Antes de V7.35, `createFounderGame()` ejecutaba `newGame()` incluso cuando se ac
 **V7.35 no rompe partidas anteriores.** No cambia el esquema de guardado. En una carrera existente, la temporada sólo se cierra automáticamente cuando el manager está sin club y confirma la creación de un club propio; no se alteran partidas que no utilicen esa opción.
 
 ---
-
-## Historial anterior
 
 ## V7.34 - Preparación del Mundial, sedes neutrales y mejor once bot
 

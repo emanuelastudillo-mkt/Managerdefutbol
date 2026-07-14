@@ -1,11 +1,12 @@
 {
   "metadata": {
-    "version": "V6.03",
+    "version": "V7.36",
     "type": "players-manifest",
-    "description": "Base de jugadores dividida por país/liga para reducir el peso de data/jugadores.json. Manifest mantenido en V6.03.",
+    "description": "Base de jugadores por país/liga con nombres y apellidos coherentes con la nacionalidad y bancos ampliados en V7.36.",
     "splitFrom": "V6.01 data/jugadores.json",
     "playersCount": 4050,
-    "filesCount": 9
+    "filesCount": 9,
+    "namePoolsVersion": "V7.36"
   },
   "rules": {
     "posiciones": {

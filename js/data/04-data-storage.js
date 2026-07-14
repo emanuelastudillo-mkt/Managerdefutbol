@@ -1943,11 +1943,12 @@ function generateClubPlayers(club, prestige, startId, generationContext=null){
     });
   });
 }
-const FIRST_NAMES = ['Agustín', 'Mateo', 'Lautaro', 'Santiago', 'Julián', 'Tomás', 'Nicolás', 'Franco', 'Lucas', 'Bruno', 'Facundo', 'Ezequiel', 'Ramiro', 'Iván', 'Gonzalo', 'Emiliano', 'Brian', 'Thiago', 'Alan', 'Pablo', 'Martín', 'Leandro', 'Matías', 'Valentín', 'Bautista', 'Benjamín', 'Santino', 'Gael', 'Ignacio', 'Simón', 'Máximo', 'Dante', 'Nahuel', 'Tobías', 'Juan', 'Diego', 'Sebastián', 'Federico', 'Enzo', 'Marcos', 'Gabriel', 'Alexis', 'Renzo', 'Lisandro', 'Jeremías', 'Lorenzo', 'Kevin', 'Ulises', 'Milton', 'Rodrigo', 'Esteban', 'Cristian', 'Leonel', 'Damián', 'Ariel', 'Joel', 'Jonathan', 'Andrés', 'Néstor', 'Hernán', 'Mauro', 'Ciro', 'Elías', 'Joaquín', 'Manuel', 'Rafael', 'Adrián', 'Fabián', 'Maximiliano', 'Sergio'];
-const LAST_NAMES = ['Gómez', 'Rodríguez', 'Fernández', 'López', 'Martínez', 'Pérez', 'García', 'Sánchez', 'Romero', 'Torres', 'Díaz', 'Alvarez', 'Ruiz', 'Ramírez', 'Aguirre', 'Molina', 'Castro', 'Silva', 'Rojas', 'Vera', 'Acosta', 'Morales', 'Herrera', 'Medina', 'Luna', 'Pereyra', 'Sosa', 'Coronel', 'Cabrera', 'Campos', 'Suárez', 'Giménez', 'Arias', 'Farias', 'Roldán', 'Ferreyra', 'Benítez', 'Navarro', 'Flores', 'Méndez', 'Ortega', 'Vargas', 'Cáceres', 'Miranda', 'Godoy', 'Ponce', 'Quiroga', 'Villalba', 'Carrizo', 'Espinoza', 'Peralta', 'Mansilla', 'Leiva', 'Bravo', 'Ojeda', 'Barrios', 'Vega', 'Maldonado', 'Córdoba', 'Lucero', 'Bustos', 'Ibarra', 'Soria', 'Domínguez', 'Palacios', 'Escobar', 'Ledesma', 'Núñez', 'Ríos', 'Figueroa', 'Montiel', 'Paz', 'Blanco', 'Serrano'];
-function generatedPlayerName(id, clubNameValue){
-  const first = FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-first`, FIRST_NAMES.length)];
-  const last = LAST_NAMES[hashNumber(`${clubNameValue}-${id}-last`, LAST_NAMES.length)];
+const FALLBACK_PLAYER_FIRST_NAMES = ['Agustín','Mateo','Lautaro','Santiago','Julián','Tomás','Nicolás','Franco','Lucas','Bruno'];
+const FALLBACK_PLAYER_LAST_NAMES = ['Gómez','Rodríguez','Fernández','López','Martínez','Pérez','García','Sánchez','Romero','Torres'];
+function generatedPlayerName(id, clubNameValue, nationality='Argentina'){
+  if(typeof playerNameForNationality === 'function') return playerNameForNationality(id, nationality, clubNameValue);
+  const first = FALLBACK_PLAYER_FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-first`, FALLBACK_PLAYER_FIRST_NAMES.length)];
+  const last = FALLBACK_PLAYER_LAST_NAMES[hashNumber(`${clubNameValue}-${id}-last`, FALLBACK_PLAYER_LAST_NAMES.length)];
   return `${first} ${last}`;
 }
 function skillTierValue(base, id, label, tier='common'){

@@ -1348,21 +1348,37 @@ function acceptTransferOffer(messageId){
   completeTransferSaleFromMessage(msg, player);
 }
 function specialClauseStayMessages(player, managerName){
+  const playerName = player?.name || 'Jugador';
+  const clubNameValue = clubName(game?.selectedClubId) || 'el club';
+  const manager = managerName || 'Manager';
   return [
-    `Estaba esperando que me llamaras, ${managerName}. No quiero irme. Sé que el club necesita el dinero, pero quiero quedarme a pelear por cosas grandes. Nos vemos en el entrenamiento.`,
-    `Gracias por hablar conmigo, ${managerName}. La oferta era fuerte, pero este club todavía tiene algo pendiente conmigo. Me quedo.`,
-    `Me llamó el otro club, sí, pero necesitaba escuchar al mío. Si vos me querés acá, me quedo a competir. Nos vemos mañana en la práctica, ${managerName}.`,
-    `No voy a negar que la cláusula me hizo pensar, ${managerName}. Pero quiero ser importante acá. Guardá la lapicera, todavía no firmo nada afuera.`,
-    `Tenía miedo de que el club quisiera venderme sin decirme nada. Si me pedís que me quede, me quedo. Quiero pelearla con esta camiseta, ${managerName}.`
+    `${manager}, soy ${playerName}. Estaba esperando que me llamaras. No quiero irme: sé que ${clubNameValue} necesita el dinero, pero prefiero quedarme a pelear por algo importante. Nos vemos en el entrenamiento.`,
+    `Gracias por hablar conmigo, ${manager}. La oferta era fuerte, pero todavía tengo una historia pendiente en ${clubNameValue}. Contá conmigo: me quedo.`,
+    `Me llamó el otro club, sí, pero necesitaba escuchar al mío. Si vos me querés acá, sigo compitiendo con esta camiseta. Mañana estoy en la práctica, ${manager}.`,
+    `No voy a negar que el pago de la cláusula me hizo pensar. Pero quiero ser importante en ${clubNameValue}. Guardá la lapicera: ${playerName} se queda.`,
+    `Tenía miedo de que quisieran venderme sin hablar conmigo. Si me pedís que siga, sigo. Quiero pelearla con este equipo, ${manager}.`,
+    `${manager}, valoro que hayas venido de frente. El dinero es importante, pero también lo es sentir respaldo. Me quedo para demostrar que todavía puedo darle mucho a ${clubNameValue}.`,
+    `La propuesta me tentó, no te voy a mentir, ${manager}. Pero después de esta charla entendí que todavía soy parte del proyecto de ${clubNameValue}. Deciles que no preparen el contrato: me quedo.`,
+    `Soy ${playerName} y mi decisión está tomada: continúo en ${clubNameValue}. Quiero que esta temporada termine con nosotros peleando juntos, no mirando desde otro vestuario.`,
+    `Gracias por confiar en mí, ${manager}. No necesito promesas imposibles; necesitaba saber que cuento para vos. Rechazo la salida y sigo entrenando con el grupo.`,
+    `La cláusula podía sacar a ${playerName} del club, pero esta conversación cambió todo. Me quedo por mis compañeros, por la gente de ${clubNameValue} y porque todavía creo en lo que estamos construyendo.`
   ];
 }
 function specialClauseLeaveMessages(player, managerName){
+  const playerName = player?.name || 'Jugador';
+  const clubNameValue = clubName(game?.selectedClubId) || 'el club';
+  const manager = managerName || 'Manager';
   return [
-    `${managerName}, el rendimiento del equipo no es lo que esperaba y tengo mejores aspiraciones. Me da felicidad saber que el club recibe un buen dinero por mi venta. Te agradezco y me voy.`,
-    `Míster, lo pensé mucho. El equipo no está en el lugar donde imaginaba competir y siento que esta oportunidad no la puedo dejar pasar. Gracias por todo; me voy tranquilo porque al club le entra una suma importante.`,
-    `${managerName}, me cuesta decirlo, pero necesito otro desafío. El presente deportivo no acompaña mis objetivos. Ojalá este dinero ayude al club. Gracias por intentarlo.`,
-    `Te escuché, pero ya tomé una decisión. Quiero competir por objetivos más altos y hoy siento que acá no los tengo cerca. Me voy agradecido y con la tranquilidad de dejarle dinero al club.`,
-    `Aprecio que me hayas llamado, ${managerName}. Pero la propuesta es importante y el rendimiento del equipo no coincide con mis aspiraciones. Me voy con respeto y gratitud.`
+    `${manager}, soy ${playerName}. El rendimiento del equipo no es lo que esperaba y tengo aspiraciones más altas. Me deja tranquilo saber que ${clubNameValue} recibe un buen dinero. Te agradezco, pero me voy.`,
+    `Lo pensé mucho, ${manager}. El equipo no está en el lugar donde imaginaba competir y esta oportunidad no la puedo dejar pasar. Gracias por todo; la cláusula también deja una suma importante al club.`,
+    `${manager}, me cuesta decirlo, pero necesito otro desafío. El presente deportivo no acompaña mis objetivos. Ojalá este dinero ayude a ${clubNameValue}. Gracias por intentarlo.`,
+    `Te escuché y respeto tu postura, ${manager}, pero ya tomé una decisión. Quiero competir por objetivos más altos y hoy siento que en ${clubNameValue} no los tengo cerca. Me voy agradecido.`,
+    `Aprecio que me hayas llamado, ${manager}. La propuesta es importante y el rendimiento del equipo no coincide con mis aspiraciones. Me voy con respeto y gratitud.`,
+    `No es una decisión contra vos. Siento que llegó el momento de cambiar de club y probarme en otro nivel. ${clubNameValue} recibe la cláusula completa y yo voy a aceptar el nuevo desafío.`,
+    `${manager}, agradezco que hayas intentado convencerme, pero mi ciclo está terminado. Necesito salir ahora y no quiero prometer una continuidad que no voy a sentir.`,
+    `Soy ${playerName} y prefiero ser claro: elegí marcharme. La oferta deportiva me convence más y creo que es el paso correcto para mi carrera.`,
+    `La charla fue sincera, ${manager}, pero no cambió mi decisión. Quiero otro entorno competitivo y ya di mi palabra. Espero que el ingreso por la cláusula ayude a reconstruir el plantel de ${clubNameValue}.`,
+    `Me llevo buenos recuerdos de ${clubNameValue}, ${manager}, pero esta oportunidad no vuelve todos los días. La cláusula fue pagada y voy a continuar mi carrera en el otro club.`
   ];
 }
 function showSpecialClauseResponseModal(player, text, status='stay'){

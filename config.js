@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.25',
+  version: 'V7.26',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -784,6 +784,17 @@ window.GAME_CONFIG = {
     resultadosPorPagina: 100,
     cooldownCargaDias: 50,
     nombreRanking: 'Ranking Online'
+  },
+
+  desafiosOnline: {
+    activo: true,
+    // Usa el mismo Worker y la misma cuenta del Ranking Online.
+    endpoint: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
+    versionSimulador: 'challenge-sim-v1',
+    resultadosPorPagina: 40,
+    actualizacionMs: 30000,
+    maximosAbiertos: 3,
+    vencimientoDias: 7
   },
 
   mensajesAsistente: {

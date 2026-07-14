@@ -1,4 +1,95 @@
-# Fútbol Manager MVP - V7.25
+# Fútbol Manager MVP - V7.26
+
+## V7.26 - Desafíos online con simulación local y Cloudflare D1
+
+Se agregó una nueva sección **Desafíos Online** que reutiliza el login del Ranking Online. Un manager puede publicar una fotografía de su equipo y otro usuario puede aceptarla con su propio plantel. El navegador del jugador que acepta ejecuta una simulación determinista y envía el resultado al Worker para dejarlo publicado.
+
+### Información enviada por cada equipo
+
+- Club, escudo, hinchas, estadio y estado del campo.
+- Formación, capitán, mentalidad e instrucciones tácticas.
+- Once titular y hasta diez suplentes.
+- Media, forma y moral de cada jugador.
+- Habilidades agregadas necesarias para la simulación.
+- Valor del once titular.
+- Suma de los sueldos del once titular.
+- Valor de toda la convocatoria.
+- Suma de los sueldos de toda la convocatoria.
+
+Después del partido se guardan además el valor y la suma de sueldos de los jugadores que realmente disputaron minutos.
+
+### Flujo
+
+1. El creador publica el equipo y Cloudflare guarda una fotografía inalterable.
+2. Otro usuario acepta y envía su fotografía.
+3. El Worker reserva el desafío y entrega una semilla.
+4. `simulador-desafios.js` simula el encuentro sin tocar la carrera.
+5. El resultado se guarda en `manager_desafios_db`.
+6. El jugador que aceptó ve la ficha inmediatamente.
+7. El creador y el resto de la comunidad pueden consultar el partido después.
+
+### Resultado publicado
+
+- Marcador, goleadores y asistencias.
+- Tarjetas amarillas y rojas.
+- Lesiones simuladas.
+- Cambios.
+- Posesión, tiros, tiros al arco, córners y faltas.
+- Hinchas locales y visitantes y asistencia total.
+- Rendimientos individuales y figura del partido.
+- Valor y masa salarial de cada convocatoria.
+- Valor y masa salarial de los jugadores utilizados.
+
+### Cloudflare
+
+La carpeta `cloudflare-desafios/` incluye:
+
+- `migracion-desafios-v1.sql`.
+- `worker-ranking-desafios-v1.js`.
+- `PASOS-INSTALACION-DESAFIOS.md`.
+- `PRUEBAS-DESAFIOS.md`.
+
+El Worker combinado conserva la base actual:
+
+```text
+db -> ranking_manager_db
+```
+
+Y requiere una segunda vinculación:
+
+```text
+DESAFIOS_DB -> manager_desafios_db
+```
+
+### Reglas iniciales
+
+- Máximo tres desafíos abiertos por usuario.
+- Vencimiento a los siete días.
+- No se pueden aceptar desafíos propios.
+- Sólo el primer usuario que acepta reserva el encuentro.
+- Los partidos son amistosos y no modifican forma, lesiones, moral, cohesión, dinero, cartas ni estadísticas oficiales.
+- La simulación se ejecuta localmente; por eso no entrega recompensas competitivas.
+
+### Archivos principales modificados en V7.26
+
+- `README.md`
+- `index.html`
+- `style.css`
+- `config.js`
+- `balance-modificadores.js`
+- `data/instalaciones.json`
+- `js/core/01-config-constants.js`
+- `js/ui/06-render-home-messages.js`
+- `simulador-desafios.js`
+- `js/game/18-challenges-online.js`
+- `cloudflare-desafios/*`
+
+### Compatibilidad de partidas
+
+**V7.26 no rompe partidas anteriores.** Los desafíos utilizan fotografías separadas y una nueva base D1. No agregan datos obligatorios al guardado local de la carrera.
+
+---
+
 
 ## V7.25 - Código reutilizable de fondos para el club
 

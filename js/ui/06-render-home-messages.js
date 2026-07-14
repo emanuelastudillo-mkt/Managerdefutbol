@@ -124,7 +124,7 @@ function renderAll(){
     }
   }
   if(activeTab === 'players') activeTab = 'market';
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, special:renderSpecial };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
   if(game.gameOver?.active){
     if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
     if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();

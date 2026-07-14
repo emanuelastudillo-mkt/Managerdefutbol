@@ -108,6 +108,10 @@
   const BOT_OVEREXERTION_RULES_V2 = normalizeBotOverexertionRules(simConfigArray('equilibrioBots.tacticaRapida.reglasDiferencia', []));
   const BOT_TACTIC_VARIETY_ENABLED = Boolean(simConfigValue('equilibrioBots.tacticasVariadas.activo', true));
   const BOT_TACTIC_ROTATION_INTERVAL = Math.max(1, Math.round(simConfigNumber('equilibrioBots.tacticasVariadas.rotacionCadaFechas', 1, 1, 20)));
+  const BOT_MANAGER_TOP_PLAYERS_ENABLED_V2 = Boolean(simConfigValue('equilibrioBots.tacticaContraManager.priorizarMejoresJugadores', true));
+  const BOT_MANAGER_TOP_PLAYERS_COUNT_V2 = Math.max(3, Math.min(5, Math.round(simConfigNumber('equilibrioBots.tacticaContraManager.cantidadMejoresJugadores', 5, 3, 5))));
+  const BOT_MANAGER_TOP_PLAYER_BONUS_V2 = Math.max(1000, simConfigNumber('equilibrioBots.tacticaContraManager.bonusInclusionMejorJugador', 5000, 1000, 50000));
+  const BOT_MANAGER_FORMATION_AUDIT_ENABLED_V2 = Boolean(simConfigValue('equilibrioBots.tacticaContraManager.auditarCobertura', true));
   const BOT_TACTIC_PROFILES = {
     balanced:{ formations:['4-4-2','4-2-3-1'], sectorStyles:{ defense:'posicional', midfield:'posicional', attack:'posicional' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } },
     possession:{ formations:['4-2-3-1','4-1-4-1'], sectorStyles:{ defense:'rotacion', midfield:'posicional', attack:'rotacion' }, matchInstructions:{ winning:'lower', drawing:'normal', losing:'push' } },
@@ -253,16 +257,37 @@
     if(Number(reputation || 0) <= 60) return ['defensive','counter','cautious','balanced','direct'];
     return ['balanced','possession','high_press','direct','wide','counter','defensive','cautious'];
   }
-  function botTacticForClubV2(clubId){
+  function botManagerFormationSelectionOptions(opponentClubId){
+    const againstManager = Number(opponentClubId || 0) === Number(game?.selectedClubId || 0);
+    if(!againstManager || !BOT_MANAGER_TOP_PLAYERS_ENABLED_V2) return { againstManager:false };
+    return {
+      againstManager:true,
+      prioritizeTopPlayers:true,
+      priorityCount:BOT_MANAGER_TOP_PLAYERS_COUNT_V2,
+      priorityBonus:BOT_MANAGER_TOP_PLAYER_BONUS_V2
+    };
+  }
+  function botTacticForClubV2(clubId, context={}){
     const id = Number(clubId || 0);
     if(id === Number(game?.selectedClubId || 0)) return { ...game.tactic, matchInstructions:normalizeMatchInstructions(game.tactic?.matchInstructions), sectorStyles:normalizeSectorStylesV2(game.tactic?.sectorStyles) };
     const club = seed?.clubs?.find(c => Number(c.id) === id) || { reputation:60 };
+    const selectionOptions = botManagerFormationSelectionOptions(context.opponentClubId);
     if(!BOT_TACTIC_VARIETY_ENABLED){
-      const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id) : null;
+      const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id, selectionOptions) : null;
       const formation = best?.formation || (Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2');
       const starters = (best?.lineup || []).slice(0, 11).map(player => Number(player.id));
       const bench = typeof autoSelectBench === 'function' ? autoSelectBench(id, starters).map(player => Number(player.id)).slice(0, 10) : [];
-      return { formation, starters, bench, autoSubs:[], playerMentalities:{}, matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS}, sectorStyles:normalizeSectorStylesV2(null), botProfile:'legacy' };
+      return {
+        formation,
+        starters,
+        bench,
+        autoSubs:[],
+        playerMentalities:{},
+        matchInstructions:{...DEFAULT_MATCH_INSTRUCTIONS},
+        sectorStyles:normalizeSectorStylesV2(null),
+        botProfile:'legacy',
+        botTopPlayersAudit:selectionOptions.againstManager && BOT_MANAGER_FORMATION_AUDIT_ENABLED_V2 ? (best?.audit || null) : null
+      };
     }
     const season = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
     const matchday = Math.max(0, Math.round(Number(game?.matchdayIndex || 0)));
@@ -274,7 +299,7 @@
     const formations = Array.isArray(profile.formations) && profile.formations.length ? profile.formations : ['4-4-2'];
     const formationOffset = simStableHash(`bot-formation-base-${id}-${season}-${profileId}`, formations.length);
     const fallbackFormation = formations[(formationOffset + cycle) % formations.length] || '4-4-2';
-    const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id) : null;
+    const best = typeof bestBotFormationSelection === 'function' ? bestBotFormationSelection(id, selectionOptions) : null;
     const formation = best?.formation || fallbackFormation;
     const starters = (best?.lineup || []).slice(0, 11).map(player => Number(player.id));
     const bench = typeof autoSelectBench === 'function' ? autoSelectBench(id, starters).map(player => Number(player.id)).slice(0, 10) : [];
@@ -287,10 +312,11 @@
       matchInstructions:normalizeMatchInstructions(profile.matchInstructions),
       sectorStyles:normalizeSectorStylesV2(profile.sectorStyles),
       botProfile:profileId,
-      botTacticCycle:cycle
+      botTacticCycle:cycle,
+      botTopPlayersAudit:selectionOptions.againstManager && BOT_MANAGER_FORMATION_AUDIT_ENABLED_V2 ? (best?.audit || null) : null
     };
   }
-  function getTacticForClubV2(clubId){ return botTacticForClubV2(clubId); }
+  function getTacticForClubV2(clubId, opponentClubId=0){ return botTacticForClubV2(clubId, { opponentClubId }); }
   function instructionForScore(tactic, gf, gc){
     const instructions = normalizeMatchInstructions(tactic?.matchInstructions);
     if(gf > gc) return instructions.winning;
@@ -1526,8 +1552,8 @@
     return applyManagerTacticalAdaptationPairV2(home, away, session.match, session.matchContext);
   }
   function createLiveMatchSession(match){
-    const homeTactic = ensureLiveTacticShape(getTacticForClubV2(match.homeId), match.homeId);
-    const awayTactic = ensureLiveTacticShape(getTacticForClubV2(match.awayId), match.awayId);
+    const homeTactic = ensureLiveTacticShape(getTacticForClubV2(match.homeId, match.awayId), match.homeId);
+    const awayTactic = ensureLiveTacticShape(getTacticForClubV2(match.awayId, match.homeId), match.awayId);
     const botConditionRepair = normalizeLiveBotConditionsForMatch(match, homeTactic, awayTactic);
     applyTacticCohesionPenalty(match.homeId, homeTactic);
     applyTacticCohesionPenalty(match.awayId, awayTactic);
@@ -1848,8 +1874,8 @@
     return result;
   }
   function simulateMatch(match){
-    const homeTactic = getTacticForClubV2(match.homeId);
-    const awayTactic = getTacticForClubV2(match.awayId);
+    const homeTactic = getTacticForClubV2(match.homeId, match.awayId);
+    const awayTactic = getTacticForClubV2(match.awayId, match.homeId);
     applyTacticCohesionPenalty(match.homeId, homeTactic);
     applyTacticCohesionPenalty(match.awayId, awayTactic);
     const matchContext = makeMatchContextV2(match);

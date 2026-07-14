@@ -1326,18 +1326,77 @@ function botFormationPlayerScore(player, slot){
   const exactBonus = playerExactRoleFitsSlot(player, slot) ? 7 : (playerFitsSlot(player, slot) ? 2 : 0);
   return (overall * fit) + (condition * 0.12) + (morale * 0.05) + exactBonus;
 }
-function optimalBotLineupForFormation(squad=[], slots=[], clubId=0, formation=''){
+function botPriorityPlayerValue(player){
+  if(!player) return -Infinity;
+  const overall = Math.max(1, Number(effectiveOverall(player) || 0));
+  const condition = Math.max(0, Number(currentCondition(player.id) || 0));
+  const morale = Math.max(1, Number(currentMorale(player.id) || 0));
+  return (overall * 10000) + (condition * 10) + morale;
+}
+function botPriorityPlayersForManagerMatch(squad=[], requestedCount=5){
+  const count = Math.max(3, Math.min(5, Math.round(Number(requestedCount || 5))));
+  const ordered = (squad || []).filter(Boolean).slice().sort((a,b) => {
+    const valueDiff = botPriorityPlayerValue(b) - botPriorityPlayerValue(a);
+    if(valueDiff) return valueDiff;
+    return Number(a.id || 0) - Number(b.id || 0);
+  });
+  const selected = [];
+  let goalkeeperUsed = false;
+  for(const player of ordered){
+    const goalkeeper = isGoalkeeperPlayer(player);
+    if(goalkeeper && goalkeeperUsed) continue;
+    selected.push(player);
+    if(goalkeeper) goalkeeperUsed = true;
+    if(selected.length >= count) break;
+  }
+  return selected;
+}
+function botPriorityCoverageForLineup(lineup=[], slots=[], priorityPlayers=[]){
+  const priorityIds = new Set((priorityPlayers || []).map(player => Number(player?.id || 0)).filter(Boolean));
+  const includedIds = [];
+  let fitPoints = 0;
+  let exact = 0;
+  let compatible = 0;
+  let forcedZone = 0;
+  (lineup || []).forEach((player, index) => {
+    if(!player || !priorityIds.has(Number(player.id || 0))) return;
+    includedIds.push(Number(player.id));
+    const slot = slots[index];
+    const level = playerTacticFitLevel(player, slot);
+    if(level === 'exact'){ exact += 1; fitPoints += 100; }
+    else if(level === 'role'){ compatible += 1; fitPoints += 75; }
+    else if(level === 'emergency_gk'){ forcedZone += 1; fitPoints += 25; }
+    else { forcedZone += 1; fitPoints += 50; }
+  });
+  const omittedIds = [...priorityIds].filter(id => !includedIds.includes(id));
+  return {
+    requested:priorityIds.size,
+    included:includedIds.length,
+    includedIds,
+    omittedIds,
+    exact,
+    compatible,
+    forcedZone,
+    fitPoints,
+    averageFit:includedIds.length ? Math.round(fitPoints / includedIds.length) : 0,
+    passed:omittedIds.length === 0
+  };
+}
+function optimalBotLineupForFormation(squad=[], slots=[], clubId=0, formation='', options={}){
   const rowCount = slots.length;
   const realPlayers = squad.slice();
   const columnCount = Math.max(rowCount, realPlayers.length);
-  if(!rowCount || !columnCount) return { lineup:[], score:-110000, missing:rowCount || 11 };
+  const priorityIds = new Set((options.priorityPlayers || []).map(player => Number(player?.id || 0)).filter(Boolean));
+  const priorityBonus = Math.max(0, Number(options.priorityBonus || 0));
+  if(!rowCount || !columnCount) return { lineup:[], assignments:[], score:-110000, missing:rowCount || 11, priorityCoverage:botPriorityCoverageForLineup([], slots, options.priorityPlayers || []) };
   const scoreFor = (row, column) => {
     if(column >= realPlayers.length) return -10000 - row;
     const player = realPlayers[column];
     const slot = slots[row];
     const base = botFormationPlayerScore(player, slot);
+    const priority = priorityIds.has(Number(player?.id || 0)) ? priorityBonus : 0;
     const tie = hashNumber(`bot-lineup-tie-${game?.seasonNumber || 1}-${clubId}-${formation}-${slot}-${player.id}`, 1000) / 1000000;
-    return base + tie;
+    return base + priority + tie;
   };
   const u = Array(rowCount + 1).fill(0);
   const v = Array(columnCount + 1).fill(0);
@@ -1378,29 +1437,116 @@ function optimalBotLineupForFormation(squad=[], slots=[], clubId=0, formation=''
   let score = 0;
   let missing = 0;
   const lineup = [];
+  const assignments = [];
   assignedColumns.forEach((column, row) => {
     const player = column >= 0 && column < realPlayers.length ? realPlayers[column] : null;
     const playerScore = player ? botFormationPlayerScore(player, slots[row]) : -100000;
-    if(!player || playerScore <= -50000){ missing += 1; score -= 10000 + row; return; }
+    if(!player || playerScore <= -50000){
+      missing += 1;
+      score -= 10000 + row;
+      lineup.push(null);
+      assignments.push({ slot:slots[row], player:null, score:-100000 });
+      return;
+    }
     lineup.push(player);
+    assignments.push({ slot:slots[row], player, score:playerScore });
     score += playerScore;
   });
-  return { lineup, score:score - (missing * 10000), missing };
+  return {
+    lineup,
+    assignments,
+    score:score - (missing * 10000),
+    missing,
+    priorityCoverage:botPriorityCoverageForLineup(lineup, slots, options.priorityPlayers || [])
+  };
+}
+function botFormationCandidateIsBetter(candidate, current, prioritizeTopPlayers=false){
+  if(!current) return true;
+  if(prioritizeTopPlayers){
+    const candidateCoverage = candidate.priorityCoverage || {};
+    const currentCoverage = current.priorityCoverage || {};
+    if(Number(candidateCoverage.included || 0) !== Number(currentCoverage.included || 0)) return Number(candidateCoverage.included || 0) > Number(currentCoverage.included || 0);
+    if(Number(candidateCoverage.fitPoints || 0) !== Number(currentCoverage.fitPoints || 0)) return Number(candidateCoverage.fitPoints || 0) > Number(currentCoverage.fitPoints || 0);
+    if(Number(candidateCoverage.exact || 0) !== Number(currentCoverage.exact || 0)) return Number(candidateCoverage.exact || 0) > Number(currentCoverage.exact || 0);
+  }
+  if(Number(candidate.missing || 0) !== Number(current.missing || 0)) return Number(candidate.missing || 0) < Number(current.missing || 0);
+  return Number(candidate.score || -Infinity) > Number(current.score || -Infinity);
 }
 function bestBotFormationSelection(clubId, options={}){
   const id = Number(clubId || 0);
   const squad = playersByClub(id)
     .filter(player => player && !player.retired && !player.sold && !player.freeAgent)
     .filter(player => options.includeUnavailable || !isUnavailable(player.id));
+  const prioritizeTopPlayers = Boolean(options.prioritizeTopPlayers);
+  const defaultPriorityCount = typeof BOT_MANAGER_TOP_PLAYERS_COUNT !== 'undefined' ? BOT_MANAGER_TOP_PLAYERS_COUNT : 5;
+  const priorityCount = Math.max(3, Math.min(5, Math.round(Number(options.priorityCount || defaultPriorityCount || 5))));
+  const priorityPlayers = prioritizeTopPlayers ? botPriorityPlayersForManagerMatch(squad, priorityCount) : [];
+  const defaultPriorityBonus = typeof BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS !== 'undefined' ? BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS : 5000;
+  const priorityBonus = prioritizeTopPlayers ? Math.max(1000, Number(options.priorityBonus || defaultPriorityBonus || 5000)) : 0;
   const formationNames = Object.keys(FORMATIONS || {});
-  let best = { formation:'4-4-2', lineup:[], score:-Infinity, missing:11 };
+  let best = null;
   formationNames.forEach(formation => {
-    const selection = optimalBotLineupForFormation(squad, FORMATIONS[formation] || [], id, formation);
+    const selection = optimalBotLineupForFormation(squad, FORMATIONS[formation] || [], id, formation, { priorityPlayers, priorityBonus });
     const tie = hashNumber(`best-bot-formation-${game?.seasonNumber || 1}-${id}-${formation}`, 1000) / 1000000;
-    const finalScore = selection.score + tie;
-    if(finalScore > best.score){ best = { formation, lineup:selection.lineup, score:finalScore, missing:selection.missing }; }
+    const candidate = {
+      formation,
+      lineup:selection.lineup.filter(Boolean),
+      assignments:selection.assignments,
+      score:selection.score + tie,
+      missing:selection.missing,
+      priorityPlayers,
+      priorityCoverage:selection.priorityCoverage
+    };
+    if(botFormationCandidateIsBetter(candidate, best, prioritizeTopPlayers)) best = candidate;
   });
+  if(!best) best = { formation:'4-4-2', lineup:[], assignments:[], score:-Infinity, missing:11, priorityPlayers, priorityCoverage:botPriorityCoverageForLineup([], FORMATIONS?.['4-4-2'] || [], priorityPlayers) };
+  best.audit = {
+    enabled:prioritizeTopPlayers,
+    clubId:id,
+    formation:best.formation,
+    requested:Number(best.priorityCoverage?.requested || 0),
+    included:Number(best.priorityCoverage?.included || 0),
+    passed:!prioritizeTopPlayers || Boolean(best.priorityCoverage?.passed),
+    exact:Number(best.priorityCoverage?.exact || 0),
+    compatible:Number(best.priorityCoverage?.compatible || 0),
+    forcedZone:Number(best.priorityCoverage?.forcedZone || 0),
+    averageFit:Number(best.priorityCoverage?.averageFit || 0),
+    priorityPlayerIds:priorityPlayers.map(player => Number(player.id)),
+    omittedPlayerIds:(best.priorityCoverage?.omittedIds || []).slice()
+  };
   return best;
+}
+function testBotFormationCoverageAgainstManager(clubId, options={}){
+  const count = Math.max(3, Math.min(5, Math.round(Number(options.priorityCount || (typeof BOT_MANAGER_TOP_PLAYERS_COUNT !== 'undefined' ? BOT_MANAGER_TOP_PLAYERS_COUNT : 5)))));
+  const selection = bestBotFormationSelection(clubId, {
+    prioritizeTopPlayers:true,
+    priorityCount:count,
+    priorityBonus:Number(options.priorityBonus || (typeof BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS !== 'undefined' ? BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS : 5000))
+  });
+  return {
+    clubId:Number(clubId || 0),
+    formation:selection.formation,
+    lineupIds:(selection.lineup || []).map(player => Number(player.id)),
+    topPlayerIds:(selection.priorityPlayers || []).map(player => Number(player.id)),
+    ...selection.audit
+  };
+}
+function testAllBotFormationCoverageAgainstManager(options={}){
+  const managerClubId = Number(game?.selectedClubId || 0);
+  const clubIds = (seed?.clubs || []).map(club => Number(club.id || 0)).filter(id => id && id !== managerClubId);
+  const results = clubIds.map(id => testBotFormationCoverageAgainstManager(id, options));
+  return {
+    tested:results.length,
+    passed:results.filter(result => result.passed).length,
+    failed:results.filter(result => !result.passed),
+    results
+  };
+}
+if(typeof window !== 'undefined'){
+  window.BotFormationCoverageTest = {
+    testClub:testBotFormationCoverageAgainstManager,
+    testAll:testAllBotFormationCoverageAgainstManager
+  };
 }
 function zoneFactor(player, slot){
   return playerTacticFitFactor(player, slot);

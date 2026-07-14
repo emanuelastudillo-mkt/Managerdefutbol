@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.36',
-    nombre: 'Balance centralizado de modificadores V7.36',
+    version: 'V7.37',
+    nombre: 'Balance centralizado de modificadores V7.37',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -143,6 +143,13 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   equilibrioBots: {
+    // Contra el manager, obliga a la IA a revisar su top 5 disponible y adaptar la formación para incluirlo.
+    tacticaContraManager: {
+      priorizarMejoresJugadores: true,
+      cantidadMejoresJugadores: 5,
+      bonusInclusionMejorJugador: 5000,
+      auditarCobertura: true
+    },
     // Los bots no entrenan. Este bloque sólo ajusta su simulación rápida de partido.
     tacticaRapida: {
       sobreexigenciaSiPierde: true,

@@ -1,4 +1,58 @@
-# Fútbol Manager MVP - V7.36
+# Fútbol Manager MVP - V7.37
+
+
+## V7.37 - Auditoría táctica bot y cobertura del top 5
+
+### Prioridad de los mejores jugadores contra el manager
+
+- Antes de cada partido contra el club controlado por el manager, el bot ordena a sus jugadores disponibles por media efectiva.
+- Se forma un grupo prioritario de 5 futbolistas. Para mantener una alineación válida, el grupo admite como máximo un portero; si aparecen dos porteros entre los primeros puestos, el segundo se reemplaza por el siguiente jugador de campo.
+- Los cinco jugadores prioritarios deben quedar incluidos en el once inicial siempre que exista una alineación reglamentaria.
+- La regla se aplica tanto al partido simulado directamente como al simulador en vivo.
+- Los partidos entre dos equipos bot mantienen el selector general anterior y no activan esta prioridad especial.
+
+### Elección de formación
+
+- Se prueban las diez formaciones disponibles antes de confirmar la táctica bot.
+- La comparación se realiza en este orden: cantidad de jugadores prioritarios incluidos, adaptación de esos jugadores a los puestos, cantidad de puestos sin cubrir y rendimiento total del once.
+- Un rol exacto vale más que una ubicación compatible y una ubicación compatible vale más que forzar al jugador fuera de su zona.
+- Si el plantel tiene tres delanteros entre sus principales figuras, las formaciones con tres lugares ofensivos reciben ventaja por poder utilizarlos juntos con mejor adaptación.
+- Después de asegurar el top 5, los seis puestos restantes se completan mediante la optimización global del once que ya utilizaba el juego.
+
+### Test interno
+
+- Cada táctica bot contra el manager conserva una auditoría interna con formación elegida, jugadores prioritarios, cantidad incluida, adaptación media y jugadores omitidos.
+- Puede ejecutarse desde la consola del navegador con `BotFormationCoverageTest.testClub(idClub)` para revisar un club o `BotFormationCoverageTest.testAll()` para revisar todos los bots.
+- La auditoría no genera mensajes ni información visible para el jugador.
+- En la validación de la base actual, los 161 clubes bot evaluados incluyeron correctamente a sus cinco jugadores prioritarios.
+- Una prueba específica con tres delanteros centro como principales figuras seleccionó `3-4-3` y ubicó a los tres en posiciones exactas.
+
+### Configuración
+
+El bloque `equilibrioBots.tacticaContraManager` permite ajustar:
+
+- Activación de la prioridad.
+- Cantidad de jugadores prioritarios, entre 3 y 5.
+- Bonificación interna que garantiza su inclusión.
+- Registro de la auditoría táctica.
+
+### Archivos principales modificados en V7.37
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `simulador-2.0.js`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/game/18-challenges-online.js`
+- `README.md`
+
+**V7.37 no rompe partidas anteriores.** No cambia la estructura de guardado ni modifica planteles, resultados o tácticas del manager. La nueva selección se calcula únicamente al preparar los próximos partidos de un bot contra el manager.
+
+---
+
+## Historial anterior
 
 ## V7.36 - Respuestas por cláusula y nombres por nacionalidad
 

@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.39');
+const APP_VERSION = configValue('version', 'V7.40');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -161,6 +161,12 @@ const FOUNDER_FREE_AGENTS_MIN_GK = Math.max(0, Math.round(configNumber('modoFund
 const FOUNDER_FREE_AGENTS_MIN_DEF = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosDefensores', 20, 0, 200)));
 const FOUNDER_FREE_AGENTS_MIN_MID = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosMediocampistas', 24, 0, 200)));
 const FOUNDER_FREE_AGENTS_MIN_ATT = Math.max(0, Math.round(configNumber('modoFundador.libresMinimosDelanteros', 16, 0, 200)));
+const FOUNDER_STAFF_GOOD_WINS = Math.max(1, Math.round(configNumber('modoFundador.empleados.victoriasNivelBueno', 15, 1, 999)));
+const FOUNDER_STAFF_ELITE_WINS = Math.max(FOUNDER_STAFF_GOOD_WINS, Math.round(configNumber('modoFundador.empleados.victoriasNivelElite', 45, FOUNDER_STAFF_GOOD_WINS, 999)));
+const FOUNDER_ADMIN_COSTS_ENABLED = configBoolean('modoFundador.costosAdministrativosDiarios.activo', true);
+const FOUNDER_ADMIN_BASE_BY_DIVISION = configValue('modoFundador.costosAdministrativosDiarios.basePorDivision', { 1:180000, 2:100000, 3:60000 });
+const FOUNDER_ADMIN_ROSTER_RATE_BY_DIVISION = configValue('modoFundador.costosAdministrativosDiarios.porcentajeValorPlantelPorDivision', { 1:0.000015, 2:0.000012, 3:0.000010 });
+const FOUNDER_ADMIN_DISTRIBUTION = configValue('modoFundador.costosAdministrativosDiarios.distribucion', { inscripcionLiga:0.18, seguridad:0.17, transporte:0.20, administracion:0.15, mantenimientoMinimo:0.15, seguros:0.15 });
 const FOUNDER_CREST_OPTIONS_RAW = configValue('modoFundador.escudosDisponibles', [
   'img/escudos/fundador-1.webp',
   'img/escudos/fundador-2.webp',

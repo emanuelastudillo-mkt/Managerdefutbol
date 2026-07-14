@@ -940,6 +940,83 @@ function noteOwnMatchForMonthlyExpenses(match){
   if(!state) return;
   state.matchesPlayed += 1;
 }
+function founderAdministrativeCostsActive(){
+  return Boolean(FOUNDER_ADMIN_COSTS_ENABLED && game && typeof isFoundedClubId === 'function' && isFoundedClubId(game.selectedClubId));
+}
+function normalizeFounderAdministrativeCostsState(state={}){
+  const src = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  return {
+    lastChargeDate:validIsoDate(src.lastChargeDate) ? src.lastChargeDate : null,
+    totalCharged:Math.max(0, Math.round(Number(src.totalCharged || 0))),
+    daysCharged:Math.max(0, Math.round(Number(src.daysCharged || 0))),
+    lastBreakdown:src.lastBreakdown && typeof src.lastBreakdown === 'object' && !Array.isArray(src.lastBreakdown) ? { ...src.lastBreakdown } : null
+  };
+}
+function founderAdministrativeDivisionValue(source, order, fallback){
+  const table = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
+  const direct = Number(table[order] ?? table[String(order)]);
+  if(Number.isFinite(direct)) return direct;
+  const third = Number(table[3] ?? table['3']);
+  return Number.isFinite(third) ? third : fallback;
+}
+function founderAdministrativeRosterValue(clubId=game?.selectedClubId){
+  return (typeof playersByClub === 'function' ? playersByClub(clubId) : [])
+    .filter(player => !player?.retired && !player?.sold)
+    .reduce((sum, player) => sum + Math.max(0, Math.round(Number(player?.value || player?.clause || 0))), 0);
+}
+function founderAdministrativeCostBreakdown(clubId=game?.selectedClubId){
+  const division = typeof clubDivision === 'function' ? clubDivision(clubId) : { order:3, name:'División inferior' };
+  const order = Math.max(1, Math.min(3, Math.round(Number(division?.order || 3))));
+  const rosterValue = founderAdministrativeRosterValue(clubId);
+  const base = Math.max(0, Math.round(founderAdministrativeDivisionValue(FOUNDER_ADMIN_BASE_BY_DIVISION, order, 60000)));
+  const rate = Math.max(0, Number(founderAdministrativeDivisionValue(FOUNDER_ADMIN_ROSTER_RATE_BY_DIVISION, order, 0.000010)));
+  const total = Math.max(0, Math.round(base + (rosterValue * rate)));
+  const source = FOUNDER_ADMIN_DISTRIBUTION && typeof FOUNDER_ADMIN_DISTRIBUTION === 'object' && !Array.isArray(FOUNDER_ADMIN_DISTRIBUTION) ? FOUNDER_ADMIN_DISTRIBUTION : {};
+  const rows = [
+    ['inscripcionLiga','Inscripción en la liga',0.18],
+    ['seguridad','Seguridad',0.17],
+    ['transporte','Transporte',0.20],
+    ['administracion','Administración',0.15],
+    ['mantenimientoMinimo','Mantenimiento mínimo',0.15],
+    ['seguros','Seguros',0.15]
+  ];
+  const weights = rows.map(([key,,fallback]) => Math.max(0, Number(source[key] ?? fallback)));
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0) || 1;
+  let allocated = 0;
+  const items = rows.map(([key,label], index) => {
+    const amount = index === rows.length - 1 ? Math.max(0, total - allocated) : Math.max(0, Math.round(total * (weights[index] / weightTotal)));
+    allocated += amount;
+    return { key, label, amount };
+  });
+  return { total, base, rate, rosterValue, divisionOrder:order, divisionName:String(division?.name || `División ${order}`), items };
+}
+function processFounderAdministrativeCostsDaily(){
+  if(!founderAdministrativeCostsActive()) return 0;
+  const today = validIsoDate(game?.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  if(!validIsoDate(today)) return 0;
+  game.founderAdministrativeCosts = normalizeFounderAdministrativeCostsState(game.founderAdministrativeCosts || {});
+  if(game.founderAdministrativeCosts.lastChargeDate === today) return 0;
+  const breakdown = founderAdministrativeCostBreakdown(game.selectedClubId);
+  if(breakdown.total <= 0){ game.founderAdministrativeCosts.lastChargeDate = today; return 0; }
+  recordBudgetChange(-breakdown.total, 'Costos administrativos diarios', {
+    type:'founder_admin_daily',
+    clubId:Number(game.selectedClubId || 0),
+    divisionOrder:breakdown.divisionOrder,
+    rosterValue:breakdown.rosterValue,
+    breakdown:Object.fromEntries(breakdown.items.map(item => [item.key, item.amount]))
+  });
+  game.founderAdministrativeCosts.lastChargeDate = today;
+  game.founderAdministrativeCosts.totalCharged += breakdown.total;
+  game.founderAdministrativeCosts.daysCharged += 1;
+  game.founderAdministrativeCosts.lastBreakdown = { date:today, ...breakdown };
+  return breakdown.total;
+}
+function founderAdministrativeCostsMarkup(){
+  if(!founderAdministrativeCostsActive()) return '';
+  const breakdown = founderAdministrativeCostBreakdown(game.selectedClubId);
+  const rows = breakdown.items.map(item => `<div class="card"><p class="label">${escapeHtml(item.label)}</p><strong>${formatMoney(item.amount)}</strong><p class="muted small">por día</p></div>`).join('');
+  return `<div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Dificultad del club fundador</p><h3>Costos administrativos diarios</h3><p class="muted small">Estimación actual según ${escapeHtml(breakdown.divisionName)} y un plantel valuado en ${formatMoney(breakdown.rosterValue)}.</p></div><strong class="bad">-${formatMoney(breakdown.total)} / día</strong></div><div class="grid cols-3" style="margin-top:12px">${rows}</div></div>`;
+}
 function processMonthlyClubExpensesDaily(){
   if(!MONTHLY_EXPENSES_ENABLED || !game) return 0;
   const state = ensureMonthlyExpensesState();
@@ -1062,6 +1139,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily();
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('daily');
   processMonthlyClubExpensesDaily();
+  const founderAdministrativeCost = processFounderAdministrativeCostsDaily();
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
   else if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'daily_rest' });
@@ -1071,7 +1149,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
   const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-  return { botResults, recovered, bankPayment, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
+  return { botResults, recovered, bankPayment, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -2090,6 +2168,7 @@ function financeBudgetCategory(entry){
   if(type.includes('season_salary') || concept.includes('sueldo')) return 'Sueldos';
   if(type.includes('season_prize') || concept.includes('premio por campeonato') || concept.includes('premio por ascenso')) return 'Premios temporada';
   if(type.includes('bank_loan') || concept.includes('préstamo') || concept.includes('prestamo') || concept.includes('cuota semanal')) return 'Banco';
+  if(type.includes('founder_admin') || concept.includes('costos administrativos diarios')) return 'Costos administrativos';
   if(type.includes('monthly_') || concept.includes('impuesto mensual') || concept.includes('electricidad mensual') || concept.includes('limpieza general')) return 'Gastos mensuales';
   if(type.includes('scouting_') || concept.includes('ojeador') || concept.includes('ojeo')) return 'Centro de Ojeo';
   if(type.includes('transfer_purchase') || type.includes('transfer_sale') || concept.includes('compra acordada') || concept.includes('venta de')) return 'Mercado';
@@ -2171,7 +2250,7 @@ function financeExpensesByCategoryMarkup(){
     acc[category].push(entry);
     return acc;
   }, {});
-  const order = ['Sueldos','Banco','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
+  const order = ['Sueldos','Costos administrativos','Gastos mensuales','Banco','Mercado','Estadio','Residencias juveniles','Academia','Empleados','Tratamientos médicos','Eventos','Otros'];
   const details = order.filter(category => grouped[category]?.length).map((category, index) => {
     const entries = grouped[category];
     const groupedEntries = financeGroupedEntries(entries);
@@ -2466,6 +2545,7 @@ function renderFinances(){
       ${bankLoanOffersMarkup()}
     </div>
     <div style="margin-top:14px">${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}</div>
+    ${typeof founderAdministrativeCostsMarkup === 'function' ? founderAdministrativeCostsMarkup() : ''}
     <div class="grid cols-2 finance-category-grid" style="margin-top:14px">
       ${financeExpensesByCategoryMarkup()}
       ${financeIncomeByCategoryMarkup()}

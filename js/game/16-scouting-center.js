@@ -381,6 +381,8 @@ function hireScoutingChief(type){
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const chief = scoutingChiefType(type);
   if(!chief){ showNotice('Jefe de ojeadores inválido.'); return; }
+  const unlock = typeof staffCategoryUnlockInfo === 'function' ? staffCategoryUnlockInfo(chief.key) : { unlocked:true, requiredWins:0, wins:0 };
+  if(!unlock.unlocked){ showNotice(`El jefe ${chief.name} requiere ${unlock.requiredWins} victorias con el club fundador. Llevás ${unlock.wins}.`); return; }
   const state = ensureScoutingCenterState();
   if(state.chief){ showNotice('Ya tenés un jefe de ojeadores. Se va solo al finalizar la temporada.'); return; }
   state.chief = { type:chief.key, hiredDate:game.currentDate || currentCalendarDate(), season:game.seasonNumber || 1 };
@@ -749,11 +751,16 @@ function scoutingChiefMarkup(){
       <p class="muted small">Sueldo mensual ${formatMoney(type?.monthlySalary || 0)} · controla hasta ${type?.maxOffices || 0} oficina(s) · se va al finalizar la temporada.</p>
     </div>`;
   }
-  const cards = (SCOUTING_CHIEF_TYPES || []).map(type => `<div class="card inner scouting-chief-option">
-    <div class="scouting-chief-option-head"><strong>${escapeHtml(type.name)}</strong><span>${type.maxOffices} 🏢</span></div>
-    <p class="muted small">${formatMoney(type.monthlySalary)} por mes · revela ${type.revealMin}-${type.revealMax} habilidad(es)/día.</p>
-    <button class="primary small-btn" data-hire-scouting-chief="${escapeHtml(type.key)}">Contratar</button>
-  </div>`).join('');
+  const cards = (SCOUTING_CHIEF_TYPES || []).map(type => {
+    const unlock = typeof staffCategoryUnlockInfo === 'function' ? staffCategoryUnlockInfo(type.key) : { unlocked:true, requiredWins:0, remaining:0 };
+    const lockText = unlock.unlocked ? '' : `<p class="muted small bad">Bloqueado: requiere ${unlock.requiredWins} victorias con el club fundador (${unlock.remaining} restantes).</p>`;
+    return `<div class="card inner scouting-chief-option ${unlock.unlocked ? '' : 'disabled'}">
+      <div class="scouting-chief-option-head"><strong>${escapeHtml(type.name)}</strong><span>${type.maxOffices} 🏢</span></div>
+      <p class="muted small">${formatMoney(type.monthlySalary)} por mes · revela ${type.revealMin}-${type.revealMax} habilidad(es)/día.</p>
+      ${lockText}
+      <button class="primary small-btn" data-hire-scouting-chief="${escapeHtml(type.key)}" ${unlock.unlocked ? '' : 'disabled'}>${unlock.unlocked ? 'Contratar' : 'Bloqueado'}</button>
+    </div>`;
+  }).join('');
   return `<div class="card scouting-chief-card scouting-control-card">
     <div class="scouting-card-head">
       <div class="scouting-card-icon">${scoutingBinocularsIcon('small')}</div>

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.39',
+  version: 'V7.40',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -134,6 +134,25 @@ window.GAME_CONFIG = {
     libresMinimosDefensores: 20,
     libresMinimosMediocampistas: 24,
     libresMinimosDelanteros: 16,
+    // En el club fundador, las categorías superiores de empleados se habilitan por victorias logradas con ese club.
+    empleados: {
+      victoriasNivelBueno: 15,
+      victoriasNivelElite: 45
+    },
+    // Gastos diarios exclusivos del club fundador. El total combina un piso por división y un porcentaje del valor del plantel.
+    costosAdministrativosDiarios: {
+      activo: true,
+      basePorDivision: { 1: 180000, 2: 100000, 3: 60000 },
+      porcentajeValorPlantelPorDivision: { 1: 0.000015, 2: 0.000012, 3: 0.000010 },
+      distribucion: {
+        inscripcionLiga: 0.18,
+        seguridad: 0.17,
+        transporte: 0.20,
+        administracion: 0.15,
+        mantenimientoMinimo: 0.15,
+        seguros: 0.15
+      }
+    },
     escudosDisponibles: [
       'img/escudos/fundador-1.webp',
       'img/escudos/fundador-2.webp',

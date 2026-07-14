@@ -159,6 +159,42 @@ function staffContractsPanelMarkup({ empty=false }={}){
     ${active.length ? `<div class="grid cols-3 featured-staff-grid">${active.map(def => staffContractCardMarkup(def.id)).join('')}</div>` : '<p class="muted">Todavía no hay empleados contratados.</p>'}
   </div>`;
 }
+function founderStaffRestrictionsActive(){
+  return Boolean(game && typeof isFoundedClubId === 'function' && isFoundedClubId(game.selectedClubId));
+}
+function founderClubManagerWins(){
+  if(!game?.managerStats) return 0;
+  const founderClubId = Number(game.founderClubId || game.selectedClubId || 0);
+  if(!founderClubId) return 0;
+  const stats = typeof normalizeManagerStats === 'function' ? normalizeManagerStats(game.managerStats) : game.managerStats;
+  const completed = (Array.isArray(stats?.seasons) ? stats.seasons : [])
+    .filter(item => Number(item?.clubId || 0) === founderClubId)
+    .reduce((sum, item) => sum + Math.max(0, Math.round(Number(item?.won || 0))), 0);
+  const current = Number(stats?.currentSeason?.clubId || 0) === founderClubId
+    ? Math.max(0, Math.round(Number(stats.currentSeason?.won || 0)))
+    : 0;
+  return completed + current;
+}
+function founderStaffCategoryRequirement(categoryId='regular'){
+  const id = String(categoryId || 'regular');
+  if(id === 'elite') return typeof FOUNDER_STAFF_ELITE_WINS !== 'undefined' ? FOUNDER_STAFF_ELITE_WINS : 45;
+  if(id === 'bueno') return typeof FOUNDER_STAFF_GOOD_WINS !== 'undefined' ? FOUNDER_STAFF_GOOD_WINS : 15;
+  return 0;
+}
+function staffCategoryUnlockInfo(categoryId='regular'){
+  const requiredWins = founderStaffCategoryRequirement(categoryId);
+  const wins = founderClubManagerWins();
+  const restricted = founderStaffRestrictionsActive();
+  return { restricted, requiredWins, wins, unlocked:!restricted || wins >= requiredWins, remaining:Math.max(0, requiredWins - wins) };
+}
+function founderStaffUnlockSummaryMarkup(){
+  if(!founderStaffRestrictionsActive()) return '';
+  const wins = founderClubManagerWins();
+  const good = typeof FOUNDER_STAFF_GOOD_WINS !== 'undefined' ? FOUNDER_STAFF_GOOD_WINS : 15;
+  const elite = typeof FOUNDER_STAFF_ELITE_WINS !== 'undefined' ? FOUNDER_STAFF_ELITE_WINS : 45;
+  const next = wins < good ? `Nivel Bueno: faltan ${good - wins} victoria(s)` : wins < elite ? `Nivel Elite: faltan ${elite - wins} victoria(s)` : 'Todas las categorías desbloqueadas';
+  return `<div class="card blocker" style="margin-bottom:12px"><p class="label">Progreso del club fundador</p><strong>${wins} victorias</strong><p class="muted small">Al inicio sólo está disponible el nivel Regular. Bueno se habilita con ${good} victorias y Elite con ${elite}. ${escapeHtml(next)}.</p></div>`;
+}
 function openStaffHireModal(staffId, after=null){
   if(!game) return;
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
@@ -167,16 +203,22 @@ function openStaffHireModal(staffId, after=null){
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
   const cards = staffCategories().map(cat => {
     const cost = staffHireCost(staffId, cat.id);
-    const disabled = (game.budget || 0) < cost;
+    const unlock = staffCategoryUnlockInfo(cat.id);
+    const budgetBlocked = (game.budget || 0) < cost;
+    const disabled = budgetBlocked || !unlock.unlocked;
+    const status = !unlock.unlocked
+      ? `Bloqueado · requiere ${unlock.requiredWins} victorias (${unlock.remaining} restantes)`
+      : budgetBlocked ? 'Presupuesto insuficiente' : 'Contrato por temporada';
     return `<button class="staff-tier-card ${disabled ? 'disabled' : ''}" data-hire-staff-tier="${escapeHtml(staffId)}:${escapeHtml(cat.id)}" ${disabled ? 'disabled' : ''}>
       <span class="pill">${escapeHtml(cat.nombre)}</span>
       <strong>${formatMoney(cost)}</strong>
-      <small>Contrato por temporada</small>
+      <small>${escapeHtml(status)}</small>
     </button>`;
   }).join('');
   openModal(`<div class="staff-hire-modal">
     <h2>Contratar ${escapeHtml(def.nombre)}</h2>
     <p class="muted">Elegí una categoría para esta temporada.</p>
+    ${founderStaffUnlockSummaryMarkup()}
     <div class="staff-tier-grid">${cards}</div>
   </div>`);
   document.querySelectorAll('[data-hire-staff-tier]').forEach(btn => btn.addEventListener('click', () => {
@@ -191,6 +233,11 @@ function hireStaffEmployee(staffId, categoryId='regular', after=null){
   if(!def) return;
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
   const cat = staffCategory(categoryId);
+  const unlock = staffCategoryUnlockInfo(cat.id);
+  if(!unlock.unlocked){
+    showNotice(`La categoría ${cat.nombre} requiere ${unlock.requiredWins} victorias con el club fundador. Llevás ${unlock.wins}.`);
+    return;
+  }
   const cost = staffHireCost(staffId, cat.id);
   if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para contratar este empleado.'); return; }
   recordBudgetChange(-cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`staff_${staffId}`, category:cat.id });

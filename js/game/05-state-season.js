@@ -1363,6 +1363,7 @@ function prepareFounderClubForCareerTransition(created){
   game.founderClubId = clubId;
   game.founderReplacedClub = created.club.founderReplacedClub || null;
   game.founderGoals = null;
+  game.founderAdministrativeCosts = {};
   game.bankruptcyMode = false;
   game.bankruptcy = null;
   game.challenge = null;
@@ -1391,6 +1392,7 @@ function startFounderCareerAfterSeason(created, transition={}){
   game.founderClubId = clubId;
   game.founderReplacedClub = created.club.founderReplacedClub || null;
   game.founderGoals = null;
+  game.founderAdministrativeCosts = {};
   game.clubBudgets[clubId] = FOUNDER_CLUB_INITIAL_BUDGET;
   game.budget = FOUNDER_CLUB_INITIAL_BUDGET;
   game.seasonInitialBudget = FOUNDER_CLUB_INITIAL_BUDGET;
@@ -2874,6 +2876,7 @@ function normalizeGame(saved){
   normalized.founderClubId = normalized.founderMode ? Number(normalized.founderClubId || normalized.selectedClubId || 0) : 0;
   normalized.founderReplacedClub = normalized.founderReplacedClub || null;
   normalized.founderGoals = normalized.founderMode && normalized.founderGoals && typeof normalized.founderGoals === 'object' && !Array.isArray(normalized.founderGoals) ? normalized.founderGoals : (normalized.founderMode ? {} : null);
+  normalized.founderAdministrativeCosts = typeof normalizeFounderAdministrativeCostsState === 'function' ? normalizeFounderAdministrativeCostsState(normalized.founderAdministrativeCosts || {}) : (normalized.founderAdministrativeCosts || {});
   normalized.bankruptcyMode = Boolean(normalized.bankruptcyMode);
   normalized.bankruptcy = normalized.bankruptcy && typeof normalized.bankruptcy === 'object' && !Array.isArray(normalized.bankruptcy) ? normalized.bankruptcy : null;
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
@@ -3459,6 +3462,7 @@ function newGame(selectedClubId, options={}){
     founderClubId: options.founderMode ? Number(selectedClubId) : 0,
     founderReplacedClub: options.founderReplacedClub || null,
     founderGoals: null,
+    founderAdministrativeCosts: {},
     bankruptcyMode: Boolean(options.bankruptcyMode),
     bankruptcy: null,
     challenge: null

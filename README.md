@@ -1,5 +1,59 @@
-# Fútbol Manager MVP - V7.39
+# Fútbol Manager MVP - V7.40
 
+
+
+## V7.40 - Progresión de empleados y costos administrativos del club fundador
+
+### Empleados desbloqueados por victorias
+
+Esta dificultad se aplica únicamente mientras el manager dirige el club que fundó:
+
+- Al inicio sólo puede contratar empleados de categoría **Regular**.
+- La categoría **Bueno** se habilita al alcanzar **15 victorias oficiales** con el club fundador.
+- La categoría **Elite** se habilita al alcanzar **45 victorias oficiales** con el club fundador.
+- El conteo suma temporadas completas y la temporada actual del club fundador. No utiliza victorias obtenidas previamente con otros clubes.
+- El modal de contratación muestra el progreso y las victorias restantes.
+- La misma progresión se aplica a los jefes de ojeadores Regular, Bueno y Elite del Centro de Ojeo.
+- La contratación también se valida internamente para impedir que una categoría bloqueada se contrate ejecutando la acción por fuera de la interfaz.
+- Los contratos superiores ya activos en una partida anterior no se eliminan; la restricción se aplica a nuevas contrataciones.
+
+### Costos administrativos diarios
+
+El club fundador afronta diariamente:
+
+- Inscripción en la liga.
+- Seguridad.
+- Transporte.
+- Administración.
+- Mantenimiento mínimo.
+- Seguros.
+
+El total combina un costo base por división y una proporción del valor actual del plantel:
+
+- Primera división: `$180.000` + `0,0015%` del plantel por día.
+- Segunda división: `$100.000` + `0,0012%` del plantel por día.
+- Tercera división: `$60.000` + `0,0010%` del plantel por día.
+
+El cobro es idempotente: una fecha no puede cobrarse dos veces. Finanzas muestra la estimación vigente, el desglose de los seis conceptos y agrupa los movimientos bajo **Costos administrativos**.
+
+### Archivos principales modificados en V7.40
+
+- `config.js`
+- `index.html`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/12-modals.js`
+- `README.md`
+
+### Compatibilidad
+
+**V7.40 no rompe partidas anteriores.** Las restricciones usan las estadísticas ya guardadas. Las partidas fundadoras existentes comenzarán a pagar los costos administrativos desde el próximo día procesado. Las carreras normales y los clubes no fundados no reciben estos gastos ni bloqueos.
 
 ## V7.39 - Tarjetas unificadas de Desafíos Online y referencia salarial
 
@@ -161,6 +215,7 @@ El bloque `equilibrioBots.tacticaContraManager` permite ajustar:
 - `js/data/04-player-name-pools.js`
 - `js/data/04-data-storage.js`
 - `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
 - `js/game/18-challenges-online.js`
 - `js/ui/06-render-home-messages.js`
 - `data/jugadores.json`
@@ -328,6 +383,7 @@ No se eliminaron archivos completos. `app.js`, `balance-manager.js` y los módul
 - `js/data/04-data-storage.js`
 - `js/game/05-state-season.js`
 - `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
 - `js/game/13-ranking-online.js`
 - `js/game/15-especial.js`
 - `js/game/17-live-match.js`
@@ -550,6 +606,7 @@ Los niveles deben construirse en orden. El bonus se suma al juvenil excepcional 
 - `js/game/08-sponsors-stadium-stats.js`
 - `js/game/09-simulation-economy-training.js`
 - `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
 
 ### Compatibilidad de partidas
 
@@ -618,6 +675,7 @@ El bonus se aplica cuando el tratamiento del kinesiólogo resulta exitoso. Se su
 - `js/data/04-data-storage.js`
 - `js/game/09-simulation-economy-training.js`
 - `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
 - `js/game/15-especial.js`
 - `js/ui/06-render-home-messages.js`
 - `js/ui/12-modals.js`
@@ -868,6 +926,7 @@ Se corrigió el caso en el que un jugador joven podía conservar una penalizaci�
 - `js/core/03-player-tactics-utils.js`
 - `js/game/05-state-season.js`
 - `js/game/10-academy-employees.js`
+- `js/game/16-scouting-center.js`
 
 ### Compatibilidad de partidas
 

@@ -280,7 +280,7 @@
     return `<div class="card inner live-compare-card">
       <div class="live-compare-top"><span>${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</span><b>Estadísticas del partido</b><span>${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</span></div>
       ${compareStatRow('Disparos', h.attacks || 0, a.attacks || 0)}
-      ${compareStatRow('Tiros a puerta', h.chances || 0, a.chances || 0)}
+      ${compareStatRow('Tiros a Puerta', h.chances || 0, a.chances || 0)}
       ${compareStatRow('xG', h.xg || 0, a.xg || 0, 'xg')}
       ${compareStatRow('Faltas', h.fouls || 0, a.fouls || 0)}
       ${compareStatRow('Posesión', h.possession || 50, awayPoss, 'pct')}

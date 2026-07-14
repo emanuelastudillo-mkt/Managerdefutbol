@@ -4,9 +4,15 @@ let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
 const SPECIAL_GLOBAL_CARDS_STORAGE_KEY = 'futbolManager.specialCardsGlobal.v1';
 const SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY = Object.freeze({ comun:1, rara:3, epica:5, legendaria:12 });
+const SPECIAL_MAX_USES_BY_RARITY = Object.freeze({ inutil:1, comun:1, rara:2, epica:3, legendaria:5 });
 
 function specialPhysicalRecoveryPointsForRarity(rarity){
   return Math.max(0, Math.round(Number(SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY[String(rarity || '').toLowerCase()] || 0)));
+}
+function specialMaxUsesForRarity(rarity){
+  const key = String(rarity || 'inutil').toLowerCase();
+  const configured = specialDatabase()?.limites?.activaciones_por_rareza?.[key];
+  return Math.max(1, Math.round(Number(configured ?? SPECIAL_MAX_USES_BY_RARITY[key] ?? specialDatabase()?.limites?.activaciones_por_carta ?? 1)));
 }
 
 function specialDatabase(){
@@ -18,7 +24,8 @@ function specialLimits(){
     activeMax: Math.max(1, Math.round(Number(db.limites?.cartas_activas_max || 5))),
     reserveMax: Math.max(1, Math.round(Number(db.limites?.cartas_reserva_max || 50))),
     lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 15))),
-    maxUsesPerCard: Math.max(1, Math.round(Number(db.limites?.activaciones_por_carta || 10))),
+    maxUsesPerCard: Math.max(1, Math.round(Number(db.limites?.activaciones_por_carta || 5))),
+    maxUsesByRarity:{ ...SPECIAL_MAX_USES_BY_RARITY, ...(db.limites?.activaciones_por_rareza || {}) },
     allowOpenWhenReserveFull: db.limites?.permitir_abrir_sobres_con_reserva_llena === true,
     allowRepeatedActive: db.limites?.permitir_cartas_repetidas_activas !== false,
     stackBonuses: db.limites?.bonus_se_apilan !== false
@@ -45,10 +52,10 @@ function normalizeSpecialCard(card, index=0){
   const id = String(card.id_carta || card.id || `CARD-${Date.now()}-${index}-${hashNumber(JSON.stringify(card), 100000)}`);
   const activatedTurn = Number.isFinite(Number(card.activada_en_turno ?? card.activatedTurn)) ? Math.max(0, Math.round(Number(card.activada_en_turno ?? card.activatedTurn))) : null;
   const lockedUntilTurn = Number.isFinite(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn)) ? Math.max(0, Math.round(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn))) : null;
-  const maxUses = Math.max(1, Math.round(Number(card.activaciones_max ?? card.maxUses ?? specialLimits().maxUsesPerCard ?? 10)));
+  const rarity = String(card.rareza || base.rareza || 'inutil');
+  const maxUses = specialMaxUsesForRarity(rarity);
   const usedRaw = Number(card.activaciones_usadas ?? card.usedActivations ?? card.usos_usados ?? 0);
   const used = clamp(Math.round(Number.isFinite(usedRaw) ? usedRaw : 0), 0, maxUses);
-  const rarity = String(card.rareza || base.rareza || 'inutil');
   const bonusType = card.tipo_bonus ?? base.tipo_bonus ?? null;
   const physicalRecoveryPoints = bonusType === 'preparacion_fisica' ? specialPhysicalRecoveryPointsForRarity(rarity) : null;
   return {
@@ -106,15 +113,14 @@ function writeSpecialGlobalCardsState(state){
   }catch(err){ console.warn('No se pudo guardar inventario global de cartas.', err); return false; }
 }
 function specialCardRemainingUses(card){
-  const max = Math.max(1, Math.round(Number(card?.activaciones_max || specialLimits().maxUsesPerCard || 10)));
+  const max = specialMaxUsesForRarity(card?.rareza);
   const used = clamp(Math.round(Number(card?.activaciones_usadas || 0)), 0, max);
   return Math.max(0, max - used);
 }
 function normalizeSpecialGlobalCard(raw, index=0){
   const card = normalizeSpecialCard(raw, index);
   if(!card) return null;
-  const limits = specialLimits();
-  card.activaciones_max = Math.max(1, Math.round(Number(card.activaciones_max || limits.maxUsesPerCard || 10)));
+  card.activaciones_max = specialMaxUsesForRarity(card.rareza);
   card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)), 0, card.activaciones_max);
   card.active_slot_id = String(card.active_slot_id || '');
   card.ultimo_slot_activacion = String(card.ultimo_slot_activacion || '');
@@ -128,7 +134,7 @@ function specialGlobalUpsertCard(rawCard, options={}){
   const asActive = options.zone === 'active' || options.active === true || card.activa;
   const global = options.globalState || readSpecialGlobalCardsState();
   const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
-  const maxUses = Math.max(Number(existing.activaciones_max || 0), Number(card.activaciones_max || 0), specialLimits().maxUsesPerCard || 10);
+  const maxUses = specialMaxUsesForRarity(card.rareza || existing.rareza);
   const used = Math.max(Number(existing.activaciones_usadas || 0), Number(card.activaciones_usadas || 0));
   const merged = {
     ...existing,
@@ -829,7 +835,7 @@ function createSpecialCardInstance(base, packId){
     unidad:base.unidad || '',
     activable:Boolean(base.activable),
     texto:base.texto || '',
-    activaciones_max:specialLimits().maxUsesPerCard,
+    activaciones_max:specialMaxUsesForRarity(base.rareza),
     activaciones_usadas:0,
     active_slot_id:'',
     ultimo_slot_activacion:'',
@@ -1010,7 +1016,7 @@ function activateSpecialCard(cardId){
   if(!limits.allowRepeatedActive && state.cartas_activas.some(active => active.id_base === card.id_base)){ showNotice('Esta carta ya está activa.'); return; }
   if(specialCardRemainingUses(card) <= 0){ showNotice('Esta carta ya no tiene activaciones disponibles.'); return; }
   state.cartas_reserva.splice(index, 1);
-  const maxUses = Math.max(1, Math.round(Number(card.activaciones_max || limits.maxUsesPerCard || 10)));
+  const maxUses = specialMaxUsesForRarity(card.rareza);
   const used = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
   const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, active_slot_id:slotId, ultimo_slot_activacion:slotId };
   lockSpecialCardChanges(activatedCard, state);
@@ -1082,7 +1088,7 @@ function specialCardMarkup(card, zone='reserve'){
   const canActivate = zone === 'reserve' && card.activable;
   const activeLock = zone === 'active' ? specialCardActiveLockInfo(card) : { locked:false, remaining:0, until:null };
   const lockPill = zone === 'active' && activeLock.locked ? `<span class="pill warn">${formatDays(activeLock.remaining)}</span>` : '';
-  const usesText = `${specialCardRemainingUses(card)}/${Math.max(1, Math.round(Number(card.activaciones_max || specialLimits().maxUsesPerCard || 10)))}`;
+  const usesText = `${specialCardRemainingUses(card)}/${specialMaxUsesForRarity(card.rareza)}`;
   const usesPill = card.activable ? `<span class="pill special-uses-pill">Usos ${escapeHtml(usesText)}</span>` : '';
   const bonus = specialCardBonusText(card);
   const action = zone === 'active'

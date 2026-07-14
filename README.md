@@ -1,74 +1,83 @@
-# Fútbol Manager MVP - V7.27
+# Fútbol Manager MVP - V7.28
 
-## V7.27 - Ranking de desafíos y listas estables
+## V7.28 - Presentación de desafíos, residencias y cartas por rareza
 
-Se ajustó la pantalla **Desafíos Online** y se agregó un ranking público de puntaje.
+### Estadísticas del simulador
 
-### Corrección visual
+Se unificaron los nombres visibles con el resumen rápido, sin modificar cálculos ni probabilidades:
 
-- La pestaña **Disponibles** ya no parpadea cuando está vacía.
-- La pestaña **Partidos disputados** ya no se recarga visualmente en bucle cuando no hay registros.
-- Cada pestaña conserva un estado de carga propio.
-- El refresco automático de **Mis desafíos** ya no fuerza el redibujado de las demás pestañas vacías.
+- `Total de ataques` ahora se muestra como **Disparos**.
+- `Ocasiones de gol` ahora se muestra como **Tiros a Puerta**.
+- Las propiedades internas `attacks` y `chances` siguen siendo las mismas.
 
-### Ranking de desafíos
+### Predio juvenil y residencias
 
-Se agregó una cuarta pestaña:
+Cada nivel construido del predio de entrenamiento juvenil habilita espacio para **2 residencias juveniles adicionales**:
+
+| Nivel | Residencias máximas |
+|---:|---:|
+| 0 | 0 |
+| 1 | 2 |
+| 2 | 4 |
+| 3 | 6 |
+| 4 | 8 |
+| 5 | 10 |
+
+Las residencias que ya existan en una partida antigua no se eliminan si superan temporalmente el límite actual. No podrán alquilarse nuevas hasta mejorar el predio o quedar por debajo del máximo permitido.
+
+### Jugadores intransferibles
+
+Los jugadores marcados como intransferibles muestran un icono **🔒** junto a su nombre. El icono conserva una descripción emergente indicando que sólo se escuchan ofertas por la cláusula completa.
+
+### Usos de cartas
+
+Los usos máximos pasan a depender de la rareza:
+
+| Rareza | Usos |
+|---|---:|
+| Común | 1 |
+| Rara | 2 |
+| Épica | 3 |
+| Legendaria | 5 |
+
+Las cartas existentes se normalizan automáticamente. Los usos ya consumidos se conservan hasta el nuevo máximo. Una carta activa que haya agotado sus usos permanece activa hasta que pueda retirarse; al desactivarla pasa al historial como agotada.
+
+### Desafíos Online
+
+Se mejoró la presentación de **Disponibles**, **Mis desafíos** y **Partidos disputados**:
+
+- Escudo del club.
+- Nombre del estadio.
+- Capacidad.
+- Cantidad de hinchas.
+- Media, formación, valor y salarios de la convocatoria.
+- Sede del partido claramente identificada.
+
+La ficha del encuentro ahora usa una estructura de tres columnas:
 
 ```text
-Ranking
+Puntajes del local | Estadísticas y eventos | Puntajes del visitante
 ```
 
-El ranking se calcula desde los partidos completados guardados en Cloudflare.
-
-El puntaje considera:
-
-- Resultado.
-- Media del equipo propio.
-- Media del rival.
-- Diferencia de goles.
-
-Una victoria con un equipo muy superior entrega pocos puntos. Una victoria con un equipo claramente inferior entrega muchos puntos. En empate, ambos suman, pero el equipo más débil recibe más.
-
-### Fórmula resumida
-
-```text
-Victoria = 12 + 188 × (1 - probabilidad esperada) + bonus de diferencia de gol
-Empate = 10 + 70 × (1 - probabilidad esperada)
-Derrota = 0
-```
-
-Ejemplo conceptual:
-
-- Equipo 99 vence a equipo 34: puntaje mínimo.
-- Equipo 34 vence a equipo 99: puntaje muy alto.
-- Equipo 34 empata con equipo 99: puntaje alto para el equipo 34 y bajo para el equipo 99.
-
-No se crea una tabla nueva para el ranking. El Worker lo calcula con los resultados ya guardados en `fm_challenge_matches_v1` y las fotografías de equipos existentes.
+Los jugadores no repiten el nombre del club en cada fila. El equipo local permanece a la izquierda y el visitante a la derecha.
 
 ### Cloudflare
 
-No hace falta ejecutar una migración nueva si ya instalaste V7.26.
-
-Sólo hay que reemplazar el Worker combinado por:
+No requiere una migración D1 nueva. Para que las fotografías nuevas guarden el nombre del estadio, hay que reemplazar el Worker por:
 
 ```text
 cloudflare-desafios/worker-ranking-desafios-v1.js
 ```
 
-Nueva ruta pública:
+Versión esperada:
 
 ```text
-GET /challenges/ranking
+V7.28-desafios-presentacion-v1
 ```
 
-Versión esperada del Worker:
+Los desafíos anteriores continúan funcionando; si no tenían nombre de estadio guardado se muestra un nombre de respaldo.
 
-```text
-V7.27-desafios-ranking-v1
-```
-
-### Archivos principales modificados en V7.27
+### Archivos principales modificados en V7.28
 
 - `README.md`
 - `index.html`
@@ -76,7 +85,14 @@ V7.27-desafios-ranking-v1
 - `config.js`
 - `balance-modificadores.js`
 - `data/instalaciones.json`
-- `js/core/01-config-constants.js`
+- `data/habilidades_especiales.json`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/12-modals.js`
+- `js/game/15-especial.js`
 - `js/game/18-challenges-online.js`
 - `cloudflare-desafios/worker-ranking-desafios-v1.js`
 - `cloudflare-desafios/PASOS-INSTALACION-DESAFIOS.md`
@@ -84,10 +100,15 @@ V7.27-desafios-ranking-v1
 
 ### Compatibilidad de partidas
 
-**V7.27 no rompe partidas anteriores.** Sólo modifica la interfaz de Desafíos Online y agrega un cálculo público de ranking desde los resultados guardados.
+**V7.28 no rompe partidas anteriores.** Conserva resultados, cartas, residencias, instalaciones, planteles y desafíos existentes. Sólo ajusta límites y presentación.
 
 ---
 
+## V7.27 - Ranking de desafíos y listas estables
+
+- Se corrigió el parpadeo de listas vacías en Desafíos Online.
+- Se agregó el ranking público calculado según resultado, diferencia de media y diferencia de goles.
+- No requirió una tabla D1 adicional.
 
 ## V7.25 - Código reutilizable de fondos para el club
 

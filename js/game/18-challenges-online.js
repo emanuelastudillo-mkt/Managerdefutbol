@@ -24,7 +24,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.27') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.28') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -135,7 +135,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.27'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.28'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -143,9 +143,10 @@ function buildChallengeSnapshot(){
     club:{
       id:String(game.selectedClubId),
       name:String(club.name || clubName(game.selectedClubId) || 'Club').slice(0, 100),
-      crestPath:String(club.crestPath || club.crest || '').slice(0, 220),
+      crestPath:String((typeof clubBadgeSrcCandidates === 'function' ? clubBadgeSrcCandidates(club)?.[0] : '') || club.crestPath || club.crest || '').slice(0, 220),
       reputation:Math.max(0, Math.round(Number(club.reputation || club.prestige || 0))),
       fans:Math.max(0, Math.round(typeof clubFansCurrent === 'function' ? clubFansCurrent(game.selectedClubId) : 0)),
+      stadiumName:String(typeof clubStadiumName === 'function' ? clubStadiumName(game.selectedClubId) : (club.stadiumName || `${club.name || 'Club'} Stadium`)).slice(0, 120),
       stadiumCapacity:Math.max(0, Math.round(typeof clubStadiumCapacity === 'function' ? clubStadiumCapacity(game.selectedClubId) : 0)),
       stadiumCondition:Math.max(0, Math.round(typeof fieldScoreForClub === 'function' ? fieldScoreForClub(game.selectedClubId) : 100))
     },
@@ -177,21 +178,38 @@ function challengeStatusLabel(status){
 function challengeStatusClass(status){
   return ({ open:'ok', processing:'warn', completed:'', cancelled:'bad', expired:'muted' })[String(status || '')] || '';
 }
-function challengeClubSummary(snapshot={}){
+function challengeCrestMarkup(snapshot={}, extraClass=''){
+  const club = snapshot?.club || {};
+  const src = String(club.crestPath || '').trim();
+  return src
+    ? `<span class="challenge-crest-shell ${escapeHtml(extraClass)}"><img src="${escapeHtml(src)}" alt="" class="challenge-crest" onerror="this.parentElement.classList.add('crest-missing');this.remove()"></span>`
+    : `<span class="challenge-crest-shell crest-missing ${escapeHtml(extraClass)}" aria-hidden="true">⚽</span>`;
+}
+function challengeVenueName(snapshot={}){
+  return String(snapshot?.club?.stadiumName || `${snapshot?.club?.name || 'Club'} Stadium`);
+}
+function challengeClubSummary(snapshot={}, options={}){
   const club = snapshot.club || {};
   const team = snapshot.team || {};
-  return `<div class="challenge-team-summary">
-    <div>${club.crestPath ? `<img src="${escapeHtml(club.crestPath)}" alt="" class="challenge-crest" onerror="this.style.display='none'">` : ''}<strong>${escapeHtml(club.name || 'Club')}</strong></div>
-    <span>Media ${Number(team.rating || 0).toFixed(1)}</span>
-    <span>${escapeHtml(snapshot?.tactic?.formation || '—')}</span>
-    <span>Valor ${formatMoney(Number(team.matchSquadValue || 0))}</span>
-    <span>Sueldos ${formatMoney(Number(team.matchSquadSalaryTotal || 0))}</span>
+  const compact = options.compact === true;
+  return `<div class="challenge-team-summary ${compact ? 'compact' : ''}">
+    <div class="challenge-club-head">${challengeCrestMarkup(snapshot)}<div><strong>${escapeHtml(club.name || 'Club')}</strong><small>${escapeHtml(snapshot?.tactic?.formation || '—')} · Media ${Number(team.rating || 0).toFixed(1)}</small></div></div>
+    <div class="challenge-club-facts">
+      <span><b>Estadio</b>${escapeHtml(challengeVenueName(snapshot))}</span>
+      <span><b>Capacidad</b>${formatPlainNumber(Number(club.stadiumCapacity || 0))}</span>
+      <span><b>Hinchas</b>${formatPlainNumber(Number(club.fans || 0))}</span>
+      ${compact ? '' : `<span><b>Valor</b>${formatMoney(Number(team.matchSquadValue || 0))}</span><span><b>Sueldos</b>${formatMoney(Number(team.matchSquadSalaryTotal || 0))}</span>`}
+    </div>
   </div>`;
+}
+function challengeVenueMarkup(homeSnapshot={}){
+  const club = homeSnapshot?.club || {};
+  return `<div class="challenge-venue-line"><span>🏟</span><strong>${escapeHtml(challengeVenueName(homeSnapshot))}</strong><span>Capacidad ${formatPlainNumber(Number(club.stadiumCapacity || 0))}</span><span>Hinchas ${formatPlainNumber(Number(club.fans || 0))}</span></div>`;
 }
 function challengeOpenCard(row){
   const snapshot = row.creatorSnapshot || row.snapshot || {};
-  return `<article class="card challenge-card">
-    <div class="row"><div><p class="label">${escapeHtml(row.creatorUsername || 'Manager')}</p><h3>${escapeHtml(snapshot?.club?.name || row.creatorClubName || 'Club')}</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
+  return `<article class="card challenge-card challenge-open-card">
+    <div class="row challenge-card-top"><div><p class="label">${escapeHtml(row.creatorUsername || 'Manager')}</p><h3>Desafío disponible</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
     ${challengeClubSummary(snapshot)}
     <p class="small muted">Publicado ${escapeHtml(challengeDateLabel(row.createdAt))} · vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</p>
     <button class="primary" data-challenge-accept="${escapeHtml(row.id)}">Aceptar desafío</button>
@@ -203,7 +221,7 @@ function challengeMineCard(row){
   const result = row.match || null;
   return `<article class="card challenge-card">
     <div class="row"><div><p class="label">Tu desafío</p><h3>${escapeHtml(home?.club?.name || row.creatorClubName || 'Club')}</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
-    ${result ? `<div class="challenge-score"><strong>${escapeHtml(home?.club?.name || 'Local')}</strong><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b><strong>${escapeHtml(away?.club?.name || 'Visitante')}</strong></div>` : challengeClubSummary(home)}
+    ${result ? `<div class="challenge-history-matchup"><div>${challengeClubSummary(home,{compact:true})}</div><div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div><div>${challengeClubSummary(away,{compact:true})}</div></div>${challengeVenueMarkup(home)}` : challengeClubSummary(home)}
     <p class="small muted">${row.opponentUsername ? `Aceptado por ${escapeHtml(row.opponentUsername)}` : 'Esperando rival'} · ${escapeHtml(challengeDateLabel(row.createdAt))}</p>
     <div class="row challenge-actions">
       ${row.status === 'open' ? `<button class="ghost danger" data-challenge-cancel="${escapeHtml(row.id)}">Cancelar</button>` : ''}
@@ -216,8 +234,13 @@ function challengeHistoryCard(row){
   const away = row.opponentSnapshot || {};
   const result = row.match || {};
   return `<article class="card challenge-card challenge-history-card" data-challenge-view="${escapeHtml(row.id)}">
-    <div class="row"><p class="label">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p><span class="small muted">${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span></div>
-    <div class="challenge-score"><strong>${escapeHtml(home?.club?.name || 'Local')}</strong><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b><strong>${escapeHtml(away?.club?.name || 'Visitante')}</strong></div>
+    <div class="row challenge-card-top"><p class="label">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p><span class="small muted">${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span></div>
+    <div class="challenge-history-matchup">
+      <div>${challengeClubSummary(home,{compact:true})}</div>
+      <div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div>
+      <div>${challengeClubSummary(away,{compact:true})}</div>
+    </div>
+    ${challengeVenueMarkup(home)}
     <p class="small muted">Asistencia ${formatPlainNumber(Number(result.attendance || 0))} · Valor usado ${formatMoney(Number(result.homeUsedPlayersValue || 0))} vs ${formatMoney(Number(result.awayUsedPlayersValue || 0))}</p>
   </article>`;
 }
@@ -250,7 +273,7 @@ function challengeCurrentTeamCard(){
   try{ snapshot = buildChallengeSnapshot(); }
   catch(error){ return `<div class="card blocker"><h3>No se puede publicar el equipo</h3><p>${escapeHtml(error.message)}</p><button class="ghost" data-go-tab="firstTeam">Ir a Primer Equipo</button></div>`; }
   return `<div class="card challenge-publish-card">
-    <div class="row"><div><p class="label">Tu equipo actual</p><h3>${escapeHtml(snapshot.club.name)}</h3></div><span class="pill">${escapeHtml(snapshot.tactic.formation)}</span></div>
+    <div class="challenge-publish-head">${challengeCrestMarkup(snapshot,'large')}<div><p class="label">Tu equipo actual</p><h3>${escapeHtml(snapshot.club.name)}</h3><p class="muted small">${escapeHtml(challengeVenueName(snapshot))} · ${formatPlainNumber(snapshot.club.stadiumCapacity)} lugares · ${formatPlainNumber(snapshot.club.fans)} hinchas</p></div><span class="pill">${escapeHtml(snapshot.tactic.formation)}</span></div>
     <div class="grid cols-4 challenge-team-metrics">
       <div><span>Media</span><strong>${snapshot.team.rating.toFixed(1)}</strong></div>
       <div><span>Valor convocatoria</span><strong>${formatMoney(snapshot.team.matchSquadValue)}</strong></div>
@@ -261,6 +284,7 @@ function challengeCurrentTeamCard(){
     <button id="btnPublishChallenge" class="primary" ${challengeToken() ? '' : 'disabled'}>Publicar desafío</button>
   </div>`;
 }
+
 function challengeLoginWarning(){
   if(challengeToken()) return '';
   return `<div class="card blocker"><h3>Iniciá sesión</h3><p>Los desafíos reutilizan la misma cuenta del Ranking Online.</p><button class="primary" data-go-ranking>Ir al login del ranking</button></div>`;
@@ -418,37 +442,48 @@ function challengeEventLabel(event){
   if(event.type === 'substitution') return `↔ ${escapeHtml(event.inPlayerName || 'Jugador')} por ${escapeHtml(event.outPlayerName || 'Jugador')}`;
   return escapeHtml(event.type || 'Evento');
 }
+function challengeRatingsColumn(ratings=[], side='home'){
+  const rows = ratings.filter(item => item.side === side).sort((a,b) => Number(b.rating || 0) - Number(a.rating || 0) || String(a.playerName || '').localeCompare(String(b.playerName || ''), 'es'));
+  return `<aside class="card challenge-ratings-side ${side}">
+    <div class="challenge-ratings-head"><span class="pill">${side === 'home' ? 'LOCAL' : 'VISITANTE'}</span><strong>${rows.length} jugadores</strong></div>
+    <div class="challenge-rating-list">${rows.length ? rows.map(item => `<div class="challenge-rating-row"><span><b>${escapeHtml(item.playerName || 'Jugador')}</b><small>${escapeHtml(item.position || '—')}</small></span><strong>${Number(item.rating || 0).toFixed(1)}</strong></div>`).join('') : '<p class="muted small">Sin puntajes.</p>'}</div>
+  </aside>`;
+}
 function renderChallengeDetail(row){
   const home = row.creatorSnapshot || {};
   const away = row.opponentSnapshot || {};
   const match = row.match || {};
   const result = match.result || {};
   const events = Array.isArray(result.events) ? result.events : [];
-  const ratings = Array.isArray(result.playerRatings) ? result.playerRatings.slice().sort((a,b)=>b.rating-a.rating) : [];
+  const ratings = Array.isArray(result.playerRatings) ? result.playerRatings.slice() : [];
   view.innerHTML = `<div class="row section-title"><div><h2>Partido de desafío</h2><p class="tagline">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p></div><button id="btnBackChallenges" class="ghost">Volver</button></div>
     <div class="card challenge-result-hero">
       <div>${challengeClubSummary(home)}</div>
       <div class="challenge-result-score"><span>Final</span><strong>${Number(match.homeGoals || result?.score?.home || 0)}–${Number(match.awayGoals || result?.score?.away || 0)}</strong><small>${escapeHtml(challengeDateLabel(row.completedAt || match.createdAt))}</small></div>
       <div>${challengeClubSummary(away)}</div>
     </div>
+    ${challengeVenueMarkup(home)}
     <div class="grid cols-4 challenge-result-metrics">
       <div class="card"><span>Asistencia</span><strong>${formatPlainNumber(Number(match.attendance || result?.attendance?.total || 0))}</strong></div>
       <div class="card"><span>Valor usado local</span><strong>${formatMoney(Number(match.homeUsedPlayersValue || result?.economy?.homeUsedPlayersValue || 0))}</strong></div>
       <div class="card"><span>Valor usado visitante</span><strong>${formatMoney(Number(match.awayUsedPlayersValue || result?.economy?.awayUsedPlayersValue || 0))}</strong></div>
       <div class="card"><span>Figura</span><strong>${escapeHtml(result?.manOfMatch?.playerName || '—')} ${result?.manOfMatch?.rating ? `(${result.manOfMatch.rating})` : ''}</strong></div>
     </div>
-    <div class="grid cols-2">
-      <div class="card"><h3>Estadísticas</h3>${challengeStatisticsMarkup(home, away, result.statistics || {})}</div>
-      <div class="card"><h3>Eventos</h3><div class="challenge-events">${events.length ? events.map(event => `<div><span>${Number(event.minute || 0)}'</span><strong>${event.side === 'home' ? escapeHtml(home?.club?.name || 'Local') : escapeHtml(away?.club?.name || 'Visitante')}</strong><p>${challengeEventLabel(event)}</p></div>`).join('') : '<p class="muted">Sin eventos registrados.</p>'}</div></div>
+    <div class="challenge-match-layout">
+      ${challengeRatingsColumn(ratings,'home')}
+      <main class="challenge-match-center">
+        <div class="card"><h3>Estadísticas</h3>${challengeStatisticsMarkup(home, away, result.statistics || {})}</div>
+        <div class="card"><h3>Eventos</h3><div class="challenge-events">${events.length ? events.map(event => `<div><span>${Number(event.minute || 0)}'</span><strong>${event.side === 'home' ? 'LOCAL' : 'VISITANTE'}</strong><p>${challengeEventLabel(event)}</p></div>`).join('') : '<p class="muted">Sin eventos registrados.</p>'}</div></div>
+      </main>
+      ${challengeRatingsColumn(ratings,'away')}
     </div>
-    <div class="card"><h3>Rendimientos individuales</h3><div class="table-wrap"><table><thead><tr><th>Equipo</th><th>Jugador</th><th>POS</th><th>Nota</th></tr></thead><tbody>${ratings.map(item => `<tr><td>${item.side === 'home' ? escapeHtml(home?.club?.name || 'Local') : escapeHtml(away?.club?.name || 'Visitante')}</td><td>${escapeHtml(item.playerName || 'Jugador')}</td><td>${escapeHtml(item.position || '—')}</td><td><strong>${Number(item.rating || 0).toFixed(1)}</strong></td></tr>`).join('')}</tbody></table></div></div>
     <div class="card challenge-disclaimer"><strong>Amistoso online.</strong> El resultado fue simulado localmente por el jugador que aceptó y no modifica ninguna carrera.</div>`;
   $('btnBackChallenges')?.addEventListener('click', () => { challengeDetail=null; renderOnlineChallenges(); });
 }
 function challengeStatisticsMarkup(home, away, statistics){
   const labels = [
-    ['Posesión','possession','%'], ['Tiros','shots',''], ['Al arco','shotsOnTarget',''], ['Córners','corners',''], ['Faltas','fouls','']
+    ['Posesión','possession','%'], ['Disparos','shots',''], ['Tiros a Puerta','shotsOnTarget',''], ['Córners','corners',''], ['Faltas','fouls','']
   ];
   return `<div class="challenge-stat-list">${labels.map(([label,key,suffix]) => `<div><strong>${Number(statistics?.home?.[key] || 0)}${suffix}</strong><span>${label}</span><strong>${Number(statistics?.away?.[key] || 0)}${suffix}</strong></div>`).join('')}</div>
-    <div class="challenge-economy-comparison"><p>${escapeHtml(home?.club?.name || 'Local')}: convocatoria ${formatMoney(Number(home?.team?.matchSquadValue || 0))} · sueldos ${formatMoney(Number(home?.team?.matchSquadSalaryTotal || 0))}</p><p>${escapeHtml(away?.club?.name || 'Visitante')}: convocatoria ${formatMoney(Number(away?.team?.matchSquadValue || 0))} · sueldos ${formatMoney(Number(away?.team?.matchSquadSalaryTotal || 0))}</p></div>`;
+    <div class="challenge-economy-comparison"><p>Local: convocatoria ${formatMoney(Number(home?.team?.matchSquadValue || 0))} · sueldos ${formatMoney(Number(home?.team?.matchSquadSalaryTotal || 0))}</p><p>Visitante: convocatoria ${formatMoney(Number(away?.team?.matchSquadValue || 0))} · sueldos ${formatMoney(Number(away?.team?.matchSquadSalaryTotal || 0))}</p></div>`;
 }

@@ -537,13 +537,13 @@ function installationsDatabaseFallback(){
       dias_construccion:60, costo_diario:10000, mejora_campo_diaria:1
     },
     predio_entrenamiento_juvenil:{
-      id:'youth_training_ground', nombre:'Predio de entrenamiento juvenil',
+      id:'youth_training_ground', nombre:'Predio de entrenamiento juvenil', residencias_desbloqueadas_por_nivel:2,
       niveles:[
-        { nivel:1, nombre:'Básico', costo:20000000, dias_construccion:58, juveniles_excepcionales_adicionales:0 },
-        { nivel:2, nombre:'Medio', costo:100000000, dias_construccion:105, juveniles_excepcionales_adicionales:1 },
-        { nivel:3, nombre:'Bueno', costo:300000000, dias_construccion:180, juveniles_excepcionales_adicionales:2 },
-        { nivel:4, nombre:'Excelente', costo:500000000, dias_construccion:230, juveniles_excepcionales_adicionales:3 },
-        { nivel:5, nombre:'Elite', costo:1200000000, dias_construccion:80, juveniles_excepcionales_adicionales:5 }
+        { nivel:1, nombre:'Básico', costo:20000000, dias_construccion:58, juveniles_excepcionales_adicionales:0, residencias_maximas:2 },
+        { nivel:2, nombre:'Medio', costo:100000000, dias_construccion:105, juveniles_excepcionales_adicionales:1, residencias_maximas:4 },
+        { nivel:3, nombre:'Bueno', costo:300000000, dias_construccion:180, juveniles_excepcionales_adicionales:2, residencias_maximas:6 },
+        { nivel:4, nombre:'Excelente', costo:500000000, dias_construccion:230, juveniles_excepcionales_adicionales:3, residencias_maximas:8 },
+        { nivel:5, nombre:'Elite', costo:1200000000, dias_construccion:80, juveniles_excepcionales_adicionales:5, residencias_maximas:10 }
       ]
     },
     source:'fallback'
@@ -572,7 +572,7 @@ async function loadSpecialSkillsDatabase(){
   const fallback = {
     version:APP_VERSION,
     sistema:'habilidades_especiales',
-    limites:{ cartas_activas_max:5, cartas_reserva_max:50, dias_bloqueo_cambio_cartas:15, permitir_abrir_sobres_con_reserva_llena:false, permitir_cartas_repetidas_activas:true, bonus_se_apilan:true },
+    limites:{ cartas_activas_max:5, cartas_reserva_max:50, dias_bloqueo_cambio_cartas:15, permitir_abrir_sobres_con_reserva_llena:false, permitir_cartas_repetidas_activas:true, bonus_se_apilan:true, activaciones_por_carta:5, activaciones_por_rareza:{ inutil:1, comun:1, rara:2, epica:3, legendaria:5 } },
     rareza_orden_visual:['inutil','comun','rara','epica','legendaria'],
     sobres:{},
     destruir_cartas:{ permitido:true, recuperacion_puntos:{ inutil:5, comun:20, rara:50, epica:250, legendaria:1000 } },
@@ -1124,16 +1124,26 @@ function pitchHeatingDefinition(){
     dailyFieldGain:Math.max(0, Math.round(Number(raw.mejora_campo_diaria ?? raw.dailyFieldGain ?? fallback.mejora_campo_diaria)))
   };
 }
+function youthTrainingResidencesPerLevel(){
+  const fallback = installationsDatabaseFallback().predio_entrenamiento_juvenil;
+  const raw = installationsDatabase?.predio_entrenamiento_juvenil || {};
+  return Math.max(0, Math.round(Number(raw.residencias_desbloqueadas_por_nivel ?? raw.residencesPerLevel ?? fallback.residencias_desbloqueadas_por_nivel ?? 2)));
+}
 function youthTrainingGroundLevels(){
   const fallback = installationsDatabaseFallback().predio_entrenamiento_juvenil.niveles;
   const raw = installationsDatabase?.predio_entrenamiento_juvenil?.niveles;
-  return (Array.isArray(raw) && raw.length ? raw : fallback).map(item => ({
-    level:Math.max(1, Math.round(Number(item.nivel ?? item.level ?? 1))),
-    name:String(item.nombre || item.name || `Nivel ${item.nivel || item.level || 1}`),
-    cost:Math.max(0, Math.round(Number(item.costo ?? item.cost ?? 0))),
-    buildDays:Math.max(1, Math.round(Number(item.dias_construccion ?? item.buildDays ?? 1))),
-    exceptionalBonus:Math.max(0, Math.round(Number(item.juveniles_excepcionales_adicionales ?? item.exceptionalBonus ?? 0)))
-  })).sort((a,b) => a.level - b.level);
+  const perLevel = youthTrainingResidencesPerLevel();
+  return (Array.isArray(raw) && raw.length ? raw : fallback).map(item => {
+    const level = Math.max(1, Math.round(Number(item.nivel ?? item.level ?? 1)));
+    return {
+      level,
+      name:String(item.nombre || item.name || `Nivel ${level}`),
+      cost:Math.max(0, Math.round(Number(item.costo ?? item.cost ?? 0))),
+      buildDays:Math.max(1, Math.round(Number(item.dias_construccion ?? item.buildDays ?? 1))),
+      exceptionalBonus:Math.max(0, Math.round(Number(item.juveniles_excepcionales_adicionales ?? item.exceptionalBonus ?? 0))),
+      maxResidences:Math.max(0, Math.round(Number(item.residencias_maximas ?? item.maxResidences ?? level * perLevel)))
+    };
+  }).sort((a,b) => a.level - b.level);
 }
 function youthTrainingGroundLevelDefinition(level){
   return youthTrainingGroundLevels().find(item => Number(item.level) === Number(level)) || null;
@@ -1182,6 +1192,10 @@ function youthTrainingGroundLevel(clubId=game?.selectedClubId){
 function youthTrainingExceptionalBonus(clubId=game?.selectedClubId){
   const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel(clubId));
   return Math.max(0, Math.round(Number(definition?.exceptionalBonus || 0)));
+}
+function youthTrainingResidenceLimit(clubId=game?.selectedClubId){
+  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel(clubId));
+  return Math.max(0, Math.round(Number(definition?.maxResidences || 0)));
 }
 function createInitialStadiumState(){
   const fields = {};

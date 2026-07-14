@@ -816,22 +816,23 @@ function youthTrainingFacilityMarkup(){
   const project = state.youthTraining.construction;
   const nextDef = youthTrainingGroundLevelDefinition(currentLevel + 1);
   const currentBonus = youthTrainingExceptionalBonus(game.selectedClubId);
+  const currentResidenceLimit = typeof youthTrainingResidenceLimit === 'function' ? youthTrainingResidenceLimit(game.selectedClubId) : currentLevel * 2;
   return `<div class="card stadium-facility-card youth-facility-card">
     <div class="row facility-card-head"><div><p class="label">Academia</p><h3>Predio de entrenamiento juvenil</h3></div><span class="pill ${currentLevel >= 5 ? 'ok' : ''}">${currentLevel ? `Nivel ${currentLevel} · ${escapeHtml(currentDef?.name || '')}` : 'Sin predio'}</span></div>
-    <p class="muted small">El bonus se suma al juvenil excepcional base de cada temporada. Nivel actual: +${currentBonus} juvenil(es) excepcional(es) adicional(es), entregados mediante captaciones mientras haya cupos.</p>
+    <p class="muted small">El bonus se suma al juvenil excepcional base de cada temporada. Nivel actual: +${currentBonus} juvenil(es) excepcional(es) adicional(es) y espacio para ${currentResidenceLimit} residencia(s). Cada nivel habilita 2 residencias más.</p>
     ${project ? `<div class="facility-project"><div class="row"><strong>Construyendo nivel ${Number(project.targetLevel || currentLevel + 1)}</strong><span>${Number(project.daysLeft || 0)} día(s) restantes</span></div><div class="project-progress"><span style="width:${facilityConstructionProgress(project)}%"></span></div></div>` : ''}
     <div class="facility-level-grid">${levels.map(level => {
       const completed = currentLevel >= level.level;
       const active = Number(project?.targetLevel || 0) === level.level;
       const available = !project && level.level === currentLevel + 1;
       return `<div class="facility-level ${completed ? 'completed' : ''} ${active ? 'active' : ''}">
-        <div class="row"><strong>Nivel ${level.level} · ${escapeHtml(level.name)}</strong><span class="pill">+${level.exceptionalBonus}</span></div>
+        <div class="row"><strong>Nivel ${level.level} · ${escapeHtml(level.name)}</strong><span class="facility-level-badges"><span class="pill">+${level.exceptionalBonus} excepcional(es)</span><span class="pill">${level.maxResidences} residencias</span></span></div>
         <p>${formatMoney(level.cost)} · ${level.buildDays} días</p>
         <small>${completed ? 'Construido' : active ? 'En construcción' : level.level < currentLevel + 1 ? 'Construido' : level.level > currentLevel + 1 ? 'Requiere nivel anterior' : 'Siguiente mejora disponible'}</small>
         ${available ? `<button class="primary small-btn" data-build-youth-facility="${level.level}" ${(game.budget || 0) < level.cost ? 'disabled' : ''}>Construir nivel ${level.level}</button>` : ''}
       </div>`;
     }).join('')}</div>
-    ${!nextDef && !project ? '<p class="ok small">Predio Elite completado. Bonus máximo: +5 juveniles excepcionales adicionales por temporada.</p>' : ''}
+    ${!nextDef && !project ? '<p class="ok small">Predio Elite completado. Bonus máximo: +5 juveniles excepcionales y hasta 10 residencias juveniles.</p>' : ''}
   </div>`;
 }
 function renderStadiumFacilities(){

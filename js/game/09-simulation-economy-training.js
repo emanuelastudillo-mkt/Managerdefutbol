@@ -1474,8 +1474,8 @@ function showResultOnlySummary(result){
       <p class="label">Resultado directo</p>
       <h2>${escapeHtml(h)} ${Number(result.homeGoals || 0)} - ${Number(result.awayGoals || 0)} ${escapeHtml(a)}</h2>
       <div class="grid cols-2">
-        <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Ataques: ${Number(hs.attacks || 0)}</p><p>Ocasiones: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
-        <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Ataques: ${Number(as.attacks || 0)}</p><p>Ocasiones: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
+        <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Disparos: ${Number(hs.attacks || 0)}</p><p>Tiros a Puerta: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
+        <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Disparos: ${Number(as.attacks || 0)}</p><p>Tiros a Puerta: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
       </div>
       <div class="modal-actions"><button class="primary" onclick="closeModal()">Cerrar</button></div>
     </div>`;

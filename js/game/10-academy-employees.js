@@ -376,6 +376,9 @@ function academyResidenceCount(){
   game.academy = normalizeAcademyState(game.academy);
   return Math.max(0, Math.round(Number(game.academy.residences || 0)));
 }
+function academyResidenceLimit(){
+  return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit(game?.selectedClubId) || 0))) : 0;
+}
 function academyCapacity(){
   return ACADEMY_BASE_CAPACITY + (academyResidenceCount() * ACADEMY_RESIDENCE_CAPACITY);
 }
@@ -386,8 +389,14 @@ function rentAcademyResidence(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
   const cost = ACADEMY_RESIDENCE_MONTHLY_COST;
-  if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para alquilar una residencia.'); return; }
   const currentResidences = academyResidenceCount();
+  const residenceLimit = academyResidenceLimit();
+  if(currentResidences >= residenceLimit){
+    const level = typeof youthTrainingGroundLevel === 'function' ? youthTrainingGroundLevel(game.selectedClubId) : 0;
+    showNotice(level > 0 ? `El predio juvenil nivel ${level} permite hasta ${residenceLimit} residencia(s). Mejoralo para habilitar más lugares.` : 'Necesitás construir el predio juvenil nivel 1 para habilitar residencias.');
+    return;
+  }
+  if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para alquilar una residencia.'); return; }
   const nextResidences = currentResidences + 1;
   const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
   game.academy.residences = nextResidences;
@@ -1060,6 +1069,7 @@ function renderAcademy(){
   const activePreparer = academyYouthPreparerActive();
   const salaryTurn = active.length * ACADEMY_PLAYER_TURN_COST;
   const residences = academyResidenceCount();
+  const residenceLimit = academyResidenceLimit();
   const capacity = academyCapacity();
   const availableSlots = academyAvailableSlots();
   const scoutingDisabled = availableSlots <= 0;
@@ -1070,14 +1080,15 @@ function renderAcademy(){
       <div class="pill">Costo por semana: ${formatMoney(salaryTurn)}</div>
     </div>
     <div class="card academy-residence-card" style="margin-bottom:14px">
-      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Costo mensual por residencia: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)}.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
+      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. El predio juvenil habilita 2 residencias por nivel. Costo mensual por residencia: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)}.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
       <div class="academy-residence-stats">
-        <div><p class="label">Residencias alquiladas</p><strong>${residences}</strong></div>
+        <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
         <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
         <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
       </div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence">Alquilar residencias</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence" ${residences < residenceLimit ? '' : 'disabled'}>Alquilar residencia</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
       ${residences > 0 && availableSlots < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${availableSlots}.</p>` : ''}
+      ${residences > residenceLimit ? `<p class="small warn">Esta partida conserva ${residences - residenceLimit} residencia(s) heredada(s) por encima del límite actual. No se eliminan, pero no se pueden alquilar nuevas hasta ampliar el predio.</p>` : residenceLimit <= 0 ? '<p class="small warn">Construí el predio juvenil nivel 1 para habilitar las primeras 2 residencias.</p>' : residences >= residenceLimit ? `<p class="small muted">Límite actual alcanzado: ${residenceLimit} residencia(s). Cada nuevo nivel del predio habilita 2 más.</p>` : `<p class="small muted">Podés alquilar ${residenceLimit - residences} residencia(s) adicional(es) con el nivel actual.</p>`}
     </div>
     <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
       <div class="row">

@@ -1,8 +1,8 @@
 {
-  "version": "V7.23",
+  "version": "V7.28",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.23: agrega cartas de apoyo al capitán, director de marketing, director deportivo y médico milagroso.",
+  "caracteristicas_version": "V7.28: usos por rareza (común 1, rara 2, épica 3 y legendaria 5).",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -23,7 +23,14 @@
     "permitir_abrir_sobres_con_reserva_llena": false,
     "permitir_cartas_repetidas_activas": true,
     "bonus_se_apilan": true,
-    "activaciones_por_carta": 10
+    "activaciones_por_carta": 5,
+    "activaciones_por_rareza": {
+      "inutil": 1,
+      "comun": 1,
+      "rara": 2,
+      "epica": 3,
+      "legendaria": 5
+    }
   },
   "rareza_orden_visual": [
     "inutil",
@@ -854,7 +861,7 @@
     "destruida": false,
     "obtenida_en_turno": null,
     "obtenida_desde_sobre": "",
-    "activaciones_max": 10,
+    "activaciones_max": 1,
     "activaciones_usadas": 0,
     "active_slot_id": "",
     "ultimo_slot_activacion": ""

@@ -3441,7 +3441,7 @@ function transferListedMarkup(playerOrId){
   return isTransferListedPlayer(playerOrId) ? '<span class="transfer-listed-badge" title="Jugador transferible">EN VENTA</span>' : '';
 }
 function untransferableMarkup(playerOrId){
-  return isPlayerUntransferable(playerOrId) ? '<span class="untransferable-badge" title="Sólo se escuchan ofertas por cláusula completa">INTRANSFERIBLE</span>' : '';
+  return isPlayerUntransferable(playerOrId) ? '<span class="untransferable-lock" title="Jugador intransferible: sólo se escuchan ofertas por cláusula completa" aria-label="Jugador intransferible">🔒</span>' : '';
 }
 function playerNameWithStar(player){
   return `${playerStarMarkup(player)}${escapeHtml(player?.name || 'Jugador')}${transferListedMarkup(player)}${untransferableMarkup(player)}`;

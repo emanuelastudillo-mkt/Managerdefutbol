@@ -845,8 +845,8 @@ function teamMatchEventSummary(match, clubId, minute=90){
 }
 function revealTeamStatsCard(clubId, stats, sideLabel, match=null, minute=90){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
-    <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
-    <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Disparos</span><strong>${stats.attacks}</strong></div>
+    <div class="stat-rank"><span>Tiros a Puerta</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
     <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
@@ -1023,8 +1023,8 @@ function showMatchModal(matchId){
 }
 function matchStatsCard(clubId, stats, sideLabel){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
-    <div class="stat-rank"><span>Total de ataques</span><strong>${stats.attacks}</strong></div>
-    <div class="stat-rank"><span>Ocasiones de gol</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Disparos</span><strong>${stats.attacks}</strong></div>
+    <div class="stat-rank"><span>Tiros a Puerta</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
     <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>

@@ -432,6 +432,7 @@ function specialBonusLabel(type){
     director_marketing:'Director de marketing',
     director_deportivo:'Director deportivo',
     medico_milagroso:'Médico milagroso',
+    prevencion_lesiones_partido:'Prevención de lesiones',
     cohesion_activar:'Cohesión al activar'
   };
   return labels[type] || String(type || 'Sin bonus');
@@ -440,6 +441,7 @@ function specialCardBonusText(card){
   if(!card?.tipo_bonus || !card.valor_bonus) return 'Sin bonus activo';
   const value = Number(card.valor_bonus || 0);
   if(card.tipo_bonus === 'medico_milagroso') return `${specialBonusLabel(card.tipo_bonus)}: -${value} día${value === 1 ? '' : 's'} extra por tratamiento`;
+  if(card.tipo_bonus === 'prevencion_lesiones_partido') return `${specialBonusLabel(card.tipo_bonus)}: -${value}% de probabilidad durante partidos`;
   const unit = card.unidad === 'porcentaje_relativo' ? '% relativo' : (card.unidad === 'porcentaje' ? '%' : (card.unidad === 'puntos' ? ' pts' : ''));
   const sign = ['deterioro_campo','objetivo_mas_bajo'].includes(card.tipo_bonus) ? '-' : '+';
   const suffix = card.tipo_bonus === 'cohesion_activar' ? ' una vez al activar' : '';
@@ -535,20 +537,29 @@ function specialActiveBonus(type){
   const cap = capRaw === null || capRaw === undefined || capRaw === '' ? null : Number(capRaw);
   return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
 }
+
+function specialMatchInjuryMultiplier(clubId=game?.selectedClubId){
+  const ownId = Number(game?.selectedClubId || 0);
+  if(!ownId || Number(clubId || 0) !== ownId) return 1;
+  const prevention = clamp(Number(specialActiveBonus('prevencion_lesiones_partido') || 0), 0, 95);
+  return clamp(1 - prevention / 100, 0.05, 1);
+}
+
 function specialActiveBonusSummary(){
-  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria','objetivo_mas_bajo','socios_extra','idolo_club','especialista_libres','preparacion_fisica','apoyo_capitan','director_marketing','director_deportivo','medico_milagroso']
+  return ['sponsors_extra','deterioro_campo','probabilidad_legendaria','objetivo_mas_bajo','socios_extra','idolo_club','especialista_libres','preparacion_fisica','apoyo_capitan','director_marketing','director_deportivo','medico_milagroso','prevencion_lesiones_partido']
     .map(type => ({ type, value:specialActiveBonus(type) }))
     .filter(item => item.value > 0);
 }
 function specialBonusSummaryText(item){
   if(!item) return '';
-  const sign = ['deterioro_campo','objetivo_mas_bajo','medico_milagroso'].includes(item.type) ? '-' : '+';
+  const sign = ['deterioro_campo','objetivo_mas_bajo','medico_milagroso','prevencion_lesiones_partido'].includes(item.type) ? '-' : '+';
   let suffix = '% acumulado';
   if(item.type === 'probabilidad_legendaria') suffix = '% relativo acumulado';
   else if(item.type === 'preparacion_fisica') suffix = ' pts postpartido acumulados';
   else if(item.type === 'apoyo_capitan') suffix = ' pts de progreso por partido';
   else if(item.type === 'director_deportivo') suffix = ' pts de cláusula ofertada';
   else if(item.type === 'medico_milagroso') suffix = ' días extra por tratamiento';
+  else if(item.type === 'prevencion_lesiones_partido') suffix = '% de probabilidad durante partidos';
   return `${sign}${Number(item.value || 0)}${suffix}`;
 }
 function applySpecialCohesionActivationBonus(card){

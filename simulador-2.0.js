@@ -808,7 +808,8 @@
     const candidates = (ownPower.lineup || []).filter(player => !isUnavailable(player.id));
     candidates.forEach(player => {
       const injuryMultiplier = simClamp(Number(ownPower?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
-      const chance = injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier;
+      const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
+      const chance = injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier * cardMultiplier;
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
@@ -1491,7 +1492,8 @@
     const candidates = (power.lineup || []).filter(player => !isUnavailable(player.id) && !liveIsUnavailableForPlay(session, player.id));
     candidates.forEach(player => {
       const injuryMultiplier = simClamp(Number(power?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
-      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90 * injuryMultiplier;
+      const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
+      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90 * injuryMultiplier * cardMultiplier;
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));

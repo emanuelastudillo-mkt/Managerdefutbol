@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.40',
-    nombre: 'Balance centralizado de modificadores V7.40',
+    version: 'V7.41',
+    nombre: 'Balance centralizado de modificadores V7.41',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 

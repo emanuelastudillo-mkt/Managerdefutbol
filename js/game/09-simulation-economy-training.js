@@ -412,6 +412,7 @@ function scheduledDateForMatch(match, round=null){
   return validIsoDate(match?.date) ? match.date : (validIsoDate(round?.date) ? round.date : currentCalendarDate());
 }
 function nextOwnMatchInfo(){
+  if(typeof ensureCampoDestruidoChallengeFullCalendar === 'function') ensureCampoDestruidoChallengeFullCalendar();
   if(!game || !isRegularSeason()) return null;
   for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
@@ -575,7 +576,8 @@ function quickBuildInjuries(clubId, lineup, context){
   const injuries = [];
   const candidates = (lineup || []).filter(player => !isUnavailable(player.id));
   candidates.forEach(player => {
-    const chance = Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70;
+    const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
+    const chance = Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70 * cardMultiplier;
     if(Math.random() >= chance) return;
     const injury = typeof pickInjuryTypeForPlayer === 'function'
       ? pickInjuryTypeForPlayer(player.id)
@@ -1505,10 +1507,15 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   game.lastOwnProblems = ownProblems;
   game.mustReviewTactics = game.lastOwnProblems.length > 0;
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  const challengeFinished = Boolean(game?.challenge?.completed && String(game.challenge.id || '') === 'campo_destruido');
+  const postCompetition = regularEnded && !challengeFinished && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - Number(budgetBeforeTurn || 0));
-  if(regularEnded && !postCompetition?.created){
+  if(challengeFinished){
+    game.currentDate = targetDate;
+    rememberCalendarDate();
+    setAdvanceLock(0);
+  }else if(regularEnded && !postCompetition?.created){
     startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   }else{
@@ -1520,7 +1527,8 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   activeTab = 'home';
   saveLocal(true);
   renderAll();
-  if(game.mustReviewTactics) showNotice('Partido dirigido. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true);
+  if(challengeFinished) showNotice(game.challenge?.closeNotice || 'Reto finalizado.', true);
+  else if(game.mustReviewTactics) showNotice('Partido dirigido. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true);
   else if(postCompetition?.created) showNotice(postCompetition.message || 'Se creó una competición de cierre de temporada.', true);
   else if(regularEnded) showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true);
   else showNotice(`Partido propio dirigido por bloques. Antes se procesaron ${(preOwnBotResults || []).length} partido(s) del mismo día o pendientes.`);
@@ -1729,10 +1737,15 @@ function simulateNextMatchday(options={}){
     game.mustReviewTactics = game.lastOwnProblems.length > 0;
   }
   let regularEnded = game.matchdayIndex >= game.fixtures.length;
-  const postCompetition = regularEnded && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
+  const challengeFinished = Boolean(game?.challenge?.completed && String(game.challenge.id || '') === 'campo_destruido');
+  const postCompetition = regularEnded && !challengeFinished && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
-  if(regularEnded && !postCompetition?.created){
+  if(challengeFinished){
+    game.currentDate = targetDate;
+    rememberCalendarDate();
+    setAdvanceLock(0);
+  }else if(regularEnded && !postCompetition?.created){
     startPostseasonPhase(targetDate);
     setAdvanceLock(0);
   } else {
@@ -1746,7 +1759,8 @@ function simulateNextMatchday(options={}){
   saveLocal(true);
   renderAll();
   const finalNotice = () => {
-    if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
+    if(challengeFinished){ showNotice(game.challenge?.closeNotice || 'Reto finalizado.', true); }
+    else if(game.mustReviewTactics){ showNotice('Partido simulado. Hay lesionados o expulsados propios: revisá la táctica antes de avanzar.', true); }
     else if(postCompetition?.created){ showNotice(postCompetition.message || 'Se creó una competición de cierre de temporada.', true); }
     else if(regularEnded){ showNotice('Terminó la fase regular. Comienza la postemporada hasta el cierre anual.', true); }
     else if(ownResult){ showNotice(`Partido propio simulado. Antes se procesaron ${preOwnBotResults.length} partido(s) del mismo día o pendientes.`); }

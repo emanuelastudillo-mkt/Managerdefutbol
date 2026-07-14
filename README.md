@@ -1,4 +1,62 @@
-# Fútbol Manager MVP - V7.40
+# Fútbol Manager MVP - V7.41
+
+
+
+## V7.41 - Prevención de lesiones y cierre completo del reto Campo destruido
+
+### Cartas de prevención de lesiones durante partidos
+
+Se incorporan cuatro cartas nuevas:
+
+- **Vendaje preventivo** · Común · reduce un `2%` la probabilidad de lesión durante el partido.
+- **Control de cargas** · Rara · reduce un `5%`.
+- **Laboratorio de prevención** · Épica · reduce un `8%`.
+- **Plantel blindado** · Legendaria · reduce un `15%`.
+
+Las cartas actúan únicamente sobre el club del manager y sólo reducen la probabilidad de que se produzca una nueva lesión dentro de un partido. No curan lesiones previas, no reducen la duración de una lesión y no alteran el desgaste. El efecto se aplica en resultado rápido, partido dirigido y simulador en vivo. Los porcentajes de varias cartas activas son acumulables hasta el límite general del `95%`.
+
+### Final completo de Primera División en Campo destruido
+
+- El reto representa las fechas 30 a 34 de la Primera División argentina.
+- Participan los 18 clubes de la categoría.
+- Cada fecha contiene 9 partidos y cada club juega una vez.
+- El calendario total incluye 45 encuentros, sin repetir enfrentamientos.
+- Los cinco rivales especiales del manager se conservan y el club elegido disputa esos encuentros como local en el campo destruido.
+- Antes de cada partido del manager se simulan los otros ocho resultados de esa jornada. Todos modifican la misma tabla.
+- La clasificación inicial conserva la situación de final de temporada configurada para el reto.
+
+Las partidas del reto creadas en una versión anterior y todavía sin partidos disputados se actualizan automáticamente al calendario completo. Un reto ya comenzado conserva su calendario previo para no reescribir resultados, estadísticas ni posiciones a mitad de la serie.
+
+### Resolución del reto
+
+Después de la quinta fecha y cuando los 45 partidos quedaron resueltos:
+
+- Si el club termina primero en la tabla, la directiva agradece al manager y entrega **10.000 puntos de habilidad**.
+- La tabla se ordena primero por puntos y luego por diferencia de gol, utilizando los desempates generales de la competición si ambos valores son idénticos.
+- Si el club no termina primero, la directiva despide al manager.
+- En ambos casos el desafío finaliza, el slot del reto se cierra y se vuelve a la pantalla de creación y selección de partidas.
+- La recompensa se acredita una sola vez y se conserva en el perfil compartido del manager.
+
+### Archivos principales modificados en V7.41
+
+- `config.js`
+- `index.html`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `simulador-2.0.js`
+- `data/habilidades_especiales.json`
+- `data/retos_manager.json`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/15-especial.js`
+- `js/game/18-challenges-online.js`
+- `README.md`
+
+### Compatibilidad
+
+**V7.41 no rompe partidas anteriores.** Las cartas nuevas se incorporan al catálogo existente. Las partidas normales no cambian. Los retos Campo destruido todavía no iniciados migran al calendario de 45 partidos; los que ya disputaron al menos un encuentro conservan el calendario anterior para evitar modificaciones retroactivas.
 
 
 

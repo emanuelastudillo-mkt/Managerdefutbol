@@ -157,35 +157,127 @@ function campoDestruidoChallengeAvailable(){
   const matches = Math.max(1, Math.round(Number(definition?.calendario?.partidos || 0)));
   return clubs.length >= matches + 1;
 }
+function createChallengeRoundRobin(teamIds=[]){
+  const unique = Array.from(new Set((teamIds || []).map(Number).filter(Boolean)));
+  if(unique.length < 2) return [];
+  const rotation = unique.length % 2 === 0 ? [...unique] : [...unique, 0];
+  const rounds = [];
+  for(let roundIndex=0; roundIndex<rotation.length - 1; roundIndex++){
+    const pairs = [];
+    for(let index=0; index<rotation.length / 2; index++){
+      const a = Number(rotation[index] || 0);
+      const b = Number(rotation[rotation.length - 1 - index] || 0);
+      if(a && b) pairs.push([a,b]);
+    }
+    rounds.push(pairs);
+    const last = rotation.pop();
+    rotation.splice(1, 0, last);
+  }
+  return rounds;
+}
 function createCampoDestruidoChallengeFixtures(selectedClubId, opponentIds=[]){
   const definition = campoDestruidoChallengeDefinition();
   if(!definition) return [];
   const calendar = definition.calendario || {};
+  const selected = Number(selectedClubId || 0);
+  const division = clubDivision(selected);
+  const divisionClubIds = (seed?.clubs || [])
+    .filter(club => String(club.divisionId || '') === String(division.id || '') && challengeClubKey(clubCountry(club)) === 'argentina' && !club.specialCompetitionOnly)
+    .map(club => Number(club.id))
+    .filter(Boolean);
   const year = currentSeasonYear ? currentSeasonYear() : (game?.seasonYear || SEASON_START_YEAR || 2026);
   const month = String(Math.max(1, Math.min(12, Math.round(Number(calendar.mesInicio || 1))))).padStart(2, '0');
   const day = String(Math.max(1, Math.min(31, Math.round(Number(calendar.diaInicio || 1))))).padStart(2, '0');
   const startDate = `${year}-${month}-${day}`;
   const matchesTotal = Math.max(1, Math.round(Number(calendar.partidos || 1)));
   const intervalDays = Math.max(1, Math.round(Number(calendar.diasEntrePartidos || 7)));
+  const firstLeagueRound = Math.max(1, Math.round(Number(calendar.fechaLigaInicial || 30)));
+  const lastLeagueRound = Math.max(firstLeagueRound, Math.round(Number(calendar.fechaLigaFinal || (firstLeagueRound + matchesTotal - 1))));
   const title = String(calendar.tituloFecha || 'Reto · Fecha');
-  return (opponentIds || []).slice(0, matchesTotal).map((opponentId, index) => {
-    const date = addDaysToIsoDate(startDate, index * intervalDays);
-    const match = {
-      id:`reto-${definition.id}-${game?.seasonNumber || 1}-${index + 1}-${selectedClubId}-${opponentId}`,
-      matchday:index + 1,
-      divisionId:clubDivision(selectedClubId).id,
-      divisionName:clubDivision(selectedClubId).name,
-      homeId:selectedClubId,
-      awayId:opponentId,
-      played:false,
-      homeGoals:0,
-      awayGoals:0,
-      date,
-      roundDate:date,
-      challengeId:definition.id
-    };
-    return { matchday:index + 1, date, endDate:date, title:`${title} ${index + 1}/${matchesTotal}`, challengeRound:true, matches:[match] };
+  const allRounds = createChallengeRoundRobin(divisionClubIds);
+  const selectedRounds = (opponentIds || []).slice(0, matchesTotal).map(opponentId => {
+    const opponent = Number(opponentId || 0);
+    return allRounds.find(pairs => (pairs || []).some(pair => pair.includes(selected) && pair.includes(opponent))) || [];
   });
+  const completeSchedule = selectedRounds.length === matchesTotal && selectedRounds.every(pairs => Array.isArray(pairs) && pairs.length >= Math.floor(divisionClubIds.length / 2));
+  if(!completeSchedule){
+    return (opponentIds || []).slice(0, matchesTotal).map((opponentId, index) => {
+      const date = addDaysToIsoDate(startDate, index * intervalDays);
+      const leagueRound = firstLeagueRound + index;
+      const match = { id:`reto-${definition.id}-${game?.seasonNumber || 1}-${leagueRound}-${selected}-${opponentId}`, matchday:leagueRound, divisionId:division.id, divisionName:division.name, homeId:selected, awayId:Number(opponentId), played:false, homeGoals:0, awayGoals:0, date, roundDate:date, challengeId:definition.id, challengeManagerMatch:true };
+      return { matchday:leagueRound, date, endDate:date, title:`${title} ${leagueRound}/${lastLeagueRound}`, challengeRound:true, matches:[match] };
+    });
+  }
+  return selectedRounds.map((pairs, index) => {
+    const date = addDaysToIsoDate(startDate, index * intervalDays);
+    const leagueRound = firstLeagueRound + index;
+    const forcedOpponent = Number(opponentIds[index] || 0);
+    const matches = pairs.map((pair, pairIndex) => {
+      let [homeId, awayId] = pair.map(Number);
+      const managerPair = pair.includes(selected);
+      if(managerPair){ homeId = selected; awayId = forcedOpponent; }
+      else if((leagueRound + pairIndex) % 2 === 0){ [homeId, awayId] = [awayId, homeId]; }
+      return {
+        id:`reto-${definition.id}-${game?.seasonNumber || 1}-${leagueRound}-${homeId}-${awayId}`,
+        matchday:leagueRound,
+        divisionId:division.id,
+        divisionName:division.name,
+        homeId,
+        awayId,
+        played:false,
+        homeGoals:0,
+        awayGoals:0,
+        date,
+        roundDate:date,
+        challengeId:definition.id,
+        challengeManagerMatch:managerPair,
+        challengeLeagueFinale:true
+      };
+    });
+    return { matchday:leagueRound, date, endDate:date, title:`${title} ${leagueRound}/${lastLeagueRound}`, challengeRound:true, challengeLeagueFinale:true, matches };
+  });
+}
+function ensureCampoDestruidoChallengeFullCalendar(){
+  const challenge = game?.challenge;
+  if(!challenge || challenge.completed || String(challenge.id || '') !== 'campo_destruido') return false;
+  const rounds = Array.isArray(game?.fixtures) ? game.fixtures : [];
+  const challengeRounds = rounds.filter(round => (round?.matches || []).some(match => String(match?.challengeId || '') === 'campo_destruido'));
+  const challengeMatches = challengeRounds.flatMap(round => (round.matches || []).filter(match => String(match?.challengeId || '') === 'campo_destruido'));
+  const expectedRounds = Math.max(1, Math.round(Number(challenge.matchesTotal || campoDestruidoChallengeDefinition()?.calendario?.partidos || 5)));
+  const selectedClubId = Number(challenge.selectedClubId || game?.selectedClubId || 0);
+  const selectedDivision = clubDivision(selectedClubId);
+  const divisionTeamCount = (seed?.clubs || []).filter(club => String(club.divisionId || '') === String(selectedDivision?.id || '') && challengeClubKey(clubCountry(club)) === 'argentina' && !club.specialCompetitionOnly).length;
+  const expectedTeams = Math.max(2, Number(divisionTeamCount || challenge.leagueTeams || 18));
+  const expectedMatchesPerRound = Math.max(1, Math.floor(expectedTeams / 2));
+  const fullCalendarReady = challengeRounds.length === expectedRounds
+    && challengeRounds.every(round => (round.matches || []).filter(match => String(match?.challengeId || '') === 'campo_destruido').length >= expectedMatchesPerRound);
+  if(fullCalendarReady){
+    challenge.leagueTeams = Math.max(expectedTeams, challengeRounds[0]?.matches?.length ? challengeRounds[0].matches.length * 2 : 0);
+    challenge.leagueMatchesTotal = challengeMatches.length;
+    challenge.fullLeagueCalendar = true;
+    return false;
+  }
+  // Una partida del reto ya iniciada conserva su calendario anterior para no reescribir
+  // resultados, estadísticas ni la tabla a mitad de las cinco fechas.
+  if(challengeMatches.some(match => match.played)) return false;
+  const selected = Number(challenge.selectedClubId || game?.selectedClubId || 0);
+  const opponentIds = Array.isArray(challenge.opponentIds) && challenge.opponentIds.length
+    ? challenge.opponentIds.map(Number).filter(Boolean)
+    : challengeMatches.filter(match => Number(match.homeId) === selected || Number(match.awayId) === selected)
+      .map(match => Number(match.homeId) === selected ? Number(match.awayId) : Number(match.homeId)).filter(Boolean);
+  const rebuilt = createCampoDestruidoChallengeFixtures(selected, opponentIds);
+  const rebuiltMatches = rebuilt.flatMap(round => round.matches || []);
+  if(rebuilt.length !== expectedRounds || rebuilt.some(round => (round.matches || []).length < expectedMatchesPerRound)) return false;
+  game.fixtures = rebuilt;
+  game.matchdayIndex = 0;
+  resetChallengeDivisionStandings(selected, opponentIds);
+  challenge.matchesPlayed = 0;
+  challenge.leagueTeams = rebuilt[0]?.matches?.length ? rebuilt[0].matches.length * 2 : expectedTeams;
+  challenge.leagueMatchesTotal = rebuiltMatches.length;
+  challenge.fullLeagueCalendar = true;
+  challenge.calendarMigratedTo = 'V7.41';
+  if(typeof saveLocal === 'function') saveLocal(true);
+  return true;
 }
 function resetChallengeDivisionStandings(selectedClubId, contenderIds=[]){
   if(!game || !seed?.clubs?.length) return;
@@ -200,18 +292,13 @@ function resetChallengeDivisionStandings(selectedClubId, contenderIds=[]){
   const leaders = Array.isArray(tableConfig.lideres) ? tableConfig.lideres : [];
   const selectedRow = tableConfig.clubSeleccionado || {};
   const contender = tableConfig.contendiente || {};
-  const rest = tableConfig.resto || {};
-  const sameDivision = seed.clubs.filter(club => String(club.divisionId || '') === String(division.id || ''));
-  sameDivision.forEach((club, index) => {
+  const sameDivision = seed.clubs
+    .filter(club => String(club.divisionId || '') === String(division.id || ''))
+    .sort((a,b) => Number(b.reputation || 0) - Number(a.reputation || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es'));
+  let restRank = 0;
+  sameDivision.forEach(club => {
     const id = Number(club.id);
-    let row = {
-      clubId:id,
-      pj:Number(rest.pj || 0), pg:Number(rest.pg || 0), pe:Number(rest.pe || 0), pp:Number(rest.pp || 0),
-      gf:Number(rest.gfBase || 0) - (index % Math.max(1, Number(rest.gfVariacion || 1))),
-      gc:Number(rest.gcBase || 0) + (index % Math.max(1, Number(rest.gcVariacion || 1))),
-      dg:0,
-      pts:Number(rest.ptsBase || 0) + (index % Math.max(1, Number(rest.ptsVariacion || 1)))
-    };
+    let row = null;
     const leaderIndex = chosenTop.indexOf(id);
     if(leaderIndex >= 0 && leaders[leaderIndex]) row = { clubId:id, ...leaders[leaderIndex] };
     else if(id === selected) row = { clubId:id, ...selectedRow };
@@ -219,13 +306,40 @@ function resetChallengeDivisionStandings(selectedClubId, contenderIds=[]){
       const rank = contenders.indexOf(id);
       const variation = Math.min(rank, Math.max(0, Number(contender.variacionMaxima || 0)));
       row = {
-        clubId:id, pj:Number(contender.pj || 0), pg:Number(contender.pgBase || 0) - variation,
-        pe:Number(contender.pe || 0), pp:Number(contender.ppBase || 0) + variation,
-        gf:Number(contender.gfBase || 0) - rank, gc:Number(contender.gcBase || 0) + rank,
-        dg:0, pts:Number(contender.ptsBase || 0) - rank
+        clubId:id,
+        pj:Number(contender.pj || 29),
+        pg:Number(contender.pgBase || 18) - variation,
+        pe:Number(contender.pe || 6),
+        pp:Number(contender.ppBase || 5) + variation,
+        gf:Number(contender.gfBase || 48) - rank,
+        gc:Number(contender.gcBase || 27) + rank
       };
+      row.pts = row.pg * 3 + row.pe;
+    }else{
+      const pj = 29;
+      const pg = Math.max(4, 13 - Math.floor(restRank * 0.7));
+      const pe = Math.min(10, 5 + (restRank % 5));
+      const pp = Math.max(0, pj - pg - pe);
+      row = {
+        clubId:id,
+        pj,
+        pg,
+        pe,
+        pp,
+        gf:Math.max(20, 45 - restRank * 2),
+        gc:Math.min(58, 30 + restRank * 2),
+        pts:pg * 3 + pe
+      };
+      restRank += 1;
     }
-    row.dg = Number(row.gf || 0) - Number(row.gc || 0);
+    row.pj = Number(row.pj || 0);
+    row.pg = Number(row.pg || 0);
+    row.pe = Number(row.pe || 0);
+    row.pp = Number(row.pp || 0);
+    row.gf = Number(row.gf || 0);
+    row.gc = Number(row.gc || 0);
+    row.pts = Number.isFinite(Number(row.pts)) ? Number(row.pts) : row.pg * 3 + row.pe;
+    row.dg = row.gf - row.gc;
     game.standings[id] = row;
   });
 }
@@ -336,6 +450,8 @@ function applyCampoDestruidoChallengePreset(selectedClubId){
     requiredFieldScore:Number(initial.campoPropio || 0),
     matchesTotal,
     matchesPlayed:0,
+    leagueTeams:game.fixtures?.[0]?.matches?.length ? game.fixtures[0].matches.length * 2 : 0,
+    leagueMatchesTotal:(game.fixtures || []).reduce((sum, round) => sum + (round.matches || []).length, 0),
     maradonaReinjured:false,
     completed:false,
     success:false,
@@ -347,7 +463,7 @@ function applyCampoDestruidoChallengePreset(selectedClubId){
   game.mustReviewTactics = false;
   if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'injury', playerId:maradona?.id || 0 }]);
   const lastMatches = Math.max(1, Math.round(Number(special.vuelveParaUltimosPartidos || 1)));
-  pushGameMessage({ type:'reto', priority:'high', title:`Reto iniciado: ${definition.nombre}`, body:`Elegiste ${clubName(selected)}. Quedan ${matchesTotal} fechas en tu campo contra ${opponents.map(club => club.name).join(', ')}. Campo ${Number(initial.campoPropio || 0)}/100, mantenimiento bloqueado, mercado/staff bloqueados y ${maradona?.name || fallbackName} vuelve para los últimos ${lastMatches} partidos. Objetivo: ${String(definition?.objetivo?.descripcion || '').toLowerCase()}`, id:`challenge-${definition.id}-${selected}-${Date.now()}` });
+  pushGameMessage({ type:'reto', priority:'high', title:`Reto iniciado: ${definition.nombre}`, body:`Elegiste ${clubName(selected)}. Quedan ${matchesTotal} fechas en tu campo contra ${opponents.map(club => club.name).join(', ')}. En cada jornada también se simulan los otros partidos de la Primera División. Campo ${Number(initial.campoPropio || 0)}/100, mantenimiento bloqueado, mercado/staff bloqueados y ${maradona?.name || fallbackName} vuelve para los últimos ${lastMatches} partidos. Objetivo: ${String(definition?.objetivo?.descripcion || '').toLowerCase()}`, id:`challenge-${definition.id}-${selected}-${Date.now()}` });
   return true;
 }
 function applyChallengePreset(challengeId, selectedClubId){
@@ -380,38 +496,73 @@ function managerChallengeAfterOwnMatch(match){
   const maradonaId = Number(challenge.maradonaId || 0);
   if(maradonaId && (match?.injuries || []).some(injury => Number(injury.playerId) === maradonaId)){
     challenge.maradonaReinjured = true;
-    pushGameMessage({ type:'reto', priority:'high', title:'Reto en peligro', body:`${challenge.maradonaName || 'Maradona'} volvió a lesionarse. La condición secundaria del reto queda fallida.`, id:`challenge-maradona-injury-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
+    pushGameMessage({ type:'reto', priority:'normal', title:'Maradona volvió a lesionarse', body:`${challenge.maradonaName || 'Maradona'} sufrió una nueva lesión, pero el resultado del reto se define únicamente por la tabla final.`, id:`challenge-maradona-injury-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
   }
+  const pendingChallengeMatches = (game?.fixtures || []).flatMap(round => round.matches || []).filter(item => String(item?.challengeId || '') === 'campo_destruido' && !item.played);
+  if(Number(challenge.matchesPlayed || 0) >= Number(challenge.matchesTotal || 5) && pendingChallengeMatches.length === 0){
+    finalizeActiveManagerChallenge();
+  }
+}
+function grantManagerChallengeSkillPoints(points=0, context={}){
+  const amount = Math.max(0, Math.round(Number(points || 0)));
+  if(!amount) return 0;
+  const state = typeof ensureSpecialState === 'function' ? ensureSpecialState() : game?.special;
+  if(!state) return 0;
+  state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + amount));
+  state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
+  state.puntos_log.push({ actionId:'completar_reto_campo_destruido_primero', points:amount, date:game?.currentDate || '', season:game?.seasonNumber || 1, ...context });
+  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'challenge_campo_destruido_reward' });
+  return amount;
 }
 function finalizeActiveManagerChallenge(record=null){
   const challenge = activeManagerChallenge();
   if(!challenge || challenge.completed) return null;
   if(String(challenge.id || '') !== 'campo_destruido') return null;
-  const champion = Boolean(record?.title || record?.position === 1);
-  const maradonaOk = !challenge.maradonaReinjured;
+  const division = clubDivision(game.selectedClubId);
+  const table = sortedStandings(division.id);
+  const positionIndex = table.findIndex(row => Number(row.clubId) === Number(game.selectedClubId));
+  const ownRow = positionIndex >= 0 ? table[positionIndex] : (game.standings?.[game.selectedClubId] || {});
+  const position = positionIndex >= 0 ? positionIndex + 1 : Number(record?.position || 0) || null;
+  const champion = position === 1;
+  const definition = campoDestruidoChallengeDefinition();
+  const configuredReward = Math.max(0, Math.round(Number(definition?.recompensas?.puntosHabilidadPrimerPuesto || 10000)));
+  let awarded = 0;
+  if(champion && !challenge.skillPointsAwarded){
+    awarded = grantManagerChallengeSkillPoints(configuredReward, { challengeId:challenge.id, clubId:game.selectedClubId, position, pts:Number(ownRow.pts || 0), dg:Number(ownRow.dg || 0) });
+    challenge.skillPointsAwarded = awarded;
+  }
   challenge.completed = true;
   challenge.active = false;
   challenge.completedAt = { season:game?.seasonNumber || 1, date:game?.currentDate || '', turn:currentTurnIndex() };
-  challenge.success = Boolean(champion && maradonaOk);
+  challenge.success = champion;
   challenge.result = {
     champion,
-    maradonaOk,
-    position:record?.position || null,
-    pts:record?.pts || 0
+    position,
+    pts:Number(ownRow.pts || 0),
+    dg:Number(ownRow.dg || 0),
+    gf:Number(ownRow.gf || 0),
+    gc:Number(ownRow.gc || 0),
+    skillPointsAwarded:awarded
   };
+  const dgLabel = Number(ownRow.dg || 0) > 0 ? `+${Number(ownRow.dg || 0)}` : String(Number(ownRow.dg || 0));
+  challenge.closeNotice = champion
+    ? `La directiva te da las gracias: terminaste 1° con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}. Recibiste ${formatPlainNumber(awarded || configuredReward)} puntos de habilidad.`
+    : `La directiva decidió despedirte: terminaste ${position || 'fuera del primer puesto'} con ${Number(ownRow.pts || 0)} puntos y diferencia ${dgLabel}.`;
   pushGameMessage({
     type:'reto',
-    priority:challenge.success ? 'high' : 'normal',
-    title:challenge.success ? `Reto completado: ${challenge.nombre || 'Campo destruido'}` : `Reto fallido: ${challenge.nombre || 'Campo destruido'}`,
-    body:challenge.success
-      ? `${clubName(game.selectedClubId)} salió campeón y ${challenge.maradonaName || 'Maradona'} no volvió a lesionarse.`
-      : `Resultado: ${champion ? 'campeón' : `posición ${record?.position || '—'}`}. Maradona ${maradonaOk ? 'no se lesionó' : 'se volvió a lesionar'}.`,
+    priority:champion ? 'high' : 'normal',
+    title:champion ? `Reto completado: ${challenge.nombre || 'Campo destruido'}` : `Reto finalizado: ${challenge.nombre || 'Campo destruido'}`,
+    body:challenge.closeNotice,
     id:`challenge-result-campo-destruido-${game.seasonNumber || 1}-${game.selectedClubId}`
   });
-  if(typeof closeCompletedChallengeSlot === 'function') setTimeout(() => closeCompletedChallengeSlot(challenge), 600);
+  showNotice(challenge.closeNotice, true);
+  if(typeof saveLocal === 'function') saveLocal(true);
+  if(typeof closeCompletedChallengeSlot === 'function') setTimeout(() => closeCompletedChallengeSlot(challenge), 1400);
   return challenge;
 }
 function managerChallengeHomeMarkup(){
+  if(typeof ensureCampoDestruidoChallengeFullCalendar === 'function') ensureCampoDestruidoChallengeFullCalendar();
   const challenge = game?.challenge;
   if(!challenge || String(challenge.id || '') !== 'campo_destruido') return '';
   const fieldScore = typeof fieldScoreForClub === 'function' ? fieldScoreForClub(game.selectedClubId) : Number(game?.stadium?.fields?.[game.selectedClubId] || 0);
@@ -422,6 +573,8 @@ function managerChallengeHomeMarkup(){
   const table = sortedStandings(clubDivision(game.selectedClubId).id);
   const pos = table.findIndex(row => Number(row.clubId) === Number(game.selectedClubId)) + 1;
   const pct = clamp((Number(challenge.matchesPlayed || 0) / Math.max(1, Number(challenge.matchesTotal || 5))) * 100, 0, 100);
+  const currentRow = table.find(row => Number(row.clubId) === Number(game.selectedClubId)) || {};
+  const remainingLeagueMatches = (game?.fixtures || []).flatMap(round => round.matches || []).filter(item => String(item?.challengeId || '') === 'campo_destruido' && !item.played).length;
   return `<div class="card manager-challenge-card" style="margin-top:14px">
     <div class="row"><div><p class="label">Reto predeterminado</p><h3>${escapeHtml(challenge.nombre || 'Campo destruido')}</h3></div><span class="pill danger">Dificultad ${escapeHtml(challenge.difficulty || 'Alta')}</span></div>
     <p class="tagline">Objetivo: <strong>${escapeHtml(challenge.objective || 'Completar las condiciones del reto.')}</strong></p>
@@ -429,9 +582,10 @@ function managerChallengeHomeMarkup(){
       <div><p class="label">Campo</p><strong>${fieldScore}/100</strong></div>
       <div><p class="label">Posición</p><strong>${pos || '—'}°</strong></div>
       <div><p class="label">Maradona</p><strong>${escapeHtml(maradonaStatus)}</strong></div>
-      <div><p class="label">Partidos</p><strong>${Number(challenge.matchesPlayed || 0)}/${Number(challenge.matchesTotal || 5)}</strong></div>
+      <div><p class="label">Partidos propios</p><strong>${Number(challenge.matchesPlayed || 0)}/${Number(challenge.matchesTotal || 5)}</strong></div>
     </div>
     <div class="project-progress" style="margin-top:10px"><span style="width:${pct}%"></span></div>
+    <p class="muted small">Tabla actual: ${Number(currentRow.pts || 0)} puntos · DG ${Number(currentRow.dg || 0) > 0 ? '+' : ''}${Number(currentRow.dg || 0)}. Quedan ${remainingLeagueMatches} partidos de liga por resolver. Premio: 10.000 puntos de habilidad si terminás primero.</p>
     <p class="muted small">Bloqueos activos: mantenimiento de campo, fichajes, empleados y resultado directo.</p>
   </div>`;
 }

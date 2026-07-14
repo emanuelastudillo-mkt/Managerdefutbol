@@ -1,8 +1,8 @@
 {
-  "version": "V7.28",
+  "version": "V7.41",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.28: usos por rareza (común 1, rara 2, épica 3 y legendaria 5).",
+  "caracteristicas_version": "V7.41: cartas de prevención de lesiones durante partidos (2%, 5%, 8% y 15%), acumulables.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -87,6 +87,10 @@
       "consultar_juveniles": {
         "puntos": 100,
         "visible_para_manager": false
+      },
+      "completar_reto_campo_destruido_primero": {
+        "puntos": 10000,
+        "visible_para_manager": true
       }
     }
   },
@@ -215,6 +219,13 @@
       "tope_porcentaje": null,
       "aplica_a": "dias_reducidos_en_tratamientos_medicos_exitosos",
       "descripcion": "Resta días adicionales a una lesión cuando el tratamiento del kinesiólogo resulta exitoso."
+    },
+    "prevencion_lesiones_partido": {
+      "se_apila": true,
+      "metodo": "suma_directa_con_tope",
+      "tope_porcentaje": 95,
+      "aplica_a": "probabilidad_de_lesion_durante_partidos_del_club_del_manager",
+      "descripcion": "Reduce porcentualmente la probabilidad final de que los jugadores del manager se lesionen durante un partido."
     }
   },
   "bonus_por_rareza": {
@@ -283,6 +294,12 @@
       "rara": 2,
       "epica": 3,
       "legendaria": 5
+    },
+    "prevencion_lesiones_partido": {
+      "comun": 2,
+      "rara": 5,
+      "epica": 8,
+      "legendaria": 15
     }
   },
   "cartas_base": [
@@ -837,6 +854,46 @@
       "unidad": "dias",
       "activable": true,
       "texto": "Resta 5 días adicionales a una lesión cuando el tratamiento es exitoso."
+    },
+    {
+      "id_base": "PREVENCION_LESION_COMUN_001",
+      "nombre": "Vendaje preventivo",
+      "rareza": "comun",
+      "tipo_bonus": "prevencion_lesiones_partido",
+      "valor_bonus": 2,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce un 2% la probabilidad de lesiones de tus jugadores durante los partidos."
+    },
+    {
+      "id_base": "PREVENCION_LESION_RARA_001",
+      "nombre": "Control de cargas",
+      "rareza": "rara",
+      "tipo_bonus": "prevencion_lesiones_partido",
+      "valor_bonus": 5,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce un 5% la probabilidad de lesiones de tus jugadores durante los partidos."
+    },
+    {
+      "id_base": "PREVENCION_LESION_EPICA_001",
+      "nombre": "Laboratorio de prevención",
+      "rareza": "epica",
+      "tipo_bonus": "prevencion_lesiones_partido",
+      "valor_bonus": 8,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce un 8% la probabilidad de lesiones de tus jugadores durante los partidos."
+    },
+    {
+      "id_base": "PREVENCION_LESION_LEGENDARIA_001",
+      "nombre": "Plantel blindado",
+      "rareza": "legendaria",
+      "tipo_bonus": "prevencion_lesiones_partido",
+      "valor_bonus": 15,
+      "unidad": "porcentaje",
+      "activable": true,
+      "texto": "Reduce un 15% la probabilidad de lesiones de tus jugadores durante los partidos."
     }
   ],
   "estructura_datos_manager": {

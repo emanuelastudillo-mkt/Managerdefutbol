@@ -495,8 +495,8 @@ async function closeCompletedChallengeSlot(challenge=null){
   const slot = normalizeSaveSlotId(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAMPO_DESTRUIDO);
   if(slot === SAVE_SLOT_CAMPO_DESTRUIDO) await deleteLocalSaveSlot(SAVE_SLOT_CAMPO_DESTRUIDO).catch(()=>{});
   setCurrentSaveSlot(SAVE_SLOT_CAREER);
-  const ok = challenge?.success ? 'Reto ganado. El slot del reto se cerró.' : 'Reto perdido. El slot del reto se cerró.';
-  await goToSaveSlotsMenu({ reloadSeed:true, notice:`${ok} Podés volver a Mi Carrera o iniciar otro reto.` });
+  const resultText = String(challenge?.closeNotice || (challenge?.success ? 'La directiva te dio las gracias por ganar el reto.' : 'La directiva finalizó tu contrato al terminar el reto.'));
+  await goToSaveSlotsMenu({ reloadSeed:true, notice:`${resultText} El desafío terminó y el slot fue cerrado.` });
 }
 
 async function loadSponsorsDatabase(){

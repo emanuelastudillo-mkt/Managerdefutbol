@@ -1,4 +1,37 @@
-# Fútbol Manager MVP - V7.29
+# Fútbol Manager MVP - V7.30
+
+## V7.30 - Reacondicionamiento de tarjetas de Desafíos Online
+
+### Diseño orientado a 1920 × 1080
+
+Se reorganizaron las tarjetas de **Partidos disputados** para impedir que los datos de ambos equipos se compriman, se superpongan o corten las palabras.
+
+- En resoluciones de escritorio amplias se muestran como máximo dos partidos por fila.
+- Por debajo de 1500 píxeles se utiliza una sola tarjeta por fila para conservar el ancho interno.
+- Cada enfrentamiento mantiene local a la izquierda, marcador en el centro y visitante a la derecha.
+- Estadio, capacidad e hinchas utilizan bloques internos estables, sin cortes letra por letra.
+- Los nombres largos de clubes y estadios se recortan visualmente con puntos suspensivos, conservando el texto completo como ayuda emergente.
+- Las pestañas **Disponibles** y **Mis desafíos** usan un ancho mínimo mayor para evitar tarjetas demasiado estrechas.
+- En pantallas pequeñas el enfrentamiento pasa a disposición vertical.
+
+No se modificaron el simulador, los resultados, el ranking, la base online ni el Worker.
+
+### Archivos principales modificados en V7.30
+
+- `README.md`
+- `index.html`
+- `style.css`
+- `config.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/game/18-challenges-online.js`
+
+### Compatibilidad de partidas
+
+**V7.30 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
+
+---
+
 
 ## V7.29 - Pausa de desafíos y Ranking Online para usuarios finales
 

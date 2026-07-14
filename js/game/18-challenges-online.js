@@ -87,7 +87,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.29') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.30') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -198,7 +198,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.29'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V7.30'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -255,14 +255,22 @@ function challengeClubSummary(snapshot={}, options={}){
   const club = snapshot.club || {};
   const team = snapshot.team || {};
   const compact = options.compact === true;
+  const facts = compact
+    ? `<div class="challenge-compact-facts">
+        <span><b>Estadio</b><em title="${escapeHtml(challengeVenueName(snapshot))}">${escapeHtml(challengeVenueName(snapshot))}</em></span>
+        <span><b>Capacidad</b><em>${formatPlainNumber(Number(club.stadiumCapacity || 0))}</em></span>
+        <span><b>Hinchas</b><em>${formatPlainNumber(Number(club.fans || 0))}</em></span>
+      </div>`
+    : `<div class="challenge-club-facts">
+        <span><b>Estadio</b>${escapeHtml(challengeVenueName(snapshot))}</span>
+        <span><b>Capacidad</b>${formatPlainNumber(Number(club.stadiumCapacity || 0))}</span>
+        <span><b>Hinchas</b>${formatPlainNumber(Number(club.fans || 0))}</span>
+        <span><b>Valor</b>${formatMoney(Number(team.matchSquadValue || 0))}</span>
+        <span><b>Sueldos</b>${formatMoney(Number(team.matchSquadSalaryTotal || 0))}</span>
+      </div>`;
   return `<div class="challenge-team-summary ${compact ? 'compact' : ''}">
-    <div class="challenge-club-head">${challengeCrestMarkup(snapshot)}<div><strong>${escapeHtml(club.name || 'Club')}</strong><small>${escapeHtml(snapshot?.tactic?.formation || '—')} · Media ${Number(team.rating || 0).toFixed(1)}</small></div></div>
-    <div class="challenge-club-facts">
-      <span><b>Estadio</b>${escapeHtml(challengeVenueName(snapshot))}</span>
-      <span><b>Capacidad</b>${formatPlainNumber(Number(club.stadiumCapacity || 0))}</span>
-      <span><b>Hinchas</b>${formatPlainNumber(Number(club.fans || 0))}</span>
-      ${compact ? '' : `<span><b>Valor</b>${formatMoney(Number(team.matchSquadValue || 0))}</span><span><b>Sueldos</b>${formatMoney(Number(team.matchSquadSalaryTotal || 0))}</span>`}
-    </div>
+    <div class="challenge-club-head">${challengeCrestMarkup(snapshot)}<div><strong title="${escapeHtml(club.name || 'Club')}">${escapeHtml(club.name || 'Club')}</strong><small>${escapeHtml(snapshot?.tactic?.formation || '—')} · Media ${Number(team.rating || 0).toFixed(1)}</small></div></div>
+    ${facts}
   </div>`;
 }
 function challengeVenueMarkup(homeSnapshot={}){
@@ -285,7 +293,7 @@ function challengeMineCard(row){
   const result = row.match || null;
   return `<article class="card challenge-card">
     <div class="row"><div><p class="label">Tu desafío</p><h3>${escapeHtml(home?.club?.name || row.creatorClubName || 'Club')}</h3></div><span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span></div>
-    ${result ? `<div class="challenge-history-matchup"><div>${challengeClubSummary(home,{compact:true})}</div><div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div><div>${challengeClubSummary(away,{compact:true})}</div></div>${challengeVenueMarkup(home)}` : challengeClubSummary(home)}
+    ${result ? `<div class="challenge-history-matchup"><div class="challenge-match-team challenge-match-team-home"><span class="challenge-side-label">Local</span>${challengeClubSummary(home,{compact:true})}</div><div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div><div class="challenge-match-team challenge-match-team-away"><span class="challenge-side-label">Visitante</span>${challengeClubSummary(away,{compact:true})}</div></div>${challengeVenueMarkup(home)}` : challengeClubSummary(home)}
     <p class="small muted">${row.opponentUsername ? `Aceptado por ${escapeHtml(row.opponentUsername)}` : 'Esperando rival'} · ${escapeHtml(challengeDateLabel(row.createdAt))}</p>
     <div class="row challenge-actions">
       ${row.status === 'open' ? `<button class="ghost danger" data-challenge-cancel="${escapeHtml(row.id)}">Cancelar</button>` : ''}
@@ -300,9 +308,9 @@ function challengeHistoryCard(row){
   return `<article class="card challenge-card challenge-history-card" data-challenge-view="${escapeHtml(row.id)}">
     <div class="row challenge-card-top"><p class="label">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p><span class="small muted">${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span></div>
     <div class="challenge-history-matchup">
-      <div>${challengeClubSummary(home,{compact:true})}</div>
+      <div class="challenge-match-team challenge-match-team-home"><span class="challenge-side-label">Local</span>${challengeClubSummary(home,{compact:true})}</div>
       <div class="challenge-score-core"><small>Final</small><b>${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}</b></div>
-      <div>${challengeClubSummary(away,{compact:true})}</div>
+      <div class="challenge-match-team challenge-match-team-away"><span class="challenge-side-label">Visitante</span>${challengeClubSummary(away,{compact:true})}</div>
     </div>
     ${challengeVenueMarkup(home)}
     <p class="small muted">Asistencia ${formatPlainNumber(Number(result.attendance || 0))} · Valor usado ${formatMoney(Number(result.homeUsedPlayersValue || 0))} vs ${formatMoney(Number(result.awayUsedPlayersValue || 0))}</p>
@@ -362,10 +370,10 @@ function challengeListMarkup(){
     const label = challengeViewTab === 'available' ? 'desafíos disponibles' : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? 'puntajes de ranking' : 'partidos disputados';
     return `<div class="card empty"><h3>Sin registros</h3><p>No hay ${label} para mostrar.</p></div>`;
   }
-  if(challengeViewTab === 'available') return `<div class="challenge-grid">${rows.map(challengeOpenCard).join('')}</div>`;
-  if(challengeViewTab === 'mine') return `<div class="challenge-grid">${rows.map(challengeMineCard).join('')}</div>`;
+  if(challengeViewTab === 'available') return `<div class="challenge-grid challenge-available-grid">${rows.map(challengeOpenCard).join('')}</div>`;
+  if(challengeViewTab === 'mine') return `<div class="challenge-grid challenge-mine-grid">${rows.map(challengeMineCard).join('')}</div>`;
   if(challengeViewTab === 'ranking') return challengeRankingMarkup(rows);
-  return `<div class="challenge-grid">${rows.map(challengeHistoryCard).join('')}</div>`;
+  return `<div class="challenge-grid challenge-history-grid">${rows.map(challengeHistoryCard).join('')}</div>`;
 }
 function renderOnlineChallenges(){
   clearTimeout(challengePollTimer);

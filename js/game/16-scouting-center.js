@@ -113,9 +113,9 @@ function scoutingCapacities(state=null){
     playerCapacity:SCOUTING_BASE_PLAYER_SLOTS + offices * SCOUTING_PLAYERS_PER_OFFICE
   };
 }
-function scoutingChiefMaxOffices(){
-  const state = ensureScoutingCenterState();
-  const type = scoutingChiefType(state.chief?.type);
+function scoutingChiefMaxOffices(state=null){
+  const clean = state || ensureScoutingCenterState();
+  const type = scoutingChiefType(clean.chief?.type);
   return type ? type.maxOffices : 0;
 }
 function scoutingIsOwnPlayer(player){
@@ -392,13 +392,14 @@ function hireScoutingChief(type){
 function rentScoutingOffice(){
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const state = ensureScoutingCenterState();
-  const max = scoutingChiefMaxOffices();
+  const max = scoutingChiefMaxOffices(state);
   if(state.offices >= max){ showNotice(max > 0 ? 'Tu jefe de ojeadores no puede controlar más oficinas.' : 'Contratá un jefe de ojeadores antes de alquilar oficinas.'); return; }
   state.offices += 1;
   state.officeLastChargeDate = game.currentDate || currentCalendarDate();
   recordBudgetChange(-SCOUTING_OFFICE_MONTHLY_COST, 'Alquiler mensual de oficina de ojeo', { type:'scouting_office_rent', offices:state.offices });
   saveLocal(true);
   renderScoutingCenter();
+  showNotice(`Oficina de ojeo alquilada. Capacidad actual: ${scoutingCapacities(state).playerCapacity} seguimiento(s) y ${scoutingCapacities(state).scoutCapacity} ojeador(es).`);
 }
 function cancelScoutingOffice(){
   const state = ensureScoutingCenterState();
@@ -766,7 +767,7 @@ function renderScoutingCenter(){
   if(!SCOUTING_CENTER_ENABLED){ view.innerHTML = '<div class="card"><h2>Centro de Ojeo</h2><p class="muted">El Centro de Ojeo está desactivado en config.js.</p></div>'; return; }
   const state = ensureScoutingCenterState();
   const caps = scoutingCapacities(state);
-  const maxOffices = scoutingChiefMaxOffices();
+  const maxOffices = scoutingChiefMaxOffices(state);
   const listed = state.listedPlayerIds.map(playerById).filter(Boolean);
   const listedTeams = (state.listedTeamIds || []).map(id => seed?.clubs?.find(c => Number(c.id) === Number(id))).filter(Boolean);
   const usedSlots = listed.length + listedTeams.length;
@@ -810,8 +811,8 @@ function renderScoutingCenter(){
               <div><p class="label">Infraestructura</p><h3>Oficinas</h3></div>
               <span class="pill">${state.offices}/${maxOffices}</span>
             </div>
-            <p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados.</p>
-            <div class="scouting-action-grid"><button class="primary" data-rent-scouting-office ${state.offices >= maxOffices ? 'disabled' : ''}>Alquilar oficina</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button></div>
+            <p class="muted small">Base: ${SCOUTING_BASE_SCOUTS} ojeadores y ${SCOUTING_BASE_PLAYER_SLOTS} jugadores listados. Cada oficina agrega ${SCOUTING_SCOUTS_PER_OFFICE} ojeadores y ${SCOUTING_PLAYERS_PER_OFFICE} jugadores listados.${maxOffices <= 0 ? ' Contratá primero un jefe de ojeadores para habilitar el alquiler.' : ''}</p>
+            <div class="scouting-action-grid"><button class="primary" data-rent-scouting-office ${maxOffices > 0 && state.offices >= maxOffices ? 'disabled' : ''} ${maxOffices <= 0 ? 'title="Requiere un jefe de ojeadores"' : ''}>${maxOffices <= 0 ? 'Requiere jefe' : 'Alquilar oficina'}</button><button class="ghost" data-cancel-scouting-office ${state.offices <= 0 ? 'disabled' : ''}>Cancelar oficina</button></div>
           </div>
           <div class="card scouting-office-card scouting-control-card">
             <div class="scouting-card-head">

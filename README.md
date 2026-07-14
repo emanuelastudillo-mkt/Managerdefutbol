@@ -1,5 +1,42 @@
-# Fútbol Manager MVP - V7.37
+# Fútbol Manager MVP - V7.38
 
+
+## V7.38 - Corrección del alquiler de oficinas de ojeo
+
+### Error corregido
+
+- El botón **Alquilar oficina** descontaba correctamente el primer mes, pero la cantidad de oficinas permanecía en cero.
+- La causa era una segunda normalización del estado del Centro de Ojeo al consultar el límite del jefe de ojeadores.
+- Esa normalización reemplazaba el objeto guardado y el incremento se aplicaba sobre una referencia anterior que ya no pertenecía a la partida.
+- La consulta del límite ahora reutiliza el mismo estado que se está modificando, por lo que alquiler, fecha de cobro, capacidad y guardado se actualizan en una única operación.
+
+### Comportamiento verificado
+
+- Un jefe Regular puede alquilar 1 oficina.
+- Un jefe Bueno puede alquilar hasta 2 oficinas.
+- Un jefe Elite puede alquilar hasta 5 oficinas.
+- Cada alquiler cobra una sola vez el costo inicial de `$1.000.000`, aumenta la capacidad en 3 ojeadores y 10 seguimientos, guarda la fecha de inicio y persiste al recargar.
+- Al alcanzar el máximo del jefe, no se cobra dinero ni se agrega otra oficina.
+- Sin jefe de ojeadores, el control muestra **Requiere jefe** y explica el requisito; al pulsarlo informa que primero debe contratarse uno.
+- Después de alquilar se muestra una confirmación con la capacidad resultante.
+- Cancelar una oficina conserva las validaciones existentes para impedir que queden ojeadores o seguimientos por encima del nuevo cupo.
+
+### Archivos principales modificados en V7.38
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/game/16-scouting-center.js`
+- `js/game/18-challenges-online.js`
+- `README.md`
+
+**V7.38 no rompe partidas anteriores.** No cambia la estructura de guardado. Las oficinas ya registradas continúan funcionando y las partidas donde el cobro fallido no llegó a guardar una oficina simplemente podrán alquilarla nuevamente.
+
+---
+
+## Historial anterior
 
 ## V7.37 - Auditoría táctica bot y cobertura del top 5
 
@@ -50,9 +87,6 @@ El bloque `equilibrioBots.tacticaContraManager` permite ajustar:
 
 **V7.37 no rompe partidas anteriores.** No cambia la estructura de guardado ni modifica planteles, resultados o tácticas del manager. La nueva selección se calcula únicamente al preparar los próximos partidos de un bot contra el manager.
 
----
-
-## Historial anterior
 
 ## V7.36 - Respuestas por cláusula y nombres por nacionalidad
 

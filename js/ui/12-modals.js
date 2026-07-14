@@ -1196,19 +1196,22 @@ function openFounderModeModal(){
     return;
   }
   if(game && !game.gameOver?.active){
-    showNotice('El modo fundador sólo se puede iniciar sin una partida activa.');
+    showNotice('El modo fundador sólo se puede iniciar al crear una carrera o cuando estás sin club.');
     return;
   }
+  const continuingCareer = Boolean(game?.gameOver?.active);
+  const currentSeason = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
   const country = availableCountries()[0] || 'Argentina';
   const body = `
     <div class="new-game-modal founder-modal">
-      <p class="label">Modo Fundador</p>
+      <p class="label">${continuingCareer ? 'Continuar carrera · Modo Fundador' : 'Modo Fundador'}</p>
       <h2>Fundar tu propio club</h2>
-      <p class="muted">Vas a reemplazar a un club bot de bajo prestigio en la división más baja del país elegido. Tu club empieza sin jugadores, sin dinero, con estadio de capacidad 0, prestigio ${FOUNDER_CLUB_REPUTATION} y ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas.</p>
-      <div class="card blocker founder-warning"><strong>Modo no recomendado para tu primera partida.</strong><p class="muted small">No tendrás objetivos de directiva ni despidos, pero deberás contratar jugadores libres, conseguir ingresos y construir el estadio desde cero.</p></div>
+      <p class="muted">Vas a reemplazar a un club bot de bajo prestigio en la división más baja del país elegido. Tu club empieza sin jugadores, sin dinero, con estadio de capacidad 0, campo en ${FOUNDER_CLUB_INITIAL_FIELD}/100, prestigio ${FOUNDER_CLUB_REPUTATION} y ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas.</p>
+      <div class="card blocker founder-warning"><strong>Dificultad inicial muy alta.</strong><p class="muted small">Debés construir un plantel completo desde agentes libres, generar ingresos sin presupuesto inicial, ampliar un estadio sin capacidad y competir con una base social mínima. No tendrás objetivos de directiva ni despidos, pero el crecimiento deportivo y económico será considerablemente más difícil.</p></div>
+      ${continuingCareer ? `<div class="card blocker"><strong>La temporada ${currentSeason} terminará inmediatamente.</strong><p class="muted small">Todos los partidos pendientes se resolverán como encuentros bot. No recibirás títulos, premios ni méritos del club al que renunciaste. El club fundado debutará al comienzo de la temporada ${currentSeason + 1}, conservando prestigio, experiencia, historial y cartas del manager.</p></div>` : ''}
       <div class="new-game-form-grid">
         <label for="founderManagerName">Nombre del manager</label>
-        <input id="founderManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}">
+        <input id="founderManagerName" maxlength="40" placeholder="Ej: Emanuel" value="${escapeHtml(storedManagerName())}" ${continuingCareer ? 'disabled' : ''}>
         <label for="founderClubName">Nombre del club</label>
         <input id="founderClubName" maxlength="42" placeholder="Ej: Club Atlético Los Fundadores">
         <label for="founderCity">Ciudad</label>
@@ -1233,7 +1236,7 @@ function openFounderModeModal(){
           <div><span>Directiva</span><strong>Sin objetivos</strong></div>
         </div>
       </div>
-      <div class="row" style="margin-top:14px"><button id="btnCreateFounderClub" class="primary">Fundar club</button></div>
+      <div class="row" style="margin-top:14px"><button id="btnCreateFounderClub" class="primary">${continuingCareer ? `Terminar temporada ${currentSeason} y fundar club` : 'Fundar club'}</button></div>
     </div>`;
   openModal(body);
   $('founderManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
@@ -1394,6 +1397,7 @@ function openNewGameModal(force=false, options={}){
             <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
           </div>
           <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
+          ${canChooseJob && typeof founderModeEnabled === 'function' && founderModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo fundador · dificultad extrema</p><strong>Fundar tu propio club</strong><p class="muted small">Creá un club en la división más baja. Empezás con 0 jugadores, $0, estadio sin capacidad, campo deteriorado y sólo ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas. Deberás formar el plantel, conseguir ingresos y construir toda la infraestructura desde cero.${game?.gameOver?.active ? ` La temporada ${game.seasonNumber || 1} se cerrará y el club debutará en la siguiente.` : ''}</p></div><button id="btnOpenFounderMode" class="ghost">Fundar club</button></div></div>` : ''}
           ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
           ${canChooseJob && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Retos predeterminados</p><strong>${escapeHtml(typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition()?.nombre || 'Campo destruido' : 'Campo destruido')}</strong><p class="muted small">${escapeHtml(typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition()?.textos?.descripcionTarjeta || '' : '')}</p></div><button id="btnOpenCampoDestruidoChallenge" class="ghost">Elegir reto</button></div></div>` : ''}
         </div>
@@ -1455,6 +1459,7 @@ function openNewGameModal(force=false, options={}){
       saveSlotId:options.saveSlotId || SAVE_SLOT_CAREER
     });
   });
+  $('btnOpenFounderMode')?.addEventListener('click', () => openFounderModeModal());
   $('btnOpenBankruptcyMode')?.addEventListener('click', () => openBankruptcyModeModal({ saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER }));
   $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
 }

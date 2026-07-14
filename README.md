@@ -1,4 +1,51 @@
-# Fútbol Manager MVP - V7.34
+# Fútbol Manager MVP - V7.35
+
+## V7.35 - Fundar club al crear manager y continuidad después de renunciar
+
+El modo **Fundar club** queda disponible tanto al iniciar una partida como durante una carrera en la que el manager quedó sin contrato. La fundación desde una carrera existente ya no reinicia el historial del manager.
+
+### Fundar club desde “Crear manager”
+
+- La pantalla inicial **Crear manager** incorpora una tarjeta propia de **Modo fundador · dificultad extrema**, ubicada junto a los demás modos y retos.
+- El botón **Fundar club** abre el formulario de nombre, ciudad, país, color y escudo.
+- La descripción informa las dificultades iniciales: plantel de 0 jugadores, presupuesto de $0, estadio con capacidad 0, campo deteriorado, sólo 500 hinchas y necesidad de construir desde cero el plantel, los ingresos y la infraestructura.
+- El modo conserva sus reglas originales: ingreso en la división más baja, sin objetivos de directiva y sin despidos, pero con crecimiento deportivo y económico considerablemente más exigente.
+
+### Fundar club después de una renuncia
+
+- Cuando el manager renuncia y luego elige **Fundar club**, la temporada actual termina obligatoriamente antes de crear el nuevo equipo.
+- Los encuentros pendientes se resuelven mediante una simulación bot resumida para cerrar rápidamente tablas, playoffs, ascensos, descensos, campeones y Mundial de Clubes sin bloquear el navegador.
+- No se acreditan al manager títulos, premios, objetivos ni méritos posteriores a la renuncia por los resultados del club abandonado.
+- Al terminar el año deportivo, se aplican los movimientos de divisiones y el club fundado reemplaza a un equipo que realmente estará en la división más baja durante la temporada siguiente.
+- La nueva temporada comienza de inmediato con el club fundado.
+- Se conservan prestigio, experiencia, historial de carrera, títulos previos y cartas del manager. Las cartas que estaban activas vuelven a la reserva según la regla existente para un cambio de club.
+- El mismo flujo seguro se utiliza si el manager quedó sin club por despido, evitando una vía alternativa que reiniciara la carrera.
+- Si la temporada ya estaba finalizada, no se vuelve a simular: se inicia directamente la temporada siguiente.
+
+### Corrección de continuidad
+
+Antes de V7.35, `createFounderGame()` ejecutaba `newGame()` incluso cuando se accedía al modo fundador desde una carrera sin club. Esto borraba la continuidad deportiva y comenzaba otra partida desde la temporada 1. Ahora existen dos recorridos separados:
+
+- **Partida inicial:** crea una carrera fundadora nueva en la temporada 1.
+- **Carrera sin club:** finaliza la temporada vigente, conserva el perfil del manager e inicia la temporada siguiente con el club nuevo.
+
+### Archivos principales modificados en V7.35
+
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/12-modals.js`
+- `README.md`
+
+**V7.35 no rompe partidas anteriores.** No cambia el esquema de guardado. En una carrera existente, la temporada sólo se cierra automáticamente cuando el manager está sin club y confirma la creación de un club propio; no se alteran partidas que no utilicen esa opción.
+
+---
+
+## Historial anterior
 
 ## V7.34 - Preparación del Mundial, sedes neutrales y mejor once bot
 
@@ -47,10 +94,6 @@ Un día antes de la primera fecha del Mundial de Clubes se ejecuta una preparaci
 - `README.md`
 
 **V7.34 no rompe partidas anteriores.** Conserva el esquema de guardado. Las carreras existentes aplican la preparación sólo si la edición actual del Mundial aún no disputó ningún partido; un torneo ya iniciado no recibe cambios retroactivos.
-
----
-
-## Historial anterior
 
 
 ## V7.33 - Auditoría de código, calendario y rendimiento

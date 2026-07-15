@@ -1,4 +1,33 @@
-# Fútbol Manager MVP - V7.50
+# Fútbol Manager MVP - V7.51
+
+## V7.51 - Despido del jefe de ojeadores
+
+### Nueva acción
+
+- La tarjeta del **Jefe de ojeadores** incorpora el botón **Despedir jefe**.
+- El despido sólo puede confirmarse cuando el Centro de Ojeo tiene **0 oficinas alquiladas** y **0 ojeadores contratados**.
+- Si queda alguna oficina u ojeador, el botón permanece bloqueado y la tarjeta explica qué debe retirarse primero.
+- El mes actual ya pagado no se reintegra.
+- Al despedirlo se elimina el jefe y se detienen sus cargos mensuales futuros. Los informes guardados y la lista de seguimiento no se borran.
+- Sin jefe no pueden alquilarse nuevas oficinas hasta contratar un reemplazo.
+
+### Archivos principales modificados en V7.51
+
+- `js/game/16-scouting-center.js`
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/19-manager-courses.js`
+- `data/habilidades_especiales.json`
+- `index.html`
+- `README.md`
+
+### Compatibilidad
+
+**V7.51 no rompe partidas anteriores.** Los jefes ya contratados continúan activos. El nuevo botón sólo modifica el estado cuando el manager decide despedirlos y cumple las condiciones.
 
 ## V7.50 - Trabajo diferenciado integrado con el kinesiólogo
 

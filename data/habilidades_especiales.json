@@ -1,8 +1,8 @@
 {
-  "version": "V7.50",
+  "version": "V7.51",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.50: conserva la tabla de recompensas de V7.48; actualización de compatibilidad general.",
+  "caracteristicas_version": "V7.51: conserva la tabla de recompensas de V7.48; actualización de compatibilidad general.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

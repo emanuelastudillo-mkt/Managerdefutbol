@@ -391,6 +391,36 @@ function hireScoutingChief(type){
   saveLocal(true);
   renderScoutingCenter();
 }
+function dismissScoutingChief(){
+  const state = ensureScoutingCenterState();
+  if(!state.chief){ showNotice('No hay un jefe de ojeadores contratado.'); return false; }
+  if(state.offices > 0 || state.scouts > 0){
+    const pending = [];
+    if(state.offices > 0) pending.push(`${state.offices} oficina(s)`);
+    if(state.scouts > 0) pending.push(`${state.scouts} ojeador(es)`);
+    showNotice(`Antes de despedir al jefe debés cancelar o despedir: ${pending.join(' y ')}.`);
+    return false;
+  }
+  const type = scoutingChiefType(state.chief.type);
+  const accepted = typeof window !== 'undefined' && typeof window.confirm === 'function'
+    ? window.confirm(`¿Despedir al jefe de ojeadores ${type?.name || state.chief.type}? El mes actual ya fue pagado y no se reintegra.`)
+    : true;
+  if(!accepted) return false;
+  const dismissedName = type?.name || state.chief.type;
+  state.chief = null;
+  state.chiefLastChargeDate = null;
+  if(typeof pushGameMessage === 'function') pushGameMessage({
+    type:'empleados',
+    priority:'normal',
+    title:`Jefe de ojeadores ${dismissedName} despedido`,
+    body:'El Centro de Ojeo quedó sin jefe. El pago del mes actual no se reintegra y no podrán alquilarse oficinas hasta contratar un reemplazo.',
+    id:`scouting-chief-dismissed-${game?.seasonNumber || 1}-${game?.globalTurn || 0}`
+  });
+  saveLocal(true);
+  renderScoutingCenter();
+  showNotice(`Jefe de ojeadores ${dismissedName} despedido. El mes pagado no se reintegra.`);
+  return true;
+}
 function rentScoutingOffice(){
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
   const state = ensureScoutingCenterState();
@@ -749,6 +779,8 @@ function scoutingChiefMarkup(){
         <span class="pill ok">Activo</span>
       </div>
       <p class="muted small">Sueldo mensual ${formatMoney(type?.monthlySalary || 0)} · controla hasta ${type?.maxOffices || 0} oficina(s) · se va al finalizar la temporada.</p>
+      <button class="ghost danger small-btn" data-dismiss-scouting-chief ${state.offices > 0 || state.scouts > 0 ? 'disabled title="Primero cancelá todas las oficinas y despedí a todos los ojeadores"' : ''}>Despedir jefe</button>
+      ${state.offices > 0 || state.scouts > 0 ? `<p class="muted small bad">Para despedirlo necesitás 0 oficinas y 0 ojeadores contratados.</p>` : '<p class="muted small">Puede despedirse ahora. El mes pagado no se reintegra.</p>'}
     </div>`;
   }
   const cards = (SCOUTING_CHIEF_TYPES || []).map(type => {
@@ -766,7 +798,7 @@ function scoutingChiefMarkup(){
       <div class="scouting-card-icon">${scoutingBinocularsIcon('small')}</div>
       <div><p class="label">Empleado contratable</p><h3>Jefe de ojeadores</h3></div>
     </div>
-    <p class="muted small">No puede despedirse. Finaliza contrato al terminar la temporada.</p>
+    <p class="muted small">Puede despedirse cuando no haya oficinas alquiladas ni ojeadores contratados. El mes pagado no se reintegra.</p>
     <div class="scouting-chief-options">${cards}</div>
   </div>`;
 }
@@ -839,6 +871,7 @@ function renderScoutingCenter(){
       </div>
     </div>`;
   document.querySelectorAll('[data-hire-scouting-chief]').forEach(btn => btn.addEventListener('click', () => hireScoutingChief(btn.dataset.hireScoutingChief)));
+  document.querySelector('[data-dismiss-scouting-chief]')?.addEventListener('click', dismissScoutingChief);
   document.querySelector('[data-rent-scouting-office]')?.addEventListener('click', rentScoutingOffice);
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);
   document.querySelector('[data-hire-scouting-scout]')?.addEventListener('click', hireScoutingScout);

@@ -77,7 +77,8 @@ function normalizeScoutingTeamReport(clubId, report={}){
 }
 function normalizeScoutingReport(playerId, report={}){
   const player = typeof playerById === 'function' ? playerById(playerId) : null;
-  const visible = Array.isArray(report.visibleSkills) ? report.visibleSkills.map(String) : [];
+  const storedVisible = Array.isArray(report.visibleSkills) ? report.visibleSkills.map(String) : [];
+  const visible = player ? migrateLegacyScoutingVisibleSkills(player, storedVisible) : storedVisible;
   const allowed = new Set(player ? scoutingSkillKeys(player) : visible);
   const initialKnown = player ? scoutingInitialKnownSkillKeys(player) : [];
   const visibleSkills = Array.from(new Set([...initialKnown, ...visible])).filter(key => !allowed.size || allowed.has(key));
@@ -164,8 +165,100 @@ function scoutingSigningChanceLabel(player){
   const clean = Math.round(Number(value) * 10) / 10;
   return `${clean}%`;
 }
+const SCOUTING_HIDDEN_INTERNAL_SKILL_KEYS = new Set(['agresividad','genetica','factorSorpresa']);
+const SCOUTING_DETAILED_SKILL_ORDER = [
+  'porteria','entradas','marca','posicionamiento','paseCorto','paseLargo','vision','regate','tecnica','remate',
+  'cabezazo','velocidad','aceleracion','fuerza','resistencia','trabajoEquipo','serenidad','disciplina','liderazgo','potencial'
+];
+function scoutingDetailedSkillKeys(player){
+  const skills = player?.skills && typeof player.skills === 'object' && !Array.isArray(player.skills) ? player.skills : {};
+  const available = Object.keys(skills).filter(key => !SCOUTING_HIDDEN_INTERNAL_SKILL_KEYS.has(String(key)));
+  const availableSet = new Set(available);
+  const ordered = SCOUTING_DETAILED_SKILL_ORDER.filter(key => availableSet.has(key));
+  const extras = available.filter(key => !ordered.includes(key)).sort((a,b) => String(a).localeCompare(String(b), 'es'));
+  return [...ordered, ...extras];
+}
+function scoutingDetailedStatMap(player, resolver=null){
+  if(!player) return {};
+  const resolve = typeof resolver === 'function'
+    ? resolver
+    : (typeof baseSkill === 'function' ? baseSkill : ((p,key) => p?.skills?.[key]));
+  return Object.fromEntries(scoutingDetailedSkillKeys(player).map(key => {
+    const raw = key === 'potencial'
+      ? Number(player?.skills?.[key])
+      : Number(resolve(player, key));
+    const fallback = Number(player?.skills?.[key]);
+    const value = Number.isFinite(raw) ? raw : fallback;
+    return [key, Number.isFinite(value) ? clamp(Math.round(value), key === 'factorSorpresa' ? 0 : 1, 99) : '—'];
+  }));
+}
+function scoutingDetailedStatMapWithResolver(player, resolver){
+  return scoutingDetailedStatMap(player, resolver);
+}
 function scoutingVisibleStatMap(player){
-  return typeof scoutingStatMap === 'function' ? scoutingStatMap(player) : (player?.skills || {});
+  return scoutingDetailedStatMap(player);
+}
+function scoutingLegacySummaryComponents(player, key){
+  const keeper = String(player?.position || '').toUpperCase() === 'POR';
+  const map = keeper ? {
+    'Ataque/Salto':['cabezazo','fuerza'],
+    'Defensa':['porteria','posicionamiento'],
+    'Pase':['paseCorto','paseLargo'],
+    'Velocidad/Reflejos':['porteria','serenidad','aceleracion'],
+    'Cabezazo/Mando':['liderazgo','trabajoEquipo','serenidad'],
+    'Tiro/Potencia':['fuerza','paseLargo'],
+    'Resistencia':['resistencia']
+  } : {
+    'Ataque/Salto':['remate','regate','posicionamiento'],
+    'Defensa':['marca','entradas','posicionamiento'],
+    'Pase':['paseCorto','paseLargo','vision'],
+    'Velocidad/Reflejos':['velocidad','aceleracion'],
+    'Cabezazo/Mando':['cabezazo'],
+    'Tiro/Potencia':['remate'],
+    'Resistencia':['resistencia']
+  };
+  return map[String(key)] || [];
+}
+function migrateLegacyScoutingVisibleSkills(player, visible=[]){
+  const migrated = [];
+  (Array.isArray(visible) ? visible : []).forEach(rawKey => {
+    const key = String(rawKey);
+    const components = scoutingLegacySummaryComponents(player, key);
+    if(components.length) migrated.push(...components);
+    else migrated.push(key);
+  });
+  return Array.from(new Set(migrated));
+}
+function scoutingSummarySkillKnown(player, summaryKey, knownSet=null){
+  if(!player) return false;
+  if(!scoutingIsOwnPlayer(player) && !knownSet && typeof scoutingKnownSet !== 'function') return false;
+  const known = knownSet || (typeof scoutingKnownSet === 'function' ? scoutingKnownSet(player.id) : new Set());
+  if(known.has(summaryKey)) return true;
+  const components = scoutingLegacySummaryComponents(player, summaryKey).filter(key => Object.prototype.hasOwnProperty.call(player?.skills || {}, key));
+  return components.length > 0 && components.every(key => known.has(key));
+}
+function scoutingDetailedSkillGroupDefinitions(){
+  return [
+    { key:'goalkeeping', label:'Portería', skills:['porteria'] },
+    { key:'defensive', label:'Defensivas', skills:['entradas','marca','posicionamiento'] },
+    { key:'technical', label:'Técnicas y ofensivas', skills:['paseCorto','paseLargo','vision','regate','tecnica','remate','cabezazo'] },
+    { key:'physical', label:'Físicas', skills:['velocidad','aceleracion','fuerza','resistencia'] },
+    { key:'mental', label:'Mentales y desarrollo', skills:['trabajoEquipo','serenidad','disciplina','liderazgo','potencial'] }
+  ];
+}
+function scoutingDetailedSkillGroups(player){
+  const map = scoutingVisibleStatMap(player);
+  const used = new Set();
+  const groups = scoutingDetailedSkillGroupDefinitions().map(group => {
+    const entries = group.skills.filter(key => Object.prototype.hasOwnProperty.call(map, key)).map(key => {
+      used.add(key);
+      return [key, map[key]];
+    });
+    return { ...group, map:Object.fromEntries(entries) };
+  }).filter(group => Object.keys(group.map).length);
+  const extras = Object.entries(map).filter(([key]) => !used.has(key));
+  if(extras.length) groups.push({ key:'other', label:'Otras habilidades', skills:extras.map(([key]) => key), map:Object.fromEntries(extras) });
+  return groups;
 }
 function scoutingHiddenStatMap(player){
   if(!player || typeof hiddenStats !== 'function') return {};
@@ -643,7 +736,12 @@ function scoutingPlayerSkillRows(player, map){
 }
 function scoutingPlayerKnownSkillRows(player){
   const knownSet = scoutingKnownSet(player.id);
-  const visibleMap = scoutingVisibleStatMap(player);
+  const visibleGroups = scoutingDetailedSkillGroups(player);
+  const visibleSections = visibleGroups.map(group => {
+    const keys = Object.keys(group.map);
+    const knownCount = keys.filter(key => knownSet.has(key)).length;
+    return `<div class="scouting-known-section scouting-skill-group scouting-skill-group-${escapeHtml(group.key)}"><p class="label">${escapeHtml(group.label)} ${knownCount}/${keys.length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, group.map)}</div></div>`;
+  }).join('');
   const hiddenMap = scoutingHiddenStatMap(player);
   const signingMap = scoutingSigningChanceMap(player);
   const hiddenKnown = Object.keys(hiddenMap).filter(key => knownSet.has(key)).length;
@@ -653,7 +751,7 @@ function scoutingPlayerKnownSkillRows(player){
     ? `<div class="scouting-known-section scouting-market-section"><p class="label">Mercado ${signingKnown}/${signingKeys.length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, signingMap)}</div></div>`
     : '';
   return `
-    <div class="scouting-known-section"><p class="label">Habilidades visibles</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, visibleMap)}</div></div>
+    <div class="scouting-skill-groups">${visibleSections}</div>
     <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>
     ${signingSection}`;
 }

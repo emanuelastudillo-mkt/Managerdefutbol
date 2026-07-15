@@ -5929,3 +5929,10 @@ button.cwc-group-result{cursor:pointer}
 .training-player-differentiated{background:rgba(65,145,107,.08)}
 .training-differentiated-status{display:grid;gap:4px;justify-items:start;min-width:175px}
 @media(max-width:720px){.kinesio-differentiated-current{align-items:flex-start}.training-differentiated-status{min-width:140px}}
+
+/* V7.52 · Ojeo detallado de todas las habilidades existentes */
+.scouting-skill-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.scouting-skill-group{margin:0;padding:10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(8,14,24,.28)}
+.scouting-skill-group .label{margin:0 0 7px}
+.scouting-skill-group-technical{grid-column:span 2}
+@media (max-width:900px){.scouting-skill-groups{grid-template-columns:1fr}.scouting-skill-group-technical{grid-column:auto}}

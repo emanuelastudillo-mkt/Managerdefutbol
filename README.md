@@ -1,4 +1,67 @@
-# Fútbol Manager MVP - V7.51
+# Fútbol Manager MVP - V7.52
+
+## V7.52 - Ojeo detallado de todas las habilidades existentes
+
+### Informe individual ampliado
+
+- El Centro de Ojeo deja de limitar el informe individual a las siete habilidades resumidas.
+- Cada jugador externo puede revelar por separado todas las habilidades que ya existen dentro de su objeto `skills`.
+- La base profesional actual contiene 20 habilidades internas por jugador:
+  - Portería.
+  - Entradas.
+  - Marca.
+  - Posicionamiento.
+  - Pase corto.
+  - Pase largo.
+  - Visión.
+  - Regate.
+  - Técnica.
+  - Remate.
+  - Cabezazo.
+  - Velocidad.
+  - Aceleración.
+  - Fuerza.
+  - Resistencia.
+  - Trabajo en equipo.
+  - Serenidad.
+  - Disciplina.
+  - Liderazgo.
+  - Potencial.
+- También se conservan las tres habilidades ocultas ya existentes: Agresividad, Genética y Factor sorpresa.
+- La probabilidad de fichaje continúa funcionando como información adicional revelable.
+
+### Presentación del informe
+
+- Las habilidades se ordenan por grupos: Portería, Defensivas, Técnicas y ofensivas, Físicas, Mentales y desarrollo, Ocultas y Mercado.
+- Cada grupo muestra cuántos datos fueron descubiertos y cuáles permanecen ocultos.
+- La ficha individual del jugador usa el mismo detalle cuando el futbolista pertenece a otro club.
+- La estimación de media se calcula sólo con habilidades detalladas ya observadas y no utiliza Potencial ni Portería para jugadores de campo.
+- El radar se habilita cuando todas las habilidades existentes del jugador fueron reveladas.
+
+### Compatibilidad de informes anteriores
+
+- Los informes creados en V7.51 se migran automáticamente.
+- Cada antigua habilidad resumida se convierte en los atributos internos que la componían, evitando perder el progreso ya realizado.
+- Los informes propios continúan mostrando desde el inicio todas las habilidades conocidas del plantel y sólo gastan ojeo en datos ocultos.
+- Los informes archivados conservan sus revelaciones.
+
+### Datos y simulación
+
+- No se agregaron campos a `data/jugadores.json` ni a los archivos de jugadores por liga.
+- El sistema lee dinámicamente las habilidades que ya existen en cada jugador, por lo que también puede mostrar futuros atributos internos sin duplicar la base.
+- No se modificaron el simulador normal, el simulador en vivo, las fórmulas deportivas ni la generación de resultados.
+
+### Archivos principales modificados en V7.52
+
+- `js/game/16-scouting-center.js`
+- `js/ui/12-modals.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.52 no rompe partidas anteriores.** Los informes de ojeo existentes se migran al nuevo detalle al cargar la partida. No se modifican jugadores, planteles, calendarios, resultados ni el simulador en vivo.
 
 ## V7.51 - Despido del jefe de ojeadores
 

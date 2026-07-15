@@ -50,11 +50,17 @@ function scoutedVisibleKeySet(player){
 }
 function scoutedOverallLabel(player){
   if(!playerRequiresScouting(player)) return String(visibleOverall(player));
-  const map = scoutingStatMap(player);
+  const map = typeof scoutingDetailedStatMap === 'function' ? scoutingDetailedStatMap(player) : scoutingStatMap(player);
   const visible = scoutedVisibleKeySet(player);
-  const values = Object.entries(map).filter(([key]) => visible.has(key)).map(([,value]) => Number(value || 0)).filter(Number.isFinite);
-  if(values.length < 2) return '<span class="muted">—</span>';
-  return `<span title="Estimación con habilidades observadas">≈ ${clamp(Math.round(avg(values)), 1, 99)}</span>`;
+  const keeper = String(player?.position || '').toUpperCase() === 'POR';
+  const values = Object.entries(map).filter(([key]) => {
+    if(!visible.has(key)) return false;
+    if(!keeper && key === 'porteria') return false;
+    if(key === 'potencial') return false;
+    return true;
+  }).map(([,value]) => Number(value || 0)).filter(Number.isFinite);
+  if(values.length < 3) return '<span class="muted">—</span>';
+  return `<span title="Estimación con habilidades detalladas observadas">≈ ${clamp(Math.round(avg(values)), 1, 99)}</span>`;
 }
 function scoutedPhysicalLabel(player){
   if(playerRequiresScouting(player)) return '<span class="muted">—</span>';
@@ -105,29 +111,33 @@ function skillBreakdownMarkup(player, key, currentValue, rawValue){
   return `<span class="skill-breakdown" title="Actual efectivo: ${clamp(Math.round(current), 1, 99)}/99">${parts.join('')}</span>`;
 }
 function scoutedStatsMarkup(player){
-  const map = scoutingStatMap(player);
-  const rawMap = scoutingStatMapWithResolver(player, rawVisibleSkill);
+  const map = typeof scoutingDetailedStatMap === 'function' ? scoutingDetailedStatMap(player) : scoutingStatMap(player);
+  const rawMap = typeof scoutingDetailedStatMapWithResolver === 'function'
+    ? scoutingDetailedStatMapWithResolver(player, rawVisibleSkill)
+    : scoutingStatMapWithResolver(player, rawVisibleSkill);
   const visible = scoutedVisibleKeySet(player);
   const rows = Object.entries(map).map(([key, value]) => {
     const raw = Number(rawMap[key]);
     const current = Number(value);
     const shown = !playerRequiresScouting(player) || visible.has(key);
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    const valueMarkup = shown ? skillBreakdownMarkup(player, key, current, raw) : '—';
+    const valueMarkup = shown
+      ? (key === 'potencial' ? escapeHtml(String(current)) : skillBreakdownMarkup(player, key, current, raw))
+      : '—';
     return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong></div>`;
   }).join('');
   const agePenalty = typeof playerAgeSkillPenalty === 'function' ? playerAgeSkillPenalty(player) : 0;
   const ageNote = agePenalty > 0 ? `<p class="muted small"><span class="age-skill-penalty">-${agePenalty}</span> indica deterioro acumulado por edad. El valor base queda al centro y el entrenamiento aparece a la derecha en verde.</p>` : '';
-  const note = playerRequiresScouting(player) ? '<p class="muted small">Sólo se muestran datos guardados en el Centro de Ojeo. Sin informe, la habilidad queda oculta.</p>' : '';
+  const note = playerRequiresScouting(player) ? '<p class="muted small">El Centro de Ojeo revela cada habilidad existente por separado. Sin informe, el valor permanece oculto.</p>' : '';
   return `${rows}${ageNote}${note}`;
 }
 function scoutedRadarMarkup(player){
   if(!playerRequiresScouting(player)) return radarSvg(visibleStats(player));
-  const map = scoutingStatMap(player);
+  const map = typeof scoutingDetailedStatMap === 'function' ? scoutingDetailedStatMap(player) : scoutingStatMap(player);
   const known = scoutedVisibleKeySet(player);
   const allVisibleKnown = Object.keys(map).length > 0 && Object.keys(map).every(key => known.has(key));
   if(allVisibleKnown) return radarSvg(visibleStats(player));
-  return '<div class="scouting-radar-placeholder"><strong>Sin informe completo</strong><span>El radar se activa cuando el Centro de Ojeo revela todas las habilidades visibles.</span></div>';
+  return '<div class="scouting-radar-placeholder"><strong>Sin informe completo</strong><span>El radar se activa cuando el Centro de Ojeo revela todas las habilidades existentes del jugador.</span></div>';
 }
 
 function scoutedHiddenStatsCardMarkup(player){
@@ -1126,12 +1136,34 @@ function scoutingSkillDisplayLabel(player, key){
     'Velocidad/Reflejos': keeper ? 'Reflejos' : 'Velocidad',
     'Cabezazo/Mando': keeper ? 'Mando' : 'Cabezazo',
     'Tiro/Potencia': keeper ? 'Potencia' : 'Tiro',
+    porteria:'Portería',
+    entradas:'Entradas',
+    marca:'Marca',
+    posicionamiento:'Posicionamiento',
+    paseCorto:'Pase corto',
+    paseLargo:'Pase largo',
+    vision:'Visión',
+    regate:'Regate',
+    tecnica:'Técnica',
+    remate:'Remate',
+    cabezazo:'Cabezazo',
+    velocidad:'Velocidad',
+    aceleracion:'Aceleración',
+    fuerza:'Fuerza',
+    resistencia:'Resistencia',
+    trabajoEquipo:'Trabajo en equipo',
+    serenidad:'Serenidad',
+    disciplina:'Disciplina',
+    liderazgo:'Liderazgo',
+    potencial:'Potencial',
     'hidden.aggression':'Agresividad',
     'hidden.genetics':'Genética',
     'hidden.surprise':'Factor sorpresa',
     'market.signingChance':'Prob. fichaje'
   };
-  return labels[key] || key;
+  if(labels[key]) return labels[key];
+  const clean = String(key || '').replace(/([a-záéíóúñ])([A-Z])/g, '$1 $2').replace(/[._-]+/g, ' ').trim();
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : String(key || 'Habilidad');
 }
 function scoutingStatMap(player){
   const stats = visibleStats(player);
@@ -1161,7 +1193,10 @@ function scoutingPlayerRow(player, options={}){
   const visible = scoutingVisibleKeys(player);
   const clickable = Boolean(options?.clickable);
   const rawMap = typeof scoutingStatMapWithResolver === 'function' ? scoutingStatMapWithResolver(player, rawVisibleSkill) : map;
-  const cell = key => visible.has(key) ? `<strong>${typeof skillBreakdownMarkup === 'function' ? skillBreakdownMarkup(player, key, map[key], rawMap[key]) : map[key]}</strong>` : '<span class="muted">—</span>';
+  const cell = key => {
+    const shown = visible.has(key) || (typeof scoutingSummarySkillKnown === 'function' && scoutingSummarySkillKnown(player, key, visible));
+    return shown ? `<strong>${typeof skillBreakdownMarkup === 'function' ? skillBreakdownMarkup(player, key, map[key], rawMap[key]) : map[key]}</strong>` : '<span class="muted">—</span>';
+  };
   const nameMarkup = clickable
     ? `<button class="linklike" data-player-id="${Number(player.id)}"><strong>${typeof playerNameWithScoutingEye === 'function' ? playerNameWithScoutingEye(player) : escapeHtml(player.name)}</strong></button>`
     : `<strong>${escapeHtml(player.name)}</strong>`;

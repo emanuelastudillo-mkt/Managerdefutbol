@@ -226,8 +226,10 @@
     const icons = livePlayerIcons(id);
     const nameCell = `<span class="live-name-cell"><strong>${ehtml(lastName(player.name))}</strong>${icons}${tag}</span>`;
     const rowNo = expelled ? 'R' : (injuredGhost ? 'L' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'));
-    const mediaCell = isOwn ? String(liveDisplayOverall(player)) : '—';
-    const body = `<span class="num">${rowNo}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b>${ehtml(mediaCell)}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
+    const rivalFullyScouted = !isOwn && typeof playerIsFullyScouted === 'function' && playerIsFullyScouted(player);
+    const mediaCell = (isOwn || rivalFullyScouted) ? String(liveDisplayOverall(player)) : '—';
+    const mediaTitle = rivalFullyScouted ? ' title="Media revelada por ojeo individual completo"' : '';
+    const body = `<span class="num">${rowNo}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b${mediaTitle}>${ehtml(mediaCell)}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
     return selectable ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
   }
   function formationSelect(){

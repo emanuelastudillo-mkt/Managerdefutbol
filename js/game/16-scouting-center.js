@@ -235,6 +235,22 @@ function scoutingKnownSet(playerId){
   return new Set(state.reports[String(playerId)]?.visibleSkills || []);
 }
 function scoutingKnownCount(playerId){ return scoutingKnownSet(playerId).size; }
+function scoutingPlayerProgress(playerOrId){
+  const player = typeof playerOrId === 'object' ? playerOrId : (typeof playerById === 'function' ? playerById(Number(playerOrId || 0)) : null);
+  if(!player) return { known:0, total:0, pct:0, complete:false };
+  const totalKeys = scoutingSkillKeys(player);
+  const report = game?.scoutingCenter?.reports?.[String(Number(player.id || 0))];
+  const knownSet = new Set(Array.isArray(report?.visibleSkills) ? report.visibleSkills.map(String) : []);
+  const known = totalKeys.filter(key => knownSet.has(String(key))).length;
+  const total = totalKeys.length;
+  const pct = total > 0 ? clamp(Math.round((known / total) * 100), 0, 100) : 0;
+  return { known, total, pct, complete:total > 0 && known === total };
+}
+function playerIsFullyScouted(playerOrId){
+  const player = typeof playerOrId === 'object' ? playerOrId : (typeof playerById === 'function' ? playerById(Number(playerOrId || 0)) : null);
+  if(!player || scoutingIsOwnPlayer(player)) return false;
+  return scoutingPlayerProgress(player).complete;
+}
 function scoutingReportForPlayer(playerId, stateOverride=null){
   const state = stateOverride || ensureScoutingCenterState();
   state.reports = (state.reports && typeof state.reports === 'object' && !Array.isArray(state.reports)) ? state.reports : {};

@@ -1338,7 +1338,13 @@ function processKinesiologistDifferentiatedDaily(){
   return summary;
 }
 function kinesiologistDifferentiatedSlotMarkup(active){
-  if(!active) return `<div class="card staff-card kinesio-differentiated-card"><h3>Trabajo diferenciado</h3><p class="muted">Contratá al kinesiólogo para asignar un jugador a una rutina de menor carga.</p></div>`;
+  if(!active) return `<div class="kinesio-differentiated-panel is-inactive">
+    <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo</p><h4>Trabajo diferenciado</h4></div><span class="pill">Sin efecto</span></div>
+    <p class="muted">Contratá al kinesiólogo para asignar un jugador. Si el empleado es despedido, la asignación se elimina y el casillero deja de producir efectos.</p>
+    <label class="label" for="kinesioDifferentiatedPlayerDisabled">Jugador asignado</label>
+    <select id="kinesioDifferentiatedPlayerDisabled" class="training-individual-select" disabled><option>Sin kinesiólogo contratado</option></select>
+    <button type="button" class="primary" disabled>Agregar jugador</button>
+  </div>`;
   const currentId = kinesiologistDifferentiatedPlayerId();
   const currentPlayer = currentId ? playerById(currentId) : null;
   const contract = staffContract('kinesiologist');
@@ -1351,9 +1357,9 @@ function kinesiologistDifferentiatedSlotMarkup(active){
     .sort((a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'es'))
     .map(player => `<option value="${player.id}" ${Number(player.id) === currentId ? 'selected' : ''}>${escapeHtml(player.name)} · ${escapeHtml(player.position || '—')} · ${visibleOverall(player)}</option>`)
     .join('');
-  const currentMarkup = currentPlayer ? `<div class="kinesio-differentiated-current">${faceImg(currentPlayer,'staff-differentiated-face')}<div><strong>${escapeHtml(currentPlayer.name)}</strong><span>${conditionBar(currentPlayer.id)}</span><span>${moraleBar(currentPlayer.id)}</span></div></div>` : '<p class="muted">Casillero libre.</p>';
-  return `<div class="card staff-card kinesio-differentiated-card">
-    <div class="row"><div><p class="label">Kinesiólogo ${escapeHtml(categoryLabel)}</p><h3>Trabajo diferenciado</h3></div><span class="pill ok">-${reduction}% lesión</span></div>
+  const currentMarkup = currentPlayer ? `<div class="kinesio-differentiated-current">${faceImg(currentPlayer,'staff-differentiated-face')}<div><strong>${escapeHtml(currentPlayer.name)}</strong><span>${conditionBar(currentPlayer.id)}</span><span>${moraleBar(currentPlayer.id)}</span></div></div>` : '<p class="muted kinesio-slot-empty">Casillero libre.</p>';
+  return `<div class="kinesio-differentiated-panel is-active">
+    <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo · ${escapeHtml(categoryLabel)}</p><h4>Trabajo diferenciado</h4></div><span class="pill ok">-${reduction}% lesión</span></div>
     <p class="muted">Un jugador queda fuera del entrenamiento general e individual. Cada día recupera ${KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY} de desgaste, ${KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY} de forma y ${KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY} de moral.</p>
     ${currentMarkup}
     <label class="label" for="kinesioDifferentiatedPlayer">Jugador asignado</label>
@@ -1396,18 +1402,18 @@ function renderEmployees(){
         <div class="profile-bar-wrap">${moraleTeamBar(game.selectedClubId)}</div>
         ${last ? `<div class="staff-result ${last.success ? 'ok-result' : 'bad-result'}"><div class="project-progress completed"><span style="width:100%"></span></div><strong>${escapeHtml(last.message)}</strong></div>` : '<p class="muted">Sin acciones recientes.</p>'}
       </div>
-      <div class="card staff-card">
+      <div class="card staff-card kinesio-employee-card">
         <h3>Kinesiólogo</h3>
         <p class="muted">Contratación por temporada completa. Permite tratar lesionados y asignar un jugador a trabajo diferenciado.</p>
         <p class="label">Costo</p>
         <div class="metric small">${staffCostLabel('kinesiologist')}</div>
         ${kinesioActive ? staffContractCardMarkup('kinesiologist', 'mini') : `<button id="btnHireKinesiologist" class="primary">Contratar</button>`}
+        ${kinesiologistDifferentiatedSlotMarkup(kinesioActive)}
       </div>
       <div class="card staff-card">
         <h3>Tratamientos</h3>
         ${kinesioActive ? injuredTreatmentList(injuredList) : '<p class="muted">Contratá al kinesiólogo para habilitar tratamientos sobre jugadores lesionados.</p>'}
       </div>
-      ${kinesiologistDifferentiatedSlotMarkup(kinesioActive)}
     </div>
   `;
   $('btnHirePsychologist')?.addEventListener('click', () => openStaffHireModal('psychologist', renderEmployees));

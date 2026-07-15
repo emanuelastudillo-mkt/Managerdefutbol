@@ -1,4 +1,38 @@
-# Fútbol Manager MVP - V7.49
+# Fútbol Manager MVP - V7.50
+
+## V7.50 - Trabajo diferenciado integrado con el kinesiólogo
+
+### Interfaz unificada
+
+- El casillero de **Trabajo diferenciado** ya no aparece como una tarjeta independiente dentro de Empleados.
+- Ahora forma parte del mismo bloque visual del **Kinesiólogo**, debajo de su contratación, categoría y botón de despido.
+- La selección del jugador, su estado físico, moral y porcentaje de prevención permanecen dentro de esa misma tarjeta.
+
+### Kinesiólogo no contratado o despedido
+
+- El casillero permanece visible dentro de la tarjeta del kinesiólogo, pero aparece oscuro, desaturado y marcado como **Sin efecto**.
+- No permite seleccionar ni agregar jugadores hasta contratar nuevamente al empleado.
+- Al despedir al kinesiólogo, la asignación vigente se elimina y dejan de aplicarse inmediatamente la recuperación diaria, la exclusión del entrenamiento y la reducción de lesiones.
+- Volver a contratar un kinesiólogo no recupera automáticamente la asignación anterior; el manager debe elegir nuevamente al jugador.
+
+### Archivos principales modificados en V7.50
+
+- `js/game/10-academy-employees.js`
+- `style.css`
+- `config.js`
+- `balance-manager.js`
+- `balance-modificadores.js`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/19-manager-courses.js`
+- `data/habilidades_especiales.json`
+- `index.html`
+- `README.md`
+
+### Compatibilidad
+
+**V7.50 no rompe partidas anteriores.** Las asignaciones existentes continúan activas si el kinesiólogo sigue contratado. Si el empleado es despedido, el casillero se desactiva y la asignación se elimina, igual que en V7.49.
 
 ## V7.49 - Trabajo diferenciado del kinesiólogo
 

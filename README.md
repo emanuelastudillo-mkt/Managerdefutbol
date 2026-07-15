@@ -1,33 +1,4 @@
-# Fútbol Manager MVP - V7.52
-
-## V7.52 - Media rival visible con ojeo completo
-
-### Ajuste del simulador
-
-- En el simulador en vivo, la columna **Media** del rival continúa oculta por defecto.
-- Cuando un jugador rival alcanza el **100% de ojeo individual**, su media real aparece para titulares y suplentes.
-- Un informe de equipo no desbloquea este dato: debe completarse el informe individual del jugador.
-- Con cualquier progreso inferior al 100%, la media continúa mostrándose como `—`.
-- Los informes archivados conservan el beneficio; no es necesario mantener al jugador en la lista activa una vez completado el ojeo.
-
-### Archivos principales modificados en V7.52
-
-- `js/game/16-scouting-center.js`
-- `js/game/17-live-match.js`
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/19-manager-courses.js`
-- `data/habilidades_especiales.json`
-- `index.html`
-- `README.md`
-
-### Compatibilidad
-
-**V7.52 no rompe partidas anteriores.** Los informes ya guardados se revisan con su progreso actual. Si un jugador ya estaba ojeado al 100%, su media se mostrará automáticamente en el próximo partido contra ese rival.
+# Fútbol Manager MVP - V7.51
 
 ## V7.51 - Despido del jefe de ojeadores
 

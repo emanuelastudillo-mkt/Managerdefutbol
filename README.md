@@ -1,4 +1,59 @@
-# Fútbol Manager MVP - V7.46
+# Fútbol Manager MVP - V7.47
+
+## V7.47 - Medidas económicas, despido de empleados y sanción AFA
+
+### Despido automático por números rojos
+
+- Cuando el presupuesto del club cae por debajo de `$0`, la directiva despide automáticamente a todos los empleados de temporada activos.
+- La medida alcanza al psicólogo motivacional, kinesiólogo y preparador de juveniles.
+- Los contratos ya fueron abonados por la temporada completa, por lo que no existe devolución de dinero.
+- El despido se comprueba al registrar movimientos económicos, al comenzar un nuevo día y al cargar Inicio o Empleados con saldo negativo.
+- Se genera un mensaje financiero de prioridad alta con el listado de empleados despedidos.
+
+### Despido manual de empleados
+
+- Cada tarjeta de empleado contratado incorpora el botón **Despedir**.
+- Antes de confirmar se advierte que el contrato anual ya está pagado y no tiene reintegro.
+- El empleado deja de habilitar sus acciones inmediatamente.
+- Si el club desea contratarlo nuevamente durante la misma temporada, debe pagar un contrato completo nuevo.
+- Los cooldowns y tratamientos ya utilizados no se reinician por despedir y volver a contratar.
+
+### Sanción de AFA por campo crítico
+
+- Si el campo del club dirigido cae por debajo de `10/100`, la AFA interviene automáticamente.
+- Se aplican dos cargos separados:
+  - `$1.000.000` de multa.
+  - `$4.000.000` por replante obligatorio del césped.
+- El replante de AFA reemplaza cualquier parcheo o replante manual que estuviera activo.
+- Durante la intervención no se puede iniciar otro mantenimiento.
+- El campo conserva su estado crítico durante el día de la sanción y queda restaurado a `100/100` al día siguiente.
+- El control es idempotente: no puede cobrar dos veces la misma intervención en una fecha.
+- La pantalla Estadio muestra el aviso, el total cobrado y la fecha prevista de restauración.
+
+### Integración económica
+
+- Los cargos de AFA aparecen en Finanzas dentro de la categoría Estadio.
+- Si la multa y el replante llevan al club a números rojos, se ejecuta inmediatamente el despido automático de empleados.
+- Los clubes bots no reciben esta sanción; se aplica únicamente al club controlado por el manager.
+
+### Archivos principales modificados en V7.47
+
+- `config.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/data/04-data-storage.js`
+- `js/game/08-sponsors-stadium-stats.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/06-render-home-messages.js`
+- `style.css`
+- `README.md`
+- archivos de versión y caché
+
+### Compatibilidad
+
+**V7.47 no rompe partidas anteriores.** Las partidas existentes incorporan automáticamente el registro de sanciones del campo. Si una partida se carga con presupuesto negativo y empleados activos, estos serán despedidos al abrir Inicio o Empleados, o durante el siguiente procesamiento económico. Si el campo ya está por debajo de 10, la sanción se aplicará al comenzar el próximo día.
+
 
 ## V7.46 - Animación diaria de puntos de habilidad
 

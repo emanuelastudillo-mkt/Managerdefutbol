@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.46',
+  version: 'V7.47',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -559,6 +559,13 @@ window.GAME_CONFIG = {
     costoParchearCampo: 200000,
     diasParchearCampo: 21,
     mejoraParchePorAvance: 5,
+    // Sanción económica automática de AFA cuando el campo dirigido cae por debajo del umbral.
+    afaCampoSancionActiva: true,
+    afaCampoUmbral: 10,
+    afaCampoMulta: 1000000,
+    afaCampoReplanteObligatorio: 4000000,
+    afaCampoEstadoRestaurado: 100,
+    afaCampoDiasRestauracion: 1,
     // El deterioro normal del campo se multiplica por este valor.
     deterioroCampoMultiplicador: 2,
     // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.

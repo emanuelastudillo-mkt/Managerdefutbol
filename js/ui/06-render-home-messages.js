@@ -553,6 +553,7 @@ function renderGameOverScreen(){
 }
 
 function renderHome(){
+  if(Number(game?.budget || 0) < 0 && typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const next = getNextMatchForSelected();
   const clubPlayers = playersByClub(game.selectedClubId);
   const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
@@ -629,6 +630,7 @@ function renderHome(){
   document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{ activeTab = btn.dataset.goTab; renderAll(); }));
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
+  if(typeof bindStaffDismissButtons === 'function') bindStaffDismissButtons(renderHome);
   updateAdvanceButtonState();
   startDailySkillPointsAnimation();
 }

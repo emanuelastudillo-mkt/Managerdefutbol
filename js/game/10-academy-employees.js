@@ -93,7 +93,11 @@ function normalizeStaffContracts(contracts){
       cost:Number(current.cost || 0),
       performanceMultiplier:Math.max(1, Number(current.performanceMultiplier || staffCategory(current.category || 'regular').multiplicadorRendimiento || 1)),
       hiredTurn:Number(current.hiredTurn || current.matchdayIndex || 0),
-      hiredGlobalTurn:Number(current.hiredGlobalTurn || current.globalTurn || 0)
+      hiredGlobalTurn:Number(current.hiredGlobalTurn || current.globalTurn || 0),
+      dismissedDate:validIsoDate(current.dismissedDate) ? current.dismissedDate : '',
+      dismissedSeason:Math.max(0, Math.round(Number(current.dismissedSeason || 0))),
+      dismissedGlobalTurn:Math.max(0, Math.round(Number(current.dismissedGlobalTurn || 0))),
+      dismissedReason:String(current.dismissedReason || '')
     };
   });
   return clean;
@@ -120,6 +124,79 @@ function staffContract(staffId){
 }
 function staffActive(staffId){ return Boolean(staffContract(staffId)); }
 function staffPerformanceMultiplier(staffId){ return Math.max(1, Number(staffContract(staffId)?.performanceMultiplier || 1)); }
+function deactivateStaffEmployee(staffId, reason='manual'){
+  if(!game) return null;
+  const def = staffDefinition(staffId);
+  if(!def) return null;
+  game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
+  const contract = game.staffContracts[staffId] || null;
+  const wasActive = Boolean(contract?.active && Number(contract.season || 0) === Number(game.seasonNumber || 1)) || legacyStaffActive(staffId);
+  if(!wasActive) return null;
+  const snapshot = {
+    id:staffId,
+    name:def.nombre,
+    category:staffCategory(contract?.category || 'regular').nombre,
+    cost:Number(contract?.cost || staffHireCost(staffId, contract?.category || 'regular') || 0)
+  };
+  if(contract){
+    contract.active = false;
+    contract.dismissedDate = validIsoDate(game.currentDate) ? game.currentDate : '';
+    contract.dismissedSeason = Number(game.seasonNumber || 1);
+    contract.dismissedGlobalTurn = Number(game.globalTurn || 0);
+    contract.dismissedReason = String(reason || 'manual');
+  }
+  game.staffActions = game.staffActions || {};
+  if(staffId === 'kinesiologist' && game.staffActions.kinesiologist) game.staffActions.kinesiologist.active = false;
+  if(staffId === 'youth_preparer'){
+    game.academy = normalizeAcademyState(game.academy);
+    if(game.academy.youthPreparer) game.academy.youthPreparer.active = false;
+  }
+  return snapshot;
+}
+function dismissStaffEmployee(staffId, options={}){
+  if(!game) return false;
+  const def = staffDefinition(staffId);
+  if(!def || !staffActive(staffId)){ if(!options.silent) showNotice('Ese empleado ya no está contratado.'); return false; }
+  if(!options.skipConfirm){
+    const accepted = window.confirm(`El contrato de ${def.nombre} ya fue pagado por toda la temporada. Despedirlo no devuelve dinero. ¿Continuar?`);
+    if(!accepted) return false;
+  }
+  const dismissed = deactivateStaffEmployee(staffId, options.reason || 'manual');
+  if(!dismissed) return false;
+  if(options.message !== false && typeof pushGameMessage === 'function') pushGameMessage({
+    type:'empleados',
+    priority:'normal',
+    title:`${dismissed.name} despedido`,
+    body:`El contrato ya estaba pagado por toda la temporada. ${dismissed.name} dejó el club sin reintegro de ${formatMoney(dismissed.cost)}.`,
+    id:`staff-dismissed-${staffId}-${game.seasonNumber || 1}-${game.globalTurn || 0}`
+  });
+  if(options.save !== false && typeof saveLocal === 'function') saveLocal(true);
+  if(typeof options.after === 'function') options.after();
+  else if(options.render !== false && typeof renderEmployees === 'function') renderEmployees();
+  if(!options.silent) showNotice(`${dismissed.name} despedido. El pago de la temporada no se reintegra.`);
+  return true;
+}
+function dismissAllStaffForFinancialCrisis(options={}){
+  if(!game || Number(game.budget || 0) >= 0) return [];
+  const active = staffDefinitions().filter(def => staffActive(def.id));
+  if(!active.length) return [];
+  const dismissed = active.map(def => deactivateStaffEmployee(def.id, 'negative_budget')).filter(Boolean);
+  if(!dismissed.length) return [];
+  if(typeof pushGameMessage === 'function') pushGameMessage({
+    type:'finanzas',
+    priority:'high',
+    title:'Empleados despedidos por números rojos',
+    body:`El presupuesto cayó a ${formatMoney(game.budget || 0)}. El club rescindió automáticamente ${dismissed.length} contrato(s): ${dismissed.map(item => item.name).join(', ')}. Los pagos de temporada ya realizados no se reintegran.`,
+    id:`staff-financial-dismissal-${game.seasonNumber || 1}-${game.globalTurn || 0}-${dismissed.map(item => item.id).join('-')}`
+  });
+  if(options.save && typeof saveLocal === 'function') saveLocal(true);
+  if(!options.silent && typeof showNotice === 'function') showNotice('El club entró en números rojos y despidió a todos los empleados.', true);
+  return dismissed;
+}
+function bindStaffDismissButtons(after=null){
+  const rerender = typeof after === 'function' ? after : (typeof renderEmployees === 'function' ? renderEmployees : null);
+  document.querySelectorAll('[data-dismiss-staff]').forEach(btn => btn.addEventListener('click', () => dismissStaffEmployee(String(btn.dataset.dismissStaff || ''), { after:rerender })));
+}
 function staffImagePath(staffId, categoryId='regular'){
   const def = staffDefinition(staffId);
   const category = staffCategory(categoryId).id;
@@ -145,6 +222,7 @@ function staffContractCardMarkup(staffId, mode='compact'){
       <p class="label">${escapeHtml(def.rol || 'Empleado')}</p>
       <h3>${escapeHtml(def.nombre)}</h3>
       <div class="staff-contract-tags"><span class="pill ok">${escapeHtml(category.nombre)}</span><span class="pill">${formatMoney(contract.cost || staffHireCost(staffId, category.id))}</span></div>
+      <button type="button" class="ghost danger small-btn staff-dismiss-btn" data-dismiss-staff="${escapeHtml(staffId)}">Despedir</button>
     </div>
   </div>`;
 }
@@ -1177,6 +1255,7 @@ function academyYouthTreatmentVisual(player){
   return `<div class="academy-youth-treatment-visual" title="${escapeHtml(progress.visible || 0)}/${escapeHtml(progress.total || 0)} habilidades visibles"><div class="academy-visibility-pie" style="--academy-visible-pct:${Math.round(progress.percent || 0)}"><strong>${Math.round(progress.percent || 0)}%</strong></div></div>`;
 }
 function renderEmployees(){
+  if(Number(game?.budget || 0) < 0) dismissAllStaffForFinancialCrisis({ silent:true });
   const last = game.staffActions?.motivationalTalk || null;
   const psychologistActive = staffActive('psychologist');
   const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
@@ -1188,11 +1267,12 @@ function renderEmployees(){
     <div class="row section-title">
       <div>
         <h2>Empleados</h2>
-        <p class="tagline">Acciones de apoyo para el plantel. Cada empleado puede contratarse en categoría Regular, Bueno o Elite.</p>
+        <p class="tagline">Acciones de apoyo para el plantel. La contratación se paga por toda la temporada; podés despedir empleados, pero no se reintegra dinero.</p>
       </div>
       <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
     </div>
     ${staffContractsPanelMarkup({ empty:true })}
+    <div class="card blocker" style="margin-top:12px"><p class="muted small">Si el presupuesto del club cae por debajo de $0, la directiva despide automáticamente a todos los empleados contratados. Los pagos ya realizados por la temporada no se recuperan.</p></div>
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card staff-card">
         <h3>Psicólogo motivacional</h3>
@@ -1229,6 +1309,7 @@ function renderEmployees(){
   document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
     btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat), btn, btn.dataset.kinesioKind || 'first')); 
   });
+  bindStaffDismissButtons(renderEmployees);
 }
 function injuredTreatmentList(injuredList){
   if(!injuredList.length) return '<p class="muted">No hay jugadores lesionados para tratar.</p>';

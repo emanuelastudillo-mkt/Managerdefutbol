@@ -1204,7 +1204,7 @@ function createInitialStadiumState(){
     fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     ticketPrices[club.id] = TICKET_PRICE_INITIAL;
   });
-  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, capacityDeteriorationHistory:[], expansionProjects:{}, completedExpansions:{}, facilities:{}, botSeasonNumber:0 };
+  return { fields, projects:{}, ticketPrices, capacityOverrides:{}, capacityDeteriorationHistory:[], expansionProjects:{}, completedExpansions:{}, facilities:{}, afaFieldSanctions:{}, botSeasonNumber:0 };
 }
 function ensureStadiumState(){
   if(!game) return;
@@ -1217,6 +1217,7 @@ function ensureStadiumState(){
   if(!game.stadium.expansionProjects) game.stadium.expansionProjects = {};
   if(!game.stadium.completedExpansions) game.stadium.completedExpansions = {};
   if(!game.stadium.facilities || typeof game.stadium.facilities !== 'object' || Array.isArray(game.stadium.facilities)) game.stadium.facilities = {};
+  if(!game.stadium.afaFieldSanctions || typeof game.stadium.afaFieldSanctions !== 'object' || Array.isArray(game.stadium.afaFieldSanctions)) game.stadium.afaFieldSanctions = {};
   seed.clubs.forEach(club => {
     if(!Number.isFinite(game.stadium.fields[club.id])) game.stadium.fields[club.id] = Number.isFinite(club.fieldConditionScore) ? club.fieldConditionScore : initialFieldScore(club);
     if(!Number.isFinite(Number(game.stadium.ticketPrices[club.id]))) game.stadium.ticketPrices[club.id] = TICKET_PRICE_INITIAL;

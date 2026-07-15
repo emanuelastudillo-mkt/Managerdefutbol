@@ -880,6 +880,8 @@ function renderStadium(){
   const replantProgress = replantActive ? Math.round(((REPLANT_TURNS - project.replantingTurnsLeft) / REPLANT_TURNS) * 100) : 0;
   const patchProgress = patchActive ? Math.round(((PATCH_TURNS - project.patchingTurnsLeft) / PATCH_TURNS) * 100) : 0;
   const fieldMaintenanceBlocked = typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance');
+  const afaSanctionState = typeof afaFieldSanctionState === 'function' ? afaFieldSanctionState(game.selectedClubId) : null;
+  const afaInterventionActive = Boolean((afaSanctionState?.status === 'pending' && validIsoDate(afaSanctionState.restoreDate)) || (typeof AFA_FIELD_SANCTION_THRESHOLD !== 'undefined' && score < AFA_FIELD_SANCTION_THRESHOLD));
   const lastCapacityDecay = Array.isArray(game?.stadium?.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory.slice().reverse().find(item => Number(item.clubId || 0) === Number(game.selectedClubId)) : null;
   view.innerHTML = `
     <div class="row section-title">
@@ -889,6 +891,7 @@ function renderStadium(){
       </div>
       <div class="row"><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div><button type="button" id="btnOpenStadiumFacilities" class="ghost">Instalaciones</button></div>
     </div>
+    ${typeof afaFieldSanctionMarkup === 'function' ? afaFieldSanctionMarkup(game.selectedClubId) : ''}
     <div class="grid cols-2">
       <div class="card stadium-card">
         <div class="row" style="align-items:flex-start">
@@ -906,11 +909,11 @@ function renderStadium(){
         <div class="stack" style="margin-top:14px">
           <div class="maintenance-option">
             <div><strong>Replantar todo</strong><p class="muted small">Costo ${formatMoney(REPLANT_COST)}. Durante 35 días el campo queda muy malo; al finalizar sube a 99.</p></div>
-            <button id="btnReplant" class="primary" ${fieldMaintenanceBlocked || replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
+            <button id="btnReplant" class="primary" ${fieldMaintenanceBlocked || afaInterventionActive || replantActive || patchActive || (game.budget || 0) < REPLANT_COST ? 'disabled' : ''}>Replantar</button>
           </div>
           <div class="maintenance-option">
             <div><strong>Regar y parchar campo de juego</strong><p class="muted small">Costo ${formatMoney(PATCH_COST)}. Mejora el campo durante los próximos 21 días.</p></div>
-            <button id="btnPatch" class="ghost" ${fieldMaintenanceBlocked || replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
+            <button id="btnPatch" class="ghost" ${fieldMaintenanceBlocked || afaInterventionActive || replantActive || patchActive || (game.budget || 0) < PATCH_COST ? 'disabled' : ''}>Regar y parchar</button>
           </div>
         </div>
       </div>

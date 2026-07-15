@@ -1113,6 +1113,12 @@ function processDailyCalendarState(dateAfter='', options={}){
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
   rememberCalendarDate();
   advanceGlobalTurn();
+  const financialStaffDismissalsAtStart = typeof dismissAllStaffForFinancialCrisis === 'function'
+    ? dismissAllStaffForFinancialCrisis({ silent:true })
+    : [];
+  const afaFieldSanction = typeof processAfaFieldSanctionDaily === 'function'
+    ? processAfaFieldSanctionDaily()
+    : { sanctioned:false, restored:false, charged:0 };
   if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'daily_calendar' });
   if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar' });
   if(managerWithoutClub){
@@ -1127,7 +1133,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation };
+    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
@@ -1154,7 +1160,10 @@ function processDailyCalendarState(dateAfter='', options={}){
   const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
   const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation };
+  const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
+    ? dismissAllStaffForFinancialCrisis({ silent:true })
+    : [];
+  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1822,6 +1831,8 @@ function finalizePreseasonTurnAfterMatch(context={}){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
+  if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
   runScheduledFiveDayGameVerifier({ reason:'preseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'preseason' });
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('preseason');
@@ -1924,6 +1935,8 @@ function simulatePostseasonTurn(){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
+  if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
   runScheduledFiveDayGameVerifier({ reason:'postseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'postseason' });
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('postseason');
@@ -1971,6 +1984,7 @@ function recordBudgetChange(delta, concept, meta={}){
     budget:game.budget,
     ...meta
   });
+  if(Number(game.budget || 0) < 0 && typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
 }
 
 function transferBudgetConfig(){
@@ -2726,6 +2740,98 @@ function applyEconomyResult(match){
   });
   return totalDelta;
 }
+function afaFieldSanctionState(clubId=game?.selectedClubId){
+  if(!game || !clubId) return null;
+  ensureStadiumState();
+  const id = Number(clubId);
+  const raw = game.stadium.afaFieldSanctions[id] && typeof game.stadium.afaFieldSanctions[id] === 'object'
+    ? game.stadium.afaFieldSanctions[id]
+    : {};
+  const clean = {
+    status:String(raw.status || ''),
+    chargedDate:validIsoDate(raw.chargedDate) ? raw.chargedDate : '',
+    restoreDate:validIsoDate(raw.restoreDate) ? raw.restoreDate : '',
+    restoredDate:validIsoDate(raw.restoredDate) ? raw.restoredDate : '',
+    fieldBefore:Math.max(0, Math.round(Number(raw.fieldBefore || 0))),
+    fine:Math.max(0, Math.round(Number(raw.fine || 0))),
+    replantCost:Math.max(0, Math.round(Number(raw.replantCost || 0))),
+    totalCharged:Math.max(0, Math.round(Number(raw.totalCharged || 0))),
+    season:Math.max(0, Math.round(Number(raw.season || 0)))
+  };
+  game.stadium.afaFieldSanctions[id] = clean;
+  return clean;
+}
+function processAfaFieldSanctionDaily(){
+  const result = { sanctioned:false, restored:false, charged:0, clubId:Number(game?.selectedClubId || 0), restoreDate:'' };
+  if(!AFA_FIELD_SANCTION_ENABLED || !game?.selectedClubId || game?.gameOver?.active) return result;
+  const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
+  if(!validIsoDate(today)) return result;
+  const clubId = Number(game.selectedClubId);
+  const state = afaFieldSanctionState(clubId);
+  if(!state) return result;
+  const project = stadiumProjectForClub(clubId);
+  if(state.status === 'pending' && validIsoDate(state.restoreDate) && today >= state.restoreDate){
+    project.replantingTurnsLeft = 0;
+    project.patchingTurnsLeft = 0;
+    game.stadium.fields[clubId] = AFA_FIELD_RESTORED_SCORE;
+    state.status = 'restored';
+    state.restoredDate = today;
+    result.restored = true;
+    if(typeof pushGameMessage === 'function') pushGameMessage({
+      type:'estadio',
+      priority:'normal',
+      title:'Replante obligatorio finalizado',
+      body:`La AFA terminó el replante obligatorio y el campo quedó en ${AFA_FIELD_RESTORED_SCORE}/100.`,
+      id:`afa-field-restored-${clubId}-${today}`
+    });
+  }
+  const score = fieldScoreForClub(clubId);
+  const alreadyPending = state.status === 'pending' && validIsoDate(state.restoreDate);
+  if(score >= AFA_FIELD_SANCTION_THRESHOLD || alreadyPending || state.chargedDate === today) return result;
+  project.replantingTurnsLeft = 0;
+  project.patchingTurnsLeft = 0;
+  const restoreDate = addDaysToIsoDate(today, AFA_FIELD_RESTORE_DAYS);
+  if(AFA_FIELD_SANCTION_FINE > 0) recordBudgetChange(-AFA_FIELD_SANCTION_FINE, 'Multa AFA por campo en estado crítico', { type:'stadium_afa_field_fine', clubId, fieldScore:score, threshold:AFA_FIELD_SANCTION_THRESHOLD });
+  if(AFA_FIELD_MANDATORY_REPLANT_COST > 0) recordBudgetChange(-AFA_FIELD_MANDATORY_REPLANT_COST, 'Replante obligatorio de césped impuesto por AFA', { type:'stadium_afa_mandatory_replant', clubId, fieldScore:score, restoreDate });
+  state.status = 'pending';
+  state.chargedDate = today;
+  state.restoreDate = restoreDate;
+  state.restoredDate = '';
+  state.fieldBefore = score;
+  state.fine = AFA_FIELD_SANCTION_FINE;
+  state.replantCost = AFA_FIELD_MANDATORY_REPLANT_COST;
+  state.totalCharged = AFA_FIELD_SANCTION_FINE + AFA_FIELD_MANDATORY_REPLANT_COST;
+  state.season = Number(game.seasonNumber || 1);
+  result.sanctioned = true;
+  result.charged = state.totalCharged;
+  result.restoreDate = restoreDate;
+  if(typeof pushGameMessage === 'function') pushGameMessage({
+    type:'estadio',
+    priority:'high',
+    title:'Sanción de AFA por el estado del campo',
+    body:`El campo estaba en ${score}/100, por debajo del mínimo permitido. La AFA aplicó una multa de ${formatMoney(AFA_FIELD_SANCTION_FINE)} y cobró ${formatMoney(AFA_FIELD_MANDATORY_REPLANT_COST)} por un replante obligatorio. El césped quedará en ${AFA_FIELD_RESTORED_SCORE}/100 el ${restoreDate}.`,
+    id:`afa-field-sanction-${clubId}-${today}`
+  });
+  return result;
+}
+function afaFieldInterventionActive(clubId=game?.selectedClubId){
+  if(!AFA_FIELD_SANCTION_ENABLED || !game || !clubId) return false;
+  const state = afaFieldSanctionState(clubId);
+  return Boolean((state?.status === 'pending' && validIsoDate(state.restoreDate)) || fieldScoreForClub(clubId) < AFA_FIELD_SANCTION_THRESHOLD);
+}
+function afaFieldSanctionMarkup(clubId=game?.selectedClubId){
+  if(!AFA_FIELD_SANCTION_ENABLED || !game || !clubId) return '';
+  const state = afaFieldSanctionState(clubId);
+  const score = fieldScoreForClub(clubId);
+  if(state?.status === 'pending' && validIsoDate(state.restoreDate)){
+    return `<div class="card blocker danger afa-field-sanction-card"><p class="label">Intervención de AFA</p><strong>Replante obligatorio en curso</strong><p class="muted small">Se cobraron ${formatMoney(state.totalCharged || (AFA_FIELD_SANCTION_FINE + AFA_FIELD_MANDATORY_REPLANT_COST))}. El campo quedará en ${AFA_FIELD_RESTORED_SCORE}/100 el ${escapeHtml(state.restoreDate)}.</p></div>`;
+  }
+  if(score < AFA_FIELD_SANCTION_THRESHOLD){
+    return `<div class="card blocker danger afa-field-sanction-card"><p class="label">Campo en estado crítico</p><strong>La AFA sancionará al club al comenzar el próximo día</strong><p class="muted small">Multa: ${formatMoney(AFA_FIELD_SANCTION_FINE)} · replante obligatorio: ${formatMoney(AFA_FIELD_MANDATORY_REPLANT_COST)}.</p></div>`;
+  }
+  return '';
+}
+
 function rainFieldDeteriorationForWeather(weather=''){
   if(!RAIN_FIELD_DETERIORATION_ENABLED) return 0;
   const normalized = String(weather || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -2756,6 +2862,7 @@ function advanceStadiumAfterMatches(results){
       game.stadium.fields[clubId] = clamp(Math.round(fieldScoreForClub(clubId) - adjustedDeterioration), 1, 100);
     }
   });
+  if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
   processStadiumProjects();
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
@@ -2839,6 +2946,7 @@ function processStadiumProjects(){
 function startReplantingField(){
   if(!game) return;
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance')){ showNotice(managerChallengeBlockedMessage('fieldMaintenance')); return; }
+  if(afaFieldInterventionActive(game.selectedClubId)){ showNotice('La AFA ya intervino el campo. No podés iniciar otro mantenimiento hasta que termine el replante obligatorio.'); return; }
   ensureStadiumState();
   const project = stadiumProjectForClub(game.selectedClubId);
   if(project.replantingTurnsLeft > 0 || project.patchingTurnsLeft > 0){ showNotice('Ya hay un trabajo de mantenimiento activo en el estadio.'); return; }
@@ -2854,6 +2962,7 @@ function startReplantingField(){
 function startPatchingField(){
   if(!game) return;
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance')){ showNotice(managerChallengeBlockedMessage('fieldMaintenance')); return; }
+  if(afaFieldInterventionActive(game.selectedClubId)){ showNotice('La AFA ya intervino el campo. No podés iniciar otro mantenimiento hasta que termine el replante obligatorio.'); return; }
   ensureStadiumState();
   const project = stadiumProjectForClub(game.selectedClubId);
   if(project.replantingTurnsLeft > 0 || project.patchingTurnsLeft > 0){ showNotice('Ya hay un trabajo de mantenimiento activo en el estadio.'); return; }

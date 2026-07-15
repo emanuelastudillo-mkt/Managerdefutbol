@@ -1,4 +1,55 @@
-# Fútbol Manager MVP - V7.47
+# Fútbol Manager MVP - V7.48
+
+## V7.48 - Reajuste de recompensas de puntos de habilidad
+
+### Nueva tabla de entrega
+
+| Acción | Puntos | Frecuencia |
+|---|---:|---|
+| Ganar un partido | 150 | Cada partido ganado por el manager |
+| Empatar un partido | 50 | Cada empate |
+| Marcar más de 5 goles | 250 adicionales | Cada partido con 6 o más goles a favor |
+| Campeón de Tercera División | 1.000 | Cada campeonato |
+| Campeón de Segunda División | 2.000 | Cada campeonato |
+| Campeón de Primera División | 3.000 | Cada campeonato |
+| Tratar a un jugador lesionado | 10 | Cada tratamiento válido |
+| Consultar juveniles | 10 | Cada nuevo informe del preparador |
+| Regar o parchar el campo | 50 | Cada mantenimiento iniciado |
+| Destruir una carta | Según rareza | Cada carta destruida |
+| Superar Campo destruido | 10.000 | Una sola vez por perfil |
+| Completar la Licencia Internacional | 1.000 | Una sola vez por perfil |
+| Canjear códigos de habilidad | 20.000 por código | Una vez por código y partida |
+
+### Cambios respecto de V7.47
+
+- Victoria: de 125 a **150 puntos**.
+- Empate: de 100 a **50 puntos**.
+- Tratamiento de lesión: de 50 a **10 puntos**.
+- Consulta de juveniles: de 100 a **10 puntos**.
+- Se mantienen sin cambios el bonus por seis o más goles, los campeonatos, el mantenimiento del campo, la destrucción de cartas, Campo destruido, la Licencia Internacional y los códigos especiales.
+- Los nuevos valores se leen desde la tabla central de habilidades especiales y se reflejan automáticamente en la animación diaria de sumatoria.
+- La URL del archivo de recompensas incorpora versión para evitar que el navegador conserve la tabla anterior en caché al publicar en GitHub Pages.
+
+### Ejemplos de acumulación
+
+- Victoria con hasta cinco goles: **150 puntos**.
+- Victoria con seis o más goles: **400 puntos** (`150 + 250`).
+- Empate con hasta cinco goles: **50 puntos**.
+- Empate marcando seis o más goles: **300 puntos** (`50 + 250`).
+- Derrota marcando seis o más goles: conserva el bonus de **250 puntos**.
+
+### Archivos principales modificados en V7.48
+
+- `data/habilidades_especiales.json`
+- `config.js`
+- `index.html`
+- archivos de versión y perfil
+- `README.md`
+
+### Compatibilidad
+
+**V7.48 no rompe partidas anteriores.** No se recalculan ni descuentan puntos ya entregados. Los nuevos importes se aplican únicamente a acciones realizadas después de cargar esta versión.
+
 
 ## V7.47 - Medidas económicas, despido de empleados y sanción AFA
 
@@ -61,7 +112,7 @@
 
 - Al comenzar una nueva fecha, junto al botón **Avanzar día** aparece una animación breve con los puntos de habilidad obtenidos desde el avance anterior.
 - El contador sube progresivamente desde 0 hasta la cantidad ganada.
-- Cuando hubo varias recompensas, muestra una suma compacta, por ejemplo `125 + 250 = 375`.
+- Cuando hubo varias recompensas, muestra una suma compacta, por ejemplo `150 + 250 = 400`.
 - También informa el saldo total de puntos después de acreditar los premios.
 - Si no se ganaron puntos, no aparece ninguna animación y la interfaz conserva su tamaño habitual.
 

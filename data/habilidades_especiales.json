@@ -1,8 +1,8 @@
 {
-  "version": "V7.41",
+  "version": "V7.48",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.41: cartas de prevención de lesiones durante partidos (2%, 5%, 8% y 15%), acumulables.",
+  "caracteristicas_version": "V7.48: reajuste general de recompensas de puntos de habilidad.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -53,11 +53,11 @@
     "moneda": "puntos_habilidad",
     "acciones": {
       "ganar_partido": {
-        "puntos": 125,
+        "puntos": 150,
         "visible_para_manager": false
       },
       "empatar_partido": {
-        "puntos": 100,
+        "puntos": 50,
         "visible_para_manager": false
       },
       "salir_campeon_division_3": {
@@ -73,7 +73,7 @@
         "visible_para_manager": false
       },
       "tratar_jugador_lesionado": {
-        "puntos": 50,
+        "puntos": 10,
         "visible_para_manager": false
       },
       "meter_mas_de_5_goles_en_un_partido": {
@@ -85,7 +85,7 @@
         "visible_para_manager": false
       },
       "consultar_juveniles": {
-        "puntos": 100,
+        "puntos": 10,
         "visible_para_manager": false
       },
       "completar_reto_campo_destruido_primero": {

@@ -36,6 +36,7 @@ function createInitialSpecialState(managerName=''){
     manager_id: game?.saveCode || '',
     nombre_manager: managerName || storedManagerName() || '',
     puntos_habilidad: 0,
+    puntos_log_secuencia: 0,
     cartas_activas: [],
     cartas_reserva: [],
     fecha_ultimo_cambio_cartas: null,
@@ -352,6 +353,15 @@ function normalizeSpecialState(state=null, managerName=''){
   normalized.manager_id = String(normalized.manager_id || game?.saveCode || '');
   normalized.nombre_manager = String(normalized.nombre_manager || managerName || storedManagerName() || 'Manager');
   normalized.puntos_habilidad = Math.max(0, Math.round(Number(normalized.puntos_habilidad || 0)));
+  const rawPointsLog = Array.isArray(normalized.puntos_log) ? normalized.puntos_log.slice(-80) : [];
+  let pointsLogSequence = Math.max(0, Math.round(Number(normalized.puntos_log_secuencia || 0)));
+  normalized.puntos_log = rawPointsLog.map(entry => {
+    const source = entry && typeof entry === 'object' ? entry : {};
+    const existingSerial = Math.max(0, Math.round(Number(source.serial || 0)));
+    if(existingSerial > pointsLogSequence) pointsLogSequence = existingSerial;
+    return existingSerial ? source : { ...source, serial:++pointsLogSequence };
+  });
+  normalized.puntos_log_secuencia = pointsLogSequence;
   const active = Array.isArray(normalized.cartas_activas) ? normalized.cartas_activas : [];
   const reserve = Array.isArray(normalized.cartas_reserva) ? normalized.cartas_reserva : [];
   normalized.cartas_activas = active.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).map(card => {
@@ -365,7 +375,6 @@ function normalizeSpecialState(state=null, managerName=''){
   normalized.historial_ultimas_cartas = Array.isArray(normalized.historial_ultimas_cartas)
     ? normalized.historial_ultimas_cartas.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).slice(0, 30)
     : [];
-  normalized.puntos_log = Array.isArray(normalized.puntos_log) ? normalized.puntos_log.slice(-80) : [];
   normalized.codigos_reclamados = (normalized.codigos_reclamados && typeof normalized.codigos_reclamados === 'object' && !Array.isArray(normalized.codigos_reclamados)) ? normalized.codigos_reclamados : {};
   normalized.fecha_ultimo_cambio_cartas = validIsoDate(normalized.fecha_ultimo_cambio_cartas) ? normalized.fecha_ultimo_cambio_cartas : null;
   normalized.bloqueado_hasta = validIsoDate(normalized.bloqueado_hasta) ? normalized.bloqueado_hasta : null;
@@ -584,6 +593,18 @@ function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
   }).join('')}</div>`;
   return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}.</p>`;
 }
+function appendSpecialPointsLog(state, entry={}){
+  if(!state || typeof state !== 'object') return null;
+  state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
+  const maxExisting = state.puntos_log.reduce((max, item) => Math.max(max, Math.max(0, Math.round(Number(item?.serial || 0)))), 0);
+  const nextSerial = Math.max(maxExisting, Math.max(0, Math.round(Number(state.puntos_log_secuencia || 0)))) + 1;
+  const record = { ...(entry && typeof entry === 'object' ? entry : {}), serial:nextSerial };
+  state.puntos_log.push(record);
+  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  state.puntos_log_secuencia = nextSerial;
+  return record;
+}
+
 function specialActionPoints(actionId){
   const action = specialDatabase().puntos_ocultos?.acciones?.[actionId];
   return Math.max(0, Math.round(Number(action?.puntos || 0)));
@@ -593,9 +614,7 @@ function awardSpecialPoints(actionId, context={}){
   const points = specialActionPoints(actionId);
   if(!state || points <= 0) return 0;
   state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + points));
-  state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
-  state.puntos_log.push({ actionId, points, ...turnStamp({ date:game?.currentDate || '', ...context }) });
-  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  appendSpecialPointsLog(state, { actionId, points, ...turnStamp({ date:game?.currentDate || '', ...context }) });
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'award_special_points' });
   return points;
 }
@@ -720,9 +739,7 @@ function redeemSpecialCode(){
   }
   if(points > 0){
     state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + points));
-    state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
-    state.puntos_log.push({ actionId:'codigo_especial', points, code:key, ...turnStamp({ date:game?.currentDate || '' }) });
-    if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+    appendSpecialPointsLog(state, { actionId:'codigo_especial', points, code:key, ...turnStamp({ date:game?.currentDate || '' }) });
     if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'special_code_points' });
     specialPointsAnimation = { id:`code-${Date.now()}-${Math.random()}`, points };
     applied.push(`+${formatPlainNumber(points)} puntos de habilidad`);
@@ -938,8 +955,7 @@ async function openSpecialPack(packId){
   // El costo del sobre se descuenta en el momento de comprarlo, antes de mostrar las cartas.
   state.puntos_habilidad = Math.max(0, previousPoints - cost);
   state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
-  state.puntos_log.push({ actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
-  if(state.puntos_log.length > 80) state.puntos_log = state.puntos_log.slice(-80);
+  appendSpecialPointsLog(state, { actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'open_special_pack_cost' });
   game.special = state;
   specialPointsAnimation = { id:`spend-${Date.now()}-${Math.random()}`, points:-cost };
@@ -1086,6 +1102,7 @@ function destroySpecialCard(cardId){
   removeSpecialCardEverywhereInState(state, card.id_carta);
   specialGlobalDestroyCard(card, { slotId:currentSpecialSaveSlotId(), reason:'destroy_special_card' });
   state.puntos_habilidad = Math.max(0, Math.round(Number(state.puntos_habilidad || 0) + recovery));
+  appendSpecialPointsLog(state, { actionId:'destruir_carta', points:recovery, cardId:card.id_carta, rarity:card.rareza, ...turnStamp({ date:game?.currentDate || '' }) });
   state.historial_ultimas_cartas = [{ ...card, activa:false, active_slot_id:'', destruida:true, recuperacion_puntos:recovery }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
   game.special = syncSpecialStateWithGlobalCards(state);
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'destroy_special_card' });

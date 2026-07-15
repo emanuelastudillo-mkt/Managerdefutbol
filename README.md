@@ -1,4 +1,44 @@
-# Fútbol Manager MVP - V7.45
+# Fútbol Manager MVP - V7.46
+
+## V7.46 - Animación diaria de puntos de habilidad
+
+### Sumatoria junto a Avanzar día
+
+- Al comenzar una nueva fecha, junto al botón **Avanzar día** aparece una animación breve con los puntos de habilidad obtenidos desde el avance anterior.
+- El contador sube progresivamente desde 0 hasta la cantidad ganada.
+- Cuando hubo varias recompensas, muestra una suma compacta, por ejemplo `125 + 250 = 375`.
+- También informa el saldo total de puntos después de acreditar los premios.
+- Si no se ganaron puntos, no aparece ninguna animación y la interfaz conserva su tamaño habitual.
+
+### Registro de premios
+
+- La sumatoria utiliza los movimientos positivos del historial de puntos, no la diferencia del saldo.
+- Abrir sobres o gastar puntos no reduce ni oculta lo ganado durante el día.
+- Se registran victorias, empates, bonus de goles, campeonatos, tratamientos, informes juveniles, mantenimiento del campo, códigos, destrucción de cartas, Campo destruido y Licencia Internacional.
+- La destrucción de cartas ahora deja también su movimiento en el historial de puntos.
+- Las recompensas obtenidas durante varios días de avance automático se agrupan en una única animación al volver a Inicio.
+
+### Interfaz
+
+- La animación aparece a la derecha del botón principal y se retira automáticamente después de unos segundos.
+- En pantallas angostas se coloca debajo del botón para no comprimirlo.
+- Respeta la preferencia del navegador de reducir movimientos.
+- También funciona cuando el manager está sin club y continúa avanzando el calendario.
+
+### Archivos principales modificados en V7.46
+
+- `index.html`
+- `js/game/05-state-season.js`
+- `js/game/15-especial.js`
+- `js/ui/06-render-home-messages.js`
+- `js/ui/19-manager-courses.js`
+- `style.css`
+- `README.md`
+- archivos de versión y caché
+
+### Compatibilidad
+
+**V7.46 no rompe partidas anteriores.** Las partidas V7.45 inicializan el nuevo cursor de movimientos con el historial existente, por lo que no muestran premios antiguos como si acabaran de obtenerse. La animación comienza a registrar y mostrar las recompensas obtenidas desde el siguiente avance de día.
 
 ## V7.45 - Cursos y licencias progresivas de manager
 

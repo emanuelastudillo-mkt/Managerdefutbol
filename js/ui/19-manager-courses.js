@@ -1,4 +1,4 @@
-/* V7.45 · Licencias progresivas y tutoriales para managers nuevos. */
+/* V7.46 · Licencias progresivas y tutoriales para managers nuevos. */
 
 const MANAGER_COURSE_REWARD_POINTS = 1000;
 const MANAGER_COURSE_ORDER = ['basic','national','international'];
@@ -64,7 +64,7 @@ const MANAGER_COURSE_LICENSES = {
 
 function createInitialManagerCoursesState(){
   return {
-    version:'V7.45',
+    version:'V7.46',
     checked:{ basic:[], national:[], international:[] },
     completed:{ basic:false, national:false, international:false },
     completedAt:{ basic:null, national:null, international:null },
@@ -95,7 +95,7 @@ function normalizeManagerCoursesState(value=null){
   });
   clean.rewardClaimed = Boolean(src.rewardClaimed && clean.completed.international);
   clean.rewardClaimedAt = clean.rewardClaimed ? (src.rewardClaimedAt || clean.completedAt.international || null) : null;
-  clean.version = 'V7.45';
+  clean.version = 'V7.46';
   return clean;
 }
 function managerCoursesHasProgress(value=null){
@@ -136,16 +136,20 @@ function managerCourseAddRewardPoints(stateInput=null){
     const special = ensureSpecialState();
     currentPoints = Math.max(currentPoints, Math.max(0, Math.round(Number(special?.puntos_habilidad || 0))));
     special.puntos_habilidad = currentPoints + MANAGER_COURSE_REWARD_POINTS;
-    special.puntos_log = Array.isArray(special.puntos_log) ? special.puntos_log : [];
-    special.puntos_log.push({
+    const rewardLog = {
       actionId:'licencia_manager_internacional',
       points:MANAGER_COURSE_REWARD_POINTS,
       puntos_antes:currentPoints,
       puntos_despues:special.puntos_habilidad,
       fecha:typeof currentCalendarDate === 'function' ? currentCalendarDate() : null,
       createdAt:new Date().toISOString()
-    });
-    special.puntos_log = special.puntos_log.slice(-80);
+    };
+    if(typeof appendSpecialPointsLog === 'function') appendSpecialPointsLog(special, rewardLog);
+    else {
+      special.puntos_log = Array.isArray(special.puntos_log) ? special.puntos_log : [];
+      special.puntos_log.push(rewardLog);
+      special.puntos_log = special.puntos_log.slice(-80);
+    }
     game.special = special;
     currentPoints = special.puntos_habilidad;
   } else {

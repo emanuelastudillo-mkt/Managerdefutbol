@@ -302,6 +302,92 @@ function daysUntilNextOwnMatchLabel(){
   return `<div class="office-days-remaining"><span>Días restantes</span><strong>${days}</strong></div>`;
 }
 
+function dailySkillPointsTracker(){
+  if(!game || typeof currentCalendarDate !== 'function') return null;
+  const special = typeof ensureSpecialState === 'function' ? ensureSpecialState() : game.special;
+  if(!special || typeof special !== 'object') return null;
+  const currentDate = String(currentCalendarDate() || game.currentDate || '');
+  const currentSerial = Math.max(0, Math.round(Number(special.puntos_log_secuencia || 0)));
+  const log = Array.isArray(special.puntos_log) ? special.puntos_log : [];
+  let tracker = game.dailySkillPointsAnimation;
+  if(!tracker || typeof tracker !== 'object'){
+    tracker = { date:currentDate, lastSerial:currentSerial, pending:null };
+    game.dailySkillPointsAnimation = tracker;
+    return tracker;
+  }
+  tracker.lastSerial = Math.max(0, Math.round(Number(tracker.lastSerial || 0)));
+  if(!tracker.date){
+    tracker.date = currentDate;
+    tracker.lastSerial = currentSerial;
+    tracker.pending = null;
+    return tracker;
+  }
+  if(String(tracker.date) !== currentDate){
+    const newEntries = log
+      .filter(entry => Math.max(0, Math.round(Number(entry?.serial || 0))) > tracker.lastSerial)
+      .filter(entry => Number(entry?.points || 0) > 0)
+      .sort((a,b) => Number(a.serial || 0) - Number(b.serial || 0));
+    const total = newEntries.reduce((sum, entry) => sum + Math.max(0, Math.round(Number(entry.points || 0))), 0);
+    tracker.pending = total > 0 ? {
+      id:`daily-skill-${Date.now()}-${currentSerial}`,
+      points:total,
+      entries:newEntries.map(entry => ({ points:Math.max(0, Math.round(Number(entry.points || 0))), actionId:String(entry.actionId || '') })).slice(-8),
+      fromDate:String(tracker.date || ''),
+      date:currentDate,
+      totalPoints:Math.max(0, Math.round(Number(special.puntos_habilidad || 0))),
+      rendered:false
+    } : null;
+    tracker.date = currentDate;
+    tracker.lastSerial = currentSerial;
+  }else if(currentSerial < tracker.lastSerial){
+    tracker.lastSerial = currentSerial;
+    tracker.pending = null;
+  }
+  return tracker;
+}
+function dailySkillPointsEquation(entries=[], total=0){
+  const values = (Array.isArray(entries) ? entries : []).map(entry => Math.max(0, Math.round(Number(entry?.points || 0)))).filter(Boolean);
+  if(values.length <= 1) return 'Puntos obtenidos desde el último avance';
+  if(values.length <= 4) return `${values.join(' + ')} = ${Math.max(0, Math.round(Number(total || 0)))}`;
+  return `${values.length} recompensas acumuladas`;
+}
+function dailySkillPointsAnimationMarkup(){
+  const tracker = dailySkillPointsTracker();
+  const pending = tracker?.pending;
+  if(!pending || pending.rendered) return '';
+  pending.rendered = true;
+  const points = Math.max(0, Math.round(Number(pending.points || 0)));
+  return `<div class="daily-skill-points-animation" data-daily-skill-animation="${escapeHtml(pending.id)}" aria-live="polite">
+    <span>Puntos del día</span>
+    <strong data-daily-skill-count data-target="${points}">+0</strong>
+    <small>${escapeHtml(dailySkillPointsEquation(pending.entries, points))}</small>
+    <em>Total ${formatPlainNumber(pending.totalPoints || 0)}</em>
+  </div>`;
+}
+function startDailySkillPointsAnimation(){
+  const element = document.querySelector('[data-daily-skill-animation]');
+  if(!element) return;
+  const counter = element.querySelector('[data-daily-skill-count]');
+  const target = Math.max(0, Math.round(Number(counter?.dataset?.target || 0)));
+  const duration = 850;
+  const startAt = performance.now();
+  requestAnimationFrame(() => element.classList.add('is-visible'));
+  function tick(now){
+    const progress = Math.min(1, Math.max(0, (now - startAt) / duration));
+    const eased = 1 - Math.pow(1 - progress, 3);
+    if(counter) counter.textContent = `+${formatPlainNumber(Math.round(target * eased))}`;
+    if(progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  setTimeout(() => element.classList.add('is-exiting'), 2450);
+  setTimeout(() => {
+    element.remove();
+    if(game?.dailySkillPointsAnimation?.pending?.id === element.dataset.dailySkillAnimation){
+      game.dailySkillPointsAnimation.pending = null;
+    }
+  }, 2900);
+}
+
 function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
   const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
@@ -348,7 +434,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     </div>
     <div class="office-side-card">
       ${nextBox}
-      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button><div class="auto-advance-switch-panel"><p class="label">Avance automático</p><button id="advanceAutoClickerBtn" class="auto-advance-switch is-off" type="button" aria-pressed="false"><span class="auto-advance-switch-track"><i></i></span><strong data-auto-advance-state>OFF</strong></button></div></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><div class="advance-main-row"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button>${dailySkillPointsAnimationMarkup()}</div><div class="auto-advance-switch-panel"><p class="label">Avance automático</p><button id="advanceAutoClickerBtn" class="auto-advance-switch is-off" type="button" aria-pressed="false"><span class="auto-advance-switch-track"><i></i></span><strong data-auto-advance-state>OFF</strong></button></div></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
     </div>
   </div>`;
 }
@@ -424,7 +510,7 @@ function renderGameOverScreen(){
         ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
       </div>
       <div class="row game-over-actions">
-        <button class="primary" id="advanceUnifiedBtn">Avanzar día</button>
+        <div class="game-over-advance-wrap"><button class="primary" id="advanceUnifiedBtn">Avanzar día</button>${dailySkillPointsAnimationMarkup()}</div>
         <button class="ghost" id="btnGameOverNewGame">Buscar otro club</button>
         ${typeof founderModeEnabled === 'function' && founderModeEnabled() ? '<button class="ghost" id="btnGameOverFounder">Fundar club</button>' : ''}
         <button class="ghost" id="btnGameOverScoutingArchive">Archivo de jugadores ojeados</button>
@@ -437,6 +523,7 @@ function renderGameOverScreen(){
     ${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'game-over', selectable:false }) : ''}
   </div>`;
   $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  startDailySkillPointsAnimation();
   $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
   $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
   $('btnGameOverScoutingArchive')?.addEventListener('click', () => { if(typeof openScoutingReportsModal === 'function') openScoutingReportsModal('all'); else showNotice('El archivo de ojeo no está disponible todavía.'); });
@@ -543,6 +630,7 @@ function renderHome(){
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   updateAdvanceButtonState();
+  startDailySkillPointsAnimation();
 }
 function updateAdvanceButtonState(){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

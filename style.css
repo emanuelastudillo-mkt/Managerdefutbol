@@ -5811,3 +5811,83 @@ button.cwc-group-result{cursor:pointer}
   .manager-course-license-title strong{white-space:normal}.manager-course-sequence{grid-template-columns:1fr}.manager-course-sequence i{display:none}
   .manager-course-license-footer{align-items:flex-start;flex-direction:column}.manager-course-license-footer span{text-align:left}
 }
+
+/* V7.46: sumatoria diaria de puntos de habilidad junto al avance */
+.advance-main-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:stretch;
+  width:100%;
+}
+.daily-skill-points-animation{
+  width:0;
+  max-width:0;
+  min-height:48px;
+  overflow:hidden;
+  opacity:0;
+  transform:translateX(-8px) scale(.96);
+  display:grid;
+  align-content:center;
+  gap:1px;
+  padding:0;
+  border:1px solid rgba(250,204,21,.30);
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(250,204,21,.17),rgba(245,158,11,.08));
+  box-shadow:0 10px 26px rgba(2,6,23,.22);
+  transition:width .26s ease,max-width .26s ease,opacity .22s ease,transform .22s ease,padding .26s ease;
+  pointer-events:none;
+}
+.daily-skill-points-animation.is-visible{
+  width:168px;
+  max-width:168px;
+  padding:7px 10px;
+  opacity:1;
+  transform:translateX(0) scale(1);
+}
+.daily-skill-points-animation.is-exiting{
+  opacity:0;
+  transform:translateY(-6px) scale(.96);
+}
+.daily-skill-points-animation span{
+  color:#fde68a;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.daily-skill-points-animation strong{
+  color:#facc15;
+  font-size:22px;
+  line-height:1;
+  letter-spacing:-.04em;
+  text-shadow:0 0 18px rgba(250,204,21,.24);
+}
+.daily-skill-points-animation small,
+.daily-skill-points-animation em{
+  display:block;
+  max-width:145px;
+  overflow:hidden;
+  color:#cbd5e1;
+  font-size:9px;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-style:normal;
+}
+.daily-skill-points-animation em{color:#94a3b8}
+.game-over-advance-wrap{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+}
+@media (max-width:720px){
+  .advance-main-row{grid-template-columns:1fr}
+  .daily-skill-points-animation.is-visible{width:100%;max-width:none}
+  .daily-skill-points-animation small,.daily-skill-points-animation em{max-width:none}
+  .game-over-advance-wrap{width:100%;display:grid;grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .daily-skill-points-animation{transition:none;transform:none}
+}

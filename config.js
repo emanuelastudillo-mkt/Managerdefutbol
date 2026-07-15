@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.48',
+  version: 'V7.49',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -33,7 +33,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.48',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.49',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -633,6 +633,12 @@ window.GAME_CONFIG = {
     kinesiologoProbabilidadFallo: 0.20,
     // Botón masivo: horas extras médicas. 0.01 = 1% del costo/sueldo del kinesiólogo contratado.
     kinesiologoHorasExtrasPorcentajeSueldo: 0.01,
+    kinesiologoTrabajoDiferenciado: {
+      recuperacionDesgasteDiaria: 4,
+      recuperacionFormaDiaria: 5,
+      recuperacionMoralDiaria: 1,
+      reduccionLesionPorCategoria: { regular: 0.40, bueno: 0.55, elite: 0.85 }
+    },
     preparadorJuvenilesCosto: 1000000
   },
   academia: {

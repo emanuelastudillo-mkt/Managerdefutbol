@@ -38,7 +38,7 @@ function defaultStaffCategories(){
 function defaultStaffDefinitions(){
   return [
     { id:'psychologist', nombre:'Psicólogo motivacional', rol:'Motivación', costoBase:PSYCHOLOGIST_COST, duracion:'temporada', descripcion:'Permite realizar charlas motivacionales para mejorar la moral del plantel.', accion:'charla_motivacional', imagenes:{ regular:'img/empleados/psicologo-regular.webp', bueno:'img/empleados/psicologo-bueno.webp', elite:'img/empleados/psicologo-elite.webp' } },
-    { id:'kinesiologist', nombre:'Kinesiólogo', rol:'Recuperación', costoBase:KINESIOLOGIST_COST, duracion:'temporada', descripcion:'Permite tratar lesionados una vez por semana para reducir días de recuperación.', accion:'tratamiento_lesion', imagenes:{ regular:'img/empleados/kinesiologo-regular.webp', bueno:'img/empleados/kinesiologo-bueno.webp', elite:'img/empleados/kinesiologo-elite.webp' } },
+    { id:'kinesiologist', nombre:'Kinesiólogo', rol:'Recuperación', costoBase:KINESIOLOGIST_COST, duracion:'temporada', descripcion:'Permite tratar lesionados y asignar un jugador a trabajo diferenciado con menor carga.', accion:'tratamiento_lesion', imagenes:{ regular:'img/empleados/kinesiologo-regular.webp', bueno:'img/empleados/kinesiologo-bueno.webp', elite:'img/empleados/kinesiologo-elite.webp' } },
     { id:'youth_preparer', nombre:'Preparador de juveniles', rol:'Academia', costoBase:YOUTH_PREPARER_COST, duracion:'temporada', descripcion:'Permite consultar informes de juveniles y descubrir más habilidades ocultas.', accion:'informe_juveniles', imagenes:{ regular:'img/empleados/preparador-juveniles-regular.webp', bueno:'img/empleados/preparador-juveniles-bueno.webp', elite:'img/empleados/preparador-juveniles-elite.webp' } }
   ];
 }
@@ -106,7 +106,10 @@ function resetStaffSeasonState(){
   if(!game) return;
   game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
   Object.values(game.staffContracts).forEach(contract => { contract.active = false; });
-  if(game.staffActions?.kinesiologist){ game.staffActions.kinesiologist.active = false; }
+  if(game.staffActions?.kinesiologist){
+    game.staffActions.kinesiologist.active = false;
+    game.staffActions.kinesiologist.differentiatedPlayerId = 0;
+  }
 }
 function legacyStaffActive(staffId){
   if(staffId === 'kinesiologist') return Boolean(game?.staffActions?.kinesiologist?.active);
@@ -146,7 +149,10 @@ function deactivateStaffEmployee(staffId, reason='manual'){
     contract.dismissedReason = String(reason || 'manual');
   }
   game.staffActions = game.staffActions || {};
-  if(staffId === 'kinesiologist' && game.staffActions.kinesiologist) game.staffActions.kinesiologist.active = false;
+  if(staffId === 'kinesiologist' && game.staffActions.kinesiologist){
+    game.staffActions.kinesiologist.active = false;
+    game.staffActions.kinesiologist.differentiatedPlayerId = 0;
+  }
   if(staffId === 'youth_preparer'){
     game.academy = normalizeAcademyState(game.academy);
     if(game.academy.youthPreparer) game.academy.youthPreparer.active = false;
@@ -1254,6 +1260,107 @@ function academyYouthTreatmentVisual(player){
   const progress = typeof academyVisibleSkillsProgress === 'function' ? academyVisibleSkillsProgress(player) : { percent:0, visible:0, total:0 };
   return `<div class="academy-youth-treatment-visual" title="${escapeHtml(progress.visible || 0)}/${escapeHtml(progress.total || 0)} habilidades visibles"><div class="academy-visibility-pie" style="--academy-visible-pct:${Math.round(progress.percent || 0)}"><strong>${Math.round(progress.percent || 0)}%</strong></div></div>`;
 }
+
+function kinesiologistDifferentiatedState(){
+  if(!game) return null;
+  game.staffActions = game.staffActions || {};
+  const current = (game.staffActions.kinesiologist && typeof game.staffActions.kinesiologist === 'object')
+    ? game.staffActions.kinesiologist
+    : { active:false };
+  game.staffActions.kinesiologist = current;
+  const playerId = Math.max(0, Math.round(Number(current.differentiatedPlayerId || 0)));
+  const player = playerId ? playerById(playerId) : null;
+  if(playerId && (!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0))){
+    current.differentiatedPlayerId = 0;
+  }else{
+    current.differentiatedPlayerId = playerId;
+  }
+  return current;
+}
+function kinesiologistDifferentiatedPlayerId(){
+  if(!game || !staffActive('kinesiologist')) return 0;
+  const state = kinesiologistDifferentiatedState();
+  return Math.max(0, Math.round(Number(state?.differentiatedPlayerId || 0)));
+}
+function isKinesiologistDifferentiatedPlayer(playerId){
+  return Number(playerId || 0) > 0 && Number(playerId) === kinesiologistDifferentiatedPlayerId();
+}
+function kinesiologistDifferentiatedInjuryReduction(playerId){
+  if(!isKinesiologistDifferentiatedPlayer(playerId)) return 0;
+  const category = String(staffContract('kinesiologist')?.category || kinesiologistDifferentiatedState()?.category || 'regular');
+  return clamp(Number(KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.[category] ?? KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.regular ?? 0), 0, 0.95);
+}
+function assignKinesiologistDifferentiatedPlayer(playerId){
+  if(!game || !staffActive('kinesiologist')){ showNotice('Primero tenés que contratar al kinesiólogo.'); return false; }
+  const cleanId = Math.max(0, Math.round(Number(playerId || 0)));
+  const player = cleanId ? playerById(cleanId) : null;
+  if(cleanId && (!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0))){
+    showNotice('Ese jugador ya no pertenece al plantel.');
+    return false;
+  }
+  const state = kinesiologistDifferentiatedState();
+  state.differentiatedPlayerId = cleanId;
+  state.differentiatedAssignedDate = cleanId && validIsoDate(game.currentDate) ? game.currentDate : '';
+  state.differentiatedAssignedGlobalTurn = cleanId ? Number(game.globalTurn || 0) : 0;
+  saveLocal(true);
+  renderEmployees();
+  showNotice(cleanId ? `${player.name} comenzó el trabajo diferenciado.` : 'El casillero de trabajo diferenciado quedó libre.');
+  return true;
+}
+function processKinesiologistDifferentiatedDaily(){
+  const playerId = kinesiologistDifferentiatedPlayerId();
+  if(!playerId) return { applied:false };
+  const player = playerById(playerId);
+  if(!player) return { applied:false };
+  game.playerCondition = game.playerCondition || {};
+  game.playerMorale = game.playerMorale || {};
+  const wearBefore = currentPlayerWear(playerId);
+  const conditionBefore = currentCondition(playerId);
+  const moraleBefore = currentMorale(playerId);
+  const wearChange = PLAYER_WEAR_ENABLED ? adjustPlayerWear(playerId, -KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY) : 0;
+  game.playerCondition[playerId] = clamp(Math.min(conditionBefore + KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY, maxConditionForPlayer(playerId)), 0, 99);
+  game.playerMorale[playerId] = clamp(moraleBefore + KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY, 1, 99);
+  const summary = {
+    applied:true,
+    playerId,
+    wearBefore,
+    wearAfter:currentPlayerWear(playerId),
+    wearRecovered:Math.abs(Math.min(0, Number(wearChange || 0))),
+    conditionBefore,
+    conditionAfter:currentCondition(playerId),
+    moraleBefore,
+    moraleAfter:currentMorale(playerId),
+    injuryReduction:kinesiologistDifferentiatedInjuryReduction(playerId),
+    ...turnStamp()
+  };
+  const state = kinesiologistDifferentiatedState();
+  if(state) state.lastDifferentiatedDaily = summary;
+  return summary;
+}
+function kinesiologistDifferentiatedSlotMarkup(active){
+  if(!active) return `<div class="card staff-card kinesio-differentiated-card"><h3>Trabajo diferenciado</h3><p class="muted">Contratá al kinesiólogo para asignar un jugador a una rutina de menor carga.</p></div>`;
+  const currentId = kinesiologistDifferentiatedPlayerId();
+  const currentPlayer = currentId ? playerById(currentId) : null;
+  const contract = staffContract('kinesiologist');
+  const category = String(contract?.category || 'regular');
+  const categoryLabel = staffCategory(category).nombre;
+  const reduction = Math.round(kinesiologistDifferentiatedInjuryReduction(currentId || -1) * 100)
+    || Math.round(Number(KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.[category] || 0) * 100);
+  const options = playersByClub(game.selectedClubId)
+    .slice()
+    .sort((a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'es'))
+    .map(player => `<option value="${player.id}" ${Number(player.id) === currentId ? 'selected' : ''}>${escapeHtml(player.name)} · ${escapeHtml(player.position || '—')} · ${visibleOverall(player)}</option>`)
+    .join('');
+  const currentMarkup = currentPlayer ? `<div class="kinesio-differentiated-current">${faceImg(currentPlayer,'staff-differentiated-face')}<div><strong>${escapeHtml(currentPlayer.name)}</strong><span>${conditionBar(currentPlayer.id)}</span><span>${moraleBar(currentPlayer.id)}</span></div></div>` : '<p class="muted">Casillero libre.</p>';
+  return `<div class="card staff-card kinesio-differentiated-card">
+    <div class="row"><div><p class="label">Kinesiólogo ${escapeHtml(categoryLabel)}</p><h3>Trabajo diferenciado</h3></div><span class="pill ok">-${reduction}% lesión</span></div>
+    <p class="muted">Un jugador queda fuera del entrenamiento general e individual. Cada día recupera ${KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY} de desgaste, ${KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY} de forma y ${KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY} de moral.</p>
+    ${currentMarkup}
+    <label class="label" for="kinesioDifferentiatedPlayer">Jugador asignado</label>
+    <select id="kinesioDifferentiatedPlayer" class="training-individual-select"><option value="0">Ningún jugador</option>${options}</select>
+    <div class="modal-actions"><button id="btnAssignKinesioDifferentiated" class="primary">${currentId ? 'Actualizar casillero' : 'Agregar jugador'}</button>${currentId ? '<button id="btnClearKinesioDifferentiated" class="ghost">Retirar</button>' : ''}</div>
+  </div>`;
+}
 function renderEmployees(){
   if(Number(game?.budget || 0) < 0) dismissAllStaffForFinancialCrisis({ silent:true });
   const last = game.staffActions?.motivationalTalk || null;
@@ -1291,7 +1398,7 @@ function renderEmployees(){
       </div>
       <div class="card staff-card">
         <h3>Kinesiólogo</h3>
-        <p class="muted">Contratación por temporada completa. Permite tratar lesionados una vez por semana.</p>
+        <p class="muted">Contratación por temporada completa. Permite tratar lesionados y asignar un jugador a trabajo diferenciado.</p>
         <p class="label">Costo</p>
         <div class="metric small">${staffCostLabel('kinesiologist')}</div>
         ${kinesioActive ? staffContractCardMarkup('kinesiologist', 'mini') : `<button id="btnHireKinesiologist" class="primary">Contratar</button>`}
@@ -1300,12 +1407,15 @@ function renderEmployees(){
         <h3>Tratamientos</h3>
         ${kinesioActive ? injuredTreatmentList(injuredList) : '<p class="muted">Contratá al kinesiólogo para habilitar tratamientos sobre jugadores lesionados.</p>'}
       </div>
+      ${kinesiologistDifferentiatedSlotMarkup(kinesioActive)}
     </div>
   `;
   $('btnHirePsychologist')?.addEventListener('click', () => openStaffHireModal('psychologist', renderEmployees));
   $('btnMotivationalTalk')?.addEventListener('click', (event) => callMotivationalPsychologist(event.currentTarget));
   $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
   $('btnKinesioTreatAll')?.addEventListener('click', (event) => treatAllInjuredPlayers(event.currentTarget));
+  $('btnAssignKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(Number($('kinesioDifferentiatedPlayer')?.value || 0)));
+  $('btnClearKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(0));
   document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
     btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat), btn, btn.dataset.kinesioKind || 'first')); 
   });

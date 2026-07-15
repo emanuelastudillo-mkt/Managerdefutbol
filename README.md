@@ -1,4 +1,65 @@
-# Fútbol Manager MVP - V7.48
+# Fútbol Manager MVP - V7.49
+
+## V7.49 - Trabajo diferenciado del kinesiólogo
+
+### Nuevo casillero de recuperación
+
+- La sección **Empleados → Kinesiólogo** incorpora un único casillero de **Trabajo diferenciado**.
+- Puede asignarse cualquier jugador del primer equipo mientras exista un kinesiólogo contratado.
+- El jugador puede cambiarse o retirarse del casillero en cualquier momento.
+- El casillero se libera automáticamente si el kinesiólogo es despedido, termina su contrato o el jugador deja el club.
+
+### Efectos diarios
+
+Mientras permanezca asignado, el jugador:
+
+- no participa del entrenamiento general del plantel;
+- no recibe entrenamiento individual;
+- no obtiene mejoras de habilidades por entrenamiento;
+- reduce **4 puntos de desgaste acumulado por día**;
+- recupera **5 puntos de forma física por día**;
+- aumenta **1 punto de moral por día**.
+
+La recuperación respeta los límites normales de forma y desgaste del jugador. El trabajo diferenciado también se procesa en días donde el entrenamiento general esté omitido.
+
+### Prevención de lesiones durante partidos
+
+La reducción se aplica únicamente al jugador ubicado en el casillero y depende de la categoría del kinesiólogo:
+
+| Kinesiólogo | Reducción de probabilidad de lesión |
+|---|---:|
+| Regular | 40% |
+| Bueno | 55% |
+| Elite | 85% |
+
+- Funciona en resultado rápido, partido dirigido y simulador en vivo.
+- Se combina de forma multiplicativa con cartas de prevención de lesiones.
+- No impide que el jugador participe de partidos.
+- No cura lesiones existentes ni reduce directamente la duración de una lesión.
+
+### Interfaz de entrenamiento
+
+- El jugador asignado aparece marcado como **Trabajo diferenciado**.
+- Su selector de entrenamiento individual queda reemplazado por una advertencia.
+- Las asignaciones masivas de entrenamiento no modifican al jugador mientras ocupe el casillero.
+
+### Archivos principales modificados en V7.49
+
+- `config.js`
+- `data/empleados.json`
+- `js/core/01-config-constants.js`
+- `js/core/03-player-tactics-utils.js`
+- `js/data/04-data-storage.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/10-academy-employees.js`
+- `style.css`
+- `index.html`
+- `README.md`
+
+### Compatibilidad
+
+**V7.49 no rompe partidas anteriores.** Las partidas existentes incorporan el casillero vacío. No se modifican entrenamientos, lesiones ni empleados ya contratados hasta que el manager asigne voluntariamente un jugador.
+
 
 ## V7.48 - Reajuste de recompensas de puntos de habilidad
 
@@ -37,14 +98,6 @@
 - Empate con hasta cinco goles: **50 puntos**.
 - Empate marcando seis o más goles: **300 puntos** (`50 + 250`).
 - Derrota marcando seis o más goles: conserva el bonus de **250 puntos**.
-
-### Archivos principales modificados en V7.48
-
-- `data/habilidades_especiales.json`
-- `config.js`
-- `index.html`
-- archivos de versión y perfil
-- `README.md`
 
 ### Compatibilidad
 

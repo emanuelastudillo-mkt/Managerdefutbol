@@ -47,7 +47,7 @@
       "rol": "Recuperación",
       "costoBase": 1000000,
       "duracion": "temporada",
-      "descripcion": "Permite tratar lesionados una vez por semana para reducir días de recuperación.",
+      "descripcion": "Permite tratar lesionados y asignar un jugador a trabajo diferenciado con menor carga, recuperación diaria y prevención de lesiones.",
       "accion": "tratamiento_lesion",
       "imagenes": {
         "regular": "img/empleados/kinesiologo-regular.webp",

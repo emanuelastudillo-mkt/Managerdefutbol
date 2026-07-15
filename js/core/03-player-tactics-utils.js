@@ -739,7 +739,11 @@ function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
   const rawChance = BASE_INJURY_CHANCE + Math.floor(fatiguePoints(playerId) / FATIGUE_INJURY_STEP) * FATIGUE_INJURY_BONUS + pitch.injuryBonus;
   const baseChance = clamp(rawChance * INJURY_CHANCE_MULTIPLIER, 0, 0.65);
   const highLoad = highParticipationInjuryRiskForPlayer(playerId);
-  return clamp(Math.max(baseChance, highLoad.active ? highLoad.chance : 0), 0, 0.95);
+  const untreatedChance = clamp(Math.max(baseChance, highLoad.active ? highLoad.chance : 0), 0, 0.95);
+  const differentiatedReduction = typeof kinesiologistDifferentiatedInjuryReduction === 'function'
+    ? clamp(Number(kinesiologistDifferentiatedInjuryReduction(playerId) || 0), 0, 0.95)
+    : 0;
+  return clamp(untreatedChance * (1 - differentiatedReduction), 0, 0.95);
 }
 function availabilityIcons(playerId){
   const icons = [];

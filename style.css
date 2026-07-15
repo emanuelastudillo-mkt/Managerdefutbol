@@ -5913,3 +5913,13 @@ button.cwc-group-result{cursor:pointer}
   .staff-contract-card{align-items:flex-start}
   .staff-contract-info .staff-dismiss-btn{width:100%}
 }
+
+
+/* V7.49 · Casillero de trabajo diferenciado del kinesiólogo */
+.kinesio-differentiated-card{grid-column:1/-1;border-color:rgba(82,196,138,.34);background:linear-gradient(145deg,rgba(19,45,37,.88),rgba(17,27,34,.96))}
+.kinesio-differentiated-current{display:flex;align-items:center;gap:12px;padding:12px;margin:10px 0;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(0,0,0,.16)}
+.kinesio-differentiated-current>div{display:grid;gap:5px;min-width:0;flex:1}
+.staff-differentiated-face{width:54px;height:54px;object-fit:cover;border-radius:12px;flex:0 0 auto}
+.training-player-differentiated{background:rgba(65,145,107,.08)}
+.training-differentiated-status{display:grid;gap:4px;justify-items:start;min-width:175px}
+@media(max-width:720px){.kinesio-differentiated-card{grid-column:auto}.kinesio-differentiated-current{align-items:flex-start}.training-differentiated-status{min-width:140px}}

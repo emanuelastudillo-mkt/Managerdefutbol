@@ -1136,6 +1136,9 @@ function processDailyCalendarState(dateAfter='', options={}){
     return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
+  const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDaily === 'function'
+    ? processKinesiologistDifferentiatedDaily()
+    : { applied:false };
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
   const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
@@ -1163,7 +1166,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -3368,6 +3371,8 @@ function applyTrainingEffects(){
   game.playerMorale = game.playerMorale || {};
   game.playerSkillBoosts = game.playerSkillBoosts || {};
   const squad = playersByClub(game.selectedClubId);
+  const differentiatedPlayerId = typeof kinesiologistDifferentiatedPlayerId === 'function' ? kinesiologistDifferentiatedPlayerId() : 0;
+  const trainingSquad = differentiatedPlayerId ? squad.filter(player => Number(player.id) !== Number(differentiatedPlayerId)) : squad;
   const conditionDraft = {};
   const moraleDraft = {};
   squad.forEach(player => {
@@ -3392,11 +3397,11 @@ function applyTrainingEffects(){
     }
     if(item.type === 'intense') intenseSessions += 1;
     if(item.type === 'massage') massageSessions += 1;
-    squad.forEach(player => { generalSkillGains += applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft) || 0; });
+    trainingSquad.forEach(player => { generalSkillGains += applyTrainingSessionToPlayer(player, item.type, scale, conditionDraft, moraleDraft) || 0; });
   });
   if(TRAINING_INDIVIDUAL_ENABLED){
     for(let day=0; day<Math.max(1, DAYS_PER_ADVANCE); day += 1){
-      squad.forEach(player => {
+      trainingSquad.forEach(player => {
         const type = playerTrainingType(player.id);
         individualSkillGains += applyIndividualTrainingSessionToPlayer(player, type, individualScale, conditionDraft, moraleDraft);
         individualSessions += 1;
@@ -3404,7 +3409,7 @@ function applyTrainingEffects(){
     }
   }
   if(PLAYER_WEAR_ENABLED && (intenseSessions || massageSessions)){
-    squad.forEach(player => {
+    trainingSquad.forEach(player => {
       if(intenseSessions) wearAdded += Math.max(0, adjustPlayerWear(player.id, intenseSessions * PLAYER_WEAR_INTENSE_TRAINING));
       if(massageSessions) wearReduced += Math.abs(Math.min(0, adjustPlayerWear(player.id, -massageSessions * PLAYER_WEAR_MASSAGE_RECOVERY)));
     });
@@ -3417,7 +3422,7 @@ function applyTrainingEffects(){
     ensureTeamCohesion();
     game.teamCohesion[game.selectedClubId] = clamp(Math.round(cohesionValue(game.selectedClubId) + tacticalGain), 0, 100);
   }
-  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, massageSessions, wearAdded, wearReduced, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, generalSkillGains, individualSessions, individualSkillGains, totalSkillGains:generalSkillGains + individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS };
+  game.lastTrainingApplied = { ...turnStamp(), tacticalGain, intenseSessions, massageSessions, wearAdded, wearReduced, slotsApplied:slots.length, slotEffectiveness:TRAINING_SLOT_EFFECTIVENESS, generalSkillGains, individualSessions, individualSkillGains, totalSkillGains:generalSkillGains + individualSkillGains, individualSlotEffectiveness:TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS, differentiatedPlayerId:Number(differentiatedPlayerId || 0) };
 }
 function trainingSlotButtonMarkup(dayIndex, slot, current){
   const option = trainingOptionByValue(current) || trainingOptionByValue(DEFAULT_TRAINING_TYPE);
@@ -3581,7 +3586,10 @@ function renderTraining(){
     const value = safeIndividualTrainingType(event.target.value);
     if(!event.target.value) return;
     game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
-    playersByClub(game.selectedClubId).forEach(player => { game.trainingPlan[player.id] = value; });
+    playersByClub(game.selectedClubId).forEach(player => {
+      if(typeof isKinesiologistDifferentiatedPlayer === 'function' && isKinesiologistDifferentiatedPlayer(player.id)) return;
+      game.trainingPlan[player.id] = value;
+    });
     saveLocal(true);
     renderTraining();
     showNotice(`Entrenamiento individual aplicado a todo el plantel: ${individualTrainingLabel(value)}.`);
@@ -3595,7 +3603,11 @@ function renderTraining(){
 }
 function trainingPlayerRow(player){
   const individual = playerTrainingType(player.id);
-  return `<tr>
+  const differentiated = typeof isKinesiologistDifferentiatedPlayer === 'function' && isKinesiologistDifferentiatedPlayer(player.id);
+  const individualMarkup = differentiated
+    ? `<div class="training-differentiated-status"><span class="pill ok">Trabajo diferenciado</span><span class="muted small">Sin entrenamiento general ni individual</span></div>`
+    : `<select class="training-individual-select training-tone-${individualTrainingTone(individual)}" data-player-training="${player.id}">${individualTrainingOptionsMarkup(individual)}</select>`;
+  return `<tr class="${differentiated ? 'training-player-differentiated' : ''}">
     <td><div class="training-player-cell">${faceImg(player,'training-face')}<button class="linklike" data-player-id="${player.id}">${availabilityIcons(player.id)}${escapeHtml(player.name)}</button></div></td>
     <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
     <td>${Number(player.age || 0) || '—'}</td>
@@ -3603,7 +3615,7 @@ function trainingPlayerRow(player){
     <td><strong>${typeof playerStatValue === 'function' ? playerStatValue(player.id, 'played') : Number(game?.playerStats?.[player.id]?.played || 0)}</strong></td>
     <td>${conditionBar(player.id)}</td>
     <td>${moraleBar(player.id)}</td>
-    <td><select class="training-individual-select training-tone-${individualTrainingTone(individual)}" data-player-training="${player.id}">${individualTrainingOptionsMarkup(individual)}</select></td>
+    <td>${individualMarkup}</td>
   </tr>`;
 }
 

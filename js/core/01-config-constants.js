@@ -30,7 +30,7 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.48');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.49');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.48');
+const APP_VERSION = configValue('version', 'V7.49');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -253,6 +253,14 @@ const PSYCHOLOGIST_MORALE_GAIN_MAX = Math.round(configNumber('empleados.psicolog
 const KINESIOLOGIST_COST = configNumber('empleados.kinesiologoCosto', 1000000, 0);
 const KINESIOLOGIST_FAILURE_CHANCE = configNumber('empleados.kinesiologoProbabilidadFallo', 0.20, 0, 1);
 const KINESIOLOGIST_OVERTIME_COST_RATE = configNumber('empleados.kinesiologoHorasExtrasPorcentajeSueldo', 0.01, 0, 1);
+const KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionDesgasteDiaria', 4, 0, 99));
+const KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionFormaDiaria', 5, 0, 99));
+const KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionMoralDiaria', 1, 0, 99));
+const KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION = Object.freeze({
+  regular:configNumber('empleados.kinesiologoTrabajoDiferenciado.reduccionLesionPorCategoria.regular', 0.40, 0, 0.95),
+  bueno:configNumber('empleados.kinesiologoTrabajoDiferenciado.reduccionLesionPorCategoria.bueno', 0.55, 0, 0.95),
+  elite:configNumber('empleados.kinesiologoTrabajoDiferenciado.reduccionLesionPorCategoria.elite', 0.85, 0, 0.95)
+});
 const INJURED_SUB_MAX_TURNS = Math.ceil(configNumber('lesiones.lesionadoSuplenteDiasMax', 63, 0) / DAYS_PER_ADVANCE);
 const INJURED_SUB_PENALTY = configNumber('lesiones.penalizacionLesionadoSuplente', 0.10, 0, 1);
 const DEFAULT_TRAINING_TYPE = 'regenerative';

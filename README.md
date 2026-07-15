@@ -1,4 +1,39 @@
-# Fútbol Manager MVP - V7.52
+# Fútbol Manager MVP - V7.53
+
+## V7.53 - Pulido visual del Centro de Ojeo
+
+### Lista de jugadores en seguimiento
+
+- Cada jugador ocupa ahora una fila completa dentro del área principal, evitando tarjetas demasiado angostas cuando existen muchos informes.
+- La cabecera separa con mayor claridad rostro, identidad, progreso, probabilidad de fichaje y acción de quitar.
+- Los textos largos pueden saltar de línea sin invadir botones, cifras ni tarjetas vecinas.
+- La lista conserva todas las habilidades agregadas en V7.52 y no cambia el ritmo ni la lógica del ojeo.
+
+### Grupos de habilidades
+
+- Los grupos se distribuyen en una grilla responsive de tres, dos o una columna según el ancho disponible.
+- Técnicas y ofensivas dispone de más espacio por ser el grupo con mayor cantidad de atributos.
+- Habilidades ocultas y Mercado forman parte de la misma grilla visual para evitar bloques sueltos y alturas inconsistentes.
+- Cada grupo tiene un encabezado independiente y una insignia compacta con datos conocidos sobre el total.
+- Cada habilidad utiliza una fila estable de etiqueta y valor; los nombres extensos, como Trabajo en equipo, pueden ocupar dos líneas sin superponerse.
+
+### Responsive y alcance
+
+- En pantallas medianas la grilla pasa a dos columnas.
+- En móviles pasa a una columna y el botón Quitar ocupa una fila propia.
+- No se modificaron informes, jugadores, datos guardados, fórmulas, mercado ni simuladores.
+
+### Archivos principales modificados en V7.53
+
+- `js/game/16-scouting-center.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.53 no rompe partidas anteriores.** Es un ajuste de presentación. Los informes y progresos de ojeo existentes se conservan sin migraciones adicionales.
+
 
 ## V7.52 - Ojeo detallado de todas las habilidades existentes
 

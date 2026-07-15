@@ -734,26 +734,35 @@ function scoutingPlayerSkillRows(player, map){
     return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${scoutingPlayerSkillValueMarkup(player, key, value, known.has(key))}</strong></div>`;
   }).join('');
 }
+function scoutingSkillGroupMarkup(player, label, map, className, knownSet){
+  const keys = Object.keys(map || {});
+  const knownCount = keys.filter(key => knownSet.has(key)).length;
+  return `<section class="scouting-known-section scouting-skill-group ${className}">
+    <div class="scouting-skill-group-head">
+      <p class="label">${escapeHtml(label)}</p>
+      <span class="scouting-skill-count">${knownCount}/${keys.length}</span>
+    </div>
+    <div class="scouting-known-grid">${scoutingPlayerSkillRows(player, map)}</div>
+  </section>`;
+}
 function scoutingPlayerKnownSkillRows(player){
   const knownSet = scoutingKnownSet(player.id);
   const visibleGroups = scoutingDetailedSkillGroups(player);
-  const visibleSections = visibleGroups.map(group => {
-    const keys = Object.keys(group.map);
-    const knownCount = keys.filter(key => knownSet.has(key)).length;
-    return `<div class="scouting-known-section scouting-skill-group scouting-skill-group-${escapeHtml(group.key)}"><p class="label">${escapeHtml(group.label)} ${knownCount}/${keys.length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, group.map)}</div></div>`;
-  }).join('');
+  const visibleSections = visibleGroups.map(group => scoutingSkillGroupMarkup(
+    player,
+    group.label,
+    group.map,
+    `scouting-skill-group-${escapeHtml(group.key)}`,
+    knownSet
+  )).join('');
   const hiddenMap = scoutingHiddenStatMap(player);
   const signingMap = scoutingSigningChanceMap(player);
-  const hiddenKnown = Object.keys(hiddenMap).filter(key => knownSet.has(key)).length;
   const signingKeys = Object.keys(signingMap);
-  const signingKnown = signingKeys.filter(key => knownSet.has(key)).length;
+  const hiddenSection = scoutingSkillGroupMarkup(player, 'Habilidades ocultas', hiddenMap, 'scouting-hidden-section', knownSet);
   const signingSection = signingKeys.length
-    ? `<div class="scouting-known-section scouting-market-section"><p class="label">Mercado ${signingKnown}/${signingKeys.length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, signingMap)}</div></div>`
+    ? scoutingSkillGroupMarkup(player, 'Mercado', signingMap, 'scouting-market-section', knownSet)
     : '';
-  return `
-    <div class="scouting-skill-groups">${visibleSections}</div>
-    <div class="scouting-known-section scouting-hidden-section"><p class="label">Habilidades ocultas ${hiddenKnown}/${Object.keys(hiddenMap).length}</p><div class="scouting-known-grid">${scoutingPlayerSkillRows(player, hiddenMap)}</div></div>
-    ${signingSection}`;
+  return `<div class="scouting-skill-groups ${signingKeys.length ? 'has-market' : 'no-market'}">${visibleSections}${hiddenSection}${signingSection}</div>`;
 }
 function scoutingPlayerSigningChanceTone(chance){
   const value = Number(chance || 0);

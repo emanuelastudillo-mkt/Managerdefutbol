@@ -5936,3 +5936,165 @@ button.cwc-group-result{cursor:pointer}
 .scouting-skill-group .label{margin:0 0 7px}
 .scouting-skill-group-technical{grid-column:span 2}
 @media (max-width:900px){.scouting-skill-groups{grid-template-columns:1fr}.scouting-skill-group-technical{grid-column:auto}}
+
+
+/* V7.53 · Pulido visual de la lista de jugadores del Centro de Ojeo */
+.scouting-player-list{
+  grid-template-columns:minmax(0,1fr);
+  gap:14px;
+}
+.scouting-player-card{
+  min-width:0;
+  overflow:hidden;
+  gap:12px;
+  padding:14px;
+  border-radius:17px;
+}
+.scouting-player-head{
+  grid-template-columns:56px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:start;
+}
+.scouting-player-head>div{min-width:0}
+.scouting-player-face{
+  width:56px;
+  height:56px;
+  border-radius:15px;
+}
+.scouting-player-head h3{
+  margin:0 0 4px;
+  line-height:1.2;
+  overflow-wrap:anywhere;
+}
+.scouting-player-head .muted{
+  margin:0 0 6px;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.scouting-player-head>button{
+  align-self:start;
+  white-space:nowrap;
+}
+.scouting-player-meta-row{
+  grid-template-columns:minmax(0,1fr) minmax(150px,180px);
+  gap:14px;
+  align-items:stretch;
+  margin:2px 0 0;
+}
+.scouting-player-meta-row>p{
+  align-self:center;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.scouting-signing-chance{
+  min-width:0;
+  height:100%;
+  align-content:center;
+}
+.scouting-skill-groups{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-auto-flow:dense;
+  gap:10px;
+  min-width:0;
+}
+.scouting-skill-group{
+  min-width:0;
+  margin:0;
+  padding:11px;
+  border-radius:13px;
+  overflow:hidden;
+}
+.scouting-skill-group-technical{grid-column:span 2}
+.scouting-hidden-section{grid-column:span 2}
+.scouting-skill-groups.no-market .scouting-hidden-section{grid-column:1/-1}
+.scouting-skill-group-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-width:0;
+  padding-bottom:8px;
+  margin-bottom:8px;
+  border-bottom:1px solid rgba(148,163,184,.10);
+}
+.scouting-skill-group-head .label{
+  min-width:0;
+  margin:0;
+  color:#d8e3f2;
+  font-size:10.5px;
+  line-height:1.25;
+  letter-spacing:.07em;
+  overflow-wrap:anywhere;
+}
+.scouting-skill-count{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  padding:3px 7px;
+  border-radius:999px;
+  border:1px solid rgba(96,165,250,.22);
+  background:rgba(59,130,246,.10);
+  color:#bfdbfe;
+  font-size:10px;
+  font-weight:900;
+  line-height:1;
+}
+.scouting-known-grid{
+  grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  gap:6px;
+  min-width:0;
+}
+.scouting-known-grid .stat-rank{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  min-height:36px;
+  padding:7px 8px;
+  border:1px solid rgba(148,163,184,.06);
+  border-radius:9px;
+  overflow:hidden;
+}
+.scouting-known-grid .stat-rank span{
+  min-width:0;
+  font-size:10.5px;
+  line-height:1.18;
+  overflow-wrap:anywhere;
+}
+.scouting-known-grid .stat-rank strong{
+  flex:0 0 auto;
+  min-width:24px;
+  text-align:right;
+  font-size:13px;
+  line-height:1;
+}
+.scouting-market-section .scouting-known-grid{
+  grid-template-columns:minmax(0,1fr);
+}
+@media (max-width:1180px){
+  .scouting-skill-groups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .scouting-skill-group-technical{grid-column:1/-1}
+  .scouting-hidden-section{grid-column:auto}
+  .scouting-skill-groups.no-market .scouting-hidden-section{grid-column:1/-1}
+}
+@media (max-width:760px){
+  .scouting-player-card{padding:12px}
+  .scouting-player-head{grid-template-columns:48px minmax(0,1fr)}
+  .scouting-player-face{width:48px;height:48px}
+  .scouting-player-head>button{grid-column:1/-1;width:100%}
+  .scouting-player-meta-row{grid-template-columns:1fr}
+  .scouting-signing-chance{text-align:left}
+  .scouting-skill-groups{grid-template-columns:minmax(0,1fr)}
+  .scouting-skill-group-technical,
+  .scouting-hidden-section,
+  .scouting-skill-groups.no-market .scouting-hidden-section{grid-column:auto}
+  .scouting-known-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:480px){
+  .scouting-known-grid{grid-template-columns:minmax(0,1fr)}
+  .scouting-skill-group{padding:10px}
+}

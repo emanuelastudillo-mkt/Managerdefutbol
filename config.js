@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.55',
+  version: 'V7.56',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -33,7 +33,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.55',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.56',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -708,9 +708,10 @@ window.GAME_CONFIG = {
   },
 
   simulador: {
-    // enfoque jugadorista. El resultado mezcla fuerza colectiva con duelos individuales.
-    pesoColectivo: 0.70,
-    pesoIndividual: 0.30,
+    // Equilibrio del resultado de cada ocasión: mitad construcción colectiva y mitad duelo individual.
+    // Se aplica al partido normal, al simulador en vivo y a Ver solo resultados.
+    pesoColectivo: 0.50,
+    pesoIndividual: 0.50,
     // Reduce goles de defensores en jugadas normales. Siguen pudiendo marcar en pelota parada.
     probabilidadPelotaParada: 0.14,
     // los errores dependen del jugador implicado. Se usa la seguridad del jugador: (moral + físico + media + cohesión) / 400.

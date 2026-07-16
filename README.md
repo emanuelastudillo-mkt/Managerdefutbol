@@ -1,4 +1,41 @@
-# Fútbol Manager MVP - V7.55
+# Fútbol Manager MVP - V7.56
+
+## V7.56 - Mayor peso de las individualidades
+
+### Equilibrio colectivo e individual
+
+- Se confirmó que el motor utilizaba una mezcla de **70% fuerza colectiva y 30% resolución individual** al definir cada ocasión.
+- La relación pasa a **50% colectivo y 50% individual**.
+- El ajuste potencia la influencia de delanteros, defensores y arqueros sobresalientes en los duelos concretos de una jugada.
+- La parte individual compara atributos ya existentes del rematador, defensor y portero, además de su moral y otros modificadores vigentes.
+- No se cambia la habilidad **Trabajo en equipo** de los jugadores ni se alteran sus valores guardados.
+
+### Modos afectados
+
+- Simulación normal mediante el motor principal.
+- Partido dirigido en el simulador en vivo.
+- Opción **Ver solo resultados**, que recorre automáticamente el mismo motor vivo.
+- Los tres modos usan la misma función de resolución de ocasiones, por lo que la proporción 50/50 es consistente.
+- No se modifica el simulador independiente de Desafíos Online.
+
+### Alcance del ajuste
+
+- No cambia la cantidad base de ataques ni ocasiones generadas por los equipos.
+- No modifica tácticas, cohesión, estado físico, localía, tarjetas, lesiones ni entrenamiento.
+- Cambia la probabilidad final de convertir una ocasión, dando más importancia a la calidad individual de quienes intervienen.
+
+### Archivos principales modificados en V7.56
+
+- `config.js`
+- `balance-modificadores.js`
+- `simulador-2.0.js`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.56 no rompe partidas anteriores.** No cambia la estructura de guardado ni los atributos de los jugadores. La nueva proporción se aplica a los partidos disputados después de cargar esta versión.
+
 
 ## V7.55 - Corrección de búsqueda automática y requisito de jefe
 

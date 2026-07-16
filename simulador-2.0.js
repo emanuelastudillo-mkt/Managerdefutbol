@@ -94,8 +94,8 @@
       bonusAtaquePct: Math.max(0, Math.min(2, Number(rule?.bonusAtaquePct ?? rule?.ataquePct ?? 0) || 0))
     })).sort((a,b) => a.diferenciaMin - b.diferenciaMin);
   }
-  const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.70, 0, 1);
-  const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.30, 0, 1);
+  const SIM_TEAM_WEIGHT = simConfigNumber('simulador.pesoColectivo', 0.50, 0, 1);
+  const SIM_INDIVIDUAL_WEIGHT = simConfigNumber('simulador.pesoIndividual', 0.50, 0, 1);
   const SIM_SET_PIECE_CHANCE = simConfigNumber('simulador.probabilidadPelotaParada', 0.14, 0, 1);
   const SIM_GOAL_ERROR_ATTRIBUTION_RATE = simConfigNumber('simulador.probabilidadGolAtribuyeErrorGol', 0.60, 0, 1);
   const SIM_PLAYER_ERROR_SCALE = simConfigNumber('simulador.escalaRiesgoErrorJugador', 0.72, 0, 2);

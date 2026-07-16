@@ -1,4 +1,4 @@
-/* V7.55 · Centro de Ojeo: búsqueda automática persistente y dependiente del jefe. */
+/* V7.56 · Centro de Ojeo: búsqueda automática persistente y dependiente del jefe. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];

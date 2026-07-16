@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.55',
-    nombre: 'Balance centralizado de modificadores V7.55',
+    version: 'V7.56',
+    nombre: 'Balance centralizado de modificadores V7.56',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -94,8 +94,8 @@ window.GAME_BALANCE_MODIFICADORES = {
   },
 
   simulador: {
-    pesoColectivo: 0.70,
-    pesoIndividual: 0.30,
+    pesoColectivo: 0.50,
+    pesoIndividual: 0.50,
     probabilidadPelotaParada: 0.14,
     escalaRiesgoErrorJugador: 0.72,
     probabilidadGolAtribuyeErrorGol: 0.60,

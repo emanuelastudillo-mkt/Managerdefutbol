@@ -809,7 +809,8 @@
     candidates.forEach(player => {
       const injuryMultiplier = simClamp(Number(ownPower?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
       const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
-      const chance = injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier * cardMultiplier;
+      const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId) : 1;
+      const chance = simClamp(injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier * cardMultiplier * contextMultiplier, 0, 0.95);
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
@@ -1547,7 +1548,11 @@
     candidates.forEach(player => {
       const injuryMultiplier = simClamp(Number(power?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
       const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
-      const chance = injuryChanceForPlayer(player.id, context.pitch) * blockDurationFactor(block) * 0.90 * injuryMultiplier * cardMultiplier;
+      const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId, { live:true }) : 0.50;
+      const fullMatchChance = simClamp(injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier * cardMultiplier * contextMultiplier, 0, 0.95);
+      const chance = typeof liveInjuryChanceForBlock === 'function'
+        ? liveInjuryChanceForBlock(fullMatchChance, block)
+        : fullMatchChance * blockDurationFactor(block) / 6;
       if(Math.random() < chance){
         const injury = typeof pickInjuryTypeForPlayer === 'function' ? pickInjuryTypeForPlayer(player.id) : pickInjuryType();
         const matchesOut = Math.floor(simRnd(injury.minTurns, injury.maxTurns + 1));
@@ -1558,7 +1563,7 @@
           name:injury.name,
           injuryLabel:injury.name,
           probability:injury.probability,
-          chance:Math.round(chance * 100),
+          chance:Math.round(fullMatchChance * 100),
           matchesOut,
           minute:Math.floor(simRnd(block.from, block.to + 1)),
           phase:'durante',

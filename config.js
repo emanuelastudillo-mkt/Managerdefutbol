@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.58',
+  version: 'V7.59',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -33,7 +33,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.58',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.59',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -791,11 +791,23 @@ window.GAME_CONFIG = {
   },
 
   lesiones: {
-    // reduce la probabilidad total de lesiones un 80%. 0.20 = queda el 20% de la chance previa.
+    // Probabilidad general del sistema. 0.20 conserva el 20% de la probabilidad previa.
     multiplicadorProbabilidad: 0.20,
     lesionBase: 0.05,
     fatigaPaso: 5,
     fatigaBonus: 0.01,
+    // Ajustes por contexto de partido.
+    multiplicadorBots: 0.50,
+    partidosProteccionManager: 50,
+    multiplicadorManagerPrimerosPartidos: 0.50,
+    multiplicadorSimuladorVivo: 0.50,
+    // Pesos relativos de aparición. Deben sumar 100.
+    pesoContusion: 34,
+    pesoDistension: 30,
+    pesoDesgarro: 20,
+    pesoEsguince: 10,
+    pesoRotura: 5,
+    pesoFractura: 1,
     // Duraciones en días. El motor las convierte a turnos según diasPorAvance.
     contusionMinDias: 7,
     contusionMaxDias: 21,

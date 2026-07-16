@@ -577,7 +577,8 @@ function quickBuildInjuries(clubId, lineup, context){
   const candidates = (lineup || []).filter(player => !isUnavailable(player.id));
   candidates.forEach(player => {
     const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
-    const chance = Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70 * cardMultiplier;
+    const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId) : 1;
+    const chance = clamp(Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70 * cardMultiplier * contextMultiplier, 0, 0.95);
     if(Math.random() >= chance) return;
     const injury = typeof pickInjuryTypeForPlayer === 'function'
       ? pickInjuryTypeForPlayer(player.id)

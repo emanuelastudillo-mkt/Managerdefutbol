@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V7.58',
-    nombre: 'Balance centralizado de modificadores V7.58',
+    version: 'V7.59',
+    nombre: 'Balance centralizado de modificadores V7.59',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -90,7 +90,21 @@ window.GAME_BALANCE_MODIFICADORES = {
 
   lesiones: {
     // Se mantiene así: un lesionado usado como suplente rinde casi nada.
-    penalizacionLesionadoSuplente: 0.30
+    penalizacionLesionadoSuplente: 0.30,
+    // Los clubes bot sufren la mitad de la probabilidad normal en todos sus partidos.
+    multiplicadorBots: 0.50,
+    // El club del manager conserva la protección durante sus primeros 50 partidos oficiales.
+    partidosProteccionManager: 50,
+    multiplicadorManagerPrimerosPartidos: 0.50,
+    // El partido dirigido en vivo reduce a la mitad el riesgo contextual de ambos equipos.
+    multiplicadorSimuladorVivo: 0.50,
+    // Distribución de tipos de lesión. Total: 100.
+    pesoContusion: 34,
+    pesoDistension: 30,
+    pesoDesgarro: 20,
+    pesoEsguince: 10,
+    pesoRotura: 5,
+    pesoFractura: 1
   },
 
   simulador: {

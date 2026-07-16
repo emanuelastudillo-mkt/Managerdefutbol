@@ -1,4 +1,16 @@
-# Fútbol Manager MVP - V7.58
+# Fútbol Manager MVP - V7.59
+
+## V7.59 - Reducción contextual y distribución de lesiones
+
+- Nueva distribución de tipos de lesión: Contusión 34%, Distensión 30%, Desgarro 20%, Esguince 10%, Rotura 5% y Fractura 1%. Las duraciones no cambian.
+- Todos los equipos bot utilizan un multiplicador constante de 0,50 sobre la probabilidad final de lesión durante partidos.
+- El club del manager utiliza un multiplicador de 0,50 durante sus primeros 50 partidos oficiales dirigidos. La protección no se aplica a encuentros contra otros managers; Desafíos Online conserva su sistema independiente.
+- El simulador en vivo aplica otro multiplicador de 0,50 a ambos equipos.
+- La comprobación minuto a minuto del simulador en vivo fue normalizada: la suma de los 90 controles representa una única probabilidad de partido, evitando multiplicar indirectamente el riesgo por realizar un control en cada minuto.
+- Cartas, trabajo diferenciado, estado físico, campo, sobrecarga por participación e instrucciones conservan sus efectos y se combinan de forma multiplicativa.
+
+**V7.59 no rompe partidas anteriores.** No cambia la estructura del guardado. Los nuevos pesos y multiplicadores se aplican únicamente a lesiones generadas en partidos disputados después de cargar esta versión.
+
 
 ## V7.58 - Estadísticas individuales por temporada
 

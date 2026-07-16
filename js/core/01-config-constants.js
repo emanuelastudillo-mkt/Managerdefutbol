@@ -30,7 +30,7 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.58');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.59');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.58');
+const APP_VERSION = configValue('version', 'V7.59');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -367,14 +367,18 @@ function injuryRule(name, probability, minPath, minDays, maxPath, maxDays){
   return { name, probability, minTurns, maxTurns };
 }
 const INJURY_TABLE = [
-  injuryRule('Distensión', 25, 'lesiones.distensionMinDias', 21, 'lesiones.distensionMaxDias', 56),
-  injuryRule('Desgarro', 20, 'lesiones.desgarroMinDias', 28, 'lesiones.desgarroMaxDias', 84),
-  injuryRule('Esguince', 15, 'lesiones.esguinceMinDias', 35, 'lesiones.esguinceMaxDias', 105),
-  injuryRule('Rotura', 9, 'lesiones.roturaMinDias', 90, 'lesiones.roturaMaxDias', 210),
-  injuryRule('Fractura', 3, 'lesiones.fracturaMinDias', 180, 'lesiones.fracturaMaxDias', 400),
-  injuryRule('Contusión', 28, 'lesiones.contusionMinDias', 7, 'lesiones.contusionMaxDias', 21)
+  injuryRule('Contusión', configNumber('lesiones.pesoContusion', 34, 0, 100), 'lesiones.contusionMinDias', 7, 'lesiones.contusionMaxDias', 21),
+  injuryRule('Distensión', configNumber('lesiones.pesoDistension', 30, 0, 100), 'lesiones.distensionMinDias', 21, 'lesiones.distensionMaxDias', 56),
+  injuryRule('Desgarro', configNumber('lesiones.pesoDesgarro', 20, 0, 100), 'lesiones.desgarroMinDias', 28, 'lesiones.desgarroMaxDias', 84),
+  injuryRule('Esguince', configNumber('lesiones.pesoEsguince', 10, 0, 100), 'lesiones.esguinceMinDias', 35, 'lesiones.esguinceMaxDias', 105),
+  injuryRule('Rotura', configNumber('lesiones.pesoRotura', 5, 0, 100), 'lesiones.roturaMinDias', 90, 'lesiones.roturaMaxDias', 210),
+  injuryRule('Fractura', configNumber('lesiones.pesoFractura', 1, 0, 100), 'lesiones.fracturaMinDias', 180, 'lesiones.fracturaMaxDias', 400)
 ];
 const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 1, 0, 2);
+const BOT_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorBots', 0.50, 0, 2);
+const MANAGER_INJURY_PROTECTION_MATCHES = Math.max(0, Math.round(configNumber('lesiones.partidosProteccionManager', 50, 0, 1000)));
+const MANAGER_INITIAL_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorManagerPrimerosPartidos', 0.50, 0, 2);
+const LIVE_MATCH_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorSimuladorVivo', 0.50, 0, 2);
 const BASE_INJURY_CHANCE = configNumber('lesiones.lesionBase', 0.05, 0, 1);
 const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
 const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);

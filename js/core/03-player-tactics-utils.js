@@ -745,6 +745,32 @@ function injuryChanceForPlayer(playerId, pitchCondition='Normal'){
     : 0;
   return clamp(untreatedChance * (1 - differentiatedReduction), 0, 0.95);
 }
+function managerDirectedMatchesForInjuryProtection(){
+  return Math.max(0, Math.round(Number(game?.managerStats?.totals?.played || 0)));
+}
+function matchInjuryContextMultiplier(clubId, options={}){
+  const id = Number(clubId || 0);
+  const managerClubId = Number(game?.selectedClubId || 0);
+  const isManagerClub = Boolean(managerClubId && id === managerClubId);
+  const managerVsManager = Boolean(options?.managerVsManager);
+  let multiplier = 1;
+  if(isManagerClub){
+    const directed = managerDirectedMatchesForInjuryProtection();
+    if(!managerVsManager && directed < MANAGER_INJURY_PROTECTION_MATCHES){
+      multiplier *= MANAGER_INITIAL_INJURY_MULTIPLIER;
+    }
+  }else{
+    multiplier *= BOT_INJURY_MULTIPLIER;
+  }
+  if(options?.live) multiplier *= LIVE_MATCH_INJURY_MULTIPLIER;
+  return clamp(multiplier, 0, 2);
+}
+function liveInjuryChanceForBlock(fullMatchChance, block){
+  const chance = clamp(Number(fullMatchChance || 0), 0, 0.95);
+  const minutes = Math.max(0, Number(block?.to || 0) - Number(block?.from || 0) + 1);
+  if(!minutes || !chance) return 0;
+  return clamp(1 - Math.pow(1 - chance, minutes / 90), 0, 0.95);
+}
 function availabilityIcons(playerId){
   const icons = [];
   if(isInjured(playerId)) icons.push('<span class="injury-cross inline" title="Lesionado">✚</span>');

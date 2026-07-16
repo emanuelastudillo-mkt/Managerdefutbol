@@ -451,7 +451,9 @@ function lastTurnSummaryMarkup(){
 
 const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','academy','employees','scouting','stadium','market','finance']);
 function isManagerWithoutClubBlockedTab(tab){
-  return Boolean(game?.gameOver?.active && MANAGER_WITHOUT_CLUB_BLOCKED_TABS.has(String(tab || '')));
+  const key = String(tab || '');
+  if(game?.gameOver?.active && key === 'finance' && String(financeViewMode || 'main') === 'bank') return false;
+  return Boolean(game?.gameOver?.active && MANAGER_WITHOUT_CLUB_BLOCKED_TABS.has(key));
 }
 function managerWithoutClubBlockedNotice(tab){
   const labels = { firstTeam:'Primer Equipo', academy:'Academia', employees:'Empleados', scouting:'Centro de Ojeo', stadium:'Estadio', market:'Mercado', finance:'Finanzas' };
@@ -459,7 +461,11 @@ function managerWithoutClubBlockedNotice(tab){
 }
 function refreshManagerWithoutClubTabState(){
   document.querySelectorAll('.tabs [data-tab]').forEach(btn => {
-    const blocked = isManagerWithoutClubBlockedTab(btn.dataset.tab);
+    const tab = String(btn.dataset.tab || '');
+    const mode = String(btn.dataset.navMode || '');
+    const blocked = game?.gameOver?.active && tab === 'finance'
+      ? mode !== 'bank'
+      : isManagerWithoutClubBlockedTab(tab);
     btn.disabled = blocked;
     btn.classList.toggle('tab-disabled', blocked);
   });

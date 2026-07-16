@@ -6340,7 +6340,7 @@ button.cwc-group-result{cursor:pointer}
   .scouting-player-clause,.player-modal-clause-value{min-width:0;width:100%}
 }
 
-/* V7.64 · menú lateral compacto y anidado */
+/* V7.65 · menú lateral compacto y anidado */
 .sidebar-nav{display:grid;gap:7px;margin-top:10px}
 .sidebar-nav>button,
 .sidebar-nav .nav-group-toggle,
@@ -6376,7 +6376,7 @@ button.cwc-group-result{cursor:pointer}
 .sidebar-nav .nav-group.is-open .nav-group-items{max-height:360px;opacity:1;padding-top:4px}
 
 
-/* V7.64 · Edad visible en informes de ojeo */
+/* V7.65 · Edad visible en informes de ojeo */
 .scouting-reports-table th:nth-child(2),
 .scouting-reports-table td:nth-child(2),
 .scouting-reports-table th:nth-child(3),
@@ -6393,3 +6393,57 @@ button.cwc-group-result{cursor:pointer}
 .scouting-reports-table td:nth-child(10),
 .scouting-reports-table th:nth-child(11),
 .scouting-reports-table td:nth-child(11){text-align:center}
+
+/* V7.65 · Contratos y cuenta personal del manager */
+.job-negotiation-label{
+  display:grid;
+  gap:6px;
+  margin:12px 0;
+  font-size:.82rem;
+  color:var(--muted);
+}
+.job-negotiation-label select{
+  width:100%;
+}
+.manager-contract-preview{
+  display:grid;
+  gap:10px;
+  margin:12px 0;
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:rgba(255,255,255,.025);
+}
+.manager-contract-preview .compact-team-stats > div{
+  display:grid;
+  gap:4px;
+}
+.manager-contract-preview .compact-team-stats span{
+  color:var(--muted);
+  font-size:.75rem;
+}
+.manager-contract-schedule{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+.manager-contract-year{
+  display:grid;
+  gap:3px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel-soft,rgba(255,255,255,.025));
+}
+.manager-contract-year span,
+.manager-contract-year small{
+  color:var(--muted);
+}
+.manager-contract-year.is-final{
+  border-color:rgba(86,211,100,.45);
+  box-shadow:inset 0 0 0 1px rgba(86,211,100,.08);
+}
+@media (max-width:720px){
+  .manager-contract-schedule{grid-template-columns:1fr;}
+}

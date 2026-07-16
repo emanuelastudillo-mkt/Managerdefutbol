@@ -1,4 +1,50 @@
-# Fútbol Manager MVP - V7.64
+# Fútbol Manager MVP - V7.65
+
+## V7.65 - Contratos y sueldo personal del manager
+
+### Duración contractual
+
+- Los clubes pueden ofrecer contratos de **1, 2 o 3 temporadas**.
+- La duración la define el club según el ajuste entre su prestigio y el del manager.
+- Los contratos exigentes por diferencia de prestigio siempre duran una temporada.
+- Un contrato de dos temporadas reduce 5% el sueldo mensual y uno de tres temporadas lo reduce 10%, a cambio de estabilidad.
+- La carrera inicial conserva un primer contrato normal de una temporada.
+
+### Objetivos por año
+
+- El manager negocia la exigencia deportiva, no la duración ni el porcentaje de venta futura.
+- **Prudente:** reduce 0,10 PPG el objetivo final y baja 20% el sueldo.
+- **Normal:** mantiene objetivo y sueldo base.
+- **Ambicioso:** aumenta 0,20 PPG el objetivo final y sube 25% el sueldo.
+- En contratos de dos temporadas, el primer año exige un mínimo 0,20 PPG inferior al objetivo final.
+- En contratos de tres temporadas, los mínimos son 0,30 y 0,15 PPG inferiores; el tercer año aplica el objetivo final completo.
+- Los límites mínimos de cada división continúan activos.
+- Si el objetivo final no se cumple pero el manager no fue despedido, la renovación automática queda limitada a una temporada prudente con sueldo reducido.
+
+### Sueldo y Cuenta Bancaria
+
+- El sueldo se calcula usando división, prestigio del manager, reputación del club, capacidad económica, duración y objetivo negociado.
+- El club paga el sueldo cada 30 días: se descuenta de sus Finanzas y se acredita en la Cuenta Bancaria personal del manager.
+- La Cuenta Bancaria queda separada del presupuesto del club y continúa visible aunque el manager esté sin trabajo.
+- Los préstamos siguen perteneciendo al club y permanecen dentro de **Club → Finanzas**.
+- La cuenta personal conserva saldo, ingresos acumulados y movimientos entre clubes.
+
+### Porcentaje de futuras ventas
+
+- Cada contrato fija un porcentaje no negociable entre 5% y 20%.
+- Los clubes de menor reputación tienden a ofrecer porcentajes mayores.
+- El porcentaje queda guardado en el contrato para aplicarlo posteriormente a los juveniles promovidos durante su vigencia.
+- V7.65 registra la condición contractual; el cobro efectivo se incorporará con el sistema de derechos económicos y cartera de jugadores.
+
+### Migración
+
+- Las partidas anteriores reciben una Cuenta Bancaria personal con saldo inicial $0.
+- El club actual genera un contrato normal de una temporada desde la fecha de migración.
+- No se acreditan sueldos retroactivos.
+- Los contratos exigentes anteriores se convierten al nuevo formato conservando su restricción de fichajes.
+
+**V7.65 no rompe partidas anteriores.** Agrega estados nuevos y los crea automáticamente al cargar una carrera existente.
+
 
 ## V7.64 - Corrección de recursión en Club
 

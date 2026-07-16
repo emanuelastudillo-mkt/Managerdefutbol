@@ -1438,7 +1438,14 @@ function openNewGameModal(force=false, options={}){
             <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
             <label for="modalClubSelect">Equipo</label>
             <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
+            <label for="modalContractNegotiation">Objetivo contractual</label>
+            <select id="modalContractNegotiation" ${canChooseJob ? '' : 'disabled'}>
+              <option value="prudente">Prudente · objetivo menor · sueldo -20%</option>
+              <option value="normal" selected>Normal · objetivo y sueldo base</option>
+              <option value="ambicioso">Ambicioso · objetivo mayor · sueldo +25%</option>
+            </select>
           </div>
+          <div id="modalContractPreview" style="margin-top:14px"></div>
           <div class="row" style="margin-top:14px"><button id="btnStartNewGameModal" class="primary" ${canChooseJob ? '' : 'disabled'}>${game?.gameOver?.active ? 'Firmar con este club' : 'Iniciar carrera'}</button></div>
           ${canChooseJob && typeof founderModeEnabled === 'function' && founderModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo fundador · dificultad extrema</p><strong>Fundar tu propio club</strong><p class="muted small">Creá un club en la división más baja. Empezás con 0 jugadores, $0, estadio sin capacidad, campo deteriorado y sólo ${formatPlainNumber(FOUNDER_CLUB_INITIAL_FANS)} hinchas. Deberás formar el plantel, conseguir ingresos y construir toda la infraestructura desde cero. Al inicio sólo habrá empleados Regulares; los niveles superiores exigen 15 y 45 victorias, además de costos administrativos diarios.${game?.gameOver?.active ? ` La temporada ${game.seasonNumber || 1} se cerrará y el club debutará en la siguiente.` : ''}</p></div><button id="btnOpenFounderMode" class="ghost">Fundar club</button></div></div>` : ''}
           ${canChooseJob && typeof bankruptcyModeEnabled === 'function' && bankruptcyModeEnabled() ? `<div class="card inner" style="margin-top:14px"><div class="row"><div><p class="label">Modo libre en bancarrota</p><strong>Bancarrota, Renacer</strong><p class="muted small">Elegí cualquier club. Empezás con deuda extrema, estadio en capacidad 0, menos hinchas, menor prestigio, plantel reducido, campo al 100% y una academia juvenil de emergencia.</p></div><button id="btnOpenBankruptcyMode" class="ghost">Elegir modo</button></div></div>` : ''}
@@ -1451,6 +1458,36 @@ function openNewGameModal(force=false, options={}){
   const countrySelect = $('modalCountrySelect');
   const leagueSelect = $('modalLeagueSelect');
   const clubSelect = $('modalClubSelect');
+  const contractNegotiationSelect = $('modalContractNegotiation');
+  const contractPreview = $('modalContractPreview');
+  const modalContractOfferForClub = (clubId) => {
+    const club = seed?.clubs?.find(item => Number(item.id) === Number(clubId));
+    if(!club || typeof managerContractDurationForOffer !== 'function') return null;
+    const state = game || {
+      saveCode:'new-career-preview',
+      seasonNumber:1,
+      selectedClubId:Number(clubId),
+      currentDate:firstAdvanceDateForSeason(seasonYearForNumber(1)),
+      clubBudgets:Object.fromEntries((seed?.clubs || []).map(item => [item.id, Number(item.budget || 0)])),
+      managerStats:createInitialManagerStats()
+    };
+    const source = game?.gameOver?.active ? 'busqueda_directa' : 'inicio_carrera';
+    return {
+      id:`modal-contract-${club.id}-${state.seasonNumber || 1}`,
+      clubId:Number(club.id),
+      source,
+      contractType:'normal',
+      durationSeasons:game?.gameOver?.active ? managerContractDurationForOffer(club, { source, contractType:'normal' }, state) : 1,
+      managerPrestigeAtOffer:Number(prestige || 0),
+      baseObjectivePpg:managerObjectiveBaseForClubDivision(club.id),
+      futureSalePercent:managerContractFutureSalePercent(club, source, state)
+    };
+  };
+  const refreshModalContractPreview = () => {
+    if(!contractPreview || typeof managerContractOfferPreviewMarkup !== 'function') return;
+    const offer = modalContractOfferForClub(Number(clubSelect?.value || 0));
+    contractPreview.innerHTML = offer ? managerContractOfferPreviewMarkup(offer, contractNegotiationSelect?.value || 'normal') : '';
+  };
   const syncLeagues = () => {
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     if(leagueSelect) leagueSelect.innerHTML = leagueOptionsMarkup(country, leagueSelect.value);
@@ -1460,9 +1497,12 @@ function openNewGameModal(force=false, options={}){
     const country = countrySelect?.value || availableCountries()[0] || 'Argentina';
     const league = leagueSelect?.value || divisionsByCountry(country)[0]?.id || 'default';
     if(clubSelect) clubSelect.innerHTML = teamOptionsMarkup(country, league, clubSelect.value);
+    refreshModalContractPreview();
   };
   countrySelect?.addEventListener('change', syncLeagues);
   leagueSelect?.addEventListener('change', syncClubs);
+  clubSelect?.addEventListener('change', refreshModalContractPreview);
+  contractNegotiationSelect?.addEventListener('change', refreshModalContractPreview);
   $('modalManagerName')?.addEventListener('input', event => persistManagerName(event.target.value || ''));
   document.querySelectorAll('[data-select-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
     event.preventDefault();
@@ -1476,7 +1516,9 @@ function openNewGameModal(force=false, options={}){
     if(leagueSelect) leagueSelect.value = club.divisionId || 'default';
     clubSelect.innerHTML = teamOptionsMarkup(country, club.divisionId || 'default', clubId);
     clubSelect.value = String(clubId);
+    refreshModalContractPreview();
   }));
+  refreshModalContractPreview();
   $('btnStartNewGameModal')?.addEventListener('click', () => {
     const selected = Number(clubSelect?.value || 0);
     if(!selected) return;
@@ -1491,14 +1533,17 @@ function openNewGameModal(force=false, options={}){
       showNotice(`Ese club requiere prestigio ${clubPrestigeValue(selectedClub)}.`);
       return;
     }
+    const contractNegotiationLevel = contractNegotiationSelect?.value || 'normal';
     if(game?.gameOver?.active) continueCareerAtClub(selected, {
       country:countrySelect?.value || '',
-      leagueId:leagueSelect?.value || ''
+      leagueId:leagueSelect?.value || '',
+      contractNegotiationLevel
     });
     else if(!game) newGame(selected, {
       managerName:$('modalManagerName')?.value || '',
       country:countrySelect?.value || '',
       leagueId:leagueSelect?.value || '',
+      contractNegotiationLevel,
       saveSlotId:options.saveSlotId || SAVE_SLOT_CAREER
     });
   });

@@ -3,8 +3,8 @@
 */
 window.GAME_BALANCE_MANAGER = {
   metadataBalance: {
-    version: 'V7.64',
-    nombre: 'Objetivos dinámicos y premios deportivos V7.64',
+    version: 'V7.65',
+    nombre: 'Objetivos dinámicos y premios deportivos V7.65',
     nota: 'Define exigencia de directiva y premios económicos por campeonatos y ascensos con escala reducida.'
   },
 
@@ -90,6 +90,48 @@ window.GAME_BALANCE_MANAGER = {
       activo: true,
       deltaDespido: -0.50
     }
+  },
+
+  contratosManager: {
+    activo: true,
+
+    // Sueldo base mensual antes de prestigio, reputación, economía, duración y objetivo.
+    sueldoBaseMensualPorDivision: {
+      1: 6000000,
+      2: 3000000,
+      3: 1500000
+    },
+
+    factorPrestigioManagerMin: 0.60,
+    factorPrestigioManagerMax: 1.50,
+    factorReputacionClubMin: 0.70,
+    factorReputacionClubMax: 1.30,
+    factorEconomicoMin: 0.75,
+    factorEconomicoMax: 1.25,
+
+    // Un contrato más largo baja levemente el sueldo mensual a cambio de estabilidad.
+    factorSueldoPorDuracion: { 1: 1.00, 2: 0.95, 3: 0.90 },
+
+    negociacionObjetivo: {
+      prudente: { label: 'Objetivo prudente', objectiveDelta: -0.10, salaryFactor: 0.80 },
+      normal: { label: 'Objetivo normal', objectiveDelta: 0.00, salaryFactor: 1.00 },
+      ambicioso: { label: 'Objetivo ambicioso', objectiveDelta: 0.20, salaryFactor: 1.25 }
+    },
+
+    // Diferencia respecto del objetivo final en cada año contractual.
+    escalonesObjetivo: {
+      1: [0.00],
+      2: [-0.20, 0.00],
+      3: [-0.30, -0.15, 0.00]
+    },
+
+    // Probabilidades de duración según ajuste entre prestigio del manager y club.
+    duracionProbabilidadManagerSuperior: { one: 15, two: 45, three: 40 },
+    duracionProbabilidadEquilibrada: { one: 35, two: 45, three: 20 },
+    duracionProbabilidadExigente: { one: 70, two: 25, three: 5 },
+
+    porcentajeVentaFuturaMin: 5,
+    porcentajeVentaFuturaMax: 20
   },
 
   premiosTemporada: {

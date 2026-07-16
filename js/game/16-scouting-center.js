@@ -1,4 +1,4 @@
-/* V7.64 · Centro de Ojeo: edad visible en tarjetas e informes de jugadores ojeados. */
+/* V7.65 · Centro de Ojeo: edad visible en tarjetas e informes de jugadores ojeados. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];

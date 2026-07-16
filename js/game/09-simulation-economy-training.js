@@ -1115,6 +1115,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
   rememberCalendarDate();
   advanceGlobalTurn();
+  const managerSalaryPayment = typeof processManagerSalaryDaily === 'function' ? processManagerSalaryDaily() : 0;
   const financialStaffDismissalsAtStart = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
@@ -1135,7 +1136,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-    return { botResults, recovered, bankPayment:0, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDaily === 'function'
@@ -1168,7 +1169,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -2565,24 +2566,37 @@ function bindBankAccountActions(){
   document.querySelector('[data-payoff-bank-loan]')?.addEventListener('click', () => payOffBankLoanFull());
 }
 function renderBankAccount(){
-  const state = ensureBankLoanState();
-  const active = state?.active || null;
-  view.innerHTML = `<div class="row section-title"><div><h2>Cuenta Bancaria</h2><p class="tagline">Préstamos, deuda vigente y capacidad financiera del club.</p></div><span class="pill">Saldo ${formatMoney(game.budget || 0)}</span></div>
-    <div class="grid cols-3 compact-team-stats">
-      <div class="card"><p class="label">Presupuesto actual</p><strong class="${budgetTone(game.budget || 0)}">${formatMoney(game.budget || 0)}</strong></div>
-      <div class="card"><p class="label">Estado del préstamo</p><strong>${active ? 'Activo' : 'Sin deuda'}</strong></div>
-      <div class="card"><p class="label">Deuda restante</p><strong>${formatMoney(active?.remainingDebt || 0)}</strong></div>
+  const finances = typeof ensureManagerFinancesState === 'function'
+    ? ensureManagerFinancesState(game)
+    : { balance:0, totalIncome:0, totalExpenses:0, totalSalaryIncome:0, history:[] };
+  const contract = typeof managerJobContractForClubSeason === 'function'
+    ? managerJobContractForClubSeason(game?.selectedClubId, game?.seasonNumber || 1)
+    : null;
+  const history = (Array.isArray(finances?.history) ? finances.history : []).slice().reverse();
+  const rows = history.map(entry => {
+    const delta = Number(entry.delta || 0);
+    const cls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'muted';
+    return `<tr><td>${escapeHtml(entry.date || '—')}</td><td>${escapeHtml(entry.concept || 'Movimiento')}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.balance || 0)}</td></tr>`;
+  }).join('');
+  const nextPayment = contract?.nextSalaryDate || 'Sin contrato activo';
+  const salary = Number(contract?.monthlySalary || 0);
+  view.innerHTML = `<div class="row section-title"><div><h2>Cuenta Bancaria</h2><p class="tagline">Patrimonio personal del manager, separado del presupuesto de los clubes.</p></div><span class="pill">Saldo ${formatMoney(finances?.balance || 0)}</span></div>
+    <div class="grid cols-4 compact-team-stats">
+      <div class="card"><p class="label">Saldo personal</p><strong class="${budgetTone(finances?.balance || 0)}">${formatMoney(finances?.balance || 0)}</strong></div>
+      <div class="card"><p class="label">Sueldos cobrados</p><strong class="ok">${formatMoney(finances?.totalSalaryIncome || 0)}</strong></div>
+      <div class="card"><p class="label">Sueldo mensual actual</p><strong>${salary > 0 ? formatMoney(salary) : '—'}</strong></div>
+      <div class="card"><p class="label">Próximo cobro</p><strong>${escapeHtml(nextPayment)}</strong></div>
     </div>
-    <div style="margin-top:14px">${bankLoanOffersMarkup()}</div>`;
-  bindBankAccountActions();
+    <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Separación patrimonial</p><h3>El dinero personal no pertenece al club</h3></div></div><p class="muted small">Los sueldos salen de Finanzas del club e ingresan aquí cada 30 días. Los préstamos del club continúan administrándose en Club → Finanzas.</p></div>
+    <div class="card" style="margin-top:14px"><h3>Movimientos personales</h3><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Saldo</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos personales.</td></tr>'}</tbody></table></div></div>`;
 }
 
 function renderFinances(){
+  if(String(financeViewMode || 'main') === 'bank'){ renderBankAccount(); return; }
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){
     view.innerHTML = `<div class="section-title compact-section-title"><h2>Finanzas</h2><p class="tagline">Sin club activo.</p></div><div class="card"><p class="label">Finanzas vacías</p><h3>Actualmente no gestionás ningún presupuesto</h3><p class="muted small">Al renunciar o ser despedido se vacían las finanzas del menú lateral. Cuando firmes con otro club se cargará la economía del nuevo equipo.</p></div>`;
     return;
   }
-  if(String(financeViewMode || 'main') === 'bank'){ renderBankAccount(); return; }
   const history = (game.budgetHistory || []).slice().reverse();
   const seasonExpenses = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) < 0).reduce((a,h)=>a+Math.abs(Number(h.delta || 0)),0);
   const seasonIncome = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) > 0).reduce((a,h)=>a+Number(h.delta || 0),0);

@@ -1050,6 +1050,57 @@ function managerJobMarketMarkup(){
     <div style="margin-top:12px"><h4>Solicitar trabajo a clubes superiores</h4><div class="available-clubs-grid">${options.length ? options.map(managerJobApplicationOptionCard).join('') : '<p class="muted small">No hay clubes dentro del margen de 20 puntos o ya tienen una solicitud/oferta activa.</p>'}</div></div>
   </section>`;
 }
+
+function bindManagerJobMarketActions(){
+  document.querySelectorAll('[data-accept-job-offer]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    acceptManagerJobOffer(btn.dataset.acceptJobOffer || '');
+  }));
+  document.querySelectorAll('[data-reject-job-offer]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    rejectManagerJobOffer(btn.dataset.rejectJobOffer || '');
+  }));
+  document.querySelectorAll('[data-apply-job-club]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    applyForManagerJob(Number(btn.dataset.applyJobClub || 0));
+  }));
+}
+function renderCareerJobs(){
+  const withoutClub = Boolean(game?.gameOver?.active);
+  if(withoutClub){
+    view.innerHTML = `<div class="row section-title"><div><h2>Ofertas laborales</h2><p class="tagline">Ofertas, solicitudes y próximos pasos de tu carrera.</p></div></div>${managerJobMarketMarkup()}${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'career-jobs', selectable:false }) : ''}`;
+    bindManagerJobMarketActions();
+    return;
+  }
+  const clubId = Number(game?.selectedClubId || 0);
+  const contract = managerJobContractForClubSeason(clubId, game?.seasonNumber || 1);
+  const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : null;
+  const currentSeasonStats = game?.managerStats?.currentSeason || {};
+  const contractType = contract?.contractType === 'high_risk' ? 'Contrato exigente' : 'Contrato normal';
+  const restriction = contract?.contractType === 'high_risk'
+    ? `Presupuesto de fichajes limitado al ${Math.round(Number(contract.transferBudgetRate || 0.05) * 100)}% del margen normal.`
+    : 'Sin restricciones laborales especiales adicionales.';
+  const objective = Number(objectiveInfo?.objective ?? currentSeasonStats?.objectivePpg ?? managerObjectiveForClubDivision(clubId));
+  const played = Number(objectiveInfo?.played ?? currentSeasonStats?.played ?? 0);
+  const ppg = Number(objectiveInfo?.ppg ?? 0);
+  const signedDate = contract?.signedDate || game?.seasonStartDate || game?.currentDate || '—';
+  view.innerHTML = `<div class="row section-title"><div><h2>Contrato actual</h2><p class="tagline">Situación laboral del manager y exigencias vigentes con el club.</p></div></div>
+    <div class="grid cols-4 compact-team-stats">
+      <div class="card"><p class="label">Club</p><strong>${clubBadge(clubId)} ${escapeHtml(clubName(clubId))}</strong></div>
+      <div class="card"><p class="label">Tipo de contrato</p><strong>${escapeHtml(contractType)}</strong></div>
+      <div class="card"><p class="label">Temporada</p><strong>${Number(game?.seasonNumber || 1)}</strong></div>
+      <div class="card"><p class="label">Firmado</p><strong>${escapeHtml(signedDate)}</strong></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:14px">
+      <div class="card"><p class="label">Objetivo deportivo</p><h3>${Number.isFinite(objective) ? `${objective.toFixed(2)} puntos por partido` : 'Sin objetivo definido'}</h3><p class="muted small">Rendimiento actual: ${ppg.toFixed(2)} puntos por partido en ${played} encuentros oficiales.</p></div>
+      <div class="card"><p class="label">Condiciones laborales</p><h3>${escapeHtml(restriction)}</h3><p class="muted small">La situación se revisa con los resultados, el objetivo de la directiva y el cierre de temporada.</p></div>
+    </div>
+    <div class="card" style="margin-top:14px"><p class="label">Cambiar de club</p><h3>Las ofertas aparecen al quedar sin cargo</h3><p class="muted small">Mientras tenés contrato vigente no se muestran solicitudes laborales activas. Al renunciar o ser despedido, esta pantalla se convierte en el mercado laboral completo.</p></div>`;
+}
+
 function applyForManagerJob(clubId){
   if(!game?.gameOver?.active){ showNotice('Sólo podés solicitar trabajo cuando estás sin club.'); return false; }
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
@@ -2488,6 +2539,78 @@ function confirmResetLocal(){
   const ok = window.confirm('Vas a borrar la partida local guardada en este navegador. Esta acción no se puede deshacer.');
   if(ok) resetLocal();
 }
+
+const SIDEBAR_GROUP_STORAGE_KEY = 'fm-sidebar-open-group-v7';
+function sidebarNavigationModeForTab(tab){
+  const key = String(tab || '');
+  if(key === 'stadium'){ const mode = String(stadiumViewMode || 'main'); return ['sponsors','fans'].includes(mode) ? mode : 'main'; }
+  if(key === 'finance') return String(financeViewMode || 'main');
+  if(key === 'fixture') return String(fixtureViewMode || 'mine') === 'clubWorldCup' ? 'clubWorldCup' : 'mine';
+  if(key === 'standings') return String(selectedCompetitionView || 'standings') === 'standings' ? 'standings' : 'champions';
+  if(key === 'mystats') return String(managerStatsViewMode || 'profile');
+  return '';
+}
+function sidebarGroupForTab(tab){
+  const key = String(tab || '');
+  if(key === 'special') return 'special';
+  if(['firstTeam','scouting','market'].includes(key)) return 'team';
+  if(['employees','stadium'].includes(key)) return 'club';
+  if(['fixture','standings','stats'].includes(key)) return 'competition';
+  if(['academy','mystats','careerJobs','finance'].includes(key)) return key === 'finance' && String(financeViewMode || 'main') === 'main' ? 'club' : 'career';
+  if(['ranking','challenges'].includes(key)) return 'online';
+  return '';
+}
+function setSidebarOpenGroup(groupName='', { persist=true }={}){
+  sidebarOpenGroup = String(groupName || '');
+  document.querySelectorAll('.sidebar-nav .nav-group').forEach(group => {
+    const open = Boolean(sidebarOpenGroup && group.dataset.navGroup === sidebarOpenGroup);
+    group.classList.toggle('is-open', open);
+    group.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  if(persist){
+    try{ localStorage.setItem(SIDEBAR_GROUP_STORAGE_KEY, sidebarOpenGroup); }catch(_err){}
+  }
+}
+function prepareSidebarNavigation(tab, mode=''){
+  const key = String(tab || 'home');
+  const selectedMode = String(mode || '');
+  if(key === 'stadium') stadiumViewMode = selectedMode || 'main';
+  if(key === 'finance') financeViewMode = selectedMode || 'main';
+  if(key === 'fixture') fixtureViewMode = selectedMode || 'mine';
+  if(key === 'standings') selectedCompetitionView = selectedMode || 'standings';
+  if(key === 'mystats') managerStatsViewMode = selectedMode || 'profile';
+  const group = sidebarGroupForTab(key);
+  if(group) setSidebarOpenGroup(group);
+}
+function sidebarLeafIsActive(button){
+  if(!button?.dataset?.tab || String(button.dataset.tab) !== String(activeTab || '')) return false;
+  const requestedMode = String(button.dataset.navMode || '');
+  return !requestedMode || requestedMode === sidebarNavigationModeForTab(activeTab);
+}
+function syncSidebarNavigationState(){
+  let activeGroup = '';
+  document.querySelectorAll('.sidebar-nav [data-tab]').forEach(button => {
+    const active = sidebarLeafIsActive(button);
+    button.classList.toggle('active', active);
+    if(active) activeGroup = button.closest('.nav-group')?.dataset.navGroup || '';
+  });
+  document.querySelectorAll('.sidebar-nav .nav-group').forEach(group => {
+    group.classList.toggle('has-active', group.dataset.navGroup === activeGroup);
+  });
+  if(!sidebarOpenGroup){
+    try{ sidebarOpenGroup = localStorage.getItem(SIDEBAR_GROUP_STORAGE_KEY) || activeGroup || ''; }catch(_err){ sidebarOpenGroup = activeGroup || ''; }
+  }
+  setSidebarOpenGroup(sidebarOpenGroup, { persist:false });
+}
+function bindSidebarGroupToggles(){
+  document.querySelectorAll('.sidebar-nav .nav-group-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const group = toggle.closest('.nav-group')?.dataset.navGroup || '';
+      setSidebarOpenGroup(sidebarOpenGroup === group ? '' : group);
+    });
+  });
+}
+
 function bindEvents(){
   $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
@@ -2506,9 +2629,10 @@ function bindEvents(){
   $('btnVerifyIntegrity')?.addEventListener('click', () => showGameIntegrityModal(inspectGameIntegrity(), false));
   $('btnForceNewSeason')?.addEventListener('click', openForceNewSeasonModal);
   $('btnReset')?.addEventListener('click', confirmResetLocal);
-  document.querySelectorAll('.tabs button').forEach(btn=>{
+  document.querySelectorAll('.tabs [data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const targetTab = btn.dataset.tab;
+      prepareSidebarNavigation(targetTab, btn.dataset.navMode || '');
       if(typeof isManagerWithoutClubBlockedTab === 'function' && isManagerWithoutClubBlockedTab(targetTab)){
         activeTab = 'home';
         if(typeof managerWithoutClubBlockedNotice === 'function') showNotice(managerWithoutClubBlockedNotice(targetTab));
@@ -2520,6 +2644,8 @@ function bindEvents(){
       renderAll();
     });
   });
+  bindSidebarGroupToggles();
+  syncSidebarNavigationState();
   document.addEventListener('click', (event)=>{
     const playerBtn = event.target.closest('[data-player-id]');
     if(playerBtn){ showPlayerModal(Number(playerBtn.dataset.playerId)); return; }
@@ -4436,7 +4562,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V7.61',
+    version:'V7.62',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4458,7 +4584,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V7.61';
+    clean.version = 'V7.62';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4477,7 +4603,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V7.61',
+    version:'V7.62',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4503,7 +4629,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V7.61',
+    version:'V7.62',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,

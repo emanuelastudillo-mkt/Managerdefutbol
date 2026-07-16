@@ -1,4 +1,4 @@
-/* V7.61 · Centro de Ojeo: cláusula visible junto a la acción de oferta en jugadores ojeados. */
+/* V7.62 · Centro de Ojeo: cláusula visible junto a la acción de oferta en jugadores ojeados. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];

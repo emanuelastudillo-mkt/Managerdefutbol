@@ -858,8 +858,60 @@ function renderStadiumFacilities(){
   document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
 }
 
+
+function bindSponsorCardActions(){
+  bindSponsorCardActions();
+}
+function renderStadiumSponsors(){
+  ensureSponsorState();
+  view.innerHTML = `<div class="row section-title"><div><h2>Sponsors</h2><p class="tagline">Ofertas, espacios disponibles y contratos activos del club.</p></div><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div></div>
+    <div class="card sponsors-card">
+      ${sponsorPlacesMarkup()}
+      <h3>Ofertas disponibles</h3>
+      ${sponsorOffersMarkup()}
+      <h3 style="margin-top:14px">Contratos activos</h3>
+      ${activeSponsorsMarkup()}
+    </div>`;
+  bindSponsorCardActions();
+}
+function renderStadiumFans(){
+  ensureFanState();
+  ensureStadiumState();
+  const currentFans = clubFansCurrent(game.selectedClubId);
+  const baseFans = clubFansBase(game.selectedClubId);
+  const capacity = clubStadiumCapacity(game.selectedClubId);
+  const ticketPrice = ticketPriceForClub(game.selectedClubId);
+  const lastFanDelta = Math.round(Number(game?.fans?.clubs?.[game.selectedClubId]?.lastDelta || 0));
+  const fanStats = fanRecentStats(game.selectedClubId);
+  const campaignCount = (game?.fans?.memberCampaigns || []).filter(campaign => Number(campaign.clubId || 0) === Number(game.selectedClubId) && Number(campaign.daysLeft || 0) > 0).length;
+  view.innerHTML = `<div class="row section-title"><div><h2>Hinchas y socios</h2><p class="tagline">Crecimiento de la hinchada, campañas y política de entradas.</p></div><span class="pill">Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}</span></div>
+    <div class="card stadium-card">
+      <div class="grid cols-3">
+        <div><p class="label">Hinchas totales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
+        <div><p class="label">Vitalicios</p><strong>${new Intl.NumberFormat('es-AR').format(baseFans)}</strong></div>
+        <div><p class="label">Último cambio</p><strong class="${lastFanDelta >= 0 ? 'ok' : 'bad'}">${lastFanDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(lastFanDelta)}</strong></div>
+        <div><p class="label">Cambio diario</p><strong class="${fanStats.todayDelta >= 0 ? 'ok' : 'bad'}">${fanStats.todayDelta >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(fanStats.todayDelta)}</strong></div>
+        <div><p class="label">Últimos 30 días</p><strong class="${fanStats.last30 >= 0 ? 'ok' : 'bad'}">${fanStats.last30 >= 0 ? '+' : ''}${new Intl.NumberFormat('es-AR').format(fanStats.last30)}</strong></div>
+        <div><p class="label">Campañas activas</p><strong>${new Intl.NumberFormat('es-AR').format(campaignCount)}</strong></div>
+      </div>
+      <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
+      <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
+      <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}.</p>
+      ${memberCampaignsMarkup()}
+    </div>`;
+  $('ticketPriceInput')?.addEventListener('change', event => {
+    const price = setTicketPriceForClub(game.selectedClubId, event.target.value);
+    saveLocal(true);
+    renderStadiumFans();
+    showNotice(`Precio de entrada actualizado a ${formatMoney(price)}.`);
+  });
+  document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));
+}
+
 function renderStadium(){
   if(stadiumViewMode === 'facilities'){ renderStadiumFacilities(); return; }
+  if(stadiumViewMode === 'sponsors'){ renderStadiumSponsors(); return; }
+  if(stadiumViewMode === 'fans'){ renderStadiumFans(); return; }
   ensureStadiumState();
   ensureSponsorState();
   const score = fieldScoreForClub(game.selectedClubId);
@@ -959,8 +1011,7 @@ function renderStadium(){
   $('btnPatch')?.addEventListener('click', startPatchingField);
   $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);
   document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
-  document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
-  document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
+  bindSponsorCardActions();
   document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));
 }
 
@@ -1114,11 +1165,13 @@ function competitionsNavMarkup(active='standings'){
   const current = String(active || 'standings');
   return `<div class="row competition-controls">
     <button type="button" id="btnCompetitionStandings" class="${current === 'standings' ? 'primary' : 'ghost'}">Tabla de posiciones</button>
+    <button type="button" id="btnCompetitionStats" class="${current === 'stats' ? 'primary' : 'ghost'}">Estadísticas</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
 }
 function bindCompetitionsNav(){
   $('btnCompetitionStandings')?.addEventListener('click', () => { selectedCompetitionView = 'standings'; renderStandings(); });
+  $('btnCompetitionStats')?.addEventListener('click', () => { selectedCompetitionView = 'stats'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
 function competitionChampionEntriesFromStandingsHistory(){
@@ -1206,6 +1259,7 @@ function renderChampionsHistory(){
 }
 function renderStandings(){
   if(String(selectedCompetitionView || 'standings') === 'champions'){ renderChampionsHistory(); return; }
+  if(String(selectedCompetitionView || 'standings') === 'stats'){ renderStats(); return; }
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
   const currentKey = currentStandingsYearKey();
@@ -1311,7 +1365,12 @@ function renderManagerStats(){
     <td>${Number(item.ppg || 0).toFixed(2)}</td>
     <td>${escapeHtml(item.type === 'dismissal' ? 'Despido' : item.type || 'Cambio')}</td>
   </tr>`).join('');
-  view.innerHTML = `<div class="row section-title"><div><h2>Tus estadísticas</h2><p class="tagline">Historial acumulado y prestigio propio de esta carrera.</p></div></div>
+  if(String(managerStatsViewMode || 'profile') === 'achievements'){
+    view.innerHTML = `<div class="row section-title"><div><h2>Hitos</h2><p class="tagline">Desafíos conseguidos y pendientes de la carrera del manager.</p></div><span class="pill">${unlockedAchievements.length}/${achievementTotal || 0}</span></div>
+      <div class="card manager-achievements-card"><p class="muted small">Los hitos conseguidos se destacan. Los pendientes permanecen visibles con colores oscuros y desaturados.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">No hay hitos configurados.</p>'}</div></div>`;
+    return;
+  }
+  view.innerHTML = `<div class="row section-title"><div><h2>Perfil e historial</h2><p class="tagline">Historial acumulado y prestigio propio de esta carrera.</p></div></div>
     <div class="grid cols-6 compact-team-stats">
       <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Propio de este slot. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
       <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">Compartidos como perfil; el prestigio no se comparte entre slots.</span></div>
@@ -1326,7 +1385,6 @@ function renderManagerStats(){
       <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
       <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">conseguidos y pendientes visibles</span></div>
     </div>
-    <div class="card manager-achievements-card" style="margin-top:14px"><h3>Hitos y récords personales</h3><p class="muted small">Los hitos conseguidos se destacan. Los pendientes permanecen visibles con colores oscuros y desaturados. Los retos de carrera registran clubes dirigidos, despidos, renuncias y títulos obtenidos en distintos destinos.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">No hay hitos configurados.</p>'}</div></div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
       <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>
     </div>
@@ -1358,12 +1416,13 @@ function renderStats(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Estadísticas</h2><p class="tagline">Rankings separados por división.</p></div>
-      ${divisionFilterMarkup('statsDivisionFilter', selectedStatsDivision)}
+      <div><h2>Estadísticas de competiciones</h2><p class="tagline">Goleadores, asistidores, tarjetas y lesiones por división.</p></div>
+      <div class="row filters-row">${competitionsNavMarkup('stats')}${divisionFilterMarkup('statsDivisionFilter', selectedStatsDivision)}</div>
     </div>
     <div class="stack">${blocks || '<div class="card"><p class="muted">Sin datos para esta división.</p></div>'}</div>
   `;
-  $('statsDivisionFilter')?.addEventListener('change', event => { selectedStatsDivision = event.target.value; renderStats(); });
+  bindCompetitionsNav();
+  $('statsDivisionFilter')?.addEventListener('change', event => { selectedStatsDivision = event.target.value; selectedCompetitionView = 'stats'; renderStats(); });
 }
 function rankList(list,key){
   if(!list.length) return '<p class="muted">Sin datos todavía.</p>';

@@ -1,4 +1,21 @@
-# Fútbol Manager MVP - V7.61
+# Fútbol Manager MVP - V7.62
+
+## V7.62 - Menú lateral compacto y anidado
+
+- El menú lateral se reorganizó en seis grupos desplegables: **Especial, Equipo, Club, Competición, Carrera y Online**, además de **Inicio** como acceso directo.
+- Sólo un grupo permanece abierto a la vez y el navegador recuerda el último grupo desplegado.
+- **Especial** contiene Cartas.
+- **Equipo** contiene Primer equipo, Centro de Ojeo y Mercado.
+- **Club** contiene Empleados, Estadio e instalaciones, Finanzas, Sponsors e Hinchas y socios.
+- **Competición** contiene Calendario, Competiciones, Tabla de posiciones y Mundial de Clubes. Las estadísticas generales siguen disponibles dentro de la pantalla de competiciones.
+- **Carrera** contiene Tu Academia, Perfil e historial, Hitos, Ofertas laborales/contrato actual y Cuenta Bancaria.
+- **Online** contiene Ranking y Desafíos Online.
+- Sponsors, Hinchas y socios, Cuenta Bancaria, Hitos y Contrato actual reciben vistas directas, sin duplicar datos ni cambiar la lógica de los sistemas.
+- Mensajes permanece accesible desde Inicio y desde sus avisos, evitando alargar nuevamente el menú.
+- El estado activo, los bloqueos por estar sin club y la navegación responsive se adaptaron a los nuevos submenús.
+
+**V7.62 no rompe partidas anteriores.** Es una reorganización de navegación y presentación. No modifica guardados, simuladores, calendarios, economía ni planteles.
+
 
 ## V7.61 - Captación excepcional del predio juvenil
 

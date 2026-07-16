@@ -81,7 +81,8 @@ function renderAll(){
   if(game && currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
   if(game?.gameOver?.active && isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
   if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
-  else document.querySelectorAll('.tabs button').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
+  else if(typeof syncSidebarNavigationState === 'function') syncSidebarNavigationState();
+  else document.querySelectorAll('.tabs [data-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
 
   if(game){
     if(game.gameOver?.active){
@@ -124,7 +125,7 @@ function renderAll(){
     }
   }
   if(activeTab === 'players') activeTab = 'market';
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
   if(game.gameOver?.active){
     if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
     if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
@@ -459,12 +460,12 @@ function managerWithoutClubBlockedNotice(tab){
   return `${labels[String(tab || '')] || 'Esta sección'} está bloqueada mientras el manager está sin club.`;
 }
 function refreshManagerWithoutClubTabState(){
-  document.querySelectorAll('.tabs button').forEach(btn => {
+  document.querySelectorAll('.tabs [data-tab]').forEach(btn => {
     const blocked = isManagerWithoutClubBlockedTab(btn.dataset.tab);
     btn.disabled = blocked;
     btn.classList.toggle('tab-disabled', blocked);
-    btn.classList.toggle('active', btn.dataset.tab === activeTab);
   });
+  if(typeof syncSidebarNavigationState === 'function') syncSidebarNavigationState();
 }
 
 function gameOverStatCard(label, value){

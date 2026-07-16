@@ -2559,11 +2559,29 @@ function financeRatingMarkup(salaryTotal=0){
   const budget = Math.max(0, Math.round(Number(game?.budget || 0)));
   return `<div class="card finance-rating-card"><div class="row"><div><p class="label">Calificación</p><h3 class="${rating.tone}">${escapeHtml(rating.label)}</h3></div><span class="pill">${Math.floor(budget / salaries)}x sueldos</span></div><p class="muted small">${escapeHtml(rating.message)}</p><p class="muted small">Referencia: presupuesto actual ${formatMoney(budget)} / sueldos anuales ${formatMoney(salaryTotal)}.</p></div>`;
 }
+
+function bindBankAccountActions(){
+  bindBankAccountActions();
+}
+function renderBankAccount(){
+  const state = ensureBankLoanState();
+  const active = state?.active || null;
+  view.innerHTML = `<div class="row section-title"><div><h2>Cuenta Bancaria</h2><p class="tagline">Préstamos, deuda vigente y capacidad financiera del club.</p></div><span class="pill">Saldo ${formatMoney(game.budget || 0)}</span></div>
+    <div class="grid cols-3 compact-team-stats">
+      <div class="card"><p class="label">Presupuesto actual</p><strong class="${budgetTone(game.budget || 0)}">${formatMoney(game.budget || 0)}</strong></div>
+      <div class="card"><p class="label">Estado del préstamo</p><strong>${active ? 'Activo' : 'Sin deuda'}</strong></div>
+      <div class="card"><p class="label">Deuda restante</p><strong>${formatMoney(active?.remainingDebt || 0)}</strong></div>
+    </div>
+    <div style="margin-top:14px">${bankLoanOffersMarkup()}</div>`;
+  bindBankAccountActions();
+}
+
 function renderFinances(){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){
     view.innerHTML = `<div class="section-title compact-section-title"><h2>Finanzas</h2><p class="tagline">Sin club activo.</p></div><div class="card"><p class="label">Finanzas vacías</p><h3>Actualmente no gestionás ningún presupuesto</h3><p class="muted small">Al renunciar o ser despedido se vacían las finanzas del menú lateral. Cuando firmes con otro club se cargará la economía del nuevo equipo.</p></div>`;
     return;
   }
+  if(String(financeViewMode || 'main') === 'bank'){ renderBankAccount(); return; }
   const history = (game.budgetHistory || []).slice().reverse();
   const seasonExpenses = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) < 0).reduce((a,h)=>a+Math.abs(Number(h.delta || 0)),0);
   const seasonIncome = (game.budgetHistory || []).filter(h => (h.season || game.seasonNumber || 1) === (game.seasonNumber || 1) && Number(h.delta || 0) > 0).reduce((a,h)=>a+Number(h.delta || 0),0);
@@ -2599,8 +2617,7 @@ function renderFinances(){
     <div class="card" style="margin-top:14px"><h3>Movimientos agrupados</h3><p class="muted small">Los conceptos iguales se consolidan para leer mejor el historial. La lista de sueldos del plantel queda siempre visible.</p>
       <div class="table-wrap"><table><thead><tr><th>Temporada</th><th>Concepto</th><th>Monto</th><th>Presupuesto luego</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div>
     </div>`;
-  document.querySelectorAll('[data-request-bank-loan]').forEach(btn => btn.addEventListener('click', () => requestBankLoan(btn.dataset.requestBankLoan)));
-  document.querySelector('[data-payoff-bank-loan]')?.addEventListener('click', () => payOffBankLoanFull());
+  bindBankAccountActions();
 }
 
 function totalClubSalary(clubId){

@@ -860,7 +860,8 @@ function renderStadiumFacilities(){
 
 
 function bindSponsorCardActions(){
-  bindSponsorCardActions();
+  document.querySelectorAll('[data-accept-sponsor]').forEach(btn => btn.addEventListener('click', () => acceptSponsorOffer(btn.dataset.acceptSponsor)));
+  document.querySelectorAll('[data-reject-sponsor]').forEach(btn => btn.addEventListener('click', () => rejectSponsorOffer(btn.dataset.rejectSponsor)));
 }
 function renderStadiumSponsors(){
   ensureSponsorState();

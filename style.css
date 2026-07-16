@@ -6340,7 +6340,7 @@ button.cwc-group-result{cursor:pointer}
   .scouting-player-clause,.player-modal-clause-value{min-width:0;width:100%}
 }
 
-/* V7.63 · menú lateral compacto y anidado */
+/* V7.64 · menú lateral compacto y anidado */
 .sidebar-nav{display:grid;gap:7px;margin-top:10px}
 .sidebar-nav>button,
 .sidebar-nav .nav-group-toggle,
@@ -6376,7 +6376,7 @@ button.cwc-group-result{cursor:pointer}
 .sidebar-nav .nav-group.is-open .nav-group-items{max-height:360px;opacity:1;padding-top:4px}
 
 
-/* V7.63 · Edad visible en informes de ojeo */
+/* V7.64 · Edad visible en informes de ojeo */
 .scouting-reports-table th:nth-child(2),
 .scouting-reports-table td:nth-child(2),
 .scouting-reports-table th:nth-child(3),

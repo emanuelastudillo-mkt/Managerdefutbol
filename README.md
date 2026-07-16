@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V7.63
+# Fútbol Manager MVP - V7.64
+
+## V7.64 - Corrección de recursión en Club
+
+- Se corrigió el error `Maximum call stack size exceeded` al abrir Estadio e instalaciones, Sponsors y Finanzas.
+- La causa eran dos enlazadores de botones sobrescritos por funciones autorreferenciales.
+- Sponsors vuelve a enlazar correctamente Aceptar/Rechazar ofertas.
+- Finanzas y Cuenta Bancaria vuelven a enlazar correctamente solicitudes y cancelación de préstamos.
+- Se limpió una asignación HTML duplicada en la vista de Estadio.
+- No se modificaron economía, sponsors, estadio, guardados ni simuladores.
+
+**V7.64 no rompe partidas anteriores.** Es una corrección de interfaz y eventos.
 
 ## V7.63 - Edad en ojeo y limpieza de Oficina del manager
 

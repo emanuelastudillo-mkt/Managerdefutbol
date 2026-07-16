@@ -2561,7 +2561,8 @@ function financeRatingMarkup(salaryTotal=0){
 }
 
 function bindBankAccountActions(){
-  bindBankAccountActions();
+  document.querySelectorAll('[data-request-bank-loan]').forEach(btn => btn.addEventListener('click', () => requestBankLoan(btn.dataset.requestBankLoan)));
+  document.querySelector('[data-payoff-bank-loan]')?.addEventListener('click', () => payOffBankLoanFull());
 }
 function renderBankAccount(){
   const state = ensureBankLoanState();

@@ -1,4 +1,39 @@
-# Fútbol Manager MVP - V7.56
+# Fútbol Manager MVP - V7.57
+
+## V7.57 - Media general y puntaje total en jugadores ojeados
+
+### Nuevos indicadores
+
+- Las tarjetas de jugadores del **Centro de Ojeo** muestran ahora **Media general** y **Puntaje total**.
+- La **Media general** es el promedio directo de las 20 habilidades existentes del jugador.
+- El **Puntaje total** es la suma de esas mismas 20 habilidades, con un máximo teórico de 1.980 puntos.
+- Se incluyen Portería, habilidades defensivas, técnicas, físicas, mentales y Potencial.
+- No se incluyen Agresividad, Genética, Factor sorpresa ni Probabilidad de fichaje, porque son datos ocultos o de mercado y no forman parte de la media técnica general.
+
+### Progreso del informe
+
+- En jugadores externos, ambos valores permanecen ocultos hasta descubrir las 20 habilidades necesarias.
+- Mientras el informe está incompleto se indica cuántas habilidades se conocen y cuántas faltan.
+- En jugadores propios, cuyos atributos normales ya son conocidos, los dos indicadores aparecen inmediatamente.
+- Los informes guardados y archivados incorporan columnas de Media general y Puntaje total cuando el informe está completo.
+
+### Datos y simulación
+
+- Los dos indicadores se calculan en tiempo real; no se agregan campos a los jugadores ni a la base JSON.
+- No se modifica el ritmo del ojeo, la cantidad de datos revelados ni la probabilidad de fichaje.
+- No se modifican el simulador normal, el simulador en vivo, el resultado rápido ni Desafíos Online.
+
+### Archivos principales modificados en V7.57
+
+- `js/game/16-scouting-center.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.57 no rompe partidas anteriores.** Los valores se calculan a partir de las habilidades ya existentes y de los informes guardados. Un jugador completamente ojeado mostrará ambos indicadores al cargar esta versión.
+
 
 ## V7.56 - Mayor peso de las individualidades
 

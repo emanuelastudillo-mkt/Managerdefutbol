@@ -1,4 +1,4 @@
-/* V7.56 · Centro de Ojeo: búsqueda automática persistente y dependiente del jefe. */
+/* V7.57 · Centro de Ojeo: media general y puntaje total calculados desde las habilidades existentes. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
@@ -971,6 +971,49 @@ function scoutingSummaryTile({ label, value, hint='', icon='', extra='' }){
   </div>`;
 }
 
+function scoutingPlayerAggregateMetrics(player, knownOverride=null){
+  if(!player) return { complete:false, knownSkills:0, totalSkills:0, average:null, total:null, maxTotal:0 };
+  const map = scoutingVisibleStatMap(player);
+  const keys = Object.keys(map || {});
+  const knownSet = knownOverride && typeof knownOverride.has === 'function' ? knownOverride : scoutingKnownSet(player.id);
+  const ownPlayer = scoutingIsOwnPlayer(player);
+  const knownSkills = ownPlayer ? keys.length : keys.filter(key => knownSet.has(key)).length;
+  const values = keys.map(key => Number(map[key])).filter(Number.isFinite);
+  const complete = keys.length > 0 && values.length === keys.length && (ownPlayer || knownSkills === keys.length);
+  const total = complete ? Math.round(values.reduce((sum, value) => sum + value, 0)) : null;
+  const average = complete ? clamp(Math.round(total / values.length), 1, 99) : null;
+  return {
+    complete,
+    knownSkills,
+    totalSkills:keys.length,
+    average,
+    total,
+    maxTotal:keys.length * 99
+  };
+}
+function scoutingFormatInteger(value){
+  const numeric = Number(value || 0);
+  return Number.isFinite(numeric) ? Math.round(numeric).toLocaleString('es-AR') : '—';
+}
+function scoutingPlayerAggregateMarkup(player){
+  const metrics = scoutingPlayerAggregateMetrics(player);
+  const remaining = Math.max(0, metrics.totalSkills - metrics.knownSkills);
+  const pendingHint = metrics.totalSkills
+    ? `${metrics.knownSkills}/${metrics.totalSkills} habilidades conocidas${remaining ? ` · faltan ${remaining}` : ''}`
+    : 'Sin habilidades disponibles';
+  return `<div class="scouting-player-aggregate-grid ${metrics.complete ? 'is-complete' : 'is-pending'}">
+    <div class="scouting-player-aggregate-card">
+      <span>Media general</span>
+      <strong>${metrics.complete ? scoutingFormatInteger(metrics.average) : '—'}</strong>
+      <small>${metrics.complete ? `Promedio de ${metrics.totalSkills} habilidades` : pendingHint}</small>
+    </div>
+    <div class="scouting-player-aggregate-card">
+      <span>Puntaje total</span>
+      <strong>${metrics.complete ? scoutingFormatInteger(metrics.total) : '—'}</strong>
+      <small>${metrics.complete ? `Suma de habilidades · máximo ${scoutingFormatInteger(metrics.maxTotal)}` : pendingHint}</small>
+    </div>
+  </div>`;
+}
 function scoutingPlayerSkillValueMarkup(player, key, value, known){
   if(!known) return '—';
   if(key === SCOUTING_SIGNING_CHANCE_KEY) return scoutingSigningChanceLabel(player);
@@ -1052,6 +1095,7 @@ function scoutingPlayerCard(player){
       <p class="muted small">Habilidades conocidas: ${known}/${total} · Ocultas reveladas: ${hiddenKnown}/${hiddenTotal} · Días observado: ${Number(report.daysObserved || 0)}</p>
       ${scoutingPlayerSigningChanceMarkup(player)}
     </div>
+    ${scoutingPlayerAggregateMarkup(player)}
     ${scoutingPlayerKnownSkillRows(player)}
   </div>`;
 }
@@ -1082,6 +1126,9 @@ function scoutingPlayerReportListRow(entry){
   const hiddenKnown = Object.keys(hiddenMap).filter(key => (report.visibleSkills || []).includes(key)).length;
   const hiddenTotal = Object.keys(hiddenMap).length;
   const signingText = playerHasScoutedSigningChance(player) ? scoutingSigningChanceLabel(player) : '<span class="muted">Oculto</span>';
+  const metrics = scoutingPlayerAggregateMetrics(player, new Set(report.visibleSkills || []));
+  const averageText = metrics.complete ? scoutingFormatInteger(metrics.average) : '<span class="muted">—</span>';
+  const totalText = metrics.complete ? scoutingFormatInteger(metrics.total) : '<span class="muted">—</span>';
   const status = entry.active ? '<span class="pill ok">Activo</span>' : '<span class="pill">Archivado</span>';
   return `<tr>
     <td><button class="linklike" data-scouting-report-player="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
@@ -1089,6 +1136,8 @@ function scoutingPlayerReportListRow(entry){
     <td>${escapeHtml(clubName(player.clubId))}</td>
     <td>${known}/${total}</td>
     <td>${hiddenKnown}/${hiddenTotal}</td>
+    <td>${averageText}</td>
+    <td>${totalText}</td>
     <td>${signingText}</td>
     <td>${Number(report.daysObserved || 0)}</td>
     <td>${status}</td>
@@ -1104,7 +1153,7 @@ function scoutingReportsModalMarkup(mode='all'){
   return `<div class="scouting-reports-modal">
     <div class="scouting-reports-head"><p class="label">Centro de Ojeo</p><h2>${escapeHtml(title)}</h2></div>
     <p class="muted small">Sólo se listan jugadores. Los informes de equipo son dinámicos y no se archivan.</p>
-    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Prob. fichaje</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
+    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Media general</th><th>Puntaje total</th><th>Prob. fichaje</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="10" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
   </div>`;
 }
 function openScoutingReportsModal(mode='all'){

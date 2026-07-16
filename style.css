@@ -6215,3 +6215,70 @@ button.cwc-group-result{cursor:pointer}
 }
 .scouting-search-switch.requires-chief span{font-size:.66rem;letter-spacing:.04em}
 .scouting-search-switch.requires-chief:hover{transform:none}
+
+/* V7.57 · Resumen agregado de habilidades en jugadores ojeados */
+.scouting-player-aggregate-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  min-width:0;
+}
+.scouting-player-aggregate-card{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:"label value" "hint value";
+  align-items:center;
+  gap:3px 12px;
+  min-width:0;
+  padding:11px 13px;
+  border:1px solid rgba(96,165,250,.20);
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(30,64,175,.10),rgba(15,23,42,.54));
+}
+.scouting-player-aggregate-card>span{
+  grid-area:label;
+  min-width:0;
+  color:#bfdbfe;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+  overflow-wrap:anywhere;
+}
+.scouting-player-aggregate-card>strong{
+  grid-area:value;
+  min-width:50px;
+  color:#f8fafc;
+  font-size:25px;
+  line-height:1;
+  text-align:right;
+  letter-spacing:-.04em;
+}
+.scouting-player-aggregate-card>small{
+  grid-area:hint;
+  min-width:0;
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+.scouting-player-aggregate-grid.is-pending .scouting-player-aggregate-card{
+  border-style:dashed;
+  border-color:rgba(148,163,184,.16);
+  background:rgba(15,23,42,.34);
+  filter:saturate(.55);
+}
+.scouting-player-aggregate-grid.is-pending .scouting-player-aggregate-card>strong{
+  color:#94a3b8;
+}
+.scouting-reports-table th:nth-child(6),
+.scouting-reports-table th:nth-child(7),
+.scouting-reports-table td:nth-child(6),
+.scouting-reports-table td:nth-child(7){
+  text-align:center;
+  white-space:nowrap;
+}
+@media(max-width:620px){
+  .scouting-player-aggregate-grid{grid-template-columns:minmax(0,1fr)}
+}

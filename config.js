@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.56',
+  version: 'V7.57',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -33,7 +33,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.56',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.57',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',

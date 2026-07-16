@@ -6294,3 +6294,48 @@ button.cwc-group-result{cursor:pointer}
 .team-player-rating.ok{color:#86efac;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.24)}.team-player-rating.warn{color:#fde68a;background:rgba(250,204,21,.10);border-color:rgba(250,204,21,.24)}.team-player-rating.bad{color:#fca5a5;background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.24)}
 .team-player-stats-note{margin-top:12px}
 @media (max-width:760px){.team-player-stats-toolbar{grid-template-columns:1fr}.team-player-stats-summary{grid-template-columns:1fr 1fr}.team-player-stats-table{min-width:900px}}
+
+
+/* V7.60 · Valor de cláusula junto a la oferta en jugadores ojeados */
+.scouting-player-market-action{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(148,163,184,.14);
+}
+.scouting-player-clause,
+.player-modal-clause-value{
+  display:grid;
+  gap:2px;
+  min-width:150px;
+  padding:8px 11px;
+  border:1px solid rgba(96,165,250,.22);
+  border-radius:12px;
+  background:rgba(30,64,175,.10);
+}
+.scouting-player-clause>span,
+.player-modal-clause-value>span{
+  color:var(--muted);
+  font-size:9.5px;
+  font-weight:900;
+  letter-spacing:.08em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.scouting-player-clause>strong,
+.player-modal-clause-value>strong{
+  color:#f8fafc;
+  font-size:14px;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.scouting-player-clause.no-clause{filter:saturate(.55);border-style:dashed}
+.player-market-offer-row{align-items:center;flex-wrap:wrap}
+.player-modal-clause-value{margin-right:auto}
+@media(max-width:620px){
+  .scouting-player-market-action{align-items:stretch;flex-direction:column}
+  .scouting-player-market-action .small-btn{width:100%}
+  .scouting-player-clause,.player-modal-clause-value{min-width:0;width:100%}
+}

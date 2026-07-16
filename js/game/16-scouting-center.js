@@ -1,4 +1,4 @@
-/* V7.58 · Centro de Ojeo: media general y puntaje total calculados desde las habilidades existentes. */
+/* V7.60 · Centro de Ojeo: cláusula visible junto a la acción de oferta en jugadores ojeados. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
@@ -1073,6 +1073,22 @@ function scoutingPlayerSigningChanceMarkup(player){
   const tone = scoutingPlayerSigningChanceTone(chance);
   return `<div class="scouting-signing-chance ${tone}"><span>Prob. fichaje</span><strong>${scoutingSigningChanceLabel(player)}</strong><small>Revelado por ojeo</small></div>`;
 }
+function scoutingPlayerMarketActionMarkup(player){
+  if(!player || scoutingIsOwnPlayer(player)) return '';
+  const clubId = Number(player.clubId || 0);
+  if(clubId > 0){
+    const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(player.id);
+    const label = blocked && typeof purchaseOfferBlockedLabel === 'function'
+      ? purchaseOfferBlockedLabel(player.id)
+      : (blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta');
+    const clauseValue = Math.max(0, Number(player.clause || player.value || 0));
+    return `<div class="scouting-player-market-action">
+      <div class="scouting-player-clause"><span>Valor de cláusula</span><strong>${formatMoney(clauseValue)}</strong></div>
+      <button class="primary small-btn" data-scouting-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button>
+    </div>`;
+  }
+  return '';
+}
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);
   const state = ensureScoutingCenterState();
@@ -1097,6 +1113,7 @@ function scoutingPlayerCard(player){
     </div>
     ${scoutingPlayerAggregateMarkup(player)}
     ${scoutingPlayerKnownSkillRows(player)}
+    ${scoutingPlayerMarketActionMarkup(player)}
   </div>`;
 }
 
@@ -1290,5 +1307,9 @@ function renderScoutingCenter(){
   document.querySelector('[data-scouting-search-chance]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('signingChance', event.target.value));
   document.querySelectorAll('[data-open-scouting-reports]').forEach(btn => btn.addEventListener('click', () => openScoutingReportsModal(btn.dataset.openScoutingReports || 'all')));
   document.querySelectorAll('[data-remove-scouting-player]').forEach(btn => btn.addEventListener('click', () => removePlayerFromScoutingCenter(Number(btn.dataset.removeScoutingPlayer || 0))));
+  document.querySelectorAll('[data-scouting-make-player-offer]').forEach(btn => btn.addEventListener('click', () => {
+    const playerId = Number(btn.dataset.scoutingMakePlayerOffer || 0);
+    if(playerId && typeof openPurchaseOfferModal === 'function') openPurchaseOfferModal(playerId);
+  }));
   document.querySelectorAll('[data-remove-scouting-team]').forEach(btn => btn.addEventListener('click', () => removeTeamFromScoutingCenter(Number(btn.dataset.removeScoutingTeam || 0))));
 }

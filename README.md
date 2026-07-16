@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V7.59
+# Fútbol Manager MVP - V7.60
+
+## V7.60 - Cláusula visible en jugadores ojeados
+
+- Las tarjetas activas del **Centro de Ojeo** muestran el **Valor de cláusula** junto al botón **Hacer oferta**.
+- El botón abre la negociación habitual sin modificar montos, aceptación ni reglas de mercado.
+- Al abrir la ficha individual de un jugador que ya posee informe de ojeo, la cláusula también aparece al lado de **Hacer oferta**.
+- No se agregan campos a los jugadores: se utiliza el valor de cláusula que ya existe en la base y en la partida.
+- No se modifican simuladores, probabilidades, planteles ni contratos.
+
+**V7.60 no rompe partidas anteriores.** Es un ajuste de presentación y acceso a la negociación; utiliza datos ya guardados.
+
 
 ## V7.59 - Reducción contextual y distribución de lesiones
 

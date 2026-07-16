@@ -187,7 +187,11 @@ function playerModalActionsMarkup(player){
   if(clubId > 0){
     const blocked = isPurchaseOfferBlockedThisSeason(player.id);
     const label = blocked ? purchaseOfferBlockedLabel(player.id) : 'Hacer oferta';
-    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions"><button class="primary" data-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button><button class="ghost" data-add-scouting-player="${player.id}">Ojear</button></div></div>`;
+    const hasScoutingReport = Boolean(game?.scoutingCenter?.reports?.[String(player.id)]);
+    const clauseMarkup = hasScoutingReport
+      ? `<div class="player-modal-clause-value"><span>Valor de cláusula</span><strong>${formatMoney(Math.max(0, Number(player.clause || player.value || 0)))}</strong></div>`
+      : '';
+    return `<div class="card inner player-action-card"><h3>Mercado</h3><div class="row message-actions player-market-offer-row">${clauseMarkup}<button class="primary" data-make-player-offer="${player.id}" ${blocked ? 'disabled' : ''}>${escapeHtml(label)}</button><button class="ghost" data-add-scouting-player="${player.id}">Ojear</button></div></div>`;
   }
   if(clubId === 0 && !player.sold){
     const blocked = typeof isFreeAgentOfferBlockedThisSeason === 'function' && isFreeAgentOfferBlockedThisSeason(player.id);

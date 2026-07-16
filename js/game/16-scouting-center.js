@@ -1,4 +1,4 @@
-/* V7.54 · Centro de Ojeo: informes detallados y búsqueda automática de jugadores. */
+/* V7.55 · Centro de Ojeo: búsqueda automática persistente y dependiente del jefe. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
@@ -76,6 +76,11 @@ function normalizeScoutingCenterState(state){
   clean.scoutsLastChargeDate = validIsoDate(clean.scoutsLastChargeDate) ? clean.scoutsLastChargeDate : null;
   clean.lastDailyProcessDate = validIsoDate(clean.lastDailyProcessDate) ? clean.lastDailyProcessDate : null;
   clean.playerSearch = normalizeScoutingPlayerSearchState(clean.playerSearch);
+  // La búsqueda automática depende del jefe de ojeadores. Al migrar o perderlo,
+  // la búsqueda se apaga y su progreso vuelve a cero sin alterar los criterios.
+  if(!clean.chief && clean.playerSearch.enabled){
+    resetScoutingPlayerSearchProgress(clean.playerSearch, { disable:true });
+  }
   const caps = scoutingCapacities(clean);
   Object.entries({ ...clean.teamReports }).forEach(([id, report]) => {
     const numericId = Number(id);
@@ -569,6 +574,13 @@ function toggleScoutingPlayerSearch(){
   }
   const state = ensureScoutingCenterState();
   const search = state.playerSearch;
+  if(!search.enabled && !scoutingChiefType(state.chief?.type)){
+    resetScoutingPlayerSearchProgress(search, { disable:true });
+    saveLocal(true);
+    renderScoutingCenter();
+    showNotice('Necesitás contratar un jefe de ojeadores para activar la búsqueda de jugadores.');
+    return;
+  }
   search.enabled = !search.enabled;
   resetScoutingPlayerSearchProgress(search, { disable:!search.enabled });
   saveLocal(true);
@@ -604,6 +616,10 @@ function addScoutingPlayerSearchResult(player, state, today){
 function processScoutingPlayerSearchDaily(state, today, reason='daily'){
   const search = state?.playerSearch;
   if(!search?.enabled) return { cost:0, foundPlayerId:null, progress:0, required:scoutingPlayerSearchRequiredDays(search?.role, search?.signingChance) };
+  if(!scoutingChiefType(state?.chief?.type)){
+    resetScoutingPlayerSearchProgress(search, { disable:true });
+    return { cost:0, foundPlayerId:null, disabled:true, missingChief:true, progress:0, required:search.requiredDays };
+  }
   if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){
     resetScoutingPlayerSearchProgress(search, { disable:true });
     return { cost:0, foundPlayerId:null, disabled:true, progress:0, required:search.requiredDays };
@@ -645,6 +661,7 @@ function processScoutingPlayerSearchDaily(state, today, reason='daily'){
   return { cost, foundPlayerId:added ? Number(player.id) : null, progress:search.progressDays, required:search.requiredDays };
 }
 function scoutingPlayerSearchStatusText(search, state){
+  if(!scoutingChiefType(state?.chief?.type)) return 'Requiere un jefe de ojeadores contratado. Sin jefe, la búsqueda se apaga y reinicia su progreso.';
   if(!search.enabled) return 'La búsqueda está apagada. Al activarla, el progreso empieza desde cero.';
   if(search.status === 'weekly_wait'){
     const passed = search.lastResultDate && validIsoDate(search.lastResultDate) ? Math.max(0, daysBetweenIsoDates(search.lastResultDate, game?.currentDate || currentCalendarDate())) : 7;
@@ -662,18 +679,20 @@ function scoutingPlayerSearchStatusText(search, state){
 function scoutingPlayerSearchMarkup(state){
   const search = normalizeScoutingPlayerSearchState(state.playerSearch);
   state.playerSearch = search;
+  const hasChief = Boolean(scoutingChiefType(state.chief?.type));
+  if(!hasChief && search.enabled) resetScoutingPlayerSearchProgress(search, { disable:true });
   const pct = clamp(Math.round((Number(search.progressDays || 0) / Math.max(1, Number(search.requiredDays || 1))) * 100), 0, 100);
   const roleOptions = SCOUTING_PLAYER_SEARCH_ROLES.map(role => `<option value="${role}" ${search.role === role ? 'selected' : ''}>${escapeHtml(scoutingPlayerSearchRoleLabel(role))}</option>`).join('');
   const chanceOptions = SCOUTING_PLAYER_SEARCH_CHANCES.map(value => `<option value="${value}" ${search.signingChance === value ? 'selected' : ''}>${escapeHtml(scoutingPlayerSearchChanceLabel(value))}</option>`).join('');
   const durationParts = ['1 día base'];
   if(search.role !== 'all') durationParts.push('+2 por rol');
   if(search.signingChance !== 'any') durationParts.push(`+${({ '30':1, '50':2, '80':3 })[search.signingChance]} por probabilidad`);
-  return `<div class="card scouting-search-card ${search.enabled ? 'is-active' : 'is-off'}">
+  return `<div class="card scouting-search-card ${search.enabled ? 'is-active' : 'is-off'} ${hasChief ? '' : 'requires-chief'}">
     <div class="scouting-card-head">
       <div><p class="label">Descubrimiento automático</p><h3>Buscar jugadores</h3></div>
-      <button class="scouting-search-switch ${search.enabled ? 'on' : 'off'}" data-toggle-scouting-player-search role="switch" aria-checked="${search.enabled ? 'true' : 'false'}"><span>${search.enabled ? 'ON' : 'OFF'}</span></button>
+      <button class="scouting-search-switch ${search.enabled ? 'on' : 'off'} ${hasChief ? '' : 'requires-chief'}" data-toggle-scouting-player-search role="switch" aria-checked="${search.enabled ? 'true' : 'false'}" aria-disabled="${hasChief ? 'false' : 'true'}"><span>${hasChief ? (search.enabled ? 'ON' : 'OFF') : 'REQUIERE JEFE'}</span></button>
     </div>
-    <p class="muted small">Encuentra como máximo un jugador por semana según los criterios elegidos y lo agrega automáticamente a la lista activa. Costo: <strong class="bad">${formatMoney(SCOUTING_PLAYER_SEARCH_DAILY_COST)} por día activo</strong>.</p>
+    <p class="muted small">${hasChief ? 'Encuentra como máximo un jugador por semana según los criterios elegidos y lo agrega automáticamente a la lista activa.' : 'Contratá un jefe de ojeadores para habilitar este servicio.'} Costo: <strong class="bad">${formatMoney(SCOUTING_PLAYER_SEARCH_DAILY_COST)} por día activo</strong>.</p>
     <div class="scouting-search-filters">
       <label><span>Rol</span><select data-scouting-search-role>${roleOptions}</select></label>
       <label><span>Probabilidad de fichaje</span><select data-scouting-search-chance>${chanceOptions}</select></label>
@@ -726,6 +745,7 @@ function dismissScoutingChief(){
   const dismissedName = type?.name || state.chief.type;
   state.chief = null;
   state.chiefLastChargeDate = null;
+  resetScoutingPlayerSearchProgress(state.playerSearch, { disable:true });
   if(typeof pushGameMessage === 'function') pushGameMessage({
     type:'empleados',
     priority:'normal',
@@ -849,15 +869,15 @@ function scoutingRevealOneSkill(attemptIndex=0, context='daily'){
   targetReport.lastUpdatedDate = today;
   return true;
 }
-function scoutingChiefDailyReveals(){
-  const state = ensureScoutingCenterState();
+function scoutingChiefDailyReveals(stateOverride=null){
+  const state = stateOverride || ensureScoutingCenterState();
   const type = scoutingChiefType(state.chief?.type);
   if(!type) return 0;
   if(type.revealMax <= type.revealMin) return type.revealMin;
   return type.revealMin + hashNumber(`scout-chief-${state.chief.type}-${game.currentDate}-${game.seasonNumber}`, (type.revealMax - type.revealMin) + 1);
 }
-function processScoutingCenterMonthlyCosts(){
-  const state = ensureScoutingCenterState();
+function processScoutingCenterMonthlyCosts(stateOverride=null){
+  const state = stateOverride || ensureScoutingCenterState();
   const today = game.currentDate || currentCalendarDate();
   if(!validIsoDate(today)) return 0;
   let total = 0;
@@ -897,10 +917,12 @@ function processScoutingCenterDaily(options={}){
     recordBudgetChange(-cost, 'Pago diario de ojeadores', { type:'scouting_scout_daily', scouts:state.scouts });
     costs += cost;
   }
-  costs += processScoutingCenterMonthlyCosts();
+  // Reutilizar el mismo objeto persistente evita que una normalización secundaria
+  // deje el progreso de búsqueda escrito sobre una referencia obsoleta.
+  costs += processScoutingCenterMonthlyCosts(state);
   const searchResult = processScoutingPlayerSearchDaily(state, today, reason);
   costs += Number(searchResult.cost || 0);
-  const attempts = Math.max(0, state.scouts) + scoutingChiefDailyReveals();
+  const attempts = Math.max(0, state.scouts) + scoutingChiefDailyReveals(state);
   const observed = attempts > 0 ? markScoutingDailyObservation(state, today) : 0;
   let reveals = 0;
   for(let i=0; i<attempts; i++){
@@ -914,6 +936,7 @@ function resetScoutingCenterForNewSeason(){
   const state = ensureScoutingCenterState();
   state.chief = null;
   state.chiefLastChargeDate = null;
+  resetScoutingPlayerSearchProgress(state.playerSearch, { disable:true });
   state.lastDailyProcessDate = null;
   game.scoutingCenter = state;
 }

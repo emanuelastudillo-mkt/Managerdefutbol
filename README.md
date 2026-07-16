@@ -1,4 +1,45 @@
-# Fútbol Manager MVP - V7.54
+# Fútbol Manager MVP - V7.55
+
+## V7.55 - Corrección de búsqueda automática y requisito de jefe
+
+### Corrección del avance diario
+
+- Se corrigió un error de persistencia que impedía que la barra de **Buscar jugadores** avanzara día a día.
+- El problema se producía porque el procesamiento de costos normalizaba nuevamente el Centro de Ojeo y reemplazaba su objeto de estado. El costo diario se registraba, pero el progreso y el resultado quedaban escritos sobre una referencia anterior.
+- El proceso diario ahora reutiliza el mismo objeto persistente para costos mensuales, búsqueda, observación y revelaciones.
+- Al completar los días requeridos, el jugador encontrado se agrega correctamente a la lista activa, recibe el borde especial y genera su mensaje.
+- Se mantiene el límite de un jugador encontrado cada siete días.
+
+### Jefe de ojeadores obligatorio
+
+- La búsqueda automática sólo puede activarse con un **Jefe de ojeadores contratado**.
+- Sin jefe, el interruptor muestra **REQUIERE JEFE**, permanece apagado y explica el requisito.
+- Una búsqueda activa de una partida anterior se desactiva automáticamente si no existe un jefe.
+- Despedir al jefe apaga la búsqueda, elimina su progreso y deja intactos los criterios elegidos.
+- Al finalizar la temporada, cuando el jefe deja el club, la búsqueda también se apaga y reinicia.
+- Mientras está desactivada por falta de jefe no se cobra el costo diario de $50.000.
+
+### Validación
+
+- Búsqueda sin filtros: resultado persistente al completar 1 día.
+- Búsqueda con probabilidad superior al 30%: progreso 1/2 el primer día y resultado el segundo.
+- Cobro único de $50.000 por cada fecha procesada.
+- Activación bloqueada sin jefe.
+- Migración de búsquedas activas sin jefe a estado apagado y progreso cero.
+- Despido del jefe con apagado inmediato de la búsqueda.
+- No se modificaron los simuladores ni la lógica de partidos.
+
+### Archivos principales modificados en V7.55
+
+- `js/game/16-scouting-center.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.55 no rompe partidas anteriores.** Las búsquedas de V7.54 conservan sus criterios. Si tenían un jefe contratado, continuarán desde su progreso guardado; si no tenían jefe, se apagarán y reiniciarán automáticamente.
+
 
 ## V7.54 - Búsqueda automática de jugadores
 

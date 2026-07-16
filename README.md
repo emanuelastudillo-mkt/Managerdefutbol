@@ -1,4 +1,53 @@
-# Fútbol Manager MVP - V7.53
+# Fútbol Manager MVP - V7.54
+
+## V7.54 - Búsqueda automática de jugadores
+
+### Nuevo buscador del Centro de Ojeo
+
+- Se agregó el bloque **Buscar jugadores** en la parte principal del Centro de Ojeo.
+- La búsqueda funciona mediante un switch **ON/OFF**.
+- Mientras permanece activa cuesta **$50.000 por día** y el gasto queda registrado en Finanzas.
+- Apagarla reinicia inmediatamente la barra de progreso a cero.
+- Cambiar cualquiera de los criterios también reinicia el progreso, evitando mezclar búsquedas diferentes.
+- El servicio encuentra como máximo un jugador por semana y lo agrega automáticamente a la lista activa de seguimiento.
+
+### Criterios disponibles
+
+- Rol: cualquiera o uno de los doce puestos disponibles —POR, LD, LI, DFC, MCD, MC, MI, MD, MCO, ED, EI y DC—.
+- Probabilidad de fichaje: cualquiera, más de 30%, más de 50% o más de 80%.
+- La búsqueda utiliza la probabilidad real correspondiente al club que dirige actualmente el manager, sin revelarla automáticamente dentro del informe.
+
+### Tiempo de búsqueda
+
+- Sin criterios: **1 día**.
+- Elegir un rol específico: **+2 días**.
+- Más de 30% de probabilidad de fichaje: **+1 día**.
+- Más de 50%: **+2 días**.
+- Más de 80%: **+3 días**.
+- El tiempo total puede variar entre **1 y 6 días**. Después de encontrar un jugador se respeta el límite máximo de una incorporación automática por cada siete días.
+
+### Progreso y resultados
+
+- Una barra muestra los días cumplidos y los días requeridos.
+- Si la lista activa está completa, la búsqueda queda al 100% esperando un cupo libre.
+- Si no existen coincidencias, permanece completa y vuelve a intentarlo diariamente mientras siga encendida.
+- El jugador encontrado se agrega automáticamente, recibe una insignia específica y su tarjeta aparece con un borde verde diferenciado.
+- También se genera un mensaje con el nombre, el rol y el club del jugador encontrado.
+- Quitar al jugador de la lista elimina el resaltado, pero conserva su informe archivado como en el resto del Centro de Ojeo.
+
+### Archivos principales modificados en V7.54
+
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/game/16-scouting-center.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
+### Compatibilidad
+
+**V7.54 no rompe partidas anteriores.** Las partidas existentes incorporan la búsqueda apagada y con progreso cero. No se modifican informes, jugadores, simuladores ni resultados.
+
 
 ## V7.53 - Pulido visual del Centro de Ojeo
 

@@ -6098,3 +6098,105 @@ button.cwc-group-result{cursor:pointer}
   .scouting-known-grid{grid-template-columns:minmax(0,1fr)}
   .scouting-skill-group{padding:10px}
 }
+
+/* V7.54 · Búsqueda automática de jugadores en el Centro de Ojeo */
+.scouting-search-card{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  border:1px solid rgba(96,165,250,.18);
+  background:linear-gradient(145deg,rgba(14,25,43,.96),rgba(7,13,24,.94));
+}
+.scouting-search-card.is-active{
+  border-color:rgba(56,189,248,.42);
+  box-shadow:0 0 0 1px rgba(56,189,248,.08),0 16px 38px rgba(2,8,23,.22);
+}
+.scouting-search-switch{
+  border:1px solid rgba(148,163,184,.28);
+  border-radius:999px;
+  min-width:66px;
+  padding:5px;
+  background:rgba(15,23,42,.74);
+  color:var(--muted);
+  cursor:pointer;
+  transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease;
+}
+.scouting-search-switch span{
+  display:block;
+  border-radius:999px;
+  padding:5px 12px;
+  font-size:.72rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-align:center;
+}
+.scouting-search-switch.on{
+  border-color:rgba(34,197,94,.45);
+  background:rgba(34,197,94,.12);
+  color:#bbf7d0;
+}
+.scouting-search-switch:hover{transform:translateY(-1px)}
+.scouting-search-filters{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.scouting-search-filters label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.scouting-search-filters label>span{
+  color:var(--muted);
+  font-size:.76rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.scouting-search-filters select{
+  width:100%;
+  min-width:0;
+}
+.scouting-search-duration{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border:1px solid rgba(148,163,184,.13);
+  border-radius:12px;
+  background:rgba(255,255,255,.035);
+}
+.scouting-search-duration strong{font-size:1rem;color:var(--text)}
+.scouting-search-duration span{color:var(--muted);font-size:.76rem;text-align:right}
+.scouting-search-progress{height:10px;margin:0}
+.scouting-search-progress>span{
+  background:linear-gradient(90deg,#38bdf8,#22c55e);
+  transition:width .35s ease;
+}
+.scouting-search-progress-copy{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+.scouting-search-progress-copy strong{white-space:nowrap;font-size:.8rem}
+.scouting-search-progress-copy span{color:var(--muted);font-size:.76rem;text-align:right;line-height:1.35}
+.scouting-player-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.scouting-player-card.scouting-search-result{
+  border-color:rgba(34,197,94,.62);
+  box-shadow:0 0 0 1px rgba(34,197,94,.14),0 12px 30px rgba(3,20,12,.24);
+  background:linear-gradient(145deg,rgba(11,33,27,.82),rgba(8,15,25,.94));
+}
+.scouting-search-result-pill{
+  border-color:rgba(34,197,94,.42)!important;
+  background:rgba(34,197,94,.14)!important;
+  color:#bbf7d0!important;
+}
+@media (max-width:700px){
+  .scouting-search-filters{grid-template-columns:1fr}
+  .scouting-search-duration,
+  .scouting-search-progress-copy{align-items:flex-start;flex-direction:column}
+  .scouting-search-duration span,
+  .scouting-search-progress-copy span{text-align:left}
+}

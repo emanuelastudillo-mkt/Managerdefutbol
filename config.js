@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.53',
+  version: 'V7.54',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -33,7 +33,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.53',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.54',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -115,6 +115,7 @@ window.GAME_CONFIG = {
     ojeadoresPorOficina: 3,
     jugadoresPorOficina: 10,
     costoOjeadorDiario: 200000,
+    costoBusquedaJugadorDiario: 50000,
     costoOficinaMensual: 1000000,
     jefes: {
       regular: { nombre:'Regular', sueldoMensual: 500000, maxOficinas: 1, revelacionesMin: 0, revelacionesMax: 1 },

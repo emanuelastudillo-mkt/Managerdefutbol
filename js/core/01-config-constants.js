@@ -30,7 +30,7 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.53');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.54');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.53');
+const APP_VERSION = configValue('version', 'V7.54');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -719,6 +719,7 @@ const SCOUTING_BASE_PLAYER_SLOTS = Math.max(0, Math.round(configNumber('centroOj
 const SCOUTING_SCOUTS_PER_OFFICE = Math.max(0, Math.round(configNumber('centroOjeo.ojeadoresPorOficina', 3, 0, 99)));
 const SCOUTING_PLAYERS_PER_OFFICE = Math.max(0, Math.round(configNumber('centroOjeo.jugadoresPorOficina', 10, 0, 999)));
 const SCOUTING_SCOUT_DAILY_COST = Math.max(0, Math.round(configNumber('centroOjeo.costoOjeadorDiario', 200000, 0)));
+const SCOUTING_PLAYER_SEARCH_DAILY_COST = Math.max(0, Math.round(configNumber('centroOjeo.costoBusquedaJugadorDiario', 50000, 0)));
 const SCOUTING_OFFICE_MONTHLY_COST = Math.max(0, Math.round(configNumber('centroOjeo.costoOficinaMensual', 1000000, 0)));
 const SCOUTING_CHIEF_TYPES = (() => {
   const src = configValue('centroOjeo.jefes', {}) || {};

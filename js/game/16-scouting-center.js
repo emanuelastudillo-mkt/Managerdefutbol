@@ -1,7 +1,49 @@
-/* Centro de Ojeo: probabilidad de fichaje tratada como dato revelable. */
+/* V7.54 · Centro de Ojeo: informes detallados y búsqueda automática de jugadores. */
 
+const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
+const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
+function createInitialScoutingPlayerSearchState(){
+  return {
+    enabled:false,
+    role:'all',
+    signingChance:'any',
+    progressDays:0,
+    requiredDays:1,
+    startedDate:null,
+    lastResultDate:null,
+    lastResultPlayerId:null,
+    status:'idle',
+    foundPlayerIds:[]
+  };
+}
+function scoutingPlayerSearchRequiredDays(role='all', signingChance='any'){
+  let days = 1;
+  if(String(role || 'all') !== 'all') days += 2;
+  const chanceDays = { '30':1, '50':2, '80':3 };
+  days += Number(chanceDays[String(signingChance || 'any')] || 0);
+  return clamp(Math.round(days), 1, 6);
+}
+function normalizeScoutingPlayerSearchState(search){
+  const clean = { ...createInitialScoutingPlayerSearchState(), ...(search && typeof search === 'object' ? search : {}) };
+  clean.enabled = Boolean(clean.enabled);
+  clean.role = SCOUTING_PLAYER_SEARCH_ROLES.includes(String(clean.role)) ? String(clean.role) : 'all';
+  clean.signingChance = SCOUTING_PLAYER_SEARCH_CHANCES.includes(String(clean.signingChance)) ? String(clean.signingChance) : 'any';
+  clean.requiredDays = scoutingPlayerSearchRequiredDays(clean.role, clean.signingChance);
+  clean.progressDays = clamp(Math.round(Number(clean.progressDays || 0)), 0, clean.requiredDays);
+  clean.startedDate = validIsoDate(clean.startedDate) ? clean.startedDate : null;
+  clean.lastResultDate = validIsoDate(clean.lastResultDate) ? clean.lastResultDate : null;
+  clean.lastResultPlayerId = Math.max(0, Math.round(Number(clean.lastResultPlayerId || 0))) || null;
+  clean.status = ['idle','searching','weekly_wait','waiting_slot','no_matches','found'].includes(String(clean.status)) ? String(clean.status) : (clean.enabled ? 'searching' : 'idle');
+  clean.foundPlayerIds = Array.from(new Set((Array.isArray(clean.foundPlayerIds) ? clean.foundPlayerIds : []).map(Number).filter(id => id > 0 && (typeof playerById !== 'function' || playerById(id)))));
+  if(!clean.enabled){
+    clean.progressDays = 0;
+    clean.startedDate = null;
+    clean.status = 'idle';
+  }
+  return clean;
+}
 function createInitialScoutingCenterState(){
-  return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null };
+  return { listedPlayerIds:[], listedTeamIds:[], reports:{}, teamReports:{}, offices:0, scouts:0, chief:null, officeLastChargeDate:null, chiefLastChargeDate:null, scoutsLastChargeDate:null, lastDailyProcessDate:null, playerSearch:createInitialScoutingPlayerSearchState() };
 }
 function normalizeScoutingCenterState(state){
   const base = createInitialScoutingCenterState();
@@ -33,6 +75,7 @@ function normalizeScoutingCenterState(state){
   clean.chiefLastChargeDate = validIsoDate(clean.chiefLastChargeDate) ? clean.chiefLastChargeDate : null;
   clean.scoutsLastChargeDate = validIsoDate(clean.scoutsLastChargeDate) ? clean.scoutsLastChargeDate : null;
   clean.lastDailyProcessDate = validIsoDate(clean.lastDailyProcessDate) ? clean.lastDailyProcessDate : null;
+  clean.playerSearch = normalizeScoutingPlayerSearchState(clean.playerSearch);
   const caps = scoutingCapacities(clean);
   Object.entries({ ...clean.teamReports }).forEach(([id, report]) => {
     const numericId = Number(id);
@@ -46,6 +89,10 @@ function normalizeScoutingCenterState(state){
   clean.listedPlayerIds = clean.listedPlayerIds.slice(0, totalSlots);
   const remainingTeamSlots = Math.max(0, totalSlots - clean.listedPlayerIds.length);
   clean.listedTeamIds = clean.listedTeamIds.slice(0, remainingTeamSlots);
+  clean.playerSearch.foundPlayerIds = clean.playerSearch.foundPlayerIds.filter(id => clean.listedPlayerIds.includes(Number(id)));
+  if(clean.playerSearch.lastResultPlayerId && !clean.playerSearch.foundPlayerIds.includes(Number(clean.playerSearch.lastResultPlayerId))){
+    clean.playerSearch.lastResultPlayerId = null;
+  }
   return clean;
 }
 function scoutingTeamSectorDefinitions(){
@@ -462,9 +509,186 @@ function scoutingTeamCard(clubId){
     <p class="muted small">Creado: ${escapeHtml(report.createdDate || '—')}</p>
   </div>`;
 }
+function scoutingPlayerSearchChanceThreshold(search=null){
+  const clean = search || ensureScoutingCenterState().playerSearch;
+  const value = Number(clean?.signingChance || 0);
+  return [30,50,80].includes(value) ? value : 0;
+}
+function scoutingPlayerSearchRoleLabel(role){
+  return String(role || 'all') === 'all' ? 'Cualquier rol' : roleMeta(String(role)).name;
+}
+function scoutingPlayerSearchChanceLabel(value){
+  const key = String(value || 'any');
+  return key === 'any' ? 'Cualquiera' : `Más de ${key}%`;
+}
+function scoutingPlayerSearchCandidates(stateOverride=null){
+  const state = stateOverride || ensureScoutingCenterState();
+  const search = normalizeScoutingPlayerSearchState(state.playerSearch);
+  const role = String(search.role || 'all');
+  const threshold = scoutingPlayerSearchChanceThreshold(search);
+  const listed = new Set((state.listedPlayerIds || []).map(Number));
+  return (seed?.players || []).filter(player => {
+    if(!player || !Number(player.id) || player.retired || player.sold) return false;
+    if(Number(player.clubId || 0) === Number(game?.selectedClubId || 0)) return false;
+    if(listed.has(Number(player.id))) return false;
+    if(role !== 'all' && String(player.position || '').toUpperCase() !== role) return false;
+    if(threshold > 0){
+      const chance = typeof marketPlayerAcceptanceChance === 'function' ? Number(marketPlayerAcceptanceChance(player)) : NaN;
+      if(!Number.isFinite(chance) || chance <= threshold) return false;
+    }
+    return true;
+  }).sort((a,b) => Number(a.id || 0) - Number(b.id || 0));
+}
+function scoutingPlayerSearchPick(candidates, search, today){
+  if(!Array.isArray(candidates) || !candidates.length) return null;
+  const seedKey = `player-search-${today}-${game?.seasonNumber || 1}-${search.role}-${search.signingChance}-${search.lastResultDate || '-'}-${candidates.length}`;
+  return candidates[hashNumber(seedKey, candidates.length)] || candidates[0];
+}
+function resetScoutingPlayerSearchProgress(search, { disable=false }={}){
+  if(!search) return;
+  if(disable) search.enabled = false;
+  search.progressDays = 0;
+  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance);
+  search.startedDate = search.enabled ? (game?.currentDate || currentCalendarDate()) : null;
+  search.status = search.enabled ? 'searching' : 'idle';
+}
+function updateScoutingPlayerSearchCriteria(field, value){
+  const state = ensureScoutingCenterState();
+  const search = state.playerSearch;
+  if(field === 'role') search.role = SCOUTING_PLAYER_SEARCH_ROLES.includes(String(value)) ? String(value) : 'all';
+  if(field === 'signingChance') search.signingChance = SCOUTING_PLAYER_SEARCH_CHANCES.includes(String(value)) ? String(value) : 'any';
+  resetScoutingPlayerSearchProgress(search);
+  saveLocal(true);
+  renderScoutingCenter();
+  if(search.enabled) showNotice(`Criterios actualizados. La búsqueda se reinició y demorará ${search.requiredDays} día(s).`);
+}
+function toggleScoutingPlayerSearch(){
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){
+    showNotice('No podés buscar jugadores mientras estás sin club.');
+    return;
+  }
+  const state = ensureScoutingCenterState();
+  const search = state.playerSearch;
+  search.enabled = !search.enabled;
+  resetScoutingPlayerSearchProgress(search, { disable:!search.enabled });
+  saveLocal(true);
+  renderScoutingCenter();
+  showNotice(search.enabled
+    ? `Búsqueda activada. Costo ${formatMoney(SCOUTING_PLAYER_SEARCH_DAILY_COST)} por día y duración estimada ${search.requiredDays} día(s).`
+    : 'Búsqueda apagada. La barra de progreso volvió a cero.');
+}
+function addScoutingPlayerSearchResult(player, state, today){
+  if(!player || !state) return false;
+  const caps = scoutingCapacities(state);
+  const usedSlots = (state.listedPlayerIds || []).length + (state.listedTeamIds || []).length;
+  if(usedSlots >= caps.playerCapacity) return false;
+  state.listedPlayerIds.push(Number(player.id));
+  state.listedPlayerIds = Array.from(new Set(state.listedPlayerIds.map(Number).filter(Boolean)));
+  state.reports[String(player.id)] = normalizeScoutingReport(player.id, state.reports[String(player.id)] || {});
+  const search = state.playerSearch;
+  search.foundPlayerIds = Array.from(new Set([...(search.foundPlayerIds || []), Number(player.id)]));
+  search.lastResultPlayerId = Number(player.id);
+  search.lastResultDate = today;
+  search.status = 'found';
+  search.progressDays = 0;
+  search.startedDate = today;
+  if(typeof pushGameMessage === 'function') pushGameMessage({
+    type:'ojeo',
+    priority:'normal',
+    title:`Búsqueda completada: ${player.name}`,
+    body:`El Centro de Ojeo encontró a ${player.name}, ${roleBadge(player.position)} de ${clubName(player.clubId)}. Fue agregado automáticamente a la lista activa y quedó resaltado como resultado de búsqueda.`,
+    id:`scouting-search-result-${game?.seasonNumber || 1}-${today}-${player.id}`
+  });
+  return true;
+}
+function processScoutingPlayerSearchDaily(state, today, reason='daily'){
+  const search = state?.playerSearch;
+  if(!search?.enabled) return { cost:0, foundPlayerId:null, progress:0, required:scoutingPlayerSearchRequiredDays(search?.role, search?.signingChance) };
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){
+    resetScoutingPlayerSearchProgress(search, { disable:true });
+    return { cost:0, foundPlayerId:null, disabled:true, progress:0, required:search.requiredDays };
+  }
+  const cost = Math.max(0, Number(SCOUTING_PLAYER_SEARCH_DAILY_COST || 0));
+  if(cost > 0) recordBudgetChange(-cost, 'Búsqueda activa de jugadores', {
+    type:'scouting_player_search_daily',
+    role:search.role,
+    signingChance:search.signingChance,
+    reason
+  });
+  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance);
+  if(!search.startedDate) search.startedDate = today;
+  search.status = 'searching';
+  search.progressDays = Math.min(search.requiredDays, Math.max(0, Number(search.progressDays || 0)) + 1);
+  if(search.progressDays < search.requiredDays){
+    return { cost, foundPlayerId:null, progress:search.progressDays, required:search.requiredDays };
+  }
+  if(search.lastResultDate && validIsoDate(search.lastResultDate)){
+    const daysSinceResult = Math.max(0, daysBetweenIsoDates(search.lastResultDate, today));
+    if(daysSinceResult < 7){
+      search.status = 'weekly_wait';
+      return { cost, foundPlayerId:null, weeklyWait:true, daysUntilNext:7 - daysSinceResult, progress:search.progressDays, required:search.requiredDays };
+    }
+  }
+  const caps = scoutingCapacities(state);
+  const usedSlots = (state.listedPlayerIds || []).length + (state.listedTeamIds || []).length;
+  if(usedSlots >= caps.playerCapacity){
+    search.status = 'waiting_slot';
+    return { cost, foundPlayerId:null, waitingSlot:true, progress:search.progressDays, required:search.requiredDays };
+  }
+  const candidates = scoutingPlayerSearchCandidates(state);
+  if(!candidates.length){
+    search.status = 'no_matches';
+    return { cost, foundPlayerId:null, noMatches:true, progress:search.progressDays, required:search.requiredDays };
+  }
+  const player = scoutingPlayerSearchPick(candidates, search, today);
+  const added = addScoutingPlayerSearchResult(player, state, today);
+  return { cost, foundPlayerId:added ? Number(player.id) : null, progress:search.progressDays, required:search.requiredDays };
+}
+function scoutingPlayerSearchStatusText(search, state){
+  if(!search.enabled) return 'La búsqueda está apagada. Al activarla, el progreso empieza desde cero.';
+  if(search.status === 'weekly_wait'){
+    const passed = search.lastResultDate && validIsoDate(search.lastResultDate) ? Math.max(0, daysBetweenIsoDates(search.lastResultDate, game?.currentDate || currentCalendarDate())) : 7;
+    return `Informe listo. Por el límite de un jugador por semana, la próxima incorporación estará disponible en ${Math.max(0, 7 - passed)} día(s).`;
+  }
+  if(search.status === 'waiting_slot') return 'Búsqueda completa, pero no hay cupos libres. Quitá un seguimiento o alquilá una oficina.';
+  if(search.status === 'no_matches') return 'Búsqueda completa sin coincidencias. Se volverá a intentar mientras permanezca activa.';
+  if(search.status === 'found' && search.lastResultPlayerId){
+    const player = typeof playerById === 'function' ? playerById(search.lastResultPlayerId) : null;
+    return player ? `Último jugador encontrado: ${player.name}. El próximo ciclo ya puede comenzar.` : 'Jugador encontrado y agregado a la lista activa.';
+  }
+  const remaining = Math.max(0, Number(search.requiredDays || 1) - Number(search.progressDays || 0));
+  return remaining > 0 ? `Faltan ${remaining} día(s) de búsqueda.` : 'Analizando coincidencias disponibles.';
+}
+function scoutingPlayerSearchMarkup(state){
+  const search = normalizeScoutingPlayerSearchState(state.playerSearch);
+  state.playerSearch = search;
+  const pct = clamp(Math.round((Number(search.progressDays || 0) / Math.max(1, Number(search.requiredDays || 1))) * 100), 0, 100);
+  const roleOptions = SCOUTING_PLAYER_SEARCH_ROLES.map(role => `<option value="${role}" ${search.role === role ? 'selected' : ''}>${escapeHtml(scoutingPlayerSearchRoleLabel(role))}</option>`).join('');
+  const chanceOptions = SCOUTING_PLAYER_SEARCH_CHANCES.map(value => `<option value="${value}" ${search.signingChance === value ? 'selected' : ''}>${escapeHtml(scoutingPlayerSearchChanceLabel(value))}</option>`).join('');
+  const durationParts = ['1 día base'];
+  if(search.role !== 'all') durationParts.push('+2 por rol');
+  if(search.signingChance !== 'any') durationParts.push(`+${({ '30':1, '50':2, '80':3 })[search.signingChance]} por probabilidad`);
+  return `<div class="card scouting-search-card ${search.enabled ? 'is-active' : 'is-off'}">
+    <div class="scouting-card-head">
+      <div><p class="label">Descubrimiento automático</p><h3>Buscar jugadores</h3></div>
+      <button class="scouting-search-switch ${search.enabled ? 'on' : 'off'}" data-toggle-scouting-player-search role="switch" aria-checked="${search.enabled ? 'true' : 'false'}"><span>${search.enabled ? 'ON' : 'OFF'}</span></button>
+    </div>
+    <p class="muted small">Encuentra como máximo un jugador por semana según los criterios elegidos y lo agrega automáticamente a la lista activa. Costo: <strong class="bad">${formatMoney(SCOUTING_PLAYER_SEARCH_DAILY_COST)} por día activo</strong>.</p>
+    <div class="scouting-search-filters">
+      <label><span>Rol</span><select data-scouting-search-role>${roleOptions}</select></label>
+      <label><span>Probabilidad de fichaje</span><select data-scouting-search-chance>${chanceOptions}</select></label>
+    </div>
+    <div class="scouting-search-duration"><strong>${search.requiredDays} día(s)</strong><span>${escapeHtml(durationParts.join(' · '))}</span></div>
+    <div class="project-progress scouting-search-progress"><span style="width:${pct}%"></span></div>
+    <div class="scouting-search-progress-copy"><strong>${search.progressDays}/${search.requiredDays} días</strong><span>${escapeHtml(scoutingPlayerSearchStatusText(search, state))}</span></div>
+  </div>`;
+}
+
 function removePlayerFromScoutingCenter(playerId){
   const state = ensureScoutingCenterState();
   state.listedPlayerIds = state.listedPlayerIds.filter(id => Number(id) !== Number(playerId));
+  state.playerSearch.foundPlayerIds = (state.playerSearch.foundPlayerIds || []).filter(id => Number(id) !== Number(playerId));
+  if(Number(state.playerSearch.lastResultPlayerId || 0) === Number(playerId)) state.playerSearch.lastResultPlayerId = null;
   // El informe queda archivado. Si ya se revelaron habilidades, la ficha del jugador debe seguir mostrándolas.
   if(state.reports[String(playerId)]) state.reports[String(playerId)] = normalizeScoutingReport(playerId, state.reports[String(playerId)]);
   saveLocal(true);
@@ -674,14 +898,16 @@ function processScoutingCenterDaily(options={}){
     costs += cost;
   }
   costs += processScoutingCenterMonthlyCosts();
+  const searchResult = processScoutingPlayerSearchDaily(state, today, reason);
+  costs += Number(searchResult.cost || 0);
   const attempts = Math.max(0, state.scouts) + scoutingChiefDailyReveals();
   const observed = attempts > 0 ? markScoutingDailyObservation(state, today) : 0;
   let reveals = 0;
   for(let i=0; i<attempts; i++){
     if(scoutingRevealOneSkill(i, reason)) reveals += 1;
   }
-  game.lastScoutingDailyResult = { date:today, reason, attempts, reveals, observed, costs };
-  return { reveals, costs, attempts, observed, date:today, reason };
+  game.lastScoutingDailyResult = { date:today, reason, attempts, reveals, observed, costs, searchResult };
+  return { reveals, costs, attempts, observed, searchResult, date:today, reason };
 }
 function resetScoutingCenterForNewSeason(){
   if(!game) return;
@@ -783,16 +1009,19 @@ function scoutingPlayerSigningChanceMarkup(player){
 }
 function scoutingPlayerCard(player){
   const report = scoutingReportForPlayer(player.id);
+  const state = ensureScoutingCenterState();
+  const foundBySearch = (state.playerSearch?.foundPlayerIds || []).map(Number).includes(Number(player.id));
   const known = scoutingKnownCount(player.id);
   const total = scoutingSkillKeys(player).length || 1;
   const hiddenTotal = Object.keys(scoutingHiddenStatMap(player)).length;
   const hiddenKnown = Object.keys(scoutingHiddenStatMap(player)).filter(key => scoutingKnownSet(player.id).has(key)).length;
   const pct = clamp(Math.round((known / total) * 100), 0, 100);
   const ownPill = scoutingIsOwnPlayer(player) ? '<span class="pill ok">Propio · ocultas primero</span>' : '<span class="pill">Externo</span>';
-  return `<div class="scouting-player-card card inner">
+  const searchPill = foundBySearch ? '<span class="pill scouting-search-result-pill">Encontrado por búsqueda</span>' : '';
+  return `<div class="scouting-player-card card inner ${foundBySearch ? 'scouting-search-result' : ''}">
     <div class="scouting-player-head">
       ${faceImg(player, 'scouting-player-face')}
-      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')}</p>${ownPill}</div>
+      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')}</p><div class="scouting-player-pills">${ownPill}${searchPill}</div></div>
       <button class="ghost small-btn" data-remove-scouting-player="${player.id}">Quitar</button>
     </div>
     <div class="project-progress scouting-report-progress"><span style="width:${pct}%"></span></div>
@@ -941,6 +1170,7 @@ function renderScoutingCenter(){
       </div>
       <div class="scouting-workspace">
         <div class="scouting-main-stack">
+          ${scoutingPlayerSearchMarkup(state)}
           <div class="card scouting-list-card">
             <div class="scouting-card-head">
               <div><p class="label">Lista activa</p><h3>Jugadores y equipos en seguimiento</h3></div>
@@ -983,6 +1213,9 @@ function renderScoutingCenter(){
   document.querySelector('[data-cancel-scouting-office]')?.addEventListener('click', cancelScoutingOffice);
   document.querySelector('[data-hire-scouting-scout]')?.addEventListener('click', hireScoutingScout);
   document.querySelector('[data-dismiss-scouting-scout]')?.addEventListener('click', dismissScoutingScout);
+  document.querySelector('[data-toggle-scouting-player-search]')?.addEventListener('click', toggleScoutingPlayerSearch);
+  document.querySelector('[data-scouting-search-role]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('role', event.target.value));
+  document.querySelector('[data-scouting-search-chance]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('signingChance', event.target.value));
   document.querySelectorAll('[data-open-scouting-reports]').forEach(btn => btn.addEventListener('click', () => openScoutingReportsModal(btn.dataset.openScoutingReports || 'all')));
   document.querySelectorAll('[data-remove-scouting-player]').forEach(btn => btn.addEventListener('click', () => removePlayerFromScoutingCenter(Number(btn.dataset.removeScoutingPlayer || 0))));
   document.querySelectorAll('[data-remove-scouting-team]').forEach(btn => btn.addEventListener('click', () => removeTeamFromScoutingCenter(Number(btn.dataset.removeScoutingTeam || 0))));

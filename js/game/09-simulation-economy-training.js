@@ -760,8 +760,9 @@ function quickSimulateBotMatch(match){
   if(!match.friendly){
     applyResultToTables(match, homeGoals, awayGoals);
     if(typeof applyPlayerStats === 'function'){
-      applyPlayerStats(match.homeId, homeLineup, substitutions, goals, cards, injuries, keySaves, errors);
-      applyPlayerStats(match.awayId, awayLineup, substitutions, goals, cards, injuries, keySaves, errors);
+      const playerStatsResult = { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway };
+      applyPlayerStats(match.homeId, homeLineup, substitutions, goals, cards, injuries, keySaves, errors, playerStatsResult);
+      applyPlayerStats(match.awayId, awayLineup, substitutions, goals, cards, injuries, keySaves, errors, playerStatsResult);
     }
     if(typeof applyAvailability === 'function') applyAvailability(cards, injuries);
     if(typeof updatePlayerStarTrackingForMatch === 'function'){

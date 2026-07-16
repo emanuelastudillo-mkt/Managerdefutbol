@@ -1,4 +1,4 @@
-/* V7.57 · Centro de Ojeo: media general y puntaje total calculados desde las habilidades existentes. */
+/* V7.58 · Centro de Ojeo: media general y puntaje total calculados desde las habilidades existentes. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];

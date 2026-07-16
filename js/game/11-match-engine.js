@@ -78,7 +78,7 @@ function applyResultToTables(match, hg, ag){
   else { h.pe++; a.pe++; h.pts++; a.pts++; }
   h.dg = h.gf - h.gc; a.dg = a.gf - a.gc;
 }
-function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries, keySaves=[], errors=[]){
+function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries, keySaves=[], errors=[], matchResult=null){
   const playedIds = new Set(lineup.map(p => p.id));
   substitutions.filter(s => s.clubId === clubId).forEach(s => playedIds.add(s.inId));
   playedIds.forEach(id => { if(game.playerStats[id]) game.playerStats[id].played++; });
@@ -103,6 +103,9 @@ function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries,
       if(e.goal) game.playerStats[e.playerId].goalErrors = Number(game.playerStats[e.playerId].goalErrors || 0) + 1;
     }
   });
+  if(typeof recordManagerPlayerMatchStatistics === 'function' && matchResult){
+    recordManagerPlayerMatchStatistics(clubId, [...playedIds], matchResult);
+  }
 }
 function applyAvailability(cards, injuries){
   cards.forEach(c => {

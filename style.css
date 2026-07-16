@@ -6282,3 +6282,15 @@ button.cwc-group-result{cursor:pointer}
 @media(max-width:620px){
   .scouting-player-aggregate-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* V7.58 · Estadísticas individuales por temporada dentro de Primer Equipo */
+.team-player-stats-toolbar{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.team-player-stats-toolbar label{display:grid;gap:6px}.team-player-stats-toolbar label>span{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.team-player-stats-toolbar select{margin:0}
+.team-player-stats-summary{margin-bottom:14px}.team-player-stats-summary .card{min-height:96px}.team-player-stats-summary strong{display:block;font-size:1.12rem;margin:4px 0}
+.team-player-stats-table{min-width:980px}.team-player-stats-table th,.team-player-stats-table td{text-align:center}.team-player-stats-table th:nth-child(2),.team-player-stats-table td:nth-child(2){text-align:left}.team-player-stats-table .photo-thumb{width:34px;height:34px;border-radius:10px}
+.team-player-rating{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:5px 8px;border-radius:999px;font-weight:950;border:1px solid rgba(148,163,184,.18);background:rgba(148,163,184,.10)}
+.team-player-rating.ok{color:#86efac;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.24)}.team-player-rating.warn{color:#fde68a;background:rgba(250,204,21,.10);border-color:rgba(250,204,21,.24)}.team-player-rating.bad{color:#fca5a5;background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.24)}
+.team-player-stats-note{margin-top:12px}
+@media (max-width:760px){.team-player-stats-toolbar{grid-template-columns:1fr}.team-player-stats-summary{grid-template-columns:1fr 1fr}.team-player-stats-table{min-width:900px}}

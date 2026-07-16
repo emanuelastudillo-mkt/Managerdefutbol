@@ -4,7 +4,8 @@ function firstTeamTabsMarkup(current){
   const tabs = [
     ['tactics','Táctica'],
     ['squad','Plantel'],
-    ['training','Entrenamiento']
+    ['training','Entrenamiento'],
+    ['playerStats','Estadísticas']
   ];
   return `<div class="card first-team-tabs"><div class="subtabs">${tabs.map(([key,label])=>`<button class="${current===key?'active':''}" data-first-team-tab="${key}">${label}</button>`).join('')}</div></div>`;
 }
@@ -25,6 +26,7 @@ function prependFirstTeamTabs(current){
 function renderFirstTeam(){
   if(firstTeamTab === 'squad') return renderSquad();
   if(firstTeamTab === 'training') return renderTraining();
+  if(firstTeamTab === 'playerStats') return renderTeamPlayerStatistics();
   return renderTactics();
 }
 
@@ -598,6 +600,96 @@ function skillColumnSort(label){
   return `<div class="th-filter compact-sort skill-sort"><span>${label}</span><select class="skill-sort-select" data-squad-skill-sort>${squadSkillOptionsMarkup()}</select><div class="sort-arrows"><button type="button" class="sort-arrow${squadSort==='habilidad_asc'?' active':''}" data-squad-sort="habilidad_asc" title="Menor a mayor" aria-label="Ordenar habilidad de menor a mayor">↑</button><button type="button" class="sort-arrow${squadSort==='habilidad_desc'?' active':''}" data-squad-sort="habilidad_desc" title="Mayor a menor" aria-label="Ordenar habilidad de mayor a menor">↓</button></div></div>`;
 }
 
+
+function teamPlayerStatsAverage(entry){
+  const rated = Math.max(0, Number(entry?.ratedMatches || 0));
+  return rated > 0 ? Number(entry.ratingTotal || 0) / rated : null;
+}
+function teamPlayerStatsSeasonOptions(state){
+  return Object.values(state?.seasons || {}).sort((a,b)=>Number(b.seasonNumber || 0)-Number(a.seasonNumber || 0));
+}
+function teamPlayerStatsSortedEntries(entries){
+  const list = entries.slice();
+  const byName = (a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'es');
+  const sorters = {
+    rating_desc:(a,b)=>(teamPlayerStatsAverage(b) ?? -1)-(teamPlayerStatsAverage(a) ?? -1) || Number(b.played||0)-Number(a.played||0) || byName(a,b),
+    played_desc:(a,b)=>Number(b.played||0)-Number(a.played||0) || byName(a,b),
+    goals_desc:(a,b)=>Number(b.goals||0)-Number(a.goals||0) || byName(a,b),
+    assists_desc:(a,b)=>Number(b.assists||0)-Number(a.assists||0) || byName(a,b),
+    cards_desc:(a,b)=>(Number(b.red||0)*3+Number(b.yellow||0))-(Number(a.red||0)*3+Number(a.yellow||0)) || byName(a,b),
+    injuries_desc:(a,b)=>Number(b.injuries||0)-Number(a.injuries||0) || byName(a,b),
+    name_asc:byName
+  };
+  return list.sort(sorters[teamPlayerStatsSort] || sorters.rating_desc);
+}
+function renderTeamPlayerStatistics(){
+  const state = managerPlayerStatsHistoryState();
+  const currentSeason = Number(game?.seasonNumber || 1);
+  const currentClub = Number(game?.selectedClubId || 0);
+  const currentRecord = syncManagerPlayerStatsClubFromHistory(currentClub, currentSeason);
+  ensureManagerPlayerStatsRoster(currentRecord, currentClub);
+  const seasons = teamPlayerStatsSeasonOptions(state);
+  if(!seasons.some(item => String(item.seasonNumber) === String(teamPlayerStatsSeasonSelection))){
+    teamPlayerStatsSeasonSelection = String(currentSeason);
+  }
+  const season = state.seasons[String(teamPlayerStatsSeasonSelection)] || seasons[0] || managerPlayerStatsSeasonRecord(currentSeason, true);
+  const clubs = Object.values(season?.clubs || {}).sort((a,b)=>String(a.clubName || '').localeCompare(String(b.clubName || ''), 'es'));
+  const preferredClub = String(season?.seasonNumber) === String(currentSeason) && clubs.some(item => Number(item.clubId) === currentClub) ? String(currentClub) : String(clubs[0]?.clubId || '');
+  if(!clubs.some(item => String(item.clubId) === String(teamPlayerStatsClubSelection))) teamPlayerStatsClubSelection = preferredClub;
+  const clubRecord = season?.clubs?.[String(teamPlayerStatsClubSelection)] || clubs[0] || null;
+  if(clubRecord && Number(season?.seasonNumber) === currentSeason && Number(clubRecord.clubId) === currentClub) ensureManagerPlayerStatsRoster(clubRecord, currentClub);
+  const entries = clubRecord ? teamPlayerStatsSortedEntries(Object.values(clubRecord.players || {})) : [];
+  const rows = entries.map(entry => {
+    const player = playerById(entry.playerId);
+    const avg = teamPlayerStatsAverage(entry);
+    const rating = avg === null ? '<span class="muted">—</span>' : `<span class="team-player-rating ${avg >= 7.2 ? 'ok' : avg >= 6 ? 'warn' : 'bad'}">${avg.toFixed(2).replace('.', ',')}</span>`;
+    return `<tr>
+      <td>${player ? faceImg(player, 'photo-thumb') : '<span class="photo-thumb">?</span>'}</td>
+      <td><button class="linklike" data-player-id="${entry.playerId}"><strong>${escapeHtml(entry.name || player?.name || 'Jugador')}</strong></button></td>
+      <td><span class="pill role-pill">${escapeHtml(entry.position || player?.position || '—')}</span></td>
+      <td><strong>${Number(entry.played || 0)}</strong></td>
+      <td>${Number(entry.goals || 0)}</td>
+      <td>${Number(entry.assists || 0)}</td>
+      <td>${Number(entry.injuries || 0)}</td>
+      <td><span class="yellow-card">■</span> ${Number(entry.yellow || 0)}</td>
+      <td><span class="red-card">■</span> ${Number(entry.red || 0)}</td>
+      <td>${rating}</td>
+    </tr>`;
+  }).join('');
+  const totals = entries.reduce((acc, entry) => {
+    acc.played += Number(entry.played || 0); acc.goals += Number(entry.goals || 0); acc.assists += Number(entry.assists || 0); acc.injuries += Number(entry.injuries || 0); return acc;
+  }, { played:0, goals:0, assists:0, injuries:0 });
+  const seasonOptions = seasons.map(item => `<option value="${item.seasonNumber}" ${String(item.seasonNumber)===String(season?.seasonNumber)?'selected':''}>${Number(item.year || seasonYearForNumber(item.seasonNumber))} · Temporada ${item.seasonNumber}</option>`).join('');
+  const clubOptions = clubs.map(item => `<option value="${item.clubId}" ${String(item.clubId)===String(clubRecord?.clubId)?'selected':''}>${escapeHtml(item.clubName || clubName(item.clubId))}</option>`).join('');
+  view.innerHTML = `
+    <div class="row section-title"><div><h2>Estadísticas del plantel</h2><p class="tagline">Rendimiento individual por temporada. El puntaje promedio utiliza la calificación final de cada partido disputado.</p></div></div>
+    <div class="card team-player-stats-toolbar">
+      <label><span>Año</span><select id="teamPlayerStatsSeason">${seasonOptions}</select></label>
+      <label><span>Club</span><select id="teamPlayerStatsClub" ${clubs.length <= 1 ? 'disabled' : ''}>${clubOptions}</select></label>
+      <label><span>Ordenar</span><select id="teamPlayerStatsSort">
+        <option value="rating_desc" ${teamPlayerStatsSort==='rating_desc'?'selected':''}>Puntaje promedio</option>
+        <option value="played_desc" ${teamPlayerStatsSort==='played_desc'?'selected':''}>Partidos jugados</option>
+        <option value="goals_desc" ${teamPlayerStatsSort==='goals_desc'?'selected':''}>Goles</option>
+        <option value="assists_desc" ${teamPlayerStatsSort==='assists_desc'?'selected':''}>Asistencias</option>
+        <option value="injuries_desc" ${teamPlayerStatsSort==='injuries_desc'?'selected':''}>Lesiones</option>
+        <option value="cards_desc" ${teamPlayerStatsSort==='cards_desc'?'selected':''}>Tarjetas</option>
+        <option value="name_asc" ${teamPlayerStatsSort==='name_asc'?'selected':''}>Nombre</option>
+      </select></label>
+    </div>
+    <div class="grid cols-4 team-player-stats-summary">
+      <div class="card"><p class="label">Club</p><strong>${clubRecord ? `${clubBadge(clubRecord.clubId)} ${escapeHtml(clubRecord.clubName)}` : '—'}</strong><span class="small muted">${escapeHtml(clubRecord?.divisionName || 'Sin datos')}</span></div>
+      <div class="card"><p class="label">Año</p><strong>${Number(season?.year || seasonYearForNumber(season?.seasonNumber || currentSeason))}</strong><span class="small muted">Temporada ${Number(season?.seasonNumber || currentSeason)}</span></div>
+      <div class="card"><p class="label">Producción</p><strong>${totals.goals} G · ${totals.assists} A</strong><span class="small muted">Suma del plantel registrado</span></div>
+      <div class="card"><p class="label">Estado</p><strong>${clubRecord?.archived ? 'Temporada guardada' : 'En curso'}</strong><span class="small muted">${clubRecord?.completedDate ? escapeHtml(clubRecord.completedDate) : `${entries.length} jugadores`}</span></div>
+    </div>
+    <div class="table-wrap team-player-stats-table-wrap"><table class="team-player-stats-table"><thead><tr><th>Foto</th><th>Jugador</th><th>POS</th><th>PJ</th><th>Goles</th><th>Asist.</th><th>Lesiones</th><th>Amarillas</th><th>Rojas</th><th>Puntaje promedio</th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">Todavía no hay estadísticas registradas para esta temporada.</td></tr>'}</tbody></table></div>
+    <div class="card inner team-player-stats-note"><p class="muted small">Las temporadas anteriores quedan archivadas con su año. Si una carrera existente comenzó antes de V7.58, la temporada actual se reconstruye desde el historial de partidos disponible; temporadas anteriores sin historial guardado no pueden recuperarse.</p></div>
+  `;
+  prependFirstTeamTabs('playerStats');
+  $('teamPlayerStatsSeason')?.addEventListener('change', event => { teamPlayerStatsSeasonSelection = event.target.value; teamPlayerStatsClubSelection = 'current'; renderTeamPlayerStatistics(); });
+  $('teamPlayerStatsClub')?.addEventListener('change', event => { teamPlayerStatsClubSelection = event.target.value; renderTeamPlayerStatistics(); });
+  $('teamPlayerStatsSort')?.addEventListener('change', event => { teamPlayerStatsSort = event.target.value; renderTeamPlayerStatistics(); });
+}
 
 function renderSquad(){
   const players = sortedSquadPlayers();

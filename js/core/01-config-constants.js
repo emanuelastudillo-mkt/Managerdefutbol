@@ -30,7 +30,7 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.57');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.58');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.57');
+const APP_VERSION = configValue('version', 'V7.58');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -773,6 +773,9 @@ let marketSubTab = 'free';
 let marketFilters = { mediaMin:'', mediaMax:'', ageMin:'', ageMax:'', priceMax:'', position:'all' };
 let marketVisibleLimit = 20;
 let firstTeamTab = 'tactics';
+let teamPlayerStatsSeasonSelection = 'current';
+let teamPlayerStatsClubSelection = 'current';
+let teamPlayerStatsSort = 'rating_desc';
 let selectedFixtureDivision = 'all';
 let fixtureViewMode = 'mine';
 let selectedClubWorldCupYear = 'current';

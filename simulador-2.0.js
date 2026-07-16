@@ -1285,6 +1285,60 @@
     rating += simClamp(scoreFor.own - scoreFor.rival, -3, 3) * 0.08;
     return simClamp(rating, 3.0, 10.0);
   }
+  function liveFinalPlayerEventSummary(session, playerId){
+    const id = Number(playerId || 0);
+    const summary = { goals:0, assists:0, yellow:0, red:0, injuries:0, saves:0, errors:0, goalErrors:0 };
+    (session?.goals || []).forEach(goal => {
+      if(Number(goal.playerId || goal.scorerId || 0) === id) summary.goals += 1;
+      if(Number(goal.assistId || 0) === id) summary.assists += 1;
+    });
+    (session?.cards || []).forEach(card => {
+      if(Number(card.playerId || 0) !== id) return;
+      if(card.type === 'yellow') summary.yellow += 1;
+      else if(card.type === 'secondYellowRed'){ summary.yellow += 1; summary.red += 1; }
+      else if(card.type === 'red') summary.red += 1;
+    });
+    (session?.injuries || []).forEach(injury => { if(Number(injury.playerId || 0) === id) summary.injuries += 1; });
+    (session?.keySaves || []).forEach(save => { if(Number(save.playerId || save.goalkeeperId || 0) === id) summary.saves += 1; });
+    (session?.errors || []).forEach(error => {
+      if(Number(error.playerId || 0) !== id) return;
+      summary.errors += 1;
+      if(error.goal) summary.goalErrors += 1;
+    });
+    return summary;
+  }
+  function liveFinalPlayerSlot(session, clubId, playerId){
+    const tactic = liveTacticForClub(session, clubId);
+    const slots = liveFormationSlots(tactic?.formation || '4-4-2');
+    const currentIndex = (tactic?.starters || []).findIndex(id => Number(id) === Number(playerId));
+    if(currentIndex >= 0) return { slot:slots[currentIndex] || playerById(playerId)?.position || 'MC', inField:true };
+    const sub = (session?.substitutions || []).find(item => Number(item.outId || 0) === Number(playerId) || Number(item.inId || 0) === Number(playerId));
+    return { slot:String(sub?.slot || playerById(playerId)?.position || 'MC'), inField:false };
+  }
+  function liveFinalPlayerRating(session, clubId, playerId){
+    const player = playerById(playerId);
+    if(!player) return 6;
+    const events = liveFinalPlayerEventSummary(session, playerId);
+    const placement = liveFinalPlayerSlot(session, clubId, playerId);
+    const overall = simClamp(Number(effectiveOverall(player) || 0), 1, 99);
+    const condition = simClamp(Number(liveEffectiveCondition(session, playerId) || 0), 1, 100);
+    const morale = simClamp(Number(currentMorale(playerId) || 50), 1, 100);
+    const fit = placement.inField ? Math.round(Number(zoneFactor(player, placement.slot) || 0.65) * 100) : 75;
+    const ownGoals = Number(clubId) === Number(session.match.homeId) ? Number(session.homeGoals || 0) : Number(session.awayGoals || 0);
+    const rivalGoals = Number(clubId) === Number(session.match.homeId) ? Number(session.awayGoals || 0) : Number(session.homeGoals || 0);
+    let rating = 6.05 + (overall - 62) * 0.012 + (morale - 55) * 0.006 + (condition - 70) * 0.005 + (fit - 78) * 0.004;
+    rating += events.goals * 0.82 + events.assists * 0.48 + events.saves * 0.24;
+    rating -= events.yellow * 0.22 + events.red * 1.10 + events.errors * 0.32 + events.goalErrors * 0.42 + events.injuries * 0.18;
+    rating += simClamp(ownGoals - rivalGoals, -3, 3) * 0.08;
+    return simClamp(rating, 3, 10);
+  }
+  function liveFinalPlayerRatings(session){
+    const rows = [];
+    [[Number(session?.match?.homeId || 0), [...(session?.playedIdsHome || [])]], [Number(session?.match?.awayId || 0), [...(session?.playedIdsAway || [])]]].forEach(([clubId, ids]) => {
+      [...new Set((ids || []).map(Number).filter(Boolean))].forEach(playerId => rows.push({ clubId, playerId, rating:Number(liveFinalPlayerRating(session, clubId, playerId).toFixed(2)) }));
+    });
+    return rows;
+  }
   function liveBotSubPressure(session, minute, usedCount){
     if(usedCount >= 3) return 999;
     if(minute < 45) return 999;
@@ -1443,7 +1497,7 @@
       session.usedIns[String(clubId)].push(inId);
       session.usedOuts[String(clubId)].push(outId);
       livePlayedSet(session, clubId).add(inId);
-      const event = { clubId, outId, inId, minute, trigger:raw?.trigger || 'manual', manual:raw?.manual !== false };
+      const event = { clubId, outId, inId, minute, slot:liveFormationSlots(tactic.formation || '4-4-2')[index] || playerById(outId)?.position || 'MC', trigger:raw?.trigger || 'manual', manual:raw?.manual !== false };
       events.push(event);
       session.substitutions.push(event);
     }
@@ -1854,6 +1908,7 @@
       substitutions:session.substitutions,
       keySaves:session.keySaves,
       errors:session.errors,
+      playerRatings:liveFinalPlayerRatings(session),
       matchStats,
       matchContext:session.matchContext,
       playedIdsHome,
@@ -1867,8 +1922,8 @@
     if(!result.friendly){
       applyMatchCohesionResult(result, result.substitutions, result.cards);
       applyResultToTables(result, result.homeGoals, result.awayGoals);
-      applyPlayerStats(result.homeId, playedIdsHome.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors);
-      applyPlayerStats(result.awayId, playedIdsAway.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors);
+      applyPlayerStats(result.homeId, playedIdsHome.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors, result);
+      applyPlayerStats(result.awayId, playedIdsAway.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors, result);
       applyAvailability(result.cards, result.injuries);
       if(typeof updatePlayerStarTrackingForMatch === 'function') updatePlayerStarTrackingForMatch(result);
     }
@@ -1942,8 +1997,9 @@
     if(!match.friendly){
       applyMatchCohesionResult(match, substitutions, cards);
       applyResultToTables(match, homeGoals, awayGoals);
-      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
-      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors);
+      const playerStatsResult = { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway };
+      applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors, playerStatsResult);
+      applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors, playerStatsResult);
       applyAvailability(cards, injuries);
       if(typeof updatePlayerStarTrackingForMatch === 'function'){
         updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway });

@@ -1,4 +1,35 @@
-# Fútbol Manager MVP - V7.57
+# Fútbol Manager MVP - V7.58
+
+## V7.58 - Estadísticas individuales por temporada
+
+### Cambios
+
+- Se agregó la subpestaña **Estadísticas** dentro de **Primer Equipo**, junto a Táctica, Plantel y Entrenamiento.
+- La tabla muestra por jugador: partidos jugados, goles, asistencias, lesiones, amarillas, rojas y puntaje promedio.
+- El puntaje promedio acumula la calificación final de cada partido oficial del club dirigido.
+- El simulador vivo guarda la calificación final mostrada para cada futbolista participante.
+- La simulación normal y **Ver solo resultados** generan una calificación equivalente usando los eventos principales del encuentro.
+- Las estadísticas se organizan por año, temporada y club.
+- Al renunciar, ser despedido o comenzar una nueva temporada, la fotografía del club queda archivada.
+- Si el manager dirige más de un club durante el mismo año, puede seleccionar cada club dentro de esa temporada.
+- Se conservan nombres y posiciones aunque el jugador cambie de club o se retire.
+
+### Compatibilidad
+
+**V7.58 no rompe partidas anteriores.** La temporada vigente se reconstruye desde `matchHistory` cuando esté disponible. Las temporadas finalizadas antes de instalar V7.58 no pueden reconstruirse porque las versiones anteriores eliminaban el historial detallado al comenzar un nuevo año.
+
+### Archivos principales modificados
+
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/09-simulation-economy-training.js`
+- `js/game/11-match-engine.js`
+- `simulador-2.0.js`
+- `js/ui/07-render-team-market.js`
+- `style.css`
+- archivos de versión y caché
+- `README.md`
+
 
 ## V7.57 - Media general y puntaje total en jugadores ojeados
 

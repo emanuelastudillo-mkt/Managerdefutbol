@@ -1,4 +1,4 @@
-/* V7.57 · Licencias progresivas y tutoriales para managers nuevos. */
+/* V7.58 · Licencias progresivas y tutoriales para managers nuevos. */
 
 const MANAGER_COURSE_REWARD_POINTS = 1000;
 const MANAGER_COURSE_ORDER = ['basic','national','international'];
@@ -64,7 +64,7 @@ const MANAGER_COURSE_LICENSES = {
 
 function createInitialManagerCoursesState(){
   return {
-    version:'V7.57',
+    version:'V7.58',
     checked:{ basic:[], national:[], international:[] },
     completed:{ basic:false, national:false, international:false },
     completedAt:{ basic:null, national:null, international:null },
@@ -95,7 +95,7 @@ function normalizeManagerCoursesState(value=null){
   });
   clean.rewardClaimed = Boolean(src.rewardClaimed && clean.completed.international);
   clean.rewardClaimedAt = clean.rewardClaimed ? (src.rewardClaimedAt || clean.completedAt.international || null) : null;
-  clean.version = 'V7.57';
+  clean.version = 'V7.58';
   return clean;
 }
 function managerCoursesHasProgress(value=null){

@@ -3163,6 +3163,7 @@ function normalizeGame(saved){
   normalized.calendarVersion = SEASON_CALENDAR_VERSION;
   normalized.standings = normalized.standings || createInitialStandings();
   normalized.playerStats = normalized.playerStats || createInitialPlayerStats();
+  normalized.managerPlayerStatsHistory = normalizeManagerPlayerStatsHistory(normalized.managerPlayerStatsHistory);
   normalized.clubBudgets = (normalized.clubBudgets && typeof normalized.clubBudgets === 'object' && !Array.isArray(normalized.clubBudgets)) ? normalized.clubBudgets : {};
   seed.clubs.forEach(c => { if(!Number.isFinite(Number(normalized.clubBudgets[c.id]))) normalized.clubBudgets[c.id] = Math.round(Number(c.budget || 0)); });
   normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (Number(normalized.clubBudgets[normalized.selectedClubId]) || seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
@@ -3638,6 +3639,7 @@ function newGame(selectedClubId, options={}){
     lastCaptaincyEffect: null,
     standings: createInitialStandings(),
     playerStats: createInitialPlayerStats(),
+    managerPlayerStatsHistory: createInitialManagerPlayerStatsHistory(),
     playerStatus: {},
     statusRebases: {},
     injuryRecoveryTurnsBySeason: {},
@@ -3780,6 +3782,219 @@ function createInitialPlayerStats(){
   return obj;
 }
 
+function createInitialManagerPlayerStatsHistory(){
+  return { version:1, seasons:{} };
+}
+function normalizeManagerPlayerStatsEntry(raw, fallbackId=0){
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const playerId = Math.max(0, Math.round(Number(src.playerId || fallbackId || 0)));
+  return {
+    playerId,
+    name:String(src.name || src.playerName || playerById(playerId)?.name || 'Jugador'),
+    position:String(src.position || playerById(playerId)?.position || '—'),
+    played:Math.max(0, Math.round(Number(src.played || 0))),
+    goals:Math.max(0, Math.round(Number(src.goals || 0))),
+    assists:Math.max(0, Math.round(Number(src.assists || 0))),
+    injuries:Math.max(0, Math.round(Number(src.injuries || 0))),
+    yellow:Math.max(0, Math.round(Number(src.yellow || 0))),
+    red:Math.max(0, Math.round(Number(src.red || 0))),
+    ratingTotal:Math.max(0, Number(src.ratingTotal || 0)),
+    ratedMatches:Math.max(0, Math.round(Number(src.ratedMatches || 0))),
+    lastRating:Number.isFinite(Number(src.lastRating)) ? Number(src.lastRating) : 0
+  };
+}
+function normalizeManagerPlayerStatsHistory(raw){
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = { version:1, seasons:{} };
+  Object.entries(src.seasons || {}).forEach(([seasonKey, seasonRaw]) => {
+    if(!seasonRaw || typeof seasonRaw !== 'object' || Array.isArray(seasonRaw)) return;
+    const seasonNumber = Math.max(1, Math.round(Number(seasonRaw.seasonNumber || seasonKey || 1)));
+    const year = Math.round(Number(seasonRaw.year || seasonYearForNumber(seasonNumber) || 0));
+    const season = { seasonNumber, year, clubs:{} };
+    Object.entries(seasonRaw.clubs || {}).forEach(([clubKey, clubRaw]) => {
+      if(!clubRaw || typeof clubRaw !== 'object' || Array.isArray(clubRaw)) return;
+      const clubId = Math.max(0, Math.round(Number(clubRaw.clubId || clubKey || 0)));
+      if(!clubId) return;
+      const club = {
+        clubId,
+        clubName:String(clubRaw.clubName || clubName(clubId)),
+        divisionName:String(clubRaw.divisionName || clubDivision(clubId)?.name || '—'),
+        archived:Boolean(clubRaw.archived),
+        completedDate:String(clubRaw.completedDate || ''),
+        players:{},
+        recordedMatchKeys:{}
+      };
+      Object.entries(clubRaw.players || {}).forEach(([playerKey, playerRaw]) => {
+        const entry = normalizeManagerPlayerStatsEntry(playerRaw, playerKey);
+        if(entry.playerId) club.players[String(entry.playerId)] = entry;
+      });
+      if(Array.isArray(clubRaw.recordedMatchKeys)) clubRaw.recordedMatchKeys.forEach(key => { if(key) club.recordedMatchKeys[String(key)] = true; });
+      else if(clubRaw.recordedMatchKeys && typeof clubRaw.recordedMatchKeys === 'object') Object.keys(clubRaw.recordedMatchKeys).forEach(key => { if(key) club.recordedMatchKeys[String(key)] = true; });
+      season.clubs[String(clubId)] = club;
+    });
+    out.seasons[String(seasonNumber)] = season;
+  });
+  return out;
+}
+function managerPlayerStatsHistoryState(){
+  if(!game) return createInitialManagerPlayerStatsHistory();
+  const current = game.managerPlayerStatsHistory;
+  if(!current || typeof current !== 'object' || Array.isArray(current) || Number(current.version || 0) !== 1 || !current.seasons || typeof current.seasons !== 'object' || Array.isArray(current.seasons)){
+    game.managerPlayerStatsHistory = normalizeManagerPlayerStatsHistory(current);
+  }
+  return game.managerPlayerStatsHistory;
+}
+function managerPlayerStatsSeasonRecord(seasonNumber=game?.seasonNumber || 1, create=true){
+  const state = managerPlayerStatsHistoryState();
+  const season = Math.max(1, Math.round(Number(seasonNumber || 1)));
+  const key = String(season);
+  if(!state.seasons[key] && create){
+    state.seasons[key] = { seasonNumber:season, year:Number(game?.seasonNumber) === season ? Number(game?.seasonYear || seasonYearForNumber(season)) : Number(seasonYearForNumber(season)), clubs:{} };
+  }
+  return state.seasons[key] || null;
+}
+function managerPlayerStatsClubRecord(clubId=game?.selectedClubId, seasonNumber=game?.seasonNumber || 1, create=true){
+  const id = Math.max(0, Math.round(Number(clubId || 0)));
+  if(!id) return null;
+  const season = managerPlayerStatsSeasonRecord(seasonNumber, create);
+  if(!season) return null;
+  const key = String(id);
+  if(!season.clubs[key] && create){
+    season.clubs[key] = { clubId:id, clubName:clubName(id), divisionName:clubDivision(id)?.name || '—', archived:false, completedDate:'', players:{}, recordedMatchKeys:{} };
+  }
+  return season.clubs[key] || null;
+}
+function ensureManagerPlayerStatsEntry(clubRecord, playerId){
+  if(!clubRecord) return null;
+  const id = Math.max(0, Math.round(Number(playerId || 0)));
+  if(!id) return null;
+  const key = String(id);
+  if(!clubRecord.players[key]) clubRecord.players[key] = normalizeManagerPlayerStatsEntry({ playerId:id }, id);
+  const player = playerById(id);
+  if(player){
+    clubRecord.players[key].name = String(player.name || clubRecord.players[key].name || 'Jugador');
+    clubRecord.players[key].position = String(player.position || clubRecord.players[key].position || '—');
+  }
+  return clubRecord.players[key];
+}
+function managerPlayerStatsMatchKey(result){
+  if(!result) return '';
+  const explicit = String(result.id || result.matchId || '').trim();
+  if(explicit) return explicit;
+  return [result.season || game?.seasonNumber || 1, result.date || result.currentDate || '', result.seasonDay || '', result.round || result.matchday || '', result.homeId || 0, result.awayId || 0, result.engine || '', result.homeGoals ?? '', result.awayGoals ?? ''].join('|');
+}
+function managerPlayerStatsEventSummary(result, playerId){
+  const id = Number(playerId || 0);
+  const summary = { goals:0, assists:0, injuries:0, yellow:0, red:0, saves:0, errors:0, goalErrors:0 };
+  (result?.goals || []).forEach(goal => {
+    if(Number(goal.playerId || goal.scorerId || 0) === id) summary.goals += 1;
+    if(Number(goal.assistId || 0) === id) summary.assists += 1;
+  });
+  (result?.cards || []).forEach(card => {
+    if(Number(card.playerId || 0) !== id) return;
+    if(card.type === 'yellow') summary.yellow += 1;
+    else if(card.type === 'secondYellowRed'){ summary.yellow += 1; summary.red += 1; }
+    else if(card.type === 'red') summary.red += 1;
+  });
+  (result?.injuries || []).forEach(injury => { if(Number(injury.playerId || 0) === id) summary.injuries += 1; });
+  (result?.keySaves || []).forEach(save => { if(Number(save.playerId || save.goalkeeperId || 0) === id) summary.saves += 1; });
+  (result?.errors || []).forEach(error => {
+    if(Number(error.playerId || 0) !== id) return;
+    summary.errors += 1;
+    if(error.goal) summary.goalErrors += 1;
+  });
+  return summary;
+}
+function managerPlayerStoredRating(result, playerId){
+  const id = Number(playerId || 0);
+  const list = Array.isArray(result?.playerRatings) ? result.playerRatings : [];
+  const found = list.find(item => Number(item?.playerId || item?.id || 0) === id);
+  const value = Number(found?.rating);
+  return Number.isFinite(value) ? clamp(value, 3, 10) : null;
+}
+function managerPlayerFallbackRating(result, clubId, playerId, events){
+  const player = playerById(playerId);
+  if(!player) return 6;
+  const overall = clamp(Number(typeof effectiveOverall === 'function' ? effectiveOverall(player) : player.overall || 50), 1, 99);
+  const condition = clamp(Number(typeof currentCondition === 'function' ? currentCondition(playerId) : 75), 1, 100);
+  const morale = clamp(Number(typeof currentMorale === 'function' ? currentMorale(playerId) : 55), 1, 100);
+  const home = Number(clubId) === Number(result?.homeId);
+  const ownGoals = home ? Number(result?.homeGoals || 0) : Number(result?.awayGoals || 0);
+  const rivalGoals = home ? Number(result?.awayGoals || 0) : Number(result?.homeGoals || 0);
+  let rating = 6.05 + (overall - 62) * 0.012 + (morale - 55) * 0.006 + (condition - 70) * 0.005;
+  rating += Number(events.goals || 0) * 0.82 + Number(events.assists || 0) * 0.48 + Number(events.saves || 0) * 0.24;
+  rating -= Number(events.yellow || 0) * 0.22 + Number(events.red || 0) * 1.10 + Number(events.errors || 0) * 0.32 + Number(events.goalErrors || 0) * 0.42 + Number(events.injuries || 0) * 0.18;
+  rating += clamp(ownGoals - rivalGoals, -3, 3) * 0.08;
+  return clamp(rating, 3, 10);
+}
+function recordManagerPlayerMatchStatistics(clubId, playedIds=[], result=null, options={}){
+  if(!game || !result || result.friendly || !result.played) return null;
+  const id = Number(clubId || 0);
+  if(!id || (!options.force && id !== Number(game.selectedClubId || 0))) return null;
+  const seasonNumber = Math.max(1, Math.round(Number(options.seasonNumber || game.seasonNumber || 1)));
+  const clubRecord = managerPlayerStatsClubRecord(id, seasonNumber, true);
+  if(!clubRecord) return null;
+  const matchKey = managerPlayerStatsMatchKey(result);
+  if(matchKey && clubRecord.recordedMatchKeys[matchKey]) return clubRecord;
+  const uniquePlayed = [...new Set((playedIds || []).map(Number).filter(Boolean))];
+  uniquePlayed.forEach(playerId => {
+    const entry = ensureManagerPlayerStatsEntry(clubRecord, playerId);
+    if(!entry) return;
+    const events = managerPlayerStatsEventSummary(result, playerId);
+    entry.played += 1;
+    entry.goals += events.goals;
+    entry.assists += events.assists;
+    entry.injuries += events.injuries;
+    entry.yellow += events.yellow;
+    entry.red += events.red;
+    const stored = managerPlayerStoredRating(result, playerId);
+    const rating = stored === null ? managerPlayerFallbackRating(result, id, playerId, events) : stored;
+    entry.ratingTotal = Number(entry.ratingTotal || 0) + rating;
+    entry.ratedMatches = Number(entry.ratedMatches || 0) + 1;
+    entry.lastRating = rating;
+  });
+  if(matchKey) clubRecord.recordedMatchKeys[matchKey] = true;
+  clubRecord.clubName = clubName(id);
+  clubRecord.divisionName = clubDivision(id)?.name || clubRecord.divisionName || '—';
+  return clubRecord;
+}
+function managerPlayerPlayedIdsForResult(result, clubId){
+  const home = Number(clubId) === Number(result?.homeId);
+  const explicit = home ? result?.playedIdsHome : result?.playedIdsAway;
+  if(Array.isArray(explicit) && explicit.length) return [...new Set(explicit.map(Number).filter(Boolean))];
+  const starters = home ? (result?.starterIdsHome || []) : (result?.starterIdsAway || []);
+  const ins = (result?.substitutions || []).filter(sub => Number(sub.clubId || 0) === Number(clubId)).map(sub => Number(sub.inId || 0));
+  return [...new Set(starters.concat(ins).map(Number).filter(Boolean))];
+}
+function syncManagerPlayerStatsClubFromHistory(clubId=game?.selectedClubId, seasonNumber=game?.seasonNumber || 1){
+  if(!game) return null;
+  const id = Number(clubId || 0);
+  const clubRecord = managerPlayerStatsClubRecord(id, seasonNumber, true);
+  if(!clubRecord) return null;
+  if(Number(seasonNumber) === Number(game.seasonNumber || 1)){
+    (game.matchHistory || []).filter(result => result?.played && !result?.friendly && (Number(result.homeId) === id || Number(result.awayId) === id)).forEach(result => {
+      recordManagerPlayerMatchStatistics(id, managerPlayerPlayedIdsForResult(result, id), result, { force:true, seasonNumber });
+    });
+  }
+  return clubRecord;
+}
+function ensureManagerPlayerStatsRoster(clubRecord, clubId){
+  if(!clubRecord) return clubRecord;
+  playersByClub(clubId).filter(player => !player.retired).forEach(player => ensureManagerPlayerStatsEntry(clubRecord, player.id));
+  return clubRecord;
+}
+function archiveManagerPlayerStatsClub(clubId=game?.selectedClubId, options={}){
+  if(!game) return null;
+  const id = Number(clubId || 0);
+  if(!id) return null;
+  const clubRecord = syncManagerPlayerStatsClubFromHistory(id, game.seasonNumber || 1);
+  ensureManagerPlayerStatsRoster(clubRecord, id);
+  if(clubRecord){
+    clubRecord.archived = options.final !== false;
+    clubRecord.completedDate = String(game.currentDate || '');
+  }
+  return clubRecord;
+}
 
 function createInitialPlayerStarsState(){
   return { byPlayerId:{} };
@@ -4221,7 +4436,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V7.57',
+    version:'V7.58',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4243,7 +4458,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V7.57';
+    clean.version = 'V7.58';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4262,7 +4477,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V7.57',
+    version:'V7.58',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4288,7 +4503,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V7.57',
+    version:'V7.58',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -4913,6 +5128,7 @@ function checkManagerObjectiveGameOver(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
+  if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('dismissal');
   recordDismissedCareerStep();
@@ -5011,6 +5227,7 @@ function resignCurrentClub(){
     snapshot:gameOverSnapshot()
   };
   game.mustReviewTactics = false;
+  if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
   prepareManagerWithoutClubUi('resignation');
   recordDismissedCareerStep();
@@ -8411,6 +8628,7 @@ function maintainBotBalanceDuringSeason(options={}){
 
 function startNextSeason(selectedClubId){
   if(!game?.seasonFinalized) return;
+  if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   archiveClubWorldCupEditionForState(game, { allowIncomplete:true });
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = Number(game.selectedClubId || 0);

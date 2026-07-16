@@ -1,5 +1,5 @@
 {
-  "version": "V7.28",
+  "version": "V7.61",
   "sistema": "instalaciones_club",
   "descripcion": "Instalaciones permanentes vinculadas a cada club y gestionadas desde Estadio.",
   "calefaccion_cesped": {
@@ -14,7 +14,7 @@
   "predio_entrenamiento_juvenil": {
     "id": "youth_training_ground",
     "nombre": "Predio de entrenamiento juvenil",
-    "descripcion": "Cada nivel agrega juveniles excepcionales adicionales por temporada y habilita espacio para 2 residencias juveniles más.",
+    "descripcion": "Cada nivel aumenta la cuota de juveniles excepcionales entregada en la primera captación de cada temporada y habilita espacio para 2 residencias juveniles más. La cuota total máxima es de 6.",
     "niveles": [
       {
         "nivel": 1,

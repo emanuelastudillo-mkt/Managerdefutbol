@@ -816,29 +816,31 @@ function youthTrainingFacilityMarkup(){
   const project = state.youthTraining.construction;
   const nextDef = youthTrainingGroundLevelDefinition(currentLevel + 1);
   const currentBonus = youthTrainingExceptionalBonus(game.selectedClubId);
+  const currentExceptionalTotal = clamp(1 + currentBonus, 1, 6);
   const currentResidenceLimit = typeof youthTrainingResidenceLimit === 'function' ? youthTrainingResidenceLimit(game.selectedClubId) : currentLevel * 2;
   return `<div class="card stadium-facility-card youth-facility-card">
     <div class="row facility-card-head"><div><p class="label">Academia</p><h3>Predio de entrenamiento juvenil</h3></div><span class="pill ${currentLevel >= 5 ? 'ok' : ''}">${currentLevel ? `Nivel ${currentLevel} · ${escapeHtml(currentDef?.name || '')}` : 'Sin predio'}</span></div>
-    <p class="muted small">El bonus se suma al juvenil excepcional base de cada temporada. Nivel actual: +${currentBonus} juvenil(es) excepcional(es) adicional(es) y espacio para ${currentResidenceLimit} residencia(s). Cada nivel habilita 2 residencias más.</p>
+    <p class="muted small">La primera captación de cada temporada entrega ${currentExceptionalTotal} juvenil(es) excepcional(es) en total: 1 base + ${currentBonus} por el nivel actual. El máximo es 6. También habilita espacio para ${currentResidenceLimit} residencia(s).</p>
     ${project ? `<div class="facility-project"><div class="row"><strong>Construyendo nivel ${Number(project.targetLevel || currentLevel + 1)}</strong><span>${Number(project.daysLeft || 0)} día(s) restantes</span></div><div class="project-progress"><span style="width:${facilityConstructionProgress(project)}%"></span></div></div>` : ''}
     <div class="facility-level-grid">${levels.map(level => {
       const completed = currentLevel >= level.level;
       const active = Number(project?.targetLevel || 0) === level.level;
       const available = !project && level.level === currentLevel + 1;
       return `<div class="facility-level ${completed ? 'completed' : ''} ${active ? 'active' : ''}">
-        <div class="row"><strong>Nivel ${level.level} · ${escapeHtml(level.name)}</strong><span class="facility-level-badges"><span class="pill">+${level.exceptionalBonus} excepcional(es)</span><span class="pill">${level.maxResidences} residencias</span></span></div>
+        <div class="row"><strong>Nivel ${level.level} · ${escapeHtml(level.name)}</strong><span class="facility-level-badges"><span class="pill">${Math.min(6, 1 + level.exceptionalBonus)} en primera captación</span><span class="pill">${level.maxResidences} residencias</span></span></div>
         <p>${formatMoney(level.cost)} · ${level.buildDays} días</p>
         <small>${completed ? 'Construido' : active ? 'En construcción' : level.level < currentLevel + 1 ? 'Construido' : level.level > currentLevel + 1 ? 'Requiere nivel anterior' : 'Siguiente mejora disponible'}</small>
         ${available ? `<button class="primary small-btn" data-build-youth-facility="${level.level}" ${(game.budget || 0) < level.cost ? 'disabled' : ''}>Construir nivel ${level.level}</button>` : ''}
       </div>`;
     }).join('')}</div>
-    ${!nextDef && !project ? '<p class="ok small">Predio Elite completado. Bonus máximo: +5 juveniles excepcionales y hasta 10 residencias juveniles.</p>' : ''}
+    ${!nextDef && !project ? '<p class="ok small">Predio Elite completado. La primera captación de cada temporada entrega 6 juveniles excepcionales y permite hasta 10 residencias juveniles.</p>' : ''}
   </div>`;
 }
 function renderStadiumFacilities(){
   ensureStadiumState();
   const score = fieldScoreForClub(game.selectedClubId);
   const bonus = youthTrainingExceptionalBonus(game.selectedClubId);
+  const exceptionalTotal = clamp(1 + bonus, 1, 6);
   view.innerHTML = `
     <div class="row section-title">
       <div><h2>Instalaciones</h2><p class="tagline">Obras permanentes del club vinculadas al estadio, el campo y la academia.</p></div>
@@ -847,7 +849,7 @@ function renderStadiumFacilities(){
     <div class="grid cols-3 facility-summary-grid">
       <div class="card"><p class="label">Campo actual</p><strong>${score}/100</strong></div>
       <div class="card"><p class="label">Predio juvenil</p><strong>Nivel ${youthTrainingGroundLevel(game.selectedClubId)}</strong></div>
-      <div class="card"><p class="label">Excepcionales adicionales</p><strong>+${bonus}</strong></div>
+      <div class="card"><p class="label">Primera captación</p><strong>${exceptionalTotal} excepcionales</strong></div>
     </div>
     <div class="stadium-facilities-grid">${pitchHeatingFacilityMarkup()}${youthTrainingFacilityMarkup()}</div>`;
   document.querySelector('#btnBackToStadium')?.addEventListener('click', () => { stadiumViewMode = 'main'; renderStadium(); });

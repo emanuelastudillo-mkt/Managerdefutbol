@@ -1,4 +1,15 @@
-# Fútbol Manager MVP - V7.60
+# Fútbol Manager MVP - V7.61
+
+## V7.61 - Captación excepcional del predio juvenil
+
+- Se auditó la relación entre el Predio de entrenamiento juvenil y la captación de talentos.
+- La cuota excepcional se entrega completa y de una sola vez en la primera captación de cada temporada.
+- La progresión queda fijada en 1, 2, 3, 4 y 6 juveniles excepcionales para los niveles 1 a 5; sin predio se mantiene el juvenil base.
+- La primera captación exige cupos libres para toda la cuota, evitando que juveniles excepcionales se marquen como entregados aunque se hayan perdido por falta de espacio.
+- Una mejora del predio posterior a la primera captación se aplica desde la temporada siguiente; las captaciones posteriores del mismo año no agregan diferencias.
+- La Academia y la pantalla de Instalaciones muestran el total exacto que entregará la primera captación.
+
+**V7.61 no rompe partidas anteriores.** Las temporadas que ya registraron una captación excepcional se consideran resueltas y no reciben duplicados. La nueva regla se aplica plenamente desde la siguiente primera captación pendiente.
 
 ## V7.60 - Cláusula visible en jugadores ojeados
 
@@ -1417,7 +1428,7 @@ La cabecera de **Estadio** incorpora el botón `Instalaciones`, que abre una pan
 | 4 · Excelente | $500.000.000 | 230 días | +3 |
 | 5 · Elite | $1.200.000.000 | 80 días | +5 |
 
-Los niveles deben construirse en orden. El bonus se suma al juvenil excepcional base de cada temporada. Los juveniles adicionales se entregan mediante captaciones mientras haya cupos disponibles. Si el predio mejora después de que ya se entregó el juvenil base, una captación posterior puede entregar la diferencia pendiente del nuevo nivel.
+Los niveles deben construirse en orden. La primera captación de cada temporada entrega toda la cuota excepcional de una sola vez: 1 juvenil base más el bonus del nivel, hasta un máximo de 6. Para iniciar esa captación deben existir cupos libres para toda la cuota. Las mejoras finalizadas después de la primera captación se aplican desde la temporada siguiente.
 
 ### Persistencia y economía
 

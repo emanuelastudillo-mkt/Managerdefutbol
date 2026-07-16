@@ -1,2311 +1,1791 @@
-# Fútbol Manager MVP - V7.65
-
-## V7.65 - Contratos y sueldo personal del manager
-
-### Duración contractual
-
-- Los clubes pueden ofrecer contratos de **1, 2 o 3 temporadas**.
-- La duración la define el club según el ajuste entre su prestigio y el del manager.
-- Los contratos exigentes por diferencia de prestigio siempre duran una temporada.
-- Un contrato de dos temporadas reduce 5% el sueldo mensual y uno de tres temporadas lo reduce 10%, a cambio de estabilidad.
-- La carrera inicial conserva un primer contrato normal de una temporada.
-
-### Objetivos por año
-
-- El manager negocia la exigencia deportiva, no la duración ni el porcentaje de venta futura.
-- **Prudente:** reduce 0,10 PPG el objetivo final y baja 20% el sueldo.
-- **Normal:** mantiene objetivo y sueldo base.
-- **Ambicioso:** aumenta 0,20 PPG el objetivo final y sube 25% el sueldo.
-- En contratos de dos temporadas, el primer año exige un mínimo 0,20 PPG inferior al objetivo final.
-- En contratos de tres temporadas, los mínimos son 0,30 y 0,15 PPG inferiores; el tercer año aplica el objetivo final completo.
-- Los límites mínimos de cada división continúan activos.
-- Si el objetivo final no se cumple pero el manager no fue despedido, la renovación automática queda limitada a una temporada prudente con sueldo reducido.
-
-### Sueldo y Cuenta Bancaria
-
-- El sueldo se calcula usando división, prestigio del manager, reputación del club, capacidad económica, duración y objetivo negociado.
-- El club paga el sueldo cada 30 días: se descuenta de sus Finanzas y se acredita en la Cuenta Bancaria personal del manager.
-- La Cuenta Bancaria queda separada del presupuesto del club y continúa visible aunque el manager esté sin trabajo.
-- Los préstamos siguen perteneciendo al club y permanecen dentro de **Club → Finanzas**.
-- La cuenta personal conserva saldo, ingresos acumulados y movimientos entre clubes.
-
-### Porcentaje de futuras ventas
-
-- Cada contrato fija un porcentaje no negociable entre 5% y 20%.
-- Los clubes de menor reputación tienden a ofrecer porcentajes mayores.
-- El porcentaje queda guardado en el contrato para aplicarlo posteriormente a los juveniles promovidos durante su vigencia.
-- V7.65 registra la condición contractual; el cobro efectivo se incorporará con el sistema de derechos económicos y cartera de jugadores.
-
-### Migración
-
-- Las partidas anteriores reciben una Cuenta Bancaria personal con saldo inicial $0.
-- El club actual genera un contrato normal de una temporada desde la fecha de migración.
-- No se acreditan sueldos retroactivos.
-- Los contratos exigentes anteriores se convierten al nuevo formato conservando su restricción de fichajes.
-
-**V7.65 no rompe partidas anteriores.** Agrega estados nuevos y los crea automáticamente al cargar una carrera existente.
-
-
-## V7.64 - Corrección de recursión en Club
-
-- Se corrigió el error `Maximum call stack size exceeded` al abrir Estadio e instalaciones, Sponsors y Finanzas.
-- La causa eran dos enlazadores de botones sobrescritos por funciones autorreferenciales.
-- Sponsors vuelve a enlazar correctamente Aceptar/Rechazar ofertas.
-- Finanzas y Cuenta Bancaria vuelven a enlazar correctamente solicitudes y cancelación de préstamos.
-- Se limpió una asignación HTML duplicada en la vista de Estadio.
-- No se modificaron economía, sponsors, estadio, guardados ni simuladores.
-
-**V7.64 no rompe partidas anteriores.** Es una corrección de interfaz y eventos.
-
-## V7.63 - Edad en ojeo y limpieza de Oficina del manager
-
-- Las tarjetas activas del **Centro de Ojeo** muestran la edad del jugador junto a club, nacionalidad y posición.
-- Las tablas de **Informes guardados** e **Informes archivados** incorporan una columna específica de edad.
-- Se utiliza el dato de edad que ya existe en cada jugador; no se agregan campos nuevos al guardado ni a la base.
-- Se retiró el bloque **Sponsors activos** de la cuadrícula de **Oficina del manager** para reducir información duplicada.
-- Sponsors continúa disponible como pantalla propia dentro de **Club → Sponsors**, y sus ofertas siguen apareciendo entre los avisos de Inicio.
-- No se modifican contratos comerciales, economía, ojeo, planteles ni simuladores.
-
-**V7.63 no rompe partidas anteriores.** Son ajustes de visualización que utilizan datos ya existentes.
-
-
-## V7.62 - Menú lateral compacto y anidado
-
-- El menú lateral se reorganizó en seis grupos desplegables: **Especial, Equipo, Club, Competición, Carrera y Online**, además de **Inicio** como acceso directo.
-- Sólo un grupo permanece abierto a la vez y el navegador recuerda el último grupo desplegado.
-- **Especial** contiene Cartas.
-- **Equipo** contiene Primer equipo, Centro de Ojeo y Mercado.
-- **Club** contiene Empleados, Estadio e instalaciones, Finanzas, Sponsors e Hinchas y socios.
-- **Competición** contiene Calendario, Competiciones, Tabla de posiciones y Mundial de Clubes. Las estadísticas generales siguen disponibles dentro de la pantalla de competiciones.
-- **Carrera** contiene Tu Academia, Perfil e historial, Hitos, Ofertas laborales/contrato actual y Cuenta Bancaria.
-- **Online** contiene Ranking y Desafíos Online.
-- Sponsors, Hinchas y socios, Cuenta Bancaria, Hitos y Contrato actual reciben vistas directas, sin duplicar datos ni cambiar la lógica de los sistemas.
-- Mensajes permanece accesible desde Inicio y desde sus avisos, evitando alargar nuevamente el menú.
-- El estado activo, los bloqueos por estar sin club y la navegación responsive se adaptaron a los nuevos submenús.
-
-**V7.62 no rompe partidas anteriores.** Es una reorganización de navegación y presentación. No modifica guardados, simuladores, calendarios, economía ni planteles.
-
-
-## V7.61 - Captación excepcional del predio juvenil
-
-- Se auditó la relación entre el Predio de entrenamiento juvenil y la captación de talentos.
-- La cuota excepcional se entrega completa y de una sola vez en la primera captación de cada temporada.
-- La progresión queda fijada en 1, 2, 3, 4 y 6 juveniles excepcionales para los niveles 1 a 5; sin predio se mantiene el juvenil base.
-- La primera captación exige cupos libres para toda la cuota, evitando que juveniles excepcionales se marquen como entregados aunque se hayan perdido por falta de espacio.
-- Una mejora del predio posterior a la primera captación se aplica desde la temporada siguiente; las captaciones posteriores del mismo año no agregan diferencias.
-- La Academia y la pantalla de Instalaciones muestran el total exacto que entregará la primera captación.
-
-**V7.61 no rompe partidas anteriores.** Las temporadas que ya registraron una captación excepcional se consideran resueltas y no reciben duplicados. La nueva regla se aplica plenamente desde la siguiente primera captación pendiente.
-
-## V7.60 - Cláusula visible en jugadores ojeados
-
-- Las tarjetas activas del **Centro de Ojeo** muestran el **Valor de cláusula** junto al botón **Hacer oferta**.
-- El botón abre la negociación habitual sin modificar montos, aceptación ni reglas de mercado.
-- Al abrir la ficha individual de un jugador que ya posee informe de ojeo, la cláusula también aparece al lado de **Hacer oferta**.
-- No se agregan campos a los jugadores: se utiliza el valor de cláusula que ya existe en la base y en la partida.
-- No se modifican simuladores, probabilidades, planteles ni contratos.
-
-**V7.60 no rompe partidas anteriores.** Es un ajuste de presentación y acceso a la negociación; utiliza datos ya guardados.
-
-
-## V7.59 - Reducción contextual y distribución de lesiones
-
-- Nueva distribución de tipos de lesión: Contusión 34%, Distensión 30%, Desgarro 20%, Esguince 10%, Rotura 5% y Fractura 1%. Las duraciones no cambian.
-- Todos los equipos bot utilizan un multiplicador constante de 0,50 sobre la probabilidad final de lesión durante partidos.
-- El club del manager utiliza un multiplicador de 0,50 durante sus primeros 50 partidos oficiales dirigidos. La protección no se aplica a encuentros contra otros managers; Desafíos Online conserva su sistema independiente.
-- El simulador en vivo aplica otro multiplicador de 0,50 a ambos equipos.
-- La comprobación minuto a minuto del simulador en vivo fue normalizada: la suma de los 90 controles representa una única probabilidad de partido, evitando multiplicar indirectamente el riesgo por realizar un control en cada minuto.
-- Cartas, trabajo diferenciado, estado físico, campo, sobrecarga por participación e instrucciones conservan sus efectos y se combinan de forma multiplicativa.
-
-**V7.59 no rompe partidas anteriores.** No cambia la estructura del guardado. Los nuevos pesos y multiplicadores se aplican únicamente a lesiones generadas en partidos disputados después de cargar esta versión.
-
-
-## V7.58 - Estadísticas individuales por temporada
-
-### Cambios
-
-- Se agregó la subpestaña **Estadísticas** dentro de **Primer Equipo**, junto a Táctica, Plantel y Entrenamiento.
-- La tabla muestra por jugador: partidos jugados, goles, asistencias, lesiones, amarillas, rojas y puntaje promedio.
-- El puntaje promedio acumula la calificación final de cada partido oficial del club dirigido.
-- El simulador vivo guarda la calificación final mostrada para cada futbolista participante.
-- La simulación normal y **Ver solo resultados** generan una calificación equivalente usando los eventos principales del encuentro.
-- Las estadísticas se organizan por año, temporada y club.
-- Al renunciar, ser despedido o comenzar una nueva temporada, la fotografía del club queda archivada.
-- Si el manager dirige más de un club durante el mismo año, puede seleccionar cada club dentro de esa temporada.
-- Se conservan nombres y posiciones aunque el jugador cambie de club o se retire.
-
-### Compatibilidad
-
-**V7.58 no rompe partidas anteriores.** La temporada vigente se reconstruye desde `matchHistory` cuando esté disponible. Las temporadas finalizadas antes de instalar V7.58 no pueden reconstruirse porque las versiones anteriores eliminaban el historial detallado al comenzar un nuevo año.
-
-### Archivos principales modificados
-
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/11-match-engine.js`
-- `simulador-2.0.js`
-- `js/ui/07-render-team-market.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-
-## V7.57 - Media general y puntaje total en jugadores ojeados
-
-### Nuevos indicadores
-
-- Las tarjetas de jugadores del **Centro de Ojeo** muestran ahora **Media general** y **Puntaje total**.
-- La **Media general** es el promedio directo de las 20 habilidades existentes del jugador.
-- El **Puntaje total** es la suma de esas mismas 20 habilidades, con un máximo teórico de 1.980 puntos.
-- Se incluyen Portería, habilidades defensivas, técnicas, físicas, mentales y Potencial.
-- No se incluyen Agresividad, Genética, Factor sorpresa ni Probabilidad de fichaje, porque son datos ocultos o de mercado y no forman parte de la media técnica general.
-
-### Progreso del informe
-
-- En jugadores externos, ambos valores permanecen ocultos hasta descubrir las 20 habilidades necesarias.
-- Mientras el informe está incompleto se indica cuántas habilidades se conocen y cuántas faltan.
-- En jugadores propios, cuyos atributos normales ya son conocidos, los dos indicadores aparecen inmediatamente.
-- Los informes guardados y archivados incorporan columnas de Media general y Puntaje total cuando el informe está completo.
-
-### Datos y simulación
-
-- Los dos indicadores se calculan en tiempo real; no se agregan campos a los jugadores ni a la base JSON.
-- No se modifica el ritmo del ojeo, la cantidad de datos revelados ni la probabilidad de fichaje.
-- No se modifican el simulador normal, el simulador en vivo, el resultado rápido ni Desafíos Online.
-
-### Archivos principales modificados en V7.57
-
-- `js/game/16-scouting-center.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.57 no rompe partidas anteriores.** Los valores se calculan a partir de las habilidades ya existentes y de los informes guardados. Un jugador completamente ojeado mostrará ambos indicadores al cargar esta versión.
-
-
-## V7.56 - Mayor peso de las individualidades
-
-### Equilibrio colectivo e individual
-
-- Se confirmó que el motor utilizaba una mezcla de **70% fuerza colectiva y 30% resolución individual** al definir cada ocasión.
-- La relación pasa a **50% colectivo y 50% individual**.
-- El ajuste potencia la influencia de delanteros, defensores y arqueros sobresalientes en los duelos concretos de una jugada.
-- La parte individual compara atributos ya existentes del rematador, defensor y portero, además de su moral y otros modificadores vigentes.
-- No se cambia la habilidad **Trabajo en equipo** de los jugadores ni se alteran sus valores guardados.
-
-### Modos afectados
-
-- Simulación normal mediante el motor principal.
-- Partido dirigido en el simulador en vivo.
-- Opción **Ver solo resultados**, que recorre automáticamente el mismo motor vivo.
-- Los tres modos usan la misma función de resolución de ocasiones, por lo que la proporción 50/50 es consistente.
-- No se modifica el simulador independiente de Desafíos Online.
-
-### Alcance del ajuste
-
-- No cambia la cantidad base de ataques ni ocasiones generadas por los equipos.
-- No modifica tácticas, cohesión, estado físico, localía, tarjetas, lesiones ni entrenamiento.
-- Cambia la probabilidad final de convertir una ocasión, dando más importancia a la calidad individual de quienes intervienen.
-
-### Archivos principales modificados en V7.56
-
-- `config.js`
-- `balance-modificadores.js`
-- `simulador-2.0.js`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.56 no rompe partidas anteriores.** No cambia la estructura de guardado ni los atributos de los jugadores. La nueva proporción se aplica a los partidos disputados después de cargar esta versión.
-
-
-## V7.55 - Corrección de búsqueda automática y requisito de jefe
-
-### Corrección del avance diario
-
-- Se corrigió un error de persistencia que impedía que la barra de **Buscar jugadores** avanzara día a día.
-- El problema se producía porque el procesamiento de costos normalizaba nuevamente el Centro de Ojeo y reemplazaba su objeto de estado. El costo diario se registraba, pero el progreso y el resultado quedaban escritos sobre una referencia anterior.
-- El proceso diario ahora reutiliza el mismo objeto persistente para costos mensuales, búsqueda, observación y revelaciones.
-- Al completar los días requeridos, el jugador encontrado se agrega correctamente a la lista activa, recibe el borde especial y genera su mensaje.
-- Se mantiene el límite de un jugador encontrado cada siete días.
-
-### Jefe de ojeadores obligatorio
-
-- La búsqueda automática sólo puede activarse con un **Jefe de ojeadores contratado**.
-- Sin jefe, el interruptor muestra **REQUIERE JEFE**, permanece apagado y explica el requisito.
-- Una búsqueda activa de una partida anterior se desactiva automáticamente si no existe un jefe.
-- Despedir al jefe apaga la búsqueda, elimina su progreso y deja intactos los criterios elegidos.
-- Al finalizar la temporada, cuando el jefe deja el club, la búsqueda también se apaga y reinicia.
-- Mientras está desactivada por falta de jefe no se cobra el costo diario de $50.000.
-
-### Validación
-
-- Búsqueda sin filtros: resultado persistente al completar 1 día.
-- Búsqueda con probabilidad superior al 30%: progreso 1/2 el primer día y resultado el segundo.
-- Cobro único de $50.000 por cada fecha procesada.
-- Activación bloqueada sin jefe.
-- Migración de búsquedas activas sin jefe a estado apagado y progreso cero.
-- Despido del jefe con apagado inmediato de la búsqueda.
-- No se modificaron los simuladores ni la lógica de partidos.
-
-### Archivos principales modificados en V7.55
-
-- `js/game/16-scouting-center.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.55 no rompe partidas anteriores.** Las búsquedas de V7.54 conservan sus criterios. Si tenían un jefe contratado, continuarán desde su progreso guardado; si no tenían jefe, se apagarán y reiniciarán automáticamente.
-
-
-## V7.54 - Búsqueda automática de jugadores
-
-### Nuevo buscador del Centro de Ojeo
-
-- Se agregó el bloque **Buscar jugadores** en la parte principal del Centro de Ojeo.
-- La búsqueda funciona mediante un switch **ON/OFF**.
-- Mientras permanece activa cuesta **$50.000 por día** y el gasto queda registrado en Finanzas.
-- Apagarla reinicia inmediatamente la barra de progreso a cero.
-- Cambiar cualquiera de los criterios también reinicia el progreso, evitando mezclar búsquedas diferentes.
-- El servicio encuentra como máximo un jugador por semana y lo agrega automáticamente a la lista activa de seguimiento.
-
-### Criterios disponibles
-
-- Rol: cualquiera o uno de los doce puestos disponibles —POR, LD, LI, DFC, MCD, MC, MI, MD, MCO, ED, EI y DC—.
-- Probabilidad de fichaje: cualquiera, más de 30%, más de 50% o más de 80%.
-- La búsqueda utiliza la probabilidad real correspondiente al club que dirige actualmente el manager, sin revelarla automáticamente dentro del informe.
-
-### Tiempo de búsqueda
-
-- Sin criterios: **1 día**.
-- Elegir un rol específico: **+2 días**.
-- Más de 30% de probabilidad de fichaje: **+1 día**.
-- Más de 50%: **+2 días**.
-- Más de 80%: **+3 días**.
-- El tiempo total puede variar entre **1 y 6 días**. Después de encontrar un jugador se respeta el límite máximo de una incorporación automática por cada siete días.
-
-### Progreso y resultados
-
-- Una barra muestra los días cumplidos y los días requeridos.
-- Si la lista activa está completa, la búsqueda queda al 100% esperando un cupo libre.
-- Si no existen coincidencias, permanece completa y vuelve a intentarlo diariamente mientras siga encendida.
-- El jugador encontrado se agrega automáticamente, recibe una insignia específica y su tarjeta aparece con un borde verde diferenciado.
-- También se genera un mensaje con el nombre, el rol y el club del jugador encontrado.
-- Quitar al jugador de la lista elimina el resaltado, pero conserva su informe archivado como en el resto del Centro de Ojeo.
-
-### Archivos principales modificados en V7.54
-
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/game/16-scouting-center.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.54 no rompe partidas anteriores.** Las partidas existentes incorporan la búsqueda apagada y con progreso cero. No se modifican informes, jugadores, simuladores ni resultados.
-
-
-## V7.53 - Pulido visual del Centro de Ojeo
-
-### Lista de jugadores en seguimiento
-
-- Cada jugador ocupa ahora una fila completa dentro del área principal, evitando tarjetas demasiado angostas cuando existen muchos informes.
-- La cabecera separa con mayor claridad rostro, identidad, progreso, probabilidad de fichaje y acción de quitar.
-- Los textos largos pueden saltar de línea sin invadir botones, cifras ni tarjetas vecinas.
-- La lista conserva todas las habilidades agregadas en V7.52 y no cambia el ritmo ni la lógica del ojeo.
-
-### Grupos de habilidades
-
-- Los grupos se distribuyen en una grilla responsive de tres, dos o una columna según el ancho disponible.
-- Técnicas y ofensivas dispone de más espacio por ser el grupo con mayor cantidad de atributos.
-- Habilidades ocultas y Mercado forman parte de la misma grilla visual para evitar bloques sueltos y alturas inconsistentes.
-- Cada grupo tiene un encabezado independiente y una insignia compacta con datos conocidos sobre el total.
-- Cada habilidad utiliza una fila estable de etiqueta y valor; los nombres extensos, como Trabajo en equipo, pueden ocupar dos líneas sin superponerse.
-
-### Responsive y alcance
-
-- En pantallas medianas la grilla pasa a dos columnas.
-- En móviles pasa a una columna y el botón Quitar ocupa una fila propia.
-- No se modificaron informes, jugadores, datos guardados, fórmulas, mercado ni simuladores.
-
-### Archivos principales modificados en V7.53
-
-- `js/game/16-scouting-center.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.53 no rompe partidas anteriores.** Es un ajuste de presentación. Los informes y progresos de ojeo existentes se conservan sin migraciones adicionales.
-
-
-## V7.52 - Ojeo detallado de todas las habilidades existentes
-
-### Informe individual ampliado
-
-- El Centro de Ojeo deja de limitar el informe individual a las siete habilidades resumidas.
-- Cada jugador externo puede revelar por separado todas las habilidades que ya existen dentro de su objeto `skills`.
-- La base profesional actual contiene 20 habilidades internas por jugador:
-  - Portería.
-  - Entradas.
-  - Marca.
-  - Posicionamiento.
-  - Pase corto.
-  - Pase largo.
-  - Visión.
-  - Regate.
-  - Técnica.
-  - Remate.
-  - Cabezazo.
-  - Velocidad.
-  - Aceleración.
-  - Fuerza.
-  - Resistencia.
-  - Trabajo en equipo.
-  - Serenidad.
-  - Disciplina.
-  - Liderazgo.
-  - Potencial.
-- También se conservan las tres habilidades ocultas ya existentes: Agresividad, Genética y Factor sorpresa.
-- La probabilidad de fichaje continúa funcionando como información adicional revelable.
-
-### Presentación del informe
-
-- Las habilidades se ordenan por grupos: Portería, Defensivas, Técnicas y ofensivas, Físicas, Mentales y desarrollo, Ocultas y Mercado.
-- Cada grupo muestra cuántos datos fueron descubiertos y cuáles permanecen ocultos.
-- La ficha individual del jugador usa el mismo detalle cuando el futbolista pertenece a otro club.
-- La estimación de media se calcula sólo con habilidades detalladas ya observadas y no utiliza Potencial ni Portería para jugadores de campo.
-- El radar se habilita cuando todas las habilidades existentes del jugador fueron reveladas.
-
-### Compatibilidad de informes anteriores
-
-- Los informes creados en V7.51 se migran automáticamente.
-- Cada antigua habilidad resumida se convierte en los atributos internos que la componían, evitando perder el progreso ya realizado.
-- Los informes propios continúan mostrando desde el inicio todas las habilidades conocidas del plantel y sólo gastan ojeo en datos ocultos.
-- Los informes archivados conservan sus revelaciones.
-
-### Datos y simulación
-
-- No se agregaron campos a `data/jugadores.json` ni a los archivos de jugadores por liga.
-- El sistema lee dinámicamente las habilidades que ya existen en cada jugador, por lo que también puede mostrar futuros atributos internos sin duplicar la base.
-- No se modificaron el simulador normal, el simulador en vivo, las fórmulas deportivas ni la generación de resultados.
-
-### Archivos principales modificados en V7.52
-
-- `js/game/16-scouting-center.js`
-- `js/ui/12-modals.js`
-- `style.css`
-- archivos de versión y caché
-- `README.md`
-
-### Compatibilidad
-
-**V7.52 no rompe partidas anteriores.** Los informes de ojeo existentes se migran al nuevo detalle al cargar la partida. No se modifican jugadores, planteles, calendarios, resultados ni el simulador en vivo.
-
-## V7.51 - Despido del jefe de ojeadores
-
-### Nueva acción
-
-- La tarjeta del **Jefe de ojeadores** incorpora el botón **Despedir jefe**.
-- El despido sólo puede confirmarse cuando el Centro de Ojeo tiene **0 oficinas alquiladas** y **0 ojeadores contratados**.
-- Si queda alguna oficina u ojeador, el botón permanece bloqueado y la tarjeta explica qué debe retirarse primero.
-- El mes actual ya pagado no se reintegra.
-- Al despedirlo se elimina el jefe y se detienen sus cargos mensuales futuros. Los informes guardados y la lista de seguimiento no se borran.
-- Sin jefe no pueden alquilarse nuevas oficinas hasta contratar un reemplazo.
-
-### Archivos principales modificados en V7.51
-
-- `js/game/16-scouting-center.js`
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/19-manager-courses.js`
-- `data/habilidades_especiales.json`
-- `index.html`
-- `README.md`
-
-### Compatibilidad
-
-**V7.51 no rompe partidas anteriores.** Los jefes ya contratados continúan activos. El nuevo botón sólo modifica el estado cuando el manager decide despedirlos y cumple las condiciones.
-
-## V7.50 - Trabajo diferenciado integrado con el kinesiólogo
-
-### Interfaz unificada
-
-- El casillero de **Trabajo diferenciado** ya no aparece como una tarjeta independiente dentro de Empleados.
-- Ahora forma parte del mismo bloque visual del **Kinesiólogo**, debajo de su contratación, categoría y botón de despido.
-- La selección del jugador, su estado físico, moral y porcentaje de prevención permanecen dentro de esa misma tarjeta.
-
-### Kinesiólogo no contratado o despedido
-
-- El casillero permanece visible dentro de la tarjeta del kinesiólogo, pero aparece oscuro, desaturado y marcado como **Sin efecto**.
-- No permite seleccionar ni agregar jugadores hasta contratar nuevamente al empleado.
-- Al despedir al kinesiólogo, la asignación vigente se elimina y dejan de aplicarse inmediatamente la recuperación diaria, la exclusión del entrenamiento y la reducción de lesiones.
-- Volver a contratar un kinesiólogo no recupera automáticamente la asignación anterior; el manager debe elegir nuevamente al jugador.
-
-### Archivos principales modificados en V7.50
-
-- `js/game/10-academy-employees.js`
-- `style.css`
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/19-manager-courses.js`
-- `data/habilidades_especiales.json`
-- `index.html`
-- `README.md`
-
-### Compatibilidad
-
-**V7.50 no rompe partidas anteriores.** Las asignaciones existentes continúan activas si el kinesiólogo sigue contratado. Si el empleado es despedido, el casillero se desactiva y la asignación se elimina, igual que en V7.49.
-
-## V7.49 - Trabajo diferenciado del kinesiólogo
-
-### Nuevo casillero de recuperación
-
-- La sección **Empleados → Kinesiólogo** incorpora un único casillero de **Trabajo diferenciado**.
-- Puede asignarse cualquier jugador del primer equipo mientras exista un kinesiólogo contratado.
-- El jugador puede cambiarse o retirarse del casillero en cualquier momento.
-- El casillero se libera automáticamente si el kinesiólogo es despedido, termina su contrato o el jugador deja el club.
-
-### Efectos diarios
-
-Mientras permanezca asignado, el jugador:
-
-- no participa del entrenamiento general del plantel;
-- no recibe entrenamiento individual;
-- no obtiene mejoras de habilidades por entrenamiento;
-- reduce **4 puntos de desgaste acumulado por día**;
-- recupera **5 puntos de forma física por día**;
-- aumenta **1 punto de moral por día**.
-
-La recuperación respeta los límites normales de forma y desgaste del jugador. El trabajo diferenciado también se procesa en días donde el entrenamiento general esté omitido.
-
-### Prevención de lesiones durante partidos
-
-La reducción se aplica únicamente al jugador ubicado en el casillero y depende de la categoría del kinesiólogo:
-
-| Kinesiólogo | Reducción de probabilidad de lesión |
-|---|---:|
-| Regular | 40% |
-| Bueno | 55% |
-| Elite | 85% |
-
-- Funciona en resultado rápido, partido dirigido y simulador en vivo.
-- Se combina de forma multiplicativa con cartas de prevención de lesiones.
-- No impide que el jugador participe de partidos.
-- No cura lesiones existentes ni reduce directamente la duración de una lesión.
-
-### Interfaz de entrenamiento
-
-- El jugador asignado aparece marcado como **Trabajo diferenciado**.
-- Su selector de entrenamiento individual queda reemplazado por una advertencia.
-- Las asignaciones masivas de entrenamiento no modifican al jugador mientras ocupe el casillero.
-
-### Archivos principales modificados en V7.49
-
-- `config.js`
-- `data/empleados.json`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `style.css`
-- `index.html`
-- `README.md`
-
-### Compatibilidad
-
-**V7.49 no rompe partidas anteriores.** Las partidas existentes incorporan el casillero vacío. No se modifican entrenamientos, lesiones ni empleados ya contratados hasta que el manager asigne voluntariamente un jugador.
-
-
-## V7.48 - Reajuste de recompensas de puntos de habilidad
-
-### Nueva tabla de entrega
-
-| Acción | Puntos | Frecuencia |
-|---|---:|---|
-| Ganar un partido | 150 | Cada partido ganado por el manager |
-| Empatar un partido | 50 | Cada empate |
-| Marcar más de 5 goles | 250 adicionales | Cada partido con 6 o más goles a favor |
-| Campeón de Tercera División | 1.000 | Cada campeonato |
-| Campeón de Segunda División | 2.000 | Cada campeonato |
-| Campeón de Primera División | 3.000 | Cada campeonato |
-| Tratar a un jugador lesionado | 10 | Cada tratamiento válido |
-| Consultar juveniles | 10 | Cada nuevo informe del preparador |
-| Regar o parchar el campo | 50 | Cada mantenimiento iniciado |
-| Destruir una carta | Según rareza | Cada carta destruida |
-| Superar Campo destruido | 10.000 | Una sola vez por perfil |
-| Completar la Licencia Internacional | 1.000 | Una sola vez por perfil |
-| Canjear códigos de habilidad | 20.000 por código | Una vez por código y partida |
-
-### Cambios respecto de V7.47
-
-- Victoria: de 125 a **150 puntos**.
-- Empate: de 100 a **50 puntos**.
-- Tratamiento de lesión: de 50 a **10 puntos**.
-- Consulta de juveniles: de 100 a **10 puntos**.
-- Se mantienen sin cambios el bonus por seis o más goles, los campeonatos, el mantenimiento del campo, la destrucción de cartas, Campo destruido, la Licencia Internacional y los códigos especiales.
-- Los nuevos valores se leen desde la tabla central de habilidades especiales y se reflejan automáticamente en la animación diaria de sumatoria.
-- La URL del archivo de recompensas incorpora versión para evitar que el navegador conserve la tabla anterior en caché al publicar en GitHub Pages.
-
-### Ejemplos de acumulación
-
-- Victoria con hasta cinco goles: **150 puntos**.
-- Victoria con seis o más goles: **400 puntos** (`150 + 250`).
-- Empate con hasta cinco goles: **50 puntos**.
-- Empate marcando seis o más goles: **300 puntos** (`50 + 250`).
-- Derrota marcando seis o más goles: conserva el bonus de **250 puntos**.
-
-### Compatibilidad
-
-**V7.48 no rompe partidas anteriores.** No se recalculan ni descuentan puntos ya entregados. Los nuevos importes se aplican únicamente a acciones realizadas después de cargar esta versión.
-
-
-## V7.47 - Medidas económicas, despido de empleados y sanción AFA
-
-### Despido automático por números rojos
-
-- Cuando el presupuesto del club cae por debajo de `$0`, la directiva despide automáticamente a todos los empleados de temporada activos.
-- La medida alcanza al psicólogo motivacional, kinesiólogo y preparador de juveniles.
-- Los contratos ya fueron abonados por la temporada completa, por lo que no existe devolución de dinero.
-- El despido se comprueba al registrar movimientos económicos, al comenzar un nuevo día y al cargar Inicio o Empleados con saldo negativo.
-- Se genera un mensaje financiero de prioridad alta con el listado de empleados despedidos.
-
-### Despido manual de empleados
-
-- Cada tarjeta de empleado contratado incorpora el botón **Despedir**.
-- Antes de confirmar se advierte que el contrato anual ya está pagado y no tiene reintegro.
-- El empleado deja de habilitar sus acciones inmediatamente.
-- Si el club desea contratarlo nuevamente durante la misma temporada, debe pagar un contrato completo nuevo.
-- Los cooldowns y tratamientos ya utilizados no se reinician por despedir y volver a contratar.
-
-### Sanción de AFA por campo crítico
-
-- Si el campo del club dirigido cae por debajo de `10/100`, la AFA interviene automáticamente.
-- Se aplican dos cargos separados:
-  - `$1.000.000` de multa.
-  - `$4.000.000` por replante obligatorio del césped.
-- El replante de AFA reemplaza cualquier parcheo o replante manual que estuviera activo.
-- Durante la intervención no se puede iniciar otro mantenimiento.
-- El campo conserva su estado crítico durante el día de la sanción y queda restaurado a `100/100` al día siguiente.
-- El control es idempotente: no puede cobrar dos veces la misma intervención en una fecha.
-- La pantalla Estadio muestra el aviso, el total cobrado y la fecha prevista de restauración.
-
-### Integración económica
-
-- Los cargos de AFA aparecen en Finanzas dentro de la categoría Estadio.
-- Si la multa y el replante llevan al club a números rojos, se ejecuta inmediatamente el despido automático de empleados.
-- Los clubes bots no reciben esta sanción; se aplica únicamente al club controlado por el manager.
-
-### Archivos principales modificados en V7.47
-
-- `config.js`
-- `index.html`
-- `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/06-render-home-messages.js`
-- `style.css`
-- `README.md`
-- archivos de versión y caché
-
-### Compatibilidad
-
-**V7.47 no rompe partidas anteriores.** Las partidas existentes incorporan automáticamente el registro de sanciones del campo. Si una partida se carga con presupuesto negativo y empleados activos, estos serán despedidos al abrir Inicio o Empleados, o durante el siguiente procesamiento económico. Si el campo ya está por debajo de 10, la sanción se aplicará al comenzar el próximo día.
-
-
-## V7.46 - Animación diaria de puntos de habilidad
-
-### Sumatoria junto a Avanzar día
-
-- Al comenzar una nueva fecha, junto al botón **Avanzar día** aparece una animación breve con los puntos de habilidad obtenidos desde el avance anterior.
-- El contador sube progresivamente desde 0 hasta la cantidad ganada.
-- Cuando hubo varias recompensas, muestra una suma compacta, por ejemplo `150 + 250 = 400`.
-- También informa el saldo total de puntos después de acreditar los premios.
-- Si no se ganaron puntos, no aparece ninguna animación y la interfaz conserva su tamaño habitual.
-
-### Registro de premios
-
-- La sumatoria utiliza los movimientos positivos del historial de puntos, no la diferencia del saldo.
-- Abrir sobres o gastar puntos no reduce ni oculta lo ganado durante el día.
-- Se registran victorias, empates, bonus de goles, campeonatos, tratamientos, informes juveniles, mantenimiento del campo, códigos, destrucción de cartas, Campo destruido y Licencia Internacional.
-- La destrucción de cartas ahora deja también su movimiento en el historial de puntos.
-- Las recompensas obtenidas durante varios días de avance automático se agrupan en una única animación al volver a Inicio.
-
-### Interfaz
-
-- La animación aparece a la derecha del botón principal y se retira automáticamente después de unos segundos.
-- En pantallas angostas se coloca debajo del botón para no comprimirlo.
-- Respeta la preferencia del navegador de reducir movimientos.
-- También funciona cuando el manager está sin club y continúa avanzando el calendario.
-
-### Archivos principales modificados en V7.46
-
-- `index.html`
-- `js/game/05-state-season.js`
-- `js/game/15-especial.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/19-manager-courses.js`
-- `style.css`
-- `README.md`
-- archivos de versión y caché
-
-### Compatibilidad
-
-**V7.46 no rompe partidas anteriores.** Las partidas V7.45 inicializan el nuevo cursor de movimientos con el historial existente, por lo que no muestran premios antiguos como si acabaran de obtenerse. La animación comienza a registrar y mostrar las recompensas obtenidas desde el siguiente avance de día.
-
-## V7.45 - Cursos y licencias progresivas de manager
-
-### Nuevo acceso superior
-
-- Se agregó el botón **Cursos de manager** inmediatamente a la izquierda de **Ayuda**.
-- El curso puede abrirse con o sin una partida activa.
-- El progreso pertenece al perfil global del manager, por lo que se conserva al cambiar de club, carrera o slot dentro del mismo navegador y dominio.
-
-### Licencia de manager Básica
-
-Incluye diez módulos introductorios con explicación y checklist **Ya entiendo cómo funciona**:
-
-- Táctica y formación.
-- Puestos naturales y adaptación.
-- Titulares y suplentes.
-- Capitanía.
-- Estado físico y rotación.
-- Moral y cohesión.
-- Estado del campo de juego.
-- Entrenamiento.
-- Lesiones y suspensiones.
-- Rutina diaria del manager.
-
-Al marcar los diez controles, la licencia queda aprobada y se habilita la Licencia Nacional.
-
-### Licencia de manager Nacional
-
-Profundiza en:
-
-- Identidad y alternativas tácticas.
-- Mentalidad e instrucciones.
-- Rotación según calendario.
-- Plan de entrenamiento.
-- Ojeo y decisiones con información incompleta.
-- Mercado, contratos y cláusulas.
-- Academia.
-- Empleados.
-- Estadio, sponsors y finanzas.
-- Objetivos y planificación de temporada.
-
-Al aprobar sus diez controles se habilita la Licencia Internacional.
-
-### Licencia de manager Internacional
-
-Desarrolla conceptos de carrera avanzada:
-
-- Cambios de club y prestigio.
-- Adaptación a otras ligas.
-- Construcción de planteles internacionales.
-- Mundial de Clubes.
-- Partidos en sede neutral.
-- Ojeo internacional.
-- Gestión de figuras y cláusulas.
-- Preparación según el rival.
-- Cartas y recursos especiales.
-- Legado en distintos clubes, ligas y países.
-
-Las explicaciones son orientativas y utilizan ejemplos prácticos, pero no muestran fórmulas, porcentajes internos ni cálculos ocultos de simulación.
-
-### Premio final
-
-- Al aprobar por primera vez la Licencia Internacional se acreditan **1.000 puntos de habilidad**.
-- La recompensa es única por perfil global.
-- Completar nuevamente una licencia o cambiar de slot no vuelve a pagar el premio.
-- Si no existe una partida activa, los puntos quedan guardados en el perfil y se aplican al iniciar o cargar una carrera.
-
-### Interfaz y persistencia
-
-- Las tres licencias se muestran dentro de un desplegable progresivo.
-- Cada nivel indica estado, cantidad de temas comprendidos y barra de progreso.
-- Las licencias bloqueadas muestran claramente cuál debe completarse primero.
-- Cada aprobación abre una pantalla de certificado y habilita el siguiente nivel.
-- La aprobación internacional abre una felicitación especial con el premio obtenido.
-
-### Archivos principales modificados en V7.45
-
-- `index.html`
-- `js/game/05-state-season.js`
-- `js/ui/19-manager-courses.js`
-- `style.css`
-- `README.md`
-- archivos de versión y caché
-
-### Compatibilidad
-
-**V7.45 no rompe partidas anteriores.** No modifica calendarios, planteles, tácticas, economía ni simulación. Las partidas V7.44 cargan normalmente y comienzan con las tres licencias sin completar. El progreso de cursos y el premio se guardan en el perfil global del navegador.
-
-## V7.44 - 30 retos de carrera itinerante
-
-### Catálogo ampliado
-
-- El sistema pasa de 60 a **90 hitos** visibles.
-- Se agregaron 30 retos centrados en cambiar de club, continuar después de despidos o renuncias y ganar títulos en distintos destinos.
-- Los nuevos hitos se calculan con el historial laboral y el historial oficial de títulos ya guardados.
-
-### Cambios de club y salidas
-
-- Retos por dirigir 2, 3, 5, 7 y 10 clubes distintos.
-- Retos por sufrir 1, 3, 5 y 10 despidos.
-- Retos por registrar 1, 3 y 5 renuncias.
-- Los hitos se revisan inmediatamente al dejar un club, aceptar un nuevo cargo o fundar un club durante una carrera existente.
-
-### Campeón itinerante
-
-- Títulos de liga con 2, 3, 5 y 7 clubes diferentes.
-- Títulos en 2, 3, 5, 7 y las 9 ligas o divisiones jugables.
-- Títulos en 2, 3, 5 y los 7 países disponibles.
-- Máxima categoría conquistada en 3 países y en los 7 países.
-- 1, 2 y 3 Mundiales de Clubes ganados.
-
-### Corrección relacionada
-
-- El hito `Leyenda del banco` pasa de exigir prestigio 100 a prestigio 99, porque el prestigio del manager tiene un máximo efectivo de 99.
-
-### Archivos principales modificados en V7.44
-
-- `data/hitos_manager.json`
-- `data/retos_manager.json`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- archivos de versión y caché
-
-### Compatibilidad
-
-**V7.44 no rompe partidas anteriores.** Los 30 retos nuevos se reconstruyen usando `seasons`, `careerHistory` y `titleHistory`. Una carrera anterior puede desbloquear varios hitos al abrir Tus estadísticas. Los títulos muy antiguos que no hayan quedado registrados en esos historiales no pueden reconstruirse retroactivamente.
-
-## V7.43 - Hitos visibles y premio único de Campo destruido
-
-### Hitos y récords personales
-
-- Los 50 hitos existentes ahora se muestran aunque todavía no hayan sido conseguidos.
-- Los hitos pendientes aparecen con una estética oscura, desaturada y una barra de progreso.
-- Los hitos desbloqueados mantienen el tratamiento dorado.
-- Se agregaron 10 desafíos extremos: 500 y 1.000 partidos; 250 y 500 victorias; 1.000 goles; +300 de diferencia de gol; 10 temporadas; 15 objetivos de directiva; 10 títulos; y 100 de prestigio.
-- El contador pasa a mostrar el progreso sobre un catálogo total de 60 hitos.
-
-### Campo destruido
-
-- Los 10.000 puntos de habilidad se entregan solamente la primera vez que el perfil termina primero en el reto.
-- El premio queda registrado en el perfil global del manager y no se reinicia al borrar o volver a crear el slot del desafío.
-- Al ganar aparece una pantalla final de felicitaciones, resultado y premio antes de volver al menú de partidas.
-- Al repetir y volver a ganar, la pantalla informa que el premio único ya fue reclamado y no acredita nuevos puntos.
-- La pantalla inicial y el panel del reto indican si la recompensa todavía está disponible.
-
-### Archivos principales modificados en V7.43
-
-- `data/hitos_manager.json`
-- `data/retos_manager.json`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/ui/12-modals.js`
-- `style.css`
-- archivos de versión y caché
-
-### Compatibilidad
-
-**V7.43 no rompe partidas anteriores.** Los hitos nuevos se evalúan usando las estadísticas ya guardadas y pueden desbloquearse al cargar una carrera. El registro de premio único comienza en V7.43; una recompensa de Campo destruido cobrada en versiones anteriores no puede identificarse con certeza si el slot del reto ya fue eliminado.
-
-
-
-## V7.42 - Aceptación automática de ofertas por cláusula sin respuesta
-
-### Controles de los días 162 y 355
-
-Las ofertas especiales en las que otro club paga el `100%` de la cláusula ya no pueden quedar pendientes indefinidamente:
-
-- Si la oferta existe antes o durante el día **162**, se acepta automáticamente al llegar al día 162 cuando el manager no eligió **Aceptar oferta** ni **Convencer al jugador de quedarse**.
-- Si el día 162 ya había sido superado cuando la oferta apareció o cuando una partida anterior incorpora esta regla, el segundo control queda programado para el día **355**.
-- El procesamiento usa `>=` sobre el día previsto para cubrir avances que crucen el control sin detenerse exactamente en esa fecha.
-- Una oferta generada después del día 355 se resuelve en el siguiente procesamiento del calendario.
-- La venta automática ejecuta la cláusula completa, aplica el impuesto federativo, acredita el ingreso neto y retira al jugador del plantel y de la táctica.
-
-Cada oferta nueva informa dentro del mensaje el día en que se ejecutará automáticamente si queda sin respuesta. Las ofertas pendientes creadas en versiones anteriores reciben esta información al volver a abrir Mensajes o al avanzar el calendario.
-
-### Descontento del jugador
-
-Se agregaron **5 respuestas personalizadas** para la salida por falta de comunicación. Incluyen nombre del manager, jugador y club, y expresan que el futbolista se marcha porque nadie respondió ni habló con él sobre la oferta.
-
-Cuando se ejecuta la salida:
-
-- La oferta original cambia al estado **Aceptada automáticamente: sin respuesta**.
-- Se agrega un nuevo mensaje importante titulado con el apellido del jugador.
-- La operación es idempotente: una oferta cerrada no puede vender al mismo jugador por segunda vez.
-- Si el manager ya cambió de club o el jugador dejó de pertenecer al plantel, la oferta se cierra sin ejecutar una venta incorrecta.
-
-### Archivos principales modificados en V7.42
-
-- `config.js`
-- `index.html`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/18-challenges-online.js`
-- `README.md`
-
-### Compatibilidad
-
-**V7.42 no rompe partidas anteriores.** Las ofertas especiales ya respondidas conservan su resultado. Las ofertas antiguas todavía pendientes se programan para el día 162 si la partida aún no lo alcanzó; si ese día ya pasó, esperan al control del día 355. No se modifican otras ofertas de transferencia.
-
-
-
-## V7.41 - Prevención de lesiones y cierre completo del reto Campo destruido
-
-### Cartas de prevención de lesiones durante partidos
-
-Se incorporan cuatro cartas nuevas:
-
-- **Vendaje preventivo** · Común · reduce un `2%` la probabilidad de lesión durante el partido.
-- **Control de cargas** · Rara · reduce un `5%`.
-- **Laboratorio de prevención** · Épica · reduce un `8%`.
-- **Plantel blindado** · Legendaria · reduce un `15%`.
-
-Las cartas actúan únicamente sobre el club del manager y sólo reducen la probabilidad de que se produzca una nueva lesión dentro de un partido. No curan lesiones previas, no reducen la duración de una lesión y no alteran el desgaste. El efecto se aplica en resultado rápido, partido dirigido y simulador en vivo. Los porcentajes de varias cartas activas son acumulables hasta el límite general del `95%`.
-
-### Final completo de Primera División en Campo destruido
-
-- El reto representa las fechas 30 a 34 de la Primera División argentina.
-- Participan los 18 clubes de la categoría.
-- Cada fecha contiene 9 partidos y cada club juega una vez.
-- El calendario total incluye 45 encuentros, sin repetir enfrentamientos.
-- Los cinco rivales especiales del manager se conservan y el club elegido disputa esos encuentros como local en el campo destruido.
-- Antes de cada partido del manager se simulan los otros ocho resultados de esa jornada. Todos modifican la misma tabla.
-- La clasificación inicial conserva la situación de final de temporada configurada para el reto.
-
-Las partidas del reto creadas en una versión anterior y todavía sin partidos disputados se actualizan automáticamente al calendario completo. Un reto ya comenzado conserva su calendario previo para no reescribir resultados, estadísticas ni posiciones a mitad de la serie.
-
-### Resolución del reto
-
-Después de la quinta fecha y cuando los 45 partidos quedaron resueltos:
-
-- Si el club termina primero en la tabla, la directiva agradece al manager y entrega **10.000 puntos de habilidad**.
-- La tabla se ordena primero por puntos y luego por diferencia de gol, utilizando los desempates generales de la competición si ambos valores son idénticos.
-- Si el club no termina primero, la directiva despide al manager.
-- En ambos casos el desafío finaliza, el slot del reto se cierra y se vuelve a la pantalla de creación y selección de partidas.
-- La recompensa se acredita una sola vez y se conserva en el perfil compartido del manager.
-
-### Archivos principales modificados en V7.41
-
-- `config.js`
-- `index.html`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `simulador-2.0.js`
-- `data/habilidades_especiales.json`
-- `data/retos_manager.json`
-- `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/15-especial.js`
-- `js/game/18-challenges-online.js`
-- `README.md`
-
-### Compatibilidad
-
-**V7.41 no rompe partidas anteriores.** Las cartas nuevas se incorporan al catálogo existente. Las partidas normales no cambian. Los retos Campo destruido todavía no iniciados migran al calendario de 45 partidos; los que ya disputaron al menos un encuentro conservan el calendario anterior para evitar modificaciones retroactivas.
-
-
-
-## V7.40 - Progresión de empleados y costos administrativos del club fundador
-
-### Empleados desbloqueados por victorias
-
-Esta dificultad se aplica únicamente mientras el manager dirige el club que fundó:
-
-- Al inicio sólo puede contratar empleados de categoría **Regular**.
-- La categoría **Bueno** se habilita al alcanzar **15 victorias oficiales** con el club fundador.
-- La categoría **Elite** se habilita al alcanzar **45 victorias oficiales** con el club fundador.
-- El conteo suma temporadas completas y la temporada actual del club fundador. No utiliza victorias obtenidas previamente con otros clubes.
-- El modal de contratación muestra el progreso y las victorias restantes.
-- La misma progresión se aplica a los jefes de ojeadores Regular, Bueno y Elite del Centro de Ojeo.
-- La contratación también se valida internamente para impedir que una categoría bloqueada se contrate ejecutando la acción por fuera de la interfaz.
-- Los contratos superiores ya activos en una partida anterior no se eliminan; la restricción se aplica a nuevas contrataciones.
-
-### Costos administrativos diarios
-
-El club fundador afronta diariamente:
-
-- Inscripción en la liga.
-- Seguridad.
-- Transporte.
-- Administración.
-- Mantenimiento mínimo.
-- Seguros.
-
-El total combina un costo base por división y una proporción del valor actual del plantel:
-
-- Primera división: `$180.000` + `0,0015%` del plantel por día.
-- Segunda división: `$100.000` + `0,0012%` del plantel por día.
-- Tercera división: `$60.000` + `0,0010%` del plantel por día.
-
-El cobro es idempotente: una fecha no puede cobrarse dos veces. Finanzas muestra la estimación vigente, el desglose de los seis conceptos y agrupa los movimientos bajo **Costos administrativos**.
-
-### Archivos principales modificados en V7.40
-
-- `config.js`
-- `index.html`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/12-modals.js`
-- `README.md`
-
-### Compatibilidad
-
-**V7.40 no rompe partidas anteriores.** Las restricciones usan las estadísticas ya guardadas. Las partidas fundadoras existentes comenzarán a pagar los costos administrativos desde el próximo día procesado. Las carreras normales y los clubes no fundados no reciben estos gastos ni bloqueos.
-
-## V7.39 - Tarjetas unificadas de Desafíos Online y referencia salarial
-
-### Disponibles
-
-- Las tarjetas de **Disponibles** adoptan el lenguaje visual horizontal de **Partidos disputados**.
-- Cada desafío muestra escudo, nombre del club, nombre del manager y sueldos totales de la convocatoria publicada.
-- El estado, la fecha de publicación, el vencimiento y el botón para aceptar quedan agrupados en un bloque lateral, sin volver a mostrar estadio, capacidad, hinchas, valor de plantel ni formación.
-
-### Mis desafíos
-
-- Un desafío todavía abierto utiliza la misma tarjeta horizontal, con escudo, club, manager y sueldos de la convocatoria propia.
-- Cuando ya existe rival, la tarjeta muestra ambos clubes y managers enfrentados, los sueldos de ambas convocatorias y el resultado final o el estado `VS` mientras se procesa.
-- Se mantienen los botones **Cancelar** y **Ver partido**, junto con la apertura del detalle completo del encuentro.
-
-### Referencia de nivel
-
-- El valor mostrado como **Sueldos** corresponde a `matchSquadSalaryTotal`, es decir, la suma salarial de titulares y suplentes incluidos en la fotografía del desafío.
-- Como respaldo para fotografías antiguas sin ese campo, se utiliza `startingXiSalaryTotal`.
-- El historial de **Partidos disputados** conserva su contenido simplificado anterior y no agrega información adicional.
-
-### Diseño adaptable
-
-- Disponibles, Mis desafíos y Partidos disputados comparten proporciones, tamaño fijo de escudos, recorte seguro de nombres y distribución horizontal.
-- En pantallas amplias pueden mostrarse dos tarjetas por fila.
-- En pantallas angostas, las acciones pasan debajo del club y los enfrentamientos mantienen la adaptación móvil ya existente.
-
-### Archivos principales modificados en V7.39
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `style.css`
-- `js/core/01-config-constants.js`
-- `js/game/18-challenges-online.js`
-- `README.md`
-
-**V7.39 no rompe partidas anteriores.** No modifica partidas, snapshots existentes ni la estructura del servicio online. Las fotografías antiguas siguen siendo compatibles; si no incluyen la masa salarial completa de la convocatoria, se muestra el total salarial del once inicial disponible en esa fotografía.
-
----
-
-## Historial anterior
-
-## V7.38 - Corrección del alquiler de oficinas de ojeo
-
-### Error corregido
-
-- El botón **Alquilar oficina** descontaba correctamente el primer mes, pero la cantidad de oficinas permanecía en cero.
-- La causa era una segunda normalización del estado del Centro de Ojeo al consultar el límite del jefe de ojeadores.
-- Esa normalización reemplazaba el objeto guardado y el incremento se aplicaba sobre una referencia anterior que ya no pertenecía a la partida.
-- La consulta del límite ahora reutiliza el mismo estado que se está modificando, por lo que alquiler, fecha de cobro, capacidad y guardado se actualizan en una única operación.
-
-### Comportamiento verificado
-
-- Un jefe Regular puede alquilar 1 oficina.
-- Un jefe Bueno puede alquilar hasta 2 oficinas.
-- Un jefe Elite puede alquilar hasta 5 oficinas.
-- Cada alquiler cobra una sola vez el costo inicial de `$1.000.000`, aumenta la capacidad en 3 ojeadores y 10 seguimientos, guarda la fecha de inicio y persiste al recargar.
-- Al alcanzar el máximo del jefe, no se cobra dinero ni se agrega otra oficina.
-- Sin jefe de ojeadores, el control muestra **Requiere jefe** y explica el requisito; al pulsarlo informa que primero debe contratarse uno.
-- Después de alquilar se muestra una confirmación con la capacidad resultante.
-- Cancelar una oficina conserva las validaciones existentes para impedir que queden ojeadores o seguimientos por encima del nuevo cupo.
-
-### Archivos principales modificados en V7.38
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `js/core/01-config-constants.js`
-- `js/game/16-scouting-center.js`
-- `js/game/18-challenges-online.js`
-- `README.md`
-
-**V7.38 no rompe partidas anteriores.** No cambia la estructura de guardado. Las oficinas ya registradas continúan funcionando y las partidas donde el cobro fallido no llegó a guardar una oficina simplemente podrán alquilarla nuevamente.
-
----
-
-## V7.37 - Auditoría táctica bot y cobertura del top 5
-
-### Prioridad de los mejores jugadores contra el manager
-
-- Antes de cada partido contra el club controlado por el manager, el bot ordena a sus jugadores disponibles por media efectiva.
-- Se forma un grupo prioritario de 5 futbolistas. Para mantener una alineación válida, el grupo admite como máximo un portero; si aparecen dos porteros entre los primeros puestos, el segundo se reemplaza por el siguiente jugador de campo.
-- Los cinco jugadores prioritarios deben quedar incluidos en el once inicial siempre que exista una alineación reglamentaria.
-- La regla se aplica tanto al partido simulado directamente como al simulador en vivo.
-- Los partidos entre dos equipos bot mantienen el selector general anterior y no activan esta prioridad especial.
-
-### Elección de formación
-
-- Se prueban las diez formaciones disponibles antes de confirmar la táctica bot.
-- La comparación se realiza en este orden: cantidad de jugadores prioritarios incluidos, adaptación de esos jugadores a los puestos, cantidad de puestos sin cubrir y rendimiento total del once.
-- Un rol exacto vale más que una ubicación compatible y una ubicación compatible vale más que forzar al jugador fuera de su zona.
-- Si el plantel tiene tres delanteros entre sus principales figuras, las formaciones con tres lugares ofensivos reciben ventaja por poder utilizarlos juntos con mejor adaptación.
-- Después de asegurar el top 5, los seis puestos restantes se completan mediante la optimización global del once que ya utilizaba el juego.
-
-### Test interno
-
-- Cada táctica bot contra el manager conserva una auditoría interna con formación elegida, jugadores prioritarios, cantidad incluida, adaptación media y jugadores omitidos.
-- Puede ejecutarse desde la consola del navegador con `BotFormationCoverageTest.testClub(idClub)` para revisar un club o `BotFormationCoverageTest.testAll()` para revisar todos los bots.
-- La auditoría no genera mensajes ni información visible para el jugador.
-- En la validación de la base actual, los 161 clubes bot evaluados incluyeron correctamente a sus cinco jugadores prioritarios.
-- Una prueba específica con tres delanteros centro como principales figuras seleccionó `3-4-3` y ubicó a los tres en posiciones exactas.
-
-### Configuración
-
-El bloque `equilibrioBots.tacticaContraManager` permite ajustar:
-
-- Activación de la prioridad.
-- Cantidad de jugadores prioritarios, entre 3 y 5.
-- Bonificación interna que garantiza su inclusión.
-- Registro de la auditoría táctica.
-
-### Archivos principales modificados en V7.37
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `simulador-2.0.js`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/18-challenges-online.js`
-- `README.md`
-
-**V7.37 no rompe partidas anteriores.** No cambia la estructura de guardado ni modifica planteles, resultados o tácticas del manager. La nueva selección se calcula únicamente al preparar los próximos partidos de un bot contra el manager.
-
-
-## V7.36 - Respuestas por cláusula y nombres por nacionalidad
-
-### Respuestas personalizadas ante ofertas por cláusula
-
-- El banco específico tenía 10 respuestas: 5 cuando el jugador aceptaba quedarse y 5 cuando rechazaba la charla y ejecutaba su salida.
-- Ahora contiene 20 respuestas: 10 de permanencia y 10 de salida.
-- Las respuestas incorporan dinámicamente el nombre del jugador, el nombre del manager y el club actual.
-- Se mantiene la misma probabilidad deportiva de convencer al jugador; sólo aumenta la variedad narrativa.
-- Los 40 consejos generales del asistente no fueron modificados.
-
-### Nombres y apellidos por nacionalidad
-
-- Se corrigió una contradicción: los jugadores profesionales generados recibían una nacionalidad propia, pero su nombre se elegía desde un único banco argentino.
-- Profesionales generados, agentes libres, refuerzos de emergencia bot y juveniles usan ahora bancos de nombres y apellidos asociados a su nacionalidad.
-- Argentina pasa de 60 nombres y 60 apellidos juveniles a 180 y 180.
-- Chile, Brasil, Inglaterra, España, Italia y Rumania pasan de 30 nombres y 30 apellidos a 90 y 90 por país.
-- También se incorporaron bancos de 90 nombres y 90 apellidos para las demás nacionalidades presentes en la base y en la generación dinámica, incluidas Uruguay, Colombia, Francia, Portugal, Serbia, Croacia, Países Bajos, Senegal y otras.
-- Los 4.050 jugadores de la base inicial fueron renombrados de forma determinista según su nacionalidad, sin cambiar ids, edad, club, posición, habilidades, sueldo, cláusula ni valor.
-- Los jugadores manuales y personalizados conservan sus nombres definidos en `data/jugadores_manuales.json`.
-- Se corrigió una validación de rango: cuando `mediaMin` y `mediaMax` estaban en `null`, JavaScript los interpretaba como cero y podía crear juveniles libres o planteles de respaldo con media 1. Ahora sólo se usa un rango fijo cuando ambos valores fueron proporcionados realmente; en los demás casos se aplican las reglas de media por liga y prestigio.
-
-### Archivos principales modificados en V7.36
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-player-name-pools.js`
-- `js/data/04-data-storage.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/06-render-home-messages.js`
-- `data/jugadores.json`
-- `data/jugadores/*.json`
-- `README.md`
-
-**V7.36 no rompe partidas anteriores.** Las partidas guardadas conservan los nombres ya almacenados en su snapshot. Los bancos ampliados se aplican a nuevos jugadores generados y a partidas nuevas; no se cambian nombres de jugadores dentro de una carrera ya iniciada.
-
----
-
-## Historial anterior
-
-## V7.35 - Fundar club al crear manager y continuidad después de renunciar
-
-El modo **Fundar club** queda disponible tanto al iniciar una partida como durante una carrera en la que el manager quedó sin contrato. La fundación desde una carrera existente ya no reinicia el historial del manager.
-
-### Fundar club desde “Crear manager”
-
-- La pantalla inicial **Crear manager** incorpora una tarjeta propia de **Modo fundador · dificultad extrema**, ubicada junto a los demás modos y retos.
-- El botón **Fundar club** abre el formulario de nombre, ciudad, país, color y escudo.
-- La descripción informa las dificultades iniciales: plantel de 0 jugadores, presupuesto de $0, estadio con capacidad 0, campo deteriorado, sólo 500 hinchas y necesidad de construir desde cero el plantel, los ingresos y la infraestructura.
-- El modo conserva sus reglas originales: ingreso en la división más baja, sin objetivos de directiva y sin despidos, pero con crecimiento deportivo y económico considerablemente más exigente.
-
-### Fundar club después de una renuncia
-
-- Cuando el manager renuncia y luego elige **Fundar club**, la temporada actual termina obligatoriamente antes de crear el nuevo equipo.
-- Los encuentros pendientes se resuelven mediante una simulación bot resumida para cerrar rápidamente tablas, playoffs, ascensos, descensos, campeones y Mundial de Clubes sin bloquear el navegador.
-- No se acreditan al manager títulos, premios, objetivos ni méritos posteriores a la renuncia por los resultados del club abandonado.
-- Al terminar el año deportivo, se aplican los movimientos de divisiones y el club fundado reemplaza a un equipo que realmente estará en la división más baja durante la temporada siguiente.
-- La nueva temporada comienza de inmediato con el club fundado.
-- Se conservan prestigio, experiencia, historial de carrera, títulos previos y cartas del manager. Las cartas que estaban activas vuelven a la reserva según la regla existente para un cambio de club.
-- El mismo flujo seguro se utiliza si el manager quedó sin club por despido, evitando una vía alternativa que reiniciara la carrera.
-- Si la temporada ya estaba finalizada, no se vuelve a simular: se inicia directamente la temporada siguiente.
-
-### Corrección de continuidad
-
-Antes de V7.35, `createFounderGame()` ejecutaba `newGame()` incluso cuando se accedía al modo fundador desde una carrera sin club. Esto borraba la continuidad deportiva y comenzaba otra partida desde la temporada 1. Ahora existen dos recorridos separados:
-
-- **Partida inicial:** crea una carrera fundadora nueva en la temporada 1.
-- **Carrera sin club:** finaliza la temporada vigente, conserva el perfil del manager e inicia la temporada siguiente con el club nuevo.
-
-### Archivos principales modificados en V7.35
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/18-challenges-online.js`
-- `js/ui/12-modals.js`
-- `README.md`
-
-**V7.35 no rompe partidas anteriores.** No cambia el esquema de guardado. En una carrera existente, la temporada sólo se cierra automáticamente cuando el manager está sin club y confirma la creación de un club propio; no se alteran partidas que no utilicen esa opción.
-
----
-
-## V7.34 - Preparación del Mundial, sedes neutrales y mejor once bot
-
-Un día antes de la primera fecha del Mundial de Clubes se ejecuta una preparación automática y silenciosa sobre todos los participantes controlados por la CPU. El único mensaje visible es: **“Los equipos ya están listos en la ciudad anfitriona.”**
-
-### Preparación previa al torneo
-
-- Los participantes bot quedan con forma física y moral al máximo interno del juego (`99/99`, equivalente al 100%), cohesión `100/100` y desgaste acumulado en cero.
-- Se eliminan todas las lesiones activas de sus planteles. Las suspensiones no se borran.
-- Cada participante bot debe disponer de 21 jugadores elegibles para completar once titular y diez suplentes. Si no alcanza esa cantidad, ficha agentes libres; sólo genera un jugador de emergencia cuando no existe una opción libre adecuada.
-- Los clubes participantes que sean campeones de una liga en esa temporada reciben, por jugador, entre 10 y 30 puntos totales de boost de entrenamiento distribuidos entre habilidades entrenables. El club del manager queda excluido de todas estas ayudas.
-- La preparación se registra una sola vez por edición. La forma, moral, cohesión, lesiones y disponibilidad se vuelven a validar silenciosamente antes del debut para evitar que un partido doméstico del día anterior deshaga la puesta a punto. El boost de entrenamiento y el mensaje no se repiten.
-- En partidas anteriores situadas antes del primer partido se aplica automáticamente; si el Mundial ya tiene resultados disputados, no modifica retrospectivamente el torneo.
-
-### Formación de los equipos bot
-
-- Todos los equipos bot evalúan las formaciones disponibles y eligen la que produce su mejor once según media efectiva, adaptación al puesto, forma y moral. La asignación de jugadores a los once puestos se resuelve de forma global para evitar selecciones parciales inferiores.
-- La misma selección se usa en la simulación rápida y en la simulación completa.
-- Los bots convocan hasta diez suplentes adicionales cuando disponen de 21 jugadores elegibles.
-
-### Sedes y público del Mundial de Clubes
-
-- Los partidos utilizan exclusivamente los estadios definidos para el torneo: **MetLife Stadium**, **Mercedes-Benz Stadium**, **Lincoln Financial Field** y **Camping World Stadium**.
-- No se utiliza el estadio, el campo ni la capacidad del club marcado administrativamente como local.
-- Se retiraron todas las ventajas de localía del Mundial, tanto en posesión, ataques, xG y público como en la simulación rápida.
-- La asistencia se distribuye proporcionalmente entre las hinchadas totales de ambos clubes y se limita por la capacidad de la sede neutral.
-- Los partidos del Mundial no generan recaudación de entradas para ninguno de los clubes.
-
-### Corrección adicional
-
-- La limpieza genérica de lesiones ahora elimina también `injuredUntilTurn` e `injuredAtTurn`. Esos campos podían mantener una lesión activa después de borrar sus datos de fecha de partido.
-
-### Archivos principales modificados en V7.34
-
-- `config.js`
-- `balance-manager.js`
-- `balance-modificadores.js`
-- `index.html`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/18-challenges-online.js`
-- `simulador-2.0.js`
-- `README.md`
-
-**V7.34 no rompe partidas anteriores.** Conserva el esquema de guardado. Las carreras existentes aplican la preparación sólo si la edición actual del Mundial aún no disputó ningún partido; un torneo ya iniciado no recibe cambios retroactivos.
-
-
-## V7.33 - Auditoría de código, calendario y rendimiento
-
-Se realizó una revisión estática y una prueba completa de ejecución sobre la base V7.32. Esta versión corrige una contradicción de calendario, elimina código confirmado como inactivo y reduce operaciones repetitivas en búsquedas de clubes y jugadores.
-
-### Corrección de fechas y playoffs
-
-- Se corrigieron comparadores cronológicos que ordenaban fechas en sentido inverso.
-- La última fecha de la fase regular ahora se calcula usando la fecha realmente más avanzada del calendario.
-- Los playoffs argentinos de promoción se programan 7 y 14 días después de la última fecha regular.
-- Al cargar una partida anterior, los playoffs de promoción todavía no disputados se corrigen automáticamente si habían quedado ubicados antes de tiempo.
-- Los playoffs que ya tengan al menos un partido disputado no se reprograman, para conservar el historial de la carrera.
-- También se corrigió el desempate por fecha en la visualización de partidos de grupos del Mundial de Clubes.
-
-### Limpieza de código sin uso
-
-La auditoría confirmó que las siguientes funciones no tenían ninguna referencia en HTML ni JavaScript y fueron eliminadas:
-
-- `clubWorldCupAuthoritativeGroupDate`
-- `clubWorldCupLatestDate`
-- `clubWorldCupMinFirstGroupDate`
-- `clubWorldCupStageLabel`
-- `rankingStoredAuthExpiresAt`
-
-No se eliminaron archivos completos. `app.js`, `balance-manager.js` y los módulos históricos de datos siguen siendo necesarios. Las versiones internas V3.x presentes en algunos JSON corresponden al esquema o generación de esos datos y no a la versión pública del juego.
-
-### Rendimiento y carga
-
-- `playerById` y `clubById` ahora utilizan índices en memoria y dejan de recorrer las listas completas en cada consulta.
-- En la prueba de 100.000 búsquedas de jugadores, el tiempo bajó de aproximadamente **177 ms** a **7 ms** en el entorno de auditoría.
-- Los 24 scripts externos se cargan con `defer`, conservando su orden de ejecución y evitando bloquear el análisis inicial del HTML.
-- Se sincronizaron los valores de respaldo de `config.js` con el balance efectivo para evitar diferencias si el archivo de modificadores no pudiera cargarse.
-
-### Contradicciones corregidas
-
-- `config.js` y `balance-modificadores.js` diferían en seis valores activos: cohesión inicial, penalización del suplente lesionado, fatiga viva, tarjetas y desgaste mínimo/máximo de partido. Los valores de respaldo ahora coinciden con el balance efectivo; con la carga normal no cambia el balance jugable.
-- El objeto enviado al Ranking Online repetía las claves `budget_variation` y `titles`. Se conservaron una sola vez y `titles` se normaliza como número.
-- Los metadatos activos de balance fueron actualizados a V7.33. Los valores deportivos de `balance-manager.js` no fueron modificados.
-
-### Verificaciones realizadas
-
-- Sintaxis válida en todos los archivos JavaScript.
-- Lectura válida de todos los archivos JSON.
-- Auditoría estática sin claves duplicadas, código inalcanzable ni advertencias activas.
-- Carga completa de 162 clubes y más de 4.000 jugadores.
-- Creación de una partida nueva y renderizado de las 16 secciones sin errores de consola.
-- Prueba de reparación de playoffs pendientes y conservación de playoffs ya disputados.
-- Paquetes generados sin archivos de imagen.
-
-### Archivos principales modificados en V7.33
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `balance-manager.js`
-- `js/core/01-config-constants.js`
-- `js/core/02-ui-utils.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-- `js/game/13-ranking-online.js`
-- `js/game/15-especial.js`
-- `js/game/17-live-match.js`
-- `js/game/18-challenges-online.js`
-
-### Compatibilidad de partidas
-
-**V7.33 no rompe partidas anteriores.** No cambia el esquema del guardado. Las carreras existentes se cargan normalmente; únicamente se reubican de forma automática los playoffs argentinos de promoción que todavía no tengan partidos disputados y hayan sido generados con fechas incorrectas.
-
----
-
-## V7.32 - Escudos en Partidos disputados
-
-La pestaña **Desafíos Online → Partidos disputados** conserva el formato simplificado y vuelve a mostrar el escudo de cada club.
-
-Cada enfrentamiento presenta únicamente:
-
-- Escudo del club local.
-- Nombre del club local.
-- Nombre del manager local.
-- Resultado final.
-- Escudo del club visitante.
-- Nombre del club visitante.
-- Nombre del manager visitante.
-
-Los escudos mantienen un tamaño fijo para no comprimir los nombres ni desplazar el marcador. El equipo local permanece a la izquierda y el visitante a la derecha. La tarjeta completa continúa siendo clickeable y abre la ficha detallada del partido.
-
-No se modificaron el simulador, los resultados, el ranking, los desafíos guardados ni Cloudflare.
-
-### Archivos principales modificados en V7.32
-
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/18-challenges-online.js`
-
-### Compatibilidad de partidas
-
-**V7.32 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
-
----
-
-## V7.30 - Reacondicionamiento de tarjetas de Desafíos Online
-
-### Diseño orientado a 1920 × 1080
-
-Se reorganizaron las tarjetas de **Partidos disputados** para impedir que los datos de ambos equipos se compriman, se superpongan o corten las palabras.
-
-- En resoluciones de escritorio amplias se muestran como máximo dos partidos por fila.
-- Por debajo de 1500 píxeles se utiliza una sola tarjeta por fila para conservar el ancho interno.
-- Cada enfrentamiento mantiene local a la izquierda, marcador en el centro y visitante a la derecha.
-- Estadio, capacidad e hinchas utilizan bloques internos estables, sin cortes letra por letra.
-- Los nombres largos de clubes y estadios se recortan visualmente con puntos suspensivos, conservando el texto completo como ayuda emergente.
-- Las pestañas **Disponibles** y **Mis desafíos** usan un ancho mínimo mayor para evitar tarjetas demasiado estrechas.
-- En pantallas pequeñas el enfrentamiento pasa a disposición vertical.
-
-No se modificaron el simulador, los resultados, el ranking, la base online ni el Worker.
-
-### Archivos principales modificados en V7.30
-
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/18-challenges-online.js`
-
-### Compatibilidad de partidas
-
-**V7.30 no rompe partidas anteriores.** El cambio es exclusivamente visual y conserva desafíos, resultados, ranking y carreras existentes.
-
----
-
-
-## V7.29 - Pausa de desafíos y Ranking Online para usuarios finales
-
-### Pausa entre acciones de desafíos
-
-Publicar o aceptar un desafío activa una pausa local compartida de **10 minutos**:
-
-- Durante ese tiempo se bloquean los botones **Publicar desafío** y **Aceptar desafío**.
-- Los botones muestran el tiempo restante en formato `MM:SS`.
-- La pausa se conserva al recargar la página o cerrar y volver a abrir el juego.
-- Se guarda por cuenta iniciada en ese navegador.
-- El bloqueo comienza después de publicar correctamente o después de reservar correctamente un desafío al aceptarlo.
-- La simulación y el guardado del partido aceptado continúan normalmente.
-
-La pausa es local y no modifica el servidor ni las partidas guardadas.
-
-### Ranking Online simplificado
-
-La pantalla fue reacondicionada para un usuario final:
-
-- Se oculta el origen interno de la sesión.
-- Se oculta la fecha técnica de vencimiento de la credencial.
-- Se elimina el contador técnico de registros descargados.
-- Se reemplazan explicaciones de almacenamiento y red por mensajes simples.
-- La pantalla sólo informa si la sesión está activa, si el ranking se actualizó o si todavía no hay carreras publicadas.
-
-### Paquetes
-
-Desde V7.29 los ZIP del juego no incluyen carpetas, migraciones, Workers ni instrucciones de Cloudflare. Esta actualización no requiere cambios externos.
-
-### Archivos principales modificados en V7.29
-
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/game/13-ranking-online.js`
-- `js/game/18-challenges-online.js`
-
-### Compatibilidad de partidas
-
-**V7.29 no rompe partidas anteriores.** La pausa se guarda en el navegador y no altera carreras, desafíos publicados, resultados ni datos del club.
-
----
-
-## V7.28 - Presentación de desafíos, residencias y cartas por rareza
-
-- Se unificaron los nombres visibles del simulador como **Disparos** y **Tiros a Puerta**.
-- Cada nivel del predio juvenil habilita dos residencias acumulativas.
-- Los jugadores intransferibles muestran un candado.
-- Los usos de cartas dependen de la rareza: 1, 2, 3 y 5.
-- Desafíos Online incorporó escudos, estadio, capacidad, hinchas y detalle en tres columnas.
-
-## V7.27 - Ranking de desafíos y listas estables
-
-- Se corrigió el parpadeo de listas vacías en Desafíos Online.
-- Se agregó el ranking público calculado según resultado, diferencia de media y diferencia de goles.
-- No requirió una tabla D1 adicional.
-
-## V7.25 - Código reutilizable de fondos para el club
-
-Se agregó un código especial alfanumérico que acredita **$100.000.000** al presupuesto del club dirigido cada vez que se canjea.
-
-### Funcionamiento
-
-- El código puede utilizarse una cantidad ilimitada de veces dentro de la misma partida.
-- Cada uso acredita $100.000.000 al club actual del manager.
-- El movimiento queda registrado en Finanzas como `Código especial`.
-- El presupuesto persistente del club se actualiza junto con el presupuesto activo de la partida.
-- El historial del código guarda la cantidad de usos, pero no bloquea nuevos canjes.
-- Los diez códigos anteriores continúan siendo de un solo uso por partida.
-- El código real no está incluido en los ZIP públicos; la configuración conserva solamente su huella SHA-256.
-
-### Archivos principales modificados en V7.25
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/instalaciones.json`
-- `js/core/01-config-constants.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.25 no rompe partidas anteriores.** Agrega un nuevo código reutilizable y conserva códigos reclamados, cartas, presupuestos, planteles y progreso existentes.
-
----
-
-## V7.24 - Mensajes antiguos e instalaciones del club
-
-### Borrar mensajes antiguos
-
-En **Mensajes** se agregó el botón `Borrar mensajes antiguos`. La acción solicita confirmación, elimina los avisos cerrados y conserva cualquier oferta o acción que continúe pendiente de respuesta.
-
-### Instalaciones en Estadio
-
-La cabecera de **Estadio** incorpora el botón `Instalaciones`, que abre una pantalla específica para construcciones permanentes vinculadas al club. Las instalaciones quedan asociadas al club y no al manager.
-
-#### Calefacción de césped
-
-- Construcción: **$200.000.000**.
-- Duración: **60 días**.
-- Una vez terminada dispone de un switch **ON/OFF**.
-- Encendida cobra **$10.000 por día**.
-- Cada día encendida mejora **+1** el estado del campo, hasta 100.
-- Si no hay presupuesto para el gasto diario, se apaga automáticamente y deja un mensaje.
-- Puede construirse en paralelo con el predio juvenil.
-
-#### Predio de entrenamiento juvenil
-
-| Nivel | Costo | Obra | Juveniles excepcionales adicionales |
-|---|---:|---:|---:|
-| 1 · Básico | $20.000.000 | 58 días | +0 |
-| 2 · Medio | $100.000.000 | 105 días | +1 |
-| 3 · Bueno | $300.000.000 | 180 días | +2 |
-| 4 · Excelente | $500.000.000 | 230 días | +3 |
-| 5 · Elite | $1.200.000.000 | 80 días | +5 |
-
-Los niveles deben construirse en orden. La primera captación de cada temporada entrega toda la cuota excepcional de una sola vez: 1 juvenil base más el bonus del nivel, hasta un máximo de 6. Para iniciar esa captación deben existir cupos libres para toda la cuota. Las mejoras finalizadas después de la primera captación se aplican desde la temporada siguiente.
-
-### Persistencia y economía
-
-- Las obras conservan sus días restantes al guardar y cargar.
-- Las instalaciones terminadas permanecen entre temporadas.
-- Los gastos y construcciones aparecen en Finanzas dentro de la categoría Estadio.
-- Cambiar de club no traslada las instalaciones: cada club conserva las propias.
-
-### Archivos principales modificados en V7.24
-
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `data/instalaciones.json`
-- `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/05-state-season.js`
-- `js/ui/06-render-home-messages.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-
-### Compatibilidad de partidas
-
-**V7.24 no rompe partidas anteriores.** Los guardados existentes reciben el estado inicial de instalaciones sin obras construidas y conservan mensajes, academia, estadio, presupuesto y progreso anteriores.
-
----
-
-
-## V7.23 - Nuevas cartas de apoyo, marketing, mercado y medicina
-
-Se incorporaron cuatro familias nuevas al sistema de cartas especiales. Cada familia contiene una carta común, rara, épica y legendaria, por lo que se agregan **16 cartas nuevas** al conjunto disponible en los sobres.
-
-### Todo al apoyo a mi capitán
-
-- **Común:** +1 punto porcentual de progreso por partido.
-- **Rara:** +3 puntos.
-- **Épica:** +5 puntos.
-- **Legendaria:** +12 puntos.
-
-El bonus se suma al progreso normal obtenido por el jugador que disputó el encuentro como capitán. Las cartas se apilan y el resultado nunca supera el máximo individual de capitanía del jugador.
-
-### Director de marketing
-
-- **Común:** +1%.
-- **Rara:** +3%.
-- **Épica:** +5%.
-- **Legendaria:** +12%.
-
-En partidos donde el club del manager actúa como local, el porcentaje acumulado aumenta la demanda de hinchas locales hasta la capacidad disponible del estadio. El mismo porcentaje también se aplica sobre la recaudación de entradas, por lo que conserva utilidad aun cuando el estadio esté completo.
-
-### Director deportivo
-
-- **Común:** +1 punto porcentual.
-- **Rara:** +2 puntos.
-- **Épica:** +3 puntos.
-- **Legendaria:** +7 puntos.
-
-El bonus se suma al porcentaje de cláusula calculado para las ofertas recibidas por jugadores propios. Se combina con partidos, goles, asistencias, rendimiento y ojeo. No modifica las ofertas que ya pagan la cláusula completa.
-
-### Médico Milagroso
-
-- **Común:** resta 1 día adicional.
-- **Rara:** resta 2 días adicionales.
-- **Épica:** resta 3 días adicionales.
-- **Legendaria:** resta 5 días adicionales.
-
-El bonus se aplica cuando el tratamiento del kinesiólogo resulta exitoso. Se suma a la reducción normal del empleado y puede aplicarse también al tratamiento conjunto de todos los lesionados. No convierte un tratamiento fallido en exitoso y no altera lesiones juveniles que ya se curan completamente mediante su tratamiento específico.
-
-### Apilamiento y usos
-
-- Las cuatro familias respetan el límite general de cinco cartas activas.
-- Las cartas repetidas continúan permitidas y sus efectos se suman.
-- Mantienen el sistema normal de 10 activaciones y el bloqueo de 15 días.
-- Las cartas nuevas pueden aparecer en sobres según la probabilidad de su rareza.
-- No se modifican ni reemplazan cartas obtenidas en versiones anteriores.
-
-### Archivos principales modificados en V7.23
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/data/04-data-storage.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-- `js/game/15-especial.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/12-modals.js`
-
-### Compatibilidad de partidas
-
-**V7.23 no rompe partidas anteriores.** Agrega nuevas cartas al conjunto de sobres y conserva íntegramente cartas activas, reserva, usos, bloqueos, progreso de capitanía, lesiones, presupuestos y ofertas existentes.
-
----
-
-
-## V7.22 - Nuevos valores de recuperación física de cartas
-
-Se reajustaron los puntos directos que otorgan las cartas de preparación física después de calcular el desgaste completo del partido.
-
-### Valores por rareza
-
-- **Común:** +1 punto de forma física postpartido.
-- **Rara:** +3 puntos.
-- **Épica:** +5 puntos.
-- **Legendaria:** +12 puntos.
-
-Las cartas continúan apilándose. Cinco cartas legendarias activas suman **+60 puntos** a cada jugador del club del manager que haya disputado el encuentro, con un máximo final de 99 de forma.
-
-### Migración de cartas existentes
-
-- Las cartas ya obtenidas se normalizan automáticamente según su rareza.
-- Se conservan usos, estado activo, bloqueo, inventario y posición en reserva.
-- No se crean cartas nuevas ni se eliminan cartas existentes.
-- El cambio empieza a aplicarse desde el siguiente partido.
-
-### Archivos principales modificados en V7.22
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.22 no rompe partidas anteriores.** Actualiza automáticamente el valor de las cartas de preparación física existentes sin modificar usos, bloqueos, inventario ni activaciones.
-
----
-
-
-## V7.21 - Mundial de Clubes por día fijo de temporada
-
-El calendario del Mundial de Clubes deja de calcularse a partir de fechas ISO, del final de las ligas o de la última ronda creada. Cada etapa utiliza un día fijo y autoritativo de la temporada.
-
-### Calendario oficial
-
-- **Día 295:** sorteo de los ocho grupos.
-- **Día 305:** primera fecha de grupos.
-- **Día 310:** segunda fecha de grupos.
-- **Día 315:** tercera fecha de grupos.
-- **Día 320:** octavos de final.
-- **Día 325:** cuartos de final.
-- **Día 330:** semifinales.
-- **Día 335:** partido por el tercer puesto.
-- **Día 336:** final.
-
-Los grupos continúan funcionando como ligas de cuatro equipos y clasifican los dos primeros de cada grupo.
-
-### Años bisiestos
-
-- Los días del Mundial no cambian: el sorteo sigue siendo el día 295 y la final el día 336.
-- La fecha ISO visible se deriva del número de día real de esa temporada.
-- En un año bisiesto existe el día 366, pero queda libre de competencias del Mundial.
-- Ninguna fase se desplaza mediante cálculos basados en el final de las ligas o en la última fecha creada.
-
-### Reparación automática
-
-- Las partidas con fechas incorrectas como `2028-02-27` se realinean al abrir la partida o el calendario.
-- Se corrigen las tres jornadas de grupos y todas las eliminatorias existentes.
-- Se guarda en cada partido y ronda el nuevo campo temporal `seasonDay`.
-- Los resultados ya disputados, clasificados, premios y estadísticas no se eliminan ni se vuelven a simular.
-- Los partidos pendientes sólo se procesan cuando el calendario alcanza el día fijo correspondiente.
-- La fecha ISO se mantiene únicamente para integrar el Mundial con el calendario general y se deriva siempre del día de temporada.
-
-### Configuración
-
-Los días pueden revisarse en `config.js`, dentro de:
-
-```js
-calendario: {
-  mundialClubes: {
-    diaSorteo: 295,
-    diaGrupos1: 305,
-    diaGrupos2: 310,
-    diaGrupos3: 315,
-    diaOctavos: 320,
-    diaCuartos: 325,
-    diaSemifinales: 330,
-    diaTercerPuesto: 335,
-    diaFinal: 336
+/* Render general, inicio, calendario anual, mensajes y ofertas de venta recibidas. */
+
+function renderWelcomeScreen(){
+  const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
+  const divisionCount = (seed?.divisions || []).length;
+  const challengeDefinition = typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition() : null;
+  const challengeAvailable = typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
+  const careerIds = typeof careerSaveSlotIds === 'function' ? careerSaveSlotIds() : [SAVE_SLOT_CAREER];
+  const careerCards = careerIds.map(slotId => {
+    const base = typeof baseSaveSlotLabel === 'function' ? baseSaveSlotLabel(slotId) : 'Carrera';
+    return `
+        <div class="card save-slot-card" data-save-slot-card="${escapeHtml(slotId)}">
+          <div class="save-slot-main">
+            <p class="label">Carrera normal</p>
+            <h3 data-save-slot-title>${escapeHtml(base)} · Revisando...</h3>
+            <p class="muted" data-save-slot-detail>Buscando datos del slot guardado.</p>
+          </div>
+          <div class="save-slot-actions">
+            <button class="primary" data-slot-continue="${escapeHtml(slotId)}">Entrar</button>
+            <button class="ghost danger" data-slot-new="${escapeHtml(slotId)}">Nueva</button>
+          </div>
+        </div>`;
+  }).join('');
+  view.innerHTML = `
+    <section class="welcome-screen save-slots-screen">
+      <div class="welcome-hero card">
+        <div>
+          <p class="label">Slots de partida</p>
+          <h2>Elegí qué jugar</h2>
+          <p class="tagline">Las carreras normales se guardan separadas. El nombre visible se actualiza solo con el club y la temporada guardada.</p>
+        </div>
+        <div class="welcome-summary">
+          <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
+          <div><span>Ligas</span><strong>${formatPlainNumber(divisionCount)}</strong></div>
+          <div><span>Carreras</span><strong>${formatPlainNumber(careerIds.length)}</strong></div>
+        </div>
+      </div>
+
+      <div class="save-slot-grid">
+        ${careerCards}
+
+        <div class="card save-slot-card save-slot-challenge ${challengeAvailable ? '' : 'blocker'}">
+          <div class="save-slot-main">
+            <p class="label">Reto predeterminado</p>
+            <h3>${escapeHtml(challengeDefinition?.nombre || 'Campo destruido')}</h3>
+            <p class="muted">${escapeHtml(challengeDefinition?.textos?.descripcionTarjeta || 'Reto no disponible.')}</p>
+          </div>
+          <div class="save-slot-actions">
+            <button id="btnSlotCampoNew" class="primary" ${challengeAvailable ? '' : 'disabled'}>Iniciar reto</button>
+            <button id="btnSlotCampoContinue" class="ghost" ${challengeAvailable ? '' : 'disabled'}>Continuar reto</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="welcome-features">
+        <span>5 carreras normales</span>
+        <span>Nombres automáticos</span>
+        <span>Retos separados</span>
+        <span>Volver al menú al ganar o perder</span>
+      </div>
+    </section>`;
+  document.querySelectorAll('[data-slot-continue]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slotId = btn.getAttribute('data-slot-continue') || SAVE_SLOT_CAREER;
+      if(typeof loadCareerSlotOrNew === 'function') loadCareerSlotOrNew(slotId); else openNewGameModal(true);
+    });
+  });
+  document.querySelectorAll('[data-slot-new]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slotId = btn.getAttribute('data-slot-new') || SAVE_SLOT_CAREER;
+      if(typeof startNewCareerFromSlot === 'function') startNewCareerFromSlot(slotId); else openNewGameModal(true);
+    });
+  });
+  $('btnSlotCampoNew')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
+  $('btnSlotCampoContinue')?.addEventListener('click', () => { if(typeof continueCampoDestruidoSlot === 'function') continueCampoDestruidoSlot(); });
+  if(typeof hydrateCareerSlotCards === 'function') hydrateCareerSlotCards().catch(()=>{});
+}
+
+function renderAll(){
+  applySelectedClubTheme(game?.selectedClubId || 0);
+  if(game && currentGameIsFounderMode()) evaluateFounderGoals({ silent:false });
+  if(game?.gameOver?.active && isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
+  if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
+  else if(typeof syncSidebarNavigationState === 'function') syncSidebarNavigationState();
+  else document.querySelectorAll('.tabs [data-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
+
+  if(game){
+    if(game.gameOver?.active){
+      $('managerClub').innerHTML = `<span>Sin club</span><small class="muted">Último: ${escapeHtml(clubName(game.selectedClubId))}</small>`;
+      $('managerClub').classList.add('side-club-name');
+    }else{
+      $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
+      $('managerClub').classList.add('side-club-name');
+    }
+  }else{
+    $('managerClub').textContent = 'Sin partida';
+    $('managerClub').classList.remove('side-club-name');
+  }
+  refreshSidebarDate();
+  $('btnSave').disabled = !game;
+  updateAssistantMessagesToggle();
+  if($('topResignClubBtn')){
+    $('topResignClubBtn').disabled = !game || game.gameOver?.active;
+    $('topResignClubBtn').classList.toggle('hidden', !game || game.gameOver?.active);
+  }
+  if(!game){
+    hideNotice();
+    if(activeTab === 'ranking' && typeof renderRankingOnline === 'function'){
+      renderRankingOnline();
+      return;
+    }
+    renderWelcomeScreen();
+    return;
+  }
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof ensureClubWorldCupCurrentSeason === 'function'){
+    const cupEnsure = ensureClubWorldCupCurrentSeason({ source:'render-all' });
+    if(cupEnsure?.changed && !game._clubWorldCupAutosavePending){
+      game._clubWorldCupAutosavePending = true;
+      setTimeout(() => {
+        Promise.resolve(typeof saveLocal === 'function' ? saveLocal(true) : null).catch(()=>{}).finally(() => {
+          if(game) game._clubWorldCupAutosavePending = false;
+        });
+      }, 0);
+    }
+  }
+  if(activeTab === 'players') activeTab = 'market';
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
+  if(game.gameOver?.active){
+    if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
+    if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();
+    if(activeTab === 'home' || !renderers[activeTab]){
+      renderGameOverScreen();
+      return;
+    }
+  }else{
+    repairBotRosters({ reason:'render' });
+  }
+  const renderer = renderers[activeTab] || renderers.home;
+  try{
+    renderer();
+  }catch(err){
+    console.error('Error renderizando pestaña', activeTab, err);
+    if(activeTab === 'firstTeam' && firstTeamTab !== 'tactics'){
+      try{
+        firstTeamTab = 'tactics';
+        renderFirstTeam();
+        showNotice('Se detectó un problema en una subpestaña de Primer Equipo. Se volvió a Táctica.');
+        return;
+      }catch(fallbackErr){
+        console.error('Error en fallback de Primer Equipo', fallbackErr);
+      }
+    }
+    view.innerHTML = `<div class="card blocker"><h2>No se pudo abrir esta sección</h2><p>La partida no se borró. Probá volver a Inicio o usar el verificador.</p><p class="muted small">Detalle técnico: ${escapeHtml(err?.message || String(err || 'error'))}</p><div class="row"><button class="primary" data-render-fallback-home>Ir a Inicio</button><button class="ghost" data-render-fallback-verify>Verificar que todo esté bien</button></div></div>`;
+    document.querySelector('[data-render-fallback-home]')?.addEventListener('click', () => { activeTab = 'home'; renderAll(); });
+    document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof inspectGameIntegrity === 'function' && typeof showGameIntegrityModal === 'function') showGameIntegrityModal(inspectGameIntegrity(), false); });
   }
 }
-```
-
-### Archivos principales modificados en V7.21
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09-simulation-economy-training.js`
-
-### Compatibilidad de partidas
-
-**V7.21 no rompe partidas anteriores.** Realinea fechas y días del Mundial existente sin borrar resultados. Las ediciones finalizadas permanecen en el historial y las etapas pendientes pasan a respetar el calendario fijo.
-
----
-
-
-## V7.20 - Reparación del apilado y del límite físico de las cartas
-
-> Valores históricos de V7.20. Desde V7.22, cinco legendarias suman +60 puntos.
-
-Se corrigieron dos errores que podían dejar a un jugador en 0 de forma aunque hubiera varias cartas legendarias activas.
-
-### Causas corregidas
-
-1. En `habilidades_especiales.json`, `tope_porcentaje: null` significa que el bonus no tiene límite. El cálculo convertía `null` en `0`, por lo que las cartas sin tope podían quedar anuladas completamente.
-2. Aunque el bonus se sumara, la forma final volvía a limitarse por el desgaste persistente del jugador: `forma máxima = 99 - desgaste`. Ese límite podía absorber casi toda la recuperación.
-
-### Nuevo comportamiento
-
-- `null`, campo vacío o ausencia de `tope_porcentaje` se interpretan correctamente como **sin límite**.
-- Cinco cartas legendarias de preparación física suman realmente **+90 puntos**.
-- Se calcula primero la forma final normal del partido y se limita como mínimo a 0.
-- Después se suman los puntos directos de las cartas activas.
-- Si el desgaste persistente bloquea el resultado, se reduce únicamente el desgaste necesario para habilitar esa forma.
-- El bonus se aplica una sola vez; no se duplica entre forma y desgaste.
-- Un jugador lesionado durante el encuentro también recibe la recuperación si disputó minutos. La duración de la lesión no se modifica.
-- Se mantiene el máximo general de 99 de forma.
-
-Un jugador cuyo cálculo normal termina en 0 y tiene cinco cartas legendarias activas queda en 90 inmediatamente después del partido.
-
-La corrección de `tope_porcentaje: null` también restablece otros bonus acumulables sin límite que estuvieran definidos con ese valor.
-
-### Archivos principales modificados en V7.20
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.20 no rompe partidas anteriores.** Conserva cartas, usos, bloqueos, planteles y desgaste guardado. La corrección se aplica desde el siguiente partido disputado.
-
----
-
-## V7.19 - Recuperación física directa de cartas
-
-> Valores históricos de V7.19. Fueron reajustados posteriormente en V7.22.
-
-Las cartas de preparación física dejaron de aplicar un porcentaje sobre la recuperación base. Ahora suman puntos directos de forma física después de calcular el desgaste completo del partido, evitando que el efecto desaparezca por redondeo.
-
-### Valores por rareza
-
-- **Común:** +2 puntos de forma física postpartido.
-- **Rara:** +5 puntos.
-- **Épica:** +8 puntos.
-- **Legendaria:** +18 puntos.
-
-### Aplicación
-
-- El bonus se aplica únicamente a jugadores del club del manager que hayan disputado el partido.
-- Primero se calcula la recuperación base por Resistencia.
-- Luego se descuentan el desgaste del encuentro, el estado del campo y los ajustes físicos de las instrucciones tácticas.
-- Finalmente se suman los puntos directos de las cartas activas.
-- Las cartas del mismo tipo continúan apilándose.
-- Un jugador que habría terminado con 0 de forma puede finalizar con 2, 5, 8 o 18 según la carta activa, salvo que alcance el límite máximo de 99.
-
-### Migración de cartas existentes
-
-- Las cartas obtenidas en versiones anteriores se actualizan automáticamente según su rareza.
-- Una carta común antigua de +1% pasa a +2 puntos.
-- Una rara de +3% pasa a +5 puntos.
-- Una épica de +5% pasa a +8 puntos.
-- Una legendaria de +9% pasa a +18 puntos.
-- Se conservan activaciones utilizadas, bloqueo, inventario y estado activo.
-
-### Archivos principales modificados en V7.19
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.19 no rompe partidas anteriores.** Actualiza automáticamente el valor y la unidad de las cartas de preparación física existentes sin eliminar cartas, usos ni bloqueos.
-
----
-
-## V7.18 - Reparación de penalizaciones por edad
-
-Se corrigió el caso en el que un jugador joven podía conservar una penalización por edad asociada a su ID. El deterioro continúa aplicándose únicamente desde los 32 años.
-
-### Limpieza automática de partidas
-
-- Al cargar una partida, todo jugador menor de 32 años queda con penalización por edad igual a 0.
-- Los registros asociados a IDs que ya no pertenecen a ningún jugador activo o del mercado se eliminan.
-- El cálculo visible vuelve a comprobar la edad del jugador antes de descontar puntos, de modo que un valor residual nunca afecte sus habilidades.
-- La limpieza se repite de forma segura al normalizar el estado, se guarda automáticamente en ambas copias del slot y no modifica penalizaciones válidas de jugadores de 32 años o más.
-
-### Jugadores nuevos y regenerados
-
-- Los juveniles promovidos al primer equipo se inicializan expresamente con penalización 0.
-- Los jugadores libres generados para una nueva temporada comienzan en 0.
-- Los jugadores creados para clubes invitados del Mundial de Clubes comienzan en 0.
-- Los jugadores de emergencia creados para planteles bots comienzan en 0.
-- Los jugadores manuales regenerados continúan reiniciando su penalización en 0.
-
-### Cambio de temporada
-
-- Si un jugador tiene menos de 32 años, cualquier penalización residual se elimina antes de continuar.
-- Un jugador que alcanza los 32 años al envejecer puede recibir por primera vez el deterioro anual configurado.
-- Los puntos obtenidos por entrenamiento no se modifican.
-
-### Archivos principales modificados en V7.18
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `balance-modificadores.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/05-state-season.js`
-- `js/game/10-academy-employees.js`
-- `js/game/16-scouting-center.js`
-
-### Compatibilidad de partidas
-
-**V7.18 no rompe partidas anteriores.** Al cargar, elimina exclusivamente penalizaciones por edad inválidas de jugadores menores de 32 años y registros huérfanos. Conserva entrenamiento, habilidades base, planteles, estadísticas, contratos y penalizaciones válidas de jugadores veteranos.
-
----
-
-## V7.17 - Valor de ofertas según rendimiento y ojeo
-
-Se mantuvo el requisito mínimo de seis partidos para ofrecer manualmente un jugador, pero esos seis partidos ya no fijan por sí solos el monto. El porcentaje de la cláusula que ofrece un club se incrementa mediante datos existentes de la temporada y del Centro de Ojeo.
-
-### Factores que aumentan la oferta
-
-- **Partidos jugados:** progresan hasta un máximo de **+8 puntos porcentuales** al llegar a 24 partidos.
-- **Goles:** agregan **+1,5 puntos porcentuales por gol**, con máximo de +12.
-- **Asistencias:** agregan **+1,25 puntos porcentuales por asistencia**, con máximo de +10.
-- **Rendimiento de temporada:** agrega hasta **+8 puntos porcentuales**. Se calcula con partidos, producción según posición, atajadas clave y regularidad, utilizando estadísticas ya guardadas.
-- **Ojeo:** agrega hasta **+5 puntos porcentuales** según cuántas habilidades ocultas del jugador propio fueron reveladas en el Centro de Ojeo.
-
-El porcentaje final continúa limitado por el rango del perfil del jugador y nunca supera el 100% de la cláusula. Las ofertas especiales que pagan la cláusula completa siguen funcionando de manera separada.
-
-### Alcance
-
-- La fórmula se utiliza al ofrecer manualmente un jugador.
-- También se utiliza en ofertas automáticas durante la temporada.
-- También se utiliza en ofertas generadas al finalizar la temporada.
-- No se agregan habilidades, atributos ni estadísticas nuevas a los jugadores.
-- El rendimiento y el ojeo se derivan exclusivamente de información existente en la partida.
-
-### Archivos principales modificados en V7.17
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
-
-### Compatibilidad de partidas
-
-**V7.17 no rompe partidas anteriores.** Los partidos, goles, asistencias y avances de ojeo ya guardados empiezan a influir inmediatamente en las nuevas ofertas.
-
----
-
-## V7.16 - Ofertas por cláusula y jugadores ofrecidos
-
-Se ajustaron las decisiones disponibles ante una oferta que paga la cláusula completa y los requisitos para ofrecer manualmente un jugador del plantel.
-
-### Ofertas por cláusula completa
-
-- Las ofertas identificadas como pago de cláusula ya no muestran la opción **Rechazar**.
-- Las únicas decisiones disponibles son **Aceptar oferta** o **Convencer al jugador de quedarse**.
-- La función interna de rechazo también bloquea estas ofertas, evitando que una partida antigua o una llamada residual pueda rechazarlas.
-- Las ofertas normales inferiores a la cláusula conservan las opciones **Aceptar** y **Rechazar**.
-
-### Ofrecer un jugador propio
-
-- Un jugador puede ofrecerse manualmente a otros clubes cuando disputó **6 partidos o más** en la temporada actual.
-- Ya no es necesario haberle pagado un sueldo.
-- Tampoco se exige que haya convertido goles o asistencias para usar la acción manual.
-- Se mantienen el bloqueo por jugador intransferible, el mínimo estructural del plantel y la espera general de tres turnos entre búsquedas.
-- Si todavía no alcanzó los seis partidos, la interfaz informa cuántos lleva y cuántos necesita.
-
-### Archivos principales modificados en V7.16
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/12-modals.js`
-
-### Compatibilidad de partidas
-
-**V7.16 no rompe partidas anteriores.** Las ofertas pendientes por cláusula conservan su información, pero dejan de permitir rechazo; los partidos ya registrados de cada jugador se utilizan inmediatamente para habilitar la acción de ofrecerlo.
-
----
-
-## V7.15 - Reparación definitiva de generación del Mundial de Clubes
-
-Se corrigieron dos bloqueos que todavía podían impedir el sorteo después del día 295.
-
-### Causas encontradas
-
-- La vista **Calendario → Mundial de Clubes** mostraba la competencia, pero no ejecutaba la función de generación. La creación desde pantalla sólo estaba conectada a otra ruta interna.
-- Algunas partidas podían conservar un objeto `clubWorldCup` vacío o incompleto de la temporada actual. Como el código comprobaba únicamente si el objeto existía, ese estado inválido impedía volver a sortear la competencia.
-- La selección de clasificados podía detenerse silenciosamente si una división no devolvía suficientes posiciones válidas.
-
-### Correcciones
-
-- El Mundial se verifica al renderizar cualquier pantalla del juego desde el día 295.
-- También se verifica expresamente al abrir **Calendario → Mundial de Clubes**.
-- Un estado vacío o incompleto, sin partidos disputados, se elimina y se reconstruye automáticamente.
-- Si el estado es válido pero faltan los partidos de grupos, el fixture se reconstruye sin repetir el sorteo.
-- La selección conserva los cupos previstos por país y completa cualquier faltante con clubes de primeras divisiones ordenados por tabla y reputación.
-- La competencia ya no falla silenciosamente: si no pudiera reunir 32 clubes, la pantalla muestra el motivo técnico.
-- El club del manager no necesita estar clasificado. Si no participa, los 64 partidos se desarrollan únicamente entre bots.
-- Las partidas ubicadas en el día 313 o posterior generan el torneo al cargar/renderizar la partida, sin esperar otro partido del usuario.
-
-### Protección de partidas
-
-La reparación automática sólo reinicia un estado estructuralmente incompleto cuando no existen partidos del Mundial ya disputados. Si encuentra resultados jugados, no los elimina.
-
-### Archivos principales modificados en V7.15
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/ui/06-render-home-messages.js`
-
-### Compatibilidad de partidas
-
-**V7.15 no rompe partidas anteriores.** Repara estados vacíos del Mundial y conserva cualquier edición que ya tenga resultados disputados.
-
----
-
-## V7.14 - Generación automática del Mundial de Clubes
-
-El sorteo del Mundial de Clubes ahora se genera automáticamente al alcanzar el **día 295** de cada temporada, aunque el club dirigido por el usuario no esté clasificado y aunque todavía exista algún partido doméstico pendiente.
-
-### Funcionamiento
-
-- El día 295 se seleccionan los 32 participantes y se crean los ocho grupos de cuatro equipos.
-- La creación ya no depende de que todos los partidos de liga estén marcados como disputados.
-- La clasificación del club del manager no condiciona la existencia del torneo.
-- Si el club dirigido no participa, todos los partidos del Mundial se simulan entre equipos bots en sus fechas correspondientes.
-- Las fechas de grupos continúan separadas por cinco días.
-- La primera jornada se mantiene al menos 18 días después del sorteo y respeta el descanso posterior al último partido regular cuando corresponde.
-- Las partidas que ya superaron el día 295 sin haber creado el torneo lo generan al abrir **Calendario → Mundial de Clubes** o al realizar el siguiente avance.
-- La pantalla informa expresamente que el sorteo está programado para el día 295 cuando todavía no se alcanzó esa fecha.
-
-### Causa corregida
-
-La versión anterior exigía simultáneamente alcanzar el día 295 y que todos los encuentros regulares de todas las ligas estuvieran finalizados. Un partido pendiente podía impedir el sorteo completo, incluso cuando el usuario no participaba en la competición.
-
-### Archivos principales modificados en V7.14
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/game/05-state-season.js`
-
-### Compatibilidad de partidas
-
-**V7.14 no rompe partidas anteriores.** Una partida situada después del día 295 y sin Mundial creado generará la edición pendiente automáticamente, conservando planteles, presupuestos, calendarios, resultados e historiales.
-
----
-
-
-## V7.13 - Desbloqueo de cartas en 15 días
-
-El plazo durante el cual una carta activa queda fija se redujo de **50 a 15 días de juego**.
-
-### Funcionamiento
-
-- Toda carta activada a partir de esta versión queda bloqueada durante 15 días.
-- Al cumplirse el plazo puede retirarse o reemplazarse normalmente.
-- La pantalla de Cartas muestra el plazo configurado de forma dinámica y ya no contiene el texto fijo `50 días`.
-- Las cartas que ya estaban activas en una partida anterior ajustan automáticamente su vencimiento al nuevo máximo de 15 días.
-- Si una carta ya permaneció activa durante 15 días o más, queda disponible al cargar la partida.
-- El cambio no modifica la cantidad de usos, rareza, bonificaciones, inventario ni puntos de habilidad.
-
-### Archivos principales modificados en V7.13
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `data/habilidades_especiales.json`
-- `js/core/01-config-constants.js`
-- `js/data/04-data-storage.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.13 no rompe partidas anteriores.** Conserva todas las cartas y reduce, sin extender, los bloqueos activos al nuevo máximo de 15 días.
-
----
-
-## V7.12 - Códigos especiales alfanuméricos
-
-Esta versión reemplaza los códigos descriptivos visibles por **10 códigos alfanuméricos individuales**.
-
-### Distribución
-
-- 2 códigos entregan **20 puntos de prestigio** cada uno.
-- 8 códigos entregan **20.000 puntos de habilidad** cada uno.
-- Cada código puede reclamarse una sola vez por partida guardada.
-- Canjear un código en una partida no lo invalida en otras partidas.
-
-### Protección de los códigos
-
-Los textos reales de los códigos no están incluidos en `config.js` ni en el README distribuido con el juego. La configuración almacena únicamente una huella **SHA-256** de cada código.
-
-Cuando el jugador escribe un código:
-
-1. Se normaliza a mayúsculas.
-2. Se calcula su huella SHA-256.
-3. Se compara con las huellas autorizadas.
-4. Se aplica el beneficio correspondiente.
-
-Los códigos descriptivos de versiones anteriores dejan de aceptar nuevos canjes. Los beneficios ya reclamados se conservan.
-
-### Archivos principales modificados en V7.12
-
-- `README.md`
-- `index.html`
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/game/15-especial.js`
-
-### Compatibilidad de partidas
-
-**V7.12 no rompe partidas anteriores.** Conserva puntos, prestigio, cartas y códigos ya reclamados. Sólo cambia la lista de códigos aceptados para nuevos canjes.
-
----
-
-# Fútbol Manager MVP - V7.11
-
-## V7.11 - Ajustes visuales del capitán
-
-Esta versión corrige la presentación del sistema de capitanía dentro de **Táctica** sin modificar su cálculo interno ni sus efectos después del partido.
-
-### Tarjeta del capitán
-
-- Se corrigió la alineación del círculo de **Forma**, incluso cuando el jugador acumula desgaste físico.
-- Se eliminó de la interfaz la línea `Próximo partido estimado` y cualquier referencia al máximo posible.
-- La tarjeta conserva foto, apellido, rol, media, forma, moral, rendimiento actual, partidos como capitán e impacto postpartido.
-- El máximo individual continúa existiendo internamente para limitar el progreso, pero permanece oculto al usuario.
-
-### Selector de capitán
-
-Cada titular muestra únicamente su progreso actual:
-
-```text
-Apellido · Rol · Media 72 · Capitanía 34%
-```
-
-El selector ya no revela el máximo posible de ningún jugador.
-
-### Insignias
-
-- Se agregó una insignia circular **C** al capitán.
-- La insignia aparece junto al icono de jugador ojeado.
-- Cuando un jugador es capitán y además fue ojeado, ambos iconos permanecen visibles.
-- Las insignias se muestran en la tarjeta del capitán, la pizarra y la lista de titulares.
-
-### Archivos principales modificados en V7.11
-
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/ui/07-render-team-market.js`
-
-### Compatibilidad de partidas
-
-**V7.11 no rompe partidas anteriores.** Es un ajuste de interfaz y versión. El capitán elegido, su progreso acumulado y los efectos de moral y cohesión se conservan sin cambios.
-
----
-
-## V7.10 - Capitán, moral y cohesión
-
-Esta versión parte de V7.09 e incorpora un sistema individual de capitanía dentro de **Táctica**. El jugador designado progresa únicamente cuando disputa un partido como capitán y, después del encuentro, modifica la moral del plantel y la cohesión del club.
-
-### Selección del capitán
-
-En **Táctica** se agregó una tarjeta de Capitán con:
-
-- Selector limitado a los once titulares.
-- Foto del jugador.
-- Apellido.
-- Rol o posición.
-- Media visible.
-- Forma física.
-- Moral.
-- Visor porcentual de rendimiento como capitán.
-- Partidos disputados como capitán.
-- Efecto actual sobre moral y cohesión.
-
-El capitán aparece identificado con una insignia `C` en la tarjeta, la pizarra y la lista de titulares. Cuando también fue ojeado, la `C` se muestra junto al icono de ojo sin reemplazarlo.
-
-Si el capitán queda fuera del once por lesión, suspensión, cambio de formación o modificación manual, el juego selecciona automáticamente otro titular válido. El usuario puede cambiarlo desde el selector antes de confirmar el equipo.
-
-### Rendimiento como capitán
-
-Cada jugador comienza en **0%** la primera vez que es utilizado como capitán por un club.
-
-El porcentaje sube únicamente después de un partido en el que el jugador fue capitán titular. El ritmo está calculado para alcanzar su máximo personal aproximadamente en **8 a 12 partidos**, con una referencia central de 10 partidos.
-
-El progreso queda guardado por jugador y club:
-
-- Cambiar temporalmente de capitán no elimina el progreso anterior.
-- Una lesión o suspensión no elimina el progreso.
-- Cambiar de temporada no elimina el progreso.
-- Cambiar de club como manager no elimina el progreso de los jugadores que permanecen en su club.
-- Cuando el jugador abandona el club por venta, despido, retiro u otra transferencia, su progreso de capitanía en ese club se elimina.
-- Si llega a otro club, comienza nuevamente en 0%.
-
-### Cálculo del máximo posible
-
-El máximo individual está limitado entre 1% y 99% y utiliza únicamente habilidades que ya existen en todos los jugadores de la base.
-
-#### Habilidades utilizadas
-
-| Habilidad existente | Peso |
-|---|---:|
-| Liderazgo | 35% |
-| Serenidad | 20% |
-| Disciplina | 15% |
-| Trabajo en equipo | 15% |
-| Posicionamiento | 10% |
-| Resistencia | 5% |
-
-No se crean atributos nuevos para calcular la capitanía. Se eliminaron `influencia en el vestuario`, `responsabilidad/profesionalismo` y `lealtad al club` porque no existen de forma general en la base de los 4.050 jugadores.
-
-La fórmula es:
-
-```text
-Máximo de capitanía =
-Liderazgo × 0,35
-+ Serenidad × 0,20
-+ Disciplina × 0,15
-+ Trabajo en equipo × 0,15
-+ Posicionamiento × 0,10
-+ Resistencia × 0,05
-```
-
-### Velocidad de aprendizaje
-
-La subida por partido utiliza:
-
-| Habilidad existente | Peso en aprendizaje |
-|---|---:|
-| Liderazgo | 40% |
-| Serenidad | 25% |
-| Disciplina | 20% |
-| Trabajo en equipo | 15% |
-
-El resultado modifica la velocidad entre 80% y 120% del ritmo base. Un jugador con mejores valores en esas habilidades progresa más rápido, pero nunca puede superar su máximo personal.
-
-### Efecto después del partido
-
-El efecto se aplica después de las variaciones normales del encuentro y afecta a todos los jugadores que permanecen en el plantel y a la cohesión del club.
-
-| Rendimiento del capitán | Moral del plantel | Cohesión |
-|---:|---:|---:|
-| 80% a 99% | +1 | +2 |
-| 40% a 79% | 0 | +1 |
-| 20% a 39% | -1 | 0 |
-| 0% a 19% | -3 | -2 |
-
-La moral continúa limitada entre 1 y 99. La cohesión continúa limitada entre 0 y 100.
-
-El efecto se registra una sola vez por partido, incluso si se vuelve a cargar o procesar el mismo resultado.
-
-### Guardado y migración
-
-Las partidas nuevas incorporan:
-
-```text
-captaincyProgress
-captaincyAppliedMatches
-lastCaptaincyEffect
-captainId dentro de la táctica
-```
-
-Las partidas anteriores reciben estas estructuras automáticamente. La táctica existente conserva sus titulares y el juego designa como capitán inicial al titular con mejor máximo estimado.
-
-Las tácticas guardadas también conservan al capitán. Si ese jugador ya no está disponible al cargar la táctica, se elige otro titular válido.
-
-### Configuración editable
-
-Los valores principales se encuentran en `balance-modificadores.js` y `config.js`, dentro de:
-
-```js
-capitania: {
-  activo: true,
-  partidosObjetivoAprox: 10,
-  maximoPorcentaje: 99,
-  pesosMaximo: { ... },
-  aprendizaje: { ... },
-  efectos: [ ... ]
+function getNextMatchForSelected(){
+  if(!game || game.matchdayIndex >= game.fixtures.length) return null;
+  if(typeof nextOwnMatchInfo === 'function') return nextOwnMatchInfo()?.match || null;
+  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+    const round = game.fixtures[roundIndex];
+    const match = (round.matches || []).find(m => !m.played && (m.homeId === game.selectedClubId || m.awayId === game.selectedClubId));
+    if(match) return match;
+  }
+  return null;
 }
-```
+function turnModePanelMarkup(){
+  if(!game || game.seasonFinalized) return '';
+  if(isPreseason()){
+    const remaining = Math.max(0, MAX_PRESEASON_FRIENDLIES - preseasonFriendliesPlayed());
+    const options = seed.clubs
+      .filter(c => c.id !== game.selectedClubId)
+      .map(c => `<option value="${c.id}" ${Number(game.pendingFriendlyOpponentId || 0)===c.id?'selected':''}>${escapeHtml(c.name)} · ${escapeHtml(clubDivision(c.id).name)}</option>`)
+      .join('');
+    return `<div class="card preseason-card">
+      <div class="row"><div><p class="label">Pretemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn || 0, PRESEASON_TURNS)}</h3></div><span class="pill">Amistosos restantes: ${remaining}</span></div>
+      <p class="muted">Usá estos días para entrenar, recuperar forma física y preparar el plantel antes del inicio oficial.</p>
+      <div class="grid cols-2" style="margin-top:10px">
+        <div><label for="friendlyOpponentSelect">Amistoso opcional de esta semana</label><select id="friendlyOpponentSelect" ${remaining <= 0 ? 'disabled' : ''}><option value="0">Sin amistoso</option>${options}</select></div>
+        <div class="row" style="align-items:end"><button id="btnClearFriendly" class="ghost" ${Number(game.pendingFriendlyOpponentId || 0) ? '' : 'disabled'}>Quitar amistoso</button></div>
+      </div>
+    </div>`;
+  }
+  if(isPostseason()){
+    return `<div class="card preseason-card"><div class="row"><div><p class="label">Postemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn || 0, postseasonTurnsForCurrentSeason())}</h3></div><span class="pill">Sin partidos oficiales</span></div><p class="muted">Últimos días del año para entrenamiento y recuperación antes del cierre formal de temporada.</p></div>`;
+  }
+  return '';
+}
 
-### Cloudflare y ranking online
+function featuredPlayerCard(type, player, label, valueText){
+  if(!player){
+    return `<div class="card featured-player-card empty"><p class="label">${escapeHtml(label)}</p><p class="muted">Sin jugador destacado todavía.</p></div>`;
+  }
+  return `<button class="card featured-player-card clickable" data-player-id="${player.id}" type="button">
+    ${faceImg(player, 'featured-player-face')}
+    <div class="featured-player-info">
+      <span class="featured-badge ${escapeHtml(type)}">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(player.name)}</strong>
+      <span>${roleBadge(player.position)} · ${Number(player.age || 0) || '—'} años</span>
+      <div class="featured-player-meta">
+        <span>Media <b>${visibleOverall(player)}</b></span>
+        ${valueText ? `<span>${valueText}</span>` : ''}
+      </div>
+    </div>
+  </button>`;
+}
+function homeFeaturedPlayers(clubId, teamAverage){
+  const squad = playersByClub(clubId);
+  const stats = game?.playerStats || {};
+  const scorer = squad.slice().sort((a,b)=>(Number(stats[b.id]?.goals || 0) - Number(stats[a.id]?.goals || 0)) || visibleOverall(b)-visibleOverall(a))[0] || null;
+  const star = squad.slice().sort((a,b)=>visibleOverall(b)-visibleOverall(a) || currentMorale(b.id)-currentMorale(a.id))[0] || null;
+  const promisePool = squad.filter(p => Number(p.age || 99) <= 23 && visibleOverall(p) > teamAverage);
+  const promise = (promisePool.length ? promisePool : squad.filter(p => Number(p.age || 99) <= 23)).sort((a,b)=>visibleOverall(b)-visibleOverall(a) || a.age-b.age)[0] || null;
+  return {
+    scorer,
+    star,
+    promise,
+    scorerText: scorer ? `Goles <b>${Number(stats[scorer.id]?.goals || 0)}</b>` : '',
+    starText: star ? `Media general <b>${visibleOverall(star)}</b>` : '',
+    promiseText: promise ? (visibleOverall(promise) > teamAverage ? `Promedio equipo <b>${teamAverage}</b>` : `En desarrollo`) : ''
+  };
+}
 
-No se modificó la API del ranking. No es necesario actualizar el Worker de Cloudflare.
 
-### Archivos principales modificados en V7.10
+function statusTone(value, good=70, warning=45){
+  const n = Math.round(Number(value) || 0);
+  if(n >= good) return 'ok';
+  if(n >= warning) return 'warn';
+  return 'bad';
+}
+function miniStatusBar(label, value, max=100){
+  const n = clamp(Math.round(Number(value) || 0), 0, max);
+  const pct = max ? clamp(Math.round((n / max) * 100), 0, 100) : 0;
+  return `<div class="mini-status-row ${statusTone(pct)}"><div><span>${escapeHtml(label)}</span><strong>${n}</strong></div><i><b style="width:${pct}%"></b></i></div>`;
+}
+function visualAlertItems(){
+  if(!game) return [];
+  const items = [];
+  const tacticErrors = isRegularSeason() ? validateCurrentTactic(false) : [];
+  const injured = injuredPlayersByClub(game.selectedClubId);
+  const pendingTransferOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
+  const sponsorOffers = game.sponsors?.offers?.length || 0;
+  const scoutingJobs = (game.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
+  const squadCount = playersByClub(game.selectedClubId).length;
+  const salaryPressure = totalClubSalary(game.selectedClubId);
+  if(game.mustReviewTactics){
+    items.push({ tone:'bad', icon:'!', title:'Debes confirmar tu equipo', text:'Hay lesionados o suspendidos propios fuera de la convocatoria válida.', tab:'tactics' });
+  }else if(tacticErrors.length){
+    items.push({ tone:'bad', icon:'11', title:'Debes confirmar tu equipo', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
+  }
+  if(injured.length){
+    items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });
+  }
+  const assistantUnread = unreadAssistantMessagesCount();
+  if(assistantUnread){
+    items.push({ tone:'assistant', icon:String(assistantUnread), title:`Tenés ${assistantUnread} mensaje(s) del asistente`, text:'Consejo nuevo pendiente de lectura.', tab:'messages' });
+  }
+  const unread = unreadMessagesCount();
+  if(unread && !assistantUnread){
+    items.push({ tone:'info', icon:'✉', title:`${unread} mensaje(s) nuevo(s)`, text:'Hay eventos pendientes para leer.', tab:'messages' });
+  }
+  if(pendingTransferOffers){
+    items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Gestioná las ofertas desde Mensajes.', tab:'messages' });
+  }
+  if(sponsorOffers){
+    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Tenés ofertas con vencimiento para aceptar o rechazar.', tab:'stadium' });
+  }
+  if(scoutingJobs.length){
+    const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));
+    const left = daysUntilTurn(nextDue);
+    items.push({ tone:'info', icon:'A', title:'Captación en curso', text:`Informe de academia en ${formatDays(left)}.`, tab:'academy' });
+  }
+  if(squadCount >= MAX_PLAYERS_PER_CLUB){
+    items.push({ tone:'warn', icon:'42', title:'Plantel completo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No podés fichar ni subir juveniles.`, tab:'firstTeam' });
+  } else if(squadCount <= MIN_PLAYERS_PER_CLUB){
+    items.push({ tone:'bad', icon:'18', title:'Plantel mínimo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No conviene vender ni despedir.`, tab:'firstTeam' });
+  }
+  if(salaryPressure > 0 && (game.budget || 0) < salaryPressure * 0.25){
+    items.push({ tone:'bad', icon:'$', title:'Presupuesto presionado', text:'El presupuesto actual está bajo contra la masa salarial anual.', tab:'finance' });
+  }
+  if(!items.length){
+    items.push({ tone:'ok', icon:'✓', title:'Sin urgencias', text:'No hay bloqueos críticos para el próximo avance.', tab:null });
+  }
+  return items.slice(0,6);
+}
+function visualAlertsMarkup(){
+  const items = visualAlertItems();
+  return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
+}
 
-- `README.md`
-- `index.html`
-- `style.css`
-- `config.js`
-- `balance-modificadores.js`
-- `js/core/01-config-constants.js`
-- `js/core/03-player-tactics-utils.js`
-- `js/game/05-state-season.js`
-- `js/game/09-simulation-economy-training.js`
-- `js/game/11-match-engine.js`
-- `js/ui/06-render-home-messages.js`
-- `js/ui/07-render-team-market.js`
-- `js/ui/12-modals.js`
+function daysUntilNextOwnMatchLabel(){
+  if(!game) return '';
+  if(!isRegularSeason()){
+    const remaining = isPreseason() ? Math.max(0, PRESEASON_TURNS - Number(game.phaseTurn || 0)) : isPostseason() ? Math.max(0, postseasonTurnsForCurrentSeason() - Number(game.phaseTurn || 0)) : 0;
+    if(remaining > 0) return `<div class="office-days-remaining"><span>Días restantes</span><strong>${remaining}</strong></div>`;
+    return '';
+  }
+  const info = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
+  if(!info?.date || typeof daysBetweenIsoDates !== 'function' || typeof currentCalendarDate !== 'function') return '';
+  const days = Math.max(0, daysBetweenIsoDates(currentCalendarDate(), info.date));
+  return `<div class="office-days-remaining"><span>Días restantes</span><strong>${days}</strong></div>`;
+}
 
-### Compatibilidad de partidas
+function dailySkillPointsTracker(){
+  if(!game || typeof currentCalendarDate !== 'function') return null;
+  const special = typeof ensureSpecialState === 'function' ? ensureSpecialState() : game.special;
+  if(!special || typeof special !== 'object') return null;
+  const currentDate = String(currentCalendarDate() || game.currentDate || '');
+  const currentSerial = Math.max(0, Math.round(Number(special.puntos_log_secuencia || 0)));
+  const log = Array.isArray(special.puntos_log) ? special.puntos_log : [];
+  let tracker = game.dailySkillPointsAnimation;
+  if(!tracker || typeof tracker !== 'object'){
+    tracker = { date:currentDate, lastSerial:currentSerial, pending:null };
+    game.dailySkillPointsAnimation = tracker;
+    return tracker;
+  }
+  tracker.lastSerial = Math.max(0, Math.round(Number(tracker.lastSerial || 0)));
+  if(!tracker.date){
+    tracker.date = currentDate;
+    tracker.lastSerial = currentSerial;
+    tracker.pending = null;
+    return tracker;
+  }
+  if(String(tracker.date) !== currentDate){
+    const newEntries = log
+      .filter(entry => Math.max(0, Math.round(Number(entry?.serial || 0))) > tracker.lastSerial)
+      .filter(entry => Number(entry?.points || 0) > 0)
+      .sort((a,b) => Number(a.serial || 0) - Number(b.serial || 0));
+    const total = newEntries.reduce((sum, entry) => sum + Math.max(0, Math.round(Number(entry.points || 0))), 0);
+    tracker.pending = total > 0 ? {
+      id:`daily-skill-${Date.now()}-${currentSerial}`,
+      points:total,
+      entries:newEntries.map(entry => ({ points:Math.max(0, Math.round(Number(entry.points || 0))), actionId:String(entry.actionId || '') })).slice(-8),
+      fromDate:String(tracker.date || ''),
+      date:currentDate,
+      totalPoints:Math.max(0, Math.round(Number(special.puntos_habilidad || 0))),
+      rendered:false
+    } : null;
+    tracker.date = currentDate;
+    tracker.lastSerial = currentSerial;
+  }else if(currentSerial < tracker.lastSerial){
+    tracker.lastSerial = currentSerial;
+    tracker.pending = null;
+  }
+  return tracker;
+}
+function dailySkillPointsEquation(entries=[], total=0){
+  const values = (Array.isArray(entries) ? entries : []).map(entry => Math.max(0, Math.round(Number(entry?.points || 0)))).filter(Boolean);
+  if(values.length <= 1) return 'Puntos obtenidos desde el último avance';
+  if(values.length <= 4) return `${values.join(' + ')} = ${Math.max(0, Math.round(Number(total || 0)))}`;
+  return `${values.length} recompensas acumuladas`;
+}
+function dailySkillPointsAnimationMarkup(){
+  const tracker = dailySkillPointsTracker();
+  const pending = tracker?.pending;
+  if(!pending || pending.rendered) return '';
+  pending.rendered = true;
+  const points = Math.max(0, Math.round(Number(pending.points || 0)));
+  return `<div class="daily-skill-points-animation" data-daily-skill-animation="${escapeHtml(pending.id)}" aria-live="polite">
+    <span>Puntos del día</span>
+    <strong data-daily-skill-count data-target="${points}">+0</strong>
+    <small>${escapeHtml(dailySkillPointsEquation(pending.entries, points))}</small>
+    <em>Total ${formatPlainNumber(pending.totalPoints || 0)}</em>
+  </div>`;
+}
+function startDailySkillPointsAnimation(){
+  const element = document.querySelector('[data-daily-skill-animation]');
+  if(!element) return;
+  const counter = element.querySelector('[data-daily-skill-count]');
+  const target = Math.max(0, Math.round(Number(counter?.dataset?.target || 0)));
+  const duration = 850;
+  const startAt = performance.now();
+  requestAnimationFrame(() => element.classList.add('is-visible'));
+  function tick(now){
+    const progress = Math.min(1, Math.max(0, (now - startAt) / duration));
+    const eased = 1 - Math.pow(1 - progress, 3);
+    if(counter) counter.textContent = `+${formatPlainNumber(Math.round(target * eased))}`;
+    if(progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  setTimeout(() => element.classList.add('is-exiting'), 2450);
+  setTimeout(() => {
+    element.remove();
+    if(game?.dailySkillPointsAnimation?.pending?.id === element.dataset.dailySkillAnimation){
+      game.dailySkillPointsAnimation.pending = null;
+    }
+  }, 2900);
+}
 
-**V7.10 no rompe partidas anteriores.** Las partidas existentes reciben el nuevo sistema con progreso inicial de 0%. Se conservan planteles, tácticas, calendarios, presupuestos, títulos, estadísticas y todo el progreso previo.
+function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
+  const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
+  const ppg = objectiveInfo.ppg || managerPointsPerGame();
+  const founderMode = currentGameIsFounderMode();
+  const objectiveReduction = typeof managerObjectiveReductionForClub === 'function' ? managerObjectiveReductionForClub(game.selectedClubId) : 0;
+  const objectiveText = founderMode ? 'Fundador' : (objectiveInfo.active ? (objectiveInfo.label || `${objectiveInfo.objective.toFixed(2)}${objectiveReduction > 0 ? ` (-${objectiveReduction}%)` : ''}`) : '—');
+  const extraText = objectiveInfo.extraMatches > 0 ? ` Prórroga fija de ${objectiveInfo.extraMatches} partido(s) por promedio general histórico ${objectiveInfo.generalPpg.toFixed(2)} al inicio de temporada.` : '';
+  const objectiveStateText = objectiveInfo.boardState || (objectiveInfo.ppg >= objectiveInfo.objective ? 'Cumple' : 'Riesgo');
+  const objectiveGapText = objectiveInfo.active ? ` Diferencia actual: ${(Number(objectiveInfo.delta || 0) >= 0 ? '+' : '')}${Number(objectiveInfo.delta || 0).toFixed(2)} PPG.` : '';
+  const objectiveExpectationText = objectiveInfo.expectation ? ` Expectativa: ${escapeHtml(objectiveInfo.expectation)}.` : '';
+  const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
+    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${objectiveExpectationText}${objectiveGapText}${extraText}`
+    : `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText}`;
+  const objectiveProgress = founderMode
+    ? founderGoalProgressMarkup()
+    : (objectiveInfo.active ? `<div class="manager-objective-progress ${escapeHtml(objectiveInfo.boardClass || (objectiveInfo.ppg >= objectiveInfo.objective ? 'ok' : 'warn'))}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');
+  const phase = phaseLabel();
+  const daysRemainingBox = daysUntilNextOwnMatchLabel();
+  const nextBox = next
+    ? `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
+    : `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
+  return `<div class="manager-office">
+    <div class="office-main-card">
+      <div class="office-club-head">
+        ${clubBadge(game.selectedClubId)}
+        <div><p class="label">Oficina del manager</p><h2>${escapeHtml(clubName(game.selectedClubId))}</h2><p class="tagline">${escapeHtml(phase)} · Fecha de liga ${Math.min(Number(game.matchdayIndex || 0) + 1, game.fixtures?.length || 0)}</p></div>
+      </div>
+      <div class="office-mini-grid">
+        <div><span>Posición</span><strong>${position || '—'}°</strong></div>
+        <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>
+        <div><span>Presupuesto</span><strong class="office-budget-compact ${budgetTone(game.budget || 0)}">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
+        <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
+        <div><span>Objetivo</span><strong>${escapeHtml(objectiveText)}</strong></div>
+      </div>
+      ${objectiveProgress}
+      <div class="office-status-bars">
+        ${miniStatusBar('Media', avgOverall, 99)}
+        ${miniStatusBar('Físico', avgFitness, 99)}
+        ${miniStatusBar('Moral', avgMorale, 99)}
+        ${miniStatusBar('Cohesión', cohesion, 100)}
+      </div>
+    </div>
+    <div class="office-side-card">
+      ${nextBox}
+      <div class="advance-control office-advance"><div class="advance-buttons advance-buttons-single"><div class="advance-main-row"><button id="advanceUnifiedBtn" class="primary">Avanzar día</button>${dailySkillPointsAnimationMarkup()}</div><div class="auto-advance-switch-panel"><p class="label">Avance automático</p><button id="advanceAutoClickerBtn" class="auto-advance-switch is-off" type="button" aria-pressed="false"><span class="auto-advance-switch-track"><i></i></span><strong data-auto-advance-state>OFF</strong></button></div></div><div id="advanceProgressBox">${advanceProgressMarkup()}</div></div>
+    </div>
+  </div>`;
+}
+function lastTurnSummaryMarkup(){
+  const summary = game?.lastTurnSummary;
+  if(!summary) return '';
+  const items = Array.isArray(summary.items) ? summary.items.slice(0,5) : [];
+  return `<div class="card turn-summary-card ${escapeHtml(summary.tone || 'info')}">
+    <div class="row"><div><p class="label">Resumen del último avance</p><h3>${escapeHtml(summary.title || 'Último avance')}</h3></div><span class="pill">${escapeHtml(summary.phase || '')}</span></div>
+    ${summary.result ? `<div class="turn-result-line">${escapeHtml(summary.result)}</div>` : ''}
+    <div class="turn-summary-list">${items.map(item => `<div class="turn-summary-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}</strong><span>${escapeHtml(item.text || '')}</span></div>`).join('')}</div>
+  </div>`;
+}
 
----
 
-## V7.09 - Historial anual del Mundial de Clubes
+const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','employees','scouting','stadium','market','finance']);
+function isManagerWithoutClubBlockedTab(tab){
+  const key = String(tab || '');
+  if(game?.gameOver?.active && key === 'finance' && String(financeViewMode || 'main') === 'bank') return false;
+  return Boolean(game?.gameOver?.active && MANAGER_WITHOUT_CLUB_BLOCKED_TABS.has(key));
+}
+function managerWithoutClubBlockedNotice(tab){
+  const labels = { firstTeam:'Primer Equipo', academy:'Academia', employees:'Empleados', scouting:'Centro de Ojeo', stadium:'Estadio', market:'Mercado', finance:'Finanzas' };
+  return `${labels[String(tab || '')] || 'Esta sección'} está bloqueada mientras el manager está sin club.`;
+}
+function refreshManagerWithoutClubTabState(){
+  document.querySelectorAll('.tabs [data-tab]').forEach(btn => {
+    const tab = String(btn.dataset.tab || '');
+    const mode = String(btn.dataset.navMode || '');
+    const blocked = game?.gameOver?.active && tab === 'finance'
+      ? mode !== 'bank'
+      : isManagerWithoutClubBlockedTab(tab);
+    btn.disabled = blocked;
+    btn.classList.toggle('tab-disabled', blocked);
+  });
+  if(typeof syncSidebarNavigationState === 'function') syncSidebarNavigationState();
+}
 
-### Selector de año
+function gameOverStatCard(label, value){
+  return `<div class="card"><p class="label">${escapeHtml(label)}</p><strong>${escapeHtml(String(value ?? '—'))}</strong></div>`;
+}
+function renderGameOverScreen(){
+  const state = game?.gameOver || {};
+  const snapshot = state.snapshot || (typeof gameOverSnapshot === 'function' ? gameOverSnapshot() : {});
+  const ppg = Number(state.ppg || (typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0));
+  const objective = Number(state.objective || MANAGER_OBJECTIVE_PPG || 0);
+  const budget = Number(snapshot.finalBudget || game?.budget || 0);
+  const score = Number(snapshot.managerScore || 0);
+  const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : Number(game?.managerStats?.prestige || 0);
+  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
+  const xp = typeof currentManagerExperience === 'function' ? currentManagerExperience() : Number(game?.managerStats?.experience || 0);
+  const title = state.type === 'resignation' ? 'Renunciaste al club' : 'La directiva te despidió';
+  const fallbackReason = state.type === 'resignation' ? 'Renunciaste al cargo. El mundo de la partida sigue activo.' : 'La directiva decidió terminar tu ciclo por no cumplir el objetivo deportivo.';
+  view.innerHTML = `<div class="game-over-screen">
+    <div class="card game-over-card">
+      <p class="label">Inicio · Sin club</p>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(state.reason || fallbackReason)}</p>
+      <p class="muted small">La partida no se reinicia. Podés navegar el calendario, tablas, estadísticas, tus estadísticas y ranking online. Las áreas operativas del club quedan bloqueadas hasta firmar con otro equipo.</p>
+      <div class="game-over-objective">
+        <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>
+        <div><span>Objetivo</span><strong>${objective ? objective.toFixed(2) : '—'}</strong></div>
+        <div><span>Partidos oficiales</span><strong>${Number(state.matches || snapshot.won + snapshot.drawn + snapshot.lost || 0)}</strong></div>
+      </div>
+      <div class="grid cols-6 compact-team-stats game-over-stats">
+        ${gameOverStatCard('Manager', snapshot.managerName || game?.rankingManagerName || 'Manager')}
+        ${gameOverStatCard('Prestigio', prestigeLabel)}
+        ${gameOverStatCard('Experiencia', xp)}
+        ${gameOverStatCard('Club saliente', snapshot.club || clubName(game?.selectedClubId))}
+        ${gameOverStatCard('Temporada', snapshot.season || game?.seasonNumber || 1)}
+        ${gameOverStatCard('División', snapshot.division || clubDivision(game?.selectedClubId).name)}
+        ${gameOverStatCard('Posición', snapshot.position ? `${snapshot.position}°` : '—')}
+        ${gameOverStatCard('Puntos ranking', score)}
+        ${gameOverStatCard('PTS', snapshot.points || 0)}
+        ${gameOverStatCard('PG', snapshot.won || 0)}
+        ${gameOverStatCard('PE', snapshot.drawn || 0)}
+        ${gameOverStatCard('PP', snapshot.lost || 0)}
+        ${gameOverStatCard('GF / GC', `${snapshot.goalsFor || 0} / ${snapshot.goalsAgainst || 0}`)}
+        ${gameOverStatCard('Presupuesto final', formatMoney(budget))}
+      </div>
+      <div class="row game-over-actions">
+        <div class="game-over-advance-wrap"><button class="primary" id="advanceUnifiedBtn">Avanzar día</button>${dailySkillPointsAnimationMarkup()}</div>
+        <button class="ghost" id="btnGameOverNewGame">Buscar otro club</button>
+        ${typeof founderModeEnabled === 'function' && founderModeEnabled() ? '<button class="ghost" id="btnGameOverFounder">Fundar club</button>' : ''}
+        <button class="ghost" id="btnGameOverScoutingArchive">Archivo de jugadores ojeados</button>
+        <button class="ghost" id="btnGameOverSave">Guardar carrera</button>
+      </div>
+      <div id="advanceProgressBox" style="margin-top:10px">${typeof advanceProgressMarkup === 'function' ? advanceProgressMarkup() : ''}</div>
+      ${typeof managerJobMarketMarkup === 'function' ? managerJobMarketMarkup() : ''}
+      ${lastTurnSummaryMarkup()}
+    </div>
+    ${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'game-over', selectable:false }) : ''}
+  </div>`;
+  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  startDailySkillPointsAnimation();
+  $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
+  $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
+  $('btnGameOverScoutingArchive')?.addEventListener('click', () => { if(typeof openScoutingReportsModal === 'function') openScoutingReportsModal('all'); else showNotice('El archivo de ojeo no está disponible todavía.'); });
+  $('btnGameOverSave')?.addEventListener('click', saveLocal);
+  document.querySelectorAll('[data-accept-job-offer]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof acceptManagerJobOffer === 'function') acceptManagerJobOffer(btn.dataset.acceptJobOffer || '');
+  }));
+  document.querySelectorAll('[data-reject-job-offer]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof rejectManagerJobOffer === 'function') rejectManagerJobOffer(btn.dataset.rejectJobOffer || '');
+  }));
+  document.querySelectorAll('[data-apply-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof applyForManagerJob === 'function') applyForManagerJob(Number(btn.dataset.applyJobClub || 0));
+  }));
+  if(typeof updateAdvanceButtonState === 'function') updateAdvanceButtonState();
+  document.querySelectorAll('[data-open-job-club]').forEach(btn => btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const clubId = Number(btn.dataset.openJobClub || 0);
+    if(clubId && typeof openNewGameModal === 'function') openNewGameModal(false, { selectedClubId:clubId });
+  }));
+}
 
-En **Calendario → Mundial de Clubes** se agregó un selector de año para consultar la edición actual y cada edición anterior guardada.
+function renderHome(){
+  if(Number(game?.budget || 0) < 0 && typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
+  const next = getNextMatchForSelected();
+  const clubPlayers = playersByClub(game.selectedClubId);
+  const avgOverall = Math.round(avg(clubPlayers.map(p=>visibleOverall(p))));
+  const avgFitness = squadFitnessAverage(game.selectedClubId);
+  const avgMorale = squadMoraleAverage(game.selectedClubId);
+  const cohesion = cohesionValue(game.selectedClubId);
+  const featured = homeFeaturedPlayers(game.selectedClubId, avgOverall);
+  const injuredList = injuredPlayersByClub(game.selectedClubId);
+  const myStanding = game.standings[game.selectedClubId] || { pts:0, pg:0, pe:0, pp:0, gf:0, gc:0 };
+  const selectedClub = seed.clubs.find(c=>c.id===game.selectedClubId);
+  const position = sortedStandings(selectedClub?.divisionId || null).findIndex(s=>s.clubId===game.selectedClubId)+1;
+  const lastMatches = game.matchHistory.filter(m=>m.homeId===game.selectedClubId || m.awayId===game.selectedClubId).slice(-5).reverse();
+  const problems = game.lastOwnProblems || [];
+  const deltaClass = game.lastBudgetDelta > 0 ? 'ok' : game.lastBudgetDelta < 0 ? 'bad' : 'muted';
+  const deltaText = game.lastBudgetDelta ? `${game.lastBudgetDelta > 0 ? '+' : ''}${formatMoney(game.lastBudgetDelta)}` : '—';
+  const problemBox = problems.length ? `<div class="card blocker"><h3>Revisión obligatoria</h3><p>Hubo lesionados o expulsados propios en el último partido. Entrá a Táctica, reemplazalos y guardá una alineación válida.</p><div class="problem-list">${problems.map(problemItem).join('')}</div><button class="primary" data-go-tactics>Ir a táctica</button></div>` : '';
+  const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
+  view.innerHTML = `
+    <div class="home-message-strip section-title">${homeMessagesSummary()}</div>
+    ${problemBox}
+    ${seasonBox}
+    ${turnModePanelMarkup()}
+    ${typeof managerChallengeHomeMarkup === 'function' ? managerChallengeHomeMarkup() : ''}
+    ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
+    ${visualAlertsMarkup()}
+    <div class="card featured-players-panel" style="margin-top:14px">
+      <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
+      <div class="grid cols-3 featured-player-grid">
+        ${featuredPlayerCard('scorer', featured.scorer, 'Goleador', featured.scorerText)}
+        ${featuredPlayerCard('star', featured.star, 'Estrella', featured.starText)}
+        ${featuredPlayerCard('promise', featured.promise, 'Promesa', featured.promiseText)}
+      </div>
+    </div>
+    ${typeof staffContractsPanelMarkup === 'function' ? staffContractsPanelMarkup() : ''}
+    <div class="grid cols-3" style="margin-top:14px">
+      <div class="card"><p class="label">Posición</p><div class="metric">${position || '—'}°</div></div>
+      <div class="card"><p class="label">Jugadores</p><div class="metric">${clubPlayers.length}</div></div>
+      <div class="card"><p class="label">Presupuesto</p><div class="metric small ${budgetTone(game.budget || 0)}">${formatMoney(game.budget || 0)}</div><p class="small ${deltaClass}">Último balance: ${deltaText}</p></div>
+    </div>
+    <div class="card own-team-stats-card" style="margin-top:14px">
+      <h3>Estadísticas de mi equipo</h3>
+      <div class="grid cols-6 compact-team-stats">
+        <div><p class="label">Puntos</p><strong>${myStanding.pts}</strong></div>
+        <div><p class="label">Ganados</p><strong>${myStanding.pg}</strong></div>
+        <div><p class="label">Empatados</p><strong>${myStanding.pe}</strong></div>
+        <div><p class="label">Perdidos</p><strong>${myStanding.pp}</strong></div>
+        <div><p class="label">GF</p><strong>${myStanding.gf}</strong></div>
+        <div><p class="label">GC</p><strong>${myStanding.gc}</strong></div>
+      </div>
+    </div>
+    <div class="card injury-home-card" style="margin-top:14px">
+      <div class="row"><h3>Jugadores lesionados</h3><span class="pill">${injuredList.length} activo(s)</span></div>
+      ${injuredList.length ? `<div class="injured-home-list">${injuredList.map(item => injuredHomeCard(item)).join('')}</div>` : '<p class="muted">No hay jugadores lesionados en el plantel.</p>'}
+    </div>
+    <div class="split" style="margin-top:14px">
+      <div class="card compact-standings-card">
+        <div class="row"><h3>Tabla cercana</h3><span class="pill">Tu zona</span></div>
+        ${compactHomeStandingsMarkup()}
+      </div>
+      <div class="card">
+        <h3>Últimos partidos</h3>
+        <div class="timeline">${lastMatches.length ? lastMatches.map(compactMatch).join('') : '<p class="muted">Aún no hay partidos jugados.</p>'}</div>
+      </div>
+    </div>
+    ${lastTurnSummaryMarkup()}
 
-Permite consultar:
+  `;
+  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  $('advanceAutoClickerBtn')?.addEventListener('click', () => { if(typeof toggleAdvanceAutoClicker === 'function') toggleAdvanceAutoClicker(); });
+  document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
+  document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
+  document.querySelector('[data-open-season-modal]')?.addEventListener('click',()=>openSeasonEndModal());
+  document.querySelectorAll('.featured-player-card[data-player-id]').forEach(card => card.addEventListener('click',()=>showPlayerModal(Number(card.dataset.playerId))));
+  document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{ activeTab = btn.dataset.goTab; renderAll(); }));
+  $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
+  $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
+  if(typeof bindStaffDismissButtons === 'function') bindStaffDismissButtons(renderHome);
+  updateAdvanceButtonState();
+  startDailySkillPointsAnimation();
+}
+function updateAdvanceButtonState(){
+  const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
+  if(!btn || !game) return;
+  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  const seasonEnded = game.seasonFinalized || seasonPhase() === 'finalized';
+  const ownInfo = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
+  const ownDueToday = Boolean(isRegularSeason() && ownInfo?.date && typeof isCurrentDateOnOrAfterIso === 'function' && isCurrentDateOnOrAfterIso(ownInfo.date));
+  const invalid = ownDueToday ? validateCurrentTactic(false) : [];
+  let text = 'Avanzar día';
+  let disabled = false;
+  btn.classList.remove('secondary');
+  btn.classList.add('primary');
+  if(seasonEnded){
+    text = 'Temporada finalizada';
+    disabled = true;
+  }else if(lockLeft > 0){
+    text = `Espera ${formatClock(lockLeft)}`;
+    disabled = true;
+  }else if(game.gameOver?.active){
+    text = 'Avanzar día';
+    disabled = false;
+  }else if(isRegularSeason() && ownDueToday){
+    text = 'Jugar partido de hoy';
+    if(game.mustReviewTactics){
+      text = 'Revisar táctica';
+      disabled = true;
+    }else if(invalid.length){
+      text = 'Táctica incompleta';
+      disabled = true;
+    }
+  }else if(isPreseason()){
+    const opponentId = Number(game.pendingFriendlyOpponentId || 0);
+    text = opponentId && typeof canPlayPreseasonFriendly === 'function' && canPlayPreseasonFriendly() ? 'Jugar amistoso' : 'Avanzar día';
+  }else if(isPostseason()){
+    text = 'Avanzar día';
+  }
+  btn.textContent = text;
+  btn.disabled = disabled;
+  if(typeof updateAdvanceAutoClickerButton === 'function') updateAdvanceAutoClickerButton();
+  updateAdvanceProgressBox();
+}
+function updateAdvanceProgressBox(){
+  const progressBox = $('advanceProgressBox');
+  if(!progressBox) return;
+  if(!progressBox.querySelector('[data-advance-progress-fill]')){
+    progressBox.innerHTML = advanceProgressMarkup();
+  }
+  const fill = progressBox.querySelector('[data-advance-progress-fill]');
+  if(fill) fill.style.width = `${advanceProgressPercent()}%`;
+  const phraseEl = progressBox.querySelector('[data-advance-phrase]');
+  if(phraseEl){
+    const phrase = advanceStatusPhrase();
+    if(phraseEl.textContent !== phrase){
+      phraseEl.textContent = phrase;
+      phraseEl.classList.remove('is-changing');
+      void phraseEl.offsetWidth;
+      phraseEl.classList.add('is-changing');
+    }
+  }
+}
+function advanceProgressPercent(){
+  if(!game) return 0;
+  const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, (game.advanceLockedUntil || 0) - Date.now());
+  if(lockLeft <= 0) return 100;
+  const duration = Math.max(1, Number(game.advanceLockDurationMs || ADVANCE_LOCK_MS || lockLeft));
+  return clamp(Math.round(((duration - lockLeft) / duration) * 100), 0, 100);
+}
+function advanceProgressMarkup(){
+  if(!game) return '';
+  const pct = advanceProgressPercent();
+  return `<div class="advance-progress"><div class="project-progress"><span data-advance-progress-fill style="width:${pct}%"></span></div><p class="small muted advance-phrase" data-advance-phrase>${escapeHtml(advanceStatusPhrase())}</p></div>`;
+}
+function advanceStatusPhrase(){
+  const fallback = ['Revisando planillas de entrenamiento'];
+  const phrases = (Array.isArray(ADVANCE_STATUS_PHRASES) && ADVANCE_STATUS_PHRASES.length) ? ADVANCE_STATUS_PHRASES : fallback;
+  const now = Date.now();
+  const currentSlot = Math.floor(now / ADVANCE_STATUS_PHRASE_INTERVAL_MS);
+  if(!window.__fmAdvancePhraseState || window.__fmAdvancePhraseState.slot !== currentSlot){
+    const previous = window.__fmAdvancePhraseState?.index;
+    let index = Math.floor(Math.random() * phrases.length);
+    if(phrases.length > 1 && index === previous) index = (index + 1) % phrases.length;
+    window.__fmAdvancePhraseState = { slot: currentSlot, index };
+  }
+  return phrases[window.__fmAdvancePhraseState.index] || fallback[0];
+}
+function formatClock(ms){
+  const total = Math.ceil(ms/1000);
+  const m = Math.floor(total/60);
+  const s = String(total%60).padStart(2,'0');
+  return `${m}:${s}`;
+}
+function weekdayLabelFromIso(iso){
+  if(!validIsoDate(iso)) return '—';
+  const labels = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const date = new Date(`${iso}T00:00:00Z`);
+  return labels[date.getUTCDay()] || '—';
+}
+function currentWeekdayLabel(){
+  if(!game) return '—';
+  const iso = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  return weekdayLabelFromIso(iso);
+}
+function refreshSidebarDate(){
+  if(!game){
+    $('currentSeason') && ($('currentSeason').textContent = 'Temporada: —');
+    $('currentDate').textContent = 'Fecha: —';
+    $('currentRound').textContent = 'Calendario: —';
+    return;
+  }
+  $('currentSeason') && ($('currentSeason').textContent = `Temporada: ${game.seasonNumber || 1}`);
+  $('currentDate').textContent = `Día: ${currentWeekdayLabel()} · Fecha: ${game.currentDate}`;
+  $('currentRound').textContent = phaseLabel();
+}
+function problemItem(problem){
+  const p = playerById(problem.playerId);
+  const type = problem.type === 'injury' ? 'Lesión' : 'Expulsión';
+  return `<span class="pill ${problem.type === 'injury' ? 'warn' : 'bad'}">${type}: ${escapeHtml(p?.name || 'Jugador')}</span>`;
+}
+function matchPreview(match){
+  return `<button class="next-match clickable" data-match-id="${escapeHtml(match.id)}">
+    <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
+    <div class="vs">VS<br><span class="small">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(match.date) : match.date)}</span></div>
+    <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
+    ${matchFieldSummaryMarkup(match)}
+  </button>`;
+}
+function compactMatch(m){
+  const isHome = m.homeId === game.selectedClubId;
+  const gf = isHome ? m.homeGoals : m.awayGoals;
+  const gc = isHome ? m.awayGoals : m.homeGoals;
+  const cls = gf > gc ? 'ok' : gf < gc ? 'bad' : 'warn';
+  return `<button class="stat-rank clickable plain" data-match-id="${escapeHtml(m.id)}"><span>${clubBadge(m.homeId)} ${m.homeGoals} - ${m.awayGoals} ${clubBadge(m.awayId)}</span><strong class="${cls}">${gf > gc ? 'G' : gf < gc ? 'P' : 'E'}</strong></button>`;
+}
 
-- Campeón, subcampeón y tercer puesto.
-- Tablas finales de los ocho grupos.
-- Partidos y resultados de cada grupo.
-- Octavos, cuartos, semifinales, tercer puesto y final.
+function compactHomeStandingsMarkup(){
+  const club = seed.clubs.find(c => Number(c.id) === Number(game.selectedClubId));
+  const table = sortedStandings(club?.divisionId || null);
+  if(!Array.isArray(table) || !table.length) return '<p class="muted">La tabla todavía no está disponible.</p>';
+  const ownIndex = table.findIndex(row => Number(row.clubId) === Number(game.selectedClubId));
+  if(ownIndex < 0) return '<p class="muted">Tu club aún no aparece en la tabla.</p>';
+  const windowSize = Math.min(3, table.length);
+  const start = Math.max(0, Math.min(ownIndex - 1, table.length - windowSize));
+  const rows = table.slice(start, start + windowSize);
+  return `<div class="compact-standings-list">${rows.map((row, index) => {
+    const pos = start + index + 1;
+    const own = Number(row.clubId) === Number(game.selectedClubId);
+    const dg = Number(row.dg || 0);
+    return `<button class="stat-rank clickable plain compact-standing-row ${own ? 'own-club-row' : ''}" data-club-id="${escapeHtml(row.clubId)}"><span><span class="rank-num">${pos}°</span>${clubBadge(row.clubId)} ${escapeHtml(clubName(row.clubId))}</span><strong>${Number(row.pts || 0)} pts <span class="muted small">DG ${dg >= 0 ? '+' : ''}${dg}</span></strong></button>`;
+  }).join('')}</div>`;
+}
 
-### Fase de grupos
 
-Los ocho grupos se muestran como ligas de cuatro equipos. Cada tabla incluye posición, equipo, partidos jugados, diferencia de gol y puntos. Los dos primeros aparecen destacados como clasificados.
+function unreadMessagesCount(){
+  return (game?.messages || []).filter(m => !m.read).length;
+}
+function unreadAssistantMessagesCount(){
+  return (game?.messages || []).filter(m => !m.read && String(m.type || '').toLowerCase() === 'asistente').length;
+}
+function assistantMessagesEnabled(){
+  return !game || game.assistantMessagesEnabled !== false;
+}
+function assistantMessagesButtonLabel(){
+  return assistantMessagesEnabled() ? 'Recibir mensajes de tu ayudante' : 'No recibir mensajes del ayudante';
+}
+function updateAssistantMessagesToggle(){
+  const btn = document.getElementById('btnAssistantMessagesToggle');
+  if(!btn) return;
+  btn.textContent = assistantMessagesButtonLabel();
+  btn.disabled = !game;
+}
+function pushGameMessage(message){
+  if(!game) return null;
+  game.messages = Array.isArray(game.messages) ? game.messages : [];
+  const item = {
+    id: message.id || `msg-${Date.now()}-${hashNumber(`${message.title || ''}-${game.messages.length}-${Math.random()}`, 1000000)}`,
+    turn: game.matchdayIndex || 0,
+    season: game.seasonNumber || 1,
+    date: game.currentDate || '',
+    read: false,
+    priority: message.priority || 'normal',
+    type: message.type || 'info',
+    title: message.title || 'Mensaje',
+    body: message.body || '',
+    action: message.action || null,
+    createdAt: Date.now()
+  };
+  game.messages.unshift(item);
+  return item;
+}
 
-### Cuadro eliminatorio
+function assistantAdvicePool(){
+  const cfg = window.GAME_CONFIG?.mensajesAsistente || {};
+  return Array.isArray(cfg.consejos) ? cfg.consejos.filter(Boolean) : [];
+}
+function assistantAdviceManagerName(){
+  return String(game?.rankingManagerName || (typeof storedManagerName === 'function' ? storedManagerName() : '') || 'Míster').trim() || 'Míster';
+}
+function assistantAdviceText(raw){
+  const managerName = assistantAdviceManagerName();
+  return String(raw || '')
+    .replaceAll('#usuario#', managerName)
+    .replaceAll('#manager#', managerName)
+    .replaceAll('{{usuario}}', managerName)
+    .replaceAll('{{manager}}', managerName);
+}
+function ensureAssistantAdviceState(){
+  if(!game) return null;
+  game.assistantAdviceState = game.assistantAdviceState && typeof game.assistantAdviceState === 'object' && !Array.isArray(game.assistantAdviceState) ? game.assistantAdviceState : {};
+  game.assistantAdviceState.used = Array.isArray(game.assistantAdviceState.used) ? game.assistantAdviceState.used.map(Number).filter(Number.isFinite) : [];
+  game.assistantAdviceState.lastTurn = Number.isFinite(Number(game.assistantAdviceState.lastTurn)) ? Number(game.assistantAdviceState.lastTurn) : -99999;
+  game.assistantAdviceState.count = Math.max(0, Math.round(Number(game.assistantAdviceState.count || 0)));
+  return game.assistantAdviceState;
+}
+function pickAssistantAdviceIndex(pool, state, reason='daily'){
+  if(!pool.length) return -1;
+  const used = new Set((state?.used || []).map(Number));
+  if(used.size >= pool.length){
+    state.used = [];
+    used.clear();
+  }
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game?.matchdayIndex || 0);
+  let idx = typeof hashNumber === 'function' ? hashNumber(`assistant-advice-${reason}-${game?.seasonNumber || 1}-${turn}-${state?.count || 0}`, pool.length) : Math.floor(Math.random() * pool.length);
+  for(let i=0; i<pool.length; i++){
+    const candidate = (idx + i) % pool.length;
+    if(!used.has(candidate)) return candidate;
+  }
+  return idx;
+}
+function maybePushAssistantAdviceMessage(reason='daily', options={}){
+  if(!game) return null;
+  const cfg = window.GAME_CONFIG?.mensajesAsistente || {};
+  if(cfg.activo === false || game.assistantMessagesEnabled === false) return null;
+  const pool = assistantAdvicePool();
+  if(!pool.length) return null;
+  const state = ensureAssistantAdviceState();
+  if(!state) return null;
+  const force = Boolean(options.force || reason === 'new_game');
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game.matchdayIndex || 0);
+  const interval = Math.max(1, Math.round(Number(cfg.frecuenciaDias || 12)));
+  if(!force && turn - Number(state.lastTurn || -99999) < interval) return null;
+  const idx = pickAssistantAdviceIndex(pool, state, reason);
+  if(idx < 0) return null;
+  state.used.push(idx);
+  state.lastTurn = turn;
+  state.count += 1;
+  return pushGameMessage({
+    type:'asistente',
+    priority:'normal',
+    title: cfg.titulo || 'Consejo del asistente',
+    body: assistantAdviceText(pool[idx])
+  });
+}
+function queueInitialAssistantAdviceMessages(){
+  return maybePushAssistantAdviceMessage('new_game', { force:true });
+}
+function markMessagesRead(){
+  if(!game?.messages) return;
+  game.messages.forEach(m => { m.read = true; });
+}
+function latestMessages(limit=3){
+  return (game?.messages || []).slice(0, limit);
+}
+function homeMessagesSummary(){
+  const items = latestMessages(3);
+  const count = unreadMessagesCount();
+  if(!items.length){
+    return `<div class="home-messages-summary"><p class="label">Mensajes / eventos</p><h2>Sin mensajes nuevos</h2><p class="tagline">Los avisos deportivos, ofertas y eventos del club aparecerán acá.</p></div>`;
+  }
+  const latest = items[0];
+  const assistantClass = String(latest.type || '').toLowerCase() === 'asistente' ? ' assistant-message-summary' : '';
+  const assistantUnread = unreadAssistantMessagesCount();
+  const badge = assistantUnread ? `<span class="pill danger">${assistantUnread} mensaje asistente</span>` : (count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>');
+  return `<div class="home-messages-summary clickable${assistantClass}" data-open-messages>
+    <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(latest.title)}</h2></div>${badge}</div>
+    <p class="tagline">${escapeHtml(latest.body)}</p>
+  </div>`;
+}
+function messageHasPendingAction(message){
+  return Boolean(message?.action && String(message.action.status || 'pending') === 'pending');
+}
+function deletableOldMessages(){
+  return (game?.messages || []).filter(message => !messageHasPendingAction(message));
+}
+function deleteOldMessages(){
+  if(!game) return;
+  const deletable = deletableOldMessages();
+  if(!deletable.length){ showNotice('No hay mensajes cerrados para borrar.'); return; }
+  const ok = window.confirm(`Se borrarán ${deletable.length} mensaje(s) antiguos. Las ofertas y acciones pendientes se conservarán. ¿Continuar?`);
+  if(!ok) return;
+  game.messages = (game.messages || []).filter(message => messageHasPendingAction(message));
+  saveLocal(true);
+  renderMessages();
+  showNotice(`${deletable.length} mensaje(s) antiguo(s) eliminado(s).`);
+}
+function renderMessages(){
+  if(typeof ensurePendingSpecialClauseAutoAcceptanceMetadata === 'function') ensurePendingSpecialClauseAutoAcceptanceMetadata();
+  markMessagesRead();
+  const messages = Array.isArray(game.messages) ? game.messages : [];
+  const unread = messages.filter(m => !m.read).length;
+  const pendingOffers = messages.filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
+  const highPriority = messages.filter(m => m.priority === 'high').length;
+  const rows = messages.map(m => messageCard(m)).join('');
+  const deletableCount = deletableOldMessages().length;
+  view.innerHTML = `
+    <div class="row section-title compact-section-title"><div><h2>Mensajes</h2><p class="tagline">Bandeja compacta de avisos del club.</p></div><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar mensajes antiguos${deletableCount ? ` (${deletableCount})` : ''}</button></div>
+    <div class="messages-shell">
+      <div class="messages-toolbar card">
+        <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
+        <div class="messages-toolbar-item"><p class="label">Nuevos</p><strong>${unread}</strong><span>Sin leer</span></div>
+        <div class="messages-toolbar-item"><p class="label">Ofertas</p><strong>${pendingOffers}</strong><span>Pendientes</span></div>
+        <div class="messages-toolbar-item"><p class="label">Importantes</p><strong>${highPriority}</strong><span>Prioridad alta</span></div>
+      </div>
+      <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
+    </div>`;
+  document.querySelector('#btnDeleteOldMessages')?.addEventListener('click', deleteOldMessages);
+  if(!(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active))){
+    document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
+    document.querySelectorAll('[data-convince-player]').forEach(btn => btn.addEventListener('click', () => convinceSpecialClausePlayer(btn.dataset.convincePlayer)));
+    document.querySelectorAll('[data-reject-offer]').forEach(btn => btn.addEventListener('click', () => rejectTransferOffer(btn.dataset.rejectOffer)));
+  }
+  saveLocal(true);
+}
+function messageIcon(type){
+  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', asistente:'🎧' };
+  return map[String(type || '').trim()] || '✉️';
+}
+function messageToneClass(type, priority){
+  if(priority === 'high') return 'message-tone-high';
+  const key = String(type || '').toLowerCase();
+  if(['transferoffer','finance'].includes(key)) return 'message-tone-money';
+  if(['evento','noticia'].includes(key)) return 'message-tone-sport';
+  if(['warning'].includes(key)) return 'message-tone-alert';
+  if(['staff','directiva'].includes(key)) return 'message-tone-board';
+  if(['asistente'].includes(key)) return 'message-tone-assistant';
+  return 'message-tone-info';
+}
+function messageTypeLabel(type){
+  const raw = String(type || 'info').trim();
+  if(!raw) return 'Info';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+function messageTransferPlayer(m){
+  if(m?.action?.type !== 'transferOffer') return null;
+  return playerById(Number(m.action.playerId || 0));
+}
+function messagePlayerLink(player, label=null){
+  if(!player) return '';
+  const text = label || player.name || 'Jugador';
+  return `<button type="button" class="linklike message-player-link" data-player-id="${Number(player.id)}" title="Abrir ficha del jugador">${escapeHtml(text)}</button>`;
+}
+function messageTitleHtml(m){
+  const player = messageTransferPlayer(m);
+  if(player) return `Oferta por ${messagePlayerLink(player, playerLastName(player.name))}`;
+  return escapeHtml(m.title);
+}
+function messageBodyHtml(m){
+  const player = messageTransferPlayer(m);
+  const safeBody = escapeHtml(m.body || '');
+  if(!player?.name) return safeBody;
+  const safeName = escapeHtml(player.name);
+  const link = messagePlayerLink(player, player.name);
+  if(safeBody.includes(safeName)) return safeBody.split(safeName).join(link);
+  return `${safeBody} <span class="message-player-inline">Jugador: ${link}</span>`;
+}
+function transferOfferStatusLabel(status){
+  const map = {
+    accepted:'Aceptada',
+    rejected:'Rechazada',
+    blocked_by_board:'Bloqueada por directiva',
+    auto_rejected_intransferible:'Rechazada: intransferible',
+    convinced:'Jugador convencido',
+    forced_sale:'Venta ejecutada',
+    auto_accepted_no_response:'Aceptada automáticamente: sin respuesta',
+    cancelled_club_change:'Cerrada: cambiaste de club',
+    expired_player_unavailable:'Cerrada: jugador no disponible'
+  };
+  return map[status] || String(status || 'Cerrada');
+}
+function messageCard(m){
+  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
+  const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
+  const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
+    ? (isWithoutClub
+      ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
+      : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
+    : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '');
+  const toneClass = messageToneClass(m.type, m.priority);
+  const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
+  const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
+  const assistantBadge = isAssistant && !m.read ? '<span class="assistant-message-badge">Tenés 1 mensaje</span>' : '';
+  return `<div class="card message-card ${toneClass} ${isAssistant ? 'assistant-message-card' : ''} ${m.read ? '' : 'unread'}">
+    <div class="message-card-accent"></div>
+    <div class="message-card-main">
+      <div class="row message-card-head">
+        <div class="message-head-left">
+          <div class="message-meta-row">
+            <span class="message-type-chip">${messageIcon(m.type)} ${escapeHtml(messageTypeLabel(m.type || 'info'))}</span>
+            <span class="message-date-chip">Temporada ${m.season || 1} · Día ${((Number(m.turn || 0)) * DAYS_PER_ADVANCE) + 1}</span>
+            ${unreadMark}
+            ${assistantBadge}
+          </div>
+          <h3>${messageTitleHtml(m)}</h3>
+        </div>
+        <span class="pill ${m.priority === 'high' ? 'warn' : ''}">${m.priority === 'high' ? 'Importante' : 'Normal'}</span>
+      </div>
+      <div class="message-paper"><p>${messageBodyHtml(m)}</p></div>
+      ${action}
+    </div>
+  </div>`;
+}
+function hasPendingTransferOfferForPlayer(playerId){
+  const id = Number(playerId);
+  return (game?.messages || []).some(m => m.action?.type === 'transferOffer' && m.action.status === 'pending' && Number(m.action.playerId) === id);
+}
+function playerSeasonStatsForOffers(player){
+  const st = game?.playerStats?.[player?.id] || {};
+  return {
+    played:Number(st.played || 0),
+    goals:Number(st.goals || 0),
+    assists:Number(st.assists || 0),
+    injuries:Number(st.injuries || 0),
+    red:Number(st.red || 0),
+    goalErrors:Number(st.goalErrors || 0),
+    errors:Number(st.errors || 0),
+    keySaves:Number(st.keySaves || 0)
+  };
+}
+function playerQualifiesForTransferOffers(player){
+  if(!player) return false;
+  const st = playerSeasonStatsForOffers(player);
+  const played = Number(st.played || 0);
+  const directProduction = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
+  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
+  const young = Number(player.age || 99) <= 23;
+  const goodYoungProfile = young && visibleOverall(player) >= 58 && played >= 2;
+  const transferListed = Boolean(player.transferListed);
+  if(isStar && played > 0) return true;
+  if(goodYoungProfile && directProduction > 0) return true;
+  if(transferListed && hasPlayerSalaryPaid(player) && played > 0) return true;
+  if(PLAYER_OFFERS_REQUIRE_MATCHES && played <= 0) return false;
+  if(PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST && (st.goals + st.assists) <= 0) return false;
+  return true;
+}
+function playerOfferProfile(player){
+  const st = playerSeasonStatsForOffers(player);
+  const isStar = typeof playerStarRecord === 'function' && Boolean(playerStarRecord(player));
+  const young = Number(player.age || 99) <= 23;
+  const production = Number(st.goals || 0) + Number(st.assists || 0) + Number(st.keySaves || 0);
+  if(isStar) return 'star';
+  if(young && visibleOverall(player) >= 58 && (production > 0 || Number(st.played || 0) >= 5)) return 'young_good';
+  if(Boolean(player.transferListed)) return 'transfer_listed';
+  return 'standard';
+}
+function playerOfferPerformanceScore(player){
+  const st = playerSeasonStatsForOffers(player);
+  const profile = playerOfferProfile(player);
+  const production = (st.goals * 24) + (st.assists * 18) + (st.keySaves * 14);
+  const youthBonus = Number(player.age || 99) <= 21 ? 22 : Number(player.age || 99) <= 23 ? 12 : 0;
+  const starBonus = profile === 'star' ? 55 : 0;
+  const listedPenalty = profile === 'transfer_listed' ? 18 : 0;
+  const reliabilityPenalty = (st.injuries * 10) + (st.red * 12) + (st.goalErrors * 18) + (st.errors * 4);
+  return Math.max(0, (visibleOverall(player) * 0.42) + (st.played * 2) + production + youthBonus + starBonus - listedPenalty - reliabilityPenalty);
+}
+function playerOfferSeasonPerformancePercent(player){
+  const st = playerSeasonStatsForOffers(player);
+  const played = Math.max(0, Number(st.played || 0));
+  if(played <= 0) return 0;
+  const group = typeof playerGroup === 'function' ? playerGroup(player?.position) : String(player?.position || '');
+  let contribution = 0;
+  if(group === 'gk'){
+    contribution = (st.keySaves * 1.8) + (st.assists * 1.2) + (st.goals * 3);
+  }else if(group === 'def'){
+    contribution = (st.goals * 2.3) + (st.assists * 1.8) + (st.keySaves * 0.4);
+  }else if(group === 'mid'){
+    contribution = (st.goals * 2.1) + (st.assists * 2.5) + (st.keySaves * 0.3);
+  }else{
+    contribution = (st.goals * 2.8) + (st.assists * 1.8) + (st.keySaves * 0.2);
+  }
+  const reliability = Math.max(0, 1 - ((st.red * 0.08) + (st.goalErrors * 0.12) + (st.errors * 0.025) + (st.injuries * 0.02)));
+  const productionPerMatch = contribution / played;
+  const activity = Math.min(1, played / 12);
+  return clamp(Math.round((35 + (productionPerMatch * 34) + (activity * 22)) * reliability), 0, 100);
+}
+function playerOfferScoutingPercent(player){
+  if(!player || !game) return 0;
+  const report = game?.scoutingCenter?.reports?.[String(Number(player.id || 0))];
+  const known = new Set(Array.isArray(report?.visibleSkills) ? report.visibleSkills.map(String) : []);
+  const hiddenKeys = typeof scoutingHiddenSkillKeys === 'function'
+    ? scoutingHiddenSkillKeys(player)
+    : ['hidden.aggression','hidden.genetics','hidden.surprise'];
+  const uniqueHidden = Array.from(new Set((hiddenKeys || []).map(String))).filter(Boolean);
+  if(!uniqueHidden.length) return 0;
+  const revealed = uniqueHidden.filter(key => known.has(key)).length;
+  return clamp(Math.round((revealed / uniqueHidden.length) * 100), 0, 100);
+}
+function playerOfferValueFactors(player){
+  const st = playerSeasonStatsForOffers(player);
+  const played = Math.max(0, Number(st.played || 0));
+  const goals = Math.max(0, Number(st.goals || 0));
+  const assists = Math.max(0, Number(st.assists || 0));
+  const performancePercent = playerOfferSeasonPerformancePercent(player);
+  const scoutingPercent = playerOfferScoutingPercent(player);
+  const matchesBonus = Math.min(Number(PLAYER_OFFER_MATCH_BONUS_MAX || 0), (played / Math.max(1, Number(PLAYER_OFFER_MATCHES_FOR_MAX_BONUS || 24))) * Number(PLAYER_OFFER_MATCH_BONUS_MAX || 0));
+  const goalsBonus = Math.min(Number(PLAYER_OFFER_GOAL_BONUS_MAX || 0), goals * Number(PLAYER_OFFER_GOAL_BONUS || 0));
+  const assistsBonus = Math.min(Number(PLAYER_OFFER_ASSIST_BONUS_MAX || 0), assists * Number(PLAYER_OFFER_ASSIST_BONUS || 0));
+  const performanceBonus = (performancePercent / 100) * Number(PLAYER_OFFER_PERFORMANCE_BONUS_MAX || 0);
+  const scoutingBonus = (scoutingPercent / 100) * Number(PLAYER_OFFER_SCOUTING_BONUS_MAX || 0);
+  const sportingDirectorBonus = typeof specialActiveBonus === 'function'
+    ? Math.max(0, Number(specialActiveBonus('director_deportivo') || 0))
+    : 0;
+  return {
+    played,
+    goals,
+    assists,
+    performancePercent,
+    scoutingPercent,
+    matchesBonus,
+    goalsBonus,
+    assistsBonus,
+    performanceBonus,
+    scoutingBonus,
+    sportingDirectorBonus,
+    totalBonus:matchesBonus + goalsBonus + assistsBonus + performanceBonus + scoutingBonus + sportingDirectorBonus
+  };
+}
+function playerOfferRange(player){
+  const profile = playerOfferProfile(player);
+  // Las ofertas por cláusula completa mantienen su flujo separado.
+  if(profile === 'star') return { min:70, max:100 };
+  if(profile === 'young_good') return { min:36, max:70 };
+  if(profile === 'transfer_listed') return { min:12, max:36 };
+  const minRate = Number(PLAYER_OFFER_MIN_CLAUSE_RATE || 0.10);
+  const maxRate = Number(PLAYER_OFFER_MAX_CLAUSE_RATE || 0.30);
+  return { min:Math.round(minRate * 100), max:Math.max(Math.round(minRate * 100), Math.round(maxRate * 100)) };
+}
+function playerOfferPercent(player, salt=''){
+  const range = playerOfferRange(player);
+  const minPct = Math.max(1, Math.round(range.min || 5));
+  const maxPct = Math.max(minPct, Math.round(range.max || 15));
+  const span = Math.max(0, maxPct - minPct);
+  const factors = playerOfferValueFactors(player);
+  const randomRoom = Math.min(4, Math.max(0, Math.floor(span * 0.20)));
+  const noise = randomRoom > 0 ? hashNumber(`player-offer-pct-${player?.id}-${salt}-${game?.seasonNumber || 1}`, randomRoom + 1) : 0;
+  const sportingDirectorBonus = Math.max(0, Math.round(Number(factors.sportingDirectorBonus || 0)));
+  const earnedBonus = Math.max(0, Math.round(Number(factors.totalBonus || 0) - sportingDirectorBonus));
+  const basePercent = clamp(minPct + noise + earnedBonus, minPct, Math.min(100, maxPct));
+  return clamp(basePercent + sportingDirectorBonus, minPct, 100);
+}
+function buildTransferOfferFinancials(player, pct){
+  const clause = refreshPlayerClause(player);
+  const grossAmount = Math.max(0, Math.round(clause * Number(pct || 0) / 100));
+  const taxAmount = Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0));
+  const netAmount = Math.max(0, grossAmount - taxAmount);
+  return { clause, grossAmount, taxAmount, netAmount };
+}
+function normalizeFederationKey(value){
+  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function transferTaxFederationByCountry(country){
+  const key = normalizeFederationKey(country);
+  const configured = typeof TRANSFER_TAX_FEDERATIONS === 'object' && TRANSFER_TAX_FEDERATIONS ? TRANSFER_TAX_FEDERATIONS : {};
+  const map = Object.fromEntries(Object.entries(configured).map(([countryName, federation]) => [normalizeFederationKey(countryName), String(federation || '').trim() || 'Federación']));
+  const aliases = { brazil:'Brasil', england:'Inglaterra', spain:'España', espana:'España', italy:'Italia', romania:'Rumania' };
+  return map[key] || map[normalizeFederationKey(aliases[key])] || 'Federación';
+}
+function transferTaxFederationForSource(source){
+  const sourceObj = typeof source === 'object' && source ? source : { name:String(source || '') };
+  const sourceClubId = Number(sourceObj.id || sourceObj.sourceClubId || 0);
+  if(sourceClubId > 0){
+    const sourceClub = seed?.clubs?.find(c => Number(c.id) === sourceClubId);
+    if(sourceClub) return transferTaxFederationByCountry(clubCountry(sourceClub));
+  }
+  const nameKey = normalizeFederationKey(sourceObj.name || sourceObj.club || sourceObj.foreignClub || source);
+  const genericClubFederations = [
+    { keys:['lisboa', 'porto'], value:'FPF' },
+    { keys:['london'], value:'FA' },
+    { keys:['milano'], value:'FIGC' },
+    { keys:['paris'], value:'FFF' },
+    { keys:['berlin'], value:'DFB' },
+    { keys:['madrid'], value:'RFEF' },
+    { keys:['amsterdam'], value:'KNVB' },
+    { keys:['montevideo'], value:'AUF' },
+    { keys:['santos'], value:'CBF' }
+  ];
+  const found = genericClubFederations.find(item => item.keys.some(key => nameKey.includes(key)));
+  if(found) return found.value;
+  const selectedClub = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  return transferTaxFederationByCountry(selectedClub ? clubCountry(selectedClub) : game?.selectedCountry || 'Argentina');
+}
+function transferOfferBody(source, player, financials, pct, suffix=''){
+  const sourceObj = typeof source === 'object' && source ? source : { name:String(source || 'Club interesado') };
+  const foreignClub = sourceObj.name || 'Club interesado';
+  const federation = sourceObj.federation || transferTaxFederationForSource(sourceObj);
+  return `${foreignClub} ofrece ${formatMoney(financials.grossAmount)} por ${player.name}. La oferta equivale al ${pct}% de su cláusula. ${federation} retiene ${formatMoney(financials.taxAmount)} en impuestos de traspaso; el club recibiría ${formatMoney(financials.netAmount)} netos.${suffix ? ' ' + suffix : ''}`;
+}
+function managerPointsPerGame(){
+  return typeof managerCurrentPPG === 'function' ? managerCurrentPPG() : 0;
+}
+function botTransferOfferClub(player){
+  const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
+  if(!clubs.length) return { name:'Club interesado', id:-1 };
+  const sameDivision = clubs.filter(c => String(c.divisionId || '') === String(seed.clubs.find(x => Number(x.id) === Number(game?.selectedClubId))?.divisionId || ''));
+  const pool = sameDivision.length ? sameDivision : clubs;
+  const club = pool[hashNumber(`bot-offer-club-${player.id}-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}`, pool.length)];
+  return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
+}
 
-Debajo de los grupos se muestra un cuadro horizontal con octavos, cuartos, semifinales, final y partido por el tercer puesto.
+function currentManagerLeaguePosition(){
+  const divisionId = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId))?.divisionId || null;
+  const table = typeof sortedStandings === 'function' ? sortedStandings(divisionId) : [];
+  const index = table.findIndex(row => Number(row.clubId) === Number(game?.selectedClubId));
+  return index >= 0 ? index + 1 : 20;
+}
+function isPendingSpecialClauseOfferMessage(message){
+  return Boolean(message?.action?.type === 'transferOffer'
+    && message.action.status === 'pending'
+    && (message.action.origin === 'special_clause' || message.action.canConvince === true));
+}
+function specialClauseOfferCreatedSeasonDay(message){
+  const stored = Number(message?.action?.createdSeasonDay || 0);
+  if(stored > 0) return stored;
+  const season = Math.max(1, Math.round(Number(message?.season || game?.seasonNumber || 1)));
+  const year = typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : currentSeasonYear();
+  const date = validIsoDate(message?.date) ? message.date : (game?.currentDate || '');
+  const calculated = typeof seasonDayFromDate === 'function' ? Number(seasonDayFromDate(date, year) || 0) : 0;
+  return Math.max(1, calculated || (typeof currentGlobalDayNumber === 'function' ? Number(currentGlobalDayNumber() || 1) : 1));
+}
+function specialClauseAutomaticAcceptanceDay(createdSeasonDay){
+  const created = Math.max(1, Math.round(Number(createdSeasonDay || 1)));
+  return created <= Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
+    ? Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
+    : Number(SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355);
+}
+function specialClauseAutoAcceptanceWarning(day){
+  return `Si no respondés ni hablás con el jugador, la cláusula se aceptará automáticamente el día ${Math.max(1, Math.round(Number(day || 0)))}.`;
+}
+function ensureSpecialClauseAutoAcceptanceMetadata(message, options={}){
+  if(!isPendingSpecialClauseOfferMessage(message)) return null;
+  const createdSeasonDay = specialClauseOfferCreatedSeasonDay(message);
+  const currentDay = typeof currentGlobalDayNumber === 'function' ? Math.max(1, Math.round(Number(currentGlobalDayNumber() || 1))) : createdSeasonDay;
+  const fallbackDeadline = currentDay <= Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
+    ? Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
+    : Number(SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355);
+  const autoAcceptSeasonDay = Math.max(1, Math.round(Number(message.action.autoAcceptSeasonDay || fallbackDeadline)));
+  message.action.createdSeasonDay = createdSeasonDay;
+  message.action.autoAcceptSeasonDay = autoAcceptSeasonDay;
+  message.action.ownerClubId = Number(message.action.ownerClubId || game?.selectedClubId || 0);
+  if(options.addWarning !== false && !message.action.autoAcceptWarningAdded){
+    const warning = specialClauseAutoAcceptanceWarning(autoAcceptSeasonDay);
+    if(!String(message.body || '').includes(warning)) message.body = `${String(message.body || '').trim()} ${warning}`.trim();
+    message.action.autoAcceptWarningAdded = true;
+  }
+  return message.action;
+}
+function ensurePendingSpecialClauseAutoAcceptanceMetadata(){
+  if(!game) return 0;
+  let changed = 0;
+  (game.messages || []).forEach(message => {
+    if(!isPendingSpecialClauseOfferMessage(message)) return;
+    const before = JSON.stringify(message.action || {});
+    const beforeBody = String(message.body || '');
+    ensureSpecialClauseAutoAcceptanceMetadata(message);
+    if(before !== JSON.stringify(message.action || {}) || beforeBody !== String(message.body || '')) changed += 1;
+  });
+  return changed;
+}
+function specialClauseNoResponseMessages(player, managerName){
+  const playerName = player?.name || 'Jugador';
+  const clubNameValue = clubName(player?.clubId || game?.selectedClubId) || 'el club';
+  const manager = managerName || 'Manager';
+  return [
+    `${manager}, esperé una respuesta sobre mi futuro y nunca llegó. Ni siquiera tuvimos una charla. No voy a seguir en un club que ignora una decisión tan importante: ejecuto la cláusula y me marcho de ${clubNameValue}.`,
+    `Soy ${playerName}. La oferta estuvo días sobre la mesa y nadie se comunicó conmigo. Ese silencio me dejó claro el lugar que ocupaba en ${clubNameValue}. Acepto la salida y continúo mi carrera en otro club.`,
+    `${manager}, no esperaba promesas, pero sí una conversación. Como nadie respondió ni explicó qué quería hacer conmigo, decidí aceptar la cláusula. Me voy decepcionado por la forma en que terminó mi etapa en ${clubNameValue}.`,
+    `La cláusula fue pagada y esperé que ${clubNameValue} se acercara a hablar. No ocurrió. Sentí indiferencia en un momento decisivo para mi carrera, así que doy por terminado mi ciclo y me marcho.`,
+    `${manager}, el problema no fue la oferta: fue no recibir una sola respuesta. Después de esperar sin que nadie hablara conmigo, ya no tengo motivos para quedarme. La transferencia se ejecuta y dejo ${clubNameValue}.`
+  ];
+}
+function processUnansweredSpecialClauseOffers(options={}){
+  const result = { checked:0, accepted:0, closed:0, messages:[], seasonDay:0 };
+  if(!game) return result;
+  ensurePendingSpecialClauseAutoAcceptanceMetadata();
+  const currentSeason = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const currentDay = typeof currentGlobalDayNumber === 'function'
+    ? Math.max(1, Math.round(Number(currentGlobalDayNumber() || 1)))
+    : Math.max(1, Math.round(Number(seasonDayFromDate(game.currentDate, currentSeasonYear()) || 1)));
+  result.seasonDay = currentDay;
+  const managerName = game?.rankingManagerName || storedManagerName() || 'Manager';
+  const pending = (game.messages || []).filter(isPendingSpecialClauseOfferMessage);
+  for(const msg of pending){
+    result.checked += 1;
+    const action = ensureSpecialClauseAutoAcceptanceMetadata(msg);
+    if(!action) continue;
+    const offerSeason = Math.max(1, Math.round(Number(msg.season || currentSeason)));
+    const due = Math.max(1, Math.round(Number(action.autoAcceptSeasonDay || SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355)));
+    const overdue = offerSeason < currentSeason || (offerSeason === currentSeason && currentDay >= due);
+    if(!overdue) continue;
+    const player = playerById(Number(action.playerId || 0));
+    const ownerClubId = Number(action.ownerClubId || game.selectedClubId || 0);
+    if(ownerClubId && ownerClubId !== Number(game.selectedClubId || 0)){
+      action.status = 'cancelled_club_change';
+      action.closedAutomaticallyAtSeasonDay = currentDay;
+      msg.body += ' La oferta quedó cerrada porque el manager ya no dirige al club que recibió la propuesta.';
+      result.closed += 1;
+      continue;
+    }
+    if(!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0)){
+      action.status = 'expired_player_unavailable';
+      action.closedAutomaticallyAtSeasonDay = currentDay;
+      msg.body += ' La oferta quedó cerrada porque el jugador ya no pertenece al club.';
+      result.closed += 1;
+      continue;
+    }
+    const variants = specialClauseNoResponseMessages(player, managerName);
+    const text = variants[hashNumber(`special-clause-no-response-${msg.id}-${player.id}-${offerSeason}-${due}`, variants.length)];
+    action.autoAcceptedAtSeasonDay = currentDay;
+    action.autoAcceptedAtDate = game.currentDate || '';
+    action.noResponseMessage = text;
+    completeTransferSaleFromMessage(msg, player, {
+      status:'auto_accepted_no_response',
+      bodyPrefix:`La oferta se aceptó automáticamente por falta de respuesta. ${text}`,
+      notice:`${player.name} ejecutó la cláusula después de no recibir respuesta.`,
+      silent:true
+    });
+    const departureMessage = pushGameMessage({
+      type:'mercado',
+      priority:'high',
+      title:`${playerLastName(player.name)} se marchó sin recibir respuesta`,
+      body:text,
+      id:`special-clause-no-response-${offerSeason}-${player.id}-${due}`
+    });
+    if(departureMessage) result.messages.push(departureMessage.id);
+    result.accepted += 1;
+  }
+  if(result.accepted || result.closed){
+    saveLocal(true);
+    if(!options.silent && result.accepted) showNotice(`${result.accepted} oferta(s) por cláusula se aceptaron automáticamente por falta de respuesta.`);
+  }
+  return result;
+}
+function specialClauseOfferScheduleState(){
+  if(!game || !SPECIAL_CLAUSE_OFFER_ENABLED) return null;
+  const season = Number(game.seasonNumber || 1);
+  const clubId = Number(game.selectedClubId || 0);
+  const total = Number(game.fixtures?.length || 0);
+  if(!clubId || total <= 0) return null;
+  const start = Math.max(0, total - Number(SPECIAL_CLAUSE_OFFER_LAST_MATCHDAYS || 10));
+  const minCount = Number(SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON || 1);
+  const maxCount = Math.max(minCount, Number(SPECIAL_CLAUSE_OFFER_MAX_PER_SEASON || 2));
+  const targetCount = Math.max(0, Math.min(maxCount, minCount + hashNumber(`special-clause-count-${season}-${clubId}`, Math.max(1, maxCount - minCount + 1))));
+  const candidates = [];
+  for(let i=start; i<total; i++) candidates.push(i);
+  candidates.sort((a,b)=>hashNumber(`special-clause-date-${season}-${clubId}-${a}`, 100000)-hashNumber(`special-clause-date-${season}-${clubId}-${b}`, 100000));
+  const scheduled = candidates.slice(0, targetCount).sort((a,b)=>a-b);
+  const state = game.specialClauseOffers;
+  if(!state || Number(state.season || 0) !== season || Number(state.clubId || 0) !== clubId){
+    game.specialClauseOffers = { season, clubId, targetCount, scheduled, generated:[], skipped:[] };
+  }else{
+    game.specialClauseOffers.targetCount = Number.isFinite(Number(state.targetCount)) ? Number(state.targetCount) : targetCount;
+    game.specialClauseOffers.scheduled = Array.isArray(state.scheduled) && state.scheduled.length ? state.scheduled : scheduled;
+    game.specialClauseOffers.generated = Array.isArray(state.generated) ? state.generated : [];
+    game.specialClauseOffers.skipped = Array.isArray(state.skipped) ? state.skipped : [];
+  }
+  return game.specialClauseOffers;
+}
+function sameLeagueClauseOfferClub(player){
+  const selectedClub = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId));
+  const clubs = (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId) && String(c.divisionId || '') === String(selectedClub?.divisionId || ''));
+  const pool = clubs.length ? clubs : (seed?.clubs || []).filter(c => Number(c.id) !== Number(game?.selectedClubId));
+  if(!pool.length) return { name:'Club interesado', id:-1 };
+  const club = pool[hashNumber(`special-clause-club-${game?.seasonNumber || 1}-${game?.matchdayIndex || 0}-${player?.id || 0}`, pool.length)];
+  return { name:club?.name || 'Club interesado', id:Number(club?.id || -1) };
+}
+function maybeGenerateSpecialClauseOffer(match){
+  if(!game || !match || !SPECIAL_CLAUSE_OFFER_ENABLED || !isRegularSeason()) return null;
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)) return null;
+  const state = specialClauseOfferScheduleState();
+  if(!state) return null;
+  const matchday = Number(game.matchdayIndex || 0);
+  const scheduled = Array.isArray(state.scheduled) ? state.scheduled.map(Number) : [];
+  const generated = Array.isArray(state.generated) ? state.generated.map(Number) : [];
+  const skipped = Array.isArray(state.skipped) ? state.skipped.map(Number) : [];
+  if(!scheduled.includes(matchday) || generated.includes(matchday) || skipped.includes(matchday)) return null;
+  const topPlayers = playersByClub(game.selectedClubId)
+    .filter(p => playerClauseFor(p) > 0 && !hasPendingTransferOfferForPlayer(p.id))
+    .sort((a,b)=>visibleOverall(b)-visibleOverall(a) || refreshPlayerClause(b)-refreshPlayerClause(a) || a.age-b.age)
+    .slice(0, Math.max(1, Number(SPECIAL_CLAUSE_OFFER_TOP_PLAYERS || 3)));
+  if(!topPlayers.length){
+    state.skipped.push(matchday);
+    return null;
+  }
+  const player = topPlayers[hashNumber(`special-clause-player-${state.season}-${state.clubId}-${matchday}`, topPlayers.length)];
+  const source = sameLeagueClauseOfferClub(player);
+  const financials = buildTransferOfferFinancials(player, 100);
+  const federation = transferTaxFederationForSource(source);
+  const createdSeasonDay = typeof currentGlobalDayNumber === 'function' ? currentGlobalDayNumber() : seasonDayFromDate(game.currentDate, currentSeasonYear());
+  const autoAcceptSeasonDay = specialClauseAutomaticAcceptanceDay(createdSeasonDay);
+  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. ${federation} retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse. ${specialClauseAutoAcceptanceWarning(autoAcceptSeasonDay)}`;
+  const msg = pushGameMessage({
+    type:'mercado',
+    priority:'high',
+    title:`Oferta de cláusula por ${playerLastName(player.name)}`,
+    body,
+    action:{ type:'transferOffer', status:'pending', origin:'special_clause', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, ownerClubId:Number(game.selectedClubId || 0), pct:100, canConvince:true, createdSeasonDay, autoAcceptSeasonDay, autoAcceptWarningAdded:true }
+  });
+  state.generated.push(matchday);
+  return msg;
+}
+function maybeGenerateTransferOffer(match){
+  if(!game || !match) return;
+  maybeGenerateSpecialClauseOffer(match);
+  const ownPlayers = playersByClub(game.selectedClubId);
+  const listedCount = ownPlayers.filter(p => Boolean(p.transferListed)).length;
+  const chance = clamp(Number(BOT_TRANSFER_OFFER_BASE_CHANCE || 0.28) + Math.min(Number(BOT_TRANSFER_LISTED_EXTRA_CHANCE || 0.22), listedCount * 0.045), 0, 0.72);
+  if(Math.random() > chance) return;
+  const candidates = ownPlayers
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && !isPlayerUntransferable(p) && playerQualifiesForTransferOffers(p));
+  if(!candidates.length) return;
+  candidates.sort((a,b)=>{
+    const listedDelta = Number(Boolean(b.transferListed)) - Number(Boolean(a.transferListed));
+    if(listedDelta) return listedDelta;
+    return playerOfferPerformanceScore(b)-playerOfferPerformanceScore(a) || visibleOverall(b)-visibleOverall(a);
+  });
+  const listedPool = candidates.filter(p => Boolean(p.transferListed));
+  const basePool = listedPool.length && Math.random() < 0.70 ? listedPool : candidates.slice(0, Math.min(14, candidates.length));
+  const player = basePool[hashNumber(`offer-${game.seasonNumber}-${game.matchdayIndex}-${match.id}-${Date.now()}`, basePool.length)];
+  const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
+  const financials = buildTransferOfferFinancials(player, pct);
+  const source = botTransferOfferClub(player);
+  const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás, el jugador se va del club.';
+  pushGameMessage({
+    type:'mercado',
+    priority:'high',
+    title:`Oferta por ${playerLastName(player.name)}`,
+    body:transferOfferBody(source, player, financials, pct, note),
+    action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct }
+  });
+}
+function seasonEndOfferScore(player){
+  return playerOfferPerformanceScore(player) + hashNumber(`season-end-score-${game?.seasonNumber || 1}-${player.id}`, 9);
+}
+function generateSeasonEndPlayerOffers(){
+  if(!game || !isPostseason()) return [];
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){
+    const season = game.seasonNumber || 1;
+    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
+    return [];
+  }
+  const season = game.seasonNumber || 1;
+  if(game.seasonEndPlayerOffers?.season === season) return [];
+  const candidates = playersByClub(game.selectedClubId)
+    .filter(p => playerClauseFor(p) > 0 && !isUnavailable(p.id) && !hasPendingTransferOfferForPlayer(p.id) && !isPlayerUntransferable(p) && playerQualifiesForTransferOffers(p));
+  if(!candidates.length){
+    game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:0 };
+    return [];
+  }
+  const stats = game.playerStats || {};
+  const byScore = candidates.slice().sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
+  const byGoals = candidates.slice().sort((a,b)=>Number(stats[b.id]?.goals || 0)-Number(stats[a.id]?.goals || 0) || visibleOverall(b)-visibleOverall(a));
+  const byAssists = candidates.slice().sort((a,b)=>Number(stats[b.id]?.assists || 0)-Number(stats[a.id]?.assists || 0) || visibleOverall(b)-visibleOverall(a));
+  const map = new Map();
+  [...byScore.slice(0,12), ...byGoals.slice(0,8), ...byAssists.slice(0,8)].forEach(p => map.set(p.id, p));
+  const pool = Array.from(map.values()).sort((a,b)=>seasonEndOfferScore(b)-seasonEndOfferScore(a));
+  const targetCount = Math.min(pool.length, randomInt(SEASON_END_TRANSFER_OFFERS_MIN, SEASON_END_TRANSFER_OFFERS_MAX));
+  const created = [];
+  for(const player of pool){
+    if(created.length >= targetCount) break;
+    const pct = playerOfferPercent(player, `season-end-${season}-${created.length}-${Date.now()}`);
+    const financials = buildTransferOfferFinancials(player, pct);
+    const source = botTransferOfferClub(player);
+    const msg = pushGameMessage({
+      type:'mercado',
+      priority:'high',
+      title:`Oferta por ${playerLastName(player.name)}`,
+      body:transferOfferBody(source, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+      action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct, origin:'season_end' }
+    });
+    if(msg) created.push(msg);
+  }
+  game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:created.length };
+  return created;
+}
+function completeTransferSaleFromMessage(msg, player, options={}){
+  const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
+  const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
+  const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
+  const saleFederation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
+  recordBudgetChange(netAmount, `Venta de ${player.name} (neto ${saleFederation})`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, federation:saleFederation, origin:msg.action.origin || 'offer' });
+  const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
+  const destinationClubId = Number(msg.action.sourceClubId || -1);
+  if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, game.selectedClubId);
+  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
+  player.transferListed = false;
+  player.intransferible = false;
+  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true } : p);
+  removePlayerFromCurrentTactic(player.id);
+  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SALE_LOSS) : 0;
+  msg.action.status = options.status || 'accepted';
+  msg.action.grossAmount = grossAmount;
+  msg.action.taxAmount = taxAmount;
+  msg.action.netAmount = netAmount;
+  const federation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
+  const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
+  const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto ${federation}: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}${cohesionText}`;
+  msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
+  if(options.skipSave !== true) saveLocal(true);
+  if(options.silent !== true){
+    showNotice(options.notice || `${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
+    renderMessages();
+  }
+}
+function acceptTransferOffer(messageId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés aceptar ofertas de jugadores mientras estás sin club.'); return; }
+  const msg = (game.messages || []).find(m => m.id === messageId);
+  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
+  const player = playerById(msg.action.playerId);
+  if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
+  const pct = Number(msg.action.pct || 0);
+  if(isPlayerUntransferable(player) && pct < 100){
+    msg.action.status = 'auto_rejected_intransferible';
+    msg.body += ` Oferta rechazada automáticamente: ${player.name} está marcado como intransferible y sólo se aceptan propuestas por la cláusula completa.`;
+    saveLocal(true);
+    showNotice('Oferta rechazada automáticamente: jugador intransferible.');
+    renderMessages();
+    return;
+  }
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
+    msg.action.status = 'blocked_by_board';
+    msg.body += ` La directiva bloqueó la venta porque es un jugador muy importante para el club. Para una estrella exige una oferta superior al ${STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT}% de su cláusula.`;
+    saveLocal(true);
+    showNotice('La directiva bloqueó la venta porque es un jugador muy importante para el club.');
+    renderMessages();
+    return;
+  }
+  completeTransferSaleFromMessage(msg, player);
+}
+function specialClauseStayMessages(player, managerName){
+  const playerName = player?.name || 'Jugador';
+  const clubNameValue = clubName(game?.selectedClubId) || 'el club';
+  const manager = managerName || 'Manager';
+  return [
+    `${manager}, soy ${playerName}. Estaba esperando que me llamaras. No quiero irme: sé que ${clubNameValue} necesita el dinero, pero prefiero quedarme a pelear por algo importante. Nos vemos en el entrenamiento.`,
+    `Gracias por hablar conmigo, ${manager}. La oferta era fuerte, pero todavía tengo una historia pendiente en ${clubNameValue}. Contá conmigo: me quedo.`,
+    `Me llamó el otro club, sí, pero necesitaba escuchar al mío. Si vos me querés acá, sigo compitiendo con esta camiseta. Mañana estoy en la práctica, ${manager}.`,
+    `No voy a negar que el pago de la cláusula me hizo pensar. Pero quiero ser importante en ${clubNameValue}. Guardá la lapicera: ${playerName} se queda.`,
+    `Tenía miedo de que quisieran venderme sin hablar conmigo. Si me pedís que siga, sigo. Quiero pelearla con este equipo, ${manager}.`,
+    `${manager}, valoro que hayas venido de frente. El dinero es importante, pero también lo es sentir respaldo. Me quedo para demostrar que todavía puedo darle mucho a ${clubNameValue}.`,
+    `La propuesta me tentó, no te voy a mentir, ${manager}. Pero después de esta charla entendí que todavía soy parte del proyecto de ${clubNameValue}. Deciles que no preparen el contrato: me quedo.`,
+    `Soy ${playerName} y mi decisión está tomada: continúo en ${clubNameValue}. Quiero que esta temporada termine con nosotros peleando juntos, no mirando desde otro vestuario.`,
+    `Gracias por confiar en mí, ${manager}. No necesito promesas imposibles; necesitaba saber que cuento para vos. Rechazo la salida y sigo entrenando con el grupo.`,
+    `La cláusula podía sacar a ${playerName} del club, pero esta conversación cambió todo. Me quedo por mis compañeros, por la gente de ${clubNameValue} y porque todavía creo en lo que estamos construyendo.`
+  ];
+}
+function specialClauseLeaveMessages(player, managerName){
+  const playerName = player?.name || 'Jugador';
+  const clubNameValue = clubName(game?.selectedClubId) || 'el club';
+  const manager = managerName || 'Manager';
+  return [
+    `${manager}, soy ${playerName}. El rendimiento del equipo no es lo que esperaba y tengo aspiraciones más altas. Me deja tranquilo saber que ${clubNameValue} recibe un buen dinero. Te agradezco, pero me voy.`,
+    `Lo pensé mucho, ${manager}. El equipo no está en el lugar donde imaginaba competir y esta oportunidad no la puedo dejar pasar. Gracias por todo; la cláusula también deja una suma importante al club.`,
+    `${manager}, me cuesta decirlo, pero necesito otro desafío. El presente deportivo no acompaña mis objetivos. Ojalá este dinero ayude a ${clubNameValue}. Gracias por intentarlo.`,
+    `Te escuché y respeto tu postura, ${manager}, pero ya tomé una decisión. Quiero competir por objetivos más altos y hoy siento que en ${clubNameValue} no los tengo cerca. Me voy agradecido.`,
+    `Aprecio que me hayas llamado, ${manager}. La propuesta es importante y el rendimiento del equipo no coincide con mis aspiraciones. Me voy con respeto y gratitud.`,
+    `No es una decisión contra vos. Siento que llegó el momento de cambiar de club y probarme en otro nivel. ${clubNameValue} recibe la cláusula completa y yo voy a aceptar el nuevo desafío.`,
+    `${manager}, agradezco que hayas intentado convencerme, pero mi ciclo está terminado. Necesito salir ahora y no quiero prometer una continuidad que no voy a sentir.`,
+    `Soy ${playerName} y prefiero ser claro: elegí marcharme. La oferta deportiva me convence más y creo que es el paso correcto para mi carrera.`,
+    `La charla fue sincera, ${manager}, pero no cambió mi decisión. Quiero otro entorno competitivo y ya di mi palabra. Espero que el ingreso por la cláusula ayude a reconstruir el plantel de ${clubNameValue}.`,
+    `Me llevo buenos recuerdos de ${clubNameValue}, ${manager}, pero esta oportunidad no vuelve todos los días. La cláusula fue pagada y voy a continuar mi carrera en el otro club.`
+  ];
+}
+function showSpecialClauseResponseModal(player, text, status='stay'){
+  if(typeof openModal !== 'function') return;
+  const clubId = Number(game?.selectedClubId || player?.clubId || 0);
+  const tone = status === 'leave' ? 'leave' : 'stay';
+  const html = `<div class="special-clause-response-modal ${tone}">
+    ${clubBadge(clubId)}
+    <p class="label">Respuesta a la charla</p>
+    <h2>${escapeHtml(player?.name || 'Jugador')}</h2>
+    <blockquote>${escapeHtml(text || '')}</blockquote>
+    <button class="primary" data-close-modal>Continuar</button>
+  </div>`;
+  openModal(html);
+}
+function convinceSpecialClausePlayer(messageId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés intervenir ofertas de jugadores mientras estás sin club.'); return; }
+  const msg = (game.messages || []).find(m => m.id === messageId);
+  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending' || msg.action.origin !== 'special_clause') return;
+  const player = playerById(msg.action.playerId);
+  if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
+  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  const position = currentManagerLeaguePosition();
+  const failureChance = clamp((Number(position || 20) * 2) / 100, 0.02, 0.95);
+  const managerName = game?.rankingManagerName || storedManagerName() || 'Manager';
+  const roll = Math.random();
+  if(roll < failureChance){
+    const variants = specialClauseLeaveMessages(player, managerName);
+    const text = variants[hashNumber(`special-clause-leave-${player.id}-${Date.now()}`, variants.length)];
+    completeTransferSaleFromMessage(msg, player, { status:'forced_sale', bodyPrefix:text, notice:`${player.name} decidió irse. La cláusula fue ejecutada.` });
+    showSpecialClauseResponseModal(player, text, 'leave');
+    return;
+  }
+  const variants = specialClauseStayMessages(player, managerName);
+  const text = variants[hashNumber(`special-clause-stay-${player.id}-${Date.now()}`, variants.length)];
+  msg.action.status = 'convinced';
+  msg.body += ` ${text}`;
+  game.playerMorale[player.id] = clamp(currentMorale(player.id) + 4, 1, 99);
+  saveLocal(true);
+  showNotice(`${player.name} aceptó quedarse en el club.`);
+  renderMessages();
+  showSpecialClauseResponseModal(player, text, 'stay');
+}
+function rejectTransferOffer(messageId){
+  if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés gestionar ofertas de jugadores mientras estás sin club.'); return; }
+  const msg = (game.messages || []).find(m => m.id === messageId);
+  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
+  if(msg.action?.origin === 'special_clause' || msg.action?.canConvince === true){
+    showNotice('Una oferta por la cláusula completa no puede rechazarse. Podés aceptarla o intentar convencer al jugador.');
+    return;
+  }
+  msg.action.status = 'rejected';
+  saveLocal(true);
+  renderMessages();
+}
+function removePlayerFromCurrentTactic(playerId){
+  if(!game?.tactic) return;
+  const id = Number(playerId);
+  const starters = (game.tactic.starters || []).map(x => Number(x) === id ? 0 : x);
+  const bench = (game.tactic.bench || []).filter(x => Number(x) !== id);
+  const autoSubs = (game.tactic.autoSubs || []).map(rule => ({...rule, outId:Number(rule.outId)===id?0:rule.outId, inId:Number(rule.inId)===id?0:rule.inId}));
+  const captainId = Number(game.tactic.captainId || 0) === id ? 0 : Number(game.tactic.captainId || 0);
+  game.tactic = ensureTacticCaptain(applyStarterMentalities({ ...game.tactic, captainId, starters, bench, autoSubs }), game.selectedClubId);
+}
 
-### Historial guardado
 
-Al finalizar cada edición se guarda una instantánea independiente con participantes, invitados, grupos, posiciones, partidos, cruces, fechas y podio final.
+function canBotDismissPlayer(player){
+  if(!player || Number(player.clubId || 0) === Number(game?.selectedClubId)) return false;
+  if(player.emergencyLocked || player.emergencyBot) return false;
+  const clubId = Number(player.clubId || 0);
+  const squad = playersByClub(clubId);
+  if(squad.length <= Math.max(MIN_PLAYERS_PER_CLUB, 20)) return false;
+  const group = playerRoleGroup(player.position);
+  const counts = rosterGroupCounts(squad);
+  const req = minimumRosterRequirements();
+  return (counts[group] || 0) > (req[group] || 0) + 1;
+}
+function processBotDismissals(){
+  if(!game || !seed?.clubs?.length) return 0;
+  if(Math.random() > Number(BOT_DISMISS_CHECK_CHANCE || 0.38)) return 0;
+  let dismissed = 0;
+  seed.clubs.forEach(club => {
+    if(Number(club.id) === Number(game.selectedClubId)) return;
+    const squad = playersByClub(club.id).filter(canBotDismissPlayer).sort((a,b)=>visibleOverall(a)-visibleOverall(b) || Number(b.age||0)-Number(a.age||0));
+    const maxCuts = playersByClub(club.id).length > MAX_PLAYERS_PER_CLUB ? 2 : 1;
+    for(let i=0; i<Math.min(maxCuts, squad.length); i++){
+      const player = squad[i];
+      if(hashNumber(`bot-dismiss-${game.seasonNumber}-${game.matchdayIndex}-${club.id}-${player.id}`, 100) > 42) continue;
+      player.clubId = 0;
+      player.freeAgent = true;
+      player.transferListed = false;
+      player.salaryPaidCount = 0;
+      player.lastSalaryPaidSeason = 0;
+      refreshPlayerClause(player);
+      game.marketPlayers = game.marketPlayers || [];
+      const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
+      const copy = { ...player, clubId:0, freeAgent:true, sold:false, transferListed:false };
+      if(idx >= 0) game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...copy };
+      else game.marketPlayers.push(copy);
+      dismissed += 1;
+    }
+  });
+  if(dismissed && typeof repairBotRosters === 'function') repairBotRosters({ reason:'bot_dismissals' });
+  return dismissed;
+}
 
-### Correcciones conservadas de V7.08
+function buildBalancedFreeAgentPositionGroups(count, label='market'){
+  const total = Math.max(0, Math.round(Number(count) || 0));
+  if(total <= 0) return [];
+  const rules = (Array.isArray(MARKET_FREE_AGENT_POSITION_GROUPS) && MARKET_FREE_AGENT_POSITION_GROUPS.length)
+    ? MARKET_FREE_AGENT_POSITION_GROUPS
+    : PLAYER_GENERATION_POSITION_GROUPS;
+  const weighted = rules.map(rule => ({ ...rule, probability:Math.max(0, Number(rule.probability || 0)) }));
+  const weightTotal = weighted.reduce((acc, rule) => acc + rule.probability, 0) || 1;
+  const quotas = weighted.map(rule => {
+    const exact = total * (rule.probability || 0) / weightTotal;
+    return { rule, exact, count:Math.floor(exact), rest:exact - Math.floor(exact) };
+  });
+  let assigned = quotas.reduce((acc, item) => acc + item.count, 0);
+  quotas.slice().sort((a,b) => b.rest - a.rest || String(a.rule.id).localeCompare(String(b.rule.id))).forEach(item => {
+    if(assigned < total){ item.count += 1; assigned += 1; }
+  });
+  const groups = [];
+  quotas.forEach(item => { for(let i=0;i<item.count;i++) groups.push(item.rule.id); });
+  return groups.sort((a,b) => hashNumber(`${label}-${a}-pos-order`, 100000) - hashNumber(`${label}-${b}-pos-order`, 100000));
+}
+function pickFreeAgentPositionFromGroup(groupId, id, label){
+  const rules = (Array.isArray(MARKET_FREE_AGENT_POSITION_GROUPS) && MARKET_FREE_AGENT_POSITION_GROUPS.length)
+    ? MARKET_FREE_AGENT_POSITION_GROUPS
+    : PLAYER_GENERATION_POSITION_GROUPS;
+  const group = rules.find(item => item.id === groupId) || PLAYER_GENERATION_POSITION_GROUPS.find(item => item.id === groupId) || PLAYER_GENERATION_POSITION_GROUPS[2];
+  const pool = group.positions || ['MC'];
+  return pool[hashNumber(`${label}-${id}-free-pos`, pool.length)];
+}
 
-- Un club no clasificado no cobra premios del Mundial de Clubes.
-- Las tres jornadas de grupos respetan sus fechas oficiales.
-- Sólo se procesa una jornada pendiente de grupos por avance.
+function generateMarketPlayers(count=50, options={}){
+  const startId = Number.isFinite(Number(options.startId))
+    ? Math.max(1, Math.round(Number(options.startId)))
+    : Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000;
+  const label = options.label || 'market';
+  const nameContext = options.nameContext || 'Mercado Libre';
+  const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
+  const generationContext = createPlayerGenerationContext(activePlayers.length + count, activePlayers);
+  const balancedGroups = buildBalancedFreeAgentPositionGroups(count, label);
+  const players = [];
+  for(let i=0;i<count;i++){
+    const id = startId + i;
+    const group = balancedGroups[i] || pickPositionGroupForGeneration(id, label, generationContext);
+    const position = pickFreeAgentPositionFromGroup(group, id, label);
+    const player = generatedPlayerFactory({
+      id,
+      position,
+      clubId:0,
+      age:MARKET_FREE_AGENT_AGE_MIN + hashNumber(`${label}-age-${id}`, Math.max(1, MARKET_FREE_AGENT_AGE_MAX - MARKET_FREE_AGENT_AGE_MIN + 1)),
+      prestige:52,
+      nameContext,
+      divisionName:'Mercado',
+      generationContext,
+      salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
+      freeAgent:true,
+      mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
+      mediaMax:MARKET_FREE_AGENT_MEDIA_MAX,
+      nationalityOverride:freeAgentNationalityForIndex(i, label)
+    });
+    players.push(player);
+  }
+  return players;
+}
+function mergeMarketPlayersIntoSeed(players=[]){
+  if(!seed?.players) return;
+  const existing = new Set(seed.players.map(p => Number(p.id)));
+  players.forEach(p => {
+    if(!existing.has(Number(p.id))){ seed.players.push(p); existing.add(Number(p.id)); }
+    else {
+      const idx = seed.players.findIndex(x => Number(x.id) === Number(p.id));
+      if(idx >= 0) seed.players[idx] = { ...seed.players[idx], ...p };
+    }
+  });
+}
+

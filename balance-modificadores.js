@@ -1,192 +1,1796 @@
-/* Modificadores de balance del simulador y entrenamiento.
-  Archivo activo: se carga antes de config.js y sobrescribe los valores indicados.
-  Ajustar estos números permite balancear sin tocar app.js ni los módulos del juego.
-*/
-window.GAME_BALANCE_MODIFICADORES = {
-  metadataBalance: {
-    version: 'V7.65',
-    nombre: 'Balance centralizado de modificadores V7.65',
-    nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
-  },
+/* Academia, captación, juveniles, empleados y tratamientos. */
 
-  entrenamiento: {
-    // al avanzar 1 día se aplican sólo los 4 bloques del día actual, no los 28 turnos de toda la semana.
-    aplicarSoloDiaActual: true,
-    efectividadPorCasilla: 0.25,
-    entrenamientoIndividualDiario: true,
-    efectividadIndividualPorDia: 0.25,
-    curvaHabilidadActual: true,
-    probabilidadMinimaSubidaHabilidad: 0,
-    multiplicadorSubidaHabilidades: 3,
-    desgaste: {
-      activo: true,
-      maximo: 98,
-      desgasteMinPartido: 2,
-      desgasteMaxPartido: 4,
-      desgastePorTurnoIntenso: 1,
-      recuperacionPorTurnoMasajista: 1
+function createInitialAcademyState(){
+  return {
+    owner:'manager', ownershipVersion:2, homeCountry:'', createdAt:'',
+    players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, staffContracts:{},
+    facilities:{ youthTraining:{ level:0, construction:null }, lastProcessedDate:null },
+    lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null,
+    exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, exceptionalYouthTargetSeason:null, exceptionalYouthTargetCount:0,
+    residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, lastNegativeBalanceNoticeDate:null,
+    youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc'
+  };
+}
+function normalizeManagerAcademyFacilitiesState(state){
+  const clean = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const raw = clean.youthTraining && typeof clean.youthTraining === 'object' ? clean.youthTraining : {};
+  const maxLevel = Math.max(0, ...youthTrainingGroundLevels().map(item => Number(item.level || 0)));
+  const level = clamp(Math.round(Number(raw.level || 0)), 0, maxLevel);
+  const targetLevel = Math.max(level + 1, Math.round(Number(raw?.construction?.targetLevel || level + 1)));
+  const construction = typeof normalizeFacilityConstruction === 'function'
+    ? normalizeFacilityConstruction(raw.construction, { targetLevel })
+    : (raw.construction && Number(raw.construction.daysLeft || 0) > 0 ? { ...raw.construction, targetLevel } : null);
+  return {
+    ...clean,
+    youthTraining:{ ...raw, level, construction },
+    lastProcessedDate:validIsoDate(clean.lastProcessedDate) ? clean.lastProcessedDate : null
+  };
+}
+function academyStaffContractsState(){
+  game.academy = normalizeAcademyState(game.academy);
+  game.academy.staffContracts = normalizeStaffContracts(game.academy.staffContracts || {});
+  return game.academy.staffContracts;
+}
+function managerAcademyFacilitiesState(){
+  game.academy = normalizeAcademyState(game.academy);
+  game.academy.facilities = normalizeManagerAcademyFacilitiesState(game.academy.facilities);
+  return game.academy.facilities;
+}
+function normalizeAcademyState(state){
+  const base = createInitialAcademyState();
+  const hadExceptionalCount = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'exceptionalYouthGrantedCount'));
+  const hadExceptionalTarget = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'exceptionalYouthTargetSeason'));
+  const hadOwnershipVersion = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'ownershipVersion'));
+  const clean = { ...base, ...(state || {}) };
+  if(state && !hadOwnershipVersion) clean.ownershipVersion = 0;
+  const allowedSorts = new Set(['edad_asc','edad_desc','informe_desc','informe_asc']);
+  clean.sortMode = allowedSorts.has(String(clean.sortMode || '')) ? String(clean.sortMode) : 'edad_asc';
+  clean.players = Array.isArray(clean.players) ? clean.players.map(normalizeAcademyPlayer).filter(Boolean) : [];
+  clean.scoutingJobs = Array.isArray(clean.scoutingJobs) ? clean.scoutingJobs : [];
+  clean.unlockedStats = clean.unlockedStats && typeof clean.unlockedStats === 'object' ? clean.unlockedStats : {};
+  clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
+  clean.owner = 'manager';
+  clean.ownershipVersion = Math.max(0, Math.round(Number(clean.ownershipVersion || 0)));
+  clean.homeCountry = String(clean.homeCountry || '');
+  clean.createdAt = String(clean.createdAt || '');
+  clean.youthPreparer = clean.youthPreparer || null;
+  clean.staffContracts = normalizeStaffContracts(clean.staffContracts || {});
+  clean.facilities = normalizeManagerAcademyFacilitiesState(clean.facilities);
+  clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
+  clean.exceptionalYouthGrantedCount = Math.max(0, Math.round(Number(clean.exceptionalYouthGrantedCount || 0)));
+  if(!hadExceptionalCount && clean.exceptionalYouthGrantedSeason) clean.exceptionalYouthGrantedCount = 1;
+  clean.exceptionalYouthTargetSeason = Number(clean.exceptionalYouthTargetSeason || 0) || null;
+  clean.exceptionalYouthTargetCount = clamp(Math.round(Number(clean.exceptionalYouthTargetCount || 0)), 0, 6);
+  if(!hadExceptionalTarget && clean.exceptionalYouthGrantedSeason){
+    clean.exceptionalYouthTargetSeason = clean.exceptionalYouthGrantedSeason;
+    clean.exceptionalYouthTargetCount = clamp(Math.max(1, clean.exceptionalYouthGrantedCount), 1, 6);
+  }
+  clean.lastConsultReveal = clean.lastConsultReveal && typeof clean.lastConsultReveal === 'object' ? clean.lastConsultReveal : null;
+  clean.youthInjurySeason = Number(clean.youthInjurySeason || 0) || null;
+  clean.youthInjuriesTarget = Number.isFinite(Number(clean.youthInjuriesTarget)) ? Math.max(0, Math.round(Number(clean.youthInjuriesTarget))) : null;
+  clean.youthInjuriesCount = Math.max(0, Math.round(Number(clean.youthInjuriesCount || 0)));
+  clean.residences = Math.max(0, Math.round(Number(clean.residences || 0)));
+  clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
+  clean.youthSalaryLastChargeDate = validIsoDate(clean.youthSalaryLastChargeDate) ? clean.youthSalaryLastChargeDate : null;
+  clean.lastNegativeBalanceNoticeDate = validIsoDate(clean.lastNegativeBalanceNoticeDate) ? clean.lastNegativeBalanceNoticeDate : null;
+  return clean;
+}
+
+
+function defaultStaffCategories(){
+  return [
+    { id:'regular', nombre:'Regular', multiplicadorCosto:1, multiplicadorRendimiento:1, descripcion:'Mantiene el rendimiento estándar.' },
+    { id:'bueno', nombre:'Bueno', multiplicadorCosto:4, multiplicadorRendimiento:2, descripcion:'Duplica el rendimiento de la acción.' },
+    { id:'elite', nombre:'Elite', multiplicadorCosto:50, multiplicadorRendimiento:3, descripcion:'Triplica el rendimiento de la acción.' }
+  ];
+}
+function defaultStaffDefinitions(){
+  return [
+    { id:'psychologist', nombre:'Psicólogo motivacional', rol:'Motivación', costoBase:PSYCHOLOGIST_COST, duracion:'temporada', descripcion:'Permite realizar charlas motivacionales para mejorar la moral del plantel.', accion:'charla_motivacional', imagenes:{ regular:'img/empleados/psicologo-regular.webp', bueno:'img/empleados/psicologo-bueno.webp', elite:'img/empleados/psicologo-elite.webp' } },
+    { id:'kinesiologist', nombre:'Kinesiólogo', rol:'Recuperación', costoBase:KINESIOLOGIST_COST, duracion:'temporada', descripcion:'Permite tratar lesionados y asignar un jugador a trabajo diferenciado con menor carga.', accion:'tratamiento_lesion', imagenes:{ regular:'img/empleados/kinesiologo-regular.webp', bueno:'img/empleados/kinesiologo-bueno.webp', elite:'img/empleados/kinesiologo-elite.webp' } },
+    { id:'youth_preparer', nombre:'Preparador de juveniles', rol:'Academia', costoBase:YOUTH_PREPARER_COST, duracion:'temporada', descripcion:'Permite consultar informes de juveniles y descubrir más habilidades ocultas.', accion:'informe_juveniles', imagenes:{ regular:'img/empleados/preparador-juveniles-regular.webp', bueno:'img/empleados/preparador-juveniles-bueno.webp', elite:'img/empleados/preparador-juveniles-elite.webp' } }
+  ];
+}
+function staffCategories(){
+  const source = Array.isArray(employeesDatabase?.categorias) && employeesDatabase.categorias.length ? employeesDatabase.categorias : defaultStaffCategories();
+  return source.map(item => ({
+    id:String(item.id || 'regular'),
+    nombre:item.nombre || item.label || item.id || 'Regular',
+    multiplicadorCosto:Math.max(0, Number(item.multiplicadorCosto ?? item.costMultiplier ?? 1) || 1),
+    multiplicadorRendimiento:Math.max(1, Number(item.multiplicadorRendimiento ?? item.performanceMultiplier ?? 1) || 1),
+    descripcion:item.descripcion || item.description || ''
+  }));
+}
+function staffDefinitions(){
+  const source = Array.isArray(employeesDatabase?.empleados) && employeesDatabase.empleados.length ? employeesDatabase.empleados : defaultStaffDefinitions();
+  return source.map(item => ({
+    id:String(item.id || ''),
+    nombre:item.nombre || item.name || item.id || 'Empleado',
+    rol:item.rol || item.role || '',
+    costoBase:Math.max(0, Number(item.costoBase ?? item.baseCost ?? 0) || 0),
+    duracion:item.duracion || item.duration || 'temporada',
+    descripcion:item.descripcion || item.description || '',
+    accion:item.accion || item.action || '',
+    imagenes:(item.imagenes && typeof item.imagenes === 'object') ? { ...item.imagenes } : {}
+  })).filter(item => item.id);
+}
+function staffDefinition(staffId){
+  return staffDefinitions().find(item => item.id === staffId) || defaultStaffDefinitions().find(item => item.id === staffId) || null;
+}
+function staffCategory(categoryId){
+  return staffCategories().find(item => item.id === categoryId) || staffCategories()[0] || defaultStaffCategories()[0];
+}
+function staffBaseCost(staffId){
+  const fromJson = Number(staffDefinition(staffId)?.costoBase || 0);
+  if(fromJson > 0) return fromJson;
+  if(staffId === 'psychologist') return PSYCHOLOGIST_COST;
+  if(staffId === 'kinesiologist') return KINESIOLOGIST_COST;
+  if(staffId === 'youth_preparer') return YOUTH_PREPARER_COST;
+  return 0;
+}
+function staffHireCost(staffId, categoryId='regular'){
+  return Math.round(staffBaseCost(staffId) * staffCategory(categoryId).multiplicadorCosto);
+}
+function managerPersonalBalance(){
+  const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
+  return Math.round(Number(finances?.balance || 0));
+}
+function managerCanAffordAcademy(cost=0){ return managerPersonalBalance() >= Math.max(0, Math.round(Number(cost || 0))); }
+function recordAcademyPersonalExpense(cost, concept, meta={}){
+  const amount = Math.max(0, Math.round(Number(cost || 0)));
+  if(amount <= 0) return 0;
+  if(typeof recordManagerFinanceChange !== 'function') return 0;
+  return recordManagerFinanceChange(-amount, concept, { ...meta, academyExpense:true, academyOwnedByManager:true });
+}
+function academyFinanceHistory(){
+  const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
+  return (Array.isArray(finances?.history) ? finances.history : []).filter(item => Boolean(item?.academyExpense));
+}
+function normalizeStaffContracts(contracts){
+  const clean = (contracts && typeof contracts === 'object' && !Array.isArray(contracts)) ? { ...contracts } : {};
+  Object.keys(clean).forEach(key => {
+    const current = clean[key] || {};
+    clean[key] = {
+      active:Boolean(current.active),
+      season:Number(current.season || 0),
+      category:staffCategory(current.category || current.nivel || 'regular').id,
+      cost:Number(current.cost || 0),
+      performanceMultiplier:Math.max(1, Number(current.performanceMultiplier || staffCategory(current.category || 'regular').multiplicadorRendimiento || 1)),
+      hiredTurn:Number(current.hiredTurn || current.matchdayIndex || 0),
+      hiredGlobalTurn:Number(current.hiredGlobalTurn || current.globalTurn || 0),
+      dismissedDate:validIsoDate(current.dismissedDate) ? current.dismissedDate : '',
+      dismissedSeason:Math.max(0, Math.round(Number(current.dismissedSeason || 0))),
+      dismissedGlobalTurn:Math.max(0, Math.round(Number(current.dismissedGlobalTurn || 0))),
+      dismissedReason:String(current.dismissedReason || '')
+    };
+  });
+  return clean;
+}
+function resetStaffSeasonState(){
+  if(!game) return;
+  game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
+  Object.values(game.staffContracts).forEach(contract => { contract.active = false; });
+  if(game.staffActions?.kinesiologist){
+    game.staffActions.kinesiologist.active = false;
+    game.staffActions.kinesiologist.differentiatedPlayerId = 0;
+  }
+}
+function legacyStaffActive(staffId){
+  if(staffId === 'kinesiologist') return Boolean(game?.staffActions?.kinesiologist?.active);
+  if(staffId === 'youth_preparer') return Boolean(game?.academy?.youthPreparer?.active && Number(game.academy.youthPreparer.season || 0) === Number(game.seasonNumber || 1));
+  return false;
+}
+function staffContract(staffId){
+  const contracts = staffId === 'youth_preparer' ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  const contract = contracts[staffId];
+  if(contract?.active && Number(contract.season || 0) === Number(game.seasonNumber || 1)) return contract;
+  if(legacyStaffActive(staffId)){
+    return { active:true, season:game.seasonNumber || 1, category:'regular', cost:staffBaseCost(staffId), performanceMultiplier:1, legacy:true };
+  }
+  return null;
+}
+function staffActive(staffId){ return Boolean(staffContract(staffId)); }
+function staffPerformanceMultiplier(staffId){ return Math.max(1, Number(staffContract(staffId)?.performanceMultiplier || 1)); }
+function deactivateStaffEmployee(staffId, reason='manual'){
+  if(!game) return null;
+  const def = staffDefinition(staffId);
+  if(!def) return null;
+  const contracts = staffId === 'youth_preparer' ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  const contract = contracts[staffId] || null;
+  const wasActive = Boolean(contract?.active && Number(contract.season || 0) === Number(game.seasonNumber || 1)) || legacyStaffActive(staffId);
+  if(!wasActive) return null;
+  const snapshot = {
+    id:staffId,
+    name:def.nombre,
+    category:staffCategory(contract?.category || 'regular').nombre,
+    cost:Number(contract?.cost || staffHireCost(staffId, contract?.category || 'regular') || 0)
+  };
+  if(contract){
+    contract.active = false;
+    contract.dismissedDate = validIsoDate(game.currentDate) ? game.currentDate : '';
+    contract.dismissedSeason = Number(game.seasonNumber || 1);
+    contract.dismissedGlobalTurn = Number(game.globalTurn || 0);
+    contract.dismissedReason = String(reason || 'manual');
+  }
+  game.staffActions = game.staffActions || {};
+  if(staffId === 'kinesiologist' && game.staffActions.kinesiologist){
+    game.staffActions.kinesiologist.active = false;
+    game.staffActions.kinesiologist.differentiatedPlayerId = 0;
+  }
+  if(staffId === 'youth_preparer'){
+    game.academy = normalizeAcademyState(game.academy);
+    if(game.academy.youthPreparer) game.academy.youthPreparer.active = false;
+  }
+  return snapshot;
+}
+function dismissStaffEmployee(staffId, options={}){
+  if(!game) return false;
+  const def = staffDefinition(staffId);
+  if(!def || !staffActive(staffId)){ if(!options.silent) showNotice('Ese empleado ya no está contratado.'); return false; }
+  if(!options.skipConfirm){
+    const accepted = window.confirm(`El contrato de ${def.nombre} ya fue pagado por toda la temporada. Despedirlo no devuelve dinero. ¿Continuar?`);
+    if(!accepted) return false;
+  }
+  const dismissed = deactivateStaffEmployee(staffId, options.reason || 'manual');
+  if(!dismissed) return false;
+  if(options.message !== false && typeof pushGameMessage === 'function') pushGameMessage({
+    type:'empleados',
+    priority:'normal',
+    title:`${dismissed.name} despedido`,
+    body:`El contrato ya estaba pagado por toda la temporada. ${dismissed.name} dejó ${staffId === 'youth_preparer' ? 'Tu Academia' : 'el club'} sin reintegro de ${formatMoney(dismissed.cost)}.`,
+    id:`staff-dismissed-${staffId}-${game.seasonNumber || 1}-${game.globalTurn || 0}`
+  });
+  if(options.save !== false && typeof saveLocal === 'function') saveLocal(true);
+  if(typeof options.after === 'function') options.after();
+  else if(options.render !== false && typeof renderEmployees === 'function') renderEmployees();
+  if(!options.silent) showNotice(`${dismissed.name} despedido. El pago de la temporada no se reintegra.`);
+  return true;
+}
+function dismissAllStaffForFinancialCrisis(options={}){
+  if(!game || Number(game.budget || 0) >= 0) return [];
+  const active = staffDefinitions().filter(def => def.id !== 'youth_preparer' && staffActive(def.id));
+  if(!active.length) return [];
+  const dismissed = active.map(def => deactivateStaffEmployee(def.id, 'negative_budget')).filter(Boolean);
+  if(!dismissed.length) return [];
+  if(typeof pushGameMessage === 'function') pushGameMessage({
+    type:'finanzas',
+    priority:'high',
+    title:'Empleados despedidos por números rojos',
+    body:`El presupuesto cayó a ${formatMoney(game.budget || 0)}. El club rescindió automáticamente ${dismissed.length} contrato(s): ${dismissed.map(item => item.name).join(', ')}. Los pagos de temporada ya realizados no se reintegran.`,
+    id:`staff-financial-dismissal-${game.seasonNumber || 1}-${game.globalTurn || 0}-${dismissed.map(item => item.id).join('-')}`
+  });
+  if(options.save && typeof saveLocal === 'function') saveLocal(true);
+  if(!options.silent && typeof showNotice === 'function') showNotice('El club entró en números rojos y despidió a todos los empleados.', true);
+  return dismissed;
+}
+function bindStaffDismissButtons(after=null){
+  const rerender = typeof after === 'function' ? after : (typeof renderEmployees === 'function' ? renderEmployees : null);
+  document.querySelectorAll('[data-dismiss-staff]').forEach(btn => btn.addEventListener('click', () => dismissStaffEmployee(String(btn.dataset.dismissStaff || ''), { after:rerender })));
+}
+function staffImagePath(staffId, categoryId='regular'){
+  const def = staffDefinition(staffId);
+  const category = staffCategory(categoryId).id;
+  const fromJson = def?.imagenes?.[category] || def?.imagenes?.regular || '';
+  if(fromJson) return String(fromJson);
+  const base = staffId === 'psychologist' ? 'psicologo' : staffId === 'kinesiologist' ? 'kinesiologo' : staffId === 'youth_preparer' ? 'preparador-juveniles' : 'empleado';
+  return `img/empleados/${base}-${category}.webp`;
+}
+function staffImageMarkup(staffId, categoryId='regular', className='staff-employee-photo'){
+  const def = staffDefinition(staffId);
+  const alt = `${def?.nombre || 'Empleado'} ${staffCategory(categoryId).nombre}`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(staffImagePath(staffId, categoryId))}" alt="${escapeHtml(alt)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='grid');"><span class="staff-photo-fallback" style="display:none">${escapeHtml((def?.nombre || 'E').slice(0,1).toUpperCase())}</span>`;
+}
+function staffContractCardMarkup(staffId, mode='compact'){
+  const contract = staffContract(staffId);
+  const def = staffDefinition(staffId);
+  if(!contract || !def) return '';
+  const category = staffCategory(contract.category || 'regular');
+  const cls = mode === 'mini' ? 'staff-contract-card mini' : 'staff-contract-card';
+  return `<div class="${cls}">
+    <div class="staff-photo-wrap">${staffImageMarkup(staffId, category.id)}</div>
+    <div class="staff-contract-info">
+      <p class="label">${escapeHtml(def.rol || 'Empleado')}</p>
+      <h3>${escapeHtml(def.nombre)}</h3>
+      <div class="staff-contract-tags"><span class="pill ok">${escapeHtml(category.nombre)}</span><span class="pill">${formatMoney(contract.cost || staffHireCost(staffId, category.id))}</span></div>
+      <button type="button" class="ghost danger small-btn staff-dismiss-btn" data-dismiss-staff="${escapeHtml(staffId)}">Despedir</button>
+    </div>
+  </div>`;
+}
+function contractedStaffList(scope='club'){
+  return staffDefinitions().filter(def => (scope === 'academy' ? def.id === 'youth_preparer' : def.id !== 'youth_preparer') && staffActive(def.id));
+}
+function staffContractsPanelMarkup({ empty=false, scope='club' }={}){
+  const active = contractedStaffList(scope);
+  if(!active.length && !empty) return '';
+  return `<div class="card featured-staff-panel" style="margin-top:14px">
+    <div class="row"><h3>Empleados contratados</h3><span class="pill">Temporada actual</span></div>
+    ${active.length ? `<div class="grid cols-3 featured-staff-grid">${active.map(def => staffContractCardMarkup(def.id)).join('')}</div>` : '<p class="muted">Todavía no hay empleados contratados.</p>'}
+  </div>`;
+}
+function founderStaffRestrictionsActive(){
+  return Boolean(game && typeof isFoundedClubId === 'function' && isFoundedClubId(game.selectedClubId));
+}
+function founderClubManagerWins(){
+  if(!game?.managerStats) return 0;
+  const founderClubId = Number(game.founderClubId || game.selectedClubId || 0);
+  if(!founderClubId) return 0;
+  const stats = typeof normalizeManagerStats === 'function' ? normalizeManagerStats(game.managerStats) : game.managerStats;
+  const completed = (Array.isArray(stats?.seasons) ? stats.seasons : [])
+    .filter(item => Number(item?.clubId || 0) === founderClubId)
+    .reduce((sum, item) => sum + Math.max(0, Math.round(Number(item?.won || 0))), 0);
+  const current = Number(stats?.currentSeason?.clubId || 0) === founderClubId
+    ? Math.max(0, Math.round(Number(stats.currentSeason?.won || 0)))
+    : 0;
+  return completed + current;
+}
+function founderStaffCategoryRequirement(categoryId='regular'){
+  const id = String(categoryId || 'regular');
+  if(id === 'elite') return typeof FOUNDER_STAFF_ELITE_WINS !== 'undefined' ? FOUNDER_STAFF_ELITE_WINS : 45;
+  if(id === 'bueno') return typeof FOUNDER_STAFF_GOOD_WINS !== 'undefined' ? FOUNDER_STAFF_GOOD_WINS : 15;
+  return 0;
+}
+function staffCategoryUnlockInfo(categoryId='regular'){
+  const requiredWins = founderStaffCategoryRequirement(categoryId);
+  const wins = founderClubManagerWins();
+  const restricted = founderStaffRestrictionsActive();
+  return { restricted, requiredWins, wins, unlocked:!restricted || wins >= requiredWins, remaining:Math.max(0, requiredWins - wins) };
+}
+function founderStaffUnlockSummaryMarkup(){
+  if(!founderStaffRestrictionsActive()) return '';
+  const wins = founderClubManagerWins();
+  const good = typeof FOUNDER_STAFF_GOOD_WINS !== 'undefined' ? FOUNDER_STAFF_GOOD_WINS : 15;
+  const elite = typeof FOUNDER_STAFF_ELITE_WINS !== 'undefined' ? FOUNDER_STAFF_ELITE_WINS : 45;
+  const next = wins < good ? `Nivel Bueno: faltan ${good - wins} victoria(s)` : wins < elite ? `Nivel Elite: faltan ${elite - wins} victoria(s)` : 'Todas las categorías desbloqueadas';
+  return `<div class="card blocker" style="margin-bottom:12px"><p class="label">Progreso del club fundador</p><strong>${wins} victorias</strong><p class="muted small">Al inicio sólo está disponible el nivel Regular. Bueno se habilita con ${good} victorias y Elite con ${elite}. ${escapeHtml(next)}.</p></div>`;
+}
+function openStaffHireModal(staffId, after=null){
+  if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
+  const def = staffDefinition(staffId);
+  if(!def){ showNotice('Empleado no disponible.'); return; }
+  if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
+  const cards = staffCategories().map(cat => {
+    const cost = staffHireCost(staffId, cat.id);
+    const personalAcademyStaff = staffId === 'youth_preparer';
+    const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
+    const budgetBlocked = personalAcademyStaff ? !managerCanAffordAcademy(cost) : (game.budget || 0) < cost;
+    const disabled = budgetBlocked || !unlock.unlocked;
+    const status = !unlock.unlocked
+      ? `Bloqueado · requiere ${unlock.requiredWins} victorias (${unlock.remaining} restantes)`
+      : budgetBlocked ? (personalAcademyStaff ? 'Saldo personal insuficiente' : 'Presupuesto insuficiente') : 'Contrato por temporada';
+    return `<button class="staff-tier-card ${disabled ? 'disabled' : ''}" data-hire-staff-tier="${escapeHtml(staffId)}:${escapeHtml(cat.id)}" ${disabled ? 'disabled' : ''}>
+      <span class="pill">${escapeHtml(cat.nombre)}</span>
+      <strong>${formatMoney(cost)}</strong>
+      <small>${escapeHtml(status)}</small>
+    </button>`;
+  }).join('');
+  openModal(`<div class="staff-hire-modal">
+    <h2>Contratar ${escapeHtml(def.nombre)}</h2>
+    <p class="muted">Elegí una categoría para esta temporada.</p>
+    ${staffId === 'youth_preparer' ? '' : founderStaffUnlockSummaryMarkup()}
+    <div class="staff-tier-grid">${cards}</div>
+  </div>`);
+  document.querySelectorAll('[data-hire-staff-tier]').forEach(btn => btn.addEventListener('click', () => {
+    const [id, category] = String(btn.dataset.hireStaffTier || '').split(':');
+    hireStaffEmployee(id, category, after);
+  }));
+}
+function hireStaffEmployee(staffId, categoryId='regular', after=null){
+  if(!game) return;
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('staff')){ showNotice(managerChallengeBlockedMessage('staff')); return; }
+  const def = staffDefinition(staffId);
+  if(!def) return;
+  if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
+  const cat = staffCategory(categoryId);
+  const personalAcademyStaff = staffId === 'youth_preparer';
+  const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
+  if(!unlock.unlocked){
+    showNotice(`La categoría ${cat.nombre} requiere ${unlock.requiredWins} victorias con el club fundador. Llevás ${unlock.wins}.`);
+    return;
+  }
+  const cost = staffHireCost(staffId, cat.id);
+  if(personalAcademyStaff ? !managerCanAffordAcademy(cost) : (game.budget || 0) < cost){ showNotice(personalAcademyStaff ? 'Saldo personal insuficiente para contratar este empleado de Academia.' : 'Presupuesto insuficiente para contratar este empleado.'); return; }
+  if(personalAcademyStaff) recordAcademyPersonalExpense(cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`academy_staff_${staffId}`, category:cat.id });
+  else recordBudgetChange(-cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`staff_${staffId}`, category:cat.id });
+  const contracts = personalAcademyStaff ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  contracts[staffId] = {
+    active:true,
+    season:game.seasonNumber || 1,
+    category:cat.id,
+    cost,
+    performanceMultiplier:cat.multiplicadorRendimiento,
+    hiredTurn:currentTurnIndex(),
+    hiredGlobalTurn:Number(game.globalTurn || 0)
+  };
+  game.staffActions = game.staffActions || {};
+  if(staffId === 'kinesiologist') game.staffActions.kinesiologist = { active:true, category:cat.id, ...turnStamp() };
+  if(staffId === 'youth_preparer'){
+    game.academy = normalizeAcademyState(game.academy);
+    game.academy.youthPreparer = { active:true, category:cat.id, season:game.seasonNumber || 1, hiredTurn:currentTurnIndex() };
+  }
+  closeModal();
+  saveLocal(true);
+  if(typeof after === 'function') after(); else renderAll();
+  showNotice(`${def.nombre} ${cat.nombre} contratado por esta temporada.`);
+}
+function staffCostLabel(staffId){ return `Desde ${formatMoney(staffHireCost(staffId, 'regular'))}`; }
+
+function resetAcademySeasonState(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  if(game.academy.youthPreparer){ game.academy.youthPreparer.active = false; }
+  game.academy.staffContracts = normalizeStaffContracts(game.academy.staffContracts || {});
+  if(game.academy.staffContracts.youth_preparer) game.academy.staffContracts.youth_preparer.active = false;
+  game.academy.lastConsultTurn = null;
+  game.academy.lastConsultReveal = null;
+  game.academy.exceptionalYouthGrantedSeason = null;
+  game.academy.exceptionalYouthGrantedCount = 0;
+  game.academy.exceptionalYouthTargetSeason = null;
+  game.academy.exceptionalYouthTargetCount = 0;
+  resetAcademyGrowthForSeason();
+  resetAcademyYouthInjurySeason();
+}
+function resetAcademyYouthInjurySeason(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const min = ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON;
+  const max = ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON;
+  const target = max > min ? min + hashNumber(`academy-injury-target-${game.seasonNumber || 1}-${Date.now()}-${Math.random()}`, max - min + 1) : min;
+  game.academy.youthInjurySeason = Number(game.seasonNumber || 1);
+  game.academy.youthInjuriesTarget = target;
+  game.academy.youthInjuriesCount = 0;
+}
+function ensureAcademyYouthInjurySeason(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  if(Number(game.academy.youthInjurySeason || 0) !== Number(game.seasonNumber || 1) || game.academy.youthInjuriesTarget === null){
+    resetAcademyYouthInjurySeason();
+  }
+}
+
+function academyCreationMaxOverall(age){
+  const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+  const base = Number.isFinite(Number(typeof ACADEMY_YOUTH_CREATION_MAX_BASE !== 'undefined' ? ACADEMY_YOUTH_CREATION_MAX_BASE : 30)) ? Number(ACADEMY_YOUTH_CREATION_MAX_BASE) : 30;
+  const bonus = Number.isFinite(Number(typeof ACADEMY_YOUTH_CREATION_AGE_BONUS !== 'undefined' ? ACADEMY_YOUTH_CREATION_AGE_BONUS : 3)) ? Number(ACADEMY_YOUTH_CREATION_AGE_BONUS) : 3;
+  const yearsBonus = Math.max(0, Math.round(Number(age || minAge)) - minAge + bonus);
+  return clamp(Math.round(base + yearsBonus), 1, 99);
+}
+function academySeasonGrowthLimit(player, season=game?.seasonNumber || 1){
+  const exceptional = Boolean(player?.exceptional);
+  const min = exceptional ? (typeof ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN !== 'undefined' ? ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN : 15) : (typeof ACADEMY_YOUTH_SEASON_GROWTH_MIN !== 'undefined' ? ACADEMY_YOUTH_SEASON_GROWTH_MIN : 7);
+  const max = exceptional ? (typeof ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX !== 'undefined' ? ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX : 20) : (typeof ACADEMY_YOUTH_SEASON_GROWTH_MAX !== 'undefined' ? ACADEMY_YOUTH_SEASON_GROWTH_MAX : 11);
+  const cleanMin = Math.max(0, Math.round(Number(min || 0)));
+  const cleanMax = Math.max(cleanMin, Math.round(Number(max || cleanMin)));
+  return cleanMin + hashNumber(`academy-growth-limit-${player?.id || 0}-${season}-${exceptional ? 'x' : 'n'}`, cleanMax - cleanMin + 1);
+}
+function academyUncappedProjectedOverall(player){ return rawVisibleOverall(academyTempPlayer(player)); }
+function ensureAcademyGrowthState(player){
+  if(!player || player.status && player.status !== 'academy') return player;
+  const season = Number(game?.seasonNumber || player.growthSeason || 1);
+  if(Number(player.growthSeason || 0) !== season || !Number.isFinite(Number(player.seasonStartOverall)) || !Number.isFinite(Number(player.seasonGrowthLimit))){
+    const current = clamp(Math.round(Number(player.overall || academyUncappedProjectedOverall(player) || 1)), 1, 99);
+    const limit = academySeasonGrowthLimit(player, season);
+    player.growthSeason = season;
+    player.seasonStartOverall = current;
+    player.seasonGrowthLimit = limit;
+    player.seasonMaxOverall = clamp(current + limit, 1, 99);
+  } else {
+    player.seasonStartOverall = clamp(Math.round(Number(player.seasonStartOverall || player.overall || 1)), 1, 99);
+    player.seasonGrowthLimit = Math.max(0, Math.round(Number(player.seasonGrowthLimit || 0)));
+    player.seasonMaxOverall = clamp(Math.round(Number(player.seasonMaxOverall || (player.seasonStartOverall + player.seasonGrowthLimit))), 1, 99);
+  }
+  return player;
+}
+function academyGrowthCapOverall(player){
+  ensureAcademyGrowthState(player);
+  return clamp(Math.round(Number(player?.seasonMaxOverall || 99)), 1, 99);
+}
+function resetAcademyGrowthForSeason(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  let count = 0;
+  academyActivePlayers().forEach(player => {
+    const current = academyProjectedOverall(player);
+    player.growthSeason = Number(game.seasonNumber || 1);
+    player.seasonStartOverall = current;
+    player.seasonGrowthLimit = academySeasonGrowthLimit(player, game.seasonNumber || 1);
+    player.seasonMaxOverall = clamp(player.seasonStartOverall + player.seasonGrowthLimit, 1, 99);
+    player.overall = current;
+    count += 1;
+  });
+  return count;
+}
+function normalizeAcademyPlayer(player){
+  if(!player) return null;
+  const group = normalizeAcademyGroup(player.group || player.role || player.positionGroup);
+  const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+  const finalAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17)) ? Number(ACADEMY_YOUTH_FINAL_ACADEMY_AGE) : 17;
+  const age = clamp(Math.round(Number(player.age || minAge)), minAge, Math.max(finalAge, minAge));
+  const id = Number(player.id || nextAcademyPlayerId());
+  const rawOverall = clamp(Math.round(Number(player.overall || player.media || 12)), 1, 99);
+  const skills = player.skills && typeof player.skills === 'object' ? { ...player.skills } : academySkillsFor(group, rawOverall, id);
+  skills.resistencia = clamp(Math.round(Number(skills.resistencia || (1 + hashNumber(`academy-res-${id}`, 9)))), 1, 99);
+  const injuredThroughTurn = Math.max(0, Math.round(Number(player.injuredThroughTurn || 0)));
+  const normalized = {
+    ...player,
+    id,
+    name:player.name || academyName(id),
+    nationality:player.nationality || academyNationality(id),
+    age,
+    group,
+    overall:rawOverall,
+    skills,
+    status:player.status || 'academy',
+    injuredThroughTurn,
+    injuryStartTurn:Math.max(0, Math.round(Number(player.injuryStartTurn || 0))),
+    injuryName:injuredThroughTurn > currentTurnIndex() ? (player.injuryName || 'Molestia muscular') : '',
+    injuryTreated:Boolean(player.injuryTreated && injuredThroughTurn > currentTurnIndex()),
+    injuriesSeason:Math.max(0, Math.round(Number(player.injuriesSeason || 0)))
+  };
+  ensureAcademyGrowthState(normalized);
+  normalized.overall = academyProjectedOverall(normalized);
+  return normalized;
+}
+function normalizeAcademyGroup(group){
+  const raw = String(group || '').toUpperCase();
+  if(['POR','ARQ'].includes(raw)) return 'POR';
+  if(['DEF','DFC','LD','LI'].includes(raw)) return 'DEF';
+  if(['MED','MID','MC','MCD','MCO','MI','MD'].includes(raw)) return 'MED';
+  return 'DEL';
+}
+function academyGroupLabel(group){ return ({ POR:'POR', DEF:'DEF', MED:'MED', DEL:'DEL' })[normalizeAcademyGroup(group)] || 'MED'; }
+function academyRepresentativePosition(group){
+  const g = normalizeAcademyGroup(group);
+  if(g === 'POR') return 'POR';
+  if(g === 'DEF') return 'DFC';
+  if(g === 'MED') return 'MC';
+  return 'DC';
+}
+function academyExactPositions(group){
+  const g = normalizeAcademyGroup(group);
+  if(g === 'POR') return ['POR'];
+  if(g === 'DEF') return ['DFC','LI','LD'];
+  if(g === 'MED') return ['MC','MCO','MD','MI','MCD'];
+  return ['DC','EI','ED'];
+}
+function academyActivePlayers(){
+  game.academy = normalizeAcademyState(game.academy);
+  return game.academy.players.filter(p => p.status === 'academy');
+}
+function academySortedPlayers(players){
+  const list = Array.isArray(players) ? players.slice() : [];
+  const mode = String(game?.academy?.sortMode || 'edad_asc');
+  return list.sort((a,b) => {
+    const pa = academyVisibleSkillsProgress(a).percent;
+    const pb = academyVisibleSkillsProgress(b).percent;
+    if(mode === 'edad_desc') return Number(b.age || 0) - Number(a.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    if(mode === 'informe_desc') return pb - pa || Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    if(mode === 'informe_asc') return pa - pb || Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+    return Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+  });
+}
+function academySortControlsMarkup(){
+  const mode = String(game?.academy?.sortMode || 'edad_asc');
+  const option = (value, label) => `<option value="${value}" ${mode === value ? 'selected' : ''}>${label}</option>`;
+  return `<div class="card academy-sort-card" style="margin-top:14px"><div class="row"><div><p class="label">Ordenar juveniles</p><h3>Listado de academia</h3></div><select id="academySortMode" class="compact-select">${option('edad_asc','Edad ↑ menor primero')}${option('edad_desc','Edad ↓ mayor primero')}${option('informe_desc','Informe descubierto ↓ mayor primero')}${option('informe_asc','Informe descubierto ↑ menor primero')}</select></div></div>`;
+}
+function academyResidenceCount(){
+  game.academy = normalizeAcademyState(game.academy);
+  return Math.max(0, Math.round(Number(game.academy.residences || 0)));
+}
+function academyResidenceLimit(){
+  return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit() || 0))) : 0;
+}
+function academyCapacity(){
+  return ACADEMY_BASE_CAPACITY + (academyResidenceCount() * ACADEMY_RESIDENCE_CAPACITY);
+}
+function academyAvailableSlots(){
+  return Math.max(0, academyCapacity() - academyActivePlayers().length);
+}
+function rentAcademyResidence(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const cost = ACADEMY_RESIDENCE_MONTHLY_COST;
+  const currentResidences = academyResidenceCount();
+  const residenceLimit = academyResidenceLimit();
+  if(currentResidences >= residenceLimit){
+    const level = typeof youthTrainingGroundLevel === 'function' ? youthTrainingGroundLevel() : 0;
+    showNotice(level > 0 ? `El predio juvenil nivel ${level} permite hasta ${residenceLimit} residencia(s). Mejoralo para habilitar más lugares.` : 'Necesitás construir el predio juvenil nivel 1 para habilitar residencias.');
+    return;
+  }
+  if(!managerCanAffordAcademy(cost)){ showNotice('Saldo personal insuficiente para alquilar una residencia.'); return; }
+  const nextResidences = currentResidences + 1;
+  const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  game.academy.residences = nextResidences;
+  game.academy.residenceLastChargeDate = today;
+  recordAcademyPersonalExpense(cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:nextResidences });
+  saveLocal(true);
+  if(typeof renderAll === 'function') renderAll(); else renderAcademy();
+  showNotice(`Residencia alquilada. Residencias: ${nextResidences}. Cupo juvenil: ${academyCapacity()}.`);
+}
+function cancelAcademyResidence(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const currentResidences = academyResidenceCount();
+  if(currentResidences <= 0){ showNotice('No hay residencias alquiladas para cancelar.'); return; }
+  const freeSlots = academyAvailableSlots();
+  const requiredFreeSlots = Math.max(1, ACADEMY_RESIDENCE_CAPACITY);
+  if(freeSlots < requiredFreeSlots){
+    showNotice(`Para cancelar una residencia necesitás al menos ${requiredFreeSlots} cupos juveniles libres. Cupos libres actuales: ${freeSlots}.`);
+    return;
+  }
+  const nextResidences = Math.max(0, currentResidences - 1);
+  game.academy.residences = nextResidences;
+  if(game.academy.residences <= 0) game.academy.residenceLastChargeDate = null;
+  saveLocal(true);
+  if(typeof renderAll === 'function') renderAll(); else renderAcademy();
+  showNotice(`Se canceló una residencia. Residencias: ${nextResidences}. Cupo juvenil: ${academyCapacity()}.`);
+}
+function processAcademyResidenceRent(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const residences = academyResidenceCount();
+  if(residences <= 0 || ACADEMY_RESIDENCE_MONTHLY_COST <= 0) return 0;
+  const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  if(!game.academy.residenceLastChargeDate){
+    game.academy.residenceLastChargeDate = today;
+    return 0;
+  }
+  const elapsed = daysBetweenIsoDates(game.academy.residenceLastChargeDate, today);
+  if(elapsed < ACADEMY_RESIDENCE_MONTH_DAYS) return 0;
+  const months = Math.max(1, Math.floor(elapsed / ACADEMY_RESIDENCE_MONTH_DAYS));
+  const total = residences * ACADEMY_RESIDENCE_MONTHLY_COST * months;
+  recordAcademyPersonalExpense(total, 'Alquiler mensual de residencias juveniles', { type:'academy_residence_monthly', residences, months });
+  game.academy.residenceLastChargeDate = addDaysToIsoDate(game.academy.residenceLastChargeDate, months * ACADEMY_RESIDENCE_MONTH_DAYS);
+  return total;
+}
+function nextAcademyPlayerId(){
+  const ids = [0]
+    .concat((seed?.players || []).map(p => Number(p.id) || 0))
+    .concat((game?.marketPlayers || []).map(p => Number(p.id) || 0))
+    .concat((game?.academy?.players || []).map(p => Number(p.id) || 0));
+  return Math.max(...ids) + 1;
+}
+function academyLocalCountry(){
+  game.academy = normalizeAcademyState(game.academy);
+  if(game.academy.homeCountry) return game.academy.homeCountry;
+  const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId || 0));
+  game.academy.homeCountry = club ? clubCountry(club) : 'Argentina';
+  return game.academy.homeCountry;
+}
+function academyNationality(id, options={}){
+  if(options.local === true) return localNationalityForCountry(academyLocalCountry());
+  return pickNationalityForGeneration(id, `academy-${game?.seasonNumber || 1}`, null, { localCountry:academyLocalCountry() }) || localNationalityForCountry(academyLocalCountry());
+}
+function academyNameForCountry(id, country='Argentina'){
+  const nationality = localNationalityForCountry(country) || country || 'Argentina';
+  if(typeof playerNameForNationality === 'function') return playerNameForNationality(id, nationality, `academy-${game?.seasonNumber || 1}`);
+  return generatedPlayerName(id, `academy-${game?.seasonNumber || 1}`, nationality);
+}
+function academyName(id, country='Argentina'){
+  return academyNameForCountry(id, country);
+}
+function academyOverallRoll(id, age=null){
+  const maxByAge = academyCreationMaxOverall(age || ACADEMY_YOUTH_MIN_AGE || 12);
+  const roll = hashNumber(`academy-overall-band-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 1000) / 1000;
+  let value;
+  if(roll < 0.80) value = 1 + hashNumber(`academy-overall-low-${id}-${Math.random()}`, 19);
+  else if(roll < 0.90) value = 20 + hashNumber(`academy-overall-mid-${id}-${Math.random()}`, 11);
+  else value = 30 + hashNumber(`academy-overall-high-${id}-${Math.random()}`, 11);
+  return clamp(value, 1, maxByAge);
+}
+function academyGroupRoll(id){
+  const roll = hashNumber(`academy-group-${game?.seasonNumber || 1}-${id}-${Math.random()}`, 100);
+  if(roll < 10) return 'POR';
+  if(roll < 40) return 'DEF';
+  if(roll < 70) return 'MED';
+  return 'DEL';
+}
+function academySkillsFor(group, overall, id){
+  const mapped = normalizeAcademyGroup(group) === 'MED' ? 'MID' : normalizeAcademyGroup(group) === 'DEL' ? 'ATT' : normalizeAcademyGroup(group);
+  const skills = skillsForGroup(mapped, clamp(Number(overall || 10), 1, 40), id);
+  skills.resistencia = 1 + hashNumber(`academy-res-init-${id}`, 9);
+  return skills;
+}
+function academyTempPlayer(player){
+  return { id:player.id, name:player.name, age:player.age, nationality:player.nationality, position:academyRepresentativePosition(player.group), overall:player.overall, skills:player.skills || academySkillsFor(player.group, player.overall, player.id) };
+}
+function academyVisibleStats(player){ return visibleStats(academyTempPlayer(player), rawVisibleSkill); }
+function academyProjectedOverall(player){
+  const raw = academyUncappedProjectedOverall(player);
+  if(!player || player.status && player.status !== 'academy') return raw;
+  return Math.min(raw, academyGrowthCapOverall(player));
+}
+function academyExceptionalYouthSeasonTarget(){
+  const facilityBonus = typeof youthTrainingExceptionalBonus === 'function' ? youthTrainingExceptionalBonus() : 0;
+  return clamp(1 + Math.max(0, Math.round(Number(facilityBonus || 0))), 1, 6);
+}
+function academyExceptionalYouthSeasonStatus(){
+  game.academy = normalizeAcademyState(game.academy);
+  const season = Number(game?.seasonNumber || 1);
+  const resolved = Number(game.academy.exceptionalYouthTargetSeason || game.academy.exceptionalYouthGrantedSeason || 0) === season;
+  const currentTarget = academyExceptionalYouthSeasonTarget();
+  const storedTarget = clamp(Math.round(Number(game.academy.exceptionalYouthTargetCount || game.academy.exceptionalYouthGrantedCount || 0)), 0, 6);
+  const target = resolved ? Math.max(1, storedTarget || currentTarget) : currentTarget;
+  const granted = Number(game.academy.exceptionalYouthGrantedSeason || 0) === season
+    ? clamp(Math.round(Number(game.academy.exceptionalYouthGrantedCount || 0)), 0, target)
+    : 0;
+  return { season, resolved, target, granted, currentTarget, missingSlots:resolved ? 0 : Math.max(0, target - academyAvailableSlots()) };
+}
+function startAcademyScouting(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const exceptionalStatus = academyExceptionalYouthSeasonStatus();
+  const availableSlots = academyAvailableSlots();
+  if(availableSlots <= 0){ showNotice('No hay lugares disponibles en la academia. Alquilá residencias o liberá cupos antes de captar juveniles.'); return; }
+  if(!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target){
+    showNotice(`La primera captación de la temporada entregará ${exceptionalStatus.target} juvenil(es) excepcional(es). Necesitás ${exceptionalStatus.target} cupos libres y actualmente tenés ${availableSlots}.`);
+    return;
+  }
+  if(!managerCanAffordAcademy(ACADEMY_SCOUTING_COST)){ showNotice('Saldo personal insuficiente para hacer una captación.'); return; }
+  recordAcademyPersonalExpense(ACADEMY_SCOUTING_COST, 'Captación de talentos', { type:'academy_scouting_start' });
+  const count = ACADEMY_PLAYERS_MIN + Math.floor(Math.random() * (ACADEMY_PLAYERS_MAX - ACADEMY_PLAYERS_MIN + 1));
+  const job = { id:`cap-${Date.now()}-${Math.round(Math.random()*9999)}`, startedTurn:currentTurnIndex(), dueTurn:currentTurnIndex() + ACADEMY_SCOUTING_TURNS, count, status:'pending' };
+  game.academy.scoutingJobs.push(job);
+  const exceptionalYouth = grantSeasonalExceptionalAcademyYouth();
+  saveLocal(true);
+  renderAcademy();
+  showNotice(exceptionalYouth.length ? `Captación iniciada. La primera captación de la temporada incorporó ${exceptionalYouth.length} juvenil(es) excepcional(es).` : 'Captación iniciada. El informe llegará en 35 días.');
+}
+function createAcademyBatch(count){
+  const players = [];
+  let id = nextAcademyPlayerId();
+  for(let i=0;i<count;i++, id++){
+    const group = academyGroupRoll(id);
+    const minAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MIN_AGE !== 'undefined' ? ACADEMY_YOUTH_MIN_AGE : 12)) ? Number(ACADEMY_YOUTH_MIN_AGE) : 12;
+    const maxAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_MAX_CREATION_AGE !== 'undefined' ? ACADEMY_YOUTH_MAX_CREATION_AGE : 16)) ? Number(ACADEMY_YOUTH_MAX_CREATION_AGE) : 16;
+    const age = minAge + hashNumber(`academy-age-${game?.seasonNumber || 1}-${id}-${Math.random()}`, Math.max(1, maxAge - minAge + 1));
+    const overall = academyOverallRoll(id, age);
+    const nationality = academyNationality(id);
+    players.push(normalizeAcademyPlayer({
+      id,
+      name:academyName(id, nationality),
+      nationality,
+      age,
+      group,
+      overall,
+      skills:academySkillsFor(group, overall, id),
+      status:'academy',
+      joinedSeason:game?.seasonNumber || 1,
+      joinedTurn:currentTurnIndex()
+    }));
+  }
+  return players;
+}
+
+function createExceptionalAcademyYouth(){
+  const id = nextAcademyPlayerId();
+  const group = academyGroupRoll(id);
+  const span = Math.max(0, ACADEMY_EXCEPTIONAL_YOUTH_MAX_OVERALL - ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL);
+  const overall = clamp(ACADEMY_EXCEPTIONAL_YOUTH_MIN_OVERALL + hashNumber(`academy-exceptional-overall-${game?.seasonNumber || 1}-${id}-${Math.random()}`, span + 1), 1, academyCreationMaxOverall(ACADEMY_EXCEPTIONAL_YOUTH_AGE));
+  return normalizeAcademyPlayer({
+    id,
+    name:academyName(id, academyLocalCountry()),
+    nationality:academyNationality(id, { local:true }),
+    age:ACADEMY_EXCEPTIONAL_YOUTH_AGE,
+    group,
+    overall,
+    skills:academySkillsFor(group, overall, id),
+    status:'academy',
+    exceptional:true,
+    source:'captacion_excepcional_temporada',
+    joinedSeason:game?.seasonNumber || 1,
+    joinedTurn:currentTurnIndex()
+  });
+}
+function grantSeasonalExceptionalAcademyYouth(){
+  if(!game?.academy || !ACADEMY_EXCEPTIONAL_YOUTH_ENABLED) return [];
+  game.academy = normalizeAcademyState(game.academy);
+  const status = academyExceptionalYouthSeasonStatus();
+  if(status.resolved) return [];
+  if(academyAvailableSlots() < status.target) return [];
+  const players = [];
+  for(let i=0; i<status.target; i+=1){
+    const player = createExceptionalAcademyYouth();
+    game.academy.players.push(player);
+    players.push(player);
+  }
+  game.academy.exceptionalYouthTargetSeason = status.season;
+  game.academy.exceptionalYouthTargetCount = status.target;
+  game.academy.exceptionalYouthGrantedSeason = status.season;
+  game.academy.exceptionalYouthGrantedCount = players.length;
+  if(players.length){
+    const facilityBonus = Math.max(0, status.target - 1);
+    const names = players.map(player => `${player.name} (${academyGroupLabel(player.group)})`).join(', ');
+    pushGameMessage({
+      type:'academia',
+      title:players.length === 1 ? 'Juvenil excepcional incorporado' : `${players.length} juveniles excepcionales incorporados`,
+      body:`La primera captación de la temporada incorporó ${names}. Ya pueden entrenarse en academia o firmar contrato profesional.${facilityBonus ? ` El predio juvenil aportó ${facilityBonus} juvenil(es) adicional(es), para un total de ${status.target}.` : ''}`,
+      priority:'normal'
+    });
+  }
+  return players;
+}
+function processAcademyScoutingArrivals(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  let added = 0;
+  let lost = 0;
+  game.academy.scoutingJobs.forEach(job => {
+    if(job.status !== 'pending') return;
+    if(Number(job.dueTurn || 0) > currentTurnIndex()) return;
+    const requested = clamp(Number(job.count || 0), ACADEMY_PLAYERS_MIN, ACADEMY_PLAYERS_MAX);
+    const available = academyAvailableSlots();
+    if(available <= 0){
+      job.status = 'completed_lost';
+      job.completedTurn = currentTurnIndex();
+      job.lostPlayers = requested;
+      lost += requested;
+      return;
     }
-  },
+    const accepted = Math.min(requested, available);
+    const batch = createAcademyBatch(requested).slice(0, accepted);
+    game.academy.players.push(...batch);
+    job.status = accepted >= requested ? 'completed' : 'completed_partial';
+    job.completedTurn = currentTurnIndex();
+    job.addedPlayers = batch.length;
+    job.lostPlayers = Math.max(0, requested - batch.length);
+    added += batch.length;
+    lost += job.lostPlayers;
+  });
+  if(added > 0 || lost > 0){
+    game.academy.lastArrivalTurn = currentTurnIndex();
+    const parts = [];
+    if(added > 0) parts.push(`La academia recibió ${added} juveniles para evaluar.`);
+    if(lost > 0) parts.push(`${lost} juveniles se perdieron por falta de lugar.`);
+    pushGameMessage({ type:'academia', title:'Informe de captación recibido', body:parts.join(' '), priority:lost > 0 ? 'high' : 'normal' });
+  }
+  return added;
+}
 
-  cohesion: {
-    valorInicial: 10,
-    gananciaPorPartido: 7,
-    perdidaPorCambioTactico: 8,
-    perdidaPorCambioJugador: 1,
-    perdidaPorFichaje: 2,
-    perdidaPorVenta: 3,
-    perdidaPorDespedirJugador: 1,
-    gananciaPorContratoProfesionalJuvenil: 3,
-    probabilidadEntrenamientoTacticoPorCasilla: 0.35,
-    gananciaEntrenamientoTacticoPorCasilla: 1
-  },
 
-  moral: {
-    perdidaPlantelPorDespedirJugador: 1
-  },
-
-  capitania: {
-    activo: true,
-    partidosObjetivoAprox: 10,
-    maximoPorcentaje: 99,
-    // Sólo usa habilidades que ya existen en todos los jugadores de la base.
-    pesosMaximo: {
-      liderazgo: 0.35,
-      serenidad: 0.20,
-      disciplina: 0.15,
-      trabajoEquipo: 0.15,
-      posicionamiento: 0.10,
-      resistencia: 0.05
-    },
-    aprendizaje: {
-      factorMinimo: 0.80,
-      factorMaximo: 1.20,
-      pesoLiderazgo: 0.40,
-      pesoSerenidad: 0.25,
-      pesoDisciplina: 0.20,
-      pesoTrabajoEquipo: 0.15
-    },
-    efectos: [
-      { minimo: 80, maximo: 99, moral: 1, cohesion: 2 },
-      { minimo: 40, maximo: 79, moral: 0, cohesion: 1 },
-      { minimo: 20, maximo: 39, moral: -1, cohesion: 0 },
-      { minimo: 0, maximo: 19, moral: -3, cohesion: -2 }
-    ]
-  },
-
-  economia: {
-    pagosPorResultadoLiga: {
-      activo: true,
-      reputacionMinima: 10,
-      reputacionMaxima: 100,
-      pagoVictoriaPorPuntoReputacion: 8000,
-      pagoEmpatePorPuntoReputacion: 3000,
-      variacionMinima: 0.75,
-      variacionMaxima: 1.25,
-      redondeo: 5000,
-      pagoDerrota: 0
+function academyPlayerInjured(player){
+  return Number(player?.injuredThroughTurn || 0) > currentTurnIndex();
+}
+function academyYouthInjuryTurnsLeft(player){
+  return Math.max(0, Math.round(Number(player?.injuredThroughTurn || 0) - currentTurnIndex()));
+}
+function academyYouthInjuryLabel(player){
+  const turns = academyYouthInjuryTurnsLeft(player);
+  if(turns <= 0) return '';
+  return `${player.injuryName || 'Lesión juvenil'} · ${formatDaysFromTurns(turns)}`;
+}
+function clearRecoveredAcademyYouthInjuries(){
+  if(!game?.academy) return 0;
+  let recovered = 0;
+  academyActivePlayers().forEach(player => {
+    if(Number(player.injuredThroughTurn || 0) > 0 && Number(player.injuredThroughTurn || 0) <= currentTurnIndex()){
+      player.injuredThroughTurn = 0;
+      player.injuryStartTurn = 0;
+      player.injuryName = '';
+      player.injuryTreated = false;
+      recovered += 1;
     }
-  },
+  });
+  return recovered;
+}
+function academySeasonProgressRatio(){
+  const total = Math.max(1, (game?.fixtures || []).length || 30);
+  const current = clamp(Number(game?.matchdayIndex || 0), 0, total);
+  return clamp(current / total, 0, 1);
+}
+function processAcademyYouthInjuries(){
+  if(!game?.academy) return 0;
+  ensureAcademyYouthInjurySeason();
+  clearRecoveredAcademyYouthInjuries();
+  const target = Math.max(0, Math.round(Number(game.academy.youthInjuriesTarget || 0)));
+  if(target <= 0) return 0;
+  const count = Math.max(0, Math.round(Number(game.academy.youthInjuriesCount || 0)));
+  if(count >= target) return 0;
+  const progress = academySeasonProgressRatio();
+  const due = Math.min(target, Math.floor((progress * target) + 0.15));
+  const randomPush = Math.random() < 0.06;
+  const forcedEndSeason = progress >= 0.88;
+  if(due <= count && !randomPush && !forcedEndSeason) return 0;
+  const candidates = academyActivePlayers().filter(player => !academyPlayerInjured(player));
+  if(!candidates.length) return 0;
+  const player = candidates[hashNumber(`academy-injury-pick-${game.seasonNumber || 1}-${currentTurnIndex()}-${Math.random()}`, candidates.length)];
+  const names = ['sobrecarga muscular','esguince leve','molestia en la rodilla','contractura fuerte','dolor en el aductor','golpe en el tobillo'];
+  const duration = rnd(ACADEMY_YOUTH_INJURY_MIN_TURNS, ACADEMY_YOUTH_INJURY_MAX_TURNS);
+  player.injuryName = names[hashNumber(`academy-injury-name-${player.id}-${currentTurnIndex()}-${Math.random()}`, names.length)];
+  player.injuryStartTurn = currentTurnIndex();
+  player.injuredThroughTurn = currentTurnIndex() + duration;
+  player.injuryTreated = false;
+  player.injuriesSeason = Math.max(0, Math.round(Number(player.injuriesSeason || 0))) + 1;
+  game.academy.youthInjuriesCount = count + 1;
+  pushGameMessage({ type:'academia', priority:'normal', title:'Juvenil lesionado', body:`${player.name} sufrió ${player.injuryName}. Mientras esté lesionado no entrenará habilidades.` });
+  return 1;
+}
+function treatAcademyYouthInjuryCore(playerId, options={}){
+  if(!game) return { success:false, message:'No hay partida activa.' };
+  game.academy = normalizeAcademyState(game.academy);
+  const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
+  if(!player || !academyPlayerInjured(player)) return { success:false, message:'El juvenil no está lesionado.' };
+  const injuryName = player.injuryName || 'lesión juvenil';
+  const cost = Math.max(0, Math.round(Number(options.cost ?? ACADEMY_YOUTH_INJURY_TREATMENT_COST)));
+  if(cost > 0 && !managerCanAffordAcademy(cost)) return { success:false, message:`Saldo personal insuficiente. El tratamiento cuesta ${formatMoney(cost)}.` };
+  if(cost > 0) recordAcademyPersonalExpense(cost, `Tratamiento juvenil: ${player.name}`, { type:'academy_youth_injury_treatment', playerId:player.id, injuryName });
+  player.injuredThroughTurn = 0;
+  player.injuryStartTurn = 0;
+  player.injuryName = '';
+  player.injuryTreated = true;
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId:player.id, youth:true, success:true });
+  return { success:true, player, injuryName, message:`${player.name} fue tratado por ${injuryName} y puede volver a entrenar.` };
+}
+function treatAcademyYouthInjury(playerId){
+  const result = treatAcademyYouthInjuryCore(playerId);
+  if(!result.success){ showNotice(result.message || 'No se pudo tratar al juvenil.'); return; }
+  saveLocal(true);
+  renderAcademy();
+  showNotice(result.message);
+}
+function academyInjuredTreatmentItems(){
+  if(!game?.academy) return [];
+  game.academy = normalizeAcademyState(game.academy);
+  return academyActivePlayers().filter(player => academyPlayerInjured(player)).map(player => ({
+    kind:'youth',
+    player,
+    remaining:academyYouthInjuryTurnsLeft(player),
+    status:{ injuryLabel:player.injuryName || 'Lesión juvenil' }
+  }));
+}
 
-  lesiones: {
-    // Se mantiene así: un lesionado usado como suplente rinde casi nada.
-    penalizacionLesionadoSuplente: 0.30,
-    // Los clubes bot sufren la mitad de la probabilidad normal en todos sus partidos.
-    multiplicadorBots: 0.50,
-    // El club del manager conserva la protección durante sus primeros 50 partidos oficiales.
-    partidosProteccionManager: 50,
-    multiplicadorManagerPrimerosPartidos: 0.50,
-    // El partido dirigido en vivo reduce a la mitad el riesgo contextual de ambos equipos.
-    multiplicadorSimuladorVivo: 0.50,
-    // Distribución de tipos de lesión. Total: 100.
-    pesoContusion: 34,
-    pesoDistension: 30,
-    pesoDesgarro: 20,
-    pesoEsguince: 10,
-    pesoRotura: 5,
-    pesoFractura: 1
-  },
-
-  simulador: {
-    pesoColectivo: 0.50,
-    pesoIndividual: 0.50,
-    probabilidadPelotaParada: 0.14,
-    escalaRiesgoErrorJugador: 0.72,
-    probabilidadGolAtribuyeErrorGol: 0.60,
-    maximoErroresPorEquipo: 5,
-    fatigaVivaMultiplicador: 5,
-    multiplicadorTarjetas: 1.10,
-    rojasDerrotaDefault: 5,
-    recuperacionAutomaticaPostPartidoMin: 4,
-    recuperacionAutomaticaPostPartidoMax: 6,
-    // si está activo, la recuperación postpartido usa la resistencia del jugador.
-    // El rango 61-70 queda como puente para evitar saltos bruscos.
-    recuperacionPostPartidoUsaResistencia: true,
-    recuperacionPostPartidoPorResistencia: [
-      { minResistencia: 1, maxResistencia: 40, recuperacionMin: 0, recuperacionMax: 1 },
-      { minResistencia: 41, maxResistencia: 60, recuperacionMin: 2, recuperacionMax: 4 },
-      { minResistencia: 61, maxResistencia: 70, recuperacionMin: 3, recuperacionMax: 5 },
-      { minResistencia: 71, maxResistencia: 80, recuperacionMin: 4, recuperacionMax: 7 },
-      { minResistencia: 81, maxResistencia: 90, recuperacionMin: 6, recuperacionMax: 9 },
-      { minResistencia: 91, maxResistencia: 99, recuperacionMin: 12, recuperacionMax: 20 }
-    ],
-    desgastePartidoMin: 40,
-    desgastePartidoMax: 78,
-    factorDesgasteArquero: 0.5
-  },
-
-  dificultad: {
-    // aumenta la dificultad sin azar arbitrario.
-    partidosReferenciaTemporada: 34,
-    umbralParticipacionLesionLarga: 0.80,
-    probabilidadLesionLargaMin: 0.35,
-    probabilidadLesionLargaMax: 0.65,
-    pesoLesionLargaAltaParticipacion: 0.90,
-    lesionLargaMinDias: 90,
-    adaptacionTactica: {
-      activo: true,
-      partidosSinPenalizacion: 3,
-      bonusRivalPorRepeticion: 0.03,
-      bonusRivalMaximo: 0.12
-    },
-    moralSuplentes: {
-      perdidaPorPartidoPerdido: 1,
-      perdidaMaximaPorPartido: 12,
-      partidosSinJugarMaximoContador: 20
+function academyWeeklySalaryDueToday(today){
+  if(!validIsoDate(today)) return false;
+  const chargeDay = Number.isFinite(Number(typeof ACADEMY_PLAYER_WEEKLY_CHARGE_DAY !== 'undefined' ? ACADEMY_PLAYER_WEEKLY_CHARGE_DAY : 1)) ? Number(ACADEMY_PLAYER_WEEKLY_CHARGE_DAY) : 1;
+  const localDate = new Date(`${today}T12:00:00`);
+  if(Number(localDate.getDay()) !== chargeDay) return false;
+  return game?.academy?.youthSalaryLastChargeDate !== today;
+}
+function academyTurnSalaryCost(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const count = academyActivePlayers().length;
+  if(!count) return 0;
+  const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
+  if(!academyWeeklySalaryDueToday(today)) return 0;
+  const total = count * ACADEMY_PLAYER_TURN_COST;
+  recordAcademyPersonalExpense(total, 'Sueldos semanales de academia', { type:'academy_weekly_salary', players:count, date:today });
+  game.academy.youthSalaryLastChargeDate = today;
+  return total;
+}
+function academyTrainingType(playerId){
+  return game?.academy?.trainingPlan?.[playerId] === 'resistance' ? 'resistance' : 'technical';
+}
+function academyTrainingGainMultiplier(player){
+  return player?.exceptional ? ACADEMY_EXCEPTIONAL_YOUTH_TRAINING_MULTIPLIER : ACADEMY_SKILL_GAIN_MULTIPLIER;
+}
+function applyAcademyTrainingEffects(){
+  if(!game?.academy) return;
+  academyActivePlayers().forEach(player => {
+    if(academyPlayerInjured(player)) return;
+    player.skills = player.skills || academySkillsFor(player.group, player.overall, player.id);
+    ensureAcademyGrowthState(player);
+    const cap = academyGrowthCapOverall(player);
+    if(academyUncappedProjectedOverall(player) >= cap){
+      player.overall = academyProjectedOverall(player);
+      return;
     }
-  },
-
-  equilibrioBots: {
-    // Contra el manager, obliga a la IA a revisar su top 5 disponible y adaptar la formación para incluirlo.
-    tacticaContraManager: {
-      priorizarMejoresJugadores: true,
-      cantidadMejoresJugadores: 5,
-      bonusInclusionMejorJugador: 5000,
-      auditarCobertura: true
-    },
-    // Los bots no entrenan. Este bloque sólo ajusta su simulación rápida de partido.
-    tacticaRapida: {
-      sobreexigenciaSiPierde: true,
-      // reglas progresivas según diferencia de goles en contra del bot.
-      // desgasteFisicoPct se aplica como pérdida extra de estado físico sobre la fatiga normal del partido.
-      // bonusAtaquePct aumenta la presión ofensiva mientras el bot va perdiendo.
-      reglasDiferencia: [
-        { diferenciaMin: 1, diferenciaMax: 1, desgasteFisicoPct: 0.20, bonusAtaquePct: 0.10 },
-        { diferenciaMin: 2, diferenciaMax: 2, desgasteFisicoPct: 0.30, bonusAtaquePct: 0.20 },
-        { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.30 }
-      ],
-      maxGolesExtraPorEquipo: 1,
-      // La sobreexigencia se define únicamente mediante reglasDiferencia.
+    const type = academyTrainingType(player.id);
+    const gainMultiplier = Math.max(1, Math.round(academyTrainingGainMultiplier(player)));
+    const canApplySkillPoint = (skill) => {
+      const previous = Math.round(Number(player.skills[skill] || 1));
+      player.skills[skill] = clamp(previous + 1, 1, 99);
+      if(academyUncappedProjectedOverall(player) > cap){
+        player.skills[skill] = previous;
+        return false;
+      }
+      return true;
+    };
+    if(type === 'resistance'){
+      const total = Math.max(1, Math.round(rnd(3,6) * gainMultiplier));
+      for(let i=0;i<total;i++){
+        if(!canApplySkillPoint('resistencia')) break;
+      }
+    } else {
+      const skillNames = Object.keys(player.skills).filter(k => k !== 'porteria' || player.group === 'POR');
+      for(let i=0;i<gainMultiplier;i++){
+        if(academyUncappedProjectedOverall(player) >= cap) break;
+        const skill = skillNames[hashNumber(`academy-train-${player.id}-${currentTurnIndex()}-${i}-${Math.random()}`, skillNames.length)];
+        canApplySkillPoint(skill);
+      }
     }
-  },
+    player.overall = clamp(academyProjectedOverall(player), 1, 99);
+  });
+}
+function processAcademyTurn(){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  processAcademyResidenceRent();
+  processAcademyYouthInjuries();
+  academyTurnSalaryCost();
+  applyAcademyTrainingEffects();
+  const added = processAcademyScoutingArrivals();
+  const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  if(managerPersonalBalance() < 0 && game.academy.lastNegativeBalanceNoticeDate !== today){
+    game.academy.lastNegativeBalanceNoticeDate = today;
+    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'high', title:'Academia en números rojos', body:`Tu Cuenta Bancaria quedó en ${formatMoney(managerPersonalBalance())}. Los gastos automáticos siguen siendo personales; no podrás iniciar nuevas captaciones, obras, tratamientos o contrataciones hasta recuperar saldo.`, id:`academy-negative-${today}` });
+  }
+  if(activeTab === 'academy' && added > 0) renderAcademy();
+}
+function academyYouthPreparerActive(){
+  return staffActive('youth_preparer');
+}
+function hireYouthPreparer(){
+  openStaffHireModal('youth_preparer', renderAcademy);
+}
+function academyLockedStatTargets(){
+  const targets = [];
+  academyActivePlayers().forEach(player => {
+    const stats = Object.keys(academyVisibleStats(player));
+    const unlocked = new Set(game.academy.unlockedStats[player.id] || []);
+    stats.forEach(stat => { if(!unlocked.has(stat)) targets.push({ playerId:player.id, stat }); });
+  });
+  return targets;
+}
+function consultAcademyPlayers(){
+  if(!academyYouthPreparerActive()){ showNotice('Necesitás contratar al preparador de juveniles para consultar informes.'); return; }
+  const turn = currentTurnIndex();
+  if(Number(game.academy.lastConsultTurn) === turn){ showNotice('El preparador ya entregó un informe esta semana.'); return; }
+  const targets = academyLockedStatTargets();
+  if(!targets.length){ showNotice('No quedan habilidades ocultas por desbloquear en la academia.'); return; }
+  const baseAmount = 1 + Math.floor(Math.random() * 2);
+  const amount = Math.min(targets.length, Math.max(1, Math.round(baseAmount * staffPerformanceMultiplier('youth_preparer') * ACADEMY_CONSULT_REVEAL_MULTIPLIER)));
+  const revealed = [];
+  for(let i=0;i<amount;i++){
+    const remaining = academyLockedStatTargets();
+    if(!remaining.length) break;
+    const pick = remaining[hashNumber(`academy-consult-${turn}-${i}-${Math.random()}`, remaining.length)];
+    game.academy.unlockedStats[pick.playerId] = game.academy.unlockedStats[pick.playerId] || [];
+    if(!game.academy.unlockedStats[pick.playerId].includes(pick.stat)) game.academy.unlockedStats[pick.playerId].push(pick.stat);
+    const p = game.academy.players.find(x => Number(x.id) === Number(pick.playerId));
+    revealed.push(`${p?.name || 'Juvenil'}: ${pick.stat}`);
+  }
+  game.academy.lastConsultTurn = turn;
+  game.academy.lastConsultReveal = { turn, revealed:revealed.slice(0,12), total:revealed.length, createdAt:Date.now() };
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('consultar_juveniles', { revealed:revealed.length });
+  saveLocal(true);
+  renderAcademy();
+  showNotice(`Informe recibido: ${revealed.join(' · ')}`);
+}
+function dismissAcademyPlayer(playerId){
+  if(!game) return;
+  game.academy = normalizeAcademyState(game.academy);
+  const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
+  if(!player) return;
+  if(!managerCanAffordAcademy(ACADEMY_DISMISS_COMPENSATION)){ showNotice('Saldo personal insuficiente para pagar la compensación.'); return; }
+  if(!confirm(`Despedir a ${player.name} de la academia?`)) return;
+  recordAcademyPersonalExpense(ACADEMY_DISMISS_COMPENSATION, 'Compensación por baja de academia', { type:'academy_dismiss', playerId });
+  player.status = 'dismissed';
+  player.dismissedTurn = currentTurnIndex();
+  saveLocal(true);
+  renderAcademy();
+  showNotice(`${player.name} fue dado de baja de la academia.`);
+}
+function openPromoteAcademyModal(playerId){
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){ showNotice('Necesitás estar contratado por un club para ofrecer un contrato profesional.'); return; }
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
+  const player = academyActivePlayers().find(p => Number(p.id) === Number(playerId));
+  if(!player) return;
+  if(Number(player.age || 0) < 16){ showNotice('El juvenil todavía no tiene edad para firmar contrato profesional.'); return; }
+  const options = academyExactPositions(player.group).map(pos => `<option value="${pos}">${pos} · ${escapeHtml(roleMeta(pos).name)}</option>`).join('');
+  openModal(`<div class="purchase-offer-modal"><h2>Contrato profesional</h2><p class="muted">Fijá la posición definitiva de ${escapeHtml(player.name)} antes de subirlo al primer equipo.</p><label for="academyPromotePosition">Posición</label><select id="academyPromotePosition">${options}</select><div class="row" style="margin-top:14px"><button class="primary" id="btnConfirmPromoteAcademy">Subir al primer equipo</button></div></div>`);
+  $('btnConfirmPromoteAcademy')?.addEventListener('click', () => promoteAcademyPlayer(playerId, $('academyPromotePosition')?.value));
+}
+function promoteAcademyPlayer(playerId, exactPosition){
+  if(!game) return;
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){ showNotice('Necesitás estar contratado por un club para ofrecer un contrato profesional.'); return; }
+  if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
+  game.academy = normalizeAcademyState(game.academy);
+  const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
+  if(!player) return;
+  if(Number(player.age || 0) < 16){ showNotice('El juvenil todavía no tiene edad para firmar contrato profesional.'); return; }
+  if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
+  const allowed = academyExactPositions(player.group);
+  const position = allowed.includes(exactPosition) ? exactPosition : allowed[0];
+  const official = {
+    id:player.id,
+    name:player.name,
+    age:player.age,
+    nationality:player.nationality,
+    position,
+    clubId:game.selectedClubId,
+    overall:clamp(academyProjectedOverall(player), 1, 99),
+    skills:{ ...(player.skills || academySkillsFor(player.group, player.overall, player.id)) },
+    freeAgent:false,
+    academyOrigin:true,
+    joinedClubSeason:game.seasonNumber || 1,
+    salaryPaidCount:0,
+    lastSalaryPaidSeason:0
+  };
+  official.salary = initialAnnualSalaryForMedia(official.overall, 0.40);
+  refreshPlayerClause(official);
+  seed.players = (seed.players || []).filter(p => Number(p.id) !== Number(official.id));
+  seed.players.push(official);
+  game.playerCondition[official.id] = 70;
+  game.playerMorale[official.id] = PLAYER_MORALE_START;
+  game.playerSkillBoosts[official.id] = {};
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+  game.playerAgeSkillPenalties[official.id] = 0;
+  game.trainingPlan[official.id] = safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL);
+  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+  player.status = 'promoted';
+  player.promotedTurn = currentTurnIndex();
+  player.promotedPosition = position;
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, TEAM_COHESION_YOUTH_CONTRACT_GAIN) : 0;
+  const cohesionText = cohesionChange ? ` Cohesión +${cohesionChange}.` : '';
+  pushGameMessage({ type:'academia', title:'Juvenil promovido', body:`${official.name} firmó contrato profesional como ${position}.${cohesionText}`, priority:'normal' });
+  closeModal();
+  saveLocal(true);
+  renderAll();
+  showNotice(`${official.name} ya está en el primer equipo.${cohesionText}`);
+}
+function expireFinalSeasonAcademyPlayers(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const finalAge = Number.isFinite(Number(typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17)) ? Number(ACADEMY_YOUTH_FINAL_ACADEMY_AGE) : 17;
+  const expired = [];
+  game.academy.players.forEach(player => {
+    if(player.status !== 'academy') return;
+    if(Number(player.age || 0) >= finalAge){
+      player.status = 'expired';
+      player.expiredSeason = Number(game.seasonNumber || 1);
+      player.expiredTurn = currentTurnIndex();
+      expired.push(player);
+    }
+  });
+  if(expired.length){
+    expired.forEach(player => {
+      if(game.academy.unlockedStats) delete game.academy.unlockedStats[player.id];
+      if(game.academy.trainingPlan) delete game.academy.trainingPlan[player.id];
+    });
+    const names = expired.slice(0,4).map(p => p.name).join(', ');
+    pushGameMessage({
+      type:'academia',
+      title:'Juveniles dejaron la academia',
+      body:`${expired.length} juvenil(es) de 17 años terminaron su última temporada sin contrato profesional${names ? `: ${names}${expired.length > 4 ? '...' : ''}` : ''}.`,
+      priority:'high'
+    });
+  }
+  return expired.length;
+}
+function applyAcademyAgingIfNeeded(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  expireFinalSeasonAcademyPlayers();
+  let count = 0;
+  game.academy.players.forEach(player => {
+    if(player.status !== 'academy') return;
+    player.age = Math.max(ACADEMY_YOUTH_MIN_AGE || 12, Number(player.age || 12) + 1);
+    player.age = Math.min(player.age, ACADEMY_YOUTH_FINAL_ACADEMY_AGE || 17);
+    count += 1;
+  });
+  return count;
+}
+function academyPendingJobsMarkup(){
+  const jobs = (game.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
+  if(!jobs.length) return '<p class="muted">No hay captaciones en curso.</p>';
+  return `<div class="academy-jobs">${jobs.map(job => `<div class="stat-rank"><span>Captación en curso</span><strong>${formatDays(daysUntilTurn(job.dueTurn || 0))}</strong></div>`).join('')}</div>`;
+}
+function academyVisibleSkillsProgress(player){
+  const stats = academyVisibleStats(player);
+  const labels = Object.keys(stats);
+  const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
+  const total = labels.length || 0;
+  const visible = labels.filter(label => unlocked.has(label)).length;
+  const percent = total ? Math.round((visible / total) * 100) : 0;
+  return { total, visible, percent };
+}
+function academyVisibilityPieMarkup(player){
+  const progress = academyVisibleSkillsProgress(player);
+  const title = progress.total
+    ? `${progress.visible}/${progress.total} habilidades visibles`
+    : 'Sin habilidades para mostrar';
+  return `<div class="academy-visibility" title="${escapeHtml(title)}">
+    <div class="academy-visibility-pie" style="--academy-visible-pct:${progress.percent}"><strong>${progress.percent}%</strong></div>
+    <div>
+      <p class="label">Habilidades visibles</p>
+      <strong>${progress.visible}/${progress.total}</strong>
+      <p class="small muted">Informe descubierto</p>
+    </div>
+  </div>`;
+}
+function academyAverageVisibilityPieMarkup(activePlayers){
+  const players = Array.isArray(activePlayers) ? activePlayers : [];
+  if(!players.length){
+    return `<div class="academy-visibility academy-visibility-average"><div class="academy-visibility-pie" style="--academy-visible-pct:0"><strong>0%</strong></div><div><p class="label">Habilidades visibles</p><strong>Sin juveniles</strong><p class="small muted">Promedio activo</p></div></div>`;
+  }
+  const progress = players.map(player => academyVisibleSkillsProgress(player));
+  const avgPercent = Math.round(avg(progress.map(item => item.percent)) || 0);
+  const totalVisible = progress.reduce((sum, item) => sum + Number(item.visible || 0), 0);
+  const totalStats = progress.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  return `<div class="academy-visibility academy-visibility-average" title="${totalVisible}/${totalStats} habilidades visibles">
+    <div class="academy-visibility-pie" style="--academy-visible-pct:${avgPercent}"><strong>${avgPercent}%</strong></div>
+    <div>
+      <p class="label">Habilidades visibles</p>
+      <strong>${totalVisible}/${totalStats}</strong>
+      <p class="small muted">Promedio de juveniles activos</p>
+    </div>
+  </div>`;
+}
+function academyPlayerStatsMarkup(player){
+  const stats = academyVisibleStats(player);
+  const unlocked = new Set(game.academy?.unlockedStats?.[player.id] || []);
+  return `<div class="academy-hidden-stats">${Object.entries(stats).map(([label,value]) => `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${unlocked.has(label) ? value : '—'}</strong></div>`).join('')}</div>`;
+}
 
-  estadio: {
-    deterioroCampoMultiplicador: 2,
-    deterioroCapacidadPorTemporadaPct: 1,
-    clima: {
-      lluviaDeterioroActivo: true,
-      lluviaLeveExtraDeterioro: 3,
-      lluviaIntensaExtraDeterioro: 7
+function academyGrowthStage(growthNow, growthLimit){
+  const limit = Math.max(0, Number(growthLimit || 0));
+  const current = Math.max(0, Number(growthNow || 0));
+  const ratio = limit ? Math.min(1, current / limit) : 0;
+  if(ratio >= 1){
+    return { label:'Excelente', className:'excellent', bar:100 };
+  }
+  if(ratio >= 0.66){
+    return { label:'Muy bueno', className:'very-good', bar:76 };
+  }
+  if(ratio >= 0.33){
+    return { label:'Normal', className:'normal', bar:52 };
+  }
+  return { label:'Bajo', className:'low', bar:22 };
+}
+function academyGrowthSoftMarkup(growthNow, growthLimit){
+  const stage = academyGrowthStage(growthNow, growthLimit);
+  return `<div class="academy-growth-soft academy-growth-${stage.className}">
+    <div class="stat-rank academy-growth-cap"><span>Crecimiento esta temporada</span><strong>${escapeHtml(stage.label)}</strong></div>
+    <div class="academy-growth-soft-bar" aria-hidden="true"><span style="width:${stage.bar}%"></span></div>
+  </div>`;
+}
+function academyPlayerCard(player){
+  ensureAcademyGrowthState(player);
+  const training = academyTrainingType(player.id);
+  const employed = !(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive());
+  const canPromote = employed && Number(player.age || 0) >= 16;
+  const finalSeason = Number(player.age || 0) >= (typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17);
+  const injured = academyPlayerInjured(player);
+  const injuryLabel = academyYouthInjuryLabel(player);
+  const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x5</span>' : '<span class="pill">Media oculta</span>';
+  const finalSeasonPill = finalSeason ? '<span class="pill warn">⚠ Última temporada</span>' : '';
+  const injuryPill = injured ? '<span class="pill bad">Lesionado</span>' : '';
+  const growthNow = Math.max(0, academyProjectedOverall(player) - Number(player.seasonStartOverall || academyProjectedOverall(player)));
+  const growthLimit = Math.max(0, Number(player.seasonGrowthLimit || 0));
+  return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''} ${finalSeason ? 'academy-player-final-season' : ''}">
+    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${finalSeasonPill}${injuryPill}</div></div>
+    ${finalSeason ? '<div class="academy-injury-alert academy-final-season-alert"><strong>Última temporada en academia</strong><span>Si no firma contrato profesional antes del cambio de temporada, desaparece.</span></div>' : ''}
+    ${injured ? `<div class="academy-injury-alert"><strong>${escapeHtml(injuryLabel)}</strong><span>No entrena habilidades hasta ser tratado o recuperarse.</span></div>` : ''}
+    ${academyGrowthSoftMarkup(growthNow, growthLimit)}
+    ${academyVisibilityPieMarkup(player)}
+    ${academyPlayerStatsMarkup(player)}
+    <div class="row academy-actions">
+      <select data-academy-training="${player.id}" ${injured ? 'disabled' : ''}><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>
+      ${injured ? `<button class="primary small-btn" data-treat-academy-injury="${player.id}">Tratar · ${formatMoney(ACADEMY_YOUTH_INJURY_TREATMENT_COST)}</button>` : ''}
+      <button class="ghost small-btn" data-dismiss-academy="${player.id}">Despedir</button>
+      <button class="primary small-btn" data-promote-academy="${player.id}" ${canPromote ? '' : 'disabled'}>${canPromote ? 'Contrato profesional' : !employed ? 'Sin club' : 'Menor de 16'}</button>
+    </div>
+  </div>`;
+}
+function academyConsultAnimationMarkup(){
+  const info = game?.academy?.lastConsultReveal;
+  if(!info || Number(info.turn || -1) !== currentTurnIndex()) return '';
+  const revealed = Array.isArray(info.revealed) ? info.revealed : [];
+  if(!revealed.length) return '';
+  return `<div class="academy-consult-animation"><div><p class="label">Informe actualizado</p><strong>${Number(info.total || revealed.length)} habilidad(es) revelada(s)</strong></div><div class="academy-consult-revealed">${revealed.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>`;
+}
+function renderAcademy(){
+  game.academy = normalizeAcademyState(game.academy);
+  const activeRaw = academyActivePlayers();
+  const active = academySortedPlayers(activeRaw);
+  const activePreparer = academyYouthPreparerActive();
+  const salaryTurn = active.length * ACADEMY_PLAYER_TURN_COST;
+  const personalBalance = managerPersonalBalance();
+  const academyExpenses = academyFinanceHistory();
+  const totalAcademyExpenses = academyExpenses.reduce((sum,item) => sum + Math.abs(Math.min(0, Number(item.delta || 0))), 0);
+  const recentAcademyExpenses = academyExpenses.slice(-8).reverse();
+  const residences = academyResidenceCount();
+  const residenceLimit = academyResidenceLimit();
+  const capacity = academyCapacity();
+  const availableSlots = academyAvailableSlots();
+  const exceptionalStatus = academyExceptionalYouthSeasonStatus();
+  const scoutingDisabled = !managerCanAffordAcademy(ACADEMY_SCOUTING_COST) || availableSlots <= 0 || (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target);
+  const facilityExceptionalBonus = Math.max(0, exceptionalStatus.currentTarget - 1);
+  view.innerHTML = `
+    <div class="row section-title">
+      <div><h2>Tu Academia</h2><p class="tagline">Patrimonio personal del manager. Conservás juveniles, Predio, residencias y empleados aunque cambies de club.</p></div>
+      <div class="row"><span class="pill">Sede ${escapeHtml(academyLocalCountry())}</span><span class="pill">Saldo personal ${formatMoney(personalBalance)}</span></div>
+    </div>
+    <div class="grid cols-3 academy-owner-summary">
+      <div class="card"><p class="label">Propietario</p><strong>Manager</strong><p class="muted small">La Academia no pertenece al club actual.</p></div>
+      <div class="card"><p class="label">Gasto semanal juvenil</p><strong>${formatMoney(salaryTurn)}</strong></div>
+      <div class="card"><p class="label">Gastos históricos</p><strong class="bad">${formatMoney(totalAcademyExpenses)}</strong></div>
+    </div>
+    <div class="academy-owned-facility" style="margin-top:14px">${youthTrainingFacilityMarkup()}</div>
+    <div class="card academy-residence-card" style="margin:14px 0">
+      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Tu Predio habilita 2 residencias por nivel. El alquiler sale de la Cuenta Bancaria personal: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)} mensuales por residencia.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
+      <div class="academy-residence-stats">
+        <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
+        <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
+        <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence" ${residences < residenceLimit ? '' : 'disabled'}>Alquilar residencia</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+      ${residences > 0 && availableSlots < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${availableSlots}.</p>` : ''}
+      ${residences > residenceLimit ? `<p class="small warn">Esta partida conserva ${residences - residenceLimit} residencia(s) heredada(s) por encima del límite actual. No se eliminan, pero no se pueden alquilar nuevas hasta ampliar el predio.</p>` : residenceLimit <= 0 ? '<p class="small warn">Construí el predio juvenil nivel 1 para habilitar las primeras 2 residencias.</p>' : residences >= residenceLimit ? `<p class="small muted">Límite actual alcanzado: ${residenceLimit} residencia(s). Cada nuevo nivel del predio habilita 2 más.</p>` : `<p class="small muted">Podés alquilar ${residenceLimit - residences} residencia(s) adicional(es) con el nivel actual.</p>`}
+    </div>
+    <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
+      <div class="row">
+        <div><p class="label">Preparador de juveniles</p><h3>Informe de juveniles</h3><p class="muted small">Empleado personal de Tu Academia. Su contrato se paga desde la Cuenta Bancaria del manager y se conserva al cambiar de club.</p></div>
+        <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
+      </div>
+    </div>
+    ${academyConsultAnimationMarkup()}
+    <div class="grid cols-3 academy-summary">
+      <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>
+      <div class="card academy-average-card">${academyAverageVisibilityPieMarkup(active)}</div>
+      <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><p class="small ${exceptionalStatus.resolved ? 'ok' : 'muted'}">${exceptionalStatus.resolved ? `Excepcionales entregados: ${exceptionalStatus.granted}/${exceptionalStatus.target}` : `Primera captación: ${exceptionalStatus.target} excepcional(es)`}</p><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${availableSlots <= 0 ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target) ? `<p class="small warn">Reservá ${exceptionalStatus.target} cupos libres para recibir completa la cuota excepcional de la primera captación. Disponibles: ${availableSlots}.</p>` : ''}</div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
+    <div class="card academy-finance-card" style="margin-top:14px">
+      <div class="row"><div><p class="label">Finanzas de Academia</p><h3>Gastos personales</h3></div><span class="pill">Saldo ${formatMoney(personalBalance)}</span></div>
+      <p class="muted small">Captaciones, Predio, residencias, Preparador, becas juveniles, tratamientos y bajas se descuentan de tu Cuenta Bancaria, nunca del presupuesto del club.</p>
+      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Gasto</th></tr></thead><tbody>${recentAcademyExpenses.length ? recentAcademyExpenses.map(item => `<tr><td>${escapeHtml(item.date || '—')}</td><td>${escapeHtml(item.concept || 'Academia')}</td><td class="bad">${formatMoney(Math.abs(Number(item.delta || 0)))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">Todavía no hay gastos personales de Academia registrados.</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el predio juvenil actual, con un máximo de 6. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    ${academySortControlsMarkup()}
+    <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
+  `;
+  document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
+  $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
+  $('btnCancelAcademyResidence')?.addEventListener('click', cancelAcademyResidence);
+  $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);
+  $('btnHireYouthPreparer')?.addEventListener('click', hireYouthPreparer);
+  $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);
+  bindStaffDismissButtons(renderAcademy);
+  $('academySortMode')?.addEventListener('change', (event) => {
+    game.academy.sortMode = event.target.value;
+    saveLocal(true);
+    renderAcademy();
+  });
+  document.querySelectorAll('[data-dismiss-academy]').forEach(btn => btn.addEventListener('click', () => dismissAcademyPlayer(Number(btn.dataset.dismissAcademy))));
+  document.querySelectorAll('[data-promote-academy]').forEach(btn => btn.addEventListener('click', () => openPromoteAcademyModal(Number(btn.dataset.promoteAcademy))));
+  document.querySelectorAll('[data-treat-academy-injury]').forEach(btn => btn.addEventListener('click', () => treatAcademyYouthInjury(Number(btn.dataset.treatAcademyInjury))));
+  document.querySelectorAll('[data-academy-training]').forEach(select => select.addEventListener('change', () => {
+    game.academy.trainingPlan[select.dataset.academyTraining] = select.value === 'resistance' ? 'resistance' : 'technical';
+    saveLocal(true);
+    showNotice('Entrenamiento juvenil actualizado.');
+  }));
+}
+
+function kinesioTreatmentItems(){
+  const firstTeam = injuredPlayersByClub(game.selectedClubId).map(item => ({ ...item, kind:'first' }));
+  const youth = typeof academyInjuredTreatmentItems === 'function' ? academyInjuredTreatmentItems() : [];
+  return firstTeam.concat(youth);
+}
+function kinesioItemTreatmentKey(itemOrId, kind='first'){
+  const playerId = typeof itemOrId === 'object' ? itemOrId?.player?.id : itemOrId;
+  const itemKind = typeof itemOrId === 'object' ? (itemOrId?.kind || kind) : kind;
+  return `${itemKind}:${playerId}`;
+}
+function academyYouthTreatmentVisual(player){
+  const progress = typeof academyVisibleSkillsProgress === 'function' ? academyVisibleSkillsProgress(player) : { percent:0, visible:0, total:0 };
+  return `<div class="academy-youth-treatment-visual" title="${escapeHtml(progress.visible || 0)}/${escapeHtml(progress.total || 0)} habilidades visibles"><div class="academy-visibility-pie" style="--academy-visible-pct:${Math.round(progress.percent || 0)}"><strong>${Math.round(progress.percent || 0)}%</strong></div></div>`;
+}
+
+function kinesiologistDifferentiatedState(){
+  if(!game) return null;
+  game.staffActions = game.staffActions || {};
+  const current = (game.staffActions.kinesiologist && typeof game.staffActions.kinesiologist === 'object')
+    ? game.staffActions.kinesiologist
+    : { active:false };
+  game.staffActions.kinesiologist = current;
+  const playerId = Math.max(0, Math.round(Number(current.differentiatedPlayerId || 0)));
+  const player = playerId ? playerById(playerId) : null;
+  if(playerId && (!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0))){
+    current.differentiatedPlayerId = 0;
+  }else{
+    current.differentiatedPlayerId = playerId;
+  }
+  return current;
+}
+function kinesiologistDifferentiatedPlayerId(){
+  if(!game || !staffActive('kinesiologist')) return 0;
+  const state = kinesiologistDifferentiatedState();
+  return Math.max(0, Math.round(Number(state?.differentiatedPlayerId || 0)));
+}
+function isKinesiologistDifferentiatedPlayer(playerId){
+  return Number(playerId || 0) > 0 && Number(playerId) === kinesiologistDifferentiatedPlayerId();
+}
+function kinesiologistDifferentiatedInjuryReduction(playerId){
+  if(!isKinesiologistDifferentiatedPlayer(playerId)) return 0;
+  const category = String(staffContract('kinesiologist')?.category || kinesiologistDifferentiatedState()?.category || 'regular');
+  return clamp(Number(KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.[category] ?? KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.regular ?? 0), 0, 0.95);
+}
+function assignKinesiologistDifferentiatedPlayer(playerId){
+  if(!game || !staffActive('kinesiologist')){ showNotice('Primero tenés que contratar al kinesiólogo.'); return false; }
+  const cleanId = Math.max(0, Math.round(Number(playerId || 0)));
+  const player = cleanId ? playerById(cleanId) : null;
+  if(cleanId && (!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0))){
+    showNotice('Ese jugador ya no pertenece al plantel.');
+    return false;
+  }
+  const state = kinesiologistDifferentiatedState();
+  state.differentiatedPlayerId = cleanId;
+  state.differentiatedAssignedDate = cleanId && validIsoDate(game.currentDate) ? game.currentDate : '';
+  state.differentiatedAssignedGlobalTurn = cleanId ? Number(game.globalTurn || 0) : 0;
+  saveLocal(true);
+  renderEmployees();
+  showNotice(cleanId ? `${player.name} comenzó el trabajo diferenciado.` : 'El casillero de trabajo diferenciado quedó libre.');
+  return true;
+}
+function processKinesiologistDifferentiatedDaily(){
+  const playerId = kinesiologistDifferentiatedPlayerId();
+  if(!playerId) return { applied:false };
+  const player = playerById(playerId);
+  if(!player) return { applied:false };
+  game.playerCondition = game.playerCondition || {};
+  game.playerMorale = game.playerMorale || {};
+  const wearBefore = currentPlayerWear(playerId);
+  const conditionBefore = currentCondition(playerId);
+  const moraleBefore = currentMorale(playerId);
+  const wearChange = PLAYER_WEAR_ENABLED ? adjustPlayerWear(playerId, -KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY) : 0;
+  game.playerCondition[playerId] = clamp(Math.min(conditionBefore + KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY, maxConditionForPlayer(playerId)), 0, 99);
+  game.playerMorale[playerId] = clamp(moraleBefore + KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY, 1, 99);
+  const summary = {
+    applied:true,
+    playerId,
+    wearBefore,
+    wearAfter:currentPlayerWear(playerId),
+    wearRecovered:Math.abs(Math.min(0, Number(wearChange || 0))),
+    conditionBefore,
+    conditionAfter:currentCondition(playerId),
+    moraleBefore,
+    moraleAfter:currentMorale(playerId),
+    injuryReduction:kinesiologistDifferentiatedInjuryReduction(playerId),
+    ...turnStamp()
+  };
+  const state = kinesiologistDifferentiatedState();
+  if(state) state.lastDifferentiatedDaily = summary;
+  return summary;
+}
+function kinesiologistDifferentiatedSlotMarkup(active){
+  if(!active) return `<div class="kinesio-differentiated-panel is-inactive">
+    <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo</p><h4>Trabajo diferenciado</h4></div><span class="pill">Sin efecto</span></div>
+    <p class="muted">Contratá al kinesiólogo para asignar un jugador. Si el empleado es despedido, la asignación se elimina y el casillero deja de producir efectos.</p>
+    <label class="label" for="kinesioDifferentiatedPlayerDisabled">Jugador asignado</label>
+    <select id="kinesioDifferentiatedPlayerDisabled" class="training-individual-select" disabled><option>Sin kinesiólogo contratado</option></select>
+    <button type="button" class="primary" disabled>Agregar jugador</button>
+  </div>`;
+  const currentId = kinesiologistDifferentiatedPlayerId();
+  const currentPlayer = currentId ? playerById(currentId) : null;
+  const contract = staffContract('kinesiologist');
+  const category = String(contract?.category || 'regular');
+  const categoryLabel = staffCategory(category).nombre;
+  const reduction = Math.round(kinesiologistDifferentiatedInjuryReduction(currentId || -1) * 100)
+    || Math.round(Number(KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION?.[category] || 0) * 100);
+  const options = playersByClub(game.selectedClubId)
+    .slice()
+    .sort((a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'es'))
+    .map(player => `<option value="${player.id}" ${Number(player.id) === currentId ? 'selected' : ''}>${escapeHtml(player.name)} · ${escapeHtml(player.position || '—')} · ${visibleOverall(player)}</option>`)
+    .join('');
+  const currentMarkup = currentPlayer ? `<div class="kinesio-differentiated-current">${faceImg(currentPlayer,'staff-differentiated-face')}<div><strong>${escapeHtml(currentPlayer.name)}</strong><span>${conditionBar(currentPlayer.id)}</span><span>${moraleBar(currentPlayer.id)}</span></div></div>` : '<p class="muted kinesio-slot-empty">Casillero libre.</p>';
+  return `<div class="kinesio-differentiated-panel is-active">
+    <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo · ${escapeHtml(categoryLabel)}</p><h4>Trabajo diferenciado</h4></div><span class="pill ok">-${reduction}% lesión</span></div>
+    <p class="muted">Un jugador queda fuera del entrenamiento general e individual. Cada día recupera ${KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY} de desgaste, ${KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY} de forma y ${KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY} de moral.</p>
+    ${currentMarkup}
+    <label class="label" for="kinesioDifferentiatedPlayer">Jugador asignado</label>
+    <select id="kinesioDifferentiatedPlayer" class="training-individual-select"><option value="0">Ningún jugador</option>${options}</select>
+    <div class="modal-actions"><button id="btnAssignKinesioDifferentiated" class="primary">${currentId ? 'Actualizar casillero' : 'Agregar jugador'}</button>${currentId ? '<button id="btnClearKinesioDifferentiated" class="ghost">Retirar</button>' : ''}</div>
+  </div>`;
+}
+function renderEmployees(){
+  if(Number(game?.budget || 0) < 0) dismissAllStaffForFinancialCrisis({ silent:true });
+  const last = game.staffActions?.motivationalTalk || null;
+  const psychologistActive = staffActive('psychologist');
+  const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
+  const canCallPsychologist = psychologistActive && cooldownLeft <= 0;
+  const cooldownText = cooldownLeft > 0 ? `<p class="small warn">Disponible nuevamente en ${formatDaysFromTurns(cooldownLeft)}.</p>` : '';
+  const kinesioActive = staffActive('kinesiologist');
+  const injuredList = kinesioTreatmentItems();
+  view.innerHTML = `
+    <div class="row section-title">
+      <div>
+        <h2>Empleados</h2>
+        <p class="tagline">Acciones de apoyo para el plantel. La contratación se paga por toda la temporada; podés despedir empleados, pero no se reintegra dinero.</p>
+      </div>
+      <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
+    </div>
+    ${staffContractsPanelMarkup({ empty:true })}
+    <div class="card blocker" style="margin-top:12px"><p class="muted small">Si el presupuesto del club cae por debajo de $0, la directiva despide automáticamente a los empleados del club. El Preparador de juveniles pertenece a Tu Academia y no se ve afectado por la economía del club.</p></div>
+    <div class="grid cols-2" style="margin-top:14px">
+      <div class="card staff-card">
+        <h3>Psicólogo motivacional</h3>
+        <p class="muted">Convoca una charla para intentar mejorar la moral del plantel.</p>
+        <p class="label">Costo</p>
+        <div class="metric small">${staffCostLabel('psychologist')}</div>
+        ${psychologistActive ? staffContractCardMarkup('psychologist', 'mini') : `<button id="btnHirePsychologist" class="primary">Contratar</button>`}
+        ${cooldownText}
+        <button id="btnMotivationalTalk" class="primary" ${canCallPsychologist ? '' : 'disabled'}>Charla motivacional</button>
+      </div>
+      <div class="card staff-card">
+        <h3>Estado del plantel</h3>
+        <div class="stat-rank"><span>Moral media</span><strong>${squadMoraleAverage(game.selectedClubId)}/99</strong></div>
+        <div class="profile-bar-wrap">${moraleTeamBar(game.selectedClubId)}</div>
+        ${last ? `<div class="staff-result ${last.success ? 'ok-result' : 'bad-result'}"><div class="project-progress completed"><span style="width:100%"></span></div><strong>${escapeHtml(last.message)}</strong></div>` : '<p class="muted">Sin acciones recientes.</p>'}
+      </div>
+      <div class="card staff-card kinesio-employee-card">
+        <h3>Kinesiólogo</h3>
+        <p class="muted">Contratación por temporada completa. Permite tratar lesionados y asignar un jugador a trabajo diferenciado.</p>
+        <p class="label">Costo</p>
+        <div class="metric small">${staffCostLabel('kinesiologist')}</div>
+        ${kinesioActive ? staffContractCardMarkup('kinesiologist', 'mini') : `<button id="btnHireKinesiologist" class="primary">Contratar</button>`}
+        ${kinesiologistDifferentiatedSlotMarkup(kinesioActive)}
+      </div>
+      <div class="card staff-card">
+        <h3>Tratamientos</h3>
+        ${kinesioActive ? injuredTreatmentList(injuredList) : '<p class="muted">Contratá al kinesiólogo para habilitar tratamientos sobre jugadores lesionados.</p>'}
+      </div>
+    </div>
+  `;
+  $('btnHirePsychologist')?.addEventListener('click', () => openStaffHireModal('psychologist', renderEmployees));
+  $('btnMotivationalTalk')?.addEventListener('click', (event) => callMotivationalPsychologist(event.currentTarget));
+  $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
+  $('btnKinesioTreatAll')?.addEventListener('click', (event) => treatAllInjuredPlayers(event.currentTarget));
+  $('btnAssignKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(Number($('kinesioDifferentiatedPlayer')?.value || 0)));
+  $('btnClearKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(0));
+  document.querySelectorAll('[data-kinesio-treat]').forEach(btn => {
+    btn.addEventListener('click', () => treatInjuredPlayer(Number(btn.dataset.kinesioTreat), btn, btn.dataset.kinesioKind || 'first')); 
+  });
+  bindStaffDismissButtons(renderEmployees);
+}
+function injuredTreatmentList(injuredList){
+  if(!injuredList.length) return '<p class="muted">No hay jugadores lesionados para tratar.</p>';
+  const eligible = injuredList.filter(item => !wasKinesioTreatedThisTurn(item.player.id, item.kind));
+  const firstTeamEligible = eligible.filter(item => item.kind !== 'youth');
+  const youthEligible = eligible.filter(item => item.kind === 'youth');
+  const overtimeCost = firstTeamEligible.length ? currentKinesiologistOvertimeCost() : 0;
+  const youthCost = youthEligible.length * ACADEMY_YOUTH_INJURY_TREATMENT_COST;
+  const insufficientBudget = overtimeCost > 0 && (game.budget || 0) < overtimeCost;
+  const insufficientPersonal = youthCost > 0 && !managerCanAffordAcademy(youthCost);
+  const bulkDisabled = !eligible.length || insufficientBudget || insufficientPersonal;
+  const bulkReason = !eligible.length ? 'Todos los lesionados disponibles ya fueron tratados esta semana.' : insufficientBudget ? 'Presupuesto del club insuficiente para pagar horas extras.' : insufficientPersonal ? `Saldo personal insuficiente para tratamientos juveniles (${formatMoney(youthCost)}).` : `Horas extras del club: ${formatMoney(overtimeCost)} · tratamientos juveniles personales: ${formatMoney(youthCost)}.`;
+  return `<div class="kinesio-bulk-card">
+    <p class="label">Que los médicos hagan horas extras hoy</p>
+    <div class="row gap-sm">
+      <button class="primary" id="btnKinesioTreatAll" ${bulkDisabled ? 'disabled' : ''}>Tratar a todos · ${formatMoney(overtimeCost)}</button>
+      <span class="pill">${eligible.length}/${injuredList.length} pendiente(s)</span>
+    </div>
+    <p class="small ${insufficientBudget ? 'warn' : 'muted'}">${escapeHtml(bulkReason)}</p>
+    <div class="kinesio-bulk-progress hidden" id="kinesioBulkProgress"></div>
+  </div>
+  <div class="injured-treatment-list">${injuredList.map(item => {
+    const kind = item.kind || 'first';
+    const treated = wasKinesioTreatedThisTurn(item.player.id, kind);
+    const key = kinesioItemTreatmentKey(item);
+    const visual = kind === 'youth' ? academyYouthTreatmentVisual(item.player) : faceImg(item.player, 'injured-home-face');
+    const nameButton = kind === 'youth'
+      ? `<strong>${escapeHtml(item.player.name)}</strong>`
+      : `<button class="linklike" data-player-id="${item.player.id}">${availabilityIcons(item.player.id)}${escapeHtml(item.player.name)}</button>`;
+    const extra = kind === 'youth' ? `<span class="small muted">Juvenil de Academia · cargo personal ${formatMoney(ACADEMY_YOUTH_INJURY_TREATMENT_COST)}</span>` : '';
+    return `<div class="injured-treatment-row ${kind === 'youth' ? 'youth-treatment' : ''}" data-treatment-row="${escapeHtml(key)}">
+      ${visual}
+      <div>${nameButton}<span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${formatDaysFromTurns(item.remaining)}</span>${extra}<span class="treatment-status" data-kinesio-status="${escapeHtml(key)}">${treated ? 'Tratado esta semana' : ''}</span></div>
+      <button class="ghost" data-kinesio-treat="${item.player.id}" data-kinesio-kind="${escapeHtml(kind)}" ${treated ? 'disabled' : ''}>${treated ? 'Tratado esta semana' : 'Tratar'}</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+function wasKinesioTreatedThisTurn(playerId, kind='first'){
+  if(kind === 'youth') return false;
+  const key = `${currentTurnIndex()}:${playerId}`;
+  return Boolean(game.staffActions?.kinesiologyTreatments?.[key]);
+}
+function currentKinesiologistOvertimeCost(){
+  const contract = staffContract('kinesiologist');
+  const reference = Number(contract?.cost || staffHireCost('kinesiologist', contract?.category || 'regular') || staffBaseCost('kinesiologist') || 0);
+  return Math.max(0, Math.round(reference * KINESIOLOGIST_OVERTIME_COST_RATE));
+}
+function hireKinesiologist(){
+  openStaffHireModal('kinesiologist', renderEmployees);
+}
+function applyKinesioTreatment(playerId, kind='first'){
+  if(!staffActive('kinesiologist')){ return { success:false, message:'Primero tenés que contratar al kinesiólogo.' }; }
+  if(kind === 'youth'){
+    const result = treatAcademyYouthInjuryCore(playerId);
+    return {
+      success:Boolean(result.success),
+      recoveryReductionTurns:0,
+      buttonLabel: result.success ? 'Juvenil tratado' : 'Tratamiento fallido',
+      message: result.message || 'No se pudo tratar al juvenil.'
+    };
+  }
+  if(!isInjured(playerId)){ return { success:false, message:'El jugador no está lesionado.', after:renderEmployees }; }
+  game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
+  const key = `${currentTurnIndex()}:${playerId}`;
+  if(game.staffActions.kinesiologyTreatments[key]){ return { success:false, message:'Este jugador ya recibió tratamiento esta semana.' }; }
+  const success = Math.random() >= KINESIOLOGIST_FAILURE_CHANCE;
+  const baseRecoveryReductionTurns = Math.max(1, Math.round(staffPerformanceMultiplier('kinesiologist')));
+  const miraculousDoctorBonus = typeof specialActiveBonus === 'function'
+    ? Math.max(0, Math.round(Number(specialActiveBonus('medico_milagroso') || 0)))
+    : 0;
+  const recoveryReductionTurns = baseRecoveryReductionTurns + miraculousDoctorBonus;
+  game.staffActions.kinesiologyTreatments[key] = { success, baseRecoveryReductionTurns, miraculousDoctorBonus, recoveryReductionTurns, ...turnStamp({ playerId }) };
+  if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId, success });
+  if(success){
+    const st = playerStatus(playerId);
+    const reduction = Math.max(1, Math.round(recoveryReductionTurns));
+    if(Number.isFinite(Number(st.injuredUntilTurn))){
+      const nextUntil = Number(st.injuredUntilTurn || 0) - reduction;
+      if(nextUntil <= currentTurnIndex()){
+        const { injuredThrough, injuredUntilTurn, injuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
+        game.playerStatus[playerId] = rest;
+      } else {
+        game.playerStatus[playerId] = { ...st, injuredUntilTurn:nextUntil, injuredThrough:game.matchdayIndex + Math.max(1, Math.ceil((nextUntil - currentTurnIndex()) / Math.max(1, LEAGUE_ROUND_INTERVAL_DAYS))) };
+      }
+    } else {
+      const nextThrough = Number(st.injuredThrough) - reduction;
+      if(nextThrough < game.matchdayIndex){
+        const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+        game.playerStatus[playerId] = rest;
+      } else {
+        game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
+      }
     }
   }
-};
+  const bonusText = miraculousDoctorBonus > 0 ? ` Incluye ${formatDaysFromTurns(miraculousDoctorBonus)} extra por Médico Milagroso.` : '';
+  return {
+    success,
+    recoveryReductionTurns,
+    baseRecoveryReductionTurns,
+    miraculousDoctorBonus,
+    buttonLabel: success ? 'Tratamiento realizado' : 'Tratamiento fallido',
+    message: success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.${bonusText}` : 'El tratamiento falló. La lesión no se redujo.'
+  };
+}
+function treatInjuredPlayer(playerId, button=null, kind='first'){
+  const performTreatment = () => {
+    const outcome = applyKinesioTreatment(playerId, kind);
+    saveLocal(true);
+    return { ...outcome, after:renderEmployees };
+  };
+  return runActionFeedback(button, performTreatment, {
+    loadingLabel:'Tratando...',
+    successLabel:kind === 'youth' ? 'Juvenil tratado' : 'Tratamiento realizado',
+    failureLabel:'Tratamiento fallido'
+  });
+}
+function kinesioDelay(ms){ return new Promise(resolve => { setTimeout(resolve, ms); }); }
+function setKinesioTreatmentRowState(playerId, state, label='', kind='first'){
+  const key = `${kind}:${playerId}`;
+  const row = document.querySelector(`[data-treatment-row="${key}"]`) || document.querySelector(`[data-treatment-row="${playerId}"]`);
+  const status = document.querySelector(`[data-kinesio-status="${key}"]`) || document.querySelector(`[data-kinesio-status="${playerId}"]`);
+  const btn = document.querySelector(`[data-kinesio-treat="${playerId}"][data-kinesio-kind="${kind}"]`) || document.querySelector(`[data-kinesio-treat="${playerId}"]`);
+  if(row){
+    row.classList.remove('is-processing','is-success','is-failure');
+    if(state) row.classList.add(`is-${state}`);
+  }
+  if(status) status.textContent = label;
+  if(btn){
+    btn.disabled = true;
+    if(state === 'processing') btn.textContent = 'Tratando...';
+    if(state === 'success') btn.textContent = 'Tratado';
+    if(state === 'failure') btn.textContent = 'Falló';
+  }
+}
+async function treatAllInjuredPlayers(button=null){
+  if(!game) return;
+  if(button && (button.disabled || button.dataset.actionBusy === '1')) return;
+  if(!staffActive('kinesiologist')){ showNotice('Primero tenés que contratar al kinesiólogo.'); return; }
+  const targets = kinesioTreatmentItems().filter(item => !wasKinesioTreatedThisTurn(item.player.id, item.kind));
+  if(!targets.length){ showNotice('No hay lesionados pendientes de tratamiento esta semana.'); return; }
+  const professionalTargets = targets.filter(item => item.kind !== 'youth');
+  const youthTargets = targets.filter(item => item.kind === 'youth');
+  const cost = professionalTargets.length ? currentKinesiologistOvertimeCost() : 0;
+  const youthCost = youthTargets.length * ACADEMY_YOUTH_INJURY_TREATMENT_COST;
+  if(cost > 0 && (game.budget || 0) < cost){ showNotice(`Presupuesto insuficiente. Necesitás ${formatMoney(cost)} para pagar horas extras médicas.`); return; }
+  if(youthCost > 0 && !managerCanAffordAcademy(youthCost)){ showNotice(`Saldo personal insuficiente. Necesitás ${formatMoney(youthCost)} para tratar a los juveniles.`); return; }
+  if(cost > 0) recordBudgetChange(-cost, `Horas extras médicas: tratamiento de ${professionalTargets.length} lesionado(s) profesional(es)`, { type:'kinesiology_overtime', players:professionalTargets.map(item => item.player.id), costRate:KINESIOLOGIST_OVERTIME_COST_RATE });
+  const progress = $('kinesioBulkProgress');
+  if(progress){
+    progress.classList.remove('hidden');
+    progress.innerHTML = `<div class="project-progress"><span style="width:0%"></span></div><strong>Preparando tratamientos...</strong>`;
+  }
+  if(button){
+    button.dataset.actionBusy = '1';
+    button.disabled = true;
+    button.classList.add('action-processing');
+    button.innerHTML = '<span class="action-spinner" aria-hidden="true"></span><span>Tratando plantel...</span>';
+  }
+  document.querySelectorAll('[data-kinesio-treat]').forEach(btn => { btn.disabled = true; });
+  let successes = 0;
+  let failures = 0;
+  for(let index = 0; index < targets.length; index++){
+    const item = targets[index];
+    const playerName = item.player?.name || 'Jugador';
+    setKinesioTreatmentRowState(item.player.id, 'processing', 'Tratamiento en curso...', item.kind || 'first');
+    if(progress){
+      const pct = Math.round((index / targets.length) * 100);
+      progress.innerHTML = `<div class="project-progress"><span style="width:${pct}%"></span></div><strong>Tratando a ${escapeHtml(playerName)} (${index + 1}/${targets.length})</strong>`;
+    }
+    await kinesioDelay(KINESIOLOGIST_BULK_TREATMENT_STEP_MS);
+    const outcome = applyKinesioTreatment(item.player.id, item.kind || 'first');
+    if(outcome.success){
+      successes++;
+      setKinesioTreatmentRowState(item.player.id, 'success', item.kind === 'youth' ? 'Juvenil tratado' : `Éxito · -${formatDaysFromTurns(outcome.recoveryReductionTurns)}`, item.kind || 'first');
+    }else{
+      failures++;
+      setKinesioTreatmentRowState(item.player.id, 'failure', 'Falló · sin reducción', item.kind || 'first');
+    }
+    saveLocal(true);
+    const pct = Math.round(((index + 1) / targets.length) * 100);
+    if(progress){
+      progress.innerHTML = `<div class="project-progress completed"><span style="width:${pct}%"></span></div><strong>${escapeHtml(playerName)}: ${outcome.success ? 'tratamiento exitoso' : 'tratamiento fallido'}</strong>`;
+    }
+    await kinesioDelay(Math.max(250, Math.round(ACTION_FEEDBACK_RESULT_MS * 0.55)));
+  }
+  if(progress){
+    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>Horas extras finalizadas: ${successes} éxito(s), ${failures} fallo(s).</strong>`;
+  }
+  if(button){
+    button.classList.remove('action-processing');
+    button.classList.add('action-success');
+    button.innerHTML = '<span>Tratamientos finalizados</span>';
+  }
+  saveLocal(true);
+  showNotice(`Tratamientos finalizados. Club: ${formatMoney(cost)} · Cuenta personal: ${formatMoney(youthCost)}. Éxitos: ${successes}. Fallos: ${failures}.`);
+  await kinesioDelay(Math.max(650, ACTION_FEEDBACK_RESULT_MS));
+  renderEmployees();
+}
+function moraleTeamBar(clubId){
+  const value = squadMoraleAverage(clubId);
+  const cls = value < 40 ? 'low' : value < 70 ? 'mid' : 'high';
+  return `<div class="morale-bar ${cls} team-morale-bar" title="Moral media ${value}/99"><span style="width:${clamp(value,1,99)}%"></span><em>${value}/99</em></div>`;
+}
+function callMotivationalPsychologist(button=null){
+  const performTalk = () => {
+    if(!game) return { success:false, message:'No hay partida activa.' };
+    const last = game.staffActions?.motivationalTalk || null;
+    const cooldownLeft = turnCooldownLeft(last, PSYCHOLOGIST_COOLDOWN_TURNS);
+    if(!staffActive('psychologist')){ return { success:false, message:'Primero tenés que contratar al psicólogo motivacional.' }; }
+    if(cooldownLeft > 0){ return { success:false, message:`La charla motivacional estará disponible en ${formatDaysFromTurns(cooldownLeft)}.` }; }
+    const success = Math.random() < PSYCHOLOGIST_SUCCESS_CHANCE;
+    const moraleMultiplier = staffPerformanceMultiplier('psychologist');
+    if(success){
+      const minGain = Math.min(PSYCHOLOGIST_MORALE_GAIN_MIN, PSYCHOLOGIST_MORALE_GAIN_MAX);
+      const maxGain = Math.max(PSYCHOLOGIST_MORALE_GAIN_MIN, PSYCHOLOGIST_MORALE_GAIN_MAX);
+      playersByClub(game.selectedClubId).forEach(player => {
+        game.playerMorale[player.id] = clamp(Math.round(currentMorale(player.id) + rnd(minGain, maxGain) * moraleMultiplier), 1, 99);
+      });
+    }
+    game.staffActions = game.staffActions || {};
+    game.staffActions.motivationalTalk = {
+      success,
+      ...turnStamp(),
+      category:staffContract('psychologist')?.category || 'regular',
+      performanceMultiplier:staffPerformanceMultiplier('psychologist'),
+      message: success ? 'La charla motivacional fue un éxito' : 'La charla motivacional fue un fracaso'
+    };
+    saveLocal(true);
+    return {
+      success,
+      buttonLabel: success ? 'Charla exitosa' : 'Charla fallida',
+      message: game.staffActions.motivationalTalk.message,
+      after:renderEmployees
+    };
+  };
+  return runActionFeedback(button, performTalk, {
+    loadingLabel:'Convocando charla...',
+    successLabel:'Charla exitosa',
+    failureLabel:'Charla fallida'
+  });
+}
+
+
+function getTacticForClub(clubId){
+  if(Number(clubId) === Number(game.selectedClubId)) return game.tactic;
+  if(window.Simulator20?.botTacticForClub) return window.Simulator20.botTacticForClub(clubId);
+  const club = seed.clubs.find(c => Number(c.id) === Number(clubId)) || { reputation:60 };
+  const formation = Number(club.reputation || 0) > 74 ? '4-3-3' : Number(club.reputation || 0) < 61 ? '5-4-1' : '4-4-2';
+  return { formation, defense:'posicional', midfield:'posicional', attack:'posicional' };
+}

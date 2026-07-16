@@ -390,7 +390,6 @@ function startDailySkillPointsAnimation(){
 }
 
 function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText }){
-  const activeSponsors = (game.sponsors?.active || []).filter(s => Number(s.turnsRemaining || 0) > 0).length;
   const objectiveInfo = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : { active:false, objective:null, played:0, ppg:0, progress:0, minMatches:10, remainingMatches:10 };
   const ppg = objectiveInfo.ppg || managerPointsPerGame();
   const founderMode = currentGameIsFounderMode();
@@ -423,7 +422,6 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
         <div><span>Presupuesto</span><strong class="office-budget-compact ${budgetTone(game.budget || 0)}">${typeof formatBudgetMillions === 'function' ? formatBudgetMillions(game.budget || 0) : formatMoney(game.budget || 0)}</strong><em class="${deltaClass}">${deltaText}</em></div>
         <div><span>Prom. pts/partido</span><strong>${ppg ? ppg.toFixed(2) : '0.00'}</strong><em>Temporada</em></div>
         <div><span>Objetivo</span><strong>${escapeHtml(objectiveText)}</strong></div>
-        <div><span>Sponsors activos</span><strong>${activeSponsors}</strong></div>
       </div>
       ${objectiveProgress}
       <div class="office-status-bars">

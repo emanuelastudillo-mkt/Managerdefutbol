@@ -4694,7 +4694,7 @@ th{
   overflow:auto;
 }
 .scouting-reports-table{
-  min-width:760px;
+  min-width:840px;
 }
 .scouting-reports-table th,
 .scouting-reports-table td{
@@ -6340,7 +6340,7 @@ button.cwc-group-result{cursor:pointer}
   .scouting-player-clause,.player-modal-clause-value{min-width:0;width:100%}
 }
 
-/* V7.62 · menú lateral compacto y anidado */
+/* V7.63 · menú lateral compacto y anidado */
 .sidebar-nav{display:grid;gap:7px;margin-top:10px}
 .sidebar-nav>button,
 .sidebar-nav .nav-group-toggle,
@@ -6374,3 +6374,22 @@ button.cwc-group-result{cursor:pointer}
 .sidebar-nav .nav-group-items{display:grid;grid-template-columns:1fr;max-height:0;opacity:0;overflow:hidden;transition:max-height .22s ease,opacity .16s ease,padding .16s ease;margin:0 4px;padding-top:0}
 .sidebar-nav .nav-group-items::before{display:none}
 .sidebar-nav .nav-group.is-open .nav-group-items{max-height:360px;opacity:1;padding-top:4px}
+
+
+/* V7.63 · Edad visible en informes de ojeo */
+.scouting-reports-table th:nth-child(2),
+.scouting-reports-table td:nth-child(2),
+.scouting-reports-table th:nth-child(3),
+.scouting-reports-table td:nth-child(3),
+.scouting-reports-table th:nth-child(5),
+.scouting-reports-table td:nth-child(5),
+.scouting-reports-table th:nth-child(6),
+.scouting-reports-table td:nth-child(6),
+.scouting-reports-table th:nth-child(7),
+.scouting-reports-table td:nth-child(7),
+.scouting-reports-table th:nth-child(8),
+.scouting-reports-table td:nth-child(8),
+.scouting-reports-table th:nth-child(10),
+.scouting-reports-table td:nth-child(10),
+.scouting-reports-table th:nth-child(11),
+.scouting-reports-table td:nth-child(11){text-align:center}

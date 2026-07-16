@@ -1,4 +1,16 @@
-# Fútbol Manager MVP - V7.62
+# Fútbol Manager MVP - V7.63
+
+## V7.63 - Edad en ojeo y limpieza de Oficina del manager
+
+- Las tarjetas activas del **Centro de Ojeo** muestran la edad del jugador junto a club, nacionalidad y posición.
+- Las tablas de **Informes guardados** e **Informes archivados** incorporan una columna específica de edad.
+- Se utiliza el dato de edad que ya existe en cada jugador; no se agregan campos nuevos al guardado ni a la base.
+- Se retiró el bloque **Sponsors activos** de la cuadrícula de **Oficina del manager** para reducir información duplicada.
+- Sponsors continúa disponible como pantalla propia dentro de **Club → Sponsors**, y sus ofertas siguen apareciendo entre los avisos de Inicio.
+- No se modifican contratos comerciales, economía, ojeo, planteles ni simuladores.
+
+**V7.63 no rompe partidas anteriores.** Son ajustes de visualización que utilizan datos ya existentes.
+
 
 ## V7.62 - Menú lateral compacto y anidado
 

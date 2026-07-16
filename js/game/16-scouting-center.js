@@ -1,4 +1,4 @@
-/* V7.62 · Centro de Ojeo: cláusula visible junto a la acción de oferta en jugadores ojeados. */
+/* V7.63 · Centro de Ojeo: edad visible en tarjetas e informes de jugadores ojeados. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
@@ -1103,7 +1103,7 @@ function scoutingPlayerCard(player){
   return `<div class="scouting-player-card card inner ${foundBySearch ? 'scouting-search-result' : ''}">
     <div class="scouting-player-head">
       ${faceImg(player, 'scouting-player-face')}
-      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')}</p><div class="scouting-player-pills">${ownPill}${searchPill}</div></div>
+      <div><h3>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</h3><p class="muted small">${escapeHtml(clubName(player.clubId))} · ${escapeHtml(player.nationality || '—')} · ${escapeHtml(player.position || '')} · ${Math.max(0, Math.round(Number(player.age || 0)))} años</p><div class="scouting-player-pills">${ownPill}${searchPill}</div></div>
       <button class="ghost small-btn" data-remove-scouting-player="${player.id}">Quitar</button>
     </div>
     <div class="project-progress scouting-report-progress"><span style="width:${pct}%"></span></div>
@@ -1150,6 +1150,7 @@ function scoutingPlayerReportListRow(entry){
   return `<tr>
     <td><button class="linklike" data-scouting-report-player="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name)}</strong></button></td>
     <td>${roleBadge(player.position)}</td>
+    <td>${Math.max(0, Math.round(Number(player.age || 0)))}</td>
     <td>${escapeHtml(clubName(player.clubId))}</td>
     <td>${known}/${total}</td>
     <td>${hiddenKnown}/${hiddenTotal}</td>
@@ -1170,7 +1171,7 @@ function scoutingReportsModalMarkup(mode='all'){
   return `<div class="scouting-reports-modal">
     <div class="scouting-reports-head"><p class="label">Centro de Ojeo</p><h2>${escapeHtml(title)}</h2></div>
     <p class="muted small">Sólo se listan jugadores. Los informes de equipo son dinámicos y no se archivan.</p>
-    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Media general</th><th>Puntaje total</th><th>Prob. fichaje</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="10" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
+    <div class="table-wrap scouting-reports-table-wrap"><table class="scouting-reports-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Edad</th><th>Club</th><th>Conocidas</th><th>Ocultas</th><th>Media general</th><th>Puntaje total</th><th>Prob. fichaje</th><th>Días</th><th>Estado</th></tr></thead><tbody>${rows || `<tr><td colspan="11" class="muted">${escapeHtml(empty)}</td></tr>`}</tbody></table></div>
   </div>`;
 }
 function openScoutingReportsModal(mode='all'){

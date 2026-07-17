@@ -1551,117 +1551,144 @@ function openNewGameModal(force=false, options={}){
   $('btnOpenBankruptcyMode')?.addEventListener('click', () => openBankruptcyModeModal({ saveSlotId:options.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER }));
   $('btnOpenCampoDestruidoChallenge')?.addEventListener('click', () => { if(typeof startNewCampoDestruidoSlot === 'function') startNewCampoDestruidoSlot(); else openCampoDestruidoChallengeModal(); });
 }
-function gameHelpGoButton(tab, label, subtab=''){
-  const extra = subtab ? ` data-help-subtab="${escapeHtml(subtab)}"` : '';
-  return `<button class="ghost small-btn help-jump-btn" type="button" data-help-tab="${escapeHtml(tab)}"${extra}>${escapeHtml(label)}</button>`;
+function gameHelpGoButton(tab, label, subtab='', mode=''){
+  const subtabAttr = subtab ? ` data-help-subtab="${escapeHtml(subtab)}"` : '';
+  const modeAttr = mode ? ` data-help-mode="${escapeHtml(mode)}"` : '';
+  return `<button class="ghost small-btn help-jump-btn" type="button" data-help-tab="${escapeHtml(tab)}"${subtabAttr}${modeAttr}>${escapeHtml(label)}</button>`;
 }
 function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía rápida</p>
+      <p class="eyebrow">Guía actualizada · V7.69</p>
       <h2>Ayuda de Fútbol Manager</h2>
-      <p class="muted">Repaso breve para ubicarse en una interfaz centrada en datos. La lógica general es revisar alertas, ordenar el equipo, avanzar el calendario y volver a corregir cuando aparezcan problemas deportivos, físicos, económicos o de vestuario.</p>
+      <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
 
     <div class="help-section">
-      <h3>Prioridad alta: lo que conviene mirar seguido</h3>
+      <h3>Rutina básica de cada avance</h3>
       <div class="help-grid">
         <article class="help-card card">
           <span class="pill warn">1 · Control diario</span>
           <h4>Inicio</h4>
-          <p>Es el tablero principal. Ahí ves el estado del club, próximo partido, últimos resultados, alertas, lesionados, presupuesto y resumen del avance. Si no sabés qué hacer, empezá por esta pantalla.</p>
+          <p>Es el tablero principal. Reúne próximo partido, resultados, alertas, lesionados, presupuesto del club y decisiones pendientes. También avisa sobre ofertas laborales, pagos de sueldo y propuestas por juveniles.</p>
           ${gameHelpGoButton('home','Abrir Inicio')}
         </article>
         <article class="help-card card">
           <span class="pill warn">2 · Competencia</span>
           <h4>Primer Equipo</h4>
-          <p>Concentra Táctica, Plantel y Entrenamiento. Usalo para armar titulares, corregir jugadores lesionados o suspendidos, revisar físico y moral, rotar suplentes y evitar repetir siempre el mismo planteo.</p>
-          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Plantel','squad')}${gameHelpGoButton('firstTeam','Abrir Entrenamiento','training')}</div>
+          <p>Concentra Táctica, Plantel, Entrenamiento y Estadísticas por temporada. Revisá disponibilidad, forma, moral, cohesión y rendimiento antes de confirmar el once.</p>
+          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Plantel','squad')}${gameHelpGoButton('firstTeam','Abrir Entrenamiento','training')}${gameHelpGoButton('firstTeam','Abrir Estadísticas','playerStats')}</div>
         </article>
         <article class="help-card card">
-          <span class="pill warn">3 · Alertas</span>
+          <span class="pill warn">3 · Decisiones</span>
           <h4>Mensajes</h4>
-          <p>Reúne avisos importantes del juego. Sirve para detectar problemas, oportunidades, cambios de estado y consecuencias de decisiones anteriores.</p>
+          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y consecuencias de decisiones anteriores. Algunas operaciones sólo se resuelven desde esta bandeja.</p>
           ${gameHelpGoButton('messages','Abrir Mensajes')}
         </article>
       </div>
     </div>
 
     <div class="help-section">
-      <h3>Gestión de plantel y crecimiento</h3>
+      <h3>Contrato y patrimonio del manager</h3>
       <div class="help-grid">
         <article class="help-card card">
-          <h4>Mercado</h4>
-          <p>Buscá jugadores libres o con contrato. En los externos, el ojeo ayuda a estimar mejor su nivel y la probabilidad de fichaje. No todos los buenos jugadores aceptan cualquier club.</p>
-          ${gameHelpGoButton('market','Abrir Mercado')}
+          <h4>Contrato actual</h4>
+          <p>Los clubes ofrecen contratos de una, dos o tres temporadas. El último año concentra el objetivo final y los años previos aplican mínimos progresivos. Podés elegir una exigencia prudente, normal o ambiciosa; eso modifica objetivo y sueldo, pero no duración ni porcentaje futuro.</p>
+          ${gameHelpGoButton('careerJobs','Abrir contrato actual')}
         </article>
         <article class="help-card card">
-          <h4>Centro de Ojeo</h4>
-          <p>Usalo para descubrir información antes de comprar. Los informes reducen la incertidumbre sobre habilidades y muestran una orientación de qué tan posible es fichar al jugador.</p>
-          ${gameHelpGoButton('scouting','Abrir Ojeo')}
+          <h4>Sueldo mensual</h4>
+          <p>El club paga cada 30 días. El dinero sale de Finanzas institucionales e ingresa en la Cuenta Bancaria personal. El sueldo termina al dejar el club y no se traslada al siguiente contrato.</p>
+          ${gameHelpGoButton('finance','Abrir Cuenta Bancaria','','bank')}
         </article>
         <article class="help-card card">
-          <h4>Academia</h4>
-          <p>Espacio de juveniles. Sirve para captar, revisar y desarrollar jugadores jóvenes. No todos progresan igual, por lo que conviene mirar edad, posición, media visible y evolución.</p>
-          ${gameHelpGoButton('academy','Abrir Academia')}
+          <h4>Dos economías separadas</h4>
+          <p>El presupuesto del club paga fichajes, salarios profesionales, empleados institucionales, estadio y sponsors. La cuenta personal paga todos los gastos de Tu Academia. Un saldo no puede utilizarse para cubrir directamente al otro.</p>
+          <div class="help-actions">${gameHelpGoButton('finance','Finanzas del club','','main')}${gameHelpGoButton('finance','Cuenta personal','','bank')}</div>
+        </article>
+        <article class="help-card card">
+          <h4>Ofertas laborales</h4>
+          <p>Antes de aceptar compará duración, sueldo, objetivo anual y porcentaje de futuras ventas. Un contrato largo ofrece estabilidad, pero puede pagar algo menos por mes y mantener exigencias mínimas durante varios años.</p>
+          ${gameHelpGoButton('careerJobs','Revisar ofertas laborales')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Tu Academia</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <h4>Propiedad personal</h4>
+          <p>Juveniles, Predio, residencias y Preparador pertenecen al manager. Se conservan al cambiar de club, renunciar, ser despedido o quedar sin trabajo. La Academia puede seguir funcionando sin club.</p>
+          ${gameHelpGoButton('academy','Abrir Tu Academia')}
+        </article>
+        <article class="help-card card">
+          <h4>Captación y desarrollo</h4>
+          <p>La primera captación anual entrega la cuota excepcional completa según el nivel del Predio, hasta seis en nivel Elite. Necesitás cupos suficientes y saldo personal para captaciones, residencias, becas, tratamientos, empleados y obras.</p>
+          ${gameHelpGoButton('academy','Revisar juveniles y Predio')}
+        </article>
+        <article class="help-card card">
+          <h4>Ofertas por juveniles</h4>
+          <p>Los jugadores de 17 años pueden recibir ofertas de clubes bot. La bandeja permite aceptar o rechazar; al vender, la federación retiene 5% y el resto ingresa íntegramente en la Cuenta Bancaria del manager.</p>
+          ${gameHelpGoButton('academy','Abrir ofertas juveniles')}
+        </article>
+        <article class="help-card card">
+          <h4>Promoción y cartera</h4>
+          <p>Para ofrecer contrato profesional necesitás dirigir un club, que el juvenil tenga al menos 16 años y disponer de cupo en el plantel. El jugador promovido registra el porcentaje de futura venta del contrato laboral vigente. Ese derecho queda en tu cartera y persiste aunque abandones el club.</p>
+          ${gameHelpGoButton('academy','Abrir cartera de jugadores')}
+        </article>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Gestión del club</h3>
+      <div class="help-grid">
+        <article class="help-card card">
+          <h4>Mercado y Centro de Ojeo</h4>
+          <p>El mercado profesional utiliza el presupuesto del club. Ojeá antes de invertir para conocer habilidades, edad, cláusula, media general, puntaje total y probabilidad de fichaje.</p>
+          <div class="help-actions">${gameHelpGoButton('market','Abrir Mercado')}${gameHelpGoButton('scouting','Abrir Ojeo')}</div>
         </article>
         <article class="help-card card">
           <h4>Empleados</h4>
-          <p>Mejoran áreas de trabajo del club. Son apoyo indirecto: entrenamiento, juveniles, observación, recuperación y gestión general. Revisalos cuando el club crece o cuando una zona queda débil.</p>
+          <p>Psicólogo, Kinesiólogo y personal de observación pertenecen al club. El Preparador de juveniles pertenece a Tu Academia y se paga con dinero personal. Revisá esa diferencia antes de contratar.</p>
           ${gameHelpGoButton('employees','Abrir Empleados')}
         </article>
-      </div>
-    </div>
-
-    <div class="help-section">
-      <h3>Club, economía y contexto</h3>
-      <div class="help-grid">
         <article class="help-card card">
-          <h4>Finanzas</h4>
-          <p>Mostrá ingresos, gastos, balances y presupuesto. Conviene revisarlo antes de fichar, renovar, construir o contratar empleados.</p>
-          ${gameHelpGoButton('finance','Abrir Finanzas')}
+          <h4>Estadio e instalaciones</h4>
+          <p>El estadio, el campo y la calefacción del césped siguen siendo propiedad del club. El Predio juvenil ya no está aquí: se administra y financia desde Tu Academia.</p>
+          ${gameHelpGoButton('stadium','Abrir Estadio','','facilities')}
         </article>
         <article class="help-card card">
-          <h4>Estadio</h4>
-          <p>Permite revisar infraestructura, campo, capacidad y mejoras. Es crecimiento de club a mediano plazo, no una solución inmediata de partido.</p>
-          ${gameHelpGoButton('stadium','Abrir Estadio')}
-        </article>
-        <article class="help-card card">
-          <h4>Calendario</h4>
-          <p>Sirve para ubicar próximos partidos, carga de fechas y resultados. Revisalo para decidir rotaciones y no llegar con jugadores clave sobreexigidos.</p>
-          ${gameHelpGoButton('fixture','Abrir Calendario')}
-        </article>
-        <article class="help-card card">
-          <h4>Competiciones</h4>
-          <p>Muestra la posición del club en la liga. Es la referencia rápida para saber si estás cumpliendo expectativas o si el contexto empieza a presionar.</p>
-          ${gameHelpGoButton('standings','Abrir Competiciones')}
+          <h4>Sponsors, hinchas y finanzas</h4>
+          <p>Son recursos institucionales. Sus ingresos pertenecen al club y no a la cuenta personal. Usalos para sostener salarios, obras, fichajes y costos operativos.</p>
+          <div class="help-actions">${gameHelpGoButton('stadium','Abrir Sponsors','','sponsors')}${gameHelpGoButton('stadium','Abrir Hinchas y socios','','fans')}${gameHelpGoButton('finance','Abrir Finanzas','','main')}</div>
         </article>
       </div>
     </div>
 
     <div class="help-section">
-      <h3>Seguimiento, carrera y competencia externa</h3>
+      <h3>Competición, carrera y modos online</h3>
       <div class="help-grid">
         <article class="help-card card">
-          <h4>Estadísticas</h4>
-          <p>Compará rendimiento de equipos y jugadores. Es útil para detectar si ganás por solidez, pegada, defensa o simplemente por rachas.</p>
-          ${gameHelpGoButton('stats','Abrir Estadísticas')}
+          <h4>Calendario y competiciones</h4>
+          <p>Usá el calendario para planificar rotaciones. Tabla de posiciones, palmarés y estadísticas permiten evaluar el contexto del objetivo contractual y la evolución del equipo.</p>
+          <div class="help-actions">${gameHelpGoButton('fixture','Abrir Calendario')}${gameHelpGoButton('standings','Abrir Tabla','','standings')}${gameHelpGoButton('stats','Abrir Estadísticas')}</div>
         </article>
         <article class="help-card card">
-          <h4>Tus estadísticas</h4>
-          <p>Resume tu carrera como mánager: progreso, clubes dirigidos, temporadas y rendimiento general. Sirve para medir evolución más allá de una temporada.</p>
-          ${gameHelpGoButton('mystats','Abrir Tus estadísticas')}
+          <h4>Perfil, historial e hitos</h4>
+          <p>El historial registra clubes, temporadas y resultados. Los hitos, el prestigio y las licencias acompañan al manager durante toda la carrera, independientemente de su empleador actual.</p>
+          ${gameHelpGoButton('mystats','Abrir perfil e historial','','profile')}
         </article>
         <article class="help-card card">
-          <h4>Ranking Online</h4>
-          <p>Permite subir y comparar la carrera completa del mánager. La competencia tiene más sentido si se suben partidas reales y se evita repetir la misma carrera varias veces.</p>
-          ${gameHelpGoButton('ranking','Abrir Ranking')}
+          <h4>Ranking y Desafíos Online</h4>
+          <p>El Ranking compara carreras completas. Desafíos Online utiliza convocatorias publicadas y un simulador independiente; no altera contrato laboral, Academia ni cartera personal.</p>
+          <div class="help-actions">${gameHelpGoButton('ranking','Abrir Ranking')}${gameHelpGoButton('challenges','Abrir Desafíos')}</div>
         </article>
         <article class="help-card card">
-          <h4>ESPECIAL</h4>
-          <p>Contiene funciones especiales, recompensas o sistemas extra. No es lo primero que necesitás para jugar, pero puede cambiar el ritmo de una carrera avanzada.</p>
-          ${gameHelpGoButton('special','Abrir Especial')}
+          <h4>Cartas especiales</h4>
+          <p>Las cartas aplican efectos limitados sobre áreas concretas. Conviene reservarlas para objetivos claros y recordar que no reemplazan una estructura económica o deportiva sostenible.</p>
+          ${gameHelpGoButton('special','Abrir Cartas')}
         </article>
       </div>
     </div>
@@ -1669,16 +1696,16 @@ function openGameHelpModal(){
     <div class="help-section">
       <h3>Funciones superiores</h3>
       <div class="help-grid compact">
-        <article class="help-card card"><h4>Guardar</h4><p>Guarda la partida local en el navegador. Usalo antes de cerrar o después de avances importantes.</p></article>
-        <article class="help-card card"><h4>Cargar</h4><p>Abre los slots de partida. Desde ahí podés continuar una carrera existente o iniciar otra.</p></article>
-        <article class="help-card card"><h4>Renunciar</h4><p>Permite dejar el club actual y buscar otro destino cuando la carrera ya está iniciada.</p></article>
-        <article class="help-card card"><h4>Avance automático</h4><p>Automatiza el avance cuando corresponde. Si aparece un bloqueo, una revisión táctica o una decisión pendiente, conviene resolverla manualmente.</p></article>
+        <article class="help-card card"><h4>Guardar</h4><p>Guarda la partida local. Usalo antes de cerrar o después de operaciones importantes.</p></article>
+        <article class="help-card card"><h4>Cargar</h4><p>Abre los slots para continuar una carrera o iniciar otra.</p></article>
+        <article class="help-card card"><h4>Renunciar</h4><p>Finaliza el contrato actual y sus pagos. Tu saldo, Academia y derechos económicos permanecen.</p></article>
+        <article class="help-card card"><h4>Avance automático</h4><p>Avanza hasta que una decisión, bloqueo o revisión requiera intervención manual.</p></article>
       </div>
     </div>
 
     <div class="card help-final-note">
-      <h3>Forma simple de jugar</h3>
-      <p>Entrá a Inicio, revisá alertas, corregí Primer Equipo, controlá físico y moral, mirá el Calendario, avanzá, y después revisá Mensajes. Cuando tengas estabilidad, el desafío pasa por sostenerla: rotar, no abusar de los mismos jugadores, variar planteos y cuidar economía.</p>
+      <h3>Secuencia recomendada</h3>
+      <p>Revisá Inicio y Mensajes, corregí Primer Equipo, comprobá el Calendario y el objetivo contractual, controlá por separado Finanzas del club y Cuenta Bancaria, atendé Tu Academia y recién entonces avanzá. En una carrera larga no sólo importa ganar: también sostener el contrato, financiar la Academia y conservar oportunidades futuras en la cartera.</p>
     </div>
   </div>`;
   openModal(body);
@@ -1686,12 +1713,20 @@ function openGameHelpModal(){
     btn.addEventListener('click', () => {
       const tab = btn.dataset.helpTab || 'home';
       const subtab = btn.dataset.helpSubtab || '';
+      const mode = btn.dataset.helpMode || '';
       if(!game && tab !== 'ranking'){
         closeModal();
         if(typeof showNotice === 'function') showNotice('Iniciá o cargá una partida para abrir esa sección.', true);
         return;
       }
       if(tab === 'firstTeam' && subtab) firstTeamTab = subtab;
+      if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation(tab, mode);
+      else {
+        if(tab === 'finance' && mode) financeViewMode = mode;
+        if(tab === 'stadium' && mode) stadiumViewMode = mode;
+        if(tab === 'standings' && mode) selectedCompetitionView = mode;
+        if(tab === 'mystats' && mode) managerStatsViewMode = mode;
+      }
       activeTab = tab;
       closeModal();
       if(typeof renderAll === 'function') renderAll();

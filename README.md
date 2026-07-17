@@ -1,4 +1,26 @@
-# Fútbol Manager MVP - V7.68
+# Fútbol Manager MVP - V7.69
+
+## V7.69 - Ayuda y cursos adaptados a contratos y Academia personal
+
+### Pantalla de Ayuda
+
+- La guía explica la separación entre presupuesto del club y Cuenta Bancaria del manager.
+- Se incorporaron contratos de una, dos o tres temporadas, objetivos anuales, sueldo mensual y ofertas laborales.
+- Tu Academia se presenta como patrimonio personal que persiste al cambiar o quedar sin club.
+- Se detallan captación, Predio, residencias, gastos personales, ofertas por juveniles, promoción profesional y cartera de jugadores.
+- Sponsors, hinchas, estadio, empleados y mercado profesional quedan identificados como recursos institucionales.
+- Los botones de la guía abren directamente Finanzas del club, Cuenta Bancaria, Sponsors, Hinchas, instalaciones, contrato actual y las demás pantallas correspondientes.
+
+### Cursos de manager
+
+- La Licencia Básica diferencia campo del club, Predio juvenil y las dos economías de la carrera.
+- La Licencia Nacional enseña contrato laboral, objetivos progresivos, sueldo, Academia personal, empleados propios y finanzas separadas.
+- La Licencia Internacional incorpora continuidad patrimonial al cambiar de club, mercado juvenil y derechos económicos de la cartera.
+- Se conservaron los identificadores de los contenidos para no borrar el progreso de cursos ya iniciado.
+- Las licencias aprobadas y la recompensa final de 1.000 puntos permanecen intactas.
+
+**V7.69 no rompe partidas anteriores.** Sólo actualiza textos, enlaces de navegación y la versión interna de los cursos; conserva licencias, controles marcados y recompensas.
+
 
 ## V7.68 - Derechos económicos y cartera de jugadores
 

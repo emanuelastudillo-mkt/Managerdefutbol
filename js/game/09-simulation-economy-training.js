@@ -1127,6 +1127,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(managerWithoutClub){
     if(typeof processAcademyTurn === 'function') processAcademyTurn();
     if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
+    const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
     if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
@@ -1145,6 +1146,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     ? processKinesiologistDifferentiatedDaily()
     : { applied:false };
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
+  const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
   const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
     ? processUnansweredSpecialClauseOffers({ silent:true, source:'daily_calendar' })

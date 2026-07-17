@@ -1,4 +1,50 @@
-# Fútbol Manager MVP - V7.67
+# Fútbol Manager MVP - V7.68
+
+## V7.68 - Derechos económicos y cartera de jugadores
+
+### Registro del derecho
+
+- Cada juvenil que firma contrato profesional con el club dirigido queda asociado al contrato laboral vigente del manager.
+- Se registra el porcentaje de futura venta ofrecido por ese club, entre 5% y 20%.
+- El derecho pertenece al manager y se conserva al cambiar de club, renunciar, ser despedido o quedar sin trabajo.
+- No se crean derechos retroactivos sobre jugadores promovidos antes de V7.68.
+- Los juveniles vendidos directamente desde Tu Academia a un club bot no generan este porcentaje: el derecho nace únicamente al promoverlos al primer equipo del club dirigido.
+
+### Primera transferencia pagada
+
+- El porcentaje se cobra una sola vez, cuando el club que recibió al juvenil realiza su primera transferencia pagada.
+- Primero se descuenta el impuesto de traspaso vigente.
+- Sobre el importe neto se calcula el porcentaje personal del manager.
+- El club vendedor conserva el neto restante y el beneficio personal se acredita en la Cuenta Bancaria.
+- Una vez cobrado, el derecho queda cerrado y no vuelve a generar ingresos en transferencias posteriores.
+- Una salida como jugador libre o el retiro cierran el derecho sin pago.
+
+### Cartera de jugadores
+
+- Tu Academia incorpora una sección **Cartera de jugadores**.
+- Muestra nombre, rol, edad, club actual, liga, cláusula, porcentaje, beneficio estimado o cobrado y estado.
+- El beneficio estimado utiliza la cláusula actual, descuenta el impuesto de traspaso y aplica el porcentaje contractual.
+- Los registros cobrados conservan monto de venta, impuesto, importe neto y beneficio personal.
+
+### Transferencias de clubes bot
+
+- Los clubes bot pueden vender jugadores con derechos activos cuando el manager ya no controla al club de origen.
+- Se revisan posibles ventas cada 30 días.
+- El jugador debe llevar al menos 180 días en el club que lo promovió.
+- En cada revisión existe una probabilidad base de 18% por jugador elegible.
+- El comprador debe necesitar esa zona, tener lugar en el plantel, presupuesto y una reputación compatible con la calidad del futbolista.
+- La oferta se mueve entre 60% y 100% de la cláusula.
+- Se procesa como máximo una venta de cartera por revisión.
+
+### Casos cubiertos
+
+- Venta aceptada por el manager desde Mensajes.
+- Ejecución automática o forzada de una cláusula.
+- Compra del jugador por el nuevo club dirigido por el manager.
+- Transferencia futura entre dos clubes bot.
+
+**V7.68 no rompe partidas anteriores.** Las partidas V7.67 crean una cartera vacía al cargar. Los derechos comienzan a registrarse únicamente con juveniles promovidos después de actualizar.
+
 
 ## V7.67 - Mercado juvenil de Tu Academia
 

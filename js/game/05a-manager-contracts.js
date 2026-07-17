@@ -533,7 +533,7 @@ renderCareerJobs = function(){
       <div class="card"><p class="label">Exigencia vigente</p><h3>${Number(step?.objectivePpg || objectiveInfo?.objective || 0).toFixed(2)} puntos por partido</h3><p class="muted small">${step?.type === 'final' ? 'Es el objetivo final del contrato.' : 'Es el mínimo necesario para mantener la continuidad del proyecto.'} Rendimiento actual: ${ppg.toFixed(2)} en ${played} encuentros oficiales.</p></div>
       <div class="card"><p class="label">Condiciones laborales</p><h3>${escapeHtml(restriction)}</h3><p class="muted small">El sueldo es fijo durante todo el contrato. Cambiar de club o renunciar termina los pagos pendientes.</p></div>
     </div>
-    <div class="card" style="margin-top:14px"><p class="label">Porcentaje de formación</p><h3>${Number(contract.futureSalePercent || 0)}% sobre futuras ventas</h3><p class="muted small">Se asignará a los juveniles que promociones durante este contrato cuando se active el módulo de derechos económicos. El porcentaje queda fijado desde la firma y no se renegocia.</p></div>`;
+    <div class="card" style="margin-top:14px"><p class="label">Porcentaje de formación</p><h3>${Number(contract.futureSalePercent || 0)}% sobre futuras ventas</h3><p class="muted small">Se asigna automáticamente a cada juvenil que promociones durante este contrato. Conservás el derecho aunque cambies de club, renuncies o seas despedido; se cobra una sola vez en la primera transferencia pagada.</p></div>`;
 };
 
 /* Envuelve los flujos existentes para crear, conservar o cerrar contratos. */

@@ -6469,3 +6469,9 @@ button.cwc-group-result{cursor:pointer}
 .academy-youth-offer-money span{font-size:.72rem;color:var(--muted)}
 .academy-youth-offer-actions{justify-content:flex-end}
 @media (max-width:720px){.academy-youth-offer-money{grid-template-columns:1fr}.academy-youth-offer-actions>*{flex:1}}
+
+/* V7.68 · Cartera personal de jugadores */
+.manager-player-portfolio .table-wrap{max-height:430px}
+.manager-player-portfolio table{min-width:980px}
+.manager-portfolio-summary .metric.small{font-size:1.35rem;line-height:1.2}
+@media (max-width:900px){.manager-portfolio-summary{grid-template-columns:1fr}.manager-player-portfolio table{min-width:900px}}

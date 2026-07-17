@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.67',
+  version: 'V7.68',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -31,9 +31,9 @@ window.GAME_CONFIG = {
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=7.67',
+    installationsUrl: 'data/instalaciones.json?v=7.68',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.67',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.68',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -689,6 +689,14 @@ window.GAME_CONFIG = {
       maxOfertasPendientes: 4,
       maxOfertasPorJugadorTemporada: 4,
       plantelObjetivoBot: 24
+    },
+    derechosEconomicos: {
+      activo: true,
+      diasEntreRevisionesBot: 30,
+      diasMinimosAntesVentaBot: 180,
+      probabilidadVentaBotPorRevision: 0.18,
+      ofertaBotMinPctClausula: 60,
+      ofertaBotMaxPctClausula: 100
     }
   },
   entrenamiento: {

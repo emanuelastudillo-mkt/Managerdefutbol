@@ -1191,7 +1191,7 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.staffActions = {};
   game.staffContracts = {};
   game.monthlyExpenses = {};
-  game.academy = typeof createInitialAcademyState === 'function' ? createInitialAcademyState() : { players:[], scoutingJobs:[], residences:0 };
+  game.academy = normalizeAcademyState(game.academy);
   if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(id);
   game.pendingTransfers = [];
   game.lastOwnPlayerOffer = null;
@@ -1203,12 +1203,46 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(id, game.seasonNumber || 1, 0) : game.transferBudget;
   game.managerJobContract = null;
   game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
-  pushGameMessage({ type:'sistema', priority:'normal', title:'Club saliente reiniciado', body:`${club?.name || 'El club anterior'} reinició economía, empleados, academia, préstamos, lista activa de ojeo y sponsors tras tu salida.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
+  pushGameMessage({ type:'sistema', priority:'normal', title:'Club saliente reiniciado', body:`${club?.name || 'El club anterior'} reinició economía, empleados del club, préstamos, lista activa de ojeo y sponsors tras tu salida. Tu Academia, su Predio, residencias y juveniles continúan bajo tu propiedad.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
 }
 
 
 function managerWithoutClubActive(){
   return Boolean(game?.gameOver?.active);
+}
+function migrateManagerAcademyOwnershipForState(state=game){
+  if(!state) return null;
+  const rawAcademy = state.academy && typeof state.academy === 'object' ? state.academy : null;
+  const previousVersion = rawAcademy && Object.prototype.hasOwnProperty.call(rawAcademy, 'ownershipVersion') ? Math.round(Number(rawAcademy.ownershipVersion || 0)) : 0;
+  state.academy = normalizeAcademyState(state.academy);
+  state.stadium = state.stadium || createInitialStadiumState();
+  state.stadium.facilities = state.stadium.facilities && typeof state.stadium.facilities === 'object' && !Array.isArray(state.stadium.facilities) ? state.stadium.facilities : {};
+  const academy = state.academy;
+  const selectedClubId = Number(state.selectedClubId || 0);
+  const club = seed?.clubs?.find(item => Number(item.id) === selectedClubId);
+  if(!academy.homeCountry) academy.homeCountry = club ? clubCountry(club) : 'Argentina';
+  if(!academy.createdAt) academy.createdAt = state.currentDate || '';
+  academy.facilities = normalizeManagerAcademyFacilitiesState(academy.facilities);
+  academy.staffContracts = normalizeStaffContracts(academy.staffContracts || {});
+  if(previousVersion < 2){
+    const sourceFacility = selectedClubId ? state.stadium.facilities[selectedClubId]?.youthTraining : null;
+    if(sourceFacility && typeof sourceFacility === 'object'){
+      const current = academy.facilities.youthTraining;
+      const sourceLevel = Math.max(0, Math.round(Number(sourceFacility.level || 0)));
+      if(sourceLevel > Number(current.level || 0)) current.level = sourceLevel;
+      if(!current.construction && sourceFacility.construction) current.construction = normalizeFacilityConstruction(sourceFacility.construction, { targetLevel:Number(sourceFacility.construction.targetLevel || sourceLevel + 1) });
+    }
+    const legacyContract = state.staffContracts?.youth_preparer;
+    if(legacyContract && !academy.staffContracts.youth_preparer) academy.staffContracts.youth_preparer = { ...legacyContract };
+  }
+  if(state.staffContracts?.youth_preparer) delete state.staffContracts.youth_preparer;
+  Object.keys(state.stadium.facilities).forEach(clubId => {
+    const facility = state.stadium.facilities[clubId];
+    if(facility && typeof facility === 'object' && facility.youthTraining) delete facility.youthTraining;
+  });
+  academy.owner = 'manager';
+  academy.ownershipVersion = 2;
+  return academy;
 }
 
 function formatPlainNumber(value){
@@ -3382,6 +3416,7 @@ function normalizeGame(saved){
   if(!normalized.stadium.capacityOverrides || typeof normalized.stadium.capacityOverrides !== 'object' || Array.isArray(normalized.stadium.capacityOverrides)) normalized.stadium.capacityOverrides = {};
   if(!Array.isArray(normalized.stadium.capacityDeteriorationHistory)) normalized.stadium.capacityDeteriorationHistory = [];
   if(!normalized.stadium.facilities || typeof normalized.stadium.facilities !== 'object' || Array.isArray(normalized.stadium.facilities)) normalized.stadium.facilities = {};
+  if(typeof migrateManagerAcademyOwnershipForState === 'function') migrateManagerAcademyOwnershipForState(normalized);
   Object.keys(normalized.stadium.facilities).forEach(clubId => { normalized.stadium.facilities[clubId] = normalizeClubFacilitiesState(normalized.stadium.facilities[clubId]); });
   seed.clubs.forEach(c => {
     if(!Number.isFinite(normalized.stadium.fields[c.id])) normalized.stadium.fields[c.id] = Number.isFinite(c.fieldConditionScore) ? c.fieldConditionScore : initialFieldScore(c);
@@ -4562,7 +4597,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V7.65',
+    version:'V7.66',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4584,7 +4619,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V7.65';
+    clean.version = 'V7.66';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4603,7 +4638,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V7.65',
+    version:'V7.66',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4629,7 +4664,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V7.65',
+    version:'V7.66',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -5310,11 +5345,7 @@ function resetClubSpecificCareerStateForNewClub(newClubId){
   game.staffContracts = {};
   if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(newClubId);
   game.monthlyExpenses = {};
-  if(typeof createInitialAcademyState === 'function'){
-    game.academy = createInitialAcademyState();
-  }else{
-    game.academy = { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, residences:0, residenceLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0 };
-  }
+  game.academy = normalizeAcademyState(game.academy);
   game.lastOwnPlayerOffer = null;
   game.pendingTransfers = [];
   game.rejectedPurchaseOffers = {};

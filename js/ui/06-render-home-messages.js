@@ -449,7 +449,7 @@ function lastTurnSummaryMarkup(){
 }
 
 
-const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','academy','employees','scouting','stadium','market','finance']);
+const MANAGER_WITHOUT_CLUB_BLOCKED_TABS = new Set(['firstTeam','employees','scouting','stadium','market','finance']);
 function isManagerWithoutClubBlockedTab(tab){
   const key = String(tab || '');
   if(game?.gameOver?.active && key === 'finance' && String(financeViewMode || 'main') === 'bank') return false;

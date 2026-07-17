@@ -776,19 +776,21 @@ function togglePitchHeating(){
   showNotice(`Calefacción de césped ${state.heating.active ? 'encendida' : 'apagada'}.`);
 }
 function startYouthTrainingGroundUpgrade(targetLevel){
-  if(!game?.selectedClubId) return;
-  const state = clubFacilitiesState(game.selectedClubId);
-  const currentLevel = Math.max(0, Math.round(Number(state.youthTraining.level || 0)));
+  if(!game) return;
+  const facilities = managerAcademyFacilitiesState();
+  const state = facilities.youthTraining;
+  const currentLevel = Math.max(0, Math.round(Number(state.level || 0)));
   const requested = Math.round(Number(targetLevel || currentLevel + 1));
   const definition = youthTrainingGroundLevelDefinition(requested);
   if(!definition){ showNotice('Nivel de predio inválido.'); return; }
-  if(state.youthTraining.construction){ showNotice('Ya hay una mejora del predio juvenil en construcción.'); return; }
+  if(state.construction){ showNotice('Ya hay una mejora del predio juvenil en construcción.'); return; }
   if(requested !== currentLevel + 1){ showNotice('Los niveles del predio deben construirse en orden.'); return; }
-  if((game.budget || 0) < definition.cost){ showNotice('Presupuesto insuficiente para mejorar el predio juvenil.'); return; }
-  recordBudgetChange(-definition.cost, `Predio juvenil nivel ${definition.level}: ${definition.name}`, { type:'stadium_facility_youth_build', clubId:Number(game.selectedClubId), targetLevel:definition.level });
-  state.youthTraining.construction = { targetLevel:definition.level, daysLeft:definition.buildDays, totalDays:definition.buildDays, startedDate:game.currentDate || '', startedSeason:Number(game.seasonNumber || 1) };
+  if(!managerCanAffordAcademy(definition.cost)){ showNotice('Saldo personal insuficiente para mejorar el predio juvenil.'); return; }
+  recordAcademyPersonalExpense(definition.cost, `Predio juvenil nivel ${definition.level}: ${definition.name}`, { type:'academy_facility_youth_build', targetLevel:definition.level });
+  state.construction = { targetLevel:definition.level, daysLeft:definition.buildDays, totalDays:definition.buildDays, startedDate:game.currentDate || '', startedSeason:Number(game.seasonNumber || 1) };
+  facilities.lastProcessedDate = validIsoDate(game.currentDate) ? game.currentDate : facilities.lastProcessedDate;
   saveLocal(true);
-  renderStadium();
+  renderAcademy();
   showNotice(`Obra iniciada: predio juvenil ${definition.name}. Duración: ${definition.buildDays} días.`);
 }
 function pitchHeatingFacilityMarkup(){
@@ -809,15 +811,15 @@ function pitchHeatingFacilityMarkup(){
   </div>`;
 }
 function youthTrainingFacilityMarkup(){
-  const state = clubFacilitiesState(game.selectedClubId);
+  const state = managerAcademyFacilitiesState().youthTraining;
   const levels = youthTrainingGroundLevels();
-  const currentLevel = Math.max(0, Math.round(Number(state.youthTraining.level || 0)));
+  const currentLevel = Math.max(0, Math.round(Number(state.level || 0)));
   const currentDef = youthTrainingGroundLevelDefinition(currentLevel);
-  const project = state.youthTraining.construction;
+  const project = state.construction;
   const nextDef = youthTrainingGroundLevelDefinition(currentLevel + 1);
-  const currentBonus = youthTrainingExceptionalBonus(game.selectedClubId);
+  const currentBonus = youthTrainingExceptionalBonus();
   const currentExceptionalTotal = clamp(1 + currentBonus, 1, 6);
-  const currentResidenceLimit = typeof youthTrainingResidenceLimit === 'function' ? youthTrainingResidenceLimit(game.selectedClubId) : currentLevel * 2;
+  const currentResidenceLimit = typeof youthTrainingResidenceLimit === 'function' ? youthTrainingResidenceLimit() : currentLevel * 2;
   return `<div class="card stadium-facility-card youth-facility-card">
     <div class="row facility-card-head"><div><p class="label">Academia</p><h3>Predio de entrenamiento juvenil</h3></div><span class="pill ${currentLevel >= 5 ? 'ok' : ''}">${currentLevel ? `Nivel ${currentLevel} · ${escapeHtml(currentDef?.name || '')}` : 'Sin predio'}</span></div>
     <p class="muted small">La primera captación de cada temporada entrega ${currentExceptionalTotal} juvenil(es) excepcional(es) en total: 1 base + ${currentBonus} por el nivel actual. El máximo es 6. También habilita espacio para ${currentResidenceLimit} residencia(s).</p>
@@ -830,7 +832,7 @@ function youthTrainingFacilityMarkup(){
         <div class="row"><strong>Nivel ${level.level} · ${escapeHtml(level.name)}</strong><span class="facility-level-badges"><span class="pill">${Math.min(6, 1 + level.exceptionalBonus)} en primera captación</span><span class="pill">${level.maxResidences} residencias</span></span></div>
         <p>${formatMoney(level.cost)} · ${level.buildDays} días</p>
         <small>${completed ? 'Construido' : active ? 'En construcción' : level.level < currentLevel + 1 ? 'Construido' : level.level > currentLevel + 1 ? 'Requiere nivel anterior' : 'Siguiente mejora disponible'}</small>
-        ${available ? `<button class="primary small-btn" data-build-youth-facility="${level.level}" ${(game.budget || 0) < level.cost ? 'disabled' : ''}>Construir nivel ${level.level}</button>` : ''}
+        ${available ? `<button class="primary small-btn" data-build-youth-facility="${level.level}" ${!managerCanAffordAcademy(level.cost) ? 'disabled' : ''}>Construir nivel ${level.level}</button>` : ''}
       </div>`;
     }).join('')}</div>
     ${!nextDef && !project ? '<p class="ok small">Predio Elite completado. La primera captación de cada temporada entrega 6 juveniles excepcionales y permite hasta 10 residencias juveniles.</p>' : ''}
@@ -839,23 +841,19 @@ function youthTrainingFacilityMarkup(){
 function renderStadiumFacilities(){
   ensureStadiumState();
   const score = fieldScoreForClub(game.selectedClubId);
-  const bonus = youthTrainingExceptionalBonus(game.selectedClubId);
-  const exceptionalTotal = clamp(1 + bonus, 1, 6);
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Instalaciones</h2><p class="tagline">Obras permanentes del club vinculadas al estadio, el campo y la academia.</p></div>
+      <div><h2>Instalaciones del estadio</h2><p class="tagline">Obras que pertenecen al club y afectan directamente al campo de juego.</p></div>
       <div class="row"><span class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</span><button type="button" id="btnBackToStadium" class="ghost">Volver al estadio</button></div>
     </div>
-    <div class="grid cols-3 facility-summary-grid">
+    <div class="grid cols-2 facility-summary-grid">
       <div class="card"><p class="label">Campo actual</p><strong>${score}/100</strong></div>
-      <div class="card"><p class="label">Predio juvenil</p><strong>Nivel ${youthTrainingGroundLevel(game.selectedClubId)}</strong></div>
-      <div class="card"><p class="label">Primera captación</p><strong>${exceptionalTotal} excepcionales</strong></div>
+      <div class="card"><p class="label">Propiedad</p><strong>${escapeHtml(clubName(game.selectedClubId))}</strong><p class="muted small">El Predio juvenil ahora pertenece al manager y se administra desde Tu Academia.</p></div>
     </div>
-    <div class="stadium-facilities-grid">${pitchHeatingFacilityMarkup()}${youthTrainingFacilityMarkup()}</div>`;
+    <div class="stadium-facilities-grid">${pitchHeatingFacilityMarkup()}</div>`;
   document.querySelector('#btnBackToStadium')?.addEventListener('click', () => { stadiumViewMode = 'main'; renderStadium(); });
   document.querySelector('#btnBuildPitchHeating')?.addEventListener('click', startPitchHeatingConstruction);
   document.querySelector('#pitchHeatingSwitch')?.addEventListener('change', togglePitchHeating);
-  document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
 }
 
 
@@ -944,7 +942,7 @@ function renderStadium(){
         <h2>Estadio</h2>
         <p class="tagline">Estado del campo de ${escapeHtml(clubName(game.selectedClubId))}. Cada partido como local nuestro campo de juego empeora, dale mantenimiento para evitar lesiones y dificultades para dar pases precisos.</p>
       </div>
-      <div class="row"><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div><button type="button" id="btnOpenStadiumFacilities" class="ghost">Instalaciones</button></div>
+      <div class="row"><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div><button type="button" id="btnOpenStadiumFacilities" class="ghost">Instalaciones del estadio</button></div>
     </div>
     ${typeof afaFieldSanctionMarkup === 'function' ? afaFieldSanctionMarkup(game.selectedClubId) : ''}
     <div class="grid cols-2">

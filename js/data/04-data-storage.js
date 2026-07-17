@@ -1149,10 +1149,7 @@ function youthTrainingGroundLevelDefinition(level){
   return youthTrainingGroundLevels().find(item => Number(item.level) === Number(level)) || null;
 }
 function createClubFacilitiesState(){
-  return {
-    heating:{ built:false, active:false, construction:null },
-    youthTraining:{ level:0, construction:null }
-  };
+  return { heating:{ built:false, active:false, construction:null } };
 }
 function normalizeFacilityConstruction(project, extra={}){
   if(!project || typeof project !== 'object') return null;
@@ -1165,18 +1162,13 @@ function normalizeClubFacilitiesState(state){
   const base = createClubFacilitiesState();
   const clean = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
   const heatingRaw = clean.heating && typeof clean.heating === 'object' ? clean.heating : {};
-  const youthRaw = clean.youthTraining && typeof clean.youthTraining === 'object' ? clean.youthTraining : {};
-  const maxLevel = Math.max(0, ...youthTrainingGroundLevels().map(item => item.level));
   const heatingBuilt = Boolean(heatingRaw.built);
   const heatingConstruction = heatingBuilt ? null : normalizeFacilityConstruction(heatingRaw.construction);
-  const level = clamp(Math.round(Number(youthRaw.level || 0)), 0, maxLevel);
-  const targetLevel = Math.max(level + 1, Math.round(Number(youthRaw?.construction?.targetLevel || level + 1)));
-  const youthConstruction = normalizeFacilityConstruction(youthRaw.construction, { targetLevel });
+  const { youthTraining:_legacyYouthTraining, ...clubOnly } = clean;
   return {
     ...base,
-    ...clean,
-    heating:{ ...base.heating, ...heatingRaw, built:heatingBuilt, active:heatingBuilt && Boolean(heatingRaw.active), construction:heatingConstruction },
-    youthTraining:{ ...base.youthTraining, ...youthRaw, level, construction:youthConstruction }
+    ...clubOnly,
+    heating:{ ...base.heating, ...heatingRaw, built:heatingBuilt, active:heatingBuilt && Boolean(heatingRaw.active), construction:heatingConstruction }
   };
 }
 function clubFacilitiesState(clubId=game?.selectedClubId){
@@ -1186,15 +1178,20 @@ function clubFacilitiesState(clubId=game?.selectedClubId){
   game.stadium.facilities[id] = normalizeClubFacilitiesState(game.stadium.facilities[id]);
   return game.stadium.facilities[id];
 }
-function youthTrainingGroundLevel(clubId=game?.selectedClubId){
-  return Math.max(0, Math.round(Number(clubFacilitiesState(clubId)?.youthTraining?.level || 0)));
+function managerAcademyYouthTrainingState(){
+  if(typeof managerAcademyFacilitiesState === 'function') return managerAcademyFacilitiesState().youthTraining;
+  const raw = game?.academy?.facilities?.youthTraining || {};
+  return { level:Math.max(0, Math.round(Number(raw.level || 0))), construction:raw.construction || null };
 }
-function youthTrainingExceptionalBonus(clubId=game?.selectedClubId){
-  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel(clubId));
+function youthTrainingGroundLevel(){
+  return Math.max(0, Math.round(Number(managerAcademyYouthTrainingState()?.level || 0)));
+}
+function youthTrainingExceptionalBonus(){
+  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel());
   return Math.max(0, Math.round(Number(definition?.exceptionalBonus || 0)));
 }
-function youthTrainingResidenceLimit(clubId=game?.selectedClubId){
-  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel(clubId));
+function youthTrainingResidenceLimit(){
+  const definition = youthTrainingGroundLevelDefinition(youthTrainingGroundLevel());
   return Math.max(0, Math.round(Number(definition?.maxResidences || 0)));
 }
 function createInitialStadiumState(){

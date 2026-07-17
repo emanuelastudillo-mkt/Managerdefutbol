@@ -1125,6 +1125,8 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'daily_calendar' });
   if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar' });
   if(managerWithoutClub){
+    if(typeof processAcademyTurn === 'function') processAcademyTurn();
+    if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
     if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
@@ -1149,6 +1151,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     : { accepted:0, closed:0 };
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(1);
   if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(1);
+  if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
   const recovered = clearRecoveredDailyInjuries();
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
@@ -1828,6 +1831,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   registerInjuryRecoveryTurn('preseason');
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(DAYS_PER_ADVANCE);
+  if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
@@ -1933,6 +1937,7 @@ function simulatePostseasonTurn(){
   registerInjuryRecoveryTurn('postseason');
   if(typeof processStadiumExpansionDays === 'function') processStadiumExpansionDays(DAYS_PER_ADVANCE);
   if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(DAYS_PER_ADVANCE);
+  if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(DAYS_PER_ADVANCE);
   processStadiumProjects();
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
@@ -2587,7 +2592,7 @@ function renderBankAccount(){
       <div class="card"><p class="label">Sueldo mensual actual</p><strong>${salary > 0 ? formatMoney(salary) : '—'}</strong></div>
       <div class="card"><p class="label">Próximo cobro</p><strong>${escapeHtml(nextPayment)}</strong></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Separación patrimonial</p><h3>El dinero personal no pertenece al club</h3></div></div><p class="muted small">Los sueldos salen de Finanzas del club e ingresan aquí cada 30 días. Los préstamos del club continúan administrándose en Club → Finanzas.</p></div>
+    <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Separación patrimonial</p><h3>El dinero personal no pertenece al club</h3></div></div><p class="muted small">Los sueldos salen de Finanzas del club e ingresan aquí cada 30 días. Todos los gastos de Tu Academia también se descuentan de esta cuenta. Los préstamos continúan perteneciendo al club.</p></div>
     <div class="card" style="margin-top:14px"><h3>Movimientos personales</h3><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Saldo</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Todavía no hay movimientos personales.</td></tr>'}</tbody></table></div></div>`;
 }
 
@@ -2904,6 +2909,27 @@ function advanceStadiumAfterMatches(results){
   processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(DAYS_PER_ADVANCE);
 }
+function processManagerAcademyFacilitiesDaily(days=1){
+  if(!game || typeof managerAcademyFacilitiesState !== 'function') return { completed:[] };
+  const elapsed = Math.max(0, Math.round(Number(days || 0)));
+  if(elapsed <= 0) return { completed:[] };
+  const facilities = managerAcademyFacilitiesState();
+  const state = facilities.youthTraining;
+  const completed = [];
+  if(state.construction){
+    state.construction.daysLeft = Math.max(0, Number(state.construction.daysLeft || 0) - elapsed);
+    if(state.construction.daysLeft <= 0){
+      const targetLevel = Math.max(Number(state.level || 0), Number(state.construction.targetLevel || 0));
+      state.level = targetLevel;
+      state.construction = null;
+      completed.push(targetLevel);
+      const definition = youthTrainingGroundLevelDefinition(targetLevel);
+      if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', title:`Predio juvenil nivel ${targetLevel} finalizado`, body:`Tu predio ${definition?.name || ''} quedó habilitado. Aporta +${Number(definition?.exceptionalBonus || 0)} juvenil(es) excepcional(es) adicional(es) en la primera captación de cada temporada.`, priority:'normal' });
+    }
+  }
+  facilities.lastProcessedDate = validIsoDate(game.currentDate) ? game.currentDate : facilities.lastProcessedDate;
+  return { completed };
+}
 function processClubFacilitiesDaily(days=1){
   if(!game?.selectedClubId || typeof clubFacilitiesState !== 'function') return { completed:[], heatingDays:0, fieldGain:0, cost:0 };
   const elapsed = Math.max(0, Math.round(Number(days || 0)));
@@ -2926,15 +2952,6 @@ function processClubFacilitiesDaily(days=1){
         completed.push('heating');
       }
     }
-    if(state.youthTraining.construction){
-      state.youthTraining.construction.daysLeft = Math.max(0, Number(state.youthTraining.construction.daysLeft || 0) - 1);
-      if(state.youthTraining.construction.daysLeft <= 0){
-        const targetLevel = Math.max(Number(state.youthTraining.level || 0), Number(state.youthTraining.construction.targetLevel || 0));
-        state.youthTraining.level = targetLevel;
-        state.youthTraining.construction = null;
-        completed.push(`youth:${targetLevel}`);
-      }
-    }
     if(heatingReadyAtStart && state.heating.active){
       if((Number(game.budget || 0) - cost) < heatingDef.dailyCost){
         state.heating.active = false;
@@ -2952,11 +2969,6 @@ function processClubFacilitiesDaily(days=1){
   if(cost > 0) recordBudgetChange(-cost, 'Calefacción diaria del césped', { type:'stadium_facility_heating_daily', clubId, days:heatingDays, fieldGain });
   completed.forEach(item => {
     if(item === 'heating' && typeof pushGameMessage === 'function') pushGameMessage({ type:'estadio', title:'Calefacción de césped finalizada', body:'La instalación quedó disponible en Estadio → Instalaciones. Está apagada hasta que decidas encenderla.', priority:'normal' });
-    if(String(item).startsWith('youth:') && typeof pushGameMessage === 'function'){
-      const level = Number(String(item).split(':')[1] || 0);
-      const definition = youthTrainingGroundLevelDefinition(level);
-      pushGameMessage({ type:'academia', title:`Predio juvenil nivel ${level} finalizado`, body:`El predio ${definition?.name || ''} quedó habilitado. Aporta +${Number(definition?.exceptionalBonus || 0)} juvenil(es) excepcional(es) adicional(es) por temporada.`, priority:'normal' });
-    }
   });
   return { completed, heatingDays, fieldGain, cost };
 }

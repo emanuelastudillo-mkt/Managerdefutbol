@@ -1,7 +1,7 @@
 {
-  "version": "V7.61",
-  "sistema": "instalaciones_club",
-  "descripcion": "Instalaciones permanentes vinculadas a cada club y gestionadas desde Estadio.",
+  "version": "V7.66",
+  "sistema": "instalaciones_estadio_y_academia_personal",
+  "descripcion": "La calefacción del césped pertenece al club y se gestiona desde Estadio. El Predio de entrenamiento juvenil pertenece al manager y se gestiona desde Tu Academia.",
   "calefaccion_cesped": {
     "id": "pitch_heating",
     "nombre": "Calefacción de césped",
@@ -14,7 +14,7 @@
   "predio_entrenamiento_juvenil": {
     "id": "youth_training_ground",
     "nombre": "Predio de entrenamiento juvenil",
-    "descripcion": "Cada nivel aumenta la cuota de juveniles excepcionales entregada en la primera captación de cada temporada y habilita espacio para 2 residencias juveniles más. La cuota total máxima es de 6.",
+    "descripcion": "Instalación personal del manager. Cada nivel aumenta la cuota de juveniles excepcionales entregada en la primera captación de cada temporada y habilita espacio para 2 residencias juveniles más. La cuota total máxima es de 6.",
     "niveles": [
       {
         "nivel": 1,

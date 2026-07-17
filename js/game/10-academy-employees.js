@@ -1,20 +1,61 @@
 /* Academia, captación, juveniles, empleados y tratamientos. */
 
 function createInitialAcademyState(){
-  return { players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null, exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, exceptionalYouthTargetSeason:null, exceptionalYouthTargetCount:0, residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc' };
+  return {
+    owner:'manager', ownershipVersion:2, homeCountry:'', createdAt:'',
+    players:[], scoutingJobs:[], unlockedStats:{}, trainingPlan:{}, youthPreparer:null, staffContracts:{},
+    facilities:{ youthTraining:{ level:0, construction:null }, lastProcessedDate:null },
+    lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null,
+    exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, exceptionalYouthTargetSeason:null, exceptionalYouthTargetCount:0,
+    residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, lastNegativeBalanceNoticeDate:null,
+    youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc'
+  };
+}
+function normalizeManagerAcademyFacilitiesState(state){
+  const clean = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  const raw = clean.youthTraining && typeof clean.youthTraining === 'object' ? clean.youthTraining : {};
+  const maxLevel = Math.max(0, ...youthTrainingGroundLevels().map(item => Number(item.level || 0)));
+  const level = clamp(Math.round(Number(raw.level || 0)), 0, maxLevel);
+  const targetLevel = Math.max(level + 1, Math.round(Number(raw?.construction?.targetLevel || level + 1)));
+  const construction = typeof normalizeFacilityConstruction === 'function'
+    ? normalizeFacilityConstruction(raw.construction, { targetLevel })
+    : (raw.construction && Number(raw.construction.daysLeft || 0) > 0 ? { ...raw.construction, targetLevel } : null);
+  return {
+    ...clean,
+    youthTraining:{ ...raw, level, construction },
+    lastProcessedDate:validIsoDate(clean.lastProcessedDate) ? clean.lastProcessedDate : null
+  };
+}
+function academyStaffContractsState(){
+  game.academy = normalizeAcademyState(game.academy);
+  game.academy.staffContracts = normalizeStaffContracts(game.academy.staffContracts || {});
+  return game.academy.staffContracts;
+}
+function managerAcademyFacilitiesState(){
+  game.academy = normalizeAcademyState(game.academy);
+  game.academy.facilities = normalizeManagerAcademyFacilitiesState(game.academy.facilities);
+  return game.academy.facilities;
 }
 function normalizeAcademyState(state){
   const base = createInitialAcademyState();
   const hadExceptionalCount = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'exceptionalYouthGrantedCount'));
   const hadExceptionalTarget = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'exceptionalYouthTargetSeason'));
+  const hadOwnershipVersion = Boolean(state && Object.prototype.hasOwnProperty.call(state, 'ownershipVersion'));
   const clean = { ...base, ...(state || {}) };
+  if(state && !hadOwnershipVersion) clean.ownershipVersion = 0;
   const allowedSorts = new Set(['edad_asc','edad_desc','informe_desc','informe_asc']);
   clean.sortMode = allowedSorts.has(String(clean.sortMode || '')) ? String(clean.sortMode) : 'edad_asc';
   clean.players = Array.isArray(clean.players) ? clean.players.map(normalizeAcademyPlayer).filter(Boolean) : [];
   clean.scoutingJobs = Array.isArray(clean.scoutingJobs) ? clean.scoutingJobs : [];
   clean.unlockedStats = clean.unlockedStats && typeof clean.unlockedStats === 'object' ? clean.unlockedStats : {};
   clean.trainingPlan = clean.trainingPlan && typeof clean.trainingPlan === 'object' ? clean.trainingPlan : {};
+  clean.owner = 'manager';
+  clean.ownershipVersion = Math.max(0, Math.round(Number(clean.ownershipVersion || 0)));
+  clean.homeCountry = String(clean.homeCountry || '');
+  clean.createdAt = String(clean.createdAt || '');
   clean.youthPreparer = clean.youthPreparer || null;
+  clean.staffContracts = normalizeStaffContracts(clean.staffContracts || {});
+  clean.facilities = normalizeManagerAcademyFacilitiesState(clean.facilities);
   clean.exceptionalYouthGrantedSeason = Number(clean.exceptionalYouthGrantedSeason || 0) || null;
   clean.exceptionalYouthGrantedCount = Math.max(0, Math.round(Number(clean.exceptionalYouthGrantedCount || 0)));
   if(!hadExceptionalCount && clean.exceptionalYouthGrantedSeason) clean.exceptionalYouthGrantedCount = 1;
@@ -31,6 +72,7 @@ function normalizeAcademyState(state){
   clean.residences = Math.max(0, Math.round(Number(clean.residences || 0)));
   clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
   clean.youthSalaryLastChargeDate = validIsoDate(clean.youthSalaryLastChargeDate) ? clean.youthSalaryLastChargeDate : null;
+  clean.lastNegativeBalanceNoticeDate = validIsoDate(clean.lastNegativeBalanceNoticeDate) ? clean.lastNegativeBalanceNoticeDate : null;
   return clean;
 }
 
@@ -89,6 +131,21 @@ function staffBaseCost(staffId){
 function staffHireCost(staffId, categoryId='regular'){
   return Math.round(staffBaseCost(staffId) * staffCategory(categoryId).multiplicadorCosto);
 }
+function managerPersonalBalance(){
+  const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
+  return Math.round(Number(finances?.balance || 0));
+}
+function managerCanAffordAcademy(cost=0){ return managerPersonalBalance() >= Math.max(0, Math.round(Number(cost || 0))); }
+function recordAcademyPersonalExpense(cost, concept, meta={}){
+  const amount = Math.max(0, Math.round(Number(cost || 0)));
+  if(amount <= 0) return 0;
+  if(typeof recordManagerFinanceChange !== 'function') return 0;
+  return recordManagerFinanceChange(-amount, concept, { ...meta, academyExpense:true, academyOwnedByManager:true });
+}
+function academyFinanceHistory(){
+  const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
+  return (Array.isArray(finances?.history) ? finances.history : []).filter(item => Boolean(item?.academyExpense));
+}
 function normalizeStaffContracts(contracts){
   const clean = (contracts && typeof contracts === 'object' && !Array.isArray(contracts)) ? { ...contracts } : {};
   Object.keys(clean).forEach(key => {
@@ -124,8 +181,8 @@ function legacyStaffActive(staffId){
   return false;
 }
 function staffContract(staffId){
-  game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
-  const contract = game.staffContracts[staffId];
+  const contracts = staffId === 'youth_preparer' ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  const contract = contracts[staffId];
   if(contract?.active && Number(contract.season || 0) === Number(game.seasonNumber || 1)) return contract;
   if(legacyStaffActive(staffId)){
     return { active:true, season:game.seasonNumber || 1, category:'regular', cost:staffBaseCost(staffId), performanceMultiplier:1, legacy:true };
@@ -138,8 +195,8 @@ function deactivateStaffEmployee(staffId, reason='manual'){
   if(!game) return null;
   const def = staffDefinition(staffId);
   if(!def) return null;
-  game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
-  const contract = game.staffContracts[staffId] || null;
+  const contracts = staffId === 'youth_preparer' ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  const contract = contracts[staffId] || null;
   const wasActive = Boolean(contract?.active && Number(contract.season || 0) === Number(game.seasonNumber || 1)) || legacyStaffActive(staffId);
   if(!wasActive) return null;
   const snapshot = {
@@ -180,7 +237,7 @@ function dismissStaffEmployee(staffId, options={}){
     type:'empleados',
     priority:'normal',
     title:`${dismissed.name} despedido`,
-    body:`El contrato ya estaba pagado por toda la temporada. ${dismissed.name} dejó el club sin reintegro de ${formatMoney(dismissed.cost)}.`,
+    body:`El contrato ya estaba pagado por toda la temporada. ${dismissed.name} dejó ${staffId === 'youth_preparer' ? 'Tu Academia' : 'el club'} sin reintegro de ${formatMoney(dismissed.cost)}.`,
     id:`staff-dismissed-${staffId}-${game.seasonNumber || 1}-${game.globalTurn || 0}`
   });
   if(options.save !== false && typeof saveLocal === 'function') saveLocal(true);
@@ -191,7 +248,7 @@ function dismissStaffEmployee(staffId, options={}){
 }
 function dismissAllStaffForFinancialCrisis(options={}){
   if(!game || Number(game.budget || 0) >= 0) return [];
-  const active = staffDefinitions().filter(def => staffActive(def.id));
+  const active = staffDefinitions().filter(def => def.id !== 'youth_preparer' && staffActive(def.id));
   if(!active.length) return [];
   const dismissed = active.map(def => deactivateStaffEmployee(def.id, 'negative_budget')).filter(Boolean);
   if(!dismissed.length) return [];
@@ -239,11 +296,11 @@ function staffContractCardMarkup(staffId, mode='compact'){
     </div>
   </div>`;
 }
-function contractedStaffList(){
-  return staffDefinitions().filter(def => staffActive(def.id));
+function contractedStaffList(scope='club'){
+  return staffDefinitions().filter(def => (scope === 'academy' ? def.id === 'youth_preparer' : def.id !== 'youth_preparer') && staffActive(def.id));
 }
-function staffContractsPanelMarkup({ empty=false }={}){
-  const active = contractedStaffList();
+function staffContractsPanelMarkup({ empty=false, scope='club' }={}){
+  const active = contractedStaffList(scope);
   if(!active.length && !empty) return '';
   return `<div class="card featured-staff-panel" style="margin-top:14px">
     <div class="row"><h3>Empleados contratados</h3><span class="pill">Temporada actual</span></div>
@@ -294,12 +351,13 @@ function openStaffHireModal(staffId, after=null){
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
   const cards = staffCategories().map(cat => {
     const cost = staffHireCost(staffId, cat.id);
-    const unlock = staffCategoryUnlockInfo(cat.id);
-    const budgetBlocked = (game.budget || 0) < cost;
+    const personalAcademyStaff = staffId === 'youth_preparer';
+    const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
+    const budgetBlocked = personalAcademyStaff ? !managerCanAffordAcademy(cost) : (game.budget || 0) < cost;
     const disabled = budgetBlocked || !unlock.unlocked;
     const status = !unlock.unlocked
       ? `Bloqueado · requiere ${unlock.requiredWins} victorias (${unlock.remaining} restantes)`
-      : budgetBlocked ? 'Presupuesto insuficiente' : 'Contrato por temporada';
+      : budgetBlocked ? (personalAcademyStaff ? 'Saldo personal insuficiente' : 'Presupuesto insuficiente') : 'Contrato por temporada';
     return `<button class="staff-tier-card ${disabled ? 'disabled' : ''}" data-hire-staff-tier="${escapeHtml(staffId)}:${escapeHtml(cat.id)}" ${disabled ? 'disabled' : ''}>
       <span class="pill">${escapeHtml(cat.nombre)}</span>
       <strong>${formatMoney(cost)}</strong>
@@ -309,7 +367,7 @@ function openStaffHireModal(staffId, after=null){
   openModal(`<div class="staff-hire-modal">
     <h2>Contratar ${escapeHtml(def.nombre)}</h2>
     <p class="muted">Elegí una categoría para esta temporada.</p>
-    ${founderStaffUnlockSummaryMarkup()}
+    ${staffId === 'youth_preparer' ? '' : founderStaffUnlockSummaryMarkup()}
     <div class="staff-tier-grid">${cards}</div>
   </div>`);
   document.querySelectorAll('[data-hire-staff-tier]').forEach(btn => btn.addEventListener('click', () => {
@@ -324,16 +382,18 @@ function hireStaffEmployee(staffId, categoryId='regular', after=null){
   if(!def) return;
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
   const cat = staffCategory(categoryId);
-  const unlock = staffCategoryUnlockInfo(cat.id);
+  const personalAcademyStaff = staffId === 'youth_preparer';
+  const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
   if(!unlock.unlocked){
     showNotice(`La categoría ${cat.nombre} requiere ${unlock.requiredWins} victorias con el club fundador. Llevás ${unlock.wins}.`);
     return;
   }
   const cost = staffHireCost(staffId, cat.id);
-  if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para contratar este empleado.'); return; }
-  recordBudgetChange(-cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`staff_${staffId}`, category:cat.id });
-  game.staffContracts = normalizeStaffContracts(game.staffContracts || {});
-  game.staffContracts[staffId] = {
+  if(personalAcademyStaff ? !managerCanAffordAcademy(cost) : (game.budget || 0) < cost){ showNotice(personalAcademyStaff ? 'Saldo personal insuficiente para contratar este empleado de Academia.' : 'Presupuesto insuficiente para contratar este empleado.'); return; }
+  if(personalAcademyStaff) recordAcademyPersonalExpense(cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`academy_staff_${staffId}`, category:cat.id });
+  else recordBudgetChange(-cost, `Contratación de ${def.nombre} ${cat.nombre}`, { type:`staff_${staffId}`, category:cat.id });
+  const contracts = personalAcademyStaff ? academyStaffContractsState() : (game.staffContracts = normalizeStaffContracts(game.staffContracts || {}));
+  contracts[staffId] = {
     active:true,
     season:game.seasonNumber || 1,
     category:cat.id,
@@ -359,6 +419,8 @@ function resetAcademySeasonState(){
   if(!game) return;
   game.academy = normalizeAcademyState(game.academy);
   if(game.academy.youthPreparer){ game.academy.youthPreparer.active = false; }
+  game.academy.staffContracts = normalizeStaffContracts(game.academy.staffContracts || {});
+  if(game.academy.staffContracts.youth_preparer) game.academy.staffContracts.youth_preparer.active = false;
   game.academy.lastConsultTurn = null;
   game.academy.lastConsultReveal = null;
   game.academy.exceptionalYouthGrantedSeason = null;
@@ -517,7 +579,7 @@ function academyResidenceCount(){
   return Math.max(0, Math.round(Number(game.academy.residences || 0)));
 }
 function academyResidenceLimit(){
-  return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit(game?.selectedClubId) || 0))) : 0;
+  return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit() || 0))) : 0;
 }
 function academyCapacity(){
   return ACADEMY_BASE_CAPACITY + (academyResidenceCount() * ACADEMY_RESIDENCE_CAPACITY);
@@ -532,16 +594,16 @@ function rentAcademyResidence(){
   const currentResidences = academyResidenceCount();
   const residenceLimit = academyResidenceLimit();
   if(currentResidences >= residenceLimit){
-    const level = typeof youthTrainingGroundLevel === 'function' ? youthTrainingGroundLevel(game.selectedClubId) : 0;
+    const level = typeof youthTrainingGroundLevel === 'function' ? youthTrainingGroundLevel() : 0;
     showNotice(level > 0 ? `El predio juvenil nivel ${level} permite hasta ${residenceLimit} residencia(s). Mejoralo para habilitar más lugares.` : 'Necesitás construir el predio juvenil nivel 1 para habilitar residencias.');
     return;
   }
-  if((game.budget || 0) < cost){ showNotice('Presupuesto insuficiente para alquilar una residencia.'); return; }
+  if(!managerCanAffordAcademy(cost)){ showNotice('Saldo personal insuficiente para alquilar una residencia.'); return; }
   const nextResidences = currentResidences + 1;
   const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
   game.academy.residences = nextResidences;
   game.academy.residenceLastChargeDate = today;
-  recordBudgetChange(-cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:nextResidences });
+  recordAcademyPersonalExpense(cost, 'Alquiler mensual de residencia juvenil', { type:'academy_residence_rent', residences:nextResidences });
   saveLocal(true);
   if(typeof renderAll === 'function') renderAll(); else renderAcademy();
   showNotice(`Residencia alquilada. Residencias: ${nextResidences}. Cupo juvenil: ${academyCapacity()}.`);
@@ -578,7 +640,7 @@ function processAcademyResidenceRent(){
   if(elapsed < ACADEMY_RESIDENCE_MONTH_DAYS) return 0;
   const months = Math.max(1, Math.floor(elapsed / ACADEMY_RESIDENCE_MONTH_DAYS));
   const total = residences * ACADEMY_RESIDENCE_MONTHLY_COST * months;
-  recordBudgetChange(-total, 'Alquiler mensual de residencias juveniles', { type:'academy_residence_monthly', residences, months });
+  recordAcademyPersonalExpense(total, 'Alquiler mensual de residencias juveniles', { type:'academy_residence_monthly', residences, months });
   game.academy.residenceLastChargeDate = addDaysToIsoDate(game.academy.residenceLastChargeDate, months * ACADEMY_RESIDENCE_MONTH_DAYS);
   return total;
 }
@@ -590,8 +652,11 @@ function nextAcademyPlayerId(){
   return Math.max(...ids) + 1;
 }
 function academyLocalCountry(){
+  game.academy = normalizeAcademyState(game.academy);
+  if(game.academy.homeCountry) return game.academy.homeCountry;
   const club = seed?.clubs?.find(c => Number(c.id) === Number(game?.selectedClubId || 0));
-  return club ? clubCountry(club) : 'Argentina';
+  game.academy.homeCountry = club ? clubCountry(club) : 'Argentina';
+  return game.academy.homeCountry;
 }
 function academyNationality(id, options={}){
   if(options.local === true) return localNationalityForCountry(academyLocalCountry());
@@ -637,7 +702,7 @@ function academyProjectedOverall(player){
   return Math.min(raw, academyGrowthCapOverall(player));
 }
 function academyExceptionalYouthSeasonTarget(){
-  const facilityBonus = typeof youthTrainingExceptionalBonus === 'function' ? youthTrainingExceptionalBonus(game?.selectedClubId) : 0;
+  const facilityBonus = typeof youthTrainingExceptionalBonus === 'function' ? youthTrainingExceptionalBonus() : 0;
   return clamp(1 + Math.max(0, Math.round(Number(facilityBonus || 0))), 1, 6);
 }
 function academyExceptionalYouthSeasonStatus(){
@@ -662,8 +727,8 @@ function startAcademyScouting(){
     showNotice(`La primera captación de la temporada entregará ${exceptionalStatus.target} juvenil(es) excepcional(es). Necesitás ${exceptionalStatus.target} cupos libres y actualmente tenés ${availableSlots}.`);
     return;
   }
-  if((game.budget || 0) < ACADEMY_SCOUTING_COST){ showNotice('Presupuesto insuficiente para hacer una captación.'); return; }
-  recordBudgetChange(-ACADEMY_SCOUTING_COST, 'Captación de talentos', { type:'academy_scouting_start' });
+  if(!managerCanAffordAcademy(ACADEMY_SCOUTING_COST)){ showNotice('Saldo personal insuficiente para hacer una captación.'); return; }
+  recordAcademyPersonalExpense(ACADEMY_SCOUTING_COST, 'Captación de talentos', { type:'academy_scouting_start' });
   const count = ACADEMY_PLAYERS_MIN + Math.floor(Math.random() * (ACADEMY_PLAYERS_MAX - ACADEMY_PLAYERS_MIN + 1));
   const job = { id:`cap-${Date.now()}-${Math.round(Math.random()*9999)}`, startedTurn:currentTurnIndex(), dueTurn:currentTurnIndex() + ACADEMY_SCOUTING_TURNS, count, status:'pending' };
   game.academy.scoutingJobs.push(job);
@@ -841,12 +906,15 @@ function processAcademyYouthInjuries(){
   pushGameMessage({ type:'academia', priority:'normal', title:'Juvenil lesionado', body:`${player.name} sufrió ${player.injuryName}. Mientras esté lesionado no entrenará habilidades.` });
   return 1;
 }
-function treatAcademyYouthInjuryCore(playerId){
+function treatAcademyYouthInjuryCore(playerId, options={}){
   if(!game) return { success:false, message:'No hay partida activa.' };
   game.academy = normalizeAcademyState(game.academy);
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
   if(!player || !academyPlayerInjured(player)) return { success:false, message:'El juvenil no está lesionado.' };
   const injuryName = player.injuryName || 'lesión juvenil';
+  const cost = Math.max(0, Math.round(Number(options.cost ?? ACADEMY_YOUTH_INJURY_TREATMENT_COST)));
+  if(cost > 0 && !managerCanAffordAcademy(cost)) return { success:false, message:`Saldo personal insuficiente. El tratamiento cuesta ${formatMoney(cost)}.` };
+  if(cost > 0) recordAcademyPersonalExpense(cost, `Tratamiento juvenil: ${player.name}`, { type:'academy_youth_injury_treatment', playerId:player.id, injuryName });
   player.injuredThroughTurn = 0;
   player.injuryStartTurn = 0;
   player.injuryName = '';
@@ -887,7 +955,7 @@ function academyTurnSalaryCost(){
   const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || dateForSeasonState(game));
   if(!academyWeeklySalaryDueToday(today)) return 0;
   const total = count * ACADEMY_PLAYER_TURN_COST;
-  recordBudgetChange(-total, 'Sueldos semanales de academia', { type:'academy_weekly_salary', players:count, date:today });
+  recordAcademyPersonalExpense(total, 'Sueldos semanales de academia', { type:'academy_weekly_salary', players:count, date:today });
   game.academy.youthSalaryLastChargeDate = today;
   return total;
 }
@@ -943,6 +1011,11 @@ function processAcademyTurn(){
   academyTurnSalaryCost();
   applyAcademyTrainingEffects();
   const added = processAcademyScoutingArrivals();
+  const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  if(managerPersonalBalance() < 0 && game.academy.lastNegativeBalanceNoticeDate !== today){
+    game.academy.lastNegativeBalanceNoticeDate = today;
+    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'high', title:'Academia en números rojos', body:`Tu Cuenta Bancaria quedó en ${formatMoney(managerPersonalBalance())}. Los gastos automáticos siguen siendo personales; no podrás iniciar nuevas captaciones, obras, tratamientos o contrataciones hasta recuperar saldo.`, id:`academy-negative-${today}` });
+  }
   if(activeTab === 'academy' && added > 0) renderAcademy();
 }
 function academyYouthPreparerActive(){
@@ -990,9 +1063,9 @@ function dismissAcademyPlayer(playerId){
   game.academy = normalizeAcademyState(game.academy);
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
   if(!player) return;
-  if((game.budget || 0) < ACADEMY_DISMISS_COMPENSATION){ showNotice('Presupuesto insuficiente para pagar la compensación.'); return; }
+  if(!managerCanAffordAcademy(ACADEMY_DISMISS_COMPENSATION)){ showNotice('Saldo personal insuficiente para pagar la compensación.'); return; }
   if(!confirm(`Despedir a ${player.name} de la academia?`)) return;
-  recordBudgetChange(-ACADEMY_DISMISS_COMPENSATION, 'Compensación por baja de academia', { type:'academy_dismiss', playerId });
+  recordAcademyPersonalExpense(ACADEMY_DISMISS_COMPENSATION, 'Compensación por baja de academia', { type:'academy_dismiss', playerId });
   player.status = 'dismissed';
   player.dismissedTurn = currentTurnIndex();
   saveLocal(true);
@@ -1000,6 +1073,7 @@ function dismissAcademyPlayer(playerId){
   showNotice(`${player.name} fue dado de baja de la academia.`);
 }
 function openPromoteAcademyModal(playerId){
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){ showNotice('Necesitás estar contratado por un club para ofrecer un contrato profesional.'); return; }
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = academyActivePlayers().find(p => Number(p.id) === Number(playerId));
   if(!player) return;
@@ -1010,6 +1084,7 @@ function openPromoteAcademyModal(playerId){
 }
 function promoteAcademyPlayer(playerId, exactPosition){
   if(!game) return;
+  if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){ showNotice('Necesitás estar contratado por un club para ofrecer un contrato profesional.'); return; }
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   game.academy = normalizeAcademyState(game.academy);
   const player = game.academy.players.find(p => Number(p.id) === Number(playerId) && p.status === 'academy');
@@ -1174,7 +1249,8 @@ function academyGrowthSoftMarkup(growthNow, growthLimit){
 function academyPlayerCard(player){
   ensureAcademyGrowthState(player);
   const training = academyTrainingType(player.id);
-  const canPromote = Number(player.age || 0) >= 16;
+  const employed = !(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive());
+  const canPromote = employed && Number(player.age || 0) >= 16;
   const finalSeason = Number(player.age || 0) >= (typeof ACADEMY_YOUTH_FINAL_ACADEMY_AGE !== 'undefined' ? ACADEMY_YOUTH_FINAL_ACADEMY_AGE : 17);
   const injured = academyPlayerInjured(player);
   const injuryLabel = academyYouthInjuryLabel(player);
@@ -1194,7 +1270,7 @@ function academyPlayerCard(player){
       <select data-academy-training="${player.id}" ${injured ? 'disabled' : ''}><option value="technical" ${training==='technical'?'selected':''}>Técnica</option><option value="resistance" ${training==='resistance'?'selected':''}>Resistencia</option></select>
       ${injured ? `<button class="primary small-btn" data-treat-academy-injury="${player.id}">Tratar · ${formatMoney(ACADEMY_YOUTH_INJURY_TREATMENT_COST)}</button>` : ''}
       <button class="ghost small-btn" data-dismiss-academy="${player.id}">Despedir</button>
-      <button class="primary small-btn" data-promote-academy="${player.id}" ${canPromote ? '' : 'disabled'}>${canPromote ? 'Contrato profesional' : 'Menor de 16'}</button>
+      <button class="primary small-btn" data-promote-academy="${player.id}" ${canPromote ? '' : 'disabled'}>${canPromote ? 'Contrato profesional' : !employed ? 'Sin club' : 'Menor de 16'}</button>
     </div>
   </div>`;
 }
@@ -1211,20 +1287,30 @@ function renderAcademy(){
   const active = academySortedPlayers(activeRaw);
   const activePreparer = academyYouthPreparerActive();
   const salaryTurn = active.length * ACADEMY_PLAYER_TURN_COST;
+  const personalBalance = managerPersonalBalance();
+  const academyExpenses = academyFinanceHistory();
+  const totalAcademyExpenses = academyExpenses.reduce((sum,item) => sum + Math.abs(Math.min(0, Number(item.delta || 0))), 0);
+  const recentAcademyExpenses = academyExpenses.slice(-8).reverse();
   const residences = academyResidenceCount();
   const residenceLimit = academyResidenceLimit();
   const capacity = academyCapacity();
   const availableSlots = academyAvailableSlots();
   const exceptionalStatus = academyExceptionalYouthSeasonStatus();
-  const scoutingDisabled = availableSlots <= 0 || (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target);
+  const scoutingDisabled = !managerCanAffordAcademy(ACADEMY_SCOUTING_COST) || availableSlots <= 0 || (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target);
   const facilityExceptionalBonus = Math.max(0, exceptionalStatus.currentTarget - 1);
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Academia</h2><p class="tagline">Captación, seguimiento y entrenamiento de juveniles antes de firmar contrato profesional.</p></div>
-      <div class="pill">Costo por semana: ${formatMoney(salaryTurn)}</div>
+      <div><h2>Tu Academia</h2><p class="tagline">Patrimonio personal del manager. Conservás juveniles, Predio, residencias y empleados aunque cambies de club.</p></div>
+      <div class="row"><span class="pill">Sede ${escapeHtml(academyLocalCountry())}</span><span class="pill">Saldo personal ${formatMoney(personalBalance)}</span></div>
     </div>
-    <div class="card academy-residence-card" style="margin-bottom:14px">
-      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. El predio juvenil habilita 2 residencias por nivel. Costo mensual por residencia: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)}.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
+    <div class="grid cols-3 academy-owner-summary">
+      <div class="card"><p class="label">Propietario</p><strong>Manager</strong><p class="muted small">La Academia no pertenece al club actual.</p></div>
+      <div class="card"><p class="label">Gasto semanal juvenil</p><strong>${formatMoney(salaryTurn)}</strong></div>
+      <div class="card"><p class="label">Gastos históricos</p><strong class="bad">${formatMoney(totalAcademyExpenses)}</strong></div>
+    </div>
+    <div class="academy-owned-facility" style="margin-top:14px">${youthTrainingFacilityMarkup()}</div>
+    <div class="card academy-residence-card" style="margin:14px 0">
+      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Tu Predio habilita 2 residencias por nivel. El alquiler sale de la Cuenta Bancaria personal: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)} mensuales por residencia.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
       <div class="academy-residence-stats">
         <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
         <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
@@ -1236,7 +1322,7 @@ function renderAcademy(){
     </div>
     <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
       <div class="row">
-        <div><p class="label">Preparador de juveniles</p><h3>Informe de juveniles</h3><p class="muted small">Contratá al preparador para consultar y revelar habilidades de los juveniles activos.</p></div>
+        <div><p class="label">Preparador de juveniles</p><h3>Informe de juveniles</h3><p class="muted small">Empleado personal de Tu Academia. Su contrato se paga desde la Cuenta Bancaria del manager y se conserva al cambiar de club.</p></div>
         <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
       </div>
     </div>
@@ -1247,15 +1333,22 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><p class="small ${exceptionalStatus.resolved ? 'ok' : 'muted'}">${exceptionalStatus.resolved ? `Excepcionales entregados: ${exceptionalStatus.granted}/${exceptionalStatus.target}` : `Primera captación: ${exceptionalStatus.target} excepcional(es)`}</p><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${availableSlots <= 0 ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target) ? `<p class="small warn">Reservá ${exceptionalStatus.target} cupos libres para recibir completa la cuota excepcional de la primera captación. Disponibles: ${availableSlots}.</p>` : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
+    <div class="card academy-finance-card" style="margin-top:14px">
+      <div class="row"><div><p class="label">Finanzas de Academia</p><h3>Gastos personales</h3></div><span class="pill">Saldo ${formatMoney(personalBalance)}</span></div>
+      <p class="muted small">Captaciones, Predio, residencias, Preparador, becas juveniles, tratamientos y bajas se descuentan de tu Cuenta Bancaria, nunca del presupuesto del club.</p>
+      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Gasto</th></tr></thead><tbody>${recentAcademyExpenses.length ? recentAcademyExpenses.map(item => `<tr><td>${escapeHtml(item.date || '—')}</td><td>${escapeHtml(item.concept || 'Academia')}</td><td class="bad">${formatMoney(Math.abs(Number(item.delta || 0)))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">Todavía no hay gastos personales de Academia registrados.</td></tr>'}</tbody></table></div>
+    </div>
     <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el predio juvenil actual, con un máximo de 6. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     ${academySortControlsMarkup()}
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
+  document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
   $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
   $('btnCancelAcademyResidence')?.addEventListener('click', cancelAcademyResidence);
   $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);
   $('btnHireYouthPreparer')?.addEventListener('click', hireYouthPreparer);
   $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);
+  bindStaffDismissButtons(renderAcademy);
   $('academySortMode')?.addEventListener('change', (event) => {
     game.academy.sortMode = event.target.value;
     saveLocal(true);
@@ -1410,7 +1503,7 @@ function renderEmployees(){
       <div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div>
     </div>
     ${staffContractsPanelMarkup({ empty:true })}
-    <div class="card blocker" style="margin-top:12px"><p class="muted small">Si el presupuesto del club cae por debajo de $0, la directiva despide automáticamente a todos los empleados contratados. Los pagos ya realizados por la temporada no se recuperan.</p></div>
+    <div class="card blocker" style="margin-top:12px"><p class="muted small">Si el presupuesto del club cae por debajo de $0, la directiva despide automáticamente a los empleados del club. El Preparador de juveniles pertenece a Tu Academia y no se ve afectado por la economía del club.</p></div>
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card staff-card">
         <h3>Psicólogo motivacional</h3>
@@ -1456,10 +1549,13 @@ function injuredTreatmentList(injuredList){
   if(!injuredList.length) return '<p class="muted">No hay jugadores lesionados para tratar.</p>';
   const eligible = injuredList.filter(item => !wasKinesioTreatedThisTurn(item.player.id, item.kind));
   const firstTeamEligible = eligible.filter(item => item.kind !== 'youth');
+  const youthEligible = eligible.filter(item => item.kind === 'youth');
   const overtimeCost = firstTeamEligible.length ? currentKinesiologistOvertimeCost() : 0;
+  const youthCost = youthEligible.length * ACADEMY_YOUTH_INJURY_TREATMENT_COST;
   const insufficientBudget = overtimeCost > 0 && (game.budget || 0) < overtimeCost;
-  const bulkDisabled = !eligible.length || insufficientBudget;
-  const bulkReason = !eligible.length ? 'Todos los lesionados disponibles ya fueron tratados esta semana.' : insufficientBudget ? 'Presupuesto insuficiente para pagar horas extras.' : (firstTeamEligible.length ? 'Se cobra horas extras sólo por el plantel profesional. Los juveniles se tratan gratis.' : 'Tratamiento gratuito para juveniles lesionados.');
+  const insufficientPersonal = youthCost > 0 && !managerCanAffordAcademy(youthCost);
+  const bulkDisabled = !eligible.length || insufficientBudget || insufficientPersonal;
+  const bulkReason = !eligible.length ? 'Todos los lesionados disponibles ya fueron tratados esta semana.' : insufficientBudget ? 'Presupuesto del club insuficiente para pagar horas extras.' : insufficientPersonal ? `Saldo personal insuficiente para tratamientos juveniles (${formatMoney(youthCost)}).` : `Horas extras del club: ${formatMoney(overtimeCost)} · tratamientos juveniles personales: ${formatMoney(youthCost)}.`;
   return `<div class="kinesio-bulk-card">
     <p class="label">Que los médicos hagan horas extras hoy</p>
     <div class="row gap-sm">
@@ -1477,7 +1573,7 @@ function injuredTreatmentList(injuredList){
     const nameButton = kind === 'youth'
       ? `<strong>${escapeHtml(item.player.name)}</strong>`
       : `<button class="linklike" data-player-id="${item.player.id}">${availabilityIcons(item.player.id)}${escapeHtml(item.player.name)}</button>`;
-    const extra = kind === 'youth' ? '<span class="small muted">Juvenil de academia · tratamiento gratis</span>' : '';
+    const extra = kind === 'youth' ? `<span class="small muted">Juvenil de Academia · cargo personal ${formatMoney(ACADEMY_YOUTH_INJURY_TREATMENT_COST)}</span>` : '';
     return `<div class="injured-treatment-row ${kind === 'youth' ? 'youth-treatment' : ''}" data-treatment-row="${escapeHtml(key)}">
       ${visual}
       <div>${nameButton}<span>${escapeHtml(item.status.injuryLabel || 'Lesión')} · ${formatDaysFromTurns(item.remaining)}</span>${extra}<span class="treatment-status" data-kinesio-status="${escapeHtml(key)}">${treated ? 'Tratado esta semana' : ''}</span></div>
@@ -1589,8 +1685,11 @@ async function treatAllInjuredPlayers(button=null){
   const targets = kinesioTreatmentItems().filter(item => !wasKinesioTreatedThisTurn(item.player.id, item.kind));
   if(!targets.length){ showNotice('No hay lesionados pendientes de tratamiento esta semana.'); return; }
   const professionalTargets = targets.filter(item => item.kind !== 'youth');
+  const youthTargets = targets.filter(item => item.kind === 'youth');
   const cost = professionalTargets.length ? currentKinesiologistOvertimeCost() : 0;
+  const youthCost = youthTargets.length * ACADEMY_YOUTH_INJURY_TREATMENT_COST;
   if(cost > 0 && (game.budget || 0) < cost){ showNotice(`Presupuesto insuficiente. Necesitás ${formatMoney(cost)} para pagar horas extras médicas.`); return; }
+  if(youthCost > 0 && !managerCanAffordAcademy(youthCost)){ showNotice(`Saldo personal insuficiente. Necesitás ${formatMoney(youthCost)} para tratar a los juveniles.`); return; }
   if(cost > 0) recordBudgetChange(-cost, `Horas extras médicas: tratamiento de ${professionalTargets.length} lesionado(s) profesional(es)`, { type:'kinesiology_overtime', players:professionalTargets.map(item => item.player.id), costRate:KINESIOLOGIST_OVERTIME_COST_RATE });
   const progress = $('kinesioBulkProgress');
   if(progress){
@@ -1639,7 +1738,7 @@ async function treatAllInjuredPlayers(button=null){
     button.innerHTML = '<span>Tratamientos finalizados</span>';
   }
   saveLocal(true);
-  showNotice(`Tratamientos finalizados. Costo: ${formatMoney(cost)}. Éxitos: ${successes}. Fallos: ${failures}.`);
+  showNotice(`Tratamientos finalizados. Club: ${formatMoney(cost)} · Cuenta personal: ${formatMoney(youthCost)}. Éxitos: ${successes}. Fallos: ${failures}.`);
   await kinesioDelay(Math.max(650, ACTION_FEEDBACK_RESULT_MS));
   renderEmployees();
 }

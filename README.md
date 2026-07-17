@@ -1,4 +1,47 @@
-# Fútbol Manager MVP - V7.66
+# Fútbol Manager MVP - V7.67
+
+## V7.67 - Mercado juvenil de Tu Academia
+
+### Ofertas por juveniles
+
+- Los juveniles de **17 años** pueden recibir ofertas de clubes controlados por bots.
+- Las propuestas aparecen dentro de **Carrera → Tu Academia**, con el nombre del jugador, club comprador, liga, monto bruto, impuesto federativo, ingreso neto y fecha de vencimiento.
+- Cada oferta puede aceptarse o rechazarse directamente desde la Academia.
+- Las propuestas vencen después de 5 días si no reciben respuesta.
+- Un juvenil no puede tener más de una oferta pendiente al mismo tiempo y, tras un rechazo, debe esperar 30 días antes de recibir otra propuesta.
+
+### Clubes compradores
+
+- Los bots revisan la Academia cuando su plantel está por debajo del objetivo de 24 jugadores o necesita reforzar una zona concreta.
+- Se consideran porteros, defensores, mediocampistas y delanteros según la composición del plantel comprador.
+- El nivel actual del juvenil debe ser coherente con la reputación del club.
+- Se priorizan clubes del mismo país de la Academia, aunque también pueden aparecer propuestas extranjeras.
+- El club debe tener espacio en el plantel y presupuesto suficiente al generar y al aceptar la oferta.
+
+### Valores e impuestos
+
+- Las ofertas van desde **$20.000 hasta $5.000.000**.
+- El valor se calcula a partir de la media actual, la condición excepcional, la necesidad del comprador, su reputación y una penalización moderada si el juvenil está lesionado.
+- Los $5.000.000 quedan reservados para casos realmente excepcionales y muy desarrollados.
+- Al aceptar, la federación retiene **5%** y el 95% restante entra íntegramente en la Cuenta Bancaria personal del manager.
+- El club comprador descuenta el monto bruto de su propio presupuesto.
+
+### Incorporación al club bot
+
+- El juvenil deja Tu Academia y firma su primer contrato profesional con el comprador.
+- Su posición definitiva se elige según la necesidad concreta del club.
+- Recibe salario, cláusula y estado profesional normal.
+- La venta no crea todavía un derecho económico futuro para el manager; esa cartera se incorpora en V7.68 para los juveniles promovidos al club dirigido.
+
+### Interfaz y avisos
+
+- Los juveniles con oferta pendiente muestran una insignia con el monto.
+- Inicio muestra una alerta cuando existen propuestas pendientes.
+- La Academia conserva un historial interno de ofertas aceptadas, rechazadas y vencidas.
+
+**V7.67 no rompe partidas anteriores.** Las Academias existentes comienzan con la bandeja de ofertas vacía y el mercado juvenil se activa desde el primer día avanzado después de actualizar.
+
+
 
 ## V7.66 - Academia personal del manager
 

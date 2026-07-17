@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V7.66',
+  version: 'V7.67',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5
@@ -31,9 +31,9 @@ window.GAME_CONFIG = {
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=7.66',
+    installationsUrl: 'data/instalaciones.json?v=7.67',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.66',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=7.67',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrl: 'data/estadios_argentina.json',
@@ -675,7 +675,21 @@ window.GAME_CONFIG = {
     lesionesJuvenilesMaxPorTemporada: 2,
     lesionJuvenilDiasMin: 14,
     lesionJuvenilDiasMax: 42,
-    costoTratamientoLesionJuvenil: 50000
+    costoTratamientoLesionJuvenil: 50000,
+    mercadoJuvenil: {
+      activo: true,
+      edadOfertas: 17,
+      impuestoFederacion: 0.05,
+      valorMinimo: 20000,
+      valorMaximo: 5000000,
+      diasVencimientoOferta: 5,
+      diasEntreIntentos: 14,
+      probabilidadPorIntento: 0.45,
+      diasEsperaTrasRechazo: 30,
+      maxOfertasPendientes: 4,
+      maxOfertasPorJugadorTemporada: 4,
+      plantelObjetivoBot: 24
+    }
   },
   entrenamiento: {
     // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.

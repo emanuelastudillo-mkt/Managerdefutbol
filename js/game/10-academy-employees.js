@@ -8,6 +8,7 @@ function createInitialAcademyState(){
     lastConsultTurn:null, lastArrivalTurn:null, lastConsultReveal:null,
     exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, exceptionalYouthTargetSeason:null, exceptionalYouthTargetCount:0,
     residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, lastNegativeBalanceNoticeDate:null,
+    youthTransferOffers:[], youthTransferLastAttemptDate:null, youthTransferHistory:[],
     youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc'
   };
 }
@@ -73,6 +74,9 @@ function normalizeAcademyState(state){
   clean.residenceLastChargeDate = validIsoDate(clean.residenceLastChargeDate) ? clean.residenceLastChargeDate : null;
   clean.youthSalaryLastChargeDate = validIsoDate(clean.youthSalaryLastChargeDate) ? clean.youthSalaryLastChargeDate : null;
   clean.lastNegativeBalanceNoticeDate = validIsoDate(clean.lastNegativeBalanceNoticeDate) ? clean.lastNegativeBalanceNoticeDate : null;
+  clean.youthTransferOffers = Array.isArray(clean.youthTransferOffers) ? clean.youthTransferOffers.map(normalizeAcademyYouthTransferOffer).filter(Boolean).slice(-200) : [];
+  clean.youthTransferLastAttemptDate = validIsoDate(clean.youthTransferLastAttemptDate) ? clean.youthTransferLastAttemptDate : null;
+  clean.youthTransferHistory = Array.isArray(clean.youthTransferHistory) ? clean.youthTransferHistory.map(normalizeAcademyYouthTransferOffer).filter(Boolean).slice(-300) : [];
   return clean;
 }
 
@@ -144,7 +148,7 @@ function recordAcademyPersonalExpense(cost, concept, meta={}){
 }
 function academyFinanceHistory(){
   const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
-  return (Array.isArray(finances?.history) ? finances.history : []).filter(item => Boolean(item?.academyExpense));
+  return (Array.isArray(finances?.history) ? finances.history : []).filter(item => Boolean(item?.academyExpense || item?.academyIncome || item?.type === 'academy_youth_sale'));
 }
 function normalizeStaffContracts(contracts){
   const clean = (contracts && typeof contracts === 'object' && !Array.isArray(contracts)) ? { ...contracts } : {};
@@ -940,6 +944,279 @@ function academyInjuredTreatmentItems(){
   }));
 }
 
+function normalizeAcademyYouthTransferOffer(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const status = ['pending','accepted','rejected','expired','cancelled'].includes(String(raw.status || '')) ? String(raw.status) : 'pending';
+  const amount = clamp(Math.round(Number(raw.amount || raw.grossAmount || 0)), ACADEMY_YOUTH_OFFER_MIN_VALUE, ACADEMY_YOUTH_OFFER_MAX_VALUE);
+  const taxRate = clamp(Number(raw.taxRate ?? ACADEMY_YOUTH_SALE_TAX_RATE), 0, 0.95);
+  return {
+    ...raw,
+    id:String(raw.id || `academy-youth-offer-${Date.now()}-${Math.round(Math.random()*99999)}`),
+    playerId:Number(raw.playerId || 0),
+    buyerClubId:Number(raw.buyerClubId || raw.clubId || 0),
+    buyerPosition:String(raw.buyerPosition || ''),
+    amount,
+    taxRate,
+    taxAmount:Math.max(0, Math.round(Number(raw.taxAmount ?? amount * taxRate))),
+    netAmount:Math.max(0, Math.round(Number(raw.netAmount ?? amount * (1 - taxRate)))),
+    createdDate:validIsoDate(raw.createdDate) ? raw.createdDate : (game?.currentDate || ''),
+    expiresDate:validIsoDate(raw.expiresDate) ? raw.expiresDate : addDaysToIsoDate(validIsoDate(raw.createdDate) ? raw.createdDate : (game?.currentDate || currentCalendarDate()), ACADEMY_YOUTH_OFFER_EXPIRE_DAYS),
+    resolvedDate:validIsoDate(raw.resolvedDate) ? raw.resolvedDate : '',
+    season:Math.max(1, Math.round(Number(raw.season || game?.seasonNumber || 1))),
+    status
+  };
+}
+function academyYouthTransferOffers(status='pending'){
+  game.academy = normalizeAcademyState(game.academy);
+  const list = game.academy.youthTransferOffers || [];
+  return status ? list.filter(item => item.status === status) : list.slice();
+}
+function academyYouthOfferForPlayer(playerId){
+  return academyYouthTransferOffers('pending').find(item => Number(item.playerId) === Number(playerId)) || null;
+}
+function academyYouthOfferCountForPlayerSeason(playerId, season=game?.seasonNumber || 1){
+  const all = (game?.academy?.youthTransferOffers || []).concat(game?.academy?.youthTransferHistory || []);
+  return all.filter(item => Number(item.playerId) === Number(playerId) && Number(item.season || 0) === Number(season)).length;
+}
+function academyYouthLastRejectedOffer(playerId){
+  const all = (game?.academy?.youthTransferOffers || []).concat(game?.academy?.youthTransferHistory || []);
+  return all.filter(item => Number(item.playerId) === Number(playerId) && item.status === 'rejected' && validIsoDate(item.resolvedDate)).sort((a,b)=>String(b.resolvedDate).localeCompare(String(a.resolvedDate)))[0] || null;
+}
+function academyYouthPlayerEligibleForOffers(player){
+  if(!ACADEMY_YOUTH_MARKET_ENABLED || !player || player.status !== 'academy') return false;
+  if(Number(player.age || 0) !== Number(ACADEMY_YOUTH_OFFER_AGE)) return false;
+  if(academyYouthOfferForPlayer(player.id)) return false;
+  if(academyYouthOfferCountForPlayerSeason(player.id) >= ACADEMY_YOUTH_MAX_OFFERS_PER_PLAYER_SEASON) return false;
+  const rejected = academyYouthLastRejectedOffer(player.id);
+  if(rejected && daysBetweenIsoDates(rejected.resolvedDate, game.currentDate || currentCalendarDate()) < ACADEMY_YOUTH_OFFER_REJECTION_COOLDOWN_DAYS) return false;
+  return true;
+}
+function academyYouthGroupToRoleGroup(group){
+  const clean = normalizeAcademyGroup(group);
+  return clean === 'MED' ? 'MID' : clean === 'DEL' ? 'ATT' : clean;
+}
+function academyYouthBotNeedForGroup(club, group){
+  if(!club) return 0;
+  const managerEmployedAtSelectedClub = !(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive());
+  if(managerEmployedAtSelectedClub && Number(club.id) === Number(game?.selectedClubId || 0)) return 0;
+  if(typeof isSpecialCompetitionOnlyClub === 'function' && isSpecialCompetitionOnlyClub(club)) return 0;
+  const squad = playersByClub(Number(club.id)).filter(player => !player.retired && !player.sold && !player.freeAgent);
+  if(squad.length >= MAX_PLAYERS_PER_CLUB) return 0;
+  const roleGroup = academyYouthGroupToRoleGroup(group);
+  const counts = typeof rosterGroupCounts === 'function' ? rosterGroupCounts(squad) : { POR:0, DEF:0, MID:0, ATT:0 };
+  const minimums = typeof minimumRosterRequirements === 'function' ? minimumRosterRequirements() : { POR:2, DEF:5, MID:5, ATT:3, total:20 };
+  const developmentTargets = {
+    POR:Math.max(Number(minimums.POR || 2), 2),
+    DEF:Math.max(Number(minimums.DEF || 5), 7),
+    MID:Math.max(Number(minimums.MID || 5), 7),
+    ATT:Math.max(Number(minimums.ATT || 3), 5)
+  };
+  const groupShortage = Math.max(0, Number(developmentTargets[roleGroup] || 0) - Number(counts[roleGroup] || 0));
+  const rosterShortage = Math.max(0, Number(ACADEMY_YOUTH_BOT_TARGET_ROSTER || 24) - squad.length);
+  if(groupShortage <= 0 && rosterShortage <= 0) return 0;
+  return (groupShortage * 3) + rosterShortage;
+}
+function academyYouthQualityFitsClub(player, club){
+  const overall = clamp(Math.round(Number(academyProjectedOverall(player) || player?.overall || 1)), 1, 99);
+  const reputation = typeof clubPrestigeValue === 'function' ? clubPrestigeValue(club) : clamp(Math.round(Number(club?.reputation || 50)), 1, 99);
+  const minimum = clamp(Math.round(8 + reputation * 0.30), 8, 42);
+  return overall >= minimum;
+}
+function academyYouthOfferValue(player, club, needScore=1){
+  const overall = clamp(Number(academyProjectedOverall(player) || player?.overall || 1), 1, 99);
+  const progress = clamp((overall - 5) / 55, 0, 1);
+  const curve = ACADEMY_YOUTH_OFFER_MIN_VALUE * Math.pow(Math.max(1, ACADEMY_YOUTH_OFFER_MAX_VALUE / Math.max(1, ACADEMY_YOUTH_OFFER_MIN_VALUE)), progress);
+  const exceptionalFactor = player?.exceptional ? 1.25 : 1;
+  const needFactor = clamp(0.90 + Number(needScore || 0) * 0.025, 0.90, 1.20);
+  const reputation = typeof clubPrestigeValue === 'function' ? clubPrestigeValue(club) : Number(club?.reputation || 50);
+  const clubFactor = clamp(0.90 + reputation / 500, 0.90, 1.10);
+  const injuryFactor = academyPlayerInjured(player) ? 0.90 : 1;
+  const raw = curve * exceptionalFactor * needFactor * clubFactor * injuryFactor;
+  return clamp(Math.round(raw / 1000) * 1000, ACADEMY_YOUTH_OFFER_MIN_VALUE, ACADEMY_YOUTH_OFFER_MAX_VALUE);
+}
+function academyYouthBuyerPosition(player, club){
+  const options = academyExactPositions(player.group);
+  if(options.length <= 1) return options[0] || academyRepresentativePosition(player.group);
+  const squad = playersByClub(Number(club.id));
+  const counts = Object.fromEntries(options.map(position => [position, squad.filter(item => item.position === position).length]));
+  return options.slice().sort((a,b)=>Number(counts[a] || 0)-Number(counts[b] || 0) || a.localeCompare(b))[0];
+}
+function academyYouthBuyerCandidates(player){
+  const roleGroup = academyYouthGroupToRoleGroup(player.group);
+  const homeCountry = academyLocalCountry();
+  return (seed?.clubs || []).map(club => {
+    const need = academyYouthBotNeedForGroup(club, roleGroup);
+    if(need <= 0 || !academyYouthQualityFitsClub(player, club)) return null;
+    const amount = academyYouthOfferValue(player, club, need);
+    const budget = Math.max(0, Math.round(Number(game?.clubBudgets?.[club.id] ?? club.budget ?? 0)));
+    if(budget < amount) return null;
+    const overall = academyProjectedOverall(player);
+    const reputation = clubPrestigeValue(club);
+    const fit = 100 - Math.abs((8 + reputation * 0.45) - overall);
+    const countryBonus = clubCountry(club) === homeCountry ? 18 : 0;
+    const score = need * 18 + fit + countryBonus + hashNumber(`academy-buyer-${game?.saveCode || ''}-${game?.currentDate || ''}-${player.id}-${club.id}`, 20);
+    return { club, need, amount, score, position:academyYouthBuyerPosition(player, club) };
+  }).filter(Boolean).sort((a,b)=>b.score-a.score || Number(a.club.id)-Number(b.club.id));
+}
+function expireAcademyYouthTransferOffers(){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const today = validIsoDate(game.currentDate) ? game.currentDate : currentCalendarDate();
+  let expired = 0;
+  game.academy.youthTransferOffers.forEach(offer => {
+    if(offer.status !== 'pending') return;
+    if(!validIsoDate(offer.expiresDate) || daysBetweenIsoDates(today, offer.expiresDate) >= 0) return;
+    offer.status = 'expired';
+    offer.resolvedDate = today;
+    expired += 1;
+  });
+  if(expired){
+    const resolved = game.academy.youthTransferOffers.filter(item => item.status !== 'pending');
+    game.academy.youthTransferHistory.push(...resolved);
+    game.academy.youthTransferOffers = game.academy.youthTransferOffers.filter(item => item.status === 'pending');
+    game.academy.youthTransferHistory = game.academy.youthTransferHistory.slice(-300);
+  }
+  return expired;
+}
+function maybeGenerateAcademyYouthTransferOffer(){
+  if(!ACADEMY_YOUTH_MARKET_ENABLED || !game?.academy) return null;
+  game.academy = normalizeAcademyState(game.academy);
+  const today = validIsoDate(game.currentDate) ? game.currentDate : currentCalendarDate();
+  if(academyYouthTransferOffers('pending').length >= ACADEMY_YOUTH_MAX_PENDING_OFFERS) return null;
+  if(game.academy.youthTransferLastAttemptDate && daysBetweenIsoDates(game.academy.youthTransferLastAttemptDate, today) < ACADEMY_YOUTH_OFFER_ATTEMPT_DAYS) return null;
+  game.academy.youthTransferLastAttemptDate = today;
+  const chanceRoll = hashNumber(`academy-youth-market-chance-${game?.saveCode || ''}-${today}-${game?.seasonNumber || 1}`, 10000) / 10000;
+  if(chanceRoll >= ACADEMY_YOUTH_OFFER_ATTEMPT_CHANCE) return null;
+  const candidates = academyActivePlayers().filter(academyYouthPlayerEligibleForOffers).map(player => ({ player, buyers:academyYouthBuyerCandidates(player) })).filter(item => item.buyers.length);
+  if(!candidates.length) return null;
+  candidates.sort((a,b)=>b.buyers[0].score-a.buyers[0].score || academyProjectedOverall(b.player)-academyProjectedOverall(a.player) || Number(a.player.id)-Number(b.player.id));
+  const selectedIndex = hashNumber(`academy-youth-market-player-${game?.saveCode || ''}-${today}`, Math.min(candidates.length, 4));
+  const selected = candidates[selectedIndex] || candidates[0];
+  const buyerIndex = hashNumber(`academy-youth-market-club-${game?.saveCode || ''}-${today}-${selected.player.id}`, Math.min(selected.buyers.length, 3));
+  const buyer = selected.buyers[buyerIndex] || selected.buyers[0];
+  const amount = buyer.amount;
+  const taxAmount = Math.round(amount * ACADEMY_YOUTH_SALE_TAX_RATE);
+  const offer = normalizeAcademyYouthTransferOffer({
+    id:`academy-youth-offer-${game.seasonNumber || 1}-${today}-${selected.player.id}-${buyer.club.id}`,
+    playerId:selected.player.id,
+    playerName:selected.player.name,
+    playerGroup:normalizeAcademyGroup(selected.player.group),
+    playerOverall:academyProjectedOverall(selected.player),
+    buyerClubId:buyer.club.id,
+    buyerPosition:buyer.position,
+    amount,
+    taxRate:ACADEMY_YOUTH_SALE_TAX_RATE,
+    taxAmount,
+    netAmount:amount-taxAmount,
+    createdDate:today,
+    expiresDate:addDaysToIsoDate(today, ACADEMY_YOUTH_OFFER_EXPIRE_DAYS),
+    season:game.seasonNumber || 1,
+    status:'pending'
+  });
+  game.academy.youthTransferOffers.push(offer);
+  if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'normal', title:'Oferta por juvenil de Academia', body:`${clubName(offer.buyerClubId)} ofreció ${formatMoney(offer.amount)} por ${selected.player.name}. La oferta vence el ${offer.expiresDate}.`, id:`academy-youth-offer-message-${offer.id}` });
+  return offer;
+}
+function processAcademyYouthMarketDaily(){
+  if(!game?.academy || !ACADEMY_YOUTH_MARKET_ENABLED) return { expired:0, created:null };
+  const expired = expireAcademyYouthTransferOffers();
+  const created = maybeGenerateAcademyYouthTransferOffer();
+  return { expired, created };
+}
+function academyYouthOfferProfessionalPlayer(player, offer){
+  const position = academyExactPositions(player.group).includes(offer.buyerPosition) ? offer.buyerPosition : academyRepresentativePosition(player.group);
+  const official = {
+    id:Number(player.id), name:player.name, age:player.age, nationality:player.nationality, position,
+    clubId:Number(offer.buyerClubId), overall:clamp(academyProjectedOverall(player),1,99),
+    skills:{ ...(player.skills || academySkillsFor(player.group, player.overall, player.id)) },
+    freeAgent:false, sold:false, transferListed:false, intransferible:false,
+    academyOrigin:true, academyManagerOrigin:true, academyPurchase:true,
+    joinedClubSeason:Number(game.seasonNumber || 1), salaryPaidCount:0, lastSalaryPaidSeason:0
+  };
+  official.salary = initialAnnualSalaryForMedia(official.overall, 0.35);
+  refreshPlayerClause(official);
+  seed.players = (seed.players || []).filter(item => Number(item.id) !== Number(official.id));
+  seed.players.push(official);
+  game.playerCondition[official.id] = 70;
+  game.playerMorale[official.id] = PLAYER_MORALE_START;
+  game.playerSkillBoosts[official.id] = {};
+  game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
+  game.playerAgeSkillPenalties[official.id] = 0;
+  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+  return official;
+}
+function cancelAcademyYouthOffersForPlayer(playerId, reason='player_unavailable'){
+  if(!game?.academy) return 0;
+  game.academy = normalizeAcademyState(game.academy);
+  const today = validIsoDate(game.currentDate) ? game.currentDate : currentCalendarDate();
+  const cancelled = game.academy.youthTransferOffers.filter(item => item.status === 'pending' && Number(item.playerId) === Number(playerId));
+  cancelled.forEach(item => { item.status='cancelled'; item.resolvedDate=today; item.cancelReason=String(reason || 'player_unavailable'); });
+  if(cancelled.length){
+    game.academy.youthTransferHistory.push(...cancelled.map(item => ({ ...item })));
+    game.academy.youthTransferHistory = game.academy.youthTransferHistory.slice(-300);
+    game.academy.youthTransferOffers = game.academy.youthTransferOffers.filter(item => !(item.status === 'cancelled' && Number(item.playerId) === Number(playerId)));
+  }
+  return cancelled.length;
+}
+function resolveAcademyYouthTransferOffer(offerId, decision='reject'){
+  if(!game?.academy) return false;
+  game.academy = normalizeAcademyState(game.academy);
+  const offer = game.academy.youthTransferOffers.find(item => String(item.id) === String(offerId) && item.status === 'pending');
+  if(!offer) return false;
+  const player = game.academy.players.find(item => Number(item.id) === Number(offer.playerId) && item.status === 'academy');
+  const today = validIsoDate(game.currentDate) ? game.currentDate : currentCalendarDate();
+  if(!player){ offer.status='cancelled'; offer.resolvedDate=today; }
+  else if(decision === 'accept'){
+    const club = seed?.clubs?.find(item => Number(item.id) === Number(offer.buyerClubId));
+    if(!club){ showNotice('El club comprador ya no está disponible.'); return false; }
+    if(!hasFirstTeamRosterSpace(club.id, 1)){ showNotice(`${club.name} ya no tiene lugar en su plantel.`); return false; }
+    game.clubBudgets = (game.clubBudgets && typeof game.clubBudgets === 'object' && !Array.isArray(game.clubBudgets)) ? game.clubBudgets : {};
+    const buyerBudget = Math.max(0, Math.round(Number(game.clubBudgets[club.id] ?? club.budget ?? 0)));
+    if(buyerBudget < offer.amount){ showNotice(`${club.name} ya no dispone del dinero ofrecido.`); return false; }
+    game.clubBudgets[club.id] = buyerBudget - offer.amount;
+    const official = academyYouthOfferProfessionalPlayer(player, offer);
+    player.status = 'sold';
+    player.soldTurn = currentTurnIndex();
+    player.soldClubId = club.id;
+    player.soldAmount = offer.amount;
+    offer.status = 'accepted';
+    offer.resolvedDate = today;
+    offer.taxAmount = Math.round(offer.amount * offer.taxRate);
+    offer.netAmount = offer.amount - offer.taxAmount;
+    if(game.academy.unlockedStats) delete game.academy.unlockedStats[player.id];
+    if(game.academy.trainingPlan) delete game.academy.trainingPlan[player.id];
+    recordManagerFinanceChange(offer.netAmount, `Venta juvenil: ${player.name}`, { type:'academy_youth_sale', academyIncome:true, playerId:player.id, buyerClubId:club.id, grossAmount:offer.amount, federationTax:offer.taxAmount, offerId:offer.id });
+    if(typeof ensurePlayerStateForAll === 'function') ensurePlayerStateForAll();
+    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'normal', title:'Venta de juvenil confirmada', body:`${player.name} firmó con ${club.name}. Ingresaron ${formatMoney(offer.netAmount)} a tu Cuenta Bancaria después del impuesto federativo de ${formatMoney(offer.taxAmount)}.`, id:`academy-youth-sale-${offer.id}` });
+    showNotice(`${official.name} fue vendido a ${club.name}. Recibiste ${formatMoney(offer.netAmount)} netos.`);
+  }else{
+    offer.status = 'rejected';
+    offer.resolvedDate = today;
+    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'normal', title:'Oferta juvenil rechazada', body:`Rechazaste la propuesta de ${clubName(offer.buyerClubId)} por ${player?.name || offer.playerName || 'el juvenil'}.`, id:`academy-youth-reject-${offer.id}` });
+    showNotice('Oferta juvenil rechazada.');
+  }
+  game.academy.youthTransferHistory.push({ ...offer });
+  game.academy.youthTransferHistory = game.academy.youthTransferHistory.slice(-300);
+  game.academy.youthTransferOffers = game.academy.youthTransferOffers.filter(item => String(item.id) !== String(offer.id));
+  saveLocal(true);
+  if(activeTab === 'academy') renderAcademy(); else renderAll();
+  return true;
+}
+function academyYouthOffersMarkup(){
+  const offers = academyYouthTransferOffers('pending').slice().sort((a,b)=>String(a.expiresDate).localeCompare(String(b.expiresDate)) || Number(b.amount)-Number(a.amount));
+  if(!offers.length) return '<p class="muted">No hay ofertas pendientes por juveniles de 17 años.</p>';
+  return `<div class="academy-youth-offers-grid">${offers.map(offer => {
+    const player = game.academy.players.find(item => Number(item.id) === Number(offer.playerId));
+    const daysLeft = Math.max(0, daysBetweenIsoDates(game.currentDate || currentCalendarDate(), offer.expiresDate));
+    return `<article class="card academy-youth-offer-card">
+      <div class="row"><div><p class="label">${escapeHtml(clubDivision(offer.buyerClubId)?.name || 'Club comprador')}</p><h3>${escapeHtml(clubName(offer.buyerClubId))}</h3></div><span class="pill ${daysLeft <= 1 ? 'warn' : ''}">${daysLeft} día(s)</span></div>
+      <div class="academy-youth-offer-player"><strong>${escapeHtml(player?.name || offer.playerName || 'Juvenil')}</strong><span>${escapeHtml(academyGroupLabel(player?.group || offer.playerGroup))} · ${Number(player?.age || ACADEMY_YOUTH_OFFER_AGE)} años · Media ${Math.round(Number(offer.playerOverall || academyProjectedOverall(player) || 0))}</span></div>
+      <div class="academy-youth-offer-money"><div><span>Oferta</span><strong>${formatMoney(offer.amount)}</strong></div><div><span>Impuesto federativo</span><strong class="bad">-${formatMoney(offer.taxAmount)}</strong></div><div><span>Ingreso neto</span><strong class="ok">${formatMoney(offer.netAmount)}</strong></div></div>
+      <div class="row academy-youth-offer-actions"><button class="primary" data-accept-academy-youth-offer="${escapeHtml(offer.id)}">Aceptar</button><button class="ghost" data-reject-academy-youth-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
+    </article>`;
+  }).join('')}</div>`;
+}
+
 function academyWeeklySalaryDueToday(today){
   if(!validIsoDate(today)) return false;
   const chargeDay = Number.isFinite(Number(typeof ACADEMY_PLAYER_WEEKLY_CHARGE_DAY !== 'undefined' ? ACADEMY_PLAYER_WEEKLY_CHARGE_DAY : 1)) ? Number(ACADEMY_PLAYER_WEEKLY_CHARGE_DAY) : 1;
@@ -1010,13 +1287,14 @@ function processAcademyTurn(){
   processAcademyYouthInjuries();
   academyTurnSalaryCost();
   applyAcademyTrainingEffects();
+  const youthMarket = processAcademyYouthMarketDaily();
   const added = processAcademyScoutingArrivals();
   const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
   if(managerPersonalBalance() < 0 && game.academy.lastNegativeBalanceNoticeDate !== today){
     game.academy.lastNegativeBalanceNoticeDate = today;
     if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'high', title:'Academia en números rojos', body:`Tu Cuenta Bancaria quedó en ${formatMoney(managerPersonalBalance())}. Los gastos automáticos siguen siendo personales; no podrás iniciar nuevas captaciones, obras, tratamientos o contrataciones hasta recuperar saldo.`, id:`academy-negative-${today}` });
   }
-  if(activeTab === 'academy' && added > 0) renderAcademy();
+  if(activeTab === 'academy' && (added > 0 || youthMarket.created || youthMarket.expired > 0)) renderAcademy();
 }
 function academyYouthPreparerActive(){
   return staffActive('youth_preparer');
@@ -1068,6 +1346,7 @@ function dismissAcademyPlayer(playerId){
   recordAcademyPersonalExpense(ACADEMY_DISMISS_COMPENSATION, 'Compensación por baja de academia', { type:'academy_dismiss', playerId });
   player.status = 'dismissed';
   player.dismissedTurn = currentTurnIndex();
+  cancelAcademyYouthOffersForPlayer(player.id, 'dismissed');
   saveLocal(true);
   renderAcademy();
   showNotice(`${player.name} fue dado de baja de la academia.`);
@@ -1121,6 +1400,7 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();
+  cancelAcademyYouthOffersForPlayer(player.id, 'promoted');
   player.promotedPosition = position;
   const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, TEAM_COHESION_YOUTH_CONTRACT_GAIN) : 0;
   const cohesionText = cohesionChange ? ` Cohesión +${cohesionChange}.` : '';
@@ -1141,6 +1421,7 @@ function expireFinalSeasonAcademyPlayers(){
       player.status = 'expired';
       player.expiredSeason = Number(game.seasonNumber || 1);
       player.expiredTurn = currentTurnIndex();
+      cancelAcademyYouthOffersForPlayer(player.id, 'academy_age_limit');
       expired.push(player);
     }
   });
@@ -1257,10 +1538,12 @@ function academyPlayerCard(player){
   const specialPill = player.exceptional ? '<span class="pill ok">Juvenil excepcional · x5</span>' : '<span class="pill">Media oculta</span>';
   const finalSeasonPill = finalSeason ? '<span class="pill warn">⚠ Última temporada</span>' : '';
   const injuryPill = injured ? '<span class="pill bad">Lesionado</span>' : '';
+  const pendingOffer = academyYouthOfferForPlayer(player.id);
+  const offerPill = pendingOffer ? `<span class="pill ok">Oferta ${formatMoney(pendingOffer.amount)}</span>` : '';
   const growthNow = Math.max(0, academyProjectedOverall(player) - Number(player.seasonStartOverall || academyProjectedOverall(player)));
   const growthLimit = Math.max(0, Number(player.seasonGrowthLimit || 0));
   return `<div class="card academy-player-card ${player.exceptional ? 'academy-player-special' : ''} ${injured ? 'academy-player-injured' : ''} ${finalSeason ? 'academy-player-final-season' : ''}">
-    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${finalSeasonPill}${injuryPill}</div></div>
+    <div class="row academy-player-head"><div><p class="label">${academyGroupLabel(player.group)} · ${Number(player.age || 0)} años · ${nationalityShortMarkup(player.nationality)}</p><h3>${escapeHtml(player.name)}</h3></div><div class="row gap-sm">${specialPill}${finalSeasonPill}${injuryPill}${offerPill}</div></div>
     ${finalSeason ? '<div class="academy-injury-alert academy-final-season-alert"><strong>Última temporada en academia</strong><span>Si no firma contrato profesional antes del cambio de temporada, desaparece.</span></div>' : ''}
     ${injured ? `<div class="academy-injury-alert"><strong>${escapeHtml(injuryLabel)}</strong><span>No entrena habilidades hasta ser tratado o recuperarse.</span></div>` : ''}
     ${academyGrowthSoftMarkup(growthNow, growthLimit)}
@@ -1298,6 +1581,7 @@ function renderAcademy(){
   const exceptionalStatus = academyExceptionalYouthSeasonStatus();
   const scoutingDisabled = !managerCanAffordAcademy(ACADEMY_SCOUTING_COST) || availableSlots <= 0 || (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target);
   const facilityExceptionalBonus = Math.max(0, exceptionalStatus.currentTarget - 1);
+  const pendingYouthOffers = academyYouthTransferOffers('pending');
   view.innerHTML = `
     <div class="row section-title">
       <div><h2>Tu Academia</h2><p class="tagline">Patrimonio personal del manager. Conservás juveniles, Predio, residencias y empleados aunque cambies de club.</p></div>
@@ -1333,12 +1617,16 @@ function renderAcademy(){
       <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><p class="small ${exceptionalStatus.resolved ? 'ok' : 'muted'}">${exceptionalStatus.resolved ? `Excepcionales entregados: ${exceptionalStatus.granted}/${exceptionalStatus.target}` : `Primera captación: ${exceptionalStatus.target} excepcional(es)`}</p><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${availableSlots <= 0 ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target) ? `<p class="small warn">Reservá ${exceptionalStatus.target} cupos libres para recibir completa la cuota excepcional de la primera captación. Disponibles: ${availableSlots}.</p>` : ''}</div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
+    <section class="academy-youth-market-section" style="margin-top:14px">
+      <div class="row section-title compact"><div><p class="label">Mercado juvenil</p><h3>Ofertas por juveniles</h3><p class="muted small">Los clubes bot pueden ofertar por juveniles de ${ACADEMY_YOUTH_OFFER_AGE} años cuando necesitan esa posición y el nivel actual encaja con su reputación.</p></div><span class="pill">${pendingYouthOffers.length} pendiente(s)</span></div>
+      ${academyYouthOffersMarkup()}
+    </section>
     <div class="card academy-finance-card" style="margin-top:14px">
-      <div class="row"><div><p class="label">Finanzas de Academia</p><h3>Gastos personales</h3></div><span class="pill">Saldo ${formatMoney(personalBalance)}</span></div>
-      <p class="muted small">Captaciones, Predio, residencias, Preparador, becas juveniles, tratamientos y bajas se descuentan de tu Cuenta Bancaria, nunca del presupuesto del club.</p>
-      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Gasto</th></tr></thead><tbody>${recentAcademyExpenses.length ? recentAcademyExpenses.map(item => `<tr><td>${escapeHtml(item.date || '—')}</td><td>${escapeHtml(item.concept || 'Academia')}</td><td class="bad">${formatMoney(Math.abs(Number(item.delta || 0)))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">Todavía no hay gastos personales de Academia registrados.</td></tr>'}</tbody></table></div>
+      <div class="row"><div><p class="label">Finanzas de Academia</p><h3>Movimientos personales</h3></div><span class="pill">Saldo ${formatMoney(personalBalance)}</span></div>
+      <p class="muted small">Los gastos se descuentan de tu Cuenta Bancaria. Las ventas de juveniles ingresan aquí después de la retención federativa.</p>
+      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Movimiento</th></tr></thead><tbody>${recentAcademyExpenses.length ? recentAcademyExpenses.map(item => { const delta=Number(item.delta || 0); return `<tr><td>${escapeHtml(item.date || '—')}</td><td>${escapeHtml(item.concept || 'Academia')}</td><td class="${delta >= 0 ? 'ok' : 'bad'}">${delta >= 0 ? '+' : '-'}${formatMoney(Math.abs(delta))}</td></tr>`; }).join('') : '<tr><td colspan="3" class="muted">Todavía no hay movimientos personales de Academia registrados.</td></tr>'}</tbody></table></div>
     </div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el predio juvenil actual, con un máximo de 6. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el predio juvenil actual, con un máximo de 6. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Desde los ${ACADEMY_YOUTH_OFFER_AGE} años pueden recibir ofertas de clubes bot entre ${formatMoney(ACADEMY_YOUTH_OFFER_MIN_VALUE)} y ${formatMoney(ACADEMY_YOUTH_OFFER_MAX_VALUE)}; al aceptar, la federación retiene ${Math.round(ACADEMY_YOUTH_SALE_TAX_RATE * 100)}%. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     ${academySortControlsMarkup()}
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
@@ -1357,6 +1645,8 @@ function renderAcademy(){
   document.querySelectorAll('[data-dismiss-academy]').forEach(btn => btn.addEventListener('click', () => dismissAcademyPlayer(Number(btn.dataset.dismissAcademy))));
   document.querySelectorAll('[data-promote-academy]').forEach(btn => btn.addEventListener('click', () => openPromoteAcademyModal(Number(btn.dataset.promoteAcademy))));
   document.querySelectorAll('[data-treat-academy-injury]').forEach(btn => btn.addEventListener('click', () => treatAcademyYouthInjury(Number(btn.dataset.treatAcademyInjury))));
+  document.querySelectorAll('[data-accept-academy-youth-offer]').forEach(btn => btn.addEventListener('click', () => resolveAcademyYouthTransferOffer(btn.dataset.acceptAcademyYouthOffer, 'accept')));
+  document.querySelectorAll('[data-reject-academy-youth-offer]').forEach(btn => btn.addEventListener('click', () => resolveAcademyYouthTransferOffer(btn.dataset.rejectAcademyYouthOffer, 'reject')));
   document.querySelectorAll('[data-academy-training]').forEach(select => select.addEventListener('change', () => {
     game.academy.trainingPlan[select.dataset.academyTraining] = select.value === 'resistance' ? 'resistance' : 'technical';
     saveLocal(true);

@@ -243,6 +243,7 @@ function visualAlertItems(){
   const pendingTransferOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
   const sponsorOffers = game.sponsors?.offers?.length || 0;
   const scoutingJobs = (game.academy?.scoutingJobs || []).filter(j => j.status === 'pending');
+  const academyYouthOffers = (game.academy?.youthTransferOffers || []).filter(item => item.status === 'pending');
   const squadCount = playersByClub(game.selectedClubId).length;
   const salaryPressure = totalClubSalary(game.selectedClubId);
   if(game.mustReviewTactics){
@@ -271,6 +272,9 @@ function visualAlertItems(){
     const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));
     const left = daysUntilTurn(nextDue);
     items.push({ tone:'info', icon:'A', title:'Captación en curso', text:`Informe de academia en ${formatDays(left)}.`, tab:'academy' });
+  }
+  if(academyYouthOffers.length){
+    items.push({ tone:'ok', icon:'J', title:`${academyYouthOffers.length} oferta(s) por juveniles`, text:'Aceptá o rechazá las propuestas desde Tu Academia.', tab:'academy' });
   }
   if(squadCount >= MAX_PLAYERS_PER_CLUB){
     items.push({ tone:'warn', icon:'42', title:'Plantel completo', text:`Tenés ${squadCount}/${MAX_PLAYERS_PER_CLUB} jugadores. No podés fichar ni subir juveniles.`, tab:'firstTeam' });

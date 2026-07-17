@@ -28,9 +28,9 @@ const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS
 const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=7.66');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=7.67');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.66');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=7.67');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
@@ -126,7 +126,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V7.66');
+const APP_VERSION = configValue('version', 'V7.67');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -577,11 +577,24 @@ const ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON = Math.max(ACADEMY_YOUTH_INJURIES_MI
 const ACADEMY_YOUTH_INJURY_MIN_TURNS = Math.max(1, Math.ceil(configNumber('academia.lesionJuvenilDiasMin', 14, 1) / DAYS_PER_ADVANCE));
 const ACADEMY_YOUTH_INJURY_MAX_TURNS = Math.max(ACADEMY_YOUTH_INJURY_MIN_TURNS, Math.ceil(configNumber('academia.lesionJuvenilDiasMax', 42, 1) / DAYS_PER_ADVANCE));
 const ACADEMY_YOUTH_INJURY_TREATMENT_COST = Math.max(0, Math.round(configNumber('academia.costoTratamientoLesionJuvenil', 50000, 0)));
+const ACADEMY_YOUTH_MARKET_ENABLED = configBoolean('academia.mercadoJuvenil.activo', true);
+const ACADEMY_YOUTH_OFFER_AGE = Math.round(configNumber('academia.mercadoJuvenil.edadOfertas', 17, 16, 20));
+const ACADEMY_YOUTH_SALE_TAX_RATE = configNumber('academia.mercadoJuvenil.impuestoFederacion', 0.05, 0, 0.95);
+const ACADEMY_YOUTH_OFFER_MIN_VALUE = Math.max(0, Math.round(configNumber('academia.mercadoJuvenil.valorMinimo', 20000, 0)));
+const ACADEMY_YOUTH_OFFER_MAX_VALUE = Math.max(ACADEMY_YOUTH_OFFER_MIN_VALUE, Math.round(configNumber('academia.mercadoJuvenil.valorMaximo', 5000000, ACADEMY_YOUTH_OFFER_MIN_VALUE)));
+const ACADEMY_YOUTH_OFFER_EXPIRE_DAYS = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.diasVencimientoOferta', 5, 1)));
+const ACADEMY_YOUTH_OFFER_ATTEMPT_DAYS = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.diasEntreIntentos', 14, 1)));
+const ACADEMY_YOUTH_OFFER_ATTEMPT_CHANCE = configNumber('academia.mercadoJuvenil.probabilidadPorIntento', 0.45, 0, 1);
+const ACADEMY_YOUTH_OFFER_REJECTION_COOLDOWN_DAYS = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.diasEsperaTrasRechazo', 30, 1)));
+const ACADEMY_YOUTH_MAX_PENDING_OFFERS = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.maxOfertasPendientes', 4, 1, 20)));
+const ACADEMY_YOUTH_MAX_OFFERS_PER_PLAYER_SEASON = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.maxOfertasPorJugadorTemporada', 4, 1, 20)));
+const ACADEMY_YOUTH_BOT_TARGET_ROSTER_RAW = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.plantelObjetivoBot', 24, 1, 100)));
 
 const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 20, 1);
 const MIN_EXISTING_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMinimosExistentesPorEquipo', 20, 1));
 const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_EXISTING_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 20, 1));
 const MAX_PLAYERS_PER_CLUB = Math.max(INITIAL_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMaximosPorClub', 42, 1));
+const ACADEMY_YOUTH_BOT_TARGET_ROSTER = Math.min(MAX_PLAYERS_PER_CLUB, Math.max(MIN_PLAYERS_PER_CLUB, ACADEMY_YOUTH_BOT_TARGET_ROSTER_RAW));
 const CLUB_ROSTER_SIZE = INITIAL_PLAYERS_PER_CLUB;
 const BOT_ROSTER_REPAIR_ENABLED = configBoolean('plantel.reparacionAutomaticaBots', true);
 const BOT_MIN_GOALKEEPERS = configNumber('plantel.botsMinimoPorteros', 2, 1);

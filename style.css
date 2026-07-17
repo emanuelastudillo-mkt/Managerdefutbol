@@ -6455,3 +6455,17 @@ button.cwc-group-result{cursor:pointer}
 .academy-finance-card .table-wrap{margin-top:10px}
 .academy-finance-card td.bad{font-weight:700}
 @media (max-width:900px){.academy-owner-summary{grid-template-columns:1fr}}
+
+
+/* V7.67 · Mercado juvenil de Tu Academia */
+.academy-youth-market-section{display:grid;gap:10px}
+.academy-youth-market-section>.section-title{margin:0}
+.academy-youth-offers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.academy-youth-offer-card{display:grid;gap:12px;border-color:rgba(86,211,100,.30)}
+.academy-youth-offer-player{display:grid;gap:4px;padding:10px 12px;border-radius:10px;background:var(--panel-soft,rgba(255,255,255,.025))}
+.academy-youth-offer-player span{font-size:.8rem;color:var(--muted)}
+.academy-youth-offer-money{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.academy-youth-offer-money>div{display:grid;gap:4px;padding:9px;border:1px solid var(--border);border-radius:9px}
+.academy-youth-offer-money span{font-size:.72rem;color:var(--muted)}
+.academy-youth-offer-actions{justify-content:flex-end}
+@media (max-width:720px){.academy-youth-offer-money{grid-template-columns:1fr}.academy-youth-offer-actions>*{flex:1}}

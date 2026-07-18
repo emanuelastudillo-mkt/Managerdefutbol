@@ -1895,7 +1895,27 @@ function botFreeAgentRecruitmentScore(player, club){
   return fit + ageBonus - salaryPenalty;
 }
 function signFreeAgentForBotRoster(club, group, report){
-  const pool = botFreeAgentPoolForGroup(group);
+  let pool = botFreeAgentPoolForGroup(group);
+  if(!pool.length && typeof takeRetiredPlayersAsFreeAgents === 'function'){
+    const recycled = takeRetiredPlayersAsFreeAgents(1, {
+      positionGroup:String(group || '').toUpperCase(),
+      prestige:Number(club?.reputation || 45),
+      nameContext:'Regreso para plantel bot',
+      divisionName:clubDivision(club?.id)?.name || 'Mercado',
+      divisionOrder:clubDivision(club?.id)?.order || null,
+      salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
+      youthFreeAgent:false,
+      mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
+      mediaMax:MARKET_FREE_AGENT_MEDIA_MAX
+    });
+    if(recycled.length){
+      game.marketPlayers = (game.marketPlayers || []).concat(recycled);
+      if(typeof mergeMarketPlayersIntoSeed === 'function') mergeMarketPlayersIntoSeed(recycled);
+      else seed.players = (seed.players || []).concat(recycled);
+      if(typeof initializeFreePlayerState === 'function') initializeFreePlayerState(recycled);
+      pool = recycled;
+    }
+  }
   if(!pool.length) return null;
   const player = pool.sort((a,b) => botFreeAgentRecruitmentScore(b, club) - botFreeAgentRecruitmentScore(a, club) || visibleOverall(b) - visibleOverall(a) || Number(a.id || 0) - Number(b.id || 0))[0];
   if(!player) return null;

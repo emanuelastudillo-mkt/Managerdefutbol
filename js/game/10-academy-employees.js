@@ -9,7 +9,7 @@ function createInitialAcademyState(){
     exceptionalYouthGrantedSeason:null, exceptionalYouthGrantedCount:0, exceptionalYouthTargetSeason:null, exceptionalYouthTargetCount:0,
     residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, lastNegativeBalanceNoticeDate:null,
     youthTransferOffers:[], youthTransferLastAttemptDate:null, youthTransferHistory:[],
-    youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc'
+    youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc', submenu:'players'
   };
 }
 function normalizeManagerAcademyFacilitiesState(state){
@@ -46,6 +46,7 @@ function normalizeAcademyState(state){
   if(state && !hadOwnershipVersion) clean.ownershipVersion = 0;
   const allowedSorts = new Set(['edad_asc','edad_desc','informe_desc','informe_asc']);
   clean.sortMode = allowedSorts.has(String(clean.sortMode || '')) ? String(clean.sortMode) : 'edad_asc';
+  clean.submenu = String(clean.submenu || '') === 'portfolio' ? 'portfolio' : 'players';
   clean.players = Array.isArray(clean.players) ? clean.players.map(normalizeAcademyPlayer).filter(Boolean) : [];
   clean.scoutingJobs = Array.isArray(clean.scoutingJobs) ? clean.scoutingJobs : [];
   clean.unlockedStats = clean.unlockedStats && typeof clean.unlockedStats === 'object' ? clean.unlockedStats : {};

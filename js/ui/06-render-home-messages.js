@@ -1866,18 +1866,35 @@ function pickFreeAgentPositionFromGroup(groupId, id, label){
 }
 
 function generateMarketPlayers(count=50, options={}){
-  const startId = Number.isFinite(Number(options.startId))
+  const total = Math.max(0, Math.round(Number(count || 0)));
+  const retiredReservedMax = Math.max(0, ...((game?.retiredPlayerPool || []).map(item => Number(item?.previousPlayerId || item?.id || 0))));
+  const requestedStart = Number.isFinite(Number(options.startId))
     ? Math.max(1, Math.round(Number(options.startId)))
-    : Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000;
+    : (typeof nextPlayerId === 'function' ? nextPlayerId() : Math.max(0, ...(seed?.players || []).map(p => Number(p.id) || 0)) + 1000);
+  const startId = Math.max(requestedStart, retiredReservedMax + 1);
   const label = options.label || 'market';
   const nameContext = options.nameContext || 'Mercado Libre';
   const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
-  const generationContext = createPlayerGenerationContext(activePlayers.length + count, activePlayers);
-  const balancedGroups = buildBalancedFreeAgentPositionGroups(count, label);
-  const players = [];
-  for(let i=0;i<count;i++){
-    const id = startId + i;
-    const group = balancedGroups[i] || pickPositionGroupForGeneration(id, label, generationContext);
+  const generationContext = createPlayerGenerationContext(activePlayers.length + total, activePlayers);
+  const balancedGroups = buildBalancedFreeAgentPositionGroups(total, label);
+  const players = typeof takeRetiredPlayersAsFreeAgents === 'function'
+    ? takeRetiredPlayersAsFreeAgents(total, {
+        generationContext,
+        prestige:52,
+        nameContext,
+        divisionName:'Mercado',
+        salaryFactor:MARKET_FREE_AGENT_SALARY_FACTOR,
+        youthFreeAgent:false,
+        mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
+        mediaMax:MARKET_FREE_AGENT_MEDIA_MAX
+      })
+    : [];
+  const remaining = Math.max(0, total - players.length);
+  const generatedStartId = Math.max(startId, ...players.map(player => Number(player.id || 0) + 1), 1);
+  for(let i=0;i<remaining;i++){
+    const id = generatedStartId + i;
+    const groupIndex = players.length + i;
+    const group = balancedGroups[groupIndex] || pickPositionGroupForGeneration(id, label, generationContext);
     const position = pickFreeAgentPositionFromGroup(group, id, label);
     const player = generatedPlayerFactory({
       id,
@@ -1892,12 +1909,13 @@ function generateMarketPlayers(count=50, options={}){
       freeAgent:true,
       mediaMin:MARKET_FREE_AGENT_MEDIA_MIN,
       mediaMax:MARKET_FREE_AGENT_MEDIA_MAX,
-      nationalityOverride:freeAgentNationalityForIndex(i, label)
+      nationalityOverride:freeAgentNationalityForIndex(groupIndex, label)
     });
     players.push(player);
   }
   return players;
 }
+
 function mergeMarketPlayersIntoSeed(players=[]){
   if(!seed?.players) return;
   const existing = new Set(seed.players.map(p => Number(p.id)));

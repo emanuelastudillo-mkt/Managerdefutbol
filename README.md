@@ -1,4 +1,31 @@
-# Fútbol Manager MVP - V8.03
+# Fútbol Manager MVP - V8.04
+
+
+## V8.04 - Cartera de Academia, regeneración de retirados y reputación de Boca
+
+### Tu Academia
+
+- Tu Academia incorpora un submenú interno con las secciones **Juveniles** y **Cartera de promocionados**.
+- La cartera reúne los juveniles que el manager promovió al primer equipo durante cualquiera de sus contratos.
+- Para cada futbolista se muestran club actual, liga, cláusula o importe de venta, porcentaje personal de futura venta, beneficio estimado o cobrado y estado del derecho.
+- Los derechos existentes de partidas anteriores se conservan; no se generan derechos retroactivos para promociones que nunca fueron registradas.
+
+### Regeneración de jugadores retirados
+
+- Cada jugador retirado pasa a una reserva compacta de identidades en lugar de desaparecer definitivamente.
+- Cuando el juego necesita incorporar jugadores libres, utiliza primero esa reserva antes de crear identidades nuevas. Esto también se aplica cuando un club bot necesita cubrir una posición y no encuentra libres disponibles.
+- El futbolista vuelve con 18 años, como agente libre, conservando nombre, nacionalidad, posición y fotografía personalizada cuando existe.
+- Las habilidades, media, salario y cláusula se regeneran como las de un nuevo jugador de 18 años para evitar arrastrar penalizaciones o datos de la carrera anterior.
+- El jugador regenerado recibe un identificador nuevo; así no se mezclan estadísticas, transferencias ni registros históricos de sus dos carreras.
+- Los jugadores manuales dejan de reaparecer inmediatamente al retirarse: también esperan hasta que el mercado libre necesite incorporaciones.
+- Las partidas anteriores comienzan a registrar esta reserva desde V8.04. Los retirados eliminados por versiones previas no pueden reconstruirse porque esos datos no estaban guardados.
+
+### Clubes
+
+- La reputación base de Boca Juniors pasa de 80 a **92** para partidas nuevas.
+- Las partidas existentes conservan la reputación que ya evolucionó durante su carrera.
+
+**V8.04 no rompe partidas anteriores.** Conserva slots, temporadas, planteles, cartera económica y mercado. Agrega de forma automática el submenú de Academia y el estado vacío de reserva de retirados; desde el siguiente retiro, los futbolistas quedan disponibles para futuras regeneraciones.
 
 ## V8.03 - Ventanas de mercado y transferencias programadas
 

@@ -1,4 +1,4 @@
-/* V7.68 · Derechos económicos y cartera personal de jugadores formados. */
+/* V8.04 · Derechos económicos y submenú de cartera de juveniles promocionados. */
 
 function managerPortfolioConfigNumber(path, fallback, min=-Infinity, max=Infinity){
   if(typeof configNumber === 'function') return configNumber(`academia.derechosEconomicos.${path}`, fallback, min, max);
@@ -339,6 +339,28 @@ function managerPortfolioStatusLabel(right){
   if(right.status === 'closed_free_agent') return { text:'Sin venta', cls:'muted' };
   return { text:'Cerrado', cls:'muted' };
 }
+function managerAcademySubmenuMode(){
+  if(!game) return 'players';
+  game.academy = game.academy && typeof game.academy === 'object' && !Array.isArray(game.academy) ? game.academy : {};
+  const mode = String(game.academy.submenu || 'players');
+  game.academy.submenu = mode === 'portfolio' ? 'portfolio' : 'players';
+  return game.academy.submenu;
+}
+function managerAcademySubmenuMarkup(mode=managerAcademySubmenuMode()){
+  return `<div class="academy-submenu" role="tablist" aria-label="Secciones de Tu Academia">
+    <button type="button" class="academy-submenu-btn ${mode === 'players' ? 'active' : ''}" data-academy-submenu="players" role="tab" aria-selected="${mode === 'players'}">Juveniles</button>
+    <button type="button" class="academy-submenu-btn ${mode === 'portfolio' ? 'active' : ''}" data-academy-submenu="portfolio" role="tab" aria-selected="${mode === 'portfolio'}">Cartera de promocionados</button>
+  </div>`;
+}
+function bindManagerAcademySubmenu(){
+  document.querySelectorAll('[data-academy-submenu]').forEach(button => button.addEventListener('click', () => {
+    const next = button.dataset.academySubmenu === 'portfolio' ? 'portfolio' : 'players';
+    if(managerAcademySubmenuMode() === next) return;
+    game.academy.submenu = next;
+    saveLocal(true);
+    renderAcademy();
+  }));
+}
 function managerPlayerPortfolioMarkup(){
   const portfolio = ensureManagerPlayerPortfolio(game);
   managerPortfolioSyncRights();
@@ -370,13 +392,13 @@ function managerPlayerPortfolioMarkup(){
     </tr>`;
   }).join('');
   return `<section class="manager-player-portfolio" style="margin-top:14px">
-    <div class="row section-title compact"><div><p class="label">Patrimonio deportivo</p><h3>Cartera de jugadores</h3><p class="muted small">Conservás el porcentaje contractual sobre la primera transferencia pagada de cada juvenil promovido, aunque renuncies o seas despedido.</p></div><span class="pill">${active.length} derecho(s) activo(s)</span></div>
+    <div class="row section-title compact"><div><p class="label">Patrimonio deportivo</p><h3>Cartera de juveniles promocionados</h3><p class="muted small">Incluye los juveniles que promoviste al primer equipo de cualquier club y el porcentaje personal sobre su próxima transferencia pagada.</p></div><span class="pill">${active.length} derecho(s) activo(s)</span></div>
     <div class="grid cols-3 manager-portfolio-summary">
-      <div class="card"><p class="label">Jugadores registrados</p><div class="metric">${rights.length}</div></div>
+      <div class="card"><p class="label">Juveniles promocionados</p><div class="metric">${rights.length}</div></div>
       <div class="card"><p class="label">Beneficio estimado</p><div class="metric small">${formatMoney(estimated)}</div><p class="muted small">Estimación sobre cláusulas actuales y neto de impuestos.</p></div>
       <div class="card"><p class="label">Beneficios cobrados</p><div class="metric small">${formatMoney(received)}</div></div>
     </div>
-    <div class="card" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Rol</th><th>Edad</th><th>Club</th><th>Liga</th><th>Cláusula / venta</th><th>Beneficio</th><th>Estimado / cobrado</th><th>Estado</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">Todavía no promoviste juveniles bajo un contrato con derecho económico.</td></tr>'}</tbody></table></div></div>
+    <div class="card" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Rol</th><th>Edad</th><th>Club</th><th>Liga</th><th>Cláusula / venta</th><th>Beneficio</th><th>Estimado / cobrado</th><th>Estado</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">Todavía no promocionaste juveniles con un porcentaje de futura venta.</td></tr>'}</tbody></table></div></div>
   </section>`;
 }
 
@@ -440,12 +462,20 @@ processPendingTransfers = function(){
   return baseSummary;
 };
 
-/* La cartera se muestra dentro de Tu Academia. */
+/* La cartera se muestra como submenú independiente dentro de Tu Academia. */
 const renderAcademyV767Portfolio = renderAcademy;
 renderAcademy = function(){
-  renderAcademyV767Portfolio();
-  const rules = document.querySelector('.academy-rules-card');
-  if(rules) rules.insertAdjacentHTML('beforebegin', managerPlayerPortfolioMarkup());
+  const mode = managerAcademySubmenuMode();
+  if(mode === 'portfolio'){
+    const view = $('view');
+    if(!view) return;
+    view.innerHTML = `${managerAcademySubmenuMarkup(mode)}${managerPlayerPortfolioMarkup()}`;
+  }else{
+    renderAcademyV767Portfolio();
+    const view = $('view');
+    if(view) view.insertAdjacentHTML('afterbegin', managerAcademySubmenuMarkup(mode));
+  }
+  bindManagerAcademySubmenu();
 };
 
 /* Migración y persistencia. No se generan derechos retroactivos. */

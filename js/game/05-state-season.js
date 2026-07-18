@@ -3183,6 +3183,7 @@ function normalizeGame(saved){
   normalized.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState(normalized.competitionChampionsHistory || {});
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.manualRetiredPlayerIds = Array.from(new Set((Array.isArray(normalized.manualRetiredPlayerIds) ? normalized.manualRetiredPlayerIds : (Array.isArray(normalized.retiredManualPlayerIds) ? normalized.retiredManualPlayerIds : [])).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
+  normalized.retiredPlayerPool = normalizeRetiredPlayerPool(normalized.retiredPlayerPool || []);
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
   normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
@@ -3775,6 +3776,7 @@ function newGame(selectedClubId, options={}){
     rankingLastManualUploadGameDate: '',
     rankingLastAutomaticUploadGameDate: '',
     manualRetiredPlayerIds: [],
+    retiredPlayerPool: [],
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,
@@ -4610,7 +4612,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V8.03',
+    version:'V8.04',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4632,7 +4634,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V8.03';
+    clean.version = 'V8.04';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4651,7 +4653,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V8.03',
+    version:'V8.04',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4677,7 +4679,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V8.03',
+    version:'V8.04',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -7862,6 +7864,113 @@ function removePlayerReferencesFromState(playerId, targetGame=game, options={}){
   if(targetGame === game && typeof removePlayerFromCurrentTactic === 'function') removePlayerFromCurrentTactic(id);
   return { removed };
 }
+function normalizeRetiredPlayerPool(raw=[]){
+  const source = Array.isArray(raw) ? raw : [];
+  const clean = [];
+  const seen = new Set();
+  source.forEach(item => {
+    if(!item || typeof item !== 'object') return;
+    const previousPlayerId = Math.max(0, Math.round(Number(item.previousPlayerId || item.id || 0)));
+    const name = String(item.name || '').trim();
+    if(!previousPlayerId || !name || seen.has(previousPlayerId)) return;
+    seen.add(previousPlayerId);
+    clean.push({
+      previousPlayerId,
+      name,
+      position:normalizePlayerPosition(item.position || 'MC', previousPlayerId),
+      nationality:String(item.nationality || 'Argentina').trim() || 'Argentina',
+      photoPath:String(item.photoPath || item.fotoPath || item.imagePath || '').trim(),
+      retiredAge:Math.max(0, Math.round(Number(item.retiredAge ?? item.age ?? 0))),
+      retiredSeason:Math.max(1, Math.round(Number(item.retiredSeason || game?.seasonNumber || 1))),
+      retiredClubId:Math.max(0, Math.round(Number(item.retiredClubId ?? item.clubId ?? 0))),
+      manualIdentity:Boolean(item.manualIdentity ?? item.manualPlayer),
+      timesRecycled:Math.max(0, Math.round(Number(item.timesRecycled || 0)))
+    });
+  });
+  clean.sort((a,b)=>Number(a.retiredSeason || 0)-Number(b.retiredSeason || 0) || Number(a.previousPlayerId)-Number(b.previousPlayerId));
+  return clean.slice(-2000);
+}
+function addRetiredPlayersToPool(players=[]){
+  if(!game) return 0;
+  const pool = normalizeRetiredPlayerPool(game.retiredPlayerPool || []);
+  const byId = new Map(pool.map(item => [Number(item.previousPlayerId), item]));
+  (players || []).forEach(player => {
+    if(!player || !Number(player.id)) return;
+    const previous = byId.get(Number(player.id));
+    byId.set(Number(player.id), {
+      previousPlayerId:Number(player.id),
+      name:String(player.name || `Jugador ${player.id}`),
+      position:normalizePlayerPosition(player.position || 'MC', player.id),
+      nationality:String(player.nationality || 'Argentina'),
+      photoPath:String(player.photoPath || player.fotoPath || player.imagePath || ''),
+      retiredAge:Math.max(0, Math.round(Number(player.age || 0))),
+      retiredSeason:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
+      retiredClubId:Math.max(0, Math.round(Number(player.clubId || 0))),
+      manualIdentity:Boolean(player.manualPlayer || previous?.manualIdentity),
+      timesRecycled:Math.max(0, Math.round(Number(player.retirementRecycles ?? previous?.timesRecycled ?? 0)))
+    });
+  });
+  game.retiredPlayerPool = normalizeRetiredPlayerPool(Array.from(byId.values()));
+  return game.retiredPlayerPool.length;
+}
+function takeRetiredPlayersAsFreeAgents(count=0, options={}){
+  if(!game) return [];
+  const requested = Math.max(0, Math.round(Number(count || 0)));
+  if(!requested) return [];
+  const activeIds = new Set((seed?.players || []).map(player => Number(player?.id || 0)).filter(Boolean));
+  const pool = normalizeRetiredPlayerPool(game.retiredPlayerPool || []);
+  const requestedGroup = String(options.positionGroup || '').toUpperCase();
+  const available = pool.filter(item => !activeIds.has(Number(item.previousPlayerId)));
+  const preferred = requestedGroup ? available.filter(item => playerRoleGroup(item.position) === requestedGroup) : available;
+  const selected = preferred.slice(0, requested);
+  const selectedIds = new Set(selected.map(item => Number(item.previousPlayerId)));
+  const remaining = pool.filter(item => !selectedIds.has(Number(item.previousPlayerId)));
+  if(!selected.length){ game.retiredPlayerPool = pool; return []; }
+  const reservedMaxId = Math.max(0, ...pool.map(item => Number(item.previousPlayerId || 0)));
+  game.retiredPlayerPool = remaining;
+  const baseId = Math.max(nextPlayerId(), reservedMaxId + 1);
+  const generationContext = options.generationContext || createPlayerGenerationContext((seed?.players || []).length + selected.length, seed?.players || []);
+  const players = selected.map((entry,index) => {
+    const id = baseId + index;
+    const position = normalizePlayerPosition(entry.position || 'MC', id);
+    const player = generatedPlayerFactory({
+      id,
+      position,
+      clubId:0,
+      age:18,
+      prestige:Number(options.prestige ?? 50),
+      nameContext:String(options.nameContext || 'Regreso generacional'),
+      divisionName:String(options.divisionName || 'Mercado'),
+      divisionOrder:Number.isFinite(Number(options.divisionOrder)) ? Number(options.divisionOrder) : null,
+      generationContext,
+      salaryFactor:Number(options.salaryFactor ?? MARKET_FREE_AGENT_SALARY_FACTOR),
+      freeAgent:true,
+      youthFreeAgent:Boolean(options.youthFreeAgent),
+      mediaMin:options.mediaMin ?? null,
+      mediaMax:options.mediaMax ?? null,
+      nationalityOverride:entry.nationality
+    });
+    player.name = entry.name;
+    player.nationality = entry.nationality;
+    if(entry.photoPath) player.photoPath = entry.photoPath;
+    player.recycledRetiredPlayer = true;
+    player.previousPlayerId = entry.previousPlayerId;
+    player.previousRetirementAge = entry.retiredAge;
+    player.previousRetirementSeason = entry.retiredSeason;
+    player.retirementRecycles = Number(entry.timesRecycled || 0) + 1;
+    player.manualIdentityRecycled = Boolean(entry.manualIdentity);
+    player.generation = {
+      ...(player.generation || {}),
+      source:'retired_player_pool',
+      respawnedAfterRetirement:true,
+      previousPlayerId:entry.previousPlayerId,
+      previousRetirementSeason:entry.retiredSeason,
+      recycleNumber:player.retirementRecycles
+    };
+    return player;
+  });
+  return players;
+}
 function retirementProbabilityForAge(age){
   const cleanAge = Math.round(Number(age || 0));
   if(cleanAge < RETIREMENT_MIN_AGE) return 0;
@@ -7891,13 +8000,10 @@ function retireSeasonVeterans(){
     manualPlayer:Boolean(player.manualPlayer),
     manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement)
   }));
+  addRetiredPlayersToPool(retirees);
   const retiredIds = new Set(retirees.map(player => Number(player.id)));
-  const manualRespawned = retirees
-    .filter(player => player.manualPlayer && player.manualRespawnAfterRetirement)
-    .map(player => typeof manualRespawnClone === 'function' ? manualRespawnClone(player, 'season_retirement') : null)
-    .filter(Boolean);
   const manualRetiredIds = retirees
-    .filter(player => player.manualPlayer && !player.manualRespawnAfterRetirement)
+    .filter(player => player.manualPlayer)
     .map(player => Number(player.id))
     .filter(id => Number.isFinite(id) && id > 0);
   if(manualRetiredIds.length){
@@ -7907,20 +8013,6 @@ function retireSeasonVeterans(){
   game.marketPlayers = (game.marketPlayers || []).filter(player => !retiredIds.has(Number(player.id)));
   retirees.forEach(player => removePlayerReferencesFromState(player.id, game, { reason:'retirement' }));
   if(typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
-  if(manualRespawned.length){
-    const respawnedIds = new Set(manualRespawned.map(player => Number(player.id)));
-    seed.players = seed.players.filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
-    game.marketPlayers = (game.marketPlayers || []).filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
-    if(typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
-    if(typeof initializeFreePlayerState === 'function') initializeFreePlayerState(manualRespawned);
-    game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
-    game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
-    manualRespawned.forEach(player => {
-      player.respawnedAsFreeAgent = true;
-      player.retired = false;
-      if(game.playerAgeSkillPenalties) delete game.playerAgeSkillPenalties[player.id];
-    });
-  }
   const managedRetirees = retirees.filter(player => Number(player.clubId || 0) === managedClubId && !player.freeAgent);
   const botRetirees = retirees.filter(player => Number(player.clubId || 0) > 0 && Number(player.clubId || 0) !== managedClubId && !player.freeAgent);
   const freeRetirees = retirees.filter(player => player.freeAgent);
@@ -7949,15 +8041,6 @@ function retireSeasonVeterans(){
       body:`${freeRetirees.length} jugadores libres se retiraron al finalizar la temporada.`
     });
   }
-  if(manualRespawned.length){
-    const names = manualRespawned.slice(0,5).map(player => `${player.name} (20)`).join(', ');
-    pushGameMessage({
-      type:'mercado',
-      priority:'normal',
-      title:'Leyendas disponibles como libres',
-      body:`${manualRespawned.length === 1 ? 'Un jugador manual reapareció' : `${manualRespawned.length} jugadores manuales reaparecieron`} en el mercado libre con 20 años: ${names}${manualRespawned.length > 5 ? '...' : ''}`
-    });
-  }
   return retirees.map(player => ({
     id:player.id,
     name:player.name,
@@ -7969,14 +8052,15 @@ function retireSeasonVeterans(){
     botPlayer:Number(player.clubId || 0) > 0 && Number(player.clubId || 0) !== managedClubId,
     retirementProbability:retirementProbabilityForAge(player.age),
     manualPlayer:Boolean(player.manualPlayer),
-    manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement),
-    respawnedAsFreeAgent:Boolean(player.manualPlayer && player.manualRespawnAfterRetirement)
+    queuedForFreeAgentReturn:true
   }));
 }
+
 function nextPlayerId(){
   const ids = [0]
     .concat((seed?.players || []).map(p => Number(p.id) || 0))
-    .concat((game?.marketPlayers || []).map(p => Number(p.id) || 0));
+    .concat((game?.marketPlayers || []).map(p => Number(p.id) || 0))
+    .concat((game?.retiredPlayerPool || []).map(p => Number(p.previousPlayerId || p.id) || 0));
   return Math.max(...ids) + 1;
 }
 function currentFreeMarketPlayers(){
@@ -8056,10 +8140,17 @@ function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
   const totalCount = Math.max(0, Math.round(Number(count) || 0));
   const activePlayers = (seed?.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
   const generationContext = createPlayerGenerationContext(activePlayers.length + totalCount, activePlayers);
-  const players = [];
-  let id = nextPlayerId();
   const season = Number(game?.seasonNumber || 1);
-  for(let i=0;i<totalCount;i++, id++){
+  const players = takeRetiredPlayersAsFreeAgents(totalCount, {
+    generationContext,
+    prestige:50,
+    nameContext:`Juveniles libres ${season}`,
+    divisionName:'Juveniles libres',
+    salaryFactor:FREE_YOUTH_SALARY_FACTOR,
+    youthFreeAgent:true
+  });
+  let id = Math.max(nextPlayerId(), ...players.map(player => Number(player.id || 0) + 1), 1);
+  for(let i=players.length;i<totalCount;i++, id++){
     const group = pickPositionGroupForGeneration(id, `season-youth-${season}`, generationContext);
     const position = pickPositionFromGroup(group, id, `season-youth-${season}`);
     const club = seed?.clubs?.length ? seed.clubs[i % seed.clubs.length] : null;
@@ -8086,6 +8177,7 @@ function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){
   }
   return players;
 }
+
 function generateSeasonYouthFreeAgentsByClub(perClub=SEASON_YOUTH_FREE_AGENTS_PER_CLUB){
   const clubs = (seed?.clubs || []).filter(club => Number(club.id || 0) > 0);
   const available = Math.max(0, MARKET_FREE_AGENT_HARD_MAX - currentFreeMarketPlayers().length);
@@ -8130,10 +8222,11 @@ function renewFreeAgentMarketForSeason(retiredCount=0){
   const totalYouth = youth.length + legacyExtra.length;
   const totalRegular = regular.length;
   if(totalYouth || totalRegular || finalPruned.length){
+    const returned = youth.concat(legacyExtra, regular).filter(player => player?.recycledRetiredPlayer).length;
     pushGameMessage({
       type:'mercado',
       title:'Mercado libre renovado',
-      body:`Se incorporaron ${totalYouth} jóvenes y ${totalRegular} jugadores libres al mercado.`,
+      body:`Se incorporaron ${totalYouth} jóvenes y ${totalRegular} jugadores libres al mercado.${returned ? ` ${returned} futbolista(s) retirado(s) regresaron con 18 años.` : ''}`,
       priority:'normal'
     });
   }

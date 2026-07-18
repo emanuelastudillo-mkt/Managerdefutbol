@@ -195,30 +195,12 @@ function normalizeManualDatabasePlayer(player, seedData){
     retired:Boolean(mercado.retirado ?? player.retired ?? false),
     manualPlayer:true,
     manualRespawnAfterRetirement:Boolean(mercado.reapareceAlRetirarse ?? mercado.respawnAfterRetirement ?? player.reapareceAlRetirarse ?? player.manualRespawnAfterRetirement ?? false),
-    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V5.39-manual-webp-respawn-free-agent', tipo:player?.origen?.tipo || 'manual_activo' }
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V8.04-manual-webp-retired-player-pool', tipo:player?.origen?.tipo || 'manual_activo' }
   };
 }
 function manualRetiredPlayerIdSet(options={}){
   const source = options.retiredManualPlayerIds || options.manualRetiredPlayerIds || game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [];
   return new Set((Array.isArray(source) ? source : []).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0));
-}
-function manualRespawnClone(player, reason='manual_respawn'){
-  if(!player) return null;
-  const clone = typeof structuredClone === 'function' ? structuredClone(player) : JSON.parse(JSON.stringify(player));
-  clone.age = 20;
-  clone.clubId = 0;
-  clone.freeAgent = true;
-  clone.youthFreeAgent = false;
-  clone.sold = false;
-  clone.retired = false;
-  clone.transferListed = false;
-  clone.intransferible = false;
-  clone.manualPlayer = true;
-  clone.manualRespawnAfterRetirement = true;
-  clone.lastSalaryPaidSeason = 0;
-  clone.salaryPaidCount = 0;
-  clone.generation = { ...(clone.generation || {}), respawnedAfterRetirement:true, respawnReason:reason };
-  return normalizeDatabasePlayer(clone);
 }
 function refreshExistingManualPlayerFromDatabase(existing, manual){
   if(!existing || !manual) return existing;
@@ -258,19 +240,10 @@ function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, op
   if(!seedData || !database?.players?.length) return seedData;
   const preserveExisting = Boolean(options?.preserveExisting);
   const retiredManualIds = manualRetiredPlayerIdSet(options);
-  const respawnedIds = [];
   const manualPlayers = database.players
     .map(player => normalizeManualDatabasePlayer(player, seedData))
     .filter(Boolean)
-    .map(player => {
-      const id = Number(player.id);
-      if(retiredManualIds.has(id) && player.manualRespawnAfterRetirement){
-        respawnedIds.push(id);
-        return manualRespawnClone(player, 'load_saved_retired_manual');
-      }
-      return player;
-    })
-    .filter(player => !retiredManualIds.has(Number(player.id)) || player.manualRespawnAfterRetirement);
+    .filter(player => !retiredManualIds.has(Number(player.id)));
   if(!manualPlayers.length) return seedData;
   const manualIds = new Set(manualPlayers.map(player => Number(player.id)));
   const manualById = new Map(manualPlayers.map(player => [Number(player.id), player]));
@@ -280,18 +253,13 @@ function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, op
     .map(player => preserveExisting && manualById.has(Number(player.id)) ? refreshExistingManualPlayerFromDatabase(player, manualById.get(Number(player.id))) : player);
   const toAdd = preserveExisting ? manualPlayers.filter(player => !existingIds.has(Number(player.id))) : manualPlayers;
   seedData.players = kept.concat(toAdd);
-  if(respawnedIds.length && game){
-    const respawned = new Set(respawnedIds);
-    game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawned.has(Number(id)));
-    game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawned.has(Number(id)));
-  }
   seedData.meta = {
     ...(seedData.meta || {}),
     manualPlayersSource:database.source,
     manualPlayersVersion:database.raw?.metadata?.version || 'local',
     manualPlayersApplied:manualPlayers.length,
     manualPlayersInserted:toAdd.length,
-    manualPlayersRespawned:respawnedIds.length
+    manualPlayersRespawned:0
   };
   seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;
   return seedData;

@@ -1,10 +1,10 @@
 {
   "metadata": {
     "nombre": "jugadores_manuales",
-    "version": "V5.39",
-    "appVersion": "V5.39",
+    "version": "V8.04",
+    "appVersion": "V8.04",
     "proyecto": "manager_de_futbol",
-    "descripcion": "Jugadores manuales con fotos WEBP, actualización de foto en partidas existentes y reaparición opcional como libres.",
+    "descripcion": "Jugadores manuales con fotos WEBP y retorno generacional mediante la reserva de retirados.",
     "moneda": "ARS",
     "unidadSueldo": "anual",
     "rutaFotosSugerida": "img/jugadores/manual/",
@@ -16,7 +16,7 @@
     "cargaAutomatica": true,
     "nota": "El juego carga este archivo automáticamente si está configurado en config.js como data.manualPlayersUrl.",
     "fotoPersonalizada": "Agregar las imágenes en img/jugadores/manual/ usando extensión .webp y los nombres declarados en cada jugador. La partida actualiza photoPath desde este JSON al cargar.",
-    "retiro": "Los jugadores manuales con reapareceAlRetirarse true vuelven al mercado libre con 20 años al retirarse."
+    "retiro": "Al retirarse, los jugadores manuales pasan a la reserva de retirados y vuelven con 18 años cuando el juego necesita nuevos agentes libres."
   },
   "reglas": {
     "sueldoAnualFijo": 150000000,

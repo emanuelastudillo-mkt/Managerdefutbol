@@ -6483,3 +6483,12 @@ button.cwc-group-result{cursor:pointer}
 .transfer-market-status.closed{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(15,23,42,.86))}
 .transfer-market-status h3{margin:2px 0 4px}
 @media(max-width:700px){.transfer-market-status{align-items:flex-start;flex-direction:column}}
+
+
+/* V8.04 · Submenú de Academia y cartera de juveniles promocionados */
+.academy-submenu{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--panel-soft,rgba(255,255,255,.03))}
+.academy-submenu-btn{appearance:none;border:1px solid transparent;border-radius:10px;padding:9px 14px;background:transparent;color:var(--muted);font:inherit;font-weight:700;cursor:pointer}
+.academy-submenu-btn:hover{color:var(--text);border-color:var(--line)}
+.academy-submenu-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.manager-player-portfolio{margin-top:0!important}
+@media (max-width:700px){.academy-submenu{display:grid;grid-template-columns:1fr 1fr}.academy-submenu-btn{width:100%;padding:9px 8px}}

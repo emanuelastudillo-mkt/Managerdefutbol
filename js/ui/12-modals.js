@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.03</p>
+      <p class="eyebrow">Guía actualizada · V8.04</p>
       <h2>Ayuda de Fútbol Manager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1699,7 +1699,7 @@ function openGameHelpModal(){
         <article class="help-card card">
           <h4>Promoción y cartera</h4>
           <p>Para ofrecer contrato profesional necesitás dirigir un club, que el juvenil tenga al menos 16 años y disponer de cupo en el plantel. El jugador promovido registra el porcentaje de futura venta del contrato laboral vigente. Ese derecho queda en tu cartera y persiste aunque abandones el club.</p>
-          ${gameHelpGoButton('academy','Abrir cartera de jugadores')}
+          ${gameHelpGoButton('academy','Abrir cartera de promocionados','','portfolio')}
         </article>
       </div>
     </div>
@@ -1783,6 +1783,10 @@ function openGameHelpModal(){
         return;
       }
       if(tab === 'firstTeam' && subtab) firstTeamTab = subtab;
+      if(tab === 'academy' && mode){
+        game.academy = game.academy && typeof game.academy === 'object' && !Array.isArray(game.academy) ? game.academy : {};
+        game.academy.submenu = mode === 'portfolio' ? 'portfolio' : 'players';
+      }
       if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation(tab, mode);
       else {
         if(tab === 'finance' && mode) financeViewMode = mode;

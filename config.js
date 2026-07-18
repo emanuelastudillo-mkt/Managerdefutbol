@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.02',
+  version: 'V8.03',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5,
@@ -33,9 +33,9 @@ window.GAME_CONFIG = {
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.02',
+    installationsUrl: 'data/instalaciones.json?v=8.03',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.02',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.03',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -550,9 +550,13 @@ window.GAME_CONFIG = {
     ofertaClausulaEspecialMinPorTemporada: 1,
     ofertaClausulaEspecialMaxPorTemporada: 2,
     ofertaClausulaEspecialTopJugadores: 3,
-    // Una oferta por cláusula completa que quede sin respuesta se ejecuta automáticamente en estos días de temporada.
-    ofertaClausulaAutoAceptarPrimerDia: 162,
-    ofertaClausulaAutoAceptarSegundoDia: 355
+    // Ventanas del mercado profesional. No restringen libres ni juveniles de Academia.
+    ventanaPrincipalInicioDia: 355,
+    ventanaPrincipalFinDia: 30,
+    ventanaMitadInicioDia: 151,
+    ventanaMitadFinDia: 178,
+    // Toda oferta por cláusula conserva cinco días completos para aceptar o intentar convencer al jugador.
+    ofertaClausulaRespuestaDias: 5
   },
   estadio: {
     costoReplantarCesped: 2000000,

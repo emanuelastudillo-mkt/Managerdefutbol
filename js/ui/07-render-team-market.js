@@ -42,6 +42,12 @@ function bindMarketTabs(){
   });
 }
 
+function transferMarketStatusMarkup(){
+  if(typeof transferMarketStatusInfo !== 'function') return '';
+  const info = transferMarketStatusInfo(game);
+  return `<div class="card transfer-market-status ${info.open ? 'open' : 'closed'}"><div><p class="label">Estado de transferencias</p><h3>${escapeHtml(info.title)}</h3><p class="muted small">${escapeHtml(info.detail)}</p></div><span class="pill ${info.open ? 'ok' : 'warn'}">Día ${Number(info.day || 1)}</span></div>`;
+}
+
 function playerHasScoutingReport(playerOrId){
   const id = typeof playerOrId === 'object' ? Number(playerOrId?.id || 0) : Number(playerOrId || 0);
   if(!id || !game?.scoutingCenter) return false;
@@ -376,6 +382,7 @@ function renderMarket(){
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores libres y jugadores contratados disponibles para negociar.</p></div>
     ${marketTabsMarkup()}
+    ${transferMarketStatusMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(freeBase.length, freeFiltered.length)}
     <div class="market-limit-note small muted">${marketDiscoverySummary(freeAll.length, freeBase, 'free')} Se muestran ${free.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()} ${marketAcceptanceHiddenHint()}</div>
@@ -392,8 +399,9 @@ function renderContractedMarket(){
   const filteredPlayers = basePlayers.filter(marketPlayerMatchesFilters);
   const players = marketVisiblePlayers(filteredPlayers);
   const rows = players.map(p => {
-    const blocked = typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id);
-    const label = blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta';
+    const agreed = typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(p.id);
+    const blocked = agreed || (typeof isPurchaseOfferBlockedThisSeason === 'function' && isPurchaseOfferBlockedThisSeason(p.id));
+    const label = agreed ? 'Transferencia acordada' : (blocked ? 'Rechazada hasta próxima temp.' : 'Hacer oferta');
     return `<tr>
     <td>${faceImg(p, 'photo-thumb')}</td>
     <td><button class="linklike" data-player-id="${p.id}"><strong>${playerNameWithScoutingEye(p)}</strong></button></td>
@@ -411,6 +419,7 @@ function renderContractedMarket(){
   view.innerHTML = `
     <div class="section-title"><h2>Mercado</h2><p class="tagline">Jugadores de otros clubes. Podés iniciar una negociación desde esta pestaña.</p></div>
     ${marketTabsMarkup()}
+    ${transferMarketStatusMarkup()}
     ${typeof transferBudgetSummaryMarkup === 'function' ? transferBudgetSummaryMarkup() : ''}
     ${marketFiltersMarkup(basePlayers.length, filteredPlayers.length)}
     <div class="market-limit-note small muted">${marketDiscoverySummary(allContractedPlayers.length, basePlayers, 'contracted')} Se muestran ${players.length} jugador(es) que coinciden con el filtro. ${marketScoutingHintText()}</div>

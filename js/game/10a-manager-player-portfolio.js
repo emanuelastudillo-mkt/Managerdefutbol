@@ -281,6 +281,9 @@ function processManagerPlayerPortfolioDaily(){
   const portfolio = ensureManagerPlayerPortfolio(game);
   const active = managerPortfolioRights('active');
   if(!active.length) return { checked:false, sold:0, closed:sync.closed };
+  if(typeof isTransferMarketOpen === 'function' && !isTransferMarketOpen(game)){
+    return { checked:false, sold:0, closed:sync.closed, marketClosed:true };
+  }
   const today = validIsoDate(game.currentDate) ? game.currentDate : currentCalendarDate();
   const interval = Math.max(1, Math.round(managerPortfolioConfigNumber('diasEntreRevisionesBot', 30, 1, 365)));
   if(portfolio.lastBotSaleCheckDate && daysBetweenIsoDates(portfolio.lastBotSaleCheckDate, today) < interval) return { checked:false, sold:0, closed:sync.closed };
@@ -397,10 +400,10 @@ completeTransferSaleFromMessage = function(msg, player, options={}){
   const right = managerPortfolioActiveRight(player?.id, sellerClubId);
   const grossAmount = Math.max(0, Math.round(Number(msg?.action?.grossAmount ?? msg?.action?.amount ?? 0)));
   const buyerClubId = Math.round(Number(msg?.action?.sourceClubId || 0));
-  completeTransferSaleFromMessageV767Portfolio(msg, player, options);
-  if(!right || grossAmount <= 0) return;
+  const transferResult = completeTransferSaleFromMessageV767Portfolio(msg, player, options) || {};
+  if(!transferResult.executed || !right || grossAmount <= 0) return transferResult;
   const settlement = managerPortfolioSettleRight(right, { grossAmount, buyerClubId, source:msg?.action?.origin || 'manager_sale' });
-  if(!settlement) return;
+  if(!settlement) return transferResult;
   if(Number(sellerClubId) === Number(game?.selectedClubId || 0) && typeof recordBudgetChange === 'function'){
     recordBudgetChange(-settlement.managerIncome, `Derecho económico de ${right.playerName}`, {
       type:'academy_future_sale_share', playerId:right.playerId, rightId:right.id, grossAmount,
@@ -412,16 +415,17 @@ completeTransferSaleFromMessage = function(msg, player, options={}){
   msg.body += ` Del neto, ${formatMoney(settlement.managerIncome)} correspondieron al ${right.percent}% personal del manager por formación.`;
   saveLocal(true);
   if(options.silent !== true && activeTab === 'messages') renderMessages();
+  return transferResult;
 };
 
 /* Cobro si el manager compra desde su club a un jugador con derecho activo en un club bot. */
 const processPendingTransfersV767Portfolio = processPendingTransfers;
 processPendingTransfers = function(){
-  const due = (game?.pendingTransfers || []).filter(item => item.status === 'pending' && Number(item.arrivalTurn || 0) <= currentTurnIndex()).map(item => ({
+  const due = (game?.pendingTransfers || []).filter(item => String(item.type || 'incoming') === 'incoming' && typeof isPendingTransferReadyToExecute === 'function' && isPendingTransferReadyToExecute(item, game)).map(item => ({
     id:item.id, playerId:Number(item.playerId), sellerClubId:Number(item.fromClubId || 0), buyerClubId:Number(item.toClubId || 0), grossAmount:Math.max(0,Math.round(Number(item.amount || 0))),
     right:managerPortfolioActiveRight(item.playerId, item.fromClubId)
   }));
-  processPendingTransfersV767Portfolio();
+  const baseSummary = processPendingTransfersV767Portfolio();
   due.forEach(item => {
     const transfer = (game.pendingTransfers || []).find(entry => String(entry.id) === String(item.id));
     if(!item.right || transfer?.status !== 'arrived' || item.grossAmount <= 0) return;
@@ -433,6 +437,7 @@ processPendingTransfers = function(){
     game.clubBudgets[item.sellerClubId] = current + settlement.sellerReceipt;
   });
   if(due.some(item => item.right)) saveLocal(true);
+  return baseSummary;
 };
 
 /* La cartera se muestra dentro de Tu Academia. */

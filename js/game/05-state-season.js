@@ -1193,6 +1193,7 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.monthlyExpenses = {};
   game.academy = normalizeAcademyState(game.academy);
   if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(id);
+  if(typeof clearPendingTransferAgreementFlags === 'function') clearPendingTransferAgreementFlags(game);
   game.pendingTransfers = [];
   game.lastOwnPlayerOffer = null;
   game.rejectedPurchaseOffers = {};
@@ -3266,7 +3267,12 @@ function normalizeGame(saved){
   syncPlayerStarsWithClubs(normalized);
   normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
-  normalized.pendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
+  const rawPendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
+  const normalizedPendingTransfers = rawPendingTransfers
+    .map(item => typeof normalizePendingTransferMarketEntry === 'function' ? normalizePendingTransferMarketEntry(item, normalized) : item)
+    .filter(Boolean);
+  if(JSON.stringify(rawPendingTransfers) !== JSON.stringify(normalizedPendingTransfers)) normalized._needsAutosave = true;
+  normalized.pendingTransfers = normalizedPendingTransfers;
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
   normalized.rejectedFreeAgentOffers = (normalized.rejectedFreeAgentOffers && typeof normalized.rejectedFreeAgentOffers === 'object' && !Array.isArray(normalized.rejectedFreeAgentOffers)) ? normalized.rejectedFreeAgentOffers : {};
   normalized.scoutingCenter = (normalized.scoutingCenter && typeof normalized.scoutingCenter === 'object' && !Array.isArray(normalized.scoutingCenter)) ? normalized.scoutingCenter : {};
@@ -4604,7 +4610,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V8.02',
+    version:'V8.03',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4626,7 +4632,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V8.02';
+    clean.version = 'V8.03';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4645,7 +4651,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V8.02',
+    version:'V8.03',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4671,7 +4677,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V8.02',
+    version:'V8.03',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -5354,6 +5360,7 @@ function resetClubSpecificCareerStateForNewClub(newClubId){
   game.monthlyExpenses = {};
   game.academy = normalizeAcademyState(game.academy);
   game.lastOwnPlayerOffer = null;
+  if(typeof clearPendingTransferAgreementFlags === 'function') clearPendingTransferAgreementFlags(game);
   game.pendingTransfers = [];
   game.rejectedPurchaseOffers = {};
   game.rejectedFreeAgentOffers = {};
@@ -7862,7 +7869,8 @@ function retirementProbabilityForAge(age){
   return clamp(Number(RETIREMENT_PROBABILITY_BY_AGE?.[cleanAge] || 0), 0, 1);
 }
 function playerRetiresAtSeasonEnd(player, season=game?.seasonNumber || 1){
-  if(!player || player.sold || player.retired) return false;
+  if(!player || player.sold || player.retired || player.transferAgreed) return false;
+  if(typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(player.id)) return false;
   const age = Math.round(Number(player.age || 0));
   const probability = retirementProbabilityForAge(age);
   if(probability <= 0) return false;

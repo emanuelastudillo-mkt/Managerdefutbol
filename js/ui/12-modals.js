@@ -380,6 +380,10 @@ function openPurchaseOfferModal(playerId){
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  if(typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(player.id)){
+    showNotice('Este jugador ya tiene una transferencia acordada.');
+    return;
+  }
   if(isPurchaseOfferBlockedThisSeason(player.id)){
     showNotice('Este club ya rechazó una oferta por este jugador. Podrás volver a intentarlo la próxima temporada.');
     return;
@@ -417,6 +421,7 @@ function submitPurchaseOffer(playerId, kind){
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('players')){ showNotice(managerChallengeBlockedMessage('players')); return; }
   const player = playerById(playerId);
   if(!player || Number(player.clubId || 0) <= 0 || Number(player.clubId) === Number(game.selectedClubId)) return;
+  if(typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(player.id)){ showNotice('Este jugador ya tiene una transferencia acordada.'); return; }
   if(!hasFirstTeamRosterSpace(game.selectedClubId, 1)){ showRosterLimitNotice(); return; }
   const clause = refreshPlayerClause(player);
   const cfg = purchaseOfferConfig(kind, clause);
@@ -451,48 +456,100 @@ function submitPurchaseOffer(playerId, kind){
     return;
   }
   game.pendingTransfers = Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [];
-  if(game.pendingTransfers.some(t => Number(t.playerId) === Number(player.id) && t.status === 'pending')){
+  if(game.pendingTransfers.some(t => Number(t.playerId) === Number(player.id) && isActivePendingTransfer(t))){
     showNotice('Ya hay una operación pendiente por este jugador.');
     return;
   }
+  const marketSchedule = transferMarketScheduleForCurrentState(game);
+  const marketOpen = isTransferMarketOpen(game);
   if(typeof spendTransferBudget === 'function') spendTransferBudget(cfg.amount, `Compra de ${player.name}`);
-  recordBudgetChange(-cfg.amount, `Compra acordada de ${player.name}`, { type:'transfer_purchase_pending', playerId:player.id, fromClubId:player.clubId });
+  recordBudgetChange(-cfg.amount, `Compra acordada de ${player.name}`, { type:'transfer_purchase_pending', playerId:player.id, fromClubId:player.clubId, executeSeason:marketSchedule.season, executeDay:marketSchedule.day });
   game.pendingTransfers.push({
     id:`incoming-${player.id}-${Date.now()}`,
+    type:'incoming',
     playerId:player.id,
     fromClubId:player.clubId,
     toClubId:game.selectedClubId,
     amount:cfg.amount,
     acceptedTurn:currentTurnIndex(),
-    arrivalTurn:currentTurnIndex() + 1,
+    acceptedSeason:Number(game.seasonNumber || 1),
+    acceptedDay:transferMarketSeasonDayForState(game),
+    acceptedDate:game.currentDate || '',
+    executeSeason:marketSchedule.season,
+    executeDay:marketSchedule.day,
+    executeDate:marketSchedule.date,
     status:'pending'
   });
-  pushGameMessage({ type:'mercado', title:'Oferta aceptada', body:`${player.name} aceptó jugar en ${clubName(game.selectedClubId)} y se pondrá a disposición en breve.`, priority:'high' });
+  player.transferAgreed = true;
+  player.transferAgreedToClubId = Number(game.selectedClubId || 0);
+  player.transferScheduledDate = marketSchedule.date;
+  pushGameMessage({
+    type:'mercado',
+    title:marketOpen ? 'Oferta aceptada' : 'Fichaje acordado',
+    body:marketOpen
+      ? `${player.name} aceptó jugar en ${clubName(game.selectedClubId)}. La operación se ejecutará ahora porque el mercado está abierto.`
+      : `${player.name} aceptó jugar en ${clubName(game.selectedClubId)}. El importe quedó reservado y llegará en la temporada ${marketSchedule.season}, día ${marketSchedule.day}, cuando abra el mercado.`,
+    priority:'high'
+  });
   closeModal();
   activeTab = 'messages';
+  processPendingTransfers();
   saveLocal(true);
   renderAll();
-  showNotice('Oferta aceptada. El jugador llegará el próximo domingo.');
+  showNotice(marketOpen ? 'Oferta aceptada. El jugador ya puede incorporarse.' : `Fichaje acordado para la temporada ${marketSchedule.season}, día ${marketSchedule.day}.`);
 }
 function processPendingTransfers(){
-  if(!game) return;
-  game.pendingTransfers = Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [];
-  let changed = false;
-  game.pendingTransfers.forEach(t => {
-    if(t.status !== 'pending') return;
-    if(Number(t.arrivalTurn || 0) > currentTurnIndex()) return;
+  if(!game) return { checked:0, incoming:0, outgoing:0, changed:false };
+  game.pendingTransfers = (Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [])
+    .map(item => typeof normalizePendingTransferMarketEntry === 'function' ? normalizePendingTransferMarketEntry(item, game) : item)
+    .filter(Boolean);
+  const summary = { checked:0, incoming:0, outgoing:0, changed:false };
+  for(const t of game.pendingTransfers){
+    if(!isActivePendingTransfer(t) || !isPendingTransferReadyToExecute(t, game)) continue;
+    summary.checked += 1;
     const player = playerById(t.playerId);
-    if(!player){ t.status = 'missing'; changed = true; return; }
-    if(!hasFirstTeamRosterSpace(Number(t.toClubId || game.selectedClubId), 1)){
-      t.arrivalTurn = currentTurnIndex() + 1;
-      changed = true;
-      return;
+    if(!player){ t.status = 'missing'; summary.changed = true; continue; }
+    if(String(t.type || 'incoming') === 'outgoing'){
+      const msg = (game.messages || []).find(item => String(item.id || '') === String(t.messageId || ''));
+      if(!msg?.action){ t.status = 'missing_message'; summary.changed = true; continue; }
+      if(Number(player.clubId || 0) !== Number(t.fromClubId || game.selectedClubId || 0)){
+        t.status = 'player_unavailable';
+        msg.action.status = 'expired_player_unavailable';
+        summary.changed = true;
+        continue;
+      }
+      const result = completeTransferSaleFromMessage(msg, player, {
+        forceExecute:true,
+        status:t.finalStatus || msg.action.finalStatus || 'accepted',
+        silent:true,
+        skipSave:true
+      }) || {};
+      if(result.executed){
+        t.status = 'departed';
+        summary.outgoing += 1;
+        summary.changed = true;
+        pushGameMessage({ type:'mercado', title:'Transferencia ejecutada', body:`${player.name} dejó el club durante la apertura del mercado.`, priority:'high' });
+      }
+      continue;
     }
-    setPlayerClubId(player, Number(t.toClubId || game.selectedClubId));
+    const destinationClubId = Number(t.toClubId || game.selectedClubId);
+    if(firstTeamRosterCount(destinationClubId) >= MAX_PLAYERS_PER_CLUB){
+      const next = nextTransferMarketOpening(Number(game.seasonNumber || 1), Math.min(daysInSeasonYear(currentSeasonYear()), transferMarketSeasonDayForState(game) + 1));
+      t.executeSeason = next.season;
+      t.executeDay = next.day;
+      t.executeDate = next.date;
+      summary.changed = true;
+      continue;
+    }
+    const sellerClubId = Number(player.clubId || t.fromClubId || 0);
+    setPlayerClubId(player, destinationClubId);
     player.freeAgent = false;
     player.sold = false;
     player.transferListed = false;
     player.intransferible = false;
+    player.transferAgreed = false;
+    delete player.transferAgreedToClubId;
+    delete player.transferScheduledDate;
     player.salaryPaidCount = 0;
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);
@@ -504,10 +561,16 @@ function processPendingTransfers(){
       : 0;
     const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
     t.status = 'arrived';
-    changed = true;
+    t.executedSeason = Number(game.seasonNumber || 1);
+    t.executedDay = transferMarketSeasonDayForState(game);
+    t.executedDate = game.currentDate || '';
+    t.sellerClubId = sellerClubId;
+    summary.incoming += 1;
+    summary.changed = true;
     pushGameMessage({ type:'mercado', title:'Jugador incorporado', body:`${player.name} ya está disponible en el plantel.${cohesionText}`, priority:'high' });
-  });
-  if(changed) saveLocal(true);
+  }
+  if(summary.changed) saveLocal(true);
+  return summary;
 }
 function radarSvg(stats){
   const entries = Object.entries(stats);
@@ -1560,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.02</p>
+      <p class="eyebrow">Guía actualizada · V8.03</p>
       <h2>Ayuda de Fútbol Manager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>

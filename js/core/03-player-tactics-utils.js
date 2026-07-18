@@ -65,7 +65,10 @@ function playersByClub(clubId){
   return Array.isArray(list) ? list.slice() : [];
 }
 function pendingIncomingTransfersCount(clubId=game?.selectedClubId){
-  return (game?.pendingTransfers || []).filter(t => t.status === 'pending' && Number(t.toClubId) === Number(clubId)).length;
+  return (game?.pendingTransfers || []).filter(t => isActivePendingTransfer(t) && String(t.type || 'incoming') === 'incoming' && Number(t.toClubId) === Number(clubId)).length;
+}
+function pendingOutgoingTransfersCount(clubId=game?.selectedClubId){
+  return (game?.pendingTransfers || []).filter(t => isActivePendingTransfer(t) && String(t.type || '') === 'outgoing' && Number(t.fromClubId) === Number(clubId)).length;
 }
 function firstTeamRosterCount(clubId=game?.selectedClubId){
   return playersByClub(Number(clubId)).length;
@@ -74,7 +77,7 @@ function hasFirstTeamRosterSpace(clubId=game?.selectedClubId, extra=1){
   return firstTeamRosterCount(clubId) + pendingIncomingTransfersCount(clubId) + Math.max(0, Number(extra) || 0) <= MAX_PLAYERS_PER_CLUB;
 }
 function hasFirstTeamRosterMinimumAfterRemoval(clubId=game?.selectedClubId, removeCount=1){
-  return firstTeamRosterCount(clubId) - Math.max(0, Number(removeCount) || 0) >= MIN_PLAYERS_PER_CLUB;
+  return firstTeamRosterCount(clubId) - pendingOutgoingTransfersCount(clubId) - Math.max(0, Number(removeCount) || 0) >= MIN_PLAYERS_PER_CLUB;
 }
 function showRosterLimitNotice(){
   showNotice(`Plantel completo. Máximo ${MAX_PLAYERS_PER_CLUB} jugadores.`);
@@ -341,6 +344,114 @@ function daysUntilTurn(targetTurn){
 }
 function currentGlobalDayNumber(){
   return seasonDayFromDate(game?.currentDate || dateForSeasonState(game), currentSeasonYear());
+}
+
+function transferMarketSeasonDayForState(state=game){
+  if(!state) return 1;
+  const year = Math.round(Number(state.seasonYear || 0)) || seasonYearForNumber(state.seasonNumber || 1);
+  const date = validIsoDate(state.currentDate) ? state.currentDate : dateForSeasonState(state);
+  return seasonDayFromDate(date, year);
+}
+function isTransferMarketOpenDay(day){
+  const value = Math.max(1, Math.round(Number(day || 1)));
+  const principal = value >= Number(TRANSFER_MARKET_MAIN_START_DAY || 355) || value <= Number(TRANSFER_MARKET_MAIN_END_DAY || 30);
+  const middle = value >= Number(TRANSFER_MARKET_MID_START_DAY || 151) && value <= Number(TRANSFER_MARKET_MID_END_DAY || 178);
+  return principal || middle;
+}
+function isTransferMarketOpen(state=game){
+  return isTransferMarketOpenDay(transferMarketSeasonDayForState(state));
+}
+function transferMarketDateForSeasonDay(seasonNumber, seasonDay){
+  const season = Math.max(1, Math.round(Number(seasonNumber || 1)));
+  const day = Math.max(1, Math.round(Number(seasonDay || 1)));
+  return addDaysToIsoDate(seasonStartDateForYear(seasonYearForNumber(season)), day - 1);
+}
+function nextTransferMarketOpening(seasonNumber=game?.seasonNumber || 1, seasonDay=transferMarketSeasonDayForState(game)){
+  const season = Math.max(1, Math.round(Number(seasonNumber || 1)));
+  const day = Math.max(1, Math.round(Number(seasonDay || 1)));
+  if(isTransferMarketOpenDay(day)) return { season, day, date:transferMarketDateForSeasonDay(season, day), window:day >= Number(TRANSFER_MARKET_MAIN_START_DAY || 355) || day <= Number(TRANSFER_MARKET_MAIN_END_DAY || 30) ? 'principal' : 'mitad' };
+  if(day < Number(TRANSFER_MARKET_MID_START_DAY || 151)){
+    const targetDay = Number(TRANSFER_MARKET_MID_START_DAY || 151);
+    return { season, day:targetDay, date:transferMarketDateForSeasonDay(season, targetDay), window:'mitad' };
+  }
+  if(day < Number(TRANSFER_MARKET_MAIN_START_DAY || 355)){
+    const targetDay = Number(TRANSFER_MARKET_MAIN_START_DAY || 355);
+    return { season, day:targetDay, date:transferMarketDateForSeasonDay(season, targetDay), window:'principal' };
+  }
+  const nextSeason = season + 1;
+  return { season:nextSeason, day:1, date:transferMarketDateForSeasonDay(nextSeason, 1), window:'principal' };
+}
+function transferMarketStatusInfo(state=game){
+  const season = Math.max(1, Math.round(Number(state?.seasonNumber || 1)));
+  const day = transferMarketSeasonDayForState(state);
+  const open = isTransferMarketOpenDay(day);
+  if(open){
+    if(day >= Number(TRANSFER_MARKET_MAIN_START_DAY || 355)){
+      return { open:true, season, day, window:'principal', title:'Mercado abierto', detail:`Ventana principal abierta. Continúa hasta el día ${Number(TRANSFER_MARKET_MAIN_END_DAY || 30)} de la próxima temporada.`, closesSeason:season + 1, closesDay:Number(TRANSFER_MARKET_MAIN_END_DAY || 30) };
+    }
+    if(day <= Number(TRANSFER_MARKET_MAIN_END_DAY || 30)){
+      return { open:true, season, day, window:'principal', title:'Mercado abierto', detail:`Ventana principal abierta. Cierra al finalizar el día ${Number(TRANSFER_MARKET_MAIN_END_DAY || 30)}.`, closesSeason:season, closesDay:Number(TRANSFER_MARKET_MAIN_END_DAY || 30) };
+    }
+    return { open:true, season, day, window:'mitad', title:'Mercado abierto', detail:`Ventana de mitad de temporada abierta. Cierra al finalizar el día ${Number(TRANSFER_MARKET_MID_END_DAY || 178)}.`, closesSeason:season, closesDay:Number(TRANSFER_MARKET_MID_END_DAY || 178) };
+  }
+  const next = nextTransferMarketOpening(season, day);
+  return { open:false, season, day, window:null, title:'Mercado cerrado', detail:`Las operaciones acordadas se ejecutarán cuando abra el mercado: temporada ${next.season}, día ${next.day}.`, next };
+}
+function transferMarketScheduleForCurrentState(state=game){
+  const season = Math.max(1, Math.round(Number(state?.seasonNumber || 1)));
+  const day = transferMarketSeasonDayForState(state);
+  return nextTransferMarketOpening(season, day);
+}
+function activePendingTransferStatuses(){
+  return new Set(['pending','pending_market','agreed_pending_market']);
+}
+function isActivePendingTransfer(item){
+  return Boolean(item && activePendingTransferStatuses().has(String(item.status || 'pending')));
+}
+function hasActivePendingTransferForPlayer(playerId, state=game){
+  const id = Number(playerId || 0);
+  return Boolean(id && (state?.pendingTransfers || []).some(item => isActivePendingTransfer(item) && Number(item.playerId || 0) === id));
+}
+function clearPendingTransferAgreementFlags(state=game){
+  if(!state) return 0;
+  let cleared = 0;
+  (state.pendingTransfers || []).filter(isActivePendingTransfer).forEach(item => {
+    const player = playerById(Number(item.playerId || 0));
+    if(!player) return;
+    player.transferAgreed = false;
+    delete player.transferAgreedToClubId;
+    delete player.transferScheduledDate;
+    cleared += 1;
+  });
+  return cleared;
+}
+function normalizePendingTransferMarketEntry(raw, state=game){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const item = { ...raw };
+  item.playerId = Math.max(0, Math.round(Number(item.playerId || 0)));
+  item.fromClubId = Math.round(Number(item.fromClubId || 0));
+  item.toClubId = Math.round(Number(item.toClubId || 0));
+  item.type = String(item.type || (Number(item.toClubId || 0) === Number(state?.selectedClubId || 0) ? 'incoming' : 'outgoing'));
+  if(item.status === 'pending_market') item.status = 'pending';
+  if(!item.status) item.status = 'pending';
+  if(isActivePendingTransfer(item) && (!Number(item.executeSeason || 0) || !Number(item.executeDay || 0))){
+    const schedule = transferMarketScheduleForCurrentState(state);
+    item.executeSeason = schedule.season;
+    item.executeDay = schedule.day;
+    item.executeDate = schedule.date;
+  }
+  if(Number(item.executeSeason || 0) > 0 && Number(item.executeDay || 0) > 0 && !validIsoDate(item.executeDate)){
+    item.executeDate = transferMarketDateForSeasonDay(item.executeSeason, item.executeDay);
+  }
+  return item.playerId ? item : null;
+}
+function isPendingTransferReadyToExecute(item, state=game){
+  if(!isActivePendingTransfer(item) || !isTransferMarketOpen(state)) return false;
+  const currentSeason = Math.max(1, Math.round(Number(state?.seasonNumber || 1)));
+  const currentDay = transferMarketSeasonDayForState(state);
+  const executeSeason = Math.max(1, Math.round(Number(item.executeSeason || currentSeason)));
+  const executeDay = Math.max(1, Math.round(Number(item.executeDay || currentDay)));
+  return currentSeason > executeSeason || (currentSeason === executeSeason && currentDay >= executeDay);
 }
 function currentSeasonFixtureCount(){ return game?.fixtures?.length || seed?.fixtures?.length || 0; }
 function postseasonTurnsForSeason(seasonOrYear=null, fixtureCount=null){

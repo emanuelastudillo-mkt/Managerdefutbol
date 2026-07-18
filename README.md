@@ -1,4 +1,47 @@
-# Fútbol Manager MVP - V8.02
+# Fútbol Manager MVP - V8.03
+
+## V8.03 - Ventanas de mercado y transferencias programadas
+
+### Ventanas del mercado profesional
+
+- Mercado principal: desde el día 355 hasta el día 30 de la temporada siguiente.
+- Mercado de mitad de temporada: desde el día 151 hasta el día 178.
+- Las compras y ventas de jugadores con contrato se ejecutan inmediatamente sólo cuando el mercado está abierto.
+- Con el mercado cerrado se pueden negociar y aceptar operaciones, pero el jugador permanece en su club hasta la siguiente apertura.
+- Los jugadores libres y los juveniles de Tu Academia no están limitados por estas ventanas.
+- Las transferencias pagadas entre clubes bots también se procesan únicamente durante una ventana abierta.
+
+### Ofertas por cláusula
+
+- Cada oferta por cláusula concede cinco días completos para aceptar la venta o intentar convencer al jugador.
+- El cierre del mercado no reduce ese plazo ni provoca una aceptación anticipada.
+- Si el plazo vence con el mercado cerrado y el jugador no fue convencido, la transferencia queda acordada para la próxima ventana.
+- El futbolista puede jugar y entrenar con normalidad hasta que la salida se ejecute.
+- Mientras una transferencia está acordada, el jugador queda bloqueado para nuevas negociaciones, despidos bots y retiros.
+
+### Compras y ventas acordadas
+
+- Las compras realizadas con el mercado cerrado reservan y descuentan el importe al aceptar el acuerdo; el jugador llega en la siguiente apertura.
+- Las ventas acordadas con el mercado cerrado acreditan el dinero y aplican impuestos únicamente cuando el jugador deja efectivamente el club.
+- La fecha prevista queda almacenada por temporada, día y fecha de calendario.
+- Las partidas V8.02 con incorporaciones pendientes migran automáticamente al nuevo calendario de mercado.
+- Se corrigió el texto anterior que anunciaba la llegada «el próximo domingo» aunque el código utilizaba otro plazo.
+
+### Interfaz
+
+- El panel fijo de alertas muestra siempre **Mercado abierto** o **Mercado cerrado** junto a mensajes nuevos, ofertas y lesionados.
+- El aviso indica cuándo cierra la ventana actual o en qué temporada y día volverá a abrir.
+- La pantalla Mercado incluye el mismo estado sobre las pestañas de jugadores libres y contratados.
+- Los futbolistas con una transferencia ya acordada aparecen bloqueados para nuevas ofertas.
+- Si el manager cambia de club, las operaciones pendientes del club anterior se cancelan y sus bloqueos se limpian para evitar jugadores inaccesibles.
+
+### Corrección de carga
+
+- `10a-manager-player-portfolio.js` ahora se carga después de `12-modals.js`, donde se definen las funciones de transferencia que extiende. Esto evita una referencia prematura durante el inicio.
+- Los derechos económicos de la cartera se liquidan sólo cuando la transferencia se ejecuta, no al quedar acordada con el mercado cerrado.
+
+**V8.03 no rompe partidas anteriores.** Conserva los cinco slots, clubes, jugadores y temporadas. Las ofertas por cláusula pendientes reciben un vencimiento individual de cinco días desde su fecha original, y las incorporaciones pendientes se programan para la próxima ventana disponible.
+
 
 ## V8.02 - Optimización de retiros, guardados, planteles y simuladores
 

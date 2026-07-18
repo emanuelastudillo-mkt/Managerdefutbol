@@ -238,6 +238,10 @@ function miniStatusBar(label, value, max=100){
 function visualAlertItems(){
   if(!game) return [];
   const items = [];
+  const marketStatus = typeof transferMarketStatusInfo === 'function' ? transferMarketStatusInfo(game) : null;
+  if(marketStatus){
+    items.push({ tone:marketStatus.open ? 'ok' : 'warn', icon:'M', title:marketStatus.title, text:marketStatus.detail, tab:'market' });
+  }
   const tacticErrors = isRegularSeason() ? validateCurrentTactic(false) : [];
   const injured = injuredPlayersByClub(game.selectedClubId);
   const pendingTransferOffers = (game.messages || []).filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
@@ -921,7 +925,8 @@ function homeMessagesSummary(){
   </div>`;
 }
 function messageHasPendingAction(message){
-  return Boolean(message?.action && String(message.action.status || 'pending') === 'pending');
+  const status = String(message?.action?.status || '');
+  return Boolean(message?.action && ['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market'].includes(status));
 }
 function deletableOldMessages(){
   return (game?.messages || []).filter(message => !messageHasPendingAction(message));
@@ -1016,6 +1021,9 @@ function transferOfferStatusLabel(status){
     convinced:'Jugador convencido',
     forced_sale:'Venta ejecutada',
     auto_accepted_no_response:'Aceptada automáticamente: sin respuesta',
+    agreed_pending_market:'Transferencia acordada: espera mercado',
+    auto_agreed_pending_market:'Cláusula aceptada: espera mercado',
+    forced_sale_pending_market:'Salida decidida: espera mercado',
     cancelled_club_change:'Cerrada: cambiaste de club',
     expired_player_unavailable:'Cerrada: jugador no disponible'
   };
@@ -1055,7 +1063,10 @@ function messageCard(m){
 }
 function hasPendingTransferOfferForPlayer(playerId){
   const id = Number(playerId);
-  return (game?.messages || []).some(m => m.action?.type === 'transferOffer' && m.action.status === 'pending' && Number(m.action.playerId) === id);
+  const pendingMessage = (game?.messages || []).some(m => m.action?.type === 'transferOffer'
+    && ['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market'].includes(String(m.action.status || ''))
+    && Number(m.action.playerId) === id);
+  return pendingMessage || (typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(id));
 }
 function playerSeasonStatsForOffers(player){
   const st = game?.playerStats?.[player?.id] || {};
@@ -1270,29 +1281,44 @@ function specialClauseOfferCreatedSeasonDay(message){
   const calculated = typeof seasonDayFromDate === 'function' ? Number(seasonDayFromDate(date, year) || 0) : 0;
   return Math.max(1, calculated || (typeof currentGlobalDayNumber === 'function' ? Number(currentGlobalDayNumber() || 1) : 1));
 }
-function specialClauseAutomaticAcceptanceDay(createdSeasonDay){
-  const created = Math.max(1, Math.round(Number(createdSeasonDay || 1)));
-  return created <= Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
-    ? Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
-    : Number(SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355);
+function specialClauseOfferCreatedDate(message){
+  if(validIsoDate(message?.action?.createdDate)) return message.action.createdDate;
+  if(validIsoDate(message?.date)) return message.date;
+  const season = Math.max(1, Math.round(Number(message?.season || game?.seasonNumber || 1)));
+  const day = specialClauseOfferCreatedSeasonDay(message);
+  return typeof transferMarketDateForSeasonDay === 'function'
+    ? transferMarketDateForSeasonDay(season, day)
+    : (game?.currentDate || '');
 }
-function specialClauseAutoAcceptanceWarning(day){
-  return `Si no respondés ni hablás con el jugador, la cláusula se aceptará automáticamente el día ${Math.max(1, Math.round(Number(day || 0)))}.`;
+function specialClauseAutomaticAcceptanceDate(message){
+  const createdDate = specialClauseOfferCreatedDate(message);
+  return validIsoDate(createdDate) ? addDaysToIsoDate(createdDate, Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5)) : '';
+}
+function specialClauseAutoAcceptanceWarning(dueDate){
+  const days = Math.max(1, Math.round(Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5)));
+  const dueLabel = validIsoDate(dueDate) ? dueDate : 'la fecha indicada';
+  return `Tenés ${days} días completos para aceptar la oferta o intentar convencer al jugador. Si no respondés, la cláusula se aceptará automáticamente el ${dueLabel}. El cierre del mercado no acorta este plazo.`;
 }
 function ensureSpecialClauseAutoAcceptanceMetadata(message, options={}){
   if(!isPendingSpecialClauseOfferMessage(message)) return null;
   const createdSeasonDay = specialClauseOfferCreatedSeasonDay(message);
-  const currentDay = typeof currentGlobalDayNumber === 'function' ? Math.max(1, Math.round(Number(currentGlobalDayNumber() || 1))) : createdSeasonDay;
-  const fallbackDeadline = currentDay <= Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
-    ? Number(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY || 162)
-    : Number(SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355);
-  const autoAcceptSeasonDay = Math.max(1, Math.round(Number(message.action.autoAcceptSeasonDay || fallbackDeadline)));
+  const createdDate = specialClauseOfferCreatedDate(message);
+  const responseDueDate = validIsoDate(message.action.responseDueDate)
+    ? message.action.responseDueDate
+    : specialClauseAutomaticAcceptanceDate(message);
   message.action.createdSeasonDay = createdSeasonDay;
-  message.action.autoAcceptSeasonDay = autoAcceptSeasonDay;
+  message.action.createdDate = createdDate;
+  message.action.responseDays = Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5);
+  message.action.responseDueDate = responseDueDate;
   message.action.ownerClubId = Number(message.action.ownerClubId || game?.selectedClubId || 0);
-  if(options.addWarning !== false && !message.action.autoAcceptWarningAdded){
-    const warning = specialClauseAutoAcceptanceWarning(autoAcceptSeasonDay);
-    if(!String(message.body || '').includes(warning)) message.body = `${String(message.body || '').trim()} ${warning}`.trim();
+  if(Object.prototype.hasOwnProperty.call(message.action, 'autoAcceptSeasonDay')) delete message.action.autoAcceptSeasonDay;
+  const cleanBody = String(message.body || '')
+    .replace(/\s*Si no respondés ni hablás con el jugador, la cláusula se aceptará automáticamente el día \d+\./g, '')
+    .replace(/\s*Tenés \d+ días completos para aceptar la oferta o intentar convencer al jugador\.[^]*?El cierre del mercado no acorta este plazo\./g, '')
+    .trim();
+  if(options.addWarning !== false){
+    const warning = specialClauseAutoAcceptanceWarning(responseDueDate);
+    message.body = `${cleanBody} ${warning}`.trim();
     message.action.autoAcceptWarningAdded = true;
   }
   return message.action;
@@ -1314,21 +1340,21 @@ function specialClauseNoResponseMessages(player, managerName){
   const clubNameValue = clubName(player?.clubId || game?.selectedClubId) || 'el club';
   const manager = managerName || 'Manager';
   return [
-    `${manager}, esperé una respuesta sobre mi futuro y nunca llegó. Ni siquiera tuvimos una charla. No voy a seguir en un club que ignora una decisión tan importante: ejecuto la cláusula y me marcho de ${clubNameValue}.`,
-    `Soy ${playerName}. La oferta estuvo días sobre la mesa y nadie se comunicó conmigo. Ese silencio me dejó claro el lugar que ocupaba en ${clubNameValue}. Acepto la salida y continúo mi carrera en otro club.`,
-    `${manager}, no esperaba promesas, pero sí una conversación. Como nadie respondió ni explicó qué quería hacer conmigo, decidí aceptar la cláusula. Me voy decepcionado por la forma en que terminó mi etapa en ${clubNameValue}.`,
-    `La cláusula fue pagada y esperé que ${clubNameValue} se acercara a hablar. No ocurrió. Sentí indiferencia en un momento decisivo para mi carrera, así que doy por terminado mi ciclo y me marcho.`,
-    `${manager}, el problema no fue la oferta: fue no recibir una sola respuesta. Después de esperar sin que nadie hablara conmigo, ya no tengo motivos para quedarme. La transferencia se ejecuta y dejo ${clubNameValue}.`
+    `${manager}, esperé una respuesta sobre mi futuro y nunca llegó. Ni siquiera tuvimos una charla. No voy a seguir en un club que ignora una decisión tan importante: acepto la cláusula y mi salida queda acordada.`,
+    `Soy ${playerName}. La oferta estuvo cinco días sobre la mesa y nadie se comunicó conmigo. Ese silencio me dejó claro el lugar que ocupaba en ${clubNameValue}. Acepto la transferencia y continuaré mi carrera en el club comprador cuando el mercado lo permita.`,
+    `${manager}, no esperaba promesas, pero sí una conversación. Como nadie respondió ni explicó qué quería hacer conmigo, decidí aceptar la cláusula. Mi salida queda confirmada para la próxima fecha habilitada.`,
+    `La cláusula fue pagada y esperé que ${clubNameValue} se acercara a hablar. No ocurrió. Sentí indiferencia en un momento decisivo para mi carrera, así que doy por terminado mi ciclo y acepto la operación.`,
+    `${manager}, el problema no fue la oferta: fue no recibir una sola respuesta. Después de esperar sin que nadie hablara conmigo, ya no tengo motivos para rechazarla. La transferencia queda acordada.`
   ];
 }
 function processUnansweredSpecialClauseOffers(options={}){
-  const result = { checked:0, accepted:0, closed:0, messages:[], seasonDay:0 };
+  const result = { checked:0, accepted:0, scheduled:0, closed:0, messages:[], seasonDay:0 };
   if(!game) return result;
   ensurePendingSpecialClauseAutoAcceptanceMetadata();
-  const currentSeason = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
   const currentDay = typeof currentGlobalDayNumber === 'function'
     ? Math.max(1, Math.round(Number(currentGlobalDayNumber() || 1)))
     : Math.max(1, Math.round(Number(seasonDayFromDate(game.currentDate, currentSeasonYear()) || 1)));
+  const currentDate = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
   result.seasonDay = currentDay;
   const managerName = game?.rankingManagerName || storedManagerName() || 'Manager';
   const pending = (game.messages || []).filter(isPendingSpecialClauseOfferMessage);
@@ -1336,15 +1362,15 @@ function processUnansweredSpecialClauseOffers(options={}){
     result.checked += 1;
     const action = ensureSpecialClauseAutoAcceptanceMetadata(msg);
     if(!action) continue;
-    const offerSeason = Math.max(1, Math.round(Number(msg.season || currentSeason)));
-    const due = Math.max(1, Math.round(Number(action.autoAcceptSeasonDay || SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY || 355)));
-    const overdue = offerSeason < currentSeason || (offerSeason === currentSeason && currentDay >= due);
+    const dueDate = validIsoDate(action.responseDueDate) ? action.responseDueDate : specialClauseAutomaticAcceptanceDate(msg);
+    const overdue = validIsoDate(dueDate) && validIsoDate(currentDate) && daysBetweenIsoDates(dueDate, currentDate) >= 0;
     if(!overdue) continue;
     const player = playerById(Number(action.playerId || 0));
     const ownerClubId = Number(action.ownerClubId || game.selectedClubId || 0);
     if(ownerClubId && ownerClubId !== Number(game.selectedClubId || 0)){
       action.status = 'cancelled_club_change';
       action.closedAutomaticallyAtSeasonDay = currentDay;
+      action.closedAutomaticallyAtDate = currentDate;
       msg.body += ' La oferta quedó cerrada porque el manager ya no dirige al club que recibió la propuesta.';
       result.closed += 1;
       continue;
@@ -1352,34 +1378,42 @@ function processUnansweredSpecialClauseOffers(options={}){
     if(!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0)){
       action.status = 'expired_player_unavailable';
       action.closedAutomaticallyAtSeasonDay = currentDay;
+      action.closedAutomaticallyAtDate = currentDate;
       msg.body += ' La oferta quedó cerrada porque el jugador ya no pertenece al club.';
       result.closed += 1;
       continue;
     }
     const variants = specialClauseNoResponseMessages(player, managerName);
-    const text = variants[hashNumber(`special-clause-no-response-${msg.id}-${player.id}-${offerSeason}-${due}`, variants.length)];
+    const text = variants[hashNumber(`special-clause-no-response-${msg.id}-${player.id}-${dueDate}`, variants.length)];
     action.autoAcceptedAtSeasonDay = currentDay;
-    action.autoAcceptedAtDate = game.currentDate || '';
+    action.autoAcceptedAtDate = currentDate;
     action.noResponseMessage = text;
-    completeTransferSaleFromMessage(msg, player, {
+    const transferResult = completeTransferSaleFromMessage(msg, player, {
       status:'auto_accepted_no_response',
-      bodyPrefix:`La oferta se aceptó automáticamente por falta de respuesta. ${text}`,
+      bodyPrefix:`La oferta se aceptó automáticamente al cumplirse los ${Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5)} días sin respuesta. ${text}`,
       notice:`${player.name} ejecutó la cláusula después de no recibir respuesta.`,
       silent:true
-    });
+    }) || {};
+    const schedule = transferResult.schedule;
     const departureMessage = pushGameMessage({
       type:'mercado',
       priority:'high',
-      title:`${playerLastName(player.name)} se marchó sin recibir respuesta`,
-      body:text,
-      id:`special-clause-no-response-${offerSeason}-${player.id}-${due}`
+      title:transferResult.scheduled ? `Salida acordada de ${playerLastName(player.name)}` : `${playerLastName(player.name)} se marchó sin recibir respuesta`,
+      body:transferResult.scheduled
+        ? `${text} La transferencia quedó acordada y se ejecutará en la temporada ${schedule?.season || game.seasonNumber}, día ${schedule?.day || '—'}, cuando el mercado vuelva a abrir.`
+        : text,
+      id:`special-clause-no-response-${msg.season || game.seasonNumber}-${player.id}-${String(dueDate || '').replace(/-/g,'')}`
     });
     if(departureMessage) result.messages.push(departureMessage.id);
     result.accepted += 1;
+    if(transferResult.scheduled) result.scheduled += 1;
   }
   if(result.accepted || result.closed){
     saveLocal(true);
-    if(!options.silent && result.accepted) showNotice(`${result.accepted} oferta(s) por cláusula se aceptaron automáticamente por falta de respuesta.`);
+    if(!options.silent && result.accepted){
+      const scheduledText = result.scheduled ? ` ${result.scheduled} quedaron programada(s) para la próxima apertura del mercado.` : '';
+      showNotice(`${result.accepted} oferta(s) por cláusula se aceptaron automáticamente por falta de respuesta.${scheduledText}`);
+    }
   }
   return result;
 }
@@ -1439,14 +1473,15 @@ function maybeGenerateSpecialClauseOffer(match){
   const financials = buildTransferOfferFinancials(player, 100);
   const federation = transferTaxFederationForSource(source);
   const createdSeasonDay = typeof currentGlobalDayNumber === 'function' ? currentGlobalDayNumber() : seasonDayFromDate(game.currentDate, currentSeasonYear());
-  const autoAcceptSeasonDay = specialClauseAutomaticAcceptanceDay(createdSeasonDay);
-  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. ${federation} retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse. ${specialClauseAutoAcceptanceWarning(autoAcceptSeasonDay)}`;
+  const createdDate = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
+  const responseDueDate = addDaysToIsoDate(createdDate, Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5));
+  const body = `${source.name}, club de tu misma liga, comunicó que está dispuesto a pagar la cláusula completa de ${player.name}. La oferta es de ${formatMoney(financials.grossAmount)}. ${federation} retiene ${formatMoney(financials.taxAmount)}; el club recibiría ${formatMoney(financials.netAmount)} netos. Podés aceptar la venta o intentar convencer al jugador de quedarse. ${specialClauseAutoAcceptanceWarning(responseDueDate)}`;
   const msg = pushGameMessage({
     type:'mercado',
     priority:'high',
     title:`Oferta de cláusula por ${playerLastName(player.name)}`,
     body,
-    action:{ type:'transferOffer', status:'pending', origin:'special_clause', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, ownerClubId:Number(game.selectedClubId || 0), pct:100, canConvince:true, createdSeasonDay, autoAcceptSeasonDay, autoAcceptWarningAdded:true }
+    action:{ type:'transferOffer', status:'pending', origin:'special_clause', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, ownerClubId:Number(game.selectedClubId || 0), pct:100, canConvince:true, createdSeasonDay, createdDate, responseDays:Number(SPECIAL_CLAUSE_RESPONSE_DAYS || 5), responseDueDate, autoAcceptWarningAdded:true }
   });
   state.generated.push(matchday);
   return msg;
@@ -1472,7 +1507,7 @@ function maybeGenerateTransferOffer(match){
   const pct = playerOfferPercent(player, `auto-${match.id || game.matchdayIndex}-${Date.now()}`);
   const financials = buildTransferOfferFinancials(player, pct);
   const source = botTransferOfferClub(player);
-  const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás, el jugador se va del club.';
+  const note = player.transferListed ? 'El jugador figura como transferible, por eso la oferta es más probable pero tiende a ser menor.' : 'Si aceptás con el mercado cerrado, la salida quedará acordada para la próxima apertura.';
   pushGameMessage({
     type:'mercado',
     priority:'high',
@@ -1517,7 +1552,7 @@ function generateSeasonEndPlayerOffers(){
       type:'mercado',
       priority:'high',
       title:`Oferta por ${playerLastName(player.name)}`,
-      body:transferOfferBody(source, player, financials, pct, 'Si aceptás, el jugador se va del club.'),
+      body:transferOfferBody(source, player, financials, pct, 'Si aceptás con el mercado cerrado, la salida quedará acordada para la próxima apertura.'),
       action:{ type:'transferOffer', status:'pending', playerId:player.id, amount:financials.grossAmount, grossAmount:financials.grossAmount, taxAmount:financials.taxAmount, netAmount:financials.netAmount, foreignClub:source.name, sourceClubId:source.id, pct, origin:'season_end' }
     });
     if(msg) created.push(msg);
@@ -1525,7 +1560,67 @@ function generateSeasonEndPlayerOffers(){
   game.seasonEndPlayerOffers = { season, generatedAt:turnStamp({ action:'seasonEndPlayerOffers' }), count:created.length };
   return created;
 }
+function queueOutgoingTransferFromMessage(msg, player, options={}){
+  game.pendingTransfers = Array.isArray(game.pendingTransfers) ? game.pendingTransfers : [];
+  const schedule = transferMarketScheduleForCurrentState(game);
+  const existing = game.pendingTransfers.find(item => isActivePendingTransfer(item)
+    && String(item.type || '') === 'outgoing'
+    && (String(item.messageId || '') === String(msg.id || '') || Number(item.playerId || 0) === Number(player.id)));
+  const finalStatus = options.status || 'accepted';
+  const pendingStatus = finalStatus === 'auto_accepted_no_response'
+    ? 'auto_agreed_pending_market'
+    : finalStatus === 'forced_sale' ? 'forced_sale_pending_market' : 'agreed_pending_market';
+  const item = existing || {
+    id:`outgoing-${player.id}-${Date.now()}`,
+    type:'outgoing',
+    playerId:Number(player.id),
+    fromClubId:Number(game.selectedClubId || player.clubId || 0),
+    toClubId:Number(msg.action.sourceClubId || -1),
+    messageId:String(msg.id || ''),
+    status:'pending'
+  };
+  item.amount = Math.max(0, Math.round(Number(msg.action.grossAmount ?? msg.action.amount ?? 0)));
+  item.grossAmount = item.amount;
+  item.taxAmount = Math.max(0, Math.round(Number(msg.action.taxAmount || 0)));
+  item.netAmount = Math.max(0, Math.round(Number(msg.action.netAmount || item.amount - item.taxAmount)));
+  item.executeSeason = schedule.season;
+  item.executeDay = schedule.day;
+  item.executeDate = schedule.date;
+  item.agreedSeason = Number(game.seasonNumber || 1);
+  item.agreedDay = transferMarketSeasonDayForState(game);
+  item.agreedDate = game.currentDate || '';
+  item.finalStatus = finalStatus;
+  item.bodyPrefix = options.bodyPrefix || '';
+  item.notice = options.notice || '';
+  if(!existing) game.pendingTransfers.push(item);
+  msg.action.status = pendingStatus;
+  msg.action.finalStatus = finalStatus;
+  msg.action.transferPendingId = item.id;
+  msg.action.executeSeason = schedule.season;
+  msg.action.executeDay = schedule.day;
+  msg.action.executeDate = schedule.date;
+  player.transferAgreed = true;
+  player.transferListed = false;
+  player.transferAgreedToClubId = item.toClubId;
+  player.transferScheduledDate = schedule.date;
+  if(!msg.action.marketAgreementTextAdded){
+    const prefix = options.bodyPrefix ? ` ${options.bodyPrefix}` : ' Oferta aceptada.';
+    msg.body += `${prefix} Como el mercado está cerrado, el jugador continuará en el club hasta la temporada ${schedule.season}, día ${schedule.day}. El dinero se acreditará cuando se ejecute la transferencia.`;
+    msg.action.marketAgreementTextAdded = true;
+  }
+  if(options.skipSave !== true) saveLocal(true);
+  if(options.silent !== true){
+    showNotice(`${player.name}: salida acordada para la temporada ${schedule.season}, día ${schedule.day}.`);
+    renderMessages();
+  }
+  return { scheduled:true, executed:false, schedule, transfer:item };
+}
 function completeTransferSaleFromMessage(msg, player, options={}){
+  if(!msg?.action || !player) return { scheduled:false, executed:false };
+  const forceExecute = Boolean(options.forceExecute);
+  if(!forceExecute && typeof isTransferMarketOpen === 'function' && !isTransferMarketOpen(game)){
+    return queueOutgoingTransferFromMessage(msg, player, options);
+  }
   const grossAmount = Number(msg.action.grossAmount ?? msg.action.amount ?? 0);
   const taxAmount = Number(msg.action.taxAmount ?? Math.round(grossAmount * Number(TRANSFER_AFA_TAX_RATE || 0)));
   const netAmount = Number(msg.action.netAmount ?? Math.max(0, grossAmount - taxAmount));
@@ -1533,27 +1628,47 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   recordBudgetChange(netAmount, `Venta de ${player.name} (neto ${saleFederation})`, { type:'transfer_sale', playerId:player.id, grossAmount, taxAmount, netAmount, federation:saleFederation, origin:msg.action.origin || 'offer' });
   const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
   const destinationClubId = Number(msg.action.sourceClubId || -1);
-  if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, game.selectedClubId);
+  const sellerClubId = Number(player.clubId || game.selectedClubId || 0);
+  if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, sellerClubId);
   setPlayerClubId(player, destinationClubId > 0 ? destinationClubId : -1);
   player.transferListed = false;
   player.intransferible = false;
-  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true } : p);
+  player.transferAgreed = false;
+  delete player.transferAgreedToClubId;
+  delete player.transferScheduledDate;
+  game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true, transferAgreed:false } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SALE_LOSS) : 0;
-  msg.action.status = options.status || 'accepted';
+  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(sellerClubId, -TEAM_COHESION_SALE_LOSS) : 0;
+  const finalStatus = options.status || msg.action.finalStatus || 'accepted';
+  msg.action.status = finalStatus;
   msg.action.grossAmount = grossAmount;
   msg.action.taxAmount = taxAmount;
   msg.action.netAmount = netAmount;
+  msg.action.executedSeason = Number(game.seasonNumber || 1);
+  msg.action.executedDay = transferMarketSeasonDayForState(game);
+  msg.action.executedDate = game.currentDate || '';
   const federation = transferTaxFederationForSource({ id:msg.action.sourceClubId, name:msg.action.foreignClub });
   const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
   const defaultSuffix = ` Ingreso neto recibido: ${formatMoney(netAmount)}. Impuesto ${federation}: ${formatMoney(taxAmount)}.${unlockedForTransfers ? ` La directiva liberó ${formatMoney(unlockedForTransfers)} para futuros fichajes.` : ''}${cohesionText}`;
-  msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
+  if(msg.action.marketAgreementTextAdded){
+    msg.body += ` Transferencia ejecutada durante el mercado abierto.${defaultSuffix}`;
+  }else{
+    msg.body += `${options.bodyPrefix ? ' ' + options.bodyPrefix : ' Oferta aceptada.'}${defaultSuffix}`;
+  }
+  const pending = (game.pendingTransfers || []).find(item => String(item.id || '') === String(msg.action.transferPendingId || ''));
+  if(pending){
+    pending.status = 'departed';
+    pending.executedSeason = Number(game.seasonNumber || 1);
+    pending.executedDay = transferMarketSeasonDayForState(game);
+    pending.executedDate = game.currentDate || '';
+  }
   if(options.skipSave !== true) saveLocal(true);
   if(options.silent !== true){
     showNotice(options.notice || `${player.name} fue vendido. Neto recibido: ${formatMoney(netAmount)}.`);
     renderMessages();
   }
+  return { scheduled:false, executed:true, grossAmount, taxAmount, netAmount, destinationClubId };
 }
 function acceptTransferOffer(messageId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés aceptar ofertas de jugadores mientras estás sin club.'); return; }
@@ -1642,7 +1757,8 @@ function convinceSpecialClausePlayer(messageId){
   if(roll < failureChance){
     const variants = specialClauseLeaveMessages(player, managerName);
     const text = variants[hashNumber(`special-clause-leave-${player.id}-${Date.now()}`, variants.length)];
-    completeTransferSaleFromMessage(msg, player, { status:'forced_sale', bodyPrefix:text, notice:`${player.name} decidió irse. La cláusula fue ejecutada.` });
+    const transferResult = completeTransferSaleFromMessage(msg, player, { status:'forced_sale', bodyPrefix:text, notice:`${player.name} decidió irse. La cláusula fue ejecutada.` }) || {};
+    if(transferResult.scheduled) showNotice(`${player.name} decidió irse. La salida quedó acordada para la temporada ${transferResult.schedule?.season || game.seasonNumber}, día ${transferResult.schedule?.day || '—'}.`);
     showSpecialClauseResponseModal(player, text, 'leave');
     return;
   }
@@ -1681,7 +1797,8 @@ function removePlayerFromCurrentTactic(playerId){
 
 function canBotDismissPlayer(player){
   if(!player || Number(player.clubId || 0) === Number(game?.selectedClubId)) return false;
-  if(player.emergencyLocked || player.emergencyBot) return false;
+  if(player.emergencyLocked || player.emergencyBot || player.transferAgreed) return false;
+  if(typeof hasActivePendingTransferForPlayer === 'function' && hasActivePendingTransferForPlayer(player.id)) return false;
   const clubId = Number(player.clubId || 0);
   const squad = playersByClub(clubId);
   if(squad.length <= Math.max(MIN_PLAYERS_PER_CLUB, 20)) return false;

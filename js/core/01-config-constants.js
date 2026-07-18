@@ -28,9 +28,9 @@ const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS
 const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.02');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.03');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.02');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.03');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -133,7 +133,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.02');
+const APP_VERSION = configValue('version', 'V8.03');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -540,8 +540,11 @@ const SPECIAL_CLAUSE_OFFER_LAST_MATCHDAYS = Math.max(1, Math.round(configNumber(
 const SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON = Math.max(0, Math.round(configNumber('mercado.ofertaClausulaEspecialMinPorTemporada', 1, 0, 10)));
 const SPECIAL_CLAUSE_OFFER_MAX_PER_SEASON = Math.max(SPECIAL_CLAUSE_OFFER_MIN_PER_SEASON, Math.round(configNumber('mercado.ofertaClausulaEspecialMaxPorTemporada', 2, 0, 10)));
 const SPECIAL_CLAUSE_OFFER_TOP_PLAYERS = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaEspecialTopJugadores', 3, 1, 10)));
-const SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaAutoAceptarPrimerDia', 162, 1, 366)));
-const SPECIAL_CLAUSE_AUTO_ACCEPT_SECOND_DAY = Math.max(SPECIAL_CLAUSE_AUTO_ACCEPT_FIRST_DAY, Math.round(configNumber('mercado.ofertaClausulaAutoAceptarSegundoDia', 355, 1, 366)));
+const TRANSFER_MARKET_MAIN_START_DAY = Math.max(1, Math.round(configNumber('mercado.ventanaPrincipalInicioDia', 355, 1, 366)));
+const TRANSFER_MARKET_MAIN_END_DAY = Math.max(1, Math.round(configNumber('mercado.ventanaPrincipalFinDia', 30, 1, 366)));
+const TRANSFER_MARKET_MID_START_DAY = Math.max(1, Math.round(configNumber('mercado.ventanaMitadInicioDia', 151, 1, 366)));
+const TRANSFER_MARKET_MID_END_DAY = Math.max(TRANSFER_MARKET_MID_START_DAY, Math.round(configNumber('mercado.ventanaMitadFinDia', 178, 1, 366)));
+const SPECIAL_CLAUSE_RESPONSE_DAYS = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaRespuestaDias', 5, 1, 30)));
 const STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT = configNumber('mercado.ofertaMinimaEstrellaParaVentaPct', 40, 0, 100);
 const BOT_TRANSFER_OFFER_BASE_CHANCE = configNumber('mercado.probabilidadOfertaBotBase', 0.28, 0, 1);
 const BOT_TRANSFER_LISTED_EXTRA_CHANCE = configNumber('mercado.probabilidadExtraTransferible', 0.22, 0, 1);

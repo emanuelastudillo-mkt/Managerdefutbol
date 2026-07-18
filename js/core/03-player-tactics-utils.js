@@ -808,6 +808,71 @@ function visibleStats(p, skillResolver=baseSkill){
   };
 }
 
+function isLegendPlayer(player){
+  if(!player || typeof player !== 'object') return false;
+  if(player.legend === true || player.isLegend === true || player.leyenda === true) return true;
+  if(player.manualPlayer || player.manualOverallLocked || player.manualFixedClause || player.manualIdentityRecycled) return true;
+  const source = String(player?.generation?.source || player?.origen?.source || '').toLowerCase();
+  const type = String(player?.generation?.tipo || player?.origen?.tipo || '').toLowerCase();
+  return source.includes('jugadores_manuales') || type.includes('manual') || type.includes('leyenda');
+}
+function professionalQualityReductionForOverall(overall){
+  const value = clamp(Math.round(Number(overall || 0)), 1, 99);
+  const tier = (PROFESSIONAL_QUALITY_REDUCTION_TIERS || []).find(item => value >= Number(item?.min || 0) && value <= Number(item?.max || 0));
+  if(tier) return Math.max(0, Math.round(Number(tier.puntos || tier.reduction || 0)));
+  if(value >= 92) return 4;
+  if(value >= 80) return 5;
+  if(value >= 68) return 6;
+  if(value >= 43) return 5;
+  return 3;
+}
+function applyProfessionalQualityScaleToPlayer(player, options={}){
+  if(!player || typeof player !== 'object') return { changed:false, excluded:false, reduction:0 };
+  if(PROFESSIONAL_QUALITY_EXCLUDE_LEGENDS && isLegendPlayer(player)) return { changed:false, excluded:true, reduction:0 };
+  if(String(player.professionalQualityScaleVersion || '') === PROFESSIONAL_QUALITY_SCALE_VERSION) return { changed:false, excluded:false, reduction:0 };
+  const before = clamp(Math.round(Number(rawVisibleOverall(player) || player.overall || 1)), 1, 99);
+  const reduction = professionalQualityReductionForOverall(before);
+  if(reduction > 0 && player.skills && typeof player.skills === 'object' && !Array.isArray(player.skills)){
+    Object.keys(player.skills).forEach(skill => {
+      const raw = Number(player.skills[skill]);
+      if(!Number.isFinite(raw)) return;
+      player.skills[skill] = clamp(Math.round(raw) - reduction, 1, 99);
+    });
+  }
+  if(!player.manualOverallLocked && !player.overallLocked){
+    player.overall = clamp(Math.round(Number(player.overall || before)) - reduction, 1, 99);
+    player.overall = rawVisibleOverall(player);
+  }
+  player.professionalQualityScaleVersion = PROFESSIONAL_QUALITY_SCALE_VERSION;
+  player.professionalQualityReduction = reduction;
+  return { changed:reduction > 0, excluded:false, reduction, before, after:rawVisibleOverall(player), source:String(options.source || '') };
+}
+function applyProfessionalQualityScaleToCollection(players=[], options={}){
+  const seen = new Set();
+  const result = { processed:0, changed:0, excluded:0, totalReduction:0 };
+  (Array.isArray(players) ? players : []).forEach(player => {
+    if(!player || typeof player !== 'object' || seen.has(player)) return;
+    seen.add(player);
+    const applied = applyProfessionalQualityScaleToPlayer(player, options);
+    result.processed += 1;
+    if(applied.changed){ result.changed += 1; result.totalReduction += Number(applied.reduction || 0); }
+    if(applied.excluded) result.excluded += 1;
+  });
+  return result;
+}
+function migrateProfessionalQualityScaleForState(state, players=[]){
+  if(!state || !PROFESSIONAL_QUALITY_APPLY_EXISTING) return { changed:0, excluded:0, skipped:true };
+  if(String(state.professionalQualityScaleVersion || '') === PROFESSIONAL_QUALITY_SCALE_VERSION) return { changed:0, excluded:0, skipped:true };
+  const combined = [];
+  (Array.isArray(players) ? players : []).forEach(player => combined.push(player));
+  (Array.isArray(state.marketPlayers) ? state.marketPlayers : []).forEach(player => combined.push(player));
+  const result = applyProfessionalQualityScaleToCollection(combined, { source:'save_migration' });
+  state.professionalQualityScaleVersion = PROFESSIONAL_QUALITY_SCALE_VERSION;
+  state.professionalQualityScaleAppliedAtSeason = Math.max(1, Math.round(Number(state.seasonNumber || 1)));
+  state.professionalQualityScaleSummary = { changed:result.changed, excluded:result.excluded, totalReduction:result.totalReduction };
+  return result;
+}
+
 function lockedManualOverall(p){
   if(!p?.manualOverallLocked && !p?.overallLocked) return null;
   const value = Number(p?.overall || p?.media);

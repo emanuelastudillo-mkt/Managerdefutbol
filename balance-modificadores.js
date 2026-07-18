@@ -4,8 +4,8 @@
 */
 window.GAME_BALANCE_MODIFICADORES = {
   metadataBalance: {
-    version: 'V8.06',
-    nombre: 'Balance centralizado de modificadores V8.06',
+    version: 'V8.07',
+    nombre: 'Balance centralizado de modificadores V8.07',
     nota: 'Los valores definidos acá pisan los valores equivalentes de config.js.'
   },
 
@@ -17,7 +17,7 @@ window.GAME_BALANCE_MODIFICADORES = {
     efectividadIndividualPorDia: 0.25,
     curvaHabilidadActual: true,
     probabilidadMinimaSubidaHabilidad: 0,
-    multiplicadorSubidaHabilidades: 3,
+    multiplicadorSubidaHabilidades: 2,
     desgaste: {
       activo: true,
       maximo: 98,

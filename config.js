@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.06',
+  version: 'V8.07',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5,
@@ -16,7 +16,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.06', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.07', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -30,12 +30,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.06',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.07',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.06',
+    installationsUrl: 'data/instalaciones.json?v=8.07',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.06',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.07',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -324,13 +324,13 @@ window.GAME_CONFIG = {
     botsMinimoDefensores: 5,
     botsMinimoMediocampistas: 5,
     botsMinimoDelanteros: 3,
-    botsMediaEmergenciaMin: 28,
-    botsMediaEmergenciaMax: 52,
+    botsMediaEmergenciaMin: 25,
+    botsMediaEmergenciaMax: 47,
     botsFactorSueldoEmergencia: 0.35,
     agentesLibresIniciales: 300,
     agentesLibresMaximosTotales: 300,
-    agentesLibresMediaMin: 40,
-    agentesLibresMediaMax: 62,
+    agentesLibresMediaMin: 35,
+    agentesLibresMediaMax: 57,
     agentesLibresEdadMin: 19,
     agentesLibresEdadMax: 30,
     agentesLibresMaximosPorTemporada: 300,
@@ -346,6 +346,26 @@ window.GAME_CONFIG = {
     jovenesLibresEdadMin: 17,
     jovenesLibresEdadMax: 18,
     jovenesLibresPorTemporada: 0
+  },
+  calidadProfesional: {
+    version: 'V8.07',
+    aplicarAPartidasExistentes: true,
+    excluirLeyendas: true,
+    // Sólo afecta futbolistas profesionales. Tu Academia conserva íntegramente su generación y crecimiento.
+    reduccionPorMedia: [
+      { min:92, max:99, puntos:4 },
+      { min:80, max:91, puntos:5 },
+      { min:68, max:79, puntos:6 },
+      { min:43, max:67, puntos:5 },
+      { min:1, max:42, puntos:3 }
+    ],
+    leyendas: {
+      multiplicadorEntrenamiento: 3,
+      desarrolloBotProbabilidad: 0.18,
+      maximoBoostBotPorHabilidad: 18,
+      regeneracionMediaMin: 40,
+      regeneracionMediaMax: 62
+    }
   },
   cohesion: {
     // Balance de cohesión ajustado para que el equipo gane cohesión con mayor claridad.
@@ -412,9 +432,9 @@ window.GAME_CONFIG = {
     recuperacionDesgasteDiariaBot: 4,
     desgasteMaximoBotAntesDePartido: 38,
     pisoFisicoBotAntesDePartido: 58,
-    desarrolloPlantelPorTemporada: 0.18,
+    desarrolloPlantelPorTemporada: 0.14,
     bonusDesarrolloPorPosicion: 0.08,
-    maximoBoostBotPorHabilidad: 18,
+    maximoBoostBotPorHabilidad: 12,
     // Cada bot rota perfiles tácticos de forma determinista. Los clubes no parten todos del mismo perfil.
     tacticasVariadas: {
       activo: true,
@@ -716,7 +736,7 @@ window.GAME_CONFIG = {
     probabilidadMinimaSubidaHabilidad: 0,
     // Multiplicador directo de velocidad para boosts temporales de habilidades profesionales.
     // Las habilidades base del profesional no cambian; los boosts se reducen al 30% al cerrar temporada.
-    multiplicadorSubidaHabilidades: 3,
+    multiplicadorSubidaHabilidades: 2,
     planSemanalInicial: {
       pre: 'regenerative',
       morning: 'intense',

@@ -3360,7 +3360,8 @@ function applySeasonTrainingSkillBoost(player, skill){
   return 1;
 }
 function trainingExpectedBoostProgress(player, skill, chanceScale=1, mode='individual'){
-  const scaled = Math.max(0, Number(chanceScale || 0)) * TRAINING_SKILL_GAIN_MULTIPLIER;
+  const gainMultiplier = (typeof isLegendPlayer === 'function' && isLegendPlayer(player)) ? LEGEND_TRAINING_SKILL_GAIN_MULTIPLIER : TRAINING_SKILL_GAIN_MULTIPLIER;
+  const scaled = Math.max(0, Number(chanceScale || 0)) * gainMultiplier;
   if(scaled <= 0) return 0;
   const finalChance = trainingSkillFinalChance(player, skill);
   if(mode === 'intense'){

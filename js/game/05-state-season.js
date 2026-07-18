@@ -3184,6 +3184,8 @@ function normalizeGame(saved){
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.manualRetiredPlayerIds = Array.from(new Set((Array.isArray(normalized.manualRetiredPlayerIds) ? normalized.manualRetiredPlayerIds : (Array.isArray(normalized.retiredManualPlayerIds) ? normalized.retiredManualPlayerIds : [])).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   normalized.retiredPlayerPool = normalizeRetiredPlayerPool(normalized.retiredPlayerPool || []);
+  const professionalQualityMigration = typeof migrateProfessionalQualityScaleForState === 'function' ? migrateProfessionalQualityScaleForState(normalized, seed?.players || []) : { changed:0 };
+  if(Number(professionalQualityMigration?.changed || 0) > 0) normalized._needsAutosave = true;
   normalized.statusRebases = (normalized.statusRebases && typeof normalized.statusRebases === 'object' && !Array.isArray(normalized.statusRebases)) ? normalized.statusRebases : {};
   normalized.injuryRecoveryTurnsBySeason = (normalized.injuryRecoveryTurnsBySeason && typeof normalized.injuryRecoveryTurnsBySeason === 'object' && !Array.isArray(normalized.injuryRecoveryTurnsBySeason)) ? normalized.injuryRecoveryTurnsBySeason : {};
   normalized.lastOwnProblems = normalized.lastOwnProblems || [];
@@ -3777,6 +3779,8 @@ function newGame(selectedClubId, options={}){
     rankingLastAutomaticUploadGameDate: '',
     manualRetiredPlayerIds: [],
     retiredPlayerPool: [],
+    professionalQualityScaleVersion: typeof PROFESSIONAL_QUALITY_SCALE_VERSION !== 'undefined' ? PROFESSIONAL_QUALITY_SCALE_VERSION : 'V8.07',
+    professionalQualityScaleAppliedAtSeason: 1,
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,
@@ -4612,7 +4616,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V8.06',
+    version:'V8.07',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4634,7 +4638,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V8.06';
+    clean.version = 'V8.07';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4653,7 +4657,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V8.06',
+    version:'V8.07',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4679,7 +4683,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V8.06',
+    version:'V8.07',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -7946,8 +7950,8 @@ function takeRetiredPlayersAsFreeAgents(count=0, options={}){
       salaryFactor:Number(options.salaryFactor ?? MARKET_FREE_AGENT_SALARY_FACTOR),
       freeAgent:true,
       youthFreeAgent:Boolean(options.youthFreeAgent),
-      mediaMin:options.mediaMin ?? null,
-      mediaMax:options.mediaMax ?? null,
+      mediaMin:entry.manualIdentity ? LEGEND_REGEN_MEDIA_MIN : (options.mediaMin ?? null),
+      mediaMax:entry.manualIdentity ? LEGEND_REGEN_MEDIA_MAX : (options.mediaMax ?? null),
       nationalityOverride:entry.nationality
     });
     player.name = entry.name;
@@ -7959,6 +7963,7 @@ function takeRetiredPlayersAsFreeAgents(count=0, options={}){
     player.previousRetirementSeason = entry.retiredSeason;
     player.retirementRecycles = Number(entry.timesRecycled || 0) + 1;
     player.manualIdentityRecycled = Boolean(entry.manualIdentity);
+    if(entry.manualIdentity) player.legend = true;
     player.generation = {
       ...(player.generation || {}),
       source:'retired_player_pool',
@@ -8825,7 +8830,10 @@ function applyBotSeasonDevelopment(clubIds, rankMap={}){
       .slice(0, Math.max(18, Math.min(28, playersByClub(clubId).length)));
     squad.forEach(player => {
       const youngBonus = Number(player.age || 0) <= 23 ? 0.05 : 0;
-      const chance = clamp((BOT_BALANCE_DEVELOPMENT_CHANCE + (positionScale * BOT_BALANCE_POSITION_DEVELOPMENT_BONUS) + youngBonus) * profile.development, 0, 0.80);
+      const legendPlayer = typeof isLegendPlayer === 'function' && isLegendPlayer(player);
+      const developmentChance = legendPlayer ? LEGEND_BOT_DEVELOPMENT_CHANCE : BOT_BALANCE_DEVELOPMENT_CHANCE;
+      const maxSkillBoost = legendPlayer ? LEGEND_BOT_MAX_SKILL_BOOST : BOT_BALANCE_MAX_SKILL_BOOST;
+      const chance = clamp((developmentChance + (positionScale * BOT_BALANCE_POSITION_DEVELOPMENT_BONUS) + youngBonus) * profile.development, 0, 0.80);
       const roll = hashNumber(`bot-development-${game?.seasonNumber || 1}-${clubId}-${player.id}`, 10000) / 10000;
       if(roll >= chance) return;
       const gainCount = 1 + (roll < chance * 0.18 ? 1 : 0);
@@ -8836,8 +8844,8 @@ function applyBotSeasonDevelopment(clubIds, rankMap={}){
       for(let i=0; i<gainCount; i++){
         const skill = skills[hashNumber(`bot-development-skill-${game?.seasonNumber || 1}-${player.id}-${i}`, skills.length)];
         const current = Math.round(Number(game.playerSkillBoosts[player.id][skill] || 0));
-        if(current >= BOT_BALANCE_MAX_SKILL_BOOST) continue;
-        game.playerSkillBoosts[player.id][skill] = clamp(current + 1, 0, BOT_BALANCE_MAX_SKILL_BOOST);
+        if(current >= maxSkillBoost) continue;
+        game.playerSkillBoosts[player.id][skill] = clamp(current + 1, 0, maxSkillBoost);
         playerGains += 1;
       }
       if(playerGains > 0){

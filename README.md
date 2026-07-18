@@ -1,5 +1,20 @@
-# Fútbol Manager MVP - V8.06
+# Fútbol Manager MVP - V8.07
 
+
+
+## V8.07 - Reducción global de calidad profesional
+
+- Se redujo una sola vez la calidad base de los futbolistas profesionales según su media previa: -4 entre 92-99, -5 entre 80-91, -6 entre 68-79, -5 entre 43-67 y -3 entre 1-42.
+- La migración se aplica también a partidas existentes y queda registrada para no repetirse al volver a cargar.
+- Los jugadores Leyenda/manuales quedan completamente excluidos: no pierden habilidades, conservan el multiplicador de entrenamiento y el desarrollo bot anteriores, y sus regeneraciones mantienen el rango previo de agentes libres.
+- Tu Academia no fue modificada: se conservan captaciones, medias iniciales, crecimiento, juveniles excepcionales, empleados, Predio y residencias.
+- La generación profesional futura usa rangos más bajos: 88-95, 75-87, 62-74, 38-61 y 15-37.
+- Los agentes libres futuros pasan de 40-62 a 35-57 y los refuerzos de emergencia bots de 28-52 a 25-47.
+- El multiplicador de entrenamiento profesional general baja de 3 a 2. Las Leyendas mantienen 3.
+- El desarrollo anual bot baja de 18% a 14% y su máximo por habilidad de 18 a 12. Las Leyendas mantienen 18% y máximo 18.
+- No se recalculan salarios, cláusulas ni valores ya guardados por esta migración.
+
+**V8.07 no rompe partidas anteriores.** Al cargar una carrera previa se reduce una sola vez la base profesional no legendaria; se conservan clubes, contratos, estadísticas, entrenamiento acumulado, cinco slots y toda la Academia. La modificación deportiva es intencional y no vuelve a aplicarse.
 
 ## V8.06 - Inicio de Tu Academia y tratamientos automáticos
 

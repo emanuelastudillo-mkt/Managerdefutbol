@@ -25,12 +25,12 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.06');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.07');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.06');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.07');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.06');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.07');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -52,7 +52,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.06', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.07', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -133,7 +133,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.06');
+const APP_VERSION = configValue('version', 'V8.07');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -242,9 +242,18 @@ const BOT_BALANCE_MAINTENANCE_COHESION_GAIN = configNumber('equilibrioBots.recup
 const BOT_BALANCE_DAILY_WEAR_RECOVERY = configNumber('equilibrioBots.recuperacionDesgasteDiariaBot', 4, 0, 30);
 const BOT_BALANCE_MATCH_WEAR_CAP = configNumber('equilibrioBots.desgasteMaximoBotAntesDePartido', 38, 0, 98);
 const BOT_BALANCE_EMERGENCY_CONDITION_FLOOR = configNumber('equilibrioBots.pisoFisicoBotAntesDePartido', 58, 0, 99);
-const BOT_BALANCE_DEVELOPMENT_CHANCE = configNumber('equilibrioBots.desarrolloPlantelPorTemporada', 0.18, 0, 1);
+const BOT_BALANCE_DEVELOPMENT_CHANCE = configNumber('equilibrioBots.desarrolloPlantelPorTemporada', 0.14, 0, 1);
 const BOT_BALANCE_POSITION_DEVELOPMENT_BONUS = configNumber('equilibrioBots.bonusDesarrolloPorPosicion', 0.08, 0, 1);
-const BOT_BALANCE_MAX_SKILL_BOOST = configNumber('equilibrioBots.maximoBoostBotPorHabilidad', 18, 0, 30);
+const BOT_BALANCE_MAX_SKILL_BOOST = configNumber('equilibrioBots.maximoBoostBotPorHabilidad', 12, 0, 30);
+const PROFESSIONAL_QUALITY_SCALE_VERSION = String(configValue('calidadProfesional.version', 'V8.07') || 'V8.07');
+const PROFESSIONAL_QUALITY_APPLY_EXISTING = configBoolean('calidadProfesional.aplicarAPartidasExistentes', true);
+const PROFESSIONAL_QUALITY_EXCLUDE_LEGENDS = configBoolean('calidadProfesional.excluirLeyendas', true);
+const PROFESSIONAL_QUALITY_REDUCTION_TIERS = Array.isArray(configValue('calidadProfesional.reduccionPorMedia', [])) ? configValue('calidadProfesional.reduccionPorMedia', []) : [];
+const LEGEND_TRAINING_SKILL_GAIN_MULTIPLIER = configNumber('calidadProfesional.leyendas.multiplicadorEntrenamiento', 3, 1, 20);
+const LEGEND_BOT_DEVELOPMENT_CHANCE = configNumber('calidadProfesional.leyendas.desarrolloBotProbabilidad', 0.18, 0, 1);
+const LEGEND_BOT_MAX_SKILL_BOOST = configNumber('calidadProfesional.leyendas.maximoBoostBotPorHabilidad', 18, 0, 30);
+const LEGEND_REGEN_MEDIA_MIN = configNumber('calidadProfesional.leyendas.regeneracionMediaMin', 40, 1, 99);
+const LEGEND_REGEN_MEDIA_MAX = Math.max(LEGEND_REGEN_MEDIA_MIN, configNumber('calidadProfesional.leyendas.regeneracionMediaMax', 62, 1, 99));
 const BOT_MANAGER_TOP_PLAYERS_COUNT = Math.max(3, Math.min(5, Math.round(configNumber('equilibrioBots.tacticaContraManager.cantidadMejoresJugadores', 5, 3, 5))));
 const BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS = configNumber('equilibrioBots.tacticaContraManager.bonusInclusionMejorJugador', 5000, 1000, 50000);
 const BOT_QUICK_OVEREXERTION_ENABLED = configBoolean('equilibrioBots.tacticaRapida.sobreexigenciaSiPierde', true);
@@ -306,7 +315,7 @@ const TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efect
 const TRAINING_INDIVIDUAL_INITIAL = configValue('entrenamiento.entrenamientoIndividualInicial', DEFAULT_INDIVIDUAL_TRAINING_TYPE);
 const TRAINING_SKILL_CURVE_ENABLED = configValue('entrenamiento.curvaHabilidadActual', true) !== false;
 const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidadMinimaSubidaHabilidad', 0, 0, 1);
-const TRAINING_SKILL_GAIN_MULTIPLIER = configNumber('entrenamiento.multiplicadorSubidaHabilidades', 3, 1, 20);
+const TRAINING_SKILL_GAIN_MULTIPLIER = configNumber('entrenamiento.multiplicadorSubidaHabilidades', 2, 1, 20);
 const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial', { pre:'regenerative', morning:'intense', afternoon:'tactical', night:'dayoff' });
 const TRAINING_APPLY_CURRENT_DAY_ONLY = configBoolean('entrenamiento.aplicarSoloDiaActual', true);
 const PLAYER_WEAR_ENABLED = configBoolean('entrenamiento.desgaste.activo', true);
@@ -486,8 +495,8 @@ const STADIUM_MEMBER_CAMPAIGNS = (Array.isArray(configValue('estadio.campaniasSo
 }).filter(item => item.id && item.cost > 0 && item.durationDays > 0);
 const MARKET_FREE_AGENT_COUNT = Math.min(300, configNumber('plantel.agentesLibresIniciales', 300, 0));
 const MARKET_FREE_AGENT_HARD_MAX = Math.max(0, Math.min(300, Math.round(configNumber('plantel.agentesLibresMaximosTotales', 300, 0))));
-const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 40, 1, 99);
-const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 62, 1, 99));
+const MARKET_FREE_AGENT_MEDIA_MIN = configNumber('plantel.agentesLibresMediaMin', 35, 1, 99);
+const MARKET_FREE_AGENT_MEDIA_MAX = Math.max(MARKET_FREE_AGENT_MEDIA_MIN, configNumber('plantel.agentesLibresMediaMax', 57, 1, 99));
 const MARKET_FREE_AGENT_AGE_MIN = configNumber('plantel.agentesLibresEdadMin', 19, 15, 45);
 const MARKET_FREE_AGENT_AGE_MAX = Math.max(MARKET_FREE_AGENT_AGE_MIN, configNumber('plantel.agentesLibresEdadMax', 30, 15, 55));
 const PLAYER_AGE_DECAY_ENABLED = configBoolean('plantel.deterioroEdadActivo', true);
@@ -623,8 +632,8 @@ const BOT_MIN_GOALKEEPERS = configNumber('plantel.botsMinimoPorteros', 2, 1);
 const BOT_MIN_DEFENDERS = configNumber('plantel.botsMinimoDefensores', 5, 0);
 const BOT_MIN_MIDFIELDERS = configNumber('plantel.botsMinimoMediocampistas', 5, 0);
 const BOT_MIN_ATTACKERS = configNumber('plantel.botsMinimoDelanteros', 3, 0);
-const BOT_EMERGENCY_MEDIA_MIN = configNumber('plantel.botsMediaEmergenciaMin', 28, 1, 99);
-const BOT_EMERGENCY_MEDIA_MAX = Math.max(BOT_EMERGENCY_MEDIA_MIN, configNumber('plantel.botsMediaEmergenciaMax', 52, 1, 99));
+const BOT_EMERGENCY_MEDIA_MIN = configNumber('plantel.botsMediaEmergenciaMin', 25, 1, 99);
+const BOT_EMERGENCY_MEDIA_MAX = Math.max(BOT_EMERGENCY_MEDIA_MIN, configNumber('plantel.botsMediaEmergenciaMax', 47, 1, 99));
 const BOT_EMERGENCY_SALARY_FACTOR = configNumber('plantel.botsFactorSueldoEmergencia', 0.35, 0);
 
 const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
@@ -717,11 +726,11 @@ const PLAYER_GENERATION_POSITION_GROUPS = [
   { id:'ATT', probability:0.30, positions:['ED','EI','DC'] }
 ];
 const PLAYER_GENERATION_MEDIA_RANGES = [
-  { id:'elite_mundial', probability:0.005, media_min:92, media_max:99, salaryMultiplier:3000000 },
-  { id:'estrella', probability:0.07, media_min:80, media_max:91, salaryMultiplier:1000000 },
-  { id:'titular_competitivo', probability:0.245, media_min:68, media_max:79, salaryMultiplier:300000 },
-  { id:'profesional_promedio_bajo', probability:0.50, media_min:43, media_max:67, salaryMultiplier:80000 },
-  { id:'bajo_nivel', probability:0.18, media_min:19, media_max:42, salaryMultiplier:10000 }
+  { id:'elite_mundial', probability:0.005, media_min:88, media_max:95, salaryMultiplier:3000000 },
+  { id:'estrella', probability:0.07, media_min:75, media_max:87, salaryMultiplier:1000000 },
+  { id:'titular_competitivo', probability:0.245, media_min:62, media_max:74, salaryMultiplier:300000 },
+  { id:'profesional_promedio_bajo', probability:0.50, media_min:38, media_max:61, salaryMultiplier:80000 },
+  { id:'bajo_nivel', probability:0.18, media_min:15, media_max:37, salaryMultiplier:10000 }
 ];
 const PLAYER_ECONOMY_SCALE = configNumber('economia.escalaSueldosYClausulas', 0.10, 0);
 const PLAYER_CLAUSE_VALUE_SCALE = configNumber('economia.escalaClausulas', 0.10, 0);

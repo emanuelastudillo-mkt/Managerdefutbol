@@ -195,7 +195,7 @@ function normalizeManualDatabasePlayer(player, seedData){
     retired:Boolean(mercado.retirado ?? player.retired ?? false),
     manualPlayer:true,
     manualRespawnAfterRetirement:Boolean(mercado.reapareceAlRetirarse ?? mercado.respawnAfterRetirement ?? player.reapareceAlRetirarse ?? player.manualRespawnAfterRetirement ?? false),
-    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V8.06-manual-webp-retired-player-pool', tipo:player?.origen?.tipo || 'manual_activo' }
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V8.07-manual-webp-retired-player-pool', tipo:player?.origen?.tipo || 'manual_activo' }
   };
 }
 function manualRetiredPlayerIdSet(options={}){
@@ -768,6 +768,7 @@ function applyPlayersDatabase(seedData, database){
   const normalized = database.players
     .map(normalizeDatabasePlayer)
     .filter(player => Number.isFinite(player.id) && (Number(player.clubId) === 0 || validClubIds.has(Number(player.clubId))));
+  if(typeof applyProfessionalQualityScaleToCollection === 'function') applyProfessionalQualityScaleToCollection(normalized, { source:'base_players_database' });
   if(!normalized.length) return seedData;
   const dbClubIds = new Set(normalized.map(player => Number(player.clubId || 0)).filter(Boolean));
   const dbMaxId = Math.max(0, ...normalized.map(player => Number(player.id || 0)).filter(Number.isFinite));
@@ -776,6 +777,7 @@ function applyPlayersDatabase(seedData, database){
     .map(normalizeDatabasePlayer)
     .filter(player => Number(player.clubId || 0) > 0 && validClubIds.has(Number(player.clubId)) && !dbClubIds.has(Number(player.clubId)))
     .map(player => ensurePlayerEconomics({ ...player, id:nextId++ }));
+  if(typeof applyProfessionalQualityScaleToCollection === 'function') applyProfessionalQualityScaleToCollection(generatedForUncoveredClubs, { source:'fallback_club_players' });
   seedData.players = normalized.concat(generatedForUncoveredClubs);
   seedData.meta = { ...(seedData.meta || {}), playersSource:database.source, playersDatabaseVersion:database.raw?.metadata?.version || 'local', playersDatabaseValidation:database.raw?.validation || databaseValidationCounts(normalized), generatedPlayersKept:generatedForUncoveredClubs.length };
   seedData.meta.signature = `${seedSignature(seedData)}-${playersDatabaseHash(seedData.players)}`;

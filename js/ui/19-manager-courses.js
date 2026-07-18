@@ -1,4 +1,4 @@
-/* V7.69 · Licencias progresivas actualizadas para contratos y Academia personal. */
+/* V8.01 · Licencias progresivas actualizadas para contratos y Academia personal. */
 
 const MANAGER_COURSE_REWARD_POINTS = 1000;
 const MANAGER_COURSE_ORDER = ['basic','national','international'];
@@ -64,7 +64,7 @@ const MANAGER_COURSE_LICENSES = {
 
 function createInitialManagerCoursesState(){
   return {
-    version:'V7.69',
+    version:'V8.01',
     checked:{ basic:[], national:[], international:[] },
     completed:{ basic:false, national:false, international:false },
     completedAt:{ basic:null, national:null, international:null },
@@ -95,7 +95,7 @@ function normalizeManagerCoursesState(value=null){
   });
   clean.rewardClaimed = Boolean(src.rewardClaimed && clean.completed.international);
   clean.rewardClaimedAt = clean.rewardClaimed ? (src.rewardClaimedAt || clean.completedAt.international || null) : null;
-  clean.version = 'V7.69';
+  clean.version = 'V8.01';
   return clean;
 }
 function managerCoursesHasProgress(value=null){

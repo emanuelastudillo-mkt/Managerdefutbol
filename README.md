@@ -1,4 +1,28 @@
-# Fútbol Manager MVP - V7.69
+# Fútbol Manager MVP - V8.01
+
+## V8.01 - Base oficial, auditoría estructural y corrección del guardado manual
+
+### Nueva línea de versiones
+
+- Este paquete establece V8.01 como nueva base oficial del proyecto.
+- Se actualizaron versión visible, versión interna, cabeceras del cliente online y parámetros de caché de archivos.
+- Las próximas entregas continúan con V8.02 y siguientes.
+
+### Guardado manual
+
+- El botón Guardar ya no entrega el evento del clic como parámetro `silent`.
+- El guardado manual vuelve a mostrar su confirmación.
+- Si IndexedDB rechaza la operación, se registra el error y se muestra un aviso visible.
+
+### Auditoría de código
+
+- Se validaron sintaxis JavaScript, JSON, CSS, referencias globales, configuración, archivos de datos y focos de rendimiento.
+- No se eliminó código potencialmente muerto en esta versión para evitar mezclar la nueva base oficial con una depuración de mayor alcance.
+- El informe completo se incluye en `AUDITORIA-CODIGO-V8.01.md`.
+- Se identificaron candidatos de eliminación segura, contradicciones entre simuladores, duplicación de configuración y oportunidades de optimización del sistema de guardado.
+
+**V8.01 no rompe partidas anteriores.** Conserva el esquema de guardado y todos los datos existentes.
+
 
 ## V7.69 - Ayuda y cursos adaptados a contratos y Academia personal
 

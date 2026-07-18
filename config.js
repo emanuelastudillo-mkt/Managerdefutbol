@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.07',
+  version: 'V8.08',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5,
@@ -16,7 +16,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.07', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.08', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -30,12 +30,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.07',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.08',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.07',
+    installationsUrl: 'data/instalaciones.json?v=8.08',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.07',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.08',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -348,7 +348,7 @@ window.GAME_CONFIG = {
     jovenesLibresPorTemporada: 0
   },
   calidadProfesional: {
-    version: 'V8.07',
+    version: 'V8.08',
     aplicarAPartidasExistentes: true,
     excluirLeyendas: true,
     // Sólo afecta futbolistas profesionales. Tu Academia conserva íntegramente su generación y crecimiento.
@@ -376,9 +376,13 @@ window.GAME_CONFIG = {
     // Movimientos de plantel: vender 2 y fichar 2 jugadores reduce 10 puntos en total.
     perdidaPorFichaje: 2,
     perdidaPorVenta: 3,
+    perdidaPorDespedirJugador: 1,
     gananciaPorContratoProfesionalJuvenil: 3,
     probabilidadEntrenamientoTacticoPorCasilla: 0.35,
     gananciaEntrenamientoTacticoPorCasilla: 1
+  },
+  moral: {
+    perdidaPlantelPorDespedirJugador: 1
   },
   capitania: {
     activo: true,
@@ -446,6 +450,15 @@ window.GAME_CONFIG = {
       cantidadMejoresJugadores: 5,
       bonusInclusionMejorJugador: 5000,
       auditarCobertura: true
+    },
+    tacticaRapida: {
+      sobreexigenciaSiPierde: true,
+      reglasDiferencia: [
+        { diferenciaMin: 1, diferenciaMax: 1, desgasteFisicoPct: 0.20, bonusAtaquePct: 0.10 },
+        { diferenciaMin: 2, diferenciaMax: 2, desgasteFisicoPct: 0.30, bonusAtaquePct: 0.20 },
+        { diferenciaMin: 3, diferenciaMax: 99, desgasteFisicoPct: 0.50, bonusAtaquePct: 0.30 }
+      ],
+      maxGolesExtraPorEquipo: 1
     }
   },
   economia: {
@@ -595,6 +608,11 @@ window.GAME_CONFIG = {
     deterioroCampoMultiplicador: 2,
     // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
     deterioroCapacidadPorTemporadaPct: 1,
+    clima: {
+      lluviaDeterioroActivo: true,
+      lluviaLeveExtraDeterioro: 3,
+      lluviaIntensaExtraDeterioro: 7
+    },
     // Los equipos bots no degradan su campo durante la temporada: reciben un estado fijo al iniciar cada temporada.
     botsCampoFijoPorTemporada: true,
     botsCampoMinimo: 30,
@@ -724,7 +742,8 @@ window.GAME_CONFIG = {
     }
   },
   entrenamiento: {
-    // Cada avance semanal aplica el plan de 7 días con 4 turnos generales por día.
+    // Al avanzar se aplican sólo los bloques correspondientes al día actual.
+    aplicarSoloDiaActual: true,
     efectividadPorCasilla: 0.25,
     // Quinto entrenamiento diario: se aplica individualmente a cada jugador una vez por día.
     entrenamientoIndividualDiario: true,
@@ -1037,18 +1056,91 @@ window.GAME_CONFIG = {
 };
 
 
-(function aplicarModificadoresBalanceSeparados(){
-  const balance = window.GAME_BALANCE_MODIFICADORES;
-  if(!balance || typeof balance !== 'object') return;
-  const mergeDeep = (base, extra) => {
-    Object.entries(extra || {}).forEach(([key, value]) => {
-      if(value && typeof value === 'object' && !Array.isArray(value)){
-        base[key] = mergeDeep(base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]) ? base[key] : {}, value);
-      }else{
-        base[key] = value;
-      }
-    });
-    return base;
+(function configurarAuditoriaDeConfiguracion(){
+  const clonePlain = value => {
+    try{ return JSON.parse(JSON.stringify(value)); }
+    catch(_){ return value; }
   };
-  window.GAME_CONFIG = mergeDeep(window.GAME_CONFIG || {}, balance);
+  const sameValue = (a, b) => {
+    try{ return JSON.stringify(a) === JSON.stringify(b); }
+    catch(_){ return Object.is(a, b); }
+  };
+  const isPlainObject = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  const baseSnapshot = clonePlain(window.GAME_CONFIG || {});
+  const audit = {
+    baseVersion:String(window.GAME_CONFIG?.version || ''),
+    sources:[],
+    applied:[],
+    redundant:[],
+    unknown:[],
+    overwritten:[],
+    invalid:[]
+  };
+  const pathOwners = new Map();
+  const getAtPath = (source, path) => path.reduce((node, key) => isPlainObject(node) || Array.isArray(node) ? node[key] : undefined, source);
+  const setAtPath = (target, path, value) => {
+    let node = target;
+    path.slice(0, -1).forEach(key => {
+      if(!isPlainObject(node[key])) node[key] = {};
+      node = node[key];
+    });
+    node[path[path.length - 1]] = clonePlain(value);
+  };
+  const walkLeaves = (source, prefix=[], out=[]) => {
+    Object.entries(source || {}).forEach(([key, value]) => {
+      const path = [...prefix, key];
+      if(isPlainObject(value)) walkLeaves(value, path, out);
+      else out.push({ path, value });
+    });
+    return out;
+  };
+  window.GAME_CONFIG_BASE = baseSnapshot;
+  window.GAME_CONFIG_AUDIT = audit;
+  window.applyGameConfigOverrides = function applyGameConfigOverrides(sourceName, overrides){
+    const source = String(sourceName || 'override').trim() || 'override';
+    const leaves = walkLeaves(isPlainObject(overrides) ? overrides : {});
+    audit.sources.push({ source, entries:leaves.length });
+    leaves.forEach(({ path, value }) => {
+      const pathText = path.join('.');
+      const baseValue = getAtPath(baseSnapshot, path);
+      if(typeof baseValue === 'undefined'){
+        audit.unknown.push({ source, path:pathText, value:clonePlain(value) });
+        console.warn(`[CONFIG] ${source} intentó sobrescribir una ruta inexistente: ${pathText}`);
+        return;
+      }
+      if(typeof value === 'number' && !Number.isFinite(value)){
+        audit.invalid.push({ source, path:pathText, value });
+        console.error(`[CONFIG] ${source} contiene un número inválido en ${pathText}`);
+        return;
+      }
+      if(sameValue(getAtPath(window.GAME_CONFIG, path), value)){
+        audit.redundant.push({ source, path:pathText });
+        console.warn(`[CONFIG] Sobrescritura redundante omitida: ${source} → ${pathText}`);
+        return;
+      }
+      if(pathOwners.has(pathText)){
+        audit.overwritten.push({ path:pathText, previous:pathOwners.get(pathText), source });
+        console.warn(`[CONFIG] ${pathText} fue sobrescrito por más de una fuente: ${pathOwners.get(pathText)} → ${source}`);
+      }
+      setAtPath(window.GAME_CONFIG, path, value);
+      pathOwners.set(pathText, source);
+      audit.applied.push({ source, path:pathText, from:clonePlain(baseValue), to:clonePlain(value) });
+    });
+    return audit;
+  };
+  window.validateGameConfig = function validateGameConfig(){
+    const result = {
+      ok:audit.unknown.length === 0 && audit.invalid.length === 0 && audit.overwritten.length === 0,
+      baseVersion:audit.baseVersion,
+      sources:audit.sources.length,
+      applied:audit.applied.length,
+      redundant:audit.redundant.length,
+      unknown:audit.unknown.length,
+      overwritten:audit.overwritten.length,
+      invalid:audit.invalid.length
+    };
+    if(result.ok) console.info('[CONFIG] Configuración validada', result);
+    else console.error('[CONFIG] Se detectaron conflictos de configuración', result, audit);
+    return result;
+  };
 })();

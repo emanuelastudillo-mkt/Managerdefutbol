@@ -1,6 +1,59 @@
-# Fútbol Manager MVP - V8.07
+# Fútbol Manager MVP - V8.08
 
+## V8.08 - Refactorización profunda de configuración, módulos y estilos
 
+### Configuración centralizada
+
+- `config.js` pasa a ser la única fuente de valores base del juego.
+- Los 12 valores que sólo estaban definidos en `balance-modificadores.js` se trasladaron a la configuración principal.
+- Se eliminaron 92 sobrescrituras redundantes que repetían exactamente los valores base.
+- `balance-modificadores.js` queda como una capa opcional vacía, destinada únicamente a diferencias intencionales.
+- Se agregó una auditoría automática que detecta rutas inexistentes, números inválidos, valores redundantes y una misma ruta modificada por más de una fuente.
+- El orden de carga queda fijado: primero `config.js` y después cualquier capa opcional de balance.
+
+### División del estado y la temporada
+
+El antiguo `js/game/05-state-season.js` se separó por responsabilidades, manteniendo el mismo orden de ejecución:
+
+- `05b-manager-challenges.js`: retos y desafíos del manager.
+- `05c-manager-job-market.js`: mercado laboral y cambios de club.
+- `05d-founder-career.js`: fundación de club y continuidad de carrera.
+- `05e-integrity-navigation-saves.js`: integridad, navegación y guardados.
+- `05-state-season.js`: núcleo de estado y temporada.
+- `05f-club-world-cup.js`: Mundial de Clubes.
+- `05g-season-lifecycle.js`: cierre, transición e inicio de temporada.
+
+La reconstrucción concatenada conserva el código funcional anterior; las únicas adiciones son encabezados descriptivos de cada módulo y la actualización de versión.
+
+### División de simulación, economía y entrenamiento
+
+El antiguo módulo monolítico `09-simulation-economy-training.js` se reemplazó por:
+
+- `09a-team-cohesion-summary.js`: cohesión y resúmenes.
+- `09b-calendar-quick-simulation.js`: calendario y simulación rápida.
+- `09c-economy-finance.js`: economía y finanzas.
+- `09d-stadium-condition-morale.js`: estadio, condición y moral.
+- `09e-training.js`: entrenamiento.
+
+El archivo anterior se conserva únicamente como referencia de compatibilidad y ya no se carga desde `index.html`.
+
+### CSS modular
+
+- `style.css` se convirtió en un manifiesto de compatibilidad y dejó de contener el bloque monolítico.
+- Los estilos activos se separaron en ocho archivos dentro de `styles/`.
+- Se eliminaron 19 reglas exactamente duplicadas y sin efecto adicional.
+- Se conservaron las redefiniciones históricas necesarias para responsive y especificidad.
+- `90-cascade-compat.css` mantiene siete cruces de cascada cuya prioridad dependía del orden anterior.
+
+### Validación
+
+- Se compararon 24 pantallas y modales representativos, además de la simulación viva y el cierre de temporada.
+- No se detectaron errores JavaScript durante la navegación automatizada.
+- Los estilos calculados coinciden con V8.07 en las pantallas auditadas.
+- Se validaron sintaxis JavaScript, JSON, CSS, referencias de carga y orden de módulos.
+- Se mantienen los cinco slots y no cambia el formato de guardado.
+
+**V8.08 no rompe partidas anteriores.** Es una reorganización interna: conserva estado, balance efectivo, clubes, jugadores, contratos, calendarios, cinco slots y progreso. No incorpora migraciones de datos ni vuelve a aplicar la reducción de calidad de V8.07.
 
 ## V8.07 - Reducción global de calidad profesional
 

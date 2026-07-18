@@ -853,3 +853,151 @@ button.cwc-group-result{cursor:pointer}
 }
 @media (max-width:720px){
   .manager-contract-schedule{grid-template-columns:1fr;}}
+
+/* V8.09 · Categorías salariales de Competencias Online */
+.challenge-category-badge{
+  --category-accent:#94a3b8;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  width:max-content;
+  max-width:100%;
+  min-height:28px;
+  padding:3px 9px 3px 4px;
+  border:1px solid color-mix(in srgb,var(--category-accent) 42%,transparent);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--category-accent) 12%,rgba(2,6,23,.72));
+  color:var(--text);
+  vertical-align:middle;
+}
+.challenge-category-badge>b{
+  display:grid;
+  place-items:center;
+  width:21px;
+  height:21px;
+  flex:0 0 21px;
+  border-radius:50%;
+  background:var(--category-accent);
+  color:#07111f;
+  font-size:.72rem;
+  line-height:1;
+  font-weight:950;
+}
+.challenge-category-badge>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;font-weight:850}
+.challenge-category-badge.large{min-height:38px;padding:5px 12px 5px 5px;gap:9px}
+.challenge-category-badge.large>b{width:28px;height:28px;flex-basis:28px;font-size:.86rem}
+.challenge-category-badge.large>span{font-size:.84rem}
+.challenge-category-a{--category-accent:#a8b4c5}
+.challenge-category-n{--category-accent:#75b98c}
+.challenge-category-p{--category-accent:#64a8d8}
+.challenge-category-c{--category-accent:#b18de0}
+.challenge-category-e{--category-accent:#e0b15e}
+.challenge-category-l{--category-accent:#e3e8ef}
+.challenge-publish-tags{display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.challenge-current-category{
+  display:grid;
+  grid-template-columns:minmax(220px,auto) minmax(0,1fr);
+  align-items:center;
+  gap:14px;
+  margin:14px 0;
+  padding:12px 14px;
+  border:1px solid rgba(148,163,184,.16);
+  border-radius:14px;
+  background:rgba(2,6,23,.22);
+}
+.challenge-current-category>div{display:flex;align-items:center;gap:10px;min-width:0}
+.challenge-current-category>div>span:last-child{display:grid;gap:2px;min-width:0}
+.challenge-current-category>div>span:last-child small{color:var(--muted)}
+.challenge-current-category>p{margin:0;color:var(--muted);font-size:.82rem;text-align:right}
+.challenge-category-navigation{
+  display:grid;
+  grid-template-columns:minmax(190px,1fr) auto;
+  align-items:center;
+  gap:16px;
+  margin-bottom:14px;
+  padding:12px 14px;
+}
+.challenge-category-navigation p{margin:2px 0}
+.challenge-category-buttons{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.challenge-category-buttons button{
+  display:grid;
+  grid-template-columns:26px auto;
+  align-items:center;
+  gap:6px;
+  min-height:36px;
+  padding:4px 10px 4px 4px;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:999px;
+  background:rgba(255,255,255,.025);
+  color:var(--text);
+  cursor:pointer;
+}
+.challenge-category-buttons button>b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(148,163,184,.2);font-size:.75rem}
+.challenge-category-buttons button>span{font-size:.72rem;font-weight:800}
+.challenge-category-buttons button:hover{border-color:rgba(148,163,184,.42)}
+.challenge-category-buttons button.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent)}
+.challenge-category-buttons button.active>b{background:var(--accent);color:#fff}
+.challenge-simple-card-actions .challenge-category-badge{align-self:flex-end}
+.challenge-simple-card-footer>span{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.challenge-history-center{display:grid;justify-items:center;align-content:center;gap:7px;min-width:92px}
+.challenge-history-center .challenge-category-badge>span{display:none}
+.challenge-history-center .challenge-category-badge{padding-right:4px}
+.challenge-ranking-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.challenge-ranking-header>div{display:flex;align-items:center;gap:12px;min-width:0}
+.challenge-ranking-header h3,.challenge-ranking-header p{margin:0}
+.challenge-champion-banner{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border:1px solid rgba(224,177,94,.38);
+  border-radius:14px;
+  background:linear-gradient(110deg,rgba(224,177,94,.16),rgba(255,255,255,.025));
+}
+.challenge-champion-banner>span{font-size:.7rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#f4cf84}
+.challenge-champion-banner>strong{font-size:1.05rem}
+.challenge-champion-banner>small{color:var(--muted);text-align:right}
+.challenge-champion-banner.empty{filter:saturate(.2);border-style:dashed}
+.challenge-ranking-provisional{opacity:.68}
+.challenge-scoring-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.challenge-scoring-rules p{margin:0;padding:10px 11px;border-radius:11px;background:rgba(255,255,255,.03);color:var(--muted);font-size:.76rem;line-height:1.45}
+.challenge-scoring-rules strong{color:var(--text)}
+.challenge-category-modal{max-width:650px;margin:0 auto}
+.challenge-publish-category-options{display:grid;gap:10px;margin:18px 0}
+.challenge-publish-category-options>button{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:14px;
+  width:100%;
+  padding:14px;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:15px;
+  background:rgba(255,255,255,.028);
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+}
+.challenge-publish-category-options>button:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.challenge-publish-category-options>button>span{display:grid;gap:3px}
+.challenge-publish-category-options strong{font-size:1rem}
+.challenge-publish-category-options small{color:var(--text);font-weight:750}
+.challenge-publish-category-options em{color:var(--muted);font-size:.76rem;font-style:normal}
+.challenge-detail-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+@media (max-width:800px){
+  .challenge-current-category,.challenge-category-navigation{grid-template-columns:minmax(0,1fr)}
+  .challenge-current-category>p{text-align:left}
+  .challenge-category-buttons{justify-content:flex-start}
+  .challenge-scoring-rules{grid-template-columns:minmax(0,1fr)}
+  .challenge-champion-banner{grid-template-columns:minmax(0,1fr)}
+  .challenge-champion-banner>small{text-align:left}
+}
+@media (max-width:680px){
+  .challenge-category-buttons button{grid-template-columns:26px;padding-right:4px}
+  .challenge-category-buttons button>span{display:none}
+  .challenge-publish-head{grid-template-columns:auto minmax(0,1fr)}
+  .challenge-publish-tags{grid-column:1/-1;justify-content:flex-start}
+  .challenge-history-center{min-width:72px}
+  .challenge-publish-category-options>button{grid-template-columns:minmax(0,1fr)}
+}

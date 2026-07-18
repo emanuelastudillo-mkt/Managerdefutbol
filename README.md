@@ -1,4 +1,93 @@
-# Fútbol Manager MVP - V8.08
+# Fútbol Manager MVP - V8.09
+
+
+## V8.09 - Competencias Online por categorías salariales
+
+### Categorías
+
+Los Desafíos Online pasan a organizarse en seis competencias independientes según el sueldo mensual total de la convocatoria publicada:
+
+| Logo | Categoría | Rango salarial |
+|---|---|---:|
+| A | Ascenso | Hasta `$5.000.000` |
+| N | Nacional | `$5.000.001` a `$10.000.000` |
+| P | Profesional | `$10.000.001` a `$20.000.000` |
+| C | Continental | `$20.000.001` a `$45.000.000` |
+| E | Élite | `$45.000.001` a `$100.000.000` |
+| L | Libre | Sin límite |
+
+No existen restricciones por estrellas ni un máximo salarial individual. La categoría se determina exclusivamente por la suma de sueldos de titulares y suplentes incluidos en el snapshot.
+
+### Publicar un desafío
+
+Al pulsar **Publicar desafío**, el juego permite elegir entre:
+
+- la categoría salarial natural del equipo actual;
+- Libre.
+
+Si la convocatoria supera `$100.000.000`, su única opción es Libre.
+
+El snapshot incorpora la categoría dentro del JSON que ya utiliza el sistema. No se agregaron tablas, columnas, rutas ni migraciones para SQL o Worker.
+
+### Aceptar un desafío
+
+- Ascenso, Nacional, Profesional, Continental y Élite sólo pueden ser aceptadas por una convocatoria del mismo rango.
+- Libre puede ser aceptada por cualquier equipo.
+- La categoría se valida antes de reservar el desafío y nuevamente antes de ejecutar el simulador.
+- Los desafíos anteriores a V8.09, que no poseen categoría guardada, se consideran Libre.
+
+### Ranking y campeones
+
+Cada categoría dispone de su ranking independiente:
+
+- Campeón de Ascenso.
+- Campeón de Nacional.
+- Campeón de Profesional.
+- Campeón de Continental.
+- Campeón de Élite.
+- Campeón de Libre.
+
+No existe un máximo de partidos. Se requieren **10 partidos** en la categoría para abandonar el estado provisional, obtener posición oficial y poder ser campeón.
+
+### Puntaje dinámico
+
+- Victoria base: 100 puntos.
+- Empate base: 30 puntos.
+- Derrota: 0 puntos.
+- La primera victoria contra cada rival vale más.
+- Repetir triunfos contra el mismo manager reduce progresivamente el premio.
+- Vencer a un equipo que acumula derrotas entrega cada vez menos puntos.
+- Vencer a un rival con buenos resultados aumenta el premio.
+- Ganar estando más abajo en la tabla incrementa los puntos.
+- Ganar siendo uno de los líderes los reduce.
+
+El cálculo se realiza cronológicamente desde el historial existente. La pantalla muestra partidos, resultados, rivales diferentes vencidos, mejor triunfo y puntos acumulados.
+
+### Interfaz
+
+- Se incorporaron los logos A, N, P, C, E y L.
+- Disponibles puede filtrarse por categoría.
+- Cada tarjeta informa la competencia a la que pertenece.
+- Ranking permite cambiar entre las seis tablas.
+- El líder clasificado aparece como campeón de su categoría.
+
+### Archivos principales modificados
+
+- `config.js`
+- `index.html`
+- `js/core/01-config-constants.js`
+- `js/game/05-state-season.js`
+- `js/game/18-challenges-online.js`
+- `js/ui/12-modals.js`
+- `js/ui/19-manager-courses.js`
+- `styles/60-manager-competitions-online.css`
+- `balance-modificadores.js`
+- `README.md`
+- `AUDITORIA-CATEGORIAS-ONLINE-V8.09.md`
+
+### Compatibilidad
+
+**V8.09 no rompe partidas anteriores.** No modifica guardados, planteles, contratos, cinco slots, SQL ni Worker. Los desafíos y partidos anteriores continúan disponibles dentro de Libre.
 
 ## V8.08 - Refactorización profunda de configuración, módulos y estilos
 

@@ -8,16 +8,32 @@ let challengeDetail = null;
 let challengePollTimer = null;
 let challengeCooldownTimer = null;
 let challengeActionBusy = false;
+let challengeAvailableCategory = '';
+let challengeRankingCategory = '';
+let challengeRankingHistoryCache = [];
 
 function challengeConfig(){
   const cfg = window.GAME_CONFIG?.desafiosOnline || {};
+  const categories = Array.isArray(cfg.categoriasSalariales) && cfg.categoriasSalariales.length
+    ? cfg.categoriasSalariales
+    : [
+        { codigo:'A', nombre:'Ascenso', minimo:0, maximo:5000000 },
+        { codigo:'N', nombre:'Nacional', minimo:5000001, maximo:10000000 },
+        { codigo:'P', nombre:'Profesional', minimo:10000001, maximo:20000000 },
+        { codigo:'C', nombre:'Continental', minimo:20000001, maximo:45000000 },
+        { codigo:'E', nombre:'Élite', minimo:45000001, maximo:100000000 },
+        { codigo:'L', nombre:'Libre', minimo:0, maximo:null, libre:true }
+      ];
   return {
     active:cfg.activo !== false,
     endpoint:String(cfg.endpoint || rankingStoredEndpoint?.() || RANKING_APPS_SCRIPT_URL || '').trim(),
     simulatorVersion:String(cfg.versionSimulador || window.ChallengeSimulator?.version || 'challenge-sim-v1'),
     pageSize:Math.max(5, Math.min(100, Math.round(Number(cfg.resultadosPorPagina || 40)))),
     pollMs:Math.max(10000, Math.round(Number(cfg.actualizacionMs || 30000))),
-    actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000))
+    actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000)),
+    categories,
+    rankingMinimumMatches:Math.max(1, Math.round(Number(cfg.partidosMinimosRanking || 10))),
+    rankingHistoryPageSize:Math.max(20, Math.min(500, Math.round(Number(cfg.historialRankingPorPagina || 100))))
   };
 }
 function challengeEndpoint(){ return normalizeRankingEndpoint(challengeConfig().endpoint); }
@@ -65,7 +81,8 @@ function challengeRefreshActionCooldown(){
   const authenticated = Boolean(challengeToken());
   document.querySelectorAll('[data-challenge-cooldown-action]').forEach(button => {
     const defaultLabel = String(button.dataset.defaultLabel || 'Continuar');
-    button.disabled = challengeActionBusy || !authenticated || cooldown.active;
+    const categoryAllowed = button.dataset.challengeCategoryAllowed !== 'false';
+    button.disabled = challengeActionBusy || !authenticated || cooldown.active || !categoryAllowed;
     button.textContent = challengeActionBusy ? 'Procesando...' : cooldown.active ? `Disponible en ${challengeActionCooldownLabel(cooldown.remainingMs)}` : defaultLabel;
   });
   const note = document.getElementById('challengeActionCooldownNote');
@@ -87,7 +104,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.08') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.09') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -108,6 +125,89 @@ async function challengeRequest(path, options={}){
 function challengeSafeNumber(value, fallback=0){
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+function challengeCategoryDefinitions(){
+  const seen = new Set();
+  const rows = (challengeConfig().categories || []).map(raw => {
+    const code = String(raw?.codigo || raw?.code || '').trim().toUpperCase().slice(0,1);
+    const free = raw?.libre === true || code === 'L';
+    const minimum = Math.max(0, Math.round(challengeSafeNumber(raw?.minimo ?? raw?.minimum, 0)));
+    const rawMaximum = raw?.maximo ?? raw?.maximum;
+    const maximum = free || rawMaximum == null || rawMaximum === '' ? null : Math.max(minimum, Math.round(challengeSafeNumber(rawMaximum, minimum)));
+    return { code, name:String(raw?.nombre || raw?.name || code || 'Categoría').trim(), minimum, maximum, free };
+  }).filter(item => item.code && !seen.has(item.code) && seen.add(item.code));
+  if(!rows.some(item => item.code === 'L')) rows.push({ code:'L', name:'Libre', minimum:0, maximum:null, free:true });
+  return rows;
+}
+function challengeCategoryByCode(code){
+  const clean = String(code || '').trim().toUpperCase();
+  return challengeCategoryDefinitions().find(item => item.code === clean) || challengeCategoryDefinitions().find(item => item.code === 'L');
+}
+function challengeCategoryRangeLabel(category){
+  const row = typeof category === 'string' ? challengeCategoryByCode(category) : category;
+  if(!row || row.free) return 'Sin límite salarial';
+  if(row.minimum <= 0) return `Hasta ${formatMoney(row.maximum || 0)}`;
+  return `${formatMoney(row.minimum)} a ${formatMoney(row.maximum || row.minimum)}`;
+}
+function challengeNaturalCategoryForSalary(salaryTotal){
+  const salary = Math.max(0, Math.round(challengeSafeNumber(salaryTotal, 0)));
+  const normal = challengeCategoryDefinitions().filter(item => !item.free);
+  return normal.find(item => salary >= item.minimum && (item.maximum == null || salary <= item.maximum)) || challengeCategoryByCode('L');
+}
+function challengeNaturalCategory(snapshot={}){
+  return challengeNaturalCategoryForSalary(challengeSnapshotSalary(snapshot));
+}
+function challengeSnapshotCategoryCode(snapshot={}, options={}){
+  const competition = snapshot?.competition || snapshot?.competenciaOnline || {};
+  const explicit = String(competition.categoryCode || competition.codigoCategoria || competition.category || '').trim().toUpperCase();
+  if(explicit && challengeCategoryDefinitions().some(item => item.code === explicit)) return explicit;
+  if(options.inferLegacy === true) return challengeNaturalCategory(snapshot).code;
+  return 'L';
+}
+function challengeRowCategoryCode(row={}){
+  return challengeSnapshotCategoryCode(row.creatorSnapshot || row.snapshot || {}, { inferLegacy:false });
+}
+function challengeCategoryBadgeMarkup(value, options={}){
+  const code = typeof value === 'string' ? value : challengeSnapshotCategoryCode(value || {}, { inferLegacy:false });
+  const category = challengeCategoryByCode(code);
+  const title = `${category.name} · ${challengeCategoryRangeLabel(category)}`;
+  return `<span class="challenge-category-badge challenge-category-${escapeHtml(category.code.toLowerCase())} ${options.large ? 'large' : ''}" title="${escapeHtml(title)}"><b>${escapeHtml(category.code)}</b><span>${escapeHtml(category.name)}</span></span>`;
+}
+function challengePrepareSnapshotCategory(snapshot, requestedCode){
+  const natural = challengeNaturalCategory(snapshot);
+  const requested = challengeCategoryByCode(requestedCode || natural.code);
+  if(!requested.free && requested.code !== natural.code){
+    throw new Error(`La convocatoria pertenece a ${natural.name} (${challengeCategoryRangeLabel(natural)}) y no puede presentarse en ${requested.name}.`);
+  }
+  snapshot.snapshotVersion = Math.max(2, Number(snapshot.snapshotVersion || 1));
+  snapshot.competition = {
+    system:'salary-categories-v1',
+    categoryCode:requested.code,
+    categoryName:requested.name,
+    naturalCategoryCode:natural.code,
+    naturalCategoryName:natural.name,
+    salaryTotal:challengeSnapshotSalary(snapshot),
+    minimumSalary:requested.minimum,
+    maximumSalary:requested.maximum,
+    free:requested.free === true,
+    scoringVersion:'category-points-v1'
+  };
+  return snapshot;
+}
+function challengeCurrentNaturalCategoryCode(){
+  try{ return challengeNaturalCategory(buildChallengeSnapshot()).code; }
+  catch(_){ return 'L'; }
+}
+function challengeEnsureCategorySelections(){
+  const codes = new Set(challengeCategoryDefinitions().map(item => item.code));
+  const natural = challengeCurrentNaturalCategoryCode();
+  if(!codes.has(challengeAvailableCategory)) challengeAvailableCategory = natural;
+  if(!codes.has(challengeRankingCategory)) challengeRankingCategory = natural;
+}
+function challengeCategoryNavigationMarkup(context='available'){
+  const active = context === 'ranking' ? challengeRankingCategory : challengeAvailableCategory;
+  const attribute = context === 'ranking' ? 'data-challenge-ranking-category' : 'data-challenge-available-category';
+  return `<div class="card challenge-category-navigation"><div><p class="label">Categorías salariales</p><p class="muted small">Cada letra representa el sueldo total de la convocatoria. Libre admite cualquier equipo.</p></div><div class="challenge-category-buttons">${challengeCategoryDefinitions().map(category => `<button type="button" ${attribute}="${escapeHtml(category.code)}" class="${active === category.code ? 'active' : ''}" title="${escapeHtml(`${category.name}: ${challengeCategoryRangeLabel(category)}`)}"><b>${escapeHtml(category.code)}</b><span>${escapeHtml(category.name)}</span></button>`).join('')}</div></div>`;
 }
 function challengeFormation(){ return String(game?.tactic?.formation || game?.tactic?.formationId || '4-4-2'); }
 function challengePlayerValue(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.clause ?? player?.value, 0))); }
@@ -198,7 +298,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.08'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.09'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -302,16 +402,31 @@ function challengeSimpleScore(result={}, label='Final'){
     <b>${hasScore ? `${Number(result.homeGoals || 0)}–${Number(result.awayGoals || 0)}` : 'VS'}</b>
   </div>`;
 }
+function challengeAcceptEligibility(row){
+  const targetCode = challengeRowCategoryCode(row);
+  if(targetCode === 'L') return { allowed:true, targetCode, label:'Aceptar desafío' };
+  try{
+    const snapshot = buildChallengeSnapshot();
+    const natural = challengeNaturalCategory(snapshot);
+    return natural.code === targetCode
+      ? { allowed:true, targetCode, label:'Aceptar desafío' }
+      : { allowed:false, targetCode, label:`Requiere ${targetCode} · ${challengeCategoryByCode(targetCode).name}` };
+  }catch(error){ return { allowed:false, targetCode, label:'Equipo no disponible', error:error.message }; }
+}
 function challengeOpenCard(row){
   const snapshot = row.creatorSnapshot || row.snapshot || {};
   const action = challengeActionUiState('Aceptar desafío');
+  const eligibility = challengeAcceptEligibility(row);
+  const disabled = action.disabled || !eligibility.allowed;
+  const label = !eligibility.allowed ? eligibility.label : action.label;
   return `<article class="card challenge-card challenge-open-card challenge-simple-single-card">
     ${challengeSimpleTeamSide(snapshot, row.creatorUsername || 'Manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club' })}
     <div class="challenge-simple-card-actions">
+      ${challengeCategoryBadgeMarkup(challengeRowCategoryCode(row))}
       <span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span>
       <small>Publicado ${escapeHtml(challengeDateLabel(row.createdAt))}</small>
       <small>Vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</small>
-      <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="Aceptar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
+      <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="${escapeHtml(label)}" data-challenge-category-allowed="${eligibility.allowed ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
     </div>
   </article>`;
 }
@@ -325,6 +440,7 @@ function challengeMineCard(row){
     return `<article class="card challenge-card challenge-simple-single-card challenge-mine-simple-card">
       ${challengeSimpleTeamSide(home, row.creatorUsername || 'Tu manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club' })}
       <div class="challenge-simple-card-actions">
+        ${challengeCategoryBadgeMarkup(challengeRowCategoryCode(row))}
         <span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span>
         <small>Esperando rival</small>
         <small>${escapeHtml(challengeDateLabel(row.createdAt))}</small>
@@ -340,7 +456,7 @@ function challengeMineCard(row){
       ${challengeSimpleTeamSide(away, row.opponentUsername || 'Manager', 'away', { showSalary:true, fallbackClub:row.opponentClubName || 'Club visitante' })}
     </div>
     <div class="challenge-simple-card-footer">
-      <span>${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span>
+      <span>${challengeCategoryBadgeMarkup(challengeRowCategoryCode(row))}${escapeHtml(challengeDateLabel(row.completedAt || row.createdAt))}</span>
       <div class="challenge-actions">${actions}</div>
     </div>
   </article>`;
@@ -351,28 +467,174 @@ function challengeHistoryCard(row){
   const result = row.match || {};
   return `<article class="card challenge-card challenge-history-card challenge-history-simple" data-challenge-view="${escapeHtml(row.id)}" title="Ver detalle del partido">
     ${challengeSimpleTeamSide(home, row.creatorUsername || 'Manager', 'home', { fallbackClub:row.creatorClubName || 'Club local' })}
-    ${challengeSimpleScore(result, '')}
+    <div class="challenge-history-center">${challengeCategoryBadgeMarkup(challengeRowCategoryCode(row))}${challengeSimpleScore(result, '')}</div>
     ${challengeSimpleTeamSide(away, row.opponentUsername || 'Manager', 'away', { fallbackClub:row.opponentClubName || 'Club visitante' })}
   </article>`;
 }
 
+function challengeMatchGoals(row, side='home'){
+  const match = row?.match || {};
+  const result = match?.result || {};
+  const score = result?.score || {};
+  return Math.max(0, Math.round(challengeSafeNumber(side === 'home' ? (match.homeGoals ?? score.home) : (match.awayGoals ?? score.away), 0)));
+}
+function challengeManagerIdentity(row, side='home'){
+  const isHome = side === 'home';
+  const id = String(isHome ? (row?.creatorUserId || '') : (row?.opponentUserId || '')).trim();
+  const username = String(isHome ? (row?.creatorUsername || 'Manager') : (row?.opponentUsername || 'Manager')).trim() || 'Manager';
+  return { key:id ? `id:${id}` : `user:${username.toLocaleLowerCase('es')}`, username };
+}
+function challengeCompletedMatch(row){
+  if(!row || String(row.status || 'completed') !== 'completed' || !row.opponentUsername) return null;
+  const homeSnapshot = row.creatorSnapshot || {};
+  const awaySnapshot = row.opponentSnapshot || {};
+  const categoryCode = challengeSnapshotCategoryCode(homeSnapshot, { inferLegacy:false });
+  const awayCode = challengeSnapshotCategoryCode(awaySnapshot, { inferLegacy:false });
+  if(categoryCode !== awayCode) return null;
+  const home = challengeManagerIdentity(row, 'home');
+  const away = challengeManagerIdentity(row, 'away');
+  if(home.key === away.key) return null;
+  return {
+    id:String(row.id || `${row.completedAt || row.createdAt || ''}:${home.key}:${away.key}`),
+    completedAt:String(row.completedAt || row.match?.createdAt || row.createdAt || ''),
+    categoryCode,
+    home,
+    away,
+    homeGoals:challengeMatchGoals(row, 'home'),
+    awayGoals:challengeMatchGoals(row, 'away'),
+    homeRating:challengeSafeNumber(homeSnapshot?.team?.rating, 0),
+    awayRating:challengeSafeNumber(awaySnapshot?.team?.rating, 0)
+  };
+}
+function challengeRankingState(key, username){
+  return {
+    key, username, played:0, wins:0, draws:0, losses:0, goalsFor:0, goalsAgainst:0,
+    rawPoints:0, points:0, bestMatchPoints:0, uniqueWins:0, opponents:new Set(), winsAgainst:new Map(),
+    ratingTotal:0, opponentRatingTotal:0
+  };
+}
+function challengeOpponentQualityMultiplier(opponent){
+  const played = Math.max(0, Number(opponent?.played || 0));
+  const raw = Math.max(0, Number(opponent?.rawPoints || 0));
+  const quality = (raw + 3) / (played * 3 + 6);
+  return clamp(0.45 + 1.10 * quality, 0.50, 1.50);
+}
+function challengeRankingPositions(states){
+  const sorted = [...states.values()].filter(row => row.played > 0).sort((a,b) =>
+    b.points - a.points || b.rawPoints - a.rawPoints || b.wins - a.wins ||
+    (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || a.username.localeCompare(b.username, 'es')
+  );
+  return new Map(sorted.map((row,index) => [row.key, index + 1]));
+}
+function challengePositionMultiplier(manager, opponent, states, positions){
+  if(states.size < 4 || manager.played < 3 || opponent.played < 3) return 1;
+  const managerRank = positions.get(manager.key) || states.size;
+  const opponentRank = positions.get(opponent.key) || states.size;
+  return clamp(1 + (managerRank - opponentRank) * 0.035, 0.75, 1.35);
+}
+function challengeRepeatVictoryMultiplier(previousWins){
+  const wins = Math.max(0, Math.round(Number(previousWins || 0)));
+  if(wins === 0) return 1.15;
+  if(wins === 1) return 0.80;
+  if(wins === 2) return 0.62;
+  if(wins === 3) return 0.50;
+  return Math.max(0.35, 0.50 - (wins - 3) * 0.04);
+}
+function challengeAwardedPoints(result, manager, opponent, states, positions){
+  if(result === 'loss') return 0;
+  const base = result === 'win' ? 100 : 30;
+  const quality = challengeOpponentQualityMultiplier(opponent);
+  const position = challengePositionMultiplier(manager, opponent, states, positions);
+  const repeat = result === 'win' ? challengeRepeatVictoryMultiplier(manager.winsAgainst.get(opponent.key) || 0) : 1;
+  return Math.max(result === 'win' ? 20 : 8, Math.round(base * quality * position * repeat));
+}
+function challengeBuildCategoryRanking(historyRows, categoryCode){
+  const code = challengeCategoryByCode(categoryCode).code;
+  const matches = (historyRows || []).map(challengeCompletedMatch).filter(Boolean).filter(match => match.categoryCode === code).sort((a,b) => {
+    const timeA = new Date(a.completedAt || 0).getTime() || 0;
+    const timeB = new Date(b.completedAt || 0).getTime() || 0;
+    return timeA - timeB || a.id.localeCompare(b.id);
+  });
+  const states = new Map();
+  const getState = identity => {
+    if(!states.has(identity.key)) states.set(identity.key, challengeRankingState(identity.key, identity.username));
+    const state = states.get(identity.key);
+    state.username = identity.username || state.username;
+    return state;
+  };
+  matches.forEach(match => {
+    const home = getState(match.home);
+    const away = getState(match.away);
+    const positions = challengeRankingPositions(states);
+    const homeResult = match.homeGoals > match.awayGoals ? 'win' : match.homeGoals < match.awayGoals ? 'loss' : 'draw';
+    const awayResult = homeResult === 'win' ? 'loss' : homeResult === 'loss' ? 'win' : 'draw';
+    const homeAward = challengeAwardedPoints(homeResult, home, away, states, positions);
+    const awayAward = challengeAwardedPoints(awayResult, away, home, states, positions);
+    [[home,away,homeResult,match.homeGoals,match.awayGoals,homeAward,match.homeRating,match.awayRating], [away,home,awayResult,match.awayGoals,match.homeGoals,awayAward,match.awayRating,match.homeRating]].forEach(([state,opponent,result,gf,ga,award,rating,opponentRating]) => {
+      state.played += 1;
+      state.goalsFor += gf;
+      state.goalsAgainst += ga;
+      state.ratingTotal += rating;
+      state.opponentRatingTotal += opponentRating;
+      state.opponents.add(opponent.key);
+      state.points += award;
+      state.bestMatchPoints = Math.max(state.bestMatchPoints, award);
+      if(result === 'win'){
+        state.wins += 1;
+        state.rawPoints += 3;
+        const priorWins = state.winsAgainst.get(opponent.key) || 0;
+        if(priorWins === 0) state.uniqueWins += 1;
+        state.winsAgainst.set(opponent.key, priorWins + 1);
+      }else if(result === 'draw'){
+        state.draws += 1;
+        state.rawPoints += 1;
+      }else state.losses += 1;
+    });
+  });
+  const minimum = challengeConfig().rankingMinimumMatches;
+  const normalized = [...states.values()].map(state => ({
+    username:state.username,
+    played:state.played,
+    wins:state.wins,
+    draws:state.draws,
+    losses:state.losses,
+    goalsFor:state.goalsFor,
+    goalsAgainst:state.goalsAgainst,
+    goalDifference:state.goalsFor - state.goalsAgainst,
+    points:state.points,
+    bestMatchPoints:state.bestMatchPoints,
+    uniqueWins:state.uniqueWins,
+    uniqueOpponents:state.opponents.size,
+    averageTeamRating:state.played ? state.ratingTotal / state.played : 0,
+    averageOpponentRating:state.played ? state.opponentRatingTotal / state.played : 0,
+    qualified:state.played >= minimum
+  }));
+  normalized.sort((a,b) => Number(b.qualified) - Number(a.qualified) || b.points - a.points || b.wins - a.wins || b.goalDifference - a.goalDifference || b.uniqueWins - a.uniqueWins || a.username.localeCompare(b.username, 'es'));
+  let officialRank = 0;
+  normalized.forEach(row => { row.rank = row.qualified ? ++officialRank : null; });
+  return normalized;
+}
 function challengeRankingMarkup(rows){
+  const category = challengeCategoryByCode(challengeRankingCategory);
+  const minimum = challengeConfig().rankingMinimumMatches;
+  const champion = rows.find(row => row.qualified && row.rank === 1) || null;
   return `<div class="card challenge-ranking-card">
-    <div class="row"><div><h3>Ranking de desafíos</h3><p class="muted small">Puntaje calculado por resultado y diferencia de media entre equipos. Ganar con un equipo inferior suma mucho más.</p></div><span class="pill">Amistoso online</span></div>
-    <div class="table-wrap"><table class="challenge-ranking-table"><thead><tr><th>#</th><th>Manager</th><th>PJ</th><th>G/E/P</th><th>GF-GC</th><th>Media</th><th>Rival prom.</th><th>Mejor partido</th><th>PTS</th></tr></thead><tbody>
-      ${rows.map((row,index) => `<tr>
-        <td>${Number(row.rank || index + 1)}</td>
+    <div class="challenge-ranking-header"><div>${challengeCategoryBadgeMarkup(category.code,{large:true})}<div><h3>Ranking ${escapeHtml(category.name)}</h3><p class="muted small">Sin límite de partidos. Se requieren ${minimum} encuentros para clasificar y ser campeón.</p></div></div><span class="pill">Puntaje dinámico</span></div>
+    <div class="challenge-champion-banner ${champion ? '' : 'empty'}">${champion ? `<span>Campeón de ${escapeHtml(category.name)}</span><strong>${escapeHtml(champion.username)}</strong><small>${formatPlainNumber(champion.points)} puntos · ${champion.played} partidos</small>` : `<span>Campeón de ${escapeHtml(category.name)}</span><strong>Aún sin campeón</strong><small>Ningún manager alcanzó los ${minimum} partidos mínimos.</small>`}</div>
+    <div class="table-wrap"><table class="challenge-ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Estado</th><th>PJ</th><th>G/E/P</th><th>GF-GC</th><th>Rivales vencidos</th><th>Mejor triunfo</th><th>PTS</th></tr></thead><tbody>
+      ${rows.length ? rows.map(row => `<tr class="${row.qualified ? '' : 'challenge-ranking-provisional'}">
+        <td>${row.rank || '—'}</td>
         <td><strong>${escapeHtml(row.username || 'Manager')}</strong></td>
+        <td>${row.qualified ? (row.rank === 1 ? `<span class="pill ok">Campeón</span>` : '<span class="pill">Clasificado</span>') : `<span class="pill muted">Provisional ${row.played}/${minimum}</span>`}</td>
         <td>${Number(row.played || 0)}</td>
         <td>${Number(row.wins || 0)}/${Number(row.draws || 0)}/${Number(row.losses || 0)}</td>
         <td>${Number(row.goalsFor || 0)}-${Number(row.goalsAgainst || 0)}</td>
-        <td>${Number(row.averageTeamRating || 0).toFixed(1)}</td>
-        <td>${Number(row.averageOpponentRating || 0).toFixed(1)}</td>
+        <td>${Number(row.uniqueWins || 0)}</td>
         <td>${Number(row.bestMatchPoints || 0)}</td>
-        <td><strong>${Number(row.points || 0)}</strong></td>
-      </tr>`).join('')}
+        <td><strong>${formatPlainNumber(Number(row.points || 0))}</strong></td>
+      </tr>`).join('') : `<tr><td colspan="9" class="muted">Todavía no hay partidos en esta categoría.</td></tr>`}
     </tbody></table></div>
-    <p class="muted small">Victoria favorita: pocos puntos. Victoria de equipo inferior: puntaje alto. Empate: ambos suman, con más premio para el equipo más débil.</p>
+    <div class="challenge-scoring-rules"><p><strong>Triunfos únicos:</strong> la primera victoria contra cada rival recibe el mayor valor; las repeticiones entregan cada vez menos.</p><p><strong>Fuerza del rival:</strong> vencer a un equipo que acumula derrotas vale progresivamente menos; superar a uno con buenos resultados vale más.</p><p><strong>Posición:</strong> ganar desde abajo en la tabla aumenta el premio, mientras que los líderes reciben una reducción.</p></div>
   </div>`;
 }
 function challengeDateLabel(value){
@@ -384,18 +646,35 @@ function challengeCurrentTeamCard(){
   try{ snapshot = buildChallengeSnapshot(); }
   catch(error){ return `<div class="card blocker"><h3>No se puede publicar el equipo</h3><p>${escapeHtml(error.message)}</p><button class="ghost" data-go-tab="firstTeam">Ir a Primer Equipo</button></div>`; }
   const action = challengeActionUiState('Publicar desafío');
+  const natural = challengeNaturalCategory(snapshot);
   return `<div class="card challenge-publish-card">
-    <div class="challenge-publish-head">${challengeCrestMarkup(snapshot,'large')}<div><p class="label">Tu equipo actual</p><h3>${escapeHtml(snapshot.club.name)}</h3><p class="muted small">${escapeHtml(challengeVenueName(snapshot))} · ${formatPlainNumber(snapshot.club.stadiumCapacity)} lugares · ${formatPlainNumber(snapshot.club.fans)} hinchas</p></div><span class="pill">${escapeHtml(snapshot.tactic.formation)}</span></div>
+    <div class="challenge-publish-head">${challengeCrestMarkup(snapshot,'large')}<div><p class="label">Tu equipo actual</p><h3>${escapeHtml(snapshot.club.name)}</h3><p class="muted small">${escapeHtml(challengeVenueName(snapshot))} · ${formatPlainNumber(snapshot.club.stadiumCapacity)} lugares · ${formatPlainNumber(snapshot.club.fans)} hinchas</p></div><div class="challenge-publish-tags"><span class="pill">${escapeHtml(snapshot.tactic.formation)}</span>${challengeCategoryBadgeMarkup(natural.code)}</div></div>
     <div class="grid cols-4 challenge-team-metrics">
       <div><span>Media</span><strong>${snapshot.team.rating.toFixed(1)}</strong></div>
       <div><span>Valor convocatoria</span><strong>${formatMoney(snapshot.team.matchSquadValue)}</strong></div>
       <div><span>Sueldos convocatoria</span><strong>${formatMoney(snapshot.team.matchSquadSalaryTotal)}</strong></div>
       <div><span>Cohesión</span><strong>${snapshot.team.cohesion}%</strong></div>
     </div>
-    <p class="muted small">Se envía una fotografía de los titulares, suplentes, táctica, forma, moral, valores y sueldos. El amistoso no modifica la carrera.</p>
+    <div class="challenge-current-category"><div>${challengeCategoryBadgeMarkup(natural.code,{large:true})}<span><b>Categoría actual</b><small>${escapeHtml(challengeCategoryRangeLabel(natural))}</small></span></div><p>Podés publicar en ${escapeHtml(natural.name)} o presentar el mismo equipo en Libre. No hay restricciones por estrellas.</p></div>
+    <p class="muted small">Se envía una fotografía de titulares, suplentes, táctica, forma, moral, valores y sueldos. La competencia no modifica la carrera.</p>
     <button id="btnPublishChallenge" class="primary" data-challenge-cooldown-action="publish" data-default-label="Publicar desafío" ${action.disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
     <p id="challengeActionCooldownNote" class="muted small challenge-cooldown-note"></p>
   </div>`;
+}
+function openChallengePublishCategoryModal(){
+  if(!challengeEnsureActionAvailable()) return;
+  let snapshot;
+  try{ snapshot = buildChallengeSnapshot(); }
+  catch(error){ showNotice(error.message); return; }
+  const natural = challengeNaturalCategory(snapshot);
+  const choices = natural.code === 'L' ? [challengeCategoryByCode('L')] : [natural, challengeCategoryByCode('L')];
+  openModal(`<div class="challenge-category-modal"><p class="eyebrow">Competencia online</p><h2>Elegí la categoría</h2><p class="muted">La convocatoria suma ${formatMoney(challengeSnapshotSalary(snapshot))} en sueldos mensuales. El desafío sólo podrá ser aceptado por un equipo de la misma categoría.</p><div class="challenge-publish-category-options">${choices.map(category => `<button type="button" data-publish-challenge-category="${escapeHtml(category.code)}">${challengeCategoryBadgeMarkup(category.code,{large:true})}<span><strong>${escapeHtml(category.name)}</strong><small>${escapeHtml(challengeCategoryRangeLabel(category))}</small>${category.code === 'L' ? '<em>Admite cualquier convocatoria.</em>' : '<em>Tu convocatoria cumple este rango.</em>'}</span></button>`).join('')}</div><div class="modal-actions"><button id="btnCancelChallengePublish" class="ghost">Cancelar</button></div></div>`);
+  document.querySelectorAll('[data-publish-challenge-category]').forEach(button => button.addEventListener('click', () => {
+    const code = button.dataset.publishChallengeCategory;
+    closeModal();
+    publishChallenge(code);
+  }));
+  $('btnCancelChallengePublish')?.addEventListener('click', closeModal);
 }
 
 function challengeLoginWarning(){
@@ -403,10 +682,12 @@ function challengeLoginWarning(){
   return `<div class="card blocker"><h3>Iniciá sesión</h3><p>Los desafíos reutilizan la misma cuenta del Ranking Online.</p><button class="primary" data-go-ranking>Ir al login del ranking</button></div>`;
 }
 function challengeListMarkup(){
-  const rows = challengeRowsCache[challengeViewTab] || [];
+  let rows = challengeRowsCache[challengeViewTab] || [];
+  if(challengeViewTab === 'available') rows = rows.filter(row => challengeRowCategoryCode(row) === challengeAvailableCategory);
   if(challengeLoading && !rows.length && !challengeLoadedTabs[challengeViewTab]) return '<div class="card"><p class="muted">Cargando desafíos...</p></div>';
   if(!rows.length){
-    const label = challengeViewTab === 'available' ? 'desafíos disponibles' : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? 'puntajes de ranking' : 'partidos disputados';
+    const selectedCategory = challengeViewTab === 'available' ? challengeCategoryByCode(challengeAvailableCategory) : challengeViewTab === 'ranking' ? challengeCategoryByCode(challengeRankingCategory) : null;
+    const label = challengeViewTab === 'available' ? `desafíos disponibles en ${selectedCategory.name}` : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? `puntajes de ${selectedCategory.name}` : 'partidos disputados';
     return `<div class="card empty"><h3>Sin registros</h3><p>No hay ${label} para mostrar.</p></div>`;
   }
   if(challengeViewTab === 'available') return `<div class="challenge-grid challenge-available-grid">${rows.map(challengeOpenCard).join('')}</div>`;
@@ -417,11 +698,12 @@ function challengeListMarkup(){
 function renderOnlineChallenges(){
   clearTimeout(challengePollTimer);
   clearTimeout(challengeCooldownTimer);
+  challengeEnsureCategorySelections();
   const cfg = challengeConfig();
   if(!cfg.active){ view.innerHTML = '<div class="card blocker"><h2>Desafíos desactivados</h2><p>La función está deshabilitada en config.js.</p></div>'; return; }
   if(challengeDetail){ renderChallengeDetail(challengeDetail); return; }
   view.innerHTML = `<div class="section-title row">
-      <div><h2>Desafíos Online</h2><p class="tagline">Amistosos simulados localmente y publicados para toda la comunidad.</p></div>
+      <div><h2>Competencias Online</h2><p class="tagline">Desafíos por categorías salariales, con ranking independiente y una división Libre.</p></div>
       <button id="btnRefreshChallenges" class="ghost">Actualizar</button>
     </div>
     ${challengeLoginWarning()}
@@ -432,6 +714,7 @@ function renderOnlineChallenges(){
       <button data-challenge-tab="history" class="${challengeViewTab === 'history' ? 'active' : ''}">Partidos disputados</button>
       <button data-challenge-tab="ranking" class="${challengeViewTab === 'ranking' ? 'active' : ''}">Ranking</button>
     </div>
+    ${(challengeViewTab === 'available' || challengeViewTab === 'ranking') ? challengeCategoryNavigationMarkup(challengeViewTab) : ''}
     <div id="challengeStatus" class="small muted"></div>
     <div id="challengeList">${challengeListMarkup()}</div>`;
   bindChallengeEvents();
@@ -441,11 +724,20 @@ function renderOnlineChallenges(){
 }
 function bindChallengeEvents(){
   $('btnRefreshChallenges')?.addEventListener('click', () => loadChallenges(challengeViewTab, { force:true }));
-  $('btnPublishChallenge')?.addEventListener('click', publishChallenge);
+  $('btnPublishChallenge')?.addEventListener('click', openChallengePublishCategoryModal);
   document.querySelector('[data-go-ranking]')?.addEventListener('click', () => { activeTab='ranking'; renderAll(); });
   document.querySelectorAll('[data-challenge-tab]').forEach(button => button.addEventListener('click', () => {
     challengeViewTab = button.dataset.challengeTab;
     challengeDetail = null;
+    renderOnlineChallenges();
+  }));
+  document.querySelectorAll('[data-challenge-available-category]').forEach(button => button.addEventListener('click', () => {
+    challengeAvailableCategory = button.dataset.challengeAvailableCategory;
+    renderOnlineChallenges();
+  }));
+  document.querySelectorAll('[data-challenge-ranking-category]').forEach(button => button.addEventListener('click', () => {
+    challengeRankingCategory = button.dataset.challengeRankingCategory;
+    challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory);
     renderOnlineChallenges();
   }));
   document.querySelectorAll('[data-challenge-accept]').forEach(button => button.addEventListener('click', () => acceptChallenge(button.dataset.challengeAccept)));
@@ -453,22 +745,66 @@ function bindChallengeEvents(){
   document.querySelectorAll('[data-challenge-view]').forEach(button => button.addEventListener('click', () => openChallengeDetail(button.dataset.challengeView)));
   document.querySelectorAll('[data-go-tab]').forEach(button => button.addEventListener('click', () => { activeTab=button.dataset.goTab; renderAll(); }));
 }
+function challengeRowsFromResponse(data){
+  return Array.isArray(data?.challenges) ? data.challenges : [];
+}
+function challengeRowUniqueKey(row, index=0){
+  return String(row?.id || `${row?.completedAt || row?.createdAt || ''}:${row?.creatorUsername || ''}:${row?.opponentUsername || ''}:${index}`);
+}
+async function challengeLoadCompleteHistory(){
+  const pageSize = challengeConfig().rankingHistoryPageSize;
+  const collected = [];
+  const seen = new Set();
+  let cursor = '';
+  let offset = 0;
+  for(let page=0; page<250; page += 1){
+    const params = new URLSearchParams({ limit:String(pageSize) });
+    if(cursor) params.set('cursor', cursor);
+    else if(offset) params.set('offset', String(offset));
+    let data;
+    try{ data = await challengeRequest('challenges/history', { query:`?${params.toString()}` }); }
+    catch(error){
+      if(page === 0) throw error;
+      break;
+    }
+    const rows = challengeRowsFromResponse(data);
+    let added = 0;
+    rows.forEach((row,index) => {
+      const key = challengeRowUniqueKey(row,index);
+      if(seen.has(key)) return;
+      seen.add(key);
+      collected.push(row);
+      added += 1;
+    });
+    const next = String(data?.nextCursor || data?.next_cursor || data?.nextPageToken || data?.next_page_token || '').trim();
+    if(next){ cursor = next; offset = 0; continue; }
+    if(rows.length < pageSize || added === 0) break;
+    offset += rows.length;
+  }
+  return collected;
+}
 async function loadChallenges(tab=challengeViewTab, options={}){
   if(!challengeToken() && tab === 'mine'){ challengeLoadedTabs.mine = true; return; }
   if(options.force) challengeLoadedTabs[tab] = false;
   challengeLoading = true;
   if(!options.silent && activeTab === 'challenges') renderOnlineChallenges();
   try{
-    const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : tab === 'ranking' ? 'challenges/ranking' : 'challenges/history';
-    const data = await challengeRequest(path, { query:`?limit=${challengeConfig().pageSize}` });
-    let rows = Array.isArray(data.challenges) ? data.challenges : Array.isArray(data.ranking) ? data.ranking : [];
-    if(tab === 'available'){
-      let ownUserId = 0;
-      try{ ownUserId = Number(localStorage.getItem('fmRankingAuthUserId') || 0); }catch(_){ ownUserId = 0; }
-      if(ownUserId) rows = rows.filter(row => Number(row.creatorUserId || 0) !== ownUserId);
+    if(tab === 'ranking'){
+      challengeRankingHistoryCache = await challengeLoadCompleteHistory();
+      challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory);
+      challengeLoadedTabs.ranking = true;
+    }else{
+      const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : 'challenges/history';
+      const data = await challengeRequest(path, { query:`?limit=${challengeConfig().pageSize}` });
+      let rows = challengeRowsFromResponse(data);
+      if(tab === 'available'){
+        let ownUserId = 0;
+        try{ ownUserId = Number(localStorage.getItem('fmRankingAuthUserId') || 0); }catch(_){ ownUserId = 0; }
+        if(ownUserId) rows = rows.filter(row => Number(row.creatorUserId || 0) !== ownUserId);
+      }
+      challengeRowsCache[tab] = rows;
+      challengeLoadedTabs[tab] = true;
     }
-    challengeRowsCache[tab] = rows;
-    challengeLoadedTabs[tab] = true;
   }catch(error){
     challengeLoadedTabs[tab] = true;
     if(!options.silent) showNotice(error.message);
@@ -481,13 +817,14 @@ async function loadChallenges(tab=challengeViewTab, options={}){
     }
   }
 }
-async function publishChallenge(){
+async function publishChallenge(categoryCode){
   if(!challengeEnsureActionAvailable()) return;
   try{
     challengeActionBusy = true;
     challengeRefreshActionCooldown();
-    const snapshot = buildChallengeSnapshot();
-    showNotice('Publicando fotografía del equipo...');
+    const snapshot = challengePrepareSnapshotCategory(buildChallengeSnapshot(), categoryCode);
+    const category = challengeCategoryByCode(challengeSnapshotCategoryCode(snapshot));
+    showNotice(`Publicando desafío en ${category.name}...`);
     await challengeRequest('challenges', { method:'POST', body:{ snapshot } });
     challengeStartActionCooldown();
     challengeRowsCache.available = [];
@@ -495,7 +832,7 @@ async function publishChallenge(){
     challengeLoadedTabs.available = false;
     challengeLoadedTabs.mine = false;
     challengeViewTab = 'mine';
-    showNotice('Desafío publicado. Podrás publicar o aceptar otro dentro de 10 minutos.');
+    showNotice(`Desafío publicado en ${category.name}. Podrás publicar o aceptar otro dentro de 10 minutos.`);
     await loadChallenges('mine', { force:true });
   }catch(error){ showNotice(error.message); }
   finally{
@@ -505,21 +842,30 @@ async function publishChallenge(){
 }
 async function acceptChallenge(challengeId){
   if(!challengeEnsureActionAvailable()) return;
-  if(!confirm('¿Aceptar este desafío con la táctica y convocatoria actuales?')) return;
+  const row = (challengeRowsCache.available || []).find(item => String(item.id) === String(challengeId));
+  const targetCode = challengeRowCategoryCode(row || {});
+  const targetCategory = challengeCategoryByCode(targetCode);
+  let snapshot;
+  try{ snapshot = challengePrepareSnapshotCategory(buildChallengeSnapshot(), targetCode); }
+  catch(error){ showNotice(error.message); return; }
+  if(!confirm(`¿Aceptar este desafío en ${targetCategory.name} con la táctica y convocatoria actuales?`)) return;
   const status = $('challengeStatus');
   try{
     challengeActionBusy = true;
     challengeRefreshActionCooldown();
-    const snapshot = buildChallengeSnapshot();
     if(status) status.textContent = 'Reservando desafío y enviando tu equipo...';
     const accepted = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/accept`, { method:'POST', body:{ snapshot } });
     challengeStartActionCooldown();
     if(status) status.textContent = 'Simulando el partido en este navegador...';
+    const acceptedHomeCode = challengeSnapshotCategoryCode(accepted.homeSnapshot || {}, { inferLegacy:false });
+    const acceptedAwayCode = challengeSnapshotCategoryCode(accepted.awaySnapshot || {}, { inferLegacy:false });
+    if(acceptedHomeCode !== targetCode || acceptedAwayCode !== targetCode) throw new Error('El desafío no conserva la misma categoría para ambos equipos.');
     const result = window.ChallengeSimulator.simulateChallengeMatch({
       homeSnapshot:accepted.homeSnapshot,
       awaySnapshot:accepted.awaySnapshot,
       seed:accepted.seed
     });
+    result.competition = { categoryCode:targetCode, categoryName:targetCategory.name, scoringVersion:'category-points-v1' };
     if(status) status.textContent = 'Guardando el resultado...';
     const saved = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/result`, { method:'POST', body:{ result } });
     challengeRowsCache.available = [];
@@ -584,7 +930,8 @@ function renderChallengeDetail(row){
   const result = match.result || {};
   const events = Array.isArray(result.events) ? result.events : [];
   const ratings = Array.isArray(result.playerRatings) ? result.playerRatings.slice() : [];
-  view.innerHTML = `<div class="row section-title"><div><h2>Partido de desafío</h2><p class="tagline">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p></div><button id="btnBackChallenges" class="ghost">Volver</button></div>
+  const category = challengeCategoryByCode(challengeRowCategoryCode(row));
+  view.innerHTML = `<div class="row section-title"><div><h2>Partido de ${escapeHtml(category.name)}</h2><p class="tagline">${escapeHtml(row.creatorUsername || 'Manager')} vs ${escapeHtml(row.opponentUsername || 'Manager')}</p></div><div class="challenge-detail-actions">${challengeCategoryBadgeMarkup(category.code,{large:true})}<button id="btnBackChallenges" class="ghost">Volver</button></div></div>
     <div class="card challenge-result-hero">
       <div>${challengeClubSummary(home)}</div>
       <div class="challenge-result-score"><span>Final</span><strong>${Number(match.homeGoals || result?.score?.home || 0)}–${Number(match.awayGoals || result?.score?.away || 0)}</strong><small>${escapeHtml(challengeDateLabel(row.completedAt || match.createdAt))}</small></div>
@@ -605,7 +952,7 @@ function renderChallengeDetail(row){
       </main>
       ${challengeRatingsColumn(ratings,'away')}
     </div>
-    <div class="card challenge-disclaimer"><strong>Amistoso online.</strong> El resultado fue simulado localmente por el jugador que aceptó y no modifica ninguna carrera.</div>`;
+    <div class="card challenge-disclaimer"><strong>Competencia ${escapeHtml(category.name)}.</strong> El resultado fue simulado localmente por el jugador que aceptó, suma al ranking de la categoría y no modifica ninguna carrera.</div>`;
   $('btnBackChallenges')?.addEventListener('click', () => { challengeDetail=null; renderOnlineChallenges(); });
 }
 function challengeStatisticsMarkup(home, away, statistics){

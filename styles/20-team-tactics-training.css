@@ -1051,6 +1051,41 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .tactic-actions-card select{
   margin-bottom:0;
 }
+.tactic-online-category-summary{
+  display:grid;
+  gap:7px;
+  padding:10px;
+  border:1px solid rgba(96,165,250,.22);
+  border-radius:12px;
+  background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(15,23,42,.44));
+}
+.tactic-online-category-summary.incomplete{
+  border-color:rgba(245,158,11,.30);
+  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(15,23,42,.44));
+}
+.tactic-online-category-head,
+.tactic-online-category-salary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+}
+.tactic-online-category-head .label{
+  margin:0;
+}
+.tactic-online-category-salary span{
+  color:var(--muted);
+  font-size:12px;
+  font-weight:750;
+}
+.tactic-online-category-salary strong{
+  font-size:16px;
+  letter-spacing:-.02em;
+}
+.tactic-online-category-summary p{
+  margin:0;
+  line-height:1.35;
+}
 .tactic-actions-card .tactic-autopick-row{
   display:grid;
   grid-template-columns:1fr;

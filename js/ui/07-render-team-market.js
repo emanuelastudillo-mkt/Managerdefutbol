@@ -953,6 +953,45 @@ function tacticCaptainCardMarkup(){
     <div class="tactic-captain-effect ${effect.moral < 0 || effect.cohesion < 0 ? 'negative' : 'positive'}"><span>Impacto actual postpartido</span><strong>Moral ${signed(effect.moral)} · Cohesión ${signed(effect.cohesion)}</strong></div>
   </div>`;
 }
+function tacticOnlineCategorySummaryMarkup(){
+  const fallbackIds = () => {
+    const starters = (game?.tactic?.starters || []).slice(0,11).map(Number).filter(Boolean);
+    const starterSet = new Set(starters);
+    const bench = (game?.tactic?.bench || []).map(Number).filter(Boolean).filter(id => !starterSet.has(id)).slice(0,10);
+    return { starters, bench };
+  };
+  const ids = typeof challengeSquadIds === 'function' ? challengeSquadIds() : fallbackIds();
+  const starterPlayers = (ids.starters || []).map(playerById).filter(Boolean);
+  const benchPlayers = (ids.bench || []).map(playerById).filter(Boolean);
+  const salaryTotal = [...starterPlayers, ...benchPlayers].reduce((sum, player) => sum + Math.max(0, Math.round(Number(player?.salary || 0))), 0);
+  let category = null;
+  if(typeof challengeNaturalCategoryForSalary === 'function') category = challengeNaturalCategoryForSalary(salaryTotal);
+  if(!category){
+    const configured = Array.isArray(window.GAME_CONFIG?.desafiosOnline?.categoriasSalariales)
+      ? window.GAME_CONFIG.desafiosOnline.categoriasSalariales
+      : [];
+    const normal = configured.filter(item => item?.libre !== true && String(item?.codigo || '').toUpperCase() !== 'L');
+    const row = normal.find(item => salaryTotal >= Number(item?.minimo || 0) && salaryTotal <= Number(item?.maximo ?? Number.MAX_SAFE_INTEGER));
+    category = row
+      ? { code:String(row.codigo || '').toUpperCase(), name:String(row.nombre || 'Categoría'), minimum:Number(row.minimo || 0), maximum:Number(row.maximo || 0), free:false }
+      : { code:'L', name:'Libre', minimum:0, maximum:null, free:true };
+  }
+  const badge = typeof challengeCategoryBadgeMarkup === 'function'
+    ? challengeCategoryBadgeMarkup(category.code)
+    : `<span class="challenge-category-badge challenge-category-${escapeHtml(String(category.code || 'L').toLowerCase())}"><b>${escapeHtml(category.code || 'L')}</b><span>${escapeHtml(category.name || 'Libre')}</span></span>`;
+  const range = typeof challengeCategoryRangeLabel === 'function'
+    ? challengeCategoryRangeLabel(category)
+    : (category.free ? 'Sin límite salarial' : `Hasta ${formatMoney(category.maximum || 0)}`);
+  const complete = starterPlayers.length === 11;
+  const squadLabel = complete
+    ? `${starterPlayers.length} titulares · ${benchPlayers.length} suplentes`
+    : `${starterPlayers.length}/11 titulares · ${benchPlayers.length} suplentes`;
+  return `<div class="tactic-online-category-summary ${complete ? '' : 'incomplete'}">
+    <div class="tactic-online-category-head"><span class="label">Competencia online</span>${badge}</div>
+    <div class="tactic-online-category-salary"><span>Suma de sueldos actual</span><strong>${formatMoney(salaryTotal)}</strong></div>
+    <p class="muted small">${escapeHtml(squadLabel)} · ${escapeHtml(range)}.${complete ? ' También puede publicarse en Libre.' : ' Completá los 11 titulares para publicar.'}</p>
+  </div>`;
+}
 function renderTactics(){
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
   const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
@@ -1027,6 +1066,7 @@ function renderTactics(){
         <div class="card tactic-actions-card tactic-grid-card">
           <h3>Acciones</h3>
           <div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div>
+          ${tacticOnlineCategorySummaryMarkup()}
           <div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div>
           <button id="saveTactic" class="primary full">Confirmar equipo</button>
           <span id="tacticErrors" class="bad small"></span>

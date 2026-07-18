@@ -1,4 +1,27 @@
-# Fútbol Manager MVP - V8.09
+# Fútbol Manager MVP - V8.10
+
+
+## V8.10 - Categoría Online visible en Táctica
+
+### Resumen competitivo de la convocatoria
+
+La pantalla **Táctica y convocatoria** incorpora un apartado compacto dentro del panel de Acciones que informa en tiempo real:
+
+- la categoría salarial natural del equipo armado: Ascenso, Nacional, Profesional, Continental, Élite o Libre;
+- el logo correspondiente A, N, P, C, E o L;
+- la suma actual de sueldos mensuales de titulares y suplentes;
+- la cantidad de titulares y suplentes incluidos en la convocatoria online;
+- el rango salarial de la categoría.
+
+El cálculo utiliza exactamente la misma composición que Desafíos Online: hasta 11 titulares y 10 suplentes, sin contar reservas. Cada cambio de formación, selección automática o movimiento de jugadores actualiza el apartado al volver a renderizar Táctica.
+
+Si faltan titulares, el bloque indica que la convocatoria está incompleta. Cuando existen 11 titulares válidos, también recuerda que el equipo puede publicarse en su categoría natural o en Libre.
+
+No se modificaron categorías, rangos salariales, puntajes, SQL, D1 ni Worker.
+
+### Compatibilidad
+
+**V8.10 no rompe partidas anteriores.** El cambio es exclusivamente visual y de cálculo en la pantalla Táctica. No modifica guardados, planteles, contratos, desafíos existentes ni los cinco slots.
 
 
 ## V8.09 - Competencias Online por categorías salariales

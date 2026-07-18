@@ -195,7 +195,7 @@ function normalizeManualDatabasePlayer(player, seedData){
     retired:Boolean(mercado.retirado ?? player.retired ?? false),
     manualPlayer:true,
     manualRespawnAfterRetirement:Boolean(mercado.reapareceAlRetirarse ?? mercado.respawnAfterRetirement ?? player.reapareceAlRetirarse ?? player.manualRespawnAfterRetirement ?? false),
-    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V8.05-manual-webp-retired-player-pool', tipo:player?.origen?.tipo || 'manual_activo' }
+    generation:{ ...(player.origen || player.generation || {}), source:player?.origen?.source || MANUAL_PLAYERS_DATABASE_URL, rulesVersion:player?.origen?.rulesVersion || 'V8.06-manual-webp-retired-player-pool', tipo:player?.origen?.tipo || 'manual_activo' }
   };
 }
 function manualRetiredPlayerIdSet(options={}){

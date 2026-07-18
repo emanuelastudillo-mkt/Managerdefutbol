@@ -1,4 +1,4 @@
-/* V8.05 · Derechos económicos, cartera clickeable y nombres normalizados. */
+/* V8.06 · Derechos económicos, cartera clickeable y nombres normalizados. */
 
 function managerPortfolioConfigNumber(path, fallback, min=-Infinity, max=Infinity){
   if(typeof configNumber === 'function') return configNumber(`academia.derechosEconomicos.${path}`, fallback, min, max);

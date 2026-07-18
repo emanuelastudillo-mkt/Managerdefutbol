@@ -792,6 +792,7 @@ function startYouthTrainingGroundUpgrade(targetLevel){
   saveLocal(true);
   renderAcademy();
   showNotice(`Obra iniciada: predio juvenil ${definition.name}. Duración: ${definition.buildDays} días.`);
+  if(typeof showAcademyFirstActionIntroduction === 'function') showAcademyFirstActionIntroduction('academy_facility_youth_build');
 }
 function pitchHeatingFacilityMarkup(){
   const state = clubFacilitiesState(game.selectedClubId);

@@ -47,7 +47,7 @@
       "rol": "Recuperación",
       "costoBase": 1000000,
       "duracion": "temporada",
-      "descripcion": "Permite tratar lesionados y asignar un jugador a trabajo diferenciado con menor carga, recuperación diaria y prevención de lesiones.",
+      "descripcion": "Inicia tratamientos automáticos diarios para cada jugador lesionado y permite asignar un jugador a trabajo diferenciado con menor carga, recuperación diaria y prevención de lesiones.",
       "accion": "tratamiento_lesion",
       "imagenes": {
         "regular": "img/empleados/kinesiologo-regular.webp",

@@ -25,12 +25,12 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.05');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.06');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.05');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.06');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.05');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.06');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -52,7 +52,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.05', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.06', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -133,7 +133,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.05');
+const APP_VERSION = configValue('version', 'V8.06');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -257,7 +257,12 @@ const PSYCHOLOGIST_MORALE_GAIN_MIN = Math.round(configNumber('empleados.psicolog
 const PSYCHOLOGIST_MORALE_GAIN_MAX = Math.round(configNumber('empleados.psicologoMoralMax', 10, PSYCHOLOGIST_MORALE_GAIN_MIN, 99));
 const KINESIOLOGIST_COST = configNumber('empleados.kinesiologoCosto', 1000000, 0);
 const KINESIOLOGIST_FAILURE_CHANCE = configNumber('empleados.kinesiologoProbabilidadFallo', 0.20, 0, 1);
-const KINESIOLOGIST_OVERTIME_COST_RATE = configNumber('empleados.kinesiologoHorasExtrasPorcentajeSueldo', 0.01, 0, 1);
+const KINESIOLOGIST_AUTO_TREATMENT_COST_PER_DAY = Math.max(0, Math.round(configNumber('empleados.kinesiologoCostoAutomaticoPorDiaLesion', 2000, 0)));
+const KINESIOLOGIST_SUCCESS_CHANCE_BY_CATEGORY = Object.freeze({
+  regular:configNumber('empleados.kinesiologoProbabilidadExitoPorCategoria.regular', 1 - KINESIOLOGIST_FAILURE_CHANCE, 0, 1),
+  bueno:configNumber('empleados.kinesiologoProbabilidadExitoPorCategoria.bueno', 0.90, 0, 1),
+  elite:configNumber('empleados.kinesiologoProbabilidadExitoPorCategoria.elite', 0.98, 0, 1)
+});
 const KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionDesgasteDiaria', 4, 0, 99));
 const KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionFormaDiaria', 5, 0, 99));
 const KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY = Math.round(configNumber('empleados.kinesiologoTrabajoDiferenciado.recuperacionMoralDiaria', 1, 0, 99));
@@ -594,7 +599,6 @@ const ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON = Math.max(0, Math.round(configNumbe
 const ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON = Math.max(ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON, Math.round(configNumber('academia.lesionesJuvenilesMaxPorTemporada', 2, 0, 10)));
 const ACADEMY_YOUTH_INJURY_MIN_TURNS = Math.max(1, Math.ceil(configNumber('academia.lesionJuvenilDiasMin', 14, 1) / DAYS_PER_ADVANCE));
 const ACADEMY_YOUTH_INJURY_MAX_TURNS = Math.max(ACADEMY_YOUTH_INJURY_MIN_TURNS, Math.ceil(configNumber('academia.lesionJuvenilDiasMax', 42, 1) / DAYS_PER_ADVANCE));
-const ACADEMY_YOUTH_INJURY_TREATMENT_COST = Math.max(0, Math.round(configNumber('academia.costoTratamientoLesionJuvenil', 50000, 0)));
 const ACADEMY_YOUTH_MARKET_ENABLED = configBoolean('academia.mercadoJuvenil.activo', true);
 const ACADEMY_YOUTH_OFFER_AGE = Math.round(configNumber('academia.mercadoJuvenil.edadOfertas', 17, 16, 20));
 const ACADEMY_YOUTH_SALE_TAX_RATE = configNumber('academia.mercadoJuvenil.impuestoFederacion', 0.05, 0, 0.95);

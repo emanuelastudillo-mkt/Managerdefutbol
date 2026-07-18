@@ -1,4 +1,29 @@
-# Fútbol Manager MVP - V8.05
+# Fútbol Manager MVP - V8.06
+
+
+## V8.06 - Inicio de Tu Academia y tratamientos automáticos
+
+### Primer paso en Tu Academia
+
+- La primera acción efectiva realizada en Tu Academia muestra un mensaje introductorio y de felicitaciones.
+- El aviso puede activarse al contratar al Preparador de juveniles, iniciar una captación, comenzar la construcción del Predio o alquilar la primera residencia.
+- El mensaje explica que Tu Academia, sus instalaciones, juveniles y derechos económicos pertenecen al manager y continúan con él aunque cambie de club.
+- La felicitación se muestra una sola vez por carrera y también queda registrada en Mensajes.
+- Las partidas anteriores que ya tenían actividad en Academia se reconocen automáticamente y no reciben un aviso tardío.
+
+### Tratamiento automático de lesionados
+
+- Con un kinesiólogo contratado, cada jugador lesionado recibe automáticamente un intento de tratamiento al avanzar cada día.
+- Cada lesión inicia un único plan médico con un costo de **$2.000 por cada día diagnosticado**.
+- Los tratamientos del primer equipo se pagan con el presupuesto del club; los juveniles de Academia se pagan desde la Cuenta Bancaria personal del manager.
+- El plan se cobra una sola vez por lesión. Los intentos diarios posteriores no vuelven a cobrarlo.
+- Si no hay fondos suficientes, el tratamiento de esa lesión no comienza y se informa la situación.
+- La probabilidad diaria de éxito depende de la categoría del kinesiólogo: Regular 80%, Bueno 90% y Elite 98%.
+- Cuando el tratamiento tiene éxito, reduce la lesión con el mismo efecto que la acción manual: 1, 2 o 3 días según la categoría, más los bonos especiales activos.
+- El botón manual se conserva para tratar inmediatamente una lesión ocurrida durante el mismo día; después, el proceso continúa de forma automática.
+- Los resultados diarios son deterministas para impedir que recargar la partida cambie un éxito por un fallo.
+
+**V8.06 no rompe partidas anteriores.** Agrega estados opcionales y normalizados para el mensaje inicial y los planes médicos. Las lesiones, empleados, presupuestos y Academias existentes se conservan; las lesiones activas comienzan su plan automático cuando exista un kinesiólogo y haya fondos disponibles.
 
 
 ## V8.05 - Nombres adaptados, traspasos visibles y cartera interactiva

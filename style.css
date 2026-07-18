@@ -6493,7 +6493,7 @@ button.cwc-group-result{cursor:pointer}
 .manager-player-portfolio{margin-top:0!important}
 @media (max-width:700px){.academy-submenu{display:grid;grid-template-columns:1fr 1fr}.academy-submenu-btn{width:100%;padding:9px 8px}}
 
-/* V8.05 · Traspasos acordados y cartera clickeable */
+/* V8.06 · Traspasos acordados y cartera clickeable */
 .transfer-agreed-arrow{
   display:inline-grid;
   place-items:center;

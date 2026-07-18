@@ -1,8 +1,8 @@
 {
   "metadata": {
     "nombre": "jugadores_manuales",
-    "version": "V8.05",
-    "appVersion": "V8.05",
+    "version": "V8.06",
+    "appVersion": "V8.06",
     "proyecto": "manager_de_futbol",
     "descripcion": "Jugadores manuales con fotos WEBP y retorno generacional mediante la reserva de retirados.",
     "moneda": "ARS",

@@ -1188,6 +1188,9 @@ function processDailyCalendarState(dateAfter='', options={}){
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDaily === 'function'
     ? processKinesiologistDifferentiatedDaily()
     : { applied:false };
+  const kinesioAutomatic = typeof processAutomaticKinesiologistTreatmentsDaily === 'function'
+    ? processAutomaticKinesiologistTreatmentsDaily()
+    : { active:false, attempted:0 };
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
@@ -1217,7 +1220,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

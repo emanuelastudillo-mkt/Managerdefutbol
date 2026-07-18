@@ -4612,7 +4612,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V8.04',
+    version:'V8.05',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4634,7 +4634,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V8.04';
+    clean.version = 'V8.05';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4653,7 +4653,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V8.04',
+    version:'V8.05',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4679,7 +4679,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V8.04',
+    version:'V8.05',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,

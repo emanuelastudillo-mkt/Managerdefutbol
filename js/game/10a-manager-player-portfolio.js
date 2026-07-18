@@ -1,4 +1,4 @@
-/* V8.04 · Derechos económicos y submenú de cartera de juveniles promocionados. */
+/* V8.05 · Derechos económicos, cartera clickeable y nombres normalizados. */
 
 function managerPortfolioConfigNumber(path, fallback, min=-Infinity, max=Infinity){
   if(typeof configNumber === 'function') return configNumber(`academia.derechosEconomicos.${path}`, fallback, min, max);
@@ -352,6 +352,30 @@ function managerAcademySubmenuMarkup(mode=managerAcademySubmenuMode()){
     <button type="button" class="academy-submenu-btn ${mode === 'portfolio' ? 'active' : ''}" data-academy-submenu="portfolio" role="tab" aria-selected="${mode === 'portfolio'}">Cartera de promocionados</button>
   </div>`;
 }
+function managerPortfolioRightById(rightId){
+  const id = String(rightId || '');
+  return managerPortfolioRights().find(item => String(item.id || '') === id) || null;
+}
+function showManagerPortfolioPlayer(rightId){
+  const right = managerPortfolioRightById(rightId);
+  if(!right) return;
+  const player = managerPortfolioCurrentPlayer(right);
+  if(player && typeof showPlayerModal === 'function'){
+    showPlayerModal(player.id);
+    return;
+  }
+  const status = managerPortfolioStatusLabel(right);
+  const benefit = right.status === 'paid' ? Number(right.managerIncome || 0) : managerPortfolioEstimatedIncome(right);
+  const currentClubId = Number(right.currentClubId || 0);
+  const body = `<div class="player-modal-compact portfolio-archived-player">
+    <div class="player-identity-card"><div><p class="label">Cartera de promocionados</p><h2>${escapeHtml(right.playerName)}</h2><p class="muted">${escapeHtml(right.nationality || 'Sin nacionalidad')} · ${escapeHtml(right.position || 'Sin posición')} · Promovido en T${Number(right.promotedSeason || 1)}</p></div></div>
+    <div class="grid cols-2">
+      <div class="card inner"><h3>Trayectoria registrada</h3><div class="stat-rank"><span>Club de promoción</span><strong>${escapeHtml(right.originClubName || clubName(right.originClubId) || '—')}</strong></div><div class="stat-rank"><span>Club registrado</span><strong>${currentClubId > 0 ? escapeHtml(clubName(currentClubId)) : 'Sin club'}</strong></div><div class="stat-rank"><span>Edad al promoverse</span><strong>${Number(right.ageAtPromotion || 0)}</strong></div></div>
+      <div class="card inner"><h3>Derecho económico</h3><div class="stat-rank"><span>Porcentaje</span><strong>${Number(right.percent || 0)}%</strong></div><div class="stat-rank"><span>Estimado / cobrado</span><strong>${formatMoney(benefit)}</strong></div><div class="stat-rank"><span>Estado</span><strong class="${status.cls}">${escapeHtml(status.text)}</strong></div></div>
+    </div>
+  </div>`;
+  openModal(body);
+}
 function bindManagerAcademySubmenu(){
   document.querySelectorAll('[data-academy-submenu]').forEach(button => button.addEventListener('click', () => {
     const next = button.dataset.academySubmenu === 'portfolio' ? 'portfolio' : 'players';
@@ -359,6 +383,11 @@ function bindManagerAcademySubmenu(){
     game.academy.submenu = next;
     saveLocal(true);
     renderAcademy();
+  }));
+  document.querySelectorAll('[data-portfolio-right-id]').forEach(button => button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    showManagerPortfolioPlayer(button.dataset.portfolioRightId);
   }));
 }
 function managerPlayerPortfolioMarkup(){
@@ -379,8 +408,10 @@ function managerPlayerPortfolioMarkup(){
     const clause = right.status === 'paid' ? Number(right.grossTransferAmount || 0) : managerPortfolioCurrentClause(right);
     const status = managerPortfolioStatusLabel(right);
     const benefit = right.status === 'paid' ? Number(right.managerIncome || 0) : managerPortfolioEstimatedIncome(right);
-    return `<tr>
-      <td><strong>${escapeHtml(player?.name || right.playerName)}</strong><br><span class="muted small">Promovido en T${Number(right.promotedSeason || 1)}</span></td>
+    const playerName = escapeHtml(player?.name || right.playerName);
+    const playerLink = `<button type="button" class="linklike portfolio-player-link" data-portfolio-right-id="${escapeHtml(right.id)}" title="Abrir ficha del jugador"><strong>${player ? availabilityIcons(player.id) : ''}${playerName}</strong></button>`;
+    return `<tr class="clickable-player-row">
+      <td>${playerLink}<br><span class="muted small">Promovido en T${Number(right.promotedSeason || 1)}</span></td>
       <td>${escapeHtml(player?.position || right.position || '—')}</td>
       <td>${Number(player?.age ?? right.ageAtPromotion ?? 0)}</td>
       <td>${currentClubId > 0 ? escapeHtml(clubName(currentClubId)) : 'Sin club'}</td>
@@ -484,7 +515,10 @@ normalizeGame = function(saved){
   const normalized = normalizeGameV767Portfolio(saved);
   const hadPortfolio = Boolean(normalized.managerPlayerPortfolio && typeof normalized.managerPlayerPortfolio === 'object' && !Array.isArray(normalized.managerPlayerPortfolio));
   ensureManagerPlayerPortfolio(normalized);
-  if(!hadPortfolio) normalized._needsAutosave = true;
+  const normalizedNames = typeof normalizeGamePlayerNamesToSpanishScript === 'function'
+    ? normalizeGamePlayerNamesToSpanishScript(normalized, seed)
+    : 0;
+  if(!hadPortfolio || normalizedNames > 0) normalized._needsAutosave = true;
   return normalized;
 };
 const newGameV767Portfolio = newGame;

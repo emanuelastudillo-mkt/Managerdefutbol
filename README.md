@@ -1,5 +1,28 @@
-# Fútbol Manager MVP - V8.04
+# Fútbol Manager MVP - V8.05
 
+
+## V8.05 - Nombres adaptados, traspasos visibles y cartera interactiva
+
+### Nombres de jugadores
+
+- Los bancos de Japón, Corea del Sur y Bulgaria utilizan ahora nombres escritos con alfabeto latino y legibles en español.
+- Los nuevos juveniles, libres, profesionales generados y futbolistas reciclados después del retiro usan siempre esta adaptación.
+- Al cargar una partida anterior, los nombres existentes escritos con caracteres coreanos, japoneses o cirílicos se reemplazan de manera determinista sin alterar nacionalidad, habilidades, edad ni identidad del jugador.
+- La corrección también alcanza a Academia, mercado, reserva de retirados y nombres guardados en la cartera de promocionados.
+
+### Traspasos acordados
+
+- Los jugadores que ya tienen acordado un traspaso a otro club muestran una flecha roja junto a los iconos de lesión y suspensión.
+- El indicador aparece en las tablas, tácticas, entrenamientos y pantallas de mercado que utilizan el sistema común de estados.
+- Al pasar el cursor se informa el club de destino cuando está disponible.
+
+### Cartera de promocionados
+
+- Todos los nombres de la cartera son clickeables.
+- Si el futbolista continúa activo, se abre su ficha completa con los datos actuales, club, estadísticas, contrato y estado de transferencia.
+- Si ya no existe en la base activa, se abre una ficha histórica con los datos de promoción y el derecho económico registrado.
+
+**V8.05 no rompe partidas anteriores.** Los nombres no latinos se adaptan automáticamente al cargar; no se modifican IDs, planteles, contratos, derechos económicos, estadísticas ni transferencias pendientes.
 
 ## V8.04 - Cartera de Academia, regeneración de retirados y reputación de Boca
 

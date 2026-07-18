@@ -921,10 +921,37 @@ function liveInjuryChanceForBlock(fullMatchChance, block){
   if(!minutes || !chance) return 0;
   return clamp(1 - Math.pow(1 - chance, minutes / 90), 0, 0.95);
 }
+function agreedTransferForPlayer(playerId, state=game){
+  const id = Number(playerId || 0);
+  if(!id || !state) return null;
+  const pending = (state.pendingTransfers || []).find(item => isActivePendingTransfer(item)
+    && Number(item.playerId || 0) === id
+    && Number(item.toClubId || 0) !== Number(item.fromClubId || 0));
+  if(pending) return pending;
+  const player = typeof playerById === 'function' ? playerById(id) : null;
+  if(player?.transferAgreed){
+    return {
+      playerId:id,
+      fromClubId:Number(player.clubId || 0),
+      toClubId:Number(player.transferAgreedToClubId || 0),
+      executeDate:String(player.transferScheduledDate || '')
+    };
+  }
+  return null;
+}
+function agreedTransferIcon(playerId){
+  const transfer = agreedTransferForPlayer(playerId, game);
+  if(!transfer) return '';
+  const destination = Number(transfer.toClubId || 0) > 0 && typeof clubName === 'function' ? clubName(transfer.toClubId) : '';
+  const title = destination ? `Traspaso acordado a ${destination}` : 'Traspaso acordado a otro club';
+  return `<span class="transfer-agreed-arrow inline" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">➜</span>`;
+}
 function availabilityIcons(playerId){
   const icons = [];
   if(isInjured(playerId)) icons.push('<span class="injury-cross inline" title="Lesionado">✚</span>');
   if(isSuspended(playerId)) icons.push('<span class="red-card status-red-card inline" title="Expulsado / suspendido">■</span>');
+  const transferIcon = agreedTransferIcon(playerId);
+  if(transferIcon) icons.push(transferIcon);
   return icons.join('');
 }
 function availabilityStatusMarkup(playerId){

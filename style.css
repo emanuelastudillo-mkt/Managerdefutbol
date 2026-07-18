@@ -6492,3 +6492,28 @@ button.cwc-group-result{cursor:pointer}
 .academy-submenu-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .manager-player-portfolio{margin-top:0!important}
 @media (max-width:700px){.academy-submenu{display:grid;grid-template-columns:1fr 1fr}.academy-submenu-btn{width:100%;padding:9px 8px}}
+
+/* V8.05 · Traspasos acordados y cartera clickeable */
+.transfer-agreed-arrow{
+  display:inline-grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:8px;
+  background:rgba(239,68,68,.16);
+  border:1px solid rgba(239,68,68,.38);
+  color:#f87171;
+  font-size:16px;
+  font-weight:950;
+  line-height:1;
+}
+.transfer-agreed-arrow.inline{
+  width:18px;
+  height:18px;
+  min-width:18px;
+  border-radius:6px;
+  font-size:13px;
+  vertical-align:middle;
+}
+.portfolio-player-link{display:inline-flex!important;align-items:center;gap:4px}
+.manager-player-portfolio .clickable-player-row:hover td{background:rgba(59,130,246,.055)}

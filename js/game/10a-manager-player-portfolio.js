@@ -310,7 +310,7 @@ function processManagerPlayerPortfolioDaily(){
     game.clubBudgets[buyer.club.id] = buyerBudget - grossAmount;
     game.clubBudgets[item.right.originClubId] = sellerBudget + settlement.sellerReceipt;
     if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(item.player.id, item.right.originClubId);
-    item.player.clubId = Number(buyer.club.id);
+    setPlayerClubId(item.player, Number(buyer.club.id));
     item.player.freeAgent = false;
     item.player.sold = false;
     item.player.transferListed = false;

@@ -3,8 +3,8 @@
 */
 window.GAME_BALANCE_MANAGER = {
   metadataBalance: {
-    version: 'V8.01',
-    nombre: 'Objetivos dinámicos y premios deportivos V8.01',
+    version: 'V8.02',
+    nombre: 'Objetivos dinámicos y premios deportivos V8.02',
     nota: 'Define exigencia de directiva y premios económicos por campeonatos y ascensos con escala reducida.'
   },
 

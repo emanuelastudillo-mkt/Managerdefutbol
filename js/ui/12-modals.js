@@ -297,7 +297,7 @@ function dismissOwnPlayer(playerId){
   const dismissedClubId = Number(game.selectedClubId);
   removePlayerFromCurrentTactic(player.id);
   if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, dismissedClubId);
-  player.clubId = 0;
+  setPlayerClubId(player, 0);
   player.freeAgent = true;
   player.transferListed = false;
   player.intransferible = false;
@@ -488,7 +488,7 @@ function processPendingTransfers(){
       changed = true;
       return;
     }
-    player.clubId = Number(t.toClubId || game.selectedClubId);
+    setPlayerClubId(player, Number(t.toClubId || game.selectedClubId));
     player.freeAgent = false;
     player.sold = false;
     player.transferListed = false;
@@ -859,8 +859,8 @@ function teamMatchEventSummary(match, clubId, minute=90){
 }
 function revealTeamStatsCard(clubId, stats, sideLabel, match=null, minute=90){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
-    <div class="stat-rank"><span>Disparos</span><strong>${stats.attacks}</strong></div>
-    <div class="stat-rank"><span>Tiros a Puerta</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Intentos de ataque</span><strong>${stats.attacks}</strong></div>
+    <div class="stat-rank"><span>Tiros al arco</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
     <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
@@ -1037,8 +1037,8 @@ function showMatchModal(matchId){
 }
 function matchStatsCard(clubId, stats, sideLabel){
   return `<div class="card inner team-stat-card"><h3>${clubLink(clubId)} <span class="pill">${escapeHtml(sideLabel)}</span></h3>
-    <div class="stat-rank"><span>Disparos</span><strong>${stats.attacks}</strong></div>
-    <div class="stat-rank"><span>Tiros a Puerta</span><strong>${stats.chances}</strong></div>
+    <div class="stat-rank"><span>Intentos de ataque</span><strong>${stats.attacks}</strong></div>
+    <div class="stat-rank"><span>Tiros al arco</span><strong>${stats.chances}</strong></div>
     <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats.keySaves || 0}</strong></div>
     <div class="stat-rank"><span>Errores / de gol</span><strong>${stats.errors || 0} / ${stats.goalErrors || 0}</strong></div>
     <div class="stat-rank"><span>Posesión</span><strong>${stats.possession}%</strong></div>
@@ -1560,7 +1560,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.01</p>
+      <p class="eyebrow">Guía actualizada · V8.02</p>
       <h2>Ayuda de Fútbol Manager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>

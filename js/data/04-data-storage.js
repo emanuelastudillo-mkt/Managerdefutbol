@@ -865,6 +865,12 @@ function currentSavePayload(){
   if(game?.clubBudgets && Number.isFinite(Number(game.selectedClubId))){
     game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
   }
+  if(typeof repairPlayerSkillBoostsForState === 'function'){
+    repairPlayerSkillBoostsForState(game, seed?.players || []);
+  }
+  if(typeof repairPlayerAgeSkillPenaltiesForState === 'function'){
+    repairPlayerAgeSkillPenaltiesForState(game, seed?.players || []);
+  }
   const payload = structuredClone(game);
   delete payload._needsAutosave;
   delete payload._stadiumFieldsAutoRepaired;
@@ -2214,22 +2220,102 @@ async function openDb(){
     request.onerror = () => reject(request.error);
   });
 }
-async function saveLocal(silent=false){
-  if(!game) return showNotice('No hay partida para guardar.');
+let localSaveWriteChain = Promise.resolve();
+let pendingAutosaveTimer = null;
+let pendingAutosaveWaiters = [];
+let lastLocalSaveErrorNoticeAt = 0;
+function localSaveErrorMessage(error){
+  const name = String(error?.name || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+  if(name.includes('quota') || message.includes('quota') || message.includes('storage')){
+    return 'No se pudo guardar: el navegador no tiene espacio suficiente para esta partida.';
+  }
+  if(name.includes('version') || name.includes('invalidstate')){
+    return 'No se pudo guardar: la base local del navegador no está disponible. Recargá la página y volvé a intentarlo.';
+  }
+  return 'No se pudo guardar la partida en este navegador.';
+}
+function reportLocalSaveError(error){
+  const now = Date.now();
+  if(now - lastLocalSaveErrorNoticeAt > 1200){
+    lastLocalSaveErrorNoticeAt = now;
+    showNotice(localSaveErrorMessage(error));
+  }
+  console.error('No se pudo guardar la partida.', error);
+}
+async function writeLocalSaveNow(silent=false){
+  if(!game){
+    if(!silent) showNotice('No hay partida para guardar.');
+    return false;
+  }
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'save_local' });
   const slot = setCurrentSaveSlot(game?.saveSlotId || currentSaveSlotId || SAVE_SLOT_CAREER);
   const payload = currentSavePayload();
   payload.saveSlotId = slot;
   const db = await openDb();
-  await new Promise((resolve,reject)=>{
-    const tx = db.transaction(DB_STORE, 'readwrite');
-    const store = tx.objectStore(DB_STORE);
-    store.put(payload, saveSlotKey(slot));
-    store.put(payload, backupSaveSlotKey(slot));
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      store.put(payload, saveSlotKey(slot));
+      store.put(payload, backupSaveSlotKey(slot));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('IndexedDB rechazó el guardado.'));
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB canceló el guardado.'));
+    });
+  }finally{
+    try{ db.close(); }catch(_error){}
+  }
   if(!silent) showNotice(`${saveSlotLabel(slot, payload)} guardada en este navegador.`);
+  return true;
+}
+function queueLocalSaveWrite(silent=false){
+  const task = localSaveWriteChain
+    .catch(() => undefined)
+    .then(() => writeLocalSaveNow(silent));
+  localSaveWriteChain = task;
+  return task.catch(error => {
+    reportLocalSaveError(error);
+    throw error;
+  });
+}
+function settleAutosaveWaiters(waiters, method, value){
+  (waiters || []).forEach(waiter => {
+    try{ waiter?.[method]?.(value); }catch(_error){}
+  });
+}
+function scheduleCoalescedAutosave(){
+  return new Promise((resolve,reject) => {
+    pendingAutosaveWaiters.push({ resolve, reject });
+    if(pendingAutosaveTimer) clearTimeout(pendingAutosaveTimer);
+    pendingAutosaveTimer = setTimeout(() => {
+      pendingAutosaveTimer = null;
+      const waiters = pendingAutosaveWaiters.splice(0);
+      queueLocalSaveWrite(true)
+        .then(result => settleAutosaveWaiters(waiters, 'resolve', result))
+        .catch(error => settleAutosaveWaiters(waiters, 'reject', error));
+    }, AUTOSAVE_COALESCE_MS);
+  });
+}
+async function saveLocal(silent=false){
+  if(!game){
+    if(!silent) showNotice('No hay partida para guardar.');
+    return false;
+  }
+  if(silent && AUTOSAVE_COALESCE_MS > 0) return scheduleCoalescedAutosave();
+  const pendingWaiters = pendingAutosaveWaiters.splice(0);
+  if(pendingAutosaveTimer){
+    clearTimeout(pendingAutosaveTimer);
+    pendingAutosaveTimer = null;
+  }
+  try{
+    const result = await queueLocalSaveWrite(Boolean(silent));
+    settleAutosaveWaiters(pendingWaiters, 'resolve', result);
+    return result;
+  }catch(error){
+    settleAutosaveWaiters(pendingWaiters, 'reject', error);
+    throw error;
+  }
 }
 async function loadLocal(silent=false, slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);

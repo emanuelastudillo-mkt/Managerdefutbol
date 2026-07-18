@@ -363,7 +363,7 @@ function moveMaradonaToChallengeClub(selectedClubId){
   const names = Array.isArray(special.nombresBusqueda) ? special.nombresBusqueda.map(challengeClubKey).filter(Boolean) : [];
   const byName = (seed?.players || []).find(player => names.some(name => challengeClubKey(player.name).includes(name)));
   if(!byName) return null;
-  byName.clubId = Number(selectedClubId);
+  setPlayerClubId(byName, Number(selectedClubId));
   byName.freeAgent = false;
   byName.transferListed = false;
   byName.intransferible = true;
@@ -1308,7 +1308,7 @@ function releaseClubPlayersToFounderMarket(clubId){
   const released = [];
   (seed?.players || []).forEach(player => {
     if(Number(player.clubId || 0) !== Number(clubId)) return;
-    player.clubId = 0;
+    setPlayerClubId(player, 0);
     player.freeAgent = true;
     player.founderReleased = true;
     player.origin = player.origin || 'Club reemplazado por modo fundador';
@@ -1572,7 +1572,7 @@ function founderForcedSeasonResult(match){
   return {
     ...match,
     played:true,
-    engine:'fundador-cierre-temporada-resumido-v7.35',
+    engine:'founder-season-summary',
     homeGoals,
     awayGoals,
     goals:[],
@@ -2658,10 +2658,7 @@ function bindEvents(){
     showNotice(game.assistantMessagesEnabled === false ? 'Mensajes del ayudante desactivados.' : 'Mensajes del ayudante activados.');
   });
   $('btnSave')?.addEventListener('click', () => {
-    Promise.resolve(saveLocal(false)).catch(error => {
-      console.error('No se pudo guardar la partida.', error);
-      showNotice('No se pudo guardar la partida en este navegador.');
-    });
+    Promise.resolve(saveLocal(false)).catch(() => undefined);
   });
   $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else loadLocal(false); });
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
@@ -3353,14 +3350,16 @@ function normalizeGame(saved){
   normalized.trainingPlan = normalized.trainingPlan || {};
   normalized.trainingSchedule = normalizeTrainingSchedule(normalized.trainingSchedule);
   seed.players.forEach(p => {
-    if(!normalized.playerSkillBoosts[p.id]) normalized.playerSkillBoosts[p.id] = {};
-    normalized.playerAgeSkillPenalties[p.id] = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
+    const agePenalty = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
       ? 0
       : clamp(Math.round(Number(normalized.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    if(agePenalty > 0) normalized.playerAgeSkillPenalties[p.id] = agePenalty;
+    else delete normalized.playerAgeSkillPenalties[p.id];
     normalized.trainingPlan[p.id] = safeIndividualTrainingType(normalized.trainingPlan[p.id]);
   });
+  const skillBoostRepair = repairPlayerSkillBoostsForState(normalized, seed.players);
   const agePenaltyRepair = repairPlayerAgeSkillPenaltiesForState(normalized, seed.players);
-  if(agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) normalized._needsAutosave = true;
+  if(skillBoostRepair.normalized || skillBoostRepair.pruned || agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) normalized._needsAutosave = true;
   normalized.staffActions = normalized.staffActions || {};
   normalized.staffContracts = normalizeStaffContracts(normalized.staffContracts || {});
   normalized.academy = normalizeAcademyState(normalized.academy);
@@ -3451,16 +3450,18 @@ function ensurePlayerStateForAll(){
     else if(!Number.isFinite(game.playerCondition[p.id])) game.playerCondition[p.id] = 99;
     if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerMorale[p.id] = 5; }
     else if(!Number.isFinite(game.playerMorale[p.id])) game.playerMorale[p.id] = PLAYER_MORALE_START;
-    if(!game.playerSkillBoosts[p.id]) game.playerSkillBoosts[p.id] = {};
-    game.playerAgeSkillPenalties[p.id] = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
+    const agePenalty = Math.round(Number(p.age || 18)) < PLAYER_AGE_DECAY_START_AGE
       ? 0
       : clamp(Math.round(Number(game.playerAgeSkillPenalties[p.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    if(agePenalty > 0) game.playerAgeSkillPenalties[p.id] = agePenalty;
+    else delete game.playerAgeSkillPenalties[p.id];
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
     normalizePlayerStatRecord(game.playerStats[p.id]);
   });
+  const skillBoostRepair = repairPlayerSkillBoostsForState(game, seed.players);
   const agePenaltyRepair = repairPlayerAgeSkillPenaltiesForState(game, seed.players);
-  if(agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) game._needsAutosave = true;
+  if(skillBoostRepair.normalized || skillBoostRepair.pruned || agePenaltyRepair.cleared || agePenaltyRepair.normalized || agePenaltyRepair.pruned) game._needsAutosave = true;
 }
 
 function tacticLocationOfPlayer(playerId){
@@ -3604,7 +3605,8 @@ function bankruptcyReducedPrestige(originalPrestige){
 }
 function bankruptcyReleasePlayer(player, reason='Modo Bancarrota'){
   if(!player) return null;
-  player.clubId = 0;
+  if(typeof setPlayerClubId === 'function') setPlayerClubId(player, 0);
+  else player.clubId = 0;
   player.freeAgent = true;
   player.bankruptcyReleased = true;
   player.origin = player.origin || reason;
@@ -3828,8 +3830,8 @@ function newGame(selectedClubId, options={}){
     nextSeasonTransferBudgetUnlock: null,
     playerCondition: Object.fromEntries(seed.players.map(p => [p.id, 99])),
     playerMorale: Object.fromEntries(seed.players.map(p => [p.id, PLAYER_MORALE_START])),
-    playerSkillBoosts: Object.fromEntries(seed.players.map(p => [p.id, {}])),
-    playerAgeSkillPenalties: Object.fromEntries(seed.players.map(p => [p.id, 0])),
+    playerSkillBoosts: {},
+    playerAgeSkillPenalties: {},
     trainingPlan: Object.fromEntries(seed.players.map(p => [p.id, safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL)])),
     trainingSchedule: defaultTrainingSchedule(),
     staffActions: {},
@@ -4602,7 +4604,7 @@ function normalizeManagerGlobalProfile(profile=null){
   const coursesProgress = typeof managerCoursesHasProgress === 'function' ? managerCoursesHasProgress(managerCourses) : Boolean(managerCourses);
   const empty = !managerProfileStatsHasProgress(stats) && skillPoints <= 0 && !raw.saveCode && !raw.managerName && !coursesProgress;
   return {
-    version:'V8.01',
+    version:'V8.02',
     managerName:String(raw.managerName || raw.nombre_manager || storedManagerName() || ''),
     saveCode:String(raw.saveCode || raw.manager_id || ''),
     managerStats:stats,
@@ -4624,7 +4626,7 @@ function readManagerGlobalProfileState(){
 function writeManagerGlobalProfileState(profile){
   try{
     const clean = normalizeManagerGlobalProfile(profile);
-    clean.version = 'V8.01';
+    clean.version = 'V8.02';
     clean.updatedAt = new Date().toISOString();
     clean.empty = false;
     localStorage.setItem(MANAGER_GLOBAL_PROFILE_STORAGE_KEY, JSON.stringify(clean));
@@ -4643,7 +4645,7 @@ function applySharedManagerProfileToGame(){
   game.managerStats = ensureManagerCurrentSeasonStats(previousStats, season, clubId);
   const profileStats = normalizeManagerStats(profile.managerStats || createInitialManagerStats());
   game.managerSharedProfile = {
-    version:'V8.01',
+    version:'V8.02',
     experience:Math.max(0, Math.round(Number(profileStats.experience || 0))),
     careerHistory:Array.isArray(profileStats.careerHistory) ? profileStats.careerHistory.slice() : [],
     updatedAt:profile.updatedAt || null
@@ -4669,7 +4671,7 @@ function persistSharedManagerProfileFromGame(){
   if(typeof ensureSpecialState === 'function') special = ensureSpecialState();
   const existingProfile = readManagerGlobalProfileState();
   const profile = {
-    version:'V8.01',
+    version:'V8.02',
     managerName:String(game.rankingManagerName || storedManagerName() || ''),
     saveCode:String(game.saveCode || ''),
     managerStats:stats,
@@ -5873,9 +5875,8 @@ function ensureClubWorldCupInvitedData(){
           if(!game.playerStats[player.id]) game.playerStats[player.id] = createEmptyPlayerStat(player);
           if(game.playerCondition) game.playerCondition[player.id] = Math.max(65, Number(game.playerCondition[player.id] || 0));
           if(game.playerMorale) game.playerMorale[player.id] = Math.max(60, Number(game.playerMorale[player.id] || 0));
-          if(game.playerSkillBoosts) game.playerSkillBoosts[player.id] = game.playerSkillBoosts[player.id] || {};
           game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
-          game.playerAgeSkillPenalties[player.id] = 0;
+          delete game.playerAgeSkillPenalties[player.id];
           if(game.trainingPlan) game.trainingPlan[player.id] = typeof safeIndividualTrainingType === 'function' ? safeIndividualTrainingType(game.trainingPlan[player.id]) : (game.trainingPlan[player.id] || 'balanced');
         });
       }
@@ -7608,6 +7609,43 @@ function decayTrainedSkillBoosts(){
   });
   return { players, lost, remaining };
 }
+function repairPlayerSkillBoostsForState(targetGame, players=null){
+  if(!targetGame) return { normalized:0, pruned:0 };
+  targetGame.playerSkillBoosts = (targetGame.playerSkillBoosts && typeof targetGame.playerSkillBoosts === 'object' && !Array.isArray(targetGame.playerSkillBoosts)) ? targetGame.playerSkillBoosts : {};
+  const validIds = new Set();
+  const addPlayer = player => {
+    const id = Number(player?.id || 0);
+    if(id > 0) validIds.add(id);
+  };
+  (Array.isArray(players) ? players : (seed?.players || [])).forEach(addPlayer);
+  (targetGame.marketPlayers || []).forEach(addPlayer);
+  let normalized = 0;
+  let pruned = 0;
+  Object.keys(targetGame.playerSkillBoosts).forEach(rawId => {
+    const id = Number(rawId || 0);
+    const source = targetGame.playerSkillBoosts[rawId];
+    if(!id || !validIds.has(id) || !source || typeof source !== 'object' || Array.isArray(source)){
+      delete targetGame.playerSkillBoosts[rawId];
+      pruned += 1;
+      return;
+    }
+    const clean = {};
+    Object.entries(source).forEach(([skill, rawValue]) => {
+      const value = Math.max(0, Math.round(Number(rawValue || 0)));
+      if(value > 0) clean[skill] = value;
+      if(value !== Number(rawValue || 0)) normalized += 1;
+    });
+    if(!Object.keys(clean).length){
+      delete targetGame.playerSkillBoosts[rawId];
+      pruned += 1;
+      return;
+    }
+    if(Object.keys(clean).length !== Object.keys(source).length) normalized += 1;
+    targetGame.playerSkillBoosts[id] = clean;
+    if(String(rawId) !== String(id)) delete targetGame.playerSkillBoosts[rawId];
+  });
+  return { normalized, pruned };
+}
 function repairPlayerAgeSkillPenaltiesForState(targetGame, players=null){
   if(!targetGame) return { cleared:0, normalized:0, pruned:0 };
   targetGame.playerAgeSkillPenalties = (targetGame.playerAgeSkillPenalties && typeof targetGame.playerAgeSkillPenalties === 'object' && !Array.isArray(targetGame.playerAgeSkillPenalties)) ? targetGame.playerAgeSkillPenalties : {};
@@ -7625,12 +7663,14 @@ function repairPlayerAgeSkillPenaltiesForState(targetGame, players=null){
   let normalized = 0;
   combined.forEach(player => {
     const id = Number(player.id);
-    const before = clamp(Math.round(Number(targetGame.playerAgeSkillPenalties[id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
+    const raw = Number(targetGame.playerAgeSkillPenalties[id] || 0);
+    const before = clamp(Math.round(raw), 0, PLAYER_AGE_DECAY_CAP);
     const age = Math.round(Number(player.age || 18));
     const after = age < PLAYER_AGE_DECAY_START_AGE ? 0 : before;
     if(before > 0 && after === 0) cleared += 1;
-    if(Number(targetGame.playerAgeSkillPenalties[id] || 0) !== after) normalized += 1;
-    targetGame.playerAgeSkillPenalties[id] = after;
+    if(!Number.isFinite(raw) || raw !== after) normalized += 1;
+    if(after > 0) targetGame.playerAgeSkillPenalties[id] = after;
+    else if(Object.prototype.hasOwnProperty.call(targetGame.playerAgeSkillPenalties, id)) delete targetGame.playerAgeSkillPenalties[id];
   });
   let pruned = 0;
   Object.keys(targetGame.playerAgeSkillPenalties).forEach(rawId => {
@@ -7660,13 +7700,14 @@ function applySeasonalAgeSkillDecay(season){
     if(age < PLAYER_AGE_DECAY_START_AGE){
       const before = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
       if(before > 0) cleared += 1;
-      game.playerAgeSkillPenalties[player.id] = 0;
+      delete game.playerAgeSkillPenalties[player.id];
       return;
     }
     const roll = ageDecayRollForPlayer(player, season);
     const before = clamp(Math.round(Number(game.playerAgeSkillPenalties[player.id] || 0)), 0, PLAYER_AGE_DECAY_CAP);
     const after = clamp(before + roll, 0, PLAYER_AGE_DECAY_CAP);
-    game.playerAgeSkillPenalties[player.id] = after;
+    if(after > 0) game.playerAgeSkillPenalties[player.id] = after;
+    else delete game.playerAgeSkillPenalties[player.id];
     if(after > before){ players += 1; added += (after - before); }
     maxPenalty = Math.max(maxPenalty, after);
   });
@@ -7710,27 +7751,139 @@ function applySeasonSalaryAdjustments(){
   });
   return { players, increased, decreased, totalDelta, details };
 }
+function cleanTacticPlayerReferences(tactic, playerId){
+  if(!tactic || typeof tactic !== 'object') return false;
+  const id = Number(playerId || 0);
+  if(!id) return false;
+  let changed = false;
+  if(Array.isArray(tactic.starters)){
+    tactic.starters = tactic.starters.map(value => {
+      if(Number(value) !== id) return value;
+      changed = true;
+      return 0;
+    });
+  }
+  if(Array.isArray(tactic.bench)){
+    const next = tactic.bench.filter(value => Number(value) !== id);
+    if(next.length !== tactic.bench.length) changed = true;
+    tactic.bench = next;
+  }
+  if(Array.isArray(tactic.autoSubs)){
+    const next = tactic.autoSubs.filter(rule => Number(rule?.outId || 0) !== id && Number(rule?.inId || 0) !== id);
+    if(next.length !== tactic.autoSubs.length) changed = true;
+    tactic.autoSubs = next;
+  }
+  if(tactic.playerMentalities && Object.prototype.hasOwnProperty.call(tactic.playerMentalities, id)){
+    delete tactic.playerMentalities[id];
+    changed = true;
+  }
+  if(Number(tactic.captainId || 0) === id){
+    tactic.captainId = 0;
+    changed = true;
+  }
+  return changed;
+}
+function removePlayerReferencesFromState(playerId, targetGame=game, options={}){
+  if(!targetGame) return { removed:0 };
+  const id = Number(playerId || 0);
+  if(!id) return { removed:0 };
+  let removed = 0;
+  const deleteKey = (container, key=id) => {
+    if(container && typeof container === 'object' && Object.prototype.hasOwnProperty.call(container, key)){
+      delete container[key];
+      removed += 1;
+    }
+  };
+  [
+    targetGame.playerCondition,
+    targetGame.playerMorale,
+    targetGame.playerSkillBoosts,
+    targetGame.playerAgeSkillPenalties,
+    targetGame.trainingPlan,
+    targetGame.playerStats,
+    targetGame.playerStatus,
+    targetGame.playerWear,
+    targetGame.playerMentalities,
+    targetGame.captaincyProgress,
+    targetGame.playerImpactWindows
+  ].forEach(container => deleteKey(container));
+  deleteKey(targetGame.playerStars?.byPlayerId);
+  deleteKey(targetGame.playerBenchedStreak?.players);
+  deleteKey(targetGame.rejectedPurchaseOffers);
+  deleteKey(targetGame.rejectedFreeAgentOffers);
+  if(targetGame.tactic && cleanTacticPlayerReferences(targetGame.tactic, id)) removed += 1;
+  Object.values(targetGame.savedTactics?.slots || {}).forEach(tactic => {
+    if(cleanTacticPlayerReferences(tactic, id)) removed += 1;
+  });
+  Object.values(targetGame.savedTrainingPlans?.slots || {}).forEach(plan => deleteKey(plan?.trainingPlan));
+  if(Array.isArray(targetGame.pendingTransfers)){
+    const before = targetGame.pendingTransfers.length;
+    targetGame.pendingTransfers = targetGame.pendingTransfers.filter(item => ![item?.playerId, item?.inId, item?.outId].some(value => Number(value || 0) === id));
+    removed += before - targetGame.pendingTransfers.length;
+  }
+  if(targetGame.scoutingCenter && typeof targetGame.scoutingCenter === 'object'){
+    deleteKey(targetGame.scoutingCenter.reports);
+    if(Array.isArray(targetGame.scoutingCenter.listedPlayerIds)){
+      const before = targetGame.scoutingCenter.listedPlayerIds.length;
+      targetGame.scoutingCenter.listedPlayerIds = targetGame.scoutingCenter.listedPlayerIds.filter(value => Number(value || 0) !== id);
+      removed += before - targetGame.scoutingCenter.listedPlayerIds.length;
+    }
+    if(Array.isArray(targetGame.scoutingCenter.playerIds)){
+      const before = targetGame.scoutingCenter.playerIds.length;
+      targetGame.scoutingCenter.playerIds = targetGame.scoutingCenter.playerIds.filter(value => Number(value || 0) !== id);
+      removed += before - targetGame.scoutingCenter.playerIds.length;
+    }
+  }
+  if(targetGame.lastOwnPlayerOffer && Number(targetGame.lastOwnPlayerOffer.playerId || 0) === id){
+    targetGame.lastOwnPlayerOffer = null;
+    removed += 1;
+  }
+  if(targetGame.seasonEndPlayerOffers && typeof targetGame.seasonEndPlayerOffers === 'object'){
+    if(Array.isArray(targetGame.seasonEndPlayerOffers.offers)){
+      const before = targetGame.seasonEndPlayerOffers.offers.length;
+      targetGame.seasonEndPlayerOffers.offers = targetGame.seasonEndPlayerOffers.offers.filter(item => Number(item?.playerId || 0) !== id);
+      removed += before - targetGame.seasonEndPlayerOffers.offers.length;
+    }
+  }
+  if(targetGame.specialClauseOffers && typeof targetGame.specialClauseOffers === 'object'){
+    if(Array.isArray(targetGame.specialClauseOffers.offers)){
+      const before = targetGame.specialClauseOffers.offers.length;
+      targetGame.specialClauseOffers.offers = targetGame.specialClauseOffers.offers.filter(item => Number(item?.playerId || 0) !== id);
+      removed += before - targetGame.specialClauseOffers.offers.length;
+    }
+  }
+  if(targetGame === game && typeof removePlayerFromCurrentTactic === 'function') removePlayerFromCurrentTactic(id);
+  return { removed };
+}
+function retirementProbabilityForAge(age){
+  const cleanAge = Math.round(Number(age || 0));
+  if(cleanAge < RETIREMENT_MIN_AGE) return 0;
+  if(cleanAge > RETIREMENT_MAX_AGE) return 1;
+  return clamp(Number(RETIREMENT_PROBABILITY_BY_AGE?.[cleanAge] || 0), 0, 1);
+}
+function playerRetiresAtSeasonEnd(player, season=game?.seasonNumber || 1){
+  if(!player || player.sold || player.retired) return false;
+  const age = Math.round(Number(player.age || 0));
+  const probability = retirementProbabilityForAge(age);
+  if(probability <= 0) return false;
+  if(probability >= 1) return true;
+  const roll = hashNumber(`retirement-${Math.max(1, Number(season || 1))}-${Number(player.id || 0)}-${age}`, 1000000) / 1000000;
+  return roll < probability;
+}
 function retireSeasonVeterans(){
   if(!game || !seed?.players) return [];
-  const clubId = Number(game.selectedClubId);
-  const retirees = seed.players
-    .filter(player => !player.sold)
-    .filter(player => {
-      const age = Math.round(Number(player.age || 0));
-      const retirementAge = age >= RETIREMENT_MIN_AGE && age <= RETIREMENT_MAX_AGE;
-      if(!retirementAge) return false;
-      const ownPlayer = Number(player.clubId) === clubId && !player.freeAgent;
-      const freePlayer = Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent);
-      return ownPlayer || freePlayer;
-    })
-    .map(player => ({
-      ...player,
-      freeAgent:Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent),
-      manualPlayer:Boolean(player.manualPlayer),
-      manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement)
-    }));
-  if(!retirees.length) return [];
-  const retiredIds = new Set(retirees.map(p => Number(p.id)));
+  const managedClubId = Number(game.selectedClubId || 0);
+  const retireePlayers = seed.players.filter(player => playerRetiresAtSeasonEnd(player, game.seasonNumber || 1));
+  if(!retireePlayers.length) return [];
+  retireePlayers.forEach(player => { player.retired = true; });
+  if(typeof managerPortfolioSyncRights === 'function') managerPortfolioSyncRights({ closeMissing:false });
+  const retirees = retireePlayers.map(player => ({
+    ...player,
+    freeAgent:Number(player.clubId || 0) === 0 || Boolean(player.freeAgent) || Boolean(player.youthFreeAgent),
+    manualPlayer:Boolean(player.manualPlayer),
+    manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement)
+  }));
+  const retiredIds = new Set(retirees.map(player => Number(player.id)));
   const manualRespawned = retirees
     .filter(player => player.manualPlayer && player.manualRespawnAfterRetirement)
     .map(player => typeof manualRespawnClone === 'function' ? manualRespawnClone(player, 'season_retirement') : null)
@@ -7744,34 +7897,40 @@ function retireSeasonVeterans(){
   }
   seed.players = seed.players.filter(player => !retiredIds.has(Number(player.id)));
   game.marketPlayers = (game.marketPlayers || []).filter(player => !retiredIds.has(Number(player.id)));
-  retirees.forEach(player => {
-    removePlayerFromCurrentTactic(player.id);
-    delete game.playerCondition?.[player.id];
-    delete game.playerMorale?.[player.id];
-    delete game.playerSkillBoosts?.[player.id];
-    delete game.playerAgeSkillPenalties?.[player.id];
-    delete game.trainingPlan?.[player.id];
-    delete game.playerStats?.[player.id];
-    delete game.playerStatus?.[player.id];
-  });
+  retirees.forEach(player => removePlayerReferencesFromState(player.id, game, { reason:'retirement' }));
+  if(typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
   if(manualRespawned.length){
     const respawnedIds = new Set(manualRespawned.map(player => Number(player.id)));
     seed.players = seed.players.filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
     game.marketPlayers = (game.marketPlayers || []).filter(player => !respawnedIds.has(Number(player.id))).concat(manualRespawned);
+    if(typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
     if(typeof initializeFreePlayerState === 'function') initializeFreePlayerState(manualRespawned);
     game.manualRetiredPlayerIds = (Array.isArray(game.manualRetiredPlayerIds) ? game.manualRetiredPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
     game.retiredManualPlayerIds = (Array.isArray(game.retiredManualPlayerIds) ? game.retiredManualPlayerIds : []).filter(id => !respawnedIds.has(Number(id)));
-    manualRespawned.forEach(player => { player.respawnedAsFreeAgent = true; if(game.playerAgeSkillPenalties) game.playerAgeSkillPenalties[player.id] = 0; });
+    manualRespawned.forEach(player => {
+      player.respawnedAsFreeAgent = true;
+      player.retired = false;
+      if(game.playerAgeSkillPenalties) delete game.playerAgeSkillPenalties[player.id];
+    });
   }
-  const ownRetirees = retirees.filter(player => !player.freeAgent);
+  const managedRetirees = retirees.filter(player => Number(player.clubId || 0) === managedClubId && !player.freeAgent);
+  const botRetirees = retirees.filter(player => Number(player.clubId || 0) > 0 && Number(player.clubId || 0) !== managedClubId && !player.freeAgent);
   const freeRetirees = retirees.filter(player => player.freeAgent);
-  if(ownRetirees.length){
-    const names = ownRetirees.slice(0,5).map(p => `${p.name} (${p.age})`).join(', ');
+  if(managedRetirees.length){
+    const names = managedRetirees.slice(0,5).map(player => `${player.name} (${player.age})`).join(', ');
     pushGameMessage({
       type:'plantel',
       priority:'normal',
       title:'Retiros al finalizar la temporada',
-      body:`${ownRetirees.length === 1 ? 'Un jugador informó' : `${ownRetirees.length} jugadores informaron`} su retiro del fútbol: ${names}${ownRetirees.length > 5 ? '...' : ''}`
+      body:`${managedRetirees.length === 1 ? 'Un jugador informó' : `${managedRetirees.length} jugadores informaron`} su retiro del fútbol: ${names}${managedRetirees.length > 5 ? '...' : ''}`
+    });
+  }
+  if(botRetirees.length){
+    pushGameMessage({
+      type:'mercado',
+      priority:'normal',
+      title:'Retiros en otros clubes',
+      body:`${botRetirees.length} jugadores de clubes controlados por bots se retiraron al finalizar la temporada.`
     });
   }
   if(freeRetirees.length){
@@ -7783,7 +7942,7 @@ function retireSeasonVeterans(){
     });
   }
   if(manualRespawned.length){
-    const names = manualRespawned.slice(0,5).map(p => `${p.name} (20)`).join(', ');
+    const names = manualRespawned.slice(0,5).map(player => `${player.name} (20)`).join(', ');
     pushGameMessage({
       type:'mercado',
       priority:'normal',
@@ -7796,8 +7955,11 @@ function retireSeasonVeterans(){
     name:player.name,
     age:player.age,
     position:player.position,
+    clubId:Number(player.clubId || 0),
     salary:player.salary || 0,
     freeAgent:Boolean(player.freeAgent),
+    botPlayer:Number(player.clubId || 0) > 0 && Number(player.clubId || 0) !== managedClubId,
+    retirementProbability:retirementProbabilityForAge(player.age),
     manualPlayer:Boolean(player.manualPlayer),
     manualRespawnAfterRetirement:Boolean(player.manualRespawnAfterRetirement),
     respawnedAsFreeAgent:Boolean(player.manualPlayer && player.manualRespawnAfterRetirement)
@@ -7823,15 +7985,8 @@ function removeFreeMarketPlayersById(ids=[]){
       return !(Number(player.clubId || 0) === 0 && player.freeAgent);
     });
   }
-  removed.forEach(player => {
-    delete game.playerCondition?.[player.id];
-    delete game.playerMorale?.[player.id];
-    delete game.playerSkillBoosts?.[player.id];
-    delete game.playerAgeSkillPenalties?.[player.id];
-    delete game.trainingPlan?.[player.id];
-    delete game.playerStats?.[player.id];
-    delete game.playerStatus?.[player.id];
-  });
+  removed.forEach(player => removePlayerReferencesFromState(player.id, game, { reason:'free_agent_prune' }));
+  if(removed.length && typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
   return removed;
 }
 
@@ -7883,8 +8038,7 @@ function initializeFreePlayerState(players=[]){
   players.forEach(p => {
     game.playerCondition[p.id] = 5;
     game.playerMorale[p.id] = 5;
-    game.playerSkillBoosts[p.id] = game.playerSkillBoosts[p.id] || {};
-    game.playerAgeSkillPenalties[p.id] = 0;
+    delete game.playerAgeSkillPenalties[p.id];
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     game.playerStats[p.id] = game.playerStats[p.id] || createEmptyPlayerStat(p);
     normalizePlayerStatRecord(game.playerStats[p.id]);
@@ -8865,6 +9019,7 @@ function startNextSeason(selectedClubId){
   game.tactic = normalizeTactic(nextClubId, DEFAULT_TACTIC);
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
   renewFreeAgentMarketForSeason(retiredCount);
+  repairBotRosters({ reason:'season_retirements' });
   ensurePlayerStateForAll();
   balanceBotsForSeasonStart(nextClubId, previousBotBalanceRanks);
   generateOpeningSponsorOffers(true);

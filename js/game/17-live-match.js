@@ -123,7 +123,7 @@
   }
   function meterClass(value){ const n = Number(value || 0); return n >= 76 ? 'ok' : n >= 55 ? 'warn' : 'bad'; }
   function fitClass(value){ const n = Number(value || 0); return n >= 90 ? 'ok' : n >= 74 ? 'warn' : 'bad'; }
-  function remainingSubstitutions(){ return Math.max(0, Number(liveState?.maxSubs || 3) - Number(liveState?.usedSubs || 0) - livePendingSubstitutions.length); }
+  function remainingSubstitutions(){ return Math.max(0, Number(liveState?.maxSubs || 5) - Number(liveState?.usedSubs || 0) - livePendingSubstitutions.length); }
   function pendingOutIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.outId))); }
   function pendingInIds(){ return new Set(livePendingSubstitutions.map(s => Number(s.inId))); }
   function availabilityTag(player, inField, isOwn){
@@ -279,8 +279,8 @@
     const awayPoss = Number(a.possession ?? (100 - Number(h.possession || 50)));
     return `<div class="card inner live-compare-card">
       <div class="live-compare-top"><span>${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</span><b>Estadísticas del partido</b><span>${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</span></div>
-      ${compareStatRow('Disparos', h.attacks || 0, a.attacks || 0)}
-      ${compareStatRow('Tiros a Puerta', h.chances || 0, a.chances || 0)}
+      ${compareStatRow('Intentos de ataque', h.attacks || 0, a.attacks || 0)}
+      ${compareStatRow('Tiros al arco', h.chances || 0, a.chances || 0)}
       ${compareStatRow('xG', h.xg || 0, a.xg || 0, 'xg')}
       ${compareStatRow('Faltas', h.fouls || 0, a.fouls || 0)}
       ${compareStatRow('Posesión', h.possession || 50, awayPoss, 'pct')}
@@ -474,7 +474,7 @@
       livePaused = true;
       clearTimeout(liveAutoTimer);
       const injuredName = eventPlayerLabel(ownInjuries[0].playerId, true);
-      const canSub = Number(liveState?.usedSubs || 0) + livePendingSubstitutions.length < Number(liveState?.maxSubs || 3);
+      const canSub = Number(liveState?.usedSubs || 0) + livePendingSubstitutions.length < Number(liveState?.maxSubs || 5);
       liveShowNotice(canSub ? `${injuredName} queda lesionado en cancha. Tocá al lesionado y luego un suplente para reemplazarlo.` : `${injuredName} queda lesionado en cancha, pero ya no quedan cambios.`, false);
     }
     if(wasBeforeBreak && liveState?.nextBlock?.period === 'break' && !liveHalftimePaused){

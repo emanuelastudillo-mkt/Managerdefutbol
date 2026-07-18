@@ -441,13 +441,14 @@ function hireFreeAgent(playerId){
     return;
   }
   game.marketPlayers[idx].clubId = game.selectedClubId;
+  if(typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
   game.marketPlayers[idx].freeAgent = false;
   game.marketPlayers[idx].transferListed = false;
   game.marketPlayers[idx].intransferible = false;
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   const player = playerById(playerId);
   if(player){
-    player.clubId = game.selectedClubId;
+    setPlayerClubId(player, game.selectedClubId);
     player.freeAgent = false;
     player.transferListed = false;
     player.intransferible = false;

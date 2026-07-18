@@ -1534,7 +1534,7 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   const unlockedForTransfers = typeof unlockTransferBudgetFromSale === 'function' ? unlockTransferBudgetFromSale(netAmount) : 0;
   const destinationClubId = Number(msg.action.sourceClubId || -1);
   if(typeof resetPlayerCaptaincyProgress === 'function') resetPlayerCaptaincyProgress(player.id, game.selectedClubId);
-  player.clubId = destinationClubId > 0 ? destinationClubId : -1;
+  setPlayerClubId(player, destinationClubId > 0 ? destinationClubId : -1);
   player.transferListed = false;
   player.intransferible = false;
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true } : p);
@@ -1701,7 +1701,7 @@ function processBotDismissals(){
     for(let i=0; i<Math.min(maxCuts, squad.length); i++){
       const player = squad[i];
       if(hashNumber(`bot-dismiss-${game.seasonNumber}-${game.matchdayIndex}-${club.id}-${player.id}`, 100) > 42) continue;
-      player.clubId = 0;
+      setPlayerClubId(player, 0);
       player.freeAgent = true;
       player.transferListed = false;
       player.salaryPaidCount = 0;
@@ -1784,12 +1784,14 @@ function generateMarketPlayers(count=50, options={}){
 function mergeMarketPlayersIntoSeed(players=[]){
   if(!seed?.players) return;
   const existing = new Set(seed.players.map(p => Number(p.id)));
+  let changed = false;
   players.forEach(p => {
-    if(!existing.has(Number(p.id))){ seed.players.push(p); existing.add(Number(p.id)); }
+    if(!existing.has(Number(p.id))){ seed.players.push(p); existing.add(Number(p.id)); changed = true; }
     else {
       const idx = seed.players.findIndex(x => Number(x.id) === Number(p.id));
-      if(idx >= 0) seed.players[idx] = { ...seed.players[idx], ...p };
+      if(idx >= 0){ seed.players[idx] = { ...seed.players[idx], ...p }; changed = true; }
     }
   });
+  if(changed && typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
 }
 

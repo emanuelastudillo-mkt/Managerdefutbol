@@ -1341,10 +1341,10 @@
     return rows;
   }
   function liveBotSubPressure(session, minute, usedCount){
-    if(usedCount >= 3) return 999;
+    if(usedCount >= 5) return 999;
     if(minute < 45) return 999;
-    if(minute >= 84) return usedCount < 3 ? 18 : 999;
-    if(minute >= 78) return usedCount < 3 ? 24 : 999;
+    if(minute >= 84) return usedCount < 5 ? 18 : 999;
+    if(minute >= 78) return usedCount < 5 ? 24 : 999;
     if(minute >= 70) return usedCount < 2 ? 34 : 52;
     if(minute >= 60) return usedCount < 1 ? 42 : 62;
     if(minute >= 45) return usedCount < 1 ? 54 : 999;
@@ -1368,7 +1368,7 @@
     const ownId = Number(game?.selectedClubId || 0);
     if(!session || Number(clubId) === ownId) return [];
     const usedCount = liveUsedSubCount(session, clubId);
-    if(usedCount >= 3) return [];
+    if(usedCount >= 5) return [];
     const tactic = liveTacticForClub(session, clubId);
     if(!tactic?.starters?.length || !tactic?.bench?.length) return [];
     const slots = liveFormationSlots(tactic.formation || '4-4-2');
@@ -1456,10 +1456,10 @@
     const slots = liveFormationSlots(tactic?.formation || '4-4-2');
     const slot = slots[index] || playerById(playerId)?.position || 'MC';
     if(Number(clubId) === ownId){
-      session.injuryPauseRequest = { clubId, playerId, minute:Number(minute || injury.minute || 0), canSub:liveUsedSubCount(session, clubId) < 3 };
+      session.injuryPauseRequest = { clubId, playerId, minute:Number(minute || injury.minute || 0), canSub:liveUsedSubCount(session, clubId) < 5 };
       return [];
     }
-    if(!LIVE_BOT_INJURY_SUB_ENABLED || liveUsedSubCount(session, clubId) >= 3) return [];
+    if(!LIVE_BOT_INJURY_SUB_ENABLED || liveUsedSubCount(session, clubId) >= 5) return [];
     const replacement = chooseBenchForInjuredBot(session, clubId, playerId, slot, minute);
     if(!replacement) return [];
     return applyLiveSubstitutions(session, clubId, [{ outId:playerId, inId:replacement.id, trigger:'injury', manual:false }], Math.max(1, Number(minute || injury.minute || 0)));
@@ -1483,7 +1483,7 @@
     const usedOut = new Set(session.usedOuts[String(clubId)].map(Number));
     const events = [];
     for(const raw of Array.isArray(changes) ? changes : []){
-      if(usedSubs.length >= 3) break;
+      if(usedSubs.length >= 5) break;
       const outId = Number(raw?.outId || 0);
       const inId = Number(raw?.inId || 0);
       if(!outId || !inId || outId === inId) continue;
@@ -1865,7 +1865,7 @@
       usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
       usedSubsHome:(session.usedSubs[String(session.match.homeId)] || []).length,
       usedSubsAway:(session.usedSubs[String(session.match.awayId)] || []).length,
-      maxSubs:3,
+      maxSubs:5,
       matchStats:liveStatsSnapshot(session),
       matchContext:session.matchContext,
       phasesPlayed:Number(session.blockIndex || 0),
@@ -1902,7 +1902,7 @@
     const result = {
       ...session.match,
       played:true,
-      engine:'simulador-vivo-tactico-v5.23',
+      engine:'live-tactical',
       starterIdsHome,
       starterIdsAway,
       homeGoals:session.homeGoals,
@@ -2030,7 +2030,7 @@
       botOverexertionConditionDelta(match.homeId, homeGoals, awayGoals, starterIdsHome),
       botOverexertionConditionDelta(match.awayId, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'simulador-2.0-v7.08-tacticas-bot-variables', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    return { ...match, played:true, engine:'full-tactical', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

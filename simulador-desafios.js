@@ -169,7 +169,7 @@
   function generateSubstitutions(snapshot, random, side){
     const starters = snapshotPlayers(snapshot, 'starter').slice(0, 11);
     const bench = snapshotPlayers(snapshot, 'bench').slice(0, 10);
-    const maxSubs = Math.min(3, bench.length, Math.max(0, starters.length - 1));
+    const maxSubs = Math.min(5, bench.length, Math.max(0, starters.length - 1));
     const count = maxSubs ? Math.floor(random() * (maxSubs + 1)) : 0;
     const availableOut = starters.slice();
     const availableIn = bench.slice();

@@ -554,23 +554,60 @@ function quickBuildGoals(clubId, lineup, goalsCount, startMinute=2, endMinute=90
   }
   return goals;
 }
+function quickNormalizeCardsForExpulsions(cards=[]){
+  const ordered = (Array.isArray(cards) ? cards : []).slice().sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
+  const yellowCounts = new Map();
+  const expelled = new Set();
+  const normalized = [];
+  ordered.forEach(raw => {
+    const playerId = Number(raw?.playerId || 0);
+    if(!playerId || expelled.has(playerId)) return;
+    if(String(raw.type || '') === 'red'){
+      normalized.push({ ...raw, type:'red' });
+      expelled.add(playerId);
+      return;
+    }
+    const previous = Number(yellowCounts.get(playerId) || 0);
+    if(previous >= 1){
+      normalized.push({ ...raw, type:'secondYellowRed' });
+      yellowCounts.set(playerId, previous + 1);
+      expelled.add(playerId);
+      return;
+    }
+    normalized.push({ ...raw, type:'yellow' });
+    yellowCounts.set(playerId, 1);
+  });
+  return normalized;
+}
 function quickBuildCards(clubId, lineup, fouls){
-  const cards = [];
+  const candidates = [];
   const count = clamp(quickBotPoisson(Math.max(0.10, Number(fouls || 0) / 7.4)), 0, 6);
-  const yellowByPlayer = new Map();
   for(let i=0; i<count; i++){
     const player = quickWeightedPick(lineup, quickCardWeight);
     if(!player) continue;
-    const previous = yellowByPlayer.get(player.id) || 0;
-    yellowByPlayer.set(player.id, previous + 1);
-    cards.push({ clubId:Number(clubId), playerId:Number(player.id), type: previous ? 'secondYellowRed' : 'yellow', minute:clamp(Math.round(rnd(previous ? 35 : 8, 89)), 1, 90), quick:true });
+    candidates.push({ clubId:Number(clubId), playerId:Number(player.id), type:'yellow', minute:clamp(Math.round(rnd(8, 89)), 1, 90), quick:true });
   }
-  const directRedPool = lineup.filter(p => String(p.position || '').toUpperCase() !== 'POR' && hiddenStats(p).aggression > 78);
+  const directRedPool = lineup.filter(player => String(player.position || '').toUpperCase() !== 'POR' && hiddenStats(player).aggression > 78);
   if(directRedPool.length && Math.random() < 0.025){
     const player = quickWeightedPick(directRedPool, quickCardWeight);
-    if(player) cards.push({ clubId:Number(clubId), playerId:Number(player.id), type:'red', minute:clamp(Math.round(rnd(18, 88)), 1, 90), quick:true });
+    if(player) candidates.push({ clubId:Number(clubId), playerId:Number(player.id), type:'red', minute:clamp(Math.round(rnd(18, 88)), 1, 90), quick:true });
   }
-  return cards.sort((a,b) => a.minute - b.minute);
+  return quickNormalizeCardsForExpulsions(candidates);
+}
+function quickDefaultLossByRedCards(cards, homeId, awayId){
+  const redCards = (clubId) => (cards || [])
+    .filter(card => Number(card.clubId) === Number(clubId) && ['red','secondYellowRed'].includes(String(card.type || '')))
+    .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
+  const home = redCards(homeId);
+  const away = redCards(awayId);
+  if(home.length < 5 && away.length < 5) return null;
+  if(home.length >= 5 && away.length >= 5){
+    const homeMinute = Number(home[4]?.minute || 999);
+    const awayMinute = Number(away[4]?.minute || 999);
+    if(awayMinute < homeMinute) return { offenderClubId:Number(awayId), winnerClubId:Number(homeId), homeGoals:3, awayGoals:0, homeReds:home.length, awayReds:away.length, minute:awayMinute };
+  }
+  if(home.length >= 5) return { offenderClubId:Number(homeId), winnerClubId:Number(awayId), homeGoals:0, awayGoals:3, homeReds:home.length, awayReds:away.length, minute:Number(home[4]?.minute || 90) };
+  return { offenderClubId:Number(awayId), winnerClubId:Number(homeId), homeGoals:3, awayGoals:0, homeReds:home.length, awayReds:away.length, minute:Number(away[4]?.minute || 90) };
 }
 function quickBuildInjuries(clubId, lineup, context){
   const injuries = [];
@@ -738,7 +775,12 @@ function quickSimulateBotMatch(match){
   const awayFouls = clamp(Math.round(rnd(6,17)), 2, 30);
   const goals = quickBuildGoals(match.homeId, homeLineup, homeGoals).concat(quickBuildGoals(match.awayId, awayLineup, awayGoals)).sort((a,b) => a.minute - b.minute);
   const cards = quickBuildCards(match.homeId, homeLineup, homeFouls).concat(quickBuildCards(match.awayId, awayLineup, awayFouls)).sort((a,b) => a.minute - b.minute);
-  const injuries = quickBuildInjuries(match.homeId, homeLineup, context).concat(quickBuildInjuries(match.awayId, awayLineup, context)).sort((a,b) => a.minute - b.minute);
+  const defaultLoss = quickDefaultLossByRedCards(cards, match.homeId, match.awayId);
+  if(defaultLoss){
+    homeGoals = Number(defaultLoss.homeGoals || 0);
+    awayGoals = Number(defaultLoss.awayGoals || 0);
+  }
+  const injuries = defaultLoss ? [] : quickBuildInjuries(match.homeId, homeLineup, context).concat(quickBuildInjuries(match.awayId, awayLineup, context)).sort((a,b) => a.minute - b.minute);
   const homeKeeper = homeLineup.find(p => String(p.position || '').toUpperCase() === 'POR');
   const awayKeeper = awayLineup.find(p => String(p.position || '').toUpperCase() === 'POR');
   const keySaves = quickBuildKeySaves(match.homeId, homeKeeper, awayChances, awayGoals, awayLineup)
@@ -765,13 +807,14 @@ function quickSimulateBotMatch(match){
       applyPlayerStats(match.homeId, homeLineup, substitutions, goals, cards, injuries, keySaves, errors, playerStatsResult);
       applyPlayerStats(match.awayId, awayLineup, substitutions, goals, cards, injuries, keySaves, errors, playerStatsResult);
     }
+    if(typeof applyMatchCohesionResult === 'function') applyMatchCohesionResult(match, substitutions, cards);
     if(typeof applyAvailability === 'function') applyAvailability(cards, injuries);
     if(typeof updatePlayerStarTrackingForMatch === 'function'){
       updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway });
     }
   }
   const matchContext = overexertionEvents.length ? { ...context, botOverexertion:overexertionEvents } : context;
-  return { ...match, played:true, engine:'bot-rapido-v5.41-sobreexigencia-progresiva', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas, botOverexertionEvents:overexertionEvents };
+  return { ...match, played:true, engine:'quick-bot', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas, botOverexertionEvents:overexertionEvents, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null, suspensionReason:defaultLoss ? 'Cinco expulsiones' : '' };
 }
 function simulateScheduledMatch(match){
   if(typeof normalizeBotWearAndConditionForMatch === 'function'){
@@ -1599,8 +1642,8 @@ function showResultOnlySummary(result){
       <p class="label">Resultado directo</p>
       <h2>${escapeHtml(h)} ${Number(result.homeGoals || 0)} - ${Number(result.awayGoals || 0)} ${escapeHtml(a)}</h2>
       <div class="grid cols-2">
-        <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Disparos: ${Number(hs.attacks || 0)}</p><p>Tiros a Puerta: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
-        <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Disparos: ${Number(as.attacks || 0)}</p><p>Tiros a Puerta: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
+        <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Intentos de ataque: ${Number(hs.attacks || 0)}</p><p>Tiros al arco: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
+        <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Intentos de ataque: ${Number(as.attacks || 0)}</p><p>Tiros al arco: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
       </div>
       <div class="modal-actions"><button class="primary" onclick="closeModal()">Cerrar</button></div>
     </div>`;

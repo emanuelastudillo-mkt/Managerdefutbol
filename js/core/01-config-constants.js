@@ -28,22 +28,28 @@ const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS
 const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.01');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.02');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.01');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.02');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
-const STADIUMS_DATABASE_URL = configValue('data.estadiosUrl', 'data/estadios_argentina.json');
-const FANS_DATABASE_URL = configValue('data.hinchasUrl', 'data/hinchas_argentina.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
-  STADIUMS_DATABASE_URL,
-  configValue('data.estadiosArgentinaUrl', 'data/estadios_argentina.json'),
-  configValue('data.estadiosChileUrl', 'data/estadios_chile.json')
+  'data/estadios_argentina.json',
+  'data/estadios_chile.json',
+  'data/estadios_brasil.json',
+  'data/estadios_inglaterra.json',
+  'data/estadios_espana.json',
+  'data/estadios_italia.json',
+  'data/estadios_rumania.json'
 ]);
 const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
-  FANS_DATABASE_URL,
-  configValue('data.hinchasArgentinaUrl', 'data/hinchas_argentina.json'),
-  configValue('data.hinchasChileUrl', 'data/hinchas_chile.json')
+  'data/hinchas_argentina.json',
+  'data/hinchas_chile.json',
+  'data/hinchas_brasil.json',
+  'data/hinchas_inglaterra.json',
+  'data/hinchas_espana.json',
+  'data/hinchas_italia.json',
+  'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
 const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
@@ -54,6 +60,7 @@ const SAVE_SLOT_LEGACY_CAREER = 'career';
 const SAVE_SLOT_CAREER_PREFIX_ID = 'career:';
 const SAVE_SLOT_CAREER = 'career:1';
 const SAVE_CAREER_SLOT_COUNT = Math.max(1, Math.min(10, Math.round(configNumber('partidas.slotsCarrera', 5, 1, 10))));
+const AUTOSAVE_COALESCE_MS = Math.max(0, Math.round(configNumber('partidas.agruparAutoguardadosMs', 180, 0, 2000)));
 const SAVE_SLOT_CAMPO_DESTRUIDO = 'challenge:campo_destruido';
 const SAVE_SLOT_PREFIX = 'slot:';
 const SAVE_BACKUP_PREFIX = 'backup:';
@@ -126,7 +133,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.01');
+const APP_VERSION = configValue('version', 'V8.02');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -238,10 +245,8 @@ const BOT_BALANCE_EMERGENCY_CONDITION_FLOOR = configNumber('equilibrioBots.pisoF
 const BOT_BALANCE_DEVELOPMENT_CHANCE = configNumber('equilibrioBots.desarrolloPlantelPorTemporada', 0.18, 0, 1);
 const BOT_BALANCE_POSITION_DEVELOPMENT_BONUS = configNumber('equilibrioBots.bonusDesarrolloPorPosicion', 0.08, 0, 1);
 const BOT_BALANCE_MAX_SKILL_BOOST = configNumber('equilibrioBots.maximoBoostBotPorHabilidad', 18, 0, 30);
-const BOT_MANAGER_TOP_PLAYERS_ENABLED = configBoolean('equilibrioBots.tacticaContraManager.priorizarMejoresJugadores', true);
 const BOT_MANAGER_TOP_PLAYERS_COUNT = Math.max(3, Math.min(5, Math.round(configNumber('equilibrioBots.tacticaContraManager.cantidadMejoresJugadores', 5, 3, 5))));
 const BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS = configNumber('equilibrioBots.tacticaContraManager.bonusInclusionMejorJugador', 5000, 1000, 50000);
-const BOT_MANAGER_FORMATION_AUDIT_ENABLED = configBoolean('equilibrioBots.tacticaContraManager.auditarCobertura', true);
 const BOT_QUICK_OVEREXERTION_ENABLED = configBoolean('equilibrioBots.tacticaRapida.sobreexigenciaSiPierde', true);
 const BOT_QUICK_OVEREXERTION_MAX_GOALS = Math.max(0, Math.round(configNumber('equilibrioBots.tacticaRapida.maxGolesExtraPorEquipo', 1, 0, 5)));
 const PLAYER_MORALE_START = 60;
@@ -498,8 +503,18 @@ const SEASON_YOUTH_FREE_AGENTS_PER_CLUB = configNumber('plantel.jovenesLibresNue
 const SEASON_YOUTH_FREE_AGENT_AGE_MIN = configNumber('plantel.jovenesLibresEdadMin', 17, 15, 30);
 const SEASON_YOUTH_FREE_AGENT_AGE_MAX = Math.max(SEASON_YOUTH_FREE_AGENT_AGE_MIN, configNumber('plantel.jovenesLibresEdadMax', 18, 15, 35));
 const SEASON_YOUTH_FREE_AGENT_COUNT = configNumber('plantel.jovenesLibresPorTemporada', 0, 0);
-const RETIREMENT_MIN_AGE = 32;
-const RETIREMENT_MAX_AGE = 38;
+const RETIREMENT_PROBABILITY_BY_AGE_RAW = configValue('plantel.retiroProbabilidadPorEdad', {
+  32:0.05, 33:0.10, 34:0.18, 35:0.30, 36:0.45, 37:0.60,
+  38:0.75, 39:0.86, 40:0.94, 41:0.98, 42:1
+});
+const RETIREMENT_PROBABILITY_BY_AGE = Object.fromEntries(
+  Object.entries(RETIREMENT_PROBABILITY_BY_AGE_RAW && typeof RETIREMENT_PROBABILITY_BY_AGE_RAW === 'object' ? RETIREMENT_PROBABILITY_BY_AGE_RAW : {})
+    .map(([age, probability]) => [Math.round(Number(age)), Math.max(0, Math.min(1, Number(probability || 0)))])
+    .filter(([age]) => Number.isFinite(age) && age > 0)
+);
+const RETIREMENT_AGES = Object.keys(RETIREMENT_PROBABILITY_BY_AGE).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+const RETIREMENT_MIN_AGE = RETIREMENT_AGES[0] || 32;
+const RETIREMENT_MAX_AGE = RETIREMENT_AGES[RETIREMENT_AGES.length - 1] || 42;
 const SEASON_SALARY_BASE_REDUCTION = configNumber('economia.reduccionBaseSueldoFinTemporada', 0.05, 0, 1);
 const SEASON_SALARY_MATCH_BONUS = configNumber('economia.bonusSueldoPorPartidoJugado', 0.01, 0);
 const OWN_PLAYER_OFFER_COOLDOWN_TURNS = 3;

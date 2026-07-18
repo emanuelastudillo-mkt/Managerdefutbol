@@ -1,4 +1,66 @@
-# Fútbol Manager MVP - V8.01
+# Fútbol Manager MVP - V8.02
+
+## V8.02 - Optimización de retiros, guardados, planteles y simuladores
+
+### Alcance
+
+- Esta versión aplica los bloques de limpieza segura, retiros y reducción de población, reducción de datos por jugador y rendimiento de guardados y planteles.
+- Los slots de partidas no fueron modificados: continúan existiendo cinco carreras normales y el modo especial conserva su tratamiento independiente.
+
+### Retiros y población de jugadores
+
+- El retiro dejó de ser automático para todos los futbolistas de 32 a 38 años del club dirigido.
+- La decisión ahora es anual, probabilística y determinista según temporada, jugador y edad; recargar la partida no cambia el resultado.
+- La curva se aplica por igual a jugadores del club dirigido, clubes bots y agentes libres.
+- Las probabilidades anuales son: 32 años 5%, 33 años 10%, 34 años 18%, 35 años 30%, 36 años 45%, 37 años 60%, 38 años 75%, 39 años 86%, 40 años 94%, 41 años 98% y 42 años 100%.
+- Se corrigió la exclusión que impedía retirarse a jugadores contratados por clubes bots.
+- Los jugadores manuales que tienen configurada la reaparición después del retiro conservan esa regla.
+- Los bots sólo reparan planteles cuando quedan por debajo del mínimo de 18 jugadores o pierden cobertura posicional.
+- Antes de generar un jugador de emergencia, el bot intenta contratar un agente libre de la posición necesaria.
+
+### Reducción de datos por jugador
+
+- `playerAgeSkillPenalties` pasa a ser un registro disperso: sólo guarda futbolistas con una penalización real mayor que cero.
+- `playerSkillBoosts` también pasa a ser disperso: no conserva objetos vacíos ni mejoras con valor cero.
+- Las partidas anteriores eliminan al cargar o guardar entradas de penalizaciones y mejoras con valor cero, identificadores inválidos y jugadores inexistentes.
+- La ausencia de una entrada equivale a penalización cero.
+- El retiro utiliza una limpieza centralizada para borrar condición, moral, entrenamiento, penalización por edad, estadísticas, lesiones, sanciones, capitanía, impacto, tácticas, mercado y otras referencias del jugador.
+
+### Rendimiento de planteles
+
+- `playersByClub()` utiliza un índice de jugadores por club en lugar de filtrar toda la base en cada consulta.
+- El índice se invalida al transferir, liberar, promover, retirar o incorporar futbolistas.
+- Las reparaciones de plantel posteriores a los retiros conservan el mínimo existente de 18 jugadores y no vuelven a completar automáticamente cada club hasta 25.
+
+### Guardado local
+
+- Los autoguardados consecutivos se agrupan durante una ventana breve para evitar múltiples escrituras iguales en IndexedDB.
+- El guardado manual fuerza inmediatamente la escritura más reciente.
+- Se conserva una copia principal y una copia de respaldo por slot.
+- Antes de crear el snapshot se compactan las penalizaciones por edad.
+- Los errores de cuota, estado de IndexedDB u otros rechazos muestran una advertencia visible y específica.
+
+### Simuladores
+
+- Todos los simuladores y las reglas automáticas quedan unificados en un máximo de cinco sustituciones.
+- La simulación rápida impide que un jugador ya expulsado vuelva a recibir tarjetas.
+- Cinco expulsiones suspenden el partido y producen derrota 0-3 para el equipo infractor.
+- La simulación rápida aplica la misma evolución de cohesión posterior al partido que el simulador completo.
+- Los identificadores internos de motores dejaron de depender de números históricos de versiones.
+
+### Limpieza segura
+
+- Se eliminaron constantes antiguas reemplazadas por variantes activas, una versión de banco de nombres sin uso y una configuración de error de gol sin lecturas.
+- Se retiró `data/jugadores_manual_ejemplo.json`, que no era cargado por el juego.
+- Se eliminaron configuraciones individuales de estadios e hinchas duplicadas por las listas de URLs activas.
+
+### Textos de estadísticas
+
+- `Disparos` y `disparos a puerta` pasan a mostrarse como **Intentos de ataque**.
+- `Tiros a Puerta` y `tiros a puerta` pasan a mostrarse como **Tiros al arco**.
+
+**V8.02 no rompe partidas anteriores.** Las partidas existentes migran automáticamente las penalizaciones por edad al formato compacto, conservan sus cinco slots y mantienen todos los snapshots, clubes, jugadores y progresos compatibles.
+
 
 ## V8.01 - Base oficial, auditoría estructural y corrección del guardado manual
 

@@ -3,6 +3,18 @@
 let playerLookupSource = null;
 let playerLookupLength = -1;
 let playerLookupIndex = new Map();
+let playerClubIndexSource = null;
+let playerClubIndexLength = -1;
+let playerClubIndexRevision = 0;
+let playerClubIndexBuiltRevision = -1;
+let playerClubIndex = new Map();
+function invalidatePlayerIndexes(){
+  playerLookupSource = null;
+  playerLookupLength = -1;
+  playerClubIndexSource = null;
+  playerClubIndexLength = -1;
+  playerClubIndexRevision += 1;
+}
 function refreshPlayerLookupIndex(){
   const players = Array.isArray(seed?.players) ? seed.players : [];
   if(playerLookupSource === players && playerLookupLength === players.length) return players;
@@ -10,6 +22,30 @@ function refreshPlayerLookupIndex(){
   playerLookupLength = players.length;
   playerLookupIndex = new Map(players.map((player,index) => [Number(player.id), index]));
   return players;
+}
+function refreshPlayerClubIndex(){
+  const players = Array.isArray(seed?.players) ? seed.players : [];
+  if(playerClubIndexSource === players && playerClubIndexLength === players.length && playerClubIndexBuiltRevision === playerClubIndexRevision) return playerClubIndex;
+  const next = new Map();
+  players.forEach(player => {
+    const clubId = Number(player?.clubId || 0);
+    if(!next.has(clubId)) next.set(clubId, []);
+    next.get(clubId).push(player);
+  });
+  playerClubIndexSource = players;
+  playerClubIndexLength = players.length;
+  playerClubIndexBuiltRevision = playerClubIndexRevision;
+  playerClubIndex = next;
+  return playerClubIndex;
+}
+function setPlayerClubId(player, clubId){
+  if(!player) return player;
+  const nextClubId = Number(clubId || 0);
+  if(Number(player.clubId || 0) !== nextClubId){
+    player.clubId = nextClubId;
+    invalidatePlayerIndexes();
+  }
+  return player;
 }
 function playerById(id){
   const playerId = Number(id);
@@ -24,7 +60,10 @@ function playerById(id){
   player = Number.isInteger(index) ? playerLookupSource[index] : undefined;
   return player && Number(player.id) === playerId ? player : undefined;
 }
-function playersByClub(clubId){ return seed.players.filter(p => p.clubId === clubId); }
+function playersByClub(clubId){
+  const list = refreshPlayerClubIndex().get(Number(clubId || 0));
+  return Array.isArray(list) ? list.slice() : [];
+}
 function pendingIncomingTransfersCount(clubId=game?.selectedClubId){
   return (game?.pendingTransfers || []).filter(t => t.status === 'pending' && Number(t.toClubId) === Number(clubId)).length;
 }
@@ -382,7 +421,7 @@ function playerAgeSkillPenalty(playerOrId){
   if(!id) return 0;
   const player = providedPlayer || (seed?.players || []).find(item => Number(item?.id) === id) || (game?.marketPlayers || []).find(item => Number(item?.id) === id) || null;
   if(player && Math.round(Number(player.age || 18)) < PLAYER_AGE_DECAY_START_AGE){
-    if(game.playerAgeSkillPenalties && Number(game.playerAgeSkillPenalties[id] || 0) !== 0) game.playerAgeSkillPenalties[id] = 0;
+    if(game.playerAgeSkillPenalties && Object.prototype.hasOwnProperty.call(game.playerAgeSkillPenalties, id)) delete game.playerAgeSkillPenalties[id];
     return 0;
   }
   const value = Math.round(Number(game?.playerAgeSkillPenalties?.[id] || 0));
@@ -1707,9 +1746,10 @@ function createEmergencyBotPlayer(club, group, report){
   player.emergencyBot = true;
   normalizeEmergencyPlayerEconomics(player);
   seed.players.push(player);
+  invalidatePlayerIndexes();
   if(game){
     game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
-    game.playerAgeSkillPenalties[player.id] = 0;
+    delete game.playerAgeSkillPenalties[player.id];
   }
   if(report) report.created += 1;
   ensurePlayerStateForAll();
@@ -1748,7 +1788,7 @@ function signFreeAgentForBotRoster(club, group, report){
   if(!pool.length) return null;
   const player = pool.sort((a,b) => botFreeAgentRecruitmentScore(b, club) - botFreeAgentRecruitmentScore(a, club) || visibleOverall(b) - visibleOverall(a) || Number(a.id || 0) - Number(b.id || 0))[0];
   if(!player) return null;
-  player.clubId = Number(club.id);
+  setPlayerClubId(player, Number(club.id));
   player.freeAgent = false;
   player.youthFreeAgent = false;
   player.sold = false;

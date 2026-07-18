@@ -4,10 +4,12 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.01',
+  version: 'V8.02',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
-    slotsCarrera: 5
+    slotsCarrera: 5,
+    // Agrupa escrituras automáticas consecutivas sin afectar el guardado manual.
+    agruparAutoguardadosMs: 180
   },
   data: {
     seedUrl: 'data/seed.json',
@@ -31,29 +33,13 @@ window.GAME_CONFIG = {
     manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.01',
+    installationsUrl: 'data/instalaciones.json?v=8.02',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.01',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.02',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
-    estadiosUrl: 'data/estadios_argentina.json',
-    hinchasUrl: 'data/hinchas_argentina.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
     hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
-    estadiosArgentinaUrl: 'data/estadios_argentina.json',
-    hinchasArgentinaUrl: 'data/hinchas_argentina.json',
-    estadiosChileUrl: 'data/estadios_chile.json',
-    hinchasChileUrl: 'data/hinchas_chile.json',
-    estadiosBrasilUrl: 'data/estadios_brasil.json',
-    hinchasBrasilUrl: 'data/hinchas_brasil.json',
-    estadiosInglaterraUrl: 'data/estadios_inglaterra.json',
-    hinchasInglaterraUrl: 'data/hinchas_inglaterra.json',
-    estadiosEspanaUrl: 'data/estadios_espana.json',
-    hinchasEspanaUrl: 'data/hinchas_espana.json',
-    estadiosItaliaUrl: 'data/estadios_italia.json',
-    hinchasItaliaUrl: 'data/hinchas_italia.json',
-    estadiosRumaniaUrl: 'data/estadios_rumania.json',
-    hinchasRumaniaUrl: 'data/hinchas_rumania.json',
     relatosPartidoUrl: 'data/relatos_partido.json'
   },
   calendario: {
@@ -318,6 +304,20 @@ window.GAME_CONFIG = {
     edadInicioDeterioro: 32,
     deterioroEdadMinAnual: 1,
     deterioroEdadMaxAnual: 4,
+    // Probabilidad anual determinista de retiro. Se aplica por igual a manager, bots y libres.
+    retiroProbabilidadPorEdad: {
+      32: 0.05,
+      33: 0.10,
+      34: 0.18,
+      35: 0.30,
+      36: 0.45,
+      37: 0.60,
+      38: 0.75,
+      39: 0.86,
+      40: 0.94,
+      41: 0.98,
+      42: 1
+    },
     // Reparación automática para clubes bots: evita planteles sin porteros o por debajo de estructura mínima.
     reparacionAutomaticaBots: true,
     botsMinimoPorteros: 2,
@@ -743,7 +743,6 @@ window.GAME_CONFIG = {
     // Cuando un gol rival ocurre, esta probabilidad lo atribuye también como error de gol a un defensor o arquero.
     probabilidadGolAtribuyeErrorGol: 0.60,
     // Probabilidad base anterior mantenida como respaldo si se desactiva formulaErroresJugador.
-    probabilidadErrorTerminaEnGol: 0.28,
     // Máximo de errores usado para evitar partidos rotos por errores constantes.
     maximoErroresPorEquipo: 5,
     // multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.

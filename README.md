@@ -1,4 +1,48 @@
-# Fútbol Manager MVP - V8.10
+# Fútbol Manager MVP - V8.11
+
+
+## V8.11 - Ciclos y premios de Competencias Online
+
+### Temporadas globales de 10 días
+
+Las clasificaciones salariales online funcionan ahora por ciclos globales de **10 días reales**, iguales para todos los managers. El primer ciclo comienza el **19 de julio de 2026 a las 00:00 UTC**.
+
+Cada partido terminado se asigna al ciclo correspondiente según la fecha registrada por el Worker. Al comenzar un ciclo nuevo, la tabla visible vuelve a cero; los partidos anteriores permanecen en el historial.
+
+Para clasificarse oficialmente y recibir premios se requieren:
+
+- al menos **10 partidos** dentro del ciclo;
+- al menos **5 rivales diferentes**;
+- no existe un máximo de encuentros.
+
+### Premios
+
+| Categorías | Campeón | Segundo | Tercero |
+|---|---:|---:|---:|
+| Ascenso, Nacional, Profesional, Continental y Élite | 3.000 | 1.500 | 750 |
+| Libre | 6.000 | 2.500 | 1.000 |
+
+Los premios se acreditan como puntos de habilidad del perfil global del manager. No pertenecen a un club o slot específico.
+
+La primera victoria contra un rival conserva el mayor valor. Repetir triunfos contra el mismo manager reduce progresivamente la recompensa; vencer a un rival con muchas derrotas vale menos, y ganar desde una posición inferior aumenta el puntaje.
+
+### Reclamo seguro
+
+El Worker recalcula y congela la clasificación de cada ciclo cerrado. Los resultados congelados se guardan en `fm_meta_v2`, de modo que cambios posteriores en el historial no alteran campeones ya definidos.
+
+Los reclamos se registran en `fm_online_reward_claims_v1` con una clave única por usuario, ciclo y categoría. El cliente sólo acredita puntos cuando el Worker confirma que el reclamo es nuevo.
+
+El paquete separado `worker-V8.11-premios-competencias-online.zip` contiene:
+
+- la migración D1;
+- el parche para el Worker actual;
+- las instrucciones de instalación y verificación.
+
+Sin actualizar el Worker, las clasificaciones siguen visibles, pero el juego no permite acreditar premios.
+
+### Compatibilidad
+
+**V8.11 no rompe partidas anteriores.** No cambia el esquema de guardado local, los cinco slots, planteles, contratos ni progreso. Los partidos online anteriores al 19 de julio de 2026 continúan en el historial, pero no pertenecen a un ciclo premiado.
 
 
 ## V8.10 - Categoría Online visible en Táctica

@@ -11,6 +11,7 @@ let challengeActionBusy = false;
 let challengeAvailableCategory = '';
 let challengeRankingCategory = '';
 let challengeRankingHistoryCache = [];
+let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[] };
 
 function challengeConfig(){
   const cfg = window.GAME_CONFIG?.desafiosOnline || {};
@@ -33,8 +34,169 @@ function challengeConfig(){
     actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000)),
     categories,
     rankingMinimumMatches:Math.max(1, Math.round(Number(cfg.partidosMinimosRanking || 10))),
-    rankingHistoryPageSize:Math.max(20, Math.min(500, Math.round(Number(cfg.historialRankingPorPagina || 100))))
+    rankingMinimumOpponents:Math.max(1, Math.round(Number(cfg.rivalesMinimosPremio || 5))),
+    rankingHistoryPageSize:Math.max(20, Math.min(500, Math.round(Number(cfg.historialRankingPorPagina || 100)))),
+    cycleDays:Math.max(1, Math.round(Number(cfg.cicloCompetenciaDias || 10))),
+    cycleEpoch:String(cfg.cicloCompetenciaInicioUtc || '2026-07-19T00:00:00.000Z'),
+    rewardTable:cfg.premiosCiclo && typeof cfg.premiosCiclo === 'object' ? cfg.premiosCiclo : { A:[3000,1500,750], N:[3000,1500,750], P:[3000,1500,750], C:[3000,1500,750], E:[3000,1500,750], L:[6000,2500,1000] },
+    rewardStatusPath:String(cfg.rewardStatusPath || 'challenges/rewards/status'),
+    rewardClaimPath:String(cfg.rewardClaimPath || 'challenges/rewards/claim')
   };
+}
+function challengeCycleDurationMs(){ return challengeConfig().cycleDays * 86400000; }
+function challengeCycleEpochMs(){
+  const parsed = new Date(challengeConfig().cycleEpoch).getTime();
+  return Number.isFinite(parsed) ? parsed : Date.UTC(2026,6,19,0,0,0,0);
+}
+function challengeCycleAt(value=Date.now()){
+  const moment = value instanceof Date ? value.getTime() : (typeof value === 'number' ? value : new Date(String(value || '')).getTime());
+  const now = Number.isFinite(moment) ? moment : Date.now();
+  const duration = challengeCycleDurationMs();
+  const epoch = challengeCycleEpochMs();
+  const index = Math.max(0, Math.floor((now - epoch) / duration));
+  const startMs = epoch + index * duration;
+  const endMs = startMs + duration;
+  return { id:`FM10D-${String(index + 1).padStart(4,'0')}`, index:index + 1, startMs, endMs, startAt:new Date(startMs).toISOString(), endAt:new Date(endMs).toISOString() };
+}
+function challengePreviousCycle(cycle=challengeCycleAt()){
+  const duration = challengeCycleDurationMs();
+  const index = Math.max(1, Number(cycle?.index || 1) - 1);
+  const startMs = challengeCycleEpochMs() + (index - 1) * duration;
+  return { id:`FM10D-${String(index).padStart(4,'0')}`, index, startMs, endMs:startMs + duration, startAt:new Date(startMs).toISOString(), endAt:new Date(startMs + duration).toISOString() };
+}
+function challengeCycleForDate(value){
+  const ms = new Date(String(value || '')).getTime();
+  if(!Number.isFinite(ms) || ms < challengeCycleEpochMs()) return null;
+  return challengeCycleAt(ms);
+}
+function challengeCycleContains(cycle, value){
+  const ms = new Date(String(value || '')).getTime();
+  return Boolean(cycle && Number.isFinite(ms) && ms >= Number(cycle.startMs || new Date(cycle.startAt).getTime()) && ms < Number(cycle.endMs || new Date(cycle.endAt).getTime()));
+}
+function challengeCycleRangeLabel(cycle){
+  if(!cycle) return 'Ciclo no disponible';
+  const start = new Date(cycle.startAt || cycle.startMs);
+  const end = new Date(cycle.endAt || cycle.endMs);
+  const fmt = date => date.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', timeZone:'UTC' });
+  return `${fmt(start)} al ${fmt(new Date(end.getTime() - 1))}`;
+}
+function challengeCycleRemainingLabel(cycle, serverTime=''){
+  const reference = new Date(serverTime || Date.now()).getTime();
+  const end = Number(cycle?.endMs || new Date(cycle?.endAt || 0).getTime());
+  const remaining = Math.max(0, end - (Number.isFinite(reference) ? reference : Date.now()));
+  const days = Math.floor(remaining / 86400000);
+  const hours = Math.floor((remaining % 86400000) / 3600000);
+  const minutes = Math.floor((remaining % 3600000) / 60000);
+  if(days > 0) return `${days} d ${hours} h`;
+  if(hours > 0) return `${hours} h ${minutes} min`;
+  return `${minutes} min`;
+}
+function challengeRewardValues(categoryCode){
+  const code = challengeCategoryByCode(categoryCode).code;
+  const row = challengeConfig().rewardTable?.[code];
+  const fallback = code === 'L' ? [6000,2500,1000] : [3000,1500,750];
+  return (Array.isArray(row) ? row : fallback).slice(0,3).map(value => Math.max(0, Math.round(Number(value || 0))));
+}
+function challengeRewardReceiptStorageKey(){
+  let owner = 'local';
+  try{ owner = String(localStorage.getItem('fmRankingAuthUserId') || localStorage.getItem('fmRankingAuthUser') || 'local').trim() || 'local'; }catch(_){ owner = 'local'; }
+  return `fmOnlineRewardReceipts:${owner}`;
+}
+function challengeRewardReceipts(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(challengeRewardReceiptStorageKey()) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  }catch(_){ return {}; }
+}
+function challengeStoreRewardReceipt(id, payload={}){
+  const key = String(id || '').trim();
+  if(!key) return false;
+  const rows = challengeRewardReceipts();
+  rows[key] = { ...payload, appliedAt:rows[key]?.appliedAt || new Date().toISOString() };
+  try{ localStorage.setItem(challengeRewardReceiptStorageKey(), JSON.stringify(rows)); return true; }catch(_){ return false; }
+}
+function challengeRewardClaimFor(categoryCode){
+  const code = challengeCategoryByCode(categoryCode).code;
+  const claims = Array.isArray(challengeRewardStatus.claims) ? challengeRewardStatus.claims : [];
+  return claims.find(item => String(item?.categoryCode || item?.category || '').toUpperCase() === code) || null;
+}
+function challengeNormalizeServerCycle(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  const startMs = new Date(raw.startAt || raw.start_at || raw.start || 0).getTime();
+  const endMs = new Date(raw.endAt || raw.end_at || raw.end || 0).getTime();
+  if(!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return null;
+  return { id:String(raw.id || raw.cycleId || raw.cycle_id || ''), index:Number(raw.index || 0), startMs, endMs, startAt:new Date(startMs).toISOString(), endAt:new Date(endMs).toISOString() };
+}
+async function challengeLoadRewardStatus(options={}){
+  if(challengeRewardStatus.loading) return challengeRewardStatus;
+  if(challengeRewardStatus.loaded && !options.force) return challengeRewardStatus;
+  if(!challengeToken()){
+    challengeRewardStatus = { loaded:true, loading:false, compatible:true, error:'', serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[] };
+    return challengeRewardStatus;
+  }
+  challengeRewardStatus.loading = true;
+  try{
+    const data = await challengeRequest(challengeConfig().rewardStatusPath);
+    const cycle = challengeNormalizeServerCycle(data?.currentCycle || data?.current_cycle) || challengeCycleAt(data?.serverTime || Date.now());
+    challengeRewardStatus = {
+      loaded:true, loading:false, compatible:true, error:'', serverTime:String(data?.serverTime || data?.server_time || ''),
+      currentCycle:cycle,
+      claims:Array.isArray(data?.claims) ? data.claims : [],
+      champions:Array.isArray(data?.champions) ? data.champions : []
+    };
+  }catch(error){
+    const message = String(error?.message || 'No se pudo consultar los premios.');
+    challengeRewardStatus = { loaded:true, loading:false, compatible:!/(404|ruta no encontrada|not found)/i.test(message), error:message, serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[] };
+  }
+  return challengeRewardStatus;
+}
+function challengeApplyRewardPoints(claim){
+  const points = Math.max(0, Math.round(Number(claim?.skillPoints || claim?.skill_points || 0)));
+  const receiptId = String(claim?.claimId || claim?.claim_id || `${claim?.cycleId || claim?.cycle_id}:${claim?.categoryCode || claim?.category_code}`).trim();
+  if(!points || !receiptId) throw new Error('El premio recibido no es válido.');
+  const receipts = challengeRewardReceipts();
+  if(receipts[receiptId]) return { applied:false, points, total:Number(receipts[receiptId]?.total || 0) };
+  const profile = typeof readManagerGlobalProfileState === 'function' ? readManagerGlobalProfileState() : { skillPoints:0 };
+  let current = Math.max(0, Math.round(Number(profile?.skillPoints || 0)));
+  let special = null;
+  if(typeof game !== 'undefined' && game){
+    special = typeof ensureSpecialState === 'function' ? ensureSpecialState() : game.special;
+    current = Math.max(current, Math.max(0, Math.round(Number(special?.puntos_habilidad || 0))));
+  }
+  const total = current + points;
+  if(typeof writeManagerGlobalProfileState === 'function') writeManagerGlobalProfileState({ ...profile, skillPoints:total });
+  if(special){
+    special.puntos_habilidad = total;
+    if(typeof appendSpecialPointsLog === 'function') appendSpecialPointsLog(special, {
+      actionId:'premio_competencia_online', points,
+      cycleId:String(claim?.cycleId || claim?.cycle_id || ''),
+      categoryCode:String(claim?.categoryCode || claim?.category_code || ''),
+      position:Number(claim?.position || 0), date:game?.currentDate || ''
+    });
+    if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'online_competition_reward' });
+    if(typeof saveLocal === 'function') saveLocal(true);
+  }
+  challengeStoreRewardReceipt(receiptId, { points, total, cycleId:claim?.cycleId || claim?.cycle_id || '', categoryCode:claim?.categoryCode || claim?.category_code || '', position:Number(claim?.position || 0) });
+  return { applied:true, points, total };
+}
+async function challengeClaimReward(categoryCode){
+  const claim = challengeRewardClaimFor(categoryCode);
+  if(!claim || String(claim.status || '').toLowerCase() !== 'claimable') return;
+  const category = challengeCategoryByCode(categoryCode);
+  if(!confirm(`¿Reclamar ${formatPlainNumber(Number(claim.skillPoints || claim.skill_points || 0))} puntos por el puesto ${Number(claim.position || 0)} en ${category.name}?`)) return;
+  try{
+    const data = await challengeRequest(challengeConfig().rewardClaimPath, { method:'POST', body:{ cycleId:claim.cycleId || claim.cycle_id, categoryCode:category.code } });
+    const awarded = data?.claim || data?.award || data;
+    const newlyClaimed = data?.newlyClaimed !== false && awarded?.newlyClaimed !== false;
+    if(!newlyClaimed){
+      showNotice('Este premio ya fue reclamado con esta cuenta. No se acreditaron puntos nuevamente.');
+    }else{
+      const result = challengeApplyRewardPoints(awarded);
+      showNotice(result.applied ? `Premio acreditado: +${formatPlainNumber(result.points)} puntos de habilidad.` : 'Este premio ya estaba acreditado en este perfil.');
+    }
+    await challengeLoadRewardStatus({ force:true });
+    renderOnlineChallenges();
+  }catch(error){ showNotice(error.message); }
 }
 function challengeEndpoint(){ return normalizeRankingEndpoint(challengeConfig().endpoint); }
 function challengeToken(){ return typeof rankingStoredAuthToken === 'function' ? rankingStoredAuthToken() : ''; }
@@ -104,7 +266,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.10') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.11') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -298,7 +460,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.10'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.11'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -548,9 +710,10 @@ function challengeAwardedPoints(result, manager, opponent, states, positions){
   const repeat = result === 'win' ? challengeRepeatVictoryMultiplier(manager.winsAgainst.get(opponent.key) || 0) : 1;
   return Math.max(result === 'win' ? 20 : 8, Math.round(base * quality * position * repeat));
 }
-function challengeBuildCategoryRanking(historyRows, categoryCode){
+function challengeBuildCategoryRanking(historyRows, categoryCode, cycle=null){
   const code = challengeCategoryByCode(categoryCode).code;
-  const matches = (historyRows || []).map(challengeCompletedMatch).filter(Boolean).filter(match => match.categoryCode === code).sort((a,b) => {
+  const activeCycle = cycle || challengeRewardStatus.currentCycle || challengeCycleAt();
+  const matches = (historyRows || []).map(challengeCompletedMatch).filter(Boolean).filter(match => match.categoryCode === code && challengeCycleContains(activeCycle, match.completedAt)).sort((a,b) => {
     const timeA = new Date(a.completedAt || 0).getTime() || 0;
     const timeB = new Date(b.completedAt || 0).getTime() || 0;
     return timeA - timeB || a.id.localeCompare(b.id);
@@ -592,6 +755,7 @@ function challengeBuildCategoryRanking(historyRows, categoryCode){
     });
   });
   const minimum = challengeConfig().rankingMinimumMatches;
+  const minimumOpponents = challengeConfig().rankingMinimumOpponents;
   const normalized = [...states.values()].map(state => ({
     username:state.username,
     played:state.played,
@@ -607,7 +771,7 @@ function challengeBuildCategoryRanking(historyRows, categoryCode){
     uniqueOpponents:state.opponents.size,
     averageTeamRating:state.played ? state.ratingTotal / state.played : 0,
     averageOpponentRating:state.played ? state.opponentRatingTotal / state.played : 0,
-    qualified:state.played >= minimum
+    qualified:state.played >= minimum && state.opponents.size >= minimumOpponents
   }));
   normalized.sort((a,b) => Number(b.qualified) - Number(a.qualified) || b.points - a.points || b.wins - a.wins || b.goalDifference - a.goalDifference || b.uniqueWins - a.uniqueWins || a.username.localeCompare(b.username, 'es'));
   let officialRank = 0;
@@ -616,23 +780,49 @@ function challengeBuildCategoryRanking(historyRows, categoryCode){
 }
 function challengeRankingMarkup(rows){
   const category = challengeCategoryByCode(challengeRankingCategory);
-  const minimum = challengeConfig().rankingMinimumMatches;
-  const champion = rows.find(row => row.qualified && row.rank === 1) || null;
+  const cfg = challengeConfig();
+  const minimum = cfg.rankingMinimumMatches;
+  const minimumOpponents = cfg.rankingMinimumOpponents;
+  const cycle = challengeRewardStatus.currentCycle || challengeCycleAt();
+  const leader = rows.find(row => row.qualified && row.rank === 1) || null;
+  const prizes = challengeRewardValues(category.code);
+  const rewardClaim = challengeRewardClaimFor(category.code);
+  const priorChampion = (challengeRewardStatus.champions || []).find(item => String(item?.categoryCode || item?.category_code || '').toUpperCase() === category.code) || null;
+  let rewardMarkup = '';
+  if(!challengeToken()){
+    rewardMarkup = '<div class="challenge-reward-status muted"><strong>Premios bloqueados</strong><span>Iniciá sesión para consultar y reclamar premios de ciclos cerrados.</span></div>';
+  }else if(challengeRewardStatus.loading){
+    rewardMarkup = '<div class="challenge-reward-status muted"><strong>Verificando premios...</strong></div>';
+  }else if(!challengeRewardStatus.compatible){
+    rewardMarkup = '<div class="challenge-reward-status warning"><strong>Worker pendiente de actualización</strong><span>El ranking funciona, pero el reparto seguro de premios requiere instalar el ajuste V8.11 del Worker.</span></div>';
+  }else if(rewardClaim && String(rewardClaim.status || '').toLowerCase() === 'claimable'){
+    rewardMarkup = `<div class="challenge-reward-status claimable"><span><strong>Premio disponible</strong><small>Puesto ${Number(rewardClaim.position || 0)} · ciclo ${escapeHtml(String(rewardClaim.cycleId || rewardClaim.cycle_id || 'cerrado'))}</small></span><button class="primary" data-challenge-claim-reward="${escapeHtml(category.code)}">Reclamar +${formatPlainNumber(Number(rewardClaim.skillPoints || rewardClaim.skill_points || 0))}</button></div>`;
+  }else if(rewardClaim && String(rewardClaim.status || '').toLowerCase() === 'claimed'){
+    rewardMarkup = `<div class="challenge-reward-status claimed"><strong>Premio reclamado</strong><span>+${formatPlainNumber(Number(rewardClaim.skillPoints || rewardClaim.skill_points || 0))} puntos · puesto ${Number(rewardClaim.position || 0)}</span></div>`;
+  }else if(challengeRewardStatus.error){
+    rewardMarkup = `<div class="challenge-reward-status warning"><strong>No se pudieron verificar premios</strong><span>${escapeHtml(challengeRewardStatus.error)}</span></div>`;
+  }else{
+    rewardMarkup = '<div class="challenge-reward-status muted"><strong>Sin premio pendiente</strong><span>Los tres primeros clasificados reciben su premio al cerrar el ciclo.</span></div>';
+  }
   return `<div class="card challenge-ranking-card">
-    <div class="challenge-ranking-header"><div>${challengeCategoryBadgeMarkup(category.code,{large:true})}<div><h3>Ranking ${escapeHtml(category.name)}</h3><p class="muted small">Sin límite de partidos. Se requieren ${minimum} encuentros para clasificar y ser campeón.</p></div></div><span class="pill">Puntaje dinámico</span></div>
-    <div class="challenge-champion-banner ${champion ? '' : 'empty'}">${champion ? `<span>Campeón de ${escapeHtml(category.name)}</span><strong>${escapeHtml(champion.username)}</strong><small>${formatPlainNumber(champion.points)} puntos · ${champion.played} partidos</small>` : `<span>Campeón de ${escapeHtml(category.name)}</span><strong>Aún sin campeón</strong><small>Ningún manager alcanzó los ${minimum} partidos mínimos.</small>`}</div>
-    <div class="table-wrap"><table class="challenge-ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Estado</th><th>PJ</th><th>G/E/P</th><th>GF-GC</th><th>Rivales vencidos</th><th>Mejor triunfo</th><th>PTS</th></tr></thead><tbody>
+    <div class="challenge-ranking-header"><div>${challengeCategoryBadgeMarkup(category.code,{large:true})}<div><h3>Ranking ${escapeHtml(category.name)}</h3><p class="muted small">Ciclo ${escapeHtml(cycle.id)} · ${escapeHtml(challengeCycleRangeLabel(cycle))} · restan ${escapeHtml(challengeCycleRemainingLabel(cycle, challengeRewardStatus.serverTime))}.</p></div></div><span class="pill">10 días reales</span></div>
+    <div class="challenge-cycle-prizes"><span><b>1°</b><strong>${formatPlainNumber(prizes[0])}</strong><small>puntos</small></span><span><b>2°</b><strong>${formatPlainNumber(prizes[1])}</strong><small>puntos</small></span><span><b>3°</b><strong>${formatPlainNumber(prizes[2])}</strong><small>puntos</small></span><p>Mínimo ${minimum} partidos y ${minimumOpponents} rivales distintos. Sin máximo de encuentros.</p></div>
+    ${rewardMarkup}
+    ${priorChampion ? `<div class="challenge-last-champion"><span>Campeón del ciclo anterior</span><strong>${escapeHtml(priorChampion.username || priorChampion.managerName || 'Manager')}</strong><small>${formatPlainNumber(Number(priorChampion.points || 0))} puntos</small></div>` : ''}
+    <div class="challenge-champion-banner ${leader ? '' : 'empty'}">${leader ? `<span>Líder actual de ${escapeHtml(category.name)}</span><strong>${escapeHtml(leader.username)}</strong><small>${formatPlainNumber(leader.points)} puntos · ${leader.played} partidos · ${leader.uniqueOpponents} rivales</small>` : `<span>Líder actual de ${escapeHtml(category.name)}</span><strong>Aún sin clasificados</strong><small>Nadie alcanzó ${minimum} partidos contra ${minimumOpponents} rivales distintos.</small>`}</div>
+    <div class="table-wrap"><table class="challenge-ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Estado</th><th>PJ</th><th>G/E/P</th><th>GF-GC</th><th>Rivales</th><th>Rivales vencidos</th><th>Mejor triunfo</th><th>PTS</th></tr></thead><tbody>
       ${rows.length ? rows.map(row => `<tr class="${row.qualified ? '' : 'challenge-ranking-provisional'}">
         <td>${row.rank || '—'}</td>
         <td><strong>${escapeHtml(row.username || 'Manager')}</strong></td>
-        <td>${row.qualified ? (row.rank === 1 ? `<span class="pill ok">Campeón</span>` : '<span class="pill">Clasificado</span>') : `<span class="pill muted">Provisional ${row.played}/${minimum}</span>`}</td>
+        <td>${row.qualified ? (row.rank === 1 ? `<span class="pill ok">Líder</span>` : '<span class="pill">Clasificado</span>') : `<span class="pill muted">Provisional ${row.played}/${minimum} · ${row.uniqueOpponents}/${minimumOpponents}</span>`}</td>
         <td>${Number(row.played || 0)}</td>
         <td>${Number(row.wins || 0)}/${Number(row.draws || 0)}/${Number(row.losses || 0)}</td>
         <td>${Number(row.goalsFor || 0)}-${Number(row.goalsAgainst || 0)}</td>
+        <td>${Number(row.uniqueOpponents || 0)}</td>
         <td>${Number(row.uniqueWins || 0)}</td>
         <td>${Number(row.bestMatchPoints || 0)}</td>
         <td><strong>${formatPlainNumber(Number(row.points || 0))}</strong></td>
-      </tr>`).join('') : `<tr><td colspan="9" class="muted">Todavía no hay partidos en esta categoría.</td></tr>`}
+      </tr>`).join('') : `<tr><td colspan="10" class="muted">Todavía no hay partidos en esta categoría durante el ciclo actual.</td></tr>`}
     </tbody></table></div>
     <div class="challenge-scoring-rules"><p><strong>Triunfos únicos:</strong> la primera victoria contra cada rival recibe el mayor valor; las repeticiones entregan cada vez menos.</p><p><strong>Fuerza del rival:</strong> vencer a un equipo que acumula derrotas vale progresivamente menos; superar a uno con buenos resultados vale más.</p><p><strong>Posición:</strong> ganar desde abajo en la tabla aumenta el premio, mientras que los líderes reciben una reducción.</p></div>
   </div>`;
@@ -737,12 +927,13 @@ function bindChallengeEvents(){
   }));
   document.querySelectorAll('[data-challenge-ranking-category]').forEach(button => button.addEventListener('click', () => {
     challengeRankingCategory = button.dataset.challengeRankingCategory;
-    challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory);
+    challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
     renderOnlineChallenges();
   }));
   document.querySelectorAll('[data-challenge-accept]').forEach(button => button.addEventListener('click', () => acceptChallenge(button.dataset.challengeAccept)));
   document.querySelectorAll('[data-challenge-cancel]').forEach(button => button.addEventListener('click', () => cancelChallenge(button.dataset.challengeCancel)));
   document.querySelectorAll('[data-challenge-view]').forEach(button => button.addEventListener('click', () => openChallengeDetail(button.dataset.challengeView)));
+  document.querySelectorAll('[data-challenge-claim-reward]').forEach(button => button.addEventListener('click', () => challengeClaimReward(button.dataset.challengeClaimReward)));
   document.querySelectorAll('[data-go-tab]').forEach(button => button.addEventListener('click', () => { activeTab=button.dataset.goTab; renderAll(); }));
 }
 function challengeRowsFromResponse(data){
@@ -790,8 +981,9 @@ async function loadChallenges(tab=challengeViewTab, options={}){
   if(!options.silent && activeTab === 'challenges') renderOnlineChallenges();
   try{
     if(tab === 'ranking'){
-      challengeRankingHistoryCache = await challengeLoadCompleteHistory();
-      challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory);
+      const [history] = await Promise.all([challengeLoadCompleteHistory(), challengeLoadRewardStatus({ force:options.force })]);
+      challengeRankingHistoryCache = history;
+      challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
       challengeLoadedTabs.ranking = true;
     }else{
       const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : 'challenges/history';

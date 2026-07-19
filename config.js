@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.10',
+  version: 'V8.11',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5,
@@ -16,7 +16,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.10', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.11', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -30,12 +30,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.10',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.11',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.10',
+    installationsUrl: 'data/instalaciones.json?v=8.11',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.10',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.11',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -912,8 +912,8 @@ window.GAME_CONFIG = {
 
   desafiosOnline: {
     activo: true,
-    // Usa el mismo Worker, las mismas rutas y la misma cuenta del Ranking Online.
-    // Las categorías viajan dentro del snapshot JSON: no requieren cambios de SQL ni Worker.
+    // Usa el mismo Worker y la misma cuenta del Ranking Online.
+    // V8.11 agrega rutas de premios y una tabla D1 de reclamos únicos.
     endpoint: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
     versionSimulador: 'challenge-sim-v1',
     resultadosPorPagina: 100,
@@ -922,7 +922,21 @@ window.GAME_CONFIG = {
     vencimientoDias: 7,
     // No existe máximo de partidos disputados. Diez encuentros habilitan la clasificación oficial.
     partidosMinimosRanking: 10,
+    rivalesMinimosPremio: 5,
     historialRankingPorPagina: 100,
+    // Temporadas globales de 10 días reales. El inicio se fija en UTC para que todos compartan el mismo ciclo.
+    cicloCompetenciaDias: 10,
+    cicloCompetenciaInicioUtc: '2026-07-19T00:00:00.000Z',
+    premiosCiclo: {
+      A:[3000,1500,750],
+      N:[3000,1500,750],
+      P:[3000,1500,750],
+      C:[3000,1500,750],
+      E:[3000,1500,750],
+      L:[6000,2500,1000]
+    },
+    rewardStatusPath:'challenges/rewards/status',
+    rewardClaimPath:'challenges/rewards/claim',
     categoriasSalariales: [
       { codigo:'A', nombre:'Ascenso', minimo:0, maximo:5000000 },
       { codigo:'N', nombre:'Nacional', minimo:5000001, maximo:10000000 },

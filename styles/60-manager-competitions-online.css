@@ -854,7 +854,7 @@ button.cwc-group-result{cursor:pointer}
 @media (max-width:720px){
   .manager-contract-schedule{grid-template-columns:1fr;}}
 
-/* V8.10 · Categorías salariales de Competencias Online */
+/* V8.11 · Categorías salariales de Competencias Online */
 .challenge-category-badge{
   --category-accent:#94a3b8;
   display:inline-flex;
@@ -1000,4 +1000,27 @@ button.cwc-group-result{cursor:pointer}
   .challenge-publish-tags{grid-column:1/-1;justify-content:flex-start}
   .challenge-history-center{min-width:72px}
   .challenge-publish-category-options>button{grid-template-columns:minmax(0,1fr)}
+}
+
+/* V8.11 · Ciclos globales y premios de Competencias Online */
+.challenge-cycle-prizes{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:10px;margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel-soft)}
+.challenge-cycle-prizes>span{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.challenge-cycle-prizes>span b{grid-row:1/3;font-size:1.1rem}
+.challenge-cycle-prizes>span strong{font-size:1.15rem}
+.challenge-cycle-prizes>span small{color:var(--muted)}
+.challenge-cycle-prizes>p{grid-column:1/-1;margin:2px 0 0;color:var(--muted);font-size:.86rem}
+.challenge-reward-status{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel-soft)}
+.challenge-reward-status>span{display:flex;flex-direction:column;gap:3px}
+.challenge-reward-status.claimable{border-color:rgba(54,170,103,.45);background:rgba(54,170,103,.1)}
+.challenge-reward-status.claimed{border-color:rgba(77,133,205,.4);background:rgba(77,133,205,.09)}
+.challenge-reward-status.warning{border-color:rgba(210,145,40,.45);background:rgba(210,145,40,.1)}
+.challenge-last-champion{display:flex;align-items:center;gap:12px;margin:10px 0;padding:10px 14px;border-radius:12px;border:1px dashed var(--line);background:var(--panel-soft)}
+.challenge-last-champion span{color:var(--muted)}
+.challenge-last-champion strong{margin-left:auto}
+.challenge-last-champion small{color:var(--muted)}
+@media(max-width:720px){
+  .challenge-cycle-prizes{grid-template-columns:1fr}
+  .challenge-cycle-prizes>p{grid-column:1}
+  .challenge-reward-status,.challenge-last-champion{align-items:flex-start;flex-direction:column}
+  .challenge-last-champion strong{margin-left:0}
 }

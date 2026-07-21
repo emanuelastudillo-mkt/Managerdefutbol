@@ -676,32 +676,6 @@ function memberCampaignsMarkup(){
   </div>`;
 }
 
-function botFieldAuditMarkup(){
-  const audit = botFieldAudit(game);
-  const needsPetition = audit.invalid > 0 || audit.massUnplayable;
-  const tone = needsPetition ? 'warn' : 'ok';
-  const detail = audit.massUnplayable
-    ? `Varios clubes rivales tienen el campo en condiciones inaceptables. La dirigencia puede pedir que se cumplan las condiciones mínimas antes de los próximos partidos.`
-    : needsPetition
-      ? `Se detectaron ${audit.invalid} estadios rivales por debajo de las condiciones mínimas. La dirigencia puede elevar un reclamo formal.`
-      : `La revisión de estadios rivales no encontró campos en condiciones inaceptables.`;
-  return `<div class="card stadium-card bot-field-audit ${tone}" style="margin-top:14px">
-    <div class="row"><div><h3>Petitorio a la Federación Argentina</h3><p class="muted small">${escapeHtml(detail)}</p></div><span class="pill ${tone}">${needsPetition ? 'Reclamo disponible' : 'Sin reclamo'}</span></div>
-    <div class="row" style="margin-top:10px"><button id="btnRepairBotFields" class="ghost">Presentar petitorio a la Federación Argentina</button></div>
-  </div>`;
-}
-function repairBotFieldsFromUi(){
-  const result = repairInvalidBotFieldStates(game, 'manual_stadium_audit', { message:true });
-  if(result.repaired){
-    saveLocal(true);
-    renderStadium();
-    showNotice(`La Federación Argentina recibió el petitorio. Campos corregidos: ${result.repaired}.`);
-  } else {
-    showNotice('La Federación Argentina no encontró campos rivales fuera de reglamento.');
-  }
-}
-
-
 
 function stadiumExpansionProjectMarkup(project){
   const total = Math.max(1, Number(project.totalDays || project.daysLeft || 1));
@@ -991,7 +965,6 @@ function renderStadium(){
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${formatDaysFromTurns(project.replantingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${formatDaysFromTurns(project.patchingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
     ${stadiumExpansionsMarkup()}
-    ${botFieldAuditMarkup()}
     <div class="card sponsors-card" style="margin-top:14px">
       <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan entre 20 y 40 ofertas por temporada. Cada propuesta vence en 5 días y puede pagar todo al inicio o por día.</p></div></div>
       ${sponsorPlacesMarkup()}
@@ -1010,7 +983,6 @@ function renderStadium(){
   });
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
-  $('btnRepairBotFields')?.addEventListener('click', repairBotFieldsFromUi);
   document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
   bindSponsorCardActions();
   document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));

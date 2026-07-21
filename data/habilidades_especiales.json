@@ -1,5 +1,5 @@
 {
-  "version": "V8.14",
+  "version": "V8.15",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
   "caracteristicas_version": "V8.13: agrega cinco cartas Experto en juveniles que suman habilidades visibles al consultar informes de Tu Academia.",

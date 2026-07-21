@@ -1,4 +1,23 @@
-# Fútbol Manager MVP - V8.14
+# Fútbol Manager MVP - V8.15
+
+## V8.15 — Frontend compacto para 1280 × 720
+
+- Se eliminó de Estadio e instalaciones el Petitorio a la Federación Argentina y su botón manual.
+- La reparación automática de estados inválidos de campos rivales continúa funcionando como control interno de integridad.
+- Se agregó una hoja de estilos final específica para notebooks y pantallas de hasta 1280 × 720.
+- La barra superior reduce tamaños y espacios para evitar superposición de acciones.
+- El aviso flotante se desplaza debajo de la barra superior en resoluciones compactas.
+- El menú lateral utiliza desplazamiento propio cuando supera la altura disponible, permitiendo acceder siempre a todas las secciones.
+- Se redujeron márgenes, rellenos, alturas mínimas, controles y tarjetas sin modificar la jerarquía visual.
+- Tablas, subpestañas, formularios y modales utilizan medidas más compactas y conservan desplazamiento interno cuando corresponde.
+- Táctica, entrenamiento, ojeo, Mundial de Clubes, Desafíos Online y partido en vivo reciben ajustes intermedios para evitar columnas comprimidas o desbordes.
+- La presentación de escritorio amplio y el diseño móvil existente se mantienen separados del nuevo modo compacto.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.15 no rompe partidas anteriores.** El cambio es visual y elimina una acción manual de mantenimiento; no modifica guardados, jugadores, clubes, temporadas, contratos, resultados ni los cinco slots.
+
 
 ## V8.14 — Control de marcadores altos y mensajes deportivos
 

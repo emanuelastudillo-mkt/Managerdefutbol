@@ -1024,3 +1024,12 @@ button.cwc-group-result{cursor:pointer}
   .challenge-reward-status,.challenge-last-champion{align-items:flex-start;flex-direction:column}
   .challenge-last-champion strong{margin-left:0}
 }
+
+
+/* V8.12 · Emparejamiento anónimo y aleatorio */
+.challenge-anonymous-pool-card{align-items:center;gap:18px}
+.challenge-anonymous-rival{display:flex;align-items:center;gap:16px;min-width:0;flex:1}
+.challenge-anonymous-rival h3{margin:0 0 4px}
+.challenge-anonymous-rival p{margin:0;color:var(--muted)}
+.challenge-anonymous-pool-card .challenge-simple-card-actions{min-width:min(290px,100%)}
+@media (max-width:760px){.challenge-anonymous-pool-card,.challenge-anonymous-rival{align-items:flex-start}.challenge-anonymous-pool-card{flex-direction:column}.challenge-anonymous-pool-card .challenge-simple-card-actions{width:100%;min-width:0}}

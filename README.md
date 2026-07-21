@@ -1,4 +1,19 @@
-# Fútbol Manager MVP - V8.11
+# Fútbol Manager MVP - V8.12
+
+
+## V8.12 — Emparejamientos online anónimos
+
+- En **Disponibles** ya no se muestran el club, manager, escudo, plantel, sueldo, fecha ni identificador del desafío publicado.
+- Cada categoría sólo informa que existe al menos un rival disponible.
+- Al aceptar, el Worker selecciona al azar uno de los desafíos abiertos de la misma categoría, excluyendo los publicados por el propio usuario.
+- La identidad y el equipo rival se revelan únicamente después de que el servidor reserva el cruce.
+- La aceptación directa de un ID anterior también se redirige al sorteo aleatorio, evitando elegir manualmente un rival.
+- No requiere cambios de SQL ni nuevas tablas. Sí requiere reemplazar el Worker por la versión completa V8.12 entregada junto al juego.
+- Los desafíos propios, partidos disputados y rankings continúan mostrando los equipos normalmente.
+
+### Compatibilidad
+
+**V8.12 no rompe partidas anteriores.** Los desafíos abiertos existentes pasan automáticamente a los grupos anónimos de su categoría. No se modifica el esquema local ni D1.
 
 
 ## V8.11 - Ciclos y premios de Competencias Online

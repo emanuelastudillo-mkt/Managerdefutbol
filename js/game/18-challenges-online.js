@@ -266,7 +266,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.11') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.12') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -327,6 +327,8 @@ function challengeSnapshotCategoryCode(snapshot={}, options={}){
   return 'L';
 }
 function challengeRowCategoryCode(row={}){
+  const direct = String(row?.categoryCode || row?.category_code || '').trim().toUpperCase();
+  if(direct && challengeCategoryDefinitions().some(item => item.code === direct)) return direct;
   return challengeSnapshotCategoryCode(row.creatorSnapshot || row.snapshot || {}, { inferLegacy:false });
 }
 function challengeCategoryBadgeMarkup(value, options={}){
@@ -369,7 +371,7 @@ function challengeEnsureCategorySelections(){
 function challengeCategoryNavigationMarkup(context='available'){
   const active = context === 'ranking' ? challengeRankingCategory : challengeAvailableCategory;
   const attribute = context === 'ranking' ? 'data-challenge-ranking-category' : 'data-challenge-available-category';
-  return `<div class="card challenge-category-navigation"><div><p class="label">Categorías salariales</p><p class="muted small">Cada letra representa el sueldo total de la convocatoria. Libre admite cualquier equipo.</p></div><div class="challenge-category-buttons">${challengeCategoryDefinitions().map(category => `<button type="button" ${attribute}="${escapeHtml(category.code)}" class="${active === category.code ? 'active' : ''}" title="${escapeHtml(`${category.name}: ${challengeCategoryRangeLabel(category)}`)}"><b>${escapeHtml(category.code)}</b><span>${escapeHtml(category.name)}</span></button>`).join('')}</div></div>`;
+  return `<div class="card challenge-category-navigation"><div><p class="label">Categorías salariales</p><p class="muted small">Cada letra representa el sueldo total de la convocatoria. Los rivales publicados permanecen ocultos hasta aceptar.</p></div><div class="challenge-category-buttons">${challengeCategoryDefinitions().map(category => `<button type="button" ${attribute}="${escapeHtml(category.code)}" class="${active === category.code ? 'active' : ''}" title="${escapeHtml(`${category.name}: ${challengeCategoryRangeLabel(category)}`)}"><b>${escapeHtml(category.code)}</b><span>${escapeHtml(category.name)}</span></button>`).join('')}</div></div>`;
 }
 function challengeFormation(){ return String(game?.tactic?.formation || game?.tactic?.formationId || '4-4-2'); }
 function challengePlayerValue(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.clause ?? player?.value, 0))); }
@@ -460,7 +462,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.11'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.12'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -576,19 +578,20 @@ function challengeAcceptEligibility(row){
   }catch(error){ return { allowed:false, targetCode, label:'Equipo no disponible', error:error.message }; }
 }
 function challengeOpenCard(row){
-  const snapshot = row.creatorSnapshot || row.snapshot || {};
-  const action = challengeActionUiState('Aceptar desafío');
+  const action = challengeActionUiState('Aceptar rival aleatorio');
   const eligibility = challengeAcceptEligibility(row);
   const disabled = action.disabled || !eligibility.allowed;
   const label = !eligibility.allowed ? eligibility.label : action.label;
-  return `<article class="card challenge-card challenge-open-card challenge-simple-single-card">
-    ${challengeSimpleTeamSide(snapshot, row.creatorUsername || 'Manager', 'home', { showSalary:true, fallbackClub:row.creatorClubName || 'Club' })}
+  const category = challengeCategoryByCode(challengeRowCategoryCode(row));
+  return `<article class="card challenge-card challenge-open-card challenge-anonymous-pool-card">
+    <div class="challenge-anonymous-rival">
+      ${challengeCategoryBadgeMarkup(category.code,{large:true})}
+      <div><h3>Rival disponible</h3><p>Hay al menos un equipo disponible en ${escapeHtml(category.name)}. El club y el manager se revelarán después de aceptar.</p></div>
+    </div>
     <div class="challenge-simple-card-actions">
-      ${challengeCategoryBadgeMarkup(challengeRowCategoryCode(row))}
-      <span class="pill ${challengeStatusClass(row.status)}">${challengeStatusLabel(row.status)}</span>
-      <small>Publicado ${escapeHtml(challengeDateLabel(row.createdAt))}</small>
-      <small>Vence ${escapeHtml(challengeDateLabel(row.expiresAt))}</small>
-      <button class="primary" data-challenge-accept="${escapeHtml(row.id)}" data-challenge-cooldown-action="accept" data-default-label="${escapeHtml(label)}" data-challenge-category-allowed="${eligibility.allowed ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
+      <span class="pill ok">Emparejamiento anónimo</span>
+      <small>Si existen varios desafíos, el servidor elegirá uno al azar.</small>
+      <button class="primary" data-challenge-accept-random="${escapeHtml(category.code)}" data-challenge-cooldown-action="accept" data-default-label="${escapeHtml(label)}" data-challenge-category-allowed="${eligibility.allowed ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
     </div>
   </article>`;
 }
@@ -794,7 +797,7 @@ function challengeRankingMarkup(rows){
   }else if(challengeRewardStatus.loading){
     rewardMarkup = '<div class="challenge-reward-status muted"><strong>Verificando premios...</strong></div>';
   }else if(!challengeRewardStatus.compatible){
-    rewardMarkup = '<div class="challenge-reward-status warning"><strong>Worker pendiente de actualización</strong><span>El ranking funciona, pero el reparto seguro de premios requiere instalar el ajuste V8.11 del Worker.</span></div>';
+    rewardMarkup = '<div class="challenge-reward-status warning"><strong>Worker pendiente de actualización</strong><span>El ranking funciona, pero el reparto seguro de premios requiere instalar el ajuste V8.12 del Worker.</span></div>';
   }else if(rewardClaim && String(rewardClaim.status || '').toLowerCase() === 'claimable'){
     rewardMarkup = `<div class="challenge-reward-status claimable"><span><strong>Premio disponible</strong><small>Puesto ${Number(rewardClaim.position || 0)} · ciclo ${escapeHtml(String(rewardClaim.cycleId || rewardClaim.cycle_id || 'cerrado'))}</small></span><button class="primary" data-challenge-claim-reward="${escapeHtml(category.code)}">Reclamar +${formatPlainNumber(Number(rewardClaim.skillPoints || rewardClaim.skill_points || 0))}</button></div>`;
   }else if(rewardClaim && String(rewardClaim.status || '').toLowerCase() === 'claimed'){
@@ -877,7 +880,7 @@ function challengeListMarkup(){
   if(challengeLoading && !rows.length && !challengeLoadedTabs[challengeViewTab]) return '<div class="card"><p class="muted">Cargando desafíos...</p></div>';
   if(!rows.length){
     const selectedCategory = challengeViewTab === 'available' ? challengeCategoryByCode(challengeAvailableCategory) : challengeViewTab === 'ranking' ? challengeCategoryByCode(challengeRankingCategory) : null;
-    const label = challengeViewTab === 'available' ? `desafíos disponibles en ${selectedCategory.name}` : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? `puntajes de ${selectedCategory.name}` : 'partidos disputados';
+    const label = challengeViewTab === 'available' ? `rivales disponibles en ${selectedCategory.name}` : challengeViewTab === 'mine' ? 'desafíos propios' : challengeViewTab === 'ranking' ? `puntajes de ${selectedCategory.name}` : 'partidos disputados';
     return `<div class="card empty"><h3>Sin registros</h3><p>No hay ${label} para mostrar.</p></div>`;
   }
   if(challengeViewTab === 'available') return `<div class="challenge-grid challenge-available-grid">${rows.map(challengeOpenCard).join('')}</div>`;
@@ -893,7 +896,7 @@ function renderOnlineChallenges(){
   if(!cfg.active){ view.innerHTML = '<div class="card blocker"><h2>Desafíos desactivados</h2><p>La función está deshabilitada en config.js.</p></div>'; return; }
   if(challengeDetail){ renderChallengeDetail(challengeDetail); return; }
   view.innerHTML = `<div class="section-title row">
-      <div><h2>Competencias Online</h2><p class="tagline">Desafíos por categorías salariales, con ranking independiente y una división Libre.</p></div>
+      <div><h2>Competencias Online</h2><p class="tagline">Emparejamientos anónimos por categorías salariales, con ranking independiente y una división Libre.</p></div>
       <button id="btnRefreshChallenges" class="ghost">Actualizar</button>
     </div>
     ${challengeLoginWarning()}
@@ -930,7 +933,7 @@ function bindChallengeEvents(){
     challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
     renderOnlineChallenges();
   }));
-  document.querySelectorAll('[data-challenge-accept]').forEach(button => button.addEventListener('click', () => acceptChallenge(button.dataset.challengeAccept)));
+  document.querySelectorAll('[data-challenge-accept-random]').forEach(button => button.addEventListener('click', () => acceptRandomChallenge(button.dataset.challengeAcceptRandom)));
   document.querySelectorAll('[data-challenge-cancel]').forEach(button => button.addEventListener('click', () => cancelChallenge(button.dataset.challengeCancel)));
   document.querySelectorAll('[data-challenge-view]').forEach(button => button.addEventListener('click', () => openChallengeDetail(button.dataset.challengeView)));
   document.querySelectorAll('[data-challenge-claim-reward]').forEach(button => button.addEventListener('click', () => challengeClaimReward(button.dataset.challengeClaimReward)));
@@ -1032,21 +1035,22 @@ async function publishChallenge(categoryCode){
     challengeRefreshActionCooldown();
   }
 }
-async function acceptChallenge(challengeId){
+async function acceptRandomChallenge(categoryCode){
   if(!challengeEnsureActionAvailable()) return;
-  const row = (challengeRowsCache.available || []).find(item => String(item.id) === String(challengeId));
-  const targetCode = challengeRowCategoryCode(row || {});
+  const targetCode = challengeCategoryByCode(categoryCode).code;
   const targetCategory = challengeCategoryByCode(targetCode);
   let snapshot;
   try{ snapshot = challengePrepareSnapshotCategory(buildChallengeSnapshot(), targetCode); }
   catch(error){ showNotice(error.message); return; }
-  if(!confirm(`¿Aceptar este desafío en ${targetCategory.name} con la táctica y convocatoria actuales?`)) return;
+  if(!confirm(`¿Buscar y aceptar un rival aleatorio en ${targetCategory.name} con la táctica y convocatoria actuales?`)) return;
   const status = $('challengeStatus');
   try{
     challengeActionBusy = true;
     challengeRefreshActionCooldown();
-    if(status) status.textContent = 'Reservando desafío y enviando tu equipo...';
-    const accepted = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/accept`, { method:'POST', body:{ snapshot } });
+    if(status) status.textContent = 'Buscando y reservando un rival aleatorio...';
+    const accepted = await challengeRequest('challenges/random/accept', { method:'POST', body:{ snapshot, categoryCode:targetCode } });
+    const acceptedChallengeId = String(accepted?.challengeId || '').trim();
+    if(!acceptedChallengeId) throw new Error('El servidor no devolvió el desafío seleccionado.');
     challengeStartActionCooldown();
     if(status) status.textContent = 'Simulando el partido en este navegador...';
     const acceptedHomeCode = challengeSnapshotCategoryCode(accepted.homeSnapshot || {}, { inferLegacy:false });
@@ -1059,7 +1063,7 @@ async function acceptChallenge(challengeId){
     });
     result.competition = { categoryCode:targetCode, categoryName:targetCategory.name, scoringVersion:'category-points-v1' };
     if(status) status.textContent = 'Guardando el resultado...';
-    const saved = await challengeRequest(`challenges/${encodeURIComponent(challengeId)}/result`, { method:'POST', body:{ result } });
+    const saved = await challengeRequest(`challenges/${encodeURIComponent(acceptedChallengeId)}/result`, { method:'POST', body:{ result } });
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
     challengeRowsCache.history = [];
@@ -1069,7 +1073,7 @@ async function acceptChallenge(challengeId){
     challengeLoadedTabs.history = false;
     challengeLoadedTabs.ranking = false;
     challengeDetail = saved.challenge || null;
-    showNotice('Partido simulado y guardado.');
+    showNotice('Rival asignado al azar. Partido simulado y guardado.');
     renderOnlineChallenges();
   }catch(error){
     if(status) status.textContent = '';

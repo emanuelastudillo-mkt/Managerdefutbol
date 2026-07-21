@@ -64,7 +64,7 @@ const MANAGER_COURSE_LICENSES = {
 
 function createInitialManagerCoursesState(){
   return {
-    version:'V8.11',
+    version:'V8.12',
     checked:{ basic:[], national:[], international:[] },
     completed:{ basic:false, national:false, international:false },
     completedAt:{ basic:null, national:null, international:null },
@@ -95,7 +95,7 @@ function normalizeManagerCoursesState(value=null){
   });
   clean.rewardClaimed = Boolean(src.rewardClaimed && clean.completed.international);
   clean.rewardClaimedAt = clean.rewardClaimed ? (src.rewardClaimedAt || clean.completedAt.international || null) : null;
-  clean.version = 'V8.11';
+  clean.version = 'V8.12';
   return clean;
 }
 function managerCoursesHasProgress(value=null){

@@ -1,4 +1,4 @@
-/* V8.15 · Adaptación compacta para notebooks y pantallas de hasta 1280 × 720.
+/* V8.16 · Adaptación compacta para notebooks y pantallas de hasta 1280 × 720.
    Se carga al final para conservar intacta la presentación de escritorio amplio. */
 
 @media (min-width:901px) and (max-width:1280px){
@@ -168,4 +168,11 @@
   .available-clubs-panel{max-height:62vh}
   .job-search-clubs{max-height:48vh}
   .challenge-events{max-height:310px}
+}
+
+
+@media (min-width:901px) and (max-width:1280px){
+  .online-challenge-top-btn{padding-inline:9px}
+  .home-online-ranking-card{padding:11px 13px;margin-top:10px}
+  .home-online-ranking-card .home-online-position{font-size:1.45rem}
 }

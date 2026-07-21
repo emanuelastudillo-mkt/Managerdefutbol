@@ -11,7 +11,211 @@ let challengeActionBusy = false;
 let challengeAvailableCategory = '';
 let challengeRankingCategory = '';
 let challengeRankingHistoryCache = [];
-let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[] };
+let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[], currentStandings:{} };
+let challengeHomeOnlineState = {
+  categoryCode:'L', categoryName:'Libre', salaryTotal:0, complete:false,
+  available:false, availabilityLoaded:false, availabilityLoading:false,
+  rankingLoaded:false, rankingLoading:false, positionLabel:'-', played:0, points:0,
+  qualified:false, error:'', updatedAt:0
+};
+let challengeHomeOnlineRefreshTimer = null;
+let challengeHomeHistoryLoadedAt = 0;
+let challengeHomeAvailabilityLoadedAt = 0;
+
+
+function challengeCurrentTeamCategorySummary(){
+  const starters = (game?.tactic?.starters || []).slice(0,11).map(Number).filter(Boolean);
+  const starterSet = new Set(starters);
+  const bench = (game?.tactic?.bench || []).map(Number).filter(Boolean).filter(id => !starterSet.has(id)).slice(0,10);
+  const players = [...starters, ...bench].map(playerById).filter(Boolean);
+  const salaryTotal = players.reduce((sum, player) => sum + Math.max(0, Math.round(Number(player?.salary || 0))), 0);
+  const category = challengeNaturalCategoryForSalary(salaryTotal);
+  return { categoryCode:category.code, categoryName:category.name, salaryTotal, complete:starters.map(playerById).filter(Boolean).length === 11 };
+}
+function challengeStoredUserIdentity(){
+  let userId = '';
+  let username = '';
+  try{
+    userId = String(localStorage.getItem('fmRankingAuthUserId') || '').trim();
+    username = String(localStorage.getItem('fmRankingAuthUser') || localStorage.getItem('fmRankingUsername') || '').trim();
+  }catch(_){ /* sin almacenamiento */ }
+  return { userId, username, key:userId ? `id:${userId}` : (username ? `user:${username.toLocaleLowerCase('es')}` : '') };
+}
+function challengeFindOwnRankingRow(rows=[]){
+  const identity = challengeStoredUserIdentity();
+  if(!identity.key) return null;
+  return (rows || []).find(row => String(row?.identityKey || '') === identity.key)
+    || (identity.username ? (rows || []).find(row => String(row?.username || '').trim().toLocaleLowerCase('es') === identity.username.toLocaleLowerCase('es')) : null)
+    || null;
+}
+function challengeServerCurrentStanding(categoryCode){
+  const code = challengeCategoryByCode(categoryCode).code;
+  const rows = challengeRewardStatus.currentStandings || {};
+  const row = rows[code] || rows[String(code).toLowerCase()] || null;
+  return row && typeof row === 'object' ? row : null;
+}
+function challengeHomeOnlineRankingMarkup(){
+  const summary = challengeCurrentTeamCategorySummary();
+  const sameCategory = challengeHomeOnlineState.categoryCode === summary.categoryCode;
+  const played = sameCategory ? Number(challengeHomeOnlineState.played || 0) : 0;
+  const position = sameCategory && challengeHomeOnlineState.rankingLoaded
+    ? (played > 0 ? String(challengeHomeOnlineState.positionLabel || 'Provisional') : '-')
+    : '-';
+  const status = !challengeToken()
+    ? 'Iniciá sesión para ver tu posición.'
+    : !summary.complete
+      ? 'Completá los 11 titulares para competir.'
+      : sameCategory && challengeHomeOnlineState.rankingLoading
+        ? 'Actualizando clasificación...'
+        : played > 0
+          ? `${played} partido${played === 1 ? '' : 's'} · ${formatPlainNumber(Number(challengeHomeOnlineState.points || 0))} puntos`
+          : 'Todavía no disputaste partidos en esta categoría.';
+  return `<button type="button" class="card home-online-ranking-card" data-home-online-ranking>
+    <div><p class="label">Tu ranking online</p><strong class="home-online-position">${escapeHtml(position)}</strong><small>${escapeHtml(status)}</small></div>
+    <div class="home-online-category">${challengeCategoryBadgeMarkup(summary.categoryCode,{large:true})}<span>${escapeHtml(challengeCategoryRangeLabel(challengeCategoryByCode(summary.categoryCode)))}</span></div>
+  </button>`;
+}
+function challengeUpdateHomeOnlineRankingBlock(){
+  const box = $('homeOnlineRankingBox');
+  if(!box) return;
+  box.innerHTML = challengeHomeOnlineRankingMarkup();
+  box.querySelector('[data-home-online-ranking]')?.addEventListener('click', () => {
+    const summary = challengeCurrentTeamCategorySummary();
+    challengeRankingCategory = summary.categoryCode;
+    challengeViewTab = 'ranking';
+    challengeDetail = null;
+    activeTab = 'challenges';
+    if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('challenges');
+    renderAll();
+    setTimeout(() => loadChallenges('ranking', { force:true }), 0);
+  });
+}
+function challengeUpdateTopAvailabilityButton(){
+  const button = $('btnOnlineChallengeAvailable');
+  if(!button) return;
+  const summary = challengeCurrentTeamCategorySummary();
+  const visible = Boolean(game && !game.gameOver?.active && challengeToken() && summary.complete && challengeHomeOnlineState.availabilityLoaded && challengeHomeOnlineState.categoryCode === summary.categoryCode && challengeHomeOnlineState.available);
+  button.classList.toggle('hidden', !visible);
+  button.disabled = !visible;
+  button.dataset.challengeCategory = visible ? summary.categoryCode : '';
+  button.title = visible ? `Hay un rival disponible en ${summary.categoryName}.` : '';
+}
+async function challengeRefreshHomeAvailability(options={}){
+  const summary = challengeCurrentTeamCategorySummary();
+  const categoryChanged = challengeHomeOnlineState.categoryCode !== summary.categoryCode;
+  challengeHomeOnlineState = { ...challengeHomeOnlineState, ...summary };
+  if(categoryChanged){
+    challengeHomeOnlineState.available = false;
+    challengeHomeOnlineState.availabilityLoaded = false;
+  }
+  if(!game || game.gameOver?.active || !challengeToken() || !summary.complete){
+    challengeHomeOnlineState.available = false;
+    challengeHomeOnlineState.availabilityLoaded = true;
+    challengeUpdateTopAvailabilityButton();
+    return challengeHomeOnlineState;
+  }
+  const fresh = challengeHomeOnlineState.availabilityLoaded && challengeHomeOnlineState.categoryCode === summary.categoryCode && Date.now() - challengeHomeAvailabilityLoadedAt < challengeConfig().pollMs;
+  if(fresh && !options.force){ challengeUpdateTopAvailabilityButton(); return challengeHomeOnlineState; }
+  if(challengeHomeOnlineState.availabilityLoading) return challengeHomeOnlineState;
+  challengeHomeOnlineState.availabilityLoading = true;
+  try{
+    const data = await challengeRequest('challenges/open', { query:`?limit=${challengeConfig().pageSize}` });
+    const rows = challengeRowsFromResponse(data);
+    challengeHomeOnlineState.available = rows.some(row => challengeRowCategoryCode(row) === summary.categoryCode);
+    challengeHomeOnlineState.availabilityLoaded = true;
+    challengeHomeOnlineState.error = '';
+    challengeHomeAvailabilityLoadedAt = Date.now();
+  }catch(error){
+    challengeHomeOnlineState.available = false;
+    challengeHomeOnlineState.availabilityLoaded = true;
+    challengeHomeOnlineState.error = String(error?.message || '');
+  }finally{
+    challengeHomeOnlineState.availabilityLoading = false;
+    challengeUpdateTopAvailabilityButton();
+  }
+  return challengeHomeOnlineState;
+}
+async function challengeRefreshHomeRanking(options={}){
+  const summary = challengeCurrentTeamCategorySummary();
+  const categoryChanged = challengeHomeOnlineState.categoryCode !== summary.categoryCode;
+  challengeHomeOnlineState = { ...challengeHomeOnlineState, ...summary };
+  if(categoryChanged){
+    challengeHomeOnlineState.rankingLoaded = false;
+    challengeHomeOnlineState.positionLabel = '-';
+    challengeHomeOnlineState.played = 0;
+    challengeHomeOnlineState.points = 0;
+  }
+  const identity = challengeStoredUserIdentity();
+  if(!game || !identity.key){
+    challengeHomeOnlineState.rankingLoaded = true;
+    challengeHomeOnlineState.rankingLoading = false;
+    challengeHomeOnlineState.positionLabel = '-';
+    challengeHomeOnlineState.played = 0;
+    challengeHomeOnlineState.points = 0;
+    challengeUpdateHomeOnlineRankingBlock();
+    return challengeHomeOnlineState;
+  }
+  const fresh = challengeHomeOnlineState.rankingLoaded && challengeHomeOnlineState.categoryCode === summary.categoryCode && Date.now() - challengeHomeHistoryLoadedAt < Math.max(60000, challengeConfig().pollMs * 2);
+  if(fresh && !options.force){ challengeUpdateHomeOnlineRankingBlock(); return challengeHomeOnlineState; }
+  if(challengeHomeOnlineState.rankingLoading) return challengeHomeOnlineState;
+  challengeHomeOnlineState.rankingLoading = true;
+  challengeUpdateHomeOnlineRankingBlock();
+  try{
+    await challengeLoadRewardStatus({ force:options.force });
+    let own = challengeServerCurrentStanding(summary.categoryCode);
+    if(!own){
+      const history = await challengeLoadCompleteHistory();
+      challengeRankingHistoryCache = history;
+      const rows = challengeBuildCategoryRanking(history, summary.categoryCode, challengeRewardStatus.currentCycle || challengeCycleAt());
+      own = challengeFindOwnRankingRow(rows);
+    }
+    challengeHomeOnlineState.rankingLoaded = true;
+    challengeHomeOnlineState.played = Number(own?.played || 0);
+    challengeHomeOnlineState.points = Number(own?.points || 0);
+    challengeHomeOnlineState.qualified = Boolean(own?.qualified);
+    const serverPosition = Number(own?.position || own?.rank || 0);
+    challengeHomeOnlineState.positionLabel = own?.played ? (serverPosition > 0 ? `${serverPosition}°` : 'Provisional') : '-';
+    challengeHomeOnlineState.error = '';
+    challengeHomeHistoryLoadedAt = Date.now();
+  }catch(error){
+    challengeHomeOnlineState.rankingLoaded = true;
+    challengeHomeOnlineState.positionLabel = '-';
+    challengeHomeOnlineState.played = 0;
+    challengeHomeOnlineState.points = 0;
+    challengeHomeOnlineState.error = String(error?.message || '');
+  }finally{
+    challengeHomeOnlineState.rankingLoading = false;
+    challengeUpdateHomeOnlineRankingBlock();
+  }
+  return challengeHomeOnlineState;
+}
+function challengeRefreshHomeOnlineSummary(options={}){
+  challengeUpdateHomeOnlineRankingBlock();
+  challengeRefreshHomeAvailability(options);
+  challengeRefreshHomeRanking(options);
+}
+function challengeScheduleOnlineHeaderRefresh(){
+  clearTimeout(challengeHomeOnlineRefreshTimer);
+  challengeUpdateTopAvailabilityButton();
+  challengeHomeOnlineRefreshTimer = setTimeout(() => challengeRefreshHomeAvailability(), 40);
+}
+async function challengeOpenMatchingAvailable(){
+  const summary = challengeCurrentTeamCategorySummary();
+  if(!challengeHomeOnlineState.available || challengeHomeOnlineState.categoryCode !== summary.categoryCode){
+    await challengeRefreshHomeAvailability({ force:true });
+  }
+  if(!challengeHomeOnlineState.available || challengeHomeOnlineState.categoryCode !== summary.categoryCode){
+    showNotice(`Ya no hay rivales disponibles en ${summary.categoryName}.`);
+    return;
+  }
+  challengeAvailableCategory = summary.categoryCode;
+  challengeViewTab = 'available';
+  challengeDetail = null;
+  activeTab = 'challenges';
+  if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('challenges');
+  renderAll();
+  setTimeout(() => loadChallenges('available', { force:true }), 0);
+}
 
 function challengeConfig(){
   const cfg = window.GAME_CONFIG?.desafiosOnline || {};
@@ -131,7 +335,7 @@ async function challengeLoadRewardStatus(options={}){
   if(challengeRewardStatus.loading) return challengeRewardStatus;
   if(challengeRewardStatus.loaded && !options.force) return challengeRewardStatus;
   if(!challengeToken()){
-    challengeRewardStatus = { loaded:true, loading:false, compatible:true, error:'', serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[] };
+    challengeRewardStatus = { loaded:true, loading:false, compatible:true, error:'', serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{} };
     return challengeRewardStatus;
   }
   challengeRewardStatus.loading = true;
@@ -142,11 +346,12 @@ async function challengeLoadRewardStatus(options={}){
       loaded:true, loading:false, compatible:true, error:'', serverTime:String(data?.serverTime || data?.server_time || ''),
       currentCycle:cycle,
       claims:Array.isArray(data?.claims) ? data.claims : [],
-      champions:Array.isArray(data?.champions) ? data.champions : []
+      champions:Array.isArray(data?.champions) ? data.champions : [],
+      currentStandings:data?.currentStandings && typeof data.currentStandings === 'object' ? data.currentStandings : (data?.current_standings && typeof data.current_standings === 'object' ? data.current_standings : {})
     };
   }catch(error){
     const message = String(error?.message || 'No se pudo consultar los premios.');
-    challengeRewardStatus = { loaded:true, loading:false, compatible:!/(404|ruta no encontrada|not found)/i.test(message), error:message, serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[] };
+    challengeRewardStatus = { loaded:true, loading:false, compatible:!/(404|ruta no encontrada|not found)/i.test(message), error:message, serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{} };
   }
   return challengeRewardStatus;
 }
@@ -266,7 +471,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.15') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.16') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -462,7 +667,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.15'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.16'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -760,6 +965,7 @@ function challengeBuildCategoryRanking(historyRows, categoryCode, cycle=null){
   const minimum = challengeConfig().rankingMinimumMatches;
   const minimumOpponents = challengeConfig().rankingMinimumOpponents;
   const normalized = [...states.values()].map(state => ({
+    identityKey:state.key,
     username:state.username,
     played:state.played,
     wins:state.wins,
@@ -986,6 +1192,7 @@ async function loadChallenges(tab=challengeViewTab, options={}){
     if(tab === 'ranking'){
       const [history] = await Promise.all([challengeLoadCompleteHistory(), challengeLoadRewardStatus({ force:options.force })]);
       challengeRankingHistoryCache = history;
+      challengeHomeHistoryLoadedAt = Date.now();
       challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
       challengeLoadedTabs.ranking = true;
     }else{
@@ -998,6 +1205,12 @@ async function loadChallenges(tab=challengeViewTab, options={}){
         if(ownUserId) rows = rows.filter(row => Number(row.creatorUserId || 0) !== ownUserId);
       }
       challengeRowsCache[tab] = rows;
+      if(tab === 'available'){
+        challengeHomeAvailabilityLoadedAt = Date.now();
+        const summary = challengeCurrentTeamCategorySummary();
+        challengeHomeOnlineState = { ...challengeHomeOnlineState, ...summary, availabilityLoaded:true, available:rows.some(row => challengeRowCategoryCode(row) === summary.categoryCode) };
+        challengeUpdateTopAvailabilityButton();
+      }
       challengeLoadedTabs[tab] = true;
     }
   }catch(error){

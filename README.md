@@ -1,4 +1,16 @@
-# Fútbol Manager MVP - V8.15
+# Fútbol Manager MVP - V8.16
+
+
+## V8.16 — Ranking online y desafíos compatibles en Inicio
+
+- Inicio incorpora un bloque **Tu ranking online** con la categoría salarial natural de la convocatoria actual y la posición del manager en el ciclo vigente.
+- Sin partidos disputados, la posición muestra `-`; antes de cumplir los requisitos oficiales muestra `Provisional`.
+- La barra superior muestra **Hay desafíos disponibles** únicamente cuando existe un rival anónimo compatible con la categoría natural del equipo armado.
+- El acceso abre Competencias Online directamente en Disponibles y en la categoría correspondiente.
+- El Worker V8.16 agrega la posición actual del usuario por categoría dentro de la respuesta segura de premios. No requiere cambios de SQL ni nuevas tablas.
+- El cliente mantiene compatibilidad con el Worker V8.12 mediante un cálculo local de respaldo.
+
+**V8.16 no rompe partidas anteriores.** El cambio agrega consultas y componentes visuales; no altera guardados, jugadores, contratos, resultados ni los cinco slots.
 
 ## V8.15 — Frontend compacto para 1280 × 720
 

@@ -98,6 +98,7 @@ function renderAll(){
   }
   refreshSidebarDate();
   $('btnSave').disabled = !game;
+  if(typeof challengeScheduleOnlineHeaderRefresh === 'function') challengeScheduleOnlineHeaderRefresh();
   updateAssistantMessagesToggle();
   if($('topResignClubBtn')){
     $('topResignClubBtn').disabled = !game || game.gameOver?.active;
@@ -591,6 +592,7 @@ function renderHome(){
     ${turnModePanelMarkup()}
     ${typeof managerChallengeHomeMarkup === 'function' ? managerChallengeHomeMarkup() : ''}
     ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
+    <div id="homeOnlineRankingBox">${typeof challengeHomeOnlineRankingMarkup === 'function' ? challengeHomeOnlineRankingMarkup() : ''}</div>
     ${visualAlertsMarkup()}
     <div class="card featured-players-panel" style="margin-top:14px">
       <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
@@ -644,6 +646,7 @@ function renderHome(){
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   if(typeof bindStaffDismissButtons === 'function') bindStaffDismissButtons(renderHome);
+  if(typeof challengeRefreshHomeOnlineSummary === 'function') challengeRefreshHomeOnlineSummary();
   updateAdvanceButtonState();
   startDailySkillPointsAnimation();
 }

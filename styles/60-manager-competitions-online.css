@@ -1033,3 +1033,29 @@ button.cwc-group-result{cursor:pointer}
 .challenge-anonymous-rival p{margin:0;color:var(--muted)}
 .challenge-anonymous-pool-card .challenge-simple-card-actions{min-width:min(290px,100%)}
 @media (max-width:760px){.challenge-anonymous-pool-card,.challenge-anonymous-rival{align-items:flex-start}.challenge-anonymous-pool-card{flex-direction:column}.challenge-anonymous-pool-card .challenge-simple-card-actions{width:100%;min-width:0}}
+
+
+/* V8.16 · Resumen online en Inicio y acceso rápido a rivales compatibles. */
+.online-challenge-top-btn{
+  border-color:rgba(255,95,95,.72);
+  background:rgba(153,29,39,.22);
+  color:#ffd7da;
+  font-weight:850;
+  white-space:nowrap;
+}
+.online-challenge-top-btn:hover{background:rgba(185,39,50,.34);border-color:rgba(255,124,124,.9)}
+#homeOnlineRankingBox:empty{display:none}
+.home-online-ranking-card{
+  width:100%;margin-top:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  text-align:left;color:inherit;border-color:rgba(93,155,255,.3);background:linear-gradient(135deg,rgba(18,32,58,.96),rgba(21,43,69,.9));
+}
+.home-online-ranking-card:hover{transform:translateY(-1px);border-color:rgba(112,174,255,.58)}
+.home-online-ranking-card>div:first-child{display:grid;gap:3px;min-width:0}
+.home-online-ranking-card .home-online-position{font-size:1.75rem;line-height:1;color:#f4f8ff}
+.home-online-ranking-card small{color:var(--muted);font-weight:650}
+.home-online-category{display:flex;align-items:center;gap:10px;justify-content:flex-end;min-width:0}
+.home-online-category>span{color:var(--muted);font-size:.78rem;font-weight:750;white-space:nowrap}
+@media (max-width:760px){
+  .home-online-ranking-card{align-items:flex-start;flex-direction:column;gap:12px}
+  .home-online-category{width:100%;justify-content:space-between}
+}

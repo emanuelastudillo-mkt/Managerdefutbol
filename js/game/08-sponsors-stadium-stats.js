@@ -790,7 +790,8 @@ function startYouthTrainingGroundUpgrade(targetLevel){
   state.construction = { targetLevel:definition.level, daysLeft:definition.buildDays, totalDays:definition.buildDays, startedDate:game.currentDate || '', startedSeason:Number(game.seasonNumber || 1) };
   facilities.lastProcessedDate = validIsoDate(game.currentDate) ? game.currentDate : facilities.lastProcessedDate;
   saveLocal(true);
-  renderAcademy();
+  if(activeTab === 'careerImprovements' && typeof renderCareerImprovements === 'function') renderCareerImprovements();
+  else renderAcademy();
   showNotice(`Obra iniciada: predio juvenil ${definition.name}. Duración: ${definition.buildDays} días.`);
   if(typeof showAcademyFirstActionIntroduction === 'function') showAcademyFirstActionIntroduction('academy_facility_youth_build');
 }

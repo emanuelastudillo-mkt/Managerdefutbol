@@ -911,3 +911,15 @@
 }
 .portfolio-player-link{display:inline-flex!important;align-items:center;gap:4px}
 .manager-player-portfolio .clickable-player-row:hover td{background:rgba(59,130,246,.055)}
+
+/* V8.13 · Academia simplificada y Carrera → Mejoras */
+.academy-control-center{display:grid;gap:14px;margin:14px 0;border-color:rgba(56,189,248,.22);background:linear-gradient(145deg,rgba(14,165,233,.08),rgba(15,23,42,.72))}
+.academy-control-employee{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);gap:14px;align-items:center}
+.academy-primary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.academy-main-action{display:grid;gap:4px;min-height:76px;text-align:left;align-content:center;padding:14px 16px}
+.academy-main-action span{font-size:15px;font-weight:900}
+.academy-main-action small{font-size:11px;opacity:.82;font-weight:700}
+.career-improvements-intro{margin-bottom:14px}
+.career-improvements-grid{display:grid;gap:14px}
+.academy-improvement-actions{gap:10px;margin-top:12px;flex-wrap:wrap}
+@media (max-width:820px){.academy-control-employee{grid-template-columns:1fr}.academy-primary-actions{grid-template-columns:1fr}.academy-main-action{width:100%}}

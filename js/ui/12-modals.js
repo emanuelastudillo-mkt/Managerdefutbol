@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.12</p>
+      <p class="eyebrow">Guía actualizada · V8.13</p>
       <h2>Ayuda de Fútbol Manager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1689,7 +1689,7 @@ function openGameHelpModal(){
         <article class="help-card card">
           <h4>Captación y desarrollo</h4>
           <p>La primera captación anual entrega la cuota excepcional completa según el nivel del Predio, hasta seis en nivel Elite. Necesitás cupos suficientes y saldo personal para captaciones, residencias, becas, tratamientos, empleados y obras.</p>
-          ${gameHelpGoButton('academy','Revisar juveniles y Predio')}
+          <div class="help-actions">${gameHelpGoButton('academy','Revisar juveniles')}${gameHelpGoButton('careerImprovements','Abrir Mejoras')}</div>
         </article>
         <article class="help-card card">
           <h4>Ofertas por juveniles</h4>
@@ -1719,7 +1719,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Estadio e instalaciones</h4>
-          <p>El estadio, el campo y la calefacción del césped siguen siendo propiedad del club. El Predio juvenil ya no está aquí: se administra y financia desde Tu Academia.</p>
+          <p>El estadio, el campo y la calefacción del césped siguen siendo propiedad del club. El Predio juvenil ya no está aquí: se administra y financia desde Carrera → Mejoras.</p>
           ${gameHelpGoButton('stadium','Abrir Estadio','','facilities')}
         </article>
         <article class="help-card card">

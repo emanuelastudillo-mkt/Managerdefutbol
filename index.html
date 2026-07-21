@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fútbol Manager V8.12</title>
+  <title>Fútbol Manager V8.13</title>
   <meta name="description" content="Juego manager de fútbol en navegador con datos JSON, guardado local y ranking online." />
-  <link rel="icon" type="image/png" sizes="50x50" href="favicon.png?v=8.12" />
-  <link rel="shortcut icon" type="image/png" href="favicon.png?v=8.12" />
-  <link rel="stylesheet" href="styles/00-core.css?v=8.12" />
-  <link rel="stylesheet" href="styles/10-layout-navigation.css?v=8.12" />
-  <link rel="stylesheet" href="styles/20-team-tactics-training.css?v=8.12" />
-  <link rel="stylesheet" href="styles/30-market-academy-scouting.css?v=8.12" />
-  <link rel="stylesheet" href="styles/40-match-simulation.css?v=8.12" />
-  <link rel="stylesheet" href="styles/50-finance-club.css?v=8.12" />
-  <link rel="stylesheet" href="styles/60-manager-competitions-online.css?v=8.12" />
-  <link rel="stylesheet" href="styles/90-cascade-compat.css?v=8.12" />
+  <link rel="icon" type="image/png" sizes="50x50" href="favicon.png?v=8.13" />
+  <link rel="shortcut icon" type="image/png" href="favicon.png?v=8.13" />
+  <link rel="stylesheet" href="styles/00-core.css?v=8.13" />
+  <link rel="stylesheet" href="styles/10-layout-navigation.css?v=8.13" />
+  <link rel="stylesheet" href="styles/20-team-tactics-training.css?v=8.13" />
+  <link rel="stylesheet" href="styles/30-market-academy-scouting.css?v=8.13" />
+  <link rel="stylesheet" href="styles/40-match-simulation.css?v=8.13" />
+  <link rel="stylesheet" href="styles/50-finance-club.css?v=8.13" />
+  <link rel="stylesheet" href="styles/60-manager-competitions-online.css?v=8.13" />
+  <link rel="stylesheet" href="styles/90-cascade-compat.css?v=8.13" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">MVP local · V8.12</p>
+      <p class="eyebrow">MVP local · V8.13</p>
       <h1>Fútbol Manager</h1>
     </div>
     <div class="top-actions top-actions-compact">
@@ -90,6 +90,7 @@
           <button type="button" class="nav-group-toggle" aria-expanded="false"><span>Carrera</span><span class="nav-chevron" aria-hidden="true">▾</span></button>
           <div class="nav-group-items">
             <button data-tab="academy"><span>Tu Academia</span></button>
+            <button data-tab="careerImprovements"><span>Mejoras</span></button>
             <button data-tab="mystats" data-nav-mode="profile"><span>Perfil e historial</span></button>
             <button data-tab="mystats" data-nav-mode="achievements"><span>Hitos</span></button>
             <button data-tab="careerJobs"><span>Ofertas laborales <small>(contrato actual)</small></span></button>
@@ -133,43 +134,43 @@
     </div>
   </template>
 
-  <script defer src="config.js?v=8.12"></script>
-  <script defer src="balance-modificadores.js?v=8.12"></script>
-  <script defer src="balance-manager.js?v=8.12"></script>
-  <script defer src="simulador-2.0.js?v=8.12"></script>
-  <script defer src="simulador-desafios.js?v=8.12"></script>
-  <script defer src="js/game/17-live-match.js?v=8.12"></script>
-  <script defer src="js/core/01-config-constants.js?v=8.12"></script>
-  <script defer src="js/core/02-ui-utils.js?v=8.12"></script>
-  <script defer src="js/core/03-player-tactics-utils.js?v=8.12"></script>
-  <script defer src="js/data/04-player-name-pools.js?v=8.12"></script>
-  <script defer src="js/data/04-data-storage.js?v=8.12"></script>
-  <script defer src="js/game/05b-manager-challenges.js?v=8.12"></script>
-  <script defer src="js/game/05c-manager-job-market.js?v=8.12"></script>
-  <script defer src="js/game/05d-founder-career.js?v=8.12"></script>
-  <script defer src="js/game/05e-integrity-navigation-saves.js?v=8.12"></script>
-  <script defer src="js/game/05-state-season.js?v=8.12"></script>
-  <script defer src="js/game/05f-club-world-cup.js?v=8.12"></script>
-  <script defer src="js/game/05g-season-lifecycle.js?v=8.12"></script>
-  <script defer src="js/game/05a-manager-contracts.js?v=8.12"></script>
-  <script defer src="js/ui/06-render-home-messages.js?v=8.12"></script>
-  <script defer src="js/ui/07-render-team-market.js?v=8.12"></script>
-  <script defer src="js/game/08-sponsors-stadium-stats.js?v=8.12"></script>
-  <script defer src="js/game/09a-team-cohesion-summary.js?v=8.12"></script>
-  <script defer src="js/game/09b-calendar-quick-simulation.js?v=8.12"></script>
-  <script defer src="js/game/09c-economy-finance.js?v=8.12"></script>
-  <script defer src="js/game/09d-stadium-condition-morale.js?v=8.12"></script>
-  <script defer src="js/game/09e-training.js?v=8.12"></script>
-  <script defer src="js/game/10-academy-employees.js?v=8.12"></script>
-  <script defer src="js/game/11-match-engine.js?v=8.12"></script>
-  <script defer src="js/ui/12-modals.js?v=8.12"></script>
-  <script defer src="js/game/10a-manager-player-portfolio.js?v=8.12"></script>
-  <script defer src="js/game/13-ranking-online.js?v=8.12"></script>
-  <script defer src="js/game/14-eventos.js?v=8.12"></script>
-  <script defer src="js/game/18-challenges-online.js?v=8.12"></script>
-  <script defer src="js/game/15-especial.js?v=8.12"></script>
-  <script defer src="js/game/16-scouting-center.js?v=8.12"></script>
-  <script defer src="js/ui/19-manager-courses.js?v=8.12"></script>
-  <script defer src="app.js?v=8.12"></script>
+  <script defer src="config.js?v=8.13"></script>
+  <script defer src="balance-modificadores.js?v=8.13"></script>
+  <script defer src="balance-manager.js?v=8.13"></script>
+  <script defer src="simulador-2.0.js?v=8.13"></script>
+  <script defer src="simulador-desafios.js?v=8.13"></script>
+  <script defer src="js/game/17-live-match.js?v=8.13"></script>
+  <script defer src="js/core/01-config-constants.js?v=8.13"></script>
+  <script defer src="js/core/02-ui-utils.js?v=8.13"></script>
+  <script defer src="js/core/03-player-tactics-utils.js?v=8.13"></script>
+  <script defer src="js/data/04-player-name-pools.js?v=8.13"></script>
+  <script defer src="js/data/04-data-storage.js?v=8.13"></script>
+  <script defer src="js/game/05b-manager-challenges.js?v=8.13"></script>
+  <script defer src="js/game/05c-manager-job-market.js?v=8.13"></script>
+  <script defer src="js/game/05d-founder-career.js?v=8.13"></script>
+  <script defer src="js/game/05e-integrity-navigation-saves.js?v=8.13"></script>
+  <script defer src="js/game/05-state-season.js?v=8.13"></script>
+  <script defer src="js/game/05f-club-world-cup.js?v=8.13"></script>
+  <script defer src="js/game/05g-season-lifecycle.js?v=8.13"></script>
+  <script defer src="js/game/05a-manager-contracts.js?v=8.13"></script>
+  <script defer src="js/ui/06-render-home-messages.js?v=8.13"></script>
+  <script defer src="js/ui/07-render-team-market.js?v=8.13"></script>
+  <script defer src="js/game/08-sponsors-stadium-stats.js?v=8.13"></script>
+  <script defer src="js/game/09a-team-cohesion-summary.js?v=8.13"></script>
+  <script defer src="js/game/09b-calendar-quick-simulation.js?v=8.13"></script>
+  <script defer src="js/game/09c-economy-finance.js?v=8.13"></script>
+  <script defer src="js/game/09d-stadium-condition-morale.js?v=8.13"></script>
+  <script defer src="js/game/09e-training.js?v=8.13"></script>
+  <script defer src="js/game/10-academy-employees.js?v=8.13"></script>
+  <script defer src="js/game/11-match-engine.js?v=8.13"></script>
+  <script defer src="js/ui/12-modals.js?v=8.13"></script>
+  <script defer src="js/game/10a-manager-player-portfolio.js?v=8.13"></script>
+  <script defer src="js/game/13-ranking-online.js?v=8.13"></script>
+  <script defer src="js/game/14-eventos.js?v=8.13"></script>
+  <script defer src="js/game/18-challenges-online.js?v=8.13"></script>
+  <script defer src="js/game/15-especial.js?v=8.13"></script>
+  <script defer src="js/game/16-scouting-center.js?v=8.13"></script>
+  <script defer src="js/ui/19-manager-courses.js?v=8.13"></script>
+  <script defer src="app.js?v=8.13"></script>
 </body>
 </html>

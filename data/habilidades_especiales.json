@@ -1,8 +1,8 @@
 {
-  "version": "V7.54",
+  "version": "V8.13",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V7.54: pulido visual del Centro de Ojeo; conserva todas las habilidades detalladas y la tabla de recompensas sin cambios.",
+  "caracteristicas_version": "V8.13: agrega cinco cartas Experto en juveniles que suman habilidades visibles al consultar informes de Tu Academia.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -226,6 +226,13 @@
       "tope_porcentaje": 95,
       "aplica_a": "probabilidad_de_lesion_durante_partidos_del_club_del_manager",
       "descripcion": "Reduce porcentualmente la probabilidad final de que los jugadores del manager se lesionen durante un partido."
+    },
+    "experto_juveniles": {
+      "se_apila": true,
+      "metodo": "suma_directa_sin_tope",
+      "tope_porcentaje": null,
+      "aplica_a": "cantidad_de_habilidades_reveladas_al_consultar_juveniles",
+      "descripcion": "Suma habilidades directas al resultado normal calculado por el Preparador de juveniles."
     }
   },
   "bonus_por_rareza": {
@@ -300,6 +307,12 @@
       "rara": 5,
       "epica": 8,
       "legendaria": 15
+    },
+    "experto_juveniles": {
+      "comun": 1,
+      "rara": 2,
+      "epica": 3,
+      "legendaria": 7
     }
   },
   "cartas_base": [
@@ -894,6 +907,56 @@
       "unidad": "porcentaje",
       "activable": true,
       "texto": "Reduce un 15% la probabilidad de lesiones de tus jugadores durante los partidos."
+    },
+    {
+      "id_base": "EXPERTO_JUVENILES_COMUN_001",
+      "nombre": "Experto en juveniles",
+      "rareza": "comun",
+      "tipo_bonus": "experto_juveniles",
+      "valor_bonus": 1,
+      "unidad": "habilidades",
+      "activable": true,
+      "texto": "Suma 1 habilidad visible al resultado normal de cada consulta de juveniles."
+    },
+    {
+      "id_base": "EXPERTO_JUVENILES_RARA_001",
+      "nombre": "Experto en juveniles",
+      "rareza": "rara",
+      "tipo_bonus": "experto_juveniles",
+      "valor_bonus": 2,
+      "unidad": "habilidades",
+      "activable": true,
+      "texto": "Suma 2 habilidades visibles al resultado normal de cada consulta de juveniles."
+    },
+    {
+      "id_base": "EXPERTO_JUVENILES_EPICA_001",
+      "nombre": "Experto en juveniles",
+      "rareza": "epica",
+      "tipo_bonus": "experto_juveniles",
+      "valor_bonus": 3,
+      "unidad": "habilidades",
+      "activable": true,
+      "texto": "Suma 3 habilidades visibles al resultado normal de cada consulta de juveniles."
+    },
+    {
+      "id_base": "EXPERTO_JUVENILES_LEGENDARIA_001",
+      "nombre": "Experto en juveniles",
+      "rareza": "legendaria",
+      "tipo_bonus": "experto_juveniles",
+      "valor_bonus": 4,
+      "unidad": "habilidades",
+      "activable": true,
+      "texto": "Suma 4 habilidades visibles al resultado normal de cada consulta de juveniles."
+    },
+    {
+      "id_base": "EXPERTO_JUVENILES_LEGENDARIA_002",
+      "nombre": "Experto en juveniles",
+      "rareza": "legendaria",
+      "tipo_bonus": "experto_juveniles",
+      "valor_bonus": 7,
+      "unidad": "habilidades",
+      "activable": true,
+      "texto": "Suma 7 habilidades visibles al resultado normal de cada consulta de juveniles."
     }
   ],
   "estructura_datos_manager": {

@@ -1430,14 +1430,22 @@ function academyLockedStatTargets(){
   });
   return targets;
 }
+function academyYouthExpertCardBonus(){
+  return typeof specialActiveBonus === 'function'
+    ? Math.max(0, Math.round(Number(specialActiveBonus('experto_juveniles') || 0)))
+    : 0;
+}
 function consultAcademyPlayers(){
   if(!academyYouthPreparerActive()){ showNotice('Necesitás contratar al preparador de juveniles para consultar informes.'); return; }
   const turn = currentTurnIndex();
   if(Number(game.academy.lastConsultTurn) === turn){ showNotice('El preparador ya entregó un informe esta semana.'); return; }
   const targets = academyLockedStatTargets();
   if(!targets.length){ showNotice('No quedan habilidades ocultas por desbloquear en la academia.'); return; }
-  const baseAmount = 1 + Math.floor(Math.random() * 2);
-  const amount = Math.min(targets.length, Math.max(1, Math.round(baseAmount * staffPerformanceMultiplier('youth_preparer') * ACADEMY_CONSULT_REVEAL_MULTIPLIER)));
+  const naturalRoll = 1 + Math.floor(Math.random() * 2);
+  const baseAmount = Math.max(1, Math.round(naturalRoll * staffPerformanceMultiplier('youth_preparer') * ACADEMY_CONSULT_REVEAL_MULTIPLIER));
+  const cardBonus = academyYouthExpertCardBonus();
+  const requestedAmount = Math.max(1, baseAmount + cardBonus);
+  const amount = Math.min(targets.length, requestedAmount);
   const revealed = [];
   for(let i=0;i<amount;i++){
     const remaining = academyLockedStatTargets();
@@ -1449,11 +1457,20 @@ function consultAcademyPlayers(){
     revealed.push(`${p?.name || 'Juvenil'}: ${pick.stat}`);
   }
   game.academy.lastConsultTurn = turn;
-  game.academy.lastConsultReveal = { turn, revealed:revealed.slice(0,12), total:revealed.length, createdAt:Date.now() };
+  game.academy.lastConsultReveal = {
+    turn,
+    revealed:revealed.slice(0,12),
+    total:revealed.length,
+    baseAmount,
+    cardBonus,
+    requestedAmount,
+    createdAt:Date.now()
+  };
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('consultar_juveniles', { revealed:revealed.length });
   saveLocal(true);
   renderAcademy();
-  showNotice(`Informe recibido: ${revealed.join(' · ')}`);
+  const bonusText = cardBonus > 0 ? ` Base ${baseAmount} + cartas ${cardBonus}.` : '';
+  showNotice(`Informe recibido: ${revealed.length} habilidad(es).${bonusText} ${revealed.join(' · ')}`);
 }
 function dismissAcademyPlayer(playerId){
   if(!game) return;
@@ -1681,8 +1698,49 @@ function academyConsultAnimationMarkup(){
   if(!info || Number(info.turn || -1) !== currentTurnIndex()) return '';
   const revealed = Array.isArray(info.revealed) ? info.revealed : [];
   if(!revealed.length) return '';
-  return `<div class="academy-consult-animation"><div><p class="label">Informe actualizado</p><strong>${Number(info.total || revealed.length)} habilidad(es) revelada(s)</strong></div><div class="academy-consult-revealed">${revealed.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>`;
+  const cardBonus = Math.max(0, Math.round(Number(info.cardBonus || 0)));
+  const breakdown = cardBonus > 0 ? `<p class="small ok">Resultado normal ${Number(info.baseAmount || 0)} + cartas ${cardBonus}</p>` : '';
+  return `<div class="academy-consult-animation"><div><p class="label">Informe actualizado</p><strong>${Number(info.total || revealed.length)} habilidad(es) revelada(s)</strong>${breakdown}</div><div class="academy-consult-revealed">${revealed.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div></div>`;
 }
+function academyResidenceManagementMarkup(){
+  const activeCount = academyActivePlayers().length;
+  const residences = academyResidenceCount();
+  const residenceLimit = academyResidenceLimit();
+  const capacity = academyCapacity();
+  const availableSlots = academyAvailableSlots();
+  return `<div class="card academy-residence-card">
+    <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. El Predio habilita 2 residencias por nivel. El alquiler sale de la Cuenta Bancaria personal: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)} mensuales por residencia.</p></div><span class="pill">${activeCount}/${capacity} ocupados</span></div>
+    <div class="academy-residence-stats">
+      <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
+      <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
+      <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
+    </div>
+    <div class="row academy-improvement-actions"><button class="primary" id="btnRentAcademyResidence" ${residences < residenceLimit ? '' : 'disabled'}>Alquilar residencia</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
+    ${residences > 0 && availableSlots < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${availableSlots}.</p>` : ''}
+    ${residences > residenceLimit ? `<p class="small warn">Esta partida conserva ${residences - residenceLimit} residencia(s) heredada(s) por encima del límite actual. No se eliminan, pero no se pueden alquilar nuevas hasta ampliar el predio.</p>` : residenceLimit <= 0 ? '<p class="small warn">Construí el Predio juvenil nivel 1 para habilitar las primeras 2 residencias.</p>' : residences >= residenceLimit ? `<p class="small muted">Límite actual alcanzado: ${residenceLimit} residencia(s). Cada nuevo nivel del Predio habilita 2 más.</p>` : `<p class="small muted">Podés alquilar ${residenceLimit - residences} residencia(s) adicional(es) con el nivel actual.</p>`}
+  </div>`;
+}
+function bindCareerImprovementsActions(){
+  document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
+  $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
+  $('btnCancelAcademyResidence')?.addEventListener('click', cancelAcademyResidence);
+}
+function renderCareerImprovements(){
+  game.academy = normalizeAcademyState(game.academy);
+  const personalBalance = managerPersonalBalance();
+  view.innerHTML = `
+    <div class="row section-title">
+      <div><h2>Mejoras</h2><p class="tagline">Infraestructura personal del manager para ampliar y desarrollar Tu Academia.</p></div>
+      <div class="row"><span class="pill">Saldo personal ${formatMoney(personalBalance)}</span><span class="pill">Cupo juvenil ${academyActivePlayers().length}/${academyCapacity()}</span></div>
+    </div>
+    <div class="card career-improvements-intro"><p class="label">Patrimonio del manager</p><p class="muted small">El Predio y las residencias se conservan al cambiar de club. Sus construcciones y alquileres se pagan exclusivamente desde la Cuenta Bancaria personal.</p></div>
+    <div class="career-improvements-grid">
+      <div class="academy-owned-facility">${youthTrainingFacilityMarkup()}</div>
+      ${academyResidenceManagementMarkup()}
+    </div>`;
+  bindCareerImprovementsActions();
+}
+
 function renderAcademy(){
   game.academy = normalizeAcademyState(game.academy);
   const activeRaw = academyActivePlayers();
@@ -1693,17 +1751,16 @@ function renderAcademy(){
   const academyExpenses = academyFinanceHistory();
   const totalAcademyExpenses = academyExpenses.reduce((sum,item) => sum + Math.abs(Math.min(0, Number(item.delta || 0))), 0);
   const recentAcademyExpenses = academyExpenses.slice(-8).reverse();
-  const residences = academyResidenceCount();
-  const residenceLimit = academyResidenceLimit();
   const capacity = academyCapacity();
   const availableSlots = academyAvailableSlots();
   const exceptionalStatus = academyExceptionalYouthSeasonStatus();
   const scoutingDisabled = !managerCanAffordAcademy(ACADEMY_SCOUTING_COST) || availableSlots <= 0 || (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target);
   const facilityExceptionalBonus = Math.max(0, exceptionalStatus.currentTarget - 1);
   const pendingYouthOffers = academyYouthTransferOffers('pending');
+  const youthExpertBonus = academyYouthExpertCardBonus();
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Tu Academia</h2><p class="tagline">Patrimonio personal del manager. Conservás juveniles, Predio, residencias y empleados aunque cambies de club.</p></div>
+      <div><h2>Tu Academia</h2><p class="tagline">Preparador, captación, consulta y desarrollo de los juveniles del manager.</p></div>
       <div class="row"><span class="pill">Sede ${escapeHtml(academyLocalCountry())}</span><span class="pill">Saldo personal ${formatMoney(personalBalance)}</span></div>
     </div>
     <div class="grid cols-3 academy-owner-summary">
@@ -1711,29 +1768,23 @@ function renderAcademy(){
       <div class="card"><p class="label">Gasto semanal juvenil</p><strong>${formatMoney(salaryTurn)}</strong></div>
       <div class="card"><p class="label">Gastos históricos</p><strong class="bad">${formatMoney(totalAcademyExpenses)}</strong></div>
     </div>
-    <div class="academy-owned-facility" style="margin-top:14px">${youthTrainingFacilityMarkup()}</div>
-    <div class="card academy-residence-card" style="margin:14px 0">
-      <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. Tu Predio habilita 2 residencias por nivel. El alquiler sale de la Cuenta Bancaria personal: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)} mensuales por residencia.</p></div><span class="pill">${active.length}/${capacity} ocupados</span></div>
-      <div class="academy-residence-stats">
-        <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
-        <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>
-        <div><p class="label">Cupos libres</p><strong>${availableSlots}</strong></div>
+    <div class="card academy-control-center">
+      <div class="academy-control-employee">
+        <div><p class="label">Preparador de juveniles</p><h3>Empleado de Tu Academia</h3><p class="muted small">Su contrato se paga desde la Cuenta Bancaria personal y se conserva cuando cambiás de club.</p></div>
+        <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}</div>
       </div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnRentAcademyResidence" ${residences < residenceLimit ? '' : 'disabled'}>Alquilar residencia</button><button class="ghost" id="btnCancelAcademyResidence" ${residences > 0 && availableSlots >= ACADEMY_RESIDENCE_CAPACITY ? '' : 'disabled'}>Cancelar alquiler de 1 residencia</button></div>
-      ${residences > 0 && availableSlots < ACADEMY_RESIDENCE_CAPACITY ? `<p class="small warn">Para cancelar una residencia necesitás al menos ${ACADEMY_RESIDENCE_CAPACITY} cupos juveniles libres. Cupos libres actuales: ${availableSlots}.</p>` : ''}
-      ${residences > residenceLimit ? `<p class="small warn">Esta partida conserva ${residences - residenceLimit} residencia(s) heredada(s) por encima del límite actual. No se eliminan, pero no se pueden alquilar nuevas hasta ampliar el predio.</p>` : residenceLimit <= 0 ? '<p class="small warn">Construí el predio juvenil nivel 1 para habilitar las primeras 2 residencias.</p>' : residences >= residenceLimit ? `<p class="small muted">Límite actual alcanzado: ${residenceLimit} residencia(s). Cada nuevo nivel del predio habilita 2 más.</p>` : `<p class="small muted">Podés alquilar ${residenceLimit - residences} residencia(s) adicional(es) con el nivel actual.</p>`}
-    </div>
-    <div class="card academy-youth-preparer-card" style="margin-bottom:14px">
-      <div class="row">
-        <div><p class="label">Preparador de juveniles</p><h3>Informe de juveniles</h3><p class="muted small">Empleado personal de Tu Academia. Su contrato se paga desde la Cuenta Bancaria del manager y se conserva al cambiar de club.</p></div>
-        <div class="academy-preparer-actions">${activePreparer ? staffContractCardMarkup('youth_preparer', 'mini') : `<button class="primary" id="btnHireYouthPreparer">Contratar · ${staffCostLabel('youth_preparer')}</button>`}<button class="ghost" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}>Consultar juveniles</button></div>
+      <div class="academy-primary-actions">
+        <button class="primary academy-main-action" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}><span>Hacer captación de talentos</span><small>${formatMoney(ACADEMY_SCOUTING_COST)} · informe en 35 días</small></button>
+        <button class="primary academy-main-action" id="btnConsultAcademy" ${activePreparer ? '' : 'disabled'}><span>Consultar juveniles</span><small>${activePreparer ? `Informe semanal${youthExpertBonus > 0 ? ` · cartas +${youthExpertBonus}` : ''}` : 'Requiere Preparador de juveniles'}</small></button>
       </div>
+      ${availableSlots <= 0 ? '<p class="small warn">Sin cupos disponibles. Administrá el Predio y las residencias desde Carrera → Mejoras.</p>' : (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target) ? `<p class="small warn">Reservá ${exceptionalStatus.target} cupos libres para recibir completa la cuota excepcional de la primera captación. Disponibles: ${availableSlots}. Gestioná los cupos desde Carrera → Mejoras.</p>` : ''}
+      ${youthExpertBonus > 0 ? `<p class="small ok">Experto en juveniles activo: se suman +${youthExpertBonus} habilidad(es) al resultado normal de cada consulta.</p>` : ''}
     </div>
     ${academyConsultAnimationMarkup()}
     <div class="grid cols-3 academy-summary">
       <div class="card"><p class="label">Juveniles</p><div class="metric">${active.length}/${capacity}</div><p class="small muted">Lugares libres: ${availableSlots}</p></div>
       <div class="card academy-average-card">${academyAverageVisibilityPieMarkup(active)}</div>
-      <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><p class="small ${exceptionalStatus.resolved ? 'ok' : 'muted'}">${exceptionalStatus.resolved ? `Excepcionales entregados: ${exceptionalStatus.granted}/${exceptionalStatus.target}` : `Primera captación: ${exceptionalStatus.target} excepcional(es)`}</p><button class="primary" id="btnAcademyScouting" ${scoutingDisabled ? 'disabled' : ''}>Hacer captación de talentos</button>${availableSlots <= 0 ? '<p class="small warn">Sin cupos disponibles. Alquilá residencias o liberá juveniles.</p>' : (!exceptionalStatus.resolved && availableSlots < exceptionalStatus.target) ? `<p class="small warn">Reservá ${exceptionalStatus.target} cupos libres para recibir completa la cuota excepcional de la primera captación. Disponibles: ${availableSlots}.</p>` : ''}</div>
+      <div class="card"><p class="label">Captación</p><div class="metric small">${formatMoney(ACADEMY_SCOUTING_COST)}</div><p class="small ${exceptionalStatus.resolved ? 'ok' : 'muted'}">${exceptionalStatus.resolved ? `Excepcionales entregados: ${exceptionalStatus.granted}/${exceptionalStatus.target}` : `Primera captación: ${exceptionalStatus.target} excepcional(es)`}</p><p class="small muted">Predio y residencias: Carrera → Mejoras.</p></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Captaciones pendientes</h3>${academyPendingJobsMarkup()}</div>
     <section class="academy-youth-market-section" style="margin-top:14px">
@@ -1745,13 +1796,10 @@ function renderAcademy(){
       <p class="muted small">Los gastos se descuentan de tu Cuenta Bancaria. Las ventas de juveniles ingresan aquí después de la retención federativa.</p>
       <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Movimiento</th></tr></thead><tbody>${recentAcademyExpenses.length ? recentAcademyExpenses.map(item => { const delta=Number(item.delta || 0); return `<tr><td>${escapeHtml(item.date || '—')}</td><td>${escapeHtml(item.concept || 'Academia')}</td><td class="${delta >= 0 ? 'ok' : 'bad'}">${delta >= 0 ? '+' : '-'}${formatMoney(Math.abs(delta))}</td></tr>`; }).join('') : '<tr><td colspan="3" class="muted">Todavía no hay movimientos personales de Academia registrados.</td></tr>'}</tbody></table></div>
     </div>
-    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el predio juvenil actual, con un máximo de 6. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Desde los ${ACADEMY_YOUTH_OFFER_AGE} años pueden recibir ofertas de clubes bot entre ${formatMoney(ACADEMY_YOUTH_OFFER_MIN_VALUE)} y ${formatMoney(ACADEMY_YOUTH_OFFER_MAX_VALUE)}; al aceptar, la federación retiene ${Math.round(ACADEMY_YOUTH_SALE_TAX_RATE * 100)}%. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
+    <div class="card academy-rules-card" style="margin-top:14px"><p class="muted">Cada captación tarda 35 días y puede sumar entre 5 y 10 juveniles de ${ACADEMY_YOUTH_MIN_AGE} a ${ACADEMY_YOUTH_MAX_CREATION_AGE} años. La media máxima inicial depende de la edad. Los juveniles normales pueden subir entre ${ACADEMY_YOUTH_SEASON_GROWTH_MIN} y ${ACADEMY_YOUTH_SEASON_GROWTH_MAX} puntos de media por temporada; el juvenil excepcional puede subir entre ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MIN} y ${ACADEMY_EXCEPTIONAL_SEASON_GROWTH_MAX}. Si no hay cupos al recibir el informe, los juveniles se pierden por falta de lugar. La primera captación de cada temporada entrega de una sola vez ${exceptionalStatus.currentTarget} juvenil(es) excepcional(es) de ${ACADEMY_EXCEPTIONAL_YOUTH_AGE} años: 1 base más ${facilityExceptionalBonus} por el Predio juvenil actual, con un máximo de 6. El Predio y las residencias se administran desde Carrera → Mejoras. Para iniciar esa primera captación deben existir cupos para toda la cuota. Las captaciones posteriores de la temporada no agregan más excepcionales. Son entrenables x5 y promovibles de inmediato. Con ${ACADEMY_YOUTH_FINAL_ACADEMY_AGE} años cursan su última temporada en academia: si no firman contrato profesional antes del cambio de temporada, desaparecen. Los juveniles pueden lesionarse entre ${ACADEMY_YOUTH_INJURIES_MIN_PER_SEASON} y ${ACADEMY_YOUTH_INJURIES_MAX_PER_SEASON} veces por temporada; mientras están lesionados no entrenan habilidades. Los juveniles cobran ${formatMoney(ACADEMY_PLAYER_TURN_COST)} por semana. Desde los ${ACADEMY_YOUTH_OFFER_AGE} años pueden recibir ofertas de clubes bot entre ${formatMoney(ACADEMY_YOUTH_OFFER_MIN_VALUE)} y ${formatMoney(ACADEMY_YOUTH_OFFER_MAX_VALUE)}; al aceptar, la federación retiene ${Math.round(ACADEMY_YOUTH_SALE_TAX_RATE * 100)}%. Despedir uno cuesta ${formatMoney(ACADEMY_DISMISS_COMPENSATION)}.</p></div>
     ${academySortControlsMarkup()}
     <div class="academy-grid" style="margin-top:14px">${active.length ? active.map(academyPlayerCard).join('') : '<div class="card"><p class="muted">Todavía no hay juveniles en la academia.</p></div>'}</div>
   `;
-  document.querySelectorAll('[data-build-youth-facility]').forEach(btn => btn.addEventListener('click', () => startYouthTrainingGroundUpgrade(btn.dataset.buildYouthFacility)));
-  $('btnRentAcademyResidence')?.addEventListener('click', rentAcademyResidence);
-  $('btnCancelAcademyResidence')?.addEventListener('click', cancelAcademyResidence);
   $('btnAcademyScouting')?.addEventListener('click', startAcademyScouting);
   $('btnHireYouthPreparer')?.addEventListener('click', hireYouthPreparer);
   $('btnConsultAcademy')?.addEventListener('click', consultAcademyPlayers);

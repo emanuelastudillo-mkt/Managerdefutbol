@@ -1,4 +1,20 @@
-# Fútbol Manager MVP - V8.12
+# Fútbol Manager MVP - V8.13
+
+
+## V8.13 — Mejoras de Carrera y Experto en juveniles
+
+- Se agregó **Carrera → Mejoras** como pestaña independiente.
+- El Predio de entrenamiento juvenil y la administración de residencias fueron trasladados desde Tu Academia a Mejoras.
+- Tu Academia concentra ahora el Preparador de juveniles y presenta como acciones principales **Hacer captación de talentos** y **Consultar juveniles**.
+- Se agregaron cinco cartas **Experto en juveniles**: +1, +2, +3, +4 y +7 habilidades visibles por consulta.
+- El bonus se suma después de calcular el resultado normal del Preparador y puede apilarse entre cartas activas.
+- La consulta informa por separado el resultado normal y el aporte de las cartas.
+- No se modificaron calidad, crecimiento, captaciones, costos, cupos ni datos existentes de los juveniles.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.13 no rompe partidas anteriores.** Predio, residencias, empleados, juveniles, cartas obtenidas y progreso conservan sus datos; sólo cambia su ubicación en la interfaz y se amplía el catálogo de cartas.
 
 
 ## V8.12 — Emparejamientos online anónimos

@@ -301,7 +301,7 @@ function processManagerJobMarketDaily(){
     const diff = clubPrestige - managerClubAccessPrestige(managerPrestige);
     const rejection = managerJobApplicationRejected(app, club);
     if(rejection.rejected){
-      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud. La decisión interna fue negativa aunque estabas dentro del margen evaluable. Probabilidad de rechazo aplicada: ${Math.round(rejection.chance)}%.`, id:`job-application-random-rejected-${club.id}-${today}` });
+      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud para asumir como manager.`, id:`job-application-random-rejected-${club.id}-${today}` });
     }else if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
       managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
@@ -377,16 +377,14 @@ function managerJobOfferCard(offer){
 function managerJobApplicationCard(app){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(app.clubId));
   if(!club) return '';
-  const chance = Number.isFinite(Number(app.rejectionChance)) ? Number(app.rejectionChance) : managerJobApplicationRejectionChance(club, app.managerPrestigeAtRequest ?? currentManagerPrestige());
-  return `<article class="card job-application-card"><p class="label">Solicitud enviada</p><h3>${escapeHtml(club.name)}</h3><p class="muted small">Responden el ${escapeHtml(app.responseDate || '—')}. Prestigio club ${clubPrestigeValue(club)} · tu prestigio ${formatManagerPrestige(currentManagerPrestige())}. Riesgo de rechazo interno ${Math.round(chance)}%.</p></article>`;
+  return `<article class="card job-application-card"><p class="label">Solicitud enviada</p><h3>${escapeHtml(club.name)}</h3><p class="muted small">Responden el ${escapeHtml(app.responseDate || '—')}. Prestigio club ${clubPrestigeValue(club)} · tu prestigio ${formatManagerPrestige(currentManagerPrestige())}.</p></article>`;
 }
 function managerJobApplicationOptionCard(club){
   const prestige = managerClubAccessPrestige(currentManagerPrestige());
   const diff = clubPrestigeValue(club) - prestige;
-  const rejectionChance = managerJobApplicationRejectionChance(club, currentManagerPrestige());
   return `<button type="button" class="card available-club-card job-application-option" data-apply-job-club="${Number(club.id)}">
     <div class="available-club-head"><span class="available-club-badge">${clubBadge(club.id) || '▣'}</span><strong>${escapeHtml(club.name || 'Club')}</strong></div>
-    <p class="muted small">Prestigio ${clubPrestigeValue(club)} · ${diff > 0 ? `+${diff} sobre tu reputación` : 'alcanzable'} · rechazo ${Math.round(rejectionChance)}%</p>
+    <p class="muted small">Prestigio ${clubPrestigeValue(club)} · ${diff > 0 ? `+${diff} sobre tu reputación` : 'alcanzable'}</p>
     <small>Enviar solicitud · respuesta en 3 días</small>
   </button>`;
 }

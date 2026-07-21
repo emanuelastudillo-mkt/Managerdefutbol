@@ -104,6 +104,19 @@
   const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
   const SIM_CARD_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorTarjetas', 0.5, 0, 2);
   const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
+  const SIM_HIGH_SCORE_GOAL_PENALTY_ENABLED = Boolean(simConfigValue('simulador.penalizacionGolesAltos.activo', true));
+  const SIM_HIGH_SCORE_GOAL_PENALTY_RULES = simConfigArray('simulador.penalizacionGolesAltos.tramos', [
+    { golesTotalesDesde:6, penalizacion:0.20 },
+    { golesTotalesDesde:7, penalizacion:0.30 },
+    { golesTotalesDesde:8, penalizacion:0.40 },
+    { golesTotalesDesde:9, penalizacion:0.50 },
+    { golesTotalesDesde:10, penalizacion:0.60 },
+    { golesTotalesDesde:11, penalizacion:0.70 },
+    { golesTotalesDesde:12, penalizacion:0.80 }
+  ]).map(rule => ({
+    goalsFrom:Math.max(1, Math.round(Number(rule?.golesTotalesDesde ?? rule?.goalsFrom ?? 0) || 0)),
+    penalty:simClamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)
+  })).filter(rule => rule.goalsFrom > 0 && rule.penalty > 0).sort((a,b) => a.goalsFrom - b.goalsFrom);
   const BOT_OVEREXERTION_ENABLED_V2 = Boolean(simConfigValue('equilibrioBots.tacticaRapida.sobreexigenciaSiPierde', true));
   const BOT_OVEREXERTION_RULES_V2 = normalizeBotOverexertionRules(simConfigArray('equilibrioBots.tacticaRapida.reglasDiferencia', []));
   const BOT_TACTIC_VARIETY_ENABLED = Boolean(simConfigValue('equilibrioBots.tacticasVariadas.activo', true));
@@ -128,6 +141,15 @@
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
   function simRnd(min,max){ return min + Math.random() * (max-min); }
+  function simHighScoreGoalPenaltyForNextGoal(currentTotalGoals){
+    if(!SIM_HIGH_SCORE_GOAL_PENALTY_ENABLED) return 0;
+    const nextTotal = Math.max(0, Math.round(Number(currentTotalGoals || 0))) + 1;
+    let penalty = 0;
+    SIM_HIGH_SCORE_GOAL_PENALTY_RULES.forEach(rule => {
+      if(nextTotal >= rule.goalsFrom) penalty = Math.max(penalty, rule.penalty);
+    });
+    return simClamp(penalty, 0, 0.99);
+  }
   function botOverexertionRuleV2(gf, gc){
     if(!BOT_OVEREXERTION_ENABLED_V2) return null;
     const diff = Math.max(0, Math.round(Number(gc || 0) - Number(gf || 0)));
@@ -725,7 +747,7 @@
       chanceQuality:Number(details.chanceQuality || 0)
     };
   }
-  function resolveChanceV2(attacking, defending, attackingClubId, defendingClubId, minute, baseGoalProb, homeOrAwayTotals, rivalTotals, incidents){
+  function resolveChanceV2(attacking, defending, attackingClubId, defendingClubId, minute, baseGoalProb, homeOrAwayTotals, rivalTotals, incidents, currentTotalGoals=0){
     const setPiece = Math.random() < SIM_SET_PIECE_CHANCE;
     const shooter = selectChanceShooterV2(attacking, setPiece);
     if(!shooter) return null;
@@ -757,7 +779,9 @@
     const collectiveWeight = simClamp(SIM_TEAM_WEIGHT, 0, 1);
     const individualWeight = simClamp(SIM_INDIVIDUAL_WEIGHT, 0, 1);
     const divisor = Math.max(0.01, collectiveWeight + individualWeight);
-    const goalProb = simClamp(((baseGoalProb * collectiveWeight) + (individualGoalProb * individualWeight)) / divisor, 0.018, 0.78);
+    const rawGoalProb = simClamp(((baseGoalProb * collectiveWeight) + (individualGoalProb * individualWeight)) / divisor, 0.018, 0.78);
+    const highScorePenalty = simHighScoreGoalPenaltyForNextGoal(currentTotalGoals);
+    const goalProb = simClamp(rawGoalProb * (1 - highScorePenalty), 0, 0.78);
     const defensiveSafety = keeper ? keeperScore * 0.55 + defenderScore * 0.45 : defenderScore;
     const errorCandidate = pickErrorPlayerV2(defending, defendingClubId);
     const rawPlayerRisk = SIM_USE_PLAYER_ERROR_FORMULA ? playerErrorRiskV2(errorCandidate, defendingClubId) : simClamp(0.015 + (74 - defensiveSafety) / 1200 + baseGoalProb * 0.035 + (setPiece ? 0.008 : 0), 0.004, 0.12);
@@ -1709,11 +1733,11 @@
     const hBaseProb = h.chances > 0 ? simClamp(h.xg / Math.max(1, h.chances), 0.025, 0.70) : 0;
     const aBaseProb = a.chances > 0 ? simClamp(a.xg / Math.max(1, a.chances), 0.025, 0.70) : 0;
     for(let i=0;i<h.chances;i++){
-      const goal = resolveChanceV2(home, away, session.match.homeId, session.match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, session.homeTotals, session.awayTotals, session);
+      const goal = resolveChanceV2(home, away, session.match.homeId, session.match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, session.homeTotals, session.awayTotals, session, session.homeGoals + session.awayGoals);
       if(goal){ session.goals.push(goal); session.homeGoals++; }
     }
     for(let i=0;i<a.chances;i++){
-      const goal = resolveChanceV2(away, home, session.match.awayId, session.match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, session.awayTotals, session.homeTotals, session);
+      const goal = resolveChanceV2(away, home, session.match.awayId, session.match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, session.awayTotals, session.homeTotals, session, session.homeGoals + session.awayGoals);
       if(goal){ session.goals.push(goal); session.awayGoals++; }
     }
     const friendlyNoSanctions = Boolean(session.match?.friendly);
@@ -1966,11 +1990,11 @@
       const hBaseProb = h.chances > 0 ? simClamp(h.xg / Math.max(1, h.chances), 0.025, 0.70) : 0;
       const aBaseProb = a.chances > 0 ? simClamp(a.xg / Math.max(1, a.chances), 0.025, 0.70) : 0;
       for(let i=0;i<h.chances;i++){
-        const goal = resolveChanceV2(home, away, match.homeId, match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, homeTotals, awayTotals, incidents);
+        const goal = resolveChanceV2(home, away, match.homeId, match.awayId, Math.floor(simRnd(block.from, block.to + 1)), hBaseProb, homeTotals, awayTotals, incidents, homeGoals + awayGoals + hGoals + aGoals);
         if(goal){ goals.push(goal); hGoals++; }
       }
       for(let i=0;i<a.chances;i++){
-        const goal = resolveChanceV2(away, home, match.awayId, match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, awayTotals, homeTotals, incidents);
+        const goal = resolveChanceV2(away, home, match.awayId, match.homeId, Math.floor(simRnd(block.from, block.to + 1)), aBaseProb, awayTotals, homeTotals, incidents, homeGoals + awayGoals + hGoals + aGoals);
         if(goal){ goals.push(goal); aGoals++; }
       }
       homeGoals += hGoals;

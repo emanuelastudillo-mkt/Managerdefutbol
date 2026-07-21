@@ -420,6 +420,11 @@ function quickSimulateBotMatch(match){
     const extra = applyTrailingBotOverexertion('away', awayLineup, awayGoals, homeGoals, awayXg);
     if(extra.extraGoals > 0 || extra.xgExtra > 0){ awayGoals += extra.extraGoals; awayXg = clamp(awayXg + extra.xgExtra, 0.12, 4.60); }
   }
+  if(typeof applyHighScoreGoalPenaltyToScore === 'function'){
+    const adjustedScore = applyHighScoreGoalPenaltyToScore(homeGoals, awayGoals, Math.random);
+    homeGoals = Number(adjustedScore.homeGoals || 0);
+    awayGoals = Number(adjustedScore.awayGoals || 0);
+  }
   const homePoss = clamp(Math.round(50 + (homeRating-awayRating) * 0.35 + (neutralTournament ? 0 : 3) + rnd(-7,7)), 31, 69);
   const awayPoss = 100 - homePoss;
   const homeChances = clamp(Math.round(homeXg * rnd(4.0, 6.5)), Math.max(1, homeGoals), 18);

@@ -25,12 +25,12 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.13');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.14');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.13');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.14');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.13');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.14');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -52,7 +52,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.13', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.14', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -123,6 +123,53 @@ const KINESIOLOGIST_BULK_TREATMENT_STEP_MS = configNumber('ui.kinesiologoTratami
 const SPECIAL_PACK_REVEAL_STEP_MS = configNumber('ui.especialAperturaCartaMs', 2700, 250, 9000);
 const ADVANCE_STATUS_PHRASE_INTERVAL_MS = configNumber('ui.frasesProgresoAvanceIntervaloMs', 10000, 3000, 60000);
 const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvance', [])) ? configValue('ui.frasesProgresoAvance', []).filter(Boolean).map(String) : [];
+const HIGH_SCORE_GOAL_PENALTY_ENABLED = configBoolean('simulador.penalizacionGolesAltos.activo', true);
+const HIGH_SCORE_GOAL_PENALTY_RULES_RAW = configValue('simulador.penalizacionGolesAltos.tramos', [
+  { golesTotalesDesde:6, penalizacion:0.20 },
+  { golesTotalesDesde:7, penalizacion:0.30 },
+  { golesTotalesDesde:8, penalizacion:0.40 },
+  { golesTotalesDesde:9, penalizacion:0.50 },
+  { golesTotalesDesde:10, penalizacion:0.60 },
+  { golesTotalesDesde:11, penalizacion:0.70 },
+  { golesTotalesDesde:12, penalizacion:0.80 }
+]);
+const HIGH_SCORE_GOAL_PENALTY_RULES = (Array.isArray(HIGH_SCORE_GOAL_PENALTY_RULES_RAW) ? HIGH_SCORE_GOAL_PENALTY_RULES_RAW : [])
+  .map(rule => ({
+    goalsFrom:Math.max(1, Math.round(Number(rule?.golesTotalesDesde ?? rule?.goalsFrom ?? 0) || 0)),
+    penalty:Math.max(0, Math.min(0.99, Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0))
+  }))
+  .filter(rule => rule.goalsFrom > 0 && rule.penalty > 0)
+  .sort((a,b) => a.goalsFrom - b.goalsFrom);
+function highScoreGoalPenaltyForNextGoal(currentTotalGoals){
+  if(!HIGH_SCORE_GOAL_PENALTY_ENABLED) return 0;
+  const nextTotal = Math.max(0, Math.round(Number(currentTotalGoals || 0))) + 1;
+  let penalty = 0;
+  HIGH_SCORE_GOAL_PENALTY_RULES.forEach(rule => {
+    if(nextTotal >= rule.goalsFrom) penalty = Math.max(penalty, rule.penalty);
+  });
+  return Math.max(0, Math.min(0.99, penalty));
+}
+function applyHighScoreGoalPenaltyToScore(homeGoals, awayGoals, randomFn=Math.random){
+  const home = Math.max(0, Math.round(Number(homeGoals || 0)));
+  const away = Math.max(0, Math.round(Number(awayGoals || 0)));
+  const random = typeof randomFn === 'function' ? randomFn : Math.random;
+  const candidates = [];
+  for(let i=0;i<home;i++) candidates.push({ side:'home', order:random() });
+  for(let i=0;i<away;i++) candidates.push({ side:'away', order:random() });
+  candidates.sort((a,b) => a.order - b.order);
+  let acceptedHome = 0;
+  let acceptedAway = 0;
+  let acceptedTotal = 0;
+  candidates.forEach(candidate => {
+    const penalty = highScoreGoalPenaltyForNextGoal(acceptedTotal);
+    if(penalty > 0 && random() < penalty) return;
+    if(candidate.side === 'home') acceptedHome += 1;
+    else acceptedAway += 1;
+    acceptedTotal += 1;
+  });
+  return { homeGoals:acceptedHome, awayGoals:acceptedAway };
+}
+
 const PLAYER_STARS_MAX_PER_CLUB = configNumber('simulador.estrellasMaximasPorEquipo', 3, 0, 10);
 const PLAYER_STARS_WINDOW_MATCHES = Math.round(configNumber('simulador.estrellasPartidosVentana', 10, 1, 30));
 const PLAYER_STAR_GOAL_MATCHES_REQUIRED = Math.round(configNumber('simulador.estrellaGoleadorPartidosConGol', 3, 1, 30));
@@ -133,7 +180,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.13');
+const APP_VERSION = configValue('version', 'V8.14');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

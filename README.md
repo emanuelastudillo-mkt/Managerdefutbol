@@ -1,4 +1,20 @@
-# Fútbol Manager MVP - V8.13
+# Fútbol Manager MVP - V8.14
+
+## V8.14 — Control de marcadores altos y mensajes deportivos
+
+- Se eliminó de los mensajes visibles la explicación de que una figura del plantel adquiere mayor peso dentro del simulador.
+- Las solicitudes laborales rechazadas ya no muestran probabilidades, márgenes ni decisiones internas del sistema.
+- Todos los motores reducen progresivamente la posibilidad de convertir nuevas ocasiones cuando el partido supera cinco goles totales.
+- Hasta cinco goles entre ambos equipos no existe penalización.
+- El sexto gol recibe 20% de penalización; el séptimo 30%; el octavo 40%; el noveno 50%; el décimo 60%; el undécimo 70%; y desde el duodécimo, 80%.
+- La regla se aplica al simulador completo, partido en vivo, simulación rápida de bots y Desafíos Online.
+- La penalización actúa únicamente sobre goles adicionales: no modifica ocasiones, posesión, tarjetas, lesiones ni resultados por cinco expulsiones.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.14 no rompe partidas anteriores.** Sólo modifica partidos futuros y textos visibles; no altera resultados ya guardados, planteles, contratos, calendarios ni los cinco slots.
+
 
 
 ## V8.13 — Mejoras de Carrera y Experto en juveniles

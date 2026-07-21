@@ -8,6 +8,43 @@
   const VERSION = 'challenge-sim-v1';
   const clampValue = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
   const round = value => Math.round(Number(value) || 0);
+  const HIGH_SCORE_RULES = (() => {
+    const raw = window?.GAME_CONFIG?.simulador?.penalizacionGolesAltos?.tramos;
+    const fallback = [
+      { golesTotalesDesde:6, penalizacion:0.20 },
+      { golesTotalesDesde:7, penalizacion:0.30 },
+      { golesTotalesDesde:8, penalizacion:0.40 },
+      { golesTotalesDesde:9, penalizacion:0.50 },
+      { golesTotalesDesde:10, penalizacion:0.60 },
+      { golesTotalesDesde:11, penalizacion:0.70 },
+      { golesTotalesDesde:12, penalizacion:0.80 }
+    ];
+    return (Array.isArray(raw) ? raw : fallback).map(rule => ({
+      goalsFrom:Math.max(1, Math.round(Number(rule?.golesTotalesDesde ?? rule?.goalsFrom ?? 0) || 0)),
+      penalty:clampValue(Number(rule?.penalizacion ?? rule?.penalty ?? 0), 0, 0.99)
+    })).filter(rule => rule.goalsFrom > 0 && rule.penalty > 0).sort((a,b) => a.goalsFrom - b.goalsFrom);
+  })();
+  function highScorePenaltyForNextGoal(currentTotalGoals){
+    if(window?.GAME_CONFIG?.simulador?.penalizacionGolesAltos?.activo === false) return 0;
+    const nextTotal = Math.max(0, Math.round(Number(currentTotalGoals || 0))) + 1;
+    let penalty = 0;
+    HIGH_SCORE_RULES.forEach(rule => { if(nextTotal >= rule.goalsFrom) penalty = Math.max(penalty, rule.penalty); });
+    return clampValue(penalty, 0, 0.99);
+  }
+  function applyHighScorePenalty(homeGoals, awayGoals, random){
+    const candidates = [];
+    for(let i=0;i<Math.max(0, Math.round(Number(homeGoals || 0)));i++) candidates.push({ side:'home', order:random() });
+    for(let i=0;i<Math.max(0, Math.round(Number(awayGoals || 0)));i++) candidates.push({ side:'away', order:random() });
+    candidates.sort((a,b) => a.order - b.order);
+    let home = 0, away = 0, total = 0;
+    candidates.forEach(candidate => {
+      const penalty = highScorePenaltyForNextGoal(total);
+      if(penalty > 0 && random() < penalty) return;
+      if(candidate.side === 'home') home += 1; else away += 1;
+      total += 1;
+    });
+    return { homeGoals:home, awayGoals:away };
+  }
 
   function seedNumber(text){
     let hash = 2166136261;
@@ -297,8 +334,11 @@
     const awayMidEdge = -homeMidEdge;
     const homeLambda = clampValue(1.22 + (home.attack - away.defense * 0.72 - away.goalkeeper * 0.28) / 28 + homeMidEdge + 0.18, 0.18, 4.8);
     const awayLambda = clampValue(1.10 + (away.attack - home.defense * 0.72 - home.goalkeeper * 0.28) / 28 + awayMidEdge, 0.18, 4.8);
-    const homeGoals = Math.min(9, poisson(homeLambda, random));
-    const awayGoals = Math.min(9, poisson(awayLambda, random));
+    let homeGoals = Math.min(9, poisson(homeLambda, random));
+    let awayGoals = Math.min(9, poisson(awayLambda, random));
+    const adjustedScore = applyHighScorePenalty(homeGoals, awayGoals, random);
+    homeGoals = adjustedScore.homeGoals;
+    awayGoals = adjustedScore.awayGoals;
 
     const homeSubs = generateSubstitutions(homeSnapshot, random, 'home');
     const awaySubs = generateSubstitutions(awaySnapshot, random, 'away');

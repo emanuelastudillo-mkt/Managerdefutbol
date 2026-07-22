@@ -238,3 +238,39 @@
 .sidebar-nav [data-tab]:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.45)}.sidebar-nav .sidebar-home-link{display:flex;align-items:center}.sidebar-nav .sidebar-home-link::before{content:"⌂";display:inline-grid;place-items:center;width:18px;margin-right:7px;color:#7dafff}@media (max-width:900px){
   .sidebar-nav .nav-group-items>button{padding-left:20px}
 }.sidebar-nav .nav-group-items{display:grid;grid-template-columns:1fr;max-height:0;opacity:0;overflow:hidden;transition:max-height .22s ease,opacity .16s ease,padding .16s ease;margin:0 4px;padding-top:0}.sidebar-nav .nav-group-items::before{display:none}.sidebar-nav .nav-group.is-open .nav-group-items{max-height:360px;opacity:1;padding-top:4px}
+
+/* V8.20 · Presentación indexable de Chill mánager. */
+.welcome-about{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(240px,.65fr);
+  gap:18px;
+  align-items:center;
+}
+.welcome-about h3{margin:0 0 8px;font-size:clamp(19px,2vw,27px)}
+.welcome-about p{margin:0;line-height:1.6}
+.welcome-about-points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.welcome-about-points span{
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(var(--club-accent-rgb),.16);
+  background:rgba(var(--club-accent-rgb),.07);
+  color:#dbeafe;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.35;
+}
+.seo-noscript{
+  width:min(920px,calc(100% - 32px));
+  margin:24px auto;
+  padding:24px;
+}
+.seo-noscript p{color:var(--muted);line-height:1.6}
+@media (max-width:900px){
+  .welcome-about{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .welcome-about-points{grid-template-columns:1fr}
+}

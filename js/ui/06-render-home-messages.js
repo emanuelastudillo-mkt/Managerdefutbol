@@ -25,9 +25,9 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div>
-          <p class="label">Slots de partida</p>
-          <h2>Elegí qué jugar</h2>
-          <p class="tagline">Las carreras normales se guardan separadas. El nombre visible se actualiza solo con el club y la temporada guardada.</p>
+          <p class="label">Chill mánager · Futbol online</p>
+          <h2>Dirigí tu club y construí una carrera</h2>
+          <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tus carreras normales se guardan por separado.</p>
         </div>
         <div class="welcome-summary">
           <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
@@ -52,11 +52,25 @@ function renderWelcomeScreen(){
         </div>
       </div>
 
+      <section class="welcome-about card" aria-labelledby="welcomeAboutTitle">
+        <div>
+          <p class="label">Manager de fútbol en navegador</p>
+          <h3 id="welcomeAboutTitle">Gestioná el club dentro y fuera de la cancha</h3>
+          <p class="muted">Elegí una liga, prepará el once, entrená al plantel, negociá contratos y transferencias, desarrollá tu Academia y avanzá temporada a temporada. También podés publicar desafíos y competir por categorías salariales en el ranking online.</p>
+        </div>
+        <div class="welcome-about-points" aria-label="Características principales">
+          <span>Carrera y contratos</span>
+          <span>Tácticas y simulación</span>
+          <span>Mercado y juveniles</span>
+          <span>Rankings y desafíos online</span>
+        </div>
+      </section>
+
       <div class="welcome-features">
         <span>5 carreras normales</span>
-        <span>Nombres automáticos</span>
+        <span>Guardado local</span>
         <span>Retos separados</span>
-        <span>Volver al menú al ganar o perder</span>
+        <span>Competencias online</span>
       </div>
     </section>`;
   document.querySelectorAll('[data-slot-continue]').forEach(btn => {

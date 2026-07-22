@@ -1,0 +1,13 @@
+{
+  "name": "Chill mánager - Futbol online",
+  "short_name": "Chill mánager",
+  "description": "Juego de manager de fútbol online para navegador con carrera, tácticas, mercado, academia y competencias online.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "categories": ["games", "sports", "entertainment"]
+}

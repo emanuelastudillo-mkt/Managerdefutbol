@@ -1,3 +1,32 @@
+# Chill mánager - Futbol online — V8.20
+
+## V8.20 — Identidad final y optimización SEO
+
+- La marca visible pasa a ser **Chill mánager - Futbol online**.
+- El título HTML combina la marca con la búsqueda principal: juego de manager de fútbol.
+- Se agregó una meta description específica, directivas de indexación, color de tema y metadatos de aplicación.
+- Se incorporaron etiquetas Open Graph y Twitter Card para mejorar la presentación al compartir la web.
+- Se agregó JSON-LD con los tipos `WebSite` y `VideoGame`.
+- El idioma de la página se especifica como español de Argentina (`es-AR`).
+- La pantalla inicial incluye contenido visible que explica carrera, tácticas, mercado, juveniles, ranking y desafíos online.
+- Se agregó contenido alternativo para navegadores sin JavaScript.
+- Se incorporaron `robots.txt` y `manifest.webmanifest`.
+- No se agregó un sitemap ni una imagen social porque todavía no existe un dominio y una portada pública definitivos.
+- Las claves internas de IndexedDB y guardado continúan usando los identificadores históricos para no perder partidas.
+- No requiere cambios de Worker ni SQL.
+
+### Pendientes de publicación final
+
+- Definir el dominio o URL pública definitiva.
+- Crear el sitemap con URLs absolutas y registrarlo en `robots.txt`.
+- Agregar una portada social pública mediante `og:image` y `twitter:image`.
+- Verificar el sitio en Google Search Console y enviar el sitemap.
+
+### Compatibilidad
+
+**V8.20 no rompe partidas anteriores.** El cambio modifica identidad, metadatos y contenido inicial, pero conserva los IDs, la base IndexedDB, las claves de guardado, los jugadores, resultados y los cinco slots.
+
+
 # Fútbol Manager MVP - V8.19
 
 ## V8.19 — Penalización de goles reforzada

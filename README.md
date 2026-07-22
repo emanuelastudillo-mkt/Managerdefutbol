@@ -1,16 +1,21 @@
-# Fútbol Manager MVP - V8.16
+# Fútbol Manager MVP - V8.17
 
 
-## V8.16 — Ranking online y desafíos compatibles en Inicio
+## V8.17 — Apellidos ampliados x10 y migración de partidas
 
-- Inicio incorpora un bloque **Tu ranking online** con la categoría salarial natural de la convocatoria actual y la posición del manager en el ciclo vigente.
-- Sin partidos disputados, la posición muestra `-`; antes de cumplir los requisitos oficiales muestra `Provisional`.
-- La barra superior muestra **Hay desafíos disponibles** únicamente cuando existe un rival anónimo compatible con la categoría natural del equipo armado.
-- El acceso abre Competencias Online directamente en Disponibles y en la categoría correspondiente.
-- El Worker V8.16 agrega la posición actual del usuario por categoría dentro de la respuesta segura de premios. No requiere cambios de SQL ni nuevas tablas.
-- El cliente mantiene compatibilidad con el Worker V8.12 mediante un cálculo local de respaldo.
+- Los bancos efectivos de apellidos pasan de 3.150 a **31.500 variantes únicas**.
+- Argentina dispone de 1.800 apellidos; cada una de las otras 33 nacionalidades dispone de 900.
+- La ampliación utiliza apellidos simples y combinaciones familiares deterministas, siempre en escritura latina compatible con español.
+- Los jugadores nuevos de planteles, mercado, Academia, refuerzos bots y regeneraciones utilizan inmediatamente los bancos ampliados.
+- Las partidas existentes reciben una migración única: conserva nombre de pila, ID, club, edad, habilidades, contratos, estadísticas y progreso, y reemplaza únicamente el apellido.
+- Los jugadores manuales y Leyendas conservan íntegramente su nombre específico.
+- La cartera de promocionados, ofertas juveniles y transferencias pendientes actualizan las referencias visibles al nuevo nombre.
+- La migración queda marcada dentro del guardado para no repetirse.
+- No requiere cambios de Worker ni SQL.
 
-**V8.16 no rompe partidas anteriores.** El cambio agrega consultas y componentes visuales; no altera guardados, jugadores, contratos, resultados ni los cinco slots.
+### Compatibilidad
+
+**V8.17 no rompe partidas anteriores.** Actualiza una sola vez los apellidos de los jugadores generados, sin cambiar sus identificadores ni ninguna relación interna. Los cinco slots se conservan.
 
 ## V8.15 — Frontend compacto para 1280 × 720
 

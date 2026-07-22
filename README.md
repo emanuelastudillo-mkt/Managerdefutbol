@@ -1,3 +1,26 @@
+# Chill mánager - Futbol online — V8.21
+
+## V8.21 — Problemas de vestuario por moral y cohesión bajas
+
+- Se agregó una crisis de vestuario que comienza cuando la moral media del plantel y la cohesión del equipo están ambas por debajo de 60.
+- Una vez iniciada, se realiza un control cada 5 días de juego.
+- Cada control tiene 30% de probabilidad de activar uno de 20 problemas de vestuario.
+- La crisis continúa hasta que moral y cohesión vuelven simultáneamente a 60 o más.
+- Los controles sin evento son silenciosos.
+- Los últimos 5 problemas se evitan al elegir el siguiente, siempre que existan alternativas.
+- Los participantes se eligen entre jugadores actuales del primer equipo y se adaptan al contexto: capitán, suplentes, veteranos, juveniles, porteros, defensores o competidores por un mismo puesto.
+- Los mensajes muestran nombres reales y consecuencias narrativas, sin exponer cálculos internos de probabilidad, moral o cohesión.
+- Tres eventos pueden causar lesiones de entrenamiento. La pelea principal lesiona a dos jugadores con contusiones independientes de 10 a 20 días.
+- Las lesiones actualizan estadísticas, disponibilidad y táctica, y obligan a revisar la convocatoria cuando corresponde.
+- La secuencia queda guardada dentro de cada partida para impedir repeticiones por recarga.
+- El sistema funciona durante temporada regular, pretemporada y postemporada.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.21 no rompe partidas anteriores.** Las partidas existentes crean el estado de crisis sólo cuando sea necesario. No se modifican resultados, contratos, jugadores, calendarios ni los cinco slots.
+
+
 # Chill mánager - Futbol online — V8.20
 
 ## V8.20 — Identidad final y optimización SEO

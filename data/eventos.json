@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "V3.27",
-    "descripcion": "Planilla editable de eventos condicionales del manager. Cada evento puede activarse por fase, condición, probabilidad y efectos.",
-    "nota": "Los tipos de condición y efecto deben existir en js/game/14-eventos.js. Se pueden activar/desactivar eventos con activo true/false."
+    "version": "V8.21",
+    "descripcion": "Planilla editable de eventos condicionales y problemas de vestuario del manager.",
+    "nota": "Los problemas de vestuario se evalúan cada 5 días con la crisis activa. Los tipos y selectores deben existir en js/game/14-eventos.js."
   },
   "eventos": [
     {
@@ -80,6 +80,269 @@
           "cuerpo": "Luego del entrenamiento noté que el ánimo del equipo, los datos del GPS y las jugadas trabajadas indican que el plantel sintió el apoyo y quiere devolverlo dentro del campo."
         }
       ]
+    }
+  ],
+  "problemasVestuario": [
+    {
+      "id": "vestuario_pelea_entrenamiento",
+      "activo": true,
+      "nombre": "Pelea durante el entrenamiento",
+      "selector": "random_pair",
+      "titulo": "Pelea en el entrenamiento",
+      "cuerpo": "{{jugador1}} y {{jugador2}} discutieron durante el entrenamiento y el cuerpo técnico tuvo que separarlos.",
+      "moralParticipantes": -5,
+      "cohesion": -6,
+      "lesiones": [
+        {
+          "jugadores": [
+            "jugador1",
+            "jugador2"
+          ],
+          "nombre": "Contusión",
+          "diasMin": 10,
+          "diasMax": 20
+        }
+      ]
+    },
+    {
+      "id": "vestuario_reproche_portero_defensor",
+      "activo": true,
+      "nombre": "Reproches entre portero y defensor",
+      "selector": "goalkeeper_defender",
+      "titulo": "Reproches en la última línea",
+      "cuerpo": "{{jugador1}} y {{jugador2}} se responsabilizaron mutuamente por los errores defensivos. La discusión continuó dentro del vestuario.",
+      "moralParticipantes": -6,
+      "cohesion": -4
+    },
+    {
+      "id": "vestuario_capitan_cuestionado",
+      "activo": true,
+      "nombre": "Capitán cuestionado",
+      "selector": "captain_challenger",
+      "titulo": "El liderazgo del capitán fue cuestionado",
+      "cuerpo": "{{jugador2}} cuestionó delante del plantel las decisiones de {{jugador1}} como capitán. Varios compañeros tomaron partido.",
+      "moralPorJugador": {
+        "jugador1": -8,
+        "jugador2": -6
+      },
+      "cohesion": -6
+    },
+    {
+      "id": "vestuario_suplente_reclama",
+      "activo": true,
+      "nombre": "Suplente reclama minutos",
+      "selector": "reserve_single",
+      "titulo": "Reclamo por falta de minutos",
+      "cuerpo": "{{jugador1}} manifestó su malestar por la falta de minutos y abandonó la charla antes de que terminara.",
+      "moralParticipantes": -10,
+      "cohesion": -3
+    },
+    {
+      "id": "vestuario_bandos",
+      "activo": true,
+      "nombre": "Bandos dentro del vestuario",
+      "selector": "random_four",
+      "titulo": "El vestuario se dividió en grupos",
+      "cuerpo": "{{jugador1}}, {{jugador2}}, {{jugador3}} y {{jugador4}} protagonizaron una discusión que dejó al plantel dividido en dos grupos.",
+      "moralParticipantes": -4,
+      "moralPlantel": -1,
+      "cohesion": -8
+    },
+    {
+      "id": "vestuario_chat_filtrado",
+      "activo": true,
+      "nombre": "Filtración del chat del plantel",
+      "selector": "random_three",
+      "titulo": "Se filtraron mensajes del plantel",
+      "cuerpo": "Mensajes privados de {{jugador1}}, {{jugador2}} y {{jugador3}} circularon fuera del vestuario y generaron desconfianza entre sus compañeros.",
+      "moralParticipantes": -5,
+      "moralPlantel": -2,
+      "cohesion": -7
+    },
+    {
+      "id": "vestuario_choque_entrenamiento",
+      "activo": true,
+      "nombre": "Choque en una práctica intensa",
+      "selector": "starting_pair",
+      "titulo": "Entrenamiento interrumpido por una discusión",
+      "cuerpo": "{{jugador1}} y {{jugador2}} chocaron en una práctica intensa. Después de la jugada se empujaron y el entrenamiento fue suspendido.",
+      "moralParticipantes": -4,
+      "cohesion": -4,
+      "lesiones": [
+        {
+          "jugadores": [
+            "jugador2"
+          ],
+          "nombre": "Contusión",
+          "diasMin": 7,
+          "diasMax": 14
+        }
+      ]
+    },
+    {
+      "id": "vestuario_broma_pesada",
+      "activo": true,
+      "nombre": "Broma pesada",
+      "selector": "random_pair",
+      "titulo": "Una broma terminó mal",
+      "cuerpo": "Una broma de {{jugador1}} contra {{jugador2}} terminó en una fuerte discusión y obligó al cuerpo técnico a intervenir.",
+      "moralPorJugador": {
+        "jugador1": -4,
+        "jugador2": -6
+      },
+      "cohesion": -4,
+      "lesiones": [
+        {
+          "jugadores": [
+            "jugador2"
+          ],
+          "nombre": "Contusión",
+          "diasMin": 5,
+          "diasMax": 10
+        }
+      ]
+    },
+    {
+      "id": "vestuario_veterano_juvenil",
+      "activo": true,
+      "nombre": "Conflicto entre veterano y juvenil",
+      "selector": "veteran_youth",
+      "titulo": "Choque generacional",
+      "cuerpo": "{{jugador1}} reprochó públicamente la actitud de {{jugador2}}. El cruce entre el veterano y el juvenil dejó un ambiente tenso.",
+      "moralParticipantes": -6,
+      "cohesion": -5
+    },
+    {
+      "id": "vestuario_competencia_puesto",
+      "activo": true,
+      "nombre": "Rivalidad por un puesto",
+      "selector": "same_position_pair",
+      "titulo": "La competencia por el puesto se volvió personal",
+      "cuerpo": "{{jugador1}} y {{jugador2}} discutieron por quién debería ser titular. Desde entonces evitan trabajar juntos en los ejercicios.",
+      "moralParticipantes": -7,
+      "cohesion": -4
+    },
+    {
+      "id": "vestuario_critica_redes",
+      "activo": true,
+      "nombre": "Crítica pública de un compañero",
+      "selector": "star_reserve",
+      "titulo": "Cruce público entre compañeros",
+      "cuerpo": "{{jugador1}} publicó una crítica indirecta y {{jugador2}} respondió públicamente. El conflicto llegó al resto del plantel.",
+      "moralParticipantes": -6,
+      "moralPlantel": -1,
+      "cohesion": -6
+    },
+    {
+      "id": "vestuario_discusion_tactica",
+      "activo": true,
+      "nombre": "Discusión táctica",
+      "selector": "random_three",
+      "titulo": "La charla táctica terminó en discusión",
+      "cuerpo": "{{jugador1}}, {{jugador2}} y {{jugador3}} discutieron sobre las responsabilidades dentro del campo y la reunión tuvo que finalizar antes de tiempo.",
+      "moralParticipantes": -4,
+      "cohesion": -5
+    },
+    {
+      "id": "vestuario_llegadas_tarde",
+      "activo": true,
+      "nombre": "Llegadas tarde al entrenamiento",
+      "selector": "random_three",
+      "titulo": "Llegadas tarde y sanción interna",
+      "cuerpo": "{{jugador1}}, {{jugador2}} y {{jugador3}} llegaron tarde al entrenamiento. La sanción interna generó nuevas discusiones.",
+      "moralParticipantes": -4,
+      "formaParticipantes": -3,
+      "cohesion": -4
+    },
+    {
+      "id": "vestuario_reclamo_sueldos",
+      "activo": true,
+      "nombre": "Comparación de salarios",
+      "selector": "highest_salary_three",
+      "titulo": "Malestar por las diferencias salariales",
+      "cuerpo": "Una conversación entre {{jugador1}}, {{jugador2}} y {{jugador3}} sobre los salarios terminó generando reclamos y comparaciones dentro del grupo.",
+      "moralParticipantes": -5,
+      "moralPlantel": -1,
+      "cohesion": -5
+    },
+    {
+      "id": "vestuario_capitan_ignorado",
+      "activo": true,
+      "nombre": "Compañeros ignoran al capitán",
+      "selector": "captain_group",
+      "titulo": "El capitán perdió respaldo",
+      "cuerpo": "{{jugador2}} y {{jugador3}} ignoraron una indicación de {{jugador1}} durante la práctica. El capitán terminó la jornada visiblemente molesto.",
+      "moralPorJugador": {
+        "jugador1": -8,
+        "jugador2": -4,
+        "jugador3": -4
+      },
+      "cohesion": -6
+    },
+    {
+      "id": "vestuario_acusaciones_derrota",
+      "activo": true,
+      "nombre": "Acusaciones por los malos resultados",
+      "selector": "low_morale_three",
+      "titulo": "El plantel buscó responsables",
+      "cuerpo": "{{jugador1}}, {{jugador2}} y {{jugador3}} se acusaron mutuamente por los últimos resultados. La conversación terminó sin acuerdos.",
+      "moralParticipantes": -6,
+      "cohesion": -6
+    },
+    {
+      "id": "vestuario_comida_abandonada",
+      "activo": true,
+      "nombre": "Comida de equipo abandonada",
+      "selector": "random_four",
+      "titulo": "La comida del plantel terminó antes de tiempo",
+      "cuerpo": "{{jugador1}}, {{jugador2}}, {{jugador3}} y {{jugador4}} discutieron durante una comida organizada para unir al grupo. Varios jugadores se retiraron antes del final.",
+      "moralParticipantes": -4,
+      "cohesion": -6
+    },
+    {
+      "id": "vestuario_entrada_desmedida",
+      "activo": true,
+      "nombre": "Entrada desmedida en entrenamiento",
+      "selector": "random_pair",
+      "titulo": "Una entrada desmedida generó otro conflicto",
+      "cuerpo": "{{jugador1}} realizó una entrada innecesariamente fuerte sobre {{jugador2}}. La práctica se detuvo y ambos discutieron frente al resto del equipo.",
+      "moralPorJugador": {
+        "jugador1": -5,
+        "jugador2": -7
+      },
+      "cohesion": -5,
+      "lesiones": [
+        {
+          "jugadores": [
+            "jugador2"
+          ],
+          "nombre": "Esguince",
+          "diasMin": 10,
+          "diasMax": 18
+        }
+      ]
+    },
+    {
+      "id": "vestuario_amenaza_salida",
+      "activo": true,
+      "nombre": "Amenaza de salida",
+      "selector": "reserve_single",
+      "titulo": "Un jugador amenazó con pedir su salida",
+      "cuerpo": "{{jugador1}} comunicó a sus compañeros que evaluará buscar otro club si su situación no cambia.",
+      "moralParticipantes": -12,
+      "moralPlantel": -1,
+      "cohesion": -4
+    },
+    {
+      "id": "vestuario_mediacion_fallida",
+      "activo": true,
+      "nombre": "Mediación fallida",
+      "selector": "captain_group",
+      "titulo": "La mediación del vestuario no funcionó",
+      "cuerpo": "{{jugador1}} intentó reunir a {{jugador2}} y {{jugador3}} para resolver sus diferencias, pero la charla terminó aumentando la tensión.",
+      "moralParticipantes": -3,
+      "moralPlantel": -3,
+      "cohesion": -7
     }
   ]
 }

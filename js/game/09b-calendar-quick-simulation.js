@@ -930,6 +930,9 @@ function processDailyCalendarState(dateAfter='', options={}){
   const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn }) : [];
   if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
   else if(typeof recoverBotWearDaily === 'function') recoverBotWearDaily({ reason:'daily_rest' });
+  const lockerRoomProblem = typeof processLockerRoomProblemsDaily === 'function'
+    ? processLockerRoomProblemsDaily({ reason:'daily_calendar_state' })
+    : { active:false, checked:false, triggered:false };
   const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
     ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state', silent:true })
     : { fixed:0, remaining:0 };
@@ -939,7 +942,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1623,6 +1626,9 @@ function finalizePreseasonTurnAfterMatch(context={}){
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('preseason');
   processAcademyTurn();
   processPendingTransfers();
+  const lockerRoomProblem = typeof processLockerRoomProblemsDaily === 'function'
+    ? processLockerRoomProblemsDaily({ reason:'preseason' })
+    : { active:false, checked:false, triggered:false };
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
   if(game.phaseTurn >= PRESEASON_TURNS){
     game.seasonPhase = 'regular';
@@ -1728,6 +1734,9 @@ function simulatePostseasonTurn(){
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('postseason');
   processAcademyTurn();
   processPendingTransfers();
+  const lockerRoomProblem = typeof processLockerRoomProblemsDaily === 'function'
+    ? processLockerRoomProblemsDaily({ reason:'postseason' })
+    : { active:false, checked:false, triggered:false };
   const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
     ? processUnansweredSpecialClauseOffers({ silent:true, source:'postseason' })
     : { accepted:0, closed:0 };

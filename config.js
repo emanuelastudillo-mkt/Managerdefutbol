@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.20',
+  version: 'V8.21',
   marca: {
     nombre: 'Chill mánager - Futbol online',
     nombreCorto: 'Chill mánager',
@@ -21,7 +21,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.20', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.21', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -35,12 +35,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.20',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.21',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.20',
-    eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.20',
+    installationsUrl: 'data/instalaciones.json?v=8.21',
+    eventsUrl: 'data/eventos.json?v=8.21',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.21',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -907,6 +907,17 @@ window.GAME_CONFIG = {
     fracturaMaxDias: 400,
     lesionadoSuplenteDiasMax: 63,
     penalizacionLesionadoSuplente: 0.30
+  },
+
+  eventos: {
+    // Una crisis comienza cuando moral media y cohesión están por debajo de 60.
+    // Luego se controla cada 5 días hasta que ambos indicadores vuelven a 60 o más.
+    vestuarioMoralUmbral: 60,
+    vestuarioCohesionUmbral: 60,
+    vestuarioIntervaloDias: 5,
+    vestuarioProbabilidad: 0.30,
+    vestuarioEventosRecientes: 5,
+    problemasVestuario: []
   },
 
   ranking: {

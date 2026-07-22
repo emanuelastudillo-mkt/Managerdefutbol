@@ -651,7 +651,7 @@ function showGameIntegrityModal(result=inspectGameIntegrity(), repaired=false){
     showNotice(result.ok ? 'Verificación correcta.' : 'Verificación completada con avisos.', true);
   }
 }
-async function applySafeGameIntegrityRepairs(){
+function applySafeGameIntegrityRepairsCore(options={}){
   const before = inspectGameIntegrity();
   const divisionsById = integrityDivisionById();
   let repaired = 0;
@@ -691,7 +691,7 @@ async function applySafeGameIntegrityRepairs(){
   if(fixtureRepair.rebuilt) fixturesRebuilt = Number(fixtureRepair.fixed || 0);
 
   if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
-    const statsRepair = runDailyMatchStatsIntegrityRepair({ reason:'manual_integrity_repair', force:true, silent:true });
+    const statsRepair = runDailyMatchStatsIntegrityRepair({ reason:options.reason || 'manual_integrity_repair', force:true, silent:true });
     statsFixed = Number(statsRepair.fixed || 0);
   }
 
@@ -700,23 +700,30 @@ async function applySafeGameIntegrityRepairs(){
     const selectedClub = seed.clubs.find(club => Number(club.id) === Number(game.selectedClubId));
     if(selectedClub) game.selectedLeagueId = selectedClub.divisionId || game.selectedLeagueId;
   }
-  if((repaired > 0 || fixturesRebuilt > 0) && typeof saveLocal === 'function'){
-    await saveLocal(true);
-  }
-  if((repaired > 0 || fixturesRebuilt > 0) && typeof renderAll === 'function') renderAll();
   const after = inspectGameIntegrity();
   after.repairedCount = repaired;
   after.fixturesRebuiltCount = fixturesRebuilt;
   after.botStatsRepairedCount = statsFixed;
   after.previousIssues = before.issues || [];
-  if(repaired > 0 || fixturesRebuilt > 0 || statsFixed > 0){
-    const parts = [];
-    if(repaired > 0) parts.push(`${repaired} movimiento(s) de estructura`);
-    if(fixturesRebuilt > 0) parts.push(`${fixturesRebuilt} partido(s) de calendario regenerados`);
-    if(statsFixed > 0) parts.push(`${statsFixed} partido(s) con estadísticas completadas`);
-    showNotice(`Verificación: ${parts.join(' y ')} aplicados.`, false);
-  }else{
-    showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
+  after.changed = Boolean(repaired > 0 || fixturesRebuilt > 0 || statsFixed > 0);
+  return after;
+}
+
+async function applySafeGameIntegrityRepairs(options={}){
+  const after = applySafeGameIntegrityRepairsCore({ reason:options.reason || 'manual_integrity_repair' });
+  const changed = Boolean(after.changed);
+  if(changed && options.save !== false && typeof saveLocal === 'function') await saveLocal(true);
+  if(changed && options.render !== false && typeof renderAll === 'function') renderAll();
+  if(options.silent !== true){
+    if(changed){
+      const parts = [];
+      if(after.repairedCount > 0) parts.push(`${after.repairedCount} movimiento(s) de estructura`);
+      if(after.fixturesRebuiltCount > 0) parts.push(`${after.fixturesRebuiltCount} partido(s) de calendario regenerados`);
+      if(after.botStatsRepairedCount > 0) parts.push(`${after.botStatsRepairedCount} partido(s) con estadísticas completadas`);
+      showNotice(`Verificación: ${parts.join(' y ')} aplicados.`, false);
+    }else{
+      showNotice('Verificación completada. No había reparaciones seguras para aplicar.', false);
+    }
   }
   return after;
 }

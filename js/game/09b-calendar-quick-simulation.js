@@ -750,61 +750,122 @@ function processMonthlyClubExpensesDaily(){
   return charged;
 }
 
-function runScheduledFiveDayGameVerifier(options={}){
-  const summary = { ran:false, repaired:false, reason:options.reason || 'scheduled_5_day_verifier', statsFixed:0, postseasonFixed:false, botRosters:0, date:'', daysSinceLast:0 };
+const SCHEDULED_STRUCTURE_VERIFIER_DAYS = Object.freeze([1,31,151,179,295,355]);
+
+function scheduledStructureVerifierKey(season, day){
+  return `${Math.max(1, Math.round(Number(season || 1)))}:${Math.max(1, Math.round(Number(day || 1)))}`;
+}
+function scheduledStructureVerifierUnresolvedCount(result){
+  return Number(result?.issues?.length || 0) + Number(result?.warnings?.length || 0);
+}
+function runScheduledSeasonGameVerifier(options={}){
+  const summary = {
+    ran:false,
+    repaired:false,
+    reason:options.reason || 'scheduled_structure_verifier',
+    season:Number(game?.seasonNumber || 0),
+    seasonDay:0,
+    scheduledDay:0,
+    date:'',
+    statsFixed:0,
+    botRosters:0,
+    structureMoves:0,
+    fixturesRebuilt:0,
+    unresolved:0
+  };
   if(!game) return summary;
   const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
   summary.date = today;
   if(!validIsoDate(today)) return summary;
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const seasonDay = typeof currentGlobalDayNumber === 'function'
+    ? Math.max(1, Math.round(Number(currentGlobalDayNumber() || 1)))
+    : Math.max(1, Math.round(Number(seasonDayFromDate(today, currentSeasonYear()) || 1)));
+  summary.season = season;
+  summary.seasonDay = seasonDay;
   const state = game.scheduledVerifierState = (game.scheduledVerifierState && typeof game.scheduledVerifierState === 'object' && !Array.isArray(game.scheduledVerifierState)) ? game.scheduledVerifierState : {};
-  const lastDate = validIsoDate(state.lastDate) ? state.lastDate : '';
-  const intervalDays = 5;
-  const elapsed = lastDate ? daysBetweenIsoDates(lastDate, today) : intervalDays;
-  summary.daysSinceLast = elapsed;
-  if(!options.force && lastDate && elapsed >= 0 && elapsed < intervalDays) return summary;
+  state.version = 2;
+  state.completedKeys = Array.isArray(state.completedKeys) ? state.completedKeys.map(String).slice(-48) : [];
+  const requestedDay = Math.max(0, Math.round(Number(options.scheduledDay || 0)));
+  const hasSeasonHistory = Number(state.lastSeason || 0) === season && (Number(state.lastSeasonDay || 0) > 0 || validIsoDate(state.lastDate) || state.completedKeys.some(item => item.startsWith(`${season}:`)));
+  if(!requestedDay && options.force !== true && !SCHEDULED_STRUCTURE_VERIFIER_DAYS.includes(seasonDay) && !hasSeasonHistory){
+    state.lastDate = today;
+    state.lastSeason = season;
+    state.lastSeasonDay = seasonDay;
+    return summary;
+  }
+  let previousDay = 0;
+  if(Number(state.lastSeason || 0) === season){
+    previousDay = Math.max(0, Math.round(Number(state.lastSeasonDay || 0)));
+    if(!previousDay && validIsoDate(state.lastDate)) previousDay = Math.max(0, Math.round(Number(seasonDayFromDate(state.lastDate, currentSeasonYear()) || 0)));
+  }
+  const crossedDay = SCHEDULED_STRUCTURE_VERIFIER_DAYS.find(day => day > previousDay && day <= seasonDay && !state.completedKeys.includes(scheduledStructureVerifierKey(season, day))) || 0;
+  const scheduledDay = requestedDay || (SCHEDULED_STRUCTURE_VERIFIER_DAYS.includes(seasonDay) ? seasonDay : crossedDay);
+  if(!scheduledDay && options.force !== true){
+    state.lastDate = today;
+    state.lastSeason = season;
+    state.lastSeasonDay = seasonDay;
+    return summary;
+  }
+  summary.scheduledDay = scheduledDay || seasonDay;
+  const key = scheduledStructureVerifierKey(season, summary.scheduledDay);
+  if(options.force !== true && state.completedKeys.includes(key)) return summary;
   summary.ran = true;
 
   if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
     const statsRepair = runDailyMatchStatsIntegrityRepair({ reason:summary.reason, force:true, silent:true });
     summary.statsFixed = Number(statsRepair?.fixed || 0);
   }
-
   if(typeof repairBotRosters === 'function'){
     const rosterRepair = repairBotRosters({ reason:summary.reason });
     summary.botRosters = Number(rosterRepair?.created || 0) + Number(rosterRepair?.converted || 0);
   }
-
   if(game.seasonPhase === 'postseason' && typeof ensurePostseasonCalendar === 'function'){
-    const beforeStart = game.postseasonStartDate || '';
-    const beforeTotal = Number(game.postseasonTotalTurns || 0);
-    const beforeDate = game.currentDate || '';
-    const beforePhaseTurn = Number(game.phaseTurn || 0);
-    const calendar = ensurePostseasonCalendar(game);
-    const expectedDate = typeof dateForSeasonState === 'function' ? dateForSeasonState(game) : '';
-    if(validIsoDate(expectedDate)){
-      const current = validIsoDate(game.currentDate) ? game.currentDate : '';
-      if(!current || daysBetweenIsoDates(current, expectedDate) >= 0){
-        game.currentDate = expectedDate;
-        if(typeof rememberCalendarDate === 'function') rememberCalendarDate();
-      }
-    }
-    summary.postseasonFixed = Boolean(calendar?.repaired)
-      || beforeStart !== (game.postseasonStartDate || '')
-      || beforeTotal !== Number(game.postseasonTotalTurns || 0)
-      || beforeDate !== (game.currentDate || '')
-      || beforePhaseTurn !== Number(game.phaseTurn || 0);
+    ensurePostseasonCalendar(game);
   }
 
+  let result = typeof inspectGameIntegrity === 'function' ? inspectGameIntegrity() : null;
+  if(result?.canRepair && typeof applySafeGameIntegrityRepairsCore === 'function'){
+    result = applySafeGameIntegrityRepairsCore({ reason:summary.reason });
+    summary.structureMoves = Number(result?.repairedCount || 0);
+    summary.fixturesRebuilt = Number(result?.fixturesRebuiltCount || 0);
+    summary.statsFixed = Math.max(summary.statsFixed, Number(result?.botStatsRepairedCount || 0));
+  }
+  summary.unresolved = scheduledStructureVerifierUnresolvedCount(result);
+  summary.repaired = Boolean(summary.statsFixed || summary.botRosters || summary.structureMoves || summary.fixturesRebuilt);
+
+  state.completedKeys = [...state.completedKeys.filter(item => item !== key), key].slice(-48);
+  state.lastKey = key;
   state.lastDate = today;
-  state.lastSeason = Number(game.seasonNumber || 1);
+  state.lastSeason = season;
+  state.lastSeasonDay = summary.scheduledDay;
   state.lastGlobalTurn = Number(game.globalTurn || 0);
   state.lastSummary = { ...summary, checkedAt:new Date().toISOString() };
-  summary.repaired = Boolean(summary.statsFixed || summary.botRosters || summary.postseasonFixed);
-  if(summary.repaired){
-    game.scheduledVerifierLog = Array.isArray(game.scheduledVerifierLog) ? game.scheduledVerifierLog.slice(-12) : [];
-    game.scheduledVerifierLog.push(state.lastSummary);
+  game.scheduledVerifierLog = Array.isArray(game.scheduledVerifierLog) ? game.scheduledVerifierLog.slice(-17) : [];
+  game.scheduledVerifierLog.push(state.lastSummary);
+
+  if(summary.repaired && options.silent !== true && typeof showNotice === 'function'){
+    showNotice('El Verificador de estructura corrigió automáticamente problemas detectados.', false);
+  }
+  if(summary.unresolved > 0){
+    const messageId = `scheduled-structure-verifier-${season}-${summary.scheduledDay}`;
+    if(typeof pushGameMessage === 'function'){
+      pushGameMessage({
+        id:messageId,
+        type:'system',
+        priority:'high',
+        title:'Revisión de estructura necesaria',
+        body:`El control automático del día ${summary.scheduledDay} detectó ${summary.unresolved} aviso(s) que no se pueden corregir sin revisión. Abrí el Verificador de estructura desde el menú lateral.`
+      });
+    }
+    if(options.silent !== true && typeof showNotice === 'function') showNotice('El Verificador detectó avisos que requieren revisión manual.', true);
   }
   return summary;
+}
+
+// Alias conservado para partidas y llamadas de versiones anteriores.
+function runScheduledFiveDayGameVerifier(options={}){
+  return runScheduledSeasonGameVerifier(options);
 }
 
 function processDailyCalendarState(dateAfter='', options={}){
@@ -836,7 +897,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
       ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state_sin_club', silent:true })
       : { fixed:0, remaining:0 };
-    const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state_sin_club' });
+    const scheduledVerifier = runScheduledSeasonGameVerifier({ reason:'daily_calendar_state_sin_club' });
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
@@ -872,7 +933,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const integrityRepair = typeof runDailyMatchStatsIntegrityRepair === 'function'
     ? runDailyMatchStatsIntegrityRepair({ reason:'daily_calendar_state', silent:true })
     : { fixed:0, remaining:0 };
-  const scheduledVerifier = runScheduledFiveDayGameVerifier({ reason:'daily_calendar_state' });
+  const scheduledVerifier = runScheduledSeasonGameVerifier({ reason:'daily_calendar_state' });
   const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
@@ -955,6 +1016,8 @@ function startAutoAdvanceToNextOwnMatch(){
       const sameDayBots = simulateNonOwnDueBeforeOwnMatch(targetDate, 'auto_advance_target_day');
       processed.bots += sameDayBots.length;
       game.currentDate = targetDate;
+      rememberCalendarDate();
+      runScheduledSeasonGameVerifier({ reason:'auto_advance_target_day' });
       setAdvanceLock(0);
       setDailyAdvanceSummary(fromDate, targetDate, processed.bots);
       saveLocal(true);
@@ -1238,6 +1301,9 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   const postCompetition = regularEnded && !challengeFinished && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - Number(budgetBeforeTurn || 0));
+  game.currentDate = targetDate;
+  rememberCalendarDate();
+  runScheduledSeasonGameVerifier({ reason:'live_matchday_complete' });
   if(challengeFinished){
     game.currentDate = targetDate;
     rememberCalendarDate();
@@ -1472,6 +1538,9 @@ function simulateNextMatchday(options={}){
   const postCompetition = regularEnded && !challengeFinished && typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
   if(postCompetition?.created) regularEnded = game.matchdayIndex >= game.fixtures.length;
   game.lastBudgetDelta = Math.round(Number(game.budget || 0) - budgetBeforeTurn);
+  game.currentDate = targetDate;
+  rememberCalendarDate();
+  runScheduledSeasonGameVerifier({ reason:'matchday_complete' });
   if(challengeFinished){
     game.currentDate = targetDate;
     rememberCalendarDate();
@@ -1549,7 +1618,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   advanceGlobalTurn();
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
-  runScheduledFiveDayGameVerifier({ reason:'preseason' });
+  runScheduledSeasonGameVerifier({ reason:'preseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'preseason' });
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('preseason');
   processAcademyTurn();
@@ -1654,7 +1723,7 @@ function simulatePostseasonTurn(){
   advanceGlobalTurn();
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
-  runScheduledFiveDayGameVerifier({ reason:'postseason' });
+  runScheduledSeasonGameVerifier({ reason:'postseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'postseason' });
   if(typeof maybePushAssistantAdviceMessage === 'function') maybePushAssistantAdviceMessage('postseason');
   processAcademyTurn();

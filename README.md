@@ -1,5 +1,22 @@
-# Fútbol Manager MVP - V8.17
+# Fútbol Manager MVP - V8.18
 
+## V8.18 — Verificador de estructura programado
+
+- El Verificador de estructura se ejecuta automáticamente en los días **1, 31, 151, 179, 295 y 355** de cada temporada.
+- El día 1 se controla al crear una carrera y al comenzar cada temporada nueva.
+- Los demás controles se ejecutan después de completar las acciones automáticas del día y antes del guardado final.
+- Cada control queda marcado por temporada y día para impedir que recargar o volver a abrir la partida lo repita.
+- Si el calendario salta sobre uno de los días programados, el control pendiente se ejecuta en el siguiente avance.
+- Las reparaciones seguras se aplican automáticamente: estructura de divisiones, calendarios no disputados, estadísticas mínimas de partidos bots y planteles bots insuficientes.
+- Si no se detectan problemas, el control es completamente silencioso.
+- Si se aplica alguna corrección, se muestra un aviso breve.
+- Los problemas que requieren revisión manual generan un mensaje prioritario y conservan el acceso al Verificador manual.
+- El botón manual del Verificador continúa disponible sin cambios.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.18 no rompe partidas anteriores.** Los controles programados se incorporan al estado actual y no reconstruyen partidos disputados ni eliminan resultados. Se conservan los cinco slots, jugadores, contratos, temporadas y progreso.
 
 ## V8.17 — Apellidos ampliados x10 y migración de partidas
 

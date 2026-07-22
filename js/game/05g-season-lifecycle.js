@@ -1691,6 +1691,7 @@ function startNextSeason(selectedClubId){
   if(aging?.ageDecay?.players > 0){
     pushGameMessage({ type:'deportivo', title:'Deterioro por edad aplicado', body:`${aging.ageDecay.players} jugador(es) de 32 años o más recibieron penalización anual de habilidades. Total aplicado: -${aging.ageDecay.added} puntos acumulados.`, priority:'normal' });
   }
+  if(typeof runScheduledSeasonGameVerifier === 'function') runScheduledSeasonGameVerifier({ reason:'season_start_day_1', scheduledDay:1, silent:true });
   activeTab = 'home';
   closeModal();
   saveLocal(true);

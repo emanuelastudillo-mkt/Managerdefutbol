@@ -6,7 +6,7 @@ window.GAME_BALANCE_MODIFICADORES = {
   // Ejemplo: entrenamiento: { multiplicadorSubidaHabilidades: 2 }
 };
 window.GAME_BALANCE_MODIFICADORES_METADATA = {
-  version:'V8.17',
+  version:'V8.18',
   nombre:'Capa opcional de balance',
   nota:'Sin sobrescrituras activas; todos los valores vigentes están centralizados en config.js.'
 };

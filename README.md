@@ -1,4 +1,18 @@
-# Fútbol Manager MVP - V8.18
+# Fútbol Manager MVP - V8.19
+
+## V8.19 — Penalización de goles reforzada
+
+- Todos los goles potenciales reciben una reducción base del **10%**, desde el primero hasta el quinto gol total del partido.
+- El sexto gol recibe 40% de penalización; el séptimo 50%; el octavo 60%; el noveno 70%; el décimo 80%; el undécimo 90%; y desde el duodécimo, 95%.
+- La escala se calcula sobre el próximo gol potencial según la suma del marcador de ambos equipos.
+- Se aplica de forma uniforme al simulador completo, partido en vivo, simulaciones rápidas de bots, Mundial de Clubes y Desafíos Online.
+- La penalización sólo afecta la conversión de goles; no reduce ocasiones, posesión, tarjetas, lesiones ni modifica resultados ya guardados.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.19 no rompe partidas anteriores.** La nueva escala se utiliza únicamente en partidos futuros; no recalcula resultados existentes ni modifica jugadores, calendarios, contratos, guardados o los cinco slots.
+
 
 ## V8.18 — Verificador de estructura programado
 

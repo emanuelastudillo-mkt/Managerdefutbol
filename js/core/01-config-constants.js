@@ -25,12 +25,12 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.18');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.19');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.18');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.19');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.18');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.19');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -52,7 +52,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.18', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.19', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -125,13 +125,14 @@ const ADVANCE_STATUS_PHRASE_INTERVAL_MS = configNumber('ui.frasesProgresoAvanceI
 const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvance', [])) ? configValue('ui.frasesProgresoAvance', []).filter(Boolean).map(String) : [];
 const HIGH_SCORE_GOAL_PENALTY_ENABLED = configBoolean('simulador.penalizacionGolesAltos.activo', true);
 const HIGH_SCORE_GOAL_PENALTY_RULES_RAW = configValue('simulador.penalizacionGolesAltos.tramos', [
-  { golesTotalesDesde:6, penalizacion:0.20 },
-  { golesTotalesDesde:7, penalizacion:0.30 },
-  { golesTotalesDesde:8, penalizacion:0.40 },
-  { golesTotalesDesde:9, penalizacion:0.50 },
-  { golesTotalesDesde:10, penalizacion:0.60 },
-  { golesTotalesDesde:11, penalizacion:0.70 },
-  { golesTotalesDesde:12, penalizacion:0.80 }
+  { golesTotalesDesde:1, penalizacion:0.10 },
+  { golesTotalesDesde:6, penalizacion:0.40 },
+  { golesTotalesDesde:7, penalizacion:0.50 },
+  { golesTotalesDesde:8, penalizacion:0.60 },
+  { golesTotalesDesde:9, penalizacion:0.70 },
+  { golesTotalesDesde:10, penalizacion:0.80 },
+  { golesTotalesDesde:11, penalizacion:0.90 },
+  { golesTotalesDesde:12, penalizacion:0.95 }
 ]);
 const HIGH_SCORE_GOAL_PENALTY_RULES = (Array.isArray(HIGH_SCORE_GOAL_PENALTY_RULES_RAW) ? HIGH_SCORE_GOAL_PENALTY_RULES_RAW : [])
   .map(rule => ({
@@ -180,7 +181,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.18');
+const APP_VERSION = configValue('version', 'V8.19');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

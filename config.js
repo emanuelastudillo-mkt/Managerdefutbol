@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.18',
+  version: 'V8.19',
   partidas: {
     // se mantiene la separación de carreras normales; el nombre visible se arma con club y temporada.
     slotsCarrera: 5,
@@ -16,7 +16,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.18', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.19', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -30,12 +30,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.18',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.19',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.18',
+    installationsUrl: 'data/instalaciones.json?v=8.19',
     eventsUrl: 'data/eventos.json',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.18',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.19',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -794,18 +794,19 @@ window.GAME_CONFIG = {
     multiplicadorTarjetas: 1.10,
     // con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
     rojasDerrotaDefault: 5,
-    // Reduce progresivamente la conversión de nuevas ocasiones cuando el marcador global ya es muy alto.
+    // Reduce la conversión de cada gol potencial y endurece progresivamente la penalización cuando el marcador global aumenta.
     // Cada tramo se aplica al gol que llevaría el total del partido al valor indicado o superior.
     penalizacionGolesAltos: {
       activo: true,
       tramos: [
-        { golesTotalesDesde: 6, penalizacion: 0.20 },
-        { golesTotalesDesde: 7, penalizacion: 0.30 },
-        { golesTotalesDesde: 8, penalizacion: 0.40 },
-        { golesTotalesDesde: 9, penalizacion: 0.50 },
-        { golesTotalesDesde: 10, penalizacion: 0.60 },
-        { golesTotalesDesde: 11, penalizacion: 0.70 },
-        { golesTotalesDesde: 12, penalizacion: 0.80 }
+        { golesTotalesDesde: 1, penalizacion: 0.10 },
+        { golesTotalesDesde: 6, penalizacion: 0.40 },
+        { golesTotalesDesde: 7, penalizacion: 0.50 },
+        { golesTotalesDesde: 8, penalizacion: 0.60 },
+        { golesTotalesDesde: 9, penalizacion: 0.70 },
+        { golesTotalesDesde: 10, penalizacion: 0.80 },
+        { golesTotalesDesde: 11, penalizacion: 0.90 },
+        { golesTotalesDesde: 12, penalizacion: 0.95 }
       ]
     },
     // Estrellas de referencia: aumentan el peso del jugador dentro del simulador.

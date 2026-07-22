@@ -11,13 +11,14 @@
   const HIGH_SCORE_RULES = (() => {
     const raw = window?.GAME_CONFIG?.simulador?.penalizacionGolesAltos?.tramos;
     const fallback = [
-      { golesTotalesDesde:6, penalizacion:0.20 },
-      { golesTotalesDesde:7, penalizacion:0.30 },
-      { golesTotalesDesde:8, penalizacion:0.40 },
-      { golesTotalesDesde:9, penalizacion:0.50 },
-      { golesTotalesDesde:10, penalizacion:0.60 },
-      { golesTotalesDesde:11, penalizacion:0.70 },
-      { golesTotalesDesde:12, penalizacion:0.80 }
+      { golesTotalesDesde:1, penalizacion:0.10 },
+      { golesTotalesDesde:6, penalizacion:0.40 },
+      { golesTotalesDesde:7, penalizacion:0.50 },
+      { golesTotalesDesde:8, penalizacion:0.60 },
+      { golesTotalesDesde:9, penalizacion:0.70 },
+      { golesTotalesDesde:10, penalizacion:0.80 },
+      { golesTotalesDesde:11, penalizacion:0.90 },
+      { golesTotalesDesde:12, penalizacion:0.95 }
     ];
     return (Array.isArray(raw) ? raw : fallback).map(rule => ({
       goalsFrom:Math.max(1, Math.round(Number(rule?.golesTotalesDesde ?? rule?.goalsFrom ?? 0) || 0)),

@@ -106,13 +106,14 @@
   const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
   const SIM_HIGH_SCORE_GOAL_PENALTY_ENABLED = Boolean(simConfigValue('simulador.penalizacionGolesAltos.activo', true));
   const SIM_HIGH_SCORE_GOAL_PENALTY_RULES = simConfigArray('simulador.penalizacionGolesAltos.tramos', [
-    { golesTotalesDesde:6, penalizacion:0.20 },
-    { golesTotalesDesde:7, penalizacion:0.30 },
-    { golesTotalesDesde:8, penalizacion:0.40 },
-    { golesTotalesDesde:9, penalizacion:0.50 },
-    { golesTotalesDesde:10, penalizacion:0.60 },
-    { golesTotalesDesde:11, penalizacion:0.70 },
-    { golesTotalesDesde:12, penalizacion:0.80 }
+    { golesTotalesDesde:1, penalizacion:0.10 },
+    { golesTotalesDesde:6, penalizacion:0.40 },
+    { golesTotalesDesde:7, penalizacion:0.50 },
+    { golesTotalesDesde:8, penalizacion:0.60 },
+    { golesTotalesDesde:9, penalizacion:0.70 },
+    { golesTotalesDesde:10, penalizacion:0.80 },
+    { golesTotalesDesde:11, penalizacion:0.90 },
+    { golesTotalesDesde:12, penalizacion:0.95 }
   ]).map(rule => ({
     goalsFrom:Math.max(1, Math.round(Number(rule?.golesTotalesDesde ?? rule?.goalsFrom ?? 0) || 0)),
     penalty:simClamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)

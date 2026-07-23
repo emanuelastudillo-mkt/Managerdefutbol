@@ -941,10 +941,94 @@ function homeMessagesSummary(){
     <p class="tagline">${escapeHtml(latest.body)}</p>
   </div>`;
 }
+function activeTransferMessageStatuses(){
+  return new Set(['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market']);
+}
+function transferMessagePendingEntry(message){
+  const action = message?.action;
+  if(action?.type !== 'transferOffer') return null;
+  const pending = Array.isArray(game?.pendingTransfers) ? game.pendingTransfers : [];
+  return pending.find(item => {
+    if(typeof isActivePendingTransfer === 'function' && !isActivePendingTransfer(item)) return false;
+    if(String(action.transferPendingId || '') && String(item.id || '') === String(action.transferPendingId)) return true;
+    if(String(item.messageId || '') && String(item.messageId || '') === String(message.id || '')) return true;
+    return Number(item.playerId || 0) > 0 && Number(item.playerId || 0) === Number(action.playerId || 0) && String(item.type || '') === 'outgoing';
+  }) || null;
+}
+function transferMessageSchedulePassed(action){
+  const executeSeason = Math.max(0, Math.round(Number(action?.executeSeason || 0)));
+  const executeDay = Math.max(0, Math.round(Number(action?.executeDay || 0)));
+  if(!executeSeason || !executeDay) return false;
+  const currentSeason = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
+  const currentDay = typeof transferMarketSeasonDayForState === 'function'
+    ? Math.max(1, Math.round(Number(transferMarketSeasonDayForState(game) || 1)))
+    : Math.max(1, ((Number(game?.matchdayIndex || 0) * Number(DAYS_PER_ADVANCE || 1)) + 1));
+  return currentSeason > executeSeason || (currentSeason === executeSeason && currentDay > executeDay);
+}
+function closeTransferMessageAction(message, status, suffix=''){
+  const action = message?.action;
+  if(action?.type !== 'transferOffer') return false;
+  if(String(action.status || '') === String(status || '')) return false;
+  action.status = String(status || 'closed_stale_transfer');
+  action.closedSeason = Number(game?.seasonNumber || 1);
+  action.closedDay = typeof transferMarketSeasonDayForState === 'function' ? transferMarketSeasonDayForState(game) : 0;
+  action.closedDate = game?.currentDate || '';
+  if(suffix && !action.closedResolutionAdded){
+    message.body = `${String(message.body || '').trim()} ${suffix}`.trim();
+    action.closedResolutionAdded = true;
+  }
+  return true;
+}
+function reconcileTransferOfferMessageState(message){
+  const action = message?.action;
+  if(action?.type !== 'transferOffer') return false;
+  const status = String(action.status || '');
+  if(!activeTransferMessageStatuses().has(status)) return false;
+  const ownerClubId = Number(action.ownerClubId || 0);
+  const selectedClubId = Number(game?.selectedClubId || 0);
+  const player = typeof playerById === 'function' ? playerById(Number(action.playerId || 0)) : null;
+  if(ownerClubId && selectedClubId && ownerClubId !== selectedClubId){
+    return closeTransferMessageAction(message, 'cancelled_club_change', 'La operación quedó cerrada cuando el manager dejó el club que había recibido la oferta.');
+  }
+  if(status === 'pending'){
+    if(!player || (selectedClubId && Number(player.clubId || 0) !== selectedClubId)){
+      return closeTransferMessageAction(message, 'expired_player_unavailable', 'La oferta quedó cerrada porque el jugador ya no pertenece al club.');
+    }
+    return false;
+  }
+  const pendingEntry = transferMessagePendingEntry(message);
+  if(pendingEntry) return false;
+  if(!player || (ownerClubId && Number(player.clubId || 0) !== ownerClubId) || (!ownerClubId && selectedClubId && Number(player.clubId || 0) !== selectedClubId)){
+    return closeTransferMessageAction(message, 'expired_player_unavailable', 'La operación ya no está pendiente porque el jugador dejó de pertenecer al club vendedor.');
+  }
+  if(transferMessageSchedulePassed(action) || !pendingEntry){
+    return closeTransferMessageAction(message, 'closed_stale_transfer', 'La operación dejó de estar pendiente y el mensaje quedó archivado.');
+  }
+  return false;
+}
+function reconcileTransferOfferMessages(){
+  let changed = 0;
+  (game?.messages || []).forEach(message => { if(reconcileTransferOfferMessageState(message)) changed += 1; });
+  return changed;
+}
+function closeTransferOfferMessagesForClubExit(outgoingClubId=0){
+  if(!game) return 0;
+  let changed = 0;
+  const clubId = Number(outgoingClubId || 0);
+  (game.messages || []).forEach(message => {
+    const action = message?.action;
+    if(action?.type !== 'transferOffer' || !activeTransferMessageStatuses().has(String(action.status || ''))) return;
+    const ownerClubId = Number(action.ownerClubId || clubId || game.selectedClubId || 0);
+    if(clubId && ownerClubId && ownerClubId !== clubId) return;
+    if(closeTransferMessageAction(message, 'cancelled_club_change', 'La operación quedó cerrada cuando el manager dejó el club que había recibido la oferta.')) changed += 1;
+  });
+  return changed;
+}
 function messageHasPendingAction(message){
+  reconcileTransferOfferMessageState(message);
   const status = String(message?.action?.status || '');
   if(message?.action?.type === 'lockerRoomDecision' && String(message.action.promiseStatus || '') === 'pending') return true;
-  return Boolean(message?.action && ['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market'].includes(status));
+  return Boolean(message?.action && activeTransferMessageStatuses().has(status));
 }
 function deletableOldMessages(){
   return (game?.messages || []).filter(message => !messageHasPendingAction(message));
@@ -962,6 +1046,8 @@ function deleteOldMessages(){
 }
 function renderMessages(){
   if(typeof ensurePendingSpecialClauseAutoAcceptanceMetadata === 'function') ensurePendingSpecialClauseAutoAcceptanceMetadata();
+  const reconciledTransfers = reconcileTransferOfferMessages();
+  if(reconciledTransfers > 0 && typeof saveLocal === 'function') saveLocal(true);
   markMessagesRead();
   const messages = Array.isArray(game.messages) ? game.messages : [];
   const unread = messages.filter(m => !m.read).length;
@@ -1047,7 +1133,8 @@ function transferOfferStatusLabel(status){
     auto_agreed_pending_market:'Cláusula aceptada: espera mercado',
     forced_sale_pending_market:'Salida decidida: espera mercado',
     cancelled_club_change:'Cerrada: cambiaste de club',
-    expired_player_unavailable:'Cerrada: jugador no disponible'
+    expired_player_unavailable:'Cerrada: jugador no disponible',
+    closed_stale_transfer:'Cerrada: operación archivada'
   };
   return map[status] || String(status || 'Cerrada');
 }
@@ -1636,6 +1723,7 @@ function queueOutgoingTransferFromMessage(msg, player, options={}){
   item.notice = options.notice || '';
   if(!existing) game.pendingTransfers.push(item);
   msg.action.status = pendingStatus;
+  msg.action.ownerClubId = Number(msg.action.ownerClubId || item.fromClubId || game.selectedClubId || player.clubId || 0);
   msg.action.finalStatus = finalStatus;
   msg.action.transferPendingId = item.id;
   msg.action.executeSeason = schedule.season;

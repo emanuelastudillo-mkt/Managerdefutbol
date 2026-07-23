@@ -1409,9 +1409,13 @@ function processAcademyTurn(){
   const youthMarket = processAcademyYouthMarketDaily();
   const added = processAcademyScoutingArrivals();
   const today = validIsoDate(game.currentDate) ? game.currentDate : dateForSeasonState(game);
-  if(managerPersonalBalance() < 0 && game.academy.lastNegativeBalanceNoticeDate !== today){
+  const lastNegativeNoticeDate = String(game.academy.lastNegativeBalanceNoticeDate || '');
+  const negativeNoticeDue = !validIsoDate(lastNegativeNoticeDate)
+    || !validIsoDate(today)
+    || daysBetweenIsoDates(lastNegativeNoticeDate, today) >= 7;
+  if(managerPersonalBalance() < 0 && negativeNoticeDue){
     game.academy.lastNegativeBalanceNoticeDate = today;
-    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'high', title:'Academia en números rojos', body:`Tu Cuenta Bancaria quedó en ${formatMoney(managerPersonalBalance())}. Los gastos automáticos siguen siendo personales; no podrás iniciar nuevas captaciones, obras, tratamientos o contrataciones hasta recuperar saldo.`, id:`academy-negative-${today}` });
+    if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'high', title:'Academia en números rojos', body:`Tu Cuenta Bancaria continúa en ${formatMoney(managerPersonalBalance())}. Mientras el saldo sea negativo no podrás iniciar nuevas captaciones, obras, tratamientos o contrataciones.`, id:`academy-negative-${today}` });
   }
   if(activeTab === 'academy' && (added > 0 || youthMarket.created || youthMarket.expired > 0)) renderAcademy();
 }

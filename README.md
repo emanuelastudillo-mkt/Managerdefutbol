@@ -1,3 +1,20 @@
+# Chill mánager - Futbol online — V8.26
+
+## V8.26 — Avisos bancarios semanales y mensajes de transferencias cerradas
+
+- Los avisos por Cuenta Bancaria personal en negativo se limitan a un máximo de uno cada 7 días.
+- El saldo se sigue controlando todos los días, pero los días intermedios no generan mensajes repetidos.
+- Los mensajes de ofertas aceptadas que quedaron en “espera mercado” se reconcilian con las transferencias pendientes reales.
+- Si la operación ya se ejecutó, el jugador dejó el club, el manager cambió de equipo o la transferencia pendiente dejó de existir, el mensaje pasa a estado cerrado y puede borrarse.
+- Al abandonar un club se cierran también las ofertas y ventas pendientes vinculadas a ese equipo antes de limpiar su estado interno.
+- Los mensajes realmente pendientes, las decisiones de vestuario y las promesas todavía abiertas continúan protegidos contra el borrado.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.26 no rompe partidas anteriores.** Al abrir Mensajes, las operaciones antiguas sin transferencia pendiente se archivan automáticamente. No se ejecutan ventas retroactivas ni se modifican presupuestos, jugadores, contratos, temporadas o resultados.
+
+
 # Chill mánager - Futbol online — V8.25
 
 ## V8.25 — Activación alternativa de problemas de vestuario

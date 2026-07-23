@@ -548,6 +548,7 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.monthlyExpenses = {};
   game.academy = normalizeAcademyState(game.academy);
   if(typeof resetScoutingCenterForNewClub === 'function') resetScoutingCenterForNewClub(id);
+  if(typeof closeTransferOfferMessagesForClubExit === 'function') closeTransferOfferMessagesForClubExit(id);
   if(typeof clearPendingTransferAgreementFlags === 'function') clearPendingTransferAgreementFlags(game);
   game.pendingTransfers = [];
   game.lastOwnPlayerOffer = null;

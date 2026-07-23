@@ -871,7 +871,7 @@ function renderStadiumFans(){
       </div>
       <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
       <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
-      <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}.</p>
+      <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. El crecimiento prioriza rendimiento y posición; los vitalicios influyen como base secundaria.</p>
       ${memberCampaignsMarkup()}
     </div>`;
   $('ticketPriceInput')?.addEventListener('change', event => {
@@ -958,7 +958,7 @@ function renderStadium(){
         </div>
         <label for="ticketPriceInput" style="margin-top:14px">Precio de entrada</label>
         <input id="ticketPriceInput" type="number" min="${TICKET_PRICE_MIN}" max="${TICKET_PRICE_MAX}" step="10" value="${ticketPrice}">
-        <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. Entradas baratas protegen caídas por mala posición; entradas caras limitan el crecimiento de hinchas.</p>
+        <p class="muted small">Mínimo ${formatMoney(TICKET_PRICE_MIN)} y máximo ${formatMoney(TICKET_PRICE_MAX)}. Entradas baratas amortiguan pérdidas; entradas caras limitan el crecimiento. Los clubes pequeños pueden crecer proporcionalmente más rápido.</p>
         ${memberCampaignsMarkup()}
       </div>
     </div>

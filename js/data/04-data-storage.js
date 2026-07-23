@@ -1632,10 +1632,16 @@ function ticketPriceInfoForMatch(match, rivalPrestige=0){
   return { price, basePrice:TICKET_PRICE_INITIAL, multiplier:Number(multiplier.toFixed(2)), isAutomaticBot:true, prestigeTier:tier };
 }
 function ticketLossShieldRate(price){
-  return (1 - priceRatio(price)) * TICKET_PRICE_MAX_EFFECT_RATE;
+  const neutral = clamp(Number(TICKET_PRICE_INITIAL || TICKET_PRICE_MIN), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
+  if(Number(price || neutral) >= neutral || neutral <= TICKET_PRICE_MIN) return 0;
+  const progress = clamp((neutral - Number(price || neutral)) / Math.max(1, neutral - TICKET_PRICE_MIN), 0, 1);
+  return progress * FAN_CHEAP_TICKET_LOSS_SHIELD_MAX;
 }
 function ticketGainBlockRate(price){
-  return priceRatio(price) * TICKET_PRICE_MAX_EFFECT_RATE;
+  const neutral = clamp(Number(TICKET_PRICE_INITIAL || TICKET_PRICE_MIN), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
+  if(Number(price || neutral) <= neutral || TICKET_PRICE_MAX <= neutral) return 0;
+  const progress = clamp((Number(price || neutral) - neutral) / Math.max(1, TICKET_PRICE_MAX - neutral), 0, 1);
+  return progress * FAN_EXPENSIVE_TICKET_GAIN_BLOCK_MAX;
 }
 function awayFansMinimumRateForMatch(match){
   const range = Math.max(0, AWAY_FANS_MAX_RATE - AWAY_FANS_MIN_RATE);
@@ -1762,51 +1768,109 @@ function attendanceContextForMatch(match){
     rivalPrestigeAttendanceBonusPct:Number(rivalPrestigeBonus.pct || 0)
   };
 }
-function fanTableRateForPosition(position){
-  const raw = (FAN_TABLE_NEUTRAL_POSITION - Number(position || FAN_TABLE_NEUTRAL_POSITION)) * FAN_TABLE_POSITION_STEP;
-  return clamp(raw, -0.01, FAN_TABLE_MAX_GAIN_RATE);
+function fanGrowthMass(current, base){
+  const safeCurrent = Math.max(0, Number(current || 0));
+  const safeBase = Math.max(0, Number(base || 0));
+  return Math.max(1,
+    FAN_GROWTH_MASS_BASE
+    + (FAN_GROWTH_CURRENT_SQRT_FACTOR * Math.sqrt(safeCurrent))
+    + (FAN_GROWTH_BASE_SQRT_FACTOR * Math.sqrt(safeBase))
+  );
+}
+function fanResultFactor(resultKey){
+  if(resultKey === 'win') return FAN_RESULT_WIN_FACTOR;
+  if(resultKey === 'loss') return FAN_RESULT_LOSS_FACTOR;
+  return FAN_RESULT_DRAW_FACTOR;
+}
+function fanTableFactorForPosition(position){
+  const safePosition = Math.max(1, Math.round(Number(position || 1)));
+  const row = FAN_POSITION_FACTORS.find(item => safePosition >= item.from && safePosition <= item.to);
+  if(row) return Number(row.factor || 0);
+  if(safePosition > 18) return -0.45;
+  return 0;
 }
 function clubPositionInStandings(clubId){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   const divisionId = club?.divisionId || 'default';
   const list = typeof sortedStandings === 'function' ? sortedStandings(divisionId) : [];
   const index = list.findIndex(row => Number(row.clubId) === Number(clubId));
-  return index >= 0 ? index + 1 : FAN_TABLE_NEUTRAL_POSITION;
+  return index >= 0 ? index + 1 : 10;
 }
-function applyFanChangeForClub(clubId, resultKey){
+function fanRivalPrestigeMultiplier(clubId, rivalClubId, resultKey){
+  if(!rivalClubId || !['win','loss'].includes(resultKey)) return 1;
+  const ownPrestige = typeof clubPrestigeValue === 'function'
+    ? Number(clubPrestigeValue(clubId) || 0)
+    : Number(seed?.clubs?.find(c => Number(c.id) === Number(clubId))?.reputation || 0);
+  const rivalPrestige = typeof clubPrestigeValue === 'function'
+    ? Number(clubPrestigeValue(rivalClubId) || 0)
+    : Number(seed?.clubs?.find(c => Number(c.id) === Number(rivalClubId))?.reputation || 0);
+  const difference = clamp(rivalPrestige - ownPrestige, -FAN_RIVAL_PRESTIGE_MAX_DIFF, FAN_RIVAL_PRESTIGE_MAX_DIFF);
+  const progress = clamp(Math.abs(difference) / FAN_RIVAL_PRESTIGE_MAX_DIFF, 0, 1);
+  if(resultKey === 'win'){
+    if(difference > 0) return 1 + (progress * FAN_RIVAL_WIN_BONUS_MAX);
+    if(difference < 0) return 1 - (progress * FAN_RIVAL_WIN_LOWER_PENALTY_MAX);
+  }
+  if(resultKey === 'loss'){
+    if(difference > 0) return 1 - (progress * FAN_RIVAL_LOSS_SHIELD_MAX);
+    if(difference < 0) return 1 + (progress * FAN_RIVAL_LOSS_LOWER_PENALTY_MAX);
+  }
+  return 1;
+}
+function applyFanChangeForClub(clubId, resultKey, rivalClubId=null){
   ensureFanState();
   const current = clubFansCurrent(clubId);
-  const base = clubFansBase(clubId);
+  const base = Math.max(0, Math.round(Number(game?.fans?.clubs?.[clubId]?.base ?? clubFansBase(clubId))));
   const price = ticketPriceForClub(clubId);
-  let resultDelta = 0;
-  if(resultKey === 'win') resultDelta = base * FAN_WIN_BASE_RATE;
-  if(resultKey === 'loss') resultDelta = -current * FAN_LOSS_CURRENT_RATE;
   const position = clubPositionInStandings(clubId);
-  let positionDelta = current * fanTableRateForPosition(position);
-  if(positionDelta < 0){
-    positionDelta = Math.min(0, positionDelta + current * ticketLossShieldRate(price));
+  const mass = fanGrowthMass(current, base);
+  const resultFactor = fanResultFactor(resultKey);
+  const positionFactor = fanTableFactorForPosition(position);
+  let totalDelta = mass * (resultFactor + positionFactor);
+
+  if((resultKey === 'win' && totalDelta > 0) || (resultKey === 'loss' && totalDelta < 0)){
+    totalDelta *= fanRivalPrestigeMultiplier(clubId, rivalClubId, resultKey);
   }
-  let totalDelta = resultDelta + positionDelta;
-  if(totalDelta > 0){
-    totalDelta = Math.max(0, totalDelta - current * ticketGainBlockRate(price));
+
+  if(totalDelta < 0){
+    totalDelta *= (1 - ticketLossShieldRate(price));
+    const maxLoss = Math.max(FAN_MAX_LOSS_MINIMUM, current * FAN_MAX_LOSS_CURRENT_RATE);
+    totalDelta = Math.max(totalDelta, -maxLoss);
+  } else if(totalDelta > 0){
+    totalDelta *= (1 - ticketGainBlockRate(price));
     if(Number(clubId) === Number(game?.selectedClubId || 0) && typeof specialActiveBonus === 'function'){
       const sociosBonus = Number(specialActiveBonus('socios_extra') || 0) + Number(specialActiveBonus('idolo_club') || 0);
       if(sociosBonus > 0) totalDelta *= (1 + sociosBonus / 100);
     }
   }
+
   const rounded = Math.round(totalDelta);
   const applied = setClubFansCurrent(clubId, Math.max(0, current + rounded), `Resultado ${resultKey}. Posición ${position}. Entrada ${formatMoney(price)}.`);
-  game.fans.history.push({ season:game.seasonNumber || 1, matchday:game.matchdayIndex || 0, date:game.currentDate || '', clubId:Number(clubId), result:resultKey, position, ticketPrice:price, delta:applied, current:clubFansCurrent(clubId) });
+  game.fans.history.push({
+    season:game.seasonNumber || 1,
+    matchday:game.matchdayIndex || 0,
+    date:game.currentDate || '',
+    clubId:Number(clubId),
+    rivalClubId:Number(rivalClubId || 0),
+    result:resultKey,
+    position,
+    ticketPrice:price,
+    growthMass:Number(mass.toFixed(3)),
+    resultFactor,
+    positionFactor,
+    delta:applied,
+    current:clubFansCurrent(clubId)
+  });
   game.fans.history = game.fans.history.slice(-240);
   return applied;
 }
+
 function applyFanChangesAfterMatches(results=[]){
   ensureFanState();
   (results || []).forEach(match => {
     const homeResult = match.homeGoals > match.awayGoals ? 'win' : match.homeGoals < match.awayGoals ? 'loss' : 'draw';
     const awayResult = match.awayGoals > match.homeGoals ? 'win' : match.awayGoals < match.homeGoals ? 'loss' : 'draw';
-    applyFanChangeForClub(match.homeId, homeResult);
-    applyFanChangeForClub(match.awayId, awayResult);
+    applyFanChangeForClub(match.homeId, homeResult, match.awayId);
+    applyFanChangeForClub(match.awayId, awayResult, match.homeId);
   });
 }
 

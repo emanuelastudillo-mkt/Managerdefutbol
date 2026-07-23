@@ -1,4 +1,21 @@
-# Una vida de manager — V8.33
+# Una vida de manager — V8.34
+
+## V8.34 — Fórmula equilibrada de hinchas
+
+- Se reemplaza el crecimiento lineal basado en vitalicios por una masa comprimida que combina raíz cuadrada de hinchas actuales y vitalicios.
+- Los resultados y la posición en tabla pasan a utilizar factores fijos, evitando que un club grande multiplique automáticamente la ganancia de uno pequeño.
+- Los clubes fundados y pequeños obtienen un crecimiento porcentual mayor cuando rinden bien.
+- Los clubes grandes mantienen una ventaja absoluta, pero su crecimiento deja de ser proporcional a la masa inicial.
+- Las pérdidas quedan limitadas al mayor valor entre 8 hinchas y 0,6% de la hinchada actual.
+- Entradas baratas amortiguan pérdidas hasta 35%; entradas caras limitan ganancias hasta 40%.
+- El prestigio relativo del rival modifica moderadamente ganancias y pérdidas.
+- No requiere cambios de Worker ni SQL.
+
+**V8.34 no rompe partidas anteriores.** Mantiene hinchas actuales, vitalicios e historial; la nueva fórmula sólo afecta partidos posteriores a la actualización.
+
+---
+
+## Historial anterior — V8.33
 
 ## V8.33 — Botón global de Login
 

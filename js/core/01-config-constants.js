@@ -25,12 +25,12 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.33');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.34');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.33');
-const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.33');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.33');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.34');
+const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.34');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.34');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -52,7 +52,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.33', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.34', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -181,7 +181,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.33');
+const APP_VERSION = configValue('version', 'V8.34');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -518,12 +518,27 @@ const AWAY_FANS_MAX_RATE = Math.max(AWAY_FANS_MIN_RATE, configNumber('estadio.po
 const AWAY_FANS_MAX_WITH_LOCAL_SHORTAGE = Math.max(AWAY_FANS_MAX_RATE, configNumber('estadio.porcentajeVisitanteMaximoConFaltanteLocal', 0.50, 0, 0.80));
 const HOME_CROWD_FANS_PER_BONUS_POINT = Math.max(1, Math.round(configNumber('estadio.hinchasPorPuntoBonusLocal', 1000, 1, 1000000)));
 const HOME_CROWD_BONUS_MAX = Math.round(configNumber('estadio.bonusLocalMaximo', 50, 0, 99));
-const FAN_WIN_BASE_RATE = configNumber('estadio.gananciaHinchasPorVictoriaBase', 0.001, 0, 1);
-const FAN_LOSS_CURRENT_RATE = configNumber('estadio.perdidaHinchasPorDerrotaActual', 0.005, 0, 1);
-const FAN_TABLE_NEUTRAL_POSITION = Math.round(configNumber('estadio.posicionTablaPuntoNeutro', 10, 1, 100));
-const FAN_TABLE_POSITION_STEP = configNumber('estadio.posicionTablaPaso', 0.001, 0, 1);
-const FAN_TABLE_MAX_GAIN_RATE = configNumber('estadio.posicionTablaGananciaMaxima', 0.005, 0, 1);
-const TICKET_PRICE_MAX_EFFECT_RATE = configNumber('estadio.precioEntradaEfectoMaximo', 0.01, 0, 1);
+const FAN_GROWTH_MASS_BASE = configNumber('estadio.hinchasMasaBase', 12, 0, 1000000);
+const FAN_GROWTH_CURRENT_SQRT_FACTOR = configNumber('estadio.hinchasMasaActualRaiz', 0.45, 0, 1000);
+const FAN_GROWTH_BASE_SQRT_FACTOR = configNumber('estadio.hinchasMasaVitaliciosRaiz', 0.05, 0, 1000);
+const FAN_RESULT_WIN_FACTOR = configNumber('estadio.hinchasFactorVictoria', 0.80, -10, 10);
+const FAN_RESULT_DRAW_FACTOR = configNumber('estadio.hinchasFactorEmpate', 0, -10, 10);
+const FAN_RESULT_LOSS_FACTOR = configNumber('estadio.hinchasFactorDerrota', -0.65, -10, 10);
+const FAN_POSITION_FACTORS_RAW = configValue('estadio.hinchasFactoresPosicion', []);
+const FAN_POSITION_FACTORS = (Array.isArray(FAN_POSITION_FACTORS_RAW) ? FAN_POSITION_FACTORS_RAW : []).map((row, index) => ({
+  from:Math.max(1, Math.round(Number(row?.desde ?? row?.from ?? (index + 1)))),
+  to:Math.max(1, Math.round(Number(row?.hasta ?? row?.to ?? row?.desde ?? row?.from ?? (index + 1)))),
+  factor:Number.isFinite(Number(row?.factor)) ? Number(row.factor) : 0
+})).sort((a,b) => a.from - b.from);
+const FAN_MAX_LOSS_MINIMUM = Math.max(0, Math.round(configNumber('estadio.hinchasPerdidaMaximaMinima', 8, 0, 1000000)));
+const FAN_MAX_LOSS_CURRENT_RATE = configNumber('estadio.hinchasPerdidaMaximaPorcentaje', 0.006, 0, 1);
+const FAN_CHEAP_TICKET_LOSS_SHIELD_MAX = configNumber('estadio.entradaBarataProteccionPerdidaMaxima', 0.35, 0, 1);
+const FAN_EXPENSIVE_TICKET_GAIN_BLOCK_MAX = configNumber('estadio.entradaCaraBloqueoGananciaMaxima', 0.40, 0, 1);
+const FAN_RIVAL_PRESTIGE_MAX_DIFF = Math.max(1, configNumber('estadio.hinchasPrestigioDiferenciaMaxima', 50, 1, 99));
+const FAN_RIVAL_WIN_BONUS_MAX = configNumber('estadio.hinchasPrestigioBonusVictoriaMaximo', 0.20, 0, 1);
+const FAN_RIVAL_WIN_LOWER_PENALTY_MAX = configNumber('estadio.hinchasPrestigioPenalVictoriaInferiorMaximo', 0.15, 0, 1);
+const FAN_RIVAL_LOSS_SHIELD_MAX = configNumber('estadio.hinchasPrestigioProteccionDerrotaMaxima', 0.20, 0, 1);
+const FAN_RIVAL_LOSS_LOWER_PENALTY_MAX = configNumber('estadio.hinchasPrestigioPenalDerrotaInferiorMaxima', 0.15, 0, 1);
 const RIVAL_PRESTIGE_ATTENDANCE_MAX_RATE = configNumber('estadio.bonusAsistenciaPrestigioRivalMaximo', 0.35, 0, 2);
 const RIVAL_PRESTIGE_ATTENDANCE_START = Math.round(configNumber('estadio.bonusAsistenciaPrestigioRivalDesde', 20, 0, 99));
 const RIVAL_PRESTIGE_AWAY_DEMAND_SHARE = configNumber('estadio.bonusAsistenciaPrestigioRivalVisitante', 0.50, 0, 1);

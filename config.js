@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.33',
+  version: 'V8.34',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -25,7 +25,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.33', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.34', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -39,12 +39,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.33',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.34',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.33',
-    eventsUrl: 'data/eventos.json?v=8.33',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.33',
+    installationsUrl: 'data/instalaciones.json?v=8.34',
+    eventsUrl: 'data/eventos.json?v=8.34',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.34',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -651,12 +651,32 @@ window.GAME_CONFIG = {
     porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
     hinchasPorPuntoBonusLocal: 1000,
     bonusLocalMaximo: 50,
-    gananciaHinchasPorVictoriaBase: 0.001,
-    perdidaHinchasPorDerrotaActual: 0.005,
-    posicionTablaPuntoNeutro: 10,
-    posicionTablaPaso: 0.001,
-    posicionTablaGananciaMaxima: 0.005,
-    precioEntradaEfectoMaximo: 0.01,
+    // Crecimiento de hinchas V8.34: base comprimida para equilibrar clubes grandes, pequeños y fundados.
+    hinchasMasaBase: 12,
+    hinchasMasaActualRaiz: 0.45,
+    hinchasMasaVitaliciosRaiz: 0.05,
+    hinchasFactorVictoria: 0.80,
+    hinchasFactorEmpate: 0,
+    hinchasFactorDerrota: -0.65,
+    hinchasFactoresPosicion: [
+      { desde:1, hasta:1, factor:0.70 },
+      { desde:2, hasta:2, factor:0.55 },
+      { desde:3, hasta:4, factor:0.40 },
+      { desde:5, hasta:6, factor:0.25 },
+      { desde:7, hasta:10, factor:0 },
+      { desde:11, hasta:14, factor:-0.15 },
+      { desde:15, hasta:18, factor:-0.30 },
+      { desde:19, hasta:100, factor:-0.45 }
+    ],
+    hinchasPerdidaMaximaMinima: 8,
+    hinchasPerdidaMaximaPorcentaje: 0.006,
+    entradaBarataProteccionPerdidaMaxima: 0.35,
+    entradaCaraBloqueoGananciaMaxima: 0.40,
+    hinchasPrestigioDiferenciaMaxima: 50,
+    hinchasPrestigioBonusVictoriaMaximo: 0.20,
+    hinchasPrestigioPenalVictoriaInferiorMaximo: 0.15,
+    hinchasPrestigioProteccionDerrotaMaxima: 0.20,
+    hinchasPrestigioPenalDerrotaInferiorMaxima: 0.15,
     // Aumento de demanda de entradas por prestigio del rival. 0.35 = hasta +35% de público potencial.
     bonusAsistenciaPrestigioRivalMaximo: 0.35,
     // Desde este prestigio del rival empieza a notarse el aumento de interés por el partido.

@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.33</p>
+      <p class="eyebrow">Guía actualizada · V8.34</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1724,7 +1724,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Sponsors, hinchas y finanzas</h4>
-          <p>Son recursos institucionales. Sus ingresos pertenecen al club y no a la cuenta personal. Usalos para sostener salarios, obras, fichajes y costos operativos.</p>
+          <p>Son recursos institucionales. Sus ingresos pertenecen al club y no a la cuenta personal. La hinchada crece según resultados y posición con una escala equilibrada: los vitalicios ayudan, pero no condenan a los clubes pequeños o fundados a crecer demasiado lento.</p>
           <div class="help-actions">${gameHelpGoButton('stadium','Abrir Sponsors','','sponsors')}${gameHelpGoButton('stadium','Abrir Hinchas y socios','','fans')}${gameHelpGoButton('finance','Abrir Finanzas','','main')}</div>
         </article>
       </div>

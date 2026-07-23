@@ -1088,7 +1088,7 @@ button.cwc-group-result{cursor:pointer}
 .online-medal-categories>.small{margin-right:3px}
 @media (max-width:720px){.online-medal-shelf-head{align-items:stretch}.online-medal-title-total{min-width:88px}.online-medal-grid{grid-template-columns:1fr}.online-medal-item{min-height:82px}.online-medal-icon{width:50px;height:50px}.online-medal-icon:before{width:42px;height:42px}.online-medal-shelf-footer{align-items:flex-start;flex-direction:column}.online-medal-categories{justify-content:flex-start}}
 
-/* V8.33 · Acceso global a la cuenta online. */
+/* V8.34 · Acceso global a la cuenta online. */
 .login-top-btn{
   display:inline-flex;
   align-items:center;

@@ -412,13 +412,13 @@ function lockerRoomApplyDecisionEffect(effect={}, context={}){
   const players = lockerRoomTargetPlayers(effect, participantMap, participants);
   if(type === 'moral_jugadores'){
     const delta = Number(effect.valor || 0);
-    players.forEach(player => lockerRoomApplyPlayerMorale(player, delta));
-    return { type, playerIds:players.map(p => p.id), delta };
+    const changes = players.map(player => ({ playerId:Number(player.id), delta:lockerRoomApplyPlayerMorale(player, delta) }));
+    return { type, playerIds:players.map(p => p.id), delta, changes };
   }
   if(type === 'moral_plantel'){
     const delta = Number(effect.valor || 0);
-    if(typeof adjustSquadMorale === 'function') adjustSquadMorale(game.selectedClubId, delta);
-    return { type, delta };
+    const applied = typeof adjustSquadMorale === 'function' ? adjustSquadMorale(game.selectedClubId, delta) : { affected:0, totalChange:0 };
+    return { type, delta, applied };
   }
   if(type === 'cohesion'){
     const delta = Number(effect.valor || 0);
@@ -427,13 +427,13 @@ function lockerRoomApplyDecisionEffect(effect={}, context={}){
   }
   if(type === 'forma_jugadores'){
     const delta = Number(effect.valor || 0);
-    players.forEach(player => lockerRoomApplyPlayerCondition(player, delta));
-    return { type, playerIds:players.map(p => p.id), delta };
+    const changes = players.map(player => ({ playerId:Number(player.id), delta:lockerRoomApplyPlayerCondition(player, delta) }));
+    return { type, playerIds:players.map(p => p.id), delta, changes };
   }
   if(type === 'forma_plantel'){
     const delta = Number(effect.valor || 0);
-    playersByClub(game.selectedClubId).forEach(player => lockerRoomApplyPlayerCondition(player, delta));
-    return { type, delta };
+    const changes = playersByClub(game.selectedClubId).map(player => ({ playerId:Number(player.id), delta:lockerRoomApplyPlayerCondition(player, delta) }));
+    return { type, delta, changes, totalChange:changes.reduce((sum, item) => sum + Number(item.delta || 0), 0) };
   }
   if(type === 'dinero_club'){
     let delta = Number(effect.valor || 0);
@@ -504,6 +504,71 @@ function lockerRoomIssueText(applied=[]){
   const issues = applied.flatMap(item => Array.isArray(item?.issues) ? item.issues : []);
   if(!issues.length) return '';
   return ` ${issues.map(issue => `${issue.playerName} estará fuera ${issue.matchesOut} días por ${String(issue.injuryLabel || 'una molestia').toLowerCase()}.`).join(' ')}`;
+}
+function lockerRoomEffectMagnitude(delta=0){
+  const value = Math.abs(Number(delta || 0));
+  if(value <= 3) return 'levemente';
+  if(value <= 6) return 'moderadamente';
+  return 'marcadamente';
+}
+function lockerRoomEffectDirectionValue(effect={}){
+  if(Array.isArray(effect.changes)) return effect.changes.reduce((sum, item) => sum + Number(item?.delta || 0), 0);
+  if(effect?.applied && typeof effect.applied === 'object' && Number.isFinite(Number(effect.applied.totalChange))) return Number(effect.applied.totalChange);
+  if(Object.prototype.hasOwnProperty.call(effect || {}, 'applied') && Number.isFinite(Number(effect.applied))) return Number(effect.applied);
+  if(Object.prototype.hasOwnProperty.call(effect || {}, 'totalChange') && Number.isFinite(Number(effect.totalChange))) return Number(effect.totalChange);
+  return Number(effect?.delta || 0);
+}
+function lockerRoomEffectPlayerNames(effect={}, action={}){
+  const ids = [];
+  if(Array.isArray(effect.changes)) ids.push(...effect.changes.map(item => Number(item?.playerId)));
+  if(Array.isArray(effect.playerIds)) ids.push(...effect.playerIds.map(Number));
+  if(Number.isFinite(Number(effect.playerId))) ids.push(Number(effect.playerId));
+  const participantIds = Array.isArray(action?.participantIds) ? action.participantIds.map(Number) : [];
+  const participantNames = Array.isArray(action?.participantNames) ? action.participantNames.map(String) : [];
+  const names = [...new Set(ids.filter(Number.isFinite))].map(id => {
+    const player = typeof playerById === 'function' ? playerById(id) : null;
+    if(player?.name) return String(player.name);
+    const index = participantIds.indexOf(id);
+    return index >= 0 ? String(participantNames[index] || 'Jugador') : 'Jugador';
+  });
+  if(!names.length && Array.isArray(effect.issues)) names.push(...effect.issues.map(issue => String(issue?.playerName || 'Jugador')));
+  return [...new Set(names.filter(Boolean))];
+}
+function lockerRoomJoinNames(names=[]){
+  const clean = [...new Set((names || []).filter(Boolean).map(String))];
+  if(!clean.length) return 'los jugadores implicados';
+  if(clean.length === 1) return clean[0];
+  if(clean.length === 2) return `${clean[0]} y ${clean[1]}`;
+  return `${clean.slice(0, -1).join(', ')} y ${clean[clean.length - 1]}`;
+}
+function lockerRoomEffectSummaryItems(applied=[], action={}){
+  const summaries = [];
+  (Array.isArray(applied) ? applied : []).forEach(effect => {
+    if(!effect || effect.skipped) return;
+    const type = String(effect.type || '');
+    const value = lockerRoomEffectDirectionValue(effect);
+    const magnitudeValue = ['moral_jugadores','moral_plantel','forma_jugadores','forma_plantel'].includes(type) && Number.isFinite(Number(effect.delta)) ? Number(effect.delta) : value;
+    const magnitude = lockerRoomEffectMagnitude(magnitudeValue);
+    const names = lockerRoomJoinNames(lockerRoomEffectPlayerNames(effect, action));
+    let text = '';
+    let tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral';
+    if(type === 'moral_jugadores' && value !== 0) text = value > 0 ? `El ánimo de ${names} mejoró ${magnitude}.` : `El ánimo de ${names} quedó afectado ${magnitude}.`;
+    else if(type === 'moral_plantel' && value !== 0) text = value > 0 ? `El ánimo general del plantel mejoró ${magnitude}.` : `El ánimo general del plantel se deterioró ${magnitude}.`;
+    else if(type === 'cohesion' && value !== 0) text = value > 0 ? `La unión del grupo se fortaleció ${magnitude}.` : `La unión del grupo se debilitó ${magnitude}.`;
+    else if(type === 'forma_jugadores' && value !== 0) text = value > 0 ? `La preparación física de ${names} mejoró ${magnitude}.` : `La preparación física de ${names} quedó afectada ${magnitude}.`;
+    else if(type === 'forma_plantel' && value !== 0) text = value > 0 ? `La preparación física general del plantel mejoró.` : `La preparación física general del plantel quedó afectada.`;
+    else if(type === 'dinero_club' && Number(effect.delta || 0) !== 0){ text = Number(effect.delta) > 0 ? 'La decisión generó un ingreso para el club.' : 'La decisión generó un gasto para el club.'; tone = Number(effect.delta) > 0 ? 'positive' : 'negative'; }
+    else if(type === 'multa_grupal' && Number(effect.delta || 0) !== 0){ text = 'Los jugadores implicados recibieron una multa económica interna.'; tone = 'neutral'; }
+    else if(type === 'prestigio_manager' && value !== 0) text = value > 0 ? 'La autoridad del manager salió fortalecida.' : 'La autoridad del manager quedó debilitada.';
+    else if(type === 'hinchas' && value !== 0) text = value > 0 ? 'La relación con los hinchas mejoró.' : 'La relación con los hinchas se deterioró.';
+    else if(type === 'lesion' && Array.isArray(effect.issues) && effect.issues.length){ text = `${lockerRoomJoinNames(effect.issues.map(issue => issue?.playerName || 'Jugador'))} quedó fuera por lesión.`; tone = 'negative'; }
+    else if(type === 'ausencia_personal' && Array.isArray(effect.issues) && effect.issues.length){ text = `${lockerRoomJoinNames(effect.issues.map(issue => issue?.playerName || 'Jugador'))} recibió permiso y quedará temporalmente fuera del equipo.`; tone = 'neutral'; }
+    else if(type === 'suspension_interna' && lockerRoomEffectPlayerNames(effect, action).length){ text = `${names} quedó apartado temporalmente de la convocatoria.`; tone = 'negative'; }
+    else if(type === 'cambiar_capitan' && lockerRoomEffectPlayerNames(effect, action).length){ text = `${names} fue designado como nuevo capitán.`; tone = 'neutral'; }
+    else if(type === 'bloqueo_entrenamiento' && Number(effect.days || 0) > 0){ text = 'El trabajo de entrenamiento quedará limitado durante algunos días.'; tone = 'negative'; }
+    if(text && !summaries.some(item => item.text === text)) summaries.push({ text, tone, type });
+  });
+  return summaries;
 }
 function pendingLockerRoomDecisionMessage(){
   if(!game) return null;

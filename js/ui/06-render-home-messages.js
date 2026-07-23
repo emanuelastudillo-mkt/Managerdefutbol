@@ -1189,7 +1189,9 @@ function lockerRoomDecisionActionMarkup(message){
     ? '<span class="pill warn message-status-pill">Promesa pendiente</span>'
     : (action.promiseResult ? `<div class="locker-room-promise-result ${promiseStatus === 'failed' ? 'is-failed' : 'is-fulfilled'}"><strong>${promiseStatus === 'failed' ? 'Promesa incumplida' : 'Promesa cumplida'}</strong><p>${linked(action.promiseResult)}</p></div>` : '');
   const result = action.resultText ? `<div class="locker-room-decision-result"><strong>Consecuencia</strong><p>${linked(action.resultText)}</p></div>` : '';
-  return `<div class="locker-room-decision-closed"><div class="row locker-room-decision-statuses">${selected}${promiseStatus === 'pending' ? promise : ''}</div>${result}${promiseStatus !== 'pending' ? promise : ''}</div>`;
+  const effectItems = typeof lockerRoomEffectSummaryItems === 'function' ? lockerRoomEffectSummaryItems(action.appliedEffects || [], action) : [];
+  const effects = effectItems.length ? `<div class="locker-room-effect-summary"><strong>Efectos en el equipo</strong><ul>${effectItems.map(item => `<li class="is-${escapeHtml(item.tone || 'neutral')}">${linked(item.text || '')}</li>`).join('')}</ul></div>` : '';
+  return `<div class="locker-room-decision-closed"><div class="row locker-room-decision-statuses">${selected}${promiseStatus === 'pending' ? promise : ''}</div>${result}${effects}${promiseStatus !== 'pending' ? promise : ''}</div>`;
 }
 function messageCard(m){
   const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);

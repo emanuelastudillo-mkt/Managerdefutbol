@@ -2042,3 +2042,12 @@ th{
 .locker-room-promise-result strong{display:block;margin-bottom:4px;color:#a7f3d0;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
 .locker-room-promise-result.is-failed strong{color:#fecaca}
 .locker-room-promise-result p{margin:0;color:#e2e8f0;line-height:1.4}
+.locker-room-effect-summary{padding:12px 14px;border:1px solid rgba(96,165,250,.22);border-radius:12px;background:rgba(30,64,175,.14)}
+.locker-room-effect-summary>strong{display:block;margin-bottom:7px;color:#bfdbfe;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.locker-room-effect-summary ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.locker-room-effect-summary li{position:relative;margin:0;padding-left:17px;color:#e2e8f0;line-height:1.4}
+.locker-room-effect-summary li::before{content:'•';position:absolute;left:2px;top:0;font-weight:900}
+.locker-room-effect-summary li.is-positive::before{color:#34d399}
+.locker-room-effect-summary li.is-negative::before{color:#fb7185}
+.locker-room-effect-summary li.is-neutral::before{color:#93c5fd}
+@media (max-width:1280px){.locker-room-effect-summary{padding:10px 12px}.locker-room-effect-summary li{font-size:13px}}

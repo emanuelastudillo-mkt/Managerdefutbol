@@ -1,4 +1,15 @@
-# Chill mánager - Futbol online — V8.27
+# Chill mánager - Futbol online — V8.28
+
+
+## V8.28 — Efectos narrativos de decisiones de vestuario
+
+- Al resolver un evento de vestuario, el mensaje incorpora un bloque independiente llamado **Efectos en el equipo**.
+- Los efectos se describen de forma cualitativa: leve, moderada o marcada, sin mostrar puntos ni porcentajes exactos.
+- Se informan cambios sobre el ánimo de jugadores, el ánimo general, la unión del grupo, la preparación física, la economía del club, la autoridad del manager, los hinchas, lesiones, permisos, sanciones internas, capitanía y entrenamiento.
+- Los nombres incluidos en los efectos continúan siendo cliqueables y abren la ficha del jugador.
+- Los mensajes resueltos desde V8.22 también pueden mostrar el nuevo resumen usando los efectos que ya tenían guardados.
+
+**V8.28 no rompe partidas anteriores.** No modifica eventos ya resueltos ni vuelve a aplicar consecuencias; solamente interpreta y muestra de manera más clara los efectos registrados.
 
 ## V8.27 — Jugadores cliqueables en eventos de vestuario
 

@@ -914,6 +914,7 @@ function bindEvents(){
   $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de partida.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnManagerCourses')?.addEventListener('click', () => { if(typeof openManagerCoursesModal === 'function') openManagerCoursesModal(); });
+  $('btnLogin')?.addEventListener('click', () => { if(typeof openRankingLoginModal === 'function') openRankingLoginModal(); });
   $('btnOnlineChallengeAvailable')?.addEventListener('click', () => { if(typeof challengeOpenMatchingAvailable === 'function') challengeOpenMatchingAvailable(); });
   $('btnHelp')?.addEventListener('click', () => { if(typeof openGameHelpModal === 'function') openGameHelpModal(); });
   $('btnAssistantMessagesToggle')?.addEventListener('click', () => {
@@ -948,6 +949,7 @@ function bindEvents(){
   });
   bindSidebarGroupToggles();
   syncSidebarNavigationState();
+  if(typeof rankingUpdateTopLoginButton === 'function') rankingUpdateTopLoginButton();
   document.addEventListener('click', (event)=>{
     const playerBtn = event.target.closest('[data-player-id]');
     if(playerBtn){ showPlayerModal(Number(playerBtn.dataset.playerId)); return; }

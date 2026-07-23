@@ -1,4 +1,20 @@
-# Una vida de manager — V8.32
+# Una vida de manager — V8.33
+
+## V8.33 — Botón global de Login
+
+- Se agregó un botón `Login` en la barra superior.
+- Abre un modal con el mismo panel de autenticación disponible en Ranking.
+- Permite iniciar sesión, verificar la sesión activa y cerrar sesión sin abandonar la pantalla actual.
+- El botón muestra un indicador verde cuando existe una sesión guardada.
+- El modal incluye acceso directo a la pantalla Ranking.
+- El formulario global y el de Ranking comparten endpoint, token y almacenamiento; no son cuentas separadas.
+- No requiere cambios de Worker ni SQL.
+
+**V8.33 no rompe partidas anteriores.** No modifica guardados, cuentas online, rankings, desafíos, temporadas ni el slot único.
+
+---
+
+## Historial anterior — V8.32
 
 ## V8.32 — Un único slot de carrera
 

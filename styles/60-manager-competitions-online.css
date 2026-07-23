@@ -1087,3 +1087,41 @@ button.cwc-group-result{cursor:pointer}
 .online-medal-categories{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .online-medal-categories>.small{margin-right:3px}
 @media (max-width:720px){.online-medal-shelf-head{align-items:stretch}.online-medal-title-total{min-width:88px}.online-medal-grid{grid-template-columns:1fr}.online-medal-item{min-height:82px}.online-medal-icon{width:50px;height:50px}.online-medal-icon:before{width:42px;height:42px}.online-medal-shelf-footer{align-items:flex-start;flex-direction:column}.online-medal-categories{justify-content:flex-start}}
+
+/* V8.33 · Acceso global a la cuenta online. */
+.login-top-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.login-top-btn::before{
+  content:'';
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:rgba(148,163,184,.65);
+  box-shadow:0 0 0 2px rgba(148,163,184,.12);
+}
+.login-top-btn.online-session-active::before{
+  background:#22c55e;
+  box-shadow:0 0 0 2px rgba(34,197,94,.18);
+}
+.ranking-login-modal{
+  width:min(820px,100%);
+}
+.ranking-login-modal .ranking-login-card{
+  margin:0;
+}
+.ranking-login-modal .modal-actions{
+  margin-top:14px;
+}
+@media (max-width:560px){
+  .ranking-login-modal .modal-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .ranking-login-modal .modal-actions button{
+    width:100%;
+  }
+}

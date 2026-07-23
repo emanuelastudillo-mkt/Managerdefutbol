@@ -164,23 +164,93 @@ function rankingAuthStatusMarkup(endpoint){
   if(RANKING_REQUIRES_LOGIN) return '<span class="warn">Sin sesión. Iniciá sesión para subir récords.</span>';
   return '<span class="muted">Login opcional.</span>';
 }
-function rankingLoginPanelMarkup(endpoint){
+function rankingLoginPanelMarkup(endpoint, options={}){
   const token = rankingStoredAuthToken();
   const disabled = endpoint ? '' : 'disabled';
   const user = rankingStoredAuthUsername() || rankingStoredManagerName() || '';
-  return `<div class="card ranking-login-card">
+  const surface = String(options?.surface || 'ranking').trim() || 'ranking';
+  return `<div class="card ranking-login-card" data-ranking-auth-panel="${escapeHtml(surface)}">
     <div class="row"><div><p class="label">Cuenta online</p><h3>Login del ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
     <p class="muted">Usá tu cuenta para publicar tu carrera y participar en las funciones online.</p>
-    <div id="rankingAuthStatus" class="ranking-auth-status small">${rankingAuthStatusMarkup(endpoint)}</div>
-    <form id="rankingLoginForm" class="ranking-login-form">
-      <input id="rankingLoginUser" name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
-      <input id="rankingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Contraseña opcional" ${disabled} />
+    <div class="ranking-auth-status small" data-ranking-auth-status>${rankingAuthStatusMarkup(endpoint)}</div>
+    <form class="ranking-login-form" data-ranking-login-form>
+      <input name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
+      <input name="password" type="password" autocomplete="current-password" placeholder="Contraseña opcional" ${disabled} />
       <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
-      <button id="rankingCheckSession" class="ghost" type="button" ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
-      <button id="rankingLogout" class="danger" type="button" ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
+      <button class="ghost" type="button" data-ranking-check-session ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
+      <button class="danger" type="button" data-ranking-logout ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
     </form>
-    <div id="rankingLoginStatus" class="small muted">${token ? 'La cuenta está lista para publicar tu carrera.' : 'Ingresá tu usuario para continuar. La contraseña puede ser opcional según tu cuenta.'}</div>
+    <div class="small muted" data-ranking-login-status>${token ? 'La cuenta está lista para publicar tu carrera.' : 'Ingresá tu usuario para continuar. La contraseña puede ser opcional según tu cuenta.'}</div>
   </div>`;
+}
+function rankingAuthPanelFromSource(source){
+  if(source?.matches?.('[data-ranking-auth-panel]')) return source;
+  return source?.closest?.('[data-ranking-auth-panel]') || null;
+}
+function rankingAuthPanelElements(source){
+  const panel = rankingAuthPanelFromSource(source);
+  return {
+    panel,
+    form:panel?.querySelector?.('[data-ranking-login-form]') || null,
+    username:panel?.querySelector?.('input[name="username"]') || null,
+    password:panel?.querySelector?.('input[name="password"]') || null,
+    authStatus:panel?.querySelector?.('[data-ranking-auth-status]') || null,
+    loginStatus:panel?.querySelector?.('[data-ranking-login-status]') || null
+  };
+}
+function rankingUpdateTopLoginButton(){
+  const button = typeof $ === 'function' ? $('btnLogin') : document.getElementById('btnLogin');
+  if(!button) return;
+  const token = rankingStoredAuthToken();
+  const user = rankingStoredAuthUsername() || rankingStoredManagerName();
+  button.classList.toggle('online-session-active', Boolean(token));
+  button.setAttribute('aria-pressed', token ? 'true' : 'false');
+  button.title = token ? `Sesión online activa${user ? ` como ${user}` : ''}` : 'Verificar o iniciar sesión online';
+}
+function rankingBindAuthPanel(panel){
+  if(!panel || panel.dataset.rankingAuthBound === '1') return;
+  panel.dataset.rankingAuthBound = '1';
+  panel.querySelector('[data-ranking-login-form]')?.addEventListener('submit', loginRankingAccount);
+  panel.querySelector('[data-ranking-check-session]')?.addEventListener('click', checkRankingSession);
+  panel.querySelector('[data-ranking-logout]')?.addEventListener('click', logoutRankingAccount);
+}
+function rankingBindAuthPanels(root=document){
+  root?.querySelectorAll?.('[data-ranking-auth-panel]').forEach(rankingBindAuthPanel);
+  rankingUpdateTopLoginButton();
+}
+function rankingRefreshAuthPanels(message=''){
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const panels = Array.from(document.querySelectorAll('[data-ranking-auth-panel]'));
+  panels.forEach(panel => {
+    const surface = String(panel.dataset.rankingAuthPanel || 'ranking');
+    const holder = document.createElement('div');
+    holder.innerHTML = rankingLoginPanelMarkup(endpoint, { surface });
+    const replacement = holder.firstElementChild;
+    if(!replacement) return;
+    panel.replaceWith(replacement);
+    rankingBindAuthPanel(replacement);
+    if(message){
+      const status = replacement.querySelector('[data-ranking-login-status]');
+      if(status) status.textContent = message;
+    }
+  });
+  rankingUpdateTopLoginButton();
+}
+function openRankingLoginModal(){
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  openModal(`<div class="ranking-login-modal">
+    <div class="section-title"><h2>Cuenta online</h2><p class="tagline">Verificá si tu sesión está activa o ingresá con la misma cuenta utilizada en Ranking.</p></div>
+    ${rankingLoginPanelMarkup(endpoint, { surface:'modal' })}
+    <div class="modal-actions"><button id="btnLoginOpenRanking" class="ghost" type="button">Abrir Ranking</button><button class="primary" type="button" data-close-modal>Cerrar</button></div>
+  </div>`);
+  const root = typeof $ === 'function' ? $('modalRoot') : document.getElementById('modalRoot');
+  rankingBindAuthPanels(root || document);
+  root?.querySelector?.('#btnLoginOpenRanking')?.addEventListener('click', () => {
+    if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('ranking', '');
+    activeTab = 'ranking';
+    closeModal();
+    if(typeof renderAll === 'function') renderAll();
+  });
 }
 function rankingLoginRequestBodies(username, password){
   const cleanUser = String(username || '').trim();
@@ -255,20 +325,21 @@ async function rankingLoginRequest(endpoint, username, password){
 }
 async function loginRankingAccount(event){
   event?.preventDefault?.();
+  const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const username = String($('rankingLoginUser')?.value || '').trim();
-  const password = String($('rankingLoginPassword')?.value || '');
-  const status = $('rankingLoginStatus');
+  const username = String(elements.username?.value || '').trim();
+  const password = String(elements.password?.value || '');
+  const status = elements.loginStatus;
   if(!username){ showNotice('Ingresá el usuario del ranking. La contraseña es opcional.'); return false; }
   if(status) status.textContent = password ? 'Iniciando sesión...' : 'Buscando sesión por usuario...';
-  const submit = document.querySelector('#rankingLoginForm button[type="submit"]');
+  const submit = elements.form?.querySelector('button[type="submit"]');
   if(submit) submit.disabled = true;
   try{
     const data = await rankingLoginRequest(endpoint, username, password);
     const savedUser = rankingExtractUsername(data, username);
-    if(status) status.textContent = `Sesión iniciada${savedUser ? ` como ${savedUser}` : ''}.`;
+    const message = `Sesión iniciada${savedUser ? ` como ${savedUser}` : ''}.`;
     showNotice('Sesión iniciada en el ranking online.');
-    renderRankingOnline();
+    rankingRefreshAuthPanels(message);
     return true;
   }catch(error){
     const message = error?.message || 'No se pudo iniciar sesión.';
@@ -278,10 +349,11 @@ async function loginRankingAccount(event){
     return false;
   }
 }
-async function checkRankingSession(){
+async function checkRankingSession(event){
+  const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
   const token = rankingStoredAuthToken();
-  const status = $('rankingLoginStatus');
+  const status = elements.loginStatus;
   if(!token){ showNotice('No hay sesión guardada.'); return false; }
   if(status) status.textContent = 'Verificando sesión...';
   let lastMessage = '';
@@ -294,9 +366,9 @@ async function checkRankingSession(){
         if(user){
           try{ localStorage.setItem('fmRankingAuthUser', user); }catch(_){ /* sin almacenamiento */ }
         }
-        if(status) status.textContent = `Sesión válida${user ? ` · ${user}` : ''}.`;
+        const message = `Sesión válida${user ? ` · ${user}` : ''}.`;
         showNotice('Sesión válida en el ranking online.');
-        renderRankingOnline();
+        rankingRefreshAuthPanels(message);
         return true;
       }
       const message = rankingResponseErrorMessage(data, response, 'Sesión no válida.');
@@ -311,10 +383,10 @@ async function checkRankingSession(){
     return false;
   }
 }
-function logoutRankingAccount(){
+function logoutRankingAccount(event){
   rankingClearAuthSession();
   showNotice('Sesión del ranking cerrada en este navegador.');
-  renderRankingOnline();
+  rankingRefreshAuthPanels('La sesión online fue cerrada.');
 }
 function rankingRequestHeaders(json=true){
   const headers = json ? { 'Content-Type':'application/json' } : {};
@@ -1042,7 +1114,7 @@ function renderRankingOnline(){
   const manualDay = Number(seasonDayFromDate(rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1)) || 0);
   const payload = buildRankingPayload(managerName, { eventType:manualEventType, eventLabel:`Carrera actualizada manualmente · día ${manualDay || '—'}` });
   view.innerHTML = `<div class="section-title"><h2>${escapeHtml(RANKING_NAME)}</h2><p class="tagline">Compará tu carrera con otros managers de la comunidad.</p></div>
-    ${rankingLoginPanelMarkup(endpoint)}
+    ${rankingLoginPanelMarkup(endpoint, { surface:'ranking' })}
     ${rankingSubmitPanelMarkup(payload, endpoint)}
     <div class="card ranking-list-card">
       <div class="row"><div><p class="label">Comunidad</p><h3>Ranking de carreras</h3></div><button id="refreshRanking" class="ghost" type="button">Actualizar ranking</button></div>
@@ -1051,9 +1123,7 @@ function renderRankingOnline(){
     </div>`;
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
   $('submitRankingManual')?.addEventListener('click', submitCurrentSeasonToRanking);
-  $('rankingLoginForm')?.addEventListener('submit', loginRankingAccount);
-  $('rankingCheckSession')?.addEventListener('click', checkRankingSession);
-  $('rankingLogout')?.addEventListener('click', logoutRankingAccount);
+  rankingBindAuthPanels(view);
   document.querySelectorAll('[data-ranking-sort]').forEach(btn => btn.addEventListener('click', () => {
     rankingSort = btn.dataset.rankingSort;
     renderRankingOnline();

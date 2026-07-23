@@ -174,6 +174,7 @@ function lockerRoomCrisisSettings(){
     cohesionThreshold:Math.round(configNumber('eventos.vestuarioCohesionUmbral', 60, 1, 100)),
     intervalDays:Math.max(1, Math.round(configNumber('eventos.vestuarioIntervaloDias', 5, 1, 60))),
     probability:clamp(configNumber('eventos.vestuarioProbabilidad', 0.30, 0, 1), 0, 1),
+    guaranteeDays:Math.max(0, Math.round(configNumber('eventos.vestuarioGarantiaDias', 20, 0, 120))),
     recentLimit:Math.max(0, Math.round(configNumber('eventos.vestuarioEventosRecientes', 5, 0, 20)))
   };
 }
@@ -734,16 +735,30 @@ function processLockerRoomProblemsDaily(options={}){
   state.lastCheckTurn = turn;
   state.nextCheckTurn = turn + settings.intervalDays;
   const roll = lockerRoomHash(`locker-room-roll-${clubId}-${season}-${turn}-${state.checks}`, 1000000) / 1000000;
-  if(roll >= settings.probability) return { active:true, checked:true, triggered:false, roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
+  const streakStartTurn = Number(state.events || 0) > 0
+    ? Math.max(0, Math.round(Number(state.lastEventTurn || 0)))
+    : Math.max(0, Math.round(Number(state.startedTurn || 0)));
+  const daysWithoutEvent = Math.max(0, turn - streakStartTurn);
+  const guaranteed = settings.guaranteeDays > 0 && daysWithoutEvent >= settings.guaranteeDays;
+  if(!guaranteed && roll >= settings.probability) return { active:true, checked:true, triggered:false, roll, guaranteed:false, daysWithoutEvent, morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
   const recent = new Set((state.recentEventIds || []).slice(-settings.recentLimit));
   const candidates = definitions.filter(event => !recent.has(String(event.id)));
   const pool = candidates.length ? candidates : definitions;
   const eventIndex = lockerRoomHash(`locker-room-event-${clubId}-${season}-${turn}-${state.events}`, pool.length);
-  const event = pool[eventIndex];
-  const participants = selectLockerRoomParticipants(event, `locker-room-${clubId}-${season}-${turn}-${event.id}`);
-  if(!participants.length) return { active:true, checked:true, triggered:false, roll, reason:'no_players', morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
-  const result = createLockerRoomDecision(event, participants, state);
-  state.recentEventIds = [...(state.recentEventIds || []), String(event.id)].slice(-Math.max(settings.recentLimit, 1));
-  return { active:true, checked:true, triggered:Boolean(result), pending:Boolean(result), roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn, result, promiseSummary };
+  let selectedEvent = null;
+  let participants = [];
+  for(let offset=0; offset<pool.length; offset+=1){
+    const candidate = pool[(eventIndex + offset) % pool.length];
+    const selected = selectLockerRoomParticipants(candidate, `locker-room-${clubId}-${season}-${turn}-${candidate.id}`);
+    if(selected.length){
+      selectedEvent = candidate;
+      participants = selected;
+      break;
+    }
+  }
+  if(!selectedEvent) return { active:true, checked:true, triggered:false, roll, guaranteed, daysWithoutEvent, reason:'no_players', morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
+  const result = createLockerRoomDecision(selectedEvent, participants, state);
+  state.recentEventIds = [...(state.recentEventIds || []), String(selectedEvent.id)].slice(-Math.max(settings.recentLimit, 1));
+  return { active:true, checked:true, triggered:Boolean(result), pending:Boolean(result), roll, guaranteed, daysWithoutEvent, morale, cohesion, nextCheckTurn:state.nextCheckTurn, result, promiseSummary };
 }
 

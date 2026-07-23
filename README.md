@@ -1,3 +1,20 @@
+# Chill mánager - Futbol online — V8.24
+
+## V8.24 — Garantía de eventos de vestuario
+
+- La crisis continúa requiriendo moral media y cohesión por debajo de 60.
+- Los controles se mantienen cada 5 días con 30% de probabilidad.
+- Se agregó una garantía: si pasan 20 días de crisis sin ningún evento, el control correspondiente genera uno obligatoriamente.
+- Después de un evento, la cuenta de 20 días comienza nuevamente desde esa fecha.
+- El selector recorre alternativas si el evento sorteado no encuentra participantes válidos, evitando perder un control por falta de un perfil específico.
+- Las partidas que ya tienen una crisis activa aprovechan la garantía usando el día de inicio o el último evento guardado.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.24 no rompe partidas anteriores.** Conserva el estado existente de moral, cohesión, crisis, mensajes y decisiones. Sólo limita las rachas sin eventos mientras ambos indicadores permanezcan por debajo de 60.
+
+
 # Chill mánager - Futbol online — V8.23
 
 ## V8.23 — Medallas por campeonatos online

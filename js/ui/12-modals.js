@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.24</p>
+      <p class="eyebrow">Guía actualizada · V8.25</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1646,7 +1646,7 @@ function openGameHelpModal(){
         <article class="help-card card">
           <span class="pill warn">3 · Decisiones</span>
           <h4>Mensajes</h4>
-          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y problemas de vestuario. Una crisis requiere moral media y cohesión por debajo de 60: se controla cada 5 días con 30% de probabilidad y, si pasan 20 días sin incidentes, el siguiente control genera uno. Cuando aparece una decisión, debés responder antes de continuar el calendario.</p>
+          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y problemas de vestuario. Una crisis puede comenzar cuando el plantel está muy desmotivado o cuando el equipo dejó de funcionar bien en conjunto. Se controla cada 5 días con 30% de probabilidad y, si pasan 20 días sin incidentes, el siguiente control genera uno. Cuando aparece una decisión, debés responder antes de continuar el calendario.</p>
           ${gameHelpGoButton('messages','Abrir Mensajes')}
         </article>
       </div>

@@ -162,7 +162,7 @@ function processGameEventsAfterMatches(context={}){
   return triggered;
 }
 
-/* Decisiones interactivas de vestuario programadas por moral y cohesión bajas. */
+/* Decisiones interactivas de vestuario programadas por un estado crítico del plantel. */
 function lockerRoomProblemDefinitions(){
   const fromDatabase = Array.isArray(eventsDatabase?.problemasVestuario) ? eventsDatabase.problemasVestuario : [];
   const fromConfig = Array.isArray(configValue('eventos.problemasVestuario', [])) ? configValue('eventos.problemasVestuario', []) : [];
@@ -170,8 +170,8 @@ function lockerRoomProblemDefinitions(){
 }
 function lockerRoomCrisisSettings(){
   return {
-    moraleThreshold:Math.round(configNumber('eventos.vestuarioMoralUmbral', 60, 1, 99)),
-    cohesionThreshold:Math.round(configNumber('eventos.vestuarioCohesionUmbral', 60, 1, 100)),
+    moraleThreshold:Math.round(configNumber('eventos.vestuarioMoralUmbral', 50, 1, 99)),
+    cohesionThreshold:Math.round(configNumber('eventos.vestuarioCohesionUmbral', 50, 1, 100)),
     intervalDays:Math.max(1, Math.round(configNumber('eventos.vestuarioIntervaloDias', 5, 1, 60))),
     probability:clamp(configNumber('eventos.vestuarioProbabilidad', 0.30, 0, 1), 0, 1),
     guaranteeDays:Math.max(0, Math.round(configNumber('eventos.vestuarioGarantiaDias', 20, 0, 120))),
@@ -516,11 +516,21 @@ function lockerRoomDecisionBlockText(){
   const message = pendingLockerRoomDecisionMessage();
   return message ? `Respondé el problema de vestuario pendiente: ${message.title}.` : '';
 }
+function lockerRoomCrisisNarrative(moraleValue, cohesionValue, settings=lockerRoomCrisisSettings()){
+  const moraleLow = Number(moraleValue) < Number(settings.moraleThreshold);
+  const cohesionLow = Number(cohesionValue) < Number(settings.cohesionThreshold);
+  if(moraleLow && cohesionLow) return 'El plantel atraviesa un período de desánimo y el equipo dejó de funcionar como una unidad. La tensión acumulada empezó a generar problemas internos.';
+  if(moraleLow) return 'El plantel se muestra desmotivado y la frustración empezó a trasladarse al vestuario.';
+  if(cohesionLow) return 'El equipo no está funcionando bien en conjunto y los malos rendimientos comenzaron a provocar roces internos.';
+  return 'La seguidilla de malos momentos generó tensión dentro del vestuario.';
+}
 function createLockerRoomDecision(event, participants=[], state=null){
   if(!game || !event || !participants.length) return null;
   const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
   const participantMap = lockerRoomParticipantMap(participants);
   const context = { eventId:event.id, optionId:'initial', turn, participants, participantMap };
+  const crisisSettings = lockerRoomCrisisSettings();
+  const crisisNarrative = lockerRoomCrisisNarrative(squadMoraleAverage(game.selectedClubId), cohesionValue(game.selectedClubId), crisisSettings);
   const initialEffects = lockerRoomApplyEffectList(event.efectosIniciales || [], context);
   const messageId = `locker-room-decision-${event.id}-s${game.seasonNumber || 1}-t${turn}`;
   const message = typeof pushGameMessage === 'function' ? pushGameMessage({
@@ -528,7 +538,7 @@ function createLockerRoomDecision(event, participants=[], state=null){
     type:'vestuario',
     priority:'high',
     title:lockerRoomFormat(event.titulo || event.nombre || 'Problema de vestuario', participants),
-    body:`${lockerRoomFormat(event.cuerpo || '', participants)}${lockerRoomIssueText(initialEffects)}`.trim(),
+    body:`${crisisNarrative} ${lockerRoomFormat(event.cuerpo || '', participants)}${lockerRoomIssueText(initialEffects)}`.trim(),
     action:{
       type:'lockerRoomDecision', status:'pending', eventId:String(event.id),
       participantIds:participants.map(player => Number(player.id)),
@@ -713,7 +723,7 @@ function processLockerRoomProblemsDaily(options={}){
   state.pendingMessageId = '';
   const morale = squadMoraleAverage(clubId);
   const cohesion = cohesionValue(clubId);
-  const canStart = morale < settings.moraleThreshold && cohesion < settings.cohesionThreshold;
+  const canStart = morale < settings.moraleThreshold || cohesion < settings.cohesionThreshold;
   const recovered = morale >= settings.moraleThreshold && cohesion >= settings.cohesionThreshold;
   if(state.active && recovered){
     state.active = false;

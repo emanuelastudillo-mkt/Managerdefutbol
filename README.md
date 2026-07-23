@@ -1,3 +1,21 @@
+# Chill mánager - Futbol online — V8.25
+
+## V8.25 — Activación alternativa de problemas de vestuario
+
+- La crisis se activa cuando la moral media del plantel **o** la cohesión del equipo cae por debajo de 50.
+- Ya no es necesario que ambos indicadores estén bajos al mismo tiempo.
+- La crisis termina cuando los dos indicadores vuelven a 50 o más.
+- Los controles continúan cada 5 días con 30% de probabilidad.
+- Si pasan 20 días desde el inicio de la crisis o desde el último evento, el siguiente control genera un evento obligatorio.
+- Los mensajes no exponen los nombres técnicos de los indicadores: explican que el plantel está desmotivado, que el equipo no funciona bien en conjunto o que los malos rendimientos provocaron tensión interna.
+- Las crisis existentes se adaptan automáticamente a la nueva condición.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.25 no rompe partidas anteriores.** Conserva crisis, decisiones, promesas, lesiones, mensajes y contadores ya guardados. Sólo cambia la condición que activa y finaliza los controles futuros.
+
+
 # Chill mánager - Futbol online — V8.24
 
 ## V8.24 — Garantía de eventos de vestuario

@@ -1339,8 +1339,11 @@ function renderManagerStats(){
     <td>${escapeHtml(item.type === 'dismissal' ? 'Despido' : item.type || 'Cambio')}</td>
   </tr>`).join('');
   if(String(managerStatsViewMode || 'profile') === 'achievements'){
+    const onlineMedals = typeof challengeOnlineMedalShelfMarkup === 'function' ? challengeOnlineMedalShelfMarkup() : '';
     view.innerHTML = `<div class="row section-title"><div><h2>Hitos</h2><p class="tagline">Desafíos conseguidos y pendientes de la carrera del manager.</p></div><span class="pill">${unlockedAchievements.length}/${achievementTotal || 0}</span></div>
+      ${onlineMedals}
       <div class="card manager-achievements-card"><p class="muted small">Los hitos conseguidos se destacan. Los pendientes permanecen visibles con colores oscuros y desaturados.</p><div class="manager-achievements-grid">${achievementRows || '<p class="muted">No hay hitos configurados.</p>'}</div></div>`;
+    if(typeof challengeEnsureOnlineMedalsLoaded === 'function') setTimeout(() => challengeEnsureOnlineMedalsLoaded(), 0);
     return;
   }
   view.innerHTML = `<div class="row section-title"><div><h2>Perfil e historial</h2><p class="tagline">Historial acumulado y prestigio propio de esta carrera.</p></div></div>

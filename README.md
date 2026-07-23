@@ -1,3 +1,21 @@
+# Chill mánager - Futbol online — V8.23
+
+## V8.23 — Medallas por campeonatos online
+
+- Se agregó un bloque de medallas en la parte superior de Hitos.
+- Cada campeonato de una categoría online suma 1 unidad de bronce.
+- La representación se convierte automáticamente: 3 bronces equivalen a 1 plata y 3 platas equivalen a 1 oro.
+- El bloque muestra oro, plata y bronce, el total real de campeonatos y las categorías conquistadas.
+- Los títulos se obtienen del historial seguro de ciclos cerrados asociado a la cuenta online iniciada.
+- Un título cuenta aunque el premio de puntos todavía no haya sido reclamado.
+- Sin sesión online, los valores aparecen con guiones porque no existe una cuenta identificada para consultar.
+- No requiere cambios de Worker ni SQL y utiliza la respuesta disponible desde el Worker V8.16.
+
+### Compatibilidad
+
+**V8.23 no rompe partidas anteriores.** Las medallas pertenecen al historial de la cuenta online y se consultan al abrir Hitos. No se modifican guardados, jugadores, temporadas, resultados, contratos ni los cinco slots.
+
+
 # Chill mánager - Futbol online — V8.22
 
 ## V8.22 — Decisiones interactivas de vestuario

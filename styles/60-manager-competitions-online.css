@@ -1059,3 +1059,31 @@ button.cwc-group-result{cursor:pointer}
   .home-online-ranking-card{align-items:flex-start;flex-direction:column;gap:12px}
   .home-online-category{width:100%;justify-content:space-between}
 }
+
+
+/* V8.23 · Medallas por campeonatos de categorías online en Hitos. */
+.online-medal-shelf{display:grid;gap:14px;margin-bottom:14px;overflow:hidden;position:relative;background:linear-gradient(135deg,rgba(30,41,59,.98),rgba(15,23,42,.98));border-color:rgba(148,163,184,.2)}
+.online-medal-shelf:before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,#b7791f,#e5e7eb,#facc15);opacity:.9}
+.online-medal-shelf-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.online-medal-shelf-head h3{margin:1px 0 6px;font-size:clamp(20px,2.4vw,29px)}
+.online-medal-shelf-head p{margin:0;max-width:720px}
+.online-medal-title-total{min-width:108px;display:grid;place-items:center;text-align:center;padding:10px 14px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(148,163,184,.16)}
+.online-medal-title-total strong{font-size:30px;line-height:1;color:#f8fafc}
+.online-medal-title-total span{font-size:11px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
+.online-medal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.online-medal-item{display:flex;align-items:center;gap:13px;min-height:102px;padding:13px;border-radius:16px;border:1px solid rgba(148,163,184,.14);background:rgba(2,6,23,.32);filter:saturate(.4);opacity:.7}
+.online-medal-item.is-earned{filter:none;opacity:1;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(2,6,23,.22)}
+.online-medal-item>div{display:grid;gap:1px;min-width:0}
+.online-medal-item strong{font-size:28px;line-height:1}
+.online-medal-item span:not(.online-medal-icon){font-weight:900}
+.online-medal-item small{color:#94a3b8;font-size:11px}
+.online-medal-icon{width:58px;height:58px;display:block;position:relative;flex:0 0 auto}
+.online-medal-icon:before{content:"★";position:absolute;z-index:2;inset:0;width:48px;height:48px;margin:auto;display:grid;place-items:center;border-radius:50%;font-size:22px;font-weight:900;color:rgba(255,255,255,.9);border:3px solid rgba(255,255,255,.28);box-shadow:inset 0 2px 4px rgba(255,255,255,.24),0 7px 14px rgba(0,0,0,.28)}
+.online-medal-icon:after{content:"";position:absolute;z-index:1;left:16px;bottom:-1px;width:27px;height:30px;clip-path:polygon(0 0,100% 0,82% 100%,50% 75%,18% 100%);background:#475569}
+.medal-gold .online-medal-icon:before{background:radial-gradient(circle at 32% 25%,#fff5ad,#f7c843 46%,#a16207 100%);color:#713f12}.medal-gold .online-medal-icon:after{background:#b45309}.medal-gold.is-earned{border-color:rgba(250,204,21,.32);background:linear-gradient(135deg,rgba(113,63,18,.46),rgba(30,41,59,.7))}.medal-gold strong{color:#fde68a}
+.medal-silver .online-medal-icon:before{background:radial-gradient(circle at 32% 25%,#ffffff,#cbd5e1 48%,#64748b 100%);color:#334155}.medal-silver .online-medal-icon:after{background:#64748b}.medal-silver.is-earned{border-color:rgba(203,213,225,.28);background:linear-gradient(135deg,rgba(100,116,139,.34),rgba(30,41,59,.7))}.medal-silver strong{color:#e2e8f0}
+.medal-bronze .online-medal-icon:before{background:radial-gradient(circle at 32% 25%,#fed7aa,#c47a32 48%,#7c2d12 100%);color:#fff7ed}.medal-bronze .online-medal-icon:after{background:#9a3412}.medal-bronze.is-earned{border-color:rgba(194,120,58,.34);background:linear-gradient(135deg,rgba(124,45,18,.38),rgba(30,41,59,.7))}.medal-bronze strong{color:#fdba74}
+.online-medal-shelf-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:2px}
+.online-medal-categories{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.online-medal-categories>.small{margin-right:3px}
+@media (max-width:720px){.online-medal-shelf-head{align-items:stretch}.online-medal-title-total{min-width:88px}.online-medal-grid{grid-template-columns:1fr}.online-medal-item{min-height:82px}.online-medal-icon{width:50px;height:50px}.online-medal-icon:before{width:42px;height:42px}.online-medal-shelf-footer{align-items:flex-start;flex-direction:column}.online-medal-categories{justify-content:flex-start}}

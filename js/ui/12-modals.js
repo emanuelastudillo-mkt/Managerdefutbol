@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.22</p>
+      <p class="eyebrow">Guía actualizada · V8.23</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1745,7 +1745,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Ranking y Desafíos Online</h4>
-          <p>El Ranking compara carreras completas. Desafíos Online utiliza convocatorias publicadas y un simulador independiente; no altera contrato laboral, Academia ni cartera personal.</p>
+          <p>El Ranking compara carreras completas. Desafíos Online utiliza convocatorias publicadas y un simulador independiente; no altera contrato laboral, Academia ni cartera personal. Los campeonatos de categorías online se acumulan como medallas de bronce, plata y oro visibles en Hitos.</p>
           <div class="help-actions">${gameHelpGoButton('ranking','Abrir Ranking')}${gameHelpGoButton('challenges','Abrir Desafíos')}</div>
         </article>
         <article class="help-card card">

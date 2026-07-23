@@ -11,7 +11,7 @@ let challengeActionBusy = false;
 let challengeAvailableCategory = '';
 let challengeRankingCategory = '';
 let challengeRankingHistoryCache = [];
-let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[], currentStandings:{} };
+let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[], currentStandings:{}, ownerKey:'' };
 let challengeHomeOnlineState = {
   categoryCode:'L', categoryName:'Libre', salaryTotal:0, complete:false,
   available:false, availabilityLoaded:false, availabilityLoading:false,
@@ -324,6 +324,70 @@ function challengeRewardClaimFor(categoryCode){
   const claims = Array.isArray(challengeRewardStatus.claims) ? challengeRewardStatus.claims : [];
   return claims.find(item => String(item?.categoryCode || item?.category || '').toUpperCase() === code) || null;
 }
+
+function challengeOnlineMedalSummary(){
+  const authenticated = Boolean(challengeToken());
+  const loading = Boolean(challengeRewardStatus?.loading);
+  const loaded = Boolean(challengeRewardStatus?.loaded);
+  const error = String(challengeRewardStatus?.error || '').trim();
+  const claims = Array.isArray(challengeRewardStatus?.claims) ? challengeRewardStatus.claims : [];
+  const championMap = new Map();
+  claims.forEach(item => {
+    if(Number(item?.position || 0) !== 1) return;
+    const cycleId = String(item?.cycleId || item?.cycle_id || '').trim();
+    const categoryCode = String(item?.categoryCode || item?.category_code || item?.category || '').trim().toUpperCase();
+    if(!cycleId || !categoryCode) return;
+    championMap.set(`${cycleId}:${categoryCode}`, { cycleId, categoryCode });
+  });
+  const championRows = [...championMap.values()];
+  const titles = championRows.length;
+  const gold = Math.floor(titles / 9);
+  const afterGold = titles % 9;
+  const silver = Math.floor(afterGold / 3);
+  const bronze = afterGold % 3;
+  const categories = championRows.reduce((acc, item) => {
+    acc[item.categoryCode] = Number(acc[item.categoryCode] || 0) + 1;
+    return acc;
+  }, {});
+  return { authenticated, loading, loaded, error, titles, gold, silver, bronze, categories };
+}
+function challengeOnlineMedalShelfMarkup(){
+  const summary = challengeOnlineMedalSummary();
+  const ready = summary.authenticated && summary.loaded && !summary.loading && !summary.error;
+  const displayValue = value => summary.authenticated ? (summary.loading ? '…' : (ready ? String(value) : '—')) : '—';
+  const categoryRows = Object.entries(summary.categories)
+    .sort((a,b) => String(a[0]).localeCompare(String(b[0])))
+    .map(([code,count]) => `<span class="pill">${escapeHtml(code)} × ${formatPlainNumber(count)}</span>`)
+    .join('');
+  let statusText = 'Iniciá sesión online para consultar las medallas de esta cuenta.';
+  if(summary.authenticated && summary.loading) statusText = 'Consultando campeonatos online…';
+  else if(summary.authenticated && summary.error) statusText = 'No se pudieron consultar las medallas online.';
+  else if(ready && !summary.titles) statusText = 'Todavía no hay campeonatos online registrados para esta cuenta.';
+  else if(ready) statusText = `${formatPlainNumber(summary.titles)} ${summary.titles === 1 ? 'campeonato online acumulado' : 'campeonatos online acumulados'}.`;
+  return `<section class="card online-medal-shelf ${ready ? 'is-ready' : 'is-pending'}">
+    <div class="online-medal-shelf-head">
+      <div><p class="eyebrow">Palmarés online</p><h3>Medallas de campeón</h3><p class="muted small">Cada título vale 1 bronce. Tres bronces se convierten en 1 plata y tres platas en 1 oro.</p></div>
+      <div class="online-medal-title-total"><strong>${displayValue(summary.titles)}</strong><span>Títulos online</span></div>
+    </div>
+    <div class="online-medal-grid">
+      <div class="online-medal-item medal-gold ${summary.gold ? 'is-earned' : ''}"><span class="online-medal-icon" aria-hidden="true"></span><div><strong>${displayValue(summary.gold)}</strong><span>Oro</span><small>9 bronces</small></div></div>
+      <div class="online-medal-item medal-silver ${summary.silver ? 'is-earned' : ''}"><span class="online-medal-icon" aria-hidden="true"></span><div><strong>${displayValue(summary.silver)}</strong><span>Plata</span><small>3 bronces</small></div></div>
+      <div class="online-medal-item medal-bronze ${summary.bronze ? 'is-earned' : ''}"><span class="online-medal-icon" aria-hidden="true"></span><div><strong>${displayValue(summary.bronze)}</strong><span>Bronce</span><small>1 campeonato</small></div></div>
+    </div>
+    <div class="online-medal-shelf-footer"><span class="small muted">${escapeHtml(statusText)}</span>${categoryRows ? `<div class="online-medal-categories"><span class="small muted">Categorías conquistadas</span>${categoryRows}</div>` : ''}</div>
+  </section>`;
+}
+function challengeEnsureOnlineMedalsLoaded(){
+  const ownerKey = String(challengeStoredUserIdentity()?.key || '');
+  if(!challengeToken() || challengeRewardStatus.loading) return Promise.resolve(challengeRewardStatus);
+  if(challengeRewardStatus.loaded && String(challengeRewardStatus.ownerKey || '') === ownerKey) return Promise.resolve(challengeRewardStatus);
+  return challengeLoadRewardStatus({ force:true }).then(status => {
+    if(typeof activeTab !== 'undefined' && activeTab === 'mystats' && String(managerStatsViewMode || '') === 'achievements' && typeof renderManagerStats === 'function'){
+      renderManagerStats();
+    }
+    return status;
+  });
+}
 function challengeNormalizeServerCycle(raw){
   if(!raw || typeof raw !== 'object') return null;
   const startMs = new Date(raw.startAt || raw.start_at || raw.start || 0).getTime();
@@ -332,10 +396,11 @@ function challengeNormalizeServerCycle(raw){
   return { id:String(raw.id || raw.cycleId || raw.cycle_id || ''), index:Number(raw.index || 0), startMs, endMs, startAt:new Date(startMs).toISOString(), endAt:new Date(endMs).toISOString() };
 }
 async function challengeLoadRewardStatus(options={}){
+  const ownerKey = String(challengeStoredUserIdentity()?.key || '');
   if(challengeRewardStatus.loading) return challengeRewardStatus;
-  if(challengeRewardStatus.loaded && !options.force) return challengeRewardStatus;
+  if(challengeRewardStatus.loaded && !options.force && String(challengeRewardStatus.ownerKey || '') === ownerKey) return challengeRewardStatus;
   if(!challengeToken()){
-    challengeRewardStatus = { loaded:true, loading:false, compatible:true, error:'', serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{} };
+    challengeRewardStatus = { loaded:true, loading:false, compatible:true, error:'', serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{}, ownerKey:'' };
     return challengeRewardStatus;
   }
   challengeRewardStatus.loading = true;
@@ -347,11 +412,12 @@ async function challengeLoadRewardStatus(options={}){
       currentCycle:cycle,
       claims:Array.isArray(data?.claims) ? data.claims : [],
       champions:Array.isArray(data?.champions) ? data.champions : [],
-      currentStandings:data?.currentStandings && typeof data.currentStandings === 'object' ? data.currentStandings : (data?.current_standings && typeof data.current_standings === 'object' ? data.current_standings : {})
+      currentStandings:data?.currentStandings && typeof data.currentStandings === 'object' ? data.currentStandings : (data?.current_standings && typeof data.current_standings === 'object' ? data.current_standings : {}),
+      ownerKey
     };
   }catch(error){
     const message = String(error?.message || 'No se pudo consultar los premios.');
-    challengeRewardStatus = { loaded:true, loading:false, compatible:!/(404|ruta no encontrada|not found)/i.test(message), error:message, serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{} };
+    challengeRewardStatus = { loaded:true, loading:false, compatible:!/(404|ruta no encontrada|not found)/i.test(message), error:message, serverTime:'', currentCycle:challengeCycleAt(), claims:[], champions:[], currentStandings:{}, ownerKey };
   }
   return challengeRewardStatus;
 }
@@ -471,7 +537,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.22') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.23') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -667,7 +733,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.22'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.23'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))

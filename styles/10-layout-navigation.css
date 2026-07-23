@@ -314,3 +314,41 @@
   .topbar-brand-copy{padding-top:4px}
   .game-brand-logo-welcome{width:min(320px,100%)}
 }
+
+
+/* V8.30 · Logo centrado sobre el menú lateral y versión trasladada al footer. */
+@media (min-width:1281px){
+  .topbar{
+    display:grid;
+    grid-template-columns:310px minmax(0,1fr);
+    gap:18px;
+    align-items:center;
+  }
+  .topbar-brand{
+    width:310px;
+    justify-content:center;
+  }
+  .game-brand-logo-top{object-position:center center}
+  .top-actions{min-width:0}
+}
+.app-footer{
+  padding:0 clamp(16px,3vw,36px) 24px;
+  text-align:center;
+  color:var(--muted);
+}
+.app-footer p{
+  margin:0;
+  padding-top:12px;
+  border-top:1px solid rgba(148,163,184,.12);
+  font-size:12px;
+  font-weight:750;
+  letter-spacing:.04em;
+}
+@media (max-width:900px){
+  .topbar-brand{
+    width:100%;
+    justify-content:center;
+  }
+  .game-brand-logo-top{object-position:center center}
+  .app-footer{padding-inline:14px}
+}

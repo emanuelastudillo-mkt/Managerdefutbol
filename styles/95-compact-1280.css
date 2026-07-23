@@ -189,3 +189,34 @@
   .game-brand-logo-top{width:130px;height:52px}
   .game-brand-logo-welcome{width:min(280px,100%)}
 }
+
+
+/* V8.30 · La marca se centra sobre la columna del menú lateral. */
+@media (min-width:1051px) and (max-width:1280px){
+  .topbar{
+    display:grid;
+    grid-template-columns:250px minmax(0,1fr);
+    gap:12px;
+    align-items:center;
+  }
+  .topbar-brand{
+    width:250px;
+    min-width:0;
+    justify-content:center;
+  }
+  .game-brand-logo-top{object-position:center center}
+}
+@media (min-width:901px) and (max-width:1050px){
+  .topbar{
+    display:grid;
+    grid-template-columns:220px minmax(0,1fr);
+    gap:10px;
+    align-items:center;
+  }
+  .topbar-brand{
+    width:220px;
+    min-width:0;
+    justify-content:center;
+  }
+  .game-brand-logo-top{object-position:center center}
+}

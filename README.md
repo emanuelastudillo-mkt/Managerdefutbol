@@ -1,3 +1,17 @@
+# Una vida de manager — V8.30
+
+## V8.30 — Alineación de marca y footer
+
+- El texto `Juego de fútbol online · V8.30` se retiró de la barra superior y se trasladó al footer global.
+- El logo `assets/logo-banner.png` queda centrado sobre la columna del menú lateral.
+- La alineación se adapta a los anchos de menú de escritorio, 1280 × 720 y resoluciones intermedias.
+- En dispositivos móviles el logo permanece centrado sobre todo el ancho disponible.
+- No se modifican guardados, lógica del juego, Worker ni SQL.
+
+**V8.30 no rompe partidas anteriores.** El cambio es exclusivamente de presentación y distribución visual.
+
+---
+
 # Una vida de manager — V8.29
 
 ## V8.29 — Marca final y logo principal

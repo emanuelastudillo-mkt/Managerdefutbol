@@ -191,7 +191,7 @@
 }
 
 
-/* V8.30 · La marca se centra sobre la columna del menú lateral. */
+/* V8.31 · La marca se centra sobre la columna del menú lateral. */
 @media (min-width:1051px) and (max-width:1280px){
   .topbar{
     display:grid;

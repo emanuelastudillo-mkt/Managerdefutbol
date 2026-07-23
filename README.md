@@ -1,3 +1,19 @@
+# Una vida de manager — V8.31
+
+## V8.31 — Dominio definitivo y publicación
+
+- Se establece `https://unavidademanager.com/` como URL pública canónica del juego.
+- Se agregan `CNAME` y `sitemap.xml` para la publicación mediante GitHub Pages con dominio personalizado.
+- `robots.txt` declara el sitemap absoluto del dominio.
+- Open Graph, Twitter Card y JSON-LD incorporan la URL pública y `assets/logo-banner.png` como imagen social.
+- El manifiesto utiliza raíz `/` como identificador, inicio y alcance de la aplicación.
+- El Worker V8.31 conserva las rutas y bases D1 existentes, añade la URL pública al diagnóstico y limita CORS a `unavidademanager.com`, `www.unavidademanager.com` y servidores locales de desarrollo.
+- No requiere migración SQL ni cambios de tablas, bindings o datos existentes.
+
+**V8.31 no rompe partidas anteriores.** El cambio afecta publicación, metadatos y seguridad de acceso al Worker; conserva guardados, cuentas, rankings, desafíos y los cinco slots.
+
+---
+
 # Una vida de manager — V8.30
 
 ## V8.30 — Alineación de marca y footer

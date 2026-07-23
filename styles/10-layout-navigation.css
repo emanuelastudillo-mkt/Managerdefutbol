@@ -316,7 +316,7 @@
 }
 
 
-/* V8.30 · Logo centrado sobre el menú lateral y versión trasladada al footer. */
+/* V8.31 · Logo centrado sobre el menú lateral y versión trasladada al footer. */
 @media (min-width:1281px){
   .topbar{
     display:grid;

@@ -848,6 +848,8 @@ function pushGameMessage(message){
     title: message.title || 'Mensaje',
     body: message.body || '',
     action: message.action || null,
+    playerIds: Array.isArray(message.playerIds) ? [...new Set(message.playerIds.map(Number).filter(Number.isFinite))] : [],
+    playerNames: Array.isArray(message.playerNames) ? message.playerNames.map(name => String(name || '')).filter(Boolean) : [],
     createdAt: Date.now()
   };
   game.messages.unshift(item);
@@ -1106,19 +1108,50 @@ function messagePlayerLink(player, label=null){
   const text = label || player.name || 'Jugador';
   return `<button type="button" class="linklike message-player-link" data-player-id="${Number(player.id)}" title="Abrir ficha del jugador">${escapeHtml(text)}</button>`;
 }
+function messageRelatedPlayers(message){
+  const ids = [];
+  const transferPlayer = messageTransferPlayer(message);
+  if(transferPlayer?.id) ids.push(Number(transferPlayer.id));
+  if(Array.isArray(message?.playerIds)) ids.push(...message.playerIds.map(Number));
+  if(Array.isArray(message?.action?.participantIds)) ids.push(...message.action.participantIds.map(Number));
+  if(Number.isFinite(Number(message?.action?.playerId))) ids.push(Number(message.action.playerId));
+  const eventEntry = (game?.eventLog || []).find(entry => String(entry?.occurrenceId || entry?.details?.messageId || '') === String(message?.id || ''));
+  if(Array.isArray(eventEntry?.details?.participantIds)) ids.push(...eventEntry.details.participantIds.map(Number));
+  const unique = [...new Set(ids.filter(Number.isFinite))];
+  return unique.map(id => playerById(id)).filter(Boolean);
+}
+function messageLinkedPlayerText(text='', players=[]){
+  let html = escapeHtml(text || '');
+  const ordered = [...players]
+    .filter(player => player?.name)
+    .sort((a,b) => String(b.name).length - String(a.name).length || Number(a.id) - Number(b.id));
+  const replacedNames = new Set();
+  ordered.forEach(player => {
+    const safeName = escapeHtml(player.name);
+    if(!safeName || replacedNames.has(safeName)) return;
+    replacedNames.add(safeName);
+    if(html.includes(safeName)) html = html.split(safeName).join(messagePlayerLink(player, player.name));
+  });
+  return html;
+}
+function messageRelatedPlayersMarkup(message){
+  if(message?.action?.type !== 'lockerRoomDecision' && String(message?.type || '').toLowerCase() !== 'vestuario') return '';
+  const players = messageRelatedPlayers(message);
+  if(!players.length) return '';
+  return `<div class="message-event-player-list"><span>Jugadores implicados</span>${players.map(player => messagePlayerLink(player, player.name)).join('')}</div>`;
+}
 function messageTitleHtml(m){
   const player = messageTransferPlayer(m);
   if(player) return `Oferta por ${messagePlayerLink(player, playerLastName(player.name))}`;
-  return escapeHtml(m.title);
+  return messageLinkedPlayerText(m.title, messageRelatedPlayers(m));
 }
 function messageBodyHtml(m){
   const player = messageTransferPlayer(m);
-  const safeBody = escapeHtml(m.body || '');
-  if(!player?.name) return safeBody;
-  const safeName = escapeHtml(player.name);
-  const link = messagePlayerLink(player, player.name);
-  if(safeBody.includes(safeName)) return safeBody.split(safeName).join(link);
-  return `${safeBody} <span class="message-player-inline">Jugador: ${link}</span>`;
+  const relatedPlayers = messageRelatedPlayers(m);
+  const linkedBody = messageLinkedPlayerText(m.body || '', relatedPlayers);
+  if(!player?.name) return linkedBody;
+  if(linkedBody.includes('data-player-id=')) return linkedBody;
+  return `${linkedBody} <span class="message-player-inline">Jugador: ${messagePlayerLink(player, player.name)}</span>`;
 }
 function transferOfferStatusLabel(status){
   const map = {
@@ -1141,19 +1174,21 @@ function transferOfferStatusLabel(status){
 function lockerRoomDecisionActionMarkup(message){
   const action = message?.action;
   if(action?.type !== 'lockerRoomDecision') return '';
+  const players = messageRelatedPlayers(message);
+  const linked = text => messageLinkedPlayerText(text || '', players);
   if(action.status === 'pending'){
     const options = Array.isArray(action.options) ? action.options : [];
     return `<div class="locker-room-decision-panel">
-      <p class="locker-room-decision-prompt">${escapeHtml(action.prompt || '¿Cómo respondés?')}</p>
+      <p class="locker-room-decision-prompt">${linked(action.prompt || '¿Cómo respondés?')}</p>
       <div class="row message-actions locker-room-choice-list">${options.map((option, index) => `<button type="button" class="${index === 0 ? 'primary' : 'ghost'}" data-locker-room-message="${escapeHtml(message.id)}" data-locker-room-choice="${escapeHtml(option.id)}">${escapeHtml(option.text)}</button>`).join('')}</div>
     </div>`;
   }
-  const selected = action.selectedOptionText ? `<span class="pill message-status-pill">Decisión: ${escapeHtml(action.selectedOptionText)}</span>` : '<span class="pill message-status-pill">Respondido</span>';
+  const selected = action.selectedOptionText ? `<span class="pill message-status-pill">Decisión: ${linked(action.selectedOptionText)}</span>` : '<span class="pill message-status-pill">Respondido</span>';
   const promiseStatus = String(action.promiseStatus || '');
   const promise = promiseStatus === 'pending'
     ? '<span class="pill warn message-status-pill">Promesa pendiente</span>'
-    : (action.promiseResult ? `<div class="locker-room-promise-result ${promiseStatus === 'failed' ? 'is-failed' : 'is-fulfilled'}"><strong>${promiseStatus === 'failed' ? 'Promesa incumplida' : 'Promesa cumplida'}</strong><p>${escapeHtml(action.promiseResult)}</p></div>` : '');
-  const result = action.resultText ? `<div class="locker-room-decision-result"><strong>Consecuencia</strong><p>${escapeHtml(action.resultText)}</p></div>` : '';
+    : (action.promiseResult ? `<div class="locker-room-promise-result ${promiseStatus === 'failed' ? 'is-failed' : 'is-fulfilled'}"><strong>${promiseStatus === 'failed' ? 'Promesa incumplida' : 'Promesa cumplida'}</strong><p>${linked(action.promiseResult)}</p></div>` : '');
+  const result = action.resultText ? `<div class="locker-room-decision-result"><strong>Consecuencia</strong><p>${linked(action.resultText)}</p></div>` : '';
   return `<div class="locker-room-decision-closed"><div class="row locker-room-decision-statuses">${selected}${promiseStatus === 'pending' ? promise : ''}</div>${result}${promiseStatus !== 'pending' ? promise : ''}</div>`;
 }
 function messageCard(m){
@@ -1185,7 +1220,7 @@ function messageCard(m){
         </div>
         <span class="pill ${m.priority === 'high' ? 'warn' : ''}">${m.priority === 'high' ? 'Importante' : 'Normal'}</span>
       </div>
-      <div class="message-paper"><p>${messageBodyHtml(m)}</p></div>
+      <div class="message-paper"><p>${messageBodyHtml(m)}</p>${messageRelatedPlayersMarkup(m)}</div>
       ${action}
     </div>
   </div>`;

@@ -1620,3 +1620,8 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 .team-player-stats-note{margin-top:12px}
 @media (max-width:760px){.team-player-stats-toolbar{grid-template-columns:1fr}.team-player-stats-summary{grid-template-columns:1fr 1fr}.team-player-stats-table{min-width:900px}}
 .player-modal-clause-value{margin-right:auto}
+
+.message-event-player-list{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid rgba(148,163,184,.16)}
+.message-event-player-list>span{color:#cbd5e1;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.message-event-player-list .message-player-link{font-size:12px}
+@media (max-width:700px){.message-event-player-list{align-items:flex-start}.message-event-player-list>span{flex-basis:100%}}

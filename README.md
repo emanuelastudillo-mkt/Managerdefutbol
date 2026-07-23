@@ -1,18 +1,34 @@
-# Chill mánager - Futbol online — V8.26
+# Chill mánager - Futbol online — V8.27
 
-## V8.26 — Avisos bancarios semanales y mensajes de transferencias cerradas
+## V8.27 — Jugadores cliqueables en eventos de vestuario
 
-- Los avisos por Cuenta Bancaria personal en negativo se limitan a un máximo de uno cada 7 días.
-- El saldo se sigue controlando todos los días, pero los días intermedios no generan mensajes repetidos.
-- Los mensajes de ofertas aceptadas que quedaron en “espera mercado” se reconcilian con las transferencias pendientes reales.
-- Si la operación ya se ejecutó, el jugador dejó el club, el manager cambió de equipo o la transferencia pendiente dejó de existir, el mensaje pasa a estado cerrado y puede borrarse.
-- Al abandonar un club se cierran también las ofertas y ventas pendientes vinculadas a ese equipo antes de limpiar su estado interno.
-- Los mensajes realmente pendientes, las decisiones de vestuario y las promesas todavía abiertas continúan protegidos contra el borrado.
+- Los nombres de los jugadores implicados en mensajes de vestuario abren su ficha individual al hacer clic.
+- Los enlaces se aplican en el título, el cuerpo del evento, la pregunta, la decisión tomada, la consecuencia y el resultado de promesas cumplidas o incumplidas.
+- Cada mensaje incluye además una fila `Jugadores implicados` con todos los participantes disponibles, evitando que un nombre quede inaccesible cuando aparece dentro del texto de un botón de respuesta.
+- Las decisiones ya guardadas desde V8.22 se adaptan usando sus `participantIds`; también se consulta el registro histórico del evento como respaldo.
+- Los nuevos mensajes de seguimiento de promesas guardan las referencias de jugadores para mantener los enlaces.
+- El clic abre la misma ficha usada por Primer equipo, Mercado y Centro de Ojeo.
 - No requiere cambios de Worker ni SQL.
 
 ### Compatibilidad
 
-**V8.26 no rompe partidas anteriores.** Al abrir Mensajes, las operaciones antiguas sin transferencia pendiente se archivan automáticamente. No se ejecutan ventas retroactivas ni se modifican presupuestos, jugadores, contratos, temporadas o resultados.
+**V8.27 no rompe partidas anteriores.** No modifica IDs, eventos, respuestas, lesiones, promesas, jugadores ni los cinco slots. Los enlaces se construyen al renderizar Mensajes usando las referencias ya guardadas.
+
+
+# Chill mánager - Futbol online — V8.26
+
+## V8.26 — Avisos bancarios y mensajes de transferencias antiguas
+
+- Los avisos por Cuenta Bancaria negativa se limitan a un máximo de uno cada siete días.
+- Los mensajes de transferencias acordadas se comparan con las operaciones realmente pendientes.
+- Una operación antigua, cancelada, sin jugador disponible o perteneciente a un club anterior queda cerrada y vuelve a ser borrable.
+- Las transferencias activas y las decisiones pendientes continúan protegidas.
+- No se ejecutan ni acreditan transferencias antiguas de manera retroactiva.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.26 no rompe partidas anteriores.** Los mensajes se reconcilian al abrir la bandeja sin modificar presupuestos, jugadores, resultados, temporadas ni los cinco slots.
 
 
 # Chill mánager - Futbol online — V8.25

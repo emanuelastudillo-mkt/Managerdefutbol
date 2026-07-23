@@ -542,6 +542,7 @@ function createLockerRoomDecision(event, participants=[], state=null){
     action:{
       type:'lockerRoomDecision', status:'pending', eventId:String(event.id),
       participantIds:participants.map(player => Number(player.id)),
+      participantNames:participants.map(player => String(player.name || 'Jugador')),
       prompt:lockerRoomFormat(event.pregunta || '¿Cómo respondés?', participants),
       options:(event.opciones || []).map(option => ({ id:String(option.id), text:lockerRoomFormat(option.texto || option.id, participants) })),
       createdTurn:turn, createdSeason:Number(game.seasonNumber || 1), createdDate:String(game.currentDate || '')
@@ -694,7 +695,9 @@ function processLockerRoomPromisesDaily(){
       id:`${promise.id}-${fulfilled ? 'fulfilled' : 'failed'}`,
       type:'vestuario', priority:fulfilled ? 'normal' : 'high',
       title:fulfilled ? 'Promesa cumplida' : 'Promesa incumplida',
-      body:fulfilled ? promise.resultFulfilled : promise.resultFailed
+      body:fulfilled ? promise.resultFulfilled : promise.resultFailed,
+      playerIds:Array.isArray(promise.participantIds) ? promise.participantIds : [promise.playerId],
+      playerNames:participants.map(player => String(player.name || 'Jugador'))
     });
     if(fulfilled) summary.fulfilled += 1;
     else summary.failed += 1;

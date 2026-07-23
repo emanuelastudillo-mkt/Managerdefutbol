@@ -2023,3 +2023,22 @@ th{
 }
 .academy-finance-card .table-wrap{margin-top:10px}
 .academy-finance-card td.bad{font-weight:700}
+
+/* V8.22 · Decisiones interactivas de vestuario */
+.message-tone-locker-room .message-card-accent{background:linear-gradient(180deg,#fb7185,#be123c)}
+.locker-room-decision-panel{margin-top:14px;padding:13px;border:1px solid rgba(251,113,133,.24);border-radius:14px;background:rgba(15,23,42,.46)}
+.locker-room-decision-prompt{margin:0;color:#fce7f3;font-weight:800;font-size:14px}
+.locker-room-choice-list{display:flex;flex-wrap:wrap;align-items:stretch}
+.locker-room-choice-list button{flex:1 1 210px;min-height:42px;white-space:normal;text-align:center;line-height:1.2}
+.locker-room-decision-closed{display:grid;gap:10px;margin-top:12px}
+.locker-room-decision-result{padding:12px 14px;border:1px solid rgba(52,211,153,.22);border-radius:12px;background:rgba(6,78,59,.18)}
+.locker-room-decision-result strong{display:block;margin-bottom:4px;color:#a7f3d0;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.locker-room-decision-result p{margin:0;color:#e2e8f0;line-height:1.45}
+@media (max-width:1280px){.locker-room-decision-panel{padding:10px}.locker-room-choice-list{gap:7px}.locker-room-choice-list button{flex-basis:180px;min-height:38px;padding:8px 10px;font-size:12px}}
+@media (max-width:700px){.locker-room-choice-list{display:grid;grid-template-columns:1fr}.locker-room-choice-list button{width:100%}}
+.locker-room-decision-statuses{justify-content:flex-start;gap:8px;margin:0}
+.locker-room-promise-result{padding:11px 13px;border:1px solid rgba(52,211,153,.22);border-radius:12px;background:rgba(6,78,59,.16)}
+.locker-room-promise-result.is-failed{border-color:rgba(248,113,113,.26);background:rgba(127,29,29,.18)}
+.locker-room-promise-result strong{display:block;margin-bottom:4px;color:#a7f3d0;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.locker-room-promise-result.is-failed strong{color:#fecaca}
+.locker-room-promise-result p{margin:0;color:#e2e8f0;line-height:1.4}

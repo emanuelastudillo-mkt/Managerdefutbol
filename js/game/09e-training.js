@@ -242,6 +242,13 @@ function applyIndividualTrainingSessionToPlayer(player, type, scale, conditionDr
 }
 function applyTrainingEffects(){
   if(!game) return;
+  const currentTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game.globalTurn || 0);
+  const pauseUntil = Math.max(0, Number(game.lockerRoomTrainingPauseUntilTurn || 0));
+  if(pauseUntil > currentTurn){
+    game.lastTrainingApplied = { ...turnStamp(), skipped:true, reason:'locker_room_days_off', pauseUntilTurn:pauseUntil };
+    return;
+  }
+  if(pauseUntil && pauseUntil <= currentTurn) game.lockerRoomTrainingPauseUntilTurn = 0;
   game.trainingPlan = normalizeIndividualTrainingPlan(game.trainingPlan);
   game.trainingSchedule = normalizeTrainingSchedule(game.trainingSchedule);
   game.playerCondition = game.playerCondition || {};

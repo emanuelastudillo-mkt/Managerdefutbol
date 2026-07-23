@@ -162,11 +162,11 @@ function processGameEventsAfterMatches(context={}){
   return triggered;
 }
 
-/* Problemas de vestuario programados por moral y cohesión bajas. */
+/* Decisiones interactivas de vestuario programadas por moral y cohesión bajas. */
 function lockerRoomProblemDefinitions(){
   const fromDatabase = Array.isArray(eventsDatabase?.problemasVestuario) ? eventsDatabase.problemasVestuario : [];
   const fromConfig = Array.isArray(configValue('eventos.problemasVestuario', [])) ? configValue('eventos.problemasVestuario', []) : [];
-  return (fromDatabase.length ? fromDatabase : fromConfig).filter(event => event && event.activo !== false && event.id);
+  return (fromDatabase.length ? fromDatabase : fromConfig).filter(event => event && event.activo !== false && event.id && Array.isArray(event.opciones) && event.opciones.length);
 }
 function lockerRoomCrisisSettings(){
   return {
@@ -180,7 +180,7 @@ function lockerRoomCrisisSettings(){
 function ensureLockerRoomCrisisState(){
   if(!game) return null;
   const raw = game.lockerRoomCrisis && typeof game.lockerRoomCrisis === 'object' ? game.lockerRoomCrisis : {};
-  game.lockerRoomCrisis = {
+  const normalized = {
     clubId:Number(raw.clubId || 0),
     season:Math.max(1, Math.round(Number(raw.season || game.seasonNumber || 1))),
     active:Boolean(raw.active),
@@ -192,9 +192,14 @@ function ensureLockerRoomCrisisState(){
     recentEventIds:Array.isArray(raw.recentEventIds) ? raw.recentEventIds.map(String).filter(Boolean).slice(-20) : [],
     lastEventId:String(raw.lastEventId || ''),
     lastEventDate:String(raw.lastEventDate || ''),
-    lastEventTurn:Math.max(0, Math.round(Number(raw.lastEventTurn || 0)))
+    lastEventTurn:Math.max(0, Math.round(Number(raw.lastEventTurn || 0))),
+    pendingMessageId:String(raw.pendingMessageId || ''),
+    promises:Array.isArray(raw.promises) ? raw.promises.filter(Boolean).map(item => ({ ...item })) : []
   };
-  return game.lockerRoomCrisis;
+  Object.keys(raw).forEach(key => { if(!(key in normalized)) delete raw[key]; });
+  Object.assign(raw, normalized);
+  game.lockerRoomCrisis = raw;
+  return raw;
 }
 function lockerRoomHash(seedText, max=1000000){
   const limit = Math.max(1, Math.round(Number(max || 1)));
@@ -250,7 +255,13 @@ function selectLockerRoomParticipants(event, seedText=''){
   const starters = lockerRoomTacticIds('starters');
   const bench = lockerRoomTacticIds('bench');
   const selector = String(event?.selector || 'random_pair');
-  const countMap = { random_pair:2, goalkeeper_defender:2, captain_challenger:2, reserve_single:1, random_four:4, random_three:3, starting_pair:2, veteran_youth:2, same_position_pair:2, star_reserve:2, captain_group:3, low_morale_three:3, highest_salary_three:3, random_single:1 };
+  const countMap = {
+    random_pair:2, goalkeeper_defender:2, captain_challenger:2, reserve_single:1,
+    random_four:4, random_three:3, starting_pair:2, veteran_youth:2,
+    same_position_pair:2, star_reserve:2, captain_group:3, low_morale_three:3,
+    highest_salary_three:3, random_single:1, youth_single:1, star_single:1,
+    shooters_pair:2, low_condition_single:1, salary_gap_pair:2, low_morale_single:1
+  };
   const count = Number(countMap[selector] || 2);
   let picked = [];
   if(selector === 'goalkeeper_defender'){
@@ -258,8 +269,10 @@ function selectLockerRoomParticipants(event, seedText=''){
     const defender = lockerRoomPickDistinct(eligible.filter(player => ['DFC','LD','LI'].includes(player.position) && Number(player.id) !== Number(goalkeeper?.id)), 1, `${seedText}-def`)[0];
     picked = [goalkeeper, defender].filter(Boolean);
   }else if(selector === 'captain_challenger'){
-    const captain = lockerRoomCaptainPlayer(eligible);
-    const challenger = eligible.filter(player => Number(player.id) !== Number(captain?.id)).sort((a,b) => Number(b.skills?.liderazgo || 0) - Number(a.skills?.liderazgo || 0) || Number(b.overall || 0) - Number(a.overall || 0))[0];
+    const starterPlayers = eligible.filter(player => starters.has(Number(player.id)));
+    const captain = lockerRoomCaptainPlayer(starterPlayers.length ? starterPlayers : eligible);
+    const challengerPool = (starterPlayers.length ? starterPlayers : eligible).filter(player => Number(player.id) !== Number(captain?.id));
+    const challenger = challengerPool.sort((a,b) => Number(b.skills?.liderazgo || 0) - Number(a.skills?.liderazgo || 0) || Number(b.overall || 0) - Number(a.overall || 0))[0];
     picked = [captain, challenger].filter(Boolean);
   }else if(selector === 'reserve_single'){
     const reserves = eligible.filter(player => !starters.has(Number(player.id)) && !bench.has(Number(player.id)));
@@ -296,10 +309,39 @@ function selectLockerRoomParticipants(event, seedText=''){
     picked = eligible.slice().sort((a,b) => currentMorale(a.id) - currentMorale(b.id) || Number(a.id || 0) - Number(b.id || 0)).slice(0, 3);
   }else if(selector === 'highest_salary_three'){
     picked = eligible.slice().sort((a,b) => Number(b.salary || 0) - Number(a.salary || 0) || Number(a.id || 0) - Number(b.id || 0)).slice(0, 3);
+  }else if(selector === 'youth_single'){
+    picked = eligible.slice().sort((a,b) => Number(a.age || 99) - Number(b.age || 99) || Number(b.overall || 0) - Number(a.overall || 0))[0] ? [eligible.slice().sort((a,b) => Number(a.age || 99) - Number(b.age || 99) || Number(b.overall || 0) - Number(a.overall || 0))[0]] : [];
+  }else if(selector === 'star_single'){
+    picked = eligible.slice().sort((a,b) => Number(b.overall || 0) - Number(a.overall || 0) || Number(b.salary || 0) - Number(a.salary || 0))[0] ? [eligible.slice().sort((a,b) => Number(b.overall || 0) - Number(a.overall || 0) || Number(b.salary || 0) - Number(a.salary || 0))[0]] : [];
+  }else if(selector === 'shooters_pair'){
+    picked = eligible.slice().sort((a,b) => Number(b.skills?.remate || 0) - Number(a.skills?.remate || 0) || Number(b.skills?.serenidad || 0) - Number(a.skills?.serenidad || 0)).slice(0, 2);
+  }else if(selector === 'low_condition_single'){
+    picked = eligible.slice().sort((a,b) => currentCondition(a.id) - currentCondition(b.id) || Number(b.overall || 0) - Number(a.overall || 0)).slice(0, 1);
+  }else if(selector === 'salary_gap_pair'){
+    const bySalary = eligible.slice().sort((a,b) => Number(b.salary || 0) - Number(a.salary || 0));
+    const high = bySalary[0];
+    const claimantPool = eligible.filter(player => Number(player.id) !== Number(high?.id)).sort((a,b) => Number(a.salary || 0) - Number(b.salary || 0) || Number(b.overall || 0) - Number(a.overall || 0));
+    const claimant = claimantPool[0];
+    picked = [claimant, high].filter(Boolean);
+  }else if(selector === 'low_morale_single'){
+    picked = eligible.slice().sort((a,b) => currentMorale(a.id) - currentMorale(b.id) || Number(b.overall || 0) - Number(a.overall || 0)).slice(0, 1);
   }else{
     picked = lockerRoomPickDistinct(eligible, count, `${seedText}-${selector}`);
   }
   return lockerRoomFallbackParticipants(eligible, count, seedText, picked);
+}
+function lockerRoomParticipantMap(participants=[]){
+  const map = {};
+  participants.forEach((player, index) => { map[`jugador${index + 1}`] = player; });
+  return map;
+}
+function lockerRoomTemplateValues(participants=[]){
+  const values = {};
+  participants.forEach((player, index) => { values[`jugador${index + 1}`] = player?.name || 'Jugador'; });
+  return values;
+}
+function lockerRoomFormat(text='', participants=[]){
+  return formatEventTemplate(text, {}, { templateValues:lockerRoomTemplateValues(participants) });
 }
 function lockerRoomApplyPlayerMorale(player, delta){
   if(!player || !Number.isFinite(Number(delta)) || Number(delta) === 0) return 0;
@@ -317,110 +359,357 @@ function lockerRoomApplyPlayerCondition(player, delta){
   game.playerCondition[player.id] = after;
   return after - before;
 }
-function lockerRoomInjuryDays(eventId, playerId, minDays, maxDays, turn){
+function lockerRoomTargetPlayers(effect={}, participantMap={}, participants=[]){
+  const raw = effect.jugadores;
+  if(raw === 'participantes') return participants.filter(Boolean);
+  const keys = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+  if(!keys.length && effect.jugador) keys.push(effect.jugador);
+  const selected = keys.map(key => participantMap[String(key)]).filter(Boolean);
+  return selected.length ? selected : [];
+}
+function lockerRoomInjuryDays(eventId, playerId, minDays, maxDays, turn, salt=''){
   const min = Math.max(1, Math.round(Number(minDays || 1)));
   const max = Math.max(min, Math.round(Number(maxDays || min)));
-  return min + lockerRoomHash(`${eventId}-${playerId}-${turn}-injury`, max - min + 1);
+  return min + lockerRoomHash(`${eventId}-${playerId}-${turn}-${salt}-injury`, max - min + 1);
 }
-function executeLockerRoomProblem(event, participants=[], state=null){
+function lockerRoomApplyUnavailablePlayer(player, definition={}, context={}){
+  if(!player || isInjured(player.id)) return null;
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
+  const days = lockerRoomInjuryDays(context.eventId || 'vestuario', player.id, definition.diasMin, definition.diasMax, turn, context.salt || definition.tipo || '');
+  const label = String(definition.nombre || 'Contusión');
+  const issue = {
+    clubId:Number(game.selectedClubId), playerId:Number(player.id), playerName:player.name || 'Jugador',
+    injuryLabel:label, name:label, matchesOut:days, chance:1, source:String(context.source || 'locker_room')
+  };
+  if(typeof applyAvailability === 'function') applyAvailability([], [issue]);
+  if(context.countAsInjury !== false && game.playerStats?.[player.id]) game.playerStats[player.id].injuries = Number(game.playerStats[player.id].injuries || 0) + 1;
+  if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'injury', playerId:Number(player.id) }]);
+  game.mustReviewTactics = true;
+  return issue;
+}
+function lockerRoomApplySuspension(player, matches=1){
+  if(!player) return 0;
+  game.playerStatus = game.playerStatus || {};
+  const status = typeof playerStatus === 'function' ? playerStatus(player.id) : (game.playerStatus[player.id] || {});
+  const through = Number(game.matchdayIndex || 0) + Math.max(1, Math.round(Number(matches || 1)));
+  game.playerStatus[player.id] = { ...status, suspendedThrough:Math.max(Number(status.suspendedThrough || 0), through), suspensionLabel:'Sanción interna' };
+  if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'red', playerId:Number(player.id) }]);
+  game.mustReviewTactics = true;
+  return through;
+}
+function lockerRoomSilentPrestige(delta, reason='Decisión de vestuario'){
+  if(!game?.managerStats || Number(delta || 0) === 0) return 0;
+  game.managerStats.prestigeAdjustments = Array.isArray(game.managerStats.prestigeAdjustments) ? game.managerStats.prestigeAdjustments : [];
+  game.managerStats.prestigeAdjustments.push({ points:Number(delta), reason:String(reason), season:Number(game.seasonNumber || 1), clubId:Number(game.selectedClubId || 0), createdAt:new Date().toISOString() });
+  return Number(delta);
+}
+function lockerRoomApplyDecisionEffect(effect={}, context={}){
+  if(!game || !effect) return { skipped:true };
+  const type = String(effect.tipo || effect.type || '');
+  const participantMap = context.participantMap || {};
+  const participants = context.participants || [];
+  const players = lockerRoomTargetPlayers(effect, participantMap, participants);
+  if(type === 'moral_jugadores'){
+    const delta = Number(effect.valor || 0);
+    players.forEach(player => lockerRoomApplyPlayerMorale(player, delta));
+    return { type, playerIds:players.map(p => p.id), delta };
+  }
+  if(type === 'moral_plantel'){
+    const delta = Number(effect.valor || 0);
+    if(typeof adjustSquadMorale === 'function') adjustSquadMorale(game.selectedClubId, delta);
+    return { type, delta };
+  }
+  if(type === 'cohesion'){
+    const delta = Number(effect.valor || 0);
+    const applied = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, delta) : 0;
+    return { type, delta, applied };
+  }
+  if(type === 'forma_jugadores'){
+    const delta = Number(effect.valor || 0);
+    players.forEach(player => lockerRoomApplyPlayerCondition(player, delta));
+    return { type, playerIds:players.map(p => p.id), delta };
+  }
+  if(type === 'forma_plantel'){
+    const delta = Number(effect.valor || 0);
+    playersByClub(game.selectedClubId).forEach(player => lockerRoomApplyPlayerCondition(player, delta));
+    return { type, delta };
+  }
+  if(type === 'dinero_club'){
+    let delta = Number(effect.valor || 0);
+    if(effect.modo === 'porcentaje_sueldo'){
+      const player = participantMap[String(effect.jugador || '')];
+      delta = Math.round(Number(player?.salary || 0) * Number(effect.porcentaje || 0));
+    }else if(effect.modo === 'porcentaje_sueldos_plantel'){
+      const total = playersByClub(game.selectedClubId).reduce((sum, player) => sum + Math.max(0, Number(player.salary || 0)), 0);
+      delta = Math.round(total * Number(effect.porcentaje || 0));
+    }
+    if(delta && typeof recordBudgetChange === 'function') recordBudgetChange(delta, effect.concepto || 'Decisión de vestuario', { type:'locker_room_decision', eventId:context.eventId || '', optionId:context.optionId || '' });
+    return { type, delta };
+  }
+  if(type === 'multa_grupal'){
+    const percentage = Math.max(0, Number(effect.porcentaje || 0));
+    const delta = Math.round(players.reduce((sum, player) => sum + Math.max(0, Number(player.salary || 0)) * percentage, 0));
+    if(delta && typeof recordBudgetChange === 'function') recordBudgetChange(delta, effect.concepto || 'Multas internas', { type:'locker_room_fines', eventId:context.eventId || '', optionId:context.optionId || '', playerIds:players.map(p => p.id) });
+    return { type, delta };
+  }
+  if(type === 'prestigio_manager') return { type, delta:lockerRoomSilentPrestige(Number(effect.valor || 0), 'Decisión de vestuario') };
+  if(type === 'hinchas'){
+    const current = typeof clubFansCurrent === 'function' ? clubFansCurrent(game.selectedClubId) : 0;
+    const delta = Number.isFinite(Number(effect.porcentaje)) ? Math.round(current * Number(effect.porcentaje)) : Math.round(Number(effect.valor || 0));
+    if(delta && typeof setClubFansCurrent === 'function') setClubFansCurrent(game.selectedClubId, Math.max(0, current + delta), 'Decisión de vestuario');
+    return { type, delta };
+  }
+  if(type === 'lesion'){
+    const issues = [];
+    players.forEach((player, index) => {
+      const chance = clamp(Number(effect.probabilidad ?? 1), 0, 1);
+      const roll = lockerRoomHash(`${context.eventId}-${context.optionId}-${player.id}-${context.turn}-${index}-injury-roll`, 1000000) / 1000000;
+      if(roll >= chance) return;
+      const issue = lockerRoomApplyUnavailablePlayer(player, effect, { eventId:context.eventId, salt:`${context.optionId}-${index}`, source:'locker_room_decision', countAsInjury:true });
+      if(issue) issues.push(issue);
+    });
+    return { type, issues };
+  }
+  if(type === 'ausencia_personal'){
+    const issues = players.map((player, index) => lockerRoomApplyUnavailablePlayer(player, { ...effect, nombre:'Permiso personal' }, { eventId:context.eventId, salt:`personal-${index}`, source:'personal_leave', countAsInjury:false })).filter(Boolean);
+    return { type, issues };
+  }
+  if(type === 'suspension_interna'){
+    const matches = Math.max(1, Math.round(Number(effect.partidos || 1)));
+    players.forEach(player => lockerRoomApplySuspension(player, matches));
+    return { type, playerIds:players.map(p => p.id), matches };
+  }
+  if(type === 'cambiar_capitan'){
+    const player = participantMap[String(effect.jugador || '')];
+    const starters = new Set((game?.tactic?.starters || []).map(Number));
+    if(player && starters.has(Number(player.id))){
+      game.tactic = { ...game.tactic, captainId:Number(player.id) };
+      return { type, playerId:Number(player.id) };
+    }
+    return { type, skipped:true };
+  }
+  if(type === 'bloqueo_entrenamiento'){
+    const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Number(game.globalTurn || 0);
+    const days = Math.max(1, Math.round(Number(effect.dias || 1)));
+    game.lockerRoomTrainingPauseUntilTurn = Math.max(Number(game.lockerRoomTrainingPauseUntilTurn || 0), turn + days);
+    return { type, days, untilTurn:game.lockerRoomTrainingPauseUntilTurn };
+  }
+  return { type:type || 'desconocido', skipped:true };
+}
+function lockerRoomApplyEffectList(effects=[], context={}){
+  return (Array.isArray(effects) ? effects : []).map(effect => lockerRoomApplyDecisionEffect(effect, context));
+}
+function lockerRoomIssueText(applied=[]){
+  const issues = applied.flatMap(item => Array.isArray(item?.issues) ? item.issues : []);
+  if(!issues.length) return '';
+  return ` ${issues.map(issue => `${issue.playerName} estará fuera ${issue.matchesOut} días por ${String(issue.injuryLabel || 'una molestia').toLowerCase()}.`).join(' ')}`;
+}
+function pendingLockerRoomDecisionMessage(){
+  if(!game) return null;
+  return (game.messages || []).find(message => message?.action?.type === 'lockerRoomDecision' && message.action.status === 'pending') || null;
+}
+function hasPendingLockerRoomDecision(){
+  return Boolean(pendingLockerRoomDecisionMessage());
+}
+function lockerRoomDecisionBlockText(){
+  const message = pendingLockerRoomDecisionMessage();
+  return message ? `Respondé el problema de vestuario pendiente: ${message.title}.` : '';
+}
+function createLockerRoomDecision(event, participants=[], state=null){
   if(!game || !event || !participants.length) return null;
   const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
-  const participantMap = {};
-  const templateValues = {};
-  participants.forEach((player, index) => {
-    const key = `jugador${index + 1}`;
-    participantMap[key] = player;
-    templateValues[key] = player.name || 'Jugador';
-  });
-  const uniformMorale = Number(event.moralParticipantes || 0);
-  participants.forEach(player => lockerRoomApplyPlayerMorale(player, uniformMorale));
-  Object.entries(event.moralPorJugador || {}).forEach(([key, delta]) => lockerRoomApplyPlayerMorale(participantMap[key], Number(delta || 0)));
-  const uniformCondition = Number(event.formaParticipantes || 0);
-  participants.forEach(player => lockerRoomApplyPlayerCondition(player, uniformCondition));
-  if(Number(event.moralPlantel || 0) !== 0 && typeof adjustSquadMorale === 'function') adjustSquadMorale(game.selectedClubId, Number(event.moralPlantel || 0));
-  const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, Number(event.cohesion || 0)) : 0;
-  const injuries = [];
-  (Array.isArray(event.lesiones) ? event.lesiones : []).forEach((injuryDefinition, injuryIndex) => {
-    (injuryDefinition.jugadores || []).forEach(key => {
-      const player = participantMap[key];
-      if(!player || isInjured(player.id)) return;
-      const days = lockerRoomInjuryDays(event.id, player.id, injuryDefinition.diasMin, injuryDefinition.diasMax, turn + injuryIndex);
-      injuries.push({
-        clubId:Number(game.selectedClubId),
-        playerId:Number(player.id),
-        playerName:player.name || 'Jugador',
-        injuryLabel:String(injuryDefinition.nombre || 'Contusión'),
-        name:String(injuryDefinition.nombre || 'Contusión'),
-        matchesOut:days,
-        chance:1,
-        source:'locker_room'
-      });
-      templateValues[`dias_${key}`] = String(days);
-    });
-  });
-  if(injuries.length && typeof applyAvailability === 'function'){
-    applyAvailability([], injuries);
-    injuries.forEach(injury => {
-      if(game.playerStats?.[injury.playerId]) game.playerStats[injury.playerId].injuries = Number(game.playerStats[injury.playerId].injuries || 0) + 1;
-    });
-    const problems = injuries.map(injury => ({ type:'injury', playerId:injury.playerId }));
-    if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic(problems);
-    game.lastOwnProblems = [...(Array.isArray(game.lastOwnProblems) ? game.lastOwnProblems : []), ...problems].filter((item, index, list) => list.findIndex(other => other.type === item.type && Number(other.playerId) === Number(item.playerId)) === index);
-    game.mustReviewTactics = game.lastOwnProblems.length > 0;
-  }
-  const injuryText = injuries.length
-    ? ` ${injuries.map(injury => `${injury.playerName} sufrió ${String(injury.injuryLabel || 'una lesión').toLowerCase()} y estará fuera ${injury.matchesOut} días.`).join(' ')}`
-    : '';
-  const runtime = { templateValues };
+  const participantMap = lockerRoomParticipantMap(participants);
+  const context = { eventId:event.id, optionId:'initial', turn, participants, participantMap };
+  const initialEffects = lockerRoomApplyEffectList(event.efectosIniciales || [], context);
+  const messageId = `locker-room-decision-${event.id}-s${game.seasonNumber || 1}-t${turn}`;
   const message = typeof pushGameMessage === 'function' ? pushGameMessage({
-    id:`locker-room-${event.id}-s${game.seasonNumber || 1}-t${turn}`,
+    id:messageId,
     type:'vestuario',
-    priority:injuries.length ? 'high' : 'normal',
-    title:formatEventTemplate(event.titulo || event.nombre || 'Problema de vestuario', {}, runtime),
-    body:`${formatEventTemplate(event.cuerpo || '', {}, runtime)}${injuryText}`.trim()
+    priority:'high',
+    title:lockerRoomFormat(event.titulo || event.nombre || 'Problema de vestuario', participants),
+    body:`${lockerRoomFormat(event.cuerpo || '', participants)}${lockerRoomIssueText(initialEffects)}`.trim(),
+    action:{
+      type:'lockerRoomDecision', status:'pending', eventId:String(event.id),
+      participantIds:participants.map(player => Number(player.id)),
+      prompt:lockerRoomFormat(event.pregunta || '¿Cómo respondés?', participants),
+      options:(event.opciones || []).map(option => ({ id:String(option.id), text:lockerRoomFormat(option.texto || option.id, participants) })),
+      createdTurn:turn, createdSeason:Number(game.seasonNumber || 1), createdDate:String(game.currentDate || '')
+    }
   }) : null;
   const logEntry = {
-    occurrenceId:`locker-room-${event.id}-s${game.seasonNumber || 1}-t${turn}`,
-    eventId:event.id,
-    name:event.nombre || event.id,
-    season:game.seasonNumber || 1,
-    turn,
-    matchdayIndex:game.matchdayIndex || 0,
-    date:game.currentDate || '',
-    matchId:null,
-    createdAt:Date.now(),
-    details:{
-      type:'locker_room',
-      participantIds:participants.map(player => Number(player.id)),
-      injuries:injuries.map(injury => ({ playerId:injury.playerId, injuryLabel:injury.injuryLabel, days:injury.matchesOut })),
-      cohesionChange,
-      moraleAfter:squadMoraleAverage(game.selectedClubId),
-      cohesionAfter:cohesionValue(game.selectedClubId),
-      messageId:message?.id || null
-    }
+    occurrenceId:messageId, eventId:event.id, name:event.nombre || event.id,
+    season:game.seasonNumber || 1, turn, matchdayIndex:game.matchdayIndex || 0,
+    date:game.currentDate || '', matchId:null, createdAt:Date.now(),
+    details:{ type:'locker_room_decision', status:'pending', participantIds:participants.map(player => Number(player.id)), initialEffects, messageId:message?.id || messageId }
   };
   ensureEventLog().push(logEntry);
-  game.lastLockerRoomEvent = { id:event.id, name:event.nombre || event.id, turn, date:game.currentDate || '', participantIds:logEntry.details.participantIds };
+  game.lastLockerRoomEvent = { id:event.id, name:event.nombre || event.id, turn, date:game.currentDate || '', participantIds:logEntry.details.participantIds, pending:true };
   if(state){
     state.events += 1;
     state.lastEventId = event.id;
     state.lastEventDate = String(game.currentDate || '');
     state.lastEventTurn = turn;
+    state.pendingMessageId = message?.id || messageId;
   }
-  return { event, participants, injuries, message, logEntry };
+  return { event, participants, message, logEntry, initialEffects };
+}
+function lockerRoomResolveSpecialOption(option={}, context={}){
+  if(option.resolucionEspecial !== 'votacion_capitan') return null;
+  const captain = context.participantMap?.jugador1;
+  const challenger = context.participantMap?.jugador2;
+  if(!captain || !challenger) return { result:'La votación no pudo realizarse.', effects:[] };
+  const captainScore = Number(captain.skills?.liderazgo || 0) + currentMorale(captain.id) + lockerRoomHash(`${context.eventId}-${context.turn}-captain-vote`, 21);
+  const challengerScore = Number(challenger.skills?.liderazgo || 0) + currentMorale(challenger.id) + lockerRoomHash(`${context.eventId}-${context.turn}-challenger-vote`, 21);
+  if(challengerScore > captainScore){
+    return {
+      result:`El plantel eligió a ${challenger.name} como nuevo capitán.`,
+      effects:[{ tipo:'cambiar_capitan', jugador:'jugador2' }, { tipo:'moral_jugadores', jugadores:['jugador1'], valor:-6 }, { tipo:'moral_jugadores', jugadores:['jugador2'], valor:6 }, { tipo:'cohesion', valor:5 }]
+    };
+  }
+  return {
+    result:`El plantel ratificó a ${captain.name} como capitán.`,
+    effects:[{ tipo:'moral_jugadores', jugadores:['jugador1'], valor:6 }, { tipo:'moral_jugadores', jugadores:['jugador2'], valor:-2 }, { tipo:'cohesion', valor:5 }]
+  };
+}
+function lockerRoomCreatePromise(promiseDefinition={}, context={}, message=null, option=null){
+  const state = ensureLockerRoomCrisisState();
+  const player = context.participantMap?.[String(promiseDefinition.jugador || '')];
+  if(!state || !player) return null;
+  const turn = context.turn;
+  const promise = {
+    id:`locker-room-promise-${context.eventId}-${player.id}-${turn}`,
+    type:String(promiseDefinition.tipo || 'minutos'), eventId:String(context.eventId || ''), optionId:String(context.optionId || ''),
+    messageId:String(message?.id || ''), playerId:Number(player.id), playerName:String(player.name || 'Jugador'),
+    participantIds:context.participants.map(item => Number(item.id)),
+    createdTurn:turn, dueTurn:turn + Math.max(1, Math.round(Number(promiseDefinition.diasMax || 20))),
+    startPlayerMatches:Math.max(0, Math.round(Number(game.playerStats?.[player.id]?.played || 0))),
+    startTeamMatches:Math.max(0, Math.round(Number(game.managerStats?.totals?.played || 0))),
+    matchesMax:Math.max(1, Math.round(Number(promiseDefinition.partidosMax || 3))),
+    textPending:lockerRoomFormat(promiseDefinition.textoPendiente || 'Quedó una promesa pendiente.', context.participants),
+    resultFulfilled:lockerRoomFormat(promiseDefinition.resultadoCumplida || 'La promesa fue cumplida.', context.participants),
+    effectsFulfilled:Array.isArray(promiseDefinition.efectosCumplida) ? promiseDefinition.efectosCumplida : [],
+    resultFailed:lockerRoomFormat(promiseDefinition.resultadoIncumplida || 'La promesa no fue cumplida.', context.participants),
+    effectsFailed:Array.isArray(promiseDefinition.efectosIncumplida) ? promiseDefinition.efectosIncumplida : []
+  };
+  state.promises.push(promise);
+  return promise;
+}
+function lockerRoomFindEvent(eventId){
+  return lockerRoomProblemDefinitions().find(event => String(event.id) === String(eventId)) || null;
+}
+function respondLockerRoomDecision(messageId, optionId){
+  if(!game) return false;
+  const message = (game.messages || []).find(item => String(item.id) === String(messageId));
+  if(!message || message.action?.type !== 'lockerRoomDecision' || message.action.status !== 'pending'){
+    showNotice('La decisión ya fue respondida o dejó de estar disponible.');
+    return false;
+  }
+  const event = lockerRoomFindEvent(message.action.eventId);
+  const option = event?.opciones?.find(item => String(item.id) === String(optionId));
+  if(!event || !option){ showNotice('No se pudo encontrar la respuesta seleccionada.'); return false; }
+  const participants = (message.action.participantIds || []).map(id => playerById(Number(id))).filter(Boolean);
+  const participantMap = lockerRoomParticipantMap(participants);
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
+  const context = { eventId:event.id, optionId:option.id, turn, participants, participantMap };
+  let resultText = lockerRoomFormat(option.resultado || 'La decisión fue comunicada al plantel.', participants);
+  let effects = Array.isArray(option.efectos) ? option.efectos : [];
+  const special = lockerRoomResolveSpecialOption(option, context);
+  if(special){
+    resultText = special.result;
+    effects = special.effects;
+  }else if(Number.isFinite(Number(option.probabilidadExito))){
+    const roll = lockerRoomHash(`locker-room-choice-${event.id}-${option.id}-${message.id}`, 1000000) / 1000000;
+    const success = roll < clamp(Number(option.probabilidadExito), 0, 1);
+    resultText = lockerRoomFormat(success ? option.resultadoExito : option.resultadoFallo, participants);
+    effects = success ? (option.efectosExito || []) : (option.efectosFallo || []);
+    message.action.outcome = success ? 'success' : 'failure';
+  }
+  const appliedEffects = lockerRoomApplyEffectList(effects, context);
+  resultText = `${resultText}${lockerRoomIssueText(appliedEffects)}`.trim();
+  const promise = option.promesa ? lockerRoomCreatePromise(option.promesa, context, message, option) : null;
+  if(promise) resultText = `${resultText} ${promise.textPending}`.trim();
+  message.action.status = 'resolved';
+  message.action.selectedOptionId = String(option.id);
+  message.action.selectedOptionText = lockerRoomFormat(option.texto || option.id, participants);
+  message.action.resultText = resultText;
+  message.action.resolvedTurn = turn;
+  message.action.resolvedDate = String(game.currentDate || '');
+  message.action.appliedEffects = appliedEffects;
+  message.action.promiseId = promise?.id || '';
+  message.action.promiseStatus = promise ? 'pending' : '';
+  const state = ensureLockerRoomCrisisState();
+  if(state && String(state.pendingMessageId || '') === String(message.id)) state.pendingMessageId = '';
+  const log = ensureEventLog().find(entry => String(entry.occurrenceId) === String(message.id));
+  if(log?.details){
+    log.details.status = 'resolved';
+    log.details.optionId = String(option.id);
+    log.details.optionText = message.action.selectedOptionText;
+    log.details.resultText = resultText;
+    log.details.appliedEffects = appliedEffects;
+    log.details.promiseId = promise?.id || '';
+  }
+  if(game.lastLockerRoomEvent && String(game.lastLockerRoomEvent.id) === String(event.id)) game.lastLockerRoomEvent.pending = false;
+  saveLocal(true);
+  if(activeTab === 'messages' && typeof renderMessages === 'function') renderMessages();
+  else if(typeof renderAll === 'function') renderAll();
+  showNotice('Decisión de vestuario registrada.');
+  return true;
+}
+function processLockerRoomPromisesDaily(){
+  if(!game) return { fulfilled:0, failed:0, pending:0 };
+  const state = ensureLockerRoomCrisisState();
+  const promises = Array.isArray(state?.promises) ? state.promises : [];
+  if(!promises.length) return { fulfilled:0, failed:0, pending:0 };
+  const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
+  const teamMatches = Math.max(0, Math.round(Number(game.managerStats?.totals?.played || 0)));
+  const remaining = [];
+  const summary = { fulfilled:0, failed:0, pending:0 };
+  promises.forEach(promise => {
+    const player = playerById(Number(promise.playerId || 0));
+    const playerMatches = Math.max(0, Math.round(Number(game.playerStats?.[promise.playerId]?.played || 0)));
+    const fulfilled = player && Number(player.clubId || 0) === Number(game.selectedClubId || 0) && playerMatches > Number(promise.startPlayerMatches || 0);
+    const expired = !player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0) || turn >= Number(promise.dueTurn || 0) || teamMatches >= Number(promise.startTeamMatches || 0) + Number(promise.matchesMax || 1);
+    if(!fulfilled && !expired){ remaining.push(promise); summary.pending += 1; return; }
+    const participants = (promise.participantIds || []).map(id => playerById(Number(id))).filter(Boolean);
+    const participantMap = lockerRoomParticipantMap(participants);
+    const effects = fulfilled ? promise.effectsFulfilled : promise.effectsFailed;
+    lockerRoomApplyEffectList(effects, { eventId:promise.eventId, optionId:promise.optionId, turn, participants, participantMap });
+    const originalMessage = (game.messages || []).find(message => String(message.id) === String(promise.messageId || ''));
+    if(originalMessage?.action?.type === 'lockerRoomDecision'){
+      originalMessage.action.promiseStatus = fulfilled ? 'fulfilled' : 'failed';
+      originalMessage.action.promiseResult = fulfilled ? promise.resultFulfilled : promise.resultFailed;
+    }
+    if(typeof pushGameMessage === 'function') pushGameMessage({
+      id:`${promise.id}-${fulfilled ? 'fulfilled' : 'failed'}`,
+      type:'vestuario', priority:fulfilled ? 'normal' : 'high',
+      title:fulfilled ? 'Promesa cumplida' : 'Promesa incumplida',
+      body:fulfilled ? promise.resultFulfilled : promise.resultFailed
+    });
+    if(fulfilled) summary.fulfilled += 1;
+    else summary.failed += 1;
+  });
+  state.promises = remaining;
+  return summary;
 }
 function processLockerRoomProblemsDaily(options={}){
   if(!game || game.gameOver?.active || !Number(game.selectedClubId || 0)) return { active:false, checked:false, triggered:false };
-  const definitions = lockerRoomProblemDefinitions();
-  if(!definitions.length) return { active:false, checked:false, triggered:false };
-  const settings = lockerRoomCrisisSettings();
   const state = ensureLockerRoomCrisisState();
   const clubId = Number(game.selectedClubId || 0);
   const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
   const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
   if(Number(state.clubId) !== clubId || Number(state.season) !== season){
-    Object.assign(state, { clubId, season, active:false, startedTurn:0, nextCheckTurn:0, lastCheckTurn:0, checks:0, events:0, recentEventIds:[], lastEventId:'', lastEventDate:'', lastEventTurn:0 });
+    Object.assign(state, { clubId, season, active:false, startedTurn:0, nextCheckTurn:0, lastCheckTurn:0, checks:0, events:0, recentEventIds:[], lastEventId:'', lastEventDate:'', lastEventTurn:0, pendingMessageId:'', promises:[] });
   }
+  const promiseSummary = processLockerRoomPromisesDaily();
+  const definitions = lockerRoomProblemDefinitions();
+  if(!definitions.length) return { active:false, checked:false, triggered:false, promiseSummary };
+  const settings = lockerRoomCrisisSettings();
+  const pending = pendingLockerRoomDecisionMessage();
+  if(pending){
+    state.pendingMessageId = pending.id;
+    return { active:Boolean(state.active), checked:false, triggered:false, pending:true, messageId:pending.id, promiseSummary };
+  }
+  state.pendingMessageId = '';
   const morale = squadMoraleAverage(clubId);
   const cohesion = cohesionValue(clubId);
   const canStart = morale < settings.moraleThreshold && cohesion < settings.cohesionThreshold;
@@ -430,31 +719,31 @@ function processLockerRoomProblemsDaily(options={}){
     state.startedTurn = 0;
     state.nextCheckTurn = 0;
     state.lastCheckTurn = turn;
-    return { active:false, recovered:true, checked:false, triggered:false, morale, cohesion };
+    return { active:false, recovered:true, checked:false, triggered:false, morale, cohesion, promiseSummary };
   }
   if(!state.active){
-    if(!canStart) return { active:false, checked:false, triggered:false, morale, cohesion };
+    if(!canStart) return { active:false, checked:false, triggered:false, morale, cohesion, promiseSummary };
     state.active = true;
     state.startedTurn = turn;
     state.nextCheckTurn = turn + settings.intervalDays;
     state.lastCheckTurn = turn;
-    return { active:true, started:true, checked:false, triggered:false, morale, cohesion, nextCheckTurn:state.nextCheckTurn };
+    return { active:true, started:true, checked:false, triggered:false, morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
   }
-  if(turn < Number(state.nextCheckTurn || 0)) return { active:true, checked:false, triggered:false, morale, cohesion, nextCheckTurn:state.nextCheckTurn };
+  if(turn < Number(state.nextCheckTurn || 0)) return { active:true, checked:false, triggered:false, morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
   state.checks += 1;
   state.lastCheckTurn = turn;
   state.nextCheckTurn = turn + settings.intervalDays;
   const roll = lockerRoomHash(`locker-room-roll-${clubId}-${season}-${turn}-${state.checks}`, 1000000) / 1000000;
-  if(roll >= settings.probability) return { active:true, checked:true, triggered:false, roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn };
+  if(roll >= settings.probability) return { active:true, checked:true, triggered:false, roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
   const recent = new Set((state.recentEventIds || []).slice(-settings.recentLimit));
   const candidates = definitions.filter(event => !recent.has(String(event.id)));
   const pool = candidates.length ? candidates : definitions;
   const eventIndex = lockerRoomHash(`locker-room-event-${clubId}-${season}-${turn}-${state.events}`, pool.length);
   const event = pool[eventIndex];
   const participants = selectLockerRoomParticipants(event, `locker-room-${clubId}-${season}-${turn}-${event.id}`);
-  if(!participants.length) return { active:true, checked:true, triggered:false, roll, reason:'no_players', morale, cohesion, nextCheckTurn:state.nextCheckTurn };
-  const result = executeLockerRoomProblem(event, participants, state);
+  if(!participants.length) return { active:true, checked:true, triggered:false, roll, reason:'no_players', morale, cohesion, nextCheckTurn:state.nextCheckTurn, promiseSummary };
+  const result = createLockerRoomDecision(event, participants, state);
   state.recentEventIds = [...(state.recentEventIds || []), String(event.id)].slice(-Math.max(settings.recentLimit, 1));
-  return { active:true, checked:true, triggered:Boolean(result), roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn, result };
+  return { active:true, checked:true, triggered:Boolean(result), pending:Boolean(result), roll, morale, cohesion, nextCheckTurn:state.nextCheckTurn, result, promiseSummary };
 }
 

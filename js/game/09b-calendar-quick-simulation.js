@@ -1215,6 +1215,13 @@ function advanceWithoutClubCalendarOneStep(){
 function advanceCalendarOneStep(){
   if(!game || game.seasonFinalized) return;
   if(game.gameOver?.active){ advanceWithoutClubCalendarOneStep(); return; }
+  if(typeof hasPendingLockerRoomDecision === 'function' && hasPendingLockerRoomDecision()){
+    if(typeof stopAdvanceAutoClicker === 'function') stopAdvanceAutoClicker();
+    activeTab = 'messages';
+    if(typeof renderAll === 'function') renderAll();
+    showNotice(typeof lockerRoomDecisionBlockText === 'function' ? lockerRoomDecisionBlockText() : 'Respondé el problema de vestuario pendiente antes de avanzar.');
+    return;
+  }
   if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está procesando el calendario.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   repairBotRosters({ reason:'before_unified_day_advance' });

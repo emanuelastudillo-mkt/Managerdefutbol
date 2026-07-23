@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.21</p>
+      <p class="eyebrow">Guía actualizada · V8.22</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1646,7 +1646,7 @@ function openGameHelpModal(){
         <article class="help-card card">
           <span class="pill warn">3 · Decisiones</span>
           <h4>Mensajes</h4>
-          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y consecuencias de decisiones anteriores. Algunas operaciones sólo se resuelven desde esta bandeja.</p>
+          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y problemas de vestuario. Cuando aparece una decisión de vestuario, debés elegir una respuesta antes de continuar el calendario; cada alternativa tiene consecuencias propias y algunas crean promesas que se controlan en partidos posteriores.</p>
           ${gameHelpGoButton('messages','Abrir Mensajes')}
         </article>
       </div>

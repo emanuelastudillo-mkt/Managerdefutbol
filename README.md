@@ -1,3 +1,28 @@
+# Chill mánager - Futbol online — V8.22
+
+## V8.22 — Decisiones interactivas de vestuario
+
+- Los 20 problemas de vestuario pasan a requerir una respuesta del manager.
+- La crisis conserva las condiciones de V8.21: moral media y cohesión por debajo de 60, control cada 5 días y 30% de probabilidad en cada control.
+- Cada evento ofrece 3 respuestas diferentes, para un total de 60 decisiones posibles.
+- Cuando aparece un evento, el calendario manual y automático se detienen hasta responderlo desde Mensajes.
+- Las consecuencias se narran sin mostrar porcentajes ni variaciones internas de moral, cohesión, condición, prestigio, hinchas o dinero.
+- Las respuestas pueden afectar jugadores concretos, todo el plantel, cohesión, estado físico, presupuesto, prestigio del manager, hinchas, capitanía y disponibilidad.
+- Se incorporan sanciones internas, multas, bonos, permisos personales, lesiones de entrenamiento y descansos que suspenden temporalmente el trabajo diario.
+- La pelea en entrenamiento conserva las dos contusiones independientes de 10 a 20 días antes de la decisión del manager.
+- Dos respuestas crean promesas de minutos. Se comprueba automáticamente si el jugador participa antes del límite indicado.
+- Las promesas cumplidas o incumplidas generan una consecuencia posterior y permanecen visibles en el mensaje original hasta resolverse.
+- No puede aparecer una segunda decisión mientras exista otra sin responder.
+- Los últimos 5 eventos continúan excluidos temporalmente para reducir repeticiones.
+- El botón para borrar mensajes conserva decisiones y promesas pendientes.
+- Se actualizó Ayuda y el curso de Moral y cohesión.
+- No requiere cambios de Worker ni SQL.
+
+### Compatibilidad
+
+**V8.22 no rompe partidas anteriores.** Las partidas de V8.21 conservan su crisis, historial, jugadores y lesiones. El estado de decisiones y promesas se crea sólo cuando aparece un nuevo evento. No modifica resultados, contratos, calendarios ni los cinco slots.
+
+
 # Chill mánager - Futbol online — V8.21
 
 ## V8.21 — Problemas de vestuario por moral y cohesión bajas

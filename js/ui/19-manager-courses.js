@@ -15,7 +15,7 @@ const MANAGER_COURSE_LICENSES = {
       { id:'lineup', title:'Titulares y suplentes', text:'Confirmá once titulares válidos y un banco capaz de cubrir distintas zonas. No alcanza con elegir las medias más altas si faltan defensores, mediocampistas o reemplazos útiles.', example:'Antes de jugar, comprobá que tengas alternativas para el arquero, la defensa y el ataque.' },
       { id:'captaincy', title:'Capitanía', text:'El capitán debe ser un futbolista confiable que normalmente forme parte del once. Revisá la capitanía cuando el jugador quede lesionado, suspendido, vendido o relegado al banco.', example:'Elegí un titular habitual para evitar llegar a un partido sin capitán disponible.' },
       { id:'fitness', title:'Estado físico y rotación', text:'La forma física baja con la exigencia y necesita tiempo para recuperarse. Repetir siempre el mismo once puede hacer que el equipo llegue cansado a los partidos importantes.', example:'Rotá a un titular agotado en un encuentro accesible para recuperarlo antes de una final.' },
-      { id:'morale', title:'Moral y cohesión', text:'La moral refleja el ánimo individual y la cohesión representa cuánto se conoce el equipo. Los cambios constantes, las derrotas y un vestuario inestable pueden volver irregular a un plantel fuerte.', example:'Mantené una base reconocible y evitá modificar toda la alineación en cada fecha.' },
+      { id:'morale', title:'Moral y cohesión', text:'La moral refleja el ánimo individual y la cohesión representa cuánto se conoce el equipo. Si ambas caen por debajo de 60 pueden aparecer conflictos de vestuario que requieren una respuesta del manager y pueden dejar promesas pendientes.', example:'Mantené una base reconocible, respondé los conflictos y cumplí las promesas de minutos para recuperar confianza.' },
       { id:'pitch', title:'Campo e instalaciones del club', text:'El estado del campo influye en circulación, ocasiones, desgaste y riesgo físico. Estadio, césped y calefacción pertenecen al club; el Predio juvenil se administra por separado desde Carrera → Mejoras.', example:'Si el campo está deteriorado, usá recursos del club para mantenerlo; no confundas esa obra con una mejora personal del Predio juvenil.' },
       { id:'training', title:'Entrenamiento', text:'El entrenamiento mejora al plantel, pero las cargas más intensas también pueden reducir la forma y la moral. Entrenar bien significa elegir el momento, no usar siempre la opción más exigente.', example:'Después de varios partidos seguidos puede ser mejor recuperar que insistir con otra sesión intensa.' },
       { id:'availability', title:'Lesiones y suspensiones', text:'Un jugador lesionado o suspendido no debe quedar como una solución prevista para el próximo encuentro. Revisá disponibilidad antes de confirmar el equipo y prepará reemplazos.', example:'Mirá Mensajes y Primer Equipo después de cada partido para detectar bajas nuevas.' },
@@ -64,7 +64,7 @@ const MANAGER_COURSE_LICENSES = {
 
 function createInitialManagerCoursesState(){
   return {
-    version:'V8.21',
+    version:'V8.22',
     checked:{ basic:[], national:[], international:[] },
     completed:{ basic:false, national:false, international:false },
     completedAt:{ basic:null, national:null, international:null },
@@ -95,7 +95,7 @@ function normalizeManagerCoursesState(value=null){
   });
   clean.rewardClaimed = Boolean(src.rewardClaimed && clean.completed.international);
   clean.rewardClaimedAt = clean.rewardClaimed ? (src.rewardClaimedAt || clean.completedAt.international || null) : null;
-  clean.version = 'V8.21';
+  clean.version = 'V8.22';
   return clean;
 }
 function managerCoursesHasProgress(value=null){

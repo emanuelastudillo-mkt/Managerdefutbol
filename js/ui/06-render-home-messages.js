@@ -943,6 +943,7 @@ function homeMessagesSummary(){
 }
 function messageHasPendingAction(message){
   const status = String(message?.action?.status || '');
+  if(message?.action?.type === 'lockerRoomDecision' && String(message.action.promiseStatus || '') === 'pending') return true;
   return Boolean(message?.action && ['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market'].includes(status));
 }
 function deletableOldMessages(){
@@ -984,11 +985,14 @@ function renderMessages(){
     document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
     document.querySelectorAll('[data-convince-player]').forEach(btn => btn.addEventListener('click', () => convinceSpecialClausePlayer(btn.dataset.convincePlayer)));
     document.querySelectorAll('[data-reject-offer]').forEach(btn => btn.addEventListener('click', () => rejectTransferOffer(btn.dataset.rejectOffer)));
+    document.querySelectorAll('[data-locker-room-choice]').forEach(btn => btn.addEventListener('click', () => {
+      if(typeof respondLockerRoomDecision === 'function') respondLockerRoomDecision(btn.dataset.lockerRoomMessage, btn.dataset.lockerRoomChoice);
+    }));
   }
   saveLocal(true);
 }
 function messageIcon(type){
-  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', asistente:'🎧' };
+  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', asistente:'🎧', vestuario:'🗣️' };
   return map[String(type || '').trim()] || '✉️';
 }
 function messageToneClass(type, priority){
@@ -998,6 +1002,7 @@ function messageToneClass(type, priority){
   if(['evento','noticia'].includes(key)) return 'message-tone-sport';
   if(['warning'].includes(key)) return 'message-tone-alert';
   if(['staff','directiva'].includes(key)) return 'message-tone-board';
+  if(['vestuario'].includes(key)) return 'message-tone-locker-room';
   if(['asistente'].includes(key)) return 'message-tone-assistant';
   return 'message-tone-info';
 }
@@ -1046,14 +1051,34 @@ function transferOfferStatusLabel(status){
   };
   return map[status] || String(status || 'Cerrada');
 }
+function lockerRoomDecisionActionMarkup(message){
+  const action = message?.action;
+  if(action?.type !== 'lockerRoomDecision') return '';
+  if(action.status === 'pending'){
+    const options = Array.isArray(action.options) ? action.options : [];
+    return `<div class="locker-room-decision-panel">
+      <p class="locker-room-decision-prompt">${escapeHtml(action.prompt || '¿Cómo respondés?')}</p>
+      <div class="row message-actions locker-room-choice-list">${options.map((option, index) => `<button type="button" class="${index === 0 ? 'primary' : 'ghost'}" data-locker-room-message="${escapeHtml(message.id)}" data-locker-room-choice="${escapeHtml(option.id)}">${escapeHtml(option.text)}</button>`).join('')}</div>
+    </div>`;
+  }
+  const selected = action.selectedOptionText ? `<span class="pill message-status-pill">Decisión: ${escapeHtml(action.selectedOptionText)}</span>` : '<span class="pill message-status-pill">Respondido</span>';
+  const promiseStatus = String(action.promiseStatus || '');
+  const promise = promiseStatus === 'pending'
+    ? '<span class="pill warn message-status-pill">Promesa pendiente</span>'
+    : (action.promiseResult ? `<div class="locker-room-promise-result ${promiseStatus === 'failed' ? 'is-failed' : 'is-fulfilled'}"><strong>${promiseStatus === 'failed' ? 'Promesa incumplida' : 'Promesa cumplida'}</strong><p>${escapeHtml(action.promiseResult)}</p></div>` : '');
+  const result = action.resultText ? `<div class="locker-room-decision-result"><strong>Consecuencia</strong><p>${escapeHtml(action.resultText)}</p></div>` : '';
+  return `<div class="locker-room-decision-closed"><div class="row locker-room-decision-statuses">${selected}${promiseStatus === 'pending' ? promise : ''}</div>${result}${promiseStatus !== 'pending' ? promise : ''}</div>`;
+}
 function messageCard(m){
   const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
   const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
-  const action = m.action?.type === 'transferOffer' && m.action.status === 'pending'
-    ? (isWithoutClub
-      ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
-      : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
-    : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '');
+  const action = m.action?.type === 'lockerRoomDecision'
+    ? lockerRoomDecisionActionMarkup(m)
+    : (m.action?.type === 'transferOffer' && m.action.status === 'pending'
+      ? (isWithoutClub
+        ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
+        : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
+      : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : ''));
   const toneClass = messageToneClass(m.type, m.priority);
   const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';

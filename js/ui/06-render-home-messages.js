@@ -25,15 +25,15 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.31" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.32" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
-          <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tus carreras normales se guardan por separado.</p>
+          <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
         </div>
         <div class="welcome-summary">
           <div><span>Países</span><strong>${formatPlainNumber(countryCount)}</strong></div>
           <div><span>Ligas</span><strong>${formatPlainNumber(divisionCount)}</strong></div>
-          <div><span>Carreras</span><strong>${formatPlainNumber(careerIds.length)}</strong></div>
+          <div><span>Carrera</span><strong>${formatPlainNumber(careerIds.length)}</strong></div>
         </div>
       </div>
 
@@ -68,7 +68,7 @@ function renderWelcomeScreen(){
       </section>
 
       <div class="welcome-features">
-        <span>5 carreras normales</span>
+        <span>1 carrera normal</span>
         <span>Guardado local</span>
         <span>Retos separados</span>
         <span>Competencias online</span>

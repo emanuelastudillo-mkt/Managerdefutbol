@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.31</p>
+      <p class="eyebrow">Guía actualizada · V8.32</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1760,7 +1760,7 @@ function openGameHelpModal(){
       <h3>Funciones superiores</h3>
       <div class="help-grid compact">
         <article class="help-card card"><h4>Guardar</h4><p>Guarda la partida local. Usalo antes de cerrar o después de operaciones importantes.</p></article>
-        <article class="help-card card"><h4>Cargar</h4><p>Abre los slots para continuar una carrera o iniciar otra.</p></article>
+        <article class="help-card card"><h4>Cargar</h4><p>Abre la partida guardada para continuarla o iniciar una nueva.</p></article>
         <article class="help-card card"><h4>Renunciar</h4><p>Finaliza el contrato actual y sus pagos. Tu saldo, Academia y derechos económicos permanecen.</p></article>
         <article class="help-card card"><h4>Avance automático</h4><p>Avanza hasta que una decisión, bloqueo o revisión requiera intervención manual.</p></article>
       </div>

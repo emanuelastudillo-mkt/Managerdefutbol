@@ -272,8 +272,15 @@ function syncManualPlayersIntoSeed(options={}){
 }
 
 
+const SINGLE_CAREER_SLOT_MIGRATION_KEY = 'fmSingleCareerSlotMigrationV8.32';
+const SINGLE_CAREER_SLOT_ARCHIVE_PREFIX = 'archive:v8.32:single-career:';
+const activeSaveSlotBeforeSingleSlotMigration = (() => {
+  try{ return String(localStorage.getItem(SAVE_ACTIVE_SLOT_STORAGE_KEY) || SAVE_SLOT_CAREER); }
+  catch(_){ return SAVE_SLOT_CAREER; }
+})();
+
 let currentSaveSlotId = (() => {
-  try{ return normalizeSaveSlotId(localStorage.getItem(SAVE_ACTIVE_SLOT_STORAGE_KEY) || SAVE_SLOT_CAREER); }
+  try{ return normalizeSaveSlotId(activeSaveSlotBeforeSingleSlotMigration || SAVE_SLOT_CAREER); }
   catch(_){ return SAVE_SLOT_CAREER; }
 })();
 
@@ -317,6 +324,7 @@ function baseSaveSlotLabel(slotId=''){
   const clean = normalizeSaveSlotId(slotId);
   if(clean === SAVE_SLOT_CAMPO_DESTRUIDO) return 'Reto Campo destruido';
   const number = careerSaveSlotNumber(clean);
+  if(SAVE_CAREER_SLOT_COUNT === 1 && number) return 'Carrera';
   return number ? `Carrera ${number}` : 'Carrera';
 }
 function saveSlotRecordAutoLabel(slotId='', record=null){
@@ -352,6 +360,84 @@ async function deleteSaveRecordByKey(key){
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
+}
+function rawCareerSlotNumber(slotId=''){
+  const raw = String(slotId || '').trim().toLowerCase();
+  if([SAVE_SLOT_LEGACY_CAREER, 'main', 'mi_carrera', 'mi-carrera'].includes(raw)) return 1;
+  const match = raw.match(/^career[:_-]?(\d+)$/) || raw.match(/^carrera[:_-]?(\d+)$/);
+  return match ? Math.max(1, Math.min(10, Math.round(Number(match[1]) || 1))) : 0;
+}
+function cloneSaveRecord(record){
+  if(!record || typeof record !== 'object') return record;
+  if(typeof structuredClone === 'function'){
+    try{ return structuredClone(record); }catch(_error){}
+  }
+  return JSON.parse(JSON.stringify(record));
+}
+async function readLegacyCareerSlotRecord(slotNumber=1){
+  const number = Math.max(1, Math.min(10, Math.round(Number(slotNumber) || 1)));
+  const primaryKey = `${SAVE_SLOT_PREFIX}${SAVE_SLOT_CAREER_PREFIX_ID}${number}`;
+  const candidates = [
+    { key:primaryKey, source:'primary', priority:3 },
+    { key:number === 1 ? SAVE_KEY : `${SAVE_BACKUP_PREFIX}${primaryKey}`, source:'backup', priority:2 }
+  ];
+  if(number === 1) candidates.push({ key:legacyCareerSlotKey(), source:'legacy', priority:1 });
+  const loaded = await Promise.all(candidates.map(async item => ({ ...item, record:await readSaveRecordByKey(item.key).catch(()=>null) })));
+  const usable = loaded.filter(item => usableLocalSaveRecord(item.record));
+  if(!usable.length) return null;
+  usable.sort((a,b) => localSaveRecordTimestamp(b.record) - localSaveRecordTimestamp(a.record) || b.priority - a.priority);
+  return { slotNumber:number, key:usable[0].key, record:usable[0].record };
+}
+async function migrateCareerSlotsToSingleSlot(){
+  if(SAVE_CAREER_SLOT_COUNT !== 1) return { migrated:false, reason:'multiple_slots_enabled' };
+  try{
+    if(localStorage.getItem(SINGLE_CAREER_SLOT_MIGRATION_KEY) === 'done'){
+      setCurrentSaveSlot(SAVE_SLOT_CAREER);
+      return { migrated:false, reason:'already_done' };
+    }
+  }catch(_error){}
+
+  const records = (await Promise.all(Array.from({ length:10 }, (_, index) => readLegacyCareerSlotRecord(index + 1).catch(()=>null)))).filter(Boolean);
+  const activeNumber = rawCareerSlotNumber(activeSaveSlotBeforeSingleSlotMigration);
+  const activeRecord = records.find(item => item.slotNumber === activeNumber);
+  const slotOneRecord = records.find(item => item.slotNumber === 1);
+  const newestRecord = records.slice().sort((a,b) => localSaveRecordTimestamp(b.record) - localSaveRecordTimestamp(a.record))[0] || null;
+  const selected = activeRecord || slotOneRecord || newestRecord;
+  let migrated = false;
+  let fromSlot = 0;
+
+  if(selected && selected.slotNumber !== 1){
+    const payload = cloneSaveRecord(selected.record);
+    payload.saveSlotId = SAVE_SLOT_CAREER;
+    payload.localSaveMeta = {
+      ...(payload.localSaveMeta || {}),
+      migratedToSingleSlotAt:new Date().toISOString(),
+      migratedFromCareerSlot:selected.slotNumber
+    };
+    const db = await openDb();
+    try{
+      await new Promise((resolve,reject)=>{
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const store = tx.objectStore(DB_STORE);
+        if(slotOneRecord?.record){
+          store.put(cloneSaveRecord(slotOneRecord.record), `${SINGLE_CAREER_SLOT_ARCHIVE_PREFIX}career:1`);
+        }
+        store.put(payload, `${SAVE_SLOT_PREFIX}${SAVE_SLOT_CAREER}`);
+        store.put(payload, SAVE_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudo consolidar la partida.'));
+        tx.onabort = () => reject(tx.error || new Error('Se canceló la consolidación de la partida.'));
+      });
+    }finally{
+      try{ db.close(); }catch(_error){}
+    }
+    migrated = true;
+    fromSlot = selected.slotNumber;
+  }
+
+  setCurrentSaveSlot(SAVE_SLOT_CAREER);
+  try{ localStorage.setItem(SINGLE_CAREER_SLOT_MIGRATION_KEY, 'done'); }catch(_error){}
+  return { migrated, fromSlot, retainedLegacySlots:records.filter(item => item.slotNumber !== 1).map(item => item.slotNumber) };
 }
 async function localSlotExists(slotId='career'){
   return Boolean(await readLocalSaveRecord(slotId).catch(()=>null));
@@ -391,7 +477,7 @@ async function hydrateCareerSlotCards(){
     if(detail){
       detail.textContent = summary.exists
         ? `Guardada${summary.currentDate ? ` · ${summary.currentDate}` : ''}`
-        : 'Slot libre para iniciar una carrera normal.';
+        : 'Espacio libre para iniciar una carrera normal.';
     }
     if(continueBtn) continueBtn.textContent = summary.exists ? 'Entrar' : 'Crear';
     card.classList.toggle('save-slot-empty', !summary.exists);
@@ -428,7 +514,7 @@ async function startNewCareerFromSlot(slotId=SAVE_SLOT_CAREER){
   const slot = normalizeSaveSlotId(slotId);
   const exists = await localSlotExists(slot).catch(()=>false);
   if(exists){
-    const ok = window.confirm(`Esto inicia una nueva ${baseSaveSlotLabel(slot)} y pisa ese slot guardado en este navegador. ¿Continuar?`);
+    const ok = window.confirm(`Esto inicia una nueva carrera y reemplaza la partida guardada en este navegador. ¿Continuar?`);
     if(!ok) return false;
     await deleteLocalSaveSlot(slot).catch(()=>{});
   }
@@ -2328,7 +2414,7 @@ async function loadLocal(silent=false, slotId=null){
     }
     return true;
   }
-  if(!silent) showNotice(`No hay partida guardada en el slot ${saveSlotLabel(slot)}.`);
+  if(!silent) showNotice('No hay una partida guardada.');
   return false;
 }
 async function resetLocal(){
@@ -2345,6 +2431,7 @@ async function resetLocal(){
 
 async function init(){
   try{
+    const singleSlotMigration = await migrateCareerSlotsToSingleSlot().catch(error => { console.warn('No se pudo consolidar los slots anteriores.', error); return { migrated:false }; });
     const preferredSlot = normalizeSaveSlotId(currentSaveSlotId || SAVE_SLOT_CAREER);
     let savedRecord = await readLocalSaveRecord(preferredSlot).catch(() => null);
     if(!savedRecord && preferredSlot !== SAVE_SLOT_CAREER) savedRecord = await readLocalSaveRecord(SAVE_SLOT_CAREER).catch(() => null);
@@ -2376,6 +2463,9 @@ async function init(){
     if(typeof migrateAllSavedManagerProfilesToGlobal === 'function') await migrateAllSavedManagerProfilesToGlobal().catch(()=>{});
     let loaded = await loadLocal(true, preferredSlot);
     if(!loaded && preferredSlot !== SAVE_SLOT_CAREER) loaded = await loadLocal(true, SAVE_SLOT_CAREER);
+    if(loaded && singleSlotMigration?.migrated){
+      showNotice(`La carrera del antiguo espacio ${singleSlotMigration.fromSlot} se trasladó al único espacio disponible.`);
+    }
     if(!loaded){
       if(useSavedSnapshots){
         seed = await loadInitialSeed({ skipPlayersDatabase:false });

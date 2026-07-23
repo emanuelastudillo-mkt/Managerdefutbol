@@ -1,3 +1,19 @@
+# Una vida de manager — V8.32
+
+## V8.32 — Un único slot de carrera
+
+- Las carreras normales pasan de cinco slots visibles a uno.
+- La interfaz reemplaza “Slots / Nueva partida” por “Partida / Nueva partida”.
+- En partidas existentes, se conserva prioritariamente la carrera que estaba activa antes de actualizar.
+- Si la carrera activa pertenecía a los antiguos slots 2–5, se copia automáticamente a `career:1`.
+- Los demás registros antiguos no se eliminan: quedan archivados e inaccesibles desde la interfaz normal.
+- El reto Campo destruido mantiene su guardado especial separado.
+- No requiere cambios de Worker ni SQL.
+
+**V8.32 no rompe partidas anteriores.** Consolida la carrera activa en el único slot visible sin cambiar jugadores, temporadas, contratos, resultados ni progreso.
+
+---
+
 # Una vida de manager — V8.31
 
 ## V8.31 — Dominio definitivo y publicación

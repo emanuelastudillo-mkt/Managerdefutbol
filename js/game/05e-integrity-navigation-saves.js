@@ -911,7 +911,7 @@ function bindSidebarGroupToggles(){
 }
 
 function bindEvents(){
-  $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else openNewGameModal(); });
+  $('btnOpenNewGame')?.addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de partida.' }); else openNewGameModal(); });
   $('btnNewGame')?.addEventListener('click', ()=> newGame(Number($('clubSelect')?.value || 0), { managerName:storedManagerName() }));
   $('btnManagerCourses')?.addEventListener('click', () => { if(typeof openManagerCoursesModal === 'function') openManagerCoursesModal(); });
   $('btnOnlineChallengeAvailable')?.addEventListener('click', () => { if(typeof challengeOpenMatchingAvailable === 'function') challengeOpenMatchingAvailable(); });
@@ -926,7 +926,7 @@ function bindEvents(){
   $('btnSave')?.addEventListener('click', () => {
     Promise.resolve(saveLocal(false)).catch(() => undefined);
   });
-  $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de slots.' }); else loadLocal(false); });
+  $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de partida.' }); else loadLocal(false); });
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
   $('btnVerifyIntegrity')?.addEventListener('click', () => showGameIntegrityModal(inspectGameIntegrity(), false));
   $('btnForceNewSeason')?.addEventListener('click', openForceNewSeasonModal);

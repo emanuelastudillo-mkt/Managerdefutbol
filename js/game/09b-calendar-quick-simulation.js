@@ -855,10 +855,10 @@ function runScheduledSeasonGameVerifier(options={}){
         type:'system',
         priority:'high',
         title:'Revisión de estructura necesaria',
-        body:`El control automático del día ${summary.scheduledDay} detectó ${summary.unresolved} aviso(s) que no se pueden corregir sin revisión. Abrí el Verificador de estructura desde el menú lateral.`
+        body:`El control automático del día ${summary.scheduledDay} detectó ${summary.unresolved} aviso(s) pendientes. El sistema continuará revisando la estructura en los próximos controles programados.`
       });
     }
-    if(options.silent !== true && typeof showNotice === 'function') showNotice('El Verificador detectó avisos que requieren revisión manual.', true);
+    if(options.silent !== true && typeof showNotice === 'function') showNotice('El control automático detectó avisos pendientes y volverá a revisarlos.', true);
   }
   return summary;
 }

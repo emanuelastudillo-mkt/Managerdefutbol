@@ -929,9 +929,6 @@ function bindEvents(){
   });
   $('btnLoad').addEventListener('click', () => { if(typeof goToSaveSlotsMenu === 'function') goToSaveSlotsMenu({ saveCurrent:true, reloadSeed:true, notice:'Menú de partida.' }); else loadLocal(false); });
   $('topResignClubBtn')?.addEventListener('click', resignCurrentClub);
-  $('btnVerifyIntegrity')?.addEventListener('click', () => showGameIntegrityModal(inspectGameIntegrity(), false));
-  $('btnForceNewSeason')?.addEventListener('click', openForceNewSeasonModal);
-  $('btnReset')?.addEventListener('click', confirmResetLocal);
   document.querySelectorAll('.tabs [data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const targetTab = btn.dataset.tab;

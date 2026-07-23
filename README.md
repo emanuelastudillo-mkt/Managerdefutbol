@@ -1,3 +1,21 @@
+# Una vida de manager — V8.36
+
+## V8.36 — Herramientas de recuperación retiradas de la interfaz
+
+- Se retiró del menú lateral el bloque manual de resolución de problemas.
+- Ya no se muestran los botones `Verificar que todo esté bien`, `Desbloquear y nueva temporada` ni `Reset de partida`.
+- Los controles automáticos de estructura continúan ejecutándose en los días programados de cada temporada.
+- Los avisos automáticos ya no indican que el usuario deba abrir un verificador manual.
+- Si una sección falla al renderizar, la recuperación ofrece volver a Inicio y deja la revisión de estructura a los controles automáticos.
+- La lógica interna de integridad y reparación segura se conserva para compatibilidad con verificaciones automáticas y partidas anteriores.
+- No requiere cambios de Worker ni SQL.
+
+**V8.36 no rompe partidas anteriores.** El cambio es de interfaz y acceso manual; conserva guardados, verificaciones automáticas, temporadas, resultados y el slot único.
+
+---
+
+## Historial anterior — V8.35
+
 # Una vida de manager — V8.35
 
 ## V8.35 — Corrección del Trabajo diferenciado

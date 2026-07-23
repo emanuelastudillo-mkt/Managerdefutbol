@@ -25,7 +25,7 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.35" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.36" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
@@ -167,9 +167,8 @@ function renderAll(){
         console.error('Error en fallback de Primer Equipo', fallbackErr);
       }
     }
-    view.innerHTML = `<div class="card blocker"><h2>No se pudo abrir esta sección</h2><p>La partida no se borró. Probá volver a Inicio o usar el verificador.</p><p class="muted small">Detalle técnico: ${escapeHtml(err?.message || String(err || 'error'))}</p><div class="row"><button class="primary" data-render-fallback-home>Ir a Inicio</button><button class="ghost" data-render-fallback-verify>Verificar que todo esté bien</button></div></div>`;
+    view.innerHTML = `<div class="card blocker"><h2>No se pudo abrir esta sección</h2><p>La partida no se borró. Volvé a Inicio; los controles automáticos continuarán revisando la estructura del guardado.</p><p class="muted small">Detalle técnico: ${escapeHtml(err?.message || String(err || 'error'))}</p><div class="row"><button class="primary" data-render-fallback-home>Ir a Inicio</button></div></div>`;
     document.querySelector('[data-render-fallback-home]')?.addEventListener('click', () => { activeTab = 'home'; renderAll(); });
-    document.querySelector('[data-render-fallback-verify]')?.addEventListener('click', () => { if(typeof inspectGameIntegrity === 'function' && typeof showGameIntegrityModal === 'function') showGameIntegrityModal(inspectGameIntegrity(), false); });
   }
 }
 function getNextMatchForSelected(){

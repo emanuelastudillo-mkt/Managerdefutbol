@@ -1916,6 +1916,46 @@ function processKinesiologistDifferentiatedDaily(){
   if(state) state.lastDifferentiatedDaily = summary;
   return summary;
 }
+function processKinesiologistDifferentiatedDays(days=1, options={}){
+  const totalDays = clamp(Math.round(Number(days || 1)), 1, 31);
+  const playerId = kinesiologistDifferentiatedPlayerId();
+  if(!playerId) return { applied:false, daysRequested:totalDays, daysApplied:0 };
+  const player = playerById(playerId);
+  if(!player) return { applied:false, daysRequested:totalDays, daysApplied:0 };
+  const conditionBefore = currentCondition(playerId);
+  const moraleBefore = currentMorale(playerId);
+  const wearBefore = currentPlayerWear(playerId);
+  let daysApplied = 0;
+  let wearRecovered = 0;
+  let lastDaily = null;
+  for(let day=0; day<totalDays; day += 1){
+    const daily = processKinesiologistDifferentiatedDaily();
+    if(!daily?.applied) break;
+    daysApplied += 1;
+    wearRecovered += Math.max(0, Number(daily.wearRecovered || 0));
+    lastDaily = daily;
+  }
+  const summary = {
+    applied:daysApplied > 0,
+    playerId,
+    daysRequested:totalDays,
+    daysApplied,
+    conditionBefore,
+    conditionAfter:currentCondition(playerId),
+    moraleBefore,
+    moraleAfter:currentMorale(playerId),
+    wearBefore,
+    wearAfter:currentPlayerWear(playerId),
+    wearRecovered,
+    injuryReduction:kinesiologistDifferentiatedInjuryReduction(playerId),
+    source:String(options.source || 'calendar'),
+    lastDaily,
+    ...turnStamp()
+  };
+  const state = kinesiologistDifferentiatedState();
+  if(state) state.lastDifferentiatedBatch = summary;
+  return summary;
+}
 function kinesiologistDifferentiatedSlotMarkup(active){
   if(!active) return `<div class="kinesio-differentiated-panel is-inactive">
     <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo</p><h4>Trabajo diferenciado</h4></div><span class="pill">Sin efecto</span></div>
@@ -1937,10 +1977,15 @@ function kinesiologistDifferentiatedSlotMarkup(active){
     .map(player => `<option value="${player.id}" ${Number(player.id) === currentId ? 'selected' : ''}>${escapeHtml(player.name)} · ${escapeHtml(player.position || '—')} · ${visibleOverall(player)}</option>`)
     .join('');
   const currentMarkup = currentPlayer ? `<div class="kinesio-differentiated-current">${faceImg(currentPlayer,'staff-differentiated-face')}<div><strong>${escapeHtml(currentPlayer.name)}</strong><span>${conditionBar(currentPlayer.id)}</span><span>${moraleBar(currentPlayer.id)}</span></div></div>` : '<p class="muted kinesio-slot-empty">Casillero libre.</p>';
+  const lastRecovery = kinesiologistDifferentiatedState()?.lastDifferentiatedBatch || kinesiologistDifferentiatedState()?.lastDifferentiatedDaily || null;
+  const lastRecoveryMarkup = currentPlayer && Number(lastRecovery?.playerId || 0) === Number(currentPlayer.id) && lastRecovery?.applied
+    ? `<div class="staff-result ok-result"><strong>Último avance aplicado</strong><span>Forma ${Math.round(Number(lastRecovery.conditionBefore || 0))} → ${Math.round(Number(lastRecovery.conditionAfter || 0))} · Moral ${Math.round(Number(lastRecovery.moraleBefore || 0))} → ${Math.round(Number(lastRecovery.moraleAfter || 0))}${Number(lastRecovery.daysApplied || 1) > 1 ? ` · ${Math.round(Number(lastRecovery.daysApplied || 1))} días procesados` : ''}</span></div>`
+    : '';
   return `<div class="kinesio-differentiated-panel is-active">
     <div class="row kinesio-differentiated-header"><div><p class="label">Casillero del kinesiólogo · ${escapeHtml(categoryLabel)}</p><h4>Trabajo diferenciado</h4></div><span class="pill ok">-${reduction}% lesión</span></div>
     <p class="muted">Un jugador queda fuera del entrenamiento general e individual. Cada día recupera ${KINESIOLOGIST_DIFFERENTIATED_WEAR_RECOVERY} de desgaste, ${KINESIOLOGIST_DIFFERENTIATED_CONDITION_RECOVERY} de forma y ${KINESIOLOGIST_DIFFERENTIATED_MORALE_RECOVERY} de moral.</p>
     ${currentMarkup}
+    ${lastRecoveryMarkup}
     <label class="label" for="kinesioDifferentiatedPlayer">Jugador asignado</label>
     <select id="kinesioDifferentiatedPlayer" class="training-individual-select"><option value="0">Ningún jugador</option>${options}</select>
     <div class="modal-actions"><button id="btnAssignKinesioDifferentiated" class="primary">${currentId ? 'Actualizar casillero' : 'Agregar jugador'}</button>${currentId ? '<button id="btnClearKinesioDifferentiated" class="ghost">Retirar</button>' : ''}</div>

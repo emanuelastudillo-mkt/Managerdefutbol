@@ -904,9 +904,9 @@ function processDailyCalendarState(dateAfter='', options={}){
     return { botResults, recovered, bankPayment:0, managerSalaryPayment, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
-  const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDaily === 'function'
-    ? processKinesiologistDifferentiatedDaily()
-    : { applied:false };
+  const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
+    ? processKinesiologistDifferentiatedDays(1, { source:'daily_calendar_state' })
+    : (typeof processKinesiologistDifferentiatedDaily === 'function' ? processKinesiologistDifferentiatedDaily() : { applied:false });
   const kinesioAutomatic = typeof processAutomaticKinesiologistTreatmentsDaily === 'function'
     ? processAutomaticKinesiologistTreatmentsDaily()
     : { active:false, attempted:0 };
@@ -1627,6 +1627,9 @@ function finalizePreseasonTurnAfterMatch(context={}){
   rememberCalendarDate();
   advanceGlobalTurn();
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
+  const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
+    ? processKinesiologistDifferentiatedDays(DAYS_PER_ADVANCE, { source:'preseason_compact_advance' })
+    : { applied:false };
   if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
   runScheduledSeasonGameVerifier({ reason:'preseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'preseason' });
@@ -1735,6 +1738,9 @@ function simulatePostseasonTurn(){
   rememberCalendarDate();
   advanceGlobalTurn();
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
+  const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
+    ? processKinesiologistDifferentiatedDays(DAYS_PER_ADVANCE, { source:'postseason_compact_advance' })
+    : { applied:false };
   if(typeof processAfaFieldSanctionDaily === 'function') processAfaFieldSanctionDaily();
   runScheduledSeasonGameVerifier({ reason:'postseason' });
   if(typeof processScoutingCenterDaily === 'function') processScoutingCenterDaily({ reason:'postseason' });

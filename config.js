@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.34',
+  version: 'V8.35',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -25,7 +25,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.34', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.35', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -39,12 +39,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.34',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.35',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.34',
-    eventsUrl: 'data/eventos.json?v=8.34',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.34',
+    installationsUrl: 'data/instalaciones.json?v=8.35',
+    eventsUrl: 'data/eventos.json?v=8.35',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.35',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -651,7 +651,7 @@ window.GAME_CONFIG = {
     porcentajeVisitanteMaximoConFaltanteLocal: 0.50,
     hinchasPorPuntoBonusLocal: 1000,
     bonusLocalMaximo: 50,
-    // Crecimiento de hinchas V8.34: base comprimida para equilibrar clubes grandes, pequeños y fundados.
+    // Crecimiento de hinchas V8.35: base comprimida para equilibrar clubes grandes, pequeños y fundados.
     hinchasMasaBase: 12,
     hinchasMasaActualRaiz: 0.45,
     hinchasMasaVitaliciosRaiz: 0.05,

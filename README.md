@@ -1,3 +1,21 @@
+# Una vida de manager — V8.35
+
+## V8.35 — Corrección del Trabajo diferenciado
+
+- Se verificó el flujo completo del casillero del Kinesiólogo con jugadores de forma y moral muy bajas.
+- En temporada regular continúa aplicándose una recuperación por cada día real avanzado.
+- Se corrigió un fallo por el cual la pretemporada y la postemporada excluían al jugador del entrenamiento general, pero no ejecutaban su recuperación diferenciada.
+- Los avances compactos de esas fases ahora procesan los 7 días representados por cada turno.
+- El bloque del Kinesiólogo muestra el último cambio aplicado en forma y moral para poder comprobar el funcionamiento.
+- El Kinesiólogo Regular conserva la recuperación configurada de 5 puntos diarios de forma, 1 de moral y 4 de desgaste; la categoría modifica la reducción de riesgo de lesión.
+- No requiere cambios de Worker ni SQL.
+
+**V8.35 no rompe partidas anteriores.** Conserva empleados, asignaciones y estados físicos; la corrección se aplica desde el siguiente avance de calendario.
+
+---
+
+## Historial anterior — V8.34
+
 # Una vida de manager — V8.34
 
 ## V8.34 — Fórmula equilibrada de hinchas

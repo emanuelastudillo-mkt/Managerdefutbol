@@ -1,3 +1,18 @@
+# Una vida de manager — V8.29
+
+## V8.29 — Marca final y logo principal
+
+- El nombre público definitivo del juego pasa a ser **Una vida de manager**.
+- Se reemplaza la marca visible anterior en el título del navegador, metadatos SEO, Open Graph, datos estructurados, manifiesto y pantallas principales.
+- La barra superior y la selección de partidas utilizan `assets/logo-banner.png` como logotipo principal.
+- El archivo esperado mide **650 × 351 px** y mantiene su proporción original mediante CSS responsive.
+- La imagen no se incluye en los ZIP: debe conservarse manualmente en `assets/logo-banner.png`.
+- Se mantienen intactas las claves internas de guardado, IndexedDB, sesiones online y slots.
+
+**V8.29 no rompe partidas anteriores.** El cambio es exclusivamente de identidad visual, textos públicos y presentación.
+
+---
+
 # Chill mánager - Futbol online — V8.28
 
 

@@ -24,8 +24,9 @@ function renderWelcomeScreen(){
   view.innerHTML = `
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
-        <div>
-          <p class="label">Chill mánager · Futbol online</p>
+        <div class="welcome-brand-column">
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.29" alt="Una vida de manager" />
+          <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tus carreras normales se guardan por separado.</p>
         </div>
@@ -54,7 +55,7 @@ function renderWelcomeScreen(){
 
       <section class="welcome-about card" aria-labelledby="welcomeAboutTitle">
         <div>
-          <p class="label">Manager de fútbol en navegador</p>
+          <p class="label">Una vida de manager · Juego de fútbol en navegador</p>
           <h3 id="welcomeAboutTitle">Gestioná el club dentro y fuera de la cancha</h3>
           <p class="muted">Elegí una liga, prepará el once, entrená al plantel, negociá contratos y transferencias, desarrollá tu Academia y avanzá temporada a temporada. También podés publicar desafíos y competir por categorías salariales en el ranking online.</p>
         </div>

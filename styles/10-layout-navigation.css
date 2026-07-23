@@ -239,7 +239,7 @@
   .sidebar-nav .nav-group-items>button{padding-left:20px}
 }.sidebar-nav .nav-group-items{display:grid;grid-template-columns:1fr;max-height:0;opacity:0;overflow:hidden;transition:max-height .22s ease,opacity .16s ease,padding .16s ease;margin:0 4px;padding-top:0}.sidebar-nav .nav-group-items::before{display:none}.sidebar-nav .nav-group.is-open .nav-group-items{max-height:360px;opacity:1;padding-top:4px}
 
-/* V8.20 · Presentación indexable de Chill mánager. */
+/* V8.20 · Presentación indexable del juego. */
 .welcome-about{
   display:grid;
   grid-template-columns:minmax(0,1.35fr) minmax(240px,.65fr);
@@ -273,4 +273,44 @@
 }
 @media (max-width:560px){
   .welcome-about-points{grid-template-columns:1fr}
+}
+
+
+/* V8.29 · Identidad visual de Una vida de manager. */
+.visually-hidden{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.topbar-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.topbar-brand-copy{display:grid;gap:2px;min-width:0}
+.topbar-brand .eyebrow{margin:0}
+.game-brand-logo{display:block;max-width:100%;height:auto;object-fit:contain}
+.game-brand-logo-top{width:180px;height:72px;object-fit:contain;object-position:left center}
+.game-brand-logo-welcome{width:min(390px,100%);margin:0 0 6px}
+.game-brand-logo-empty{width:min(360px,82vw);margin:0 auto 14px}
+.game-brand-logo-noscript{width:min(360px,100%);margin:0 0 14px}
+.brand-empty-state{text-align:center}
+.welcome-brand-column{min-width:0}
+.welcome-brand-kicker{margin:0 0 8px}
+@media (max-width:900px){
+  .topbar-brand{width:100%;justify-content:space-between}
+  .game-brand-logo-top{width:170px;height:68px}
+}
+@media (max-width:520px){
+  .topbar-brand{align-items:flex-start}
+  .game-brand-logo-top{width:145px;height:58px}
+  .topbar-brand-copy{padding-top:4px}
+  .game-brand-logo-welcome{width:min(320px,100%)}
 }

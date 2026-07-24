@@ -102,7 +102,27 @@
   const SIM_USE_PLAYER_ERROR_FORMULA = Boolean(simConfigValue('simulador.formulaErroresJugador', true));
   const SIM_MAX_TEAM_ERRORS = Math.round(simConfigNumber('simulador.maximoErroresPorEquipo', 5, 0, 20));
   const LIVE_FATIGUE_MULTIPLIER = simConfigNumber('simulador.fatigaVivaMultiplicador', 2, 0.5, 4);
-  const SIM_CARD_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorTarjetas', 0.5, 0, 2);
+  const SIM_CARD_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorTarjetas', 0.70, 0, 2);
+  const SIM_DIRECT_RED_RATE_MULTIPLIER = simConfigNumber('simulador.multiplicadorRojasDirectas', 0.55, 0, 2);
+  const SIM_HIGH_CARD_PENALTY_ENABLED = Boolean(simConfigValue('simulador.penalizacionTarjetasAltas.activo', true));
+  function normalizeCardPenaltyRulesV2(path, fallback){
+    return simConfigArray(path, fallback).map(rule => ({
+      cardsFrom:Math.max(1, Math.round(Number(rule?.tarjetasTotalesDesde ?? rule?.cardsFrom ?? 0) || 0)),
+      penalty:simClamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)
+    })).filter(rule => rule.cardsFrom > 0 && rule.penalty > 0).sort((a,b)=>a.cardsFrom-b.cardsFrom);
+  }
+  const SIM_HIGH_YELLOW_CARD_PENALTY_RULES = normalizeCardPenaltyRulesV2('simulador.penalizacionTarjetasAltas.amarillas', [
+    { tarjetasTotalesDesde:6, penalizacion:0.30 },
+    { tarjetasTotalesDesde:7, penalizacion:0.40 },
+    { tarjetasTotalesDesde:8, penalizacion:0.50 },
+    { tarjetasTotalesDesde:9, penalizacion:0.80 }
+  ]);
+  const SIM_HIGH_DIRECT_RED_CARD_PENALTY_RULES = normalizeCardPenaltyRulesV2('simulador.penalizacionTarjetasAltas.rojasDirectas', [
+    { tarjetasTotalesDesde:2, penalizacion:0.40 },
+    { tarjetasTotalesDesde:3, penalizacion:0.50 },
+    { tarjetasTotalesDesde:4, penalizacion:0.60 },
+    { tarjetasTotalesDesde:5, penalizacion:0.90 }
+  ]);
   const SIM_DEFAULT_LOSS_RED_CARDS = Math.round(simConfigNumber('simulador.rojasDerrotaDefault', 5, 1, 11));
   const SIM_HIGH_SCORE_GOAL_PENALTY_ENABLED = Boolean(simConfigValue('simulador.penalizacionGolesAltos.activo', true));
   const SIM_HIGH_SCORE_GOAL_PENALTY_RULES = simConfigArray('simulador.penalizacionGolesAltos.tramos', [
@@ -142,6 +162,31 @@
   function simClamp(value,min,max){ return Math.max(min, Math.min(max, value)); }
   function simAvg(values){ const clean = values.filter(v => Number.isFinite(v)); return clean.length ? clean.reduce((a,b)=>a+b,0)/clean.length : 0; }
   function simRnd(min,max){ return min + Math.random() * (max-min); }
+  function simHighCardPenaltyForNextCard(currentCount, rules){
+    if(!SIM_HIGH_CARD_PENALTY_ENABLED) return 0;
+    const nextTotal = Math.max(0, Math.round(Number(currentCount || 0))) + 1;
+    let penalty = 0;
+    (rules || []).forEach(rule => { if(nextTotal >= Number(rule.cardsFrom || 0)) penalty = Math.max(penalty, Number(rule.penalty || 0)); });
+    return simClamp(penalty, 0, 0.99);
+  }
+  function applyCardVolumePenaltyV2(candidates, existingCards=[]){
+    const accepted = [];
+    let yellowCount = (Array.isArray(existingCards) ? existingCards : []).filter(card => ['yellow','secondYellowRed'].includes(String(card?.type || ''))).length;
+    let directRedCount = (Array.isArray(existingCards) ? existingCards : []).filter(card => String(card?.type || '') === 'red').length;
+    (Array.isArray(candidates) ? candidates : []).slice().sort((a,b)=>Number(a?.minute || 0)-Number(b?.minute || 0)).forEach(card => {
+      const type = String(card?.type || '');
+      const isYellow = type === 'yellow' || type === 'secondYellowRed';
+      const isDirectRed = type === 'red';
+      const penalty = isYellow
+        ? simHighCardPenaltyForNextCard(yellowCount, SIM_HIGH_YELLOW_CARD_PENALTY_RULES)
+        : (isDirectRed ? simHighCardPenaltyForNextCard(directRedCount, SIM_HIGH_DIRECT_RED_CARD_PENALTY_RULES) : 0);
+      if(penalty > 0 && Math.random() < penalty) return;
+      accepted.push(card);
+      if(isYellow) yellowCount += 1;
+      if(isDirectRed) directRedCount += 1;
+    });
+    return accepted;
+  }
   function simHighScoreGoalPenaltyForNextGoal(currentTotalGoals){
     if(!SIM_HIGH_SCORE_GOAL_PENALTY_ENABLED) return 0;
     const nextTotal = Math.max(0, Math.round(Number(currentTotalGoals || 0))) + 1;
@@ -821,7 +866,7 @@
       else cards.push({ clubId, playerId:p.id, type:'secondYellowRed', minute:Math.floor(simRnd(35,90)) });
     }
     const directRedCandidates = power.lineup.filter(p => p.position !== 'POR' && hiddenStats(p).aggression >= 76);
-    const directChance = simClamp(((power.aggression - 60) / 290) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier, 0.0002, 0.13);
+    const directChance = simClamp(((power.aggression - 60) / 290) * SIM_CARD_RATE_MULTIPLIER * SIM_DIRECT_RED_RATE_MULTIPLIER * cardMultiplier, 0.0001, 0.08);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(20,90)) });
@@ -1560,7 +1605,7 @@
       }else cards.push({ clubId, playerId:p.id, type:'yellow', minute });
     }
     const directRedCandidates = eligibleLineup.filter(p => !locallySent.has(Number(p.id)) && p.position !== 'POR' && hiddenStats(p).aggression >= 78);
-    const directChance = simClamp(((power.aggression - 62) / 900) * SIM_CARD_RATE_MULTIPLIER * cardMultiplier, 0.0001, 0.045);
+    const directChance = simClamp(((power.aggression - 62) / 900) * SIM_CARD_RATE_MULTIPLIER * SIM_DIRECT_RED_RATE_MULTIPLIER * cardMultiplier, 0.00005, 0.025);
     if(directRedCandidates.length && Math.random() < directChance){
       const p = weightedPickV2(directRedCandidates, cardWeightV2);
       cards.push({ clubId, playerId:p.id, type:'red', minute:Math.floor(simRnd(block.from, block.to + 1)) });
@@ -1573,7 +1618,7 @@
     candidates.forEach(player => {
       const injuryMultiplier = simClamp(Number(power?.styleEffects?.injuryMultiplier || 1), 0.35, 2.20);
       const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
-      const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId, { live:true }) : 0.50;
+      const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId, { live:true }) : 0.75;
       const fullMatchChance = simClamp(injuryChanceForPlayer(player.id, context.pitch) * injuryMultiplier * cardMultiplier * contextMultiplier, 0, 0.95);
       const chance = typeof liveInjuryChanceForBlock === 'function'
         ? liveInjuryChanceForBlock(fullMatchChance, block)
@@ -1742,10 +1787,11 @@
       if(goal){ session.goals.push(goal); session.awayGoals++; }
     }
     const friendlyNoSanctions = Boolean(session.match?.friendly);
-    const cards = friendlyNoSanctions ? [] : [
+    const cardCandidates = friendlyNoSanctions ? [] : [
       ...liveCardsForBlock(session, session.match.homeId, home, h.fouls, block),
       ...liveCardsForBlock(session, session.match.awayId, away, a.fouls, block)
     ].sort((x,y)=>x.minute-y.minute);
+    const cards = friendlyNoSanctions ? [] : applyCardVolumePenaltyV2(cardCandidates, session.cards || []);
     cards.forEach(card => {
       session.cards.push(card);
       if(isRedCardType(card.type)) removePlayerFromLiveTactic(session, card.clubId, card.playerId, 'red');
@@ -2004,7 +2050,8 @@
     goals.sort((a,b)=>a.minute-b.minute);
     const matchStats = { home:finalizeStats(homeTotals), away:finalizeStats(awayTotals) };
     matchStats.away.possession = 100 - matchStats.home.possession;
-    const cards = [...makeCardsV2(match.homeId, home, matchStats.home.fouls), ...makeCardsV2(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
+    const cardCandidates = [...makeCardsV2(match.homeId, home, matchStats.home.fouls), ...makeCardsV2(match.awayId, away, matchStats.away.fouls)].sort((a,b)=>a.minute-b.minute);
+    const cards = applyCardVolumePenaltyV2(cardCandidates, []);
     const defaultLoss = defaultLossByRedCards(cards, match.homeId, match.awayId);
     if(defaultLoss){
       homeGoals = Number(defaultLoss.homeGoals || 0);

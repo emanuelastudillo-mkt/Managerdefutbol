@@ -1657,6 +1657,11 @@ function neutralTournamentAttendanceContext(match){
     homeFans = Math.round(totalFans * (homeDemand / totalDemand));
     awayFans = Math.max(0, totalFans - homeFans);
   }
+  const isClubWorldCup = Boolean(match?.clubWorldCup);
+  const ticketPrice = isClubWorldCup
+    ? Math.max(0, Math.round(Number(String(match?.clubWorldCupStage || '') === 'final' ? CLUB_WORLD_CUP_CONFIG?.finalTicketPrice : CLUB_WORLD_CUP_CONFIG?.ticketPrice) || 0))
+    : 0;
+  const ticketRevenue = Math.max(0, Math.round(totalFans * ticketPrice));
   return {
     stadiumName:String(match?.stadiumName || 'Sede neutral'),
     capacity,
@@ -1669,13 +1674,13 @@ function neutralTournamentAttendanceContext(match){
     awaySectionRate:totalFans > 0 ? Number(((awayFans / totalFans) * 100).toFixed(1)) : 0,
     awayMax:capacity,
     homeCrowdBonus:0,
-    ticketPrice:0,
-    ticketBasePrice:0,
+    ticketPrice,
+    ticketBasePrice:ticketPrice,
     ticketPriceMultiplier:1,
     ticketPriceAutoBot:false,
     ticketPricePrestigeTier:'neutral',
-    ticketRevenue:0,
-    ticketRevenueBeforeMarketing:0,
+    ticketRevenue,
+    ticketRevenueBeforeMarketing:ticketRevenue,
     marketingRevenueBonus:0,
     marketingBonusPct:0,
     homeDemandBase:homeDemand,

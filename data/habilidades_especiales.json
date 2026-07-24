@@ -1,8 +1,8 @@
 {
-  "version": "V8.16",
+  "version": "V8.43",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V8.13: agrega cinco cartas Experto en juveniles que suman habilidades visibles al consultar informes de Tu Academia.",
+  "caracteristicas_version": "V8.43: las cartas consumen usos al activar, al desactivar y cada 100 días activas; una carta agotada expira al día siguiente del ciclo activo.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -30,7 +30,9 @@
       "rara": 2,
       "epica": 3,
       "legendaria": 5
-    }
+    },
+    "dias_por_consumo_activo": 100,
+    "consumir_uso_al_desactivar": true
   },
   "rareza_orden_visual": [
     "inutil",

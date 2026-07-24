@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.42</p>
+      <p class="eyebrow">Guía actualizada · V8.43</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1760,7 +1760,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Cartas especiales</h4>
-          <p>Las cartas aplican efectos limitados sobre áreas concretas. Conviene reservarlas para objetivos claros y recordar que no reemplazan una estructura económica o deportiva sostenible.</p>
+          <p>Las cartas aplican efectos limitados sobre áreas concretas. Cada activación y desactivación consume un uso. Mientras siguen activas, consumen otro uso cada 100 días; si una carta queda sin usos, conserva su bonus hasta completar ese ciclo y desaparece al día siguiente.</p>
           ${gameHelpGoButton('special','Abrir Cartas')}
         </article>
       </div>

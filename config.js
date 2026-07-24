@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.42',
+  version: 'V8.43',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -24,7 +24,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.42', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.43', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -38,13 +38,13 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.42',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.43',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.42',
-    eventsUrl: 'data/eventos.json?v=8.42',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.42',
-    managerAchievementsUrl: 'data/hitos_manager.json?v=8.42',
+    installationsUrl: 'data/instalaciones.json?v=8.43',
+    eventsUrl: 'data/eventos.json?v=8.43',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.43',
+    managerAchievementsUrl: 'data/hitos_manager.json?v=8.43',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
     hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
@@ -86,6 +86,8 @@ window.GAME_CONFIG = {
     // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
     mundialClubes: {
       diaSorteo: 295,
+      precioEntrada: 1200,
+      precioEntradaFinal: 3500,
       diaGrupos1: 305,
       diaGrupos2: 310,
       diaGrupos3: 315,
@@ -751,8 +753,26 @@ window.GAME_CONFIG = {
     maximoErroresPorEquipo: 5,
     // multiplicador de pérdida física minuto a minuto del simulador vivo. 2 = doble fatiga.
     fatigaVivaMultiplicador: 5,
-    // reducción general de tarjetas generadas por el simulador. 0.50 = mitad de tarjetas.
-    multiplicadorTarjetas: 1.10,
+    // Reducción general de amarillas generadas por los simuladores.
+    multiplicadorTarjetas: 0.70,
+    // Reducción adicional para rojas directas. Se combina con multiplicadorTarjetas.
+    multiplicadorRojasDirectas: 0.55,
+    // Penalización progresiva por volumen total de tarjetas entre ambos equipos.
+    penalizacionTarjetasAltas: {
+      activo: true,
+      amarillas: [
+        { tarjetasTotalesDesde: 6, penalizacion: 0.30 },
+        { tarjetasTotalesDesde: 7, penalizacion: 0.40 },
+        { tarjetasTotalesDesde: 8, penalizacion: 0.50 },
+        { tarjetasTotalesDesde: 9, penalizacion: 0.80 }
+      ],
+      rojasDirectas: [
+        { tarjetasTotalesDesde: 2, penalizacion: 0.40 },
+        { tarjetasTotalesDesde: 3, penalizacion: 0.50 },
+        { tarjetasTotalesDesde: 4, penalizacion: 0.60 },
+        { tarjetasTotalesDesde: 5, penalizacion: 0.90 }
+      ]
+    },
     // con esta cantidad de rojas para un equipo, el partido se suspende y pierde 0-3.
     rojasDerrotaDefault: 5,
     // Reduce la conversión de cada gol potencial y endurece progresivamente la penalización cuando el marcador global aumenta.
@@ -831,16 +851,17 @@ window.GAME_CONFIG = {
   },
 
   lesiones: {
-    // Probabilidad general del sistema. 0.20 conserva el 20% de la probabilidad previa.
-    multiplicadorProbabilidad: 0.20,
+    // Probabilidad general del sistema. V8.43 eleva moderadamente la frecuencia efectiva.
+    multiplicadorProbabilidad: 0.30,
     lesionBase: 0.05,
     fatigaPaso: 5,
     fatigaBonus: 0.01,
     // Ajustes por contexto de partido.
     multiplicadorBots: 0.50,
     partidosProteccionManager: 50,
-    multiplicadorManagerPrimerosPartidos: 0.50,
-    multiplicadorSimuladorVivo: 0.50,
+    multiplicadorManagerPrimerosPartidos: 0.75,
+    multiplicadorSimuladorVivo: 0.75,
+    multiplicadorSimulacionRapida: 0.85,
     // Pesos relativos de aparición. Deben sumar 100.
     pesoContusion: 34,
     pesoDistension: 30,

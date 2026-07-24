@@ -26,6 +26,8 @@ const CLUB_WORLD_CUP_CONFIG = {
   minimumMatchSquad:configNumber('calendario.mundialClubes.jugadoresMinimosPorPartido', 21, 11, 42),
   championTrainingBoostMin:configNumber('calendario.mundialClubes.boostEntrenamientoCampeonMin', 10, 0, 99),
   championTrainingBoostMax:configNumber('calendario.mundialClubes.boostEntrenamientoCampeonMax', 30, 0, 99),
+  ticketPrice:configNumber('calendario.mundialClubes.precioEntrada', 1200, 0, 1000000),
+  finalTicketPrice:configNumber('calendario.mundialClubes.precioEntradaFinal', 3500, 0, 1000000),
   stadiums:[
     { name:'MetLife Stadium', capacity:81118 },
     { name:'Mercedes-Benz Stadium', capacity:66937 },
@@ -170,7 +172,10 @@ function normalizeClubWorldCupMatchSnapshot(match){
     awayGoals,
     played,
     winnerClubId,
-    stadiumName:String(src.stadiumName || ''),
+    stadiumName:String(src.stadiumName || src.matchContext?.stadiumName || ''),
+    attendance:Math.max(0, Math.round(Number(src.attendance ?? src.totalFans ?? src.matchContext?.totalFans ?? 0))),
+    ticketPrice:Math.max(0, Math.round(Number(src.ticketPrice ?? src.matchContext?.ticketPrice ?? 0))),
+    ticketRevenue:Math.max(0, Math.round(Number(src.ticketRevenue ?? src.matchContext?.ticketRevenue ?? 0))),
     bracketKey:String(src.clubWorldCupBracketKey || src.bracketKey || ''),
     bracketSlot:String(src.clubWorldCupBracketSlot || src.bracketSlot || ''),
     penaltyShootout:penalties,
@@ -1584,6 +1589,7 @@ function clubWorldCupEditionMatchCard(match, options={}){
   const className = `match-card cwc-edition-match ${interactive ? 'clickable' : ''} ${match?.played ? 'played' : 'pending'}`;
   const seasonDay = Math.max(0, Math.round(Number(match?.seasonDay || clubWorldCupStageSeasonDay(match?.stage, match?.roundNumber || 1) || 0)));
   const meta = [seasonDay ? `Día ${seasonDay}` : '', match?.date ? matchDateLabel(match.date) : '', match?.stadiumName || '', match?.bracketKey || ''].filter(Boolean).join(' · ');
+  const revenue = Number(match?.ticketRevenue || 0) > 0 ? `<span class="cwc-match-revenue">${formatPlainNumber(match.attendance || 0)} espectadores · Entrada ${formatMoney(match.ticketPrice || 0)} · Recaudación ${formatMoney(match.ticketRevenue || 0)}</span>` : '';
   return `<${tag} class="${className}"${attr}>
     <div class="match-date-line">${escapeHtml(meta || 'Fecha pendiente')}</div>
     <div class="match-line">
@@ -1591,14 +1597,17 @@ function clubWorldCupEditionMatchCard(match, options={}){
       <strong class="score">${escapeHtml(clubWorldCupEditionMatchScore(match))}</strong>
       <div class="cwc-match-team ${Number(match?.winnerClubId || 0) === Number(match?.awayId || 0) ? 'winner' : ''}">${clubBadge(match?.awayId)} <span>${escapeHtml(clubName(match?.awayId))}</span></div>
     </div>
+    ${revenue}
   </${tag}>`;
 }
 function clubWorldCupCompactGroupMatch(match, interactive=false){
   const attr = interactive && match?.played && match?.id ? ` data-match-id="${escapeHtml(match.id)}"` : '';
   const tag = attr ? 'button' : 'div';
   const seasonDay = Math.max(0, Math.round(Number(match?.seasonDay || clubWorldCupStageSeasonDay('groups', match?.roundNumber || 1) || 0)));
-  const dateLabel = [seasonDay ? `Día ${seasonDay}` : '', match?.date ? matchDateLabel(match.date) : 'Pendiente'].filter(Boolean).join(' · ');
-  return `<${tag} class="cwc-group-result ${attr ? 'clickable' : ''}"${attr}>
+  const compactRevenue = Number(match?.ticketRevenue || 0) > 0 ? `Rec. ${formatMoney(match.ticketRevenue || 0)}` : '';
+  const dateLabel = [seasonDay ? `Día ${seasonDay}` : '', match?.date ? matchDateLabel(match.date) : 'Pendiente', compactRevenue].filter(Boolean).join(' · ');
+  const revenueTitle = Number(match?.ticketRevenue || 0) > 0 ? ` title="${escapeHtml(`${formatPlainNumber(match.attendance || 0)} espectadores · Entrada ${formatMoney(match.ticketPrice || 0)} · Recaudación ${formatMoney(match.ticketRevenue || 0)}`)}"` : '';
+  return `<${tag} class="cwc-group-result ${attr ? 'clickable' : ''}"${attr}${revenueTitle}>
     <span class="cwc-group-result-date">${escapeHtml(dateLabel)}</span>
     <span>${clubBadge(match?.homeId)} ${escapeHtml(clubName(match?.homeId))}</span>
     <strong>${escapeHtml(clubWorldCupEditionMatchScore(match))}</strong>
@@ -1647,6 +1656,13 @@ function clubWorldCupEditionMarkup(edition, options={}){
   const dates = Array.isArray(edition.groupDates) ? edition.groupDates : [];
   const groupSeasonDays = Array.isArray(edition.groupSeasonDays) && edition.groupSeasonDays.length ? edition.groupSeasonDays : clubWorldCupGroupSeasonDays();
   const stageSeasonDays = edition.stageSeasonDays || {};
+  const allEditionMatches = [
+    ...(Array.isArray(edition.groups) ? edition.groups.flatMap(group => Array.isArray(group?.matches) ? group.matches : []) : []),
+    ...Object.values(edition.stages || {}).flatMap(matches => Array.isArray(matches) ? matches : [])
+  ];
+  const playedRevenueMatches = allEditionMatches.filter(match => match?.played && Number(match?.ticketRevenue || 0) > 0);
+  const totalRevenue = playedRevenueMatches.reduce((sum, match) => sum + Number(match.ticketRevenue || 0), 0);
+  const totalAttendance = playedRevenueMatches.reduce((sum, match) => sum + Number(match.attendance || 0), 0);
   const overview = `<div class="grid cols-3 cwc-overview-grid">
     <div class="card inner"><p class="label">Edición</p><h3>${Number(edition.year || 0)}</h3><p class="muted small">Temporada ${Number(edition.season || 0)}</p></div>
     <div class="card inner"><p class="label">Estado</p><h3>${escapeHtml(statusLabels[edition.status] || edition.status || '—')}</h3><p class="muted small">${Number(edition.participantClubIds?.length || 0) || 32} participantes</p></div>
@@ -1657,12 +1673,13 @@ function clubWorldCupEditionMarkup(edition, options={}){
     const iso = clubWorldCupIsoForSeasonDay(day, Number(edition.year || currentSeasonYear()));
     return `día ${day} · ${escapeHtml(matchDateLabel(iso))}`;
   };
-  const calendar = edition.drawDate || dates.length ? `<div class="card cwc-calendar-summary"><h3>Calendario fijo por día de temporada</h3><p class="muted small">${edition.drawDate ? `Sorteo: día ${Number(edition.drawSeasonDay || clubWorldCupFixtureReadySeasonDay())} · ${escapeHtml(matchDateLabel(edition.drawDate))}. ` : ''}${dates[0] ? `Grupos 1: día ${Number(groupSeasonDays[0] || 305)} · ${escapeHtml(matchDateLabel(dates[0]))}. ` : ''}${dates[1] ? `Grupos 2: día ${Number(groupSeasonDays[1] || 310)} · ${escapeHtml(matchDateLabel(dates[1]))}. ` : ''}${dates[2] ? `Grupos 3: día ${Number(groupSeasonDays[2] || 315)} · ${escapeHtml(matchDateLabel(dates[2]))}. ` : ''}Octavos: ${stageCalendarLabel('r16')}. Cuartos: ${stageCalendarLabel('qf')}. Semifinales: ${stageCalendarLabel('sf')}. 3er puesto: ${stageCalendarLabel('thirdPlace')}. Final: ${stageCalendarLabel('final')}.</p></div>` : '';
+  const calendar = edition.drawDate || dates.length ? `<div class="card cwc-calendar-summary"><h3>Calendario fijo por día de temporada</h3><p class="muted small">${edition.drawDate ? `Sorteo: día ${Number(edition.drawSeasonDay || clubWorldCupFixtureReadySeasonDay())} · ${escapeHtml(matchDateLabel(edition.drawDate))}. ` : ''}${dates[0] ? `Grupos 1: día ${Number(groupSeasonDays[0] || 305)} · ${escapeHtml(matchDateLabel(dates[0]))}. ` : ''}${dates[1] ? `Grupos 2: día ${Number(groupSeasonDays[1] || 310)} · ${escapeHtml(matchDateLabel(dates[1]))}. ` : ''}${dates[2] ? `Grupos 3: día ${Number(groupSeasonDays[2] || 315)} · ${escapeHtml(matchDateLabel(dates[2]))}. ` : ''}Octavos: ${stageCalendarLabel('r16')}. Cuartos: ${stageCalendarLabel('qf')}. Semifinales: ${stageCalendarLabel('sf')}. 3er puesto: ${stageCalendarLabel('thirdPlace')}. Final: ${stageCalendarLabel('final')}.</p><p class="muted small">Entradas: ${formatMoney(CLUB_WORLD_CUP_CONFIG.ticketPrice)} por partido y ${formatMoney(CLUB_WORLD_CUP_CONFIG.finalTicketPrice)} en la final.</p></div>` : '';
+  const revenueSummary = playedRevenueMatches.length ? `<div class="card cwc-revenue-summary"><h3>Recaudación de la edición</h3><div class="grid cols-3"><div><p class="label">Partidos contabilizados</p><strong>${playedRevenueMatches.length}</strong></div><div><p class="label">Espectadores</p><strong>${formatPlainNumber(totalAttendance)}</strong></div><div><p class="label">Recaudación total</p><strong class="ok">${formatMoney(totalRevenue)}</strong></div></div></div>` : '';
   if(edition.summaryOnly){
     return `${overview}${championBlock}<div class="card"><p class="muted">Esta edición proviene de una partida anterior a V7.09. Se conserva el campeón y el podio, pero los grupos y resultados detallados ya no estaban disponibles en el guardado.</p></div>`;
   }
   const stats = options.showStats && options.current ? clubWorldCupStatsBlock() : '';
-  return `${overview}${calendar}${championBlock}${clubWorldCupGroupsMarkup(edition, { interactive:Boolean(options.interactive) })}${clubWorldCupBracketMarkup(edition, { interactive:Boolean(options.interactive) })}${stats ? `<div class="stack cwc-stats-history">${stats}</div>` : ''}`;
+  return `${overview}${calendar}${revenueSummary}${championBlock}${clubWorldCupGroupsMarkup(edition, { interactive:Boolean(options.interactive) })}${clubWorldCupBracketMarkup(edition, { interactive:Boolean(options.interactive) })}${stats ? `<div class="stack cwc-stats-history">${stats}</div>` : ''}`;
 }
 function bindClubWorldCupYearFilter(renderFn){
   $('clubWorldCupYearFilter')?.addEventListener('change', event => {

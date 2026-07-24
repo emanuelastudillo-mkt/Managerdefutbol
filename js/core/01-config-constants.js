@@ -24,13 +24,13 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.42');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.43');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.42');
-const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.42');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.42');
-const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.42');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.43');
+const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.43');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.43');
+const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.43');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
   'data/estadios_argentina.json',
@@ -51,7 +51,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.42', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.43', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -124,6 +124,53 @@ const SPECIAL_PACK_REVEAL_STEP_MS = configNumber('ui.especialAperturaCartaMs', 2
 const ADVANCE_STATUS_PHRASE_INTERVAL_MS = configNumber('ui.frasesProgresoAvanceIntervaloMs', 10000, 3000, 60000);
 const ADVANCE_STATUS_PHRASES_RAW = configValue('ui.frasesProgresoAvance', []);
 const ADVANCE_STATUS_PHRASES = Array.isArray(ADVANCE_STATUS_PHRASES_RAW) ? ADVANCE_STATUS_PHRASES_RAW.filter(Boolean).map(String) : [];
+const MATCH_CARD_RATE_MULTIPLIER = configNumber('simulador.multiplicadorTarjetas', 0.70, 0, 2);
+const DIRECT_RED_RATE_MULTIPLIER = configNumber('simulador.multiplicadorRojasDirectas', 0.55, 0, 2);
+const HIGH_CARD_PENALTY_ENABLED = configBoolean('simulador.penalizacionTarjetasAltas.activo', true);
+function normalizeHighCardPenaltyRules(path, fallback=[]){
+  const raw = configValue(path, fallback);
+  return (Array.isArray(raw) ? raw : fallback).map(rule => ({
+    cardsFrom:Math.max(1, Math.round(Number(rule?.tarjetasTotalesDesde ?? rule?.cardsFrom ?? 0) || 0)),
+    penalty:clamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)
+  })).filter(rule => rule.cardsFrom > 0 && rule.penalty > 0).sort((a,b)=>a.cardsFrom-b.cardsFrom);
+}
+const HIGH_YELLOW_CARD_PENALTY_RULES = normalizeHighCardPenaltyRules('simulador.penalizacionTarjetasAltas.amarillas', [
+  { tarjetasTotalesDesde:6, penalizacion:0.30 },
+  { tarjetasTotalesDesde:7, penalizacion:0.40 },
+  { tarjetasTotalesDesde:8, penalizacion:0.50 },
+  { tarjetasTotalesDesde:9, penalizacion:0.80 }
+]);
+const HIGH_DIRECT_RED_CARD_PENALTY_RULES = normalizeHighCardPenaltyRules('simulador.penalizacionTarjetasAltas.rojasDirectas', [
+  { tarjetasTotalesDesde:2, penalizacion:0.40 },
+  { tarjetasTotalesDesde:3, penalizacion:0.50 },
+  { tarjetasTotalesDesde:4, penalizacion:0.60 },
+  { tarjetasTotalesDesde:5, penalizacion:0.90 }
+]);
+function highCardPenaltyForNextCard(currentCount, rules=[]){
+  if(!HIGH_CARD_PENALTY_ENABLED) return 0;
+  const nextTotal = Math.max(0, Math.round(Number(currentCount || 0))) + 1;
+  let penalty = 0;
+  (rules || []).forEach(rule => { if(nextTotal >= Number(rule.cardsFrom || 0)) penalty = Math.max(penalty, Number(rule.penalty || 0)); });
+  return clamp(penalty, 0, 0.99);
+}
+function applyMatchCardVolumePenalty(candidates=[], existingCards=[], randomFn=Math.random){
+  const accepted = [];
+  let yellowCount = (Array.isArray(existingCards) ? existingCards : []).filter(card => ['yellow','secondYellowRed'].includes(String(card?.type || ''))).length;
+  let directRedCount = (Array.isArray(existingCards) ? existingCards : []).filter(card => String(card?.type || '') === 'red').length;
+  (Array.isArray(candidates) ? candidates : []).slice().sort((a,b)=>Number(a?.minute || 0)-Number(b?.minute || 0)).forEach(card => {
+    const type = String(card?.type || '');
+    const isYellow = type === 'yellow' || type === 'secondYellowRed';
+    const isDirectRed = type === 'red';
+    const penalty = isYellow
+      ? highCardPenaltyForNextCard(yellowCount, HIGH_YELLOW_CARD_PENALTY_RULES)
+      : (isDirectRed ? highCardPenaltyForNextCard(directRedCount, HIGH_DIRECT_RED_CARD_PENALTY_RULES) : 0);
+    if(penalty > 0 && randomFn() < penalty) return;
+    accepted.push(card);
+    if(isYellow) yellowCount += 1;
+    if(isDirectRed) directRedCount += 1;
+  });
+  return accepted;
+}
 const HIGH_SCORE_GOAL_PENALTY_ENABLED = configBoolean('simulador.penalizacionGolesAltos.activo', true);
 const HIGH_SCORE_GOAL_PENALTY_RULES_RAW = configValue('simulador.penalizacionGolesAltos.tramos', [
   { golesTotalesDesde:1, penalizacion:0.10 },
@@ -182,7 +229,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 30, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.42');
+const APP_VERSION = configValue('version', 'V8.43');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -442,11 +489,12 @@ const INJURY_TABLE = [
   injuryRule('Rotura', configNumber('lesiones.pesoRotura', 5, 0, 100), 'lesiones.roturaMinDias', 90, 'lesiones.roturaMaxDias', 210),
   injuryRule('Fractura', configNumber('lesiones.pesoFractura', 1, 0, 100), 'lesiones.fracturaMinDias', 180, 'lesiones.fracturaMaxDias', 400)
 ];
-const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 0.2, 0, 2);
+const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 0.30, 0, 2);
 const BOT_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorBots', 0.50, 0, 2);
 const MANAGER_INJURY_PROTECTION_MATCHES = Math.max(0, Math.round(configNumber('lesiones.partidosProteccionManager', 50, 0, 1000)));
-const MANAGER_INITIAL_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorManagerPrimerosPartidos', 0.50, 0, 2);
-const LIVE_MATCH_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorSimuladorVivo', 0.50, 0, 2);
+const MANAGER_INITIAL_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorManagerPrimerosPartidos', 0.75, 0, 2);
+const LIVE_MATCH_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorSimuladorVivo', 0.75, 0, 2);
+const QUICK_MATCH_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorSimulacionRapida', 0.85, 0, 2);
 const BASE_INJURY_CHANCE = configNumber('lesiones.lesionBase', 0.05, 0, 1);
 const FATIGUE_INJURY_STEP = configNumber('lesiones.fatigaPaso', 5, 1);
 const FATIGUE_INJURY_BONUS = configNumber('lesiones.fatigaBonus', 0.01, 0, 1);

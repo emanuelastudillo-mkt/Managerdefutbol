@@ -24,6 +24,8 @@ function specialLimits(){
     activeMax: Math.max(1, Math.round(Number(db.limites?.cartas_activas_max || 5))),
     reserveMax: Math.max(1, Math.round(Number(db.limites?.cartas_reserva_max || 50))),
     lockDays: Math.max(0, Math.round(Number(db.limites?.dias_bloqueo_cambio_cartas || 15))),
+    activeUseDays: Math.max(1, Math.round(Number(db.limites?.dias_por_consumo_activo || 100))),
+    consumeOnDeactivate: db.limites?.consumir_uso_al_desactivar !== false,
     maxUsesPerCard: Math.max(1, Math.round(Number(db.limites?.activaciones_por_carta || 5))),
     maxUsesByRarity:{ ...SPECIAL_MAX_USES_BY_RARITY, ...(db.limites?.activaciones_por_rareza || {}) },
     allowOpenWhenReserveFull: db.limites?.permitir_abrir_sobres_con_reserva_llena === true,
@@ -78,6 +80,10 @@ function normalizeSpecialCard(card, index=0){
     bloqueada_hasta:validIsoDate(card.bloqueada_hasta) ? card.bloqueada_hasta : null,
     activada_en_turno:activatedTurn,
     bloqueada_hasta_turno:lockedUntilTurn,
+    ciclo_uso_desde:validIsoDate(card.ciclo_uso_desde) ? card.ciclo_uso_desde : (validIsoDate(card.activada_en) ? card.activada_en : null),
+    ciclo_uso_desde_turno:Number.isFinite(Number(card.ciclo_uso_desde_turno)) ? Math.max(0, Math.round(Number(card.ciclo_uso_desde_turno))) : activatedTurn,
+    agotada_activa_desde:validIsoDate(card.agotada_activa_desde) ? card.agotada_activa_desde : null,
+    agotada_activa_desde_turno:Number.isFinite(Number(card.agotada_activa_desde_turno)) ? Math.max(0, Math.round(Number(card.agotada_activa_desde_turno))) : null,
     activaciones_max:maxUses,
     activaciones_usadas:used,
     active_slot_id:String(card.active_slot_id || card.activeSaveSlotId || card.slot_activo || ''),
@@ -125,7 +131,7 @@ function normalizeSpecialGlobalCard(raw, index=0){
   card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)), 0, card.activaciones_max);
   card.active_slot_id = String(card.active_slot_id || '');
   card.ultimo_slot_activacion = String(card.ultimo_slot_activacion || '');
-  if(specialCardRemainingUses(card) <= 0 && !card.active_slot_id) card.destruida = true;
+  if(specialCardRemainingUses(card) <= 0 && !card.active_slot_id && !card.activa) card.destruida = true;
   return card;
 }
 function specialGlobalUpsertCard(rawCard, options={}){
@@ -536,6 +542,62 @@ function lockSpecialCardChanges(card=null, stateRef=null){
     card.bloqueada_hasta_turno = nowTurn + Math.max(0, Math.round(Number(lockDays || 0)));
   }
 }
+function specialActiveCardUsageInfo(card, today=specialCurrentDate(), nowTurn=(typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0)){
+  const cycleDays = specialLimits().activeUseDays;
+  const cycleDate = validIsoDate(card?.ciclo_uso_desde) ? card.ciclo_uso_desde : (validIsoDate(card?.activada_en) ? card.activada_en : today);
+  const cycleTurn = Number.isFinite(Number(card?.ciclo_uso_desde_turno)) ? Math.round(Number(card.ciclo_uso_desde_turno)) : (Number.isFinite(Number(card?.activada_en_turno)) ? Math.round(Number(card.activada_en_turno)) : nowTurn);
+  const elapsedByDate = validIsoDate(cycleDate) && validIsoDate(today) ? Math.max(0, daysBetweenIsoDates(cycleDate, today)) : 0;
+  const elapsedByTurn = Math.max(0, nowTurn - cycleTurn);
+  const elapsed = Math.max(elapsedByDate, elapsedByTurn);
+  return { cycleDays, cycleDate, cycleTurn, elapsed, due:elapsed >= cycleDays };
+}
+function expireActiveSpecialCard(state, card, reason='active_cycle_exhausted'){
+  if(!state || !card?.id_carta) return false;
+  removeSpecialCardEverywhereInState(state, card.id_carta);
+  specialGlobalDestroyCard({ ...card, activa:false, active_slot_id:'', destruida:true }, { slotId:currentSpecialSaveSlotId(), reason });
+  state.historial_ultimas_cartas = [{ ...card, activa:false, active_slot_id:'', destruida:true, agotada_por_usos:true, motivo:'100 días activa sin usos' }].concat(state.historial_ultimas_cartas || []).slice(0,30);
+  return true;
+}
+function processActiveSpecialCardUsageDaily(options={}){
+  if(!game) return { processed:0, consumed:0, expired:0 };
+  const state = ensureSpecialState();
+  const active = Array.isArray(state.cartas_activas) ? state.cartas_activas.slice() : [];
+  if(!active.length) return { processed:0, consumed:0, expired:0 };
+  const today = specialCurrentDate();
+  const nowTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  let consumed = 0;
+  let expired = 0;
+  active.forEach(card => {
+    const info = specialActiveCardUsageInfo(card, today, nowTurn);
+    if(!info.due) return;
+    const remainingBefore = specialCardRemainingUses(card);
+    if(remainingBefore <= 0){
+      if(info.elapsed > info.cycleDays && expireActiveSpecialCard(state, card, 'active_zero_uses_day_101')) expired += 1;
+      return;
+    }
+    card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza));
+    card.ciclo_uso_desde = today;
+    card.ciclo_uso_desde_turno = nowTurn;
+    if(specialCardRemainingUses(card) <= 0){
+      card.agotada_activa_desde = today;
+      card.agotada_activa_desde_turno = nowTurn;
+    }
+    consumed += 1;
+    specialGlobalUpsertCard(card, { slotId:currentSpecialSaveSlotId(), zone:'active' });
+  });
+  game.special = syncSpecialStateWithGlobalCards(state);
+  if(expired > 0 && typeof pushGameMessage === 'function'){
+    pushGameMessage({
+      id:`special-active-slot-free-${game?.seasonNumber || 1}-${today}-${expired}`,
+      type:'especial',
+      priority:'normal',
+      title:'Cupo de bonus disponible',
+      body:expired === 1 ? 'Hay un cupo para bonus de habilidades libre.' : `Hay ${expired} cupos para bonus de habilidades libres.`
+    });
+  }
+  if((consumed > 0 || expired > 0) && options.save !== false && typeof saveLocal === 'function') saveLocal(true);
+  return { processed:active.length, consumed, expired };
+}
 function specialActiveBonus(type){
   const state = ensureSpecialState();
   if(!state) return 0;
@@ -591,7 +653,9 @@ function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
   const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${escapeHtml(specialBonusSummaryText(item))}</span></div>`).join('')}</div>` : '';
   const cardsMarkup = `<div class="special-active-rules-list">${activeCards.map(card => {
     const info = specialCardActiveLockInfo(card);
-    const status = info.locked ? `Fija ${formatDays(info.remaining)}` : 'Lista para desactivar';
+    const usage = specialActiveCardUsageInfo(card);
+    const usageRemaining = Math.max(0, usage.cycleDays - usage.elapsed);
+    const status = info.locked ? `Fija ${formatDays(info.remaining)} · uso automático en ${formatDays(usageRemaining)}` : `Lista para desactivar · uso automático en ${formatDays(usageRemaining)}`;
     return `<div><strong>${escapeHtml(card.nombre)}</strong><span>${escapeHtml(specialCardBonusText(card))}</span><em>${escapeHtml(status)}</em></div>`;
   }).join('')}</div>`;
   return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}.</p>`;
@@ -1082,7 +1146,9 @@ function activateSpecialCard(cardId){
   state.cartas_reserva.splice(index, 1);
   const maxUses = specialMaxUsesForRarity(card.rareza);
   const used = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
-  const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, active_slot_id:slotId, ultimo_slot_activacion:slotId };
+  const activationDate = specialCurrentDate();
+  const activationTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, active_slot_id:slotId, ultimo_slot_activacion:slotId, ciclo_uso_desde:activationDate, ciclo_uso_desde_turno:activationTurn, agotada_activa_desde:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationDate : null, agotada_activa_desde_turno:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationTurn : null };
   lockSpecialCardChanges(activatedCard, state);
   state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
@@ -1105,9 +1171,11 @@ function deactivateSpecialCard(cardId){
   const cardLock = specialCardActiveLockInfo(card);
   if(cardLock.locked){ showNotice(`Esta carta debe permanecer activa ${formatDays(cardLock.remaining)} más.`); return; }
   state.cartas_activas.splice(index, 1);
+  const deactivationUsed = limits.consumeOnDeactivate ? clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza)) : Math.round(Number(card.activaciones_usadas || 0));
+  card.activaciones_usadas = deactivationUsed;
   const remaining = specialCardRemainingUses(card);
   if(remaining > 0){
-    const released = { ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null };
+    const released = { ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null, ciclo_uso_desde:null, ciclo_uso_desde_turno:null, agotada_activa_desde:null, agotada_activa_desde_turno:null };
     specialGlobalReleaseCard(released, { slotId });
     state.cartas_reserva.push(released);
     showNotice(`Carta desactivada: ${card.nombre}. Usos restantes: ${remaining}.`);

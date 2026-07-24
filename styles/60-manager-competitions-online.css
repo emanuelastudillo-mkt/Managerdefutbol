@@ -1222,3 +1222,7 @@ button.cwc-group-result{cursor:pointer}
 .manager-club-legacy-stars span.is-active{opacity:1;filter:none}
 .manager-club-legacy-meta{align-items:flex-end;gap:10px;flex-wrap:wrap}
 @media(max-width:720px){.manager-club-legacy-grid{grid-template-columns:1fr}.manager-club-legacy-stars{font-size:16px}}
+
+/* V8.43 · Recaudación del Mundial de Clubes. */
+.cwc-match-revenue{display:block;margin-top:7px;text-align:center;font-size:.78rem;color:var(--muted);line-height:1.35}
+.cwc-revenue-summary strong.ok{font-size:1.1rem}

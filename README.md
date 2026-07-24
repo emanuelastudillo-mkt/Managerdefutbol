@@ -1,3 +1,43 @@
+# V8.43 — Lesiones, disciplina, recaudación del Mundial y desgaste de cartas
+
+## Lesiones
+
+- La frecuencia general de lesiones sube de forma moderada: el multiplicador global pasa de `0,20` a `0,30`.
+- La protección de los primeros 50 partidos del manager pasa de `0,50` a `0,75`.
+- El simulador vivo pasa de `0,50` a `0,75` y la simulación rápida usa un multiplicador propio de `0,85`.
+- Los bots mantienen su reducción `0,50`; las cartas y el trabajo diferenciado del kinesiólogo siguen aplicándose después de estos ajustes.
+- El simulador online también aumenta moderadamente su posibilidad de lesiones.
+
+## Tarjetas
+
+- El multiplicador general de tarjetas baja de `1,10` a `0,70`.
+- Las rojas directas reciben una reducción adicional de `0,55`.
+- La penalización se calcula entre ambos equipos y se aplica a cada tarjeta candidata:
+  - Amarillas: 1 a 5 sin penalización; 6.ª -30%; 7.ª -40%; 8.ª -50%; 9.ª y siguientes -80%.
+  - Rojas directas: 1.ª sin penalización; 2.ª -40%; 3.ª -50%; 4.ª -60%; 5.ª y siguientes -90%.
+- Una segunda amarilla cuenta dentro del volumen de amarillas; la escala de rojas se reserva para expulsiones directas.
+- Las mismas reglas se aplican en resultado rápido, partido dirigido, simulador vivo y desafíos online.
+
+## Mundial de Clubes
+
+- Cada partido calcula asistencia y recaudación con entrada fija de `$1.200`.
+- La final utiliza una entrada de `$3.500`.
+- La recaudación aparece en el detalle del partido, en los cruces eliminatorios y en el resumen acumulado de la edición.
+- Los datos quedan guardados en el historial anual del Mundial.
+
+## Cartas especiales
+
+- Activar una carta consume un uso.
+- Desactivarla consume otro uso.
+- Cada 100 días continuos activa consume un uso adicional.
+- Si una carta queda con 0 usos, conserva el bonus hasta completar su ciclo activo de 100 días y desaparece al día 101.
+- Al desaparecer se envía el mensaje: **“Hay un cupo para bonus de habilidades libre.”**
+- Las cartas antiguas migran usando su fecha de activación existente como inicio del primer ciclo.
+
+**V8.43 no rompe partidas anteriores.** Los ajustes de lesiones y tarjetas sólo afectan partidos nuevos. La recaudación del Mundial se calcula para partidos disputados desde esta versión; los partidos históricos sin contexto de asistencia conservan recaudación cero. Las cartas activas existentes comienzan o continúan su ciclo desde la fecha de activación guardada.
+
+---
+
 # Una vida de manager — V8.42
 
 ## V8.42 — Objetivos secundarios ocultos, continuidad y legado por club

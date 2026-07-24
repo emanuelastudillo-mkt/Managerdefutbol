@@ -234,14 +234,14 @@ function quickNormalizeCardsForExpulsions(cards=[]){
 }
 function quickBuildCards(clubId, lineup, fouls){
   const candidates = [];
-  const count = clamp(quickBotPoisson(Math.max(0.10, Number(fouls || 0) / 7.4)), 0, 6);
+  const count = clamp(quickBotPoisson(Math.max(0.05, (Number(fouls || 0) * MATCH_CARD_RATE_MULTIPLIER) / 7.4)), 0, 6);
   for(let i=0; i<count; i++){
     const player = quickWeightedPick(lineup, quickCardWeight);
     if(!player) continue;
     candidates.push({ clubId:Number(clubId), playerId:Number(player.id), type:'yellow', minute:clamp(Math.round(rnd(8, 89)), 1, 90), quick:true });
   }
   const directRedPool = lineup.filter(player => String(player.position || '').toUpperCase() !== 'POR' && hiddenStats(player).aggression > 78);
-  if(directRedPool.length && Math.random() < 0.025){
+  if(directRedPool.length && Math.random() < clamp(0.025 * MATCH_CARD_RATE_MULTIPLIER * DIRECT_RED_RATE_MULTIPLIER, 0, 0.10)){
     const player = quickWeightedPick(directRedPool, quickCardWeight);
     if(player) candidates.push({ clubId:Number(clubId), playerId:Number(player.id), type:'red', minute:clamp(Math.round(rnd(18, 88)), 1, 90), quick:true });
   }
@@ -268,7 +268,7 @@ function quickBuildInjuries(clubId, lineup, context){
   candidates.forEach(player => {
     const cardMultiplier = typeof specialMatchInjuryMultiplier === 'function' ? specialMatchInjuryMultiplier(clubId) : 1;
     const contextMultiplier = typeof matchInjuryContextMultiplier === 'function' ? matchInjuryContextMultiplier(clubId) : 1;
-    const chance = clamp(Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * 0.70 * cardMultiplier * contextMultiplier, 0, 0.95);
+    const chance = clamp(Math.max(0, Number(typeof injuryChanceForPlayer === 'function' ? injuryChanceForPlayer(player.id, context?.pitch || 'Normal') : 0.004)) * QUICK_MATCH_INJURY_MULTIPLIER * cardMultiplier * contextMultiplier, 0, 0.95);
     if(Math.random() >= chance) return;
     const injury = typeof pickInjuryTypeForPlayer === 'function'
       ? pickInjuryTypeForPlayer(player.id)
@@ -432,7 +432,8 @@ function quickSimulateBotMatch(match){
   const homeFouls = clamp(Math.round(rnd(6,17)), 2, 30);
   const awayFouls = clamp(Math.round(rnd(6,17)), 2, 30);
   const goals = quickBuildGoals(match.homeId, homeLineup, homeGoals).concat(quickBuildGoals(match.awayId, awayLineup, awayGoals)).sort((a,b) => a.minute - b.minute);
-  const cards = quickBuildCards(match.homeId, homeLineup, homeFouls).concat(quickBuildCards(match.awayId, awayLineup, awayFouls)).sort((a,b) => a.minute - b.minute);
+  const cardCandidates = quickBuildCards(match.homeId, homeLineup, homeFouls).concat(quickBuildCards(match.awayId, awayLineup, awayFouls)).sort((a,b) => a.minute - b.minute);
+  const cards = typeof applyMatchCardVolumePenalty === 'function' ? applyMatchCardVolumePenalty(cardCandidates, [], Math.random) : cardCandidates;
   const defaultLoss = quickDefaultLossByRedCards(cards, match.homeId, match.awayId);
   if(defaultLoss){
     homeGoals = Number(defaultLoss.homeGoals || 0);
@@ -872,6 +873,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   game.currentDate = validIsoDate(dateAfter) ? dateAfter : addDaysToIsoDate(currentCalendarDate(), 1);
   rememberCalendarDate();
   advanceGlobalTurn();
+  const specialCardUsage = typeof processActiveSpecialCardUsageDaily === 'function' ? processActiveSpecialCardUsageDaily({ save:false, source:'daily_calendar' }) : { processed:0, consumed:0, expired:0 };
   const managerSalaryPayment = typeof processManagerSalaryDaily === 'function' ? processManagerSalaryDaily() : 0;
   const financialStaffDismissalsAtStart = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
@@ -896,7 +898,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-    return { botResults, recovered, bankPayment:0, managerSalaryPayment, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
@@ -937,7 +939,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, managerSalaryPayment, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1630,6 +1632,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof processActiveSpecialCardUsageDaily === 'function') processActiveSpecialCardUsageDaily({ save:false, source:'preseason' });
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
     ? processKinesiologistDifferentiatedDays(DAYS_PER_ADVANCE, { source:'preseason_compact_advance' })
@@ -1741,6 +1744,7 @@ function simulatePostseasonTurn(){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof processActiveSpecialCardUsageDaily === 'function') processActiveSpecialCardUsageDaily({ save:false, source:'postseason' });
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
     ? processKinesiologistDifferentiatedDays(DAYS_PER_ADVANCE, { source:'postseason_compact_advance' })

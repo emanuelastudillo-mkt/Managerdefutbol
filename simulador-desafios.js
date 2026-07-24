@@ -25,6 +25,48 @@
       penalty:clampValue(Number(rule?.penalizacion ?? rule?.penalty ?? 0), 0, 0.99)
     })).filter(rule => rule.goalsFrom > 0 && rule.penalty > 0).sort((a,b) => a.goalsFrom - b.goalsFrom);
   })();
+  const CARD_RATE_MULTIPLIER = clampValue(window?.GAME_CONFIG?.simulador?.multiplicadorTarjetas ?? 0.70, 0, 2);
+  const DIRECT_RED_RATE_MULTIPLIER = clampValue(window?.GAME_CONFIG?.simulador?.multiplicadorRojasDirectas ?? 0.55, 0, 2);
+  const HIGH_CARD_PENALTY_ENABLED = window?.GAME_CONFIG?.simulador?.penalizacionTarjetasAltas?.activo !== false;
+  function normalizeCardPenaltyRules(path, fallback){
+    const raw = path === 'yellow'
+      ? window?.GAME_CONFIG?.simulador?.penalizacionTarjetasAltas?.amarillas
+      : window?.GAME_CONFIG?.simulador?.penalizacionTarjetasAltas?.rojasDirectas;
+    return (Array.isArray(raw) ? raw : fallback).map(rule => ({
+      cardsFrom:Math.max(1, Math.round(Number(rule?.tarjetasTotalesDesde ?? rule?.cardsFrom ?? 0) || 0)),
+      penalty:clampValue(Number(rule?.penalizacion ?? rule?.penalty ?? 0), 0, 0.99)
+    })).filter(rule => rule.cardsFrom > 0 && rule.penalty > 0).sort((a,b)=>a.cardsFrom-b.cardsFrom);
+  }
+  const HIGH_YELLOW_RULES = normalizeCardPenaltyRules('yellow', [
+    { tarjetasTotalesDesde:6, penalizacion:0.30 }, { tarjetasTotalesDesde:7, penalizacion:0.40 },
+    { tarjetasTotalesDesde:8, penalizacion:0.50 }, { tarjetasTotalesDesde:9, penalizacion:0.80 }
+  ]);
+  const HIGH_DIRECT_RED_RULES = normalizeCardPenaltyRules('red', [
+    { tarjetasTotalesDesde:2, penalizacion:0.40 }, { tarjetasTotalesDesde:3, penalizacion:0.50 },
+    { tarjetasTotalesDesde:4, penalizacion:0.60 }, { tarjetasTotalesDesde:5, penalizacion:0.90 }
+  ]);
+  function cardPenaltyForNext(currentCount, rules){
+    if(!HIGH_CARD_PENALTY_ENABLED) return 0;
+    const nextTotal = Math.max(0, Math.round(Number(currentCount || 0))) + 1;
+    let penalty = 0;
+    rules.forEach(rule => { if(nextTotal >= rule.cardsFrom) penalty = Math.max(penalty, rule.penalty); });
+    return clampValue(penalty, 0, 0.99);
+  }
+  function applyCardVolumePenalty(cards, random){
+    const accepted = [];
+    let yellows = 0;
+    let directReds = 0;
+    (cards || []).slice().sort((a,b)=>a.minute-b.minute).forEach(card => {
+      const isYellow = card.type === 'yellow';
+      const isDirectRed = card.type === 'red';
+      const penalty = isYellow ? cardPenaltyForNext(yellows, HIGH_YELLOW_RULES) : (isDirectRed ? cardPenaltyForNext(directReds, HIGH_DIRECT_RED_RULES) : 0);
+      if(penalty > 0 && random() < penalty) return;
+      accepted.push(card);
+      if(isYellow) yellows += 1;
+      if(isDirectRed) directReds += 1;
+    });
+    return accepted;
+  }
   function highScorePenaltyForNextGoal(currentTotalGoals){
     if(window?.GAME_CONFIG?.simulador?.penalizacionGolesAltos?.activo === false) return 0;
     const nextTotal = Math.max(0, Math.round(Number(currentTotalGoals || 0))) + 1;
@@ -248,7 +290,7 @@
 
   function generateCards(snapshot, profile, random, side){
     const players = snapshotPlayers(snapshot, 'starter').slice(0, 11);
-    const yellowMean = clampValue(2.5 - (profile.discipline - 50) / 28, 0.7, 4.8);
+    const yellowMean = clampValue((2.5 - (profile.discipline - 50) / 28) * CARD_RATE_MULTIPLIER, 0.35, 3.6);
     const yellows = Math.min(7, poisson(yellowMean, random));
     const events = [];
     const selected = new Map();
@@ -259,7 +301,7 @@
       selected.set(key, previous + 1);
       events.push({ type:'yellow', side, minute, playerId:player?.id || '', playerName:player?.name || 'Jugador' });
     });
-    const redChance = clampValue(0.035 + (55 - profile.discipline) / 850, 0.01, 0.16);
+    const redChance = clampValue((0.035 + (55 - profile.discipline) / 850) * CARD_RATE_MULTIPLIER * DIRECT_RED_RATE_MULTIPLIER, 0.003, 0.065);
     if(random() < redChance){
       const player = weightedPick(players, p => 110 - playerSkill(p, 'discipline'), random) || players[0];
       events.push({ type:'red', side, minute:Math.floor(28 + random() * 61), playerId:player?.id || '', playerName:player?.name || 'Jugador' });
@@ -269,7 +311,7 @@
 
   function generateInjuries(snapshot, profile, random, side){
     const players = snapshotPlayers(snapshot, 'starter').slice(0, 11);
-    const chance = clampValue(0.11 - profile.stamina / 1150 + (100 - Number(snapshot?.club?.stadiumCondition || 100)) / 1500, 0.025, 0.15);
+    const chance = clampValue(0.145 - profile.stamina / 1100 + (100 - Number(snapshot?.club?.stadiumCondition || 100)) / 1400, 0.04, 0.18);
     if(random() >= chance || !players.length) return [];
     const player = weightedPick(players, p => 110 - playerSkill(p, 'stamina'), random) || players[0];
     const durations = [3,5,7,10,14,21,30,45];
@@ -348,7 +390,7 @@
     const awayGoalEvents = generateGoals(awaySnapshot, awayGoals, random, 'away');
     const homeCards = generateCards(homeSnapshot, home, random, 'home');
     const awayCards = generateCards(awaySnapshot, away, random, 'away');
-    const cards = [...homeCards, ...awayCards].sort((a,b) => a.minute-b.minute);
+    const cards = applyCardVolumePenalty([...homeCards, ...awayCards], random);
     const injuries = [
       ...generateInjuries(homeSnapshot, home, random, 'home'),
       ...generateInjuries(awaySnapshot, away, random, 'away')

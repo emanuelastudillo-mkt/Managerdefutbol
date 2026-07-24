@@ -1,3 +1,34 @@
+# V8.44 — Corrección de congelamiento al iniciar
+
+## Correcciones críticas
+
+- Se corrigió el bloqueo heredado de V8.42 en `js/game/05h-manager-hidden-objectives.js`: el módulo intentaba envolver una función inexistente llamada `normalizeGameState`. La función real del proyecto es `normalizeGame`.
+- Se corrigió el bloqueo agregado en V8.43 en `js/core/01-config-constants.js`: las reglas de penalización por tarjetas llamaban a `clamp()` durante el arranque, antes de que `js/core/02-ui-utils.js` definiera esa función.
+- Las constantes tempranas ahora utilizan `configClamp()`, un helper local disponible desde el mismo archivo y sin dependencia del orden de carga.
+- La migración de objetivos secundarios vuelve a integrarse sobre la cadena real de `normalizeGame`, conservando contratos, objetivos ocultos, legado por club y partidas anteriores.
+
+## Optimización preventiva
+
+- Se eliminó una segunda normalización completa del historial del manager durante la misma carga de partida.
+- Al acreditar puntos de legado ya no se reconstruyen innecesariamente todas las temporadas, títulos y ajustes de prestigio en cada premio individual.
+- Se mantienen sin cambios las reglas de lesiones, tarjetas, recaudación del Mundial y desgaste de cartas incorporadas en V8.43.
+
+## Validaciones
+
+- Reproducción confirmada: V8.42 fallaba con `ReferenceError: normalizeGameState is not defined`.
+- Reproducción confirmada: V8.43 fallaba primero con `ReferenceError: clamp is not defined` y conservaba además el error de V8.42.
+- V8.44 supera las dos pruebas de regresión.
+- Se ejecutó el orden completo de scripts en Chromium sin excepciones de JavaScript.
+- La carga real reconstruyó 9 divisiones, 162 clubes y 4.057 jugadores de base/manuales.
+- Se inició una carrera y se avanzó del 1 al 2 de enero de 2026 sin bloqueo.
+- Todos los JavaScript superan `node --check` y todos los JSON son válidos.
+
+**V8.44 no rompe partidas anteriores.** La corrección afecta el arranque y la migración de estado; no cambia el esquema de guardado ni elimina datos. Las partidas creadas antes de V8.42, durante V8.42 o durante V8.43 pueden cargarse normalmente en V8.44.
+
+---
+
+## Historial anterior — V8.43
+
 # V8.43 — Lesiones, disciplina, recaudación del Mundial y desgaste de cartas
 
 ## Lesiones

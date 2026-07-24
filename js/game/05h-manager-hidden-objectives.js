@@ -263,7 +263,8 @@ function managerIsClubIdol(clubId, stats=game?.managerStats){
 }
 function managerClubLegacyEnsureRecord(clubId=game?.selectedClubId){
   if(!game?.managerStats || !Number(clubId || 0)) return null;
-  game.managerStats = normalizeManagerStats(game.managerStats);
+  // La partida ya se normaliza al cargar. Evita reconstruir todo el historial
+  // cada vez que se acredita un punto de legado.
   game.managerStats.clubLegacy = managerClubLegacyRecords(game.managerStats);
   let record = game.managerStats.clubLegacy.find(item => Number(item.clubId) === Number(clubId));
   if(!record){
@@ -641,10 +642,11 @@ normalizeManagerStats = function(stats){
   normalized.clubLegacy = migrateManagerClubLegacyFromHistoricalStats(normalized, sourceLegacy || normalized.clubLegacy || []);
   return normalized;
 };
-const normalizeGameStateV841HiddenObjectives = normalizeGameState;
-normalizeGameState = function(saved){
-  const normalized = normalizeGameStateV841HiddenObjectives(saved);
-  normalized.managerStats = normalizeManagerStats(normalized.managerStats);
+const normalizeGameV841HiddenObjectives = normalizeGame;
+normalizeGame = function(saved){
+  const normalized = normalizeGameV841HiddenObjectives(saved);
+  // normalizeGame ya utiliza la versión extendida de normalizeManagerStats.
+  // No se repite la migración completa del historial en el mismo ciclo de carga.
   normalized.managerHiddenObjectives = normalizeManagerHiddenObjectivesState(normalized.managerHiddenObjectives || {}, normalized);
   // Congela las bases al cargar, antes del primer avance diario de una partida migrada.
   ensureManagerHiddenObjectiveSeason(normalized);

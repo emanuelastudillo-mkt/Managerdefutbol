@@ -1,5 +1,5 @@
 {
-  "version": "V8.43",
+  "version": "V8.44",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
   "caracteristicas_version": "V8.43: las cartas consumen usos al activar, al desactivar y cada 100 días activas; una carta agotada expira al día siguiente del ciclo activo.",

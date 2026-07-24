@@ -18,19 +18,24 @@ function configBoolean(path, fallback=false){
   if(typeof raw === 'number') return raw !== 0;
   return Boolean(fallback);
 }
+function configClamp(value, min, max){
+  const numeric = Number(value);
+  const safe = Number.isFinite(numeric) ? numeric : 0;
+  return Math.max(min, Math.min(max, safe));
+}
 
 const DATA_CACHE_MODE_RAW = String(configValue('data.cacheMode', 'default')).trim();
 const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache'].includes(DATA_CACHE_MODE_RAW) ? DATA_CACHE_MODE_RAW : 'default';
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.43');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.44');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.43');
-const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.43');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.43');
-const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.43');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.44');
+const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.44');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.44');
+const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.44');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
   'data/estadios_argentina.json',
@@ -51,7 +56,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.43', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.44', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
@@ -131,7 +136,7 @@ function normalizeHighCardPenaltyRules(path, fallback=[]){
   const raw = configValue(path, fallback);
   return (Array.isArray(raw) ? raw : fallback).map(rule => ({
     cardsFrom:Math.max(1, Math.round(Number(rule?.tarjetasTotalesDesde ?? rule?.cardsFrom ?? 0) || 0)),
-    penalty:clamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)
+    penalty:configClamp(Number(rule?.penalizacion ?? rule?.penalty ?? 0) || 0, 0, 0.99)
   })).filter(rule => rule.cardsFrom > 0 && rule.penalty > 0).sort((a,b)=>a.cardsFrom-b.cardsFrom);
 }
 const HIGH_YELLOW_CARD_PENALTY_RULES = normalizeHighCardPenaltyRules('simulador.penalizacionTarjetasAltas.amarillas', [
@@ -151,7 +156,7 @@ function highCardPenaltyForNextCard(currentCount, rules=[]){
   const nextTotal = Math.max(0, Math.round(Number(currentCount || 0))) + 1;
   let penalty = 0;
   (rules || []).forEach(rule => { if(nextTotal >= Number(rule.cardsFrom || 0)) penalty = Math.max(penalty, Number(rule.penalty || 0)); });
-  return clamp(penalty, 0, 0.99);
+  return configClamp(penalty, 0, 0.99);
 }
 function applyMatchCardVolumePenalty(candidates=[], existingCards=[], randomFn=Math.random){
   const accepted = [];
@@ -229,7 +234,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 30, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.43');
+const APP_VERSION = configValue('version', 'V8.44');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

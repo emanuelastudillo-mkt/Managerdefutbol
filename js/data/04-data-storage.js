@@ -213,6 +213,9 @@ function refreshExistingManualPlayerFromDatabase(existing, manual){
   const currentIntransferible = Boolean(existing.intransferible);
   const refreshed = {
     ...existing,
+    name:String(manual.name || existing.name || '').trim() || existing.name,
+    position:manual.position || existing.position,
+    nationality:String(manual.nationality || existing.nationality || '').trim() || existing.nationality,
     manualPlayer:true,
     manualRespawnAfterRetirement:Boolean(manual.manualRespawnAfterRetirement),
     manualOverallLocked:Boolean(manual.manualOverallLocked ?? existing.manualOverallLocked ?? true),

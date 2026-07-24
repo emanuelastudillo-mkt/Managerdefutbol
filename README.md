@@ -1,3 +1,27 @@
+# V8.47 — 100 jugadores especiales
+
+## Cambios incluidos
+
+- Se reemplazó la base anterior de 7 jugadores manuales por una colección de 100 jugadores especiales con nombres ficticios reconocibles.
+- Cada jugador fue asignado al club, nacionalidad, edad, posición y media indicados.
+- Roberto Lewan no tenía media en la lista recibida; se asignó media 90 por coherencia con el bloque de delanteros en el que aparece.
+- Las medias quedan bloqueadas para respetar exactamente los valores definidos, incluyendo medias 96 a 99.
+- Las habilidades internas se generaron con perfiles específicos por posición y variaciones deterministas por jugador.
+- Sueldo y cláusula se calculan con la fórmula normal de un jugador de primera división y después se multiplican por 1,50.
+- El valor de mercado inicial queda igualado a la cláusula especial.
+- Los siete identificadores manuales existentes se conservaron para sus equivalentes ficticios; al cargar una partida anterior se actualizan sus nombres, posición y nacionalidad, pero se conservan club actual, edad, estadísticas y recorrido.
+- Los jugadores retirados continúan utilizando el sistema de reaparición generacional de la base manual.
+- No se agregaron imágenes ni rutas de fotos inexistentes; se utiliza la silueta genérica del juego.
+- La base inicial pasa de 4.057 a 4.150 jugadores.
+- Barcelona queda con 40 jugadores y Real Madrid con 38, ambos por debajo del máximo de 42.
+- No requiere cambios de Worker ni SQL.
+
+**V8.47 no rompe partidas anteriores.** En guardados existentes se incorporan los 93 jugadores manuales nuevos. Los siete jugadores manuales anteriores adoptan sus nombres ficticios mediante los IDs históricos, sin perder club actual, edad, estadísticas, ventas ni recorrido.
+
+---
+
+## Historial anterior — V8.46
+
 # V8.46 — Adaptación móvil inicial
 
 ## Cambios incluidos

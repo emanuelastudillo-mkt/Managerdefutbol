@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.36',
+  version: 'V8.37',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -25,7 +25,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.36', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.37', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -39,12 +39,12 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.36',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.37',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.36',
-    eventsUrl: 'data/eventos.json?v=8.36',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.36',
+    installationsUrl: 'data/instalaciones.json?v=8.37',
+    eventsUrl: 'data/eventos.json?v=8.37',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.37',
     managerAchievementsUrl: 'data/hitos_manager.json',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
@@ -215,77 +215,10 @@ window.GAME_CONFIG = {
   },
   codigosEspeciales: {
     activo: true,
-    // Los códigos válidos no se guardan en texto visible: sólo se conservan sus huellas SHA-256.
-    // Los códigos normales se pueden reclamar una sola vez por partida. Los marcados como reutilizables no tienen límite de usos.
-    codigos: [
-      {
-        huella: 'BAC19BFA1A8CA06D178B9E63A44064B2EB7CFF0D9B568A9D8D0413E2AFE6A3CE',
-        nombre: 'Código de prestigio 1',
-        descripcion: 'Suma 20 puntos de prestigio al manager.',
-        beneficios: { prestigio: 20 }
-      },
-      {
-        huella: '73C9EC8921C82C0242201355BBA13F87935C705DE200D00512F93112B6B5DA4C',
-        nombre: 'Código de prestigio 2',
-        descripcion: 'Suma 20 puntos de prestigio al manager.',
-        beneficios: { prestigio: 20 }
-      },
-      {
-        huella: 'A53DC17BC280C12143A42816A6CF8C5D6C5A89EEA820C7D015EEFD77BED88B10',
-        nombre: 'Código de habilidad 1',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '4F93D13471AF9C3EE053C578B9A10E1ACFE75D19B4CFAAFC3C4641779D89F4AE',
-        nombre: 'Código de habilidad 2',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '2FCC2088FE583D742CF98C0196E2507604F74E82CD1F006FEFF19E3BB6916A27',
-        nombre: 'Código de habilidad 3',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '97A45E2C3BC2539BFDE0E7EE15774725205573DE2D12BA492B31C002537A0121',
-        nombre: 'Código de habilidad 4',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '39F7FAB62D2B6008454327EB498B5D3359B92A1E2C2B6D1D53EC2B8BEA00C390',
-        nombre: 'Código de habilidad 5',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: 'C3F3A81BAAF0040644327C1EAEB501931415BEF3DA117AB015B41714D7177F17',
-        nombre: 'Código de habilidad 6',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '5C52BA8D691930D934092DB140916A0210387B0E968ABDF7F4CD9CDBC1292294',
-        nombre: 'Código de habilidad 7',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: '7659DB939C3C794D7486E28B66DAB798867F81ADAB74C19353F4A0B24533F854',
-        nombre: 'Código de habilidad 8',
-        descripcion: 'Suma 20.000 puntos de habilidad para sobres.',
-        beneficios: { puntosHabilidad: 20000 }
-      },
-      {
-        huella: 'FBDED1D38270713AF1002D4757F5D5674B3869D5F03CDB26121073245C1B8EA5',
-        nombre: 'Código de fondos del club',
-        descripcion: 'Acredita $100.000.000 al presupuesto del club. Puede utilizarse sin límite.',
-        reutilizable: true,
-        beneficios: { dineroClub: 100000000 }
-      }
-    ]
+    // Los códigos semanales se cargan desde data/codigos-semanales.js.
+    // Este bloque no debe volver a contener códigos, huellas ni beneficios.
+    fuenteGlobal: 'GAME_WEEKLY_CODES',
+    exigirVigencia: true
   },
   plantel: {
     nacionalidades: {

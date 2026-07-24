@@ -1,3 +1,24 @@
+# Una vida de manager — V8.37
+
+## V8.37 — Seguridad web y códigos semanales
+
+- Se agregó una política de seguridad de contenido en `index.html`.
+- Se agregó `_headers` con HSTS, protección contra MIME sniffing, bloqueo de iframes, política de permisos, referencia y aislamiento de origen.
+- Los encabezados completos quedan preparados para una capa de hosting o publicación que los procese.
+- Se retiraron de `config.js` todas las huellas y beneficios de códigos especiales.
+- Los códigos ahora se cargan exclusivamente desde `data/codigos-semanales.js`.
+- El archivo semanal se entrega normalmente vacío y desactivado.
+- Su cargador evita reutilizar una copia antigua del navegador al actualizar la campaña.
+- Cada campaña puede definir fecha inicial y final; una campaña vencida deja de aceptar códigos automáticamente.
+- El formulario de canje informa cuando no hay códigos activos.
+- No requiere cambios de Worker ni SQL.
+
+**V8.37 no rompe partidas anteriores.** Los códigos reclamados permanecen guardados; sólo cambia la fuente de nuevas campañas y se refuerza la publicación web.
+
+---
+
+## Historial anterior — V8.36
+
 # Una vida de manager — V8.36
 
 ## V8.36 — Herramientas de recuperación retiradas de la interfaz

@@ -638,11 +638,40 @@ function awardSpecialChampionPoints(division){
   return awardSpecialPoints(id, { divisionId:division?.id || '', divisionName:division?.name || '' });
 }
 
+function specialDateIsoToday(){
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 function specialCodesConfig(){
   const cfg = window.GAME_CONFIG?.codigosEspeciales || {};
-  const active = cfg.activo !== false;
-  const codes = Array.isArray(cfg.codigos) ? cfg.codigos.filter(item => item && typeof item === 'object') : [];
-  return { active, codes };
+  const sourceName = String(cfg.fuenteGlobal || 'GAME_WEEKLY_CODES').trim() || 'GAME_WEEKLY_CODES';
+  const weekly = window[sourceName] && typeof window[sourceName] === 'object' ? window[sourceName] : {};
+  const today = specialDateIsoToday();
+  const validFrom = String(weekly.validoDesde || weekly.validFrom || '').trim();
+  const validUntil = String(weekly.validoHasta || weekly.validUntil || '').trim();
+  const requireValidity = cfg.exigirVigencia !== false;
+  const datesValid = !requireValidity || (
+    /^\d{4}-\d{2}-\d{2}$/.test(validFrom) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(validUntil) &&
+    validFrom <= validUntil &&
+    today >= validFrom &&
+    today <= validUntil
+  );
+  const codes = Array.isArray(weekly.codigos) ? weekly.codigos.filter(item => item && typeof item === 'object') : [];
+  const active = cfg.activo !== false && weekly.activo === true && datesValid && codes.length > 0;
+  return {
+    active,
+    codes: active ? codes : [],
+    week: String(weekly.semana || weekly.week || '').trim(),
+    validFrom,
+    validUntil,
+    today,
+    datesValid,
+    configured: codes.length > 0
+  };
 }
 function normalizeSpecialCodeValue(value=''){
   return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -805,9 +834,14 @@ function redeemSpecialCode(){
 function specialCodeRedeemMarkup(){
   const cfg = specialCodesConfig();
   const disabled = cfg.active ? '' : 'disabled';
+  const placeholder = cfg.active ? 'Código alfanumérico' : 'Sin códigos activos esta semana';
+  const status = cfg.active
+    ? `<small class="muted">Campaña activa${cfg.week ? ` · ${escapeHtml(cfg.week)}` : ''}${cfg.validUntil ? ` · vence ${escapeHtml(cfg.validUntil)}` : ''}</small>`
+    : '<small class="muted">No hay una campaña semanal activa.</small>';
   return `<div class="special-code-mini">
-    <input id="special-code-input" class="input" type="text" placeholder="Código alfanumérico" autocomplete="off" ${disabled} />
+    <input id="special-code-input" class="input" type="text" placeholder="${escapeHtml(placeholder)}" autocomplete="off" spellcheck="false" ${disabled} />
     <button class="primary" id="special-code-redeem-btn" ${disabled}>Canjear</button>
+    ${status}
   </div>`;
 }
 

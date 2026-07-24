@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.44</p>
+      <p class="eyebrow">Guía actualizada · V8.45</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1719,7 +1719,7 @@ function openGameHelpModal(){
       <div class="help-grid">
         <article class="help-card card">
           <h4>Mercado y Centro de Ojeo</h4>
-          <p>El mercado profesional utiliza el presupuesto del club. Ojeá antes de invertir para conocer habilidades, edad, cláusula, media general, puntaje total y probabilidad de fichaje.</p>
+          <p>El mercado profesional utiliza el presupuesto del club. Ojeá antes de invertir para conocer habilidades, edad, cláusula, media general, puntaje total y probabilidad de fichaje. El descubrimiento automático permite limitar edad y sueldo desde/hasta; cada rango utilizado agrega 3 días a la búsqueda.</p>
           <div class="help-actions">${gameHelpGoButton('market','Abrir Mercado')}${gameHelpGoButton('scouting','Abrir Ojeo')}</div>
         </article>
         <article class="help-card card">

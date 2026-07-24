@@ -613,9 +613,9 @@ function renderHome(){
     ${turnModePanelMarkup()}
     ${typeof managerChallengeHomeMarkup === 'function' ? managerChallengeHomeMarkup() : ''}
     ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
+    <div class="home-alerts-block">${visualAlertsMarkup()}</div>
     <div id="homeOnlineRankingBox">${typeof challengeHomeOnlineRankingMarkup === 'function' ? challengeHomeOnlineRankingMarkup() : ''}</div>
     <div id="homeDiscordCommunityBox">${typeof discordCommunityHomeMarkup === 'function' ? discordCommunityHomeMarkup() : ''}</div>
-    ${visualAlertsMarkup()}
     <div class="card featured-players-panel" style="margin-top:14px">
       <div class="row"><h3>Tus jugadores destacados</h3><span class="pill">Plantel actual</span></div>
       <div class="grid cols-3 featured-player-grid">

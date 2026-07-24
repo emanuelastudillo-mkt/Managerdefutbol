@@ -1035,6 +1035,11 @@ button.cwc-group-result{cursor:pointer}
 @media (max-width:760px){.challenge-anonymous-pool-card,.challenge-anonymous-rival{align-items:flex-start}.challenge-anonymous-pool-card{flex-direction:column}.challenge-anonymous-pool-card .challenge-simple-card-actions{width:100%;min-width:0}}
 
 
+
+/* V8.45 · Alertas de Inicio separadas y ubicadas antes del ranking online. */
+.home-alerts-block{position:relative;clear:both;z-index:1;margin:0}
+.home-alerts-block .manager-alert-grid{margin-bottom:0}
+
 /* V8.16 · Resumen online en Inicio y acceso rápido a rivales compatibles. */
 .online-challenge-top-btn{
   border-color:rgba(255,95,95,.72);

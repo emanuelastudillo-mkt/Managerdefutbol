@@ -777,10 +777,19 @@
   font-weight:800;
   letter-spacing:.02em;
 }
-.scouting-search-filters select{
+.scouting-search-filters select,
+.scouting-search-filters input{
   width:100%;
   min-width:0;
 }
+.scouting-search-filters input{
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:10px;
+  background:rgba(8,14,24,.72);
+  color:var(--text);
+  padding:10px 11px;
+}
+.scouting-search-filters input::placeholder{color:rgba(148,163,184,.72)}
 .scouting-search-duration{
   display:flex;
   align-items:center;

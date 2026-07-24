@@ -1,3 +1,24 @@
+# V8.45 — Alertas de Inicio y filtros de descubrimiento automático
+
+## Cambios incluidos
+
+- El bloque de alertas de Inicio se movió inmediatamente debajo de la Oficina del manager y antes del ranking online.
+- Se agregó separación estable entre la oficina, las alertas y el ranking para evitar superposiciones visuales.
+- Descubrimiento automático incorpora cuatro límites opcionales: edad desde, edad hasta, sueldo desde y sueldo hasta.
+- El rango de edad suma 3 días a la búsqueda cuando se utiliza al menos uno de sus límites.
+- El rango de sueldo suma otros 3 días cuando se utiliza al menos uno de sus límites.
+- Se mantienen los tiempos existentes: 1 día base, +2 por rol y +1/+2/+3 según probabilidad de fichaje.
+- La duración máxima posible con todos los criterios es de 12 días.
+- Los rangos invertidos se corrigen automáticamente y todos los criterios se aplican antes de seleccionar al jugador descubierto.
+- Las partidas anteriores migran con edad y sueldo sin límites, conservando el comportamiento previo hasta que el manager active esos filtros.
+- No requiere cambios de Worker, SQL ni archivos de imagen.
+
+**V8.45 no rompe partidas anteriores.** Los nuevos campos de búsqueda son opcionales y se agregan al normalizar el guardado. Las búsquedas ya activas mantienen rol y probabilidad; edad y sueldo quedan sin límites.
+
+---
+
+## Historial anterior — V8.44
+
 # V8.44 — Corrección de congelamiento al iniciar
 
 ## Correcciones críticas

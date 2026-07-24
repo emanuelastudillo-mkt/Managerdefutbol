@@ -1,4 +1,4 @@
-/* V7.65 · Centro de Ojeo: edad visible en tarjetas e informes de jugadores ojeados. */
+/* V8.45 · Centro de Ojeo: filtros automáticos por rol, probabilidad, edad y sueldo. */
 
 const SCOUTING_PLAYER_SEARCH_ROLES = ['all','POR','LD','LI','DFC','MCD','MC','MI','MD','MCO','ED','EI','DC'];
 const SCOUTING_PLAYER_SEARCH_CHANCES = ['any','30','50','80'];
@@ -7,6 +7,10 @@ function createInitialScoutingPlayerSearchState(){
     enabled:false,
     role:'all',
     signingChance:'any',
+    ageMin:null,
+    ageMax:null,
+    salaryMin:null,
+    salaryMax:null,
     progressDays:0,
     requiredDays:1,
     startedDate:null,
@@ -16,19 +20,41 @@ function createInitialScoutingPlayerSearchState(){
     foundPlayerIds:[]
   };
 }
-function scoutingPlayerSearchRequiredDays(role='all', signingChance='any'){
+function scoutingPlayerSearchBoundActive(value){
+  return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+}
+function normalizeScoutingPlayerSearchBound(value, min=0, max=Number.MAX_SAFE_INTEGER){
+  if(!scoutingPlayerSearchBoundActive(value)) return null;
+  return clamp(Math.round(Number(value)), min, max);
+}
+function scoutingPlayerSearchRangeActive(minValue, maxValue){
+  return scoutingPlayerSearchBoundActive(minValue) || scoutingPlayerSearchBoundActive(maxValue);
+}
+function scoutingPlayerSearchRequiredDays(role='all', signingChance='any', ageMin=null, ageMax=null, salaryMin=null, salaryMax=null){
   let days = 1;
   if(String(role || 'all') !== 'all') days += 2;
   const chanceDays = { '30':1, '50':2, '80':3 };
   days += Number(chanceDays[String(signingChance || 'any')] || 0);
-  return clamp(Math.round(days), 1, 6);
+  if(scoutingPlayerSearchRangeActive(ageMin, ageMax)) days += 3;
+  if(scoutingPlayerSearchRangeActive(salaryMin, salaryMax)) days += 3;
+  return clamp(Math.round(days), 1, 12);
 }
 function normalizeScoutingPlayerSearchState(search){
   const clean = { ...createInitialScoutingPlayerSearchState(), ...(search && typeof search === 'object' ? search : {}) };
   clean.enabled = Boolean(clean.enabled);
   clean.role = SCOUTING_PLAYER_SEARCH_ROLES.includes(String(clean.role)) ? String(clean.role) : 'all';
   clean.signingChance = SCOUTING_PLAYER_SEARCH_CHANCES.includes(String(clean.signingChance)) ? String(clean.signingChance) : 'any';
-  clean.requiredDays = scoutingPlayerSearchRequiredDays(clean.role, clean.signingChance);
+  clean.ageMin = normalizeScoutingPlayerSearchBound(clean.ageMin, 15, 60);
+  clean.ageMax = normalizeScoutingPlayerSearchBound(clean.ageMax, 15, 60);
+  clean.salaryMin = normalizeScoutingPlayerSearchBound(clean.salaryMin, 0);
+  clean.salaryMax = normalizeScoutingPlayerSearchBound(clean.salaryMax, 0);
+  if(clean.ageMin !== null && clean.ageMax !== null && clean.ageMin > clean.ageMax){
+    [clean.ageMin, clean.ageMax] = [clean.ageMax, clean.ageMin];
+  }
+  if(clean.salaryMin !== null && clean.salaryMax !== null && clean.salaryMin > clean.salaryMax){
+    [clean.salaryMin, clean.salaryMax] = [clean.salaryMax, clean.salaryMin];
+  }
+  clean.requiredDays = scoutingPlayerSearchRequiredDays(clean.role, clean.signingChance, clean.ageMin, clean.ageMax, clean.salaryMin, clean.salaryMax);
   clean.progressDays = clamp(Math.round(Number(clean.progressDays || 0)), 0, clean.requiredDays);
   clean.startedDate = validIsoDate(clean.startedDate) ? clean.startedDate : null;
   clean.lastResultDate = validIsoDate(clean.lastResultDate) ? clean.lastResultDate : null;
@@ -531,12 +557,22 @@ function scoutingPlayerSearchCandidates(stateOverride=null){
   const search = normalizeScoutingPlayerSearchState(state.playerSearch);
   const role = String(search.role || 'all');
   const threshold = scoutingPlayerSearchChanceThreshold(search);
+  const ageMin = search.ageMin;
+  const ageMax = search.ageMax;
+  const salaryMin = search.salaryMin;
+  const salaryMax = search.salaryMax;
   const listed = new Set((state.listedPlayerIds || []).map(Number));
   return (seed?.players || []).filter(player => {
     if(!player || !Number(player.id) || player.retired || player.sold) return false;
     if(Number(player.clubId || 0) === Number(game?.selectedClubId || 0)) return false;
     if(listed.has(Number(player.id))) return false;
     if(role !== 'all' && String(player.position || '').toUpperCase() !== role) return false;
+    const age = Math.max(0, Math.round(Number(player.age || 0)));
+    const salary = Math.max(0, Math.round(Number(player.salary || 0)));
+    if(ageMin !== null && age < ageMin) return false;
+    if(ageMax !== null && age > ageMax) return false;
+    if(salaryMin !== null && salary < salaryMin) return false;
+    if(salaryMax !== null && salary > salaryMax) return false;
     if(threshold > 0){
       const chance = typeof marketPlayerAcceptanceChance === 'function' ? Number(marketPlayerAcceptanceChance(player)) : NaN;
       if(!Number.isFinite(chance) || chance <= threshold) return false;
@@ -546,14 +582,14 @@ function scoutingPlayerSearchCandidates(stateOverride=null){
 }
 function scoutingPlayerSearchPick(candidates, search, today){
   if(!Array.isArray(candidates) || !candidates.length) return null;
-  const seedKey = `player-search-${today}-${game?.seasonNumber || 1}-${search.role}-${search.signingChance}-${search.lastResultDate || '-'}-${candidates.length}`;
+  const seedKey = `player-search-${today}-${game?.seasonNumber || 1}-${search.role}-${search.signingChance}-${search.ageMin ?? '-'}-${search.ageMax ?? '-'}-${search.salaryMin ?? '-'}-${search.salaryMax ?? '-'}-${search.lastResultDate || '-'}-${candidates.length}`;
   return candidates[hashNumber(seedKey, candidates.length)] || candidates[0];
 }
 function resetScoutingPlayerSearchProgress(search, { disable=false }={}){
   if(!search) return;
   if(disable) search.enabled = false;
   search.progressDays = 0;
-  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance);
+  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance, search.ageMin, search.ageMax, search.salaryMin, search.salaryMax);
   search.startedDate = search.enabled ? (game?.currentDate || currentCalendarDate()) : null;
   search.status = search.enabled ? 'searching' : 'idle';
 }
@@ -562,10 +598,15 @@ function updateScoutingPlayerSearchCriteria(field, value){
   const search = state.playerSearch;
   if(field === 'role') search.role = SCOUTING_PLAYER_SEARCH_ROLES.includes(String(value)) ? String(value) : 'all';
   if(field === 'signingChance') search.signingChance = SCOUTING_PLAYER_SEARCH_CHANCES.includes(String(value)) ? String(value) : 'any';
-  resetScoutingPlayerSearchProgress(search);
+  if(field === 'ageMin') search.ageMin = normalizeScoutingPlayerSearchBound(value, 15, 60);
+  if(field === 'ageMax') search.ageMax = normalizeScoutingPlayerSearchBound(value, 15, 60);
+  if(field === 'salaryMin') search.salaryMin = normalizeScoutingPlayerSearchBound(value, 0);
+  if(field === 'salaryMax') search.salaryMax = normalizeScoutingPlayerSearchBound(value, 0);
+  state.playerSearch = normalizeScoutingPlayerSearchState(search);
+  resetScoutingPlayerSearchProgress(state.playerSearch);
   saveLocal(true);
   renderScoutingCenter();
-  if(search.enabled) showNotice(`Criterios actualizados. La búsqueda se reinició y demorará ${search.requiredDays} día(s).`);
+  if(state.playerSearch.enabled) showNotice(`Criterios actualizados. La búsqueda se reinició y demorará ${state.playerSearch.requiredDays} día(s).`);
 }
 function toggleScoutingPlayerSearch(){
   if(typeof managerWithoutClubActive === 'function' && managerWithoutClubActive()){
@@ -615,7 +656,7 @@ function addScoutingPlayerSearchResult(player, state, today){
 }
 function processScoutingPlayerSearchDaily(state, today, reason='daily'){
   const search = state?.playerSearch;
-  if(!search?.enabled) return { cost:0, foundPlayerId:null, progress:0, required:scoutingPlayerSearchRequiredDays(search?.role, search?.signingChance) };
+  if(!search?.enabled) return { cost:0, foundPlayerId:null, progress:0, required:scoutingPlayerSearchRequiredDays(search?.role, search?.signingChance, search?.ageMin, search?.ageMax, search?.salaryMin, search?.salaryMax) };
   if(!scoutingChiefType(state?.chief?.type)){
     resetScoutingPlayerSearchProgress(search, { disable:true });
     return { cost:0, foundPlayerId:null, disabled:true, missingChief:true, progress:0, required:search.requiredDays };
@@ -629,9 +670,13 @@ function processScoutingPlayerSearchDaily(state, today, reason='daily'){
     type:'scouting_player_search_daily',
     role:search.role,
     signingChance:search.signingChance,
+    ageMin:search.ageMin,
+    ageMax:search.ageMax,
+    salaryMin:search.salaryMin,
+    salaryMax:search.salaryMax,
     reason
   });
-  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance);
+  search.requiredDays = scoutingPlayerSearchRequiredDays(search.role, search.signingChance, search.ageMin, search.ageMax, search.salaryMin, search.salaryMax);
   if(!search.startedDate) search.startedDate = today;
   search.status = 'searching';
   search.progressDays = Math.min(search.requiredDays, Math.max(0, Number(search.progressDays || 0)) + 1);
@@ -687,6 +732,12 @@ function scoutingPlayerSearchMarkup(state){
   const durationParts = ['1 día base'];
   if(search.role !== 'all') durationParts.push('+2 por rol');
   if(search.signingChance !== 'any') durationParts.push(`+${({ '30':1, '50':2, '80':3 })[search.signingChance]} por probabilidad`);
+  if(scoutingPlayerSearchRangeActive(search.ageMin, search.ageMax)) durationParts.push('+3 por edad');
+  if(scoutingPlayerSearchRangeActive(search.salaryMin, search.salaryMax)) durationParts.push('+3 por sueldo');
+  const ageMinValue = search.ageMin ?? '';
+  const ageMaxValue = search.ageMax ?? '';
+  const salaryMinValue = search.salaryMin ?? '';
+  const salaryMaxValue = search.salaryMax ?? '';
   return `<div class="card scouting-search-card ${search.enabled ? 'is-active' : 'is-off'} ${hasChief ? '' : 'requires-chief'}">
     <div class="scouting-card-head">
       <div><p class="label">Descubrimiento automático</p><h3>Buscar jugadores</h3></div>
@@ -696,6 +747,10 @@ function scoutingPlayerSearchMarkup(state){
     <div class="scouting-search-filters">
       <label><span>Rol</span><select data-scouting-search-role>${roleOptions}</select></label>
       <label><span>Probabilidad de fichaje</span><select data-scouting-search-chance>${chanceOptions}</select></label>
+      <label><span>Edad desde</span><input type="number" min="15" max="60" step="1" value="${ageMinValue}" placeholder="Sin mínimo" data-scouting-search-age-min></label>
+      <label><span>Edad hasta</span><input type="number" min="15" max="60" step="1" value="${ageMaxValue}" placeholder="Sin máximo" data-scouting-search-age-max></label>
+      <label><span>Sueldo desde</span><input type="number" min="0" step="50000" value="${salaryMinValue}" placeholder="Sin mínimo" data-scouting-search-salary-min></label>
+      <label><span>Sueldo hasta</span><input type="number" min="0" step="50000" value="${salaryMaxValue}" placeholder="Sin máximo" data-scouting-search-salary-max></label>
     </div>
     <div class="scouting-search-duration"><strong>${search.requiredDays} día(s)</strong><span>${escapeHtml(durationParts.join(' · '))}</span></div>
     <div class="project-progress scouting-search-progress"><span style="width:${pct}%"></span></div>
@@ -1306,6 +1361,10 @@ function renderScoutingCenter(){
   document.querySelector('[data-toggle-scouting-player-search]')?.addEventListener('click', toggleScoutingPlayerSearch);
   document.querySelector('[data-scouting-search-role]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('role', event.target.value));
   document.querySelector('[data-scouting-search-chance]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('signingChance', event.target.value));
+  document.querySelector('[data-scouting-search-age-min]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('ageMin', event.target.value));
+  document.querySelector('[data-scouting-search-age-max]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('ageMax', event.target.value));
+  document.querySelector('[data-scouting-search-salary-min]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('salaryMin', event.target.value));
+  document.querySelector('[data-scouting-search-salary-max]')?.addEventListener('change', event => updateScoutingPlayerSearchCriteria('salaryMax', event.target.value));
   document.querySelectorAll('[data-open-scouting-reports]').forEach(btn => btn.addEventListener('click', () => openScoutingReportsModal(btn.dataset.openScoutingReports || 'all')));
   document.querySelectorAll('[data-remove-scouting-player]').forEach(btn => btn.addEventListener('click', () => removePlayerFromScoutingCenter(Number(btn.dataset.removeScoutingPlayer || 0))));
   document.querySelectorAll('[data-scouting-make-player-offer]').forEach(btn => btn.addEventListener('click', () => {

@@ -1,4 +1,24 @@
-# Una vida de manager — V8.40
+# Una vida de manager — V8.41
+
+## V8.41 — Negociación anual del contrato
+
+- Al cumplir el objetivo vigente y completar los partidos mínimos de evaluación, la directiva informa que se habilitó la negociación para la temporada siguiente.
+- La acción queda disponible en `Carrera → Contrato actual` y puede utilizarse una sola vez por temporada.
+- Pedir un aumento salarial del 20% aumenta un 30% el objetivo de puntos por partido del año siguiente.
+- Aceptar una reducción salarial del 20% disminuye un 10% el objetivo del año siguiente.
+- El acuerdo no modifica el sueldo ni el objetivo de la temporada actual.
+- En contratos de varias temporadas se ajusta únicamente el año siguiente; los demás años conservan sus condiciones.
+- Si el contrato vence, el acuerdo queda pendiente y se aplica al renovar con el mismo club.
+- Se agregó un calendario anual de sueldo al contrato para admitir condiciones diferentes por temporada.
+- Las partidas anteriores migran automáticamente el sueldo vigente a cada año restante del contrato.
+- Se corrigió la validación de objetivos para admitir valores contractuales de hasta 3,00 PPG y se recalculan los partidos mínimos cuando cambia la exigencia.
+- No requiere cambios de Worker, SQL ni archivos de imagen.
+
+**V8.41 no rompe partidas anteriores.** Los contratos existentes se normalizan automáticamente; el nuevo calendario salarial se genera desde el sueldo guardado y la negociación comienza a estar disponible desde la próxima vez que se cumpla un objetivo.
+
+---
+
+## Historial anterior — V8.40
 
 ## V8.40 — Limpieza, coherencia y auditoría de código
 

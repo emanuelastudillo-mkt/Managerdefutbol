@@ -1,4 +1,4 @@
-/* V7.65 · Contratos, sueldo y patrimonio personal del manager. */
+/* V8.41 · Contratos, sueldo, patrimonio personal y negociación anual del manager. */
 
 function managerContractBalanceConfig(){
   const cfg = window.GAME_BALANCE_MANAGER?.contratosManager;
@@ -27,6 +27,35 @@ function managerContractNegotiationConfig(level='normal'){
     objectiveDelta:Number.isFinite(Number(raw.objectiveDelta)) ? Number(raw.objectiveDelta) : fallback.objectiveDelta,
     salaryFactor:Number.isFinite(Number(raw.salaryFactor)) ? Number(raw.salaryFactor) : fallback.salaryFactor
   };
+}
+function managerContractNextSeasonNegotiationConfig(choice='aumento'){
+  const cfg = managerContractBalanceConfig();
+  const clean = String(choice || 'aumento').toLowerCase() === 'reduccion' ? 'reduccion' : 'aumento';
+  const fallback = clean === 'reduccion'
+    ? { label:'Aceptar 20% menos', salaryFactor:0.80, objectiveFactor:0.90 }
+    : { label:'Pedir 20% de aumento', salaryFactor:1.20, objectiveFactor:1.30 };
+  const raw = cfg.renegociacionTemporadaSiguiente?.[clean] || {};
+  return {
+    key:clean,
+    label:String(raw.label || fallback.label),
+    salaryFactor:clamp(Number.isFinite(Number(raw.salaryFactor)) ? Number(raw.salaryFactor) : fallback.salaryFactor, 0.10, 3),
+    objectiveFactor:clamp(Number.isFinite(Number(raw.objectiveFactor)) ? Number(raw.objectiveFactor) : fallback.objectiveFactor, 0.10, 3)
+  };
+}
+function managerContractAnnualSalarySchedule(monthlySalary, duration=1, startSeason=game?.seasonNumber || 1){
+  const salary = Math.max(100000, Math.round(Number(monthlySalary || 0)));
+  const cleanDuration = clamp(Math.round(Number(duration || 1)), 1, 3);
+  return Array.from({ length:cleanDuration }, (_, index) => ({
+    season:Number(startSeason || 1) + index,
+    contractYear:index + 1,
+    monthlySalary:salary,
+    source:'contract'
+  }));
+}
+function managerContractMonthlySalaryForSeason(contract, season=game?.seasonNumber || 1){
+  const list = Array.isArray(contract?.annualSalaries) ? contract.annualSalaries : [];
+  const entry = list.find(item => Number(item?.season) === Number(season));
+  return Math.max(100000, Math.round(Number(entry?.monthlySalary ?? contract?.monthlySalary ?? 0)));
 }
 function managerContractDurationSalaryFactor(duration=1){
   const cfg = managerContractBalanceConfig();
@@ -131,6 +160,7 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
   const annualObjectives = managerContractObjectiveSchedule(finalObjective, duration, startSeason, club.id);
   const baseMonthly = managerContractBaseMonthlySalary(club.id, state, Number(offer.managerPrestigeAtOffer ?? managerContractStatePrestige(state)));
   const monthlySalary = Math.max(100000, Math.round(baseMonthly * managerContractDurationSalaryFactor(duration) * Number(negotiation.salaryFactor || 1)));
+  const annualSalaries = managerContractAnnualSalarySchedule(monthlySalary, duration, startSeason);
   return {
     clubId:Number(club.id),
     durationSeasons:duration,
@@ -143,6 +173,7 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
     annualObjectives,
     monthlySalary,
     annualSalary:monthlySalary * 12,
+    annualSalaries,
     futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))), 5, 20),
     durationSalaryFactor:managerContractDurationSalaryFactor(duration),
     salaryFactor:Number(negotiation.salaryFactor || 1),
@@ -159,6 +190,44 @@ function managerContractActiveForSeason(contract, clubId=game?.selectedClubId, s
     && Number(contract.clubId || 0) === Number(clubId || 0)
     && Number(season || 1) >= Number(contract.startSeason || contract.season || 1)
     && Number(season || 1) <= Number(contract.endSeason || contract.season || 1);
+}
+function normalizeManagerContractAnnualSalaries(contract, fallbackSalary, startSeason, duration){
+  const raw = Array.isArray(contract?.annualSalaries) ? contract.annualSalaries : [];
+  return Array.from({ length:duration }, (_, index) => {
+    const season = Number(startSeason || 1) + index;
+    const found = raw.find(item => Number(item?.season) === season) || raw[index] || {};
+    return {
+      season,
+      contractYear:index + 1,
+      monthlySalary:Math.max(100000, Math.round(Number(found.monthlySalary ?? fallbackSalary))),
+      source:String(found.source || 'contract')
+    };
+  });
+}
+function normalizeManagerContractNextSeasonNegotiation(value, contract, state=game){
+  if(!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const currentSeason = Number(state?.seasonNumber || contract?.startSeason || 1);
+  const targetSeason = Math.max(1, Math.round(Number(value.targetSeason || currentSeason + 1)));
+  const choice = String(value.choice || '');
+  const config = choice ? managerContractNextSeasonNegotiationConfig(choice) : null;
+  const status = ['available','agreed','applied','expired'].includes(String(value.status || '')) ? String(value.status) : 'available';
+  return {
+    eligibleSeason:Math.max(1, Math.round(Number(value.eligibleSeason || targetSeason - 1))),
+    targetSeason,
+    status,
+    choice:config?.key || '',
+    label:String(value.label || config?.label || ''),
+    salaryFactor:config ? config.salaryFactor : Number(value.salaryFactor || 1),
+    objectiveFactor:config ? config.objectiveFactor : Number(value.objectiveFactor || 1),
+    baseMonthlySalary:Math.max(100000, Math.round(Number(value.baseMonthlySalary || managerContractMonthlySalaryForSeason(contract, targetSeason - 1)))),
+    negotiatedMonthlySalary:Math.max(100000, Math.round(Number(value.negotiatedMonthlySalary || value.baseMonthlySalary || managerContractMonthlySalaryForSeason(contract, targetSeason - 1)))),
+    baseObjectivePpg:Number(Number(value.baseObjectivePpg || 0).toFixed(3)),
+    negotiatedObjectivePpg:Number(Number(value.negotiatedObjectivePpg || value.baseObjectivePpg || 0).toFixed(3)),
+    unlockedDate:validIsoDate(value.unlockedDate) ? value.unlockedDate : '',
+    agreedDate:validIsoDate(value.agreedDate) ? value.agreedDate : '',
+    appliedDate:validIsoDate(value.appliedDate) ? value.appliedDate : '',
+    notified:Boolean(value.notified)
+  };
 }
 function normalizeManagerJobContract(contract, state=game){
   if(!contract || typeof contract !== 'object' || Array.isArray(contract)) return null;
@@ -187,7 +256,9 @@ function normalizeManagerJobContract(contract, state=game){
       label:String(item.label || (index === duration - 1 ? 'Objetivo final' : `Mínimo año ${index + 1}`))
     }))
     : terms.annualObjectives;
-  return {
+  const monthlySalary = Math.max(100000, Math.round(Number(contract.monthlySalary ?? terms.monthlySalary)));
+  const annualSalaries = normalizeManagerContractAnnualSalaries(contract, monthlySalary, startSeason, duration);
+  const normalizedBase = {
     id:String(contract.id || `manager-contract-${clubId}-${startSeason}-${String(contract.signedDate || 'legacy').replace(/[^0-9A-Za-z_-]/g,'')}`),
     offerId:String(contract.offerId || ''),
     clubId,
@@ -205,7 +276,8 @@ function normalizeManagerJobContract(contract, state=game){
     baseObjectivePpg:Number(contract.baseObjectivePpg ?? terms.baseObjectivePpg),
     finalObjectivePpg:Number(contract.finalObjectivePpg ?? terms.finalObjectivePpg),
     annualObjectives,
-    monthlySalary:Math.max(100000, Math.round(Number(contract.monthlySalary ?? terms.monthlySalary))),
+    monthlySalary,
+    annualSalaries,
     futureSalePercent:clamp(Math.round(Number(contract.futureSalePercent ?? terms.futureSalePercent)), 5, 20),
     nextSalaryDate:validIsoDate(contract.nextSalaryDate) ? contract.nextSalaryDate : addDaysToIsoDate(validIsoDate(contract.signedDate) ? contract.signedDate : (state?.currentDate || currentCalendarDate()), 30),
     lastSalaryPaidDate:validIsoDate(contract.lastSalaryPaidDate) ? contract.lastSalaryPaidDate : '',
@@ -213,6 +285,8 @@ function normalizeManagerJobContract(contract, state=game){
     totalSalaryPaid:Math.max(0, Math.round(Number(contract.totalSalaryPaid || 0))),
     transferBudgetRate:Number.isFinite(Number(contract.transferBudgetRate)) ? Number(contract.transferBudgetRate) : null
   };
+  normalizedBase.nextSeasonNegotiation = normalizeManagerContractNextSeasonNegotiation(contract.nextSeasonNegotiation, normalizedBase, state);
+  return normalizedBase;
 }
 function createManagerJobContractFromOffer(clubId, offer={}, negotiationLevel='normal', state=game){
   const club = seed?.clubs?.find(item => Number(item.id) === Number(clubId));
@@ -249,6 +323,7 @@ function createManagerJobContractFromOffer(clubId, offer={}, negotiationLevel='n
     finalObjectivePpg:terms.finalObjectivePpg,
     annualObjectives:terms.annualObjectives,
     monthlySalary:terms.monthlySalary,
+    annualSalaries:terms.annualSalaries,
     futureSalePercent:terms.futureSalePercent,
     nextSalaryDate:addDaysToIsoDate(signedDate, 30),
     lastSalaryPaidDate:'',
@@ -336,7 +411,7 @@ function processManagerSalaryDaily(){
   let guard = 0;
   while(daysBetweenIsoDates(contract.nextSalaryDate, today) >= 0 && guard < 24){
     const paymentDate = contract.nextSalaryDate;
-    const salary = Math.max(0, Math.round(Number(contract.monthlySalary || 0)));
+    const salary = Math.max(0, Math.round(Number(managerContractMonthlySalaryForSeason(contract, game.seasonNumber) || 0)));
     if(salary > 0){
       if(typeof recordBudgetChange === 'function') recordBudgetChange(-salary, `Sueldo mensual del manager`, { type:'manager_salary_expense', managerContractId:contract.id, paymentDate });
       recordManagerFinanceChange(salary, `Sueldo de ${clubName(contract.clubId)}`, { type:'manager_salary', clubId:contract.clubId, contractId:contract.id, paymentDate });
@@ -354,8 +429,11 @@ function processManagerSalaryDaily(){
   }
   return total;
 }
-function managerContractScheduleMarkup(schedule=[]){
-  return `<div class="manager-contract-schedule">${schedule.map(item => `<div class="manager-contract-year ${item.type === 'final' ? 'is-final' : ''}"><span>Año ${Number(item.contractYear || 1)}</span><strong>${Number(item.objectivePpg || 0).toFixed(2)} PPG</strong><small>${escapeHtml(item.type === 'final' ? 'Objetivo final' : 'Mínimo de continuidad')}</small></div>`).join('')}</div>`;
+function managerContractScheduleMarkup(schedule=[], annualSalaries=[]){
+  return `<div class="manager-contract-schedule">${schedule.map(item => {
+    const salary = (Array.isArray(annualSalaries) ? annualSalaries : []).find(entry => Number(entry?.season) === Number(item?.season));
+    return `<div class="manager-contract-year ${item.type === 'final' ? 'is-final' : ''}"><span>Año ${Number(item.contractYear || 1)}</span><strong>${Number(item.objectivePpg || 0).toFixed(2)} PPG</strong><small>${escapeHtml(item.label || (item.type === 'final' ? 'Objetivo final' : 'Mínimo de continuidad'))}</small>${salary ? `<small>Sueldo ${formatMoney(salary.monthlySalary)}/mes</small>` : ''}</div>`;
+  }).join('')}</div>`;
 }
 function managerContractOfferPreviewMarkup(offer, level='normal'){
   const terms = managerContractOfferTerms(offer, level, game);
@@ -367,9 +445,165 @@ function managerContractOfferPreviewMarkup(offer, level='normal'){
       <div><span>Duración</span><strong>${terms.durationSeasons} temporada${terms.durationSeasons === 1 ? '' : 's'}</strong></div>
       <div><span>Venta futura</span><strong>${terms.futureSalePercent}%</strong></div>
     </div>
-    ${managerContractScheduleMarkup(terms.annualObjectives)}
+    ${managerContractScheduleMarkup(terms.annualObjectives, terms.annualSalaries)}
     <p class="muted small">${durationDiscount > 0 ? `El contrato largo reduce ${durationDiscount}% el sueldo mensual a cambio de estabilidad. ` : ''}El porcentaje de venta futura lo fija el club y no se negocia.</p>
   </div>`;
+}
+
+function managerContractNextSeasonObjectiveBase(contract, targetSeason, state=game){
+  const scheduled = managerContractScheduleEntry(contract, targetSeason);
+  if(Number.isFinite(Number(scheduled?.objectivePpg))) return Number(scheduled.objectivePpg);
+  const currentStep = managerContractScheduleEntry(contract, Number(state?.seasonNumber || 1));
+  if(Number.isFinite(Number(currentStep?.objectivePpg))) return Number(currentStep.objectivePpg);
+  const info = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : null;
+  if(Number.isFinite(Number(info?.objective))) return Number(info.objective);
+  return Number(managerObjectiveBaseForClubDivision(contract?.clubId || state?.selectedClubId || 0) || 0);
+}
+function managerContractNextSeasonNegotiationEligibility(contract=game?.managerJobContract, state=game){
+  const normalized = normalizeManagerJobContract(contract, state);
+  if(!normalized || !state || state.gameOver?.active || state.founderMode || state.challenge) return { eligible:false, reason:'inactive', contract:normalized };
+  const season = Number(state.seasonNumber || 1);
+  const targetSeason = season + 1;
+  const existing = normalized.nextSeasonNegotiation;
+  if(existing && Number(existing.targetSeason) === targetSeason) return { eligible:existing.status === 'available', existing, contract:normalized, season, targetSeason, reason:existing.status };
+  const info = typeof managerObjectiveProgressInfo === 'function' ? managerObjectiveProgressInfo() : null;
+  const cfg = managerContractBalanceConfig().renegociacionTemporadaSiguiente || {};
+  const enoughMatches = cfg.exigirPartidosMinimos === false || Number(info?.played || 0) >= Number(info?.minMatches || 1);
+  const objectiveMet = Boolean(info?.active && enoughMatches && Number(info.ppg || 0) >= Number(info.objective || 0));
+  return { eligible:objectiveMet, contract:normalized, season, targetSeason, info, reason:objectiveMet ? 'objective_met' : 'objective_pending' };
+}
+function processManagerContractNextSeasonNegotiationUnlock({ notify=true }={}){
+  const eligibility = managerContractNextSeasonNegotiationEligibility(game?.managerJobContract, game);
+  const contract = eligibility.contract;
+  if(!contract || !eligibility.eligible){
+    if(contract && game) game.managerJobContract = contract;
+    return { changed:false, ...eligibility };
+  }
+  if(eligibility.existing){
+    if(game) game.managerJobContract = contract;
+    return { changed:false, ...eligibility };
+  }
+  const targetSeason = eligibility.targetSeason;
+  const baseMonthlySalary = managerContractMonthlySalaryForSeason(contract, eligibility.season);
+  const baseObjectivePpg = managerContractNextSeasonObjectiveBase(contract, targetSeason, game);
+  contract.nextSeasonNegotiation = {
+    eligibleSeason:eligibility.season,
+    targetSeason,
+    status:'available',
+    choice:'',
+    label:'',
+    salaryFactor:1,
+    objectiveFactor:1,
+    baseMonthlySalary,
+    negotiatedMonthlySalary:baseMonthlySalary,
+    baseObjectivePpg:Number(baseObjectivePpg.toFixed(3)),
+    negotiatedObjectivePpg:Number(baseObjectivePpg.toFixed(3)),
+    unlockedDate:validIsoDate(game?.currentDate) ? game.currentDate : currentCalendarDate(),
+    agreedDate:'',
+    appliedDate:'',
+    notified:Boolean(notify)
+  };
+  game.managerJobContract = contract;
+  if(notify){
+    pushGameMessage({
+      type:'directiva',
+      priority:'normal',
+      title:'Objetivo cumplido: contrato negociable',
+      body:`Cumpliste el objetivo vigente con ${Number(eligibility.info?.ppg || 0).toFixed(2)} PPG. Ya podés negociar con ${clubName(contract.clubId)} el sueldo y el objetivo de la temporada ${targetSeason} desde Carrera → Contrato actual.`,
+      id:`manager-contract-negotiation-unlocked-${contract.id}-${targetSeason}`
+    });
+  }
+  return { changed:true, ...eligibility, contract };
+}
+function managerContractApplyNegotiatedTerms(contract, agreement, targetSeason){
+  if(!contract || !agreement || String(agreement.status || '') !== 'agreed') return contract;
+  const objective = Math.max(0.30, Math.min(3, Number(agreement.negotiatedObjectivePpg || agreement.baseObjectivePpg || 0)));
+  const salary = Math.max(100000, Math.round(Number(agreement.negotiatedMonthlySalary || agreement.baseMonthlySalary || contract.monthlySalary || 0)));
+  const objectiveEntry = (contract.annualObjectives || []).find(item => Number(item.season) === Number(targetSeason));
+  if(objectiveEntry){
+    objectiveEntry.objectivePpg = Number(objective.toFixed(3));
+    objectiveEntry.label = agreement.choice === 'aumento' ? 'Objetivo renegociado por aumento' : 'Objetivo renegociado por reducción salarial';
+  }
+  const salaryEntry = (contract.annualSalaries || []).find(item => Number(item.season) === Number(targetSeason));
+  if(salaryEntry){
+    salaryEntry.monthlySalary = salary;
+    salaryEntry.source = 'renegotiated';
+  }
+  return contract;
+}
+function negotiateManagerContractNextSeason(choice){
+  processManagerContractNextSeasonNegotiationUnlock({ notify:false });
+  const contract = normalizeManagerJobContract(game?.managerJobContract, game);
+  const agreement = contract?.nextSeasonNegotiation;
+  if(!contract || !agreement || String(agreement.status || '') !== 'available'){
+    showNotice('La negociación para la próxima temporada no está disponible.');
+    return false;
+  }
+  const config = managerContractNextSeasonNegotiationConfig(choice);
+  const previewSalary = Math.max(100000, Math.round(Number(agreement.baseMonthlySalary || 0) * config.salaryFactor));
+  const previewObjective = Number(Math.max(0.30, Math.min(3, Number(agreement.baseObjectivePpg || 0) * config.objectiveFactor)).toFixed(3));
+  const confirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
+    ? window.confirm(`${config.label} para la temporada ${agreement.targetSeason}?\n\nSueldo mensual: ${formatMoney(previewSalary)}\nObjetivo: ${previewObjective.toFixed(2)} PPG\n\nEl acuerdo se puede realizar una sola vez para ese año.`)
+    : true;
+  if(!confirmed) return false;
+  agreement.status = 'agreed';
+  agreement.choice = config.key;
+  agreement.label = config.label;
+  agreement.salaryFactor = config.salaryFactor;
+  agreement.objectiveFactor = config.objectiveFactor;
+  agreement.negotiatedMonthlySalary = previewSalary;
+  agreement.negotiatedObjectivePpg = previewObjective;
+  agreement.agreedDate = validIsoDate(game?.currentDate) ? game.currentDate : currentCalendarDate();
+  agreement.notified = true;
+  managerContractApplyNegotiatedTerms(contract, agreement, agreement.targetSeason);
+  game.managerJobContract = contract;
+  pushGameMessage({
+    type:'directiva',
+    priority:'normal',
+    title:'Acuerdo para la próxima temporada',
+    body:`${clubName(contract.clubId)} aceptó ${config.label.toLowerCase()}. En la temporada ${agreement.targetSeason} cobrarás ${formatMoney(agreement.negotiatedMonthlySalary)} por mes y el objetivo será ${agreement.negotiatedObjectivePpg.toFixed(2)} PPG.`,
+    id:`manager-contract-negotiation-agreed-${contract.id}-${agreement.targetSeason}`
+  });
+  saveLocal(true);
+  renderAll();
+  showNotice('Negociación acordada para la próxima temporada.');
+  return true;
+}
+function managerContractNextSeasonNegotiationMarkup(contract, objectiveInfo){
+  const eligibility = managerContractNextSeasonNegotiationEligibility(contract, game);
+  const agreement = contract?.nextSeasonNegotiation;
+  const targetSeason = Number(game?.seasonNumber || 1) + 1;
+  if(agreement && Number(agreement.targetSeason) === targetSeason && ['agreed','applied'].includes(String(agreement.status || ''))){
+    const salaryDelta = Math.round((Number(agreement.salaryFactor || 1) - 1) * 100);
+    const objectiveDelta = Math.round((Number(agreement.objectiveFactor || 1) - 1) * 100);
+    return `<div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Temporada ${targetSeason}</p><h3>Negociación acordada</h3></div><span class="pill">${escapeHtml(agreement.label || 'Acuerdo')}</span></div><div class="grid cols-2 compact-team-stats" style="margin-top:12px"><div><span>Sueldo mensual</span><strong>${formatMoney(agreement.negotiatedMonthlySalary)}</strong><small>${salaryDelta >= 0 ? '+' : ''}${salaryDelta}%</small></div><div><span>Objetivo</span><strong>${Number(agreement.negotiatedObjectivePpg || 0).toFixed(2)} PPG</strong><small>${objectiveDelta >= 0 ? '+' : ''}${objectiveDelta}%</small></div></div><p class="muted small">El acuerdo afecta únicamente la temporada ${targetSeason}.</p></div>`;
+  }
+  if(eligibility.eligible){
+    const raise = managerContractNextSeasonNegotiationConfig('aumento');
+    const reduce = managerContractNextSeasonNegotiationConfig('reduccion');
+    const baseSalary = Number(agreement?.baseMonthlySalary || managerContractMonthlySalaryForSeason(contract, game.seasonNumber));
+    const baseObjective = Number(agreement?.baseObjectivePpg || managerContractNextSeasonObjectiveBase(contract, targetSeason, game));
+    return `<div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Objetivo vigente cumplido</p><h3>Negociar la temporada ${targetSeason}</h3></div><span class="pill ok">Disponible</span></div><p class="muted small">Podés mejorar el sueldo aceptando una exigencia mayor, o reducirlo para bajar el objetivo. El año actual no cambia.</p><div class="grid cols-2" style="margin-top:12px"><div class="card"><h3>Solicitar aumento</h3><p><strong>${formatMoney(Math.round(baseSalary * raise.salaryFactor))}</strong> por mes</p><p class="muted small">Sueldo +20% · objetivo ${Number(Math.min(3, baseObjective * raise.objectiveFactor)).toFixed(2)} PPG (+30%).</p><button type="button" class="primary" data-negotiate-next-contract="aumento">Pedir 20% de aumento</button></div><div class="card"><h3>Reducir exigencia</h3><p><strong>${formatMoney(Math.round(baseSalary * reduce.salaryFactor))}</strong> por mes</p><p class="muted small">Sueldo -20% · objetivo ${Number(Math.max(0.30, baseObjective * reduce.objectiveFactor)).toFixed(2)} PPG (-10%).</p><button type="button" class="ghost" data-negotiate-next-contract="reduccion">Aceptar 20% menos</button></div></div></div>`;
+  }
+  const remaining = Math.max(0, Number(objectiveInfo?.minMatches || 0) - Number(objectiveInfo?.played || 0));
+  const statusText = remaining > 0
+    ? `La negociación se habilita cuando alcances el objetivo y completes los ${objectiveInfo?.minMatches || 0} partidos mínimos de evaluación.`
+    : `La negociación se habilita cuando tu promedio alcance el objetivo vigente de ${Number(objectiveInfo?.objective || 0).toFixed(2)} PPG.`;
+  return `<div class="card" style="margin-top:14px"><p class="label">Próxima temporada</p><h3>Negociación todavía bloqueada</h3><p class="muted small">${escapeHtml(statusText)}</p></div>`;
+}
+function bindManagerContractNextSeasonNegotiationActions(){
+  document.querySelectorAll('[data-negotiate-next-contract]').forEach(button => button.addEventListener('click', () => {
+    negotiateManagerContractNextSeason(button.dataset.negotiateNextContract || 'aumento');
+  }));
+}
+function managerContractActivateNegotiatedSeason(contract, season=game?.seasonNumber || 1){
+  const normalized = normalizeManagerJobContract(contract, game);
+  const agreement = normalized?.nextSeasonNegotiation;
+  if(!normalized || !agreement || Number(agreement.targetSeason) !== Number(season) || String(agreement.status || '') !== 'agreed') return normalized;
+  managerContractApplyNegotiatedTerms(normalized, agreement, season);
+  agreement.status = 'applied';
+  agreement.appliedDate = validIsoDate(game?.currentDate) ? game.currentDate : currentCalendarDate();
+  return normalized;
 }
 
 /* Amplía las ofertas laborales existentes con duración, sueldo y porcentaje futuro. */
@@ -504,36 +738,44 @@ applyManagerJobContractToObjectiveFields = function(fields, clubId=game?.selecte
   clean.objectiveContractId = contract.id;
   clean.objectiveContractYear = Number(step.contractYear || 1);
   clean.objectiveContractDuration = Number(contract.durationSeasons || 1);
+  clean.objectiveBaseMatches = managerObjectiveMinMatchesForObjective(clean.objectivePpg);
+  clean.objectiveMinMatches = clean.objectiveBaseMatches + Math.max(0, Number(clean.objectiveExtraMatches || 0));
   return clean;
 };
 
 const renderCareerJobsV764 = renderCareerJobs;
 renderCareerJobs = function(){
   if(game?.gameOver?.active){ renderCareerJobsV764(); return; }
-  const contract = ensureActiveManagerJobContract(game, { source:'contract_view' });
+  let contract = ensureActiveManagerJobContract(game, { source:'contract_view' });
   if(!contract){ renderCareerJobsV764(); return; }
+  const unlock = processManagerContractNextSeasonNegotiationUnlock({ notify:true });
+  contract = normalizeManagerJobContract(game.managerJobContract, game);
+  if(unlock.changed) saveLocal(true);
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
   const step = managerContractScheduleEntry(contract, game.seasonNumber);
   const objectiveInfo = managerObjectiveProgressInfo();
   const played = Number(objectiveInfo?.played || 0);
   const ppg = Number(objectiveInfo?.ppg || 0);
   const currentYear = Number(game.seasonNumber || 1) - Number(contract.startSeason || 1) + 1;
+  const currentMonthlySalary = managerContractMonthlySalaryForSeason(contract, game.seasonNumber);
   const restriction = contract.contractType === 'high_risk'
     ? `Presupuesto de fichajes limitado al ${Math.round(Number(contract.transferBudgetRate || 0.05) * 100)}% del margen normal.`
     : 'Sin restricciones especiales sobre el presupuesto de fichajes.';
   view.innerHTML = `<div class="row section-title"><div><h2>Contrato actual</h2><p class="tagline">Sueldo, duración y objetivos acordados con el club.</p></div><span class="pill">Año ${currentYear} de ${contract.durationSeasons}</span></div>
     <div class="grid cols-4 compact-team-stats">
       <div class="card"><p class="label">Club</p><strong>${clubBadge(contract.clubId)} ${escapeHtml(clubName(contract.clubId))}</strong></div>
-      <div class="card"><p class="label">Sueldo mensual</p><strong>${formatMoney(contract.monthlySalary)}</strong></div>
+      <div class="card"><p class="label">Sueldo mensual</p><strong>${formatMoney(currentMonthlySalary)}</strong></div>
       <div class="card"><p class="label">Próximo pago</p><strong>${escapeHtml(contract.nextSalaryDate || '—')}</strong></div>
       <div class="card"><p class="label">Futura venta juvenil</p><strong>${Number(contract.futureSalePercent || 0)}%</strong></div>
     </div>
-    <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Plan deportivo</p><h3>${escapeHtml(contract.negotiationLabel || 'Objetivo normal')}</h3></div><span class="pill">Hasta temporada ${contract.endSeason}</span></div>${managerContractScheduleMarkup(contract.annualObjectives)}</div>
+    <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Plan deportivo</p><h3>${escapeHtml(contract.negotiationLabel || 'Objetivo normal')}</h3></div><span class="pill">Hasta temporada ${contract.endSeason}</span></div>${managerContractScheduleMarkup(contract.annualObjectives, contract.annualSalaries)}</div>
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card"><p class="label">Exigencia vigente</p><h3>${Number(step?.objectivePpg || objectiveInfo?.objective || 0).toFixed(2)} puntos por partido</h3><p class="muted small">${step?.type === 'final' ? 'Es el objetivo final del contrato.' : 'Es el mínimo necesario para mantener la continuidad del proyecto.'} Rendimiento actual: ${ppg.toFixed(2)} en ${played} encuentros oficiales.</p></div>
       <div class="card"><p class="label">Condiciones laborales</p><h3>${escapeHtml(restriction)}</h3><p class="muted small">El sueldo es fijo durante todo el contrato. Cambiar de club o renunciar termina los pagos pendientes.</p></div>
     </div>
-    <div class="card" style="margin-top:14px"><p class="label">Porcentaje de formación</p><h3>${Number(contract.futureSalePercent || 0)}% sobre futuras ventas</h3><p class="muted small">Se asigna automáticamente a cada juvenil que promociones durante este contrato. Conservás el derecho aunque cambies de club, renuncies o seas despedido; se cobra una sola vez en la primera transferencia pagada.</p></div>`;
+    <div class="card" style="margin-top:14px"><p class="label">Porcentaje de formación</p><h3>${Number(contract.futureSalePercent || 0)}% sobre futuras ventas</h3><p class="muted small">Se asigna automáticamente a cada juvenil que promociones durante este contrato. Conservás el derecho aunque cambies de club, renuncies o seas despedido; se cobra una sola vez en la primera transferencia pagada.</p></div>
+    ${managerContractNextSeasonNegotiationMarkup(contract, objectiveInfo)}`;
+  bindManagerContractNextSeasonNegotiationActions();
 };
 
 /* Envuelve los flujos existentes para crear, conservar o cerrar contratos. */
@@ -578,6 +820,10 @@ const checkManagerObjectiveGameOverV764 = checkManagerObjectiveGameOver;
 checkManagerObjectiveGameOver = function(){
   const dismissed = checkManagerObjectiveGameOverV764();
   if(dismissed){ archiveManagerJobContract('despido', game); saveLocal(true); }
+  else {
+    const unlock = processManagerContractNextSeasonNegotiationUnlock({ notify:true });
+    if(unlock.changed) saveLocal(true);
+  }
   return dismissed;
 };
 const startNextSeasonV764 = startNextSeason;
@@ -585,6 +831,9 @@ startNextSeason = function(selectedClubId){
   const previousSeason = Number(game?.seasonNumber || 1);
   const previousClubId = Number(game?.selectedClubId || 0);
   const previousContract = game?.managerJobContract ? normalizeManagerJobContract(game.managerJobContract, game) : null;
+  const previousNegotiation = previousContract?.nextSeasonNegotiation && Number(previousContract.nextSeasonNegotiation.targetSeason) === previousSeason + 1 && String(previousContract.nextSeasonNegotiation.status || '') === 'agreed'
+    ? { ...previousContract.nextSeasonNegotiation }
+    : null;
   const previousStepBeforeTransition = previousContract ? managerContractScheduleEntry(previousContract, previousSeason) : null;
   const previousTotalsBeforeTransition = { ...(game?.managerStats?.currentSeason || {}) };
   const previousPpgBeforeTransition = ppgFromTotals(previousTotalsBeforeTransition);
@@ -596,7 +845,7 @@ startNextSeason = function(selectedClubId){
     archiveManagerJobContract('cambio_fin_temporada', game);
   }
   if(!changedClub && previousContract && managerContractActiveForSeason(previousContract, game.selectedClubId, game.seasonNumber)){
-    game.managerJobContract = previousContract;
+    game.managerJobContract = managerContractActivateNegotiatedSeason(previousContract, game.seasonNumber);
   }else{
     if(!changedClub && previousContract){
       game.managerJobContract = previousContract;
@@ -620,8 +869,14 @@ startNextSeason = function(selectedClubId){
       futureSalePercent:managerContractFutureSalePercent(club, source, game)
     };
     game.managerJobContract = createManagerJobContractFromOffer(game.selectedClubId, offer, renewalLevel, game);
-    const renewalText = !changedClub && !renewalMet ? ' El objetivo final anterior no se cumplió: la renovación es por una temporada, con objetivo prudente y sueldo reducido.' : '';
-    pushGameMessage({ type:'directiva', priority:'normal', title:changedClub ? 'Contrato con nuevo club' : 'Contrato renovado', body:`${clubName(game.selectedClubId)} acordó un contrato de ${game.managerJobContract.durationSeasons} temporada(s), sueldo mensual de ${formatMoney(game.managerJobContract.monthlySalary)} y ${game.managerJobContract.futureSalePercent}% sobre futuras ventas de juveniles promovidos.${renewalText}`, id:`manager-contract-season-${game.seasonNumber}-${game.selectedClubId}` });
+    if(!changedClub && previousNegotiation){
+      const importedAgreement = { ...previousNegotiation, status:'agreed' };
+      game.managerJobContract.nextSeasonNegotiation = importedAgreement;
+      managerContractApplyNegotiatedTerms(game.managerJobContract, importedAgreement, game.seasonNumber);
+      game.managerJobContract = managerContractActivateNegotiatedSeason(game.managerJobContract, game.seasonNumber);
+    }
+    const renewalText = !changedClub && !renewalMet ? ' El objetivo final anterior no se cumplió: la renovación es por una temporada, con objetivo prudente y sueldo reducido.' : (previousNegotiation ? ` Se aplicó el acuerdo previo: sueldo ${formatMoney(game.managerJobContract ? managerContractMonthlySalaryForSeason(game.managerJobContract, game.seasonNumber) : 0)} y objetivo ${Number(managerContractScheduleEntry(game.managerJobContract, game.seasonNumber)?.objectivePpg || 0).toFixed(2)} PPG para este año.` : '');
+    pushGameMessage({ type:'directiva', priority:'normal', title:changedClub ? 'Contrato con nuevo club' : 'Contrato renovado', body:`${clubName(game.selectedClubId)} acordó un contrato de ${game.managerJobContract.durationSeasons} temporada(s), sueldo mensual de ${formatMoney(managerContractMonthlySalaryForSeason(game.managerJobContract, game.seasonNumber))} y ${game.managerJobContract.futureSalePercent}% sobre futuras ventas de juveniles promovidos.${renewalText}`, id:`manager-contract-season-${game.seasonNumber}-${game.selectedClubId}` });
   }
   ensureManagerFinancesState(game);
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
@@ -654,9 +909,10 @@ normalizeGame = function(saved){
   const normalized = normalizeGameV764(saved);
   const hadManagerFinances = Boolean(normalized.managerFinances && typeof normalized.managerFinances === 'object' && !Array.isArray(normalized.managerFinances));
   const hadManagerContract = Boolean(normalized.managerJobContract && typeof normalized.managerJobContract === 'object' && !Array.isArray(normalized.managerJobContract));
+  const hadAnnualSalarySchedule = Boolean(Array.isArray(normalized.managerJobContract?.annualSalaries) && normalized.managerJobContract.annualSalaries.length);
   ensureManagerFinancesState(normalized);
   normalized.managerJobContract = normalizeManagerJobContract(normalized.managerJobContract, normalized);
-  if(!hadManagerFinances || (hadManagerContract && !normalized.managerJobContract)) normalized._needsAutosave = true;
+  if(!hadManagerFinances || (hadManagerContract && (!normalized.managerJobContract || !hadAnnualSalarySchedule))) normalized._needsAutosave = true;
   if(!normalized.managerJobContract && !normalized.gameOver?.active && !normalized.founderMode && !normalized.challenge){
     normalized.managerJobContract = createManagerJobContractFromOffer(normalized.selectedClubId, {
       id:`migration-contract-${normalized.selectedClubId}-${normalized.seasonNumber || 1}`,

@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.40</p>
+      <p class="eyebrow">Guía actualizada · V8.41</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1657,7 +1657,7 @@ function openGameHelpModal(){
       <div class="help-grid">
         <article class="help-card card">
           <h4>Contrato actual</h4>
-          <p>Los clubes ofrecen contratos de una, dos o tres temporadas. El último año concentra el objetivo final y los años previos aplican mínimos progresivos. Podés elegir una exigencia prudente, normal o ambiciosa; eso modifica objetivo y sueldo, pero no duración ni porcentaje futuro.</p>
+          <p>Los clubes ofrecen contratos de una, dos o tres temporadas. El último año concentra el objetivo final y los años previos aplican mínimos progresivos. Podés elegir una exigencia prudente, normal o ambiciosa al firmar. Después de cumplir el objetivo vigente y completar los partidos mínimos de evaluación, se habilita una negociación exclusiva para la temporada siguiente: pedir 20% de aumento eleva el objetivo 30%, mientras que aceptar 20% menos reduce el objetivo 10%.</p>
           ${gameHelpGoButton('careerJobs','Abrir contrato actual')}
         </article>
         <article class="help-card card">

@@ -2169,7 +2169,7 @@ function managerObjectiveForCurrentDivision(){
 function managerObjectiveIsActive(){
   if(currentGameIsFounderMode()) return false;
   const objective = managerObjectiveForCurrentDivision();
-  return Number.isFinite(objective) && objective >= 0.3 && objective <= 2;
+  return Number.isFinite(objective) && objective >= 0.3 && objective <= 3;
 }
 function managerOfficialTotals(){
   return normalizeManagerStats(game?.managerStats).totals;

@@ -118,6 +118,14 @@ window.GAME_BALANCE_MANAGER = {
       ambicioso: { label: 'Objetivo ambicioso', objectiveDelta: 0.20, salaryFactor: 1.25 }
     },
 
+    // Renegociación anual disponible después de cumplir el objetivo vigente.
+    // El acuerdo modifica únicamente el sueldo y el objetivo de la temporada siguiente.
+    renegociacionTemporadaSiguiente: {
+      exigirPartidosMinimos: true,
+      aumento: { label: 'Pedir 20% de aumento', salaryFactor: 1.20, objectiveFactor: 1.30 },
+      reduccion: { label: 'Aceptar 20% menos', salaryFactor: 0.80, objectiveFactor: 0.90 }
+    },
+
     // Diferencia respecto del objetivo final en cada año contractual.
     escalonesObjetivo: {
       1: [0.00],

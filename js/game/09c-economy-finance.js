@@ -604,7 +604,7 @@ function renderBankAccount(){
     return `<tr><td>${escapeHtml(entry.date || '—')}</td><td>${escapeHtml(entry.concept || 'Movimiento')}</td><td><span class="${cls}">${delta > 0 ? '+' : ''}${formatMoney(delta)}</span></td><td>${formatMoney(entry.balance || 0)}</td></tr>`;
   }).join('');
   const nextPayment = contract?.nextSalaryDate || 'Sin contrato activo';
-  const salary = Number(contract?.monthlySalary || 0);
+  const salary = contract && typeof managerContractMonthlySalaryForSeason === 'function' ? managerContractMonthlySalaryForSeason(contract, game?.seasonNumber || 1) : Number(contract?.monthlySalary || 0);
   view.innerHTML = `<div class="row section-title"><div><h2>Cuenta Bancaria</h2><p class="tagline">Patrimonio personal del manager, separado del presupuesto de los clubes.</p></div><span class="pill">Saldo ${formatMoney(finances?.balance || 0)}</span></div>
     <div class="grid cols-4 compact-team-stats">
       <div class="card"><p class="label">Saldo personal</p><strong class="${budgetTone(finances?.balance || 0)}">${formatMoney(finances?.balance || 0)}</strong></div>

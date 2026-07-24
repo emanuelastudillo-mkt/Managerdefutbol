@@ -1,5 +1,22 @@
 /* Academia, captación, juveniles, empleados y tratamientos. */
 
+function createInitialAcademyCareerStats(){
+  return {
+    trainingPoints:0,
+    consultations:0,
+    promotions:0,
+    sales:0,
+    directSaleIncome:0,
+    futureSaleBenefits:0
+  };
+}
+function normalizeAcademyCareerStats(value){
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const base = createInitialAcademyCareerStats();
+  const clean = { ...base, ...raw };
+  Object.keys(base).forEach(key => { clean[key] = Math.max(0, Math.round(Number(clean[key] || 0))); });
+  return clean;
+}
 function createInitialAcademyState(){
   return {
     owner:'manager', ownershipVersion:2, homeCountry:'', createdAt:'',
@@ -10,7 +27,8 @@ function createInitialAcademyState(){
     residences:0, residenceLastChargeDate:null, youthSalaryLastChargeDate:null, lastNegativeBalanceNoticeDate:null,
     youthTransferOffers:[], youthTransferLastAttemptDate:null, youthTransferHistory:[],
     youthInjurySeason:null, youthInjuriesTarget:null, youthInjuriesCount:0, sortMode:'edad_asc', submenu:'players',
-    firstActionIntroShown:false, firstActionIntroDate:'', firstActionIntroType:'', treatmentPlans:{}
+    firstActionIntroShown:false, firstActionIntroDate:'', firstActionIntroType:'', treatmentPlans:{},
+    careerStats:createInitialAcademyCareerStats()
   };
 }
 function normalizeManagerAcademyFacilitiesState(state){
@@ -89,7 +107,52 @@ function normalizeAcademyState(state){
   clean.firstActionIntroDate = validIsoDate(clean.firstActionIntroDate) ? clean.firstActionIntroDate : '';
   clean.firstActionIntroType = String(clean.firstActionIntroType || '');
   clean.treatmentPlans = clean.treatmentPlans && typeof clean.treatmentPlans === 'object' && !Array.isArray(clean.treatmentPlans) ? clean.treatmentPlans : {};
+  clean.careerStats = normalizeAcademyCareerStats(clean.careerStats);
   return clean;
+}
+
+function academyCareerStatsState(options={}){
+  if(!game) return createInitialAcademyCareerStats();
+  game.academy = normalizeAcademyState(game.academy);
+  const stats = normalizeAcademyCareerStats(game.academy.careerStats);
+  if(options.reconcile !== false){
+    const history = Array.isArray(game.academy.youthTransferHistory) ? game.academy.youthTransferHistory : [];
+    const acceptedOffers = new Map();
+    history.filter(item => String(item?.status || '') === 'accepted').forEach(item => {
+      const id = String(item?.id || `sale-${item?.playerId || 0}-${item?.resolvedDate || ''}`);
+      if(!acceptedOffers.has(id)) acceptedOffers.set(id, item);
+    });
+    const directIncome = Array.from(acceptedOffers.values()).reduce((sum, item) => sum + Math.max(0, Math.round(Number(item?.netAmount || 0))), 0);
+    const promotionIds = new Set();
+    (game.academy.players || []).filter(item => String(item?.status || '') === 'promoted').forEach(item => promotionIds.add(Number(item.id || 0)));
+    const portfolio = game.managerPlayerPortfolio && typeof game.managerPlayerPortfolio === 'object' ? game.managerPlayerPortfolio : null;
+    (Array.isArray(portfolio?.rights) ? portfolio.rights : []).forEach(item => promotionIds.add(Number(item?.playerId || 0)));
+    const consultationLogCount = (Array.isArray(game?.special?.puntos_log) ? game.special.puntos_log : []).filter(item => String(item?.actionId || '') === 'consultar_juveniles').length;
+    const futureBenefits = Math.max(
+      Math.max(0, Math.round(Number(portfolio?.totalIncome || 0))),
+      (Array.isArray(portfolio?.history) ? portfolio.history : []).reduce((sum, item) => sum + Math.max(0, Math.round(Number(item?.managerIncome || 0))), 0)
+    );
+    stats.consultations = Math.max(stats.consultations, consultationLogCount);
+    stats.promotions = Math.max(stats.promotions, Array.from(promotionIds).filter(Boolean).length);
+    stats.sales = Math.max(stats.sales, acceptedOffers.size);
+    stats.directSaleIncome = Math.max(stats.directSaleIncome, directIncome);
+    stats.futureSaleBenefits = Math.max(stats.futureSaleBenefits, futureBenefits);
+  }
+  game.academy.careerStats = stats;
+  return stats;
+}
+function recordAcademyCareerProgress(changes={}, options={}){
+  if(!game || !changes || typeof changes !== 'object') return academyCareerStatsState();
+  game.academy = normalizeAcademyState(game.academy);
+  const stats = normalizeAcademyCareerStats(game.academy.careerStats);
+  Object.entries(changes).forEach(([key, amount]) => {
+    if(!Object.prototype.hasOwnProperty.call(stats, key)) return;
+    stats[key] = Math.max(0, Math.round(Number(stats[key] || 0) + Number(amount || 0)));
+  });
+  game.academy.careerStats = stats;
+  const reconciled = academyCareerStatsState({ reconcile:true });
+  if(options.checkAchievements !== false && typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:options.silent === true });
+  return reconciled;
 }
 
 
@@ -1305,6 +1368,7 @@ function resolveAcademyYouthTransferOffer(offerId, decision='reject'){
     if(game.academy.unlockedStats) delete game.academy.unlockedStats[player.id];
     if(game.academy.trainingPlan) delete game.academy.trainingPlan[player.id];
     recordManagerFinanceChange(offer.netAmount, `Venta juvenil: ${player.name}`, { type:'academy_youth_sale', academyIncome:true, playerId:player.id, buyerClubId:club.id, grossAmount:offer.amount, federationTax:offer.taxAmount, offerId:offer.id });
+    recordAcademyCareerProgress({ sales:1, directSaleIncome:offer.netAmount });
     if(typeof ensurePlayerStateForAll === 'function') ensurePlayerStateForAll();
     if(typeof pushGameMessage === 'function') pushGameMessage({ type:'academia', priority:'normal', title:'Venta de juvenil confirmada', body:`${player.name} firmó con ${club.name}. Ingresaron ${formatMoney(offer.netAmount)} a tu Cuenta Bancaria después del impuesto federativo de ${formatMoney(offer.taxAmount)}.`, id:`academy-youth-sale-${offer.id}` });
     showNotice(`${official.name} fue vendido a ${club.name}. Recibiste ${formatMoney(offer.netAmount)} netos.`);
@@ -1363,6 +1427,7 @@ function academyTrainingGainMultiplier(player){
 }
 function applyAcademyTrainingEffects(){
   if(!game?.academy) return;
+  let totalFormationPoints = 0;
   academyActivePlayers().forEach(player => {
     if(academyPlayerInjured(player)) return;
     player.skills = player.skills || academySkillsFor(player.group, player.overall, player.id);
@@ -1376,11 +1441,14 @@ function applyAcademyTrainingEffects(){
     const gainMultiplier = Math.max(1, Math.round(academyTrainingGainMultiplier(player)));
     const canApplySkillPoint = (skill) => {
       const previous = Math.round(Number(player.skills[skill] || 1));
+      if(previous >= 99) return false;
       player.skills[skill] = clamp(previous + 1, 1, 99);
+      if(player.skills[skill] === previous) return false;
       if(academyUncappedProjectedOverall(player) > cap){
         player.skills[skill] = previous;
         return false;
       }
+      totalFormationPoints += 1;
       return true;
     };
     if(type === 'resistance'){
@@ -1398,6 +1466,7 @@ function applyAcademyTrainingEffects(){
     }
     player.overall = clamp(academyProjectedOverall(player), 1, 99);
   });
+  if(totalFormationPoints > 0) recordAcademyCareerProgress({ trainingPoints:totalFormationPoints });
 }
 function processAcademyTurn(){
   if(!game) return;
@@ -1471,6 +1540,7 @@ function consultAcademyPlayers(){
     createdAt:Date.now()
   };
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('consultar_juveniles', { revealed:revealed.length });
+  recordAcademyCareerProgress({ consultations:1 });
   saveLocal(true);
   renderAcademy();
   const bonusText = cardBonus > 0 ? ` Base ${baseAmount} + cartas ${cardBonus}.` : '';
@@ -1540,6 +1610,7 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();
+  recordAcademyCareerProgress({ promotions:1 });
   cancelAcademyYouthOffersForPlayer(player.id, 'promoted');
   player.promotedPosition = position;
   const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, TEAM_COHESION_YOUTH_CONTRACT_GAIN) : 0;

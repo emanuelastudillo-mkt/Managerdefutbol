@@ -202,6 +202,7 @@ function managerPortfolioSettleRight(right, details={}){
       transferNetAmount, percent:right.percent
     });
   }
+  if(managerIncome > 0 && typeof recordAcademyCareerProgress === 'function') recordAcademyCareerProgress({ futureSaleBenefits:managerIncome });
   if(typeof pushGameMessage === 'function') pushGameMessage({
     type:'academia',
     priority:'high',

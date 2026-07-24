@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "V7.45",
+    "version": "V8.38",
     "sistema": "hitos_manager",
-    "descripcion": "Catálogo visible de 90 hitos personales del manager. Incluye progresión de carrera, cambios de club, despidos, renuncias, títulos en distintos clubes, ligas y países, y Mundial de Clubes."
+    "descripcion": "Catálogo visible de 105 hitos personales del manager. Incluye carrera, resultados, títulos, academia, formación, consultas, promociones, ventas y beneficios juveniles."
   },
   "hitos": [
     {
@@ -903,6 +903,156 @@
       "metrica": "topDivisionTitleCountries",
       "objetivo": 7,
       "icono": "🏔️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "formacion_juvenil_100",
+      "titulo": "Primer ciclo formativo",
+      "descripcion": "Aplicá 100 puntos de formación a juveniles de Tu Academia.",
+      "categoria": "Formación juvenil",
+      "metrica": "academyTrainingPoints",
+      "objetivo": 100,
+      "icono": "🌱",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "formacion_juvenil_500",
+      "titulo": "Cantera en crecimiento",
+      "descripcion": "Aplicá 500 puntos de formación acumulados a tus juveniles.",
+      "categoria": "Formación juvenil",
+      "metrica": "academyTrainingPoints",
+      "objetivo": 500,
+      "icono": "📈",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "formacion_juvenil_2000",
+      "titulo": "Maestro formador",
+      "descripcion": "Aplicá 2.000 puntos de formación acumulados en Tu Academia.",
+      "categoria": "Formación juvenil",
+      "metrica": "academyTrainingPoints",
+      "objetivo": 2000,
+      "icono": "🎓",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "consulta_juvenil_1",
+      "titulo": "Primer informe juvenil",
+      "descripcion": "Consultá por primera vez los informes de tus juveniles.",
+      "categoria": "Informes juveniles",
+      "metrica": "academyConsultations",
+      "objetivo": 1,
+      "icono": "🔎",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "consulta_juvenil_10",
+      "titulo": "Seguimiento constante",
+      "descripcion": "Realizá 10 consultas de informes juveniles.",
+      "categoria": "Informes juveniles",
+      "metrica": "academyConsultations",
+      "objetivo": 10,
+      "icono": "📋",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "consulta_juvenil_30",
+      "titulo": "Conocimiento profundo",
+      "descripcion": "Realizá 30 consultas de informes juveniles.",
+      "categoria": "Informes juveniles",
+      "metrica": "academyConsultations",
+      "objetivo": 30,
+      "icono": "🧠",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "promocion_juvenil_1",
+      "titulo": "Primer profesional",
+      "descripcion": "Promové tu primer juvenil al primer equipo.",
+      "categoria": "Promoción juvenil",
+      "metrica": "academyPromotions",
+      "objetivo": 1,
+      "icono": "⬆️",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "promocion_juvenil_5",
+      "titulo": "Generación propia",
+      "descripcion": "Promové 5 juveniles al fútbol profesional.",
+      "categoria": "Promoción juvenil",
+      "metrica": "academyPromotions",
+      "objetivo": 5,
+      "icono": "👥",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "promocion_juvenil_15",
+      "titulo": "Fábrica de profesionales",
+      "descripcion": "Promové 15 juveniles al primer equipo durante tu carrera.",
+      "categoria": "Promoción juvenil",
+      "metrica": "academyPromotions",
+      "objetivo": 15,
+      "icono": "🏭",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "venta_juvenil_1",
+      "titulo": "Primera venta juvenil",
+      "descripcion": "Aceptá tu primera oferta por un juvenil de la academia.",
+      "categoria": "Mercado juvenil",
+      "metrica": "academyYouthSales",
+      "objetivo": 1,
+      "icono": "🤝",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "venta_juvenil_5",
+      "titulo": "Cantera exportadora",
+      "descripcion": "Vendé 5 juveniles directamente desde Tu Academia.",
+      "categoria": "Mercado juvenil",
+      "metrica": "academyYouthSales",
+      "objetivo": 5,
+      "icono": "🧳",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "venta_juvenil_15",
+      "titulo": "Modelo exportador",
+      "descripcion": "Vendé 15 juveniles directamente desde Tu Academia.",
+      "categoria": "Mercado juvenil",
+      "metrica": "academyYouthSales",
+      "objetivo": 15,
+      "icono": "🌍",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "beneficios_juveniles_100k",
+      "titulo": "La cantera empieza a rendir",
+      "descripcion": "Obtené $100.000 en beneficios acumulados por juveniles.",
+      "categoria": "Beneficios juveniles",
+      "metrica": "academyYouthBenefits",
+      "objetivo": 100000,
+      "icono": "💵",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "beneficios_juveniles_1m",
+      "titulo": "Academia rentable",
+      "descripcion": "Obtené $1.000.000 en beneficios acumulados por juveniles.",
+      "categoria": "Beneficios juveniles",
+      "metrica": "academyYouthBenefits",
+      "objetivo": 1000000,
+      "icono": "💰",
+      "visibleInicialmente": true
+    },
+    {
+      "id": "beneficios_juveniles_5m",
+      "titulo": "Patrimonio de cantera",
+      "descripcion": "Obtené $5.000.000 en beneficios acumulados por juveniles.",
+      "categoria": "Beneficios juveniles",
+      "metrica": "academyYouthBenefits",
+      "objetivo": 5000000,
+      "icono": "🏦",
       "visibleInicialmente": true
     }
   ]

@@ -1814,6 +1814,14 @@ function managerAchievementMetricValue(metric){
   }
   if(key === 'scoutedTeams') return game?.scoutingCenter?.teamReports && typeof game.scoutingCenter.teamReports === 'object' ? Object.keys(game.scoutingCenter.teamReports).length : 0;
   if(key === 'academyPlayers') return Array.isArray(game?.academy?.players) ? game.academy.players.length : 0;
+  if(['academyTrainingPoints','academyConsultations','academyPromotions','academyYouthSales','academyYouthBenefits'].includes(key)){
+    const academyStats = typeof academyCareerStatsState === 'function' ? academyCareerStatsState({ reconcile:true }) : (game?.academy?.careerStats || {});
+    if(key === 'academyTrainingPoints') return Number(academyStats.trainingPoints || 0);
+    if(key === 'academyConsultations') return Number(academyStats.consultations || 0);
+    if(key === 'academyPromotions') return Number(academyStats.promotions || 0);
+    if(key === 'academyYouthSales') return Number(academyStats.sales || 0);
+    if(key === 'academyYouthBenefits') return Number(academyStats.directSaleIncome || 0) + Number(academyStats.futureSaleBenefits || 0);
+  }
   if(key === 'employeesCount') return ['psychologist','kinesiologist','youthPreparer'].filter(key => game?.employees?.[key]).length;
   return 0;
 }

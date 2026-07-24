@@ -1297,7 +1297,7 @@ function renderManagerStats(){
   const unlockedAchievementIds = new Set(unlockedAchievements.map(item => String(item.id || '')));
   const achievementValueLabel = (item, value) => {
     const metric = String(item?.metrica || '');
-    if(metric === 'currentBudget') return formatMoney(value);
+    if(metric === 'currentBudget' || metric === 'academyYouthBenefits') return formatMoney(value);
     if(metric === 'bestSeasonPpg') return Number(value || 0).toFixed(2);
     return formatPlainNumber(Math.max(0, Number(value || 0)));
   };

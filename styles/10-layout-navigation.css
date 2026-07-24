@@ -352,3 +352,8 @@
   .game-brand-logo-top{object-position:center center}
   .app-footer{padding-inline:14px}
 }
+
+/* V8.39 · Enlace comunitario en el footer. */
+.app-footer p{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.app-footer a{color:#a5b4fc;text-decoration:none}
+.app-footer a:hover{text-decoration:underline;color:#c7d2fe}

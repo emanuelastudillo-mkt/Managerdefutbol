@@ -1,41 +1,52 @@
-# Una vida de manager — V8.38
+# Una vida de manager — V8.39
 
-## V8.38 — Hitos de formación y economía juvenil
+## V8.39 — Comunidad Discord integrada
 
-- Se agregaron 15 hitos nuevos distribuidos entre formación, consultas, promociones, ventas y beneficios de juveniles.
-- Tu Academia registra estadísticas acumuladas que permanecen aunque el juvenil sea vendido, promovido o deje de estar visible en la plantilla.
-- La formación contabiliza únicamente puntos de habilidad realmente aplicados, respetando lesiones y topes de crecimiento.
-- Las consultas cuentan cada informe semanal recibido correctamente.
-- Las promociones registran contratos profesionales firmados desde Tu Academia.
-- Las ventas contabilizan ofertas aceptadas por juveniles de 17 años.
-- Los beneficios combinan el ingreso neto de ventas directas y los cobros posteriores por derechos económicos de jugadores formados.
-- Las partidas anteriores reconstruyen ventas, promociones, beneficios y las consultas recientes disponibles; la formación empieza a acumularse desde esta versión.
-- Se corrigieron las referencias de versión y caché del HTML, que todavía mostraban V8.36 pese a contener cambios de V8.37.
+- Se agregó una tarjeta de comunidad en Inicio con acceso directo a `https://discord.gg/MStvBW9RR`.
+- La tarjeta consulta la invitación pública de Discord y muestra cantidades aproximadas de personas conectadas y miembros totales.
+- La consulta se realiza como máximo una vez cada cinco minutos mientras Inicio está visible.
+- Si Discord no responde, la invitación permanece disponible y la interfaz muestra un estado alternativo sin bloquear el juego.
+- Se agregó un enlace permanente a Discord en el footer.
+- La configuración de invitación quedó centralizada en `GAME_CONFIG.comunidad.discord`.
+- La política CSP y `_headers` permiten únicamente la conexión necesaria con `https://discord.com` además del Worker online existente.
+- Se sincronizó el footer y todos los parámetros de caché del HTML con V8.39.
 - No requiere cambios de Worker ni SQL.
 
-**V8.38 no rompe partidas anteriores.** Conserva academia, juveniles, cartera, ventas, beneficios, hitos y el slot único.
+**V8.39 no rompe partidas anteriores.** El cambio es de comunidad e interfaz; conserva guardados, cuentas online, rankings, desafíos, temporadas, academia y el slot único.
+
+---
+
+## Historial anterior — V8.38
+
+### V8.38 — Hitos juveniles
+
+- Se agregaron 15 hitos para formación, consultas, promociones, ventas y beneficios de juveniles.
+- Las estadísticas acumuladas permanecen aunque el juvenil deje la academia o el club.
+- Las ventas, promociones y beneficios anteriores se reconstruyen desde historiales disponibles.
+- La formación empieza a contabilizarse desde V8.38 porque antes no se almacenaba cada punto aplicado.
+- No requiere cambios de Worker ni SQL.
+
+**V8.38 no rompe partidas anteriores.** Conserva academia, juveniles, ventas, cartera de derechos, beneficios, hitos y cuentas online.
 
 ---
 
 ## Historial anterior — V8.37
 
-# Una vida de manager — V8.37
+### V8.37 — Seguridad web y códigos semanales
 
-## V8.37 — Seguridad web y códigos semanales
-
-- Se agregaron políticas CSP y el archivo `_headers` con encabezados de seguridad para plataformas compatibles.
-- Los códigos especiales y sus huellas dejaron de estar en `config.js`.
-- La campaña semanal se carga desde `data/codigos-semanales.js`, vacío y desactivado por defecto.
-- Los códigos pueden limitarse por fecha de inicio y vencimiento.
+- Se agregaron políticas de seguridad mediante CSP y el archivo `_headers`.
+- Los códigos y huellas se retiraron de `config.js`.
+- La fuente semanal `data/codigos-semanales.js` queda vacía y desactivada por defecto.
+- Las campañas pueden limitarse mediante fechas de inicio y vencimiento.
 - No requiere cambios de Worker ni SQL.
 
-**V8.37 no rompe partidas anteriores.** Conserva códigos reclamados, cartas, guardados y cuentas online.
+**V8.37 no rompe partidas anteriores.** Conserva códigos reclamados, cartas, guardados, temporadas y cuentas online.
 
 ---
 
 ## Historial anterior — V8.36
 
-## V8.36 — Herramientas de recuperación retiradas de la interfaz
+### V8.36 — Herramientas de recuperación retiradas de la interfaz
 
 - Se retiró del menú lateral el bloque manual de resolución de problemas.
 - Ya no se muestran los botones `Verificar que todo esté bien`, `Desbloquear y nueva temporada` ni `Reset de partida`.

@@ -1,3 +1,30 @@
+# V8.46 — Adaptación móvil inicial
+
+## Cambios incluidos
+
+- Se agregó una interfaz móvil aislada para pantallas menores de 768 px.
+- El menú lateral se convierte en un panel deslizable con botón de apertura, cierre interno, fondo bloqueado y cierre automático al seleccionar una sección.
+- Las acciones de Login, Cursos, Ayuda, mensajes del ayudante, Guardar, Cargar y Renunciar se agrupan en un panel superior plegable.
+- La barra superior permanece visible durante el desplazamiento y contempla las zonas seguras de teléfonos con recortes de pantalla.
+- Inicio, oficina, alertas, tarjetas, formularios y grillas principales se reorganizan para una sola columna.
+- Los indicadores de la oficina utilizan dos columnas en móviles normales y una columna en teléfonos muy estrechos.
+- Inputs y selects usan tamaño táctil y texto de 16 px para evitar el zoom automático de iOS.
+- Las pestañas secundarias se desplazan horizontalmente sin comprimir sus textos.
+- Las tablas conservan toda la información mediante desplazamiento horizontal táctil.
+- Los modales se adaptan como hojas inferiores de pantalla completa parcial.
+- Se redujo la escala inicial de la cancha táctica y sus fichas para móviles.
+- Se agregaron `styles/99-mobile.css` y `js/ui/21-mobile-navigation.js`; no alteran la lógica ni el estado de la partida.
+- Los estilos nuevos no se activan en 768 px o más. Desktop y la vista compacta de 1280 × 720 conservan sus reglas actuales.
+- No requiere imágenes nuevas, cambios de Worker ni SQL.
+
+La adaptación es inicial: las pantallas de alta densidad, como táctica, calendario, simulador vivo y algunas tablas online, conservan desplazamiento para no ocultar datos ni alterar su funcionamiento.
+
+**V8.46 no rompe partidas anteriores.** No cambia el esquema de guardado, contratos, temporadas, simuladores ni datos del juego.
+
+---
+
+## Historial anterior — V8.45
+
 # V8.45 — Alertas de Inicio y filtros de descubrimiento automático
 
 ## Cambios incluidos

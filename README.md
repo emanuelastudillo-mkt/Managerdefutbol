@@ -1,4 +1,24 @@
-# Una vida de manager — V8.39
+# Una vida de manager — V8.40
+
+## V8.40 — Limpieza, coherencia y auditoría de código
+
+- Se realizó una auditoría completa de JavaScript, configuración, JSON, carga de datos y archivos vinculados.
+- Se corrigió la carga de `data/codigos-semanales.js`, cuyo loader existía pero no estaba incluido en `index.html`.
+- Se retiraron once funciones sin referencias, pertenecientes a herramientas manuales eliminadas, aliases antiguos y helpers sin consumo.
+- Se eliminaron `style.css`, `js/game/09-simulation-economy-training.js` y la base obsoleta `data/seed.json`.
+- Si fallan todos los JSON de liga, el juego ahora informa el error en lugar de iniciar silenciosamente la antigua base ficticia de 20 clubes.
+- Se eliminaron dos opciones de desafíos online sin lector en el cliente.
+- Se alinearon 34 valores fallback con la configuración activa para evitar que una carga parcial reactive reglas históricas.
+- Se redujeron lecturas duplicadas de configuración y se corrigió una instrucción antigua de despliegue.
+- La validación final carga 9 divisiones, 162 clubes y 4.057 jugadores, sin IDs duplicados ni referencias inválidas.
+- El detalle completo queda documentado en `AUDITORIA-CODIGO-V8.40.md`.
+- No requiere cambios de Worker ni SQL.
+
+**V8.40 no rompe partidas anteriores.** Conserva el esquema de guardado, temporadas, jugadores, contratos, academia, cartas, cuentas online y el slot único.
+
+---
+
+## Historial anterior — V8.39
 
 ## V8.39 — Comunidad Discord integrada
 

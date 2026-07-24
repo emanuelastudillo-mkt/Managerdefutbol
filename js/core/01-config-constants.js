@@ -19,19 +19,18 @@ function configBoolean(path, fallback=false){
   return Boolean(fallback);
 }
 
-const DATA_URL = configValue('data.seedUrl', 'data/seed.json');
 const DATA_CACHE_MODE_RAW = String(configValue('data.cacheMode', 'default')).trim();
 const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache'].includes(DATA_CACHE_MODE_RAW) ? DATA_CACHE_MODE_RAW : 'default';
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.39');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.40');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.39');
-const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.39');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.39');
-const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.39');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.40');
+const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.40');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.40');
+const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.40');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
   'data/estadios_argentina.json',
@@ -52,27 +51,28 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.39', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.40', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';
 const SAVE_SLOT_LEGACY_CAREER = 'career';
 const SAVE_SLOT_CAREER_PREFIX_ID = 'career:';
 const SAVE_SLOT_CAREER = 'career:1';
-const SAVE_CAREER_SLOT_COUNT = Math.max(1, Math.min(10, Math.round(configNumber('partidas.slotsCarrera', 5, 1, 10))));
+const SAVE_CAREER_SLOT_COUNT = Math.max(1, Math.min(10, Math.round(configNumber('partidas.slotsCarrera', 1, 1, 10))));
 const AUTOSAVE_COALESCE_MS = Math.max(0, Math.round(configNumber('partidas.agruparAutoguardadosMs', 180, 0, 2000)));
 const SAVE_SLOT_CAMPO_DESTRUIDO = 'challenge:campo_destruido';
 const SAVE_SLOT_PREFIX = 'slot:';
 const SAVE_BACKUP_PREFIX = 'backup:';
 const LOCAL_SAVE_SCHEMA_VERSION = 2;
 const SAVE_ACTIVE_SLOT_STORAGE_KEY = 'fmActiveSaveSlot';
-const DAYS_PER_ADVANCE = configNumber('calendario.diasPorAvance', 7, 1, 30);
+const DAYS_PER_ADVANCE = configNumber('calendario.diasPorAvance', 1, 1, 30);
 const SEASON_START_YEAR = configNumber('calendario.anioInicial', 2026, 1900, 2200);
 const SEASON_START_MONTH = configNumber('calendario.mesInicioTemporada', 1, 1, 12);
 const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31);
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
 const FAST_BOT_SIMULATION_ENABLED = configBoolean('calendario.simulacionRapidaBots', true);
-const LEAGUE_MATCH_DAY_RULES = Array.isArray(configValue('calendario.diasPorLiga', [])) ? configValue('calendario.diasPorLiga', []) : [];
+const LEAGUE_MATCH_DAY_RULES_RAW = configValue('calendario.diasPorLiga', []);
+const LEAGUE_MATCH_DAY_RULES = Array.isArray(LEAGUE_MATCH_DAY_RULES_RAW) ? LEAGUE_MATCH_DAY_RULES_RAW : [];
 function normalizeScheduleText(value){
   return String(value || '')
     .normalize('NFD')
@@ -111,9 +111,9 @@ function matchDateLabel(date){
 }
 const LEAGUE_ROUND_INTERVAL_DAYS = configNumber('calendario.diasEntreFechasLiga', 7, 1, 30);
 const MIDSEASON_BREAK_AFTER_ROUND = configNumber('calendario.fechaPausaLuegoDe', 17, 0, 80);
-const MIDSEASON_BREAK_DAYS = configNumber('calendario.diasVacacionesMitadTemporada', 30, 0, 90);
+const MIDSEASON_BREAK_DAYS = configNumber('calendario.diasVacacionesMitadTemporada', 28, 0, 90);
 const SEASON_CALENDAR_VERSION = 'annual-365-daily-weekly-split-break-v4-playoffs';
-const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 120000, 0);
+const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 10000, 0);
 const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
 const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);
 const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
@@ -122,7 +122,8 @@ const ACTION_FEEDBACK_RESULT_MS = configNumber('ui.accionesFeedbackResultadoMs',
 const KINESIOLOGIST_BULK_TREATMENT_STEP_MS = configNumber('ui.kinesiologoTratamientoProgresivoMs', 650, 150, 4000);
 const SPECIAL_PACK_REVEAL_STEP_MS = configNumber('ui.especialAperturaCartaMs', 2700, 250, 9000);
 const ADVANCE_STATUS_PHRASE_INTERVAL_MS = configNumber('ui.frasesProgresoAvanceIntervaloMs', 10000, 3000, 60000);
-const ADVANCE_STATUS_PHRASES = Array.isArray(configValue('ui.frasesProgresoAvance', [])) ? configValue('ui.frasesProgresoAvance', []).filter(Boolean).map(String) : [];
+const ADVANCE_STATUS_PHRASES_RAW = configValue('ui.frasesProgresoAvance', []);
+const ADVANCE_STATUS_PHRASES = Array.isArray(ADVANCE_STATUS_PHRASES_RAW) ? ADVANCE_STATUS_PHRASES_RAW.filter(Boolean).map(String) : [];
 const HIGH_SCORE_GOAL_PENALTY_ENABLED = configBoolean('simulador.penalizacionGolesAltos.activo', true);
 const HIGH_SCORE_GOAL_PENALTY_RULES_RAW = configValue('simulador.penalizacionGolesAltos.tramos', [
   { golesTotalesDesde:1, penalizacion:0.10 },
@@ -178,10 +179,10 @@ const PLAYER_STAR_KEY_SAVE_MATCHES_REQUIRED = Math.round(configNumber('simulador
 const PLAYER_STAR_MID_ASSISTS_REQUIRED = Math.round(configNumber('simulador.estrellaMediocampistaAsistencias', 3, 1, 50));
 const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferencia', 0.30, 0, 2);
 
-const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 70, 0) / DAYS_PER_ADVANCE);
+const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 30, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.39');
+const APP_VERSION = configValue('version', 'V8.40');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -255,8 +256,8 @@ const MANAGER_PRESTIGE_WINS_STEP = Math.max(1, Math.round(configNumber('manager.
 const MANAGER_PRESTIGE_OBJECTIVE_REWARD = Math.round(configNumber('manager.prestigioPorObjetivoCumplido', 5, 0, 25));
 const MANAGER_PRESTIGE_DISMISSAL_PENALTY = Math.round(configNumber('manager.prestigioPenalizacionDespido', 2, 0, 25));
 
-const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 50, 0, 100);
-const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 14, 0, 100);
+const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 10, 0, 100);
+const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 7, 0, 100);
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioTactico', 8, 0, 100);
 const TEAM_COHESION_PLAYER_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioJugador', 1, 0, 100);
 const TEAM_COHESION_SIGNING_LOSS = configNumber('cohesion.perdidaPorFichaje', 2, 0, 100);
@@ -272,15 +273,15 @@ const CAPTAINCY_LEARNING_FACTOR_MAX = configNumber('capitania.aprendizaje.factor
 const TEAM_COHESION_TACTICAL_TRAINING_CHANCE = configNumber('cohesion.probabilidadEntrenamientoTacticoPorCasilla', 0.35, 0, 1);
 const TEAM_COHESION_TACTICAL_TRAINING_GAIN = configNumber('cohesion.gananciaEntrenamientoTacticoPorCasilla', 1, 0, 100);
 const BOT_BALANCE_ENABLED = configBoolean('equilibrioBots.activo', true);
-const BOT_BALANCE_DIFFICULTY = String(configValue('equilibrioBots.dificultad', 'normal') || 'normal').trim().toLowerCase();
+const BOT_BALANCE_DIFFICULTY = String(configValue('equilibrioBots.dificultad', 'dificil') || 'normal').trim().toLowerCase();
 const BOT_BALANCE_ONLY_MANAGER_DIVISION = configBoolean('equilibrioBots.soloDivisionManager', true);
 const BOT_BALANCE_ON_SEASON_START = configBoolean('equilibrioBots.nivelarAlInicioTemporada', true);
 const BOT_BALANCE_DURING_SEASON = configBoolean('equilibrioBots.mantenerDuranteTemporada', true);
 const BOT_BALANCE_MAINTENANCE_INTERVAL_MATCHDAYS = Math.max(1, Math.round(configNumber('equilibrioBots.intervaloMantenimientoFechas', 2, 1, 38)));
 const BOT_BALANCE_POSITION_BONUS_MAX = configNumber('equilibrioBots.bonusMaximoPorPosicion', 8, 0, 30);
-const BOT_BALANCE_MORALE_FLOOR = configNumber('equilibrioBots.pisoMoral', 55, 1, 99);
+const BOT_BALANCE_MORALE_FLOOR = configNumber('equilibrioBots.pisoMoral', 65, 1, 99);
 const BOT_BALANCE_CONDITION_FLOOR = configNumber('equilibrioBots.pisoFisico', 76, 0, 99);
-const BOT_BALANCE_COHESION_FLOOR = configNumber('equilibrioBots.pisoCohesion', 50, 0, 100);
+const BOT_BALANCE_COHESION_FLOOR = configNumber('equilibrioBots.pisoCohesion', 70, 0, 100);
 const BOT_BALANCE_MORALE_SPREAD = Math.round(configNumber('equilibrioBots.margenMoral', 8, 0, 30));
 const BOT_BALANCE_CONDITION_SPREAD = Math.round(configNumber('equilibrioBots.margenFisico', 6, 0, 30));
 const BOT_BALANCE_COHESION_SPREAD = Math.round(configNumber('equilibrioBots.margenCohesion', 10, 0, 30));
@@ -329,7 +330,7 @@ const KINESIOLOGIST_DIFFERENTIATED_INJURY_REDUCTION = Object.freeze({
   elite:configNumber('empleados.kinesiologoTrabajoDiferenciado.reduccionLesionPorCategoria.elite', 0.85, 0, 0.95)
 });
 const INJURED_SUB_MAX_TURNS = Math.ceil(configNumber('lesiones.lesionadoSuplenteDiasMax', 63, 0) / DAYS_PER_ADVANCE);
-const INJURED_SUB_PENALTY = configNumber('lesiones.penalizacionLesionadoSuplente', 0.10, 0, 1);
+const INJURED_SUB_PENALTY = configNumber('lesiones.penalizacionLesionadoSuplente', 0.30, 0, 1);
 const DEFAULT_TRAINING_TYPE = 'regenerative';
 const DEFAULT_INDIVIDUAL_TRAINING_TYPE = 'balanced';
 const TRAINING_OPTIONS = [
@@ -357,9 +358,9 @@ const TRAINING_DAY_SLOTS = [
   { key:'afternoon', label:'Turno tarde' },
   { key:'night', label:'Turno noche' }
 ];
-const TRAINING_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadPorCasilla', 0.50, 0, 2);
+const TRAINING_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadPorCasilla', 0.250, 0, 2);
 const TRAINING_INDIVIDUAL_ENABLED = configBoolean('entrenamiento.entrenamientoIndividualDiario', true);
-const TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadIndividualPorDia', 0.50, 0, 2);
+const TRAINING_INDIVIDUAL_SLOT_EFFECTIVENESS = configNumber('entrenamiento.efectividadIndividualPorDia', 0.250, 0, 2);
 const TRAINING_INDIVIDUAL_INITIAL = configValue('entrenamiento.entrenamientoIndividualInicial', DEFAULT_INDIVIDUAL_TRAINING_TYPE);
 const TRAINING_SKILL_CURVE_ENABLED = configValue('entrenamiento.curvaHabilidadActual', true) !== false;
 const TRAINING_SKILL_MIN_FINAL_CHANCE = configNumber('entrenamiento.probabilidadMinimaSubidaHabilidad', 0, 0, 1);
@@ -368,8 +369,8 @@ const TRAINING_DEFAULT_SLOT_PLAN = configValue('entrenamiento.planSemanalInicial
 const TRAINING_APPLY_CURRENT_DAY_ONLY = configBoolean('entrenamiento.aplicarSoloDiaActual', true);
 const PLAYER_WEAR_ENABLED = configBoolean('entrenamiento.desgaste.activo', true);
 const PLAYER_WEAR_MAX = configNumber('entrenamiento.desgaste.maximo', 98, 0, 98);
-const PLAYER_WEAR_MATCH_MIN = configNumber('entrenamiento.desgaste.desgasteMinPartido', 1, 0, 10);
-const PLAYER_WEAR_MATCH_MAX = configNumber('entrenamiento.desgaste.desgasteMaxPartido', 3, 0, 10);
+const PLAYER_WEAR_MATCH_MIN = configNumber('entrenamiento.desgaste.desgasteMinPartido', 2, 0, 10);
+const PLAYER_WEAR_MATCH_MAX = configNumber('entrenamiento.desgaste.desgasteMaxPartido', 4, 0, 10);
 const PLAYER_WEAR_INTENSE_TRAINING = configNumber('entrenamiento.desgaste.desgastePorTurnoIntenso', 1, 0, 10);
 const PLAYER_WEAR_MASSAGE_RECOVERY = configNumber('entrenamiento.desgaste.recuperacionPorTurnoMasajista', 1, 0, 10);
 
@@ -441,7 +442,7 @@ const INJURY_TABLE = [
   injuryRule('Rotura', configNumber('lesiones.pesoRotura', 5, 0, 100), 'lesiones.roturaMinDias', 90, 'lesiones.roturaMaxDias', 210),
   injuryRule('Fractura', configNumber('lesiones.pesoFractura', 1, 0, 100), 'lesiones.fracturaMinDias', 180, 'lesiones.fracturaMaxDias', 400)
 ];
-const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 1, 0, 2);
+const INJURY_CHANCE_MULTIPLIER = configNumber('lesiones.multiplicadorProbabilidad', 0.2, 0, 2);
 const BOT_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorBots', 0.50, 0, 2);
 const MANAGER_INJURY_PROTECTION_MATCHES = Math.max(0, Math.round(configNumber('lesiones.partidosProteccionManager', 50, 0, 1000)));
 const MANAGER_INITIAL_INJURY_MULTIPLIER = configNumber('lesiones.multiplicadorManagerPrimerosPartidos', 0.50, 0, 2);
@@ -457,7 +458,7 @@ const HIGH_PARTICIPATION_LONG_INJURY_RATE = configNumber('dificultad.pesoLesionL
 const HIGH_PARTICIPATION_LONG_INJURY_MIN_TURNS = Math.max(1, Math.ceil(configNumber('dificultad.lesionLargaMinDias', 90, 1) / DAYS_PER_ADVANCE));
 const POST_MATCH_RECOVERY_MIN = configNumber('simulador.recuperacionAutomaticaPostPartidoMin', 4, 0, 99);
 const POST_MATCH_RECOVERY_MAX = Math.max(POST_MATCH_RECOVERY_MIN, configNumber('simulador.recuperacionAutomaticaPostPartidoMax', 6, 0, 99));
-const POST_MATCH_RECOVERY_USE_STAMINA = configBoolean('simulador.recuperacionPostPartidoUsaResistencia', false);
+const POST_MATCH_RECOVERY_USE_STAMINA = configBoolean('simulador.recuperacionPostPartidoUsaResistencia', true);
 const POST_MATCH_RECOVERY_STAMINA_RULES = Array.isArray(configValue('simulador.recuperacionPostPartidoPorResistencia', []))
   ? configValue('simulador.recuperacionPostPartidoPorResistencia', [])
       .map(rule => ({
@@ -469,8 +470,8 @@ const POST_MATCH_RECOVERY_STAMINA_RULES = Array.isArray(configValue('simulador.r
       .filter(rule => Number.isFinite(rule.minResistencia) && Number.isFinite(rule.maxResistencia) && Number.isFinite(rule.recuperacionMin) && Number.isFinite(rule.recuperacionMax))
       .sort((a,b) => a.minResistencia - b.minResistencia)
   : [];
-const MATCH_CONDITION_LOSS_MIN = configNumber('simulador.desgastePartidoMin', 24, 0, 99);
-const MATCH_CONDITION_LOSS_MAX = Math.max(MATCH_CONDITION_LOSS_MIN, configNumber('simulador.desgastePartidoMax', 45, 0, 99));
+const MATCH_CONDITION_LOSS_MIN = configNumber('simulador.desgastePartidoMin', 40, 0, 99);
+const MATCH_CONDITION_LOSS_MAX = Math.max(MATCH_CONDITION_LOSS_MIN, configNumber('simulador.desgastePartidoMax', 78, 0, 99));
 const GOALKEEPER_CONDITION_LOSS_FACTOR = configNumber('simulador.factorDesgasteArquero', 0.5, 0, 1);
 const PITCH_CONDITIONS = {
   'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },
@@ -492,9 +493,9 @@ const AFA_FIELD_RESTORED_SCORE = Math.max(1, Math.round(configNumber('estadio.af
 const AFA_FIELD_RESTORE_DAYS = Math.max(1, Math.round(configNumber('estadio.afaCampoDiasRestauracion', 1, 1, 30)));
 const BOT_FIELDS_FIXED_BY_SEASON = configBoolean('estadio.botsCampoFijoPorTemporada', true);
 const RAIN_FIELD_DETERIORATION_ENABLED = configBoolean('estadio.clima.lluviaDeterioroActivo', true);
-const RAIN_FIELD_DETERIORATION_LIGHT = configNumber('estadio.clima.lluviaLeveExtraDeterioro', 2, 0, 20);
-const RAIN_FIELD_DETERIORATION_HEAVY = configNumber('estadio.clima.lluviaIntensaExtraDeterioro', 4, 0, 30);
-const FIELD_DETERIORATION_MULTIPLIER = configNumber('estadio.deterioroCampoMultiplicador', 1, 0, 10);
+const RAIN_FIELD_DETERIORATION_LIGHT = configNumber('estadio.clima.lluviaLeveExtraDeterioro', 3, 0, 20);
+const RAIN_FIELD_DETERIORATION_HEAVY = configNumber('estadio.clima.lluviaIntensaExtraDeterioro', 7, 0, 30);
+const FIELD_DETERIORATION_MULTIPLIER = configNumber('estadio.deterioroCampoMultiplicador', 2, 0, 10);
 const BOT_FIELD_MIN_SCORE = configNumber('estadio.botsCampoMinimo', 30, 1, 100);
 const BOT_FIELD_MAX_SCORE = Math.max(BOT_FIELD_MIN_SCORE, configNumber('estadio.botsCampoMaximo', 95, 1, 100));
 const BOT_FIELD_INITIAL_BASE = configNumber('estadio.botsCampoBaseInicial', 58, 1, 100);
@@ -576,7 +577,7 @@ const MARKET_FREE_AGENT_POSITION_GROUPS = [
 const SEASON_FREE_AGENT_MARKET_MAX = Math.min(MARKET_FREE_AGENT_HARD_MAX, configNumber('plantel.agentesLibresMaximosPorTemporada', 300, 0));
 const SEASON_FREE_AGENT_TOP_UP_ENABLED = configBoolean('plantel.rellenarLibresHastaMaximoPorTemporada', true);
 const SEASON_FREE_AGENT_CLEANUP_ENABLED = configBoolean('plantel.limpiarLibresViejosAlCambiarTemporada', true);
-const SEASON_YOUTH_FREE_AGENTS_PER_CLUB = configNumber('plantel.jovenesLibresNuevosPorEquipoTemporada', 3, 0);
+const SEASON_YOUTH_FREE_AGENTS_PER_CLUB = configNumber('plantel.jovenesLibresNuevosPorEquipoTemporada', 0, 0);
 const SEASON_YOUTH_FREE_AGENT_AGE_MIN = configNumber('plantel.jovenesLibresEdadMin', 17, 15, 30);
 const SEASON_YOUTH_FREE_AGENT_AGE_MAX = Math.max(SEASON_YOUTH_FREE_AGENT_AGE_MIN, configNumber('plantel.jovenesLibresEdadMax', 18, 15, 35));
 const SEASON_YOUTH_FREE_AGENT_COUNT = configNumber('plantel.jovenesLibresPorTemporada', 0, 0);
@@ -599,8 +600,8 @@ const SEASON_END_TRANSFER_OFFERS_MIN = 2;
 const SEASON_END_TRANSFER_OFFERS_MAX = 6;
 const TRANSFER_AFA_TAX_RATE = configNumber('mercado.impuestoAfaTraspasos', 0.30, 0, 0.95);
 const TRANSFER_TAX_FEDERATIONS = configValue('mercado.federacionesTraspaso', { Argentina:'AFA', Chile:'ANFP', Brasil:'CBF', Inglaterra:'FA', España:'RFEF', Italia:'FIGC', Rumania:'FRF' });
-const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPorcentajeClausula', 0.05, 0, 1);
-const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.15, 0, 1));
+const PLAYER_OFFER_MIN_CLAUSE_RATE = configNumber('mercado.ofertaJugadoresMinPorcentajeClausula', 0.10, 0, 1);
+const PLAYER_OFFER_MAX_CLAUSE_RATE = Math.max(PLAYER_OFFER_MIN_CLAUSE_RATE, configNumber('mercado.ofertaJugadoresMaxPorcentajeClausula', 0.30, 0, 1));
 const PLAYER_OFFERS_REQUIRE_MATCHES = configBoolean('mercado.ofertasJugadoresRequierenPartidos', true);
 const PLAYER_OFFERS_REQUIRE_GOAL_OR_ASSIST = configBoolean('mercado.ofertasJugadoresRequierenGolOAsistencia', true);
 const OWN_PLAYER_OFFER_MIN_MATCHES = Math.max(0, Math.round(configNumber('mercado.partidosNecesariosParaOfrecerJugador', 6, 0, 100)));
@@ -622,7 +623,7 @@ const TRANSFER_MARKET_MAIN_END_DAY = Math.max(1, Math.round(configNumber('mercad
 const TRANSFER_MARKET_MID_START_DAY = Math.max(1, Math.round(configNumber('mercado.ventanaMitadInicioDia', 151, 1, 366)));
 const TRANSFER_MARKET_MID_END_DAY = Math.max(TRANSFER_MARKET_MID_START_DAY, Math.round(configNumber('mercado.ventanaMitadFinDia', 178, 1, 366)));
 const SPECIAL_CLAUSE_RESPONSE_DAYS = Math.max(1, Math.round(configNumber('mercado.ofertaClausulaRespuestaDias', 5, 1, 30)));
-const STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT = configNumber('mercado.ofertaMinimaEstrellaParaVentaPct', 40, 0, 100);
+const STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT = configNumber('mercado.ofertaMinimaEstrellaParaVentaPct', 60, 0, 100);
 const BOT_TRANSFER_OFFER_BASE_CHANCE = configNumber('mercado.probabilidadOfertaBotBase', 0.28, 0, 1);
 const BOT_TRANSFER_LISTED_EXTRA_CHANCE = configNumber('mercado.probabilidadExtraTransferible', 0.22, 0, 1);
 const BOT_DISMISS_CHECK_CHANCE = configNumber('mercado.probabilidadBotsDespidosPorFecha', 0.38, 0, 1);
@@ -632,9 +633,9 @@ const SPONSOR_OFFER_EXPIRE_DAYS = Math.max(1, Math.round(configNumber('sponsors.
 const SPONSOR_OFFERS_PER_ARRIVAL_MIN = Math.max(1, Math.round(configNumber('sponsors.ofertasPorLlegadaMin', 1, 1)));
 const SPONSOR_OFFERS_PER_ARRIVAL_MAX = Math.max(SPONSOR_OFFERS_PER_ARRIVAL_MIN, Math.round(configNumber('sponsors.ofertasPorLlegadaMax', 3, 1)));
 const SPONSOR_TRIPLE_ARRIVAL_CHANCE = configNumber('sponsors.probabilidadLlegadaTriple', 0.45, 0, 1);
-const SPONSOR_DURATION_MIN_DAYS = Math.max(1, Math.round(configNumber('sponsors.duracionOfertaMinDias', 200, 1)));
-const SPONSOR_DURATION_MAX_DAYS = Math.max(SPONSOR_DURATION_MIN_DAYS, Math.round(configNumber('sponsors.duracionOfertaMaxDias', 500, 1)));
-const SPONSOR_BASE_VALUE_FACTOR = configNumber('sponsors.factorValorBase', 1, 0);
+const SPONSOR_DURATION_MIN_DAYS = Math.max(1, Math.round(configNumber('sponsors.duracionOfertaMinDias', 30, 1)));
+const SPONSOR_DURATION_MAX_DAYS = Math.max(SPONSOR_DURATION_MIN_DAYS, Math.round(configNumber('sponsors.duracionOfertaMaxDias', 700, 1)));
+const SPONSOR_BASE_VALUE_FACTOR = configNumber('sponsors.factorValorBase', 0.1, 0);
 const SPONSOR_SPECIAL_ENABLED = Boolean(window.GAME_CONFIG?.sponsors?.sponsorEspecialActivo ?? true);
 const SPONSOR_SPECIAL_CHANCE = configNumber('sponsors.probabilidadSponsorEspecial', 0.22, 0, 1);
 const SPONSOR_SPECIAL_BONUS_MULTIPLIER = configNumber('sponsors.multiplicadorBonoEspecial', 3, 0);
@@ -647,7 +648,7 @@ const ACADEMY_PLAYER_TURN_COST = configNumber('academia.costoJugadorPorAvance', 
 const ACADEMY_PLAYER_WEEKLY_CHARGE_DAY = Math.max(0, Math.min(6, Math.round(configNumber('academia.diaCobroSemanalJuveniles', 1, 0, 6))));
 const ACADEMY_DISMISS_COMPENSATION = configNumber('academia.compensacionDespido', 50000, 0);
 const YOUTH_PREPARER_COST = configNumber('empleados.preparadorJuvenilesCosto', 1000000, 0);
-const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 3, 1);
+const ACADEMY_SKILL_GAIN_MULTIPLIER = configNumber('academia.multiplicadorEntrenamiento', 5, 1);
 const ACADEMY_EXCEPTIONAL_YOUTH_TRAINING_MULTIPLIER = configNumber('academia.multiplicadorEntrenamientoJuvenilExcepcional', 5, 1, 100);
 const ACADEMY_EXCEPTIONAL_YOUTH_ENABLED = configBoolean('academia.juvenilExcepcionalPorTemporada', true);
 const ACADEMY_EXCEPTIONAL_YOUTH_AGE = Math.round(configNumber('academia.edadJuvenilExcepcional', 16, 12, 17));
@@ -684,9 +685,9 @@ const ACADEMY_YOUTH_MAX_PENDING_OFFERS = Math.max(1, Math.round(configNumber('ac
 const ACADEMY_YOUTH_MAX_OFFERS_PER_PLAYER_SEASON = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.maxOfertasPorJugadorTemporada', 4, 1, 20)));
 const ACADEMY_YOUTH_BOT_TARGET_ROSTER_RAW = Math.max(1, Math.round(configNumber('academia.mercadoJuvenil.plantelObjetivoBot', 24, 1, 100)));
 
-const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 20, 1);
+const MIN_PLAYERS_PER_CLUB = configNumber('plantel.jugadoresMinimosPorClub', 18, 1);
 const MIN_EXISTING_PLAYERS_PER_CLUB = Math.max(MIN_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMinimosExistentesPorEquipo', 20, 1));
-const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_EXISTING_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 20, 1));
+const INITIAL_PLAYERS_PER_CLUB = Math.max(MIN_EXISTING_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresInicialesPorClub', 25, 1));
 const MAX_PLAYERS_PER_CLUB = Math.max(INITIAL_PLAYERS_PER_CLUB, configNumber('plantel.jugadoresMaximosPorClub', 42, 1));
 const ACADEMY_YOUTH_BOT_TARGET_ROSTER = Math.min(MAX_PLAYERS_PER_CLUB, Math.max(MIN_PLAYERS_PER_CLUB, ACADEMY_YOUTH_BOT_TARGET_ROSTER_RAW));
 const CLUB_ROSTER_SIZE = INITIAL_PLAYERS_PER_CLUB;
@@ -699,10 +700,10 @@ const BOT_EMERGENCY_MEDIA_MIN = configNumber('plantel.botsMediaEmergenciaMin', 2
 const BOT_EMERGENCY_MEDIA_MAX = Math.max(BOT_EMERGENCY_MEDIA_MIN, configNumber('plantel.botsMediaEmergenciaMax', 47, 1, 99));
 const BOT_EMERGENCY_SALARY_FACTOR = configNumber('plantel.botsFactorSueldoEmergencia', 0.35, 0);
 
-const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 30, 6))); 
+const MATCH_REVEAL_PHASES = Math.max(6, Math.min(90, configNumber('ui.fasesSimulacionPartido', 90, 6))); 
 const MATCH_REVEAL_MIN_PHASE_MS = Math.max(500, configNumber('ui.duracionMinimaFaseSimulacionMs', 3000, 500));
 const MATCH_REVEAL_DURATION_MS = Math.max(6000, configNumber('ui.duracionSimulacionPartidoMs', 270000, 1000), MATCH_REVEAL_PHASES * MATCH_REVEAL_MIN_PHASE_MS);
-const MATCH_COMMENTARY_HOLD_PHASES = Math.max(1, Math.min(6, Math.round(configNumber('ui.relatoMantenerFases', 2, 1))));
+const MATCH_COMMENTARY_HOLD_PHASES = Math.max(1, Math.min(6, Math.round(configNumber('ui.relatoMantenerFases', 1, 1))));
 const STADIUM_EXPANSIONS = [
   { id:1, minCapacity:0, name:'Grada tubular norte inicial', capacityGain:500, targetCapacity:500, cost:2000000, days:1, slot:'Norte' },
   { id:2, minCapacity:0, name:'Grada tubular sur inicial', capacityGain:500, targetCapacity:1000, cost:2000000, days:1, slot:'Sur' },

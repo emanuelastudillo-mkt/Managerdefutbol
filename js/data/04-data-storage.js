@@ -961,16 +961,7 @@ async function loadInitialSeed(options={}){
     const merged = mergeLeagueSeeds(leagueSeeds);
     return applyManualPlayersDatabase(applyPlayersDatabase(merged, playersDatabase), manualPlayersDatabase);
   }
-  const fallback = await fetchJsonIfExists(DATA_URL);
-  if(fallback && Array.isArray(fallback.clubs) && Array.isArray(fallback.players) && Array.isArray(fallback.fixtures)){
-    fallback.meta = { ...(fallback.meta || {}), source:fallback.meta?.source || 'seed.json', signature:seedSignature(fallback) };
-    fallback.clubs = fallback.clubs.map(c => ({ ...c, divisionId:c.divisionId || 'default', divisionName:c.divisionName || 'Liga única', prizeMultiplier:c.prizeMultiplier ?? 1, fieldConditionScore:c.fieldConditionScore || initialFieldScore(c), fieldCondition:fieldConditionName(c.fieldConditionScore || initialFieldScore(c)), crestPath:normalizeClubCrestPath(c, c.crestPath) }));
-    fallback.divisions = fallback.divisions || [{ id:'default', name:'Liga única', order:1, prizeMultiplier:1 }];
-    fallback.players = (fallback.players || []).map(player => ensurePlayerEconomics({ ...player, position:normalizePlayerPosition(player.position, player.id) }));
-    const withStadiums = applyStadiumAndFansDatabases(fallback, stadiumsDatabase, fansDatabase);
-    return applyManualPlayersDatabase(applyPlayersDatabase(withStadiums, playersDatabase), manualPlayersDatabase);
-  }
-  throw new Error('No se pudo cargar ningún JSON de liga ni un data/seed.json válido');
+  throw new Error('No se pudo cargar ningún JSON de liga válido. Revisá data.leagueUrls y los archivos publicados.');
 }
 function detectLeagueCountry(raw, sourceUrl=''){
   if(raw?.pais || raw?.country || raw?.countryName) return String(raw.pais || raw.country || raw.countryName).trim();
@@ -1596,10 +1587,6 @@ function setTicketPriceForClub(clubId, value){
   const price = clamp(Math.round(Number(value || TICKET_PRICE_INITIAL)), TICKET_PRICE_MIN, TICKET_PRICE_MAX);
   game.stadium.ticketPrices[clubId] = price;
   return price;
-}
-function priceRatio(price){
-  if(TICKET_PRICE_MAX <= TICKET_PRICE_MIN) return 0;
-  return clamp((Number(price || TICKET_PRICE_INITIAL) - TICKET_PRICE_MIN) / (TICKET_PRICE_MAX - TICKET_PRICE_MIN), 0, 1);
 }
 function roundTicketPrice(value){
   const step = Math.max(1, Number(BOT_TICKET_ROUNDING || 1));
@@ -2480,17 +2467,6 @@ async function loadLocal(silent=false, slotId=null){
   }
   if(!silent) showNotice('No hay una partida guardada.');
   return false;
-}
-async function resetLocal(){
-  const slot = gameSlotId();
-  await deleteLocalSaveSlot(slot);
-  if(slot === SAVE_SLOT_CAMPO_DESTRUIDO) setCurrentSaveSlot(SAVE_SLOT_CAREER);
-  game = null;
-  seed = await loadInitialSeed({ skipPlayersDatabase:false });
-  fillClubSelect();
-  activeTab = 'home';
-  renderAll();
-  showNotice(`${saveSlotLabel(slot)} eliminada.`);
 }
 
 async function init(){

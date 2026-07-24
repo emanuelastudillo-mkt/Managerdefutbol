@@ -863,11 +863,6 @@ function runScheduledSeasonGameVerifier(options={}){
   return summary;
 }
 
-// Alias conservado para partidas y llamadas de versiones anteriores.
-function runScheduledFiveDayGameVerifier(options={}){
-  return runScheduledSeasonGameVerifier(options);
-}
-
 function processDailyCalendarState(dateAfter='', options={}){
   if(!game) return { botResults:[], recovered:0, bankPayment:0 };
   const skipTraining = Boolean(options.skipTraining);
@@ -1351,7 +1346,7 @@ function showLiveMatchEngineBlocked(status){
     <h2>No se va a usar el simulador anterior</h2>
     <p class="muted">El partido propio quedó pendiente para evitar que se resuelva con el sistema viejo.</p>
     ${details ? `<ul class="live-engine-errors">${details}</ul>` : ''}
-    <p class="muted small">Subí también los archivos nuevos del ZIP, especialmente <strong>js/game/17-live-match.js</strong>, <strong>simulador-2.0.js</strong>, <strong>index.html</strong> y <strong>js/game/09-simulation-economy-training.js</strong>. Después usá Control + F5.</p>
+    <p class="muted small">Subí también los archivos nuevos del ZIP, especialmente <strong>js/game/17-live-match.js</strong>, <strong>simulador-2.0.js</strong>, <strong>index.html</strong> y <strong>js/game/09a-team-cohesion-summary.js</strong> a <strong>js/game/09e-training.js</strong>. Después usá Control + F5.</p>
     <div class="modal-actions"><button class="primary" onclick="closeModal()">Entendido</button></div>
   </div>`;
   if(typeof openModal === 'function') openModal(html);

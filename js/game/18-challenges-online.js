@@ -262,17 +262,6 @@ function challengeCycleAt(value=Date.now()){
   const endMs = startMs + duration;
   return { id:`FM10D-${String(index + 1).padStart(4,'0')}`, index:index + 1, startMs, endMs, startAt:new Date(startMs).toISOString(), endAt:new Date(endMs).toISOString() };
 }
-function challengePreviousCycle(cycle=challengeCycleAt()){
-  const duration = challengeCycleDurationMs();
-  const index = Math.max(1, Number(cycle?.index || 1) - 1);
-  const startMs = challengeCycleEpochMs() + (index - 1) * duration;
-  return { id:`FM10D-${String(index).padStart(4,'0')}`, index, startMs, endMs:startMs + duration, startAt:new Date(startMs).toISOString(), endAt:new Date(startMs + duration).toISOString() };
-}
-function challengeCycleForDate(value){
-  const ms = new Date(String(value || '')).getTime();
-  if(!Number.isFinite(ms) || ms < challengeCycleEpochMs()) return null;
-  return challengeCycleAt(ms);
-}
 function challengeCycleContains(cycle, value){
   const ms = new Date(String(value || '')).getTime();
   return Boolean(cycle && Number.isFinite(ms) && ms >= Number(cycle.startMs || new Date(cycle.startAt).getTime()) && ms < Number(cycle.endMs || new Date(cycle.endAt).getTime()));
@@ -537,7 +526,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.39') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.40') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -733,7 +722,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.39'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.40'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))

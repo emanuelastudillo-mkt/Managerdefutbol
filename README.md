@@ -1,4 +1,28 @@
-# Una vida de manager — V8.41
+# Una vida de manager — V8.42
+
+## V8.42 — Objetivos secundarios ocultos, continuidad y legado por club
+
+- Cada contrato incorpora cuatro objetivos secundarios internos que no se muestran durante la temporada: duplicar el patrimonio económico del club, sumar 1.000 hinchas, aumentar la capacidad del estadio y convencer al menos a un jugador de quedarse cuando otro club paga su cláusula.
+- Si el manager permanece por debajo del objetivo mínimo de puntos en el día 200, la directiva envía una advertencia formal.
+- Si el objetivo principal sigue incumplido en el día 250, se activa una evaluación de continuidad con una posibilidad inicial de despido del 100%.
+- Cumplir el objetivo económico reduce 20 puntos porcentuales la posibilidad de despido; sumar 1.000 hinchas reduce 20; ampliar el estadio reduce 10; y convencer a un jugador reduce 5.
+- La reducción total queda limitada a 70 puntos porcentuales. El sorteo de continuidad se guarda de forma determinista para impedir que una recarga cambie el resultado.
+- Se agregaron 26 variantes de mensajes de continuidad vinculadas a economía, hinchas, estadio, vestuario, capitán y condición de ídolo.
+- Se agregaron 10 variantes de despido que detallan los objetivos secundarios no alcanzados. Cuando todos fueron cumplidos, el mensaje reconoce los aportes y explica que el incumplimiento deportivo resultó decisivo.
+- El perfil del manager incorpora `Legado en clubes`, con escudo, nombre, puntos y una valoración de una a diez estrellas para cada institución dirigida.
+- Cumplir el objetivo principal suma 3 puntos de legado; cada objetivo secundario suma 1; y cada título oficial suma 5.
+- Al superar 50 puntos en un club se obtiene la etiqueta `Eres un ídolo del club`, diez estrellas y una reducción permanente de 10 puntos porcentuales en futuras evaluaciones de despido de esa institución.
+- El beneficio de ídolo se conserva aunque el manager abandone el club y regrese varias temporadas después.
+- Las partidas anteriores generan automáticamente el nuevo historial y los estados de temporada. Los objetivos principales y títulos ya registrados en temporadas cerradas se convierten retroactivamente en puntos de legado; los objetivos secundarios anteriores no pueden reconstruirse porque no existían sus bases estacionales. En una temporada ya iniciada, la base económica y de hinchas se reconstruye desde los datos disponibles; la capacidad del estadio toma como base la capacidad vigente al cargar V8.42, porque las versiones anteriores no almacenaban una fotografía estacional de ese valor.
+- Se actualizó la ayuda integrada, el progreso contractual de Inicio y el control del avance automático para detenerse correctamente ante un despido del día 250.
+- Se corrigió el archivo histórico del contrato al producirse un despido o una renuncia, antes de que el reinicio del club saliente elimine el contrato activo.
+- No requiere cambios de Worker, SQL ni archivos de imagen.
+
+**V8.42 no rompe partidas anteriores.** Los nuevos estados se migran al cargar. En partidas iniciadas antes de esta versión, una ampliación de estadio realizada antes de instalar V8.42 no puede reconstruirse y no contará para el objetivo oculto de esa temporada; las ampliaciones posteriores sí se registran normalmente.
+
+---
+
+## Historial anterior — V8.41
 
 ## V8.41 — Negociación anual del contrato
 

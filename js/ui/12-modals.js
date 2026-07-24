@@ -1623,7 +1623,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.41</p>
+      <p class="eyebrow">Guía actualizada · V8.42</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1674,6 +1674,16 @@ function openGameHelpModal(){
           <h4>Ofertas laborales</h4>
           <p>Antes de aceptar compará duración, sueldo, objetivo anual y porcentaje de futuras ventas. Un contrato largo ofrece estabilidad, pero puede pagar algo menos por mes y mantener exigencias mínimas durante varios años.</p>
           ${gameHelpGoButton('careerJobs','Revisar ofertas laborales')}
+        </article>
+        <article class="help-card card">
+          <h4>Continuidad y evaluación</h4>
+          <p>Si el día 200 seguís por debajo del objetivo mínimo, la directiva envía una advertencia formal. Si el día 250 el promedio todavía no alcanza el contrato, se resuelve la continuidad. La comisión también considera aportes secundarios internos que permanecen ocultos durante la temporada y pueden reducir la posibilidad de despido.</p>
+          ${gameHelpGoButton('messages','Abrir Mensajes')}
+        </article>
+        <article class="help-card card">
+          <h4>Legado en cada club</h4>
+          <p>Los objetivos principales, los aportes secundarios y los títulos construyen un historial independiente con cada club. El perfil muestra escudo, nombre, puntos y hasta diez estrellas. Al superar 50 puntos pasás a ser ídolo y obtenés una reducción permanente del riesgo de despido en ese club.</p>
+          ${gameHelpGoButton('mystats','Abrir perfil del manager','','profile')}
         </article>
       </div>
     </div>

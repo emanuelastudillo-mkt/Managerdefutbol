@@ -1209,3 +1209,16 @@ button.cwc-group-result{cursor:pointer}
   .discord-community-metrics>div{min-width:0}
   .discord-community-join{width:100%}
 }
+
+/* V8.42 · Legado histórico del manager por club. */
+.manager-club-legacy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px}
+.manager-club-legacy-card{display:flex;flex-direction:column;gap:10px;min-width:0}
+.manager-club-legacy-card.is-idol{box-shadow:inset 0 0 0 1px rgba(218,177,76,.55)}
+.manager-club-legacy-head{display:flex;align-items:center;gap:12px;min-width:0}
+.manager-club-legacy-head .club-badge{flex:0 0 auto}
+.manager-club-legacy-head h3{margin:2px 0 0;overflow-wrap:anywhere}
+.manager-club-legacy-stars{display:flex;gap:3px;font-size:18px;letter-spacing:.02em;white-space:nowrap}
+.manager-club-legacy-stars span{opacity:.22;filter:grayscale(1)}
+.manager-club-legacy-stars span.is-active{opacity:1;filter:none}
+.manager-club-legacy-meta{align-items:flex-end;gap:10px;flex-wrap:wrap}
+@media(max-width:720px){.manager-club-legacy-grid{grid-template-columns:1fr}.manager-club-legacy-stars{font-size:16px}}

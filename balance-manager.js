@@ -126,6 +126,26 @@ window.GAME_BALANCE_MANAGER = {
       reduccion: { label: 'Aceptar 20% menos', salaryFactor: 0.80, objectiveFactor: 0.90 }
     },
 
+    // Objetivos secundarios internos: no se muestran durante la temporada.
+    // Sólo se revelan cuando la directiva resuelve la continuidad o al consolidar el legado histórico.
+    objetivosSecundariosOcultos: {
+      activo: true,
+      diaAviso: 200,
+      diaEvaluacion: 250,
+      probabilidadDespidoBase: 100,
+      reduccionDespidoMaxima: 70,
+      reduccionIdoloClub: 10,
+      puntosIdoloClub: 51,
+      puntosObjetivoPrincipal: 3,
+      puntosObjetivoSecundario: 1,
+      puntosTitulo: 5,
+      puntosPorEstrella: 6,
+      economico: { multiplicadorPatrimonio: 2, reduccionDespido: 20 },
+      hinchas: { aumentoObjetivo: 1000, reduccionDespido: 20 },
+      estadio: { aumentoMinimo: 1, reduccionDespido: 10 },
+      clausulas: { jugadoresConvencidos: 1, reduccionDespido: 5 }
+    },
+
     // Diferencia respecto del objetivo final en cada año contractual.
     escalonesObjetivo: {
       1: [0.00],

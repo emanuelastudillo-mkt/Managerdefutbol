@@ -25,7 +25,7 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.41" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.42" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
@@ -422,9 +422,16 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const objectiveStateText = objectiveInfo.boardState || (objectiveInfo.ppg >= objectiveInfo.objective ? 'Cumple' : 'Riesgo');
   const objectiveGapText = objectiveInfo.active ? ` Diferencia actual: ${(Number(objectiveInfo.delta || 0) >= 0 ? '+' : '')}${Number(objectiveInfo.delta || 0).toFixed(2)} PPG.` : '';
   const objectiveExpectationText = objectiveInfo.expectation ? ` Expectativa: ${escapeHtml(objectiveInfo.expectation)}.` : '';
+  const hiddenDeadlineCfg = typeof managerHiddenObjectiveConfig === 'function' ? managerHiddenObjectiveConfig() : { warningDay:200, evaluationDay:250 };
+  const currentSeasonDay = typeof currentGlobalDayNumber === 'function' ? Math.max(1, Number(currentGlobalDayNumber() || 1)) : 1;
+  const belowObjective = objectiveInfo.active && Number(objectiveInfo.ppg || 0) < Number(objectiveInfo.objective || 0);
   const objectiveProgressText = objectiveInfo.played < objectiveInfo.minMatches
-    ? `Se evaluará tu continuidad en los próximos ${objectiveInfo.remainingMatches} partido(s).${objectiveExpectationText}${objectiveGapText}${extraText}`
-    : `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText}`;
+    ? `Se evaluará tu rendimiento tras los próximos ${objectiveInfo.remainingMatches} partido(s).${objectiveExpectationText}${objectiveGapText}${extraText}`
+    : belowObjective && currentSeasonDay < hiddenDeadlineCfg.warningDay
+      ? `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText} La advertencia formal de continuidad se activa en el día ${hiddenDeadlineCfg.warningDay}.`
+      : belowObjective && currentSeasonDay < hiddenDeadlineCfg.evaluationDay
+        ? `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText} La decisión sobre tu continuidad se resolverá en el día ${hiddenDeadlineCfg.evaluationDay}.`
+        : `${escapeHtml(objectiveStateText)}.${objectiveExpectationText}${objectiveGapText}`;
   const objectiveProgress = founderMode
     ? founderGoalProgressMarkup()
     : (objectiveInfo.active ? `<div class="manager-objective-progress ${escapeHtml(objectiveInfo.boardClass || (objectiveInfo.ppg >= objectiveInfo.objective ? 'ok' : 'warn'))}"><div class="manager-objective-progress-head"><span>Confianza de la directiva</span><strong>${Math.round(objectiveInfo.confidence || objectiveInfo.progress)}%</strong></div><div class="manager-objective-bar"><span style="width:${Math.min(100, Math.max(0, objectiveInfo.confidence || objectiveInfo.progress))}%"></span></div><p>${objectiveProgressText}</p></div>` : '');

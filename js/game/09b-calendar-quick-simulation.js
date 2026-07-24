@@ -1028,6 +1028,15 @@ function startAutoAdvanceToNextOwnMatch(){
     }
     const nextDate = addDaysToIsoDate(current, 1);
     const dayResult = processDailyCalendarState(nextDate, { includeOwn:false });
+    if(game?.gameOver?.active){
+      startAutoAdvanceToNextOwnMatch.active = false;
+      setAdvanceLock(0);
+      closeAutoAdvanceOverlay(overlay);
+      saveLocal(true);
+      renderAll();
+      showNotice('La directiva resolvió tu continuidad. Revisá el mensaje recibido.');
+      return;
+    }
     processed.days += 1;
     processed.bots += dayResult.botResults.length;
     processed.recovered += dayResult.recovered;

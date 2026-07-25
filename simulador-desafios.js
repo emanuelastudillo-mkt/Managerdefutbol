@@ -158,7 +158,7 @@
   }
 
   function playerMatchStrength(player){
-    const line = lineForPosition(player?.position);
+    const line = lineForPosition(player?.tacticalRole || player?.position);
     let base;
     if(line === 'goalkeeper'){
       base = playerSkill(player, 'goalkeeping') * 0.55 + playerSkill(player, 'serenity') * 0.15 + playerSkill(player, 'leadership') * 0.10 + playerOverall(player) * 0.20;
@@ -180,7 +180,7 @@
 
   function teamProfile(snapshot){
     const starters = snapshotPlayers(snapshot, 'starter').slice(0, 11);
-    const byLine = line => starters.filter(player => lineForPosition(player.position) === line);
+    const byLine = line => starters.filter(player => lineForPosition(player.tacticalRole || player.position) === line);
     const values = players => players.map(playerMatchStrength);
     const overall = average(values(starters), Number(snapshot?.team?.rating || 50));
     const goalkeeper = average(values(byLine('goalkeeper')), overall * 0.92);
@@ -189,13 +189,17 @@
     const attack = average(values(byLine('attack')), overall * 0.96);
     const cohesion = clampValue(snapshot?.team?.cohesion ?? 50, 0, 100);
     const tactical = 0.82 + cohesion / 500;
+    const custom = snapshot?.tactic?.customBalance?.active ? snapshot.tactic.customBalance : null;
+    const defenseMultiplier = custom ? clampValue(custom.defenseMultiplier ?? 1, 0.70, 1.05) : 1;
+    const midfieldMultiplier = custom ? clampValue(custom.midfieldMultiplier ?? 1, 0.70, 1.05) : 1;
+    const attackMultiplier = custom ? clampValue(custom.attackMultiplier ?? 1, 0.70, 1.05) : 1;
     return {
       starters,
-      overall:overall * tactical,
-      goalkeeper:goalkeeper * tactical,
-      defense:defense * tactical,
-      midfield:midfield * tactical,
-      attack:attack * tactical,
+      overall:overall * tactical * ((defenseMultiplier + midfieldMultiplier + attackMultiplier) / 3),
+      goalkeeper:goalkeeper * tactical * defenseMultiplier,
+      defense:defense * tactical * defenseMultiplier,
+      midfield:midfield * tactical * midfieldMultiplier,
+      attack:attack * tactical * attackMultiplier,
       discipline:average(starters.map(player => playerSkill(player, 'discipline')), 55),
       stamina:average(starters.map(player => playerSkill(player, 'stamina')), 55),
       leadership:average(starters.map(player => playerSkill(player, 'leadership')), 55)

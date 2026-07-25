@@ -526,7 +526,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.47') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.49') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -633,7 +633,7 @@ function challengeCategoryNavigationMarkup(context='available'){
   const attribute = context === 'ranking' ? 'data-challenge-ranking-category' : 'data-challenge-available-category';
   return `<div class="card challenge-category-navigation"><div><p class="label">Categorías salariales</p><p class="muted small">Cada letra representa el sueldo total de la convocatoria. Los rivales publicados permanecen ocultos hasta aceptar.</p></div><div class="challenge-category-buttons">${challengeCategoryDefinitions().map(category => `<button type="button" ${attribute}="${escapeHtml(category.code)}" class="${active === category.code ? 'active' : ''}" title="${escapeHtml(`${category.name}: ${challengeCategoryRangeLabel(category)}`)}"><b>${escapeHtml(category.code)}</b><span>${escapeHtml(category.name)}</span></button>`).join('')}</div></div>`;
 }
-function challengeFormation(){ return String(game?.tactic?.formation || game?.tactic?.formationId || '4-4-2'); }
+function challengeFormation(){ return typeof isCustomTactic === 'function' && isCustomTactic(game?.tactic) ? 'Personalizada' : String(game?.tactic?.formation || game?.tactic?.formationId || '4-4-2'); }
 function challengePlayerValue(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.clause ?? player?.value, 0))); }
 function challengePlayerSalary(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.salary, 0))); }
 function challengeSkill(player, key){
@@ -668,10 +668,12 @@ function challengeCurrentMorale(playerId){
 }
 function challengePlayerSnapshot(player, squadRole, tacticalIndex){
   const overall = clamp(Math.round(typeof effectiveOverall === 'function' ? effectiveOverall(player) : player?.overall || 50), 1, 99);
+  const tacticalRoles = typeof tacticRoleSlots === 'function' ? tacticRoleSlots(game?.tactic || {}) : [];
   return {
     id:String(player.id),
     name:String(player.name || 'Jugador').slice(0, 80),
     position:String(player.position || 'MC').slice(0, 8),
+    tacticalRole:squadRole === 'starter' ? String(tacticalRoles[tacticalIndex] || player.position || 'MC').slice(0,8) : String(player.position || 'MC').slice(0,8),
     age:Math.max(15, Math.round(Number(player.age || 18))),
     overall,
     visibleOverall:clamp(Math.round(typeof visibleOverall === 'function' ? visibleOverall(player) : player?.overall || overall), 1, 99),
@@ -722,7 +724,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.47'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.49'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -739,6 +741,9 @@ function buildChallengeSnapshot(){
     },
     tactic:{
       formation:challengeFormation(),
+      layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(game?.tactic?.layoutMode) : 'preset',
+      customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(game?.tactic?.customSlots, game?.tactic) : [],
+      customBalance:typeof customTacticBalanceCompact === 'function' ? customTacticBalanceCompact(game?.tactic) : null,
       captainId:String(game?.tactic?.captainId || ''),
       mentality:String(game?.tactic?.mentality || game?.tactic?.mentalidad || 'normal'),
       sectorStyles:JSON.parse(JSON.stringify(game?.tactic?.sectorStyles || game?.tactic?.zoneInstructions || {})),

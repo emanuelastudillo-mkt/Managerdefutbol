@@ -519,18 +519,21 @@
     return effects;
   }
   function teamPowerV2(clubId, tactic, options={}){
-    const formation = tactic?.formation || '4-4-2';
-    const slots = FORMATIONS[formation] || FORMATIONS['4-4-2'];
+    const customLayout = typeof isCustomTactic === 'function' && isCustomTactic(tactic);
+    const formation = customLayout ? 'Personalizada' : (tactic?.formation || '4-4-2');
+    const slots = typeof tacticRoleSlots === 'function' ? tacticRoleSlots(tactic) : (FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2']);
     const sentOffIds = options?.sentOffIds instanceof Set ? options.sentOffIds : new Set();
     const hasExplicitStarters = Array.isArray(tactic?.starters) && tactic.starters.length;
     let assigned = [];
     if(hasExplicitStarters){
-      assigned = tactic.starters.slice(0, 11).map((id, i) => {
-        const player = playerById(id);
-        if(!player || sentOffIds.has(Number(player.id))) return null;
-        const slot = slots[i] || player.position;
-        return { player, slot, factor:zoneFactor(player, slot) };
-      }).filter(Boolean);
+      assigned = typeof tacticAssignedEntries === 'function'
+        ? tacticAssignedEntries(tactic, { sentOffIds })
+        : tactic.starters.slice(0, 11).map((id, i) => {
+            const player = playerById(id);
+            if(!player || sentOffIds.has(Number(player.id))) return null;
+            const slot = slots[i] || player.position;
+            return { player, slot, factor:zoneFactor(player, slot) };
+          }).filter(Boolean);
     }
     if(!assigned.length && !hasExplicitStarters){
       const lineupFallback = selectLineup(clubId, tactic).filter(player => !sentOffIds.has(Number(player?.id || 0)));
@@ -568,9 +571,15 @@
       attack: counts.att * 1.55
     };
     const styleEffects = buildSectorStyleEffectsV2(tactic, assigned);
-    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
-    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
-    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower;
+    const customBalance = typeof customTacticBalanceProfile === 'function' ? customTacticBalanceProfile(tactic) : { active:false, defenseMultiplier:1, midfieldMultiplier:1, attackMultiplier:1, chanceMultiplier:1, possessionAdd:0, conditionDelta:0 };
+    if(customBalance.active){
+      styleEffects.chanceMultiplier = simClamp(Number(styleEffects.chanceMultiplier || 1) * Number(customBalance.chanceMultiplier || 1), 0.50, 1.45);
+      styleEffects.possessionAdd = simClamp(Number(styleEffects.possessionAdd || 0) + Number(customBalance.possessionAdd || 0), -18, 18);
+      styleEffects.conditionDelta = simClamp(Number(styleEffects.conditionDelta || 0) + Number(customBalance.conditionDelta || 0), -12, 3);
+    }
+    const defense = (defenseQuality + countBoost.defense + profile.defense + adjust.defense + keeperQuality * 0.12) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower * Number(customBalance.defenseMultiplier || 1);
+    const midfield = (midfieldQuality + countBoost.midfield + profile.midfield + adjust.midfield) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower * Number(customBalance.midfieldMultiplier || 1);
+    const attack = (attackQuality + countBoost.attack + profile.attack + adjust.attack) * cohesion * teamMorale * crowdConditionMultiplier * conditionPower * Number(customBalance.attackMultiplier || 1);
     const discipline = simAvg(lineup.map(p=>p.skills.disciplina));
     const stamina = simAvg(lineup.map(p=>matchSkill(p,'resistencia'))) * cohesion * teamMorale * crowdConditionMultiplier;
     const aggression = simAvg(lineup.map(p=>hiddenStats(p).aggression));
@@ -581,6 +590,7 @@
       crowdBonus,
       defenseQuality, midfieldQuality, attackQuality, keeperQuality,
       styleEffects,
+      customBalance,
       conditionAvg:liveConditionAvg,
       discipline, stamina, aggression, reputation:rep
     };
@@ -1044,6 +1054,8 @@
   function ensureLiveTacticShape(tactic, clubId){
     const next = { ...(tactic || {}) };
     next.formation = next.formation || '4-4-2';
+    next.layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(next.layoutMode) : 'preset';
+    next.customSlots = typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(next.customSlots, next) : [];
     if(!Array.isArray(next.starters) || next.starters.length !== 11){
       next.starters = selectLineup(clubId, next).map(p => Number(p.id));
     }else{
@@ -1084,6 +1096,10 @@
   function liveFormationSlots(formation){
     try{ return FORMATIONS[formation] || FORMATIONS['4-4-2'] || []; }
     catch(_){ return []; }
+  }
+  function liveTacticSlots(tactic){
+    try{ return typeof tacticRoleSlots === 'function' ? tacticRoleSlots(tactic) : liveFormationSlots(tactic?.formation || '4-4-2'); }
+    catch(_){ return liveFormationSlots(tactic?.formation || '4-4-2'); }
   }
   function livePlayerSlotScore(player, slot){
     if(!player) return -999;
@@ -1131,6 +1147,7 @@
     const starters = normalizeStarterOrderForLive(tactic, starterOrder);
     if(starters.length < 7) return false;
     tactic.formation = cleanFormation;
+    tactic.layoutMode = 'preset';
     tactic.starters = Array.isArray(starterOrder) ? starters.slice(0, 11) : optimizeLiveStartersForFormation(starters, cleanFormation);
     tactic.autoSubs = [];
     liveSetTacticForClub(session, clubId, tactic);
@@ -1380,7 +1397,7 @@
   }
   function liveFinalPlayerSlot(session, clubId, playerId){
     const tactic = liveTacticForClub(session, clubId);
-    const slots = liveFormationSlots(tactic?.formation || '4-4-2');
+    const slots = liveTacticSlots(tactic);
     const currentIndex = (tactic?.starters || []).findIndex(id => Number(id) === Number(playerId));
     if(currentIndex >= 0) return { slot:slots[currentIndex] || playerById(playerId)?.position || 'MC', inField:true };
     const sub = (session?.substitutions || []).find(item => Number(item.outId || 0) === Number(playerId) || Number(item.inId || 0) === Number(playerId));
@@ -1441,7 +1458,7 @@
     if(usedCount >= 5) return [];
     const tactic = liveTacticForClub(session, clubId);
     if(!tactic?.starters?.length || !tactic?.bench?.length) return [];
-    const slots = liveFormationSlots(tactic.formation || '4-4-2');
+    const slots = liveTacticSlots(tactic);
     const scoreFor = Number(clubId) === Number(session.match.homeId)
       ? { own:session.homeGoals, rival:session.awayGoals }
       : { own:session.awayGoals, rival:session.homeGoals };
@@ -1523,7 +1540,7 @@
     const ownId = Number(game?.selectedClubId || 0);
     const tactic = liveTacticForClub(session, clubId);
     const index = tactic?.starters?.findIndex(id => Number(id) === playerId) ?? -1;
-    const slots = liveFormationSlots(tactic?.formation || '4-4-2');
+    const slots = liveTacticSlots(tactic);
     const slot = slots[index] || playerById(playerId)?.position || 'MC';
     if(Number(clubId) === ownId){
       session.injuryPauseRequest = { clubId, playerId, minute:Number(minute || injury.minute || 0), canSub:liveUsedSubCount(session, clubId) < 5 };
@@ -1568,7 +1585,7 @@
       session.usedIns[String(clubId)].push(inId);
       session.usedOuts[String(clubId)].push(outId);
       livePlayedSet(session, clubId).add(inId);
-      const event = { clubId, outId, inId, minute, slot:liveFormationSlots(tactic.formation || '4-4-2')[index] || playerById(outId)?.position || 'MC', trigger:raw?.trigger || 'manual', manual:raw?.manual !== false };
+      const event = { clubId, outId, inId, minute, slot:liveTacticSlots(tactic)[index] || playerById(outId)?.position || 'MC', trigger:raw?.trigger || 'manual', manual:raw?.manual !== false };
       events.push(event);
       session.substitutions.push(event);
     }
@@ -1828,7 +1845,7 @@
   }
   function livePublicLineup(session, clubId){
     const tactic = liveTacticForClub(session, clubId);
-    const slots = FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2'];
+    const slots = liveTacticSlots(tactic);
     return (tactic?.starters || []).map((id, index) => {
       const player = playerById(id);
       const role = slots[index] || player?.position || '—';
@@ -1839,7 +1856,7 @@
   }
   function livePublicBoardSlots(session, clubId){
     const tactic = liveTacticForClub(session, clubId);
-    const slots = FORMATIONS[tactic?.formation || '4-4-2'] || FORMATIONS['4-4-2'];
+    const slots = liveTacticSlots(tactic);
     const starters = Array.isArray(tactic?.starters) ? tactic.starters : [];
     return slots.slice(0, 11).map((role, index) => {
       const id = Number(starters[index] || 0);
@@ -1872,7 +1889,7 @@
     const a = Number(slotA);
     const b = Number(slotB);
     if(!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a === b) return false;
-    const slots = liveFormationSlots(tactic.formation || '4-4-2');
+    const slots = liveTacticSlots(tactic);
     const max = Math.min(11, slots.length || 11);
     if(a >= max || b >= max) return false;
     while(tactic.starters.length < max) tactic.starters.push(0);
@@ -1903,6 +1920,9 @@
     away.possession = 100 - home.possession;
     return { home, away };
   }
+  function liveFormationLabel(tactic){
+    return typeof isCustomTactic === 'function' && isCustomTactic(tactic) ? 'Personalizada' : (tactic?.formation || '4-4-2');
+  }
   function livePublicState(session, extra={}){
     return {
       match:session.match,
@@ -1929,9 +1949,9 @@
       homeBench:livePublicBench(session, session.match.homeId),
       awayBench:livePublicBench(session, session.match.awayId),
       ownBench:livePublicBench(session, game?.selectedClubId || 0),
-      homeFormation:session.homeTactic?.formation || '4-4-2',
-      awayFormation:session.awayTactic?.formation || '4-4-2',
-      ownFormation:liveTacticForClub(session, game?.selectedClubId || 0)?.formation || '4-4-2',
+      homeFormation:liveFormationLabel(session.homeTactic),
+      awayFormation:liveFormationLabel(session.awayTactic),
+      ownFormation:liveFormationLabel(liveTacticForClub(session, game?.selectedClubId || 0)),
       availableFormations:liveFormationKeys(),
       usedSubs:(session.usedSubs[String(game?.selectedClubId || 0)] || []).length,
       usedSubsHome:(session.usedSubs[String(session.match.homeId)] || []).length,

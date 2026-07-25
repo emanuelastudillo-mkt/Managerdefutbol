@@ -109,7 +109,9 @@ function tacticSignature(tactic){
   const instructionSig = ['winning','drawing','losing'].map(key => `${key}:${instructions[key] || 'normal'}`).join('|');
   const sectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(tactic.sectorStyles) : (tactic.sectorStyles || {});
   const sectorSig = ['defense','midfield','attack'].map(key => `${key}:${sectorStyles[key] || 'posicional'}`).join('|');
-  return [tactic.formation || '', normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig, sectorSig].join('::');
+  const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(tactic.layoutMode) : 'preset';
+  const customSig = layoutMode === 'custom' && typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(tactic.customSlots, tactic).join(',') : '';
+  return [layoutMode, tactic.formation || '', customSig, normalizeIds(tactic.starters), normalizeIds(tactic.bench), mentality, instructionSig, sectorSig].join('::');
 }
 function managerTacticalAdaptationState(){
   if(!game) return { season:1, signature:'', streak:0, lastBonus:0 };
@@ -122,7 +124,9 @@ function managerTacticalAdaptationState(){
 function tacticRepetitionSignature(tactic){
   const clean = tactic || {};
   const formation = FORMATIONS[clean.formation] ? clean.formation : DEFAULT_TACTIC.formation;
-  const slots = FORMATIONS[formation] || FORMATIONS[DEFAULT_TACTIC.formation] || [];
+  const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(clean.layoutMode) : 'preset';
+  const slots = typeof tacticRoleSlots === 'function' ? tacticRoleSlots({ ...clean, formation, layoutMode }) : (FORMATIONS[formation] || FORMATIONS[DEFAULT_TACTIC.formation] || []);
+  const customSig = layoutMode === 'custom' && typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(clean.customSlots, clean).join(',') : '';
   const starters = Array.isArray(clean.starters) ? clean.starters.slice(0, 11).map(Number) : [];
   while(starters.length < 11) starters.push(0);
   const mentalities = starters.map((id, index) => {
@@ -135,7 +139,7 @@ function tacticRepetitionSignature(tactic){
   const instructionSig = ['winning','drawing','losing'].map(key => `${key}:${instructions[key] || 'normal'}`).join('|');
   const sectorStyles = typeof normalizeSectorStyles === 'function' ? normalizeSectorStyles(clean.sectorStyles) : (clean.sectorStyles || {});
   const sectorSig = ['defense','midfield','attack'].map(key => `${key}:${sectorStyles[key] || 'posicional'}`).join('|');
-  return [formation, mentalities, instructionSig, sectorSig].join('::');
+  return [layoutMode, formation, customSig, mentalities, instructionSig, sectorSig].join('::');
 }
 function tacticalAdaptationInfoForMatch(tactic){
   if(!game || !configBoolean('dificultad.adaptacionTactica.activo', true)) return { active:false, bonus:0, streak:0 };

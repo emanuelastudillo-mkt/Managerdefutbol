@@ -303,6 +303,7 @@ function normalizeGame(saved){
   normalized.calendarVersion = SEASON_CALENDAR_VERSION;
   normalized.standings = normalized.standings || createInitialStandings();
   normalized.playerStats = normalized.playerStats || createInitialPlayerStats();
+  normalized.playerCareerStats = normalizePlayerCareerStats(normalized.playerCareerStats, normalized.playerStats);
   normalized.managerPlayerStatsHistory = normalizeManagerPlayerStatsHistory(normalized.managerPlayerStatsHistory);
   normalized.clubBudgets = (normalized.clubBudgets && typeof normalized.clubBudgets === 'object' && !Array.isArray(normalized.clubBudgets)) ? normalized.clubBudgets : {};
   seed.clubs.forEach(c => { if(!Number.isFinite(Number(normalized.clubBudgets[c.id]))) normalized.clubBudgets[c.id] = Math.round(Number(c.budget || 0)); });
@@ -408,6 +409,7 @@ function normalizeGame(saved){
   repairInvalidBotFieldStates(normalized, 'normalize_game', { message:true });
   repairInvalidClubWorldCupParticipationPrizeForState(normalized);
   Object.values(normalized.playerStats).forEach(stat => normalizePlayerStatRecord(stat));
+  Object.values(normalized.playerCareerStats || {}).forEach(stat => normalizePlayerStatRecord(stat));
   repairLegacySeasonStartAvailability(normalized);
   return normalized;
 }
@@ -422,6 +424,7 @@ function ensurePlayerStateForAll(){
   game.trainingPlan = game.trainingPlan || {};
   game.trainingSchedule = normalizeTrainingSchedule(game.trainingSchedule);
   game.playerStats = game.playerStats || {};
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
   seed.players.forEach(p => {
     ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : (p.freeAgent ? MARKET_FREE_AGENT_SALARY_FACTOR : 1));
     if(Number(p.clubId || 0) === 0 || p.freeAgent){ game.playerCondition[p.id] = 5; }
@@ -435,7 +438,8 @@ function ensurePlayerStateForAll(){
     else delete game.playerAgeSkillPenalties[p.id];
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     if(!game.playerStats[p.id]) game.playerStats[p.id] = createEmptyPlayerStat(p);
-    normalizePlayerStatRecord(game.playerStats[p.id]);
+    normalizePlayerStatRecord(game.playerStats[p.id], p);
+    if(game.playerCareerStats[p.id]) normalizePlayerStatRecord(game.playerCareerStats[p.id], p);
   });
   const skillBoostRepair = repairPlayerSkillBoostsForState(game, seed.players);
   const agePenaltyRepair = repairPlayerAgeSkillPenaltiesForState(game, seed.players);
@@ -446,19 +450,28 @@ function tacticLocationOfPlayer(playerId){
   game.tactic = normalizeTactic(game.selectedClubId, game.tactic);
   const id = Number(playerId || 0);
   const starterIndex = (game.tactic.starters || []).map(Number).indexOf(id);
-  if(starterIndex >= 0) return { type:'starter', index:starterIndex, playerId:id };
+  if(starterIndex >= 0){
+    if(typeof isCustomTactic === 'function' && isCustomTactic(game.tactic)){
+      return { type:'custom', index:starterIndex, cellId:String(game.tactic.customSlots?.[starterIndex] || ''), playerId:id };
+    }
+    return { type:'starter', index:starterIndex, playerId:id };
+  }
   const benchIndex = (game.tactic.bench || []).map(Number).indexOf(id);
   if(benchIndex >= 0) return { type:'bench', index:benchIndex, playerId:id };
   return { type:'reserve', index:-1, playerId:id };
 }
 function tacticLocationLabel(location){
   if(!location) return '';
-  if(location.type === 'starter') return `titular ${Number(location.index || 0) + 1}`;
+  if(location.type === 'starter' || location.type === 'custom') return `titular ${Number(location.index || 0) + 1}`;
   if(location.type === 'bench') return `suplente ${Number(location.index || 0) + 1}`;
   return 'reserva';
 }
 function targetSlotLabel(location){
   if(!location) return '';
+  if(location.type === 'custom' || location.type === 'custom-cell'){
+    const role = typeof customTacticCellRole === 'function' ? customTacticCellRole(location.cellId || game?.tactic?.customSlots?.[location.index]) : 'puesto';
+    return `${role} ${Number(location.index || 0) + 1}`;
+  }
   if(location.type === 'starter'){
     const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[location.index] || 'puesto';
     return `${slot} ${Number(location.index || 0) + 1}`;
@@ -468,10 +481,12 @@ function targetSlotLabel(location){
 function validateTacticPlacement(playerId, location){
   const id = Number(playerId || 0);
   if(!id || !location) return '';
-  if(location.type === 'starter'){
+  if(location.type === 'starter' || location.type === 'custom' || location.type === 'custom-cell'){
     if(!canBeStarter(id)) return 'Los lesionados no pueden ser titulares. Los de recuperación menor a 70 días sólo pueden ir al banco.';
     const player = playerById(id);
-    const slot = (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[location.index];
+    const slot = location.type === 'starter'
+      ? (FORMATIONS[game?.tactic?.formation] || FORMATIONS['4-4-2'])[location.index]
+      : (typeof customTacticCellRole === 'function' ? customTacticCellRole(location.cellId || game?.tactic?.customSlots?.[location.index]) : 'MC');
     if(!canAssignPlayerToSlot(player, slot)) return slot === 'POR' ? 'El puesto de portero sólo acepta porteros, salvo emergencia real cuando el plantel no tiene ningún POR.' : 'Los porteros sólo pueden ocupar el puesto de portero.';
   }
   if(location.type === 'bench' && !canBeBench(id)) return 'Sólo se pueden convocar al banco jugadores disponibles o lesionados con recuperación menor a 70 días.';
@@ -479,7 +494,7 @@ function validateTacticPlacement(playerId, location){
 }
 function setTacticPlayerAt(location, playerId){
   const id = Number(playerId || 0);
-  if(location.type === 'starter'){
+  if(location.type === 'starter' || location.type === 'custom'){
     while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
     game.tactic.starters[location.index] = id;
   } else if(location.type === 'bench'){
@@ -489,7 +504,7 @@ function setTacticPlayerAt(location, playerId){
 }
 function clearTacticLocation(location){
   if(!location) return;
-  if(location.type === 'starter'){
+  if(location.type === 'starter' || location.type === 'custom'){
     while(game.tactic.starters.length < 11) game.tactic.starters.push(0);
     game.tactic.starters[location.index] = 0;
   } else if(location.type === 'bench'){
@@ -513,6 +528,7 @@ function cleanupTacticAfterClickSwap(){
 function swapTacticClickTargets(source, target){
   if(!game || !source || !target || !source.playerId) return false;
   game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  if(target.type === 'custom-cell' && typeof customTacticMoveSelectedToCell === 'function') return customTacticMoveSelectedToCell(target.cellId);
   const sourcePlayerId = Number(source.playerId || 0);
   const targetPlayerId = Number(target.playerId || 0);
   if(sourcePlayerId && targetPlayerId && sourcePlayerId === targetPlayerId){
@@ -547,12 +563,18 @@ function swapTacticClickTargets(source, target){
 }
 function normalizeTactic(clubId, tactic){
   const base = {...DEFAULT_TACTIC, ...(tactic || {})};
+  const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(base.layoutMode) : 'preset';
+  const formation = FORMATIONS[base.formation] ? base.formation : DEFAULT_TACTIC.formation;
   const squad = playersByClub(clubId);
   const squadIds = new Set(squad.map(p => p.id));
   const rawStarters = Array.isArray(base.starters) ? base.starters.map(Number) : [];
   let starters = rawStarters.length >= 11
     ? rawStarters.slice(0,11).map(id => squadIds.has(id) ? id : 0)
-    : autoSelectStarters(clubId, base).map(p => p.id);
+    : autoSelectStarters(clubId, { ...base, formation }).map(p => p.id);
+  while(starters.length < 11) starters.push(0);
+  const customSlots = typeof normalizeCustomTacticSlots === 'function'
+    ? normalizeCustomTacticSlots(base.customSlots, { ...base, formation, starters })
+    : [];
   let bench = (base.bench || []).map(Number).filter(id => squadIds.has(id) && !starters.includes(id));
   if(bench.length !== 10){ bench = autoSelectBench(clubId, starters.filter(Boolean)).map(p => p.id); }
   let autoSubs = Array.isArray(base.autoSubs) ? base.autoSubs.slice(0,5) : [];
@@ -569,7 +591,7 @@ function normalizeTactic(clubId, tactic){
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
     : { winning:'normal', drawing:'normal', losing:'normal' };
   const sectorStyles = normalizeSectorStyles(base.sectorStyles);
-  const normalized = { formation:base.formation, captainId:0, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
+  const normalized = { formation, layoutMode, customSlots, captainId:0, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
   normalized.captainId = normalizedCaptainIdForTactic(clubId, { ...normalized, captainId:base.captainId });
   return applyStarterMentalities(normalized);
 }
@@ -792,6 +814,7 @@ function newGame(selectedClubId, options={}){
     lastCaptaincyEffect: null,
     standings: createInitialStandings(),
     playerStats: createInitialPlayerStats(),
+    playerCareerStats: createInitialPlayerCareerStats(),
     managerPlayerStatsHistory: createInitialManagerPlayerStatsHistory(),
     playerStatus: {},
     statusRebases: {},
@@ -904,36 +927,90 @@ function createInitialStandings(){
   seed.clubs.forEach(c => obj[c.id] = { clubId:c.id, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, dg:0, pts:0 });
   return obj;
 }
-function createEmptyPlayerStat(player){
+function createEmptyPlayerStat(player={}){
   return {
-    playerId:player.id,
-    clubId:player.clubId,
+    playerId:Math.max(0, Math.round(Number(player.id || player.playerId || 0))),
+    clubId:Math.max(0, Math.round(Number(player.clubId || 0))),
+    played:0,
+    starts:0,
+    minutes:0,
     goals:0,
     assists:0,
     yellow:0,
     red:0,
-    played:0,
     injuries:0,
     keySaves:0,
+    goalsConceded:0,
+    cleanSheets:0,
     errors:0,
-    goalErrors:0
+    goalErrors:0,
+    ratingTotal:0,
+    ratedMatches:0,
+    lastRating:0
   };
 }
-function normalizePlayerStatRecord(stat){
-  if(!stat) return stat;
-  if(stat.injuries === undefined) stat.injuries = 0;
-  if(stat.played === undefined) stat.played = 0;
-  if(stat.yellow === undefined) stat.yellow = 0;
-  if(stat.red === undefined) stat.red = 0;
-  if(stat.keySaves === undefined) stat.keySaves = 0;
-  if(stat.errors === undefined) stat.errors = 0;
-  if(stat.goalErrors === undefined) stat.goalErrors = 0;
+const PLAYER_STAT_INTEGER_FIELDS = ['played','starts','minutes','goals','assists','yellow','red','injuries','keySaves','goalsConceded','cleanSheets','errors','goalErrors','ratedMatches'];
+function normalizePlayerStatRecord(stat, player=null){
+  if(!stat || typeof stat !== 'object' || Array.isArray(stat)) return stat;
+  const fallbackPlayer = player || playerById(stat.playerId);
+  stat.playerId = Math.max(0, Math.round(Number(stat.playerId || fallbackPlayer?.id || 0)));
+  stat.clubId = Math.max(0, Math.round(Number(fallbackPlayer?.clubId ?? stat.clubId ?? 0)));
+  PLAYER_STAT_INTEGER_FIELDS.forEach(key => {
+    stat[key] = Math.max(0, Math.round(Number(stat[key] || 0)));
+  });
+  stat.ratingTotal = Math.round(Math.max(0, Number(stat.ratingTotal || 0)) * 1000) / 1000;
+  stat.lastRating = Number.isFinite(Number(stat.lastRating)) ? Math.round(clamp(Number(stat.lastRating), 0, 10) * 10) / 10 : 0;
   return stat;
 }
 function createInitialPlayerStats(){
   const obj = {};
   seed.players.forEach(p => obj[p.id] = createEmptyPlayerStat(p));
   return obj;
+}
+function playerCareerStatFromSeason(player, seasonStat=null){
+  const record = { ...createEmptyPlayerStat(player), ...(seasonStat && typeof seasonStat === 'object' ? seasonStat : {}) };
+  record.playerId = Number(player?.id || record.playerId || 0);
+  record.clubId = Number(player?.clubId ?? record.clubId ?? 0);
+  return normalizePlayerStatRecord(record, player);
+}
+function playerStatHasActivity(stat){
+  if(!stat || typeof stat !== 'object' || Array.isArray(stat)) return false;
+  return PLAYER_STAT_INTEGER_FIELDS.some(key => Number(stat[key] || 0) > 0)
+    || Number(stat.ratingTotal || 0) > 0
+    || Number(stat.lastRating || 0) > 0;
+}
+function createInitialPlayerCareerStats(){
+  return {};
+}
+function normalizePlayerCareerStats(raw, seasonStats={}){
+  const validRaw = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const migrateFromCurrentSeason = Object.keys(validRaw).length === 0;
+  const activeById = new Map(seed.players.map(player => [Number(player.id), player]));
+  const out = {};
+  Object.entries(validRaw).forEach(([key, value]) => {
+    const player = activeById.get(Number(value?.playerId || key || 0));
+    if(!player || !playerStatHasActivity(value)) return;
+    out[player.id] = playerCareerStatFromSeason(player, value);
+  });
+  if(migrateFromCurrentSeason){
+    Object.entries(seasonStats || {}).forEach(([key, value]) => {
+      const player = activeById.get(Number(value?.playerId || key || 0));
+      if(!player || !playerStatHasActivity(value)) return;
+      out[player.id] = playerCareerStatFromSeason(player, value);
+    });
+  }
+  return out;
+}
+function playerCareerStatsRecord(playerId, create=true){
+  const id = Math.max(0, Math.round(Number(playerId || 0)));
+  if(!game || !id) return null;
+  const player = playerById(id) || { id, clubId:0 };
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
+  if(!game.playerCareerStats[id]){
+    if(!create) return createEmptyPlayerStat(player);
+    game.playerCareerStats[id] = createEmptyPlayerStat(player);
+  }
+  return normalizePlayerStatRecord(game.playerCareerStats[id], player);
 }
 
 function createInitialManagerPlayerStatsHistory(){

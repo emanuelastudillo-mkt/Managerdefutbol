@@ -919,6 +919,8 @@ function normalizeSavedTacticsState(src){
       clubId:Number(raw.clubId || 0),
       clubName:String(raw.clubName || ''),
       formation:FORMATIONS[raw.formation] ? raw.formation : DEFAULT_TACTIC.formation,
+      layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(raw.layoutMode) : 'preset',
+      customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(raw.customSlots, raw) : [],
       captainId:starters.includes(Number(raw.captainId || 0)) ? Number(raw.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
       starters,
       bench,
@@ -941,7 +943,8 @@ function tacticSlotStatus(slot){
   const clubText = saved.clubName ? ` · ${saved.clubName}` : '';
   const captain = playerById(saved.captainId);
   const captainText = captain ? ` · Capitán ${playerLastName(captain.name)}` : '';
-  return { exists:true, label:`${saved.formation}${clubText}`, details:`${validStarters}/11 titulares guardados${captainText}` };
+  const tacticLabel = typeof isCustomTactic === 'function' && isCustomTactic(saved) ? 'Personalizada' : saved.formation;
+  return { exists:true, label:`${tacticLabel}${clubText}`, details:`${validStarters}/11 titulares guardados${captainText}` };
 }
 function snapshotCurrentTacticForSlot(slot){
   const current = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic || DEFAULT_TACTIC));
@@ -957,6 +960,8 @@ function snapshotCurrentTacticForSlot(slot){
     clubId:Number(game.selectedClubId || 0),
     clubName:clubName(game.selectedClubId),
     formation:current.formation || DEFAULT_TACTIC.formation,
+    layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(current.layoutMode) : 'preset',
+    customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(current.customSlots, current) : [],
     captainId:normalizedCaptainIdForTactic(game.selectedClubId, current),
     starters,
     bench,
@@ -1004,6 +1009,8 @@ function sanitizeSavedTacticForCurrentClub(saved){
   return applyStarterMentalities({
     ...DEFAULT_TACTIC,
     formation:FORMATIONS[saved.formation] ? saved.formation : DEFAULT_TACTIC.formation,
+    layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(saved.layoutMode) : 'preset',
+    customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(saved.customSlots, saved) : [],
     captainId:starters.includes(Number(saved.captainId || 0)) ? Number(saved.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
     starters,
     bench,

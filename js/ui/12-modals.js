@@ -200,6 +200,58 @@ function playerModalActionsMarkup(player){
   }
   return '';
 }
+function playerStatsAverageValue(stat){
+  const count = Math.max(0, Math.round(Number(stat?.ratedMatches || 0)));
+  const total = Math.max(0, Number(stat?.ratingTotal || 0));
+  return count > 0 ? total / count : null;
+}
+function playerStatsMinutesLabel(stat){
+  const minutes = Math.max(0, Math.round(Number(stat?.minutes || 0)));
+  return typeof Intl !== 'undefined' ? new Intl.NumberFormat('es-AR').format(minutes) : String(minutes);
+}
+function playerStatisticsPanelMarkup(stat, player, scope='season'){
+  const safe = stat && typeof stat === 'object' ? stat : {};
+  const average = playerStatsAverageValue(safe);
+  const averageLabel = average === null ? '—' : average.toFixed(2).replace('.', ',');
+  const lastRating = Number(safe.lastRating || 0);
+  const isKeeper = String(player?.position || '').toUpperCase() === 'POR';
+  const keeperRows = isKeeper ? `
+    <div class="stat-rank"><span>Tapadas clave</span><strong>${Math.max(0, Number(safe.keySaves || 0))}</strong></div>
+    <div class="stat-rank"><span>Vallas invictas</span><strong>${Math.max(0, Number(safe.cleanSheets || 0))}</strong></div>
+    <div class="stat-rank"><span>Goles recibidos</span><strong>${Math.max(0, Number(safe.goalsConceded || 0))}</strong></div>` : '';
+  const migrationNote = scope === 'career' ? '<p class="muted small-copy">En partidas iniciadas antes de V8.48, la carrera comienza con las estadísticas disponibles de la temporada en curso al momento de actualizar.</p>' : '';
+  return `
+    <div data-player-stats-panel="${scope}" ${scope === 'career' ? 'hidden' : ''}>
+      <div class="stat-rank"><span>Partidos</span><strong>${Math.max(0, Number(safe.played || 0))}</strong></div>
+      <div class="stat-rank"><span>Titularidades</span><strong>${Math.max(0, Number(safe.starts || 0))}</strong></div>
+      <div class="stat-rank"><span>Minutos</span><strong>${playerStatsMinutesLabel(safe)}</strong></div>
+      <div class="stat-rank"><span>Goles</span><strong>${Math.max(0, Number(safe.goals || 0))}</strong></div>
+      <div class="stat-rank"><span>Asistencias</span><strong>${Math.max(0, Number(safe.assists || 0))}</strong></div>
+      <div class="stat-rank"><span>Puntaje promedio</span><strong>${averageLabel}</strong></div>
+      <div class="stat-rank"><span>Último puntaje</span><strong>${lastRating > 0 ? lastRating.toFixed(1).replace('.', ',') : '—'}</strong></div>
+      ${keeperRows}
+      <div class="stat-rank"><span>Lesiones</span><strong>${Math.max(0, Number(safe.injuries || 0))}</strong></div>
+      <div class="stat-rank"><span>Tarjetas amarillas</span><strong><span class="yellow-card">■</span> ${Math.max(0, Number(safe.yellow || 0))}</strong></div>
+      <div class="stat-rank"><span>Expulsiones</span><strong>${Math.max(0, Number(safe.red || 0))}</strong></div>
+      <div class="stat-rank"><span>Errores</span><strong>${Math.max(0, Number(safe.errors || 0))}</strong></div>
+      <div class="stat-rank"><span>Errores de gol</span><strong>${Math.max(0, Number(safe.goalErrors || 0))}</strong></div>
+      ${migrationNote}
+    </div>`;
+}
+function bindPlayerStatisticsTabs(){
+  const tabs = [...document.querySelectorAll('[data-player-stats-tab]')];
+  const panels = [...document.querySelectorAll('[data-player-stats-panel]')];
+  tabs.forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    const scope = String(button.dataset.playerStatsTab || 'season');
+    tabs.forEach(item => {
+      const selected = item === button;
+      item.classList.toggle('active', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+    panels.forEach(panel => { panel.hidden = String(panel.dataset.playerStatsPanel || '') !== scope; });
+  }));
+}
 function bindPlayerModalActions(playerId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)) return;
   document.querySelector('[data-dismiss-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); dismissOwnPlayer(playerId); });
@@ -209,11 +261,13 @@ function bindPlayerModalActions(playerId){
   document.querySelector('[data-toggle-transfer-listed]')?.addEventListener('change', (ev) => { ev.stopPropagation(); toggleTransferListed(playerId, ev.target.checked); });
   document.querySelector('[data-toggle-untransferable]')?.addEventListener('change', (ev) => { ev.stopPropagation(); toggleUntransferablePlayer(playerId, ev.target.checked); });
   document.querySelector('[data-add-scouting-player]')?.addEventListener('click', (ev) => { ev.stopPropagation(); if(typeof addPlayerToScoutingCenter === 'function') addPlayerToScoutingCenter(playerId); });
+  bindPlayerStatisticsTabs();
 }
 function showPlayerModal(playerId){
   const p = playerById(playerId);
   if(!p) return;
-  const stats = game?.playerStats?.[p.id];
+  const stats = game?.playerStats?.[p.id] || (typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(p) : {});
+  const careerStats = game?.playerCareerStats?.[p.id] || (typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(p) : {});
   const needsScouting = playerRequiresScouting(p);
   const meta = roleMeta(p.position);
   const body = `<div class="player-modal-compact">
@@ -246,15 +300,17 @@ function showPlayerModal(playerId){
         <div class="card inner"><h3>Temporada</h3>
           <div class="stat-rank"><span>Estrella</span><strong>${playerStarRecord(p) ? playerStarLabel(playerStarRecord(p).type) : '—'}</strong></div>
           ${playerStarRecord(p) ? `<p class="muted small-copy">${escapeHtml(playerStarRecord(p).reason || '')}</p>` : ''}
-          <div class="stat-rank"><span>Partidos</span><strong>${stats?.played || 0}</strong></div>
-          <div class="stat-rank"><span>Goles</span><strong>${stats?.goals || 0}</strong></div>
-          <div class="stat-rank"><span>Asistencias</span><strong>${stats?.assists || 0}</strong></div>
-          <div class="stat-rank"><span>Tapadas clave POR</span><strong>${stats?.keySaves || 0}</strong></div>
-          <div class="stat-rank"><span>Lesiones</span><strong>${stats?.injuries || 0}</strong></div>
-          <div class="stat-rank"><span>Expulsiones</span><strong>${stats?.red || 0}</strong></div>
-          <div class="stat-rank"><span>Errores</span><strong>${stats?.errors || 0}</strong></div>
-          <div class="stat-rank"><span>Errores de gol</span><strong>${stats?.goalErrors || 0}</strong></div>
-          <div class="stat-rank"><span>Tarjetas amarillas</span><strong><span class="yellow-card">■</span> ${stats?.yellow || 0}</strong></div>
+        </div>
+        <div class="card inner player-statistics-card">
+          <div class="row between player-statistics-head">
+            <h3>Estadísticas</h3>
+            <div class="subtabs player-statistics-tabs" role="tablist" aria-label="Estadísticas del jugador">
+              <button type="button" class="active" data-player-stats-tab="season" aria-selected="true">Temporada actual</button>
+              <button type="button" data-player-stats-tab="career" aria-selected="false">Carrera</button>
+            </div>
+          </div>
+          ${playerStatisticsPanelMarkup(stats, p, 'season')}
+          ${playerStatisticsPanelMarkup(careerStats, p, 'career')}
         </div>
       </div>
     </div></div>`;
@@ -1623,7 +1679,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.47</p>
+      <p class="eyebrow">Guía actualizada · V8.49</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1640,7 +1696,7 @@ function openGameHelpModal(){
         <article class="help-card card">
           <span class="pill warn">2 · Competencia</span>
           <h4>Primer Equipo</h4>
-          <p>Concentra Táctica, Plantel, Entrenamiento y Estadísticas por temporada. Revisá disponibilidad, forma, moral, cohesión y rendimiento antes de confirmar el once.</p>
+          <p>Concentra Táctica, Plantel y Entrenamiento. Táctica permite conservar las formaciones predefinidas o probar una distribución personalizada por casillas, con roles, adaptación individual y equilibrio colectivo visibles. La ficha de cada jugador separa estadísticas de temporada actual y carrera: partidos, titularidades, minutos, goles, asistencias, tarjetas, lesiones, puntajes y datos específicos de porteros.</p>
           <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Plantel','squad')}${gameHelpGoButton('firstTeam','Abrir Entrenamiento','training')}${gameHelpGoButton('firstTeam','Abrir Estadísticas','playerStats')}</div>
         </article>
         <article class="help-card card">

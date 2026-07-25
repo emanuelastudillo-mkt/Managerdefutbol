@@ -1,3 +1,122 @@
+# V8.49 — Táctica personalizada provisoria
+
+## Objetivo de la versión
+
+- Se mantiene completo el sistema de formaciones predefinidas.
+- Se agrega un segundo modo, **Personalizada · prueba**, para evaluar una distribución libre por casillas antes de decidir si reemplaza o complementa definitivamente al sistema actual.
+- El cambio afecta únicamente la táctica elegida por el manager. Los bots continúan utilizando sus formaciones predefinidas y su lógica habitual.
+
+## Táctica personalizada
+
+- La cancha ofrece 31 casillas posibles distribuidas entre arco, defensa, mediocampo y ataque.
+- La táctica activa utiliza exactamente 11 casillas diferentes.
+- Siempre debe existir una única casilla de portero.
+- El portero no puede ocupar una casilla de campo y un jugador de campo sólo puede actuar como portero mediante la regla de emergencia ya existente cuando el plantel no tiene ningún POR disponible.
+- Cada casilla determina el rol táctico aplicado al jugador: `POR`, `DFC`, `LI`, `LD`, `MCD`, `MC`, `MCO`, `MI`, `MD`, `EI`, `ED` o `DC`.
+- Para mover un puesto, se selecciona un titular y luego una casilla libre. También pueden intercambiarse dos jugadores titulares.
+- La pantalla conserva titulares, suplentes, reservas, capitán, cambios automáticos, mentalidades e instrucciones sectoriales.
+
+## Adaptación individual
+
+Se conserva la escala existente de rendimiento por rol:
+
+- Rol exacto: 100%.
+- Rol compatible: 75%.
+- Fuera de su zona natural: 50%.
+- Portero de emergencia: 25%.
+
+El rol utilizado para esta adaptación proviene de la casilla seleccionada, no del nombre de una formación.
+
+## Equilibrio colectivo provisorio
+
+La pantalla calcula y muestra una evaluación en tiempo real basada en:
+
+- Cantidad de defensores, mediocampistas y atacantes.
+- Presencia de defensores centrales.
+- Cobertura de las bandas izquierda y derecha.
+- Presencia central en el mediocampo.
+- Existencia de una referencia central de ataque.
+
+Las distribuciones desequilibradas pueden reducir:
+
+- Potencia defensiva.
+- Control del mediocampo.
+- Potencia ofensiva.
+- Generación de ocasiones.
+- Posesión.
+- Conservación física.
+
+Una estructura equilibrada puede recibir un bonus leve de aproximadamente 2% a 3% por línea. Los multiplicadores colectivos quedan limitados para evitar resultados extremos durante esta etapa de prueba.
+
+## Integraciones
+
+- Simulación táctica completa.
+- Simulador vivo.
+- Sustituciones, lesiones y expulsiones durante el partido.
+- Desafíos Online.
+- Firmas de cohesión y repetición táctica.
+- Tres espacios de tácticas guardadas.
+- Interfaz móvil de V8.46.
+
+En el simulador vivo, cambiar manualmente a una formación predefinida devuelve esa táctica al modo predefinido. La distribución personalizada se muestra como **Personalizada** en lugar de conservar un nombre de formación engañoso.
+
+## Carácter provisorio
+
+- Las casillas son posiciones tácticas fijas; todavía no se permite arrastrar jugadores a cualquier píxel de la cancha.
+- Los bots continúan usando formaciones predefinidas.
+- Los multiplicadores de equilibrio quedan expuestos para facilitar las pruebas y podrán ajustarse según resultados reales.
+- Volver al modo predefinido conserva las formaciones existentes. Cambiar la plantilla predefinida reconstruye la base de casillas personalizadas desde esa nueva formación.
+
+## Migración
+
+- Las partidas de V8.48 y anteriores cargan automáticamente en modo **Predefinida**.
+- Su formación, titulares, suplentes, capitán e instrucciones se mantienen.
+- Al activar por primera vez el modo personalizado, la formación vigente se convierte en una distribución equivalente de 11 casillas.
+- Los campos nuevos son opcionales y se normalizan al cargar.
+- No requiere cambios de Worker, SQL ni imágenes.
+
+**V8.49 no rompe partidas anteriores.** La táctica personalizada se incorpora como un modo adicional y las formaciones predefinidas continúan disponibles.
+
+---
+
+## Historial anterior — V8.48
+
+# V8.48 — Estadísticas de temporada y carrera por jugador
+
+## Cambios incluidos
+
+- La ficha de todos los jugadores incorpora dos vistas: **Temporada actual** y **Carrera**.
+- Se amplió el registro oficial por jugador con partidos, titularidades, minutos, goles, asistencias, amarillas, expulsiones, lesiones, errores, errores de gol, puntaje acumulado, partidos puntuados y último puntaje.
+- Para porteros también se guardan tapadas clave, goles recibidos y vallas invictas.
+- Las estadísticas se actualizan una sola vez al finalizar cada partido oficial, tanto en simulación táctica como en simulación rápida de encuentros entre bots.
+- La temporada actual continúa utilizando `playerStats` y se reinicia al comenzar un nuevo año.
+- La carrera utiliza `playerCareerStats`, no se reinicia entre temporadas y acompaña al jugador aunque cambie de club.
+- No se guarda una copia por partido dentro de cada jugador. Se almacenan únicamente acumulados, evitando crecimiento indefinido del historial.
+- El mapa de carrera es disperso: un jugador sin partidos oficiales no ocupa un registro adicional.
+- Los puntajes promedio se calculan al mostrar la ficha a partir de `ratingTotal / ratedMatches`; no se guarda un promedio duplicado.
+- Los minutos consideran titularidad, ingreso, sustitución, lesión y expulsión.
+- Los jugadores eliminados definitivamente de la base por retiro o limpieza de libres también liberan su registro estadístico para evitar datos huérfanos.
+- No requiere cambios de Worker, SQL ni imágenes.
+
+## Migración
+
+- En una partida anterior, la carrera se inicia con las estadísticas disponibles de la temporada actual al instalar V8.48.
+- Los años cerrados antes de V8.48 no pueden reconstruirse para todos los jugadores porque el juego no conservaba esos acumulados globales.
+- Los campos nuevos que no existían —titularidades, minutos, puntajes y estadísticas específicas de porteros— comienzan a registrarse desde V8.48.
+- Las estadísticas actuales ya existentes, como partidos, goles, asistencias, tarjetas y lesiones, se conservan.
+
+## Rendimiento
+
+- Con 4.150 jugadores, un mapa completo con todos los campos ocupa aproximadamente 1 MB en JSON sin comprimir.
+- `playerCareerStats` se mantiene disperso y solo agrega registros cuando un jugador disputa partidos.
+- El costo por partido es constante y se limita a los jugadores utilizados; no se recorren los 4.150 jugadores al finalizar cada encuentro.
+
+**V8.48 no rompe partidas anteriores.** La migración es automática y conserva las estadísticas de temporada ya guardadas. El historial global de temporadas anteriores no puede recuperarse porque no existía en versiones previas.
+
+---
+
+## Historial anterior — V8.47
+
 # V8.47 — 100 jugadores especiales
 
 ## Cambios incluidos

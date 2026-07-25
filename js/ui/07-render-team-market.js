@@ -838,6 +838,30 @@ function bindTacticClickEvents(){
       swapTacticClickTargets(tacticLocationOfPlayer(tacticClickSelection.playerId), { type:'starter', index, playerId:0 });
     });
   });
+  document.querySelectorAll('[data-tactic-custom-cell]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if(!tacticClickSelection?.playerId){
+        showNotice('Primero seleccioná un titular, suplente o reserva y después elegí una casilla.');
+        return;
+      }
+      if(typeof customTacticMoveSelectedToCell === 'function') customTacticMoveSelectedToCell(el.dataset.tacticCustomCell || '');
+    });
+  });
+  document.querySelectorAll('[data-custom-mentality-player]').forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const playerId = Number(el.dataset.customMentalityPlayer || 0);
+      if(!playerId) return;
+      game.tactic = applyStarterMentalities(game.tactic);
+      setPlayerMentality(playerId, nextMentality(playerMentality(playerId)), game.tactic);
+      tacticClickSelection = null;
+      saveLocal(true);
+      renderTactics();
+    });
+  });
 }
 
 
@@ -992,16 +1016,16 @@ function tacticOnlineCategorySummaryMarkup(){
     <p class="muted small">${escapeHtml(squadLabel)} · ${escapeHtml(range)}.${complete ? ' También puede publicarse en Libre.' : ' Completá los 11 titulares para publicar.'}</p>
   </div>`;
 }
-function renderTactics(){
-  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
-  const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
-  const bench = game.tactic.bench.map(playerById).filter(Boolean);
-  const starterSet = new Set(game.tactic.starters);
-  const benchSet = new Set(game.tactic.bench);
-  const reserves = playersByClub(game.selectedClubId)
-    .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
-    .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
-  const pitch = pitchSlots(game.tactic).map(slot => {
+
+function tacticModeControlsMarkup(){
+  const custom = typeof isCustomTactic === 'function' && isCustomTactic(game?.tactic);
+  return `<div class="tactic-mode-switch" role="group" aria-label="Tipo de táctica">
+    <button type="button" id="presetTacticModeBtn" class="${custom ? 'ghost' : 'primary'}">Predefinida</button>
+    <button type="button" id="customTacticModeBtn" class="${custom ? 'primary' : 'ghost'}">Personalizada · prueba</button>
+  </div>`;
+}
+function presetTacticPitchMarkup(tactic){
+  return pitchSlots(tactic).map(slot => {
     const fitLevel = slot.player ? playerTacticFitLevel(slot.player, slot.slot) : 'exact';
     const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
     const chip = slot.player ? `
@@ -1012,10 +1036,38 @@ function renderTactics(){
       </button>` : `<button type="button" class="empty-slot ${slotGroup(slot.slot)} tactic-empty-slot" data-tactic-empty-slot="${slot.index}" title="Seleccioná un jugador y hacé click acá"><strong>${slot.slot}</strong><span>Vacío</span></button>`;
     return `<div class="pitch-slot" style="left:${slot.x}%; top:${slot.y}%">${chip}</div>`;
   }).join('');
-  const starterList = pitchSlots(game.tactic).map(slot => {
+}
+function customTacticPitchMarkup(tactic){
+  const activeSlots = typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(tactic?.customSlots, tactic) : [];
+  const activeMap = new Map(activeSlots.map((cellId,index) => [cellId,index]));
+  return (typeof CUSTOM_TACTIC_CELLS !== 'undefined' ? CUSTOM_TACTIC_CELLS : []).map(cell => {
+    const index = activeMap.has(cell.id) ? activeMap.get(cell.id) : -1;
+    const player = index >= 0 ? playerById(tactic?.starters?.[index]) : null;
+    if(player){
+      const fitLevel = playerTacticFitLevel(player,cell.role);
+      const fitClass = fitLevel === 'zone' ? 'out-zone' : fitLevel === 'role' ? 'off-role' : '';
+      return `<div class="custom-tactic-cell occupied" style="left:${cell.x}%;top:${cell.y}%" data-custom-role="${cell.role}">
+        <button type="button" class="player-chip tactic-click-player mentality-${playerMentality(player.id)} ${playerGroupClass(player.position)} ${fitClass}${tacticSelectionClass(player.id)}" data-tactic-player="${player.id}" data-tactic-zone="custom" data-tactic-index="${index}" title="${playerTacticFitTitle(player,cell.role)} · Click para seleccionar o intercambiar">
+          <span class="jersey-dot">${jerseyNumber(player.id)}</span>
+          <span class="player-chip-name">${tacticPlayerNameWithStatus(player,true)}</span>
+        </button>
+        <button type="button" class="custom-mentality-toggle" data-custom-mentality-player="${player.id}" title="Cambiar mentalidad individual">${mentalityMarker(playerMentality(player.id))}</button>
+        <span class="custom-cell-role">${cell.role}</span>
+      </div>`;
+    }
+    const active = index >= 0;
+    return `<button type="button" class="custom-tactic-cell-target ${active ? 'active-empty' : 'inactive'} ${slotGroup(cell.role)}" style="left:${cell.x}%;top:${cell.y}%" data-tactic-custom-cell="${cell.id}" title="${active ? `Casilla titular ${cell.role} vacía` : `Mover puesto a ${cell.role}`}"><strong>${cell.role}</strong><span>${active ? 'Vacío' : '+'}</span></button>`;
+  }).join('');
+}
+function tacticPitchMarkup(tactic){
+  return typeof isCustomTactic === 'function' && isCustomTactic(tactic) ? customTacticPitchMarkup(tactic) : presetTacticPitchMarkup(tactic);
+}
+function tacticStarterListMarkup(tactic){
+  return pitchSlots(tactic).map(slot => {
     const p = slot.player;
-    const fit = p ? playerFitsSlot(p, slot.slot) : false;
-    return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="starter" data-tactic-index="${slot.index}"` : `data-tactic-empty-slot="${slot.index}"`}>
+    const fit = p ? playerFitsSlot(p,slot.slot) : false;
+    const locationType = typeof isCustomTactic === 'function' && isCustomTactic(tactic) ? 'custom' : 'starter';
+    return `<div class="lineup-row tactic-lineup-row ${p && !fit ? 'bad-zone' : ''}${p ? tacticSelectionClass(p.id) : ''}" ${p ? `data-tactic-player="${p.id}" data-tactic-zone="${locationType}" data-tactic-index="${slot.index}"` : (locationType === 'custom' ? `data-tactic-custom-cell="${slot.cellId || tactic.customSlots?.[slot.index] || ''}"` : `data-tactic-empty-slot="${slot.index}"`)}>
       <span class="pill">${slot.index+1}. ${slot.slot}</span>
       <span>${p ? `<strong>${tacticPlayerNameWithStatus(p)}</strong>` : '<span class="muted">Vacío</span>'}</span>
       <span class="lineup-center-cell">${p ? roleBadge(p.position) : '—'}</span>
@@ -1023,18 +1075,47 @@ function renderTactics(){
       <span class="lineup-center-cell">${p ? `<strong>${visibleOverall(p)}</strong>` : '—'}</span>
       <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(conditionBar(p.id)) : ''}</span>
       <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(moraleBar(p.id)) : ''}</span>
-      <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(tacticFitBar(p, slot.slot)) : ''}</span>
+      <span class="lineup-center-cell metric-only">${p ? tacticMetricCircle(tacticFitBar(p,slot.slot)) : ''}</span>
     </div>`;
   }).join('');
+}
+function customTacticBalanceMarkup(){
+  if(typeof customTacticBalanceProfile !== 'function' || !isCustomTactic(game?.tactic)) return '';
+  const profile = customTacticBalanceProfile(game.tactic);
+  const pct = value => `${Math.round(Number(value || 1) * 100)}%`;
+  const notes = profile.warnings.length
+    ? profile.warnings.slice(0,5).map(item => `<li>${escapeHtml(item.text)}</li>`).join('')
+    : '<li>Sin desequilibrios graves detectados.</li>';
+  return `<div class="card custom-tactic-balance-card tactic-grid-card">
+    <div class="custom-balance-head"><div><p class="label">Evaluación provisoria</p><h3>${escapeHtml(profile.label)}</h3></div><strong class="custom-balance-score">${profile.score}/100</strong></div>
+    <div class="custom-balance-metrics"><span>Defensa <b>${pct(profile.defenseMultiplier)}</b></span><span>Medios <b>${pct(profile.midfieldMultiplier)}</b></span><span>Ataque <b>${pct(profile.attackMultiplier)}</b></span><span>Ocasiones <b>${pct(profile.chanceMultiplier)}</b></span></div>
+    <p class="muted small">${profile.counts.def} DEF · ${profile.counts.mid} MED · ${profile.counts.att} ATA · Bandas ${profile.counts.left}/${profile.counts.right}</p>
+    <ul class="custom-balance-notes">${notes}</ul>
+  </div>`;
+}
+
+function renderTactics(){
+  game.tactic = applyStarterMentalities(normalizeTactic(game.selectedClubId, game.tactic));
+  const formationOptions = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${game.tactic.formation===f?'selected':''}>${f}</option>`).join('');
+  const bench = game.tactic.bench.map(playerById).filter(Boolean);
+  const starterSet = new Set(game.tactic.starters);
+  const benchSet = new Set(game.tactic.bench);
+  const reserves = playersByClub(game.selectedClubId)
+    .filter(p => !starterSet.has(p.id) && !benchSet.has(p.id))
+    .sort((a,b)=>positionOrder(a.position)-positionOrder(b.position) || visibleOverall(b)-visibleOverall(a));
+  const pitch = tacticPitchMarkup(game.tactic);
+  const starterList = tacticStarterListMarkup(game.tactic);
+  const customMode = typeof isCustomTactic === 'function' && isCustomTactic(game.tactic);
   view.innerHTML = `
     <div class="section-title tactic-section-title"><h2>Táctica y convocatoria</h2></div>
     <div class="tactic-workspace">
       <main class="tactic-left-stack">
         <div class="card tactic-board-card tactic-grid-card">
-          <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">Formación ${game.tactic.formation}</p></div></div>
+          <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">${customMode ? 'Personalizada provisoria · cada casilla define el rol' : `Formación ${game.tactic.formation}`}</p></div></div>
+          ${tacticModeControlsMarkup()}
           <div class="tactic-click-help">${tacticSelectionHint()}</div>
           <div class="pitch-board-wrap">
-            <div class="pitch-board centered">${pitch}</div>
+            <div class="pitch-board centered ${customMode ? 'custom-tactic-board' : ''}">${pitch}</div>
             <div class="tactic-state-legend">
               <span>${mentalityMarker('muy_defensivo')} Muy defensivo</span>
               <span>${mentalityMarker('defensivo')} Defensivo</span>
@@ -1065,13 +1146,14 @@ function renderTactics(){
       <aside class="tactic-right-rail">
         <div class="card tactic-actions-card tactic-grid-card">
           <h3>Acciones</h3>
-          <div class="formation-box"><label>Formación</label><select id="formation">${formationOptions}</select></div>
+          <div class="formation-box"><label>Plantilla predefinida</label><select id="formation" ${customMode ? 'disabled' : ''}>${formationOptions}</select><small class="muted">En personalizada, las formaciones siguen disponibles al volver al modo predefinido.</small></div>
           ${tacticOnlineCategorySummaryMarkup()}
           <div class="tactic-autopick-row"><button id="autoPickBestBtn" class="ghost">Mejor once</button><button id="autoPickConditionBtn" class="ghost">Mejor condición física</button></div>
           <button id="saveTactic" class="primary full">Confirmar equipo</button>
           <span id="tacticErrors" class="bad small"></span>
         </div>
         ${tacticCaptainCardMarkup()}
+        ${customTacticBalanceMarkup()}
         <div class="card tactic-board-side tactic-board-right tactic-sector-card tactic-grid-card">
           <h3>Visores tácticos</h3>
           <div class="tactic-board-visors" aria-label="Visores tácticos">${tacticSectorSkillVisors()}</div>
@@ -1084,6 +1166,8 @@ function renderTactics(){
     </div>
   `;
   prependFirstTeamTabs('tactics');
+  $('presetTacticModeBtn')?.addEventListener('click', () => switchTacticLayoutMode('preset'));
+  $('customTacticModeBtn')?.addEventListener('click', () => switchTacticLayoutMode('custom'));
   $('formation').addEventListener('change', () => {
     const tentative = {...game.tactic, formation:$('formation').value};
     const autoStarters = autoSelectStarters(game.selectedClubId, tentative).map(p=>p.id);
@@ -1091,13 +1175,14 @@ function renderTactics(){
     game.tactic.bench = autoSelectBench(game.selectedClubId, autoStarters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
     game.tactic.formation = tentative.formation;
+    if(typeof customTacticSlotsFromPreset === 'function') game.tactic.customSlots = customTacticSlotsFromPreset(game.tactic);
     game.tactic = ensureTacticCaptain(applyStarterMentalities(game.tactic), game.selectedClubId);
     saveLocal(true);
     renderTactics();
   });
   $('autoPickBestBtn').addEventListener('click', () => {
     game.tactic.formation = $('formation').value;
-    const starters = autoSelectStarters(game.selectedClubId, game.tactic).map(p=>p.id);
+    const starters = (typeof autoSelectStartersForTacticLayout === 'function' ? autoSelectStartersForTacticLayout(game.selectedClubId, game.tactic) : autoSelectStarters(game.selectedClubId, game.tactic)).map(p=>p.id);
     game.tactic.starters = starters;
     game.tactic.bench = autoSelectBench(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
@@ -1107,7 +1192,7 @@ function renderTactics(){
   });
   $('autoPickConditionBtn').addEventListener('click', () => {
     game.tactic.formation = $('formation').value;
-    const starters = autoSelectByBestCondition(game.selectedClubId).map(p=>p.id);
+    const starters = (typeof autoSelectByBestConditionForTactic === 'function' ? autoSelectByBestConditionForTactic(game.selectedClubId, game.tactic) : autoSelectByBestCondition(game.selectedClubId)).map(p=>p.id);
     game.tactic.starters = starters;
     game.tactic.bench = autoSelectBenchByBestCondition(game.selectedClubId, starters).map(p=>p.id);
     game.tactic.autoSubs = defaultAutoSubs(game.tactic.starters, game.tactic.bench);
@@ -1185,6 +1270,8 @@ function saveTacticFromScreen(){
   };
   const nextTactic = applyStarterMentalities({
     formation:$('formation')?.value || game.tactic.formation,
+    layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(game.tactic.layoutMode) : 'preset',
+    customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(game.tactic.customSlots, game.tactic) : [],
     captainId:Number($('captainSelect')?.value || game.tactic.captainId || 0),
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
@@ -1227,7 +1314,12 @@ function validateTactic(tactic){
   if(!captainId || !uniqueStarters.has(captainId)) errors.push('Elegí un capitán entre los once titulares.');
   const unavailableBench = [...uniqueBench].filter(id => !canBeBench(id));
   if(unavailableBench.length) errors.push('En el banco sólo se permiten disponibles o lesionados con recuperación menor a 70 días.');
-  const slots = FORMATIONS[tactic.formation] || FORMATIONS['4-4-2'];
+  const slots = typeof tacticRoleSlots === 'function' ? tacticRoleSlots(tactic) : (FORMATIONS[tactic.formation] || FORMATIONS['4-4-2']);
+  if(typeof isCustomTactic === 'function' && isCustomTactic(tactic)){
+    const customSlots = typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(tactic.customSlots, tactic) : [];
+    if(customSlots.length !== 11 || new Set(customSlots).size !== 11) errors.push('La táctica personalizada necesita exactamente 11 casillas diferentes.');
+    if(slots.filter(slot => slot === 'POR').length !== 1) errors.push('La táctica personalizada debe incluir exactamente una casilla de portero.');
+  }
   slots.forEach((slot, index) => {
     const player = playerById(starters[index]);
     if(player && !canAssignPlayerToSlot(player, slot)) errors.push(slot === 'POR' ? 'El titular en POR debe ser portero, salvo emergencia si el plantel no tiene ningún POR.' : 'Un portero no puede jugar como jugador de campo.');

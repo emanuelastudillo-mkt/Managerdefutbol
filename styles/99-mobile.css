@@ -639,3 +639,14 @@
     z-index:1080;
   }
 }
+
+/* V8.49 provisoria · Ajustes móviles para la cancha personalizada. */
+@media (max-width:767px){
+  .tactic-mode-switch{grid-template-columns:1fr}
+  .pitch-board.custom-tactic-board{min-width:620px;min-height:440px}
+  .pitch-board-wrap:has(.custom-tactic-board){overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+  .custom-tactic-cell{width:54px;height:54px}
+  .custom-tactic-cell-target{width:26px;height:26px;min-height:26px}
+  .custom-tactic-cell-target.active-empty{width:42px;height:42px;min-height:42px}
+  .custom-balance-metrics{grid-template-columns:1fr}
+}

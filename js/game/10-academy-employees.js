@@ -383,7 +383,7 @@ function staffImagePath(staffId, categoryId='regular'){
 function staffImageMarkup(staffId, categoryId='regular', className='staff-employee-photo'){
   const def = staffDefinition(staffId);
   const alt = `${def?.nombre || 'Empleado'} ${staffCategory(categoryId).nombre}`;
-  return `<img class="${escapeHtml(className)}" src="${escapeHtml(staffImagePath(staffId, categoryId))}" alt="${escapeHtml(alt)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='grid');"><span class="staff-photo-fallback" style="display:none">${escapeHtml((def?.nombre || 'E').slice(0,1).toUpperCase())}</span>`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(staffImagePath(staffId, categoryId))}" alt="${escapeHtml(alt)}" loading="lazy"><span class="staff-photo-fallback" style="display:none">${escapeHtml((def?.nombre || 'E').slice(0,1).toUpperCase())}</span>`;
 }
 function staffContractCardMarkup(staffId, mode='compact'){
   const contract = staffContract(staffId);
@@ -1324,7 +1324,9 @@ function academyYouthOfferProfessionalPlayer(player, offer){
   delete game.playerSkillBoosts[official.id];
   game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   delete game.playerAgeSkillPenalties[official.id];
-  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
+  game.playerCareerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
   return official;
 }
 function cancelAcademyYouthOffersForPlayer(playerId, reason='player_unavailable'){
@@ -1607,7 +1609,9 @@ function promoteAcademyPlayer(playerId, exactPosition){
   game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   delete game.playerAgeSkillPenalties[official.id];
   game.trainingPlan[official.id] = safeIndividualTrainingType(TRAINING_INDIVIDUAL_INITIAL);
-  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
+  game.playerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
+  game.playerCareerStats[official.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(official) : { playerId:official.id, clubId:official.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
   player.status = 'promoted';
   player.promotedTurn = currentTurnIndex();
   recordAcademyCareerProgress({ promotions:1 });

@@ -356,12 +356,19 @@ function quickBotConditionDeltaForOverexertion(player, rule){
 }
 function quickEnsureStatsForPlayers(players=[]){
   game.playerStats = game.playerStats || {};
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
   players.forEach(player => {
     if(!player) return;
     if(!game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function'
       ? createEmptyPlayerStat(player)
-      : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
-    if(typeof normalizePlayerStatRecord === 'function') normalizePlayerStatRecord(game.playerStats[player.id]);
+      : { playerId:player.id, clubId:player.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
+    if(!game.playerCareerStats[player.id]) game.playerCareerStats[player.id] = typeof createEmptyPlayerStat === 'function'
+      ? createEmptyPlayerStat(player)
+      : { playerId:player.id, clubId:player.clubId, played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
+    if(typeof normalizePlayerStatRecord === 'function'){
+      normalizePlayerStatRecord(game.playerStats[player.id], player);
+      normalizePlayerStatRecord(game.playerCareerStats[player.id], player);
+    }
   });
 }
 function quickSimulateBotMatch(match){
@@ -1358,7 +1365,7 @@ function showLiveMatchEngineBlocked(status){
     <p class="muted">El partido propio quedó pendiente para evitar que se resuelva con el sistema viejo.</p>
     ${details ? `<ul class="live-engine-errors">${details}</ul>` : ''}
     <p class="muted small">Subí también los archivos nuevos del ZIP, especialmente <strong>js/game/17-live-match.js</strong>, <strong>simulador-2.0.js</strong>, <strong>index.html</strong> y <strong>js/game/09a-team-cohesion-summary.js</strong> a <strong>js/game/09e-training.js</strong>. Después usá Control + F5.</p>
-    <div class="modal-actions"><button class="primary" onclick="closeModal()">Entendido</button></div>
+    <div class="modal-actions"><button class="primary" data-close-modal>Entendido</button></div>
   </div>`;
   if(typeof openModal === 'function') openModal(html);
   showNotice('No se cargó el motor de simulación viva. El partido no fue simulado con el sistema anterior.', true);
@@ -1388,7 +1395,7 @@ function showResultOnlySummary(result){
         <div class="card inner"><h3>${escapeHtml(h)}</h3><p>Intentos de ataque: ${Number(hs.attacks || 0)}</p><p>Tiros al arco: ${Number(hs.chances || 0)}</p><p>xG: ${Number(hs.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(hs.possession || 0)}%</p></div>
         <div class="card inner"><h3>${escapeHtml(a)}</h3><p>Intentos de ataque: ${Number(as.attacks || 0)}</p><p>Tiros al arco: ${Number(as.chances || 0)}</p><p>xG: ${Number(as.xg || 0).toFixed(2)}</p><p>Posesión: ${Number(as.possession || 0)}%</p></div>
       </div>
-      <div class="modal-actions"><button class="primary" onclick="closeModal()">Cerrar</button></div>
+      <div class="modal-actions"><button class="primary" data-close-modal>Cerrar</button></div>
     </div>`;
     if(typeof openModal === 'function') openModal(body);
   }, 0);
@@ -1783,5 +1790,4 @@ function simulatePostseasonTurn(){
     showNotice('Día de postemporada aplicado.');
   }
 }
-
 

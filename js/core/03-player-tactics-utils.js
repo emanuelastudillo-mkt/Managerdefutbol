@@ -1487,9 +1487,9 @@ function faceImg(player, className='photo-thumb'){
   const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
   const fallbackAttr = fallbackBase && fallbackBase !== base ? ` data-face-fallback-base="${escapeHtml(fallbackBase)}"` : '';
   if(customPath){
-    return `<img class="${escapeHtml(className)}" src="${escapeHtml(versionedCustomPhotoPath(customPath))}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1"${fallbackAttr} onerror="tryNextFaceExt(this)">`;
+    return `<img class="${escapeHtml(className)}" src="${escapeHtml(versionedCustomPhotoPath(customPath))}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1"${fallbackAttr}>`;
   }
-  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr} onerror="tryNextFaceExt(this)">`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr}>`;
 }
 function tryNextFaceExt(img){
   const exts = ['.webp','.png','.jpg','.jpeg'];
@@ -1784,53 +1784,7 @@ function bestBotFormationSelection(clubId, options={}){
     if(botFormationCandidateIsBetter(candidate, best, prioritizeTopPlayers)) best = candidate;
   });
   if(!best) best = { formation:'4-4-2', lineup:[], assignments:[], score:-Infinity, missing:11, priorityPlayers, priorityCoverage:botPriorityCoverageForLineup([], FORMATIONS?.['4-4-2'] || [], priorityPlayers) };
-  best.audit = {
-    enabled:prioritizeTopPlayers,
-    clubId:id,
-    formation:best.formation,
-    requested:Number(best.priorityCoverage?.requested || 0),
-    included:Number(best.priorityCoverage?.included || 0),
-    passed:!prioritizeTopPlayers || Boolean(best.priorityCoverage?.passed),
-    exact:Number(best.priorityCoverage?.exact || 0),
-    compatible:Number(best.priorityCoverage?.compatible || 0),
-    forcedZone:Number(best.priorityCoverage?.forcedZone || 0),
-    averageFit:Number(best.priorityCoverage?.averageFit || 0),
-    priorityPlayerIds:priorityPlayers.map(player => Number(player.id)),
-    omittedPlayerIds:(best.priorityCoverage?.omittedIds || []).slice()
-  };
   return best;
-}
-function testBotFormationCoverageAgainstManager(clubId, options={}){
-  const count = Math.max(3, Math.min(5, Math.round(Number(options.priorityCount || (typeof BOT_MANAGER_TOP_PLAYERS_COUNT !== 'undefined' ? BOT_MANAGER_TOP_PLAYERS_COUNT : 5)))));
-  const selection = bestBotFormationSelection(clubId, {
-    prioritizeTopPlayers:true,
-    priorityCount:count,
-    priorityBonus:Number(options.priorityBonus || (typeof BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS !== 'undefined' ? BOT_MANAGER_TOP_PLAYER_INCLUSION_BONUS : 5000))
-  });
-  return {
-    clubId:Number(clubId || 0),
-    formation:selection.formation,
-    lineupIds:(selection.lineup || []).map(player => Number(player.id)),
-    topPlayerIds:(selection.priorityPlayers || []).map(player => Number(player.id)),
-    ...selection.audit
-  };
-}
-function testAllBotFormationCoverageAgainstManager(options={}){
-  const managerClubId = Number(game?.selectedClubId || 0);
-  const clubIds = (seed?.clubs || []).map(club => Number(club.id || 0)).filter(id => id && id !== managerClubId);
-  const results = clubIds.map(id => testBotFormationCoverageAgainstManager(id, options));
-  return {
-    tested:results.length,
-    passed:results.filter(result => result.passed).length,
-    failed:results.filter(result => !result.passed),
-    results
-  };
-}
-if(typeof window !== 'undefined'){
-  window.BotFormationCoverageTest = {
-    testClub:testBotFormationCoverageAgainstManager,
-    testAll:testAllBotFormationCoverageAgainstManager
-  };
 }
 function zoneFactor(player, slot){
   return playerTacticFitFactor(player, slot);
@@ -2245,6 +2199,4 @@ function pitchSlots(tactic){
     return { player, slot, index:i, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: player ? playerMentality(player.id, tactic) : 'posicional' };
   });
 }
-
-
 

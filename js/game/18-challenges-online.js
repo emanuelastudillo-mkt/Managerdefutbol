@@ -1,4 +1,4 @@
-/* Desafíos online: fotografías del equipo, simulación local y resultados públicos. */
+/* Desafíos online: snapshots del equipo y resultados autoritativos del Worker. */
 
 let challengeViewTab = 'available';
 let challengeRowsCache = { available:[], mine:[], history:[], ranking:[] };
@@ -10,7 +10,7 @@ let challengeCooldownTimer = null;
 let challengeActionBusy = false;
 let challengeAvailableCategory = '';
 let challengeRankingCategory = '';
-let challengeRankingHistoryCache = [];
+let challengeRankingLeaderboardsCache = {};
 let challengeRewardStatus = { loaded:false, loading:false, compatible:true, error:'', serverTime:'', currentCycle:null, claims:[], champions:[], currentStandings:{}, ownerKey:'' };
 let challengeHomeOnlineState = {
   categoryCode:'L', categoryName:'Libre', salaryTotal:0, complete:false,
@@ -164,9 +164,8 @@ async function challengeRefreshHomeRanking(options={}){
     await challengeLoadRewardStatus({ force:options.force });
     let own = challengeServerCurrentStanding(summary.categoryCode);
     if(!own){
-      const history = await challengeLoadCompleteHistory();
-      challengeRankingHistoryCache = history;
-      const rows = challengeBuildCategoryRanking(history, summary.categoryCode, challengeRewardStatus.currentCycle || challengeCycleAt());
+      const data = await challengeRequest('challenges/ranking', { query:`?categoryCode=${encodeURIComponent(summary.categoryCode)}` });
+      const rows = Array.isArray(data?.ranking) ? data.ranking : [];
       own = challengeFindOwnRankingRow(rows);
     }
     challengeHomeOnlineState.rankingLoaded = true;
@@ -232,7 +231,7 @@ function challengeConfig(){
   return {
     active:cfg.activo !== false,
     endpoint:String(cfg.endpoint || rankingStoredEndpoint?.() || RANKING_APPS_SCRIPT_URL || '').trim(),
-    simulatorVersion:String(cfg.versionSimulador || window.ChallengeSimulator?.version || 'challenge-sim-v1'),
+    simulatorVersion:String(cfg.versionSimulador || 'challenge-sim-v2-server'),
     pageSize:Math.max(5, Math.min(100, Math.round(Number(cfg.resultadosPorPagina || 40)))),
     pollMs:Math.max(10000, Math.round(Number(cfg.actualizacionMs || 30000))),
     actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000)),
@@ -526,7 +525,7 @@ function challengeApiUrl(path='', query=''){
   return `${challengeEndpoint()}${clean ? `/${clean}` : ''}${query || ''}`;
 }
 function challengeHeaders(includeJson=false){
-  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.49') };
+  const headers = { 'X-FM-Client-Version':String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.51') };
   const token = challengeToken();
   if(token) headers.Authorization = `Bearer ${token}`;
   if(includeJson) headers['Content-Type'] = 'application/json';
@@ -635,7 +634,23 @@ function challengeCategoryNavigationMarkup(context='available'){
 }
 function challengeFormation(){ return typeof isCustomTactic === 'function' && isCustomTactic(game?.tactic) ? 'Personalizada' : String(game?.tactic?.formation || game?.tactic?.formationId || '4-4-2'); }
 function challengePlayerValue(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.clause ?? player?.value, 0))); }
-function challengePlayerSalary(player){ return Math.max(0, Math.round(challengeSafeNumber(player?.salary, 0))); }
+function challengeCompetitionStrength(player){
+  const overall = clamp(Math.round(Number(typeof effectiveOverall === 'function' ? effectiveOverall(player) : player?.overall || 50)), 1, 99);
+  const skills = player?.skills && ['attack','defense','passing','speed','heading','shooting','stamina','leadership','serenity','discipline','teamwork','goalkeeping'].some(key => Number.isFinite(Number(player.skills[key])))
+    ? player.skills
+    : challengeVisibleSkillSet(player);
+  const values = Object.values(skills || {}).map(Number).filter(Number.isFinite).map(value => clamp(value, 1, 99));
+  const average = values.length ? values.reduce((sum,value) => sum + value, 0) / values.length : overall;
+  return clamp(Math.round(Math.max(overall, average)), 1, 99);
+}
+function challengeCompetitionSalaryFloor(player){
+  const media = challengeCompetitionStrength(player);
+  const multiplier = media >= 88 ? 3000000 : media >= 75 ? 1000000 : media >= 62 ? 300000 : media >= 38 ? 80000 : 10000;
+  return Math.max(1, Math.round(media * multiplier * 0.10 * 0.35));
+}
+function challengePlayerSalary(player){
+  return Math.max(challengeCompetitionSalaryFloor(player), Math.round(challengeSafeNumber(player?.salary, 0)));
+}
 function challengeSkill(player, key){
   try{ return clamp(Math.round(typeof baseSkill === 'function' ? baseSkill(player, key) : player?.skills?.[key] || player?.[key] || player?.overall || 50), 1, 99); }
   catch(_){ return clamp(Math.round(Number(player?.overall || 50)), 1, 99); }
@@ -724,7 +739,7 @@ function buildChallengeSnapshot(){
   return {
     snapshotVersion:1,
     context:{
-      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.49'),
+      gameVersion:String(typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V8.51'),
       simulatorVersion:challengeConfig().simulatorVersion,
       seasonNumber:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       seasonDay:Math.max(1, Math.round(Number(seasonDay || 1)))
@@ -774,7 +789,7 @@ function challengeCrestMarkup(snapshot={}, extraClass=''){
   const club = snapshot?.club || {};
   const src = String(club.crestPath || '').trim();
   return src
-    ? `<span class="challenge-crest-shell ${escapeHtml(extraClass)}"><img src="${escapeHtml(src)}" alt="" class="challenge-crest" onerror="this.parentElement.classList.add('crest-missing');this.remove()"></span>`
+    ? `<span class="challenge-crest-shell ${escapeHtml(extraClass)}"><img src="${escapeHtml(src)}" alt="" class="challenge-crest"></span>`
     : `<span class="challenge-crest-shell crest-missing ${escapeHtml(extraClass)}" aria-hidden="true">⚽</span>`;
 }
 function challengeVenueName(snapshot={}){
@@ -902,151 +917,6 @@ function challengeHistoryCard(row){
   </article>`;
 }
 
-function challengeMatchGoals(row, side='home'){
-  const match = row?.match || {};
-  const result = match?.result || {};
-  const score = result?.score || {};
-  return Math.max(0, Math.round(challengeSafeNumber(side === 'home' ? (match.homeGoals ?? score.home) : (match.awayGoals ?? score.away), 0)));
-}
-function challengeManagerIdentity(row, side='home'){
-  const isHome = side === 'home';
-  const id = String(isHome ? (row?.creatorUserId || '') : (row?.opponentUserId || '')).trim();
-  const username = String(isHome ? (row?.creatorUsername || 'Manager') : (row?.opponentUsername || 'Manager')).trim() || 'Manager';
-  return { key:id ? `id:${id}` : `user:${username.toLocaleLowerCase('es')}`, username };
-}
-function challengeCompletedMatch(row){
-  if(!row || String(row.status || 'completed') !== 'completed' || !row.opponentUsername) return null;
-  const homeSnapshot = row.creatorSnapshot || {};
-  const awaySnapshot = row.opponentSnapshot || {};
-  const categoryCode = challengeSnapshotCategoryCode(homeSnapshot, { inferLegacy:false });
-  const awayCode = challengeSnapshotCategoryCode(awaySnapshot, { inferLegacy:false });
-  if(categoryCode !== awayCode) return null;
-  const home = challengeManagerIdentity(row, 'home');
-  const away = challengeManagerIdentity(row, 'away');
-  if(home.key === away.key) return null;
-  return {
-    id:String(row.id || `${row.completedAt || row.createdAt || ''}:${home.key}:${away.key}`),
-    completedAt:String(row.completedAt || row.match?.createdAt || row.createdAt || ''),
-    categoryCode,
-    home,
-    away,
-    homeGoals:challengeMatchGoals(row, 'home'),
-    awayGoals:challengeMatchGoals(row, 'away'),
-    homeRating:challengeSafeNumber(homeSnapshot?.team?.rating, 0),
-    awayRating:challengeSafeNumber(awaySnapshot?.team?.rating, 0)
-  };
-}
-function challengeRankingState(key, username){
-  return {
-    key, username, played:0, wins:0, draws:0, losses:0, goalsFor:0, goalsAgainst:0,
-    rawPoints:0, points:0, bestMatchPoints:0, uniqueWins:0, opponents:new Set(), winsAgainst:new Map(),
-    ratingTotal:0, opponentRatingTotal:0
-  };
-}
-function challengeOpponentQualityMultiplier(opponent){
-  const played = Math.max(0, Number(opponent?.played || 0));
-  const raw = Math.max(0, Number(opponent?.rawPoints || 0));
-  const quality = (raw + 3) / (played * 3 + 6);
-  return clamp(0.45 + 1.10 * quality, 0.50, 1.50);
-}
-function challengeRankingPositions(states){
-  const sorted = [...states.values()].filter(row => row.played > 0).sort((a,b) =>
-    b.points - a.points || b.rawPoints - a.rawPoints || b.wins - a.wins ||
-    (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || a.username.localeCompare(b.username, 'es')
-  );
-  return new Map(sorted.map((row,index) => [row.key, index + 1]));
-}
-function challengePositionMultiplier(manager, opponent, states, positions){
-  if(states.size < 4 || manager.played < 3 || opponent.played < 3) return 1;
-  const managerRank = positions.get(manager.key) || states.size;
-  const opponentRank = positions.get(opponent.key) || states.size;
-  return clamp(1 + (managerRank - opponentRank) * 0.035, 0.75, 1.35);
-}
-function challengeRepeatVictoryMultiplier(previousWins){
-  const wins = Math.max(0, Math.round(Number(previousWins || 0)));
-  if(wins === 0) return 1.15;
-  if(wins === 1) return 0.80;
-  if(wins === 2) return 0.62;
-  if(wins === 3) return 0.50;
-  return Math.max(0.35, 0.50 - (wins - 3) * 0.04);
-}
-function challengeAwardedPoints(result, manager, opponent, states, positions){
-  if(result === 'loss') return 0;
-  const base = result === 'win' ? 100 : 30;
-  const quality = challengeOpponentQualityMultiplier(opponent);
-  const position = challengePositionMultiplier(manager, opponent, states, positions);
-  const repeat = result === 'win' ? challengeRepeatVictoryMultiplier(manager.winsAgainst.get(opponent.key) || 0) : 1;
-  return Math.max(result === 'win' ? 20 : 8, Math.round(base * quality * position * repeat));
-}
-function challengeBuildCategoryRanking(historyRows, categoryCode, cycle=null){
-  const code = challengeCategoryByCode(categoryCode).code;
-  const activeCycle = cycle || challengeRewardStatus.currentCycle || challengeCycleAt();
-  const matches = (historyRows || []).map(challengeCompletedMatch).filter(Boolean).filter(match => match.categoryCode === code && challengeCycleContains(activeCycle, match.completedAt)).sort((a,b) => {
-    const timeA = new Date(a.completedAt || 0).getTime() || 0;
-    const timeB = new Date(b.completedAt || 0).getTime() || 0;
-    return timeA - timeB || a.id.localeCompare(b.id);
-  });
-  const states = new Map();
-  const getState = identity => {
-    if(!states.has(identity.key)) states.set(identity.key, challengeRankingState(identity.key, identity.username));
-    const state = states.get(identity.key);
-    state.username = identity.username || state.username;
-    return state;
-  };
-  matches.forEach(match => {
-    const home = getState(match.home);
-    const away = getState(match.away);
-    const positions = challengeRankingPositions(states);
-    const homeResult = match.homeGoals > match.awayGoals ? 'win' : match.homeGoals < match.awayGoals ? 'loss' : 'draw';
-    const awayResult = homeResult === 'win' ? 'loss' : homeResult === 'loss' ? 'win' : 'draw';
-    const homeAward = challengeAwardedPoints(homeResult, home, away, states, positions);
-    const awayAward = challengeAwardedPoints(awayResult, away, home, states, positions);
-    [[home,away,homeResult,match.homeGoals,match.awayGoals,homeAward,match.homeRating,match.awayRating], [away,home,awayResult,match.awayGoals,match.homeGoals,awayAward,match.awayRating,match.homeRating]].forEach(([state,opponent,result,gf,ga,award,rating,opponentRating]) => {
-      state.played += 1;
-      state.goalsFor += gf;
-      state.goalsAgainst += ga;
-      state.ratingTotal += rating;
-      state.opponentRatingTotal += opponentRating;
-      state.opponents.add(opponent.key);
-      state.points += award;
-      state.bestMatchPoints = Math.max(state.bestMatchPoints, award);
-      if(result === 'win'){
-        state.wins += 1;
-        state.rawPoints += 3;
-        const priorWins = state.winsAgainst.get(opponent.key) || 0;
-        if(priorWins === 0) state.uniqueWins += 1;
-        state.winsAgainst.set(opponent.key, priorWins + 1);
-      }else if(result === 'draw'){
-        state.draws += 1;
-        state.rawPoints += 1;
-      }else state.losses += 1;
-    });
-  });
-  const minimum = challengeConfig().rankingMinimumMatches;
-  const minimumOpponents = challengeConfig().rankingMinimumOpponents;
-  const normalized = [...states.values()].map(state => ({
-    identityKey:state.key,
-    username:state.username,
-    played:state.played,
-    wins:state.wins,
-    draws:state.draws,
-    losses:state.losses,
-    goalsFor:state.goalsFor,
-    goalsAgainst:state.goalsAgainst,
-    goalDifference:state.goalsFor - state.goalsAgainst,
-    points:state.points,
-    bestMatchPoints:state.bestMatchPoints,
-    uniqueWins:state.uniqueWins,
-    uniqueOpponents:state.opponents.size,
-    averageTeamRating:state.played ? state.ratingTotal / state.played : 0,
-    averageOpponentRating:state.played ? state.opponentRatingTotal / state.played : 0,
-    qualified:state.played >= minimum && state.opponents.size >= minimumOpponents
-  }));
-  normalized.sort((a,b) => Number(b.qualified) - Number(a.qualified) || b.points - a.points || b.wins - a.wins || b.goalDifference - a.goalDifference || b.uniqueWins - a.uniqueWins || a.username.localeCompare(b.username, 'es'));
-  let officialRank = 0;
-  normalized.forEach(row => { row.rank = row.qualified ? ++officialRank : null; });
-  return normalized;
-}
 function challengeRankingMarkup(rows){
   const category = challengeCategoryByCode(challengeRankingCategory);
   const cfg = challengeConfig();
@@ -1196,7 +1066,7 @@ function bindChallengeEvents(){
   }));
   document.querySelectorAll('[data-challenge-ranking-category]').forEach(button => button.addEventListener('click', () => {
     challengeRankingCategory = button.dataset.challengeRankingCategory;
-    challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
+    challengeRowsCache.ranking = challengeRankingLeaderboardsCache[challengeRankingCategory] || [];
     renderOnlineChallenges();
   }));
   document.querySelectorAll('[data-challenge-accept-random]').forEach(button => button.addEventListener('click', () => acceptRandomChallenge(button.dataset.challengeAcceptRandom)));
@@ -1208,41 +1078,6 @@ function bindChallengeEvents(){
 function challengeRowsFromResponse(data){
   return Array.isArray(data?.challenges) ? data.challenges : [];
 }
-function challengeRowUniqueKey(row, index=0){
-  return String(row?.id || `${row?.completedAt || row?.createdAt || ''}:${row?.creatorUsername || ''}:${row?.opponentUsername || ''}:${index}`);
-}
-async function challengeLoadCompleteHistory(){
-  const pageSize = challengeConfig().rankingHistoryPageSize;
-  const collected = [];
-  const seen = new Set();
-  let cursor = '';
-  let offset = 0;
-  for(let page=0; page<250; page += 1){
-    const params = new URLSearchParams({ limit:String(pageSize) });
-    if(cursor) params.set('cursor', cursor);
-    else if(offset) params.set('offset', String(offset));
-    let data;
-    try{ data = await challengeRequest('challenges/history', { query:`?${params.toString()}` }); }
-    catch(error){
-      if(page === 0) throw error;
-      break;
-    }
-    const rows = challengeRowsFromResponse(data);
-    let added = 0;
-    rows.forEach((row,index) => {
-      const key = challengeRowUniqueKey(row,index);
-      if(seen.has(key)) return;
-      seen.add(key);
-      collected.push(row);
-      added += 1;
-    });
-    const next = String(data?.nextCursor || data?.next_cursor || data?.nextPageToken || data?.next_page_token || '').trim();
-    if(next){ cursor = next; offset = 0; continue; }
-    if(rows.length < pageSize || added === 0) break;
-    offset += rows.length;
-  }
-  return collected;
-}
 async function loadChallenges(tab=challengeViewTab, options={}){
   if(!challengeToken() && tab === 'mine'){ challengeLoadedTabs.mine = true; return; }
   if(options.force) challengeLoadedTabs[tab] = false;
@@ -1250,10 +1085,14 @@ async function loadChallenges(tab=challengeViewTab, options={}){
   if(!options.silent && activeTab === 'challenges') renderOnlineChallenges();
   try{
     if(tab === 'ranking'){
-      const [history] = await Promise.all([challengeLoadCompleteHistory(), challengeLoadRewardStatus({ force:options.force })]);
-      challengeRankingHistoryCache = history;
+      const [rankingData] = await Promise.all([
+        challengeRequest('challenges/ranking'),
+        challengeLoadRewardStatus({ force:options.force })
+      ]);
+      challengeRankingLeaderboardsCache = rankingData?.leaderboards && typeof rankingData.leaderboards === 'object' ? rankingData.leaderboards : {};
       challengeHomeHistoryLoadedAt = Date.now();
-      challengeRowsCache.ranking = challengeBuildCategoryRanking(challengeRankingHistoryCache, challengeRankingCategory, challengeRewardStatus.currentCycle || challengeCycleAt());
+      challengeRowsCache.ranking = challengeRankingLeaderboardsCache[challengeRankingCategory]
+        || (Array.isArray(rankingData?.ranking) ? rankingData.ranking : []);
       challengeLoadedTabs.ranking = true;
     }else{
       const path = tab === 'available' ? 'challenges/open' : tab === 'mine' ? 'challenges/mine' : 'challenges/history';
@@ -1325,18 +1164,9 @@ async function acceptRandomChallenge(categoryCode){
     const acceptedChallengeId = String(accepted?.challengeId || '').trim();
     if(!acceptedChallengeId) throw new Error('El servidor no devolvió el desafío seleccionado.');
     challengeStartActionCooldown();
-    if(status) status.textContent = 'Simulando el partido en este navegador...';
-    const acceptedHomeCode = challengeSnapshotCategoryCode(accepted.homeSnapshot || {}, { inferLegacy:false });
-    const acceptedAwayCode = challengeSnapshotCategoryCode(accepted.awaySnapshot || {}, { inferLegacy:false });
-    if(acceptedHomeCode !== targetCode || acceptedAwayCode !== targetCode) throw new Error('El desafío no conserva la misma categoría para ambos equipos.');
-    const result = window.ChallengeSimulator.simulateChallengeMatch({
-      homeSnapshot:accepted.homeSnapshot,
-      awaySnapshot:accepted.awaySnapshot,
-      seed:accepted.seed
-    });
-    result.competition = { categoryCode:targetCode, categoryName:targetCategory.name, scoringVersion:'category-points-v1' };
-    if(status) status.textContent = 'Guardando el resultado...';
-    const saved = await challengeRequest(`challenges/${encodeURIComponent(acceptedChallengeId)}/result`, { method:'POST', body:{ result } });
+    if(status) status.textContent = 'Recuperando el partido calculado y guardado por el servidor...';
+    const saved = accepted?.challenge ? accepted : await challengeRequest(`challenges/${encodeURIComponent(acceptedChallengeId)}`);
+    if(!saved?.challenge?.match) throw new Error('El Worker no devolvió el resultado autoritativo. Verificá que esté instalada la versión V8.32.');
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
     challengeRowsCache.history = [];
@@ -1346,7 +1176,7 @@ async function acceptRandomChallenge(categoryCode){
     challengeLoadedTabs.history = false;
     challengeLoadedTabs.ranking = false;
     challengeDetail = saved.challenge || null;
-    showNotice('Rival asignado al azar. Partido simulado y guardado.');
+    showNotice('Rival asignado al azar. El Worker simuló y guardó el partido.');
     renderOnlineChallenges();
   }catch(error){
     if(status) status.textContent = '';
@@ -1421,7 +1251,7 @@ function renderChallengeDetail(row){
       </main>
       ${challengeRatingsColumn(ratings,'away')}
     </div>
-    <div class="card challenge-disclaimer"><strong>Competencia ${escapeHtml(category.name)}.</strong> El resultado fue simulado localmente por el jugador que aceptó, suma al ranking de la categoría y no modifica ninguna carrera.</div>`;
+    <div class="card challenge-disclaimer"><strong>Competencia ${escapeHtml(category.name)}.</strong> El resultado fue calculado y validado por el Worker, suma al ranking de la categoría y no modifica ninguna carrera.</div>`;
   $('btnBackChallenges')?.addEventListener('click', () => { challengeDetail=null; renderOnlineChallenges(); });
 }
 function challengeStatisticsMarkup(home, away, statistics){

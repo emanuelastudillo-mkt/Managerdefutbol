@@ -302,11 +302,3 @@ function openManagerCourseCompletionModal(licenseId='', awarded=0){
   openModal(body);
   $('btnContinueManagerCourses')?.addEventListener('click', () => openManagerCoursesModal({ focus:nextId || 'international' }));
 }
-
-window.ManagerCoursesTest = {
-  licenses:MANAGER_COURSE_ORDER.slice(),
-  topicCounts:Object.fromEntries(MANAGER_COURSE_ORDER.map(id => [id, managerCourseTopicIds(id).length])),
-  normalize:normalizeManagerCoursesState,
-  progress:(state=null) => Object.fromEntries(MANAGER_COURSE_ORDER.map(id => [id, managerCourseLicenseProgress(id, state)])),
-  unlocked:(state=null) => Object.fromEntries(MANAGER_COURSE_ORDER.map(id => [id, managerCourseLicenseUnlocked(id, state)]))
-};

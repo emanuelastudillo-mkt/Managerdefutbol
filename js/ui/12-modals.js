@@ -1344,7 +1344,7 @@ function founderCrestOptionsMarkup(){
   return options.slice(0, 9).map((path, index) => {
     const checked = index === 0 ? 'checked' : '';
     const clean = escapeHtml(path);
-    return `<label class="founder-crest-option" title="Escudo ${index + 1}"><input type="radio" name="founderCrestPath" value="${clean}" ${checked}><span><img src="${clean}" alt="Escudo fundador ${index + 1}" onerror="var el=this.closest('.founder-crest-option');if(el)el.classList.add('missing')"></span></label>`;
+    return `<label class="founder-crest-option" title="Escudo ${index + 1}"><input type="radio" name="founderCrestPath" value="${clean}" ${checked}><span><img src="${clean}" alt="Escudo fundador ${index + 1}"></span></label>`;
   }).join('');
 }
 
@@ -1679,7 +1679,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.49</p>
+      <p class="eyebrow">Guía actualizada · V8.51</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1889,4 +1889,3 @@ function forceCloseModal(){
   if(root) root.remove();
   document.querySelectorAll('.modal-backdrop').forEach(node => node.remove());
 }
-

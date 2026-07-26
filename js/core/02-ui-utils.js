@@ -254,12 +254,42 @@ function nextClubBadgeSrc(img){
   img.onerror = null;
   img.style.visibility = 'hidden';
 }
+function handleDelegatedImageError(event){
+  const img = event?.target;
+  if(typeof HTMLImageElement === 'undefined' || !(img instanceof HTMLImageElement)) return;
+  if(img.dataset.fallbackSrcs){
+    nextClubBadgeSrc(img);
+    return;
+  }
+  if(img.dataset.faceBase && typeof tryNextFaceExt === 'function'){
+    tryNextFaceExt(img);
+    return;
+  }
+  const founderOption = img.closest('.founder-crest-option');
+  if(founderOption){
+    founderOption.classList.add('missing');
+    return;
+  }
+  if(img.classList.contains('challenge-crest')){
+    img.parentElement?.classList.add('crest-missing');
+    img.remove();
+    return;
+  }
+  const staffFallback = img.nextElementSibling;
+  if(staffFallback?.classList?.contains('staff-photo-fallback')){
+    img.style.display = 'none';
+    staffFallback.style.display = 'grid';
+  }
+}
+if(typeof document !== 'undefined'){
+  document.addEventListener('error', handleDelegatedImageError, true);
+}
 function clubBadge(id){
   const club = seed.clubs.find(c=>c.id===id) || {};
   const paths = clubBadgeSrcCandidates(club);
   const src = paths[0] || '';
   const fallbackJson = escapeHtml(JSON.stringify(paths));
-  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" data-fallback-index="0" data-fallback-srcs='${fallbackJson}' onerror="nextClubBadgeSrc(this)"></span>`;
+  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" data-fallback-index="0" data-fallback-srcs='${fallbackJson}'></span>`;
 }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }

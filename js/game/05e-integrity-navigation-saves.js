@@ -871,6 +871,7 @@ function bindEvents(){
 function startUiTicker(){
   clearInterval(uiTicker);
   uiTicker = setInterval(()=>{
+    if(typeof document !== 'undefined' && document.hidden) return;
     if(game) refreshSidebarDate();
     if(game && activeTab === 'home') updateAdvanceButtonState();
   }, 1000);

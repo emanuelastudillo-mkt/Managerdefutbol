@@ -323,6 +323,7 @@ function processManagerPlayerPortfolioDaily(){
     item.player.lastSalaryPaidSeason = 0;
     if(typeof refreshPlayerClause === 'function') refreshPlayerClause(item.player);
     if(game.playerStats?.[item.player.id]) game.playerStats[item.player.id].clubId = item.player.clubId;
+    if(game.playerCareerStats?.[item.player.id]) game.playerCareerStats[item.player.id].clubId = item.player.clubId;
     if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
     if(typeof pushGameMessage === 'function') pushGameMessage({
       type:'mercado', priority:'normal', title:'Transferencia de un jugador de tu cartera',

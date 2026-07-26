@@ -121,8 +121,10 @@ function ensureClubWorldCupInvitedData(){
       addedPlayers += generated.length;
       if(game){
         game.playerStats = game.playerStats || {};
+        game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
         generated.forEach(player => {
           if(!game.playerStats[player.id]) game.playerStats[player.id] = createEmptyPlayerStat(player);
+          if(!game.playerCareerStats[player.id]) game.playerCareerStats[player.id] = createEmptyPlayerStat(player);
           if(game.playerCondition) game.playerCondition[player.id] = Math.max(65, Number(game.playerCondition[player.id] || 0));
           if(game.playerMorale) game.playerMorale[player.id] = Math.max(60, Number(game.playerMorale[player.id] || 0));
           game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};

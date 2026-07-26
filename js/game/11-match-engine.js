@@ -78,30 +78,96 @@ function applyResultToTables(match, hg, ag){
   else { h.pe++; a.pe++; h.pts++; a.pts++; }
   h.dg = h.gf - h.gc; a.dg = a.gf - a.gc;
 }
+function officialPlayerStatsRecord(container, playerId, clubId){
+  const id = Math.max(0, Math.round(Number(playerId || 0)));
+  if(!container || !id) return null;
+  const player = playerById(id) || { id, clubId };
+  if(!container[id]) container[id] = typeof createEmptyPlayerStat === 'function'
+    ? createEmptyPlayerStat(player)
+    : { playerId:id, clubId:Number(player.clubId || clubId || 0), played:0, starts:0, minutes:0, goals:0, assists:0, yellow:0, red:0, injuries:0, keySaves:0, goalsConceded:0, cleanSheets:0, errors:0, goalErrors:0, ratingTotal:0, ratedMatches:0, lastRating:0 };
+  if(typeof normalizePlayerStatRecord === 'function') normalizePlayerStatRecord(container[id], player);
+  container[id].clubId = Math.max(0, Math.round(Number(player.clubId ?? clubId ?? container[id].clubId ?? 0)));
+  return container[id];
+}
+function officialPlayerParticipation(playerId, clubId, lineup=[], substitutions=[], cards=[], injuries=[]){
+  const id = Number(playerId || 0);
+  const starters = new Set((lineup || []).map(player => Number(player?.id || 0)).filter(Boolean));
+  const ownSubs = (substitutions || []).filter(sub => Number(sub?.clubId || 0) === Number(clubId));
+  const starter = starters.has(id);
+  const entry = starter
+    ? 0
+    : Math.min(90, ...ownSubs.filter(sub => Number(sub?.inId || 0) === id).map(sub => Math.max(0, Number(sub?.minute || 0))), 90);
+  if(!starter && entry >= 90 && !ownSubs.some(sub => Number(sub?.inId || 0) === id)) return null;
+  const exits = [90];
+  ownSubs.filter(sub => Number(sub?.outId || 0) === id).forEach(sub => exits.push(Math.max(entry, Math.min(90, Number(sub?.minute || 90)))));
+  (cards || []).filter(card => Number(card?.clubId || 0) === Number(clubId) && Number(card?.playerId || 0) === id && ['red','secondYellowRed'].includes(String(card?.type || ''))).forEach(card => exits.push(Math.max(entry, Math.min(90, Number(card?.minute || 90)))));
+  (injuries || []).filter(injury => Number(injury?.clubId || 0) === Number(clubId) && Number(injury?.playerId || 0) === id).forEach(injury => exits.push(Math.max(entry, Math.min(90, Number(injury?.minute || 90)))));
+  const exit = Math.max(entry, Math.min(...exits));
+  return { starter, entry, exit, minutes:Math.max(0, Math.round(exit - entry)) };
+}
+function officialPlayerMatchRating(matchResult, clubId, playerId){
+  if(!matchResult) return null;
+  const id = Number(playerId || 0);
+  const list = Array.isArray(matchResult.playerRatings) ? matchResult.playerRatings : [];
+  const stored = Number(list.find(item => Number(item?.playerId || item?.id || 0) === id)?.rating);
+  if(Number.isFinite(stored)) return clamp(stored, 3, 10);
+  if(typeof managerPlayerStatsEventSummary === 'function' && typeof managerPlayerFallbackRating === 'function'){
+    const events = managerPlayerStatsEventSummary(matchResult, id);
+    return clamp(Number(managerPlayerFallbackRating(matchResult, clubId, id, events) || 0), 3, 10);
+  }
+  return null;
+}
 function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries, keySaves=[], errors=[], matchResult=null){
-  const playedIds = new Set(lineup.map(p => p.id));
-  substitutions.filter(s => s.clubId === clubId).forEach(s => playedIds.add(s.inId));
-  playedIds.forEach(id => { if(game.playerStats[id]) game.playerStats[id].played++; });
-  goals.filter(g=>g.clubId===clubId).forEach(g=>{
-    game.playerStats[g.playerId].goals++;
-    if(g.assistId) game.playerStats[g.assistId].assists++;
+  game.playerStats = game.playerStats || {};
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
+  const playedIds = new Set((lineup || []).map(player => Number(player?.id || 0)).filter(Boolean));
+  (substitutions || []).filter(sub => Number(sub?.clubId || 0) === Number(clubId)).forEach(sub => {
+    const inId = Number(sub?.inId || 0);
+    if(inId) playedIds.add(inId);
   });
-  cards.filter(c=>c.clubId===clubId).forEach(c=>{
-    if(c.type === 'yellow') game.playerStats[c.playerId].yellow++;
-    if(c.type === 'secondYellowRed') { game.playerStats[c.playerId].yellow++; game.playerStats[c.playerId].red++; }
-    if(c.type === 'red') game.playerStats[c.playerId].red++;
-  });
-  injuries.filter(i=>i.clubId===clubId).forEach(i=>{
-    if(game.playerStats[i.playerId]) game.playerStats[i.playerId].injuries++;
-  });
-  keySaves.filter(s=>s.clubId===clubId).forEach(s=>{
-    if(game.playerStats[s.playerId]) game.playerStats[s.playerId].keySaves = Number(game.playerStats[s.playerId].keySaves || 0) + 1;
-  });
-  errors.filter(e=>e.clubId===clubId).forEach(e=>{
-    if(game.playerStats[e.playerId]){
-      game.playerStats[e.playerId].errors = Number(game.playerStats[e.playerId].errors || 0) + 1;
-      if(e.goal) game.playerStats[e.playerId].goalErrors = Number(game.playerStats[e.playerId].goalErrors || 0) + 1;
-    }
+  playedIds.forEach(id => {
+    const participation = officialPlayerParticipation(id, clubId, lineup, substitutions, cards, injuries);
+    if(!participation) return;
+    const player = playerById(id);
+    const eventSummary = typeof managerPlayerStatsEventSummary === 'function' && matchResult
+      ? managerPlayerStatsEventSummary(matchResult, id)
+      : {
+          goals:(goals || []).filter(goal => Number(goal?.clubId || 0) === Number(clubId) && Number(goal?.playerId || goal?.scorerId || 0) === id).length,
+          assists:(goals || []).filter(goal => Number(goal?.clubId || 0) === Number(clubId) && Number(goal?.assistId || 0) === id).length,
+          injuries:(injuries || []).filter(injury => Number(injury?.clubId || 0) === Number(clubId) && Number(injury?.playerId || 0) === id).length,
+          yellow:(cards || []).filter(card => Number(card?.clubId || 0) === Number(clubId) && Number(card?.playerId || 0) === id && ['yellow','secondYellowRed'].includes(String(card?.type || ''))).length,
+          red:(cards || []).filter(card => Number(card?.clubId || 0) === Number(clubId) && Number(card?.playerId || 0) === id && ['red','secondYellowRed'].includes(String(card?.type || ''))).length,
+          saves:(keySaves || []).filter(save => Number(save?.clubId || 0) === Number(clubId) && Number(save?.playerId || save?.goalkeeperId || 0) === id).length,
+          errors:(errors || []).filter(error => Number(error?.clubId || 0) === Number(clubId) && Number(error?.playerId || 0) === id).length,
+          goalErrors:(errors || []).filter(error => Number(error?.clubId || 0) === Number(clubId) && Number(error?.playerId || 0) === id && Boolean(error?.goal)).length
+        };
+    const isKeeper = String(player?.position || '').toUpperCase() === 'POR';
+    const rivalGoals = isKeeper
+      ? (goals || []).filter(goal => Number(goal?.clubId || 0) !== Number(clubId) && Number(goal?.minute || 90) >= participation.entry && Number(goal?.minute || 90) <= participation.exit).length
+      : 0;
+    const rating = officialPlayerMatchRating(matchResult, clubId, id);
+    [officialPlayerStatsRecord(game.playerStats, id, clubId), officialPlayerStatsRecord(game.playerCareerStats, id, clubId)].filter(Boolean).forEach(stat => {
+      stat.played += 1;
+      if(participation.starter) stat.starts += 1;
+      stat.minutes += participation.minutes;
+      stat.goals += Number(eventSummary.goals || 0);
+      stat.assists += Number(eventSummary.assists || 0);
+      stat.yellow += Number(eventSummary.yellow || 0);
+      stat.red += Number(eventSummary.red || 0);
+      stat.injuries += Number(eventSummary.injuries || 0);
+      stat.keySaves += Number(eventSummary.saves || 0);
+      stat.errors += Number(eventSummary.errors || 0);
+      stat.goalErrors += Number(eventSummary.goalErrors || 0);
+      if(isKeeper){
+        stat.goalsConceded += rivalGoals;
+        if(rivalGoals === 0 && participation.minutes >= 60) stat.cleanSheets += 1;
+      }
+      if(Number.isFinite(rating)){
+        stat.ratingTotal = Math.round((Number(stat.ratingTotal || 0) + rating) * 1000) / 1000;
+        stat.ratedMatches = Number(stat.ratedMatches || 0) + 1;
+        stat.lastRating = Math.round(rating * 10) / 10;
+      }
+    });
   });
   if(typeof recordManagerPlayerMatchStatistics === 'function' && matchResult){
     recordManagerPlayerMatchStatistics(clubId, [...playedIds], matchResult);

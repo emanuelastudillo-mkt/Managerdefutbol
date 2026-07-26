@@ -407,6 +407,7 @@ function applyCampoDestruidoChallengePreset(selectedClubId){
   resetChallengeDivisionStandings(selected, opponentIds);
   if(maradona){
     if(game.playerStats && game.playerStats[maradona.id]) game.playerStats[maradona.id].clubId = selected;
+    if(game.playerCareerStats && game.playerCareerStats[maradona.id]) game.playerCareerStats[maradona.id].clubId = selected;
     game.playerStatus[maradona.id] = {
       ...(game.playerStatus[maradona.id] || {}),
       injuredUntilTurn:currentTurnIndex() + Math.max(1, Math.round(Number(special.diasLesion || 1))),

@@ -1001,18 +1001,6 @@ function normalizePlayerCareerStats(raw, seasonStats={}){
   }
   return out;
 }
-function playerCareerStatsRecord(playerId, create=true){
-  const id = Math.max(0, Math.round(Number(playerId || 0)));
-  if(!game || !id) return null;
-  const player = playerById(id) || { id, clubId:0 };
-  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
-  if(!game.playerCareerStats[id]){
-    if(!create) return createEmptyPlayerStat(player);
-    game.playerCareerStats[id] = createEmptyPlayerStat(player);
-  }
-  return normalizePlayerStatRecord(game.playerCareerStats[id], player);
-}
-
 function createInitialManagerPlayerStatsHistory(){
   return { version:1, seasons:{} };
 }
@@ -2824,4 +2812,3 @@ function createArgentinePromotionPlayoffsIfNeeded(){
 
   return true;
 }
-

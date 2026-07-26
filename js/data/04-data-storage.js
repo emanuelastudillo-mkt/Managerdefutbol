@@ -1,12 +1,16 @@
 /* Carga de JSON, calendario anual, hinchadas, estadios, persistencia local e inicialización optimizada. */
 
+function versionedDataRequestUrl(url){
+  const clean = String(url || '').trim();
+  if(!clean || !/^data\//i.test(clean) || /[?&]v=/i.test(clean)) return clean;
+  const version = String(window.GAME_CONFIG?.version || 'V8.51').replace(/^v/i, '');
+  return `${clean}${clean.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
+}
 async function fetchJsonIfExists(url){
   try{
-    const res = await fetch(url, { cache:DATA_CACHE_MODE });
+    const res = await fetch(versionedDataRequestUrl(url), { cache:DATA_CACHE_MODE });
     if(!res.ok) return null;
-    const raw = await res.text();
-    if(!raw.trim()) return null;
-    return JSON.parse(raw);
+    return await res.json();
   }catch(error){
     console.warn(`No se pudo cargar ${url}`, error);
     return null;
@@ -385,7 +389,7 @@ async function readLegacyCareerSlotRecord(slotNumber=1){
     { key:number === 1 ? SAVE_KEY : `${SAVE_BACKUP_PREFIX}${primaryKey}`, source:'backup', priority:2 }
   ];
   if(number === 1) candidates.push({ key:legacyCareerSlotKey(), source:'legacy', priority:1 });
-  const loaded = await Promise.all(candidates.map(async item => ({ ...item, record:await readSaveRecordByKey(item.key).catch(()=>null) })));
+  const loaded = await Promise.all(candidates.map(async item => ({ ...item, record:await readSaveRecordByKey(item.key) })));
   const usable = loaded.filter(item => usableLocalSaveRecord(item.record));
   if(!usable.length) return null;
   usable.sort((a,b) => localSaveRecordTimestamp(b.record) - localSaveRecordTimestamp(a.record) || b.priority - a.priority);
@@ -400,7 +404,7 @@ async function migrateCareerSlotsToSingleSlot(){
     }
   }catch(_error){}
 
-  const records = (await Promise.all(Array.from({ length:10 }, (_, index) => readLegacyCareerSlotRecord(index + 1).catch(()=>null)))).filter(Boolean);
+  const records = (await Promise.all(Array.from({ length:10 }, (_, index) => readLegacyCareerSlotRecord(index + 1)))).filter(Boolean);
   const activeNumber = rawCareerSlotNumber(activeSaveSlotBeforeSingleSlotMigration);
   const activeRecord = records.find(item => item.slotNumber === activeNumber);
   const slotOneRecord = records.find(item => item.slotNumber === 1);
@@ -418,22 +422,18 @@ async function migrateCareerSlotsToSingleSlot(){
       migratedFromCareerSlot:selected.slotNumber
     };
     const db = await openDb();
-    try{
-      await new Promise((resolve,reject)=>{
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        const store = tx.objectStore(DB_STORE);
-        if(slotOneRecord?.record){
-          store.put(cloneSaveRecord(slotOneRecord.record), `${SINGLE_CAREER_SLOT_ARCHIVE_PREFIX}career:1`);
-        }
-        store.put(payload, `${SAVE_SLOT_PREFIX}${SAVE_SLOT_CAREER}`);
-        store.put(payload, SAVE_KEY);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error || new Error('No se pudo consolidar la partida.'));
-        tx.onabort = () => reject(tx.error || new Error('Se canceló la consolidación de la partida.'));
-      });
-    }finally{
-      try{ db.close(); }catch(_error){}
-    }
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      if(slotOneRecord?.record){
+        store.put(cloneSaveRecord(slotOneRecord.record), `${SINGLE_CAREER_SLOT_ARCHIVE_PREFIX}career:1`);
+      }
+      store.put(payload, `${SAVE_SLOT_PREFIX}${SAVE_SLOT_CAREER}`);
+      store.put(payload, SAVE_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo consolidar la partida.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la consolidación de la partida.'));
+    });
     migrated = true;
     fromSlot = selected.slotNumber;
   }
@@ -947,16 +947,16 @@ function currentSavePayload(){
 }
 async function loadInitialSeed(options={}){
   const skipPlayersDatabase = Boolean(options?.skipPlayersDatabase);
-  const [playersDatabase, loadedManualPlayersDatabase, loadedStadiumsDatabase, loadedFansDatabase] = await Promise.all([
+  const [playersDatabase, loadedManualPlayersDatabase, loadedStadiumsDatabase, loadedFansDatabase, loadedLeagues] = await Promise.all([
     skipPlayersDatabase ? Promise.resolve(null) : loadPlayersDatabase(),
     loadManualPlayersDatabase(),
     loadStadiumsDatabase(),
-    loadFansDatabase()
+    loadFansDatabase(),
+    Promise.all(LEAGUE_DATA_CANDIDATES.map(async url => ({ url, leagueJson:await fetchJsonIfExists(url) })))
   ]);
   manualPlayersDatabase = loadedManualPlayersDatabase;
   stadiumsDatabase = loadedStadiumsDatabase;
   fansDatabase = loadedFansDatabase;
-  const loadedLeagues = await Promise.all(LEAGUE_DATA_CANDIDATES.map(async url => ({ url, leagueJson:await fetchJsonIfExists(url) })));
   const leagueSeeds = loadedLeagues
     .filter(item => item.leagueJson)
     .map(item => applyStadiumAndFansDatabases(buildSeedFromLigaArgentina(item.leagueJson, item.url), stadiumsDatabase, fansDatabase));
@@ -2318,22 +2318,38 @@ async function readLocalSaveRecord(slotId=null){
   const selected = usable[0];
   const primary = loaded.find(item => item.source === 'primary');
   const backup = loaded.find(item => item.source === 'backup');
-  const selectedTimestamp = localSaveRecordTimestamp(selected.record);
-  const backupTimestamp = localSaveRecordTimestamp(backup?.record);
   selected.record._storageReadSource = selected.source;
   selected.record._storageNeedsRefresh = selected.source !== 'primary'
     || !usableLocalSaveRecord(primary?.record)
-    || !usableLocalSaveRecord(backup?.record)
-    || (selectedTimestamp > 0 && backupTimestamp !== selectedTimestamp);
+    || !usableLocalSaveRecord(backup?.record);
   return selected.record;
 }
+let localDbPromise = null;
 async function openDb(){
-  return new Promise((resolve,reject)=>{
+  if(localDbPromise) return localDbPromise;
+  localDbPromise = new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(DB_STORE);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onupgradeneeded = () => {
+      if(!request.result.objectStoreNames.contains(DB_STORE)) request.result.createObjectStore(DB_STORE);
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        localDbPromise = null;
+      };
+      resolve(db);
+    };
+    request.onerror = () => {
+      localDbPromise = null;
+      reject(request.error);
+    };
+    request.onblocked = () => {
+      localDbPromise = null;
+      reject(new Error('La base local está bloqueada por otra pestaña.'));
+    };
   });
+  return localDbPromise;
 }
 let localSaveWriteChain = Promise.resolve();
 let pendingAutosaveTimer = null;
@@ -2368,19 +2384,22 @@ async function writeLocalSaveNow(silent=false){
   const payload = currentSavePayload();
   payload.saveSlotId = slot;
   const db = await openDb();
-  try{
-    await new Promise((resolve,reject)=>{
-      const tx = db.transaction(DB_STORE, 'readwrite');
-      const store = tx.objectStore(DB_STORE);
-      store.put(payload, saveSlotKey(slot));
-      store.put(payload, backupSaveSlotKey(slot));
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('IndexedDB rechazó el guardado.'));
-      tx.onabort = () => reject(tx.error || new Error('IndexedDB canceló el guardado.'));
-    });
-  }finally{
-    try{ db.close(); }catch(_error){}
-  }
+  await new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const primaryKey = saveSlotKey(slot);
+    const backupKey = backupSaveSlotKey(slot);
+    const previousRequest = store.get(primaryKey);
+    previousRequest.onsuccess = () => {
+      const previous = previousRequest.result;
+      store.put(usableLocalSaveRecord(previous) ? previous : payload, backupKey);
+      store.put(payload, primaryKey);
+    };
+    previousRequest.onerror = () => tx.abort();
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error || new Error('IndexedDB rechazó el guardado.'));
+    tx.onabort = () => reject(tx.error || new Error('IndexedDB canceló el guardado.'));
+  });
   if(!silent) showNotice(`${saveSlotLabel(slot, payload)} guardada en este navegador.`);
   return true;
 }
@@ -2412,6 +2431,21 @@ function scheduleCoalescedAutosave(){
     }, AUTOSAVE_COALESCE_MS);
   });
 }
+function flushPendingAutosave(){
+  if(!pendingAutosaveTimer) return Promise.resolve(false);
+  clearTimeout(pendingAutosaveTimer);
+  pendingAutosaveTimer = null;
+  const waiters = pendingAutosaveWaiters.splice(0);
+  return queueLocalSaveWrite(true)
+    .then(result => {
+      settleAutosaveWaiters(waiters, 'resolve', result);
+      return result;
+    })
+    .catch(error => {
+      settleAutosaveWaiters(waiters, 'reject', error);
+      throw error;
+    });
+}
 async function saveLocal(silent=false){
   if(!game){
     if(!silent) showNotice('No hay partida para guardar.');
@@ -2431,6 +2465,18 @@ async function saveLocal(silent=false){
     settleAutosaveWaiters(pendingWaiters, 'reject', error);
     throw error;
   }
+}
+if(typeof document !== 'undefined'){
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden' && pendingAutosaveTimer){
+      flushPendingAutosave().catch(reportLocalSaveError);
+    }
+  });
+}
+if(typeof window !== 'undefined'){
+  window.addEventListener('pagehide', () => {
+    if(pendingAutosaveTimer) flushPendingAutosave().catch(reportLocalSaveError);
+  });
 }
 async function loadLocal(silent=false, slotId=null){
   const slot = normalizeSaveSlotId(slotId || currentSaveSlotId || SAVE_SLOT_CAREER);

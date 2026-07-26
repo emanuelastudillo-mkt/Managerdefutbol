@@ -365,6 +365,7 @@ function removePlayerReferencesFromState(playerId, targetGame=game, options={}){
     targetGame.playerAgeSkillPenalties,
     targetGame.trainingPlan,
     targetGame.playerStats,
+    targetGame.playerCareerStats,
     targetGame.playerStatus,
     targetGame.playerWear,
     targetGame.playerMentalities,
@@ -683,13 +684,15 @@ function initializeFreePlayerState(players=[]){
   game.playerAgeSkillPenalties = (game.playerAgeSkillPenalties && typeof game.playerAgeSkillPenalties === 'object' && !Array.isArray(game.playerAgeSkillPenalties)) ? game.playerAgeSkillPenalties : {};
   game.trainingPlan = game.trainingPlan || {};
   game.playerStats = game.playerStats || {};
+  game.playerCareerStats = game.playerCareerStats && typeof game.playerCareerStats === 'object' && !Array.isArray(game.playerCareerStats) ? game.playerCareerStats : {};
   players.forEach(p => {
     game.playerCondition[p.id] = 5;
     game.playerMorale[p.id] = 5;
     delete game.playerAgeSkillPenalties[p.id];
     game.trainingPlan[p.id] = safeIndividualTrainingType(game.trainingPlan[p.id]);
     game.playerStats[p.id] = game.playerStats[p.id] || createEmptyPlayerStat(p);
-    normalizePlayerStatRecord(game.playerStats[p.id]);
+    normalizePlayerStatRecord(game.playerStats[p.id], p);
+    if(game.playerCareerStats[p.id]) normalizePlayerStatRecord(game.playerCareerStats[p.id], p);
   });
 }
 function generateSeasonYouthFreeAgents(count=SEASON_YOUTH_FREE_AGENT_COUNT){

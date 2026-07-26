@@ -1,5 +1,7 @@
 /* Ranking online con puntaje total explícito para Worker. */
 
+let rankingSessionAutoCheckInFlight = false;
+
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
   if(configured) return configured;
@@ -56,20 +58,8 @@ function normalizeRankingEndpoint(url){
 function rankingConfiguredPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   const raw = kind === 'submit' ? cfg.submitPaths : cfg.readPaths;
-  const defaults = kind === 'submit'
-    ? [
-        // Carga principal de carrera para el Worker Cloudflare + D1.
-        'ranking/career','api/ranking/career','career','records/career','api/records/career',
-        // Compatibilidad con variantes anteriores.
-        'ranking/season','api/ranking/season','season','records/season','api/records/season',
-        'records','ranking','scores','submit','api/records','api/ranking','api/scores','api/submit',''
-      ]
-    : [
-        // Lectura principal del ranking por carrera; temporada queda como respaldo.
-        'ranking/career','api/ranking/career','career','records/career','api/records/career','ranking/season','api/ranking/season',
-        'ranking','records','scores','api/ranking','api/records','api/scores',''
-      ];
-  const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
+  const defaults = ['ranking/career'];
+  const source = Array.isArray(raw) && raw.length ? raw : defaults;
   const seen = new Set();
   return source
     .map(path => String(path || '').trim().replace(/^\/+|\/+$/g, ''))
@@ -93,7 +83,15 @@ function rankingStoredAuthToken(){
   const configured = String(RANKING_TOKEN || '').trim();
   if(configured) return configured;
   try{
-    return String(localStorage.getItem('fmRankingAuthToken') || localStorage.getItem('fmRankingToken') || localStorage.getItem('rankingToken') || '').trim();
+    const current = String(localStorage.getItem('fmRankingAuthToken') || '').trim();
+    if(current) return current;
+    const legacy = String(localStorage.getItem('fmRankingToken') || localStorage.getItem('rankingToken') || '').trim();
+    if(legacy){
+      localStorage.setItem('fmRankingAuthToken', legacy);
+      localStorage.removeItem('fmRankingToken');
+      localStorage.removeItem('rankingToken');
+    }
+    return legacy;
   }catch(_){ return ''; }
 }
 
@@ -104,10 +102,8 @@ function rankingStoredAuthUsername(){
 function rankingAuthPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   const raw = kind === 'me' ? cfg.mePaths : cfg.loginPaths;
-  const defaults = kind === 'me'
-    ? ['auth/me','me','api/auth/me','api/me','user','api/user']
-    : ['auth/login','login','api/auth/login','api/login','auth/register','register','api/auth/register','api/register','auth/session','session','api/auth/session','api/session'];
-  const source = Array.isArray(raw) && raw.length ? raw.concat(defaults) : defaults;
+  const defaults = kind === 'me' ? ['auth/me'] : ['auth/login'];
+  const source = Array.isArray(raw) && raw.length ? raw : defaults;
   const seen = new Set();
   return source
     .map(path => String(path || '').trim().replace(/^\/+|\/+$/g, ''))
@@ -142,19 +138,28 @@ function rankingStoreAuthSession(data, fallbackUsername=''){
   const expiresAt = String(data?.expires_at || data?.expiresAt || data?.data?.expires_at || data?.session?.expires_at || '').trim();
   try{
     localStorage.setItem('fmRankingAuthToken', token);
-    localStorage.setItem('fmRankingToken', token);
-    localStorage.setItem('rankingToken', token);
+    localStorage.removeItem('fmRankingToken');
+    localStorage.removeItem('rankingToken');
     if(username) localStorage.setItem('fmRankingAuthUser', username);
     if(expiresAt) localStorage.setItem('fmRankingAuthExpiresAt', expiresAt);
     if(data?.user?.id || data?.data?.user?.id) localStorage.setItem('fmRankingAuthUserId', String(data?.user?.id || data?.data?.user?.id));
+    localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
   }catch(_){ /* sin almacenamiento */ }
   if(username && (!rankingStoredManagerName() || rankingStoredManagerName() === 'Manager')) setRankingStoredManagerName(username);
   return token;
 }
 function rankingClearAuthSession(){
   try{
-    ['fmRankingAuthToken','fmRankingToken','rankingToken','fmRankingAuthUser','fmRankingUsername','fmRankingAuthExpiresAt','fmRankingAuthUserId'].forEach(key => localStorage.removeItem(key));
+    ['fmRankingAuthToken','fmRankingToken','rankingToken','fmRankingAuthUser','fmRankingUsername','fmRankingAuthExpiresAt','fmRankingAuthUserId','fmRankingNeedsPasswordSetup'].forEach(key => localStorage.removeItem(key));
   }catch(_){ /* sin almacenamiento */ }
+}
+function rankingNeedsPasswordSetup(){
+  try{ return localStorage.getItem('fmRankingNeedsPasswordSetup') === '1'; }
+  catch(_){ return false; }
+}
+function rankingPasswordSetupStateKnown(){
+  try{ return localStorage.getItem('fmRankingNeedsPasswordSetup') !== null; }
+  catch(_){ return false; }
 }
 function rankingAuthStatusMarkup(endpoint){
   const token = rankingStoredAuthToken();
@@ -170,17 +175,19 @@ function rankingLoginPanelMarkup(endpoint, options={}){
   const user = rankingStoredAuthUsername() || rankingStoredManagerName() || '';
   const surface = String(options?.surface || 'ranking').trim() || 'ranking';
   return `<div class="card ranking-login-card" data-ranking-auth-panel="${escapeHtml(surface)}">
-    <div class="row"><div><p class="label">Cuenta online</p><h3>Login del ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
-    <p class="muted">Usá tu cuenta para publicar tu carrera y participar en las funciones online.</p>
+    <div class="row"><div><p class="label">Cuenta online</p><h3>Acceso al ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
+    <p class="muted">Iniciá sesión o creá una cuenta protegida para participar en las funciones online.</p>
     <div class="ranking-auth-status small" data-ranking-auth-status>${rankingAuthStatusMarkup(endpoint)}</div>
     <form class="ranking-login-form" data-ranking-login-form>
       <input name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
-      <input name="password" type="password" autocomplete="current-password" placeholder="Contraseña opcional" ${disabled} />
+      <input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="Contraseña" ${disabled} />
       <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
+      <button class="ghost" type="button" data-ranking-register ${disabled}>Crear cuenta</button>
+      <button class="ghost" type="button" data-ranking-set-password ${endpoint && token && rankingNeedsPasswordSetup() ? '' : 'disabled'}>Proteger cuenta heredada</button>
       <button class="ghost" type="button" data-ranking-check-session ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
       <button class="danger" type="button" data-ranking-logout ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
     </form>
-    <div class="small muted" data-ranking-login-status>${token ? 'La cuenta está lista para publicar tu carrera.' : 'Ingresá tu usuario para continuar. La contraseña puede ser opcional según tu cuenta.'}</div>
+    <div class="small muted" data-ranking-login-status>${token ? (rankingNeedsPasswordSetup() ? 'Tu sesión heredada sigue activa: asignale una contraseña antes de cerrar sesión.' : 'La cuenta está lista para publicar tu carrera.') : 'Usuario de 3 a 40 caracteres y contraseña de al menos 8 caracteres.'}</div>
   </div>`;
 }
 function rankingAuthPanelFromSource(source){
@@ -211,8 +218,17 @@ function rankingBindAuthPanel(panel){
   if(!panel || panel.dataset.rankingAuthBound === '1') return;
   panel.dataset.rankingAuthBound = '1';
   panel.querySelector('[data-ranking-login-form]')?.addEventListener('submit', loginRankingAccount);
+  panel.querySelector('[data-ranking-register]')?.addEventListener('click', registerRankingAccount);
+  panel.querySelector('[data-ranking-set-password]')?.addEventListener('click', setRankingAccountPassword);
   panel.querySelector('[data-ranking-check-session]')?.addEventListener('click', checkRankingSession);
   panel.querySelector('[data-ranking-logout]')?.addEventListener('click', logoutRankingAccount);
+  if(rankingStoredAuthToken() && !rankingPasswordSetupStateKnown() && !rankingSessionAutoCheckInFlight){
+    rankingSessionAutoCheckInFlight = true;
+    setTimeout(async () => {
+      try{ await checkRankingSession({ currentTarget:panel, automatic:true }); }
+      finally{ rankingSessionAutoCheckInFlight = false; }
+    }, 0);
+  }
 }
 function rankingBindAuthPanels(root=document){
   root?.querySelectorAll?.('[data-ranking-auth-panel]').forEach(rankingBindAuthPanel);
@@ -255,38 +271,15 @@ function openRankingLoginModal(){
 function rankingLoginRequestBodies(username, password){
   const cleanUser = String(username || '').trim();
   const cleanPassword = String(password || '');
-  const json = payload => ({ headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(payload) });
-  const form = payload => ({ headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' }, body:new URLSearchParams(payload).toString() });
-  const bodies = [];
-  if(cleanPassword){
-    bodies.push(
-      json({ username:cleanUser, password:cleanPassword }),
-      json({ user:cleanUser, username:cleanUser, password:cleanPassword }),
-      json({ email:cleanUser, password:cleanPassword }),
-      form({ username:cleanUser, password:cleanPassword })
-    );
-  }
-  // Compatibilidad con el Worker original del proyecto: usuario + token, sin contraseña.
-  bodies.push(
-    json({ username:cleanUser }),
-    json({ user:cleanUser, username:cleanUser }),
-    json({ managerName:cleanUser, username:cleanUser }),
-    form({ username:cleanUser }),
-    form({ user:cleanUser })
-  );
-  const seen = new Set();
-  return bodies.filter(req => {
-    const key = `${req.headers['Content-Type']}|${req.body}`;
-    if(seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return [{
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ username:cleanUser, password:cleanPassword })
+  }];
 }
 async function rankingLoginRequest(endpoint, username, password){
   const paths = rankingAuthPaths('login');
   const bodies = rankingLoginRequestBodies(username, password);
   let lastMessage = '';
-  let authMessage = '';
   const tried = [];
   for(const path of paths){
     const route = rankingRouteLabel(path);
@@ -310,18 +303,24 @@ async function rankingLoginRequest(endpoint, username, password){
       const message = rankingResponseErrorMessage(data, response, 'No se pudo iniciar sesión.');
       lastMessage = message;
       if(rankingIsRouteMissing(message, response)) break;
-      if([401,403].includes(Number(response.status || 0)) || /credencial|contraseña|password|usuario|login|token/i.test(message)){
-        authMessage = message;
-        // No cortar acá: algunos Workers devuelven error por formato en una ruta, pero aceptan usuario solo en otra.
-        continue;
-      }
     }
   }
   const uniqueRoutes = [...new Set(tried)].join(', ');
-  if(authMessage && !String(password || '').trim()){
-    throw new Error(`${authMessage}. Probá ingresando sólo tu usuario exacto del ranking o creá nuevamente la sesión en el Worker.`);
-  }
   throw new Error(lastMessage || `No se encontró una ruta válida de login. Rutas probadas: ${uniqueRoutes}`);
+}
+function rankingAuthConfigPath(key, fallback){
+  const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
+  return String(cfg?.[key] || fallback).trim().replace(/^\/+|\/+$/g, '');
+}
+async function rankingAuthJsonRequest(endpoint, path, body, fallback){
+  const response = await fetch(rankingApiUrl(endpoint, path), {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...rankingRequestHeaders(false) },
+    body:JSON.stringify(body || {})
+  });
+  const data = await response.json().catch(() => ({}));
+  if(!response.ok || data.ok === false) throw new Error(rankingResponseErrorMessage(data, response, fallback));
+  return data;
 }
 async function loginRankingAccount(event){
   event?.preventDefault?.();
@@ -330,8 +329,9 @@ async function loginRankingAccount(event){
   const username = String(elements.username?.value || '').trim();
   const password = String(elements.password?.value || '');
   const status = elements.loginStatus;
-  if(!username){ showNotice('Ingresá el usuario del ranking. La contraseña es opcional.'); return false; }
-  if(status) status.textContent = password ? 'Iniciando sesión...' : 'Buscando sesión por usuario...';
+  if(!username){ showNotice('Ingresá el usuario del ranking.'); return false; }
+  if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
+  if(status) status.textContent = 'Iniciando sesión...';
   const submit = elements.form?.querySelector('button[type="submit"]');
   if(submit) submit.disabled = true;
   try{
@@ -349,7 +349,55 @@ async function loginRankingAccount(event){
     return false;
   }
 }
+async function registerRankingAccount(event){
+  const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  const username = String(elements.username?.value || '').trim();
+  const password = String(elements.password?.value || '');
+  const status = elements.loginStatus;
+  if(username.length < 3){ showNotice('El usuario debe tener al menos 3 caracteres.'); return false; }
+  if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
+  if(!confirm(`¿Crear la cuenta online "${username}"?`)) return false;
+  if(status) status.textContent = 'Creando cuenta protegida...';
+  try{
+    const path = rankingAuthConfigPath('registerPath', 'auth/register');
+    const data = await rankingAuthJsonRequest(endpoint, path, { username, password }, 'No se pudo crear la cuenta.');
+    rankingStoreAuthSession(data, username);
+    showNotice('Cuenta online creada e iniciada.');
+    rankingRefreshAuthPanels(`Cuenta creada como ${rankingExtractUsername(data, username)}.`);
+    return true;
+  }catch(error){
+    const message = error?.message || 'No se pudo crear la cuenta.';
+    if(status) status.textContent = message;
+    showNotice(message);
+    return false;
+  }
+}
+async function setRankingAccountPassword(event){
+  const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
+  const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
+  if(!rankingStoredAuthToken()){ showNotice('La sesión heredada ya no está disponible.'); return false; }
+  const password = prompt('Elegí una contraseña nueva de al menos 8 caracteres:') || '';
+  if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
+  const confirmation = prompt('Repetí la contraseña nueva:') || '';
+  if(password !== confirmation){ showNotice('Las contraseñas no coinciden.'); return false; }
+  if(elements.loginStatus) elements.loginStatus.textContent = 'Protegiendo la cuenta...';
+  try{
+    const path = rankingAuthConfigPath('passwordPath', 'auth/password');
+    const data = await rankingAuthJsonRequest(endpoint, path, { password }, 'No se pudo establecer la contraseña.');
+    try{ localStorage.setItem('fmRankingNeedsPasswordSetup', '0'); }catch(_){ /* sin almacenamiento */ }
+    showNotice('La cuenta heredada quedó protegida.');
+    rankingRefreshAuthPanels(data?.message || 'Contraseña establecida correctamente.');
+    return true;
+  }catch(error){
+    const message = error?.message || 'No se pudo establecer la contraseña.';
+    if(elements.loginStatus) elements.loginStatus.textContent = message;
+    showNotice(message);
+    return false;
+  }
+}
 async function checkRankingSession(event){
+  const automatic = event?.automatic === true;
   const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
   const token = rankingStoredAuthToken();
@@ -363,11 +411,12 @@ async function checkRankingSession(event){
       const data = await response.json().catch(() => ({}));
       if(response.ok && data.ok !== false){
         const user = rankingExtractUsername(data, rankingStoredAuthUsername());
-        if(user){
-          try{ localStorage.setItem('fmRankingAuthUser', user); }catch(_){ /* sin almacenamiento */ }
-        }
+        try{
+          if(user) localStorage.setItem('fmRankingAuthUser', user);
+          localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
+        }catch(_){ /* sin almacenamiento */ }
         const message = `Sesión válida${user ? ` · ${user}` : ''}.`;
-        showNotice('Sesión válida en el ranking online.');
+        if(!automatic) showNotice('Sesión válida en el ranking online.');
         rankingRefreshAuthPanels(message);
         return true;
       }
@@ -379,7 +428,7 @@ async function checkRankingSession(event){
   }catch(error){
     const message = error?.message || 'No se pudo verificar la sesión.';
     if(status) status.textContent = message;
-    showNotice(message);
+    if(!automatic) showNotice(message);
     return false;
   }
 }

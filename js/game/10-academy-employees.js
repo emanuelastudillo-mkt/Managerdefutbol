@@ -722,6 +722,18 @@ function academyResidenceCount(){
   game.academy = normalizeAcademyState(game.academy);
   return Math.max(0, Math.round(Number(game.academy.residences || 0)));
 }
+function academyResidenceVisualPath(count=academyResidenceCount()){
+  const safeCount = clamp(Math.round(Number(count || 1)), 1, 10);
+  return `assets/residencias/residencias-${String(safeCount).padStart(2,'0')}.webp`;
+}
+function academyResidenceVisualMarkup(count=academyResidenceCount()){
+  const safeCount = clamp(Math.round(Number(count || 0)), 0, 10);
+  if(safeCount <= 0) return '<div class="game-visual-asset-empty"><strong>Sin residencias alquiladas</strong><span>La imagen del complejo aparecerá con la primera residencia.</span></div>';
+  if(typeof stadiumVisualAssetMarkup === 'function'){
+    return stadiumVisualAssetMarkup(academyResidenceVisualPath(safeCount), `Complejo con ${safeCount} residencia${safeCount === 1 ? '' : 's'} juvenil${safeCount === 1 ? '' : 'es'}`, { modifier:'residence-visual', badge:`${safeCount}/10 residencias` });
+  }
+  return `<figure class="game-visual-asset residence-visual"><img src="${academyResidenceVisualPath(safeCount)}?v=8.56" alt="Complejo con ${safeCount} residencias juveniles" loading="lazy"></figure>`;
+}
 function academyResidenceLimit(){
   return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit() || 0))) : 0;
 }
@@ -1827,6 +1839,7 @@ function academyResidenceManagementMarkup(){
   const availableSlots = academyAvailableSlots();
   return `<div class="card academy-residence-card">
     <div class="row"><div><p class="label">Residencias juveniles</p><h3>Cupos de academia</h3><p class="muted small">Base ${ACADEMY_BASE_CAPACITY} cupos. Cada residencia agrega ${ACADEMY_RESIDENCE_CAPACITY} cupos. El Predio habilita 2 residencias por nivel. El alquiler sale de la Cuenta Bancaria personal: ${formatMoney(ACADEMY_RESIDENCE_MONTHLY_COST)} mensuales por residencia.</p></div><span class="pill">${activeCount}/${capacity} ocupados</span></div>
+    ${academyResidenceVisualMarkup(residences)}
     <div class="academy-residence-stats">
       <div><p class="label">Residencias alquiladas</p><strong>${residences}/${residenceLimit}</strong></div>
       <div><p class="label">Cupo total</p><strong>${capacity}</strong></div>

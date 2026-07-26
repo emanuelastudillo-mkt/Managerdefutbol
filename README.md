@@ -1,26 +1,29 @@
-# Una vida de manager — V8.55
+# Una vida de manager — V8.56
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.55** y ajusta los nombres de jugadores y los recursos visuales sobre la base funcional de V8.54.
+La revisión actual muestra **V8.56** y suma privacidad del Legado, una tipografía más compacta y recursos visuales dinámicos sobre la base funcional de V8.55.
 
-- límite estricto de 22 caracteres para nombres completos, contando los espacios;
-- hasta dos nombres y un apellido cuando la combinación entra en el límite;
-- reducción automática a un nombre y un apellido cuando la combinación es larga;
-- migración idempotente para plantel, mercado, academia, retirados, transferencias y derechos del manager;
-- restauración del banner PNG y del favicon PNG usados antes de la V8.54;
-- eliminación del fondo `hero-stadium.svg` y reemplazo por fondos CSS livianos;
-- conservación de la renovación visual deportiva, sin recursos remotos en tiempo de ejecución.
+- corrección de botones blancos que podían heredar texto blanco en Mensajes y Especial;
+- reducción de 2 px en las 694 declaraciones tipográficas explícitas del juego; la única declaración `inherit` conserva la reducción de su elemento padre;
+- el Legado en clubes ya no expone puntos, estrellas, desglose, condiciones, umbrales ni recompensas antes de obtener el reconocimiento;
+- al convertirse en ídolo sólo se muestra el club y el reconocimiento conseguido, sin explicar cómo se alcanzó;
+- 29 imágenes WebP nuevas, optimizadas para uso web, integradas con estados reales del juego;
+- tres retratos definitivos para el Segundo entrenador;
+- cinco iconos SVG nuevos para el Centro de Ojeo;
+- imágenes dinámicas para césped, calefacción, estadio, obras, hinchas, residencias y Predio juvenil;
+- conservación del formato de nombres de V8.55, con máximo de 22 caracteres y migración idempotente.
 
 ## Sistema visual
 
-- `styles/100-visual-refresh-v855.css` funciona como capa final aislada.
+- `styles/100-visual-refresh-v855.css` conserva la renovación visual general.
+- `styles/110-visual-assets-v856.css` incorpora los recursos dinámicos y cierra la corrección de contraste.
 - Los estilos anteriores se conservan para no romper componentes ni pantallas históricas.
 - Los colores dinámicos del club siguen usándose como acento.
 - Las superficies principales usan una paleta neutral para mejorar el contraste.
-- La tipografía permanece local mediante la pila de fuentes del sistema.
+- La tipografía permanece local mediante la pila de fuentes del sistema y ahora es 2 px más compacta.
 - Los fondos de bienvenida, oficina, Filosofía y Segundo entrenador ahora se generan únicamente con CSS.
 - No se incorporaron frameworks, librerías, fuentes remotas ni CSS externo.
 
@@ -28,34 +31,51 @@ La revisión actual muestra **V8.55** y ajusta los nombres de jugadores y los re
 
 - `assets/logo-banner.png`: logotipo horizontal original del juego.
 - `favicon.png`: icono original del navegador.
+- `img/empleados/segundo-entrenador-*.webp`: Principiante, Asentado y Experimentado.
+- `assets/campo/`: cinco estados visuales de deterioro del terreno.
+- `assets/instalaciones/`: calefacción de césped OFF y ON.
+- `assets/estadio/`: estadio operativo y estadio en ampliación/remodelación.
+- `assets/hinchas/`: imagen genérica para Hinchas y socios.
+- `assets/residencias/`: diez etapas, seleccionadas según la cantidad de residencias.
+- `assets/juveniles/`: seis estados, desde Sin predio hasta Elite.
+- `assets/icons/scouting/`: Binoculares, Ojeador, Oficina, Informe y Radar en SVG.
 
-Los archivos `assets/logo-banner.svg`, `assets/favicon.svg` y `assets/hero-stadium.svg` ya no forman parte de la versión completa.
+Las 29 imágenes raster se generaron en PNG y se publican como WebP a 1.280 px de ancho. La optimización redujo el paquete de 73.945.096 a 4.002.856 bytes, un 94,6%.
 
 ## Compatibilidad y publicación
 
-- La V8.55 no cambia reglas deportivas, economía, Worker ni base de datos.
-- Las partidas anteriores compatibles migran los nombres automáticamente al cargarse.
-- La migración guarda `playerNameFormatVersion` y mantiene sincronizadas las referencias por ID.
+- La V8.56 no cambia reglas deportivas, economía, Worker ni base de datos.
+- Las partidas anteriores conservan sus datos; la privacidad del Legado sólo modifica lo que se muestra.
+- El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.55-INCREMENTAL` respetando las rutas.
-- `favicon.png` y `assets/logo-banner.png` son obligatorios para evitar imágenes rotas.
-- Si se usa el incremental, borrar manualmente los tres SVG retirados y `styles/100-visual-refresh-v854.css`.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.56-INCREMENTAL` respetando las rutas.
+- Las carpetas nuevas de `assets/` y los tres WebP de `img/empleados/` son obligatorios para evitar imágenes rotas.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
-
-## Fotos del Segundo entrenador
-
-La versión funciona sin fotografías gracias a un respaldo visual. Cuando estén disponibles, agregar estos archivos:
-
-- `img/empleados/segundo-entrenador-principiante.webp`
-- `img/empleados/segundo-entrenador-asentado.webp`
-- `img/empleados/segundo-entrenador-experimentado.webp`
 
 ---
 
 # Historial de versiones
+
+## V8.56 — Legado privado y recursos visuales dinámicos
+
+- Contraste corregido en botones principales de fondo blanco.
+- Todos los tamaños de texto explícitos se redujeron 2 px.
+- El Legado oculta progreso y condiciones hasta conseguir la condición de ídolo.
+- Se integraron 29 imágenes WebP y cinco iconos SVG nuevos.
+- Estadio, campo, calefacción, hinchas, residencias y Predio cambian de imagen según su estado.
+- Se completaron las tres fotografías del Segundo entrenador.
+
+## V8.55 — Nombres simplificados y recursos PNG
+
+- Nombres completos con máximo estricto de 22 caracteres.
+- Hasta dos nombres y un apellido para combinaciones cortas.
+- Un nombre y un apellido cuando la combinación larga supera el límite.
+- Migración automática de nombres en plantel, mercado, academia, retirados, transferencias y derechos.
+- Restauración de banner y favicon PNG.
+- Retiro de `hero-stadium.svg`, `favicon.svg` y `logo-banner.svg`.
 
 ## V8.54 — Renovación visual de estilo deportivo
 

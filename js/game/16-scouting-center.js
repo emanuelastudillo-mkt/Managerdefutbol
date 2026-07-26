@@ -740,6 +740,7 @@ function scoutingPlayerSearchMarkup(state){
   const salaryMaxValue = search.salaryMax ?? '';
   return `<div class="card scouting-search-card ${search.enabled ? 'is-active' : 'is-off'} ${hasChief ? '' : 'requires-chief'}">
     <div class="scouting-card-head">
+      <div class="scouting-card-icon">${scoutingSvgIcon('radar', 'small')}</div>
       <div><p class="label">Descubrimiento automático</p><h3>Buscar jugadores</h3></div>
       <button class="scouting-search-switch ${search.enabled ? 'on' : 'off'} ${hasChief ? '' : 'requires-chief'}" data-toggle-scouting-player-search role="switch" aria-checked="${search.enabled ? 'true' : 'false'}" aria-disabled="${hasChief ? 'false' : 'true'}"><span>${hasChief ? (search.enabled ? 'ON' : 'OFF') : 'REQUIERE JEFE'}</span></button>
     </div>
@@ -1004,6 +1005,12 @@ function resetScoutingCenterForNewClub(){
   game.scoutingCenter = { ...createInitialScoutingCenterState(), reports: previous.reports || {}, teamReports: previous.teamReports || {} };
 }
 
+const SCOUTING_SVG_ICONS = new Set(['binoculares','ojeador','oficina','informe','radar']);
+function scoutingSvgIcon(name='binoculares', extraClass=''){
+  const safeName = SCOUTING_SVG_ICONS.has(String(name)) ? String(name) : 'binoculares';
+  const safeClass = String(extraClass || '').replace(/[^a-z0-9_-]/gi, '');
+  return `<img class="scouting-svg-icon ${safeClass}" src="assets/icons/scouting/${safeName}.svg?v=8.56" alt="" aria-hidden="true" loading="lazy">`;
+}
 function scoutingRepeatedIcons(icon, active=0, total=null, className=''){
   const safeActive = Math.max(0, Math.round(Number(active || 0)));
   const safeTotal = total === null ? safeActive : Math.max(0, Math.round(Number(total || 0)));
@@ -1017,7 +1024,7 @@ function scoutingRepeatedIcons(icon, active=0, total=null, className=''){
   return `<div class="scouting-icon-stack ${className}">${items.join('')}</div>`;
 }
 function scoutingBinocularsIcon(extraClass=''){
-  return `<span class="scouting-binoculars-icon ${extraClass}" aria-hidden="true"><span></span></span>`;
+  return scoutingSvgIcon('binoculares', extraClass);
 }
 function scoutingSummaryTile({ label, value, hint='', icon='', extra='' }){
   return `<div class="card scouting-summary-tile ${extra}">
@@ -1243,7 +1250,7 @@ function scoutingReportsControlMarkup(){
   const totalPlayerReports = scoutingPlayerReportEntries('all').length;
   const teamReports = Object.keys(state.teamReports || {}).length;
   return `<div class="card scouting-reports-card scouting-control-card">
-    <div class="scouting-card-head"><div><p class="label">Informes</p><h3>Guardados y archivados</h3></div><span class="pill">${totalPlayerReports}</span></div>
+    <div class="scouting-card-head"><div class="scouting-card-icon">${scoutingSvgIcon('informe', 'small')}</div><div><p class="label">Informes</p><h3>Guardados y archivados</h3></div><span class="pill">${totalPlayerReports}</span></div>
     <p class="muted small">Abrí jugadores ya ojeados en lista. Los equipos no se archivan; sus visores se actualizan con el plantel actual.</p>
     <div class="scouting-action-grid"><button class="ghost" data-open-scouting-reports="all">Informes guardados</button><button class="ghost" data-open-scouting-reports="archived">Archivados</button></div>
     ${teamReports ? `<p class="muted small">Informes dinámicos de equipo activos/guardados: ${teamReports}</p>` : ''}
@@ -1268,7 +1275,7 @@ function scoutingChiefMarkup(){
     const unlock = typeof staffCategoryUnlockInfo === 'function' ? staffCategoryUnlockInfo(type.key) : { unlocked:true, requiredWins:0, remaining:0 };
     const lockText = unlock.unlocked ? '' : `<p class="muted small bad">Bloqueado: requiere ${unlock.requiredWins} victorias con el club fundador (${unlock.remaining} restantes).</p>`;
     return `<div class="card inner scouting-chief-option ${unlock.unlocked ? '' : 'disabled'}">
-      <div class="scouting-chief-option-head"><strong>${escapeHtml(type.name)}</strong><span>${type.maxOffices} 🏢</span></div>
+      <div class="scouting-chief-option-head"><strong>${escapeHtml(type.name)}</strong><span>${type.maxOffices} ${scoutingSvgIcon('oficina', 'inline')}</span></div>
       <p class="muted small">${formatMoney(type.monthlySalary)} por mes · revela ${type.revealMin}-${type.revealMax} habilidad(es)/día.</p>
       ${lockText}
       <button class="primary small-btn" data-hire-scouting-chief="${escapeHtml(type.key)}" ${unlock.unlocked ? '' : 'disabled'}>${unlock.unlocked ? 'Contratar' : 'Bloqueado'}</button>
@@ -1309,9 +1316,9 @@ function renderScoutingCenter(){
       </div>
       <div class="scouting-summary-grid">
         ${scoutingSummaryTile({ label:'Ojeo activo', value:`${usedSlots}/${caps.playerCapacity}`, hint:`${listed.length} jugador(es) · ${listedTeams.length} equipo(s)`, icon:scoutingBinocularsIcon('mini') })}
-        ${scoutingSummaryTile({ label:'Ojeadores', value:`${state.scouts}/${caps.scoutCapacity}`, hint:scoutCost, icon:'👤' })}
-        ${scoutingSummaryTile({ label:'Oficinas', value:`${state.offices}/${maxOffices}`, hint:officeCost, icon:'🏢' })}
-        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports} jugador(es) archivado(s)`, icon:'▣' })}
+        ${scoutingSummaryTile({ label:'Ojeadores', value:`${state.scouts}/${caps.scoutCapacity}`, hint:scoutCost, icon:scoutingSvgIcon('ojeador', 'mini') })}
+        ${scoutingSummaryTile({ label:'Oficinas', value:`${state.offices}/${maxOffices}`, hint:officeCost, icon:scoutingSvgIcon('oficina', 'mini') })}
+        ${scoutingSummaryTile({ label:'Informes guardados', value:reportCount, hint:`${archivedReports} jugador(es) archivado(s)`, icon:scoutingSvgIcon('informe', 'mini') })}
       </div>
       <div class="scouting-workspace">
         <div class="scouting-main-stack">
@@ -1329,6 +1336,7 @@ function renderScoutingCenter(){
           ${scoutingChiefMarkup()}
           <div class="card scouting-office-card scouting-control-card">
             <div class="scouting-card-head">
+              <div class="scouting-card-icon">${scoutingSvgIcon('oficina', 'small')}</div>
               <div><p class="label">Infraestructura</p><h3>Oficinas</h3></div>
               <span class="pill">${state.offices}/${maxOffices}</span>
             </div>
@@ -1337,10 +1345,11 @@ function renderScoutingCenter(){
           </div>
           <div class="card scouting-office-card scouting-control-card">
             <div class="scouting-card-head">
+              <div class="scouting-card-icon">${scoutingSvgIcon('ojeador', 'small')}</div>
               <div><p class="label">Personal</p><h3>Ojeadores</h3></div>
               <span class="pill">${state.scouts}/${caps.scoutCapacity}</span>
             </div>
-            <div class="scouting-asset-strip"><span>Equipo activo</span>${scoutingRepeatedIcons('👤', state.scouts, caps.scoutCapacity, 'person-icons')}</div>
+            <div class="scouting-asset-strip"><span>Equipo activo</span>${scoutingRepeatedIcons(scoutingSvgIcon('ojeador', 'stack'), state.scouts, caps.scoutCapacity, 'person-icons')}</div>
             <p class="muted small">Ojeador: ${formatMoney(SCOUTING_SCOUT_DAILY_COST)}/día. Costo actual: <strong class="bad">${formatMoney(state.scouts * SCOUTING_SCOUT_DAILY_COST)}</strong>.</p>
             <div class="scouting-action-grid"><button class="primary" data-hire-scouting-scout ${state.scouts >= caps.scoutCapacity ? 'disabled' : ''}>Contratar ojeador</button><button class="ghost danger" data-dismiss-scouting-scout ${state.scouts <= 0 ? 'disabled' : ''}>Despedir ojeador</button></div>
           </div>

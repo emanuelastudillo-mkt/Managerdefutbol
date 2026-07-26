@@ -1679,7 +1679,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.55</p>
+      <p class="eyebrow">Guía actualizada · V8.56</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1738,7 +1738,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Legado en cada club</h4>
-          <p>Los objetivos principales, los aportes secundarios y los títulos construyen un historial independiente con cada club. El perfil muestra escudo, nombre, puntos y hasta diez estrellas. Al superar 50 puntos pasás a ser ídolo y obtenés una reducción permanente del riesgo de despido en ese club.</p>
+          <p>Cada institución evalúa internamente la huella que dejás durante tu carrera. El perfil no revela progreso, condiciones ni resultados parciales: sólo mostrará un reconocimiento especial después de que el club lo conceda.</p>
           ${gameHelpGoButton('mystats','Abrir perfil del manager','','profile')}
         </article>
       </div>

@@ -9,14 +9,14 @@
     flex-wrap:nowrap;
   }
   .topbar>div:first-child{flex:0 0 auto;min-width:220px}
-  .topbar h1{font-size:30px;line-height:1.02}
-  .topbar .eyebrow{font-size:10px;letter-spacing:.14em;margin-bottom:3px}
+  .topbar h1{font-size:28px;line-height:1.02}
+  .topbar .eyebrow{font-size:8px;letter-spacing:.14em;margin-bottom:3px}
   .top-actions{gap:5px;flex-wrap:nowrap;min-width:0}
   .top-actions .small-btn{
     min-height:30px;
     padding:7px 8px;
     border-radius:10px;
-    font-size:11px;
+    font-size:9px;
     line-height:1.1;
     white-space:nowrap;
   }
@@ -40,18 +40,18 @@
   .side::-webkit-scrollbar{width:7px}
   .side::-webkit-scrollbar-thumb{background:rgba(148,163,184,.32);border-radius:999px}
   .new-game,.status-card{padding:9px;border-radius:13px;margin-bottom:8px}
-  .new-game-toggle{min-height:34px;padding:8px 9px;border-radius:10px;font-size:12px}
+  .new-game-toggle{min-height:34px;padding:8px 9px;border-radius:10px;font-size:10px}
   .status-card .label{margin-bottom:5px}
-  .status-card h2{font-size:16px;line-height:1.1;margin:0 0 7px}
-  .status-card p{font-size:11px;line-height:1.25;margin:5px 0}
+  .status-card h2{font-size:14px;line-height:1.1;margin:0 0 7px}
+  .status-card p{font-size:9px;line-height:1.25;margin:5px 0}
   .status-card .club-badge-placeholder{width:34px;height:34px;min-width:34px;border-radius:10px}
   .sidebar-nav{gap:3px;margin-top:6px}
-  .sidebar-nav>button,.sidebar-nav .nav-group-toggle{min-height:34px;padding:7px 9px;border-radius:9px;font-size:12px}
-  .sidebar-nav .nav-group-items>button{min-height:29px;padding:6px 8px 6px 21px;border-radius:8px;font-size:11.5px}
+  .sidebar-nav>button,.sidebar-nav .nav-group-toggle{min-height:34px;padding:7px 9px;border-radius:9px;font-size:10px}
+  .sidebar-nav .nav-group-items>button{min-height:29px;padding:6px 8px 6px 21px;border-radius:8px;font-size:9.5px}
   .sidebar-nav .nav-group-items>button::before{left:8px}
   .sidebar-nav .nav-group.is-open .nav-group-items{padding-top:2px}
   .reset-zone{margin-top:7px}
-  .reset-zone summary{font-size:11px}
+  .reset-zone summary{font-size:9px}
 
   .content{min-width:0}
   .view{
@@ -59,8 +59,8 @@
     min-height:calc(100vh - 82px);
     border-radius:18px;
   }
-  h2{font-size:22px;line-height:1.12}
-  h3{font-size:16px;line-height:1.18}
+  h2{font-size:20px;line-height:1.12}
+  h3{font-size:14px;line-height:1.18}
   .section-title{margin-bottom:10px}
   .section-title h2,.section-title h3{margin-bottom:0}
   .card{padding:12px;border-radius:14px}
@@ -68,40 +68,40 @@
   .stack{gap:9px}
   .row{gap:8px}
   .tagline{line-height:1.45}
-  .small{font-size:12px}
-  label,.label{font-size:10.5px;letter-spacing:.1em;margin-bottom:6px}
+  .small{font-size:10px}
+  label,.label{font-size:8.5px;letter-spacing:.1em;margin-bottom:6px}
   select,input{padding:8px 10px;border-radius:10px;margin-bottom:8px}
   .primary,.ghost{padding:8px 10px;border-radius:10px}
-  .small-btn{min-height:28px;padding:5px 8px;font-size:11px}
+  .small-btn{min-height:28px;padding:5px 8px;font-size:9px}
   .subtabs{gap:5px}
-  .subtabs button{padding:6px 10px;font-size:12px}
+  .subtabs button{padding:6px 10px;font-size:10px}
   .table-wrap{border-radius:12px}
   table{min-width:640px}
-  th,td{padding:6px 7px;font-size:11.5px}
-  th{font-size:9.5px;letter-spacing:.09em}
+  th,td{padding:6px 7px;font-size:9.5px}
+  th{font-size:7.5px;letter-spacing:.09em}
   .photo-thumb,img.photo-thumb{width:30px;height:30px;border-radius:9px}
-  .pill{padding:3px 7px;font-size:11px}
-  .metric{font-size:27px}
+  .pill{padding:3px 7px;font-size:9px}
+  .metric{font-size:25px}
 
   .modal-backdrop{padding:10px}
   .modal-panel{max-height:96vh;padding:14px;border-radius:17px}
-  .modal-close{width:30px;height:30px;font-size:19px}
-  .notice{top:68px;width:min(560px,calc(100vw - 28px));padding:9px 12px;font-size:12px;border-radius:14px!important}
+  .modal-close{width:30px;height:30px;font-size:17px}
+  .notice{top:68px;width:min(560px,calc(100vw - 28px));padding:9px 12px;font-size:10px;border-radius:14px!important}
 
   .manager-office{grid-template-columns:minmax(0,1fr) minmax(230px,260px);gap:10px;margin-bottom:10px}
   .office-main-card,.office-side-card{padding:12px;border-radius:18px}
   .office-club-head{gap:10px;margin-bottom:10px}
   .office-club-head .club-badge-placeholder{width:46px;height:46px;min-width:46px;border-radius:14px}
-  .office-club-head h2{font-size:28px}
+  .office-club-head h2{font-size:26px}
   .office-mini-grid{gap:7px;margin-bottom:10px}
   .office-mini-grid>div{min-height:68px;padding:8px;border-radius:13px}
-  .office-mini-grid span{font-size:9px}
-  .office-mini-grid strong{font-size:20px}
+  .office-mini-grid span{font-size:7px}
+  .office-mini-grid strong{font-size:18px}
   .office-status-bars{gap:7px}
   .mini-status-row{padding:8px 9px;border-radius:12px}
   .office-side-card{gap:9px}
   .office-days-remaining{padding:9px 10px;margin-bottom:7px}
-  .office-days-remaining strong{font-size:28px}
+  .office-days-remaining strong{font-size:26px}
   .manager-alert-grid{gap:8px}
   .turn-summary-list{gap:7px}
 
@@ -110,10 +110,10 @@
   .tactic-grid-card{padding:10px;border-radius:13px}
   .tactic-workspace .pitch-board.centered{max-width:760px!important}
   .pitch-board .player-chip{width:58px;min-height:58px;padding:6px 4px 12px}
-  .pitch-board .player-chip-name{font-size:9px;max-width:45px}
+  .pitch-board .player-chip-name{font-size:7px;max-width:45px}
   .pitch-slot{width:64px;min-height:64px}
   .tactic-state-legend{gap:5px!important;padding:6px 7px!important}
-  .tactic-state-legend span{font-size:9.5px!important}
+  .tactic-state-legend span{font-size:7.5px!important}
   .tactic-actions-card .tactic-autopick-row{gap:6px}
   .tactic-online-category-summary{padding:9px}
   .tactic-sector-card .sector-style-control{padding:7px}
@@ -174,7 +174,7 @@
 @media (min-width:901px) and (max-width:1280px){
   .online-challenge-top-btn{padding-inline:9px}
   .home-online-ranking-card{padding:11px 13px;margin-top:10px}
-  .home-online-ranking-card .home-online-position{font-size:1.45rem}
+  .home-online-ranking-card .home-online-position{font-size:1.325rem}
 }
 
 

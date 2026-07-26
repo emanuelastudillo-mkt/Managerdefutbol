@@ -36,7 +36,7 @@ body{
     radial-gradient(circle at 9% -8%,rgba(var(--club-accent-rgb),.20),transparent 29rem),
     radial-gradient(circle at 92% 8%,rgba(var(--club-rgb),.12),transparent 34rem),
     linear-gradient(180deg,#09090b 0%,#0b0b0e 46%,#09090b 100%);
-  font-size:14px;
+  font-size:12px;
   line-height:1.48;
   letter-spacing:-.005em;
 }
@@ -65,7 +65,7 @@ h1{
 }
 
 h2{
-  font-size:clamp(21px,2.15vw,29px);
+  font-size:clamp(19px,2.15vw,27px);
   font-weight:880;
   letter-spacing:-.043em;
 }
@@ -341,7 +341,7 @@ textarea:focus{
 
 .status-card h2{
   margin-bottom:5px;
-  font-size:18px;
+  font-size:16px;
 }
 
 .status-card p{
@@ -439,7 +439,7 @@ textarea:focus{
 
 .metric{
   color:#fff;
-  font-size:clamp(25px,2.6vw,36px);
+  font-size:clamp(23px,2.6vw,34px);
   font-variant-numeric:tabular-nums;
 }
 
@@ -524,7 +524,7 @@ textarea:focus{
 .welcome-hero h2{
   max-width:760px;
   margin-bottom:12px;
-  font-size:clamp(35px,5vw,62px);
+  font-size:clamp(33px,5vw,60px);
   line-height:.98;
   font-weight:900;
   letter-spacing:-.062em;
@@ -534,7 +534,7 @@ textarea:focus{
 .welcome-hero .tagline{
   max-width:670px;
   color:#d4d4d8;
-  font-size:clamp(14px,1.25vw,17px);
+  font-size:clamp(12px,1.25vw,15px);
   line-height:1.55;
 }
 
@@ -555,7 +555,7 @@ textarea:focus{
 
 .welcome-summary strong{
   color:#fff;
-  font-size:30px;
+  font-size:28px;
 }
 
 .welcome-features span{
@@ -616,7 +616,7 @@ textarea:focus{
 }
 
 .office-club-head h2{
-  font-size:clamp(29px,3.7vw,48px);
+  font-size:clamp(27px,3.7vw,46px);
   line-height:1;
 }
 
@@ -869,7 +869,7 @@ tr:hover td{
   }
 
   .welcome-hero h2{
-    font-size:clamp(34px,5.4vw,52px);
+    font-size:clamp(32px,5.4vw,50px);
   }
 }
 
@@ -927,7 +927,7 @@ tr:hover td{
   }
 
   .welcome-hero h2{
-    font-size:clamp(34px,10vw,48px);
+    font-size:clamp(32px,10vw,46px);
   }
 
   .welcome-summary{
@@ -962,7 +962,7 @@ tr:hover td{
   }
 
   .welcome-hero h2{
-    font-size:34px;
+    font-size:32px;
   }
 
   .welcome-about-points{
@@ -970,7 +970,7 @@ tr:hover td{
   }
 
   .office-club-head h2{
-    font-size:30px;
+    font-size:28px;
   }
 
   .card{

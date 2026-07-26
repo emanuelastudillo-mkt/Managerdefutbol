@@ -290,7 +290,7 @@ function managerClubLegacyAddAward(clubId, award={}){
       type:'directiva',
       priority:'high',
       title:`Eres un ídolo de ${record.clubName || clubName(clubId)}`,
-      body:`Tu legado superó los 50 puntos en ${record.clubName || clubName(clubId)}. Desde ahora tendrás 10% menos de posibilidades de ser despedido por este club, incluso si regresás en otra etapa de tu carrera.`,
+      body:`${record.clubName || clubName(clubId)} reconoció tu trayectoria y te incorporó entre sus ídolos. El vínculo queda registrado de forma permanente para futuras etapas de tu carrera.`,
       id:`club-idol-${clubId}-${game?.seasonNumber || 1}`
     });
   }
@@ -618,20 +618,16 @@ function managerRegisterClausePlayerConvinced(player=null){
   return record.clausePlayersConvinced;
 }
 function managerClubLegacyMarkup(){
-  const records = managerClubLegacyRecords(game?.managerStats).filter(item => Number(item.points || 0) > 0);
-  if(!records.length) return `<div class="card manager-club-legacy-section" style="margin-top:14px"><h3>Legado en clubes</h3><p class="muted">Todavía no acumulaste puntos de legado. Los objetivos principales, los aportes secundarios ocultos y los títulos se registran al cerrar una temporada o una etapa.</p></div>`;
   const cfg = managerHiddenObjectiveConfig();
+  const records = managerClubLegacyRecords(game?.managerStats).filter(item => Number(item.points || 0) >= cfg.idolThreshold);
+  if(!records.length) return `<div class="card manager-club-legacy-section manager-club-legacy-private" style="margin-top:14px"><h3>Legado en clubes</h3><p class="muted">Los reconocimientos especiales de los clubes aparecerán aquí únicamente cuando sean concedidos.</p></div>`;
   const cards = records.map(record => {
-    const stars = managerClubLegacyStars(record);
-    const idol = Number(record.points || 0) >= cfg.idolThreshold;
-    return `<article class="card manager-club-legacy-card ${idol ? 'is-idol' : ''}">
-      <div class="manager-club-legacy-head">${clubBadge(record.clubId)}<div><p class="label">${idol ? 'Eres un ídolo del club' : 'Legado en el club'}</p><h3>${escapeHtml(record.clubName || clubName(record.clubId))}</h3></div></div>
-      <div class="manager-club-legacy-stars" aria-label="${stars} de 10 estrellas">${Array.from({length:10},(_,index)=>`<span class="${index < stars ? 'is-active' : ''}">★</span>`).join('')}</div>
-      <div class="row manager-club-legacy-meta"><strong>${formatPlainNumber(record.points)} puntos</strong><span class="small muted">Principal ${record.mainObjectives} · Secundarios ${record.secondaryObjectives} · Títulos ${record.titles}</span></div>
-      ${idol ? '<p class="small ok">Reduce permanentemente 10% la posibilidad de despido en este club.</p>' : `<p class="small muted">Ídolo al superar ${cfg.idolThreshold - 1} puntos.</p>`}
+    return `<article class="card manager-club-legacy-card is-idol">
+      <div class="manager-club-legacy-head">${clubBadge(record.clubId)}<div><p class="label">Ídolo del club</p><h3>${escapeHtml(record.clubName || clubName(record.clubId))}</h3></div></div>
+      <div class="manager-club-legacy-recognition"><span aria-hidden="true">★</span><strong>Reconocimiento conseguido</strong></div>
     </article>`;
   }).join('');
-  return `<section class="manager-club-legacy-section" style="margin-top:14px"><div class="row"><div><h3>Legado en clubes</h3><p class="muted small">Cada objetivo principal suma ${cfg.pointsMainObjective}, cada objetivo secundario oculto suma ${cfg.pointsSecondaryObjective} y cada título suma ${cfg.pointsPerTitle} puntos.</p></div></div><div class="manager-club-legacy-grid">${cards}</div></section>`;
+  return `<section class="manager-club-legacy-section" style="margin-top:14px"><div class="row"><div><h3>Legado en clubes</h3><p class="muted small">Reconocimientos especiales obtenidos durante tu carrera.</p></div></div><div class="manager-club-legacy-grid">${cards}</div></section>`;
 }
 
 /* Persistencia y migración. */

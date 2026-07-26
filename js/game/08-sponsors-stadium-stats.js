@@ -725,6 +725,29 @@ function facilityConstructionProgress(project){
   if(!project || Number(project.totalDays || 0) <= 0) return 0;
   return clamp(Math.round(((Number(project.totalDays) - Number(project.daysLeft || 0)) / Number(project.totalDays)) * 100), 0, 100);
 }
+function stadiumVisualAssetMarkup(src, alt, options={}){
+  const modifier = String(options.modifier || '').replace(/[^a-z0-9_-]/gi, '');
+  const badge = options.badge ? `<span class="game-visual-asset-badge">${escapeHtml(options.badge)}</span>` : '';
+  const caption = options.caption ? `<figcaption>${escapeHtml(options.caption)}</figcaption>` : '';
+  return `<figure class="game-visual-asset ${modifier}"><img src="${escapeHtml(src)}?v=8.56" alt="${escapeHtml(alt)}" loading="lazy">${badge}${caption}</figure>`;
+}
+function stadiumFieldVisualPath(score){
+  const quality = clamp(Math.round(Number(score || 0)), 0, 100);
+  if(quality >= 80) return 'assets/campo/campo-deterioro-01-excelente.webp';
+  if(quality >= 60) return 'assets/campo/campo-deterioro-02-leve.webp';
+  if(quality >= 40) return 'assets/campo/campo-deterioro-03-medio.webp';
+  if(quality >= 20) return 'assets/campo/campo-deterioro-04-alto.webp';
+  return 'assets/campo/campo-deterioro-05-critico.webp';
+}
+function stadiumMainVisualPath(clubId=game?.selectedClubId){
+  return activeStadiumExpansionProjects(clubId).length
+    ? 'assets/estadio/estadio-remodelacion.webp'
+    : 'assets/estadio/estadio-generico.webp';
+}
+function youthTrainingVisualPath(level=0){
+  const safeLevel = clamp(Math.round(Number(level || 0)), 0, 5);
+  return `assets/juveniles/predio-juveniles-nivel-${String(safeLevel).padStart(2,'0')}.webp`;
+}
 function startPitchHeatingConstruction(){
   if(!game?.selectedClubId) return;
   if(typeof managerChallengeBlocks === 'function' && managerChallengeBlocks('fieldMaintenance')){ showNotice(managerChallengeBlockedMessage('fieldMaintenance')); return; }
@@ -777,6 +800,7 @@ function pitchHeatingFacilityMarkup(){
   const status = project ? 'En construcción' : state.heating.built ? (state.heating.active ? 'Encendida' : 'Apagada') : 'No construida';
   return `<div class="card stadium-facility-card">
     <div class="row facility-card-head"><div><p class="label">Instalación del campo</p><h3>${escapeHtml(definition.name)}</h3></div><span class="pill ${state.heating.active ? 'ok' : ''}">${escapeHtml(status)}</span></div>
+    ${stadiumVisualAssetMarkup(`assets/instalaciones/calefaccion-cesped-${state.heating.active ? 'on' : 'off'}.webp`, `Calefacción de césped ${state.heating.active ? 'encendida' : 'apagada'}`, { modifier:'facility-visual', badge:state.heating.active ? 'ON' : 'OFF' })}
     <p class="muted small">Construcción ${formatMoney(definition.buildCost)} · ${definition.buildDays} días. Encendida cuesta ${formatMoney(definition.dailyCost)} por día y recupera +${definition.dailyFieldGain} de estado del campo.</p>
     ${project ? `<div class="facility-project"><div class="row"><strong>Obra activa</strong><span>${Number(project.daysLeft || 0)} día(s) restantes</span></div><div class="project-progress"><span style="width:${facilityConstructionProgress(project)}%"></span></div></div>` : ''}
     <div class="facility-actions">
@@ -798,6 +822,7 @@ function youthTrainingFacilityMarkup(){
   const currentResidenceLimit = typeof youthTrainingResidenceLimit === 'function' ? youthTrainingResidenceLimit() : currentLevel * 2;
   return `<div class="card stadium-facility-card youth-facility-card">
     <div class="row facility-card-head"><div><p class="label">Academia</p><h3>Predio de entrenamiento juvenil</h3></div><span class="pill ${currentLevel >= 5 ? 'ok' : ''}">${currentLevel ? `Nivel ${currentLevel} · ${escapeHtml(currentDef?.name || '')}` : 'Sin predio'}</span></div>
+    ${stadiumVisualAssetMarkup(youthTrainingVisualPath(currentLevel), currentLevel ? `Predio juvenil nivel ${currentLevel} ${currentDef?.name || ''}` : 'Terreno inicial sin predio juvenil', { modifier:'facility-visual', badge:currentLevel ? `Nivel ${currentLevel}` : 'Sin predio' })}
     <p class="muted small">La primera captación de cada temporada entrega ${currentExceptionalTotal} juvenil(es) excepcional(es) en total: 1 base + ${currentBonus} por el nivel actual. El máximo es 6. También habilita espacio para ${currentResidenceLimit} residencia(s).</p>
     ${project ? `<div class="facility-project"><div class="row"><strong>Construyendo nivel ${Number(project.targetLevel || currentLevel + 1)}</strong><span>${Number(project.daysLeft || 0)} día(s) restantes</span></div><div class="project-progress"><span style="width:${facilityConstructionProgress(project)}%"></span></div></div>` : ''}
     <div class="facility-level-grid">${levels.map(level => {
@@ -860,6 +885,7 @@ function renderStadiumFans(){
   const fanStats = fanRecentStats(game.selectedClubId);
   const campaignCount = (game?.fans?.memberCampaigns || []).filter(campaign => Number(campaign.clubId || 0) === Number(game.selectedClubId) && Number(campaign.daysLeft || 0) > 0).length;
   view.innerHTML = `<div class="row section-title"><div><h2>Hinchas y socios</h2><p class="tagline">Crecimiento de la hinchada, campañas y política de entradas.</p></div><span class="pill">Capacidad ${new Intl.NumberFormat('es-AR').format(capacity)}</span></div>
+    ${stadiumVisualAssetMarkup('assets/hinchas/hinchas-generico.webp', 'Hinchas alentando en la tribuna', { modifier:'fans-visual', badge:`${new Intl.NumberFormat('es-AR').format(currentFans)} hinchas` })}
     <div class="card stadium-card">
       <div class="grid cols-3">
         <div><p class="label">Hinchas totales</p><strong>${new Intl.NumberFormat('es-AR').format(currentFans)}</strong></div>
@@ -912,6 +938,7 @@ function renderStadium(){
   const afaSanctionState = typeof afaFieldSanctionState === 'function' ? afaFieldSanctionState(game.selectedClubId) : null;
   const afaInterventionActive = Boolean((afaSanctionState?.status === 'pending' && validIsoDate(afaSanctionState.restoreDate)) || (typeof AFA_FIELD_SANCTION_THRESHOLD !== 'undefined' && score < AFA_FIELD_SANCTION_THRESHOLD));
   const lastCapacityDecay = Array.isArray(game?.stadium?.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory.slice().reverse().find(item => Number(item.clubId || 0) === Number(game.selectedClubId)) : null;
+  const activeExpansionCount = activeStadiumExpansionProjects(game.selectedClubId).length;
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -921,6 +948,7 @@ function renderStadium(){
       <div class="row"><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div><button type="button" id="btnOpenStadiumFacilities" class="ghost">Instalaciones del estadio</button></div>
     </div>
     ${typeof afaFieldSanctionMarkup === 'function' ? afaFieldSanctionMarkup(game.selectedClubId) : ''}
+    ${stadiumVisualAssetMarkup(stadiumMainVisualPath(game.selectedClubId), activeExpansionCount ? 'Estadio durante una ampliación o remodelación' : 'Estadio del club en condiciones normales', { modifier:'stadium-main-visual', badge:activeExpansionCount ? `${activeExpansionCount} obra(s) activa(s)` : 'Estadio operativo' })}
     <div class="grid cols-2">
       <div class="card stadium-card">
         <div class="row" style="align-items:flex-start">
@@ -930,6 +958,7 @@ function renderStadium(){
           </div>
           <span class="pill">Mantenimiento</span>
         </div>
+        ${stadiumVisualAssetMarkup(stadiumFieldVisualPath(score), `Campo de juego con ${100 - score}% de deterioro`, { modifier:'pitch-visual', badge:`Deterioro ${100 - score}%` })}
         <div class="stadium-score-row"><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong><span>${score}/100</span></div>
         ${fieldBar(score, label)}
         ${fieldMaintenanceBlocked ? '<p class="muted small danger">Reto activo: no se puede replantar ni reparar el campo.</p>' : ''}
@@ -1415,4 +1444,3 @@ function sortedStandings(divisionId=null){
     .filter(s => !allowed || allowed.has(s.clubId))
     .sort((a,b)=> b.pts-a.pts || b.dg-a.dg || b.gf-a.gf || clubName(a.clubId).localeCompare(clubName(b.clubId)) );
 }
-

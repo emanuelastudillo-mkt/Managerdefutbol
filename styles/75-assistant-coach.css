@@ -32,8 +32,8 @@
   margin:0;
 }
 .assistant-tier-preview strong,.assistant-tier-preview span,.assistant-tier-preview small{display:block}
-.assistant-tier-preview span{margin-top:4px;color:var(--text,#eef7f3);font-size:.84rem}
-.assistant-tier-preview small{margin-top:3px;color:var(--muted,#9eb3aa);font-size:.76rem}
+.assistant-tier-preview span{margin-top:4px;color:var(--text,#eef7f3);font-size:.715rem}
+.assistant-tier-preview small{margin-top:3px;color:var(--muted,#9eb3aa);font-size:.635rem}
 .assistant-coach-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
 .assistant-coach-active-grid{
   display:grid;
@@ -63,7 +63,7 @@
   box-shadow:0 0 16px rgba(73,190,128,.35);
   transition:width .25s ease;
 }
-.assistant-progress-copy{margin-top:8px;gap:10px;font-size:.82rem}
+.assistant-progress-copy{margin-top:8px;gap:10px;font-size:.695rem}
 .assistant-progress-copy span{color:var(--muted,#9eb3aa)}
 .assistant-last-analysis{
   display:flex;
@@ -74,7 +74,7 @@
   padding-top:16px;
   border-top:1px solid rgba(255,255,255,.09);
 }
-.staff-tier-cadence{display:block;margin-top:3px;color:var(--muted,#9eb3aa);font-size:.76rem}
+.staff-tier-cadence{display:block;margin-top:3px;color:var(--muted,#9eb3aa);font-size:.635rem}
 
 .assistant-analysis-modal{width:min(940px,92vw)}
 .assistant-analysis-title{align-items:flex-start;gap:16px}
@@ -99,9 +99,9 @@
   border-radius:13px;
   background:rgba(255,255,255,.035);
 }
-.assistant-analysis-metric span{color:var(--muted,#9eb3aa);font-size:.74rem}
-.assistant-analysis-metric strong{margin-top:auto;font-size:1.06rem}
-.assistant-analysis-metric small{margin-top:3px;color:var(--muted,#9eb3aa);font-size:.72rem}
+.assistant-analysis-metric span{color:var(--muted,#9eb3aa);font-size:.615rem}
+.assistant-analysis-metric strong{margin-top:auto;font-size:.935rem}
+.assistant-analysis-metric small{margin-top:3px;color:var(--muted,#9eb3aa);font-size:.595rem}
 .assistant-analysis-section-title{margin:20px 0 10px}
 .assistant-analysis-section-title h3{margin:2px 0 0}
 .assistant-recommendations{display:grid;gap:10px}
@@ -128,7 +128,7 @@
   font-weight:800;
 }
 .assistant-recommendation-head{display:flex;gap:8px;align-items:center}
-.assistant-area{color:var(--muted,#9eb3aa);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+.assistant-area{color:var(--muted,#9eb3aa);font-size:.625rem;text-transform:uppercase;letter-spacing:.06em}
 .assistant-recommendation h3{margin:8px 0 5px}
 .assistant-recommendation p{margin:0;line-height:1.48}
 .assistant-evidence{
@@ -137,7 +137,7 @@
   border-radius:10px;
   background:rgba(0,0,0,.2);
   color:var(--muted,#9eb3aa);
-  font-size:.8rem;
+  font-size:.675rem;
 }
 
 @media (max-width:900px){

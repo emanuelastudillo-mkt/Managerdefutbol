@@ -3,7 +3,7 @@
 function versionedDataRequestUrl(url){
   const clean = String(url || '').trim();
   if(!clean || !/^data\//i.test(clean) || /[?&]v=/i.test(clean)) return clean;
-  const version = String(window.GAME_CONFIG?.version || 'V8.54').replace(/^v/i, '');
+  const version = String(window.GAME_CONFIG?.version || 'V8.55').replace(/^v/i, '');
   return `${clean}${clean.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
 }
 async function fetchJsonIfExists(url){
@@ -2071,8 +2071,11 @@ const FALLBACK_PLAYER_LAST_NAMES = ['Gómez','Rodríguez','Fernández','López',
 function generatedPlayerName(id, clubNameValue, nationality='Argentina'){
   if(typeof playerNameForNationality === 'function') return playerNameForNationality(id, nationality, clubNameValue);
   const first = FALLBACK_PLAYER_FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-first`, FALLBACK_PLAYER_FIRST_NAMES.length)];
+  let second = FALLBACK_PLAYER_FIRST_NAMES[hashNumber(`${clubNameValue}-${id}-second`, FALLBACK_PLAYER_FIRST_NAMES.length)];
+  if(second === first) second = FALLBACK_PLAYER_FIRST_NAMES[(FALLBACK_PLAYER_FIRST_NAMES.indexOf(second) + 1) % FALLBACK_PLAYER_FIRST_NAMES.length];
   const last = FALLBACK_PLAYER_LAST_NAMES[hashNumber(`${clubNameValue}-${id}-last`, FALLBACK_PLAYER_LAST_NAMES.length)];
-  return `${first} ${last}`;
+  const full = `${first} ${second} ${last}`;
+  return full.length <= 22 ? full : `${first} ${last}`.slice(0,22).trim();
 }
 function skillTierValue(base, id, label, tier='common'){
   const multipliers = { key:1.30, common:1.00, rare:0.65, weak:0.35 };

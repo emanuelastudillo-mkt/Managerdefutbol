@@ -1,48 +1,48 @@
-# Una vida de manager — V8.54
+# Una vida de manager — V8.55
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.54** e incorpora una renovación visual deportiva completa sobre la base funcional de V8.53.
+La revisión actual muestra **V8.55** y ajusta los nombres de jugadores y los recursos visuales sobre la base funcional de V8.54.
 
-- fondo negro neutro y superficies más limpias;
-- cabecera compacta y fija en escritorio;
-- navegación lateral modernizada, conservando todas las secciones;
-- títulos con mayor jerarquía y mejor separación entre bloques;
-- botones principales tipo píldora y controles secundarios consistentes;
-- bienvenida y oficina con una ilustración de estadio propia y liviana;
-- tarjetas, tablas, partidos, modales, Filosofía y Segundo entrenador alineados al nuevo sistema;
-- adaptación específica para móvil, sin agrandar innecesariamente tablas o tácticas;
-- marca, favicon e ilustración incluidos en `assets/`, sin recursos externos.
+- límite estricto de 22 caracteres para nombres completos, contando los espacios;
+- hasta dos nombres y un apellido cuando la combinación entra en el límite;
+- reducción automática a un nombre y un apellido cuando la combinación es larga;
+- migración idempotente para plantel, mercado, academia, retirados, transferencias y derechos del manager;
+- restauración del banner PNG y del favicon PNG usados antes de la V8.54;
+- eliminación del fondo `hero-stadium.svg` y reemplazo por fondos CSS livianos;
+- conservación de la renovación visual deportiva, sin recursos remotos en tiempo de ejecución.
 
 ## Sistema visual
 
-- `styles/100-visual-refresh-v854.css` funciona como capa final aislada.
+- `styles/100-visual-refresh-v855.css` funciona como capa final aislada.
 - Los estilos anteriores se conservan para no romper componentes ni pantallas históricas.
 - Los colores dinámicos del club siguen usándose como acento.
 - Las superficies principales usan una paleta neutral para mejorar el contraste.
 - La tipografía permanece local mediante la pila de fuentes del sistema.
-- No se incorporaron frameworks, librerías, fuentes remotas ni CSS del sitio utilizado como referencia.
+- Los fondos de bienvenida, oficina, Filosofía y Segundo entrenador ahora se generan únicamente con CSS.
+- No se incorporaron frameworks, librerías, fuentes remotas ni CSS externo.
 
 ## Recursos incluidos
 
-- `assets/logo-banner.svg`: logotipo horizontal del juego.
-- `assets/favicon.svg`: icono del navegador.
-- `assets/hero-stadium.svg`: ilustración abstracta para Inicio, oficina, Filosofía y Segundo entrenador.
+- `assets/logo-banner.png`: logotipo horizontal original del juego.
+- `favicon.png`: icono original del navegador.
 
-Los SVG son propios, se sirven desde el mismo dominio y cumplen la política de seguridad existente.
+Los archivos `assets/logo-banner.svg`, `assets/favicon.svg` y `assets/hero-stadium.svg` ya no forman parte de la versión completa.
 
 ## Compatibilidad y publicación
 
-- La V8.54 no cambia reglas, datos de carrera ni estructura de guardado.
-- Las partidas V8.53 y anteriores compatibles se cargan sin migración visual.
+- La V8.55 no cambia reglas deportivas, economía, Worker ni base de datos.
+- Las partidas anteriores compatibles migran los nombres automáticamente al cargarse.
+- La migración guarda `playerNameFormatVersion` y mantiene sincronizadas las referencias por ID.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.54-INCREMENTAL` respetando las rutas.
-- Los nuevos archivos de `assets/` son obligatorios para evitar imágenes rotas.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.55-INCREMENTAL` respetando las rutas.
+- `favicon.png` y `assets/logo-banner.png` son obligatorios para evitar imágenes rotas.
+- Si se usa el incremental, borrar manualmente los tres SVG retirados y `styles/100-visual-refresh-v854.css`.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ## Fotos del Segundo entrenador
@@ -56,6 +56,14 @@ La versión funciona sin fotografías gracias a un respaldo visual. Cuando esté
 ---
 
 # Historial de versiones
+
+## V8.54 — Renovación visual de estilo deportivo
+
+- Fondo negro neutro, superficies más limpias y cabecera compacta.
+- Navegación lateral, títulos, botones, tarjetas, tablas y modales modernizados.
+- Adaptación visual de Inicio, oficina, partidos, Filosofía y Segundo entrenador.
+- Ajustes específicos para escritorio y móvil.
+- Capa final aislada para conservar la compatibilidad de los componentes históricos.
 
 ## V8.53 — Segundo entrenador y análisis situacional
 

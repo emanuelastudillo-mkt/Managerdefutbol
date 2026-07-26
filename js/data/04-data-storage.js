@@ -3,7 +3,7 @@
 function versionedDataRequestUrl(url){
   const clean = String(url || '').trim();
   if(!clean || !/^data\//i.test(clean) || /[?&]v=/i.test(clean)) return clean;
-  const version = String(window.GAME_CONFIG?.version || 'V8.53').replace(/^v/i, '');
+  const version = String(window.GAME_CONFIG?.version || 'V8.54').replace(/^v/i, '');
   return `${clean}${clean.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
 }
 async function fetchJsonIfExists(url){

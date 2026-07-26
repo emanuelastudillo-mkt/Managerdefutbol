@@ -1,50 +1,49 @@
-# Una vida de manager — V8.53
+# Una vida de manager — V8.54
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.53** e incorpora al **Segundo entrenador** en `Club > Empleados`.
+La revisión actual muestra **V8.54** e incorpora una renovación visual deportiva completa sobre la base funcional de V8.53.
 
-- tres niveles propios: Principiante, Asentado y Experimentado;
-- sueldos por temporada de $2.000.000, $7.000.000 y $23.000.000;
-- un nuevo análisis cada 25, 18 o 10 días de juego;
-- barra visible de progreso hasta el siguiente informe;
-- mensaje enlazado a Empleados cuando el análisis queda disponible;
-- tres prioridades personalizadas y explicadas por informe;
-- historial de hasta 20 análisis dentro de la carrera.
+- fondo negro neutro y superficies más limpias;
+- cabecera compacta y fija en escritorio;
+- navegación lateral modernizada, conservando todas las secciones;
+- títulos con mayor jerarquía y mejor separación entre bloques;
+- botones principales tipo píldora y controles secundarios consistentes;
+- bienvenida y oficina con una ilustración de estadio propia y liviana;
+- tarjetas, tablas, partidos, modales, Filosofía y Segundo entrenador alineados al nuevo sistema;
+- adaptación específica para móvil, sin agrandar innecesariamente tablas o tácticas;
+- marca, favicon e ilustración incluidos en `assets/`, sin recursos externos.
 
-## Qué analiza
+## Sistema visual
 
-- calidad y profundidad del plantel comparadas con la división;
-- forma física, moral, lesiones y compatibilidad de los titulares con sus roles;
-- caja del club y saldo personal;
-- ocupación y decisiones pendientes de la Academia;
-- estado del campo y capacidad del estadio;
-- formación activa, tácticas guardadas y problemas detectados;
-- calidad del próximo rival;
-- resultado de Filosofía, cuando el cuestionario fue completado.
+- `styles/100-visual-refresh-v854.css` funciona como capa final aislada.
+- Los estilos anteriores se conservan para no romper componentes ni pantallas históricas.
+- Los colores dinámicos del club siguen usándose como acento.
+- Las superficies principales usan una paleta neutral para mejorar el contraste.
+- La tipografía permanece local mediante la pila de fuentes del sistema.
+- No se incorporaron frameworks, librerías, fuentes remotas ni CSS del sitio utilizado como referencia.
 
-El diagnóstico es local, determinista y orientativo. No utiliza servicios de IA externos, no genera costos por consulta y no modifica atributos, resultados, probabilidades ni recompensas.
+## Recursos incluidos
 
-## Contrato y despido
+- `assets/logo-banner.svg`: logotipo horizontal del juego.
+- `assets/favicon.svg`: icono del navegador.
+- `assets/hero-stadium.svg`: ilustración abstracta para Inicio, oficina, Filosofía y Segundo entrenador.
 
-- El sueldo anual se cobra completo al momento de contratar, igual que los otros empleados del club.
-- El contrato dura la temporada vigente.
-- El despido no cobra una segunda indemnización porque el año completo ya fue pagado; tampoco devuelve dinero.
-- Al despedirlo se pierde el progreso del informe en curso, pero se conservan los informes anteriores.
-- Al comenzar una nueva temporada o cambiar de club se necesita contratar nuevamente.
-- Si el presupuesto cae debajo de $0, la directiva también puede despedir automáticamente al Segundo entrenador.
+Los SVG son propios, se sirven desde el mismo dominio y cumplen la política de seguridad existente.
 
 ## Compatibilidad y publicación
 
-- Las partidas V8.52 se normalizan automáticamente al cargar y reciben el nuevo estado de análisis sin perder información.
-- El progreso y los informes se guardan localmente con la carrera.
+- La V8.54 no cambia reglas, datos de carrera ni estructura de guardado.
+- Las partidas V8.53 y anteriores compatibles se cargan sin migración visual.
+- Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.53-INCREMENTAL` respetando las rutas.
-- No eliminar del repositorio recursos visuales que no estén incluidos en la entrega, como `favicon.png`, `assets/logo-banner.png`, `img/` u otras imágenes ya publicadas.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.54-INCREMENTAL` respetando las rutas.
+- Los nuevos archivos de `assets/` son obligatorios para evitar imágenes rotas.
+- No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ## Fotos del Segundo entrenador
 
@@ -57,6 +56,17 @@ La versión funciona sin fotografías gracias a un respaldo visual. Cuando esté
 ---
 
 # Historial de versiones
+
+## V8.53 — Segundo entrenador y análisis situacional
+
+- Tres niveles: Principiante, Asentado y Experimentado.
+- Sueldos por temporada de $2.000.000, $7.000.000 y $23.000.000.
+- Un nuevo análisis cada 25, 18 o 10 días de juego.
+- Barra visible de progreso hasta el siguiente informe.
+- Mensaje enlazado a Empleados cuando el análisis queda disponible.
+- Tres prioridades personalizadas y explicadas por informe.
+- Historial de hasta 20 análisis dentro de la carrera.
+- Diagnóstico local sin llamadas a servicios externos de IA.
 
 ## V8.52 — Filosofía e identidad del manager
 

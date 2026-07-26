@@ -1,3 +1,58 @@
+# V8.50 — Alertas de lesiones y cláusulas equilibradas
+
+## Cambios incluidos
+
+### Acceso desde la alerta de lesionados
+
+- La alerta de lesionados del Inicio ya no abre **Primer Equipo** ni **Táctica**.
+- Al seleccionarla abre directamente **Empleados**, donde se encuentra el Kinesiólogo y las acciones de tratamiento.
+- El texto de la alerta explica que desde esa sección se puede tratar al jugador y revisar su recuperación.
+- El bloqueo obligatorio por una alineación inválida continúa abriendo Táctica, porque ese aviso corresponde a reemplazar lesionados o suspendidos antes de jugar.
+
+### Nueva fórmula de cláusulas
+
+La fórmula anterior podía producir diferencias demasiado amplias: desde aproximadamente `0,6` hasta `32` sueldos anuales según edad y división.
+
+V8.50 conserva el cálculo histórico y después mueve cada resultado un 50% hacia una referencia central de `16` sueldos anuales:
+
+```text
+multiplicador_nuevo = 16 + (multiplicador_anterior - 16) × 0,50
+cláusula = sueldo_anual × multiplicador_nuevo
+```
+
+Resultado del balance en la base inicial:
+
+- Rango anterior: entre `0,6` y `32` sueldos anuales.
+- Rango nuevo: entre `8,3` y `24` sueldos anuales.
+- Cláusula mínima generada: de `$48.000` a `$664.000`.
+- Cláusula máxima generada: de `$921.600.000` a `$691.200.000`.
+- Las cláusulas intermedias cambian menos que los extremos.
+- Se mantiene la jerarquía por división, edad y sueldo.
+
+Los parámetros quedan editables en `config.js`:
+
+- `economia.clausulaMultiplicadorCentral`: referencia central, por defecto `16`.
+- `economia.clausulaCompresionExtremos`: proporción de distancia conservada, por defecto `0.50`.
+
+### Jugadores especiales
+
+- Los 100 jugadores especiales de V8.47 fueron recalculados con la fórmula V8.50.
+- Conservan sueldo y cláusula al 150% del valor normal correspondiente.
+- Las partidas anteriores sincronizan sus nuevas cláusulas desde la base manual sin cambiar club actual, edad alcanzada, estadísticas ni historial de transferencias.
+
+## Migración
+
+- Las cláusulas calculadas se actualizan automáticamente al cargar una partida.
+- El valor de mercado continúa siguiendo la cláusula, como en las versiones anteriores.
+- No se modifican sueldos existentes.
+- No requiere Worker, SQL ni imágenes.
+
+**V8.50 no rompe partidas anteriores.** Cambia los valores económicos calculados de las cláusulas al cargar, pero no elimina jugadores, contratos, estadísticas, transferencias ni datos de la carrera.
+
+---
+
+## Historial anterior — V8.49
+
 # V8.49 — Táctica personalizada provisoria
 
 ## Objetivo de la versión

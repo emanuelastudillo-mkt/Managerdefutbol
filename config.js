@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.49',
+  version: 'V8.50',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -24,7 +24,7 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.49', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.50', 'data/Liga Chile.json', 'data/Liga Brasil.json', 'data/Liga Inglaterra.json', 'data/Liga Espana.json', 'data/Liga Italia.json', 'data/Liga Rumania.json'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
     playersUrl: 'data/jugadores.json',
     playersUrls: [
@@ -38,13 +38,13 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.49',
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.50',
     sponsorsUrl: 'data/sponsors.json',
     employeesUrl: 'data/empleados.json',
-    installationsUrl: 'data/instalaciones.json?v=8.49',
-    eventsUrl: 'data/eventos.json?v=8.49',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.49',
-    managerAchievementsUrl: 'data/hitos_manager.json?v=8.49',
+    installationsUrl: 'data/instalaciones.json?v=8.50',
+    eventsUrl: 'data/eventos.json?v=8.50',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.50',
+    managerAchievementsUrl: 'data/hitos_manager.json?v=8.50',
     retosManagerUrl: 'data/retos_manager.json',
     estadiosUrls: ['data/estadios_argentina.json', 'data/estadios_chile.json', 'data/estadios_brasil.json', 'data/estadios_inglaterra.json', 'data/estadios_espana.json', 'data/estadios_italia.json', 'data/estadios_rumania.json'],
     hinchasUrls: ['data/hinchas_argentina.json', 'data/hinchas_chile.json', 'data/hinchas_brasil.json', 'data/hinchas_inglaterra.json', 'data/hinchas_espana.json', 'data/hinchas_italia.json', 'data/hinchas_rumania.json'],
@@ -424,8 +424,12 @@ window.GAME_CONFIG = {
       limpiezaPorHinchaPorPartido: 10
     },
     escalaSueldosYClausulas: 0.10,
-    // Multiplica sólo las cláusulas calculadas. 0.10 = una décima parte del valor previo.
+    // Escala histórica previa al balance de extremos.
     escalaClausulas: 0.10,
+    // V8.50: cada cláusula se mueve un 50% hacia un valor central equivalente a 16 sueldos anuales.
+    // Esto eleva especialmente las cláusulas demasiado bajas y reduce las más altas sin invertir la jerarquía.
+    clausulaMultiplicadorCentral: 16,
+    clausulaCompresionExtremos: 0.50,
     reduccionBaseSueldoFinTemporada: 0.05,
     bonusSueldoPorPartidoJugado: 0.01,
     banco: {

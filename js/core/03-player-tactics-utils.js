@@ -1347,12 +1347,24 @@ function clauseBaseForClub(clubId, divisionName=''){
   }
   return clauseBaseFromDivisionName(divisionName);
 }
+function rawPlayerClauseSalaryMultiplier(player, clubId=player?.clubId, divisionName=''){
+  const age = Math.max(15, Math.round(Number(player?.age || 18)));
+  const historicalMultiplier = Math.max(
+    PLAYER_CLAUSE_MIN_MULTIPLIER,
+    clauseBaseForClub(clubId, divisionName) - (PLAYER_CLAUSE_AGE_REDUCTION * age)
+  );
+  return Math.max(0, historicalMultiplier * PLAYER_CLAUSE_VALUE_SCALE);
+}
+function balancedPlayerClauseSalaryMultiplier(player, clubId=player?.clubId, divisionName=''){
+  const rawMultiplier = rawPlayerClauseSalaryMultiplier(player, clubId, divisionName);
+  const target = Math.max(0, Number(PLAYER_CLAUSE_BALANCE_TARGET_MULTIPLIER || 0));
+  const compression = clamp(Number(PLAYER_CLAUSE_EXTREME_COMPRESSION || 0), 0, 1);
+  return Math.max(0, target + ((rawMultiplier - target) * compression));
+}
 function playerClauseFor(player, clubId=player?.clubId, divisionName=''){
   const salary = Math.max(0, Math.round(Number(player?.salary || 0)));
-  const age = Math.max(15, Math.round(Number(player?.age || 18)));
-  const multiplier = Math.max(PLAYER_CLAUSE_MIN_MULTIPLIER, clauseBaseForClub(clubId, divisionName) - (PLAYER_CLAUSE_AGE_REDUCTION * age));
-  const baseClause = Math.max(salary * PLAYER_CLAUSE_MIN_MULTIPLIER, Math.round(salary * multiplier));
-  return Math.max(0, Math.round(baseClause * PLAYER_CLAUSE_VALUE_SCALE));
+  if(!salary) return 0;
+  return Math.max(0, Math.round(salary * balancedPlayerClauseSalaryMultiplier(player, clubId, divisionName)));
 }
 function refreshPlayerClause(player){
   if(!player) return 0;

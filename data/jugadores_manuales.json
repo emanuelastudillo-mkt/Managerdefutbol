@@ -1,8 +1,8 @@
 {
   "metadata": {
     "nombre": "jugadores_manuales",
-    "version": "V8.47",
-    "appVersion": "V8.47",
+    "version": "V8.50",
+    "appVersion": "V8.50",
     "proyecto": "manager_de_futbol",
     "descripcion": "100 jugadores especiales con nombres ficticios reconocibles, media bloqueada y economía al 150% del valor normal.",
     "moneda": "ARS",
@@ -21,14 +21,15 @@
     "sincronizaPartidasExistentes": true
   },
   "reglas": {
-    "economia": "Sueldo y cláusula calculados con la fórmula normal de primera división y multiplicados por 1.50.",
+    "economia": "Sueldo al 150% y cláusula calculada con la fórmula V8.50 de compresión de extremos, manteniendo el 150% sobre el valor normal.",
     "multiplicadorEconomico": 1.5,
     "clausulaBloqueada": true,
     "valorMercadoIgualClausula": true,
     "idsReservados": "910001 en adelante para jugadores manuales activos",
     "reapareceAlRetirarse": true,
     "mediaBloqueada": true,
-    "mediaRobertoLewanInferida": 90
+    "mediaRobertoLewanInferida": 90,
+    "formulaClausula": "Mover 50% hacia 16 sueldos anuales; jugadores especiales conservan prima 1.50."
   },
   "habilidadesRequeridas": [
     "ataque",
@@ -75,12 +76,13 @@
       },
       "economia": {
         "sueldo": 44550000,
-        "clausula": 1202850000,
-        "valor": 1202850000,
+        "clausula": 957825000,
+        "valor": 957825000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 29700000,
-        "clausulaNormalReferencia": 801900000
+        "clausulaNormalReferencia": 638550000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -92,7 +94,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 1
       }
@@ -125,12 +127,13 @@
       },
       "economia": {
         "sueldo": 44100000,
-        "clausula": 1014300000,
-        "valor": 1014300000,
+        "clausula": 859950000,
+        "valor": 859950000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 29400000,
-        "clausulaNormalReferencia": 676200000
+        "clausulaNormalReferencia": 573300000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -142,7 +145,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 2
       }
@@ -175,12 +178,13 @@
       },
       "economia": {
         "sueldo": 44100000,
-        "clausula": 1190700000,
-        "valor": 1190700000,
+        "clausula": 948150000,
+        "valor": 948150000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 29400000,
-        "clausulaNormalReferencia": 793800000
+        "clausulaNormalReferencia": 632100000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -192,7 +196,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 3
       }
@@ -225,12 +229,13 @@
       },
       "economia": {
         "sueldo": 44100000,
-        "clausula": 1014300000,
-        "valor": 1014300000,
+        "clausula": 859950000,
+        "valor": 859950000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 29400000,
-        "clausulaNormalReferencia": 676200000
+        "clausulaNormalReferencia": 573300000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -242,7 +247,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 4
       }
@@ -275,12 +280,13 @@
       },
       "economia": {
         "sueldo": 43200000,
-        "clausula": 1080000000,
-        "valor": 1080000000,
+        "clausula": 885600000,
+        "valor": 885600000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28800000,
-        "clausulaNormalReferencia": 720000000
+        "clausulaNormalReferencia": 590400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -292,7 +298,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 5
       }
@@ -325,12 +331,13 @@
       },
       "economia": {
         "sueldo": 43200000,
-        "clausula": 1339200000,
-        "valor": 1339200000,
+        "clausula": 1015200000,
+        "valor": 1015200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28800000,
-        "clausulaNormalReferencia": 892800000
+        "clausulaNormalReferencia": 676800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -342,7 +349,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 6
       }
@@ -375,12 +382,13 @@
       },
       "economia": {
         "sueldo": 42750000,
-        "clausula": 1154250000,
-        "valor": 1154250000,
+        "clausula": 919125000,
+        "valor": 919125000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28500000,
-        "clausulaNormalReferencia": 769500000
+        "clausulaNormalReferencia": 612750000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -392,7 +400,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 7
       }
@@ -425,12 +433,13 @@
       },
       "economia": {
         "sueldo": 42750000,
-        "clausula": 1068750000,
-        "valor": 1068750000,
+        "clausula": 876375000,
+        "valor": 876375000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28500000,
-        "clausulaNormalReferencia": 712500000
+        "clausulaNormalReferencia": 584250000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -442,7 +451,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 8
       }
@@ -475,12 +484,13 @@
       },
       "economia": {
         "sueldo": 42750000,
-        "clausula": 983250000,
-        "valor": 983250000,
+        "clausula": 833625000,
+        "valor": 833625000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28500000,
-        "clausulaNormalReferencia": 655500000
+        "clausulaNormalReferencia": 555750000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -492,7 +502,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 9
       }
@@ -525,12 +535,13 @@
       },
       "economia": {
         "sueldo": 42300000,
-        "clausula": 1226700000,
-        "valor": 1226700000,
+        "clausula": 951750000,
+        "valor": 951750000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28200000,
-        "clausulaNormalReferencia": 817800000
+        "clausulaNormalReferencia": 634500000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -542,7 +553,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 10
       }
@@ -575,12 +586,13 @@
       },
       "economia": {
         "sueldo": 41850000,
-        "clausula": 1171800000,
-        "valor": 1171800000,
+        "clausula": 920700000,
+        "valor": 920700000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27900000,
-        "clausulaNormalReferencia": 781200000
+        "clausulaNormalReferencia": 613800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -592,7 +604,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 11
       }
@@ -625,12 +637,13 @@
       },
       "economia": {
         "sueldo": 41850000,
-        "clausula": 1088100000,
-        "valor": 1088100000,
+        "clausula": 878850000,
+        "valor": 878850000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27900000,
-        "clausulaNormalReferencia": 725400000
+        "clausulaNormalReferencia": 585900000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -642,7 +655,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 12
       }
@@ -675,12 +688,13 @@
       },
       "economia": {
         "sueldo": 41850000,
-        "clausula": 920700000,
-        "valor": 920700000,
+        "clausula": 795150000,
+        "valor": 795150000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27900000,
-        "clausulaNormalReferencia": 613800000
+        "clausulaNormalReferencia": 530100000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -692,7 +706,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 13
       }
@@ -725,12 +739,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 828000000,
-        "valor": 828000000,
+        "clausula": 745200000,
+        "valor": 745200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 552000000
+        "clausulaNormalReferencia": 496800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -742,7 +757,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 14
       }
@@ -775,12 +790,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 1076400000,
-        "valor": 1076400000,
+        "clausula": 869400000,
+        "valor": 869400000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 717600000
+        "clausulaNormalReferencia": 579600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -792,7 +808,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 15
       }
@@ -825,12 +841,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 993600000,
-        "valor": 993600000,
+        "clausula": 828000000,
+        "valor": 828000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 662400000
+        "clausulaNormalReferencia": 552000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -842,7 +859,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 16
       }
@@ -875,12 +892,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 982800000,
-        "valor": 982800000,
+        "clausula": 819000000,
+        "valor": 819000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 655200000
+        "clausulaNormalReferencia": 546000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -892,7 +910,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 17
       }
@@ -925,12 +943,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 982800000,
-        "valor": 982800000,
+        "clausula": 819000000,
+        "valor": 819000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 655200000
+        "clausulaNormalReferencia": 546000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -942,7 +961,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 18
       }
@@ -975,12 +994,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 1064700000,
-        "valor": 1064700000,
+        "clausula": 859950000,
+        "valor": 859950000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 709800000
+        "clausulaNormalReferencia": 573300000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -992,7 +1012,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 19
       }
@@ -1025,12 +1045,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 1105650000,
-        "valor": 1105650000,
+        "clausula": 880425000,
+        "valor": 880425000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 737100000
+        "clausulaNormalReferencia": 586950000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1042,7 +1063,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 20
       }
@@ -1075,12 +1096,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 972000000,
-        "valor": 972000000,
+        "clausula": 810000000,
+        "valor": 810000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 648000000
+        "clausulaNormalReferencia": 540000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1092,7 +1114,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 21
       }
@@ -1125,12 +1147,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 810000000,
-        "valor": 810000000,
+        "clausula": 729000000,
+        "valor": 729000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 540000000
+        "clausulaNormalReferencia": 486000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1142,7 +1165,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 22
       }
@@ -1175,12 +1198,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 1215000000,
-        "valor": 1215000000,
+        "clausula": 931500000,
+        "valor": 931500000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 810000000
+        "clausulaNormalReferencia": 621000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1192,7 +1216,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 23
       }
@@ -1225,12 +1249,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 841050000,
-        "valor": 841050000,
+        "clausula": 740925000,
+        "valor": 740925000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 560700000
+        "clausulaNormalReferencia": 493950000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1242,7 +1267,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 24
       }
@@ -1275,12 +1300,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 1108800000,
-        "valor": 1108800000,
+        "clausula": 871200000,
+        "valor": 871200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 739200000
+        "clausulaNormalReferencia": 580800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1292,7 +1318,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 25
       }
@@ -1325,12 +1351,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 910800000,
-        "valor": 910800000,
+        "clausula": 772200000,
+        "valor": 772200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 607200000
+        "clausulaNormalReferencia": 514800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1342,7 +1369,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 26
       }
@@ -1375,12 +1402,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 950400000,
-        "valor": 950400000,
+        "clausula": 792000000,
+        "valor": 792000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 633600000
+        "clausulaNormalReferencia": 528000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1392,7 +1420,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 27
       }
@@ -1425,12 +1453,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 831600000,
-        "valor": 831600000,
+        "clausula": 732600000,
+        "valor": 732600000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 554400000
+        "clausulaNormalReferencia": 488400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1442,7 +1471,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 28
       }
@@ -1475,12 +1504,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 910800000,
-        "valor": 910800000,
+        "clausula": 772200000,
+        "valor": 772200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 607200000
+        "clausulaNormalReferencia": 514800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1492,7 +1522,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 29
       }
@@ -1525,12 +1555,13 @@
       },
       "economia": {
         "sueldo": 42300000,
-        "clausula": 888300000,
-        "valor": 888300000,
+        "clausula": 782550000,
+        "valor": 782550000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 28200000,
-        "clausulaNormalReferencia": 592200000
+        "clausulaNormalReferencia": 521700000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1542,7 +1573,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 30
       }
@@ -1575,12 +1606,13 @@
       },
       "economia": {
         "sueldo": 41850000,
-        "clausula": 1088100000,
-        "valor": 1088100000,
+        "clausula": 878850000,
+        "valor": 878850000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27900000,
-        "clausulaNormalReferencia": 725400000
+        "clausulaNormalReferencia": 585900000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1592,7 +1624,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 31
       }
@@ -1625,12 +1657,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 1035000000,
-        "valor": 1035000000,
+        "clausula": 848700000,
+        "valor": 848700000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 690000000
+        "clausulaNormalReferencia": 565800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1642,7 +1675,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 32
       }
@@ -1675,12 +1708,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 982800000,
-        "valor": 982800000,
+        "clausula": 819000000,
+        "valor": 819000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 655200000
+        "clausulaNormalReferencia": 546000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1692,7 +1726,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 33
       }
@@ -1725,12 +1759,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 1023750000,
-        "valor": 1023750000,
+        "clausula": 839475000,
+        "valor": 839475000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 682500000
+        "clausulaNormalReferencia": 559650000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1742,7 +1777,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 34
       }
@@ -1775,12 +1810,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 1121400000,
-        "valor": 1121400000,
+        "clausula": 881100000,
+        "valor": 881100000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 747600000
+        "clausulaNormalReferencia": 587400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1792,7 +1828,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 35
       }
@@ -1825,12 +1861,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1842,7 +1879,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 36
       }
@@ -1875,12 +1912,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 850500000,
-        "valor": 850500000,
+        "clausula": 749250000,
+        "valor": 749250000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 567000000
+        "clausulaNormalReferencia": 499500000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1892,7 +1930,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 37
       }
@@ -1925,12 +1963,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1942,7 +1981,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 38
       }
@@ -1975,12 +2014,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 881100000,
-        "valor": 881100000,
+        "clausula": 760950000,
+        "valor": 760950000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 587400000
+        "clausulaNormalReferencia": 507300000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -1992,7 +2032,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 39
       }
@@ -2025,12 +2065,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 982800000,
-        "valor": 982800000,
+        "clausula": 819000000,
+        "valor": 819000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 655200000
+        "clausulaNormalReferencia": 546000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2042,7 +2083,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 40
       }
@@ -2075,12 +2116,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 982800000,
-        "valor": 982800000,
+        "clausula": 819000000,
+        "valor": 819000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 655200000
+        "clausulaNormalReferencia": 546000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2092,7 +2134,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 41
       }
@@ -2125,12 +2167,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 1035000000,
-        "valor": 1035000000,
+        "clausula": 848700000,
+        "valor": 848700000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 690000000
+        "clausulaNormalReferencia": 565800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2142,7 +2185,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 42
       }
@@ -2175,12 +2218,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2192,7 +2236,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 43
       }
@@ -2225,12 +2269,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 972000000,
-        "valor": 972000000,
+        "clausula": 810000000,
+        "valor": 810000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 648000000
+        "clausulaNormalReferencia": 540000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2242,7 +2287,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 44
       }
@@ -2275,12 +2320,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 1117800000,
-        "valor": 1117800000,
+        "clausula": 890100000,
+        "valor": 890100000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 745200000
+        "clausulaNormalReferencia": 593400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2292,7 +2338,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 45
       }
@@ -2325,12 +2371,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 1069200000,
-        "valor": 1069200000,
+        "clausula": 851400000,
+        "valor": 851400000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 712800000
+        "clausulaNormalReferencia": 567600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2342,7 +2389,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 46
       }
@@ -2375,12 +2422,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 361200000,
-        "valor": 361200000,
+        "clausula": 283800000,
+        "valor": 283800000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 240800000
+        "clausulaNormalReferencia": 189200000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2392,7 +2440,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 47
       }
@@ -2425,12 +2473,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 950400000,
-        "valor": 950400000,
+        "clausula": 792000000,
+        "valor": 792000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 633600000
+        "clausulaNormalReferencia": 528000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2442,7 +2491,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 48
       }
@@ -2475,12 +2524,13 @@
       },
       "economia": {
         "sueldo": 41400000,
-        "clausula": 1117800000,
-        "valor": 1117800000,
+        "clausula": 890100000,
+        "valor": 890100000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27600000,
-        "clausulaNormalReferencia": 745200000
+        "clausulaNormalReferencia": 593400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2492,7 +2542,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 49
       }
@@ -2525,12 +2575,13 @@
       },
       "economia": {
         "sueldo": 40950000,
-        "clausula": 900900000,
-        "valor": 900900000,
+        "clausula": 778050000,
+        "valor": 778050000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27300000,
-        "clausulaNormalReferencia": 600600000
+        "clausulaNormalReferencia": 518700000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2542,7 +2593,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 50
       }
@@ -2575,12 +2626,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 261000000,
-        "valor": 261000000,
+        "clausula": 234900000,
+        "valor": 234900000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 174000000
+        "clausulaNormalReferencia": 156600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2592,7 +2644,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 51
       }
@@ -2625,12 +2677,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 313200000,
-        "valor": 313200000,
+        "clausula": 261000000,
+        "valor": 261000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 208800000
+        "clausulaNormalReferencia": 174000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2642,7 +2695,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 52
       }
@@ -2675,12 +2728,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 950400000,
-        "valor": 950400000,
+        "clausula": 792000000,
+        "valor": 792000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 633600000
+        "clausulaNormalReferencia": 528000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2692,7 +2746,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 53
       }
@@ -2725,12 +2779,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 1001250000,
-        "valor": 1001250000,
+        "clausula": 821025000,
+        "valor": 821025000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 667500000
+        "clausulaNormalReferencia": 547350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2742,7 +2797,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 54
       }
@@ -2775,12 +2830,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 910800000,
-        "valor": 910800000,
+        "clausula": 772200000,
+        "valor": 772200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 607200000
+        "clausulaNormalReferencia": 514800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2792,7 +2848,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 55
       }
@@ -2825,12 +2881,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 1108800000,
-        "valor": 1108800000,
+        "clausula": 871200000,
+        "valor": 871200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 739200000
+        "clausulaNormalReferencia": 580800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2842,7 +2899,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 56
       }
@@ -2875,12 +2932,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 326250000,
-        "valor": 326250000,
+        "clausula": 267525000,
+        "valor": 267525000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 217500000
+        "clausulaNormalReferencia": 178350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2892,7 +2950,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 57
       }
@@ -2925,12 +2983,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 313200000,
-        "valor": 313200000,
+        "clausula": 261000000,
+        "valor": 261000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 208800000
+        "clausulaNormalReferencia": 174000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2942,7 +3001,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 58
       }
@@ -2975,12 +3034,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 313200000,
-        "valor": 313200000,
+        "clausula": 261000000,
+        "valor": 261000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 208800000
+        "clausulaNormalReferencia": 174000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -2992,7 +3052,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 59
       }
@@ -3025,12 +3085,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3042,7 +3103,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 60
       }
@@ -3075,12 +3136,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 1012500000,
-        "valor": 1012500000,
+        "clausula": 830250000,
+        "valor": 830250000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 675000000
+        "clausulaNormalReferencia": 553500000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3092,7 +3154,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 61
       }
@@ -3125,12 +3187,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 990000000,
-        "valor": 990000000,
+        "clausula": 811800000,
+        "valor": 811800000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 660000000
+        "clausulaNormalReferencia": 541200000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3142,7 +3205,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 62
       }
@@ -3175,12 +3238,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 871200000,
-        "valor": 871200000,
+        "clausula": 752400000,
+        "valor": 752400000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 580800000
+        "clausulaNormalReferencia": 501600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3192,7 +3256,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 63
       }
@@ -3225,12 +3289,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 1001250000,
-        "valor": 1001250000,
+        "clausula": 821025000,
+        "valor": 821025000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 667500000
+        "clausulaNormalReferencia": 547350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3242,7 +3307,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 64
       }
@@ -3275,12 +3340,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 300150000,
-        "valor": 300150000,
+        "clausula": 254475000,
+        "valor": 254475000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 200100000
+        "clausulaNormalReferencia": 169650000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3292,7 +3358,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 65
       }
@@ -3325,12 +3391,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3342,7 +3409,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 66
       }
@@ -3375,12 +3442,13 @@
       },
       "economia": {
         "sueldo": 12750000,
-        "clausula": 318750000,
-        "valor": 318750000,
+        "clausula": 261375000,
+        "valor": 261375000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8500000,
-        "clausulaNormalReferencia": 212500000
+        "clausulaNormalReferencia": 174250000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3392,7 +3460,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 67
       }
@@ -3425,12 +3493,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 252000000,
-        "valor": 252000000,
+        "clausula": 226800000,
+        "valor": 226800000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 168000000
+        "clausulaNormalReferencia": 151200000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3442,7 +3511,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 68
       }
@@ -3475,12 +3544,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 910800000,
-        "valor": 910800000,
+        "clausula": 772200000,
+        "valor": 772200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 607200000
+        "clausulaNormalReferencia": 514800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3492,7 +3562,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 69
       }
@@ -3525,12 +3595,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 340200000,
-        "valor": 340200000,
+        "clausula": 270900000,
+        "valor": 270900000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 226800000
+        "clausulaNormalReferencia": 180600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3542,7 +3613,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 70
       }
@@ -3575,12 +3646,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 302400000,
-        "valor": 302400000,
+        "clausula": 252000000,
+        "valor": 252000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 201600000
+        "clausulaNormalReferencia": 168000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3592,7 +3664,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 71
       }
@@ -3625,12 +3697,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 365400000,
-        "valor": 365400000,
+        "clausula": 283500000,
+        "valor": 283500000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 243600000
+        "clausulaNormalReferencia": 189000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3642,7 +3715,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 72
       }
@@ -3675,12 +3748,13 @@
       },
       "economia": {
         "sueldo": 12450000,
-        "clausula": 323700000,
-        "valor": 323700000,
+        "clausula": 261450000,
+        "valor": 261450000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8300000,
-        "clausulaNormalReferencia": 215800000
+        "clausulaNormalReferencia": 174300000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3692,7 +3766,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 73
       }
@@ -3725,12 +3799,13 @@
       },
       "economia": {
         "sueldo": 12300000,
-        "clausula": 282900000,
-        "valor": 282900000,
+        "clausula": 239850000,
+        "valor": 239850000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8200000,
-        "clausulaNormalReferencia": 188600000
+        "clausulaNormalReferencia": 159900000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3742,7 +3817,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 74
       }
@@ -3775,12 +3850,13 @@
       },
       "economia": {
         "sueldo": 12300000,
-        "clausula": 344400000,
-        "valor": 344400000,
+        "clausula": 270600000,
+        "valor": 270600000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8200000,
-        "clausulaNormalReferencia": 229600000
+        "clausulaNormalReferencia": 180400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3792,7 +3868,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 75
       }
@@ -3825,12 +3901,13 @@
       },
       "economia": {
         "sueldo": 12300000,
-        "clausula": 270600000,
-        "valor": 270600000,
+        "clausula": 233700000,
+        "valor": 233700000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8200000,
-        "clausulaNormalReferencia": 180400000
+        "clausulaNormalReferencia": 155800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3842,7 +3919,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 76
       }
@@ -3875,12 +3952,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 264600000,
-        "valor": 264600000,
+        "clausula": 233100000,
+        "valor": 233100000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 176400000
+        "clausulaNormalReferencia": 155400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3892,7 +3970,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 77
       }
@@ -3925,12 +4003,13 @@
       },
       "economia": {
         "sueldo": 12450000,
-        "clausula": 311250000,
-        "valor": 311250000,
+        "clausula": 255225000,
+        "valor": 255225000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8300000,
-        "clausulaNormalReferencia": 207500000
+        "clausulaNormalReferencia": 170150000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3942,7 +4021,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 78
       }
@@ -3975,12 +4054,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 1108800000,
-        "valor": 1108800000,
+        "clausula": 871200000,
+        "valor": 871200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 739200000
+        "clausulaNormalReferencia": 580800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -3992,7 +4072,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 79
       }
@@ -4025,12 +4105,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 1041300000,
-        "valor": 1041300000,
+        "clausula": 841050000,
+        "valor": 841050000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 694200000
+        "clausulaNormalReferencia": 560700000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4042,7 +4123,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 80
       }
@@ -4075,12 +4156,13 @@
       },
       "economia": {
         "sueldo": 40050000,
-        "clausula": 961200000,
-        "valor": 961200000,
+        "clausula": 801000000,
+        "valor": 801000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26700000,
-        "clausulaNormalReferencia": 640800000
+        "clausulaNormalReferencia": 534000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4092,7 +4174,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 81
       }
@@ -4125,12 +4207,13 @@
       },
       "economia": {
         "sueldo": 40500000,
-        "clausula": 972000000,
-        "valor": 972000000,
+        "clausula": 810000000,
+        "valor": 810000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 27000000,
-        "clausulaNormalReferencia": 648000000
+        "clausulaNormalReferencia": 540000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4142,7 +4225,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 82
       }
@@ -4175,12 +4258,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 326250000,
-        "valor": 326250000,
+        "clausula": 267525000,
+        "valor": 267525000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 217500000
+        "clausulaNormalReferencia": 178350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4192,7 +4276,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 83
       }
@@ -4225,12 +4309,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 871200000,
-        "valor": 871200000,
+        "clausula": 752400000,
+        "valor": 752400000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 580800000
+        "clausulaNormalReferencia": 501600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4242,7 +4327,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 84
       }
@@ -4275,12 +4360,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 326250000,
-        "valor": 326250000,
+        "clausula": 267525000,
+        "valor": 267525000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 217500000
+        "clausulaNormalReferencia": 178350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4292,7 +4378,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 85
       }
@@ -4325,12 +4411,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 326250000,
-        "valor": 326250000,
+        "clausula": 267525000,
+        "valor": 267525000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 217500000
+        "clausulaNormalReferencia": 178350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4342,7 +4429,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 86
       }
@@ -4375,12 +4462,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 348300000,
-        "valor": 348300000,
+        "clausula": 277350000,
+        "valor": 277350000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 232200000
+        "clausulaNormalReferencia": 184900000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4392,7 +4480,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 87
       }
@@ -4425,12 +4513,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 300150000,
-        "valor": 300150000,
+        "clausula": 254475000,
+        "valor": 254475000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 200100000
+        "clausulaNormalReferencia": 169650000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4442,7 +4531,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 88
       }
@@ -4475,12 +4564,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 270900000,
-        "valor": 270900000,
+        "clausula": 238650000,
+        "valor": 238650000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 180600000
+        "clausulaNormalReferencia": 159100000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4492,7 +4582,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 89
       }
@@ -4525,12 +4615,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 309600000,
-        "valor": 309600000,
+        "clausula": 258000000,
+        "valor": 258000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 206400000
+        "clausulaNormalReferencia": 172000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4542,7 +4633,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 90
       }
@@ -4575,12 +4666,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 340200000,
-        "valor": 340200000,
+        "clausula": 270900000,
+        "valor": 270900000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 226800000
+        "clausulaNormalReferencia": 180600000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4592,7 +4684,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 91
       }
@@ -4625,12 +4717,13 @@
       },
       "economia": {
         "sueldo": 13050000,
-        "clausula": 326250000,
-        "valor": 326250000,
+        "clausula": 267525000,
+        "valor": 267525000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8700000,
-        "clausulaNormalReferencia": 217500000
+        "clausulaNormalReferencia": 178350000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4642,7 +4735,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 92
       }
@@ -4675,12 +4768,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 296700000,
-        "valor": 296700000,
+        "clausula": 251550000,
+        "valor": 251550000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 197800000
+        "clausulaNormalReferencia": 167700000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4692,7 +4786,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 93
       }
@@ -4725,12 +4819,13 @@
       },
       "economia": {
         "sueldo": 12750000,
-        "clausula": 357000000,
-        "valor": 357000000,
+        "clausula": 280500000,
+        "valor": 280500000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8500000,
-        "clausulaNormalReferencia": 238000000
+        "clausulaNormalReferencia": 187000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4742,7 +4837,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 94
       }
@@ -4775,12 +4870,13 @@
       },
       "economia": {
         "sueldo": 12750000,
-        "clausula": 293250000,
-        "valor": 293250000,
+        "clausula": 248625000,
+        "valor": 248625000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8500000,
-        "clausulaNormalReferencia": 195500000
+        "clausulaNormalReferencia": 165750000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4792,7 +4888,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 95
       }
@@ -4825,12 +4921,13 @@
       },
       "economia": {
         "sueldo": 12600000,
-        "clausula": 264600000,
-        "valor": 264600000,
+        "clausula": 233100000,
+        "valor": 233100000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8400000,
-        "clausulaNormalReferencia": 176400000
+        "clausulaNormalReferencia": 155400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4842,7 +4939,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 96
       }
@@ -4875,12 +4972,13 @@
       },
       "economia": {
         "sueldo": 12900000,
-        "clausula": 309600000,
-        "valor": 309600000,
+        "clausula": 258000000,
+        "valor": 258000000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8600000,
-        "clausulaNormalReferencia": 206400000
+        "clausulaNormalReferencia": 172000000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4892,7 +4990,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 97
       }
@@ -4925,12 +5023,13 @@
       },
       "economia": {
         "sueldo": 12750000,
-        "clausula": 293250000,
-        "valor": 293250000,
+        "clausula": 248625000,
+        "valor": 248625000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 8500000,
-        "clausulaNormalReferencia": 195500000
+        "clausulaNormalReferencia": 165750000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4942,7 +5041,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 98
       }
@@ -4975,12 +5074,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 910800000,
-        "valor": 910800000,
+        "clausula": 772200000,
+        "valor": 772200000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 607200000
+        "clausulaNormalReferencia": 514800000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -4992,7 +5092,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 99
       }
@@ -5025,12 +5125,13 @@
       },
       "economia": {
         "sueldo": 39600000,
-        "clausula": 1029600000,
-        "valor": 1029600000,
+        "clausula": 831600000,
+        "valor": 831600000,
         "clausulaBloqueada": true,
         "multiplicadorSobreValorNormal": 1.5,
         "sueldoNormalReferencia": 26400000,
-        "clausulaNormalReferencia": 686400000
+        "clausulaNormalReferencia": 554400000,
+        "formulaClausula": "V8.50-compresion-extremos-50"
       },
       "foto": "",
       "mercado": {
@@ -5042,7 +5143,7 @@
       },
       "origen": {
         "source": "data/jugadores_manuales.json",
-        "rulesVersion": "V8.47-100-jugadores-especiales-economia-150",
+        "rulesVersion": "V8.50-clausulas-equilibradas-especiales-150",
         "tipo": "manual_activo",
         "ordenLista": 100
       }

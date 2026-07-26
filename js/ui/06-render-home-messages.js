@@ -271,7 +271,7 @@ function visualAlertItems(){
     items.push({ tone:'bad', icon:'11', title:'Debes confirmar tu equipo', text:tacticErrors.slice(0,2).join(' '), tab:'tactics' });
   }
   if(injured.length){
-    items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Revisá disponibilidad antes del próximo partido.', tab:'firstTeam' });
+    items.push({ tone:'warn', icon:'+', title:`${injured.length} lesionado(s)`, text:'Abrí Empleados para aplicar tratamientos y revisar la recuperación.', tab:'employees' });
   }
   const assistantUnread = unreadAssistantMessagesCount();
   if(assistantUnread){

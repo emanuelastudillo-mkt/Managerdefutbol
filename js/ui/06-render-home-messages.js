@@ -25,7 +25,7 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.51" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.52" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
@@ -141,7 +141,7 @@ function renderAll(){
     }
   }
   if(activeTab === 'players') activeTab = 'market';
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, careerImprovements:renderCareerImprovements, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, careerImprovements:renderCareerImprovements, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, philosophy:renderManagerPhilosophy, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
   if(game.gameOver?.active){
     if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
     if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();

@@ -1,4 +1,82 @@
-# V8.50 — Alertas de lesiones y cláusulas equilibradas
+# Una vida de manager — V8.52
+
+## Estado actual
+
+Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
+
+La revisión actual muestra **V8.52** e incorpora una nueva pestaña en `Carrera > Filosofía`.
+
+- cuestionario de 24 decisiones situacionales;
+- ocho ejes de identidad: intención, flexibilidad, defensa, riesgo, plantel, proyecto, liderazgo y mercado;
+- diez perfiles posibles y tres afinidades con entrenadores reconocidos;
+- resultado visual con radar, fortalezas y alertas;
+- cuatro consejos breves conectados directamente con las pantallas y reglas del juego;
+- guardado del avance y del resultado dentro de cada carrera;
+- repetición voluntaria del cuestionario con confirmación.
+
+## Consejos aplicados al juego
+
+- Los perfiles ofensivos reciben una recomendación para atacar con cobertura y evitar que cada pérdida se convierta en una ocasión rival.
+- Los perfiles dogmáticos reciben la advertencia **Tu Plan A necesita un Plan B** y un acceso directo para guardar dos tácticas.
+- Los perfiles adaptables reciben una guía para cambiar una capa táctica por vez y conservar automatismos.
+- Los formadores de talentos reciben un circuito de Academia basado en la economía real del juego: captación, Preparador, residencias, salarios semanales, cupos para juveniles excepcionales y reinversión de ventas.
+- La recomendación de cartas explica que **Experto en juveniles** debe activarse antes de la consulta semanal para revelar habilidades adicionales.
+- Cada consejo puede abrir Táctica, Entrenamiento, Mercado, Cuenta Bancaria, Academia o Cartas.
+
+El diagnóstico es orientativo: no modifica atributos, resultados, probabilidades ni recompensas.
+
+## Compatibilidad y publicación
+
+- Las partidas V8.51 se normalizan automáticamente al cargar y reciben el nuevo estado de Filosofía sin perder información.
+- El cuestionario y el resultado se guardan localmente con la carrera.
+- No se modificó el Worker.
+- No se requiere ejecutar SQL.
+- Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.52-INCREMENTAL` respetando las rutas.
+- No eliminar del repositorio recursos visuales que no estén incluidos en la entrega, como `favicon.png`, `assets/logo-banner.png`, `img/` u otras imágenes ya publicadas.
+
+---
+
+# Historial de versiones
+
+## V8.51 — Sin fotos personalizadas y enlace a Hitos
+
+- Eliminación completa de rutas y campos de fotos personalizadas de jugadores.
+- Uso exclusivo de imágenes por nacionalidad, con imagen genérica como respaldo.
+- Limpieza automática de campos de fotos heredados al cargar jugadores de partidas anteriores.
+- Botón **Ver hitos** en el mensaje generado al desbloquear un hito.
+- Acceso directo a `Carrera > Hitos` desde ese mensaje y desde su resumen en Inicio.
+- Ajustes exclusivamente de frontend, sin cambios de Worker ni SQL.
+
+## Base consolidada heredada
+
+### Integridad y seguridad online
+
+- Registro e inicio de sesión separados, con contraseña obligatoria.
+- Recuperación controlada de cuentas heredadas.
+- Límites de tamaño, frecuencia, intentos de autenticación y carreras por usuario.
+- Puntuación de carrera recalculada en el Worker.
+- Partidos de desafíos simulados de forma autoritativa en el servidor.
+- Rankings y premios unificados sobre partidos V2.
+- CORS restringido a los dominios autorizados y errores internos sin detalles SQL.
+
+### Rendimiento
+
+- Consultas de ranking sin cargar snapshots completos.
+- Selección de rival filtrada y limitada desde SQL.
+- Historial con paginación keyset.
+- Caché breve para esquema y ranking.
+- Cargas iniciales paralelas, conexión IndexedDB reutilizable y autoguardados agrupados.
+- Pausa del ticker visual cuando la pestaña está oculta.
+
+### Limpieza
+
+- Retirados módulos, rutas, diagnósticos y helpers sin uso confirmados por la auditoría.
+- Eliminado el simulador de desafíos del navegador: el cálculo ahora corresponde al Worker.
+- Eliminados handlers HTML inline y endurecida la CSP.
+- Conservado el CSS dinámico que no podía descartarse sin cobertura visual completa.
+
+## V8.50 — Alertas de lesiones y cláusulas equilibradas
 
 ## Cambios incluidos
 

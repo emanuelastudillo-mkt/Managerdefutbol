@@ -744,7 +744,7 @@ function sidebarGroupForTab(tab){
   if(['firstTeam','scouting','market'].includes(key)) return 'team';
   if(['employees','stadium'].includes(key)) return 'club';
   if(['fixture','standings','stats'].includes(key)) return 'competition';
-  if(['academy','careerImprovements','mystats','careerJobs','finance'].includes(key)) return key === 'finance' && String(financeViewMode || 'main') === 'main' ? 'club' : 'career';
+  if(['academy','careerImprovements','mystats','philosophy','careerJobs','finance'].includes(key)) return key === 'finance' && String(financeViewMode || 'main') === 'main' ? 'club' : 'career';
   if(['ranking','challenges'].includes(key)) return 'online';
   return '';
 }

@@ -212,6 +212,11 @@ function normalizeGame(saved){
   if(removedSpecialOverrides || !hadLeagueEconomySnapshot) normalized._needsAutosave = true;
   const previousTitleHistoryCount = Array.isArray(normalized.managerStats?.titleHistory) ? normalized.managerStats.titleHistory.length : 0;
   normalized.managerStats = ensureManagerCurrentSeasonStats(normalized.managerStats, normalized.seasonNumber, normalized.selectedClubId);
+  const hadManagerPhilosophy = Boolean(normalized.managerPhilosophy && typeof normalized.managerPhilosophy === 'object');
+  normalized.managerPhilosophy = typeof normalizeManagerPhilosophyState === 'function'
+    ? normalizeManagerPhilosophyState(normalized.managerPhilosophy)
+    : (normalized.managerPhilosophy || null);
+  if(!hadManagerPhilosophy) normalized._needsAutosave = true;
   const titlesRebuilt = syncManagerOfficialTitles(normalized);
   if(titlesRebuilt || Number(normalized.managerStats?.titleHistory?.length || 0) !== previousTitleHistoryCount) normalized._needsAutosave = true;
   normalized.managerSharedProfile = (normalized.managerSharedProfile && typeof normalized.managerSharedProfile === 'object' && !Array.isArray(normalized.managerSharedProfile)) ? {
@@ -792,6 +797,7 @@ function newGame(selectedClubId, options={}){
     clubDivisionOverrides: {},
     leagueSeasonEconomy: { version:1, seasons:{} },
     managerStats: ensureManagerCurrentSeasonStats(createInitialManagerStats(), 1, selectedClubId),
+    managerPhilosophy: typeof createInitialManagerPhilosophyState === 'function' ? createInitialManagerPhilosophyState() : null,
     gameOver: null,
     messages: [],
     eventLog: [],

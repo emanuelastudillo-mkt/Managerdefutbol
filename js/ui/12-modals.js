@@ -1679,7 +1679,7 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.51</p>
+      <p class="eyebrow">Guía actualizada · V8.52</p>
       <h2>Ayuda de Chill mánager</h2>
       <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
@@ -1808,6 +1808,11 @@ function openGameHelpModal(){
           <h4>Perfil, historial e hitos</h4>
           <p>El historial registra clubes, temporadas y resultados. Los hitos, el prestigio y las licencias acompañan al manager durante toda la carrera, independientemente de su empleador actual.</p>
           ${gameHelpGoButton('mystats','Abrir perfil e historial','','profile')}
+        </article>
+        <article class="help-card card">
+          <h4>Filosofía del manager</h4>
+          <p>El cuestionario reúne 24 decisiones y construye un perfil sobre ocho ejes. El resultado muestra tres entrenadores de referencia y cuatro acciones para aplicar la identidad en Táctica, Entrenamiento, Mercado, Cuenta Bancaria, Academia o Cartas. Es orientativo y no entrega bonificaciones.</p>
+          ${gameHelpGoButton('philosophy','Descubrir mi filosofía')}
         </article>
         <article class="help-card card">
           <h4>Ranking y Desafíos Online</h4>

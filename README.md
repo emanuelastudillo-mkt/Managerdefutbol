@@ -1,25 +1,25 @@
-# Una vida de manager — V8.56
+# Una vida de manager — V8.57
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.56** y suma privacidad del Legado, una tipografía más compacta y recursos visuales dinámicos sobre la base funcional de V8.55.
+La revisión actual muestra **V8.57** e incorpora progresión visual por cantidad de juveniles y capacidad estructural del estadio sobre la base funcional de V8.56.
 
-- corrección de botones blancos que podían heredar texto blanco en Mensajes y Especial;
-- reducción de 2 px en las 694 declaraciones tipográficas explícitas del juego; la única declaración `inherit` conserva la reducción de su elemento padre;
-- el Legado en clubes ya no expone puntos, estrellas, desglose, condiciones, umbrales ni recompensas antes de obtener el reconocimiento;
-- al convertirse en ídolo sólo se muestra el club y el reconocimiento conseguido, sin explicar cómo se alcanzó;
-- 29 imágenes WebP nuevas, optimizadas para uso web, integradas con estados reales del juego;
-- tres retratos definitivos para el Segundo entrenador;
-- cinco iconos SVG nuevos para el Centro de Ojeo;
-- imágenes dinámicas para césped, calefacción, estadio, obras, hinchas, residencias y Predio juvenil;
-- conservación del formato de nombres de V8.55, con máximo de 22 caracteres y migración idempotente.
+- siete escenas de entrenamiento para representar desde una Academia inicial hasta 210 juveniles;
+- la cantidad de grupos y la densidad de jugadores aumentan sin vincular la imagen a un nivel concreto del Predio;
+- diez fases visuales de estadio entre 0 y 120.000 espectadores;
+- cada fase de estadio tiene su propia versión durante una ampliación: 20 estados activos en total;
+- el estadio utiliza su capacidad estructural, conservando la fase alcanzada aunque el aforo disponible disminuya por deterioro anual;
+- una obra activa muestra la variante en construcción de la fase actual y la siguiente fase aparece sólo después de finalizar la ampliación;
+- los 25 recursos nuevos se entregan en WebP optimizado;
+- se conservan todas las correcciones de contraste, tipografía, Legado y recursos dinámicos de V8.56.
 
 ## Sistema visual
 
 - `styles/100-visual-refresh-v855.css` conserva la renovación visual general.
 - `styles/110-visual-assets-v856.css` incorpora los recursos dinámicos y cierra la corrección de contraste.
+- `styles/120-visual-progression-v857.css` adapta las nuevas progresiones a escritorio y móvil.
 - Los estilos anteriores se conservan para no romper componentes ni pantallas históricas.
 - Los colores dinámicos del club siguen usándose como acento.
 - Las superficies principales usan una paleta neutral para mejorar el contraste.
@@ -34,30 +34,41 @@ La revisión actual muestra **V8.56** y suma privacidad del Legado, una tipograf
 - `img/empleados/segundo-entrenador-*.webp`: Principiante, Asentado y Experimentado.
 - `assets/campo/`: cinco estados visuales de deterioro del terreno.
 - `assets/instalaciones/`: calefacción de césped OFF y ON.
-- `assets/estadio/`: estadio operativo y estadio en ampliación/remodelación.
+- `assets/estadio/`: diez tamaños de estadio y diez estados correspondientes durante obras.
+- `assets/academia/`: siete densidades de juveniles entrenando, seleccionadas por ocupación.
 - `assets/hinchas/`: imagen genérica para Hinchas y socios.
 - `assets/residencias/`: diez etapas, seleccionadas según la cantidad de residencias.
 - `assets/juveniles/`: seis estados, desde Sin predio hasta Elite.
 - `assets/icons/scouting/`: Binoculares, Ojeador, Oficina, Informe y Radar en SVG.
 
-Las 29 imágenes raster se generaron en PNG y se publican como WebP a 1.280 px de ancho. La optimización redujo el paquete de 73.945.096 a 4.002.856 bytes, un 94,6%.
+Los 25 recursos raster nuevos se generaron en PNG y se publican como WebP a 1.280 px de ancho. La optimización redujo esos recursos de 60.626.534 a 3.158.316 bytes, un 94,8%. Sumados los dos estadios reutilizados de V8.56, la progresión actual utiliza 27 imágenes y pesa 3.386.272 bytes.
 
 ## Compatibilidad y publicación
 
-- La V8.56 no cambia reglas deportivas, economía, Worker ni base de datos.
-- Las partidas anteriores conservan sus datos; la privacidad del Legado sólo modifica lo que se muestra.
+- La V8.57 no cambia reglas deportivas, economía, Worker ni base de datos.
+- Las partidas anteriores conservan sus datos; las fases visuales se calculan al mostrar cada pantalla.
 - El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.56-INCREMENTAL` respetando las rutas.
-- Las carpetas nuevas de `assets/` y los tres WebP de `img/empleados/` son obligatorios para evitar imágenes rotas.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.57-INCREMENTAL` respetando las rutas.
+- Las carpetas nuevas `assets/academia/` y `assets/estadio/`, junto con `styles/120-visual-progression-v857.css`, son obligatorias para evitar imágenes o estilos faltantes.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ---
 
 # Historial de versiones
+
+## V8.57 — Progresión visual de Academia y estadio
+
+- Se añadieron siete fases de entrenamiento según la cantidad de juveniles activos.
+- Las escenas se concentran en jugadores y ejercicios para no contradecir los niveles del Predio.
+- Se añadieron diez fases estructurales de estadio desde 0 hasta 120.000 espectadores.
+- Cada fase posee una variante propia durante ampliaciones.
+- El deterioro de aforo no reduce visualmente el tamaño estructural ya construido.
+- Se reutilizaron como fase 8 el estadio operativo y la remodelación creados en V8.56.
+- Los 25 archivos nuevos se optimizaron a WebP y no requieren Worker ni SQL.
 
 ## V8.56 — Legado privado y recursos visuales dinámicos
 

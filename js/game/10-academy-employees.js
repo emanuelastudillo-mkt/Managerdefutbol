@@ -713,6 +713,41 @@ function academySortedPlayers(players){
     return Number(a.age || 0) - Number(b.age || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
   });
 }
+const ACADEMY_YOUTH_VISUAL_PHASES = [
+  { phase:1, max:29, label:'Grupo inicial' },
+  { phase:2, max:49, label:'Academia pequeña' },
+  { phase:3, max:79, label:'Academia en crecimiento' },
+  { phase:4, max:109, label:'Academia consolidada' },
+  { phase:5, max:139, label:'Academia amplia' },
+  { phase:6, max:179, label:'Academia de alto volumen' },
+  { phase:7, max:210, label:'Academia multitudinaria' }
+];
+function academyYouthVisualDefinition(count){
+  const safeCount = Math.max(0, Math.round(Number(count || 0)));
+  return ACADEMY_YOUTH_VISUAL_PHASES.find(item => safeCount <= item.max) || ACADEMY_YOUTH_VISUAL_PHASES.at(-1);
+}
+function academyYouthVisualPath(count){
+  const definition = academyYouthVisualDefinition(count);
+  const ranges = ['10-29','30-49','50-79','80-109','110-139','140-179','180-210'];
+  return `assets/academia/academia-juveniles-fase-${String(definition.phase).padStart(2,'0')}-${ranges[definition.phase - 1]}.webp`;
+}
+function academyYouthVisualMarkup(count, capacity=academyCapacity()){
+  const safeCount = Math.max(0, Math.round(Number(count || 0)));
+  if(safeCount <= 0){
+    return '<div class="game-visual-asset-empty academy-youth-visual-empty"><strong>Academia sin juveniles activos</strong><span>La sesión de entrenamiento aparecerá después de la primera captación.</span></div>';
+  }
+  const definition = academyYouthVisualDefinition(safeCount);
+  const path = academyYouthVisualPath(safeCount);
+  const badge = `${safeCount}/${Math.max(safeCount, Math.round(Number(capacity || 0)))} juveniles`;
+  if(typeof stadiumVisualAssetMarkup === 'function'){
+    return stadiumVisualAssetMarkup(path, `${safeCount} juveniles entrenando en Tu Academia`, {
+      modifier:'academy-youth-occupancy-visual',
+      badge,
+      caption:`${definition.label} · fase visual ${definition.phase}/7`
+    });
+  }
+  return `<figure class="game-visual-asset academy-youth-occupancy-visual"><img src="${path}?v=8.57" alt="${safeCount} juveniles entrenando en Tu Academia" loading="lazy"><span class="game-visual-asset-badge">${badge}</span></figure>`;
+}
 function academySortControlsMarkup(){
   const mode = String(game?.academy?.sortMode || 'edad_asc');
   const option = (value, label) => `<option value="${value}" ${mode === value ? 'selected' : ''}>${label}</option>`;
@@ -732,7 +767,7 @@ function academyResidenceVisualMarkup(count=academyResidenceCount()){
   if(typeof stadiumVisualAssetMarkup === 'function'){
     return stadiumVisualAssetMarkup(academyResidenceVisualPath(safeCount), `Complejo con ${safeCount} residencia${safeCount === 1 ? '' : 's'} juvenil${safeCount === 1 ? '' : 'es'}`, { modifier:'residence-visual', badge:`${safeCount}/10 residencias` });
   }
-  return `<figure class="game-visual-asset residence-visual"><img src="${academyResidenceVisualPath(safeCount)}?v=8.56" alt="Complejo con ${safeCount} residencias juveniles" loading="lazy"></figure>`;
+  return `<figure class="game-visual-asset residence-visual"><img src="${academyResidenceVisualPath(safeCount)}?v=8.57" alt="Complejo con ${safeCount} residencias juveniles" loading="lazy"></figure>`;
 }
 function academyResidenceLimit(){
   return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit() || 0))) : 0;
@@ -1893,6 +1928,7 @@ function renderAcademy(){
       <div><h2>Tu Academia</h2><p class="tagline">Preparador, captación, consulta y desarrollo de los juveniles del manager.</p></div>
       <div class="row"><span class="pill">Sede ${escapeHtml(academyLocalCountry())}</span><span class="pill">Saldo personal ${formatMoney(personalBalance)}</span></div>
     </div>
+    ${academyYouthVisualMarkup(active.length, capacity)}
     <div class="grid cols-3 academy-owner-summary">
       <div class="card"><p class="label">Propietario</p><strong>Manager</strong><p class="muted small">La Academia no pertenece al club actual.</p></div>
       <div class="card"><p class="label">Gasto semanal juvenil</p><strong>${formatMoney(salaryTurn)}</strong></div>

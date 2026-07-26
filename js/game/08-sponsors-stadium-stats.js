@@ -729,7 +729,7 @@ function stadiumVisualAssetMarkup(src, alt, options={}){
   const modifier = String(options.modifier || '').replace(/[^a-z0-9_-]/gi, '');
   const badge = options.badge ? `<span class="game-visual-asset-badge">${escapeHtml(options.badge)}</span>` : '';
   const caption = options.caption ? `<figcaption>${escapeHtml(options.caption)}</figcaption>` : '';
-  return `<figure class="game-visual-asset ${modifier}"><img src="${escapeHtml(src)}?v=8.56" alt="${escapeHtml(alt)}" loading="lazy">${badge}${caption}</figure>`;
+  return `<figure class="game-visual-asset ${modifier}"><img src="${escapeHtml(src)}?v=8.57" alt="${escapeHtml(alt)}" loading="lazy">${badge}${caption}</figure>`;
 }
 function stadiumFieldVisualPath(score){
   const quality = clamp(Math.round(Number(score || 0)), 0, 100);
@@ -739,10 +739,55 @@ function stadiumFieldVisualPath(score){
   if(quality >= 20) return 'assets/campo/campo-deterioro-04-alto.webp';
   return 'assets/campo/campo-deterioro-05-critico.webp';
 }
+const STADIUM_VISUAL_CAPACITY_PHASES = [
+  { phase:1, max:1999, label:'Campo municipal' },
+  { phase:2, max:4999, label:'Estadio de barrio' },
+  { phase:3, max:9999, label:'Estadio profesional pequeño' },
+  { phase:4, max:19999, label:'Estadio regional' },
+  { phase:5, max:29999, label:'Estadio profesional mediano' },
+  { phase:6, max:44999, label:'Estadio de gran ciudad' },
+  { phase:7, max:59999, label:'Estadio nacional' },
+  { phase:8, max:74999, label:'Estadio internacional' },
+  { phase:9, max:99999, label:'Estadio de élite' },
+  { phase:10, max:STADIUM_EXPANSION_MAX_CAPACITY, label:'Estadio monumental' }
+];
+function stadiumStructuralVisualCapacity(clubId=game?.selectedClubId){
+  const id = Number(clubId || 0);
+  const availableCapacity = clubStadiumCapacity(id);
+  const bankruptcyClub = Boolean(game?.bankruptcyMode && Number(game?.selectedClubId || 0) === id);
+  const structuralBase = bankruptcyClub ? 0 : baseStadiumCapacityForClub(id);
+  const completed = completedStadiumExpansionsForClub(id);
+  const completedGain = (STADIUM_EXPANSIONS || []).reduce((sum, expansion) => {
+    return sum + (completed?.[expansion.id] ? Math.max(0, Math.round(Number(expansion.capacityGain || 0))) : 0);
+  }, 0);
+  return clamp(Math.max(availableCapacity, structuralBase + completedGain), 0, STADIUM_EXPANSION_MAX_CAPACITY);
+}
+function stadiumVisualPhaseDefinition(capacity){
+  const safeCapacity = clamp(Math.round(Number(capacity || 0)), 0, STADIUM_EXPANSION_MAX_CAPACITY);
+  return STADIUM_VISUAL_CAPACITY_PHASES.find(item => safeCapacity <= item.max) || STADIUM_VISUAL_CAPACITY_PHASES.at(-1);
+}
+function stadiumMainVisualState(clubId=game?.selectedClubId){
+  const structuralCapacity = stadiumStructuralVisualCapacity(clubId);
+  const definition = stadiumVisualPhaseDefinition(structuralCapacity);
+  const activeWorks = activeStadiumExpansionProjects(clubId).length;
+  const suffix = activeWorks ? '-ampliacion' : '';
+  const phaseToken = String(definition.phase).padStart(2,'0');
+  const path = definition.phase === 8
+    ? (activeWorks ? 'assets/estadio/estadio-remodelacion.webp' : 'assets/estadio/estadio-generico.webp')
+    : `assets/estadio/estadio-fase-${phaseToken}${suffix}.webp`;
+  return {
+    path,
+    phase:definition.phase,
+    label:definition.label,
+    structuralCapacity,
+    activeWorks,
+    alt:activeWorks
+      ? `${definition.label} durante una ampliación`
+      : `${definition.label} en condiciones normales`
+  };
+}
 function stadiumMainVisualPath(clubId=game?.selectedClubId){
-  return activeStadiumExpansionProjects(clubId).length
-    ? 'assets/estadio/estadio-remodelacion.webp'
-    : 'assets/estadio/estadio-generico.webp';
+  return stadiumMainVisualState(clubId).path;
 }
 function youthTrainingVisualPath(level=0){
   const safeLevel = clamp(Math.round(Number(level || 0)), 0, 5);
@@ -939,6 +984,7 @@ function renderStadium(){
   const afaInterventionActive = Boolean((afaSanctionState?.status === 'pending' && validIsoDate(afaSanctionState.restoreDate)) || (typeof AFA_FIELD_SANCTION_THRESHOLD !== 'undefined' && score < AFA_FIELD_SANCTION_THRESHOLD));
   const lastCapacityDecay = Array.isArray(game?.stadium?.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory.slice().reverse().find(item => Number(item.clubId || 0) === Number(game.selectedClubId)) : null;
   const activeExpansionCount = activeStadiumExpansionProjects(game.selectedClubId).length;
+  const stadiumVisual = stadiumMainVisualState(game.selectedClubId);
   view.innerHTML = `
     <div class="row section-title">
       <div>
@@ -948,7 +994,11 @@ function renderStadium(){
       <div class="row"><div class="pill">Presupuesto: ${formatMoney(game.budget || 0)}</div><button type="button" id="btnOpenStadiumFacilities" class="ghost">Instalaciones del estadio</button></div>
     </div>
     ${typeof afaFieldSanctionMarkup === 'function' ? afaFieldSanctionMarkup(game.selectedClubId) : ''}
-    ${stadiumVisualAssetMarkup(stadiumMainVisualPath(game.selectedClubId), activeExpansionCount ? 'Estadio durante una ampliación o remodelación' : 'Estadio del club en condiciones normales', { modifier:'stadium-main-visual', badge:activeExpansionCount ? `${activeExpansionCount} obra(s) activa(s)` : 'Estadio operativo' })}
+    ${stadiumVisualAssetMarkup(stadiumVisual.path, stadiumVisual.alt, {
+      modifier:'stadium-main-visual',
+      badge:activeExpansionCount ? `${stadiumVisual.label} · ${activeExpansionCount} obra(s)` : stadiumVisual.label,
+      caption:`Fase visual ${stadiumVisual.phase}/10 · estructura para ${new Intl.NumberFormat('es-AR').format(stadiumVisual.structuralCapacity)} espectadores`
+    })}
     <div class="grid cols-2">
       <div class="card stadium-card">
         <div class="row" style="align-items:flex-start">

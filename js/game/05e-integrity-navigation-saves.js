@@ -847,6 +847,10 @@ function bindEvents(){
       if(typeof openManagerAchievementsFromMessage === 'function') openManagerAchievementsFromMessage();
       return;
     }
+    if(event.target.closest('[data-open-employees]')){
+      if(typeof openEmployeesFromMessage === 'function') openEmployeesFromMessage();
+      return;
+    }
     if(event.target.closest('[data-open-messages]')){ activeTab='messages'; renderAll(); return; }
     const mentalityBtn = event.target.closest('[data-toggle-mentality]');
     if(mentalityBtn){

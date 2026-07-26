@@ -193,6 +193,19 @@ function defaultStaffDefinitions(){
   return [
     { id:'psychologist', nombre:'Psicólogo motivacional', rol:'Motivación', costoBase:PSYCHOLOGIST_COST, duracion:'temporada', descripcion:'Permite realizar charlas motivacionales para mejorar la moral del plantel.', accion:'charla_motivacional', imagenes:{ regular:'img/empleados/psicologo-regular.webp', bueno:'img/empleados/psicologo-bueno.webp', elite:'img/empleados/psicologo-elite.webp' } },
     { id:'kinesiologist', nombre:'Kinesiólogo', rol:'Recuperación', costoBase:KINESIOLOGIST_COST, duracion:'temporada', descripcion:'Aplica tratamientos automáticos diarios a los lesionados y permite asignar un jugador a trabajo diferenciado con menor carga.', accion:'tratamiento_lesion', imagenes:{ regular:'img/empleados/kinesiologo-regular.webp', bueno:'img/empleados/kinesiologo-bueno.webp', elite:'img/empleados/kinesiologo-elite.webp' } },
+    {
+      id:'assistant_coach',
+      nombre:'Segundo entrenador',
+      rol:'Análisis situacional',
+      costoBase:ASSISTANT_COACH_ANNUAL_COSTS.regular,
+      duracion:'temporada',
+      descripcion:'Analiza el plantel, la economía, la Academia, el estadio, la táctica y el próximo rival para entregar tres prioridades explicadas.',
+      accion:'analisis_situacion',
+      nombresCategoria:{ regular:'Principiante', bueno:'Asentado', elite:'Experimentado' },
+      costosPorCategoria:{ ...ASSISTANT_COACH_ANNUAL_COSTS },
+      diasAnalisisPorCategoria:{ ...ASSISTANT_COACH_ANALYSIS_DAYS },
+      imagenes:{ regular:'img/empleados/segundo-entrenador-principiante.webp', bueno:'img/empleados/segundo-entrenador-asentado.webp', elite:'img/empleados/segundo-entrenador-experimentado.webp' }
+    },
     { id:'youth_preparer', nombre:'Preparador de juveniles', rol:'Academia', costoBase:YOUTH_PREPARER_COST, duracion:'temporada', descripcion:'Permite consultar informes de juveniles y descubrir más habilidades ocultas.', accion:'informe_juveniles', imagenes:{ regular:'img/empleados/preparador-juveniles-regular.webp', bueno:'img/empleados/preparador-juveniles-bueno.webp', elite:'img/empleados/preparador-juveniles-elite.webp' } }
   ];
 }
@@ -207,7 +220,10 @@ function staffCategories(){
   }));
 }
 function staffDefinitions(){
-  const source = Array.isArray(employeesDatabase?.empleados) && employeesDatabase.empleados.length ? employeesDatabase.empleados : defaultStaffDefinitions();
+  const defaults = defaultStaffDefinitions();
+  const provided = Array.isArray(employeesDatabase?.empleados) ? employeesDatabase.empleados.filter(Boolean) : [];
+  const providedIds = new Set(provided.map(item => String(item?.id || '')));
+  const source = provided.length ? [...provided, ...defaults.filter(item => !providedIds.has(item.id))] : defaults;
   return source.map(item => ({
     id:String(item.id || ''),
     nombre:item.nombre || item.name || item.id || 'Empleado',
@@ -216,6 +232,9 @@ function staffDefinitions(){
     duracion:item.duracion || item.duration || 'temporada',
     descripcion:item.descripcion || item.description || '',
     accion:item.accion || item.action || '',
+    nombresCategoria:(item.nombresCategoria && typeof item.nombresCategoria === 'object') ? { ...item.nombresCategoria } : {},
+    costosPorCategoria:(item.costosPorCategoria && typeof item.costosPorCategoria === 'object') ? { ...item.costosPorCategoria } : {},
+    diasAnalisisPorCategoria:(item.diasAnalisisPorCategoria && typeof item.diasAnalisisPorCategoria === 'object') ? { ...item.diasAnalisisPorCategoria } : {},
     imagenes:(item.imagenes && typeof item.imagenes === 'object') ? { ...item.imagenes } : {}
   })).filter(item => item.id);
 }
@@ -224,6 +243,11 @@ function staffDefinition(staffId){
 }
 function staffCategory(categoryId){
   return staffCategories().find(item => item.id === categoryId) || staffCategories()[0] || defaultStaffCategories()[0];
+}
+function staffCategoryFor(staffId, categoryId='regular'){
+  const base = staffCategory(categoryId);
+  const customName = String(staffDefinition(staffId)?.nombresCategoria?.[base.id] || '').trim();
+  return customName ? { ...base, nombre:customName } : base;
 }
 function staffBaseCost(staffId){
   const fromJson = Number(staffDefinition(staffId)?.costoBase || 0);
@@ -234,7 +258,10 @@ function staffBaseCost(staffId){
   return 0;
 }
 function staffHireCost(staffId, categoryId='regular'){
-  return Math.round(staffBaseCost(staffId) * staffCategory(categoryId).multiplicadorCosto);
+  const category = staffCategory(categoryId);
+  const exact = Number(staffDefinition(staffId)?.costosPorCategoria?.[category.id]);
+  if(Number.isFinite(exact) && exact >= 0) return Math.round(exact);
+  return Math.round(staffBaseCost(staffId) * category.multiplicadorCosto);
 }
 function managerPersonalBalance(){
   const finances = typeof ensureManagerFinancesState === 'function' ? ensureManagerFinancesState(game) : null;
@@ -279,6 +306,7 @@ function resetStaffSeasonState(){
     game.staffActions.kinesiologist.active = false;
     game.staffActions.kinesiologist.differentiatedPlayerId = 0;
   }
+  if(typeof pauseAssistantCoachAnalysis === 'function') pauseAssistantCoachAnalysis('season_end');
 }
 function legacyStaffActive(staffId){
   if(staffId === 'kinesiologist') return Boolean(game?.staffActions?.kinesiologist?.active);
@@ -307,7 +335,7 @@ function deactivateStaffEmployee(staffId, reason='manual'){
   const snapshot = {
     id:staffId,
     name:def.nombre,
-    category:staffCategory(contract?.category || 'regular').nombre,
+    category:staffCategoryFor(staffId, contract?.category || 'regular').nombre,
     cost:Number(contract?.cost || staffHireCost(staffId, contract?.category || 'regular') || 0)
   };
   if(contract){
@@ -326,6 +354,7 @@ function deactivateStaffEmployee(staffId, reason='manual'){
     game.academy = normalizeAcademyState(game.academy);
     if(game.academy.youthPreparer) game.academy.youthPreparer.active = false;
   }
+  if(staffId === 'assistant_coach' && typeof pauseAssistantCoachAnalysis === 'function') pauseAssistantCoachAnalysis(reason);
   return snapshot;
 }
 function dismissStaffEmployee(staffId, options={}){
@@ -377,19 +406,19 @@ function staffImagePath(staffId, categoryId='regular'){
   const category = staffCategory(categoryId).id;
   const fromJson = def?.imagenes?.[category] || def?.imagenes?.regular || '';
   if(fromJson) return String(fromJson);
-  const base = staffId === 'psychologist' ? 'psicologo' : staffId === 'kinesiologist' ? 'kinesiologo' : staffId === 'youth_preparer' ? 'preparador-juveniles' : 'empleado';
+  const base = staffId === 'psychologist' ? 'psicologo' : staffId === 'kinesiologist' ? 'kinesiologo' : staffId === 'youth_preparer' ? 'preparador-juveniles' : staffId === 'assistant_coach' ? 'segundo-entrenador' : 'empleado';
   return `img/empleados/${base}-${category}.webp`;
 }
 function staffImageMarkup(staffId, categoryId='regular', className='staff-employee-photo'){
   const def = staffDefinition(staffId);
-  const alt = `${def?.nombre || 'Empleado'} ${staffCategory(categoryId).nombre}`;
+  const alt = `${def?.nombre || 'Empleado'} ${staffCategoryFor(staffId, categoryId).nombre}`;
   return `<img class="${escapeHtml(className)}" src="${escapeHtml(staffImagePath(staffId, categoryId))}" alt="${escapeHtml(alt)}" loading="lazy"><span class="staff-photo-fallback" style="display:none">${escapeHtml((def?.nombre || 'E').slice(0,1).toUpperCase())}</span>`;
 }
 function staffContractCardMarkup(staffId, mode='compact'){
   const contract = staffContract(staffId);
   const def = staffDefinition(staffId);
   if(!contract || !def) return '';
-  const category = staffCategory(contract.category || 'regular');
+  const category = staffCategoryFor(staffId, contract.category || 'regular');
   const cls = mode === 'mini' ? 'staff-contract-card mini' : 'staff-contract-card';
   return `<div class="${cls}">
     <div class="staff-photo-wrap">${staffImageMarkup(staffId, category.id)}</div>
@@ -440,13 +469,16 @@ function staffCategoryUnlockInfo(categoryId='regular'){
   const restricted = founderStaffRestrictionsActive();
   return { restricted, requiredWins, wins, unlocked:!restricted || wins >= requiredWins, remaining:Math.max(0, requiredWins - wins) };
 }
-function founderStaffUnlockSummaryMarkup(){
+function founderStaffUnlockSummaryMarkup(staffId=''){
   if(!founderStaffRestrictionsActive()) return '';
   const wins = founderClubManagerWins();
   const good = typeof FOUNDER_STAFF_GOOD_WINS !== 'undefined' ? FOUNDER_STAFF_GOOD_WINS : 15;
   const elite = typeof FOUNDER_STAFF_ELITE_WINS !== 'undefined' ? FOUNDER_STAFF_ELITE_WINS : 45;
-  const next = wins < good ? `Nivel Bueno: faltan ${good - wins} victoria(s)` : wins < elite ? `Nivel Elite: faltan ${elite - wins} victoria(s)` : 'Todas las categorías desbloqueadas';
-  return `<div class="card blocker" style="margin-bottom:12px"><p class="label">Progreso del club fundador</p><strong>${wins} victorias</strong><p class="muted small">Al inicio sólo está disponible el nivel Regular. Bueno se habilita con ${good} victorias y Elite con ${elite}. ${escapeHtml(next)}.</p></div>`;
+  const regularLabel = staffCategoryFor(staffId, 'regular').nombre;
+  const goodLabel = staffCategoryFor(staffId, 'bueno').nombre;
+  const eliteLabel = staffCategoryFor(staffId, 'elite').nombre;
+  const next = wins < good ? `Nivel ${goodLabel}: faltan ${good - wins} victoria(s)` : wins < elite ? `Nivel ${eliteLabel}: faltan ${elite - wins} victoria(s)` : 'Todas las categorías desbloqueadas';
+  return `<div class="card blocker" style="margin-bottom:12px"><p class="label">Progreso del club fundador</p><strong>${wins} victorias</strong><p class="muted small">Al inicio sólo está disponible el nivel ${escapeHtml(regularLabel)}. ${escapeHtml(goodLabel)} se habilita con ${good} victorias y ${escapeHtml(eliteLabel)} con ${elite}. ${escapeHtml(next)}.</p></div>`;
 }
 function openStaffHireModal(staffId, after=null){
   if(!game) return;
@@ -454,7 +486,8 @@ function openStaffHireModal(staffId, after=null){
   const def = staffDefinition(staffId);
   if(!def){ showNotice('Empleado no disponible.'); return; }
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
-  const cards = staffCategories().map(cat => {
+  const cards = staffCategories().map(baseCategory => {
+    const cat = staffCategoryFor(staffId, baseCategory.id);
     const cost = staffHireCost(staffId, cat.id);
     const personalAcademyStaff = staffId === 'youth_preparer';
     const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
@@ -463,16 +496,20 @@ function openStaffHireModal(staffId, after=null){
     const status = !unlock.unlocked
       ? `Bloqueado · requiere ${unlock.requiredWins} victorias (${unlock.remaining} restantes)`
       : budgetBlocked ? (personalAcademyStaff ? 'Saldo personal insuficiente' : 'Presupuesto insuficiente') : 'Contrato por temporada';
+    const cadence = staffId === 'assistant_coach'
+      ? `<span class="staff-tier-cadence">Nuevo análisis cada ${Math.max(1, Math.round(Number(def.diasAnalisisPorCategoria?.[cat.id] || ASSISTANT_COACH_ANALYSIS_DAYS?.[cat.id] || 25)))} días</span>`
+      : '';
     return `<button class="staff-tier-card ${disabled ? 'disabled' : ''}" data-hire-staff-tier="${escapeHtml(staffId)}:${escapeHtml(cat.id)}" ${disabled ? 'disabled' : ''}>
       <span class="pill">${escapeHtml(cat.nombre)}</span>
       <strong>${formatMoney(cost)}</strong>
+      ${cadence}
       <small>${escapeHtml(status)}</small>
     </button>`;
   }).join('');
   openModal(`<div class="staff-hire-modal">
     <h2>Contratar ${escapeHtml(def.nombre)}</h2>
     <p class="muted">Elegí una categoría para esta temporada.</p>
-    ${staffId === 'youth_preparer' ? '' : founderStaffUnlockSummaryMarkup()}
+    ${staffId === 'youth_preparer' ? '' : founderStaffUnlockSummaryMarkup(staffId)}
     <div class="staff-tier-grid">${cards}</div>
   </div>`);
   document.querySelectorAll('[data-hire-staff-tier]').forEach(btn => btn.addEventListener('click', () => {
@@ -486,7 +523,7 @@ function hireStaffEmployee(staffId, categoryId='regular', after=null){
   const def = staffDefinition(staffId);
   if(!def) return;
   if(staffActive(staffId)){ showNotice(`${def.nombre} ya está contratado esta temporada.`); return; }
-  const cat = staffCategory(categoryId);
+  const cat = staffCategoryFor(staffId, categoryId);
   const personalAcademyStaff = staffId === 'youth_preparer';
   const unlock = personalAcademyStaff ? { restricted:false, requiredWins:0, wins:0, unlocked:true, remaining:0 } : staffCategoryUnlockInfo(cat.id);
   if(!unlock.unlocked){
@@ -513,6 +550,7 @@ function hireStaffEmployee(staffId, categoryId='regular', after=null){
     game.academy = normalizeAcademyState(game.academy);
     game.academy.youthPreparer = { active:true, category:cat.id, season:game.seasonNumber || 1, hiredTurn:currentTurnIndex() };
   }
+  if(staffId === 'assistant_coach' && typeof initializeAssistantCoachAnalysisAfterHire === 'function') initializeAssistantCoachAnalysisAfterHire(cat.id);
   closeModal();
   saveLocal(true);
   if(typeof after === 'function') after(); else renderAll();
@@ -2085,6 +2123,7 @@ function renderEmployees(){
     </div>
     ${staffContractsPanelMarkup({ empty:true })}
     <div class="card blocker" style="margin-top:12px"><p class="muted small">Si el presupuesto del club cae por debajo de $0, la directiva despide automáticamente a los empleados del club. El Preparador de juveniles pertenece a Tu Academia y no se ve afectado por la economía del club.</p></div>
+    ${typeof assistantCoachEmployeePanelMarkup === 'function' ? assistantCoachEmployeePanelMarkup() : ''}
     <div class="grid cols-2" style="margin-top:14px">
       <div class="card staff-card">
         <h3>Psicólogo motivacional</h3>
@@ -2118,6 +2157,7 @@ function renderEmployees(){
   $('btnHirePsychologist')?.addEventListener('click', () => openStaffHireModal('psychologist', renderEmployees));
   $('btnMotivationalTalk')?.addEventListener('click', (event) => callMotivationalPsychologist(event.currentTarget));
   $('btnHireKinesiologist')?.addEventListener('click', hireKinesiologist);
+  if(typeof bindAssistantCoachEmployeePanel === 'function') bindAssistantCoachEmployeePanel();
   $('btnKinesioTreatAll')?.addEventListener('click', (event) => treatAllInjuredPlayers(event.currentTarget));
   $('btnAssignKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(Number($('kinesioDifferentiatedPlayer')?.value || 0)));
   $('btnClearKinesioDifferentiated')?.addEventListener('click', () => assignKinesiologistDifferentiatedPlayer(0));

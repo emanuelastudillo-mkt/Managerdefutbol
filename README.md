@@ -1,43 +1,72 @@
-# Una vida de manager — V8.52
+# Una vida de manager — V8.53
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.52** e incorpora una nueva pestaña en `Carrera > Filosofía`.
+La revisión actual muestra **V8.53** e incorpora al **Segundo entrenador** en `Club > Empleados`.
 
-- cuestionario de 24 decisiones situacionales;
-- ocho ejes de identidad: intención, flexibilidad, defensa, riesgo, plantel, proyecto, liderazgo y mercado;
-- diez perfiles posibles y tres afinidades con entrenadores reconocidos;
-- resultado visual con radar, fortalezas y alertas;
-- cuatro consejos breves conectados directamente con las pantallas y reglas del juego;
-- guardado del avance y del resultado dentro de cada carrera;
-- repetición voluntaria del cuestionario con confirmación.
+- tres niveles propios: Principiante, Asentado y Experimentado;
+- sueldos por temporada de $2.000.000, $7.000.000 y $23.000.000;
+- un nuevo análisis cada 25, 18 o 10 días de juego;
+- barra visible de progreso hasta el siguiente informe;
+- mensaje enlazado a Empleados cuando el análisis queda disponible;
+- tres prioridades personalizadas y explicadas por informe;
+- historial de hasta 20 análisis dentro de la carrera.
 
-## Consejos aplicados al juego
+## Qué analiza
 
-- Los perfiles ofensivos reciben una recomendación para atacar con cobertura y evitar que cada pérdida se convierta en una ocasión rival.
-- Los perfiles dogmáticos reciben la advertencia **Tu Plan A necesita un Plan B** y un acceso directo para guardar dos tácticas.
-- Los perfiles adaptables reciben una guía para cambiar una capa táctica por vez y conservar automatismos.
-- Los formadores de talentos reciben un circuito de Academia basado en la economía real del juego: captación, Preparador, residencias, salarios semanales, cupos para juveniles excepcionales y reinversión de ventas.
-- La recomendación de cartas explica que **Experto en juveniles** debe activarse antes de la consulta semanal para revelar habilidades adicionales.
-- Cada consejo puede abrir Táctica, Entrenamiento, Mercado, Cuenta Bancaria, Academia o Cartas.
+- calidad y profundidad del plantel comparadas con la división;
+- forma física, moral, lesiones y compatibilidad de los titulares con sus roles;
+- caja del club y saldo personal;
+- ocupación y decisiones pendientes de la Academia;
+- estado del campo y capacidad del estadio;
+- formación activa, tácticas guardadas y problemas detectados;
+- calidad del próximo rival;
+- resultado de Filosofía, cuando el cuestionario fue completado.
 
-El diagnóstico es orientativo: no modifica atributos, resultados, probabilidades ni recompensas.
+El diagnóstico es local, determinista y orientativo. No utiliza servicios de IA externos, no genera costos por consulta y no modifica atributos, resultados, probabilidades ni recompensas.
+
+## Contrato y despido
+
+- El sueldo anual se cobra completo al momento de contratar, igual que los otros empleados del club.
+- El contrato dura la temporada vigente.
+- El despido no cobra una segunda indemnización porque el año completo ya fue pagado; tampoco devuelve dinero.
+- Al despedirlo se pierde el progreso del informe en curso, pero se conservan los informes anteriores.
+- Al comenzar una nueva temporada o cambiar de club se necesita contratar nuevamente.
+- Si el presupuesto cae debajo de $0, la directiva también puede despedir automáticamente al Segundo entrenador.
 
 ## Compatibilidad y publicación
 
-- Las partidas V8.51 se normalizan automáticamente al cargar y reciben el nuevo estado de Filosofía sin perder información.
-- El cuestionario y el resultado se guardan localmente con la carrera.
+- Las partidas V8.52 se normalizan automáticamente al cargar y reciben el nuevo estado de análisis sin perder información.
+- El progreso y los informes se guardan localmente con la carrera.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.52-INCREMENTAL` respetando las rutas.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.53-INCREMENTAL` respetando las rutas.
 - No eliminar del repositorio recursos visuales que no estén incluidos en la entrega, como `favicon.png`, `assets/logo-banner.png`, `img/` u otras imágenes ya publicadas.
+
+## Fotos del Segundo entrenador
+
+La versión funciona sin fotografías gracias a un respaldo visual. Cuando estén disponibles, agregar estos archivos:
+
+- `img/empleados/segundo-entrenador-principiante.webp`
+- `img/empleados/segundo-entrenador-asentado.webp`
+- `img/empleados/segundo-entrenador-experimentado.webp`
 
 ---
 
 # Historial de versiones
+
+## V8.52 — Filosofía e identidad del manager
+
+- Pestaña `Carrera > Filosofía` con cuestionario de 24 situaciones.
+- Ocho ejes, diez perfiles y tres afinidades con entrenadores reconocidos.
+- Radar, fortalezas, alertas y cuatro acciones aplicables al juego.
+- Advertencia para perfiles dogmáticos y preparación de Plan A / Plan B.
+- Circuito económico y de cartas para perfiles formadores de talentos.
+- Persistencia completa del avance y el resultado.
+- Ajustes exclusivamente de frontend, sin cambios de Worker ni SQL.
 
 ## V8.51 — Sin fotos personalizadas y enlace a Hitos
 

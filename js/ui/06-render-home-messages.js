@@ -25,7 +25,7 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.52" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.53" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
@@ -129,6 +129,7 @@ function renderAll(){
     return;
   }
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof refreshAssistantCoachAnalysisAvailability === 'function') refreshAssistantCoachAnalysisAvailability({ notify:true, save:true });
   if(typeof ensureClubWorldCupCurrentSeason === 'function'){
     const cupEnsure = ensureClubWorldCupCurrentSeason({ source:'render-all' });
     if(cupEnsure?.changed && !game._clubWorldCupAutosavePending){
@@ -947,7 +948,9 @@ function homeMessagesSummary(){
   const assistantClass = String(latest.type || '').toLowerCase() === 'asistente' ? ' assistant-message-summary' : '';
   const assistantUnread = unreadAssistantMessagesCount();
   const badge = assistantUnread ? `<span class="pill danger">${assistantUnread} mensaje asistente</span>` : (count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>');
-  const openAttribute = latest.action?.type === 'openManagerAchievements' ? 'data-open-manager-achievements' : 'data-open-messages';
+  const openAttribute = latest.action?.type === 'openManagerAchievements'
+    ? 'data-open-manager-achievements'
+    : (latest.action?.type === 'openEmployees' ? 'data-open-employees' : 'data-open-messages');
   return `<div class="home-messages-summary clickable${assistantClass}" ${openAttribute}>
     <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(latest.title)}</h2></div>${badge}</div>
     <p class="tagline">${escapeHtml(latest.body)}</p>
@@ -958,6 +961,13 @@ function openManagerAchievementsFromMessage(){
   if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('mystats', 'achievements');
   else managerStatsViewMode = 'achievements';
   activeTab = 'mystats';
+  renderAll();
+  return true;
+}
+function openEmployeesFromMessage(){
+  if(!game) return false;
+  activeTab = 'employees';
+  if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('employees');
   renderAll();
   return true;
 }
@@ -1216,6 +1226,11 @@ function managerAchievementsMessageActionMarkup(message){
   const label = String(message.action.label || 'Ver hitos').trim() || 'Ver hitos';
   return `<div class="row message-actions"><button type="button" class="primary" data-open-manager-achievements>${escapeHtml(label)}</button></div>`;
 }
+function employeesMessageActionMarkup(message){
+  if(message?.action?.type !== 'openEmployees') return '';
+  const label = String(message.action.label || 'Ir a Empleados').trim() || 'Ir a Empleados';
+  return `<div class="row message-actions"><button type="button" class="primary" data-open-employees>${escapeHtml(label)}</button></div>`;
+}
 function messageCard(m){
   const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
   const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
@@ -1223,11 +1238,13 @@ function messageCard(m){
     ? lockerRoomDecisionActionMarkup(m)
     : (m.action?.type === 'openManagerAchievements'
       ? managerAchievementsMessageActionMarkup(m)
-      : (m.action?.type === 'transferOffer' && m.action.status === 'pending'
+      : (m.action?.type === 'openEmployees'
+        ? employeesMessageActionMarkup(m)
+        : (m.action?.type === 'transferOffer' && m.action.status === 'pending'
       ? (isWithoutClub
         ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
         : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
-      : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '')));
+      : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : ''))));
   const toneClass = messageToneClass(m.type, m.priority);
   const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';

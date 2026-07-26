@@ -947,10 +947,19 @@ function homeMessagesSummary(){
   const assistantClass = String(latest.type || '').toLowerCase() === 'asistente' ? ' assistant-message-summary' : '';
   const assistantUnread = unreadAssistantMessagesCount();
   const badge = assistantUnread ? `<span class="pill danger">${assistantUnread} mensaje asistente</span>` : (count ? `<span class="pill warn">${count} nuevo(s)</span>` : '<span class="pill">Ver mensajes</span>');
-  return `<div class="home-messages-summary clickable${assistantClass}" data-open-messages>
+  const openAttribute = latest.action?.type === 'openManagerAchievements' ? 'data-open-manager-achievements' : 'data-open-messages';
+  return `<div class="home-messages-summary clickable${assistantClass}" ${openAttribute}>
     <div class="row"><div><p class="label">Mensajes / eventos</p><h2>${escapeHtml(latest.title)}</h2></div>${badge}</div>
     <p class="tagline">${escapeHtml(latest.body)}</p>
   </div>`;
+}
+function openManagerAchievementsFromMessage(){
+  if(!game) return false;
+  if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('mystats', 'achievements');
+  else managerStatsViewMode = 'achievements';
+  activeTab = 'mystats';
+  renderAll();
+  return true;
 }
 function activeTransferMessageStatuses(){
   return new Set(['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market']);
@@ -1202,16 +1211,23 @@ function lockerRoomDecisionActionMarkup(message){
   const effects = effectItems.length ? `<div class="locker-room-effect-summary"><strong>Efectos en el equipo</strong><ul>${effectItems.map(item => `<li class="is-${escapeHtml(item.tone || 'neutral')}">${linked(item.text || '')}</li>`).join('')}</ul></div>` : '';
   return `<div class="locker-room-decision-closed"><div class="row locker-room-decision-statuses">${selected}${promiseStatus === 'pending' ? promise : ''}</div>${result}${effects}${promiseStatus !== 'pending' ? promise : ''}</div>`;
 }
+function managerAchievementsMessageActionMarkup(message){
+  if(message?.action?.type !== 'openManagerAchievements') return '';
+  const label = String(message.action.label || 'Ver hitos').trim() || 'Ver hitos';
+  return `<div class="row message-actions"><button type="button" class="primary" data-open-manager-achievements>${escapeHtml(label)}</button></div>`;
+}
 function messageCard(m){
   const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
   const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
   const action = m.action?.type === 'lockerRoomDecision'
     ? lockerRoomDecisionActionMarkup(m)
-    : (m.action?.type === 'transferOffer' && m.action.status === 'pending'
+    : (m.action?.type === 'openManagerAchievements'
+      ? managerAchievementsMessageActionMarkup(m)
+      : (m.action?.type === 'transferOffer' && m.action.status === 'pending'
       ? (isWithoutClub
         ? '<span class="pill message-status-pill">Acción bloqueada: manager sin club</span>'
         : `<div class="row message-actions"><button class="primary" data-accept-offer="${escapeHtml(m.id)}">Aceptar oferta</button>${isSpecialClauseOffer ? `<button class="ghost" data-convince-player="${escapeHtml(m.id)}">Convencer al jugador de quedarse</button>` : `<button class="ghost" data-reject-offer="${escapeHtml(m.id)}">Rechazar</button>`}</div>`)
-      : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : ''));
+      : (m.action?.status ? `<span class="pill message-status-pill">${escapeHtml(transferOfferStatusLabel(m.action.status))}</span>` : '')));
   const toneClass = messageToneClass(m.type, m.priority);
   const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';

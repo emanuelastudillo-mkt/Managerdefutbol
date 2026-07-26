@@ -256,6 +256,7 @@ function normalizeGame(saved){
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   normalizeAllPlayerPositions();
   normalized.marketPlayers.forEach((p, index) => {
+    if(typeof removeCustomPlayerPhotoFields === 'function') removeCustomPlayerPhotoFields(p);
     p.position = normalizePlayerPosition(p.position, p.id);
     p.transferListed = Boolean(p.transferListed);
     p.intransferible = Boolean(p.intransferible);
@@ -1910,7 +1911,14 @@ function checkManagerAchievements(options={}){
   game.managerStats.achievements = state;
   if(unlockedNow.length && options.silent !== true){
     const first = unlockedNow[0];
-    pushGameMessage({ type:'asistente', priority:'normal', title:'Nuevo hito desbloqueado', body:`${first.titulo}${unlockedNow.length > 1 ? ` y ${unlockedNow.length - 1} hito(s) más` : ''}. Revisalo en Tus estadísticas.`, id:`manager-achievement-${game.seasonNumber || 1}-${game.globalTurn || 0}-${first.id}` });
+    pushGameMessage({
+      type:'asistente',
+      priority:'normal',
+      title:'Nuevo hito desbloqueado',
+      body:`${first.titulo}${unlockedNow.length > 1 ? ` y ${unlockedNow.length - 1} hito(s) más` : ''}. Revisalo en Hitos.`,
+      id:`manager-achievement-${game.seasonNumber || 1}-${game.globalTurn || 0}-${first.id}`,
+      action:{ type:'openManagerAchievements', label:'Ver hitos' }
+    });
   }
   return unlockedNow;
 }

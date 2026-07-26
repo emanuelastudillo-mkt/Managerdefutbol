@@ -1469,26 +1469,11 @@ function playerGenericImageBase(){
 function faceBaseForPlayer(player){
   return playerNationalityImageBase(player);
 }
-function playerPhotoPath(player){
-  const custom = player?.photoPath || player?.fotoPath || player?.imagePath || player?.photo || player?.foto || '';
-  return String(custom || '').trim();
-}
-function versionedCustomPhotoPath(path){
-  const clean = String(path || '').trim();
-  if(!clean) return '';
-  if(/[?&]v=/.test(clean)) return clean;
-  const version = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'manual';
-  return `${clean}${clean.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
-}
 function faceImg(player, className='photo-thumb'){
   const base = faceBaseForPlayer(player);
   const fallbackBase = playerGenericImageBase();
-  const customPath = playerPhotoPath(player);
   const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
   const fallbackAttr = fallbackBase && fallbackBase !== base ? ` data-face-fallback-base="${escapeHtml(fallbackBase)}"` : '';
-  if(customPath){
-    return `<img class="${escapeHtml(className)}" src="${escapeHtml(versionedCustomPhotoPath(customPath))}" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="-1"${fallbackAttr}>`;
-  }
   return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr}>`;
 }
 function tryNextFaceExt(img){
@@ -2199,4 +2184,3 @@ function pitchSlots(tactic){
     return { player, slot, index:i, x: coords[i]?.x || 50, y: coords[i]?.y || 50, mentality: player ? playerMentality(player.id, tactic) : 'posicional' };
   });
 }
-

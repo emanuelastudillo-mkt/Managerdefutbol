@@ -435,7 +435,6 @@ function normalizeRetiredPlayerPool(raw=[]){
       name,
       position:normalizePlayerPosition(item.position || 'MC', previousPlayerId),
       nationality:String(item.nationality || 'Argentina').trim() || 'Argentina',
-      photoPath:String(item.photoPath || item.fotoPath || item.imagePath || '').trim(),
       retiredAge:Math.max(0, Math.round(Number(item.retiredAge ?? item.age ?? 0))),
       retiredSeason:Math.max(1, Math.round(Number(item.retiredSeason || game?.seasonNumber || 1))),
       retiredClubId:Math.max(0, Math.round(Number(item.retiredClubId ?? item.clubId ?? 0))),
@@ -458,7 +457,6 @@ function addRetiredPlayersToPool(players=[]){
       name:String(player.name || `Jugador ${player.id}`),
       position:normalizePlayerPosition(player.position || 'MC', player.id),
       nationality:String(player.nationality || 'Argentina'),
-      photoPath:String(player.photoPath || player.fotoPath || player.imagePath || ''),
       retiredAge:Math.max(0, Math.round(Number(player.age || 0))),
       retiredSeason:Math.max(1, Math.round(Number(game.seasonNumber || 1))),
       retiredClubId:Math.max(0, Math.round(Number(player.clubId || 0))),
@@ -508,7 +506,6 @@ function takeRetiredPlayersAsFreeAgents(count=0, options={}){
     });
     player.name = entry.name;
     player.nationality = entry.nationality;
-    if(entry.photoPath) player.photoPath = entry.photoPath;
     player.recycledRetiredPlayer = true;
     player.previousPlayerId = entry.previousPlayerId;
     player.previousRetirementAge = entry.retiredAge;
@@ -1737,4 +1734,3 @@ function openSeasonEndModal(){
   $('btnContinueSameClub')?.addEventListener('click', () => startNextSeason(game.selectedClubId));
   $('btnStartNextSeasonOther')?.addEventListener('click', () => startNextSeason(Number($('seasonClubSelect')?.value || game.selectedClubId)));
 }
-

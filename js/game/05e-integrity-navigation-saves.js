@@ -843,6 +843,10 @@ function bindEvents(){
     if(clubBtn){ showClubModal(Number(clubBtn.dataset.clubId)); return; }
     const matchBtn = event.target.closest('[data-match-id]');
     if(matchBtn){ showMatchModal(matchBtn.dataset.matchId); return; }
+    if(event.target.closest('[data-open-manager-achievements]')){
+      if(typeof openManagerAchievementsFromMessage === 'function') openManagerAchievementsFromMessage();
+      return;
+    }
     if(event.target.closest('[data-open-messages]')){ activeTab='messages'; renderAll(); return; }
     const mentalityBtn = event.target.closest('[data-toggle-mentality]');
     if(mentalityBtn){

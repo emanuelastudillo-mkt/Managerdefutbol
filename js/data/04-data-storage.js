@@ -192,7 +192,6 @@ function normalizeManualDatabasePlayer(player, seedData){
     fixedClause:Boolean(economy.clausulaBloqueada ?? player.clausulaBloqueada ?? player.fixedClause ?? true),
     manualFixedClause:Boolean(economy.clausulaBloqueada ?? player.clausulaBloqueada ?? player.manualFixedClause ?? true),
     economyLocked:Boolean(economy.clausulaBloqueada ?? player.economyLocked ?? true),
-    photoPath:String(player.foto || player.photoPath || player.photo || '').trim(),
     transferListed:Boolean(mercado.transferible ?? player.transferListed ?? false),
     intransferible:Boolean(mercado.intransferible ?? player.intransferible ?? false),
     sold:Boolean(mercado.vendido ?? player.sold ?? false),
@@ -231,7 +230,6 @@ function refreshExistingManualPlayerFromDatabase(existing, manual){
     fixedClause:Boolean(manual.fixedClause ?? existing.fixedClause ?? true),
     manualFixedClause:Boolean(manual.manualFixedClause ?? existing.manualFixedClause ?? true),
     economyLocked:Boolean(manual.economyLocked ?? existing.economyLocked ?? true),
-    photoPath:String(manual.photoPath || existing.photoPath || '').trim(),
     generation:{ ...(existing.generation || {}), ...(manual.generation || {}), refreshedFromManualDatabase:true }
   };
   refreshed.clubId = currentClubId;
@@ -829,8 +827,14 @@ function playersDatabaseHash(players=[]){
   const raw = players.map(p => `${p.id}:${p.clubId}:${p.position}:${p.overall}:${p.salary}:${p.clause}`).join('|');
   return `players-${hashNumber(raw, 1000000000)}`;
 }
+function removeCustomPlayerPhotoFields(player){
+  if(!player || typeof player !== 'object') return player;
+  ['photoPath','fotoPath','imagePath','photo','foto'].forEach(field => { delete player[field]; });
+  return player;
+}
 function normalizeDatabasePlayer(player){
   const clean = { ...player, id:Number(player.id), clubId:Number(player.clubId || 0), age:Math.max(15, Math.round(Number(player.age || 18))) };
+  removeCustomPlayerPhotoFields(clean);
   clean.position = normalizePlayerPosition(clean.position, clean.id);
   clean.skills = clean.skills && typeof clean.skills === 'object' ? { ...clean.skills } : skillsForPosition(clean.position, Number(clean.overall || 50), clean.id);
   clean.overall = (clean.manualOverallLocked || clean.overallLocked) ? clamp(Math.round(Number(clean.overall || clean.media || 50)), 1, 99) : rawVisibleOverall({ ...clean, overall:Number(clean.overall || 50) });

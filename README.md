@@ -1,19 +1,19 @@
-# Una vida de manager — V8.59
+# Una vida de manager — V8.60
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.59** y agrega realismo al asumir un club durante una temporada y al recibir ofertas mientras el manager está sin equipo.
+La revisión actual muestra **V8.60** y ajusta el mercado laboral y la negociación de contratos.
 
-- al aceptar un nuevo cargo, entre el 40% y el 60% de los espacios de sponsors disponibles ya comienzan con contratos activos;
-- el club heredado cuenta con dos o tres jugadores que parten aproximadamente con el 50% de su capacidad máxima como capitán;
-- las ofertas automáticas para un manager sin equipo se concentran en clubes ubicados en la zona baja de sus tablas;
-- los clubes más chicos, con menor capacidad salarial o peor posición compensan con un porcentaje superior sobre futuras ventas;
-- esperar sin aceptar una propuesta puede elevar gradualmente esa participación hasta un máximo del 25%;
-- cada nuevo período sin club reinicia correctamente las ofertas y el tiempo de espera;
-- se conservan las correcciones de cartas, clubes invitados y despidos consecutivos incorporadas en V8.58;
-- se mantiene completa la progresión visual incorporada en V8.57.
+- cuando un club rechaza una solicitud enviada por el manager, la solicitud desaparece y ese club queda bloqueado durante el resto de la temporada;
+- el bloqueo también impide que ese club reaparezca como opción directa o envíe una oferta automática;
+- al comenzar una nueva temporada, el club vuelve a estar disponible si el prestigio lo permite;
+- cada oferta laboral normal incluye condiciones base y dos alternativas de negociación generadas específicamente para esa propuesta;
+- una alternativa aumenta el sueldo y reduce el objetivo, a cambio de reducir el porcentaje de venta futura;
+- la otra reduce el sueldo y compensa aleatoriamente con un objetivo mayor o un porcentaje superior de venta futura;
+- los porcentajes se mantienen estables mientras la oferta siga activa, pero cambian entre clubes y propuestas;
+- se conservan los ajustes de realismo laboral incorporados en V8.59.
 
 ## Sistema visual
 
@@ -45,20 +45,32 @@ Los 25 recursos raster nuevos se generaron en PNG y se publican como WebP a 1.28
 
 ## Compatibilidad y publicación
 
-- La V8.59 ajusta sponsors heredados, experiencia de capitanía y mercado laboral sin cambiar Worker ni base de datos.
+- La V8.60 ajusta solicitudes rechazadas y negociación laboral sin cambiar Worker ni base de datos.
 - Las partidas anteriores conservan sus datos; las fases visuales se calculan al mostrar cada pantalla.
 - El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `03-GITHUB-V8.59-INCREMENTAL` respetando las rutas.
+- Como alternativa, copiar solamente el contenido de `04-GITHUB-V8.60-INCREMENTAL` respetando las rutas.
 - Las carpetas nuevas `assets/academia/` y `assets/estadio/`, junto con `styles/120-visual-progression-v857.css`, son obligatorias para evitar imágenes o estilos faltantes.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ---
 
 # Historial de versiones
+
+## V8.60 — Solicitudes bloqueadas y negociación variable
+
+- Una solicitud rechazada se elimina inmediatamente de la bandeja laboral.
+- El club que rechazó al manager queda bloqueado hasta el cierre de la temporada vigente.
+- El bloqueo se aplica a nuevas solicitudes, ofertas automáticas y selección directa del club.
+- La disponibilidad se restaura automáticamente al comenzar la temporada siguiente.
+- Las ofertas normales conservan una opción base y generan dos alternativas variables.
+- La alternativa favorable aumenta el sueldo entre 5% y 20%, reduce el objetivo entre 3% y 12% y descuenta entre 1 y 5 puntos del porcentaje de venta futura.
+- La alternativa de compensación reduce el sueldo entre 5% y 20% y agrega aleatoriamente un objetivo entre 3% y 12% mayor o entre 1 y 5 puntos adicionales de venta futura.
+- Cada propuesta utiliza valores deterministas mientras permanece activa, evitando que cambien al volver a abrir la pantalla.
+- Compatible con partidas V8.59. No requiere Worker, SQL, imágenes ni reiniciar la carrera.
 
 ## V8.59 — Realismo al asumir clubes y mercado laboral
 

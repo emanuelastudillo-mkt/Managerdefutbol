@@ -26,6 +26,7 @@ function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), optio
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!managerClubCareerEligible(club)) return false;
   if(options.ignoreRehireBlock !== true && managerClubRehireBlockInfo(club).blocked) return false;
+  if(options.ignoreApplicationRejectionBlock !== true && typeof managerJobClubBlockedByRejectedApplication === 'function' && managerJobClubBlockedByRejectedApplication(club)) return false;
   const clubPrestige = clubPrestigeValue(club);
   const managerPrestige = managerClubAccessPrestige(prestige);
   if(clubPrestige <= MANAGER_CLUB_OPEN_PRESTIGE) return true;
@@ -34,6 +35,8 @@ function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), optio
 function clubAvailabilityLabel(clubOrId, prestige=currentManagerPrestige()){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return 'No disponible';
+  const applicationBlockLabel = typeof managerJobRejectedApplicationBlockLabel === 'function' ? managerJobRejectedApplicationBlockLabel(club) : '';
+  if(applicationBlockLabel) return applicationBlockLabel;
   const blockLabel = managerClubRehireBlockLabel(club);
   if(blockLabel) return blockLabel;
   const clubPrestige = clubPrestigeValue(club);
@@ -197,9 +200,20 @@ function normalizeManagerJobMarketState(state={}){
       status:String(app?.status || 'pending')
     };
   };
+  const blockedBySeason = {};
+  const rawBlockedBySeason = src.applicationRejectedClubIdsBySeason && typeof src.applicationRejectedClubIdsBySeason === 'object' && !Array.isArray(src.applicationRejectedClubIdsBySeason)
+    ? src.applicationRejectedClubIdsBySeason
+    : {};
+  Object.entries(rawBlockedBySeason).forEach(([seasonKey, clubIds]) => {
+    const season = Math.max(1, Math.round(Number(seasonKey || 0)));
+    if(!season || !Array.isArray(clubIds)) return;
+    const cleanIds = Array.from(new Set(clubIds.map(Number).filter(clubId => clubId > 0 && managerClubCareerEligible(clubId))));
+    if(cleanIds.length) blockedBySeason[String(season)] = cleanIds.slice(-80);
+  });
   return {
     offers:(Array.isArray(src.offers) ? src.offers : []).map(normalizeOffer).filter(Boolean).slice(-12),
     applications:(Array.isArray(src.applications) ? src.applications : []).map(normalizeApplication).filter(Boolean).slice(-12),
+    applicationRejectedClubIdsBySeason:blockedBySeason,
     nextIncomingOfferDate:validIsoDate(src.nextIncomingOfferDate) ? src.nextIncomingOfferDate : null,
     lastProcessedDate:validIsoDate(src.lastProcessedDate) ? src.lastProcessedDate : null,
     unemployedSinceDate:validIsoDate(src.unemployedSinceDate) ? src.unemployedSinceDate : null,
@@ -207,6 +221,48 @@ function normalizeManagerJobMarketState(state={}){
     unemploymentKey:String(src.unemploymentKey || ''),
     log:Array.isArray(src.log) ? src.log.slice(-25) : []
   };
+}
+function managerJobApplicationRejectedClubIds(season=game?.seasonNumber || 1, state=game){
+  const market = state?.managerJobMarket && typeof state.managerJobMarket === 'object' ? state.managerJobMarket : {};
+  const map = market.applicationRejectedClubIdsBySeason && typeof market.applicationRejectedClubIdsBySeason === 'object' && !Array.isArray(market.applicationRejectedClubIdsBySeason)
+    ? market.applicationRejectedClubIdsBySeason
+    : {};
+  return new Set((Array.isArray(map[String(Math.max(1, Math.round(Number(season || 1))))]) ? map[String(Math.max(1, Math.round(Number(season || 1))))] : []).map(Number).filter(Number.isFinite));
+}
+function managerJobClubBlockedByRejectedApplication(clubOrId, season=game?.seasonNumber || 1, state=game){
+  const clubId = Number(typeof clubOrId === 'object' ? clubOrId?.id : clubOrId);
+  return clubId > 0 && managerJobApplicationRejectedClubIds(season, state).has(clubId);
+}
+function managerJobRejectedApplicationBlockLabel(clubOrId, season=game?.seasonNumber || 1){
+  if(!managerJobClubBlockedByRejectedApplication(clubOrId, season)) return '';
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(item => Number(item.id) === Number(clubOrId));
+  return `${club?.name || 'El club'} rechazó tu solicitud y queda bloqueado hasta la próxima temporada.`;
+}
+function managerJobBlockClubAfterApplicationRejection(clubOrId, season=game?.seasonNumber || 1){
+  const clubId = Number(typeof clubOrId === 'object' ? clubOrId?.id : clubOrId);
+  if(!clubId || !game) return false;
+  const state = game.managerJobMarket && typeof game.managerJobMarket === 'object' && !Array.isArray(game.managerJobMarket)
+    ? game.managerJobMarket
+    : ensureManagerJobMarketState();
+  const seasonKey = String(Math.max(1, Math.round(Number(season || game.seasonNumber || 1))));
+  const map = state.applicationRejectedClubIdsBySeason && typeof state.applicationRejectedClubIdsBySeason === 'object' && !Array.isArray(state.applicationRejectedClubIdsBySeason)
+    ? state.applicationRejectedClubIdsBySeason
+    : {};
+  const ids = new Set((Array.isArray(map[seasonKey]) ? map[seasonKey] : []).map(Number).filter(Number.isFinite));
+  const before = ids.size;
+  ids.add(clubId);
+  map[seasonKey] = Array.from(ids).slice(-80);
+  const currentSeason = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  Object.keys(map).forEach(key => {
+    const mappedSeason = Math.round(Number(key || 0));
+    if(!mappedSeason || mappedSeason < currentSeason - 2) delete map[key];
+  });
+  state.applicationRejectedClubIdsBySeason = map;
+  state.applications = (state.applications || []).filter(app => Number(app.clubId) !== clubId || String(app.status || 'pending') !== 'pending');
+  state.offers = (state.offers || []).filter(offer => Number(offer.clubId) !== clubId);
+  state.log.push({ type:'application_rejected_block', clubId, season:Number(seasonKey), date:typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || '') });
+  state.log = state.log.slice(-25);
+  return ids.size !== before;
 }
 function ensureManagerJobMarketState(){
   if(!game) return normalizeManagerJobMarketState({});
@@ -269,7 +325,8 @@ function managerJobAvailableOfferCandidates(){
   const eligible = (seed?.clubs || [])
     .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
     .filter(club => managerCanSelectClub(club, prestige))
-    .filter(club => !managerClubRehireBlockInfo(club).blocked);
+    .filter(club => !managerClubRehireBlockInfo(club).blocked)
+    .filter(club => !managerJobClubBlockedByRejectedApplication(club));
   const lowZone = eligible.filter(club => managerJobClubStandingProfile(club).lowZone);
   const pool = lowZone.length ? lowZone : eligible
     .slice()
@@ -289,6 +346,7 @@ function managerJobApplicationCandidates(limit=8){
     .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
     .filter(club => !busy.has(Number(club.id)))
     .filter(club => !managerClubRehireBlockInfo(club).blocked)
+    .filter(club => !managerJobClubBlockedByRejectedApplication(club))
     .filter(club => {
       const cp = clubPrestigeValue(club);
       return cp > prestige && cp <= prestige + 20;
@@ -304,6 +362,7 @@ function managerJobCreateOffer(clubId, options={}){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   if(!managerClubCareerEligible(club) || !game?.gameOver?.active) return null;
   const state = ensureManagerJobMarketState();
+  if(managerJobClubBlockedByRejectedApplication(club)) return null;
   if(state.offers.some(o => Number(o.clubId) === Number(club.id))) return null;
   const today = currentCalendarDate();
   const contractType = String(options.contractType || 'normal');
@@ -371,7 +430,8 @@ function processManagerJobMarketDaily(){
     const diff = clubPrestige - managerClubAccessPrestige(managerPrestige);
     const rejection = managerJobApplicationRejected(app, club);
     if(rejection.rejected){
-      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud para asumir como manager.`, id:`job-application-random-rejected-${club.id}-${today}` });
+      managerJobBlockClubAfterApplicationRejection(club, game?.seasonNumber || 1);
+      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} rechazó tu solicitud para asumir como manager. El club queda bloqueado hasta la próxima temporada.`, id:`job-application-random-rejected-${club.id}-${today}` });
     }else if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
       managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
@@ -379,7 +439,8 @@ function processManagerJobMarketDaily(){
       managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud en evaluación aceptada', body:`${club.name} analiza tu perfil pese a la diferencia de prestigio. Te ofrece contrato con objetivo superior al normal y una restricción de fichajes muy alta. Tenés 20 días para aceptar.`, id:`job-application-risk-${club.id}-${today}` });
     }else{
-      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} respondió que la diferencia de reputación todavía es demasiado grande para ofrecerte el cargo.`, id:`job-application-rejected-${club.id}-${today}` });
+      managerJobBlockClubAfterApplicationRejection(club, game?.seasonNumber || 1);
+      pushGameMessage({ type:'directiva', priority:'normal', title:'Solicitud rechazada', body:`${club.name} respondió que la diferencia de reputación todavía es demasiado grande para ofrecerte el cargo. El club queda bloqueado hasta la próxima temporada.`, id:`job-application-rejected-${club.id}-${today}` });
     }
   });
   state.applications = remainingApplications.slice(-12);
@@ -533,6 +594,8 @@ function applyForManagerJob(clubId){
   if(!managerClubCareerEligible(club)){ showNotice('Ese equipo no pertenece a una liga jugable y no puede contratar managers.'); return false; }
   const rehireBlock = managerClubRehireBlockInfo(club);
   if(rehireBlock.blocked){ showNotice(managerClubRehireBlockLabel(club)); return false; }
+  const rejectedApplicationBlock = managerJobRejectedApplicationBlockLabel(club);
+  if(rejectedApplicationBlock){ showNotice(rejectedApplicationBlock); return false; }
   if(managerCanSelectClub(club, currentManagerPrestige())){
     showNotice(`${club.name} ya acepta contratarte de forma normal. Podés firmar desde Buscar otro club.`);
     return false;

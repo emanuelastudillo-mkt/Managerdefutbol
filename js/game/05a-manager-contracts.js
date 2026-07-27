@@ -10,23 +10,79 @@ function managerContractStatePrestige(state=game){
 }
 function managerContractNegotiationLevel(value='normal'){
   const level = String(value || 'normal').toLowerCase();
-  return ['prudente','normal','ambicioso'].includes(level) ? level : 'normal';
+  return ['prudente','normal','ambicioso','beneficios','compensacion'].includes(level) ? level : 'normal';
 }
-function managerContractNegotiationConfig(level='normal'){
+function managerContractNegotiationRandomConfig(){
+  const cfg = managerContractBalanceConfig().negociacionOfertaAleatoria;
+  return cfg && typeof cfg === 'object' && !Array.isArray(cfg) ? cfg : {};
+}
+function managerContractNegotiationRandomInt(offer={}, key='', min=0, max=min){
+  const lo = Math.round(Math.min(Number(min || 0), Number(max || 0)));
+  const hi = Math.round(Math.max(Number(min || 0), Number(max || 0)));
+  if(hi <= lo) return lo;
+  const salt = `${offer?.id || ''}-${offer?.clubId || 0}-${offer?.createdDate || ''}-${offer?.source || ''}-${key}`;
+  return lo + hashNumber(`manager-contract-negotiation-${salt}`, hi - lo + 1);
+}
+function managerContractNegotiationConfig(level='normal', offer={}, state=game){
   const cfg = managerContractBalanceConfig();
   const clean = managerContractNegotiationLevel(level);
   const fallback = {
-    prudente:{ label:'Objetivo prudente', objectiveDelta:-0.10, salaryFactor:0.80 },
-    normal:{ label:'Objetivo normal', objectiveDelta:0, salaryFactor:1 },
-    ambicioso:{ label:'Objetivo ambicioso', objectiveDelta:0.20, salaryFactor:1.25 }
-  }[clean];
-  const raw = cfg.negociacionObjetivo?.[clean] || {};
+    prudente:{ label:'Objetivo prudente', objectiveDelta:-0.10, salaryFactor:0.80, futureSaleDelta:0 },
+    normal:{ label:'Condiciones base', objectiveDelta:0, salaryFactor:1, futureSaleDelta:0 },
+    ambicioso:{ label:'Objetivo ambicioso', objectiveDelta:0.20, salaryFactor:1.25, futureSaleDelta:0 }
+  }[clean] || { label:'Condiciones base', objectiveDelta:0, salaryFactor:1, futureSaleDelta:0 };
+  if(!['beneficios','compensacion'].includes(clean)){
+    const raw = cfg.negociacionObjetivo?.[clean] || {};
+    return {
+      key:clean,
+      label:String(raw.label || fallback.label),
+      objectiveDelta:Number.isFinite(Number(raw.objectiveDelta)) ? Number(raw.objectiveDelta) : fallback.objectiveDelta,
+      objectiveFactor:null,
+      salaryFactor:Number.isFinite(Number(raw.salaryFactor)) ? Number(raw.salaryFactor) : fallback.salaryFactor,
+      futureSaleDelta:Number.isFinite(Number(raw.futureSaleDelta)) ? Math.round(Number(raw.futureSaleDelta)) : Number(fallback.futureSaleDelta || 0),
+      tradeoffType:'legacy'
+    };
+  }
+  const randomCfg = managerContractNegotiationRandomConfig();
+  if(randomCfg.activo === false) return managerContractNegotiationConfig(clean === 'beneficios' ? 'ambicioso' : 'prudente', offer, state);
+  if(clean === 'beneficios'){
+    const salaryPct = managerContractNegotiationRandomInt(offer, 'beneficios-sueldo', randomCfg.aumentoSueldoMin ?? 5, randomCfg.aumentoSueldoMax ?? 20);
+    const objectivePct = managerContractNegotiationRandomInt(offer, 'beneficios-objetivo', randomCfg.reduccionObjetivoMin ?? 3, randomCfg.reduccionObjetivoMax ?? 12);
+    const futureSalePoints = managerContractNegotiationRandomInt(offer, 'beneficios-venta', randomCfg.reduccionVentaFuturaMin ?? 1, randomCfg.reduccionVentaFuturaMax ?? 5);
+    return {
+      key:clean,
+      label:`Sueldo +${salaryPct}% · objetivo -${objectivePct}% · venta futura -${futureSalePoints} pt${futureSalePoints === 1 ? '' : 's'}`,
+      objectiveDelta:0,
+      objectiveFactor:Number((1 - objectivePct / 100).toFixed(3)),
+      salaryFactor:Number((1 + salaryPct / 100).toFixed(3)),
+      futureSaleDelta:-futureSalePoints,
+      tradeoffType:'salary_and_objective'
+    };
+  }
+  const salaryPct = managerContractNegotiationRandomInt(offer, 'compensacion-sueldo', randomCfg.reduccionSueldoMin ?? 5, randomCfg.reduccionSueldoMax ?? 20);
+  const alternative = managerContractNegotiationRandomInt(offer, 'compensacion-alternativa', 0, 1) === 0 ? 'objective' : 'future_sale';
+  const objectivePct = alternative === 'objective'
+    ? managerContractNegotiationRandomInt(offer, 'compensacion-objetivo', randomCfg.aumentoObjetivoMin ?? 3, randomCfg.aumentoObjetivoMax ?? 12)
+    : 0;
+  const futureSalePoints = alternative === 'future_sale'
+    ? managerContractNegotiationRandomInt(offer, 'compensacion-venta', randomCfg.aumentoVentaFuturaMin ?? 1, randomCfg.aumentoVentaFuturaMax ?? 5)
+    : 0;
   return {
     key:clean,
-    label:String(raw.label || fallback.label),
-    objectiveDelta:Number.isFinite(Number(raw.objectiveDelta)) ? Number(raw.objectiveDelta) : fallback.objectiveDelta,
-    salaryFactor:Number.isFinite(Number(raw.salaryFactor)) ? Number(raw.salaryFactor) : fallback.salaryFactor
+    label:alternative === 'objective'
+      ? `Sueldo -${salaryPct}% · objetivo +${objectivePct}%`
+      : `Sueldo -${salaryPct}% · venta futura +${futureSalePoints} pt${futureSalePoints === 1 ? '' : 's'}`,
+    objectiveDelta:0,
+    objectiveFactor:alternative === 'objective' ? Number((1 + objectivePct / 100).toFixed(3)) : 1,
+    salaryFactor:Number((1 - salaryPct / 100).toFixed(3)),
+    futureSaleDelta:futureSalePoints,
+    tradeoffType:alternative
   };
+}
+function managerContractOfferNegotiationOptionsMarkup(offer={}, selected='normal'){
+  const current = managerContractNegotiationLevel(selected);
+  const options = ['normal','beneficios','compensacion'].map(level => managerContractNegotiationConfig(level, offer, game));
+  return options.map(option => `<option value="${escapeHtml(option.key)}" ${option.key === current ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('');
 }
 function managerContractNextSeasonNegotiationConfig(choice='aumento'){
   const cfg = managerContractBalanceConfig();
@@ -201,17 +257,23 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
   const highRisk = String(offer.contractType || '') === 'high_risk';
   const duration = highRisk ? 1 : clamp(Math.round(Number(offer.durationSeasons || 1)), 1, 3);
   const negotiation = highRisk
-    ? { key:'ambicioso', label:'Contrato exigente', objectiveDelta:Number(offer.objectiveBonus || 0.25), salaryFactor:1.30 }
-    : managerContractNegotiationConfig(negotiationLevel);
+    ? { key:'ambicioso', label:'Contrato exigente', objectiveDelta:Number(offer.objectiveBonus || 0.25), objectiveFactor:null, salaryFactor:1.30, futureSaleDelta:0 }
+    : managerContractNegotiationConfig(negotiationLevel, offer, state);
   const baseObjective = Number.isFinite(Number(offer.baseObjectivePpg)) ? Number(offer.baseObjectivePpg) : Number(managerObjectiveBaseForClubDivision(club.id));
   const limits = managerObjectiveLimitsForDivision(clubDivision(club.id));
-  const finalObjective = clamp(baseObjective + Number(negotiation.objectiveDelta || 0), limits.min, Math.max(limits.max, baseObjective + 0.50));
+  const hasObjectiveFactor = negotiation.objectiveFactor !== null && negotiation.objectiveFactor !== undefined && Number.isFinite(Number(negotiation.objectiveFactor));
+  const rawFinalObjective = hasObjectiveFactor
+    ? baseObjective * Number(negotiation.objectiveFactor)
+    : baseObjective + Number(negotiation.objectiveDelta || 0);
+  const finalObjective = clamp(rawFinalObjective, limits.min, Math.max(limits.max, baseObjective + 0.50));
   const startSeason = Number(state?.seasonNumber || 1);
   const annualObjectives = managerContractObjectiveSchedule(finalObjective, duration, startSeason, club.id);
   const baseMonthly = managerContractBaseMonthlySalary(club.id, state, Number(offer.managerPrestigeAtOffer ?? managerContractStatePrestige(state)));
   const salaryOfferFactor = Number.isFinite(Number(offer.salaryOfferFactor)) ? clamp(Number(offer.salaryOfferFactor), 0.40, 1.50) : 1;
   const monthlySalary = Math.max(100000, Math.round(baseMonthly * managerContractDurationSalaryFactor(duration) * Number(negotiation.salaryFactor || 1) * salaryOfferFactor));
   const annualSalaries = managerContractAnnualSalarySchedule(monthlySalary, duration, startSeason);
+  const baseFutureSalePercent = clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))), 5, managerContractFutureSaleMaximum());
+  const futureSalePercent = clamp(baseFutureSalePercent + Math.round(Number(negotiation.futureSaleDelta || 0)), 5, managerContractFutureSaleMaximum());
   return {
     clubId:Number(club.id),
     durationSeasons:duration,
@@ -225,9 +287,12 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
     monthlySalary,
     annualSalary:monthlySalary * 12,
     annualSalaries,
-    futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))), 5, managerContractFutureSaleMaximum()),
+    futureSalePercent,
+    baseFutureSalePercent,
+    futureSaleDelta:Math.round(Number(negotiation.futureSaleDelta || 0)),
     durationSalaryFactor:managerContractDurationSalaryFactor(duration),
     salaryFactor:Number(negotiation.salaryFactor || 1),
+    objectiveFactor:hasObjectiveFactor ? Number(negotiation.objectiveFactor) : null,
     salaryOfferFactor,
     highRisk
   };
@@ -511,7 +576,7 @@ function managerContractOfferPreviewMarkup(offer, level='normal'){
       <div><span>Venta futura</span><strong>${terms.futureSalePercent}%</strong></div>
     </div>
     ${managerContractScheduleMarkup(terms.annualObjectives, terms.annualSalaries)}
-    <p class="muted small">${durationDiscount > 0 ? `El contrato largo reduce ${durationDiscount}% el sueldo mensual a cambio de estabilidad. ` : ''}El porcentaje de venta futura lo fija el club y no se negocia.</p>
+    <p class="muted small"><strong>${escapeHtml(terms.negotiationLabel || 'Condiciones base')}.</strong> ${durationDiscount > 0 ? `El contrato largo reduce ${durationDiscount}% el sueldo mensual a cambio de estabilidad. ` : ''}Las alternativas quedan fijadas para esta oferta.</p>
   </div>`;
 }
 
@@ -697,6 +762,7 @@ managerJobCreateOffer = function(clubId, options={}){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   if((typeof managerClubCareerEligible === 'function' && !managerClubCareerEligible(club)) || !club || !game?.gameOver?.active) return null;
   const state = ensureManagerJobMarketState();
+  if(typeof managerJobClubBlockedByRejectedApplication === 'function' && managerJobClubBlockedByRejectedApplication(club)) return null;
   if(state.offers.some(o => Number(o.clubId) === Number(club.id))) return null;
   const today = currentCalendarDate();
   const contractType = String(options.contractType || 'normal');
@@ -749,7 +815,7 @@ managerJobOfferCard = function(offer){
   return `<article class="card job-offer-card ${highRisk ? 'warn' : ''}" data-job-offer-card="${escapeHtml(offer.id)}">
     <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
     <p class="muted small">${escapeHtml(division?.name || 'Liga')}${standingText} · Prestigio ${clubPrestigeValue(club)}${waitText} · Sueldo ajustado al contexto del club · ${Number(offer.futureSalePercent || 5)}% sobre la futura primera venta de juveniles promovidos durante este contrato.</p>
-    ${highRisk ? '<p class="small"><strong>La diferencia de prestigio impone un objetivo ambicioso y un contrato de una sola temporada.</strong></p>' : `<label class="job-negotiation-label">Negociar objetivo y sueldo<select data-job-negotiation="${escapeHtml(offer.id)}"><option value="prudente">Prudente · objetivo menor · sueldo -20%</option><option value="normal" selected>Normal · objetivo y sueldo base</option><option value="ambicioso">Ambicioso · objetivo mayor · sueldo +25%</option></select></label>`}
+    ${highRisk ? '<p class="small"><strong>La diferencia de prestigio impone un objetivo ambicioso y un contrato de una sola temporada.</strong></p>' : `<label class="job-negotiation-label">Negociar condiciones<select data-job-negotiation="${escapeHtml(offer.id)}">${managerContractOfferNegotiationOptionsMarkup(offer, 'normal')}</select></label>`}
     <div data-job-offer-preview="${escapeHtml(offer.id)}">${managerContractOfferPreviewMarkup(offer, defaultLevel)}</div>
     <div class="row message-actions"><button class="primary" data-accept-job-offer="${escapeHtml(offer.id)}">Aceptar cargo</button><button class="ghost" data-reject-job-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
   </article>`;

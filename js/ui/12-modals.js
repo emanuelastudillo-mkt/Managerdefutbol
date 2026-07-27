@@ -1557,11 +1557,11 @@ function openNewGameModal(force=false, options={}){
             <select id="modalLeagueSelect">${leagueOptionsMarkup(initialCountry, initialLeague)}</select>
             <label for="modalClubSelect">Equipo</label>
             <select id="modalClubSelect" ${canChooseJob ? '' : 'disabled'}>${teamOptionsMarkup(initialCountry, initialLeague, initialClub)}</select>
-            <label for="modalContractNegotiation">Objetivo contractual</label>
+            <label for="modalContractNegotiation">Negociar condiciones</label>
             <select id="modalContractNegotiation" ${canChooseJob ? '' : 'disabled'}>
-              <option value="prudente">Prudente · objetivo menor · sueldo -20%</option>
-              <option value="normal" selected>Normal · objetivo y sueldo base</option>
-              <option value="ambicioso">Ambicioso · objetivo mayor · sueldo +25%</option>
+              <option value="normal" selected>Condiciones base</option>
+              <option value="beneficios">Mejor sueldo y menor objetivo</option>
+              <option value="compensacion">Compensación alternativa</option>
             </select>
           </div>
           <div id="modalContractPreview" style="margin-top:14px"></div>
@@ -1605,6 +1605,10 @@ function openNewGameModal(force=false, options={}){
   const refreshModalContractPreview = () => {
     if(!contractPreview || typeof managerContractOfferPreviewMarkup !== 'function') return;
     const offer = modalContractOfferForClub(Number(clubSelect?.value || 0));
+    if(contractNegotiationSelect && offer && typeof managerContractOfferNegotiationOptionsMarkup === 'function'){
+      const selectedLevel = managerContractNegotiationLevel(contractNegotiationSelect.value || 'normal');
+      contractNegotiationSelect.innerHTML = managerContractOfferNegotiationOptionsMarkup(offer, selectedLevel);
+    }
     contractPreview.innerHTML = offer ? managerContractOfferPreviewMarkup(offer, contractNegotiationSelect?.value || 'normal') : '';
   };
   const syncLeagues = () => {
@@ -1713,7 +1717,7 @@ function openGameHelpModal(){
       <div class="help-grid">
         <article class="help-card card">
           <h4>Contrato actual</h4>
-          <p>Los clubes ofrecen contratos de una, dos o tres temporadas. El último año concentra el objetivo final y los años previos aplican mínimos progresivos. Podés elegir una exigencia prudente, normal o ambiciosa al firmar. Después de cumplir el objetivo vigente y completar los partidos mínimos de evaluación, se habilita una negociación exclusiva para la temporada siguiente: pedir 20% de aumento eleva el objetivo 30%, mientras que aceptar 20% menos reduce el objetivo 10%.</p>
+          <p>Los clubes ofrecen contratos de una, dos o tres temporadas. El último año concentra el objetivo final y los años previos aplican mínimos progresivos. Al firmar, cada oferta presenta condiciones base y dos alternativas aleatorias que combinan sueldo, objetivo y porcentaje de venta futura. Después de cumplir el objetivo vigente y completar los partidos mínimos de evaluación, se habilita una negociación exclusiva para la temporada siguiente: pedir 20% de aumento eleva el objetivo 30%, mientras que aceptar 20% menos reduce el objetivo 10%.</p>
           ${gameHelpGoButton('careerJobs','Abrir contrato actual')}
         </article>
         <article class="help-card card">

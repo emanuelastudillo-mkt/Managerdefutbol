@@ -161,6 +161,23 @@ window.GAME_BALANCE_MANAGER = {
     porcentajeVentaFuturaMin: 5,
     porcentajeVentaFuturaMax: 20,
 
+    // Cada oferta genera dos alternativas estables pero con porcentajes variables.
+    negociacionOfertaAleatoria: {
+      activo: true,
+      aumentoSueldoMin: 5,
+      aumentoSueldoMax: 20,
+      reduccionObjetivoMin: 3,
+      reduccionObjetivoMax: 12,
+      reduccionVentaFuturaMin: 1,
+      reduccionVentaFuturaMax: 5,
+      reduccionSueldoMin: 5,
+      reduccionSueldoMax: 20,
+      aumentoObjetivoMin: 3,
+      aumentoObjetivoMax: 12,
+      aumentoVentaFuturaMin: 1,
+      aumentoVentaFuturaMax: 5
+    },
+
     // Realismo al asumir un club durante una temporada ya iniciada.
     mercadoLaboralRealista: {
       activo: true,

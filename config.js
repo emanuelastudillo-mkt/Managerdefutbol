@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.66',
+  version: 'V8.67',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -314,6 +314,8 @@ window.GAME_CONFIG = {
     // Balance de cohesión ajustado para que el equipo gane cohesión con mayor claridad.
     valorInicial: 10,
     gananciaPorPartido: 7,
+    // En una derrota no se aplica la ganancia base y cada gol recibido resta cohesión.
+    perdidaPorGolEnContraDerrota: 1,
     perdidaPorCambioTactico: 8,
     perdidaPorCambioJugador: 1,
     // Movimientos de plantel: vender 2 y fichar 2 jugadores reduce 10 puntos en total.
@@ -325,7 +327,9 @@ window.GAME_CONFIG = {
     gananciaEntrenamientoTacticoPorCasilla: 1
   },
   moral: {
-    perdidaPlantelPorDespedirJugador: 1
+    perdidaPlantelPorDespedirJugador: 1,
+    // Penalización adicional para todo el plantel cuando el equipo pierde.
+    perdidaExtraPorDerrota: 2
   },
   capitania: {
     activo: true,

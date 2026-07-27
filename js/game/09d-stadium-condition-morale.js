@@ -288,6 +288,7 @@ function applyMoraleUpdates(results){
         if(team.gf > team.gc) next += rnd(1,3);
         else if(team.gf < team.gc){
           next -= starter ? rnd(5,8) : rnd(3,4);
+          next -= TEAM_MORALE_DEFEAT_EXTRA_LOSS;
         }
         game.playerMorale[player.id] = clamp(Math.round(next), 1, 99);
       });

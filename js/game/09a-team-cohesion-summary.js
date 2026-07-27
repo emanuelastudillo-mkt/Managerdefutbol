@@ -191,10 +191,16 @@ function applyTacticCohesionPenalty(clubId, tactic){
 function applyMatchCohesionResult(match, substitutions=[], cards=[]){
   ensureTeamCohesion();
   [match.homeId, match.awayId].forEach(clubId => {
-    const subCount = (substitutions || []).filter(s => s.clubId === clubId).length;
-    const redCount = (cards || []).filter(c => c.clubId === clubId && (c.type === 'red' || c.type === 'secondYellowRed')).length;
-    const loss = (subCount + redCount) * TEAM_COHESION_PLAYER_CHANGE_LOSS;
-    game.teamCohesion[clubId] = clamp((game.teamCohesion[clubId] ?? TEAM_COHESION_START) + TEAM_COHESION_MATCH_GAIN - loss, 0, 100);
+    const isHome = Number(clubId) === Number(match.homeId);
+    const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
+    const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);
+    const defeated = gf < gc;
+    const subCount = (substitutions || []).filter(s => Number(s.clubId) === Number(clubId)).length;
+    const redCount = (cards || []).filter(c => Number(c.clubId) === Number(clubId) && (c.type === 'red' || c.type === 'secondYellowRed')).length;
+    const playerChangeLoss = (subCount + redCount) * TEAM_COHESION_PLAYER_CHANGE_LOSS;
+    const defeatGoalLoss = defeated ? Math.max(0, gc) * TEAM_COHESION_DEFEAT_GOAL_LOSS : 0;
+    const matchGain = defeated ? 0 : TEAM_COHESION_MATCH_GAIN;
+    game.teamCohesion[clubId] = clamp((game.teamCohesion[clubId] ?? TEAM_COHESION_START) + matchGain - playerChangeLoss - defeatGoalLoss, 0, 100);
   });
 }
 function applyMentalityBonus(tactic, assigned){

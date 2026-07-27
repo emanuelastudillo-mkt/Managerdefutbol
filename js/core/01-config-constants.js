@@ -310,6 +310,7 @@ const MANAGER_PRESTIGE_DISMISSAL_PENALTY = Math.round(configNumber('manager.pres
 
 const TEAM_COHESION_START = configNumber('cohesion.valorInicial', 10, 0, 100);
 const TEAM_COHESION_MATCH_GAIN = configNumber('cohesion.gananciaPorPartido', 7, 0, 100);
+const TEAM_COHESION_DEFEAT_GOAL_LOSS = configNumber('cohesion.perdidaPorGolEnContraDerrota', 1, 0, 20);
 const TEAM_COHESION_TACTIC_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioTactico', 8, 0, 100);
 const TEAM_COHESION_PLAYER_CHANGE_LOSS = configNumber('cohesion.perdidaPorCambioJugador', 1, 0, 100);
 const TEAM_COHESION_SIGNING_LOSS = configNumber('cohesion.perdidaPorFichaje', 2, 0, 100);
@@ -317,6 +318,7 @@ const TEAM_COHESION_SALE_LOSS = configNumber('cohesion.perdidaPorVenta', 3, 0, 1
 const TEAM_COHESION_DISMISSAL_LOSS = configNumber('cohesion.perdidaPorDespedirJugador', 1, 0, 100);
 const TEAM_COHESION_YOUTH_CONTRACT_GAIN = configNumber('cohesion.gananciaPorContratoProfesionalJuvenil', 3, 0, 100);
 const TEAM_MORALE_DISMISSAL_LOSS = configNumber('moral.perdidaPlantelPorDespedirJugador', 1, 0, 98);
+const TEAM_MORALE_DEFEAT_EXTRA_LOSS = configNumber('moral.perdidaExtraPorDerrota', 2, 0, 20);
 const CAPTAINCY_ENABLED = configBoolean('capitania.activo', true);
 const CAPTAINCY_TARGET_MATCHES = Math.max(1, Math.round(configNumber('capitania.partidosObjetivoAprox', 10, 1, 50)));
 const CAPTAINCY_MAX_PERCENT = Math.max(1, Math.min(99, Math.round(configNumber('capitania.maximoPorcentaje', 99, 1, 99))));

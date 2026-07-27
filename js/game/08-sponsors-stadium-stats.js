@@ -351,6 +351,76 @@ function sponsorUnlockedPlaceCount(clubId=game?.selectedClubId){
 function sponsorUnlockedPlaces(clubId=game?.selectedClubId){
   return sponsorPlacesOrdered().slice(0, sponsorUnlockedPlaceCount(clubId));
 }
+function initializeInheritedSponsorsForNewClub(clubId=game?.selectedClubId, options={}){
+  if(!game || !clubId) return { count:0, totalPlaces:0, ratio:0 };
+  ensureSponsorState();
+  const cfg = window.GAME_BALANCE_MANAGER?.contratosManager?.mercadoLaboralRealista || {};
+  const minRatio = clamp(Number(cfg.sponsorsActivosMinimo ?? 0.40), 0, 1);
+  const maxRatio = clamp(Number(cfg.sponsorsActivosMaximo ?? 0.60), minRatio, 1);
+  const places = sponsorUnlockedPlaces(clubId);
+  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
+  if(!places.length || !sponsors.length) return { count:0, totalPlaces:places.length, ratio:0 };
+  const minimum = Math.min(places.length, Math.ceil(places.length * minRatio));
+  const maximum = Math.max(minimum, Math.min(places.length, Math.floor(places.length * maxRatio)));
+  const key = `${game.saveCode || ''}-${game.seasonNumber || 1}-${game.globalTurn || 0}-${clubId}-${options.reason || 'new_job'}`;
+  const target = minimum + hashNumber(`inherited-sponsor-count-${key}`, maximum - minimum + 1);
+  const orderedPlaces = places
+    .map((place,index) => ({ place, score:hashNumber(`inherited-sponsor-place-${key}-${place.id_lugar}-${index}`, 1000000) }))
+    .sort((a,b) => a.score - b.score)
+    .slice(0, target)
+    .map(item => item.place);
+  game.sponsors.active = [];
+  game.sponsors.offers = [];
+  orderedPlaces.forEach((place,index) => {
+    const sponsorIndex = hashNumber(`inherited-sponsor-brand-${key}-${place.id_lugar}-${index}`, sponsors.length);
+    const sponsor = sponsors[sponsorIndex];
+    if(!sponsor) return;
+    const value = sponsorOfferValue(sponsor, place);
+    const remainingFactor = 0.35 + (hashNumber(`inherited-sponsor-remaining-${key}-${place.id_lugar}`, 61) / 100);
+    const remainingDays = Math.max(14, Math.round(Number(value.durationDays || 30) * remainingFactor));
+    const elapsedDays = Math.max(0, Math.round(Number(value.durationDays || remainingDays) - remainingDays));
+    const paidToDate = value.paymentType === 'upfront'
+      ? Math.max(0, Math.round(Number(value.total || 0)))
+      : Math.max(0, Math.round(Number(value.upfrontAmount || 0) + (Number(value.dailyAmount || 0) * elapsedDays)));
+    game.sponsors.active.push({
+      id:`INHERITED-SPON-${game.seasonNumber || 1}-${clubId}-${place.id_lugar}-${hashNumber(`${key}-${sponsor.id_sponsor}`, 100000)}`,
+      sponsorId:sponsor.id_sponsor,
+      sponsorName:sponsor.nombre_marca,
+      category:sponsor.categoria,
+      placeId:place.id_lugar,
+      placeName:place.nombre,
+      placeType:place.tipo,
+      paymentType:value.paymentType,
+      paymentLabel:sponsorPaymentLabel(value.paymentType),
+      valuePer7Days:value.valuePer7Days,
+      dailyAmount:value.dailyAmount,
+      durationDays:value.durationDays,
+      turns:value.turns,
+      total:value.total,
+      dailyTotal:value.dailyTotal,
+      upfrontTotal:value.upfrontTotal,
+      upfrontAmount:value.upfrontAmount,
+      remainingDailyTotal:Math.max(0, Number(value.remainingDailyTotal || 0) - (Number(value.dailyAmount || 0) * elapsedDays)),
+      acceptedTurn:Math.max(0, currentTurnIndex() - daysToTurns(elapsedDays)),
+      acceptedDate:'',
+      turnsRemaining:Math.max(1, daysToTurns(remainingDays)),
+      paidToDate,
+      inherited:true,
+      inheritedAt:game.currentDate || '',
+      season:game.seasonNumber || 1,
+      specialChallenge:null
+    });
+  });
+  game.sponsors.seasonPlan = [];
+  game.sponsors.seasonPlanSeason = 0;
+  game.sponsors.generatedOfferCount = 0;
+  if(typeof buildSponsorSeasonPlan === 'function') buildSponsorSeasonPlan();
+  return {
+    count:game.sponsors.active.length,
+    totalPlaces:places.length,
+    ratio:places.length ? game.sponsors.active.length / places.length : 0
+  };
+}
 function sponsorPlaceIsUnlocked(placeId, clubId=game?.selectedClubId){
   return sponsorUnlockedPlaces(clubId).some(place => String(place.id_lugar) === String(placeId));
 }

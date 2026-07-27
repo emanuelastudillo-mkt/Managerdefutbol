@@ -1,18 +1,18 @@
-# Una vida de manager — V8.58
+# Una vida de manager — V8.59
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.58** y corrige cuatro problemas de continuidad de carrera sobre la base completa V8.57.
+La revisión actual muestra **V8.59** y agrega realismo al asumir un club durante una temporada y al recibir ofertas mientras el manager está sin equipo.
 
-- la carta **Objetivo más bajo** reduce también el objetivo vigente de contratos de una, dos o tres temporadas;
-- el contrato actual muestra el objetivo efectivo y la reducción porcentual aplicada por la carta;
-- los invitados especiales del Mundial de Clubes y cualquier club sin división jugable quedan fuera del mercado laboral;
-- las ofertas y solicitudes antiguas de esos clubes se eliminan al normalizar la partida;
-- aceptar un nuevo cargo después del día 250 no provoca otra evaluación y despido al avanzar un día;
-- el nuevo club queda exento de la evaluación tardía durante esa temporada y comienza con controles normales en la siguiente;
-- la pantalla sin club deja de mostrar el detalle interno de objetivos secundarios y probabilidades de despido;
+- al aceptar un nuevo cargo, entre el 40% y el 60% de los espacios de sponsors disponibles ya comienzan con contratos activos;
+- el club heredado cuenta con dos o tres jugadores que parten aproximadamente con el 50% de su capacidad máxima como capitán;
+- las ofertas automáticas para un manager sin equipo se concentran en clubes ubicados en la zona baja de sus tablas;
+- los clubes más chicos, con menor capacidad salarial o peor posición compensan con un porcentaje superior sobre futuras ventas;
+- esperar sin aceptar una propuesta puede elevar gradualmente esa participación hasta un máximo del 25%;
+- cada nuevo período sin club reinicia correctamente las ofertas y el tiempo de espera;
+- se conservan las correcciones de cartas, clubes invitados y despidos consecutivos incorporadas en V8.58;
 - se mantiene completa la progresión visual incorporada en V8.57.
 
 ## Sistema visual
@@ -45,20 +45,32 @@ Los 25 recursos raster nuevos se generaron en PNG y se publican como WebP a 1.28
 
 ## Compatibilidad y publicación
 
-- La V8.58 corrige cartas, mercado laboral y continuidad tras despidos sin cambiar Worker ni base de datos.
+- La V8.59 ajusta sponsors heredados, experiencia de capitanía y mercado laboral sin cambiar Worker ni base de datos.
 - Las partidas anteriores conservan sus datos; las fases visuales se calculan al mostrar cada pantalla.
 - El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.58-INCREMENTAL` respetando las rutas.
+- Como alternativa, copiar solamente el contenido de `03-GITHUB-V8.59-INCREMENTAL` respetando las rutas.
 - Las carpetas nuevas `assets/academia/` y `assets/estadio/`, junto con `styles/120-visual-progression-v857.css`, son obligatorias para evitar imágenes o estilos faltantes.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ---
 
 # Historial de versiones
+
+## V8.59 — Realismo al asumir clubes y mercado laboral
+
+- Un club aceptado durante la temporada hereda entre el 40% y el 60% de sus espacios de sponsors desbloqueados con contratos activos.
+- Los sponsors heredados no acreditan pagos iniciales retroactivos al nuevo manager y continúan con un calendario válido desde el día actual.
+- Dos o tres jugadores del plantel reciben una experiencia inicial equivalente aproximadamente al 45%-55% de su capacidad máxima como capitán.
+- Las ofertas laborales automáticas se concentran en equipos de la zona baja; si no hay suficientes candidatos, se prioriza el peor 40% de los clubes elegibles.
+- El sueldo ofrecido baja de manera gradual según tamaño, economía y posición del club.
+- Los equipos chicos o relegados compensan con una participación mayor sobre futuras ventas.
+- El tiempo sin equipo mejora progresivamente esa participación y puede llevarla hasta el 25% después de 120 días en los contextos más desfavorables.
+- Cada nuevo ciclo de desempleo registra su propia fecha de inicio y elimina propuestas o solicitudes obsoletas.
+- Compatible con partidas V8.58. No requiere Worker, SQL, imágenes ni reiniciar la carrera.
 
 ## V8.58 — Cartas, mercado laboral y continuidad tras despidos
 

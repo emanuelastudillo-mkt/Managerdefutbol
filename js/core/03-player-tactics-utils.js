@@ -627,6 +627,47 @@ function ensureCaptaincyProgressState(){
   if(!game.captaincyAppliedMatches || typeof game.captaincyAppliedMatches !== 'object' || Array.isArray(game.captaincyAppliedMatches)) game.captaincyAppliedMatches = {};
   return game.captaincyProgress;
 }
+function initializeCaptaincyExperienceForNewClub(clubId=game?.selectedClubId, options={}){
+  if(!game || !CAPTAINCY_ENABLED || !clubId) return { count:0, players:[] };
+  const cfg = window.GAME_BALANCE_MANAGER?.contratosManager?.mercadoLaboralRealista || {};
+  const minCount = clamp(Math.round(Number(cfg.capitanesConExperienciaMinimo ?? 2)), 1, 6);
+  const maxCount = clamp(Math.round(Number(cfg.capitanesConExperienciaMaximo ?? 3)), minCount, 6);
+  const minFactor = clamp(Number(cfg.capacidadCapitanInicialMinima ?? 0.45), 0.10, 0.95);
+  const maxFactor = clamp(Number(cfg.capacidadCapitanInicialMaxima ?? 0.55), minFactor, 0.99);
+  const key = `${game.saveCode || ''}-${game.seasonNumber || 1}-${game.globalTurn || 0}-${clubId}-${options.reason || 'new_job'}`;
+  const targetCount = minCount + hashNumber(`captain-count-${key}`, maxCount - minCount + 1);
+  const candidates = playersByClub(clubId)
+    .filter(player => captaincyMaximum(player) >= 20)
+    .sort((a,b) => captaincyMaximum(b) - captaincyMaximum(a) || Number(b.age || 0) - Number(a.age || 0) || baseSkill(b,'liderazgo') - baseSkill(a,'liderazgo') || Number(a.id) - Number(b.id));
+  const store = ensureCaptaincyProgressState();
+  const existing = candidates.filter(player => Number(store[player.id]?.clubId || 0) === Number(clubId) && Number(store[player.id]?.percent || 0) > 0);
+  const selected = existing.slice(0, targetCount);
+  candidates.forEach(player => {
+    if(selected.length >= targetCount || selected.some(item => Number(item.id) === Number(player.id))) return;
+    selected.push(player);
+  });
+  selected.forEach((player,index) => {
+    const maximum = captaincyMaximum(player);
+    const factorRoll = hashNumber(`captain-factor-${key}-${player.id}-${index}`, 1001) / 1000;
+    const factor = minFactor + ((maxFactor - minFactor) * factorRoll);
+    const seededPercent = clamp(Math.round(maximum * factor), 1, maximum);
+    const current = store[player.id];
+    if(current && Number(current.clubId) === Number(clubId) && Number(current.percent || 0) >= seededPercent) return;
+    store[player.id] = {
+      playerId:Number(player.id),
+      clubId:Number(clubId),
+      percent:seededPercent,
+      matches:Math.max(1, Math.round((seededPercent / Math.max(1, maximum)) * CAPTAINCY_TARGET_MATCHES)),
+      updatedSeason:Number(game.seasonNumber || 1),
+      updatedAt:String(game.currentDate || '')
+    };
+  });
+  if(game.tactic) game.tactic = ensureTacticCaptain(game.tactic, clubId);
+  return {
+    count:selected.length,
+    players:selected.map(player => ({ id:Number(player.id), name:String(player.name || ''), percent:captaincyValue(player.id), maximum:captaincyMaximum(player) }))
+  };
+}
 function captaincyEntry(playerId, create=true){
   if(!game || !CAPTAINCY_ENABLED) return null;
   const id = Number(playerId || 0);

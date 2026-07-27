@@ -159,7 +159,29 @@ window.GAME_BALANCE_MANAGER = {
     duracionProbabilidadExigente: { one: 70, two: 25, three: 5 },
 
     porcentajeVentaFuturaMin: 5,
-    porcentajeVentaFuturaMax: 20
+    porcentajeVentaFuturaMax: 20,
+
+    // Realismo al asumir un club durante una temporada ya iniciada.
+    mercadoLaboralRealista: {
+      activo: true,
+      zonaBajaDesde: 0.55,
+      diasParaBonusMaximoEspera: 120,
+      porcentajeVentaFuturaMaximo: 25,
+      bonusVentaFuturaMaximoPorEspera: 5,
+      bonusVentaFuturaMaximoPorContexto: 2,
+      factorSueldoMinimo: 0.65,
+      factorSueldoMaximo: 1.05,
+      penalizacionSueldoMaximaClubChico: 0.10,
+      penalizacionSueldoMaximaZonaBaja: 0.12,
+      penalizacionSueldoMaximaEconomiaDebil: 0.08,
+      variacionSueldo: 0.04,
+      sponsorsActivosMinimo: 0.40,
+      sponsorsActivosMaximo: 0.60,
+      capitanesConExperienciaMinimo: 2,
+      capitanesConExperienciaMaximo: 3,
+      capacidadCapitanInicialMinima: 0.45,
+      capacidadCapitanInicialMaxima: 0.55
+    }
   },
 
   premiosTemporada: {

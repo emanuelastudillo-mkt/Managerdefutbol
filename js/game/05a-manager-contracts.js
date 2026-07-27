@@ -126,6 +126,56 @@ function managerContractFutureSalePercent(club, salt='', state=game){
   const variation = hashNumber(`manager-future-percent-${state?.saveCode || ''}-${club?.id || 0}-${salt}`, 3) - 1;
   return clamp(base + variation, min, max);
 }
+function managerContractFutureSaleMaximum(){
+  const cfg = typeof managerJobRealismConfig === 'function' ? managerJobRealismConfig() : {};
+  return clamp(Math.round(Number(cfg.porcentajeVentaFuturaMaximo ?? 25)), 5, 100);
+}
+function managerJobOfferRealismTerms(club, salt='', state=game){
+  const cfg = typeof managerJobRealismConfig === 'function' ? managerJobRealismConfig() : {};
+  const active = cfg.activo !== false;
+  const standing = typeof managerJobClubStandingProfile === 'function' ? managerJobClubStandingProfile(club) : { position:0, total:0, ratio:0.5 };
+  const unemploymentDays = typeof managerJobUnemployedDays === 'function' ? managerJobUnemployedDays(state) : 0;
+  const maxWaitDays = Math.max(1, Math.round(Number(cfg.diasParaBonusMaximoEspera ?? 120)));
+  const waitFactor = clamp(unemploymentDays / maxWaitDays, 0, 1);
+  const prestige = clamp(Number(clubPrestigeValue(club) || 0), 0, 99);
+  const smallClubFactor = clamp(1 - (prestige / 99), 0, 1);
+  const wealth = typeof managerContractWealthFactor === 'function' ? managerContractWealthFactor(club.id, state) : 1;
+  const weakEconomyFactor = clamp((1.25 - Number(wealth || 1)) / 0.50, 0, 1);
+  const jitterRange = Math.max(0, Number(cfg.variacionSueldo ?? 0.04));
+  const jitterRaw = (hashNumber(`manager-job-salary-${state?.saveCode || ''}-${club?.id || 0}-${salt}`, 1001) / 1000) - 0.5;
+  const salaryFactor = active ? clamp(
+    1
+      - smallClubFactor * Math.max(0, Number(cfg.penalizacionSueldoMaximaClubChico ?? 0.10))
+      - Number(standing.ratio || 0) * Math.max(0, Number(cfg.penalizacionSueldoMaximaZonaBaja ?? 0.12))
+      - weakEconomyFactor * Math.max(0, Number(cfg.penalizacionSueldoMaximaEconomiaDebil ?? 0.08))
+      + jitterRaw * jitterRange * 2,
+    Number(cfg.factorSueldoMinimo ?? 0.65),
+    Number(cfg.factorSueldoMaximo ?? 1.05)
+  ) : 1;
+  const baseFuture = managerContractFutureSalePercent(club, salt, state);
+  const contextMax = Math.max(0, Math.round(Number(cfg.bonusVentaFuturaMaximoPorContexto ?? 2)));
+  const waitMax = Math.max(0, Math.round(Number(cfg.bonusVentaFuturaMaximoPorEspera ?? 5)));
+  const contextScore = clamp((smallClubFactor * 0.45) + (weakEconomyFactor * 0.25) + (Number(standing.ratio || 0) * 0.30), 0, 1);
+  const contextBonus = active ? Math.round(contextScore * contextMax) : 0;
+  const lowSalaryBonus = active && salaryFactor <= 0.78 ? 1 : 0;
+  const structuralCap = Math.min(managerContractFutureSaleMaximum() - waitMax, 22);
+  const structuralPercent = Math.min(structuralCap, baseFuture + contextBonus + lowSalaryBonus);
+  const waitCeiling = contextScore >= 0.70
+    ? managerContractFutureSaleMaximum()
+    : Math.min(managerContractFutureSaleMaximum(), structuralPercent + waitMax);
+  const waitBonus = active ? Math.round(waitFactor * Math.max(0, waitCeiling - structuralPercent)) : 0;
+  const futureSalePercent = clamp(structuralPercent + waitBonus, 5, managerContractFutureSaleMaximum());
+  return {
+    salaryOfferFactor:Number(salaryFactor.toFixed(3)),
+    futureSalePercent:Math.round(futureSalePercent),
+    tablePosition:Number(standing.position || 0),
+    tableSize:Number(standing.total || 0),
+    tableRatio:Number(Number(standing.ratio || 0).toFixed(3)),
+    unemploymentDays:Math.max(0, Math.round(Number(unemploymentDays || 0))),
+    waitBonus,
+    contextBonus
+  };
+}
 function managerContractObjectiveSchedule(finalObjective, duration=1, startSeason=game?.seasonNumber || 1, clubId=game?.selectedClubId){
   const cfg = managerContractBalanceConfig();
   const cleanDuration = clamp(Math.round(Number(duration || 1)), 1, 3);
@@ -159,7 +209,8 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
   const startSeason = Number(state?.seasonNumber || 1);
   const annualObjectives = managerContractObjectiveSchedule(finalObjective, duration, startSeason, club.id);
   const baseMonthly = managerContractBaseMonthlySalary(club.id, state, Number(offer.managerPrestigeAtOffer ?? managerContractStatePrestige(state)));
-  const monthlySalary = Math.max(100000, Math.round(baseMonthly * managerContractDurationSalaryFactor(duration) * Number(negotiation.salaryFactor || 1)));
+  const salaryOfferFactor = Number.isFinite(Number(offer.salaryOfferFactor)) ? clamp(Number(offer.salaryOfferFactor), 0.40, 1.50) : 1;
+  const monthlySalary = Math.max(100000, Math.round(baseMonthly * managerContractDurationSalaryFactor(duration) * Number(negotiation.salaryFactor || 1) * salaryOfferFactor));
   const annualSalaries = managerContractAnnualSalarySchedule(monthlySalary, duration, startSeason);
   return {
     clubId:Number(club.id),
@@ -174,9 +225,10 @@ function managerContractOfferTerms(offer={}, negotiationLevel='normal', state=ga
     monthlySalary,
     annualSalary:monthlySalary * 12,
     annualSalaries,
-    futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))), 5, 20),
+    futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))), 5, managerContractFutureSaleMaximum()),
     durationSalaryFactor:managerContractDurationSalaryFactor(duration),
     salaryFactor:Number(negotiation.salaryFactor || 1),
+    salaryOfferFactor,
     highRisk
   };
 }
@@ -244,7 +296,8 @@ function normalizeManagerJobContract(contract, state=game){
     managerPrestigeAtOffer:Number(contract.managerPrestigeAtSigning ?? managerContractStatePrestige(state)),
     baseObjectivePpg:Number(contract.baseObjectivePpg ?? managerObjectiveBaseForClubDivision(clubId)),
     objectiveBonus:Number(contract.objectiveBonus || 0.25),
-    futureSalePercent:Number(contract.futureSalePercent ?? managerContractFutureSalePercent(club, contract.id || '', state))
+    futureSalePercent:Number(contract.futureSalePercent ?? managerContractFutureSalePercent(club, contract.id || '', state)),
+    salaryOfferFactor:Number.isFinite(Number(contract.salaryOfferFactor)) ? Number(contract.salaryOfferFactor) : 1
   };
   const terms = managerContractOfferTerms(pseudoOffer, contract.negotiationLevel || (pseudoOffer.contractType === 'high_risk' ? 'ambicioso' : 'normal'), { ...state, seasonNumber:startSeason });
   const annualObjectives = Array.isArray(contract.annualObjectives) && contract.annualObjectives.length === duration
@@ -278,7 +331,11 @@ function normalizeManagerJobContract(contract, state=game){
     annualObjectives,
     monthlySalary,
     annualSalaries,
-    futureSalePercent:clamp(Math.round(Number(contract.futureSalePercent ?? terms.futureSalePercent)), 5, 20),
+    futureSalePercent:clamp(Math.round(Number(contract.futureSalePercent ?? terms.futureSalePercent)), 5, managerContractFutureSaleMaximum()),
+    salaryOfferFactor:Number.isFinite(Number(contract.salaryOfferFactor)) ? clamp(Number(contract.salaryOfferFactor), 0.40, 1.50) : Number(terms.salaryOfferFactor || 1),
+    tablePosition:Math.max(0, Math.round(Number(contract.tablePosition || 0))),
+    tableSize:Math.max(0, Math.round(Number(contract.tableSize || 0))),
+    unemploymentDays:Math.max(0, Math.round(Number(contract.unemploymentDays || 0))),
     nextSalaryDate:validIsoDate(contract.nextSalaryDate) ? contract.nextSalaryDate : addDaysToIsoDate(validIsoDate(contract.signedDate) ? contract.signedDate : (state?.currentDate || currentCalendarDate()), 30),
     lastSalaryPaidDate:validIsoDate(contract.lastSalaryPaidDate) ? contract.lastSalaryPaidDate : '',
     salaryPayments:Math.max(0, Math.round(Number(contract.salaryPayments || 0))),
@@ -299,7 +356,11 @@ function createManagerJobContractFromOffer(clubId, offer={}, negotiationLevel='n
     durationSeasons:clamp(Math.round(Number(offer.durationSeasons || managerContractDurationForOffer(club, offer, state))), 1, 3),
     managerPrestigeAtOffer:Number(offer.managerPrestigeAtOffer ?? managerContractStatePrestige(state)),
     baseObjectivePpg:Number(offer.baseObjectivePpg ?? managerObjectiveBaseForClubDivision(club.id)),
-    futureSalePercent:Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state))
+    futureSalePercent:Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', state)),
+    salaryOfferFactor:Number.isFinite(Number(offer.salaryOfferFactor)) ? Number(offer.salaryOfferFactor) : 1,
+    tablePosition:Math.max(0, Math.round(Number(offer.tablePosition || 0))),
+    tableSize:Math.max(0, Math.round(Number(offer.tableSize || 0))),
+    unemploymentDays:Math.max(0, Math.round(Number(offer.unemploymentDays || 0)))
   };
   const terms = managerContractOfferTerms(normalizedOffer, negotiationLevel, state);
   if(!terms) return null;
@@ -325,6 +386,10 @@ function createManagerJobContractFromOffer(clubId, offer={}, negotiationLevel='n
     monthlySalary:terms.monthlySalary,
     annualSalaries:terms.annualSalaries,
     futureSalePercent:terms.futureSalePercent,
+    salaryOfferFactor:terms.salaryOfferFactor,
+    tablePosition:normalizedOffer.tablePosition,
+    tableSize:normalizedOffer.tableSize,
+    unemploymentDays:normalizedOffer.unemploymentDays,
     nextSalaryDate:addDaysToIsoDate(signedDate, 30),
     lastSalaryPaidDate:'',
     salaryPayments:0,
@@ -613,11 +678,17 @@ normalizeManagerJobMarketState = function(state={}){
   normalized.offers = normalized.offers.map(offer => {
     const club = seed?.clubs?.find(item => Number(item.id) === Number(offer.clubId));
     if(!club) return offer;
+    const realism = managerJobOfferRealismTerms(club, offer.id || '', game);
     return {
       ...offer,
       durationSeasons:clamp(Math.round(Number(offer.durationSeasons || managerContractDurationForOffer(club, offer, game))), 1, 3),
       baseObjectivePpg:Number.isFinite(Number(offer.baseObjectivePpg)) ? Number(offer.baseObjectivePpg) : Number(managerObjectiveBaseForClubDivision(club.id)),
-      futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? managerContractFutureSalePercent(club, offer.id || '', game))), 5, 20)
+      salaryOfferFactor:Number.isFinite(Number(offer.salaryOfferFactor)) ? clamp(Number(offer.salaryOfferFactor), 0.40, 1.50) : realism.salaryOfferFactor,
+      futureSalePercent:clamp(Math.round(Number(offer.futureSalePercent ?? realism.futureSalePercent)), 5, managerContractFutureSaleMaximum()),
+      tablePosition:Math.max(0, Math.round(Number(offer.tablePosition || realism.tablePosition || 0))),
+      tableSize:Math.max(0, Math.round(Number(offer.tableSize || realism.tableSize || 0))),
+      tableRatio:Number.isFinite(Number(offer.tableRatio)) ? clamp(Number(offer.tableRatio), 0, 1) : realism.tableRatio,
+      unemploymentDays:Math.max(0, Math.round(Number(offer.unemploymentDays ?? realism.unemploymentDays ?? 0)))
     };
   });
   return normalized;
@@ -644,7 +715,7 @@ managerJobCreateOffer = function(clubId, options={}){
   };
   offer.durationSeasons = managerContractDurationForOffer(club, offer, game);
   offer.baseObjectivePpg = Number(managerObjectiveBaseForClubDivision(club.id));
-  offer.futureSalePercent = managerContractFutureSalePercent(club, offer.id, game);
+  Object.assign(offer, managerJobOfferRealismTerms(club, offer.id, game));
   state.offers.push(offer);
   state.log.push({ type:'offer', clubId:offer.clubId, contractType, durationSeasons:offer.durationSeasons, date:today, source:offer.source });
   return offer;
@@ -673,9 +744,11 @@ managerJobOfferCard = function(offer){
   const highRisk = String(offer.contractType || '') === 'high_risk';
   const tag = highRisk ? 'Contrato exigente' : `${Number(offer.durationSeasons || 1)} temporada${Number(offer.durationSeasons || 1) === 1 ? '' : 's'}`;
   const defaultLevel = highRisk ? 'ambicioso' : 'normal';
+  const standingText = Number(offer.tablePosition || 0) && Number(offer.tableSize || 0) ? ` · Puesto ${Number(offer.tablePosition)}/${Number(offer.tableSize)}` : '';
+  const waitText = Number(offer.unemploymentDays || 0) > 0 ? ` · ${Number(offer.unemploymentDays)} día(s) sin club` : '';
   return `<article class="card job-offer-card ${highRisk ? 'warn' : ''}" data-job-offer-card="${escapeHtml(offer.id)}">
     <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
-    <p class="muted small">${escapeHtml(division?.name || 'Liga')} · Prestigio ${clubPrestigeValue(club)} · El club fija ${Number(offer.futureSalePercent || 5)}% sobre la futura primera venta de juveniles promovidos durante este contrato.</p>
+    <p class="muted small">${escapeHtml(division?.name || 'Liga')}${standingText} · Prestigio ${clubPrestigeValue(club)}${waitText} · Sueldo ajustado al contexto del club · ${Number(offer.futureSalePercent || 5)}% sobre la futura primera venta de juveniles promovidos durante este contrato.</p>
     ${highRisk ? '<p class="small"><strong>La diferencia de prestigio impone un objetivo ambicioso y un contrato de una sola temporada.</strong></p>' : `<label class="job-negotiation-label">Negociar objetivo y sueldo<select data-job-negotiation="${escapeHtml(offer.id)}"><option value="prudente">Prudente · objetivo menor · sueldo -20%</option><option value="normal" selected>Normal · objetivo y sueldo base</option><option value="ambicioso">Ambicioso · objetivo mayor · sueldo +25%</option></select></label>`}
     <div data-job-offer-preview="${escapeHtml(offer.id)}">${managerContractOfferPreviewMarkup(offer, defaultLevel)}</div>
     <div class="row message-actions"><button class="primary" data-accept-job-offer="${escapeHtml(offer.id)}">Aceptar cargo</button><button class="ghost" data-reject-job-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
@@ -796,6 +869,7 @@ continueCareerAtClub = function(selectedClubId, options={}){
     archiveManagerJobContract('nuevo_club', game);
   }
   const club = seed?.clubs?.find(item => Number(item.id) === Number(selectedClubId));
+  const directOfferRealism = offerCopy ? null : managerJobOfferRealismTerms(club, `career-change-${game.seasonNumber || 1}-${game.globalTurn || 0}`, game);
   const offer = offerCopy || {
     id:`direct-job-${selectedClubId}-${game.seasonNumber || 1}-${Date.now()}`,
     clubId:Number(selectedClubId),
@@ -804,7 +878,7 @@ continueCareerAtClub = function(selectedClubId, options={}){
     durationSeasons:managerContractDurationForOffer(club, { source:'career_change', contractType:'normal' }, game),
     managerPrestigeAtOffer:currentManagerPrestige(),
     baseObjectivePpg:managerObjectiveBaseForClubDivision(selectedClubId),
-    futureSalePercent:managerContractFutureSalePercent(club, 'career_change', game)
+    ...directOfferRealism
   };
   game.managerJobContract = createManagerJobContractFromOffer(selectedClubId, offer, options.contractNegotiationLevel || 'normal', game);
   ensureManagerFinancesState(game);

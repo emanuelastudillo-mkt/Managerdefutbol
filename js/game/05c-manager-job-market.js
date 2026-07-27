@@ -173,6 +173,12 @@ function normalizeManagerJobMarketState(state={}){
       objectiveBonus:Number.isFinite(Number(offer?.objectiveBonus)) ? Number(offer.objectiveBonus) : (String(offer?.contractType || '') === 'high_risk' ? 0.25 : 0),
       transferBudgetRate:Number.isFinite(Number(offer?.transferBudgetRate)) ? Number(offer.transferBudgetRate) : (String(offer?.contractType || '') === 'high_risk' ? 0.05 : null),
       rejectionChance:Number.isFinite(Number(offer?.rejectionChance)) ? clamp(Number(offer.rejectionChance), 1, 20) : 1,
+      salaryOfferFactor:Number.isFinite(Number(offer?.salaryOfferFactor)) ? clamp(Number(offer.salaryOfferFactor), 0.40, 1.50) : null,
+      futureSalePercent:Number.isFinite(Number(offer?.futureSalePercent)) ? clamp(Math.round(Number(offer.futureSalePercent)), 0, 100) : null,
+      tablePosition:Math.max(0, Math.round(Number(offer?.tablePosition || 0))),
+      tableSize:Math.max(0, Math.round(Number(offer?.tableSize || 0))),
+      tableRatio:Number.isFinite(Number(offer?.tableRatio)) ? clamp(Number(offer.tableRatio), 0, 1) : null,
+      unemploymentDays:Math.max(0, Math.round(Number(offer?.unemploymentDays || 0))),
       note:String(offer?.note || '')
     };
   };
@@ -196,13 +202,59 @@ function normalizeManagerJobMarketState(state={}){
     applications:(Array.isArray(src.applications) ? src.applications : []).map(normalizeApplication).filter(Boolean).slice(-12),
     nextIncomingOfferDate:validIsoDate(src.nextIncomingOfferDate) ? src.nextIncomingOfferDate : null,
     lastProcessedDate:validIsoDate(src.lastProcessedDate) ? src.lastProcessedDate : null,
+    unemployedSinceDate:validIsoDate(src.unemployedSinceDate) ? src.unemployedSinceDate : null,
+    unemployedSinceTurn:Math.max(0, Math.round(Number(src.unemployedSinceTurn || 0))),
+    unemploymentKey:String(src.unemploymentKey || ''),
     log:Array.isArray(src.log) ? src.log.slice(-25) : []
   };
 }
 function ensureManagerJobMarketState(){
   if(!game) return normalizeManagerJobMarketState({});
   game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
+  if(game.gameOver?.active){
+    const key = String(game.gameOver.triggeredAt || `${game.gameOver.type || 'without_club'}-${game.seasonNumber || 1}-${game.globalTurn || 0}`);
+    if(game.managerJobMarket.unemploymentKey !== key){
+      game.managerJobMarket.offers = [];
+      game.managerJobMarket.applications = [];
+      game.managerJobMarket.nextIncomingOfferDate = null;
+      game.managerJobMarket.lastProcessedDate = null;
+      game.managerJobMarket.unemployedSinceDate = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (game.currentDate || null);
+      game.managerJobMarket.unemployedSinceTurn = Math.max(0, Math.round(Number(game.globalTurn || 0)));
+      game.managerJobMarket.unemploymentKey = key;
+      game.managerJobMarket.log.push({ type:'unemployment_start', date:game.managerJobMarket.unemployedSinceDate || '', reason:String(game.gameOver.type || '') });
+      game.managerJobMarket.log = game.managerJobMarket.log.slice(-25);
+    }
+  }
   return game.managerJobMarket;
+}
+function managerJobRealismConfig(){
+  const cfg = window.GAME_BALANCE_MANAGER?.contratosManager?.mercadoLaboralRealista;
+  return cfg && typeof cfg === 'object' && !Array.isArray(cfg) ? cfg : {};
+}
+function managerJobUnemployedDays(state=game){
+  const market = state?.managerJobMarket && typeof state.managerJobMarket === 'object' ? state.managerJobMarket : {};
+  const today = typeof currentCalendarDate === 'function' ? currentCalendarDate() : (state?.currentDate || '');
+  if(typeof validIsoDate === 'function' && validIsoDate(market.unemployedSinceDate) && validIsoDate(today)) return Math.max(0, daysBetweenIsoDates(market.unemployedSinceDate, today));
+  const currentTurn = Math.max(0, Math.round(Number(state?.globalTurn || 0)));
+  return Math.max(0, currentTurn - Math.max(0, Number(market.unemployedSinceTurn || 0)));
+}
+function managerJobClubStandingProfile(clubOrId){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(item => Number(item.id) === Number(clubOrId));
+  if(!club) return { position:0, total:0, ratio:0.5, lowZone:false };
+  const division = typeof clubDivision === 'function' ? clubDivision(club.id) : seed?.divisions?.find(item => String(item.id || '') === String(club.divisionId || ''));
+  let table = [];
+  try{ table = typeof sortedStandings === 'function' && division?.id ? sortedStandings(division.id) : []; }catch(error){ table = []; }
+  const divisionClubs = (seed?.clubs || []).filter(item => String(item.divisionId || '') === String(club.divisionId || ''));
+  const total = Math.max(1, table.length || divisionClubs.length || 1);
+  let index = table.findIndex(row => Number(row.clubId || row.id || 0) === Number(club.id));
+  if(index < 0){
+    const fallback = divisionClubs.slice().sort((a,b) => clubPrestigeValue(b) - clubPrestigeValue(a) || Number(a.id || 0) - Number(b.id || 0));
+    index = fallback.findIndex(item => Number(item.id) === Number(club.id));
+  }
+  if(index < 0) index = Math.floor((total - 1) / 2);
+  const ratio = total <= 1 ? 0.5 : clamp(index / (total - 1), 0, 1);
+  const threshold = clamp(Number(managerJobRealismConfig().zonaBajaDesde ?? 0.55), 0, 1);
+  return { position:index + 1, total, ratio, lowZone:ratio >= threshold };
 }
 function managerJobScheduleNextIncomingOffer(fromDate=currentCalendarDate()){
   if(!game?.gameOver?.active) return null;
@@ -214,11 +266,16 @@ function managerJobScheduleNextIncomingOffer(fromDate=currentCalendarDate()){
 }
 function managerJobAvailableOfferCandidates(){
   const prestige = currentManagerPrestige();
-  return (seed?.clubs || [])
+  const eligible = (seed?.clubs || [])
     .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
     .filter(club => managerCanSelectClub(club, prestige))
-    .filter(club => !managerClubRehireBlockInfo(club).blocked)
-    .sort((a,b) => clubPrestigeValue(b) - clubPrestigeValue(a) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' }));
+    .filter(club => !managerClubRehireBlockInfo(club).blocked);
+  const lowZone = eligible.filter(club => managerJobClubStandingProfile(club).lowZone);
+  const pool = lowZone.length ? lowZone : eligible
+    .slice()
+    .sort((a,b) => managerJobClubStandingProfile(b).ratio - managerJobClubStandingProfile(a).ratio || clubPrestigeValue(a) - clubPrestigeValue(b))
+    .slice(0, Math.max(1, Math.ceil(eligible.length * 0.40)));
+  return pool.sort((a,b) => managerJobClubStandingProfile(b).ratio - managerJobClubStandingProfile(a).ratio || clubPrestigeValue(a) - clubPrestigeValue(b) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' }));
 }
 function managerJobApplicationCandidates(limit=8){
   const prestige = managerClubAccessPrestige(currentManagerPrestige());
@@ -273,10 +330,12 @@ function managerJobIncomingOfferClub(){
   const prestige = currentManagerPrestige();
   const weighted = candidates.map(club => {
     const cp = clubPrestigeValue(club);
+    const standing = managerJobClubStandingProfile(club);
     const closeness = Math.max(1, 25 - Math.abs(cp - prestige));
-    const reputation = Math.max(1, cp / 10);
-    const jitter = 1 + (hashNumber(`job-incoming-${game?.saveCode || ''}-${game?.globalTurn || 0}-${club.id}`, 100) / 100);
-    return { club, weight:closeness * reputation * jitter };
+    const smallClub = 1 + ((99 - cp) / 99);
+    const tableNeed = 1 + (standing.ratio * 2.5);
+    const jitter = 0.85 + (hashNumber(`job-incoming-${game?.saveCode || ''}-${game?.globalTurn || 0}-${club.id}`, 31) / 100);
+    return { club, weight:closeness * smallClub * tableNeed * jitter };
   });
   const total = weighted.reduce((sum,item)=>sum + item.weight, 0);
   let pick = hashNumber(`job-incoming-pick-${game?.saveCode || ''}-${game?.globalTurn || 0}-${currentCalendarDate()}`, Math.max(1, Math.round(total * 1000))) / 1000;

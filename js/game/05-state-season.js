@@ -2518,6 +2518,12 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, newClub.id);
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(newClub.id, game.seasonNumber || 1, 0) : game.transferBudget;
   resetClubSpecificCareerStateForNewClub(newClub.id);
+  const inheritedSponsors = typeof initializeInheritedSponsorsForNewClub === 'function'
+    ? initializeInheritedSponsorsForNewClub(newClub.id, { reason:game.gameOver?.type || 'new_job' })
+    : { count:0, totalPlaces:0, ratio:0 };
+  const inheritedCaptains = typeof initializeCaptaincyExperienceForNewClub === 'function'
+    ? initializeCaptaincyExperienceForNewClub(newClub.id, { reason:game.gameOver?.type || 'new_job' })
+    : { count:0, players:[] };
   if(highRiskOffer){
     game.managerJobContract = {
       clubId:Number(newClub.id),
@@ -2546,7 +2552,8 @@ function continueCareerAtClub(selectedClubId, options={}){
   activeTab = 'home';
   closeModal();
   const specialResetText = newClubSpecialReset?.returned ? ` ${newClubSpecialReset.returned} carta(s) activa(s) volvieron a la reserva.` : '';
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.${specialResetText}` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, academia, acciones de staff, sponsors, préstamos y cooldowns vinculados al club anterior.${specialResetText}`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  const inheritedStateText = ` El club conserva ${Number(inheritedSponsors.count || 0)} sponsor(s) activo(s) de ${Number(inheritedSponsors.totalPlaces || 0)} espacios habilitados y ${Number(inheritedCaptains.count || 0)} jugador(es) con experiencia previa de capitanía.`;
+  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.${inheritedStateText}${specialResetText}` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, acciones de staff, préstamos y cooldowns vinculados al club anterior.${inheritedStateText}${specialResetText}`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

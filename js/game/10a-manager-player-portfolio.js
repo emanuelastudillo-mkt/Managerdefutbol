@@ -110,7 +110,7 @@ function managerPortfolioRegisterPromotion(player, academyPlayer=null){
   if(!contract || String(contract.status || 'active') !== 'active') return null;
   const clubId = Number(player.clubId || game.selectedClubId || 0);
   if(!clubId || Number(contract.clubId || 0) !== clubId) return null;
-  const percent = clamp(Math.round(Number(contract.futureSalePercent || 0)), 5, 20);
+  const percent = clamp(Math.round(Number(contract.futureSalePercent || 0)), 5, typeof managerContractFutureSaleMaximum === 'function' ? managerContractFutureSaleMaximum() : 25);
   const portfolio = ensureManagerPlayerPortfolio(game);
   const contractId = String(contract.id || contract.offerId || `contract-${clubId}-${game.seasonNumber || 1}`);
   const id = `manager-player-right-${player.id}-${clubId}-${contractId}`;

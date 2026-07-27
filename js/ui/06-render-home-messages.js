@@ -2123,15 +2123,96 @@ function generateMarketPlayers(count=50, options={}){
 }
 
 function mergeMarketPlayersIntoSeed(players=[]){
-  if(!seed?.players) return;
-  const existing = new Set(seed.players.map(p => Number(p.id)));
+  if(!seed?.players) return { changed:false, inserted:0, updated:0, deduplicated:0, canonicalized:0 };
+  const manualById = typeof manualDatabasePlayersById === 'function' ? manualDatabasePlayersById(seed) : new Map();
+  const signature = player => typeof manualPlayerCanonicalSignature === 'function'
+    ? manualPlayerCanonicalSignature(player)
+    : JSON.stringify([player?.name, player?.position, player?.nationality, player?.overall, player?.skills]);
+  const canonicalize = player => {
+    if(!player || typeof player !== 'object') return player;
+    const manual = manualById.get(Number(player.id || 0));
+    let refreshed = player;
+    if(manual && typeof refreshExistingManualPlayerFromDatabase === 'function') refreshed = refreshExistingManualPlayerFromDatabase(player, manual);
+    else if(typeof refreshManualRecycledIdentity === 'function') refreshed = refreshManualRecycledIdentity(player, manualById);
+    return signature(player) === signature(refreshed) ? player : refreshed;
+  };
   let changed = false;
-  players.forEach(p => {
-    if(!existing.has(Number(p.id))){ seed.players.push(p); existing.add(Number(p.id)); changed = true; }
-    else {
-      const idx = seed.players.findIndex(x => Number(x.id) === Number(p.id));
-      if(idx >= 0){ seed.players[idx] = { ...seed.players[idx], ...p }; changed = true; }
+  let inserted = 0;
+  let updated = 0;
+  let deduplicated = 0;
+  let canonicalized = 0;
+
+  const normalizedMarket = [];
+  const marketIndexById = new Map();
+  (Array.isArray(players) ? players : []).forEach(rawPlayer => {
+    if(!rawPlayer || typeof rawPlayer !== 'object') return;
+    const id = Number(rawPlayer.id || 0);
+    if(!Number.isFinite(id) || id <= 0) return;
+    let next = canonicalize(rawPlayer);
+    if(signature(rawPlayer) !== signature(next)) canonicalized += 1;
+    if(marketIndexById.has(id)){
+      const index = marketIndexById.get(id);
+      next = canonicalize({ ...normalizedMarket[index], ...next });
+      normalizedMarket[index] = next;
+      deduplicated += 1;
+      changed = true;
+      return;
+    }
+    marketIndexById.set(id, normalizedMarket.length);
+    normalizedMarket.push(next);
+  });
+  if(Array.isArray(players)){
+    const marketChanged = players.length !== normalizedMarket.length || players.some((player,index) => normalizedMarket[index] !== player);
+    if(marketChanged){
+      players.splice(0, players.length, ...normalizedMarket);
+      changed = true;
+    }
+  }
+
+  const dedupedSeed = [];
+  const seedIndexById = new Map();
+  seed.players.forEach(rawPlayer => {
+    if(!rawPlayer || typeof rawPlayer !== 'object') return;
+    const id = Number(rawPlayer.id || 0);
+    if(!Number.isFinite(id) || id <= 0) return;
+    let next = canonicalize(rawPlayer);
+    if(signature(rawPlayer) !== signature(next)) canonicalized += 1;
+    if(seedIndexById.has(id)){
+      const index = seedIndexById.get(id);
+      next = canonicalize({ ...dedupedSeed[index], ...next });
+      dedupedSeed[index] = next;
+      deduplicated += 1;
+      changed = true;
+      return;
+    }
+    seedIndexById.set(id, dedupedSeed.length);
+    dedupedSeed.push(next);
+  });
+  if(seed.players.length !== dedupedSeed.length || seed.players.some((player,index) => dedupedSeed[index] !== player)){
+    seed.players = dedupedSeed;
+    changed = true;
+  }
+
+  normalizedMarket.forEach(incoming => {
+    const id = Number(incoming.id || 0);
+    const index = seedIndexById.get(id);
+    if(!Number.isInteger(index)){
+      seedIndexById.set(id, seed.players.length);
+      seed.players.push(incoming);
+      inserted += 1;
+      changed = true;
+      return;
+    }
+    const existing = seed.players[index];
+    const merged = canonicalize({ ...existing, ...incoming });
+    const before = JSON.stringify(existing);
+    const after = JSON.stringify(merged);
+    if(before !== after){
+      seed.players[index] = merged;
+      updated += 1;
+      changed = true;
     }
   });
   if(changed && typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
+  return { changed, inserted, updated, deduplicated, canonicalized };
 }

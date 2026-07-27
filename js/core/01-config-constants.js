@@ -29,7 +29,7 @@ const DATA_CACHE_MODE = ['default','no-store','no-cache','reload','force-cache']
 const PLAYERS_DATABASE_URL = configValue('data.playersUrl', 'data/jugadores.json');
 const PLAYERS_DATABASE_URLS_RAW = configValue('data.playersUrls', []);
 const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS_DATABASE_URLS_RAW.filter(Boolean) : [];
-const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json?v=8.57');
+const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.57');

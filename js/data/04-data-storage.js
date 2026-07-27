@@ -241,6 +241,132 @@ function refreshExistingManualPlayerFromDatabase(existing, manual){
   refreshed.intransferible = currentIntransferible;
   return normalizeDatabasePlayer(refreshed);
 }
+function manualDatabasePlayersById(seedData=seed){
+  const map = new Map();
+  if(!seedData || !manualPlayersDatabase?.players?.length) return map;
+  manualPlayersDatabase.players.forEach(rawPlayer => {
+    const manual = normalizeManualDatabasePlayer(rawPlayer, seedData);
+    if(manual) map.set(Number(manual.id), manual);
+  });
+  return map;
+}
+function manualPlayerCanonicalSignature(player={}){
+  const skills = player?.skills && typeof player.skills === 'object' && !Array.isArray(player.skills)
+    ? Object.keys(player.skills).sort().map(key => `${key}:${Number(player.skills[key])}`).join('|')
+    : '';
+  return [
+    String(player?.name || ''),
+    String(player?.position || ''),
+    String(player?.nationality || ''),
+    Number(player?.overall || 0),
+    skills,
+    Number(player?.salary || 0),
+    Number(player?.clause || 0),
+    Number(player?.value || 0),
+    Boolean(player?.manualPlayer),
+    Boolean(player?.manualOverallLocked),
+    Boolean(player?.manualFixedClause)
+  ].join('::');
+}
+function refreshManualRecycledIdentity(player, manualById){
+  if(!player || !manualById?.size || !player.manualIdentityRecycled) return player;
+  const previousId = Number(player.previousPlayerId || player?.generation?.previousPlayerId || 0);
+  const manual = manualById.get(previousId);
+  if(!manual) return player;
+  return {
+    ...player,
+    name:String(manual.name || player.name || '').trim() || player.name,
+    position:manual.position || player.position,
+    nationality:String(manual.nationality || player.nationality || '').trim() || player.nationality,
+    generation:{ ...(player.generation || {}), manualIdentitySourceId:previousId, refreshedFromManualDatabase:true }
+  };
+}
+function synchronizeManualPlayerReferences(state, seedData=seed, options={}){
+  const manualById = manualDatabasePlayersById(seedData);
+  if(!manualById.size) return { changed:false, seedChanged:0, marketChanged:0, retiredChanged:0, historyChanged:0 };
+  let seedChanged = 0;
+  let marketChanged = 0;
+  let retiredChanged = 0;
+  let historyChanged = 0;
+  const refreshArray = (source=[], mode='seed') => {
+    if(!Array.isArray(source)) return [];
+    const out = [];
+    const byId = new Map();
+    source.forEach(rawPlayer => {
+      if(!rawPlayer || typeof rawPlayer !== 'object') return;
+      const id = Number(rawPlayer.id || 0);
+      if(!Number.isFinite(id) || id <= 0) return;
+      const manual = manualById.get(id);
+      let next = manual ? refreshExistingManualPlayerFromDatabase(rawPlayer, manual) : refreshManualRecycledIdentity(rawPlayer, manualById);
+      if(byId.has(id)){
+        const index = byId.get(id);
+        const merged = { ...out[index], ...next };
+        next = manual ? refreshExistingManualPlayerFromDatabase(merged, manual) : refreshManualRecycledIdentity(merged, manualById);
+        out[index] = next;
+        if(mode === 'seed') seedChanged += 1;
+        else marketChanged += 1;
+        return;
+      }
+      byId.set(id, out.length);
+      out.push(next);
+      const before = manualPlayerCanonicalSignature(rawPlayer);
+      const after = manualPlayerCanonicalSignature(next);
+      if(before !== after){
+        if(mode === 'seed') seedChanged += 1;
+        else marketChanged += 1;
+      }
+    });
+    return out;
+  };
+  if(seedData?.players){
+    const previousLength = seedData.players.length;
+    seedData.players = refreshArray(seedData.players, 'seed');
+    if(seedData.players.length !== previousLength) seedChanged += Math.abs(previousLength - seedData.players.length);
+  }
+  if(state && typeof state === 'object'){
+    if(Array.isArray(state.marketPlayers)){
+      const previousLength = state.marketPlayers.length;
+      state.marketPlayers = refreshArray(state.marketPlayers, 'market');
+      if(state.marketPlayers.length !== previousLength) marketChanged += Math.abs(previousLength - state.marketPlayers.length);
+    }
+    if(Array.isArray(state.retiredPlayerPool)){
+      state.retiredPlayerPool = state.retiredPlayerPool.map(entry => {
+        if(!entry || typeof entry !== 'object' || !entry.manualIdentity) return entry;
+        const manual = manualById.get(Number(entry.previousPlayerId || entry.id || 0));
+        if(!manual) return entry;
+        const next = {
+          ...entry,
+          name:String(manual.name || entry.name || '').trim() || entry.name,
+          position:manual.position || entry.position,
+          nationality:String(manual.nationality || entry.nationality || '').trim() || entry.nationality
+        };
+        if(String(entry.name || '') !== String(next.name || '') || String(entry.position || '') !== String(next.position || '') || String(entry.nationality || '') !== String(next.nationality || '')) retiredChanged += 1;
+        return next;
+      });
+    }
+    const seasons = state?.managerPlayerStatsHistory?.seasons;
+    if(seasons && typeof seasons === 'object' && !Array.isArray(seasons)){
+      Object.values(seasons).forEach(season => {
+        Object.values(season?.clubs || {}).forEach(club => {
+          Object.values(club?.players || {}).forEach(entry => {
+            const manual = manualById.get(Number(entry?.playerId || 0));
+            if(!manual || !entry) return;
+            const nextName = String(manual.name || entry.name || '').trim() || entry.name;
+            const nextPosition = manual.position || entry.position;
+            if(String(entry.name || '') !== String(nextName || '') || String(entry.position || '') !== String(nextPosition || '')) historyChanged += 1;
+            entry.name = nextName;
+            entry.position = nextPosition;
+          });
+        });
+      });
+    }
+  }
+  const changed = Boolean(seedChanged || marketChanged || retiredChanged || historyChanged);
+  if(changed && typeof invalidatePlayerIndexes === 'function') invalidatePlayerIndexes();
+  if(state && typeof state === 'object') state.manualPlayerReferenceSyncVersion = 'V8.66';
+  return { changed, seedChanged, marketChanged, retiredChanged, historyChanged };
+}
+
 function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, options={}){
   if(!seedData || !database?.players?.length) return seedData;
   const preserveExisting = Boolean(options?.preserveExisting);
@@ -270,10 +396,19 @@ function applyManualPlayersDatabase(seedData, database=manualPlayersDatabase, op
   return seedData;
 }
 function syncManualPlayersIntoSeed(options={}){
-  if(!seed || !manualPlayersDatabase?.players?.length) return { inserted:0 };
-  const before = seed.players?.length || 0;
+  if(!seed || !manualPlayersDatabase?.players?.length) return { inserted:0, refreshed:0, changed:false };
+  const beforeLength = seed.players?.length || 0;
+  const beforeById = new Map((seed.players || []).map(player => [Number(player.id), manualPlayerCanonicalSignature(player)]));
   applyManualPlayersDatabase(seed, manualPlayersDatabase, { preserveExisting:true, ...options });
-  return { inserted:Math.max(0, (seed.players?.length || 0) - before) };
+  const referenceSync = synchronizeManualPlayerReferences(options.state === false ? null : (options.state || game), seed, options);
+  let refreshed = 0;
+  (seed.players || []).forEach(player => {
+    const id = Number(player.id || 0);
+    if(beforeById.has(id) && beforeById.get(id) !== manualPlayerCanonicalSignature(player)) refreshed += 1;
+  });
+  const inserted = Math.max(0, (seed.players?.length || 0) - beforeLength);
+  const changed = Boolean(inserted || refreshed || referenceSync.changed);
+  return { ...referenceSync, inserted, refreshed, changed };
 }
 
 
@@ -914,8 +1049,10 @@ function applySavedDatabaseSnapshots(saved){
   }
   if(Array.isArray(saved?.playersSnapshot) && saved.playersSnapshot.length){
     seed.players = saved.playersSnapshot.map(normalizeDatabasePlayer);
-    syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:saved?.manualRetiredPlayerIds || saved?.retiredManualPlayerIds || [] });
+    syncManualPlayersIntoSeed({ preserveExisting:true, state:false, retiredManualPlayerIds:saved?.manualRetiredPlayerIds || saved?.retiredManualPlayerIds || [] });
   }
+  const manualReferenceSync = synchronizeManualPlayerReferences(clean, seed, { retiredManualPlayerIds:saved?.manualRetiredPlayerIds || saved?.retiredManualPlayerIds || [] });
+  if(manualReferenceSync.changed) clean._needsAutosave = true;
   delete clean.playersSnapshot;
   delete clean.clubsSnapshot;
   delete clean.divisionsSnapshot;
@@ -2507,10 +2644,10 @@ async function loadLocal(silent=false, slotId=null){
     const repairedStadiumFields = Boolean(game._stadiumFieldsAutoRepaired);
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
-    const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true, retiredManualPlayerIds:game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [] });
+    const manualSync = syncManualPlayersIntoSeed({ preserveExisting:true, state:game, retiredManualPlayerIds:game?.manualRetiredPlayerIds || game?.retiredManualPlayerIds || [] });
     const botRepair = repairBotRosters({ reason:'load_game' });
     const stadiumRepair = repairInvalidBotFieldStates(game, 'load_game', { message:repairedStadiumFields ? false : true });
-    const shouldAutosave = Boolean(manualSync.inserted) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired || Boolean(sharedProfileApplied?.changed) || storageNeedsRefresh;
+    const shouldAutosave = Boolean(manualSync.changed || manualSync.inserted || manualSync.refreshed) || botRepair.created || botRepair.converted || needsAutosave || stadiumRepair.repaired || Boolean(sharedProfileApplied?.changed) || storageNeedsRefresh;
     delete game._needsAutosave;
     delete game._stadiumFieldsAutoRepaired;
     activeTab = 'home';

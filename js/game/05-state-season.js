@@ -249,6 +249,10 @@ function normalizeGame(saved){
   syncPlayerStarsWithClubs(normalized);
   normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
+  const manualReferenceRepair = typeof synchronizeManualPlayerReferences === 'function'
+    ? synchronizeManualPlayerReferences(normalized, seed, { retiredManualPlayerIds:normalized?.manualRetiredPlayerIds || normalized?.retiredManualPlayerIds || [] })
+    : { changed:false };
+  if(manualReferenceRepair.changed) normalized._needsAutosave = true;
   const rawPendingTransfers = Array.isArray(normalized.pendingTransfers) ? normalized.pendingTransfers : [];
   const normalizedPendingTransfers = rawPendingTransfers
     .map(item => typeof normalizePendingTransferMarketEntry === 'function' ? normalizePendingTransferMarketEntry(item, normalized) : item)

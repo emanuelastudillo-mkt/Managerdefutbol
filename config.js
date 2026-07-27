@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.65',
+  version: 'V8.66',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -38,7 +38,7 @@ window.GAME_CONFIG = {
       'data/jugadores/italia-serie-a-italia.json',
       'data/jugadores/rumania-superliga-rumania.json'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.60',
+    manualPlayersUrl: 'data/jugadores_manuales.json',
     sponsorsUrl: 'data/sponsors.json?v=8.62',
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json?v=8.60',

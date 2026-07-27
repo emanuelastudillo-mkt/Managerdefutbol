@@ -221,6 +221,17 @@ function uniqueBadgePaths(paths){
     return true;
   });
 }
+function clubBadgePathVariants(path){
+  const raw = String(path || '').trim();
+  if(!raw) return [];
+  if(raw.startsWith('data:') || raw.startsWith('blob:')) return [raw];
+  const svgPath = /\.(?:png|webp|jpe?g)(?=([?#]|$))/i.test(raw)
+    ? raw.replace(/\.(?:png|webp|jpe?g)(?=([?#]|$))/i, '.svg')
+    : /\.svg(?=([?#]|$))/i.test(raw)
+      ? raw
+      : `${raw}.svg`;
+  return uniqueBadgePaths([svgPath, raw]);
+}
 function clubBadgeSrcCandidates(club){
   const name = club?.name || '';
   const slug = clubAssetSlug(name);
@@ -228,8 +239,12 @@ function clubBadgeSrcCandidates(club){
   const legacy = legacyEscudoSlug(name);
   const foundedFallback = (club?.isFoundedClub || club?.founderClub) ? 'img/escudos/fundador-1.webp' : '';
   return uniqueBadgePaths([
-    club?.crestPath,
-    foundedFallback,
+    ...clubBadgePathVariants(club?.crestPath),
+    ...clubBadgePathVariants(foundedFallback),
+    `img/escudos/${slug}.svg`,
+    `img/escudos/${underscore}.svg`,
+    `img/escudos/${legacy}.svg`,
+    `IMG/ESCUDOS/${slug}.svg`,
     `img/escudos/${slug}.png`,
     `img/escudos/${slug}.webp`,
     `img/escudos/${underscore}.png`,

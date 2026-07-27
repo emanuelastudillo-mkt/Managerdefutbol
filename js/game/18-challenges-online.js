@@ -787,9 +787,14 @@ function challengeStatusClass(status){
 }
 function challengeCrestMarkup(snapshot={}, extraClass=''){
   const club = snapshot?.club || {};
-  const src = String(club.crestPath || '').trim();
+  const rawSrc = String(club.crestPath || '').trim();
+  const paths = rawSrc && typeof clubBadgeSrcCandidates === 'function'
+    ? clubBadgeSrcCandidates({ name:club.name || '', crestPath:rawSrc })
+    : rawSrc ? [rawSrc] : [];
+  const src = paths[0] || '';
+  const fallbackJson = escapeHtml(JSON.stringify(paths));
   return src
-    ? `<span class="challenge-crest-shell ${escapeHtml(extraClass)}"><img src="${escapeHtml(src)}" alt="" class="challenge-crest"></span>`
+    ? `<span class="challenge-crest-shell ${escapeHtml(extraClass)}"><img src="${escapeHtml(src)}" alt="" class="challenge-crest" data-fallback-index="0" data-fallback-srcs='${fallbackJson}'></span>`
     : `<span class="challenge-crest-shell crest-missing ${escapeHtml(extraClass)}" aria-hidden="true">⚽</span>`;
 }
 function challengeVenueName(snapshot={}){

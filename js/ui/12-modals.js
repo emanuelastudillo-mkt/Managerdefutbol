@@ -1344,7 +1344,10 @@ function founderCrestOptionsMarkup(){
   return options.slice(0, 9).map((path, index) => {
     const checked = index === 0 ? 'checked' : '';
     const clean = escapeHtml(path);
-    return `<label class="founder-crest-option" title="Escudo ${index + 1}"><input type="radio" name="founderCrestPath" value="${clean}" ${checked}><span><img src="${clean}" alt="Escudo fundador ${index + 1}"></span></label>`;
+    const candidates = typeof clubBadgePathVariants === 'function' ? clubBadgePathVariants(path).map(encodeAssetPath) : [encodeAssetPath(path)];
+    const src = candidates[0] || encodeAssetPath(path);
+    const fallbackJson = escapeHtml(JSON.stringify(candidates));
+    return `<label class="founder-crest-option" title="Escudo ${index + 1}"><input type="radio" name="founderCrestPath" value="${clean}" ${checked}><span><img src="${escapeHtml(src)}" alt="Escudo fundador ${index + 1}" data-fallback-index="0" data-fallback-srcs='${fallbackJson}'></span></label>`;
   }).join('');
 }
 
@@ -1380,7 +1383,7 @@ function openFounderModeModal(){
         <input id="founderPrimaryColor" type="color" value="#3b82f6">
       </div>
       <div class="founder-crest-selector card">
-        <div class="row"><div><p class="label">Escudo fundador</p><h3>Elegí el escudo del club</h3><p class="muted small">Usa archivos .webp de 256x256 px. Ruta esperada: <code>img/escudos/fundador-1.webp</code> a <code>fundador-9.webp</code>.</p></div></div>
+        <div class="row"><div><p class="label">Escudo fundador</p><h3>Elegí el escudo del club</h3><p class="muted small">Prioriza archivos .svg y conserva .webp como respaldo. Ruta esperada: <code>img/escudos/fundador-1.webp</code> a <code>fundador-9.webp</code>.</p></div></div>
         <div class="founder-crest-grid">${founderCrestOptionsMarkup()}</div>
       </div>
       <div class="founder-preview card">

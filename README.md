@@ -1,25 +1,25 @@
-# Una vida de manager — V8.60
+# Una vida de manager — V8.61
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.60** y ajusta el mercado laboral y la negociación de contratos.
+La revisión actual muestra **V8.61** y mejora la alineación de botones y la carga de escudos.
 
-- cuando un club rechaza una solicitud enviada por el manager, la solicitud desaparece y ese club queda bloqueado durante el resto de la temporada;
-- el bloqueo también impide que ese club reaparezca como opción directa o envíe una oferta automática;
-- al comenzar una nueva temporada, el club vuelve a estar disponible si el prestigio lo permite;
-- cada oferta laboral normal incluye condiciones base y dos alternativas de negociación generadas específicamente para esa propuesta;
-- una alternativa aumenta el sueldo y reduce el objetivo, a cambio de reducir el porcentaje de venta futura;
-- la otra reduce el sueldo y compensa aleatoriamente con un objetivo mayor o un porcentaje superior de venta futura;
-- los porcentajes se mantienen estables mientras la oferta siga activa, pero cambian entre clubes y propuestas;
-- se conservan los ajustes de realismo laboral incorporados en V8.59.
+- el contenido textual de los botones queda centrado horizontalmente y también dentro de los controles que ya utilizan flex o grid;
+- los botones de navegación que necesitan una distribución propia conservan su alineación específica;
+- los escudos buscan primero una variante SVG con el mismo nombre y ruta;
+- si el SVG no existe, el cargador continúa automáticamente con la ruta original y luego con alternativas PNG o WebP;
+- la prioridad SVG también se aplica a escudos del modo fundador y a los mostrados en desafíos online;
+- no se reemplazan ni eliminan los recursos raster existentes, que permanecen como respaldo;
+- se conservan los ajustes del mercado laboral y negociación incorporados en V8.60.
 
 ## Sistema visual
 
 - `styles/100-visual-refresh-v855.css` conserva la renovación visual general.
 - `styles/110-visual-assets-v856.css` incorpora los recursos dinámicos y cierra la corrección de contraste.
 - `styles/120-visual-progression-v857.css` adapta las nuevas progresiones a escritorio y móvil.
+- `styles/130-interface-polish-v861.css` centra el contenido de botones sin alterar la distribución específica de navegación.
 - Los estilos anteriores se conservan para no romper componentes ni pantallas históricas.
 - Los colores dinámicos del club siguen usándose como acento.
 - Las superficies principales usan una paleta neutral para mejorar el contraste.
@@ -45,20 +45,28 @@ Los 25 recursos raster nuevos se generaron en PNG y se publican como WebP a 1.28
 
 ## Compatibilidad y publicación
 
-- La V8.60 ajusta solicitudes rechazadas y negociación laboral sin cambiar Worker ni base de datos.
-- Las partidas anteriores conservan sus datos; las fases visuales se calculan al mostrar cada pantalla.
-- El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
-- Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
+- La V8.61 modifica únicamente frontend, estilos y resolución de rutas de escudos.
+- Los SVG se priorizan sin volverlos obligatorios; PNG y WebP continúan funcionando como respaldo.
+- Las partidas anteriores conservan sus datos y rutas de escudo almacenadas.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
-- Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `04-GITHUB-V8.60-INCREMENTAL` respetando las rutas.
-- Las carpetas nuevas `assets/academia/` y `assets/estadio/`, junto con `styles/120-visual-progression-v857.css`, son obligatorias para evitar imágenes o estilos faltantes.
+- No se agregan imágenes ni se eliminan recursos existentes.
+- Para publicar, copiar el contenido de `05-GITHUB-V8.61-INCREMENTAL` respetando las rutas.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ---
 
 # Historial de versiones
+
+## V8.61 — Botones centrados y prioridad SVG
+
+- El texto de los botones queda centrado por defecto.
+- Los botones construidos con flex o grid reciben alineación central de contenido.
+- Las reglas específicas de navegación y controles compuestos conservan prioridad para evitar cambios de estructura.
+- Cada ruta de escudo raster intenta primero el archivo SVG equivalente.
+- Si el SVG falta, se prueba la ruta original y las alternativas PNG/WebP existentes.
+- La misma cadena de respaldo se utiliza en escudos normales, modo fundador y desafíos online.
+- Compatible con partidas V8.60. No requiere Worker, SQL, imágenes ni reiniciar la carrera.
 
 ## V8.60 — Solicitudes bloqueadas y negociación variable
 

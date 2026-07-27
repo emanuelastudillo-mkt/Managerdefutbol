@@ -25,7 +25,7 @@ function renderWelcomeScreen(){
     <section class="welcome-screen save-slots-screen">
       <div class="welcome-hero card">
         <div class="welcome-brand-column">
-          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.57" alt="Una vida de manager" />
+          <img class="game-brand-logo game-brand-logo-welcome" src="assets/logo-banner.png?v=8.58" alt="Una vida de manager" />
           <p class="label welcome-brand-kicker">Juego de fútbol online</p>
           <h2>Dirigí tu club y construí una carrera</h2>
           <p class="tagline">Juego de manager de fútbol para navegador con temporadas completas, tácticas, mercado de pases, juveniles, finanzas y competencias online. Tu carrera se guarda localmente en este navegador.</p>
@@ -516,13 +516,14 @@ function renderGameOverScreen(){
   const prestige = typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : Number(game?.managerStats?.prestige || 0);
   const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(prestige);
   const xp = typeof currentManagerExperience === 'function' ? currentManagerExperience() : Number(game?.managerStats?.experience || 0);
-  const title = state.type === 'resignation' ? 'Renunciaste al club' : 'La directiva te despidió';
-  const fallbackReason = state.type === 'resignation' ? 'Renunciaste al cargo. El mundo de la partida sigue activo.' : 'La directiva decidió terminar tu ciclo por no cumplir el objetivo deportivo.';
+  const title = state.type === 'resignation' ? 'Renunciaste al club' : 'Actualmente estás sin club';
+  const fallbackReason = state.type === 'resignation' ? 'Renunciaste al cargo. El mundo de la partida sigue activo.' : 'Tu contrato terminó y podés continuar la carrera en otro equipo.';
+  const displayReason = state.type === 'resignation' ? (state.reason || fallbackReason) : fallbackReason;
   view.innerHTML = `<div class="game-over-screen">
     <div class="card game-over-card">
       <p class="label">Inicio · Sin club</p>
       <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(state.reason || fallbackReason)}</p>
+      <p>${escapeHtml(displayReason)}</p>
       <p class="muted small">La partida no se reinicia. Podés navegar el calendario, tablas, estadísticas, tus estadísticas y ranking online. Las áreas operativas del club quedan bloqueadas hasta firmar con otro equipo.</p>
       <div class="game-over-objective">
         <div><span>Prom. pts/partido</span><strong>${ppg.toFixed(2)}</strong></div>

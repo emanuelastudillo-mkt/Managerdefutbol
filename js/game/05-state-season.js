@@ -2306,6 +2306,8 @@ function managerObjectiveProgressInfo(){
     clubPrestige:seasonTotals.objectiveClubPrestige,
     leagueAveragePrestige:seasonTotals.objectiveLeagueAveragePrestige,
     modifierPpg:seasonTotals.objectiveModifierPpg,
+    bonusReduction:Math.max(0, Number(seasonTotals.objectiveBonusReduction || 0)),
+    contractObjective:Number.isFinite(Number(seasonTotals.objectiveContractPpg)) ? Number(seasonTotals.objectiveContractPpg) : null,
     remainingMatches:Math.max(0, minMatches - played),
     failed:objective !== null && played >= minMatches && Boolean(boardState.despido)
   };
@@ -2486,6 +2488,10 @@ function continueCareerAtClub(selectedClubId, options={}){
   if(!game?.gameOver?.active){ showNotice('Sólo podés buscar otro club cuando estás sin cargo.'); return; }
   const newClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
   if(!newClub){ showNotice('Club no encontrado.'); return; }
+  if(typeof managerClubCareerEligible === 'function' && !managerClubCareerEligible(newClub)){
+    showNotice('Ese equipo no pertenece a una liga jugable y no puede contratar managers.');
+    return;
+  }
   const rehireBlock = managerClubRehireBlockInfo(newClub);
   if(rehireBlock.blocked){
     const cause = rehireBlock.type === 'resignation' ? 'renuncia' : 'despido';

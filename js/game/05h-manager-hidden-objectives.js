@@ -468,7 +468,7 @@ function managerHiddenObjectiveFinalizeDismissal(info, evaluation, chance, roll)
   game.gameOver = {
     active:true,
     type:'dismissal',
-    reason:`${text} Probabilidad final de despido: ${chance.toFixed(0)}% (reducción ${evaluation.reduction.toFixed(0)}%).`,
+    reason:'La directiva decidió finalizar tu ciclo por no alcanzar el objetivo deportivo.',
     triggeredAt:new Date().toISOString(),
     objective:info.objective,
     ppg:info.ppg,
@@ -488,7 +488,7 @@ function managerHiddenObjectiveFinalizeDismissal(info, evaluation, chance, roll)
     type:'directiva',
     priority:'high',
     title:'Despido del manager',
-    body:`${text} La posibilidad inicial era ${managerHiddenObjectiveConfig().baseDismissalChance.toFixed(0)}%; tus aportes la redujeron ${evaluation.reduction.toFixed(0)} puntos, hasta ${chance.toFixed(0)}%. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`,
+    body:`La directiva decidió finalizar tu ciclo por no alcanzar el objetivo deportivo. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`,
     id:`dismissal-v842-${record.season}-${record.clubId}`
   });
   queueAutomaticRankingSubmission('dismissal');
@@ -664,8 +664,23 @@ startNextSeason = function(selectedClubId){
 };
 const continueCareerAtClubV841HiddenObjectives = continueCareerAtClub;
 continueCareerAtClub = function(selectedClubId, options={}){
+  const wasWithoutClub = Boolean(game?.gameOver?.active);
+  const previousClubId = Number(game?.selectedClubId || 0);
   const result = continueCareerAtClubV841HiddenObjectives(selectedClubId, options);
-  if(game && !game.gameOver?.active) ensureManagerHiddenObjectiveSeason(game);
+  if(game && !game.gameOver?.active){
+    const record = ensureManagerHiddenObjectiveSeason(game);
+    const joinedDay = Math.max(1, Math.round(Number(typeof currentGlobalDayNumber === 'function' ? currentGlobalDayNumber() : seasonDayFromDate(game.currentDate, currentSeasonYear())) || 1));
+    const cfg = managerHiddenObjectiveConfig();
+    const changedClubAfterExit = wasWithoutClub && Number(game.selectedClubId || 0) !== previousClubId;
+    if(record && changedClubAfterExit && joinedDay >= cfg.evaluationDay){
+      record.warningSent = true;
+      record.warningDay = joinedDay;
+      record.evaluationCompleted = true;
+      record.evaluationDay = joinedDay;
+      record.dismissalResult = 'late_appointment_exempt';
+      record.updatedDate = game.currentDate || '';
+    }
+  }
   return result;
 };
 

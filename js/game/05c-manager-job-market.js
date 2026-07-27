@@ -14,9 +14,17 @@ function prepareManagerWithoutClubUi(){
     if(!state.nextIncomingOfferDate && typeof managerJobScheduleNextIncomingOffer === 'function') managerJobScheduleNextIncomingOffer(currentCalendarDate?.() || game.currentDate || '');
   }
 }
-function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), options={}){
+function managerClubCareerEligible(clubOrId){
   const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
   if(!club) return false;
+  if(typeof isSpecialCompetitionOnlyClub === 'function' && isSpecialCompetitionOnlyClub(club)) return false;
+  const divisionId = String(club.divisionId || '').trim();
+  if(!divisionId) return false;
+  return (seed?.divisions || []).some(division => String(division?.id || '') === divisionId);
+}
+function managerCanSelectClub(clubOrId, prestige=currentManagerPrestige(), options={}){
+  const club = typeof clubOrId === 'object' ? clubOrId : seed?.clubs?.find(c => Number(c.id) === Number(clubOrId));
+  if(!managerClubCareerEligible(club)) return false;
   if(options.ignoreRehireBlock !== true && managerClubRehireBlockInfo(club).blocked) return false;
   const clubPrestige = clubPrestigeValue(club);
   const managerPrestige = managerClubAccessPrestige(prestige);
@@ -50,7 +58,7 @@ function clubCountry(club){
   return String(club?.country || club?.pais || club?.countryName || 'Argentina').trim() || 'Argentina';
 }
 function availableCountries(){
-  const names = Array.from(new Set((seed?.clubs || []).map(clubCountry).filter(Boolean)));
+  const names = Array.from(new Set((seed?.clubs || []).filter(managerClubCareerEligible).map(clubCountry).filter(Boolean)));
   return names.length ? names.sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'})) : ['Argentina'];
 }
 function countryOptionsMarkup(selected='Argentina'){
@@ -61,7 +69,7 @@ function countryOptionsMarkup(selected='Argentina'){
 function divisionsByCountry(country='Argentina'){
   const cleanCountry = String(country || '').trim() || availableCountries()[0] || 'Argentina';
   const countryClubDivisionIds = new Set((seed?.clubs || [])
-    .filter(club => clubCountry(club) === cleanCountry)
+    .filter(club => managerClubCareerEligible(club) && clubCountry(club) === cleanCountry)
     .map(club => club.divisionId || 'default'));
   const divisions = (seed?.divisions || [{ id:'default', name:'Liga única' }])
     .filter(division => countryClubDivisionIds.has(division.id || 'default'));
@@ -77,7 +85,7 @@ function clubsByCountryLeague(country='Argentina', leagueId=''){
   const divisions = divisionsByCountry(cleanCountry);
   const currentLeague = divisions.some(d => d.id === leagueId) ? leagueId : divisions[0]?.id;
   return (seed?.clubs || [])
-    .filter(club => clubCountry(club) === cleanCountry && (club.divisionId || 'default') === currentLeague)
+    .filter(club => managerClubCareerEligible(club) && clubCountry(club) === cleanCountry && (club.divisionId || 'default') === currentLeague)
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'es',{sensitivity:'base'}));
 }
 function teamOptionsMarkup(country='Argentina', leagueId='', selectedClubId=0){
@@ -150,7 +158,8 @@ function normalizeManagerJobMarketState(state={}){
   const src = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
   const normalizeOffer = offer => {
     const clubId = Number(offer?.clubId || 0);
-    if(!clubId || !seed?.clubs?.some(club => Number(club.id) === clubId)) return null;
+    const club = seed?.clubs?.find(item => Number(item.id) === clubId);
+    if(!clubId || !managerClubCareerEligible(club)) return null;
     const createdDate = validIsoDate(offer?.createdDate) ? offer.createdDate : (game?.currentDate || currentCalendarDate?.() || '');
     const expiresDate = validIsoDate(offer?.expiresDate) ? offer.expiresDate : addDaysToIsoDate(createdDate, 20);
     return {
@@ -169,7 +178,8 @@ function normalizeManagerJobMarketState(state={}){
   };
   const normalizeApplication = app => {
     const clubId = Number(app?.clubId || 0);
-    if(!clubId || !seed?.clubs?.some(club => Number(club.id) === clubId)) return null;
+    const club = seed?.clubs?.find(item => Number(item.id) === clubId);
+    if(!clubId || !managerClubCareerEligible(club)) return null;
     const requestedDate = validIsoDate(app?.requestedDate) ? app.requestedDate : (game?.currentDate || currentCalendarDate?.() || '');
     return {
       id:String(app?.id || `job-app-${clubId}-${requestedDate}-${hashNumber(`${clubId}-${requestedDate}`, 99999)}`),
@@ -218,6 +228,7 @@ function managerJobApplicationCandidates(limit=8){
     ...state.applications.filter(a => a.status === 'pending').map(a => Number(a.clubId || 0))
   ]);
   const pool = (seed?.clubs || [])
+    .filter(managerClubCareerEligible)
     .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0))
     .filter(club => !busy.has(Number(club.id)))
     .filter(club => !managerClubRehireBlockInfo(club).blocked)
@@ -234,7 +245,7 @@ function managerJobApplicationCandidates(limit=8){
 }
 function managerJobCreateOffer(clubId, options={}){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
-  if(!club || !game?.gameOver?.active) return null;
+  if(!managerClubCareerEligible(club) || !game?.gameOver?.active) return null;
   const state = ensureManagerJobMarketState();
   if(state.offers.some(o => Number(o.clubId) === Number(club.id))) return null;
   const today = currentCalendarDate();
@@ -460,6 +471,7 @@ function applyForManagerJob(clubId){
   if(!game?.gameOver?.active){ showNotice('Sólo podés solicitar trabajo cuando estás sin club.'); return false; }
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
   if(!club){ showNotice('Club no encontrado.'); return false; }
+  if(!managerClubCareerEligible(club)){ showNotice('Ese equipo no pertenece a una liga jugable y no puede contratar managers.'); return false; }
   const rehireBlock = managerClubRehireBlockInfo(club);
   if(rehireBlock.blocked){ showNotice(managerClubRehireBlockLabel(club)); return false; }
   if(managerCanSelectClub(club, currentManagerPrestige())){

@@ -1,19 +1,19 @@
-# Una vida de manager — V8.57
+# Una vida de manager — V8.58
 
 ## Estado actual
 
 Esta carpeta contiene el frontend completo que debe publicarse en GitHub.
 
-La revisión actual muestra **V8.57** e incorpora progresión visual por cantidad de juveniles y capacidad estructural del estadio sobre la base funcional de V8.56.
+La revisión actual muestra **V8.58** y corrige cuatro problemas de continuidad de carrera sobre la base completa V8.57.
 
-- siete escenas de entrenamiento para representar desde una Academia inicial hasta 210 juveniles;
-- la cantidad de grupos y la densidad de jugadores aumentan sin vincular la imagen a un nivel concreto del Predio;
-- diez fases visuales de estadio entre 0 y 120.000 espectadores;
-- cada fase de estadio tiene su propia versión durante una ampliación: 20 estados activos en total;
-- el estadio utiliza su capacidad estructural, conservando la fase alcanzada aunque el aforo disponible disminuya por deterioro anual;
-- una obra activa muestra la variante en construcción de la fase actual y la siguiente fase aparece sólo después de finalizar la ampliación;
-- los 25 recursos nuevos se entregan en WebP optimizado;
-- se conservan todas las correcciones de contraste, tipografía, Legado y recursos dinámicos de V8.56.
+- la carta **Objetivo más bajo** reduce también el objetivo vigente de contratos de una, dos o tres temporadas;
+- el contrato actual muestra el objetivo efectivo y la reducción porcentual aplicada por la carta;
+- los invitados especiales del Mundial de Clubes y cualquier club sin división jugable quedan fuera del mercado laboral;
+- las ofertas y solicitudes antiguas de esos clubes se eliminan al normalizar la partida;
+- aceptar un nuevo cargo después del día 250 no provoca otra evaluación y despido al avanzar un día;
+- el nuevo club queda exento de la evaluación tardía durante esa temporada y comienza con controles normales en la siguiente;
+- la pantalla sin club deja de mostrar el detalle interno de objetivos secundarios y probabilidades de despido;
+- se mantiene completa la progresión visual incorporada en V8.57.
 
 ## Sistema visual
 
@@ -45,20 +45,32 @@ Los 25 recursos raster nuevos se generaron en PNG y se publican como WebP a 1.28
 
 ## Compatibilidad y publicación
 
-- La V8.57 no cambia reglas deportivas, economía, Worker ni base de datos.
+- La V8.58 corrige cartas, mercado laboral y continuidad tras despidos sin cambiar Worker ni base de datos.
 - Las partidas anteriores conservan sus datos; las fases visuales se calculan al mostrar cada pantalla.
 - El formato y la migración de nombres incorporados en V8.55 se mantienen sin cambios.
 - Filosofía, Segundo entrenador, rankings, desafíos y el resto de los sistemas conservan su funcionamiento.
 - No se modificó el Worker.
 - No se requiere ejecutar SQL.
 - Para publicar, reemplazar en GitHub el frontend completo por el contenido de esta carpeta.
-- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.57-INCREMENTAL` respetando las rutas.
+- Como alternativa, copiar solamente el contenido de `02-GITHUB-V8.58-INCREMENTAL` respetando las rutas.
 - Las carpetas nuevas `assets/academia/` y `assets/estadio/`, junto con `styles/120-visual-progression-v857.css`, son obligatorias para evitar imágenes o estilos faltantes.
 - No borrar del repositorio las colecciones de imágenes ya publicadas en `IMG/`, `img/` u otras rutas que no formen parte de esta entrega.
 
 ---
 
 # Historial de versiones
+
+## V8.58 — Cartas, mercado laboral y continuidad tras despidos
+
+- **Objetivo más bajo** se aplica después de calcular el objetivo contractual, evitando que el contrato anule el bonus.
+- El objetivo efectivo se recalcula mientras la carta está activa y vuelve al valor contractual al desactivarla.
+- Los 14 tipos de bonus de cartas fueron revisados contra sus puntos de aplicación; no se detectaron otras rutas desconectadas.
+- Los clubes marcados como competencia especial o sin una división existente no pueden seleccionarse, recibir solicitudes ni generar ofertas laborales.
+- Las ofertas y solicitudes heredadas de invitados del Mundial de Clubes se depuran automáticamente al cargar.
+- Una contratación realizada desde el día 250 queda exenta de la evaluación de esa temporada, evitando despidos consecutivos al día siguiente.
+- La evaluación vuelve a funcionar normalmente desde la temporada posterior.
+- La pantalla de manager sin club usa un encabezado neutral y no revela el listado de objetivos secundarios ocultos ni el cálculo probabilístico.
+- Compatible con partidas V8.57. No requiere Worker, SQL, imágenes ni reiniciar la carrera.
 
 ## V8.57 — Progresión visual de Academia y estadio
 

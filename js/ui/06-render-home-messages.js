@@ -443,10 +443,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
     : `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
   return `<div class="manager-office">
     <div class="office-main-card">
-      <div class="office-club-head">
-        ${clubBadge(game.selectedClubId)}
-        <div><p class="label">Oficina del manager</p><h2>${escapeHtml(clubName(game.selectedClubId))}</h2><p class="tagline">${escapeHtml(phase)} · Fecha de liga ${Math.min(Number(game.matchdayIndex || 0) + 1, game.fixtures?.length || 0)}</p></div>
-      </div>
+      <p class="label">Oficina del manager</p>
       <div class="office-mini-grid">
         <div><span>Posición</span><strong>${position || '—'}°</strong></div>
         <div><span>Plantel</span><strong>${clubPlayers.length}/${MAX_PLAYERS_PER_CLUB}</strong></div>

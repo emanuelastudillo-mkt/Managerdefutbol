@@ -1,66 +1,70 @@
-# Una vida de manager — V8.69
+# Una vida de manager — V8.70
 
 ## Base requerida
 
-Aplicar este incremental sobre **V8.68**.
+Aplicar este incremental sobre **V8.69**.
 
-## Primera etapa del sistema de carrera
+## Segunda etapa del sistema de carrera
 
-### Perfil acumulativo del manager
+### Confianza individual
 
-- Se incorpora un **Prestigio de carrera** entre 0 y 1.000.
-- Se incorpora un **Momento profesional** entre -100 y +100.
-- Se agregan seis capacidades acumulativas entre 0 y 100:
-  - Rendimiento deportivo.
-  - Liderazgo.
-  - Gestión económica.
-  - Desarrollo de jugadores.
-  - Manejo de crisis.
-  - Estabilidad.
-- Los valores no se compran ni se reparten manualmente: cambian al cerrar una temporada, renunciar o ser despedido.
-- El prestigio representa la trayectoria completa; el momento profesional da mayor peso a los resultados recientes.
-- Un despido y una renuncia reducen siempre el momento profesional, incluso cuando existieron aspectos positivos en la campaña.
+- Cada jugador del primer equipo incorpora una confianza en el mánager entre 0 y 100.
+- La confianza se guarda por club, temporada y etapa contractual del mánager.
+- Al continuar en el mismo club, parte de la relación de la temporada anterior se conserva, acercándose moderadamente a un valor neutral.
+- Los estados visibles son Respaldo, Estable, Dudas, Tensión y Fracturado.
+- La ficha del jugador muestra su confianza, grupo, rol interno y predisposición a renovar.
 
-### Objetivos cualitativos
+### Grupos del vestuario
 
-- El objetivo numérico interno se traduce a una expectativa deportiva comprensible.
-- Los objetivos disponibles incluyen ganar el título, pelear el título, terminar en zona alta, mitad de tabla, no descender, ascender, jugar playoffs, pelear el ascenso y consolidar la categoría.
-- Cada objetivo muestra una **posición mínima visible**.
-- El objetivo principal y el mínimo aparecen en Inicio y en el perfil del manager.
-- El modo Club Fundador conserva su objetivo específico sin exigir una posición mínima artificial.
+- El plantel se organiza automáticamente en Titulares, Rotación, Suplentes y Jóvenes.
+- Los grupos se actualizan según la táctica, titularidades, partidos disputados y edad.
+- Se muestra la confianza promedio de cada grupo y una confianza general ponderada por influencia.
+- Se agrega el submenú **Vestuario** dentro de Primer equipo.
 
-### Evaluación final de temporada
+### Referentes y capitanes
 
-- Cada campaña obtiene una evaluación entre 0 y 100.
-- La evaluación combina:
-  - 45% rendimiento deportivo.
-  - 15% rendimiento por encima o por debajo de la expectativa.
-  - 10% gestión económica.
-  - 10% desarrollo del plantel.
-  - 10% liderazgo mediante moral y cohesión.
-  - 10% contexto, manejo de crisis y estabilidad.
-- El cierre informa resultado del objetivo, evaluación general, cambios de prestigio y momento profesional.
-- Las salidas durante la temporada generan una evaluación parcial proporcional al tiempo dirigido.
+- Cada plantel posee entre 2 y 4 referentes.
+- La selección considera capacidad de capitán, progreso como capitán, media, edad, participación y continuidad.
+- El capitán actual tiene prioridad como referente.
+- Cambiar de capitán sin una causa deportiva clara puede afectar al capitán anterior y al resto de los referentes.
+- Vender, despedir o declarar transferible a un referente genera consecuencias en el vestuario.
 
-### Historial de temporadas del manager
+### Resultados, participación y confianza
 
-- Se guarda club, división, posición, partidos, puntos, goles, objetivo, mínimo exigido, evaluación y motivo de cierre.
-- Se registran finales de temporada, renuncias y despidos.
-- Se evita duplicar un mismo cierre al cargar o guardar repetidamente.
-- Las temporadas antiguas se migran al nuevo formato sin borrar el historial existente.
+- Las victorias aumentan más la confianza de titulares y jugadores utilizados.
+- Las derrotas, derrotas amplias y falta prolongada de minutos pueden reducirla.
+- Utilizar suplentes y jóvenes favorece su relación con el mánager.
+- Cada partido oficial se procesa una sola vez para evitar cambios duplicados.
 
-### Historial anual de clubes
+### Efectos sobre moral y cohesión
 
-- Al finalizar cada temporada se guarda un resumen de todos los clubes de las ligas jugables.
-- Se registra división, posición, puntos, goles, ascenso, descenso, campeonato, reputación, presupuesto y valor general del plantel.
-- El historial identifica las temporadas en las que un club fue dirigido por el jugador y vincula su evaluación.
-- Se guardan resúmenes, no copias completas de cada partido, para reducir el impacto sobre el tamaño de la partida.
+- Los cambios relevantes de confianza pueden modificar moderadamente la moral individual.
+- Un vestuario con respaldo puede sumar cohesión después de una victoria.
+- Un vestuario con dudas, tensión o fractura puede perder cohesión después de una derrota.
+- Los efectos son limitados y no reemplazan la calidad del plantel ni la táctica.
+
+### Renovaciones y solicitudes de salida
+
+- La confianza modifica la predisposición anual a renovar.
+- Los jugadores con dudas o tensión pueden exigir un salario mayor.
+- La exigencia adicional puede ser de aproximadamente 5%, 10% o 15% según el nivel de conflicto.
+- Un jugador con la relación fracturada puede solicitar ser transferido.
+- El resultado anual de la renovación queda guardado en su historial de vestuario.
+
+### Evolución de Liderazgo
+
+- La evaluación anual de Liderazgo ahora utiliza:
+  - 45% confianza general del vestuario.
+  - 20% confianza de los referentes.
+  - 20% moral del plantel.
+  - 15% cohesión del equipo.
+- Un vestuario fracturado aplica una penalización adicional.
+- El resumen del vestuario queda vinculado al historial de temporada del mánager.
 
 ## Compatibilidad
 
-- Compatible con partidas existentes de V8.68.
-- Migra el prestigio y los historiales anteriores como base del nuevo perfil.
-- No modifica resultados ya disputados ni reinicia el progreso del manager.
+- Compatible con partidas existentes de V8.69.
+- Las partidas antiguas inicializan el vestuario al cargarse sin borrar estadísticas ni relaciones existentes del juego.
 - No requiere Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
@@ -69,4 +73,5 @@ Aplicar este incremental sobre **V8.68**.
 - `config.js`
 - `index.html`
 - `js/game/05j-manager-career-stage-one.js`
-- `styles/140-manager-career-stage-one.css`
+- `js/game/05k-manager-dressing-room.js`
+- `styles/150-manager-dressing-room.css`

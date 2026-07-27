@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.69',
+  version: 'V8.70',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -220,6 +220,44 @@ window.GAME_CONFIG = {
       momentoMaximo: 100,
       capacidadInicial: 10,
       evaluacionTemporadaMaxima: 100
+    },
+    vestuario: {
+      activo: true,
+      confianzaInicial: 50,
+      edadMaximaJoven: 21,
+      referentesMinimo: 2,
+      referentesMaximo: 4,
+      confianzaRespaldo: 70,
+      confianzaEstable: 50,
+      confianzaDudas: 35,
+      confianzaTension: 20,
+      efectoDeportivoMaximoPct: 4,
+      cambiosPartido: {
+        victoriaTitular: 2,
+        victoriaResto: 1,
+        empateTitular: 1,
+        derrotaTitular: -1,
+        derrotaResto: -1,
+        derrotaAmpliaExtra: -1,
+        suplenteUtilizado: 1,
+        jovenUtilizado: 1,
+        titularNoUtilizado: -1,
+        rotacionTresPartidosSinJugar: -1,
+        capitanElegido: 1,
+        nuevoCapitan: 2,
+        exCapitanSinJustificacion: -4,
+        referentesPorCambioCapitan: -1
+      },
+      renovaciones: {
+        predispuestoDesde: 70,
+        abiertoDesde: 50,
+        dudasDesde: 35,
+        dificilDesde: 20,
+        aumentoDudasPct: 5,
+        aumentoDificilPct: 10,
+        aumentoRupturaPct: 15,
+        probabilidadPedidoSalidaBajaConfianza: 0.35
+      }
     },
   },
   codigosEspeciales: {

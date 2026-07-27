@@ -481,6 +481,10 @@
     return careerClamp(Math.round(50 + overallDelta * 7 + youngDelta * 9 + careerClamp(countDelta, -5, 5) * 1.5), 0, 100);
   }
   function managerCareerLeadershipScore(clubId){
+    if(typeof window.managerDressingRoomLeadershipScore === 'function'){
+      const contextual = Number(window.managerDressingRoomLeadershipScore(clubId));
+      if(Number.isFinite(contextual)) return careerClamp(Math.round(contextual), 0, 100);
+    }
     const morale = typeof squadMoraleAverage === 'function' ? Number(squadMoraleAverage(clubId) || 0) : 50;
     const cohesion = typeof cohesionValue === 'function' ? Number(cohesionValue(clubId) || 0) : 50;
     return careerClamp(Math.round((morale / 99) * 52 + (cohesion / 100) * 48), 0, 100);

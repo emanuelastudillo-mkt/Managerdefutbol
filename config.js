@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.61',
+  version: 'V8.62',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -39,7 +39,7 @@ window.GAME_CONFIG = {
       'data/jugadores/rumania-superliga-rumania.json'
     ],
     manualPlayersUrl: 'data/jugadores_manuales.json?v=8.60',
-    sponsorsUrl: 'data/sponsors.json',
+    sponsorsUrl: 'data/sponsors.json?v=8.62',
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json?v=8.60',
     eventsUrl: 'data/eventos.json?v=8.60',
@@ -457,6 +457,11 @@ window.GAME_CONFIG = {
   sponsors: {
     // sistema fijo por temporada + sponsor especial con condición.
     factorValorBase: 0.1,
+    porcentajeSponsorsLocales: 0.50,
+    multiplicadorPrestigioLigaMinimo: 0.70,
+    multiplicadorPrestigioLigaMaximo: 1.30,
+    multiplicadorPosicionTablaMinimo: 0.80,
+    multiplicadorPosicionTablaMaximo: 1.20,
     ofertasMinimasPorTemporada: 20,
     ofertasMaximasPorTemporada: 40,
     ofertasVencenEnDias: 5,

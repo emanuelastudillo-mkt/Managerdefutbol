@@ -1,7 +1,7 @@
 {
-  "version": "V6.20",
+  "version": "V8.62",
   "archivo": "data/sponsors.json",
-  "descripcion": "Lugares de sponsor ampliados a 32 con desbloqueo progresivo por estadio.",
+  "descripcion": "Lugares de sponsor ampliados a 32, ofertas locales por país de liga y pagos ajustados por reputación y posición.",
   "moneda": "dinero_juego",
   "reglas_calculo": {
     "pago_oferta": "Cada oferta sortea una sola forma de pago: todo al inicio o pago diario. Las ofertas de pago inicial son 50% más bajas que el total equivalente de pago diario.",
@@ -11,15 +11,9 @@
       "criterio": "Cada oferta sortea su duración dentro de este rango."
     },
     "multiplicadores_por_division": {
-      "division_1": 10,
-      "division_2": 4,
+      "division_1": 3,
+      "division_2": 1.5,
       "division_3": 1
-    },
-    "bonus_posicion_tabla": {
-      "min": 0,
-      "max": 0.2,
-      "formula": "((total_equipos - posicion_tabla) / (total_equipos - 1)) * 0.20",
-      "nota": "Con 18 equipos: 1º cobra +20%; 18º cobra +0%."
     },
     "bonus_moral_equipo": {
       "min": 0,
@@ -33,7 +27,7 @@
     },
     "formula_pago_total_inmediato": "round((valor_final_por_7_dias / 7) * dias_duracion_oferta * 0.50)",
     "total_equipos_default": 18,
-    "formula_valor_final_por_7_dias": "round(valor_base_por_7_dias * multiplicador_division * multiplicador_lugar * (1 + bonus_posicion_tabla + bonus_moral_equipo + bonus_cohesion_equipo))",
+    "formula_valor_final_por_7_dias": "round(valor_base_por_7_dias * factor_valor_base * multiplicador_division * multiplicador_lugar * multiplicador_reputacion_liga * multiplicador_posicion_tabla * (1 + bonus_moral_equipo + bonus_cohesion_equipo))",
     "ofertas_por_temporada": {
       "min": 20,
       "max": 40,
@@ -44,7 +38,20 @@
       "pago_diario": "paga un monto por día mientras el contrato esté activo",
       "pago_total_inicio": "paga todo al aceptar con descuento del 50% respecto del total diario equivalente"
     },
-    "formula_pago_diario": "round(valor_final_por_7_dias / 7) por día durante dias_duracion_oferta"
+    "formula_pago_diario": "round(valor_final_por_7_dias / 7) por día durante dias_duracion_oferta",
+    "porcentaje_sponsors_locales": 0.5,
+    "multiplicador_reputacion_liga": {
+      "min": 0.7,
+      "neutral": 1.0,
+      "max": 1.3,
+      "criterio": "La reputación promedio anual de la división reduce o aumenta el valor de las nuevas ofertas."
+    },
+    "multiplicador_posicion_tabla": {
+      "min": 0.8,
+      "neutral": 1.0,
+      "max": 1.2,
+      "criterio": "El último recibe el mínimo, el líder el máximo y antes de la primera fecha se usa el valor neutral."
+    }
   },
   "lugares_sponsor": [
     {
@@ -281,7 +288,10 @@
       "valor_base_por_7_dias": 320000,
       "dias_duracion_oferta": 448,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO002",
@@ -291,7 +301,10 @@
       "valor_base_por_7_dias": 450000,
       "dias_duracion_oferta": 485,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO003",
@@ -421,7 +434,10 @@
       "valor_base_por_7_dias": 380000,
       "dias_duracion_oferta": 301,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO016",
@@ -661,7 +677,10 @@
       "valor_base_por_7_dias": 250000,
       "dias_duracion_oferta": 389,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO040",
@@ -671,7 +690,10 @@
       "valor_base_por_7_dias": 390000,
       "dias_duracion_oferta": 294,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO041",
@@ -681,7 +703,10 @@
       "valor_base_por_7_dias": 480000,
       "dias_duracion_oferta": 319,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO042",
@@ -691,7 +716,10 @@
       "valor_base_por_7_dias": 520000,
       "dias_duracion_oferta": 249,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO043",
@@ -701,7 +729,10 @@
       "valor_base_por_7_dias": 320000,
       "dias_duracion_oferta": 391,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO044",
@@ -711,7 +742,10 @@
       "valor_base_por_7_dias": 440000,
       "dias_duracion_oferta": 294,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO045",
@@ -751,7 +785,10 @@
       "valor_base_por_7_dias": 420000,
       "dias_duracion_oferta": 284,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO049",
@@ -761,7 +798,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 497,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO050",
@@ -831,7 +871,10 @@
       "valor_base_por_7_dias": 510000,
       "dias_duracion_oferta": 333,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO057",
@@ -841,7 +884,10 @@
       "valor_base_por_7_dias": 380000,
       "dias_duracion_oferta": 283,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO058",
@@ -871,7 +917,10 @@
       "valor_base_por_7_dias": 380000,
       "dias_duracion_oferta": 306,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO061",
@@ -1241,7 +1290,10 @@
       "valor_base_por_7_dias": 520000,
       "dias_duracion_oferta": 201,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO098",
@@ -1251,7 +1303,10 @@
       "valor_base_por_7_dias": 360000,
       "dias_duracion_oferta": 430,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO099",
@@ -1261,7 +1316,10 @@
       "valor_base_por_7_dias": 490000,
       "dias_duracion_oferta": 278,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO100",
@@ -1311,7 +1369,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 254,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO105",
@@ -1361,7 +1422,10 @@
       "valor_base_por_7_dias": 390000,
       "dias_duracion_oferta": 208,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO110",
@@ -1371,7 +1435,10 @@
       "valor_base_por_7_dias": 300000,
       "dias_duracion_oferta": 427,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO111",
@@ -1381,7 +1448,10 @@
       "valor_base_por_7_dias": 510000,
       "dias_duracion_oferta": 295,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO112",
@@ -1401,7 +1471,10 @@
       "valor_base_por_7_dias": 540000,
       "dias_duracion_oferta": 434,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO114",
@@ -1411,7 +1484,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 406,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO115",
@@ -1421,7 +1497,10 @@
       "valor_base_por_7_dias": 350000,
       "dias_duracion_oferta": 468,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO116",
@@ -1431,7 +1510,10 @@
       "valor_base_por_7_dias": 300000,
       "dias_duracion_oferta": 338,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO117",
@@ -1441,7 +1523,10 @@
       "valor_base_por_7_dias": 350000,
       "dias_duracion_oferta": 334,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO118",
@@ -1451,7 +1536,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 217,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO119",
@@ -1461,7 +1549,10 @@
       "valor_base_por_7_dias": 520000,
       "dias_duracion_oferta": 328,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO120",
@@ -1491,7 +1582,10 @@
       "valor_base_por_7_dias": 540000,
       "dias_duracion_oferta": 276,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO123",
@@ -1501,7 +1595,10 @@
       "valor_base_por_7_dias": 420000,
       "dias_duracion_oferta": 461,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO124",
@@ -1511,7 +1608,10 @@
       "valor_base_por_7_dias": 470000,
       "dias_duracion_oferta": 454,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO125",
@@ -1521,7 +1621,10 @@
       "valor_base_por_7_dias": 400000,
       "dias_duracion_oferta": 375,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO126",
@@ -1541,7 +1644,10 @@
       "valor_base_por_7_dias": 430000,
       "dias_duracion_oferta": 267,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO128",
@@ -1561,7 +1667,10 @@
       "valor_base_por_7_dias": 450000,
       "dias_duracion_oferta": 401,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO130",
@@ -1611,7 +1720,10 @@
       "valor_base_por_7_dias": 480000,
       "dias_duracion_oferta": 209,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO135",
@@ -1641,7 +1753,10 @@
       "valor_base_por_7_dias": 440000,
       "dias_duracion_oferta": 214,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO138",
@@ -1651,7 +1766,10 @@
       "valor_base_por_7_dias": 340000,
       "dias_duracion_oferta": 350,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO139",
@@ -1731,7 +1849,10 @@
       "valor_base_por_7_dias": 380000,
       "dias_duracion_oferta": 252,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO147",
@@ -1781,7 +1902,10 @@
       "valor_base_por_7_dias": 360000,
       "dias_duracion_oferta": 291,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO152",
@@ -1791,7 +1915,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 438,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO153",
@@ -1801,7 +1928,10 @@
       "valor_base_por_7_dias": 450000,
       "dias_duracion_oferta": 333,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO154",
@@ -1811,7 +1941,10 @@
       "valor_base_por_7_dias": 290000,
       "dias_duracion_oferta": 300,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO155",
@@ -1821,7 +1954,10 @@
       "valor_base_por_7_dias": 410000,
       "dias_duracion_oferta": 298,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO156",
@@ -1831,7 +1967,10 @@
       "valor_base_por_7_dias": 420000,
       "dias_duracion_oferta": 351,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO157",
@@ -1841,7 +1980,10 @@
       "valor_base_por_7_dias": 540000,
       "dias_duracion_oferta": 434,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO158",
@@ -1851,7 +1993,10 @@
       "valor_base_por_7_dias": 550000,
       "dias_duracion_oferta": 244,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO159",
@@ -1861,7 +2006,10 @@
       "valor_base_por_7_dias": 420000,
       "dias_duracion_oferta": 429,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO160",
@@ -1871,7 +2019,10 @@
       "valor_base_por_7_dias": 430000,
       "dias_duracion_oferta": 457,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO161",
@@ -1911,7 +2062,10 @@
       "valor_base_por_7_dias": 450000,
       "dias_duracion_oferta": 356,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO165",
@@ -1921,7 +2075,10 @@
       "valor_base_por_7_dias": 310000,
       "dias_duracion_oferta": 459,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO166",
@@ -1971,7 +2128,10 @@
       "valor_base_por_7_dias": 380000,
       "dias_duracion_oferta": 232,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO171",
@@ -2021,7 +2181,10 @@
       "valor_base_por_7_dias": 550000,
       "dias_duracion_oferta": 311,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO176",
@@ -2031,7 +2194,10 @@
       "valor_base_por_7_dias": 480000,
       "dias_duracion_oferta": 459,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO177",
@@ -2041,7 +2207,10 @@
       "valor_base_por_7_dias": 390000,
       "dias_duracion_oferta": 209,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO178",
@@ -2141,7 +2310,10 @@
       "valor_base_por_7_dias": 540000,
       "dias_duracion_oferta": 447,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO188",
@@ -2151,7 +2323,10 @@
       "valor_base_por_7_dias": 420000,
       "dias_duracion_oferta": 204,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO189",
@@ -2161,7 +2336,10 @@
       "valor_base_por_7_dias": 330000,
       "dias_duracion_oferta": 424,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO190",
@@ -2171,7 +2349,10 @@
       "valor_base_por_7_dias": 330000,
       "dias_duracion_oferta": 405,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO191",
@@ -2201,7 +2382,10 @@
       "valor_base_por_7_dias": 430000,
       "dias_duracion_oferta": 389,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO194",
@@ -2211,7 +2395,10 @@
       "valor_base_por_7_dias": 390000,
       "dias_duracion_oferta": 358,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO195",
@@ -2221,7 +2408,10 @@
       "valor_base_por_7_dias": 370000,
       "dias_duracion_oferta": 307,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO196",
@@ -2231,7 +2421,10 @@
       "valor_base_por_7_dias": 350000,
       "dias_duracion_oferta": 417,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO197",
@@ -2241,7 +2434,10 @@
       "valor_base_por_7_dias": 390000,
       "dias_duracion_oferta": 482,
       "pago": "pago_sorteado_por_oferta",
-      "activo": true
+      "activo": true,
+      "paises_liga": [
+        "Argentina"
+      ]
     },
     {
       "id_sponsor": "SPO198",
@@ -2270,6 +2466,1098 @@
       "alcance_comercial": "global",
       "valor_base_por_7_dias": 700000,
       "dias_duracion_oferta": 361,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO201",
+      "nombre_marca": "Copec",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 620000,
+      "dias_duracion_oferta": 454,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO202",
+      "nombre_marca": "BancoEstado",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 520000,
+      "dias_duracion_oferta": 427,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO203",
+      "nombre_marca": "Banco de Chile",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 610000,
+      "dias_duracion_oferta": 501,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO204",
+      "nombre_marca": "Entel",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 570000,
+      "dias_duracion_oferta": 376,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO205",
+      "nombre_marca": "WOM Chile",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 430000,
+      "dias_duracion_oferta": 467,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO206",
+      "nombre_marca": "Falabella",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 640000,
+      "dias_duracion_oferta": 334,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO207",
+      "nombre_marca": "Cencosud",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 680000,
+      "dias_duracion_oferta": 460,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO208",
+      "nombre_marca": "LATAM Airlines Chile",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 281,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO209",
+      "nombre_marca": "CCU",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 540000,
+      "dias_duracion_oferta": 451,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO210",
+      "nombre_marca": "Cristal Chile",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 410000,
+      "dias_duracion_oferta": 306,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO211",
+      "nombre_marca": "Colún",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 390000,
+      "dias_duracion_oferta": 475,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO212",
+      "nombre_marca": "PF Alimentos",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 360000,
+      "dias_duracion_oferta": 299,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO213",
+      "nombre_marca": "Soprole",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 430000,
+      "dias_duracion_oferta": 402,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO214",
+      "nombre_marca": "Agrosuper",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Chile"
+      ],
+      "valor_base_por_7_dias": 520000,
+      "dias_duracion_oferta": 280,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO215",
+      "nombre_marca": "Petrobras",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 820000,
+      "dias_duracion_oferta": 473,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO216",
+      "nombre_marca": "Banco do Brasil",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 650000,
+      "dias_duracion_oferta": 393,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO217",
+      "nombre_marca": "Bradesco",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 690000,
+      "dias_duracion_oferta": 456,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO218",
+      "nombre_marca": "Itaú Brasil",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 232,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO219",
+      "nombre_marca": "Nubank Brasil",
+      "categoria": "Fintech",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 720000,
+      "dias_duracion_oferta": 435,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO220",
+      "nombre_marca": "Vivo Brasil",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 650000,
+      "dias_duracion_oferta": 411,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO221",
+      "nombre_marca": "TIM Brasil",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 590000,
+      "dias_duracion_oferta": 395,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO222",
+      "nombre_marca": "Ambev",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 780000,
+      "dias_duracion_oferta": 272,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO223",
+      "nombre_marca": "Magazine Luiza",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 560000,
+      "dias_duracion_oferta": 462,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO224",
+      "nombre_marca": "Casas Bahia",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 470000,
+      "dias_duracion_oferta": 454,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO225",
+      "nombre_marca": "Localiza",
+      "categoria": "Movilidad",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 520000,
+      "dias_duracion_oferta": 387,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO226",
+      "nombre_marca": "GOL Linhas Aéreas",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 640000,
+      "dias_duracion_oferta": 369,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO227",
+      "nombre_marca": "Azul Linhas Aéreas",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 610000,
+      "dias_duracion_oferta": 288,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO228",
+      "nombre_marca": "Havan",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Brasil"
+      ],
+      "valor_base_por_7_dias": 510000,
+      "dias_duracion_oferta": 470,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO229",
+      "nombre_marca": "Barclays UK",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 850000,
+      "dias_duracion_oferta": 479,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO230",
+      "nombre_marca": "Lloyds Bank",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 720000,
+      "dias_duracion_oferta": 319,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO231",
+      "nombre_marca": "NatWest",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 730000,
+      "dias_duracion_oferta": 442,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO232",
+      "nombre_marca": "EE",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 680000,
+      "dias_duracion_oferta": 294,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO233",
+      "nombre_marca": "O2 UK",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 650000,
+      "dias_duracion_oferta": 471,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO234",
+      "nombre_marca": "Vodafone UK",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 700000,
+      "dias_duracion_oferta": 491,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO235",
+      "nombre_marca": "Tesco",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 317,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO236",
+      "nombre_marca": "Sainsbury's",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 650000,
+      "dias_duracion_oferta": 233,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO237",
+      "nombre_marca": "Marks & Spencer",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 690000,
+      "dias_duracion_oferta": 473,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO238",
+      "nombre_marca": "British Airways",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 880000,
+      "dias_duracion_oferta": 477,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO239",
+      "nombre_marca": "Virgin Atlantic",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 350,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO240",
+      "nombre_marca": "JD Sports",
+      "categoria": "Indumentaria",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 620000,
+      "dias_duracion_oferta": 405,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO241",
+      "nombre_marca": "Cadbury",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 610000,
+      "dias_duracion_oferta": 507,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO242",
+      "nombre_marca": "BP UK",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Inglaterra"
+      ],
+      "valor_base_por_7_dias": 840000,
+      "dias_duracion_oferta": 471,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO243",
+      "nombre_marca": "CaixaBank",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 730000,
+      "dias_duracion_oferta": 304,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO244",
+      "nombre_marca": "Banco Sabadell",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 590000,
+      "dias_duracion_oferta": 506,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO245",
+      "nombre_marca": "Iberdrola",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 780000,
+      "dias_duracion_oferta": 453,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO246",
+      "nombre_marca": "Repsol",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 516,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO247",
+      "nombre_marca": "Telefónica España",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 740000,
+      "dias_duracion_oferta": 461,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO248",
+      "nombre_marca": "El Corte Inglés",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 700000,
+      "dias_duracion_oferta": 289,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO249",
+      "nombre_marca": "Mahou",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 520000,
+      "dias_duracion_oferta": 464,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO250",
+      "nombre_marca": "Estrella Galicia",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 540000,
+      "dias_duracion_oferta": 291,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO251",
+      "nombre_marca": "SEAT",
+      "categoria": "Automotriz",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 690000,
+      "dias_duracion_oferta": 478,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO252",
+      "nombre_marca": "Iberia",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 770000,
+      "dias_duracion_oferta": 412,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO253",
+      "nombre_marca": "Renfe",
+      "categoria": "Transporte",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 610000,
+      "dias_duracion_oferta": 311,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO254",
+      "nombre_marca": "Mapfre",
+      "categoria": "Seguros",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 680000,
+      "dias_duracion_oferta": 490,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO255",
+      "nombre_marca": "Zara España",
+      "categoria": "Indumentaria",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 820000,
+      "dias_duracion_oferta": 367,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO256",
+      "nombre_marca": "Cervezas San Miguel",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "España"
+      ],
+      "valor_base_por_7_dias": 500000,
+      "dias_duracion_oferta": 263,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO257",
+      "nombre_marca": "Eni",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 820000,
+      "dias_duracion_oferta": 309,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO258",
+      "nombre_marca": "TIM Italia",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 700000,
+      "dias_duracion_oferta": 352,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO259",
+      "nombre_marca": "UniCredit",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 760000,
+      "dias_duracion_oferta": 315,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO260",
+      "nombre_marca": "Intesa Sanpaolo",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 780000,
+      "dias_duracion_oferta": 383,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO261",
+      "nombre_marca": "Poste Italiane",
+      "categoria": "Servicios",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 640000,
+      "dias_duracion_oferta": 235,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO262",
+      "nombre_marca": "Enel Italia",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 790000,
+      "dias_duracion_oferta": 503,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO263",
+      "nombre_marca": "Trenitalia",
+      "categoria": "Transporte",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 620000,
+      "dias_duracion_oferta": 510,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO264",
+      "nombre_marca": "ITA Airways",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 690000,
+      "dias_duracion_oferta": 321,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO265",
+      "nombre_marca": "Barilla",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 660000,
+      "dias_duracion_oferta": 479,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO266",
+      "nombre_marca": "Lavazza",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 610000,
+      "dias_duracion_oferta": 395,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO267",
+      "nombre_marca": "Ferrero Italia",
+      "categoria": "Alimentos",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 790000,
+      "dias_duracion_oferta": 280,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO268",
+      "nombre_marca": "Armani",
+      "categoria": "Indumentaria",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 850000,
+      "dias_duracion_oferta": 297,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO269",
+      "nombre_marca": "Conad",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 550000,
+      "dias_duracion_oferta": 454,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO270",
+      "nombre_marca": "Esselunga",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Italia"
+      ],
+      "valor_base_por_7_dias": 530000,
+      "dias_duracion_oferta": 336,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO271",
+      "nombre_marca": "Banca Transilvania",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 520000,
+      "dias_duracion_oferta": 294,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO272",
+      "nombre_marca": "BRD Romania",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 460000,
+      "dias_duracion_oferta": 407,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO273",
+      "nombre_marca": "BCR",
+      "categoria": "Banca",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 480000,
+      "dias_duracion_oferta": 234,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO274",
+      "nombre_marca": "Digi Romania",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 490000,
+      "dias_duracion_oferta": 509,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO275",
+      "nombre_marca": "Orange Romania",
+      "categoria": "Telecomunicaciones",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 510000,
+      "dias_duracion_oferta": 490,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO276",
+      "nombre_marca": "OMV Petrom",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 620000,
+      "dias_duracion_oferta": 505,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO277",
+      "nombre_marca": "Dacia",
+      "categoria": "Automotriz",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 590000,
+      "dias_duracion_oferta": 386,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO278",
+      "nombre_marca": "eMAG",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 560000,
+      "dias_duracion_oferta": 474,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO279",
+      "nombre_marca": "Dedeman",
+      "categoria": "Retail",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 510000,
+      "dias_duracion_oferta": 273,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO280",
+      "nombre_marca": "Rompetrol",
+      "categoria": "Energía",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 540000,
+      "dias_duracion_oferta": 433,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO281",
+      "nombre_marca": "Ursus Breweries",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 420000,
+      "dias_duracion_oferta": 407,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO282",
+      "nombre_marca": "Borsec",
+      "categoria": "Bebidas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 360000,
+      "dias_duracion_oferta": 452,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO283",
+      "nombre_marca": "TAROM",
+      "categoria": "Aerolíneas",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 430000,
+      "dias_duracion_oferta": 317,
+      "pago": "pago_sorteado_por_oferta",
+      "activo": true
+    },
+    {
+      "id_sponsor": "SPO284",
+      "nombre_marca": "Bitdefender",
+      "categoria": "Tecnología",
+      "alcance_comercial": "nacional",
+      "paises_liga": [
+        "Rumania"
+      ],
+      "valor_base_por_7_dias": 580000,
+      "dias_duracion_oferta": 419,
       "pago": "pago_sorteado_por_oferta",
       "activo": true
     }

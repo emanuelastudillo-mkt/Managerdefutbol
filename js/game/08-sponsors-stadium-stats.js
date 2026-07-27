@@ -11,6 +11,7 @@ function createInitialSponsorState(){
     seasonPlanSeason:0,
     seasonOfferTarget:0,
     generatedOfferCount:0,
+    generatedLocalOfferCount:0,
     lastOfferTurn:-1,
     expiredOffers:0
   };
@@ -78,6 +79,7 @@ function normalizeSponsorState(state){
   clean.seasonPlanSeason = Number.isFinite(Number(clean.seasonPlanSeason)) ? Number(clean.seasonPlanSeason) : 0;
   clean.seasonOfferTarget = Number.isFinite(Number(clean.seasonOfferTarget)) ? Number(clean.seasonOfferTarget) : 0;
   clean.generatedOfferCount = Number.isFinite(Number(clean.generatedOfferCount)) ? Number(clean.generatedOfferCount) : 0;
+  clean.generatedLocalOfferCount = Number.isFinite(Number(clean.generatedLocalOfferCount)) ? Number(clean.generatedLocalOfferCount) : 0;
   clean.lastOfferTurn = Number.isFinite(Number(clean.lastOfferTurn)) ? Number(clean.lastOfferTurn) : -1;
   clean.expiredOffers = Number.isFinite(Number(clean.expiredOffers)) ? Number(clean.expiredOffers) : 0;
   delete clean.matchesSinceOffer;
@@ -95,25 +97,86 @@ function ensureSponsorState(){
   if(!game) return;
   game.sponsors = normalizeSponsorState(game.sponsors);
 }
-function sponsorDivisionMultiplier(){
-  const club = seed.clubs.find(c => c.id === game.selectedClubId) || {};
-  const order = Number(club.divisionOrder || clubDivision(game.selectedClubId).order || 1);
+function sponsorDivisionMultiplier(clubId=game?.selectedClubId){
+  const club = seed.clubs.find(c => Number(c.id) === Number(clubId)) || {};
+  const order = Number(club.divisionOrder || clubDivision(clubId).order || 1);
   if(order <= 1) return 3;
   if(order === 2) return 1.5;
   return 1;
 }
-function sponsorPositionBonus(){
-  const division = clubDivision(game.selectedClubId);
-  const table = sortedStandings(division.id);
-  const index = table.findIndex(row => row.clubId === game.selectedClubId);
-  if(index < 0 || table.length <= 1) return 0;
-  return ((table.length - (index + 1)) / (table.length - 1)) * 0.20;
+function sponsorLeagueCountry(clubId=game?.selectedClubId){
+  const club = (seed?.clubs || []).find(item => Number(item.id) === Number(clubId)) || {};
+  const division = typeof clubDivision === 'function' ? clubDivision(clubId) : {};
+  return String(club.country || club.pais || division?.country || division?.pais || game?.selectedCountry || '').trim();
 }
-function sponsorMoraleBonus(){
-  return (squadMoraleAverage(game.selectedClubId) / 100) * 0.10;
+function sponsorCountryKey(value=''){
+  if(typeof countryNameKey === 'function') return countryNameKey(value);
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
-function sponsorCohesionBonus(){
-  return (cohesionValue(game.selectedClubId) / 100) * 0.10;
+function sponsorCountries(sponsor={}){
+  const explicit = Array.isArray(sponsor.paises_liga) ? sponsor.paises_liga : [];
+  const single = sponsor.pais_liga || sponsor.pais_origen || sponsor.country || sponsor.pais || '';
+  return [...explicit, single].map(sponsorCountryKey).filter(Boolean);
+}
+function sponsorIsLocalForCountry(sponsor={}, country=''){
+  const target = sponsorCountryKey(country);
+  return Boolean(target && sponsorCountries(sponsor).includes(target));
+}
+function sponsorPickForClub(clubId=game?.selectedClubId, options={}){
+  const all = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
+  if(!all.length) return null;
+  const opts = typeof options === 'string' ? { deterministicKey:options } : (options || {});
+  const deterministicKey = String(opts.deterministicKey || '');
+  const country = sponsorLeagueCountry(clubId);
+  const local = all.filter(sponsor => sponsorIsLocalForCountry(sponsor, country));
+  const foreignOrGlobal = all.filter(sponsor => !sponsorIsLocalForCountry(sponsor, country));
+  const localRoll = deterministicKey
+    ? hashNumber(`sponsor-local-roll-${deterministicKey}-${country}`, 10000) / 10000
+    : Math.random();
+  const requestedLocal = typeof opts.forceLocal === 'boolean' ? opts.forceLocal : localRoll < SPONSOR_LOCAL_OFFER_RATIO;
+  const wantsLocal = local.length > 0 && requestedLocal;
+  const pool = wantsLocal ? local : (foreignOrGlobal.length ? foreignOrGlobal : all);
+  const index = deterministicKey
+    ? hashNumber(`sponsor-brand-${deterministicKey}-${country}-${wantsLocal ? 'local' : 'general'}`, pool.length)
+    : randomInt(0, pool.length - 1);
+  const sponsor = pool[index] || all[0] || null;
+  return sponsor ? { sponsor, country, local:Boolean(sponsorIsLocalForCountry(sponsor, country)) } : null;
+}
+function sponsorLeagueReputationValue(clubId=game?.selectedClubId){
+  const division = typeof clubDivision === 'function' ? clubDivision(clubId) : null;
+  if(!division?.id) return 50;
+  if(typeof leagueSeasonEconomyForDivision === 'function'){
+    const snapshot = leagueSeasonEconomyForDivision(division.id, game?.seasonNumber || 1);
+    const value = Number(snapshot?.effectiveReputation ?? snapshot?.reputation);
+    if(Number.isFinite(value)) return clamp(value, 0, 100);
+  }
+  const clubs = (seed?.clubs || []).filter(club => String(club.divisionId || '') === String(division.id));
+  if(!clubs.length) return 50;
+  const total = clubs.reduce((sum, club) => sum + Number(typeof clubPrestigeValue === 'function' ? clubPrestigeValue(club) : (club.reputation || club.prestigio || 50)), 0);
+  return clamp(total / clubs.length, 0, 100);
+}
+function sponsorLeagueReputationMultiplier(clubId=game?.selectedClubId){
+  const reputation = sponsorLeagueReputationValue(clubId);
+  if(reputation >= 50){
+    return 1 + ((reputation - 50) / 50) * (SPONSOR_LEAGUE_REPUTATION_MULTIPLIER_MAX - 1);
+  }
+  return SPONSOR_LEAGUE_REPUTATION_MULTIPLIER_MIN + (reputation / 50) * (1 - SPONSOR_LEAGUE_REPUTATION_MULTIPLIER_MIN);
+}
+function sponsorTablePositionInfo(clubId=game?.selectedClubId){
+  const division = typeof clubDivision === 'function' ? clubDivision(clubId) : null;
+  const table = division?.id && typeof sortedStandings === 'function' ? sortedStandings(division.id) : [];
+  const index = table.findIndex(row => Number(row.clubId) === Number(clubId));
+  const hasPlayedMatches = table.some(row => Number(row.pj || row.played || 0) > 0);
+  if(index < 0 || table.length <= 1 || !hasPlayedMatches) return { position:0, teams:table.length, multiplier:1 };
+  const strength = (table.length - 1 - index) / (table.length - 1);
+  const multiplier = SPONSOR_TABLE_POSITION_MULTIPLIER_MIN + strength * (SPONSOR_TABLE_POSITION_MULTIPLIER_MAX - SPONSOR_TABLE_POSITION_MULTIPLIER_MIN);
+  return { position:index + 1, teams:table.length, multiplier };
+}
+function sponsorMoraleBonus(clubId=game?.selectedClubId){
+  return (squadMoraleAverage(clubId) / 100) * 0.10;
+}
+function sponsorCohesionBonus(clubId=game?.selectedClubId){
+  return (cohesionValue(clubId) / 100) * 0.10;
 }
 function sponsorSeasonWindowTurns(){
   const total = typeof totalSeasonTurnCount === 'function' ? totalSeasonTurnCount() : 365;
@@ -130,11 +193,14 @@ function sponsorPaymentLabel(paymentType='daily'){
   if(paymentType === 'mixed') return '20% al firmar + diario';
   return 'Diario';
 }
-function sponsorOfferValue(baseSponsor, lugar){
+function sponsorOfferValue(baseSponsor, lugar, clubId=game?.selectedClubId){
   const base = Number(baseSponsor?.valor_base_por_7_dias || 0);
   const place = Number(lugar?.multiplicador_lugar || 1);
   const specialBonusPct = typeof specialActiveBonus === 'function' ? specialActiveBonus('sponsors_extra') : 0;
-  const totalMultiplier = sponsorDivisionMultiplier() * place * (1 + sponsorPositionBonus() + sponsorMoraleBonus() + sponsorCohesionBonus()) * (1 + (specialBonusPct / 100));
+  const leagueReputation = sponsorLeagueReputationValue(clubId);
+  const leagueMultiplier = sponsorLeagueReputationMultiplier(clubId);
+  const tableInfo = sponsorTablePositionInfo(clubId);
+  const totalMultiplier = sponsorDivisionMultiplier(clubId) * place * leagueMultiplier * tableInfo.multiplier * (1 + sponsorMoraleBonus(clubId) + sponsorCohesionBonus(clubId)) * (1 + (specialBonusPct / 100));
   const valuePer7Days = Math.max(0, Math.round(base * SPONSOR_BASE_VALUE_FACTOR * totalMultiplier));
   const baseDailyAmount = Math.max(0, Math.round(valuePer7Days / 7));
   const durationDays = randomInt(SPONSOR_DURATION_MIN_DAYS, SPONSOR_DURATION_MAX_DAYS);
@@ -159,7 +225,14 @@ function sponsorOfferValue(baseSponsor, lugar){
     upfrontAmount,
     upfrontTotal:upfrontAmount,
     dailyTotal,
-    remainingDailyTotal
+    remainingDailyTotal,
+    leagueCountry:sponsorLeagueCountry(clubId),
+    leagueReputation:Number(leagueReputation.toFixed(2)),
+    leagueMultiplier:Number(leagueMultiplier.toFixed(4)),
+    tablePosition:Number(tableInfo.position || 0),
+    tableTeams:Number(tableInfo.teams || 0),
+    tablePositionMultiplier:Number(tableInfo.multiplier.toFixed(4)),
+    totalMultiplier:Number(totalMultiplier.toFixed(4))
   };
 }
 function sponsorSpecialConditionPool(){
@@ -371,11 +444,12 @@ function initializeInheritedSponsorsForNewClub(clubId=game?.selectedClubId, opti
     .map(item => item.place);
   game.sponsors.active = [];
   game.sponsors.offers = [];
+  const localTarget = Math.min(target, Math.max(0, Math.round(target * SPONSOR_LOCAL_OFFER_RATIO)));
   orderedPlaces.forEach((place,index) => {
-    const sponsorIndex = hashNumber(`inherited-sponsor-brand-${key}-${place.id_lugar}-${index}`, sponsors.length);
-    const sponsor = sponsors[sponsorIndex];
+    const picked = sponsorPickForClub(clubId, { deterministicKey:`${key}-${place.id_lugar}-${index}`, forceLocal:index < localTarget });
+    const sponsor = picked?.sponsor;
     if(!sponsor) return;
-    const value = sponsorOfferValue(sponsor, place);
+    const value = sponsorOfferValue(sponsor, place, clubId);
     const remainingFactor = 0.35 + (hashNumber(`inherited-sponsor-remaining-${key}-${place.id_lugar}`, 61) / 100);
     const remainingDays = Math.max(14, Math.round(Number(value.durationDays || 30) * remainingFactor));
     const elapsedDays = Math.max(0, Math.round(Number(value.durationDays || remainingDays) - remainingDays));
@@ -387,6 +461,8 @@ function initializeInheritedSponsorsForNewClub(clubId=game?.selectedClubId, opti
       sponsorId:sponsor.id_sponsor,
       sponsorName:sponsor.nombre_marca,
       category:sponsor.categoria,
+      sponsorCountry:picked?.country || sponsorLeagueCountry(clubId),
+      localSponsor:Boolean(picked?.local),
       placeId:place.id_lugar,
       placeName:place.nombre,
       placeType:place.tipo,
@@ -401,6 +477,12 @@ function initializeInheritedSponsorsForNewClub(clubId=game?.selectedClubId, opti
       upfrontTotal:value.upfrontTotal,
       upfrontAmount:value.upfrontAmount,
       remainingDailyTotal:Math.max(0, Number(value.remainingDailyTotal || 0) - (Number(value.dailyAmount || 0) * elapsedDays)),
+      leagueReputation:value.leagueReputation,
+      leagueMultiplier:value.leagueMultiplier,
+      tablePosition:value.tablePosition,
+      tableTeams:value.tableTeams,
+      tablePositionMultiplier:value.tablePositionMultiplier,
+      totalMultiplier:value.totalMultiplier,
       acceptedTurn:Math.max(0, currentTurnIndex() - daysToTurns(elapsedDays)),
       acceptedDate:'',
       turnsRemaining:Math.max(1, daysToTurns(remainingDays)),
@@ -414,6 +496,7 @@ function initializeInheritedSponsorsForNewClub(clubId=game?.selectedClubId, opti
   game.sponsors.seasonPlan = [];
   game.sponsors.seasonPlanSeason = 0;
   game.sponsors.generatedOfferCount = 0;
+  game.sponsors.generatedLocalOfferCount = 0;
   if(typeof buildSponsorSeasonPlan === 'function') buildSponsorSeasonPlan();
   return {
     count:game.sponsors.active.length,
@@ -473,6 +556,7 @@ function buildSponsorSeasonPlan(){
   game.sponsors.seasonPlanSeason = season;
   game.sponsors.seasonOfferTarget = totalOffers;
   game.sponsors.generatedOfferCount = 0;
+  game.sponsors.generatedLocalOfferCount = 0;
   return plan;
 }
 function ensureSponsorSeasonPlan(){
@@ -485,12 +569,15 @@ function ensureSponsorSeasonPlan(){
 }
 function createSponsorOfferFromPlan(planItem){
   const lugares = sponsorOfferPlacePool();
-  const sponsors = (sponsorsDatabase?.sponsors || []).filter(sponsor => sponsor.activo !== false);
-  if(!lugares.length || !sponsors.length) return null;
-  const sponsor = sponsors[randomInt(0, sponsors.length - 1)];
+  const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
+  const localBefore = Number(game.sponsors.generatedLocalOfferCount || 0);
+  const localTargetAfter = Math.round(serial * SPONSOR_LOCAL_OFFER_RATIO);
+  const picked = sponsorPickForClub(game?.selectedClubId, { forceLocal:localTargetAfter > localBefore });
+  const sponsor = picked?.sponsor;
+  if(!lugares.length || !sponsor) return null;
   const place = lugares[randomInt(0, lugares.length - 1)];
-  if(!sponsor || !place) return null;
-  const value = sponsorOfferValue(sponsor, place);
+  if(!place) return null;
+  const value = sponsorOfferValue(sponsor, place, game?.selectedClubId);
   const paymentType = value.paymentType;
   const specialChallenge = createSponsorSpecialChallenge();
   const createdTurn = currentSeasonTurnNumber();
@@ -499,13 +586,15 @@ function createSponsorOfferFromPlan(planItem){
   const expiresDate = sponsorDefaultExpiryDate(createdDate, createdDate);
   const expiresTurn = createdTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS)) - 1;
   const expiresGlobalTurn = createdGlobalTurn + Math.max(1, daysToTurns(SPONSOR_OFFER_EXPIRE_DAYS));
-  const serial = Number(game.sponsors.generatedOfferCount || 0) + 1;
   game.sponsors.generatedOfferCount = serial;
+  if(picked?.local) game.sponsors.generatedLocalOfferCount = localBefore + 1;
   return {
     id:`SPON-${game.seasonNumber || 1}-${serial}-${sponsor.id_sponsor}-${place.id_lugar}-${hashNumber(String(Math.random()), 100000)}`,
     sponsorId:sponsor.id_sponsor,
     sponsorName:sponsor.nombre_marca,
     category:sponsor.categoria,
+    sponsorCountry:picked?.country || sponsorLeagueCountry(game?.selectedClubId),
+    localSponsor:Boolean(picked?.local),
     placeId:place.id_lugar,
     placeName:place.nombre,
     placeType:place.tipo,
@@ -520,6 +609,12 @@ function createSponsorOfferFromPlan(planItem){
     upfrontTotal:value.upfrontTotal,
     upfrontAmount:value.upfrontAmount,
     remainingDailyTotal:value.remainingDailyTotal,
+    leagueReputation:value.leagueReputation,
+    leagueMultiplier:value.leagueMultiplier,
+    tablePosition:value.tablePosition,
+    tableTeams:value.tableTeams,
+    tablePositionMultiplier:value.tablePositionMultiplier,
+    totalMultiplier:value.totalMultiplier,
     createdTurn,
     expiresTurn,
     createdGlobalTurn,

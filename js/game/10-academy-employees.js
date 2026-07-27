@@ -736,14 +736,12 @@ function academyYouthVisualMarkup(count, capacity=academyCapacity()){
   if(safeCount <= 0){
     return '<div class="game-visual-asset-empty academy-youth-visual-empty"><strong>Academia sin juveniles activos</strong><span>La sesión de entrenamiento aparecerá después de la primera captación.</span></div>';
   }
-  const definition = academyYouthVisualDefinition(safeCount);
   const path = academyYouthVisualPath(safeCount);
   const badge = `${safeCount}/${Math.max(safeCount, Math.round(Number(capacity || 0)))} juveniles`;
   if(typeof stadiumVisualAssetMarkup === 'function'){
     return stadiumVisualAssetMarkup(path, `${safeCount} juveniles entrenando en Tu Academia`, {
       modifier:'academy-youth-occupancy-visual',
-      badge,
-      caption:`${definition.label} · fase visual ${definition.phase}/7`
+      badge
     });
   }
   return `<figure class="game-visual-asset academy-youth-occupancy-visual"><img src="${path}?v=8.57" alt="${safeCount} juveniles entrenando en Tu Academia" loading="lazy"><span class="game-visual-asset-badge">${badge}</span></figure>`;

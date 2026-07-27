@@ -434,7 +434,7 @@ function startFounderCareerAfterSeason(created, transition={}){
   const specialReset = typeof resetActiveSpecialCardsToReserveForNewClub === 'function'
     ? resetActiveSpecialCardsToReserveForNewClub({ reason:'founder_new_club' })
     : null;
-  startNextSeason(clubId);
+  startNextSeason(clubId, { allowDirectClubChange:true, reason:'founder_career_start' });
   game.founderMode = true;
   game.founderClubId = clubId;
   game.founderReplacedClub = created.club.founderReplacedClub || null;

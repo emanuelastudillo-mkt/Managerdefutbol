@@ -1161,8 +1161,7 @@ function renderStadium(){
     ${typeof afaFieldSanctionMarkup === 'function' ? afaFieldSanctionMarkup(game.selectedClubId) : ''}
     ${stadiumVisualAssetMarkup(stadiumVisual.path, stadiumVisual.alt, {
       modifier:'stadium-main-visual',
-      badge:activeExpansionCount ? `${stadiumVisual.label} · ${activeExpansionCount} obra(s)` : stadiumVisual.label,
-      caption:`Fase visual ${stadiumVisual.phase}/10 · estructura para ${new Intl.NumberFormat('es-AR').format(stadiumVisual.structuralCapacity)} espectadores`
+      badge:activeExpansionCount ? `${stadiumVisual.label} · ${activeExpansionCount} obra(s)` : stadiumVisual.label
     })}
     <div class="grid cols-2">
       <div class="card stadium-card">
@@ -1209,14 +1208,6 @@ function renderStadium(){
     ${replantActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Replantando</h3><span class="pill">${formatDaysFromTurns(project.replantingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${replantProgress}%"></span></div><p class="muted small">Durante el replante el campo se mantiene en estado muy malo. Al finalizar pasará a 99.</p></div>` : ''}
     ${patchActive ? `<div class="card stadium-progress-card" style="margin-top:14px"><div class="row"><h3>Regando y parchando campo de juego</h3><span class="pill">${formatDaysFromTurns(project.patchingTurnsLeft)} restante(s)</span></div><div class="project-progress"><span style="width:${patchProgress}%"></span></div><p class="muted small">El campo mejora progresivamente mientras dura el mantenimiento.</p></div>` : ''}
     ${stadiumExpansionsMarkup()}
-    <div class="card sponsors-card" style="margin-top:14px">
-      <div class="row"><div><h3>Sponsors</h3><p class="muted small">Llegan entre 20 y 40 ofertas por temporada. Cada propuesta vence en 5 días y puede pagar todo al inicio o por día.</p></div></div>
-      ${sponsorPlacesMarkup()}
-      <h4>Ofertas disponibles</h4>
-      ${sponsorOffersMarkup()}
-      <h4 style="margin-top:14px">Contratos activos</h4>
-      ${activeSponsorsMarkup()}
-    </div>
   `;
   $('btnOpenStadiumFacilities')?.addEventListener('click', () => { stadiumViewMode = 'facilities'; renderStadium(); });
   $('ticketPriceInput')?.addEventListener('change', event => {

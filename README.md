@@ -1,44 +1,43 @@
-# Una vida de manager — V8.62
+# Una vida de manager — V8.63
 
 ## Base requerida
 
-Aplicar este incremental sobre **V8.61**.
+Aplicar este incremental sobre **V8.62**.
 
 ## Cambios
 
-### Sponsors locales por liga
+### Limpieza de textos sobre imágenes
 
-- El **50% aproximado** de las ofertas de sponsors se selecciona entre marcas vinculadas al país de la liga del club.
-- El otro 50% proviene de marcas globales o de otros mercados.
-- Se agregaron grupos locales para Argentina, Chile, Brasil, Inglaterra, España, Italia y Rumania.
-- La misma regla se utiliza al heredar sponsors activos al asumir un club durante la temporada.
+- Se quitaron los textos superpuestos que indicaban **“Fase visual X/10”** en el estadio.
+- También se retiró la referencia equivalente de fases visuales en la imagen de juveniles de Tu Academia.
+- Los indicadores útiles de estado, nivel y capacidad permanecen visibles mediante sus etiquetas principales.
 
-### Pago por reputación de liga
+### Sponsors fuera de Estadio e instalaciones
 
-- El pago base ahora incorpora la reputación promedio anual de la división.
-- Las ligas de menor reputación aplican una reducción progresiva.
-- Las ligas de mayor reputación aplican un aumento progresivo.
-- El multiplicador configurable varía entre **0,70 y 1,30**.
+- Se eliminó el bloque duplicado de sponsors de la pantalla principal de **Estadio e instalaciones**.
+- Las ofertas, espacios y contratos activos continúan disponibles exclusivamente desde el submenú **Sponsors**.
+- No se modificó la generación, pago ni vencimiento de contratos.
 
-### Pago por posición en tabla
+### Continuidad al terminar la temporada
 
-- La posición dejó de otorgar únicamente bonificaciones.
-- Los equipos de la zona baja reciben una reducción progresiva.
-- Los equipos de la zona alta reciben un aumento progresivo.
-- El multiplicador configurable varía entre **0,80 y 1,20**.
-- Antes de que se juegue la primera fecha, el multiplicador de tabla queda neutral en 1,00.
+- Al finalizar una temporada ya no aparece la selección directa de otro club.
+- El manager sólo puede comenzar la temporada siguiente con su club actual.
+- Los cambios de equipo deben realizarse mediante una oferta laboral o una solicitud enviada por el manager.
+- Se añadió una validación interna que bloquea intentos de cambiar directamente el identificador del club durante el cierre de temporada.
+- El inicio de una nueva partida y el inicio explícito de una carrera de club fundador conservan la selección inicial de club.
 
 ## Compatibilidad
 
-- Compatible con partidas existentes de V8.61.
-- Los contratos de sponsor ya aceptados conservan sus importes.
-- Los nuevos criterios se aplican a ofertas generadas desde V8.62 y a sponsors heredados al asumir un nuevo club.
-- No requiere cambios de Worker ni SQL.
+- Compatible con partidas existentes de V8.62.
+- No altera sponsors activos, contratos laborales, tablas ni calendarios guardados.
+- No requiere cambios de Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
 
 - `config.js`
 - `index.html`
-- `data/sponsors.json`
-- `js/core/01-config-constants.js`
+- `js/game/05d-founder-career.js`
+- `js/game/05g-season-lifecycle.js`
 - `js/game/08-sponsors-stadium-stats.js`
+- `js/game/10-academy-employees.js`
+- `js/ui/06-render-home-messages.js`

@@ -1602,13 +1602,20 @@ function maintainBotBalanceDuringSeason(options={}){
   return { clubs:clubsAdjusted, players:playersAdjusted, reference, forced:force };
 }
 
-function startNextSeason(selectedClubId){
+function startNextSeason(selectedClubId, options={}){
   if(!game?.seasonFinalized) return;
+  const currentClubId = Number(game.selectedClubId || 0);
+  const requestedClubId = Number(selectedClubId || currentClubId);
+  const allowDirectClubChange = Boolean(options?.allowDirectClubChange);
+  if(requestedClubId !== currentClubId && !allowDirectClubChange){
+    showNotice('No podés seleccionar otro club al cerrar la temporada. Los cambios de equipo se realizan mediante ofertas o solicitudes laborales.');
+    return;
+  }
   if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   archiveClubWorldCupEditionForState(game, { allowIncomplete:true });
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
-  const previousClubId = Number(game.selectedClubId || 0);
-  const nextClubId = Number(selectedClubId || game.selectedClubId);
+  const previousClubId = currentClubId;
+  const nextClubId = requestedClubId;
   const previousMatchdayIndex = Number(game.matchdayIndex || game.fixtures?.length || 0);
   const previousBotBalanceRanks = botBalanceRankMap();
   const configuredPostseasonRecovery = postseasonTurnsForCurrentSeason();
@@ -1707,13 +1714,13 @@ function seasonEndPanelMarkup(){
   const retirementRows = retirements.map(p => `<li><strong>${escapeHtml(p.name)}</strong> se retiró del fútbol a los ${p.age} años.</li>`).join('');
   return `<div class="card season-end-card">
     <div class="row"><div><p class="label">Fin de temporada</p><h3>${record?.title ? 'Campeón' : `Posición final: ${escapeHtml(record?.label || '—')}`}</h3></div><span class="pill">Temporada ${game.seasonNumber || 1}</span></div>
-    <p class="muted">Podés seguir en ${escapeHtml(clubName(game.selectedClubId))} o elegir otro club para la próxima temporada.</p>
+    <p class="muted">La próxima temporada continúa con ${escapeHtml(clubName(game.selectedClubId))}. Para cambiar de equipo, utilizá una oferta o una solicitud laboral.</p>
     ${record?.totalSeasonPrize ? `<p class="tagline ok">Premios deportivos cobrados: <strong>${formatMoney(record.totalSeasonPrize)}</strong>${record.championPrize ? ` · Campeonato ${formatMoney(record.championPrize)}` : ''}${record.promotionPrize ? ` · Ascenso ${formatMoney(record.promotionPrize)}` : ''}.</p>` : ''}
     ${game.seasonTransition?.salariesPaid ? `<p class="tagline">Pago anual de sueldos descontado: <strong>${formatMoney(game.seasonTransition.salariesPaid)}</strong>.</p>` : ''}
     ${salaryAdjustments ? `<p class="tagline">Sueldos ajustados para la próxima temporada según partidos jugados: ${salaryAdjustments.increased || 0} suben, ${salaryAdjustments.decreased || 0} bajan.</p>` : ''}
     ${retirementRows ? `<ul class="season-movement-list">${retirementRows}</ul>` : ''}
     ${moveRows ? `<ul class="season-movement-list">${moveRows}</ul>` : ''}
-    <div class="row" style="margin-top:12px"><button class="primary" data-continue-season>Seguir en este club</button><button class="ghost" data-open-season-modal>Cambiar club</button></div>
+    <div class="row" style="margin-top:12px"><button class="primary" data-continue-season>Comenzar próxima temporada</button></div>
   </div>`;
 }
 function openSeasonEndModal(){
@@ -1723,14 +1730,9 @@ function openSeasonEndModal(){
     <p class="label">Fin de temporada ${game.seasonNumber || 1}</p>
     <h2>${record?.title ? 'Saliste campeón' : `Finalizaste ${escapeHtml(record?.label || '—')}`}</h2>
     ${record?.totalSeasonPrize ? `<p class="tagline ok">Premios cobrados: <strong>${formatMoney(record.totalSeasonPrize)}</strong>${record.championPrize ? ` · Campeonato ${formatMoney(record.championPrize)}` : ''}${record.promotionPrize ? ` · Ascenso ${formatMoney(record.promotionPrize)}` : ''}.</p>` : ''}
-    <p class="muted">Elegí cómo continuar la próxima temporada.</p>
-    <div class="row" style="margin-top:14px"><button id="btnContinueSameClub" class="primary">Seguir en ${escapeHtml(clubName(game.selectedClubId))}</button></div>
-    <hr>
-    <label for="seasonClubSelect">Cambiar de club</label>
-    <select id="seasonClubSelect">${clubSelectOptionsMarkup()}</select>
-    <div class="row" style="margin-top:12px"><button id="btnStartNextSeasonOther" class="ghost">Empezar nueva temporada con este club</button></div>
+    <p class="muted">La próxima temporada continuará con ${escapeHtml(clubName(game.selectedClubId))}. Los cambios de equipo sólo se realizan mediante ofertas o solicitudes laborales.</p>
+    <div class="row" style="margin-top:14px"><button id="btnContinueSameClub" class="primary">Comenzar próxima temporada</button></div>
   </div>`;
   openModal(body);
   $('btnContinueSameClub')?.addEventListener('click', () => startNextSeason(game.selectedClubId));
-  $('btnStartNextSeasonOther')?.addEventListener('click', () => startNextSeason(Number($('seasonClubSelect')?.value || game.selectedClubId)));
 }

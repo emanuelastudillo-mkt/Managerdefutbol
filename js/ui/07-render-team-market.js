@@ -1108,7 +1108,7 @@ function renderTactics(){
   const customMode = typeof isCustomTactic === 'function' && isCustomTactic(game.tactic);
   view.innerHTML = `
     <div class="section-title tactic-section-title"><h2>Táctica y convocatoria</h2></div>
-    <div class="tactic-workspace">
+    <div class="tactic-workspace ${customMode ? 'custom-layout-active' : ''}">
       <main class="tactic-left-stack">
         <div class="card tactic-board-card tactic-grid-card">
           <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">${customMode ? 'Personalizada provisoria · cada casilla define el rol' : `Formación ${game.tactic.formation}`}</p></div></div>

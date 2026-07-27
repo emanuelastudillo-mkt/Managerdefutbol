@@ -1,43 +1,33 @@
-# Una vida de manager — V8.63
+# Una vida de manager — V8.64
 
 ## Base requerida
 
-Aplicar este incremental sobre **V8.62**.
+Aplicar este incremental sobre **V8.63**.
 
 ## Cambios
 
-### Limpieza de textos sobre imágenes
+### Selección en táctica personalizada
 
-- Se quitaron los textos superpuestos que indicaban **“Fase visual X/10”** en el estadio.
-- También se retiró la referencia equivalente de fases visuales en la imagen de juveniles de Tu Academia.
-- Los indicadores útiles de estado, nivel y capacidad permanecen visibles mediante sus etiquetas principales.
+- El primer clic sobre un jugador ahora lo muestra con el color atenuado.
+- La atenuación se aplica en la cancha, la lista de titulares, suplentes y reservas.
+- El jugador seleccionado conserva exactamente su posición y tamaño mientras espera el segundo clic.
+- Volver a hacer clic sobre el mismo jugador continúa cancelando la selección.
 
-### Sponsors fuera de Estadio e instalaciones
+### Casilla de destino fija
 
-- Se eliminó el bloque duplicado de sponsors de la pantalla principal de **Estadio e instalaciones**.
-- Las ofertas, espacios y contratos activos continúan disponibles exclusivamente desde el submenú **Sponsors**.
-- No se modificó la generación, pago ni vencimiento de contratos.
-
-### Continuidad al terminar la temporada
-
-- Al finalizar una temporada ya no aparece la selección directa de otro club.
-- El manager sólo puede comenzar la temporada siguiente con su club actual.
-- Los cambios de equipo deben realizarse mediante una oferta laboral o una solicitud enviada por el manager.
-- Se añadió una validación interna que bloquea intentos de cambiar directamente el identificador del club durante el cierre de temporada.
-- El inicio de una nueva partida y el inicio explícito de una carrera de club fundador conservan la selección inicial de club.
+- En el segundo clic, las casillas disponibles de la táctica personalizada ya no aumentan de tamaño ni se desplazan al pasar el cursor o presionarlas.
+- El estado interactivo se comunica únicamente atenuando el color, brillo y saturación.
+- La ubicación final del jugador y la lógica de intercambio no fueron modificadas.
 
 ## Compatibilidad
 
-- Compatible con partidas existentes de V8.62.
-- No altera sponsors activos, contratos laborales, tablas ni calendarios guardados.
+- Compatible con partidas existentes de V8.63.
+- No modifica formaciones guardadas, titulares, suplentes, mentalidades ni modificadores tácticos.
 - No requiere cambios de Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
 
 - `config.js`
 - `index.html`
-- `js/game/05d-founder-career.js`
-- `js/game/05g-season-lifecycle.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/10-academy-employees.js`
-- `js/ui/06-render-home-messages.js`
+- `js/ui/07-render-team-market.js`
+- `styles/20-team-tactics-training.css`

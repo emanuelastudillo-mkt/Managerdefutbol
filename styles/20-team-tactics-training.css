@@ -524,6 +524,21 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
   box-shadow:0 0 0 3px rgba(34,197,94,.28),0 14px 30px rgba(2,6,23,.28)!important;
   background:linear-gradient(135deg,rgba(34,197,94,.16),rgba(255,255,255,.045))!important;
 }
+/* V8.64 · En táctica personalizada, el primer clic se identifica atenuando el jugador sin desplazarlo. */
+.tactic-workspace.custom-layout-active .tactic-selected,
+.tactic-workspace.custom-layout-active .tactic-lineup-row.tactic-selected,
+.tactic-workspace.custom-layout-active .drag-player.tactic-selected,
+.tactic-workspace.custom-layout-active .player-chip.tactic-selected{
+  opacity:.58!important;
+  filter:saturate(.42) brightness(.78)!important;
+  border-color:rgba(148,163,184,.46)!important;
+  box-shadow:0 0 0 2px rgba(148,163,184,.14),0 10px 22px rgba(2,6,23,.22)!important;
+  background:linear-gradient(135deg,rgba(15,23,42,.72),rgba(255,255,255,.025))!important;
+  transform:none;
+}
+.tactic-workspace.custom-layout-active .custom-tactic-cell .player-chip.tactic-selected{
+  transform:translate(-50%,-50%)!important;
+}
 .tactic-empty-slot{
   font-family:inherit;
 }
@@ -1668,8 +1683,21 @@ img.player-photo-placeholder.large{width:120px;height:120px;border-radius:22px}
 }
 .custom-tactic-cell-target strong{font-size:7px;line-height:1}
 .custom-tactic-cell-target span{font-size:8px;line-height:1}
+/* V8.64 · El segundo clic conserva fija la casilla destino; el feedback es sólo cromático. */
 .custom-tactic-cell-target:hover,
-.custom-tactic-cell-target:focus-visible{opacity:1;border-color:rgba(147,197,253,.95);background:rgba(30,64,175,.45);transform:translate(-50%,-50%) scale(1.08)}
+.custom-tactic-cell-target:focus-visible{
+  opacity:.72;
+  border-color:rgba(147,197,253,.72);
+  background:rgba(15,23,42,.72);
+  color:rgba(226,232,240,.64);
+  filter:saturate(.48) brightness(.82);
+  transform:translate(-50%,-50%);
+}
+.custom-tactic-cell-target:active{
+  opacity:.58;
+  filter:saturate(.34) brightness(.72);
+  transform:translate(-50%,-50%)!important;
+}
 .custom-tactic-cell-target.active-empty{width:52px;height:52px;min-height:52px;opacity:.94;border:2px dashed rgba(250,204,21,.82);background:rgba(15,23,42,.82);color:#fde68a}
 .custom-tactic-cell-target.active-empty strong{font-size:9px}
 .custom-cell-role{

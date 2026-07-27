@@ -553,6 +553,198 @@ function simulateNonOwnDueBeforeOwnMatch(targetDate, source='before_own_match'){
   return results;
 }
 
+function firstTeamInjuryHistoryCount(clubId=game?.selectedClubId){
+  const ownId = Math.max(0, Math.round(Number(clubId || 0)));
+  if(!game || !ownId) return 0;
+  const historyCount = (game.matchHistory || []).reduce((total, result) => total + (result?.injuries || []).filter(injury => Number(injury?.clubId || 0) === ownId).length, 0);
+  const statsCount = Object.values(game.playerStats || {}).reduce((total, stat) => {
+    if(Number(stat?.clubId || 0) !== ownId) return total;
+    return total + Math.max(0, Math.round(Number(stat?.injuries || 0)));
+  }, 0);
+  return Math.max(historyCount, statsCount);
+}
+function ensureFirstTeamInjurySeasonControl(clubId=game?.selectedClubId){
+  if(!game) return null;
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const ownId = Math.max(0, Math.round(Number(clubId || 0)));
+  if(!ownId) return null;
+  const previous = game.firstTeamInjurySeasonControl;
+  if(!previous || Number(previous.season || 0) !== season || Number(previous.clubId || 0) !== ownId){
+    game.firstTeamInjurySeasonControl = {
+      version:1,
+      season,
+      clubId:ownId,
+      count:firstTeamInjuryHistoryCount(ownId),
+      target:FIRST_TEAM_SEASON_INJURY_MINIMUM,
+      eventKeys:[],
+      playerCounts:{},
+      lastInjuryDateByPlayer:{},
+      lastCompensationDate:'',
+      compensated:0
+    };
+  }
+  const state = game.firstTeamInjurySeasonControl;
+  state.version = 1;
+  state.season = season;
+  state.clubId = ownId;
+  state.target = FIRST_TEAM_SEASON_INJURY_MINIMUM;
+  state.eventKeys = Array.isArray(state.eventKeys) ? state.eventKeys.slice(-180) : [];
+  state.playerCounts = state.playerCounts && typeof state.playerCounts === 'object' && !Array.isArray(state.playerCounts) ? state.playerCounts : {};
+  state.lastInjuryDateByPlayer = state.lastInjuryDateByPlayer && typeof state.lastInjuryDateByPlayer === 'object' && !Array.isArray(state.lastInjuryDateByPlayer) ? state.lastInjuryDateByPlayer : {};
+  state.count = Math.max(Math.max(0, Math.round(Number(state.count || 0))), firstTeamInjuryHistoryCount(ownId));
+  state.compensated = Math.max(0, Math.round(Number(state.compensated || 0)));
+  return state;
+}
+function firstTeamInjuryEventKey(injury={}, index=0){
+  const date = validIsoDate(game?.currentDate) ? game.currentDate : String(currentTurnIndex());
+  return [game?.seasonNumber || 1, injury.clubId || 0, injury.playerId || 0, date, currentTurnIndex(), injury.minute ?? index, injury.injuryLabel || injury.name || 'lesion', injury.source || injury.phase || 'partido'].join(':');
+}
+function registerFirstTeamSeasonInjuries(injuries=[], options={}){
+  if(!game || !Array.isArray(injuries) || !injuries.length || game?.gameOver?.active) return 0;
+  const ownId = Number(game.selectedClubId || 0);
+  const ownInjuries = injuries.filter(injury => Number(injury?.clubId || 0) === ownId && Number(injury?.playerId || 0) > 0);
+  if(!ownInjuries.length) return 0;
+  const state = ensureFirstTeamInjurySeasonControl(ownId);
+  if(!state) return 0;
+  const known = new Set(state.eventKeys);
+  let added = 0;
+  ownInjuries.forEach((injury, index) => {
+    const key = String(injury?.seasonInjuryKey || firstTeamInjuryEventKey(injury, index));
+    if(known.has(key)) return;
+    known.add(key);
+    state.eventKeys.push(key);
+    const playerId = Math.max(0, Math.round(Number(injury.playerId || 0)));
+    state.playerCounts[playerId] = Math.max(0, Math.round(Number(state.playerCounts[playerId] || 0))) + 1;
+    if(validIsoDate(game.currentDate)) state.lastInjuryDateByPlayer[playerId] = game.currentDate;
+    state.count += 1;
+    if(options.compensation || injury.source === 'midweek_minimum'){
+      state.compensated += 1;
+      if(validIsoDate(game.currentDate)) state.lastCompensationDate = game.currentDate;
+    }
+    added += 1;
+  });
+  state.eventKeys = state.eventKeys.slice(-180);
+  return added;
+}
+function firstTeamInjurySeasonWindow(clubId=game?.selectedClubId){
+  const ownId = Number(clubId || 0);
+  const dates = [];
+  (game?.fixtures || []).forEach(round => {
+    (round?.matches || []).forEach(match => {
+      if(match?.clubWorldCup || match?.playoff || match?.knockout) return;
+      if(Number(match?.homeId || 0) !== ownId && Number(match?.awayId || 0) !== ownId) return;
+      const date = validIsoDate(match?.date) ? match.date : (validIsoDate(round?.date) ? round.date : '');
+      if(date) dates.push(date);
+    });
+  });
+  dates.sort();
+  const fallbackStart = typeof leagueStartDateForSeason === 'function' ? leagueStartDateForSeason(currentSeasonYear()) : seasonStartDateForYear(currentSeasonYear());
+  const fallbackEnd = typeof lastFixtureMatchDate === 'function' ? lastFixtureMatchDate(game) : seasonEndDateForYear(currentSeasonYear());
+  return { start:dates[0] || fallbackStart, end:dates[dates.length - 1] || fallbackEnd || seasonEndDateForYear(currentSeasonYear()) };
+}
+function firstTeamInjurySeasonProgress(clubId=game?.selectedClubId){
+  const window = firstTeamInjurySeasonWindow(clubId);
+  const today = currentCalendarDate();
+  if(!validIsoDate(window.start) || !validIsoDate(window.end) || !validIsoDate(today)) return { progress:0, remainingDays:999, ...window };
+  const totalDays = Math.max(1, daysBetweenIsoDates(window.start, window.end));
+  const elapsed = clamp(daysBetweenIsoDates(window.start, today), 0, totalDays);
+  return { progress:clamp(elapsed / totalDays, 0, 1), remainingDays:Math.max(0, daysBetweenIsoDates(today, window.end)), ...window };
+}
+function firstTeamMidweekTrainingDay(iso=currentCalendarDate()){
+  if(!validIsoDate(iso)) return false;
+  const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
+  return day >= 1 && day <= 5;
+}
+function firstTeamMidweekInjuryType(playerId, date=currentCalendarDate()){
+  const table = [
+    { name:'Sobrecarga muscular', probability:38, minTurns:7, maxTurns:21 },
+    { name:'Contusión en entrenamiento', probability:28, minTurns:7, maxTurns:21 },
+    { name:'Distensión muscular', probability:22, minTurns:14, maxTurns:42 },
+    { name:'Esguince leve', probability:8, minTurns:21, maxTurns:49 },
+    { name:'Desgarro muscular', probability:4, minTurns:28, maxTurns:56 }
+  ];
+  const total = table.reduce((sum, item) => sum + item.probability, 0);
+  let roll = hashNumber(`midweek-injury-type-${game?.seasonNumber || 1}-${date}-${playerId}`, total);
+  let picked = table[0];
+  for(const item of table){
+    picked = item;
+    if(roll < item.probability) break;
+    roll -= item.probability;
+  }
+  const span = Math.max(1, picked.maxTurns - picked.minTurns + 1);
+  const duration = picked.minTurns + hashNumber(`midweek-injury-duration-${game?.seasonNumber || 1}-${date}-${playerId}`, span);
+  return { ...picked, duration };
+}
+function firstTeamMidweekCandidate(state, clubId, date){
+  const squad = playersByClub(clubId).filter(player => player && Number(player.id || 0) > 0 && !isUnavailable(player.id));
+  if(squad.length <= FIRST_TEAM_MIDWEEK_MIN_AVAILABLE) return null;
+  const availableGoalkeepers = squad.filter(player => String(player.position || '').toUpperCase() === 'POR');
+  const rested = squad.filter(player => {
+    if(String(player.position || '').toUpperCase() === 'POR' && availableGoalkeepers.length <= 1) return false;
+    const lastDate = state.lastInjuryDateByPlayer?.[player.id];
+    return !validIsoDate(lastDate) || daysBetweenIsoDates(lastDate, date) >= FIRST_TEAM_MIDWEEK_PLAYER_REST_DAYS;
+  });
+  const candidates = rested.length ? rested : squad.filter(player => String(player.position || '').toUpperCase() !== 'POR' || availableGoalkeepers.length > 1);
+  if(!candidates.length) return null;
+  return candidates.slice().sort((a,b) => {
+    const countA = Math.max(0, Math.round(Number(state.playerCounts?.[a.id] || 0)));
+    const countB = Math.max(0, Math.round(Number(state.playerCounts?.[b.id] || 0)));
+    if(countA !== countB) return countA - countB;
+    const riskA = fatiguePoints(a.id) + Math.max(0, Number(game?.playerStats?.[a.id]?.played || 0)) * 1.5 + hashNumber(`midweek-candidate-${date}-${a.id}`, 100) / 100;
+    const riskB = fatiguePoints(b.id) + Math.max(0, Number(game?.playerStats?.[b.id]?.played || 0)) * 1.5 + hashNumber(`midweek-candidate-${date}-${b.id}`, 100) / 100;
+    return riskB - riskA;
+  })[0] || null;
+}
+function processFirstTeamInjuryMinimumDaily(options={}){
+  if(!game || !FIRST_TEAM_MIDWEEK_INJURY_ENABLED || FIRST_TEAM_SEASON_INJURY_MINIMUM <= 0 || game?.gameOver?.active || !isRegularSeason()) return { applied:false };
+  const clubId = Number(game.selectedClubId || 0);
+  if(!clubId) return { applied:false };
+  const date = currentCalendarDate();
+  if(!firstTeamMidweekTrainingDay(date)) return { applied:false, reason:'weekend' };
+  const state = ensureFirstTeamInjurySeasonControl(clubId);
+  const season = firstTeamInjurySeasonProgress(clubId);
+  const target = Math.max(0, Math.round(Number(state?.target || FIRST_TEAM_SEASON_INJURY_MINIMUM)));
+  if(!state || state.count >= target) return { applied:false, count:state?.count || 0, target };
+  let due = Math.min(target, Math.floor((season.progress * target) + 0.15));
+  if(season.remainingDays <= FIRST_TEAM_MIDWEEK_FORCE_FINAL_DAYS) due = target;
+  if(state.count >= due) return { applied:false, count:state.count, due, target };
+  if(validIsoDate(state.lastCompensationDate)){
+    const elapsed = daysBetweenIsoDates(state.lastCompensationDate, date);
+    const interval = season.remainingDays <= FIRST_TEAM_MIDWEEK_FORCE_FINAL_DAYS ? 1 : FIRST_TEAM_MIDWEEK_INJURY_INTERVAL_DAYS;
+    if(elapsed < interval) return { applied:false, count:state.count, due, target, reason:'interval' };
+  }
+  const active = injuredPlayersByClub(clubId).length;
+  if(active >= FIRST_TEAM_MIDWEEK_MAX_ACTIVE && season.remainingDays > Math.max(14, FIRST_TEAM_MIDWEEK_FORCE_FINAL_DAYS)) return { applied:false, count:state.count, due, target, reason:'active_limit' };
+  const player = firstTeamMidweekCandidate(state, clubId, date);
+  if(!player) return { applied:false, count:state.count, due, target, reason:'no_candidate' };
+  const injury = firstTeamMidweekInjuryType(player.id, date);
+  const issue = {
+    clubId,
+    playerId:Number(player.id),
+    playerName:player.name || 'Jugador',
+    type:'injury',
+    name:injury.name,
+    injuryLabel:injury.name,
+    matchesOut:injury.duration,
+    chance:1,
+    source:'midweek_minimum',
+    phase:'entrenamiento',
+    seasonInjuryKey:`midweek:${game.seasonNumber || 1}:${clubId}:${player.id}:${date}`
+  };
+  const tacticIds = new Set([...(game.tactic?.starters || []), ...(game.tactic?.bench || [])].map(Number));
+  if(typeof applyAvailability === 'function') applyAvailability([], [issue]);
+  else{
+    game.playerStatus = game.playerStatus || {};
+    game.playerStatus[player.id] = { ...playerStatus(player.id), injuredThrough:game.matchdayIndex + Math.max(1, Math.ceil(injury.duration / Math.max(1, LEAGUE_ROUND_INTERVAL_DAYS))), injuredUntilTurn:currentTurnIndex() + injury.duration, injuryLabel:injury.name, injuredAtMatchday:game.matchdayIndex, injuredAtTurn:currentTurnIndex() };
+    registerFirstTeamSeasonInjuries([issue], { compensation:true });
+  }
+  const stat = typeof officialPlayerStatsRecord === 'function' ? officialPlayerStatsRecord(game.playerStats || (game.playerStats = {}), player.id, clubId) : (game.playerStats?.[player.id] || null);
+  if(stat) stat.injuries = Math.max(0, Math.round(Number(stat.injuries || 0))) + 1;
+  if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'injury', playerId:Number(player.id) }]);
+  if(tacticIds.has(Number(player.id))) game.mustReviewTactics = true;
+  state.lastCompensationDate = date;
+  return { applied:true, playerId:Number(player.id), duration:injury.duration, count:state.count, due, target, silent:true };
+}
 function clearRecoveredDailyInjuries(){
   if(!game?.playerStatus) return 0;
   let cleared = 0;
@@ -924,6 +1116,9 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof processClubFacilitiesDaily === 'function') processClubFacilitiesDaily(1);
   if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
   const recovered = clearRecoveredDailyInjuries();
+  const firstTeamInjuryMinimum = typeof processFirstTeamInjuryMinimumDaily === 'function'
+    ? processFirstTeamInjuryMinimumDaily({ source:'daily_calendar_state' })
+    : { applied:false };
   const bankPayment = processBankLoanDailySchedule();
   if(typeof processSponsorContracts === 'function') processSponsorContracts();
   if(typeof processMemberCampaigns === 'function') processMemberCampaigns(1);
@@ -946,7 +1141,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

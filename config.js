@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.67',
+  version: 'V8.68',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -901,7 +901,16 @@ window.GAME_CONFIG = {
     fracturaMinDias: 180,
     fracturaMaxDias: 400,
     lesionadoSuplenteDiasMax: 63,
-    penalizacionLesionadoSuplente: 0.30
+    penalizacionLesionadoSuplente: 0.30,
+    // Control silencioso del primer equipo: las lesiones de partido cuentan primero y
+    // sólo se agregan lesiones de entrenamiento cuando el club queda por debajo del ritmo mínimo.
+    minimoPrimerEquipoPorTemporada: 30,
+    compensacionEntreSemanaActiva: true,
+    compensacionIntervaloMinimoDias: 3,
+    compensacionMaxLesionadosSimultaneos: 5,
+    compensacionMinimoJugadoresDisponibles: 14,
+    compensacionDescansoRepeticionJugadorDias: 21,
+    compensacionForzarUltimosDias: 7
   },
 
   eventos: {

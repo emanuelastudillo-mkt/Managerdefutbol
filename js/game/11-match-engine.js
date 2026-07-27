@@ -196,6 +196,7 @@ function applyAvailability(cards, injuries){
       injuredAtTurn: currentTurnIndex()
     };
   });
+  if(typeof registerFirstTeamSeasonInjuries === 'function') registerFirstTeamSeasonInjuries(injuries, { compensation:injuries.some(injury => injury?.source === 'midweek_minimum') });
 }
 function collectOwnProblems(result){
   if(!result) return [];

@@ -1,30 +1,33 @@
-# Una vida de manager — V8.67
+# Una vida de manager — V8.68
 
 ## Base requerida
 
-Aplicar este incremental sobre **V8.66**.
+Aplicar este incremental sobre **V8.67**.
 
-## Ajustes
+## Control silencioso de lesiones
 
-### Presentación del objetivo
+- Se incorpora un seguimiento interno de las lesiones del primer equipo durante cada temporada.
+- El mínimo de referencia queda establecido en **30 lesiones por temporada**.
+- Las lesiones producidas durante los partidos se cuentan antes de aplicar cualquier compensación.
+- Cuando el club queda por debajo del ritmo esperado, el sistema puede generar una lesión de entrenamiento entre semana.
+- La compensación se distribuye progresivamente durante la temporada y no espera al cierre para concentrar lesiones.
+- En los últimos siete días de la fase regular se completa cualquier diferencia pendiente para alcanzar el mínimo.
+- Las lesiones compensatorias son principalmente leves o moderadas: sobrecargas, contusiones, distensiones, esguinces leves y desgarros.
+- Se limita la cantidad habitual de lesionados simultáneos y se evita repetir al mismo jugador de forma inmediata.
+- Se protege al único arquero disponible y se conserva un mínimo operativo de jugadores.
+- Los jugadores con mayor carga, fatiga o participación tienen prioridad cuando varios candidatos poseen la misma cantidad de lesiones.
 
-- El bloque de objetivo de la Oficina del manager ahora separa la información por jerarquía visual.
-- **Objetivo** se muestra como etiqueta pequeña.
-- El valor, por ejemplo **0.94**, se muestra en tamaño destacado.
-- La etapa contractual, por ejemplo **mínimo año 1**, se muestra debajo en texto pequeño.
-- La reducción de la carta se muestra únicamente como porcentaje entre paréntesis, por ejemplo **(-1%)**, sin repetir la palabra “Carta”.
+## Comportamiento visible
 
-### Moral y cohesión después de una derrota
-
-- Una derrota resta **2 puntos adicionales de moral** a cada jugador del plantel, además del efecto que ya tenía el resultado.
-- En una derrota no se aplica la ganancia base de cohesión por partido.
-- Cada gol recibido en una derrota resta **1 punto de cohesión**.
-- Las sustituciones y expulsiones mantienen sus penalizaciones de cohesión actuales.
+- No se crean mensajes, notificaciones ni avisos especiales explicando la compensación.
+- La lesión aparece únicamente mediante los sistemas normales del juego: disponibilidad del jugador, táctica y tratamiento médico.
+- Si el jugador estaba convocado, se retira de la táctica y se exige completar nuevamente la formación.
 
 ## Compatibilidad
 
-- Compatible con partidas existentes de V8.66.
-- No reinicia temporadas, contratos, moral, cohesión ni planteles.
+- Compatible con partidas existentes de V8.67.
+- Las partidas comenzadas reconstruyen el contador mediante el historial de partidos y las estadísticas de la temporada.
+- El contador se reinicia automáticamente al cambiar de temporada o de club.
 - No requiere cambios de Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
@@ -33,7 +36,5 @@ Aplicar este incremental sobre **V8.66**.
 - `config.js`
 - `index.html`
 - `js/core/01-config-constants.js`
-- `js/game/09a-team-cohesion-summary.js`
-- `js/game/09d-stadium-condition-morale.js`
-- `js/ui/06-render-home-messages.js`
-- `styles/10-layout-navigation.css`
+- `js/game/09b-calendar-quick-simulation.js`
+- `js/game/11-match-engine.js`

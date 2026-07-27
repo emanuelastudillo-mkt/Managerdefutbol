@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.68',
+  version: 'V8.69',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -213,6 +213,14 @@ window.GAME_CONFIG = {
     partidosMinimosEvaluacionObjetivo: 5,
     // La cantidad total de partidos de evaluación se congela al iniciar cada temporada.
     congelarEvaluacionObjetivoPorTemporada: true,
+    carrera: {
+      activo: true,
+      prestigioMaximo: 1000,
+      momentoMinimo: -100,
+      momentoMaximo: 100,
+      capacidadInicial: 10,
+      evaluacionTemporadaMaxima: 100
+    },
   },
   codigosEspeciales: {
     activo: true,

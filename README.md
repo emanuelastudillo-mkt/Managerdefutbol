@@ -1,40 +1,72 @@
-# Una vida de manager — V8.68
+# Una vida de manager — V8.69
 
 ## Base requerida
 
-Aplicar este incremental sobre **V8.67**.
+Aplicar este incremental sobre **V8.68**.
 
-## Control silencioso de lesiones
+## Primera etapa del sistema de carrera
 
-- Se incorpora un seguimiento interno de las lesiones del primer equipo durante cada temporada.
-- El mínimo de referencia queda establecido en **30 lesiones por temporada**.
-- Las lesiones producidas durante los partidos se cuentan antes de aplicar cualquier compensación.
-- Cuando el club queda por debajo del ritmo esperado, el sistema puede generar una lesión de entrenamiento entre semana.
-- La compensación se distribuye progresivamente durante la temporada y no espera al cierre para concentrar lesiones.
-- En los últimos siete días de la fase regular se completa cualquier diferencia pendiente para alcanzar el mínimo.
-- Las lesiones compensatorias son principalmente leves o moderadas: sobrecargas, contusiones, distensiones, esguinces leves y desgarros.
-- Se limita la cantidad habitual de lesionados simultáneos y se evita repetir al mismo jugador de forma inmediata.
-- Se protege al único arquero disponible y se conserva un mínimo operativo de jugadores.
-- Los jugadores con mayor carga, fatiga o participación tienen prioridad cuando varios candidatos poseen la misma cantidad de lesiones.
+### Perfil acumulativo del manager
 
-## Comportamiento visible
+- Se incorpora un **Prestigio de carrera** entre 0 y 1.000.
+- Se incorpora un **Momento profesional** entre -100 y +100.
+- Se agregan seis capacidades acumulativas entre 0 y 100:
+  - Rendimiento deportivo.
+  - Liderazgo.
+  - Gestión económica.
+  - Desarrollo de jugadores.
+  - Manejo de crisis.
+  - Estabilidad.
+- Los valores no se compran ni se reparten manualmente: cambian al cerrar una temporada, renunciar o ser despedido.
+- El prestigio representa la trayectoria completa; el momento profesional da mayor peso a los resultados recientes.
+- Un despido y una renuncia reducen siempre el momento profesional, incluso cuando existieron aspectos positivos en la campaña.
 
-- No se crean mensajes, notificaciones ni avisos especiales explicando la compensación.
-- La lesión aparece únicamente mediante los sistemas normales del juego: disponibilidad del jugador, táctica y tratamiento médico.
-- Si el jugador estaba convocado, se retira de la táctica y se exige completar nuevamente la formación.
+### Objetivos cualitativos
+
+- El objetivo numérico interno se traduce a una expectativa deportiva comprensible.
+- Los objetivos disponibles incluyen ganar el título, pelear el título, terminar en zona alta, mitad de tabla, no descender, ascender, jugar playoffs, pelear el ascenso y consolidar la categoría.
+- Cada objetivo muestra una **posición mínima visible**.
+- El objetivo principal y el mínimo aparecen en Inicio y en el perfil del manager.
+- El modo Club Fundador conserva su objetivo específico sin exigir una posición mínima artificial.
+
+### Evaluación final de temporada
+
+- Cada campaña obtiene una evaluación entre 0 y 100.
+- La evaluación combina:
+  - 45% rendimiento deportivo.
+  - 15% rendimiento por encima o por debajo de la expectativa.
+  - 10% gestión económica.
+  - 10% desarrollo del plantel.
+  - 10% liderazgo mediante moral y cohesión.
+  - 10% contexto, manejo de crisis y estabilidad.
+- El cierre informa resultado del objetivo, evaluación general, cambios de prestigio y momento profesional.
+- Las salidas durante la temporada generan una evaluación parcial proporcional al tiempo dirigido.
+
+### Historial de temporadas del manager
+
+- Se guarda club, división, posición, partidos, puntos, goles, objetivo, mínimo exigido, evaluación y motivo de cierre.
+- Se registran finales de temporada, renuncias y despidos.
+- Se evita duplicar un mismo cierre al cargar o guardar repetidamente.
+- Las temporadas antiguas se migran al nuevo formato sin borrar el historial existente.
+
+### Historial anual de clubes
+
+- Al finalizar cada temporada se guarda un resumen de todos los clubes de las ligas jugables.
+- Se registra división, posición, puntos, goles, ascenso, descenso, campeonato, reputación, presupuesto y valor general del plantel.
+- El historial identifica las temporadas en las que un club fue dirigido por el jugador y vincula su evaluación.
+- Se guardan resúmenes, no copias completas de cada partido, para reducir el impacto sobre el tamaño de la partida.
 
 ## Compatibilidad
 
-- Compatible con partidas existentes de V8.67.
-- Las partidas comenzadas reconstruyen el contador mediante el historial de partidos y las estadísticas de la temporada.
-- El contador se reinicia automáticamente al cambiar de temporada o de club.
-- No requiere cambios de Worker, SQL ni recursos gráficos.
+- Compatible con partidas existentes de V8.68.
+- Migra el prestigio y los historiales anteriores como base del nuevo perfil.
+- No modifica resultados ya disputados ni reinicia el progreso del manager.
+- No requiere Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
 
 - `README.md`
 - `config.js`
 - `index.html`
-- `js/core/01-config-constants.js`
-- `js/game/09b-calendar-quick-simulation.js`
-- `js/game/11-match-engine.js`
+- `js/game/05j-manager-career-stage-one.js`
+- `styles/140-manager-career-stage-one.css`

@@ -894,7 +894,7 @@ function stadiumVisualAssetMarkup(src, alt, options={}){
   const modifier = String(options.modifier || '').replace(/[^a-z0-9_-]/gi, '');
   const badge = options.badge ? `<span class="game-visual-asset-badge">${escapeHtml(options.badge)}</span>` : '';
   const caption = options.caption ? `<figcaption>${escapeHtml(options.caption)}</figcaption>` : '';
-  return `<figure class="game-visual-asset ${modifier}"><img src="${escapeHtml(src)}?v=8.57" alt="${escapeHtml(alt)}" loading="lazy">${badge}${caption}</figure>`;
+  return `<figure class="game-visual-asset ${modifier}"><img src="${escapeHtml(src)}?v=8.73" alt="${escapeHtml(alt)}" loading="lazy">${badge}${caption}</figure>`;
 }
 function stadiumFieldVisualPath(score){
   const quality = clamp(Math.round(Number(score || 0)), 0, 100);
@@ -1521,9 +1521,6 @@ function renderManagerStats(){
   const totals = game.managerStats.totals;
   const seasons = game.managerStats.seasons.slice().sort((a,b)=>(b.season || 0)-(a.season || 0));
   const career = (game.managerStats.careerHistory || []).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  const breakdown = typeof managerPrestigeBreakdown === 'function' ? managerPrestigeBreakdown(game.managerStats) : { total:Number(game.managerStats.prestige || 0), experiencePrestige:0, winPrestige:0, objectivePrestige:0, championPrestige:0, badSeasonPenalty:0, dismissalPenalty:0 };
-  const prestige = breakdown.total;
-  const prestigeLabel = typeof formatManagerPrestige === 'function' ? formatManagerPrestige(prestige) : String(Math.floor(Number(prestige || 0)));
   const localExperience = Number(game.managerStats.experience || 0);
   const experience = typeof currentManagerExperience === 'function' ? currentManagerExperience() : localExperience;
   const unlockedAchievements = typeof managerUnlockedAchievements === 'function' ? managerUnlockedAchievements() : [];
@@ -1553,13 +1550,12 @@ function renderManagerStats(){
     const objectiveName = item.objectiveLabel ? escapeHtml(item.objectiveLabel) : (Number.isFinite(Number(item.objectivePpg)) ? Number(item.objectivePpg).toFixed(2) : '—');
     const objectiveLabel = Number.isFinite(Number(item.objectivePpg)) ? `${objectiveName} ${item.objectiveAchieved ? '<span class="ok">✓</span>' : '<span class="muted">×</span>'}` : objectiveName;
     const deltaLabel = Number.isFinite(Number(item.objectiveDelta)) ? ` <span class="small muted">${Number(item.objectiveDelta) >= 0 ? '+' : ''}${Number(item.objectiveDelta).toFixed(2)}</span>` : '';
-    const prestigeLabel = Number.isFinite(Number(item.managerPrestigeObjectiveReward)) && Number(item.managerPrestigeObjectiveReward) !== 0 ? ` <span class="small ${Number(item.managerPrestigeObjectiveReward) > 0 ? 'ok' : 'danger'}">${Number(item.managerPrestigeObjectiveReward) > 0 ? '+' : ''}${Number(item.managerPrestigeObjectiveReward)}</span>` : '';
     return `<tr>
     <td>${item.season}</td>
     <td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || clubName(item.clubId))}</td>
     <td>${escapeHtml(item.divisionName || '—')}</td>
     <td><strong>${escapeHtml(item.label || (item.position === 1 ? 'Campeón' : `${item.position || '—'}°`))}</strong></td>
-    <td>${objectiveLabel}${deltaLabel}${prestigeLabel}</td>
+    <td>${objectiveLabel}${deltaLabel}</td>
     <td>${Number(item.ppg || 0).toFixed(2)}</td>
     <td>${item.pts || 0}</td><td>${item.pg || 0}</td><td>${item.pe || 0}</td><td>${item.pp || 0}</td><td>${item.gf || 0}</td><td>${item.gc || 0}</td>
   </tr>`;
@@ -1581,20 +1577,16 @@ function renderManagerStats(){
     if(typeof challengeEnsureOnlineMedalsLoaded === 'function') setTimeout(() => challengeEnsureOnlineMedalsLoaded(), 0);
     return;
   }
-  view.innerHTML = `<div class="row section-title"><div><h2>Perfil e historial</h2><p class="tagline">Historial acumulado y prestigio propio de esta carrera.</p></div></div>
-    <div class="grid cols-6 compact-team-stats">
-      <div class="card manager-prestige-card"><p class="label">Prestigio manager</p><strong>${prestigeLabel}</strong><span class="small muted">Propio de este slot. Clubes de prestigio ${MANAGER_CLUB_OPEN_PRESTIGE} o menos: libres.</span></div>
-      <div class="card"><p class="label">Puntos experiencia</p><strong>${experience}</strong><span class="small muted">Compartidos como perfil; el prestigio no se comparte entre slots.</span></div>
+  view.innerHTML = `<div class="row section-title"><div><h2>Estadísticas de la carrera</h2><p class="tagline">Resultados acumulados del mánager en esta partida.</p></div></div>
+    <div class="grid cols-4 compact-team-stats">
       <div class="card"><p class="label">Partidos</p><strong>${totals.played || 0}</strong></div>
       <div class="card"><p class="label">Ganados</p><strong>${totals.won || 0}</strong></div>
       <div class="card"><p class="label">Empatados</p><strong>${totals.drawn || 0}</strong></div>
       <div class="card"><p class="label">Perdidos</p><strong>${totals.lost || 0}</strong></div>
       <div class="card"><p class="label">GF / GC</p><strong>${totals.gf || 0} / ${totals.gc || 0}</strong></div>
       <div class="card"><p class="label">Títulos obtenidos</p><strong>${game.managerStats.titles || 0}</strong></div>
-      <div class="card"><p class="label">Victorias p/ prestigio</p><strong>${Math.floor((totals.won || 0) / MANAGER_PRESTIGE_WINS_STEP)}</strong><span class="small muted">1 cada ${MANAGER_PRESTIGE_WINS_STEP} victorias</span></div>
-      <div class="card"><p class="label">Objetivos / directiva</p><strong>${Number(breakdown.objectivePrestige || 0)}</strong><span class="small muted">dinámico por PPG vs objetivo</span></div>
-      <div class="card"><p class="label">Títulos / penalizaciones</p><strong>${Number(breakdown.championPrestige || 0)} / -${Number(breakdown.badSeasonPenalty || 0) + Number(breakdown.dismissalPenalty || 0)}</strong></div>
-      <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">conseguidos y pendientes visibles</span></div>
+      <div class="card"><p class="label">Puntos de experiencia</p><strong>${experience}</strong><span class="small muted">Experiencia acumulada del perfil.</span></div>
+      <div class="card"><p class="label">Hitos personales</p><strong>${unlockedAchievements.length}/${achievementTotal || 0}</strong><span class="small muted">Conseguidos y pendientes.</span></div>
     </div>
     <div class="card" style="margin-top:14px"><h3>Finales de temporada</h3>
       <div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Posición</th><th>Objetivo</th><th>PPG</th><th>PTS</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th></tr></thead><tbody>${rows || '<tr><td colspan="12" class="muted">Aún no finalizaste ninguna temporada.</td></tr>'}</tbody></table></div>

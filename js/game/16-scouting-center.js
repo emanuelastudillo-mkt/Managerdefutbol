@@ -1009,7 +1009,7 @@ const SCOUTING_SVG_ICONS = new Set(['binoculares','ojeador','oficina','informe',
 function scoutingSvgIcon(name='binoculares', extraClass=''){
   const safeName = SCOUTING_SVG_ICONS.has(String(name)) ? String(name) : 'binoculares';
   const safeClass = String(extraClass || '').replace(/[^a-z0-9_-]/gi, '');
-  return `<img class="scouting-svg-icon ${safeClass}" src="assets/icons/scouting/${safeName}.svg?v=8.57" alt="" aria-hidden="true" loading="lazy">`;
+  return `<img class="scouting-svg-icon ${safeClass}" src="assets/icons/scouting/${safeName}.svg?v=8.73" alt="" aria-hidden="true" loading="lazy">`;
 }
 function scoutingRepeatedIcons(icon, active=0, total=null, className=''){
   const safeActive = Math.max(0, Math.round(Number(active || 0)));

@@ -1027,8 +1027,8 @@ function finalizeSeasonIfNeeded(options={}){
       promoted,
       championPrize: champion ? seasonChampionPrizeAmount(division) : 0,
       promotionPrize: promoted && (!champion || prizeConfig.acumularCampeonatoYAscenso) ? seasonPromotionPrizeAmount(division) : 0,
-      managerPrestigeChampionReward: champion ? championPrestigeRewardByDivisionOrder(division.order || divisionOrderFromName(division.name)) : 0,
-      managerPrestigeBadSeasonPenalty: managerObjectiveBadSeasonPenalty({ relegated:wasRelegated, last:finishedLast })
+      managerPrestigeChampionReward: 0,
+      managerPrestigeBadSeasonPenalty: 0
     };
     record.totalSeasonPrize = Math.max(0, Math.round(Number(record.championPrize || 0) + Number(record.promotionPrize || 0)));
     if(!game.managerStats.seasons.some(s => s.season === record.season)){
@@ -1044,24 +1044,17 @@ function finalizeSeasonIfNeeded(options={}){
       record.objectiveSource = game.managerStats.currentSeason?.objectiveSource || '';
       record.objectiveFixed = Boolean(game.managerStats.currentSeason?.objectiveFixed);
       record.objectivePrestigeRelative = game.managerStats.currentSeason?.objectivePrestigeRelative;
-      record.managerPrestigeObjectiveReward = objectiveReward.points;
+      record.managerPrestigeObjectiveReward = 0;
       record.objectivePrestigeLabel = objectiveReward.label;
       record.ppg = seasonPpg;
       game.managerStats.seasons.push(record);
       if(champion) recordManagerOfficialTitleForState(game, { season:record.season, year:game.seasonYear, type:'league', competitionId:division.id, competitionName:division.name, clubId:game.selectedClubId, clubName:clubName(game.selectedClubId) });
       game.managerStats = normalizeManagerStats(game.managerStats);
       if(typeof checkManagerAchievements === 'function') checkManagerAchievements({ silent:false });
-      if(Number(objectiveReward.points || 0) !== 0){
-        const sign = objectiveReward.points > 0 ? 'Suma' : 'Resta';
-        pushGameMessage({ type:'directiva', priority:objectiveReward.points > 0 ? 'normal' : 'high', title:objectiveReward.label, body:`${record.clubName}: ${seasonPpg.toFixed(2)} PPG / objetivo ${Number(objective || 0).toFixed(2)}. ${sign} ${Math.abs(objectiveReward.points)} punto(s) de prestigio de manager.`, id:`objective-prestige-${record.season}-${record.clubId}` });
-      }
     }
     if(champion){
-      pushGameMessage({ type:'deportivo', priority:'high', title:'Has salido campeón', body:`Felicitaciones: ${clubName(game.selectedClubId)} salió campeón de ${division.name}. Suma ${record.managerPrestigeChampionReward} puntos de prestigio de manager.`, id:`champion-${game.seasonNumber || 1}-${game.selectedClubId}` });
+      pushGameMessage({ type:'deportivo', priority:'high', title:'Has salido campeón', body:`Felicitaciones: ${clubName(game.selectedClubId)} salió campeón de ${division.name}. El logro será considerado en la evaluación integral de la temporada.`, id:`champion-${game.seasonNumber || 1}-${game.selectedClubId}` });
       if(typeof awardSpecialChampionPoints === 'function') awardSpecialChampionPoints(division);
-    }
-    if(record.managerPrestigeBadSeasonPenalty > 0){
-      pushGameMessage({ type:'directiva', priority:'high', title:'Prestigio de manager reducido', body:`Descender o terminar último resta ${record.managerPrestigeBadSeasonPenalty} puntos de prestigio de manager.`, id:`bad-season-prestige-${game.seasonNumber || 1}-${game.selectedClubId}` });
     }
     if(typeof finalizeActiveManagerChallenge === 'function') finalizeActiveManagerChallenge(record);
   }

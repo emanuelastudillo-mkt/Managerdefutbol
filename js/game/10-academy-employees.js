@@ -744,7 +744,7 @@ function academyYouthVisualMarkup(count, capacity=academyCapacity()){
       badge
     });
   }
-  return `<figure class="game-visual-asset academy-youth-occupancy-visual"><img src="${path}?v=8.57" alt="${safeCount} juveniles entrenando en Tu Academia" loading="lazy"><span class="game-visual-asset-badge">${badge}</span></figure>`;
+  return `<figure class="game-visual-asset academy-youth-occupancy-visual"><img src="${path}?v=8.73" alt="${safeCount} juveniles entrenando en Tu Academia" loading="lazy"><span class="game-visual-asset-badge">${badge}</span></figure>`;
 }
 function academySortControlsMarkup(){
   const mode = String(game?.academy?.sortMode || 'edad_asc');
@@ -765,7 +765,7 @@ function academyResidenceVisualMarkup(count=academyResidenceCount()){
   if(typeof stadiumVisualAssetMarkup === 'function'){
     return stadiumVisualAssetMarkup(academyResidenceVisualPath(safeCount), `Complejo con ${safeCount} residencia${safeCount === 1 ? '' : 's'} juvenil${safeCount === 1 ? '' : 'es'}`, { modifier:'residence-visual', badge:`${safeCount}/10 residencias` });
   }
-  return `<figure class="game-visual-asset residence-visual"><img src="${academyResidenceVisualPath(safeCount)}?v=8.57" alt="Complejo con ${safeCount} residencias juveniles" loading="lazy"></figure>`;
+  return `<figure class="game-visual-asset residence-visual"><img src="${academyResidenceVisualPath(safeCount)}?v=8.73" alt="Complejo con ${safeCount} residencias juveniles" loading="lazy"></figure>`;
 }
 function academyResidenceLimit(){
   return typeof youthTrainingResidenceLimit === 'function' ? Math.max(0, Math.round(Number(youthTrainingResidenceLimit() || 0))) : 0;

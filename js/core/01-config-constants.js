@@ -32,10 +32,10 @@ const PLAYERS_DATABASE_URLS = Array.isArray(PLAYERS_DATABASE_URLS_RAW) ? PLAYERS
 const MANUAL_PLAYERS_DATABASE_URL = configValue('data.manualPlayersUrl', 'data/jugadores_manuales.json');
 const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.json');
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
-const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.57');
-const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.57');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.57');
-const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.57');
+const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.73');
+const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.73');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.73');
+const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.73');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
   'data/estadios_argentina.json',
@@ -56,7 +56,7 @@ const FANS_DATABASE_CANDIDATES = configValue('data.hinchasUrls', [
   'data/hinchas_rumania.json'
 ]);
 const MATCH_COMMENTARY_DATABASE_URL = configValue('data.relatosPartidoUrl', 'data/relatos_partido.json');
-const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.57', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
+const LEAGUE_DATA_CANDIDATES = configValue('data.leagueUrls', ['data/Liga Argentina.json?v=8.73', 'data/Liga argentina.json', 'data/Liga_argentina.json', 'data/liga_argentina.json', 'data/liga-argentina.json']);
 const DB_NAME = 'futbol-manager-mvp';
 const DB_STORE = 'saves';
 const SAVE_KEY = 'main';

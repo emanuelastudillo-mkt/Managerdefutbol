@@ -488,7 +488,7 @@ function managerHiddenObjectiveFinalizeDismissal(info, evaluation, chance, roll)
     type:'directiva',
     priority:'high',
     title:'Despido del manager',
-    body:`La directiva decidió finalizar tu ciclo por no alcanzar el objetivo deportivo. El despido resta ${MANAGER_PRESTIGE_DISMISSAL_PENALTY} puntos de prestigio. Podés buscar otro club sin reiniciar el mundo de la partida.`,
+    body:`La directiva decidió finalizar tu ciclo por no alcanzar el objetivo deportivo. El impacto profesional se calculará dentro de la evaluación integral de esta etapa. Podés buscar otro club sin reiniciar el mundo de la partida.`,
     id:`dismissal-v842-${record.season}-${record.clubId}`
   });
   queueAutomaticRankingSubmission('dismissal');

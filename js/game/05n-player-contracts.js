@@ -1,4 +1,4 @@
-/* V8.75 · Contratos de jugadores, negociación manual, renovaciones bot,
+/* V8.77 · Contratos de jugadores, negociación manual, renovaciones bot,
    control de plantel al inicio de temporada y vista táctica de grupos. */
 
 (function(){
@@ -218,6 +218,8 @@
     refresh();
   }
 
+  window.openPlayerContractNegotiation=pcOpenNegotiation;
+
   function pcSortPlayers(players){
     const byName=(a,b)=>String(a.name||'').localeCompare(String(b.name||''),'es');
     const sorters={
@@ -396,10 +398,58 @@
     }
     if(typeof showPlayerModal==='function'){
       const original=showPlayerModal;
-      showPlayerModal=function(playerId){ const result=original(playerId); const player=typeof playerById==='function'?playerById(playerId):null; if(!player||Number(player.clubId)!==Number(game?.selectedClubId)) return result; pcNormalizeContract(player); const stack=document.querySelector('.player-modal-grid .stack'); if(stack&&!stack.querySelector('.player-contract-card')){ const disposition=pcTrustDisposition(player); stack.insertAdjacentHTML('beforeend',`<div class="card inner player-contract-card"><h3>Contrato</h3><div class="stat-rank"><span>Vigencia</span><strong>Hasta temporada ${Number(player.contractEndSeason||pcSeason())}</strong></div><div class="stat-rank"><span>Sueldo anual</span><strong>${formatMoney(player.salary||0)}</strong></div><div class="stat-rank"><span>Predisposición</span><strong class="${disposition.tone}">${escapeHtml(disposition.label)}</strong></div>${pcNegotiationWindow(player).available?`<button class="ghost full" data-modal-renew-player="${player.id}">Negociar renovación</button>`:`<p class="muted small">${pcNegotiationWindow(player).reason==='too_early'?'La negociación se habilita cuando resten dos temporadas o menos.':'Debe acercarse al vencimiento o mejorar su confianza para extender el contrato.'}</p>`}</div>`); document.querySelector('[data-modal-renew-player]')?.addEventListener('click',()=>{closeModal();pcOpenNegotiation(player.id);}); } return result; };
+      showPlayerModal=function(playerId){
+        const result=original(playerId);
+        const player=typeof playerById==='function'?playerById(playerId):null;
+        if(!player||Number(player.clubId)!==Number(game?.selectedClubId)) return result;
+        pcNormalizeContract(player);
+        const disposition=pcTrustDisposition(player);
+        const windowInfo=pcNegotiationWindow(player);
+        const blocked=pcContractBlocked(player);
+        const metrics=document.querySelector('.player-modal-landscape .player-profile-metrics');
+        if(metrics&&!metrics.querySelector('.player-contract-metric')){
+          const salaryMetric=[...metrics.children].find(node=>String(node.querySelector('span')?.textContent||'').trim().toLowerCase()==='salario');
+          const target=salaryMetric||metrics.lastElementChild;
+          if(target){
+            const remaining=pcContractYearsRemaining(player);
+            target.classList.add('player-contract-metric');
+            target.insertAdjacentHTML('beforeend',`<small>Contrato hasta T${Number(player.contractEndSeason||pcSeason())} · ${remaining===0?'vence al cierre':`${remaining} temp. futura(s)`} · ${escapeHtml(disposition.label)}</small>`);
+          }
+        }
+        const actionCard=document.querySelector('.player-modal-landscape .player-action-card');
+        const actions=actionCard?.querySelector('.message-actions');
+        if(actions&&!actions.querySelector('[data-modal-renew-player]')&&!actions.querySelector('[data-modal-renew-disabled]')){
+          let label='Negociar renovación';
+          let title=`Contrato hasta T${Number(player.contractEndSeason||pcSeason())}. ${disposition.label}.`;
+          let disabled=false;
+          if(blocked){
+            label=`Retomar ${player.contractRejectedUntil}`;
+            title=`La propuesta anterior fue rechazada. Podés retomar la negociación el ${player.contractRejectedUntil}.`;
+            disabled=true;
+          }else if(!windowInfo.available){
+            disabled=true;
+            if(windowInfo.reason==='too_early'){
+              label='Contrato aún vigente';
+              title='La renovación se habilita cuando resten dos temporadas o menos.';
+            }else{
+              label='Mejorar confianza';
+              title='La confianza actual no permite ofrecer una extensión superior a la vigencia existente.';
+            }
+          }
+          actions.insertAdjacentHTML('beforeend',`<button class="${disabled?'ghost':'primary'}" type="button" ${disabled?'disabled data-modal-renew-disabled="1"':`data-modal-renew-player="${player.id}"`} title="${escapeHtml(title)}">${escapeHtml(label)}</button>`);
+          actions.querySelector('[data-modal-renew-player]')?.addEventListener('click',event=>{
+            event.stopPropagation();
+            closeModal();
+            pcOpenNegotiation(player.id);
+          });
+        }
+        return result;
+      };
     }
   }
 
   pcInstallHooks();
-  window.PLAYER_CONTRACTS_V875={ensure:ensureAllPlayerContracts,render:renderPlayerContracts,groups:renderTacticGroups,negotiate:negotiatePlayerContract,transition:processPlayerContractSeasonTransition,rosterCheck:processManagerRosterComplianceDaily};
+  const playerContractsApi={ensure:ensureAllPlayerContracts,render:renderPlayerContracts,groups:renderTacticGroups,negotiate:negotiatePlayerContract,openNegotiation:pcOpenNegotiation,transition:processPlayerContractSeasonTransition,rosterCheck:processManagerRosterComplianceDaily};
+  window.PLAYER_CONTRACTS_V875=playerContractsApi;
+  window.PLAYER_CONTRACTS_V877=playerContractsApi;
 })();

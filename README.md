@@ -1,37 +1,39 @@
-# Una Vida de Mánager · V8.76 incremental
+# Una Vida de Mánager · V8.77 incremental
 
-Aplicar sobre **V8.75** conservando la estructura de carpetas.
+Aplicar sobre **V8.76** conservando la estructura de carpetas.
 
-## Corrección de frecuencia de eventos de carrera
+## Renovaciones visibles desde la ficha
 
-- Se corrigió la repetición excesiva de `Los referentes piden una definición` en partidas iniciadas antes de incorporar el motor de eventos.
-- La causa era la ausencia de un identificador estable de etapa laboral en algunas partidas migradas. El sistema podía interpretar días consecutivos como etapas distintas y reiniciar sus bloqueos.
-- Las etapas duplicadas de la misma temporada y club se consolidan automáticamente al cargar.
-- Los mensajes y registros anteriores también se utilizan como bloqueo, aunque el estado interno antiguo estuviera incompleto.
-- Una misma decisión interactiva sólo puede aparecer una vez durante una etapa laboral, salvo futuros eventos configurados expresamente con otro límite.
-- El evento de referentes requiere ahora una tensión más clara:
-  - al menos ocho partidos de temporada;
-  - al menos cinco partidos desde la llegada del mánager;
-  - confianza general inferior a 45 o confianza de referentes inferior a 42.
-- Se amplió a 90 días la protección contra repetición del mismo evento.
-- Dos decisiones de la misma categoría deben quedar separadas por al menos 35 días.
-- Las decisiones interactivas deben quedar separadas por al menos 21 días.
+- La renovación continúa disponible desde **Primer equipo → Contratos**.
+- Se corrigió el acceso desde la ficha horizontal del jugador, que todavía buscaba la estructura anterior a V8.74.
+- La ficha de un jugador del club dirigido muestra ahora:
+  - temporada de vencimiento;
+  - tiempo restante;
+  - predisposición contractual;
+  - botón **Negociar renovación**.
+- El botón permanece visible pero desactivado cuando:
+  - restan más de dos temporadas;
+  - la confianza no permite extender el contrato actual;
+  - existe un bloqueo temporal después de una propuesta rechazada.
+- En esos casos se muestra el motivo o la fecha en la que puede retomarse la negociación.
 
-## Llegada a un nuevo club
+## Funcionamiento de la negociación
 
-- Al asumir un equipo se aplican 21 días de adaptación antes de generar eventos especiales de carrera.
-- También deben haberse disputado al menos cuatro partidos desde la llegada.
-- Los eventos pendientes duplicados del mismo tipo se cierran y unifican sin aplicar nuevas consecuencias.
-- Los eventos del club anterior no reinician ni contaminan el vestuario del nuevo equipo.
+- Se elige la duración permitida por confianza y edad.
+- Se selecciona una propuesta salarial ajustada, recomendada o generosa.
+- Antes de enviarla se informa el salario propuesto y la probabilidad estimada de aceptación.
+- El descontento eleva la exigencia, limita los años disponibles y reduce la posibilidad de aceptación.
+- Una relación positiva facilita la renovación y habilita contratos más largos.
 
 ## Compatibilidad
 
-- Compatible con partidas de V8.75 y anteriores migradas hasta esa versión.
-- Los eventos ya respondidos permanecen en el historial; no se revierten sus efectos.
+- Compatible con partidas de V8.76.
+- No modifica contratos ya firmados ni reinicia intentos anteriores.
 - No requiere cambios de Worker, SQL ni recursos gráficos.
 
 ## Archivos modificados
 
 - `config.js`
 - `index.html`
-- `js/game/05m-manager-career-events.js`
+- `js/game/05n-player-contracts.js`
+- `styles/185-player-contracts-groups.css`

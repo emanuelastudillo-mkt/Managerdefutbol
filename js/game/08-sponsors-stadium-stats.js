@@ -1375,12 +1375,14 @@ function competitionsNavMarkup(active='standings'){
   return `<div class="row competition-controls">
     <button type="button" id="btnCompetitionStandings" class="${current === 'standings' ? 'primary' : 'ghost'}">Tabla de posiciones</button>
     <button type="button" id="btnCompetitionStats" class="${current === 'stats' ? 'primary' : 'ghost'}">Estadísticas</button>
+    <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
 }
 function bindCompetitionsNav(){
   $('btnCompetitionStandings')?.addEventListener('click', () => { selectedCompetitionView = 'standings'; renderStandings(); });
   $('btnCompetitionStats')?.addEventListener('click', () => { selectedCompetitionView = 'stats'; renderStandings(); });
+  $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
 function competitionChampionEntriesFromStandingsHistory(){
@@ -1452,7 +1454,7 @@ function renderChampionsHistory(){
       return `<tr>
         <td>${escapeHtml(entry.competitionName)}</td>
         <td>${clubLink(entry.championId)}</td>
-        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : 'Liga'}</td>
+        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : entry.type === 'national_cup' ? 'Copa nacional' : entry.type === 'national_supercup' ? 'Supercopa' : 'Liga'}</td>
         <td class="muted small">${extra || '—'}</td>
       </tr>`;
     }).join('');
@@ -1460,13 +1462,19 @@ function renderChampionsHistory(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: campeones de cada liga y de la Copa Mundial de Clubes por temporada.</p></div>
+      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, supercopas y Mundial de Clubes por temporada.</p></div>
       ${competitionsNavMarkup('champions')}
     </div>
     <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar el Mundial de Clubes.</p></div>'}</div>`;
   bindCompetitionsNav();
 }
 function renderStandings(){
+  if(String(selectedCompetitionView || 'standings') === 'national-cups'){
+    view.innerHTML = typeof nationalCupsCompetitionMarkup === 'function' ? nationalCupsCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de copas nacionales no está disponible.</p></div>';
+    bindCompetitionsNav();
+    document.querySelectorAll('[data-match-id]').forEach(element => element.addEventListener('click', () => showMatchModal(element.dataset.matchId)));
+    return;
+  }
   if(String(selectedCompetitionView || 'standings') === 'champions'){ renderChampionsHistory(); return; }
   if(String(selectedCompetitionView || 'standings') === 'stats'){ renderStats(); return; }
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];

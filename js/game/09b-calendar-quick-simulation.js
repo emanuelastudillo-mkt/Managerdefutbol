@@ -498,7 +498,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot','winnerRequiredResolved','winnerRequiredReason'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot','winnerRequiredResolved','winnerRequiredReason','nationalCup','nationalCupId','nationalCupStage','nationalCupStageLabel','nationalCupCountry','nationalSupercup','stadiumClubId','stadiumName','stadiumCapacity','attendance','homeAttendance','awayAttendance','ticketPrice','ticketRevenue','nationalCupRevenuePaid'
   ];
   const data = {};
   fields.forEach(field => {
@@ -518,12 +518,15 @@ function simulateDueMatchesUntil(targetDate, options={}){
     const rawResult = simulateScheduledMatch(item.match);
     let result = typeof finalizeWinnerRequiredMatchResult === 'function' ? finalizeWinnerRequiredMatchResult(item.match, rawResult) : rawResult;
     result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, result) : result;
+    result = typeof finalizeNationalCupMatchResult === 'function' ? finalizeNationalCupMatchResult(item.match, result) : result;
     markScheduledResult(item, result);
     results.push(result);
   });
   if(results.length){
     game.matchHistory.push(...results);
     advanceCompletedRegularRounds();
+    if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
+    if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();
     if(typeof runDailyMatchStatsIntegrityRepair === 'function') runDailyMatchStatsIntegrityRepair({ reason:'after_due_match_simulation', force:true, silent:true });
   }
   return results;
@@ -1083,6 +1086,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     : { sanctioned:false, restored:false, charged:0 };
   if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'daily_calendar' });
   if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar' });
+  const nationalCupDaily = typeof processNationalCupsDaily === 'function' ? processNationalCupsDaily({ source:'daily_calendar' }) : null;
   if(managerWithoutClub){
     if(typeof processAcademyTurn === 'function') processAcademyTurn();
     if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
@@ -1098,7 +1102,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
@@ -1493,10 +1497,13 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   } = context;
   ownResult = typeof finalizeWinnerRequiredMatchResult === 'function' ? finalizeWinnerRequiredMatchResult(ownInfo?.match, ownResult) : ownResult;
   ownResult = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(ownInfo?.match, ownResult) : ownResult;
+  ownResult = typeof finalizeNationalCupMatchResult === 'function' ? finalizeNationalCupMatchResult(ownInfo?.match, ownResult) : ownResult;
   const results = [ownResult];
   if(ownInfo?.match) markScheduledResult({ match:ownInfo.match, date:targetDate }, ownResult);
   game.matchHistory.push(ownResult);
   advanceCompletedRegularRounds();
+  if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
+  if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();
   applyConditionUpdates(results);
   applyMoraleUpdates(results);
   if(typeof applyFanChangesAfterMatches === 'function') applyFanChangesAfterMatches(results);
@@ -1836,6 +1843,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   game.currentDate = dateForSeasonState(game);
   rememberCalendarDate();
   advanceGlobalTurn();
+  if(typeof processNationalCupsDaily === 'function') processNationalCupsDaily({ source:'preseason' });
   if(typeof processActiveSpecialCardUsageDaily === 'function') processActiveSpecialCardUsageDaily({ save:false, source:'preseason' });
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'

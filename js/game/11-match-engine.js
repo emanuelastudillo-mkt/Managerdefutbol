@@ -227,7 +227,7 @@ function removeOwnUnavailableFromTactic(problems=[]){
   }
 }
 
-/* V8.78 · Definiciones por penales para competiciones que exigen ganador. */
+/* V8.79 · Definiciones por penales para competiciones que exigen ganador. */
 function competitionMatchRule(match, key, fallback=undefined){
   const sources = [
     match?.competitionRules,

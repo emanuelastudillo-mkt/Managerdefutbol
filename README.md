@@ -1,87 +1,35 @@
-# Una Vida de Mánager · V8.78 incremental
+# Una Vida de Mánager · V8.79 incremental
 
-Aplicar sobre **V8.77** conservando la estructura de carpetas.
+## Copas nacionales
 
-## Tandas de penales
+- Copa Argentina, Copa Chile, Copa del Rey, Copa Rumana, FA Cup y Copa Brasil.
+- Sorteos durante los días 20, 21, 22, 23, 24 y 25.
+- Copa Argentina: 54 participantes; 10 clasificados directamente y 44 equipos en fase previa.
+- Las demás copas: 18 participantes; 14 clasificados directamente y 4 equipos en fase previa.
+- Rondas en el primer miércoles de marzo, mayo, junio, agosto, septiembre y octubre.
+- Las seis finales se disputan en octubre.
+- Partidos únicos en estadios neutrales de clubes con buena reputación, sin bonificación de localía.
+- Distribución inicial de la capacidad entre ambas hinchadas y reasignación de lugares libres para intentar completar el estadio.
+- Entradas de $200, $250, $300, $350, $500 o $1,000 según la instancia.
+- El ganador de cada partido recibe el 100% de la recaudación.
+- Todos los empates se definen mediante tanda de penales.
 
-- Se agregó una definición por penales para partidos cuya competición exige un ganador.
-- Se aplica inicialmente a las fases de eliminación directa del Mundial de Clubes:
-  - octavos;
-  - cuartos;
-  - semifinales;
-  - partido por el tercer puesto;
-  - final.
-- La fase de grupos y las ligas continúan permitiendo empates.
-- Se eliminó el antiguo desempate del Mundial de Clubes por faltas y tarjetas.
+## Supercopas
 
-## Funcionamiento
+- Se juegan durante el día 300.
+- Participan el campeón de liga y el campeón de copa de cada país.
+- Si un club gana ambas competiciones, participa el siguiente equipo mejor ubicado de la liga.
+- Se disputan en el estadio de mayor capacidad del país, sin localía de los participantes.
+- Entrada de $1,000 y recaudación completa para el ganador.
+- Se registran como títulos oficiales, pero aportan menos valor al legado del mánager que los demás campeonatos.
 
-- Los equipos patean de forma alternada.
-- Se disputan hasta cinco rondas iniciales.
-- La tanda sólo puede finalizar después de que ambos equipos hayan ejecutado la misma cantidad de penales.
-- Se permite finalización anticipada cuando un equipo ya no puede alcanzar al otro.
-- Si continúan empatados después de cinco remates por equipo, comienza la muerte súbita.
-- En muerte súbita siempre patean ambos equipos antes de declarar al ganador.
-- Los jugadores sustituidos, expulsados o lesionados no integran la lista final de ejecutantes cuando puede reconstruirse quién terminó el partido.
+## Integración
 
-## Probabilidad de conversión
+- 144 partidos oficiales nuevos por temporada: 138 de copas nacionales y 6 supercopas.
+- Nueva vista `Competiciones → Copas nacionales` con llaves, fechas, resultados, campeones y supercopas.
+- Los partidos no alteran las tablas ni los goles de liga.
+- Los campeones quedan registrados en el historial de competiciones y, cuando corresponde, en los títulos del mánager.
+- Calendario, simulación rápida, simulación completa, partidos en vivo, economía, guardados y migraciones integrados.
+- Puede desactivarse mediante `calendario.copasNacionalesActivas` en `config.js`.
 
-La primera versión utiliza:
-
-- habilidad específica de penales, cuando existe;
-- remate;
-- serenidad;
-- técnica;
-- media general;
-- posición;
-- estado físico;
-- moral;
-- calidad del portero;
-- una influencia local mínima en sedes no neutrales.
-
-## Estadísticas
-
-Los goles de la tanda se guardan de forma separada y no se suman a:
-
-- marcador reglamentario;
-- goles de jugadores;
-- tabla de goleadores;
-- goles a favor o en contra;
-- estadísticas oficiales del partido.
-
-## Preparación para futuras copas
-
-Una competición futura puede exigir ganador usando:
-
-- `requiresWinner: true`;
-- `tieBreakMode: 'penalties'`;
-- `neutralVenue: true` cuando corresponda.
-
-También se admite un empate global en una vuelta mediante `aggregateHomeGoals` y `aggregateAwayGoals`, o mediante una estructura `aggregateScore`.
-
-## Interfaz
-
-- El resultado mantiene el marcador reglamentario.
-- Debajo se muestra el ganador y el resultado de la tanda.
-- El detalle del partido incluye cada ejecución, el jugador y si convirtió o falló.
-- La simulación viva muestra la definición al finalizar.
-
-## Compatibilidad
-
-- Compatible con partidas de V8.77.
-- Los partidos antiguos ya resueltos por el criterio anterior conservan su ganador.
-- No requiere cambios de Worker, SQL ni recursos gráficos.
-
-## Archivos modificados
-
-- `config.js`
-- `index.html`
-- `simulador-2.0.js`
-- `js/game/05d-founder-career.js`
-- `js/game/05f-club-world-cup.js`
-- `js/game/08-sponsors-stadium-stats.js`
-- `js/game/09b-calendar-quick-simulation.js`
-- `js/game/11-match-engine.js`
-- `js/game/17-live-match.js`
-- `js/ui/12-modals.js`
-- `styles/40-match-simulation.css`
+Compatible con partidas V8.78. Si una partida existente ya superó la primera ronda prevista al instalar V8.79, esa copa no reescribe el pasado y comienza normalmente desde la temporada siguiente.

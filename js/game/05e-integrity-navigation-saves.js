@@ -131,12 +131,14 @@ function rebuildSafeSeasonFixturesAfterStructureRepair(){
   if(!issues.length) return { rebuilt:false, reason:'sin_partidos_cruzados', blockedPlayedCross:0, issues };
   if(typeof generateFixturesForDivisions !== 'function') return { rebuilt:false, reason:'generador_no_disponible', blockedPlayedCross:0, issues };
   const nextRegular = generateFixturesForDivisions(seed.clubs || [], divisionOrderList(), { seasonYear:game.seasonYear || seasonYearForNumber(game.seasonNumber || 1) });
-  const previousRegular = (game.fixtures || []).filter(round => !isPromotionPlayoffRound(round));
-  const previousPlayoffs = (game.fixtures || []).filter(isPromotionPlayoffRound);
+  const isPersistentCompetition = round => Boolean(isPromotionPlayoffRound(round) || round?.clubWorldCupRound || round?.nationalCupRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup));
+  const previousRegular = (game.fixtures || []).filter(round => !isPersistentCompetition(round));
+  const previousPlayoffs = (game.fixtures || []).filter(isPersistentCompetition);
   const mergedRegular = typeof mergePlayedFixturesIntoCalendar === 'function'
     ? mergePlayedFixturesIntoCalendar(nextRegular, previousRegular)
     : nextRegular;
   game.fixtures = mergedRegular.concat(previousPlayoffs);
+  if(typeof sortFixturesAfterNationalCupChange === 'function') sortFixturesAfterNationalCupChange();
   game.calendarVersion = `${SEASON_CALENDAR_VERSION}-country-safe`;
   return { rebuilt:true, reason:'calendario_regenerado', fixed:issues.length, blockedPlayedCross:0, issues };
 }

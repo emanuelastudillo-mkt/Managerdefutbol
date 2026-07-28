@@ -1419,6 +1419,7 @@ function createPostRegularCompetitionsIfNeeded(){
   if(!game || game.seasonFinalized || !Array.isArray(game.fixtures)) return null;
   if(typeof managerChallengeIs === 'function' && managerChallengeIs()) return null;
   const createdKinds = [];
+  if(typeof createNationalSupercupIfNeeded === 'function') NATIONAL_CUP_COUNTRIES?.forEach?.(country => { if(createNationalSupercupIfNeeded(country)) createdKinds.push(`national_supercup_${nationalCupCountryKey(country)}`); });
   if(typeof createArgentinePromotionPlayoffsIfNeeded === 'function' && createArgentinePromotionPlayoffsIfNeeded()){
     createdKinds.push('promotion_playoff');
   }
@@ -1433,6 +1434,7 @@ function createPostRegularCompetitionsIfNeeded(){
     else if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates({ force:true });
     const messages = [];
     if(createdKinds.includes('promotion_playoff')) messages.push('Se creó el calendario de playoffs de promoción');
+    if(createdKinds.some(kind => String(kind).startsWith('national_supercup_'))) messages.push('se programaron las supercopas nacionales para el día 300');
     if(createdKinds.includes('club_world_cup')) messages.push(`se sorteó la Copa Mundial de Clubes de la FIFA el día ${clubWorldCupFixtureReadySeasonDay()}, con la primera fecha programada para el día ${clubWorldCupGroupSeasonDays()[0]}`);
     if(createdKinds.includes('club_world_cup_repaired')) messages.push('se reparó y reconstruyó el calendario del Mundial de Clubes');
     return { created:true, kind:createdKinds.join('+'), message:`${messages.join(' y ')}.` };

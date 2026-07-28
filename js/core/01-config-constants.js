@@ -76,6 +76,7 @@ const SEASON_START_MONTH = configNumber('calendario.mesInicioTemporada', 1, 1, 1
 const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31);
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
 const FAST_BOT_SIMULATION_ENABLED = configBoolean('calendario.simulacionRapidaBots', true);
+const NATIONAL_CUPS_ENABLED = configBoolean('calendario.copasNacionalesActivas', true);
 const LEAGUE_MATCH_DAY_RULES_RAW = configValue('calendario.diasPorLiga', []);
 const LEAGUE_MATCH_DAY_RULES = Array.isArray(LEAGUE_MATCH_DAY_RULES_RAW) ? LEAGUE_MATCH_DAY_RULES_RAW : [];
 function normalizeScheduleText(value){
@@ -117,7 +118,7 @@ function matchDateLabel(date){
 const LEAGUE_ROUND_INTERVAL_DAYS = configNumber('calendario.diasEntreFechasLiga', 7, 1, 30);
 const MIDSEASON_BREAK_AFTER_ROUND = configNumber('calendario.fechaPausaLuegoDe', 17, 0, 80);
 const MIDSEASON_BREAK_DAYS = configNumber('calendario.diasVacacionesMitadTemporada', 28, 0, 90);
-const SEASON_CALENDAR_VERSION = 'annual-365-daily-weekly-split-break-v4-playoffs';
+const SEASON_CALENDAR_VERSION = 'annual-365-daily-weekly-split-break-v5-national-cups';
 const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 10000, 0);
 const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
 const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);

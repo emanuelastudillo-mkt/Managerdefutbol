@@ -196,6 +196,7 @@ function normalizeGame(saved){
   normalized.argentinaPlayoffs = (normalized.argentinaPlayoffs && typeof normalized.argentinaPlayoffs === 'object' && !Array.isArray(normalized.argentinaPlayoffs)) ? normalized.argentinaPlayoffs : null;
   normalized.clubWorldCup = (normalized.clubWorldCup && typeof normalized.clubWorldCup === 'object' && !Array.isArray(normalized.clubWorldCup)) ? normalized.clubWorldCup : null;
   normalized.clubWorldCupHistory = normalizeClubWorldCupHistoryState(normalized.clubWorldCupHistory || {});
+  normalized.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState(normalized.nationalCups || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.nationalCups || null);
   if(normalized.clubWorldCup && typeof ensureClubWorldCupInvitedData === 'function') ensureClubWorldCupInvitedData();
   if(syncClubWorldCupHistoryForState(normalized)) normalized._needsAutosave = true;
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');

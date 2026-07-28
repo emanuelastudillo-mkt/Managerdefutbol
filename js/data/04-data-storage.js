@@ -2414,12 +2414,19 @@ function fixtureDataCrossCountryIssues(fixtures=[]){
 function fixtureRoundIsPlayoff(round){
   return Boolean(round?.playoffRound || (round?.matches || []).some(match => match?.playoff));
 }
+function fixtureRoundIsPersistentCompetition(round){
+  return Boolean(fixtureRoundIsPlayoff(round) || round?.clubWorldCupRound || round?.nationalCupRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup));
+}
+function fixtureRoundCalendarDate(round){
+  const dates = (round?.matches || []).map(match => validIsoDate(match?.date) ? match.date : '').filter(Boolean).sort();
+  return dates[0] || (validIsoDate(round?.date) ? round.date : '9999-12-31');
+}
 function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=null){
   const year = Math.round(Number(seasonYear || 0)) || seasonYearForNumber(seasonNumber || 1);
   const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year });
   const current = Array.isArray(existingFixtures) ? existingFixtures : [];
-  const playoffRounds = current.filter(fixtureRoundIsPlayoff);
-  const regularCurrent = current.filter(round => !fixtureRoundIsPlayoff(round));
+  const persistentCompetitionRounds = current.filter(fixtureRoundIsPersistentCompetition);
+  const regularCurrent = current.filter(round => !fixtureRoundIsPersistentCompetition(round));
   const fixtureCountryIssues = fixtureDataCrossCountryIssues(regularCurrent);
   const hasOnlyUnplayedCrossCountryFixtures = fixtureCountryIssues.length > 0 && !fixtureCountryIssues.some(item => item.played);
   const currentYear = String(regularCurrent?.[0]?.date || current?.[0]?.date || '').slice(0,4);
@@ -2430,7 +2437,9 @@ function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=nu
     || regularCurrent.some(round => (round.matches || []).some(match => !validIsoDate(match.date) || !Object.prototype.hasOwnProperty.call(match, 'roundDate')))
     || hasOnlyUnplayedCrossCountryFixtures;
   const normalizedRegular = needsCalendar ? mergePlayedFixturesIntoCalendar(expected, regularCurrent) : regularCurrent;
-  return normalizedRegular.concat(playoffRounds);
+  const combined = normalizedRegular.concat(persistentCompetitionRounds).sort((a,b)=>daysBetweenIsoDates(fixtureRoundCalendarDate(a), fixtureRoundCalendarDate(b)) || Number(a.matchday || 0)-Number(b.matchday || 0));
+  combined.forEach((round,index)=>{ round.matchday=index+1; (round.matches || []).forEach(match=>{ match.matchday=index+1; }); });
+  return combined;
 }
 
 

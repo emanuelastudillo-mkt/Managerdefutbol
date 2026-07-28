@@ -1645,6 +1645,7 @@ function startNextSeason(selectedClubId, options={}){
   game.seasonTransition = null;
   game.argentinaPlayoffs = null;
   game.clubWorldCup = null;
+  game.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState({}, game.seasonNumber, game.seasonYear) : null;
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;

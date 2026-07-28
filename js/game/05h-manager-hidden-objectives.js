@@ -1,4 +1,4 @@
-/* V8.42 · Objetivos secundarios ocultos, continuidad contractual y legado por club. */
+/* V8.79 · Objetivos secundarios, continuidad contractual y legado por club con títulos ponderados. */
 
 function managerHiddenObjectiveConfig(){
   const raw = window.GAME_BALANCE_MANAGER?.contratosManager?.objetivosSecundariosOcultos;
@@ -24,6 +24,11 @@ function managerHiddenObjectiveConfig(){
     clauseConvictions:Math.max(1, Math.round(Number(cfg.clausulas?.jugadoresConvencidos ?? 1))),
     clauseDismissalReduction:clamp(Number(cfg.clausulas?.reduccionDespido ?? 5), 0, 100)
   };
+}
+
+function managerOfficialTitleLegacyPoints(title, cfg=managerHiddenObjectiveConfig()){
+  const base = Math.max(0, Math.round(Number(cfg?.pointsPerTitle || 0)));
+  return String(title?.type || '') === 'national_supercup' ? Math.max(1, Math.round(base * 0.4)) : base;
 }
 
 function managerHiddenObjectiveSeasonKey(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
@@ -233,7 +238,7 @@ function migrateManagerClubLegacyFromHistoricalStats(stats={}, existingRecords=[
       season,
       type:'title',
       label:`Título: ${title.competitionName || 'Competición'}`,
-      points:cfg.pointsPerTitle,
+      points:managerOfficialTitleLegacyPoints(title, cfg),
       context:'migration',
       date:String(title.createdAt || '')
     });
@@ -597,7 +602,7 @@ function managerFinalizeClubLegacyContribution(context='season_end', options={})
       season,
       type:'title',
       label:`Título: ${title.competitionName || 'Competición'}`,
-      points:cfg.pointsPerTitle,
+      points:managerOfficialTitleLegacyPoints(title, cfg),
       context,
       date:game.currentDate || ''
     });

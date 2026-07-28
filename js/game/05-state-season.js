@@ -356,8 +356,13 @@ function normalizeGame(saved){
   normalized.managerPlayerStatsHistory = normalizeManagerPlayerStatsHistory(normalized.managerPlayerStatsHistory);
   normalized.clubBudgets = (normalized.clubBudgets && typeof normalized.clubBudgets === 'object' && !Array.isArray(normalized.clubBudgets)) ? normalized.clubBudgets : {};
   seed.clubs.forEach(c => { if(!Number.isFinite(Number(normalized.clubBudgets[c.id]))) normalized.clubBudgets[c.id] = Math.round(Number(c.budget || 0)); });
-  normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (Number(normalized.clubBudgets[normalized.selectedClubId]) || seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
-  normalized.clubBudgets[normalized.selectedClubId] = Math.round(Number(normalized.budget || 0));
+  const normalizedManagerHasClub = !Boolean(normalized.gameOver?.active);
+  if(normalizedManagerHasClub){
+    normalized.budget = Number.isFinite(normalized.budget) ? normalized.budget : (Number(normalized.clubBudgets[normalized.selectedClubId]) || seed.clubs.find(c=>c.id===normalized.selectedClubId)?.budget || 0);
+    normalized.clubBudgets[normalized.selectedClubId] = Math.round(Number(normalized.budget || 0));
+  }else{
+    normalized.budget = 0;
+  }
   normalized.lastBudgetDelta = Number.isFinite(normalized.lastBudgetDelta) ? normalized.lastBudgetDelta : 0;
   normalized.budgetHistory = normalized.budgetHistory || [];
   normalized.transferBudget = typeof normalizeTransferBudgetState === 'function' ? normalizeTransferBudgetState(normalized.transferBudget, normalized) : (normalized.transferBudget || null);
@@ -2594,7 +2599,7 @@ function continueCareerAtClub(selectedClubId, options={}){
   }else{
     recordDismissedCareerStep();
   }
-  game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
+  // La caja del club saliente ya quedó persistida antes de limpiar el estado del mánager.
   game.selectedClubId = Number(newClub.id);
   game.selectedCountry = clubCountry(newClub);
   game.selectedLeagueId = newClub.divisionId || 'default';

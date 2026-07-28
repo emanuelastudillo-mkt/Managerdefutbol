@@ -944,7 +944,7 @@ function processMonthlyClubExpensesDaily(){
   let charged = 0;
   for(let i=0; i<months; i++){
     const tax = Math.round(Math.max(0, Number(game.budget || 0)) * MONTHLY_PROFIT_TAX_RATE);
-    if(tax > 0){ recordBudgetChange(-tax, 'Impuesto mensual de ganancias', { type:'monthly_profit_tax', rate:MONTHLY_PROFIT_TAX_RATE }); charged += tax; }
+    if(tax > 0){ recordBudgetChange(-tax, 'Impuesto mensual de riqueza', { type:'monthly_wealth_tax', rate:MONTHLY_PROFIT_TAX_RATE, managerClubOnly:true }); charged += tax; }
   }
   if(matches > 0){
     const electricity = Math.round(matches * (MONTHLY_ELECTRICITY_BASE_PER_MATCH + (capacity * MONTHLY_ELECTRICITY_CAPACITY_FACTOR)));

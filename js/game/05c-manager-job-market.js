@@ -500,7 +500,7 @@ function managerJobOfferCard(offer){
     ? 'Objetivo superior al normal y fichajes muy restringidos.'
     : 'Condiciones normales según reputación y división.';
   return `<article class="card job-offer-card ${highRisk ? 'warn' : ''}">
-    <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
+    <div class="row"><div><p class="label">Oferta laboral · vence ${escapeHtml(offer.expiresDate || '—')}</p><h3>${typeof clubLink === 'function' ? clubLink(club.id) : escapeHtml(club.name || 'Club')}</h3></div><span class="pill ${highRisk ? 'warn' : 'ok'}">${escapeHtml(tag)}</span></div>
     <p class="muted small">${escapeHtml(division?.name || 'Liga')} · Prestigio ${clubPrestigeValue(club)} · ${escapeHtml(note)}</p>
     <div class="job-offer-details"><p class="small"><strong>${escapeHtml(detail.objectiveText)}</strong></p><p class="muted small">${escapeHtml(detail.restrictionText)}</p></div>
     <div class="row message-actions"><button class="primary" data-accept-job-offer="${escapeHtml(offer.id)}">Aceptar cargo</button><button class="ghost" data-reject-job-offer="${escapeHtml(offer.id)}">Rechazar</button></div>
@@ -671,8 +671,10 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   const id = Number(clubId);
   const club = seed?.clubs?.find(c => Number(c.id) === id);
   ensureClubBudgetsState();
-  const baseBudget = Math.max(0, Math.round(Number(club?.budget || 0)));
-  game.clubBudgets[id] = baseBudget;
+  const persistentBudget = Number(game.selectedClubId || 0) === id
+    ? Math.round(Number(game.budget ?? game.clubBudgets[id] ?? club?.budget ?? 0))
+    : Math.round(Number(game.clubBudgets[id] ?? club?.budget ?? 0));
+  game.clubBudgets[id] = persistentBudget;
   if(Number(game.selectedClubId || 0) === id){
     game.budget = 0;
     game.seasonInitialBudget = 0;
@@ -696,7 +698,7 @@ function resetOutgoingClubStateAfterManagerExit(clubId=game?.selectedClubId, rea
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(id, game.seasonNumber || 1, 0) : game.transferBudget;
   game.managerJobContract = null;
   game.managerJobMarket = normalizeManagerJobMarketState(game.managerJobMarket || {});
-  pushGameMessage({ type:'sistema', priority:'normal', title:'Club saliente reiniciado', body:`${club?.name || 'El club anterior'} reinició economía, empleados del club, préstamos, lista activa de ojeo y sponsors tras tu salida. Tu Academia, su Predio, residencias y juveniles continúan bajo tu propiedad.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
+  pushGameMessage({ type:'sistema', priority:'normal', title:'Cambio de administración', body:`${club?.name || 'El club anterior'} conserva ${typeof formatMoney === 'function' ? formatMoney(persistentBudget) : persistentBudget} en caja. Se reiniciaron empleados contratados por el mánager, préstamos, lista activa de ojeo y sponsors. Tu Academia, su Predio, residencias y juveniles continúan bajo tu propiedad.`, id:`club-reset-after-${reason}-${id}-${game.seasonNumber || 1}-${game.globalTurn || 0}` });
 }
 
 

@@ -235,7 +235,7 @@ const PLAYER_STAR_REFERENCE_BONUS = configNumber('simulador.estrellaBonusReferen
 const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 30, 0) / DAYS_PER_ADVANCE);
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
-const APP_VERSION = configValue('version', 'V8.82');
+const APP_VERSION = configValue('version', 'V8.83');
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');
@@ -901,7 +901,7 @@ const LEAGUE_RESULT_PAYMENT_ROUNDING = Math.max(1, Math.round(configNumber('econ
 const LEAGUE_RESULT_LOSS_PAYMENT = Math.max(0, Math.round(configNumber('economia.pagosPorResultadoLiga.pagoDerrota', 0, 0)));
 
 const MONTHLY_EXPENSES_ENABLED = configBoolean('economia.gastosMensuales.activo', true);
-const MONTHLY_PROFIT_TAX_RATE = configNumber('economia.gastosMensuales.impuestoGananciasPct', 0.01, 0, 1);
+const MONTHLY_PROFIT_TAX_RATE = configNumber('economia.gastosMensuales.impuestoGananciasPct', 0.08, 0, 1);
 const MONTHLY_ELECTRICITY_BASE_PER_MATCH = Math.max(0, Math.round(configNumber('economia.gastosMensuales.electricidadBasePorPartido', 100000, 0)));
 const MONTHLY_ELECTRICITY_CAPACITY_FACTOR = Math.max(0, configNumber('economia.gastosMensuales.electricidadPorCapacidadPorPartido', 10, 0));
 const MONTHLY_CLEANING_PER_FAN_PER_MATCH = Math.max(0, configNumber('economia.gastosMensuales.limpiezaPorHinchaPorPartido', 10, 0));

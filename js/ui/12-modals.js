@@ -1302,6 +1302,10 @@ function showClubModal(clubId){
   const fieldPlayers = players.filter(p=>p.position !== 'POR');
   const rows = players.map(player => scoutingPlayerRow(player, { clickable:true })).join('');
   const isOwnClub = Number(club.id) === Number(game?.selectedClubId || 0);
+  const clubCash = typeof clubCashAvailable === 'function' ? clubCashAvailable(club.id) : Math.round(Number(game?.clubBudgets?.[club.id] ?? club.budget ?? 0));
+  const clubSalaryExpense = typeof totalClubSalary === 'function' ? totalClubSalary(club.id) : players.reduce((sum, player) => sum + Math.max(0, Number(player.salary || 0)), 0);
+  const stadiumCapacity = typeof clubStadiumCapacity === 'function' ? Math.max(0, Math.round(Number(clubStadiumCapacity(club.id) || 0))) : Math.max(0, Math.round(Number(club.stadiumCapacity || 0)));
+  const clubSupporters = typeof clubFansCurrent === 'function' ? Math.max(0, Math.round(Number(clubFansCurrent(club.id) || 0))) : Math.max(0, Math.round(Number(club.fans || club.hinchas || 0)));
   const isTeamScouted = Array.isArray(game?.scoutingCenter?.listedTeamIds) && game.scoutingCenter.listedTeamIds.map(Number).includes(Number(club.id));
   const teamScoutButton = isOwnClub ? '' : `<button class="ghost" data-add-scouting-team="${club.id}">${isTeamScouted ? 'En Centro de Ojeo' : 'Ojear equipo'}</button>`;
   const teamSectorReport = isTeamScouted && typeof scoutingTeamSectorMarkup === 'function' ? scoutingTeamSectorMarkup(club.id) : '<p class="muted small">Usá “Ojear equipo” para guardar un informe dinámico de Defensa, Medios y Delantera en el Centro de Ojeo.</p>';
@@ -1309,7 +1313,13 @@ function showClubModal(clubId){
     <div class="club-modal-head" style="clear:both">
       <p class="label">Club observado</p>
       <div class="row between"><h2>${clubBadge(club.id)}${escapeHtml(club.name)}</h2>${teamScoutButton}</div>
-      <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation} · Presupuesto base ${formatMoney(club.budget || 0)}</p>
+      <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation}</p>
+    </div>
+    <div class="grid cols-4 club-finance-profile-grid" style="margin:14px 0">
+      <div class="card inner"><p class="label">Dinero en caja</p><div class="metric small ${typeof budgetTone === 'function' ? budgetTone(clubCash) : ''}">${formatMoney(clubCash)}</div></div>
+      <div class="card inner"><p class="label">Gasto en sueldos</p><div class="metric small">${formatMoney(clubSalaryExpense)}</div><small class="muted">anual</small></div>
+      <div class="card inner"><p class="label">Capacidad</p><div class="metric">${new Intl.NumberFormat('es-AR').format(stadiumCapacity)}</div></div>
+      <div class="card inner"><p class="label">Hinchas</p><div class="metric">${new Intl.NumberFormat('es-AR').format(clubSupporters)}</div></div>
     </div>
     <div class="grid cols-3" style="margin:14px 0">
       <div class="card inner"><p class="label">Plantel</p><div class="metric">${players.length}</div></div>

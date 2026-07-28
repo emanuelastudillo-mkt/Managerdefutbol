@@ -562,7 +562,7 @@ function renderGameOverScreen(){
     </div>
     ${typeof managerAvailableClubsPanelMarkup === 'function' ? managerAvailableClubsPanelMarkup({ context:'game-over', selectable:false }) : ''}
   </div>`;
-  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  $('advanceUnifiedBtn')?.addEventListener('click', typeof requestAdvanceCalendarOneStep === 'function' ? requestAdvanceCalendarOneStep : advanceCalendarOneStep);
   startDailySkillPointsAnimation();
   $('btnGameOverNewGame')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openNewGameModal(true); });
   $('btnGameOverFounder')?.addEventListener('click', () => { if(typeof forceCloseModal === 'function') forceCloseModal(); openFounderModeModal(); });
@@ -663,7 +663,7 @@ function renderHome(){
     ${lastTurnSummaryMarkup()}
 
   `;
-  $('advanceUnifiedBtn')?.addEventListener('click', advanceCalendarOneStep);
+  $('advanceUnifiedBtn')?.addEventListener('click', typeof requestAdvanceCalendarOneStep === 'function' ? requestAdvanceCalendarOneStep : advanceCalendarOneStep);
   $('advanceAutoClickerBtn')?.addEventListener('click', () => { if(typeof toggleAdvanceAutoClicker === 'function') toggleAdvanceAutoClicker(); });
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));

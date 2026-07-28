@@ -1,27 +1,20 @@
-# Una Vida de Mánager · V8.82
+# V8.83 · Economía persistente y recuperación de calendario
 
-## Corrección del calendario con copas nacionales
+Aplicar sobre una instalación V8.82.
 
-Se corrigió un problema introducido al intercalar las rondas de copas nacionales dentro del calendario de liga.
+## Cambios
 
-El guardado utilizaba `matchdayIndex` como posición numérica dentro de `fixtures`. Al agregar, ordenar o cargar rondas de copa, esa posición podía desplazarse y dejar un partido de liga pendiente detrás del cursor. El partido seguía existiendo, pero dejaba de aparecer como próximo compromiso y la portada mostraba **Sin partido confirmado**.
-
-### Cambios
-
-- El cursor del calendario se reconstruye desde el primer encuentro realmente pendiente.
-- Las búsquedas de próximo partido ya no ignoran encuentros anteriores al índice guardado.
-- La simulación diaria revisa todas las rondas pendientes en orden cronológico.
-- Al agregar una nueva ronda de copa se recalcula el cursor de forma segura.
-- Las partidas afectadas se reparan automáticamente al cargarse.
-- Un partido pendiente recuperado conserva su fecha original, sin hacer retroceder la fecha general de la partida.
-- Después de jugar el encuentro recuperado, el calendario continúa con el siguiente compromiso normal.
-
-## Separación entre liga y copas
-
-- Las rondas de copas nacionales ya no se cuentan como fechas de liga regular.
-- El cierre de la liga, la creación de playoffs argentinos y la última fecha regular se calculan únicamente con jornadas de liga.
-- Mundial de Clubes, copas nacionales, supercopas y playoffs permanecen como competiciones independientes.
+- Caja persistente para todos los clubes entre temporadas y cambios de mánager.
+- Las compras descuentan dinero al comprador y las ventas acreditan al vendedor.
+- Los campeones bot y del mánager reciben los premios configurados sin duplicaciones.
+- Verificación de partidos atrasados y reprogramación en el primer martes disponible.
+- Impuesto mensual de riqueza del 8%, únicamente para el club dirigido.
+- El botón Avanzar se bloquea y muestra el contador antes de iniciar la simulación.
+- La ficha del club muestra caja, sueldos, capacidad e hinchas.
+- El nombre del club en una oferta laboral abre su ficha.
+- Se elimina el historial duplicado de movimientos personales en Tu Academia.
+- Edad y Media agregadas en Grupos, Vestuario y Contratos.
 
 ## Compatibilidad
 
-Compatible con partidas V8.79, V8.80 y V8.81 ya iniciadas. No reinicia la temporada, no elimina resultados y no vuelve a simular partidos ya disputados.
+Las partidas iniciadas se migran automáticamente. No se modifican partidos ya disputados y la caja de un club anterior no se pierde al quedar el mánager sin trabajo.

@@ -67,7 +67,7 @@ function scheduledDateForMatch(match, round=null){
 function nextOwnMatchInfo(){
   if(typeof ensureCampoDestruidoChallengeFullCalendar === 'function') ensureCampoDestruidoChallengeFullCalendar();
   if(!game || !isRegularSeason()) return null;
-  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
     const match = (round.matches || []).find(m => !m.played && ownClubInMatch(m));
     if(match) return { roundIndex, round, match, date:scheduledDateForMatch(match, round) };
@@ -77,7 +77,7 @@ function nextOwnMatchInfo(){
 function nextPendingMatchInfo(){
   if(!game || !isRegularSeason()) return null;
   let found = null;
-  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
     (round.matches || []).forEach(match => {
       if(match.played) return;
@@ -92,7 +92,7 @@ function collectDueMatchesUntil(targetDate, options={}){
   if(!validIsoDate(targetDate) || !game?.fixtures) return [];
   const includeOwn = options.includeOwn !== false;
   const collected = [];
-  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
     (round.matches || []).forEach(match => {
       if(match.played) return;
@@ -118,9 +118,12 @@ function currentRoundIsComplete(index=game?.matchdayIndex || 0){
 }
 function advanceCompletedRegularRounds(){
   if(!game?.fixtures) return;
-  while(game.matchdayIndex < game.fixtures.length && currentRoundIsComplete(game.matchdayIndex)){
-    game.matchdayIndex += 1;
+  if(typeof repairFixtureCursorForState === 'function'){
+    repairFixtureCursorForState(game, { reason:'after_match_simulation' });
+    return;
   }
+  const firstIncomplete = game.fixtures.findIndex(round => (round?.matches || []).some(match => !match?.played));
+  game.matchdayIndex = firstIncomplete >= 0 ? firstIncomplete : game.fixtures.length;
 }
 function quickBotPoisson(lambda){
   const safe = Math.max(0.02, Number(lambda) || 0.02);

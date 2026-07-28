@@ -135,6 +135,32 @@ function deriveSeasonInitialBudgetFromHistory(saved, season){
   }
   return Math.round(Number(saved?.budget || 0));
 }
+function firstIncompleteFixtureIndexForState(state){
+  const fixtures = Array.isArray(state?.fixtures) ? state.fixtures : [];
+  const index = fixtures.findIndex(round => (round?.matches || []).some(match => !match?.played));
+  return index >= 0 ? index : fixtures.length;
+}
+function repairFixtureCursorForState(state, options={}){
+  if(!state || !Array.isArray(state.fixtures)) return { changed:false, previous:0, next:0, recoveredPending:0 };
+  const previous = Math.min(Math.max(0, Math.round(Number(state.matchdayIndex || 0))), state.fixtures.length);
+  const next = firstIncompleteFixtureIndexForState(state);
+  const recoveredPending = state.fixtures.slice(0, previous).reduce((total, round) => total + (round?.matches || []).filter(match => !match?.played).length, 0);
+  const changed = previous !== next;
+  if(changed){
+    state.matchdayIndex = next;
+    state._needsAutosave = true;
+    state.fixtureCursorRepair = {
+      version:1,
+      season:Number(state.seasonNumber || 1),
+      previous,
+      next,
+      recoveredPending,
+      reason:String(options.reason || 'calendar_reorder'),
+      repairedAt:new Date().toISOString()
+    };
+  }
+  return { changed, previous, next, recoveredPending };
+}
 function normalizeGame(saved){
   const normalized = {...saved};
   normalized.version = APP_VERSION;
@@ -293,6 +319,13 @@ function normalizeGame(saved){
   repairPromotionPlayoffScheduleForState(normalized);
   const calendarExpanded = previousCalendarVersion !== SEASON_CALENDAR_VERSION && previousFixtureCount > 0 && normalized.fixtures.length > previousFixtureCount;
   normalized.matchdayIndex = Math.min(Math.max(0, Number(normalized.matchdayIndex || 0)), normalized.fixtures.length);
+  const fixtureCursorRepair = repairFixtureCursorForState(normalized, { reason:calendarExpanded ? 'calendar_expanded' : 'calendar_normalized' });
+  if(fixtureCursorRepair.recoveredPending > 0 && ['postseason','finalizing'].includes(normalized.seasonPhase)){
+    normalized.seasonPhase = 'regular';
+    normalized.phaseTurn = 0;
+    normalized.seasonFinalized = false;
+    normalized.seasonTransition = null;
+  }
   if(calendarExpanded && normalized.matchdayIndex < normalized.fixtures.length && ['postseason','finalizing','finalized'].includes(normalized.seasonPhase)){
     normalized.seasonPhase = 'regular';
     normalized.phaseTurn = 0;
@@ -2703,13 +2736,20 @@ function isPromotionPlayoffRound(round){
 function isClubWorldCupRound(round){
   return Boolean(round?.clubWorldCupRound || (round?.matches || []).some(match => match?.clubWorldCup));
 }
+function isNationalCupRound(round){
+  return Boolean(round?.nationalCupRound || (round?.matches || []).some(match => match?.nationalCup));
+}
 function isPostRegularRound(round){
   return isPromotionPlayoffRound(round) || isClubWorldCupRound(round);
 }
+function isRegularLeagueRound(round){
+  return Boolean(round) && !isPromotionPlayoffRound(round) && !isClubWorldCupRound(round) && !isNationalCupRound(round);
+}
+function regularFixtureRounds(fixtures=game?.fixtures || []){
+  return (Array.isArray(fixtures) ? fixtures : []).filter(isRegularLeagueRound);
+}
 function regularFixtureLength(fixtures=game?.fixtures || []){
-  const list = Array.isArray(fixtures) ? fixtures : [];
-  const firstPostRegularIndex = list.findIndex(isPostRegularRound);
-  return firstPostRegularIndex >= 0 ? firstPostRegularIndex : list.length;
+  return regularFixtureRounds(fixtures).length;
 }
 function argentinaDivisions(){
   return divisionOrderList().filter(division => normalizeScheduleText(division.country || '') === 'argentina').sort((a,b)=>(a.order || 0)-(b.order || 0));
@@ -2805,10 +2845,9 @@ function playoffFixtureMatch(tie, leg, date, matchday){
   };
 }
 function lastRegularFixtureDate(state=game){
-  const fixtures = Array.isArray(state?.fixtures) ? state.fixtures : [];
-  const regularCount = regularFixtureLength(fixtures);
+  const fixtures = regularFixtureRounds(state?.fixtures || []);
   const dates = [];
-  fixtures.slice(0, regularCount).forEach(round => {
+  fixtures.forEach(round => {
     if(validIsoDate(round?.endDate)) dates.push(round.endDate);
     if(validIsoDate(round?.date)) dates.push(round.date);
     (round?.matches || []).forEach(match => { if(validIsoDate(match.date)) dates.push(match.date); });
@@ -2853,15 +2892,14 @@ function repairPromotionPlayoffScheduleForState(state){
   return changed;
 }
 function regularFixturesComplete(){
-  const regularCount = regularFixtureLength();
-  return (game?.fixtures || []).slice(0, regularCount).every(round => (round.matches || []).every(match => match.played));
+  const rounds = regularFixtureRounds();
+  return rounds.length > 0 && rounds.every(round => (round.matches || []).every(match => match.played));
 }
 function createArgentinePromotionPlayoffsIfNeeded(){
   if(!game || game.seasonFinalized || !Array.isArray(game.fixtures)) return false;
   const season = Number(game.seasonNumber || 1);
   const regularCount = regularFixtureLength();
   if(game.fixtures.some(isPromotionPlayoffRound)) return false;
-  if(Number(game.matchdayIndex || 0) < regularCount) return false;
   if(game.argentinaPlayoffs?.season === season && game.argentinaPlayoffs?.created) return false;
   if(!regularFixturesComplete()) return false;
   const ties = buildArgentinePlayoffTies();
@@ -2895,6 +2933,8 @@ function createArgentinePromotionPlayoffsIfNeeded(){
     title:'Playoffs VUELTA',
     matches:secondLegMatches
   });
+  if(typeof sortFixturesAfterNationalCupChange === 'function') sortFixturesAfterNationalCupChange();
+  else repairFixtureCursorForState(game, { reason:'promotion_playoffs_created' });
   game.argentinaPlayoffs = { season, created:true, regularFixtureCount:regularCount, firstLegDate, secondLegDate, ties };
   pushGameMessage({
     type:'deportivo',

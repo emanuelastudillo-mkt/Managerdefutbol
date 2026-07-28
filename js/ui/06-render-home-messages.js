@@ -174,9 +174,9 @@ function renderAll(){
   }
 }
 function getNextMatchForSelected(){
-  if(!game || game.matchdayIndex >= game.fixtures.length) return null;
+  if(!game || !Array.isArray(game.fixtures)) return null;
   if(typeof nextOwnMatchInfo === 'function') return nextOwnMatchInfo()?.match || null;
-  for(let roundIndex=Math.max(0, Number(game.matchdayIndex || 0)); roundIndex<game.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
     const match = (round.matches || []).find(m => !m.played && (m.homeId === game.selectedClubId || m.awayId === game.selectedClubId));
     if(match) return match;

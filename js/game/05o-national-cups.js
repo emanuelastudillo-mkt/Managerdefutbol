@@ -188,8 +188,11 @@ function sortFixturesAfterNationalCupChange(){
     round.matchday = index + 1;
     (round.matches || []).forEach(match => { match.matchday = index + 1; });
   });
-  const firstIncomplete = game.fixtures.findIndex(round => (round.matches || []).some(match => !match.played));
-  game.matchdayIndex = firstIncomplete >= 0 ? firstIncomplete : game.fixtures.length;
+  if(typeof repairFixtureCursorForState === 'function') repairFixtureCursorForState(game, { reason:'national_cup_calendar_sort' });
+  else{
+    const firstIncomplete = game.fixtures.findIndex(round => (round.matches || []).some(match => !match.played));
+    game.matchdayIndex = firstIncomplete >= 0 ? firstIncomplete : game.fixtures.length;
+  }
 }
 function nationalCupVenueCandidates(country, excluded=[]){
   const excludedSet = new Set((excluded || []).map(Number));

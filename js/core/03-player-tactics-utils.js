@@ -236,7 +236,7 @@ function nextUnplayedMatchDateForClub(state=game, clubId=null){
   if(!state || !Array.isArray(state.fixtures)) return '';
   const ownId = Number(clubId || state.selectedClubId || 0);
   if(!ownId) return '';
-  for(let roundIndex=Math.max(0, Number(state.matchdayIndex || 0)); roundIndex<state.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<state.fixtures.length; roundIndex++){
     const round = state.fixtures[roundIndex];
     const match = (round.matches || []).find(m => !m.played && (Number(m.homeId) === ownId || Number(m.awayId) === ownId));
     if(match) return validIsoDate(match.date) ? match.date : (round.date || '');
@@ -246,7 +246,7 @@ function nextUnplayedMatchDateForClub(state=game, clubId=null){
 function nextUnplayedMatchDate(state=game){
   if(!state || !Array.isArray(state.fixtures)) return '';
   let found = '';
-  for(let roundIndex=Math.max(0, Number(state.matchdayIndex || 0)); roundIndex<state.fixtures.length; roundIndex++){
+  for(let roundIndex=0; roundIndex<state.fixtures.length; roundIndex++){
     const round = state.fixtures[roundIndex];
     (round.matches || []).forEach(match => {
       if(match.played) return;

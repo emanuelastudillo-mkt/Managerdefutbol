@@ -42,7 +42,7 @@ window.GAME_CONFIG = {
     sponsorsUrl: 'data/sponsors.json?v=8.62',
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json?v=8.60',
-    eventsUrl: 'data/eventos.json?v=8.72',
+    eventsUrl: 'data/eventos.json?v=8.73',
     specialSkillsUrl: 'data/habilidades_especiales.json?v=8.60',
     managerAchievementsUrl: 'data/hitos_manager.json?v=8.60',
     retosManagerUrl: 'data/retos_manager.json',
@@ -218,8 +218,70 @@ window.GAME_CONFIG = {
       prestigioMaximo: 1000,
       momentoMinimo: -100,
       momentoMaximo: 100,
-      capacidadInicial: 10,
+      prestigioInicial: 100,
+      capacidadInicial: 35,
       evaluacionTemporadaMaxima: 100,
+      progresionLarga: {
+        activo: true,
+        momentoConservadoEntreTemporadas: 0.65,
+        prestigioAccesoPuntos: [
+          { carrera:0, acceso:15 },
+          { carrera:100, acceso:20 },
+          { carrera:300, acceso:40 },
+          { carrera:500, acceso:60 },
+          { carrera:650, acceso:75 },
+          { carrera:800, acceso:90 },
+          { carrera:900, acceso:97 },
+          { carrera:1000, acceso:99 }
+        ],
+        multiplicadoresGananciaPrestigio: [
+          { hasta:399, factor:1.00 },
+          { hasta:599, factor:0.85 },
+          { hasta:749, factor:0.70 },
+          { hasta:849, factor:0.50 },
+          { hasta:899, factor:0.30 },
+          { hasta:1000, factor:0.15 }
+        ],
+        multiplicadorPerdidaEliteMaximo: 1.35,
+        mantenimientoPrestigio: {
+          consolidadoDesde: 650,
+          consolidadoEvaluacion: 60,
+          eliteDesde: 800,
+          eliteEvaluacion: 68,
+          mundialDesde: 900,
+          mundialEvaluacion: 74,
+          historicoEvaluacion: 78,
+          penalizacionPorPunto: 2
+        },
+        capacidades: {
+          maximoNormalPorTemporada: 3,
+          maximoExcepcionalPorTemporada: 5,
+          especializacionesSinPenalizacion: 2,
+          umbralEspecializacion: 75,
+          penalizacionTresEspecializaciones: 0.75,
+          penalizacionCuatroEspecializaciones: 0.50,
+          desgasteDesde: 80,
+          desgasteCadaTemporadas: 2
+        },
+        ofertas: {
+          margenSolicitudBase: 8,
+          margenSolicitudMaximo: 12,
+          prestigioElite: 825,
+          prestigioPotencia: 900,
+          momentoMinimoElite: 0,
+          evaluacionRecienteMinimaElite: 70,
+          objetivoExigenteBonusMin: 0.28,
+          objetivoExigenteBonusMax: 0.55,
+          presupuestoExigenteMin: 0.03,
+          presupuestoExigenteMax: 0.10
+        },
+        presionExpectativas: {
+          activo: true,
+          prestigioCarreraDesde: 600,
+          ventajaAccesoDesde: 10,
+          bonusPpgMaximo: 0.18
+        }
+      },
       terceraEtapa: {
         ofertas: {
           maximoCandidatos: 14

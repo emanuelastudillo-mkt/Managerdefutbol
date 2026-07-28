@@ -5,7 +5,11 @@ function managerContractBalanceConfig(){
   return cfg && typeof cfg === 'object' && !Array.isArray(cfg) ? cfg : {};
 }
 function managerContractStatePrestige(state=game){
-  if(state?.managerStats && typeof managerPrestigeBreakdown === 'function') return clamp(Number(managerPrestigeBreakdown(state.managerStats).total || 0), 0, 99);
+  const careerPrestige = Number(state?.managerStats?.careerProfile?.prestige);
+  if(Number.isFinite(careerPrestige)){
+    return clamp(typeof managerCareerPrestigeToClubScale === 'function' ? managerCareerPrestigeToClubScale(careerPrestige) : Math.round(careerPrestige / 10), 0, 99);
+  }
+  if(state?.managerStats && typeof managerPrestigeBreakdown === 'function') return clamp(Number(managerPrestigeBreakdown(state.managerStats).legacyTotal ?? managerPrestigeBreakdown(state.managerStats).total ?? 0), 0, 99);
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
 }
 function managerContractNegotiationLevel(value='normal'){

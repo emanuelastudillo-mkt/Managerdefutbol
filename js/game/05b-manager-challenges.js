@@ -40,8 +40,12 @@ function managerPrestigeBreakdown(stats=game?.managerStats){
   const badSeasonPenalty = seasons.reduce((sum, item) => sum + Math.max(0, Number(item.managerPrestigeBadSeasonPenalty || item.prestigePenalty || 0)), 0);
   const dismissalPenalty = career.filter(item => item.type === 'dismissal').length * Number(MANAGER_PRESTIGE_DISMISSAL_PENALTY || 2);
   const totalRaw = adjustments + experiencePrestige + winPrestige + objectivePrestige + championPrestige - badSeasonPenalty - dismissalPenalty;
-  const total = clamp(totalRaw, 0, 99);
-  return { total, adjustments, experience, experiencePrestige, wins, winPrestige, objectivePrestige, championPrestige, badSeasonPenalty, dismissalPenalty };
+  const legacyTotal = clamp(totalRaw, 0, 99);
+  const careerPrestige = Number(src?.careerProfile?.prestige);
+  const total = Number.isFinite(careerPrestige)
+    ? clamp(typeof managerCareerPrestigeToClubScale === 'function' ? managerCareerPrestigeToClubScale(careerPrestige) : Math.round(careerPrestige / 10), 0, 99)
+    : legacyTotal;
+  return { total, legacyTotal, careerPrestige:Number.isFinite(careerPrestige) ? careerPrestige : null, adjustments, experience, experiencePrestige, wins, winPrestige, objectivePrestige, championPrestige, badSeasonPenalty, dismissalPenalty };
 }
 function formatManagerPrestige(value=currentManagerPrestige()){
   const n = Math.max(0, Math.floor(Number(value || 0)));
@@ -52,9 +56,14 @@ function managerClubAccessPrestige(value=currentManagerPrestige()){
   return Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
 }
 function currentManagerPrestige(){
-  // el prestigio vuelve a ser propio de cada slot/carrera.
-  // No se usa el perfil global para abrir clubes ni para calcular reputación activa.
-  if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).total;
+  // V8.73: el acceso a clubes usa el prestigio acumulativo de carrera como única fuente activa.
+  // La escala 0-1000 se convierte a la escala 0-99 de los clubes para conservar compatibilidad.
+  const careerPrestige = Number(game?.managerStats?.careerProfile?.prestige);
+  if(Number.isFinite(careerPrestige)){
+    if(typeof managerCareerPrestigeToClubScale === 'function') return clamp(managerCareerPrestigeToClubScale(careerPrestige), 0, 99);
+    return clamp(Math.round(careerPrestige / 10), 0, 99);
+  }
+  if(game?.managerStats) return managerPrestigeBreakdown(game.managerStats).legacyTotal ?? managerPrestigeBreakdown(game.managerStats).total;
   return clamp(Number(MANAGER_PRESTIGE_INITIAL || 0), 0, 99);
 }
 function currentManagerExperience(){

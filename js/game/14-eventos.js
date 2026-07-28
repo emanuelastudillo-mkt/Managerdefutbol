@@ -400,9 +400,8 @@ function lockerRoomApplySuspension(player, matches=1){
 }
 function lockerRoomSilentPrestige(delta, reason='Decisión de vestuario'){
   if(!game?.managerStats || Number(delta || 0) === 0) return 0;
-  game.managerStats.prestigeAdjustments = Array.isArray(game.managerStats.prestigeAdjustments) ? game.managerStats.prestigeAdjustments : [];
-  game.managerStats.prestigeAdjustments.push({ points:Number(delta), reason:String(reason), season:Number(game.seasonNumber || 1), clubId:Number(game.selectedClubId || 0), createdAt:new Date().toISOString() });
-  return Number(delta);
+  if(typeof addManagerPrestige === 'function') return addManagerPrestige(Number(delta), reason);
+  return 0;
 }
 function lockerRoomApplyDecisionEffect(effect={}, context={}){
   if(!game || !effect) return { skipped:true };

@@ -1,4 +1,4 @@
-/* V8.72 · Integración del sistema de carrera.
+/* V8.73 · Integración del sistema de carrera.
    Motor central de decisiones, eventos automáticos, consecuencias diferidas y memoria narrativa. */
 
 (function(){
@@ -132,7 +132,7 @@
     const profile = game?.managerStats?.careerProfile || {};
     const stability = Number(profile.capabilities?.stability || 10);
     const moment = Number(profile.moment || 0);
-    const prestige = Number(profile.prestige || 0) / 10;
+    const prestige = typeof managerCareerPrestigeToClubScale === 'function' ? managerCareerPrestigeToClubScale(Number(profile.prestige || 0)) : Number(profile.prestige || 0) / 10;
     return ceClamp(48 + (stability - 50) * 0.12 + moment * 0.08 + (prestige - 40) * 0.05, 35, 68);
   }
   function ceStint(){
@@ -882,9 +882,16 @@
       profile.capabilities = profile.capabilities || {};
       CAPABILITIES.forEach(capability => {
         const signal = Number(stint.signals[capability] || 0);
-        const delta = signal >= 5 ? 1 : signal <= -5 ? -1 : 0;
+        const current = ceRound(profile.capabilities[capability] ?? 35);
+        const baseDelta = Number(entry.profileChange?.capabilityDeltas?.[capability] || 0);
+        let delta = signal >= 5 ? 1 : signal <= -5 ? -1 : 0;
+        if(delta > 0){
+          const annualMaximum = signal >= 10 ? 5 : 3;
+          if(baseDelta >= annualMaximum || current >= 90) delta = 0;
+          else if(current >= 80 && signal < 8) delta = 0;
+        }
         capabilityDeltas[capability] = delta;
-        if(delta) profile.capabilities[capability] = ceClamp(ceRound(profile.capabilities[capability] || 10) + delta, 0, 100);
+        if(delta) profile.capabilities[capability] = ceClamp(current + delta, 0, 100);
       });
       game.managerStats.careerProfile = profile;
       stint.finalizations.push(finalizationKey); stint.finalizations = stint.finalizations.slice(-8);

@@ -2,7 +2,7 @@
    Historial anual, perfil acumulativo, objetivos cualitativos y evaluación final. */
 
 (function(){
-  const CAREER_PROFILE_VERSION = 1;
+  const CAREER_PROFILE_VERSION = 2;
   const CAREER_HISTORY_VERSION = 1;
   const CAPABILITY_KEYS = ['sporting','leadership','economy','development','crisis','stability'];
   const CAPABILITY_LABELS = {
@@ -21,7 +21,11 @@
   function careerPrestigeMaximum(){ return Math.max(100, careerRound(careerSetting('prestigioMaximo', 1000), 1000)); }
   function careerMomentMinimum(){ return careerRound(careerSetting('momentoMinimo', -100), -100); }
   function careerMomentMaximum(){ return careerRound(careerSetting('momentoMaximo', 100), 100); }
-  function careerInitialCapability(){ return careerClamp(careerRound(careerSetting('capacidadInicial', 10), 10), 0, 100); }
+  function careerInitialPrestige(){ return careerClamp(careerRound(careerSetting('prestigioInicial', 100), 100), 0, careerPrestigeMaximum()); }
+  function careerInitialCapability(){ return careerClamp(careerRound(careerSetting('capacidadInicial', 35), 35), 0, 100); }
+  function careerLongSetting(key, fallback){
+    return typeof configValue === 'function' ? configValue(`manager.carrera.progresionLarga.${key}`, fallback) : fallback;
+  }
 
   function careerClamp(value, min, max){
     const number = Number(value);
@@ -40,6 +44,52 @@
     const clean = (Array.isArray(values) ? values : []).map(Number).filter(Number.isFinite);
     return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : 0;
   }
+
+  function managerCareerPrestigeAccessPoints(){
+    const configured = careerLongSetting('prestigioAccesoPuntos', []);
+    const fallback = [
+      { carrera:0, acceso:15 }, { carrera:100, acceso:20 }, { carrera:300, acceso:40 },
+      { carrera:500, acceso:60 }, { carrera:650, acceso:75 }, { carrera:800, acceso:90 },
+      { carrera:900, acceso:97 }, { carrera:1000, acceso:99 }
+    ];
+    const source = Array.isArray(configured) && configured.length >= 2 ? configured : fallback;
+    return source.map(item => ({ carrera:careerClamp(careerRound(item?.carrera || 0), 0, careerPrestigeMaximum()), acceso:careerClamp(careerRound(item?.acceso || 0), 0, 99) }))
+      .sort((a,b)=>a.carrera-b.carrera);
+  }
+  function managerCareerPrestigeToClubScale(value=0){
+    const prestige = careerClamp(careerNumber(value, 0), 0, careerPrestigeMaximum());
+    const points = managerCareerPrestigeAccessPoints();
+    if(prestige <= points[0].carrera) return points[0].acceso;
+    for(let index=1; index<points.length; index += 1){
+      const previous = points[index - 1];
+      const next = points[index];
+      if(prestige <= next.carrera){
+        const span = Math.max(1, next.carrera - previous.carrera);
+        const ratio = careerClamp((prestige - previous.carrera) / span, 0, 1);
+        return careerClamp(Math.round(previous.acceso + (next.acceso - previous.acceso) * ratio), 0, 99);
+      }
+    }
+    return points[points.length - 1].acceso;
+  }
+  window.managerCareerPrestigeToClubScale = managerCareerPrestigeToClubScale;
+  function currentManagerCareerPrestige(state=game){
+    const raw = state?.managerStats?.careerProfile?.prestige;
+    if(Number.isFinite(Number(raw))) return careerClamp(careerRound(raw), 0, careerPrestigeMaximum());
+    const legacy = state?.managerStats && typeof managerPrestigeBreakdown === 'function' ? Number(managerPrestigeBreakdown(state.managerStats).legacyTotal ?? managerPrestigeBreakdown(state.managerStats).total ?? 0) : 0;
+    return careerClamp(Math.max(careerInitialPrestige(), careerRound(legacy * 10)), 0, careerPrestigeMaximum());
+  }
+  window.currentManagerCareerPrestige = currentManagerCareerPrestige;
+  function managerCareerStageLabel(prestige=currentManagerCareerPrestige()){
+    const value = careerRound(prestige || 0);
+    if(value >= 900) return 'Mánager histórico';
+    if(value >= 800) return 'Prestigio mundial';
+    if(value >= 650) return 'Mánager de élite';
+    if(value >= 500) return 'Mánager consolidado';
+    if(value >= 300) return 'Mánager reconocido';
+    if(value >= 150) return 'Mánager regional';
+    return 'Mánager en formación';
+  }
+  window.managerCareerStageLabel = managerCareerStageLabel;
   function careerSeasonYear(season){
     if(typeof seasonYearForNumber === 'function') return seasonYearForNumber(season);
     return careerRound(configValue('calendario.anioInicial', 2026)) + Math.max(0, careerRound(season, 1) - 1);
@@ -142,12 +192,12 @@
     const career = Array.isArray(stats?.careerHistory) ? stats.careerHistory : [];
     const titles = Math.max(0, careerRound(stats?.titles || 0));
     const legacyPrestige = typeof managerPrestigeBreakdown === 'function' ? Number(managerPrestigeBreakdown(stats).total || 0) : Number(stats?.prestige || 0);
-    const baseCapability = careerClamp(10 + seasons.length * 2, 10, 45);
+    const baseCapability = careerClamp(careerInitialCapability() + seasons.length, careerInitialCapability(), 55);
     const avgPpg = careerAverage(seasons.map(item => Number(item?.ppg || 0)));
     const objectiveRate = seasons.length ? seasons.filter(item => item?.objectiveAchieved === true).length / seasons.length : 0;
     return {
       version:CAREER_PROFILE_VERSION,
-      prestige:careerClamp(careerRound(legacyPrestige * 7 + titles * 8 + seasons.length * 3), 0, careerPrestigeMaximum()),
+      prestige:careerClamp(seasons.length || career.length || titles || legacyPrestige ? careerRound(Math.max(careerInitialPrestige(), legacyPrestige * 8 + titles * 12 + seasons.length * 8)) : careerInitialPrestige(), 0, careerPrestigeMaximum()),
       moment:seasons.length ? careerClamp(careerRound((avgPpg - 1.15) * 55 + (objectiveRate - 0.5) * 30), careerMomentMinimum(), careerMomentMaximum()) : 0,
       capabilities:normalizeCareerCapabilities({
         sporting:baseCapability + titles * 2 + careerRound(objectiveRate * 8),
@@ -172,9 +222,16 @@
       prestigeDelta:careerRound(item?.prestigeDelta || 0), momentBefore:careerRound(item?.momentBefore || 0), momentAfter:careerRound(item?.momentAfter || 0),
       capabilityDeltas:normalizeCareerCapabilities(item?.capabilityDeltas || {}, 0), createdAt:String(item?.createdAt || '')
     })).filter(item => item.key).slice(-120) : [];
+    const hasStoredProfile = Object.keys(raw).length > 0;
+    const rawPrestige = careerRound(raw.prestige, legacy.prestige);
+    const migratedPrestige = !hasStoredProfile
+      ? legacy.prestige
+      : Number(raw.version || 1) < CAREER_PROFILE_VERSION && !progression.length && !careerRound(raw.seasonsEvaluated || 0)
+        ? Math.max(careerInitialPrestige(), rawPrestige)
+        : rawPrestige;
     return {
       version:CAREER_PROFILE_VERSION,
-      prestige:careerClamp(careerRound(raw.prestige, legacy.prestige), 0, careerPrestigeMaximum()),
+      prestige:careerClamp(migratedPrestige, 0, careerPrestigeMaximum()),
       moment:careerClamp(careerRound(raw.moment, legacy.moment), careerMomentMinimum(), careerMomentMaximum()),
       capabilities:normalizeCareerCapabilities(raw.capabilities || legacy.capabilities, careerInitialCapability()),
       seasonsEvaluated:Math.max(progression.length, careerRound(raw.seasonsEvaluated, legacy.seasonsEvaluated)),
@@ -579,8 +636,76 @@
   }
   window.managerCareerEvaluationData = managerCareerEvaluationData;
 
-  function managerCareerCapabilityDelta(score, weight=1){
-    return careerClamp(Math.round(((Number(score || 50) - 50) / 17) * Number(weight || 1)), -4, 6);
+  function managerCareerPrestigeBaseDelta(score){
+    const value = careerClamp(Number(score || 50), 0, 100);
+    const interpolate = (minScore, maxScore, minDelta, maxDelta) => {
+      const ratio = maxScore <= minScore ? 0 : careerClamp((value - minScore) / (maxScore - minScore), 0, 1);
+      return minDelta + (maxDelta - minDelta) * ratio;
+    };
+    if(value < 30) return interpolate(0, 29, -50, -30);
+    if(value < 45) return interpolate(30, 44, -30, -10);
+    if(value < 55) return interpolate(45, 54, -10, 5);
+    if(value < 70) return interpolate(55, 69, 10, 40);
+    if(value < 85) return interpolate(70, 84, 45, 75);
+    if(value < 95) return interpolate(85, 94, 70, 90);
+    return interpolate(95, 100, 90, 105);
+  }
+  function managerCareerPrestigeGainMultiplier(prestige){
+    const configured = careerLongSetting('multiplicadoresGananciaPrestigio', []);
+    const fallback = [{ hasta:399, factor:1 }, { hasta:599, factor:0.85 }, { hasta:749, factor:0.70 }, { hasta:849, factor:0.50 }, { hasta:899, factor:0.30 }, { hasta:1000, factor:0.15 }];
+    const rules = Array.isArray(configured) && configured.length ? configured : fallback;
+    const rule = rules.slice().sort((a,b)=>Number(a.hasta||0)-Number(b.hasta||0)).find(item => Number(prestige || 0) <= Number(item?.hasta ?? 1000));
+    return careerClamp(Number(rule?.factor ?? 1), 0.05, 1.5);
+  }
+  function managerCareerPrestigeMaintenanceTarget(prestige){
+    const current = careerClamp(Number(prestige || 0), 0, careerPrestigeMaximum());
+    const consolidatedFrom = careerRound(careerLongSetting('mantenimientoPrestigio.consolidadoDesde', 650), 650);
+    const eliteFrom = careerRound(careerLongSetting('mantenimientoPrestigio.eliteDesde', 800), 800);
+    const worldFrom = careerRound(careerLongSetting('mantenimientoPrestigio.mundialDesde', 900), 900);
+    const consolidatedScore = careerRound(careerLongSetting('mantenimientoPrestigio.consolidadoEvaluacion', 60), 60);
+    const eliteScore = careerRound(careerLongSetting('mantenimientoPrestigio.eliteEvaluacion', 68), 68);
+    const worldScore = careerRound(careerLongSetting('mantenimientoPrestigio.mundialEvaluacion', 74), 74);
+    const historicScore = careerRound(careerLongSetting('mantenimientoPrestigio.historicoEvaluacion', 78), 78);
+    if(current < consolidatedFrom) return 0;
+    const interpolate = (value, from, to, min, max) => {
+      if(to <= from) return max;
+      const ratio = careerClamp((value - from) / (to - from), 0, 1);
+      return min + (max - min) * ratio;
+    };
+    if(current < eliteFrom) return interpolate(current, consolidatedFrom, eliteFrom, consolidatedScore, eliteScore);
+    if(current < worldFrom) return interpolate(current, eliteFrom, worldFrom, eliteScore, worldScore);
+    return interpolate(current, worldFrom, careerPrestigeMaximum(), worldScore, historicScore);
+  }
+  function managerCareerCapabilityRawDelta(score){
+    const value = careerClamp(Number(score || 50), 0, 100);
+    if(value >= 97) return 5;
+    if(value >= 90) return 4;
+    if(value >= 78) return 3;
+    if(value >= 67) return 2;
+    if(value >= 56) return 1;
+    if(value >= 45) return 0;
+    if(value >= 35) return -1;
+    if(value >= 25) return -2;
+    return -3;
+  }
+  function managerCareerCapabilityDelta(score, weight=1, currentValue=0, profile=null){
+    let delta = managerCareerCapabilityRawDelta(score);
+    if(delta > 0){
+      const current = careerClamp(Number(currentValue || 0), 0, 100);
+      const softFactor = current < 60 ? 1 : current < 70 ? 0.80 : current < 80 ? 0.60 : current < 90 ? 0.40 : 0.20;
+      const threshold = careerRound(careerLongSetting('capacidades.umbralEspecializacion', 75), 75);
+      const highCount = Object.values(profile?.capabilities || {}).filter(value => Number(value || 0) >= threshold).length;
+      const free = careerRound(careerLongSetting('capacidades.especializacionesSinPenalizacion', 2), 2);
+      const specializationFactor = highCount <= free ? 1 : highCount === free + 1 ? Number(careerLongSetting('capacidades.penalizacionTresEspecializaciones', 0.75)) : Number(careerLongSetting('capacidades.penalizacionCuatroEspecializaciones', 0.50));
+      delta = Math.round(delta * softFactor * specializationFactor * Number(weight || 1));
+      if(delta === 0 && score >= 78 && current < 90 && Number(weight || 1) >= 0.75) delta = 1;
+    }else if(delta < 0){
+      delta = Math.round(delta * Math.max(0.35, Number(weight || 1)));
+      if(delta === 0) delta = -1;
+    }
+    const normalMax = Math.max(1, careerRound(careerLongSetting('capacidades.maximoNormalPorTemporada', 3), 3));
+    const exceptionalMax = Math.max(normalMax, careerRound(careerLongSetting('capacidades.maximoExcepcionalPorTemporada', 5), 5));
+    return careerClamp(delta, -3, score >= 90 ? exceptionalMax : normalMax);
   }
   function managerCareerApplyProfileEvaluation(evaluation, options={}){
     if(!game?.managerStats || !evaluation) return null;
@@ -593,23 +718,40 @@
     const expectedMatches = Math.max(1, (Math.max(2, evaluation.totalTeams) - 1) * (typeof SEASON_HOME_AWAY !== 'undefined' && SEASON_HOME_AWAY ? 2 : 1));
     const partialWeight = options.partial ? careerClamp(evaluation.played / expectedMatches, 0.20, 0.75) : 1;
     const status = String(options.status || 'season_end');
-    let prestigeDelta = Math.round(((evaluation.score - 50) * 0.45) * partialWeight);
-    if(evaluation.position === 1) prestigeDelta += Math.round(10 * partialWeight);
-    if(options.promoted) prestigeDelta += Math.round(7 * partialWeight);
-    if(options.relegated) prestigeDelta -= Math.round(10 * partialWeight);
-    if(status === 'dismissal') prestigeDelta -= 7;
-    if(status === 'resignation') prestigeDelta -= 4;
-    prestigeDelta = careerClamp(prestigeDelta, -25, 30);
+    const prestigeBefore = Number(profile.prestige || 0);
+    let rawPrestigeDelta = managerCareerPrestigeBaseDelta(evaluation.score);
+    rawPrestigeDelta += careerClamp(Math.round((Number(evaluation.components?.overperformance || 50) - 50) * 0.24), -12, 12);
+    if(evaluation.position === 1) rawPrestigeDelta += 14;
+    if(options.promoted) rawPrestigeDelta += 12;
+    if(options.relegated) rawPrestigeDelta -= 18;
+    if(status === 'dismissal') rawPrestigeDelta -= 18;
+    if(status === 'resignation') rawPrestigeDelta -= 10;
+    const maintenanceTarget = managerCareerPrestigeMaintenanceTarget(prestigeBefore);
+    if(maintenanceTarget > 0 && Number(evaluation.score || 0) < maintenanceTarget){
+      const penaltyPerPoint = Math.max(1, Number(careerLongSetting('mantenimientoPrestigio.penalizacionPorPunto', 2)) || 2);
+      const maintenancePenalty = Math.max(4, Math.round((maintenanceTarget - Number(evaluation.score || 0)) * penaltyPerPoint));
+      rawPrestigeDelta = Math.min(rawPrestigeDelta, -maintenancePenalty);
+    }
+    let prestigeDelta;
+    if(rawPrestigeDelta >= 0){
+      prestigeDelta = Math.round(rawPrestigeDelta * managerCareerPrestigeGainMultiplier(prestigeBefore) * partialWeight);
+    }else{
+      const eliteLossMax = Number(careerLongSetting('multiplicadorPerdidaEliteMaximo', 1.35));
+      const lossFactor = 1 + (careerClamp(prestigeBefore / careerPrestigeMaximum(), 0, 1) * Math.max(0, eliteLossMax - 1));
+      prestigeDelta = Math.round(rawPrestigeDelta * lossFactor * Math.max(0.35, partialWeight));
+    }
+    prestigeDelta = careerClamp(prestigeDelta, -80, 105);
     const momentBefore = profile.moment;
     let momentEvent = 0;
     if(evaluation.position === 1) momentEvent += 12;
-    if(options.promoted) momentEvent += 8;
-    if(options.relegated) momentEvent -= 14;
-    if(status === 'dismissal') momentEvent -= 16;
-    if(status === 'resignation') momentEvent -= 9;
-    let momentAfter = careerClamp(Math.round(momentBefore * 0.52 + (evaluation.score - 50) * 1.18 * partialWeight + momentEvent), careerMomentMinimum(), careerMomentMaximum());
-    if(status === 'dismissal') momentAfter = Math.min(momentAfter, careerClamp(momentBefore - 10, careerMomentMinimum(), careerMomentMaximum()));
-    if(status === 'resignation') momentAfter = Math.min(momentAfter, careerClamp(momentBefore - 5, careerMomentMinimum(), careerMomentMaximum()));
+    if(options.promoted) momentEvent += 9;
+    if(options.relegated) momentEvent -= 16;
+    if(status === 'dismissal') momentEvent -= 28;
+    if(status === 'resignation') momentEvent -= 14;
+    const momentRetention = careerClamp(Number(careerLongSetting('momentoConservadoEntreTemporadas', 0.65)), 0, 1);
+    let momentAfter = careerClamp(Math.round(momentBefore * momentRetention + (evaluation.score - 50) * 1.20 * partialWeight + momentEvent), careerMomentMinimum(), careerMomentMaximum());
+    if(status === 'dismissal') momentAfter = Math.min(momentAfter, careerClamp(momentBefore - 25, careerMomentMinimum(), careerMomentMaximum()));
+    if(status === 'resignation') momentAfter = Math.min(momentAfter, careerClamp(momentBefore - 10, careerMomentMinimum(), careerMomentMaximum()));
     const capabilityScores = {
       sporting:evaluation.components.sporting,
       leadership:evaluation.components.leadership,
@@ -620,15 +762,20 @@
     };
     const capabilityDeltas = {};
     CAPABILITY_KEYS.forEach(capability => {
-      let delta = managerCareerCapabilityDelta(capabilityScores[capability], partialWeight);
+      const currentValue = careerRound(profile.capabilities[capability] || 0);
+      let delta = managerCareerCapabilityDelta(capabilityScores[capability], partialWeight, currentValue, profile);
+      const wearFrom = careerRound(careerLongSetting('capacidades.desgasteDesde', 80), 80);
+      const wearEvery = Math.max(1, careerRound(careerLongSetting('capacidades.desgasteCadaTemporadas', 2), 2));
+      if(!options.partial && currentValue >= wearFrom && Number(capabilityScores[capability] || 50) < 60 && (Math.max(1, evaluation.season) % wearEvery === 0)) delta -= 1;
       if(capability === 'stability' && status === 'dismissal') delta = Math.min(delta, -2);
       if(capability === 'stability' && status === 'resignation') delta = Math.min(delta, -2);
+      delta = careerClamp(delta, -4, 5);
       capabilityDeltas[capability] = delta;
-      profile.capabilities[capability] = careerClamp(careerRound(profile.capabilities[capability] || 0) + delta, 0, 100);
+      profile.capabilities[capability] = careerClamp(currentValue + delta, 0, 100);
     });
     const change = {
       key, season:evaluation.season, clubId:evaluation.clubId, evaluationScore:evaluation.score,
-      prestigeBefore:profile.prestige, prestigeDelta, prestigeAfter:careerClamp(profile.prestige + prestigeDelta, 0, careerPrestigeMaximum()),
+      prestigeBefore, prestigeDelta, prestigeAfter:careerClamp(prestigeBefore + prestigeDelta, 0, careerPrestigeMaximum()),
       momentBefore, momentAfter, capabilityDeltas, weight:Number(partialWeight.toFixed(3)), status,
       createdAt:new Date().toISOString()
     };
@@ -973,7 +1120,8 @@
     const profile = game.managerStats.careerProfile;
     const currentObjective = managerCareerQualitativeObjective(game.selectedClubId, game.managerStats.currentSeason?.objectivePpg, { founder:typeof currentGameIsFounderMode === 'function' && currentGameIsFounderMode() });
     const rows = careerSeasonHistoryRows(game.managerStats);
-    return `<section class="career-profile-stage-one"><div class="career-profile-summary"><div class="career-profile-main"><span>Prestigio de carrera</span><strong>${profile.prestige}<small>/${careerPrestigeMaximum()}</small></strong><em>Se construye con cada temporada y cada club.</em></div><div class="career-profile-main"><span>Momento profesional</span><strong class="${profile.moment >= 0 ? 'ok' : 'danger'}">${profile.moment >= 0 ? '+' : ''}${profile.moment}</strong><em>${escapeHtml(careerProfileMomentLabel(profile.moment))}</em></div><div class="career-profile-main"><span>Objetivo actual</span><strong>${escapeHtml(currentObjective.label)}</strong><em>${escapeHtml(currentObjective.minimumLabel || 'Sin posición mínima')}</em></div></div><div class="card career-capabilities-card"><h3>Capacidades acumulativas</h3><p class="muted small">No se compran: evolucionan según decisiones y resultados de la carrera.</p><div class="career-capabilities-grid">${careerCapabilityMarkup(profile)}</div></div><div class="card career-season-history-card" style="margin-top:14px"><h3>Evaluaciones de carrera</h3><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>Objetivo</th><th>Pos.</th><th>Evaluación</th><th>Resultado</th><th>Prestigio</th><th>Cierre</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">La primera evaluación se guardará al terminar la temporada o al dejar un club.</td></tr>'}</tbody></table></div></div>${careerClubHistoryMarkup()}</section>`;
+    const accessPrestige = managerCareerPrestigeToClubScale(profile.prestige);
+    return `<section class="career-profile-stage-one"><div class="career-profile-summary"><div class="career-profile-main"><span>Prestigio de carrera</span><strong>${profile.prestige}<small>/${careerPrestigeMaximum()}</small></strong><em>${escapeHtml(managerCareerStageLabel(profile.prestige))} · acceso laboral ${accessPrestige}/99.</em></div><div class="career-profile-main"><span>Momento profesional</span><strong class="${profile.moment >= 0 ? 'ok' : 'danger'}">${profile.moment >= 0 ? '+' : ''}${profile.moment}</strong><em>${escapeHtml(careerProfileMomentLabel(profile.moment))}</em></div><div class="career-profile-main"><span>Objetivo actual</span><strong>${escapeHtml(currentObjective.label)}</strong><em>${escapeHtml(currentObjective.minimumLabel || 'Sin posición mínima')}</em></div></div><div class="card career-capabilities-card"><h3>Capacidades acumulativas</h3><p class="muted small">No se compran: evolucionan según decisiones y resultados de la carrera.</p><div class="career-capabilities-grid">${careerCapabilityMarkup(profile)}</div></div><div class="card career-season-history-card" style="margin-top:14px"><h3>Evaluaciones de carrera</h3><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>Objetivo</th><th>Pos.</th><th>Evaluación</th><th>Resultado</th><th>Prestigio</th><th>Cierre</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">La primera evaluación se guardará al terminar la temporada o al dejar un club.</td></tr>'}</tbody></table></div></div>${careerClubHistoryMarkup()}</section>`;
   }
 
   const renderManagerStatsV869 = renderManagerStats;

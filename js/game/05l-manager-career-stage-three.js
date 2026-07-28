@@ -4,7 +4,7 @@
 (function(){
   'use strict';
 
-  const STAGE_THREE_VERSION = 1;
+  const STAGE_THREE_VERSION = 2;
   const CONSEQUENCE_VERSION = 1;
   const CAPABILITY_LABELS = {
     sporting:'Rendimiento deportivo',
@@ -25,6 +25,9 @@
 
   function stCfg(path, fallback){
     return typeof configValue === 'function' ? configValue(`manager.carrera.terceraEtapa.${path}`, fallback) : fallback;
+  }
+  function stLongCfg(path, fallback){
+    return typeof configValue === 'function' ? configValue(`manager.carrera.progresionLarga.${path}`, fallback) : fallback;
   }
   function stClamp(value, min, max){
     const number = Number(value);
@@ -69,15 +72,15 @@
   function stProfile(){
     const profile = game?.managerStats?.careerProfile || {};
     return {
-      prestige:stClamp(stRound(profile.prestige || 0), 0, 1000),
+      prestige:stClamp(stRound(profile.prestige ?? stLongCfg('prestigioInicial', 100)), 0, 1000),
       moment:stClamp(stRound(profile.moment || 0), -100, 100),
       capabilities:{
-        sporting:stClamp(stRound(profile.capabilities?.sporting || 10), 0, 100),
-        leadership:stClamp(stRound(profile.capabilities?.leadership || 10), 0, 100),
-        economy:stClamp(stRound(profile.capabilities?.economy || 10), 0, 100),
-        development:stClamp(stRound(profile.capabilities?.development || 10), 0, 100),
-        crisis:stClamp(stRound(profile.capabilities?.crisis || 10), 0, 100),
-        stability:stClamp(stRound(profile.capabilities?.stability || 10), 0, 100)
+        sporting:stClamp(stRound(profile.capabilities?.sporting ?? 35), 0, 100),
+        leadership:stClamp(stRound(profile.capabilities?.leadership ?? 35), 0, 100),
+        economy:stClamp(stRound(profile.capabilities?.economy ?? 35), 0, 100),
+        development:stClamp(stRound(profile.capabilities?.development ?? 35), 0, 100),
+        crisis:stClamp(stRound(profile.capabilities?.crisis ?? 35), 0, 100),
+        stability:stClamp(stRound(profile.capabilities?.stability ?? 35), 0, 100)
       }
     };
   }
@@ -87,6 +90,46 @@
       .slice()
       .sort((a,b) => Number(b.season || 0) - Number(a.season || 0) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
+  function managerCareerRecentEvaluations(){
+    const all = stManagerHistory();
+    const finals = all.filter(item => String(item?.status || '') === 'season_end');
+    return (finals.length ? finals : all).slice(0,3);
+  }
+  function managerCareerRecentPerformance(){
+    const recent = managerCareerRecentEvaluations();
+    if(!recent.length) return 45;
+    const weights = [0.50, 0.30, 0.20];
+    const availableWeights = weights.slice(0, recent.length);
+    const totalWeight = availableWeights.reduce((sum,value)=>sum+value,0) || 1;
+    return stClamp(recent.reduce((sum,item,index)=>sum + Number(item?.evaluationScore || 50) * availableWeights[index], 0) / totalWeight, 0, 100);
+  }
+  window.managerCareerRecentPerformance = managerCareerRecentPerformance;
+  function managerCareerApplicationMargin(){
+    const profile = stProfile();
+    const base = Math.max(1, stRound(stLongCfg('ofertas.margenSolicitudBase', 8), 8));
+    const maximum = Math.max(base, stRound(stLongCfg('ofertas.margenSolicitudMaximo', 12), 12));
+    const capability = stAverage([profile.capabilities.sporting, profile.capabilities.stability]);
+    const bonus = (profile.moment >= 35 ? 2 : profile.moment >= 10 ? 1 : 0) + (capability >= 70 ? 2 : capability >= 55 ? 1 : 0);
+    return stClamp(base + bonus, base, maximum);
+  }
+  window.managerCareerApplicationMargin = managerCareerApplicationMargin;
+  function managerCareerHighRiskTerms(clubId){
+    const access = typeof currentManagerPrestige === 'function' ? Number(currentManagerPrestige() || 0) : 0;
+    const target = typeof clubPrestigeValue === 'function' ? Number(clubPrestigeValue(clubId) || 0) : 0;
+    const diff = Math.max(1, target - access);
+    const margin = Math.max(1, managerCareerApplicationMargin());
+    const pressure = stClamp(diff / margin, 0, 1);
+    const minBonus = Number(stLongCfg('ofertas.objetivoExigenteBonusMin', 0.28));
+    const maxBonus = Math.max(minBonus, Number(stLongCfg('ofertas.objetivoExigenteBonusMax', 0.55)));
+    const minBudget = Number(stLongCfg('ofertas.presupuestoExigenteMin', 0.03));
+    const maxBudget = Math.max(minBudget, Number(stLongCfg('ofertas.presupuestoExigenteMax', 0.10)));
+    return {
+      difference:diff,
+      objectiveBonus:Number((minBonus + (maxBonus - minBonus) * pressure).toFixed(3)),
+      transferBudgetRate:Number((maxBudget - (maxBudget - minBudget) * pressure).toFixed(3))
+    };
+  }
+  window.managerCareerHighRiskTerms = managerCareerHighRiskTerms;
   function stClubHistory(clubId){
     return (Array.isArray(game?.clubSeasonHistory?.entries) ? game.clubSeasonHistory.entries : [])
       .filter(item => Number(item?.clubId || 0) === Number(clubId))
@@ -172,21 +215,23 @@
     const profile = stProfile();
     const need = managerCareerClubNeed(clubId);
     const history = stManagerHistory();
-    const recent = history.slice(0,3);
     const division = stDivision(clubId);
     const country = String(club.country || division?.country || '');
-    const managerPrestigeComparable = profile.prestige / 10;
+    const managerPrestigeComparable = typeof managerCareerPrestigeToClubScale === 'function' ? managerCareerPrestigeToClubScale(profile.prestige) : profile.prestige / 10;
     const targetPrestige = typeof clubPrestigeValue === 'function' ? Number(clubPrestigeValue(clubId) || 0) : Number(club.prestige || 0);
-    const prestigeFit = stClamp(1 - Math.abs(managerPrestigeComparable - targetPrestige) / 52, 0, 1);
-    const recentPerformance = recent.length ? stAverage(recent.map(item => Number(item.evaluationScore || 50))) / 100 : 0.45;
+    const prestigeDifference = managerPrestigeComparable - targetPrestige;
+    const prestigeFit = prestigeDifference >= 0
+      ? stClamp(1 - Math.min(0.15, prestigeDifference / 300), 0.85, 1)
+      : stClamp(1 - Math.abs(prestigeDifference) / 24, 0, 1);
+    const recentPerformance = managerCareerRecentPerformance() / 100;
     const capabilityFit = Number(profile.capabilities?.[need.capability] || 0) / 100;
     const sameDivision = history.filter(item => String(item.divisionId || '') === String(division?.id || '')).length;
     const sameCountry = history.filter(item => String(stClub(item.clubId)?.country || '') === country).length;
     const experienceFit = sameDivision >= 2 ? 1 : sameDivision === 1 ? 0.72 : sameCountry >= 2 ? 0.48 : sameCountry === 1 ? 0.30 : 0.10;
     const stabilityFit = Number(profile.capabilities?.stability || 0) / 100;
     const momentFit = (Number(profile.moment || 0) + 100) / 200;
-    const score = stRound((prestigeFit * 0.30 + recentPerformance * 0.25 + capabilityFit * 0.20 + experienceFit * 0.10 + stabilityFit * 0.10 + momentFit * 0.05) * 100);
-    const threshold = stClamp(stRound(38 + targetPrestige * 0.20 - Number(need.standing?.ratio || 0.5) * 10), 34, 62);
+    const score = stRound((prestigeFit * 0.35 + recentPerformance * 0.25 + momentFit * 0.15 + capabilityFit * 0.15 + experienceFit * 0.05 + stabilityFit * 0.05) * 100);
+    const threshold = stClamp(stRound(36 + targetPrestige * 0.30 - Number(need.standing?.ratio || 0.5) * 8), 34, 68);
     const strongest = [
       { key:'prestige', label:'trayectoria', value:prestigeFit },
       { key:'recent', label:'rendimiento reciente', value:recentPerformance },
@@ -214,6 +259,25 @@
   }
   window.managerCareerProfileMatch = managerCareerProfileMatch;
 
+  function managerCareerAutomaticOfferEligible(clubId){
+    const profile = stProfile();
+    const target = typeof clubPrestigeValue === 'function' ? Number(clubPrestigeValue(clubId) || 0) : 0;
+    const match = managerCareerProfileMatch(clubId);
+    const recent = managerCareerRecentPerformance();
+    if(target <= Number(typeof MANAGER_CLUB_OPEN_PRESTIGE !== 'undefined' ? MANAGER_CLUB_OPEN_PRESTIGE : 20)) return true;
+    if(target >= 90){
+      return profile.prestige >= Number(stLongCfg('ofertas.prestigioPotencia', 900)) && profile.moment >= 10 && recent >= 75 && match.score >= match.threshold;
+    }
+    if(target >= 80){
+      return profile.prestige >= Number(stLongCfg('ofertas.prestigioElite', 825)) && profile.moment >= Number(stLongCfg('ofertas.momentoMinimoElite', 0)) && recent >= Number(stLongCfg('ofertas.evaluacionRecienteMinimaElite', 70)) && match.score >= match.threshold - 2;
+    }
+    if(target >= 70){
+      return profile.prestige >= 650 && profile.moment >= -20 && recent >= 60 && match.score >= match.threshold - 5;
+    }
+    return match.score >= match.threshold - 8;
+  }
+  window.managerCareerAutomaticOfferEligible = managerCareerAutomaticOfferEligible;
+
   function stDecorateOffer(offer){
     if(!offer || !Number(offer.clubId || 0)) return offer;
     const match = managerCareerProfileMatch(offer.clubId);
@@ -240,8 +304,11 @@
   if(typeof managerJobCreateOffer === 'function'){
     const managerJobCreateOfferV871 = managerJobCreateOffer;
     managerJobCreateOffer = function(clubId, options={}){
-      const offer = managerJobCreateOfferV871(clubId, options);
+      const highRisk = String(options?.contractType || '') === 'high_risk';
+      const riskTerms = highRisk ? managerCareerHighRiskTerms(clubId) : null;
+      const offer = managerJobCreateOfferV871(clubId, highRisk ? { ...options, objectiveBonus:riskTerms.objectiveBonus, transferBudgetRate:riskTerms.transferBudgetRate } : options);
       if(!offer) return offer;
+      if(riskTerms) Object.assign(offer, riskTerms);
       const decorated = stDecorateOffer(offer);
       Object.assign(offer, decorated);
       return offer;
@@ -253,16 +320,26 @@
       const pool = managerJobAvailableOfferCandidatesV871();
       const scored = pool.map(club => ({ club, match:managerCareerProfileMatch(club.id) }))
         .sort((a,b)=>b.match.score-a.match.score || Number(b.match.need?.standing?.ratio || 0)-Number(a.match.need?.standing?.ratio || 0));
-      const qualified = scored.filter(item => item.match.eligible);
-      return (qualified.length >= 3 ? qualified : scored).slice(0, Math.max(3, stRound(stCfg('ofertas.maximoCandidatos', 14), 14))).map(item => item.club);
+      const eligible = scored.filter(item => managerCareerAutomaticOfferEligible(item.club.id));
+      const starter = scored.filter(item => Number(clubPrestigeValue(item.club)) <= Number(typeof MANAGER_CLUB_OPEN_PRESTIGE !== 'undefined' ? MANAGER_CLUB_OPEN_PRESTIGE : 20));
+      const selected = eligible.length ? eligible : starter.length ? starter : scored;
+      return selected.slice(0, Math.max(3, stRound(stCfg('ofertas.maximoCandidatos', 14), 14))).map(item => item.club);
     };
   }
   if(typeof managerJobApplicationCandidates === 'function'){
-    const managerJobApplicationCandidatesV871 = managerJobApplicationCandidates;
     managerJobApplicationCandidates = function(limit=8){
-      return managerJobApplicationCandidatesV871(Math.max(limit, 12))
-        .map(club => ({ club, match:managerCareerProfileMatch(club.id) }))
-        .sort((a,b)=>b.match.score-a.match.score)
+      const prestige = Number(typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : 0);
+      const margin = managerCareerApplicationMargin();
+      const state = typeof ensureManagerJobMarketState === 'function' ? ensureManagerJobMarketState() : { offers:[], applications:[] };
+      const busy = new Set([...(state.offers || []).map(item=>Number(item.clubId||0)), ...(state.applications || []).filter(item=>item.status==='pending').map(item=>Number(item.clubId||0))]);
+      return (seed?.clubs || [])
+        .filter(club => typeof managerClubCareerEligible !== 'function' || managerClubCareerEligible(club))
+        .filter(club => Number(club.id) !== Number(game?.selectedClubId || 0) && !busy.has(Number(club.id)))
+        .filter(club => !(typeof managerClubRehireBlockInfo === 'function' && managerClubRehireBlockInfo(club).blocked))
+        .filter(club => !(typeof managerJobClubBlockedByRejectedApplication === 'function' && managerJobClubBlockedByRejectedApplication(club)))
+        .filter(club => { const target = Number(clubPrestigeValue(club)); return target > prestige && target <= prestige + margin; })
+        .map(club => ({ club, match:managerCareerProfileMatch(club.id), difference:Number(clubPrestigeValue(club))-prestige }))
+        .sort((a,b)=>b.match.score-a.match.score || a.difference-b.difference)
         .slice(0, Math.max(1, Number(limit || 8)))
         .map(item=>item.club);
     };
@@ -285,12 +362,14 @@
     };
   }
   if(typeof managerJobApplicationRejectionChance === 'function'){
-    const managerJobApplicationRejectionChanceV871 = managerJobApplicationRejectionChance;
     managerJobApplicationRejectionChance = function(club, managerPrestige){
-      const base = Number(managerJobApplicationRejectionChanceV871(club, managerPrestige) || 1);
+      const access = Number(typeof managerClubAccessPrestige === 'function' ? managerClubAccessPrestige(managerPrestige) : managerPrestige || 0);
+      const difference = Math.max(1, Number(clubPrestigeValue(club)) - access);
+      const margin = Math.max(1, managerCareerApplicationMargin());
       const fit = managerCareerProfileMatch(club?.id || club).score;
-      const adjustment = fit >= 80 ? -8 : fit >= 65 ? -5 : fit >= 50 ? -2 : fit < 30 ? 6 : fit < 40 ? 3 : 0;
-      return stClamp(Math.round(base + adjustment), 1, 20);
+      const base = 12 + (difference / margin) * 68;
+      const fitAdjustment = fit >= 80 ? -16 : fit >= 65 ? -10 : fit >= 50 ? -5 : fit < 30 ? 12 : fit < 40 ? 7 : 0;
+      return stClamp(Math.round(base + fitAdjustment), 8, 92);
     };
   }
   function stProfileMatchMarkup(clubId, offer=null){
@@ -319,7 +398,14 @@
     managerJobApplicationOptionCard = function(club){
       const html = managerJobApplicationOptionCardV871(club);
       const match = managerCareerProfileMatch(club?.id || 0);
-      return html.replace('</button>', `<span class="career-application-fit">Compatibilidad ${match.score}/100 · ${escapeHtml(match.need.label)}</span></button>`);
+      const terms = managerCareerHighRiskTerms(club?.id || 0);
+      const baseObjective = typeof managerObjectiveForClubDivision === 'function' ? Number(managerObjectiveForClubDivision(club?.id || 0)) : null;
+      const finalObjective = Number.isFinite(baseObjective) ? Math.min(2.75, baseObjective + Number(terms.objectiveBonus || 0)) : null;
+      const qualitative = Number.isFinite(finalObjective) && typeof managerCareerQualitativeObjective === 'function' ? managerCareerQualitativeObjective(club?.id || 0, finalObjective) : null;
+      const rejection = typeof managerJobApplicationRejectionChance === 'function' ? Number(managerJobApplicationRejectionChance(club, typeof currentManagerPrestige === 'function' ? currentManagerPrestige() : 0)) : 50;
+      const riskLabel = rejection >= 75 ? 'aceptación poco probable' : rejection >= 50 ? 'aceptación difícil' : 'aceptación posible';
+      const objectiveLabel = qualitative?.label || (Number.isFinite(finalObjective) ? `${finalObjective.toFixed(2)} pts/partido` : 'objetivo muy exigente');
+      return html.replace('</button>', `<span class="career-application-fit">Compatibilidad ${match.score}/100 · ${escapeHtml(match.need.label)}</span><span class="career-application-fit warn">Alto riesgo: ${escapeHtml(objectiveLabel)} · ${escapeHtml(riskLabel)}</span></button>`);
     };
   }
 

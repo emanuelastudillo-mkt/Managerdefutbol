@@ -1953,27 +1953,40 @@ function managerUnlockedAchievements(){
 function addManagerPrestige(points, reason=''){
   if(!game?.managerStats || Number(points || 0) === 0) return 0;
   game.managerStats = normalizeManagerStats(game.managerStats);
-  game.managerStats.prestigeAdjustments = Array.isArray(game.managerStats.prestigeAdjustments) ? game.managerStats.prestigeAdjustments : [];
-  game.managerStats.prestigeAdjustments.push({ points:Number(points || 0), reason:String(reason || 'Ajuste de prestigio'), season:Number(game.seasonNumber || 1), clubId:Number(game.selectedClubId || 0), createdAt:new Date().toISOString() });
-  game.managerStats = normalizeManagerStats(game.managerStats);
-  const total = formatManagerPrestige(game.managerStats.prestige);
-  if(reason){
-    pushGameMessage({ type:'directiva', priority:Number(points || 0) > 0 ? 'normal' : 'high', title:Number(points || 0) > 0 ? 'Prestigio de manager aumentado' : 'Prestigio de manager reducido', body:`${reason}. Prestigio actual: ${total}.`, id:`manager-prestige-${game.seasonNumber || 1}-${game.globalTurn || 0}-${reason}` });
+  const legacyPoints = Number(points || 0);
+  const careerDelta = Math.round(legacyPoints * 4);
+  if(typeof normalizeManagerCareerProfile === 'function'){
+    const profile = normalizeManagerCareerProfile(game.managerStats.careerProfile || {}, game.managerStats);
+    const before = Number(profile.prestige || 0);
+    profile.prestige = clamp(before + careerDelta, 0, Number(typeof configValue === 'function' ? configValue('manager.carrera.prestigioMaximo', 1000) : 1000));
+    profile.progression = Array.isArray(profile.progression) ? profile.progression : [];
+    profile.progression.push({
+      key:`adjustment:${game.seasonNumber || 1}:${game.selectedClubId || 0}:${game.globalTurn || 0}:${reason || 'prestigio'}`,
+      season:Number(game.seasonNumber || 1), clubId:Number(game.selectedClubId || 0), evaluationScore:50,
+      prestigeBefore:before, prestigeDelta:careerDelta, prestigeAfter:profile.prestige,
+      momentBefore:Number(profile.moment || 0), momentAfter:Number(profile.moment || 0), capabilityDeltas:{},
+      weight:0, status:'adjustment', createdAt:new Date().toISOString()
+    });
+    profile.progression = profile.progression.slice(-120);
+    game.managerStats.careerProfile = profile;
+  }else{
+    game.managerStats.prestigeAdjustments = Array.isArray(game.managerStats.prestigeAdjustments) ? game.managerStats.prestigeAdjustments : [];
+    game.managerStats.prestigeAdjustments.push({ points:legacyPoints, reason:String(reason || 'Ajuste de prestigio'), season:Number(game.seasonNumber || 1), clubId:Number(game.selectedClubId || 0), createdAt:new Date().toISOString() });
   }
-  return Number(points || 0);
+  if(reason){
+    const careerTotal = Number(game.managerStats?.careerProfile?.prestige || 0);
+    pushGameMessage({ type:'directiva', priority:careerDelta > 0 ? 'normal' : 'high', title:careerDelta > 0 ? 'Prestigio de carrera aumentado' : 'Prestigio de carrera reducido', body:`${reason}. Prestigio de carrera: ${careerTotal}/1000.`, id:`manager-prestige-${game.seasonNumber || 1}-${game.globalTurn || 0}-${reason}` });
+  }
+  return careerDelta;
 }
 function updateManagerPrestigeFromWins(){
+  // V8.73: las victorias ya forman parte de la evaluación anual y no otorgan un segundo prestigio paralelo.
   if(!game?.managerStats) return 0;
   game.managerStats = normalizeManagerStats(game.managerStats);
   const wins = Math.max(0, Math.round(Number(game.managerStats.totals?.won || 0)));
   const step = Math.max(1, Number(MANAGER_PRESTIGE_WINS_STEP || 10));
-  const milestones = Math.floor(wins / step);
-  const current = Math.max(0, Math.round(Number(game.managerStats.prestigeWinMilestones || 0)));
-  if(milestones <= current) return 0;
-  const diff = milestones - current;
-  game.managerStats.prestigeWinMilestones = milestones;
-  pushGameMessage({ type:'directiva', priority:'normal', title:'Prestigio por victorias', body:`${wins} victorias acumuladas. Las victorias suman ${diff} punto(s) de prestigio por carrera. Prestigio actual: ${formatManagerPrestige(currentManagerPrestige())}.`, id:`manager-win-prestige-${game.seasonNumber || 1}-${game.globalTurn || 0}-${wins}` });
-  return diff;
+  game.managerStats.prestigeWinMilestones = Math.max(Number(game.managerStats.prestigeWinMilestones || 0), Math.floor(wins / step));
+  return 0;
 }
 function emptyManagerSeasonStats(season=game?.seasonNumber || 1, clubId=game?.selectedClubId || 0){
   return { season:Number(season || 1), clubId:Number(clubId || 0), played:0, won:0, drawn:0, lost:0, gf:0, gc:0 };
@@ -2033,6 +2046,25 @@ function managerObjectiveLimitsForDivision(division={}){
     max:Number.isFinite(Number(limits.max)) ? Number(limits.max) : fallback.max
   };
 }
+function managerObjectiveManagerPrestigePressure(clubId){
+  const cfg = typeof configValue === 'function' ? configValue('manager.carrera.progresionLarga.presionExpectativas', {}) : {};
+  if(cfg?.activo === false) return { bonus:0, careerPrestige:0, accessPrestige:0, advantage:0 };
+  const careerPrestige = Number(typeof currentManagerCareerPrestige === 'function'
+    ? currentManagerCareerPrestige(game)
+    : game?.managerStats?.careerProfile?.prestige || 0);
+  const accessPrestige = Number(typeof managerCareerPrestigeToClubScale === 'function'
+    ? managerCareerPrestigeToClubScale(careerPrestige)
+    : currentManagerPrestige());
+  const advantage = accessPrestige - clubPrestigeValue(clubId);
+  const fromPrestige = Number(cfg?.prestigioCarreraDesde ?? 600);
+  const fromAdvantage = Number(cfg?.ventajaAccesoDesde ?? 10);
+  if(careerPrestige < fromPrestige || advantage < fromAdvantage) return { bonus:0, careerPrestige, accessPrestige, advantage };
+  const prestigeFactor = clamp((careerPrestige - fromPrestige) / Math.max(1, 1000 - fromPrestige), 0, 1);
+  const advantageFactor = clamp((advantage - fromAdvantage) / 30, 0, 1);
+  const maxBonus = Math.max(0, Number(cfg?.bonusPpgMaximo ?? 0.18));
+  const bonus = clamp(maxBonus * (prestigeFactor * 0.60 + advantageFactor * 0.40), 0, maxBonus);
+  return { bonus:Number(bonus.toFixed(3)), careerPrestige, accessPrestige, advantage };
+}
 function managerObjectiveBreakdownForClubDivision(clubId){
   const targetClubId = clubId || game?.selectedClubId;
   if(isFoundedClubId(targetClubId)) return { active:false, objective:null, reason:'fundador' };
@@ -2068,8 +2100,9 @@ function managerObjectiveBreakdownForClubDivision(clubId){
   const base = managerObjectiveBaseValueForDivision(division, targetClubId);
   const modEntry = managerObjectiveEntryForValue(cfg.modificadoresPrestigioRelativo, relative);
   const modifier = Number(modEntry?.ppg || 0);
+  const managerPressure = managerObjectiveManagerPrestigePressure(targetClubId);
   const limits = managerObjectiveLimitsForDivision(division);
-  const raw = base + modifier;
+  const raw = base + modifier + Number(managerPressure.bonus || 0);
   const objective = clamp(raw, limits.min, limits.max);
   const expectationEntry = managerObjectiveEntryForValue(cfg.expectativasPrestigioRelativo, relative);
   return {
@@ -2082,7 +2115,9 @@ function managerObjectiveBreakdownForClubDivision(clubId){
     prestige,
     leagueAveragePrestige:Number(avg.toFixed(2)),
     prestigeRelative:relative,
-    expectation:expectationEntry?.texto || 'Mitad de tabla',
+    managerExpectationBonusPpg:Number(managerPressure.bonus || 0),
+    managerCareerPrestige:Number(managerPressure.careerPrestige || 0),
+    expectation:managerPressure.bonus > 0 ? `${expectationEntry?.texto || 'Mitad de tabla'} · exigencia adicional por prestigio del mánager` : (expectationEntry?.texto || 'Mitad de tabla'),
     divisionKey:managerObjectiveDivisionKey(division?.order || 3),
     minLimit:limits.min,
     maxLimit:limits.max

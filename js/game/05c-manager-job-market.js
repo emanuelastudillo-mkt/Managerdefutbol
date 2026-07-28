@@ -175,7 +175,7 @@ function normalizeManagerJobMarketState(state={}){
       managerPrestigeAtOffer:Math.max(0, Math.round(Number(offer?.managerPrestigeAtOffer ?? currentManagerPrestige()))),
       objectiveBonus:Number.isFinite(Number(offer?.objectiveBonus)) ? Number(offer.objectiveBonus) : (String(offer?.contractType || '') === 'high_risk' ? 0.25 : 0),
       transferBudgetRate:Number.isFinite(Number(offer?.transferBudgetRate)) ? Number(offer.transferBudgetRate) : (String(offer?.contractType || '') === 'high_risk' ? 0.05 : null),
-      rejectionChance:Number.isFinite(Number(offer?.rejectionChance)) ? clamp(Number(offer.rejectionChance), 1, 20) : 1,
+      rejectionChance:Number.isFinite(Number(offer?.rejectionChance)) ? clamp(Number(offer.rejectionChance), 1, 95) : 1,
       salaryOfferFactor:Number.isFinite(Number(offer?.salaryOfferFactor)) ? clamp(Number(offer.salaryOfferFactor), 0.40, 1.50) : null,
       futureSalePercent:Number.isFinite(Number(offer?.futureSalePercent)) ? clamp(Math.round(Number(offer.futureSalePercent)), 0, 100) : null,
       tablePosition:Math.max(0, Math.round(Number(offer?.tablePosition || 0))),
@@ -196,7 +196,7 @@ function normalizeManagerJobMarketState(state={}){
       requestedDate,
       responseDate:validIsoDate(app?.responseDate) ? app.responseDate : addDaysToIsoDate(requestedDate, 3),
       managerPrestigeAtRequest:Math.max(0, Math.round(Number(app?.managerPrestigeAtRequest ?? currentManagerPrestige()))),
-      rejectionChance:Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 20) : 1,
+      rejectionChance:Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 95) : 1,
       status:String(app?.status || 'pending')
     };
   };
@@ -374,9 +374,9 @@ function managerJobCreateOffer(clubId, options={}){
     createdDate:today,
     expiresDate:addDaysToIsoDate(today, 20),
     managerPrestigeAtOffer:currentManagerPrestige(),
-    objectiveBonus:contractType === 'high_risk' ? 0.25 : 0,
-    transferBudgetRate:contractType === 'high_risk' ? 0.05 : null,
-    rejectionChance:Number.isFinite(Number(options.rejectionChance)) ? clamp(Number(options.rejectionChance), 1, 20) : 1,
+    objectiveBonus:contractType === 'high_risk' ? Number(options.objectiveBonus ?? 0.25) : 0,
+    transferBudgetRate:contractType === 'high_risk' ? Number(options.transferBudgetRate ?? 0.05) : null,
+    rejectionChance:Number.isFinite(Number(options.rejectionChance)) ? clamp(Number(options.rejectionChance), 1, 95) : 1,
     note:String(options.note || '')
   };
   state.offers.push(offer);
@@ -435,7 +435,7 @@ function processManagerJobMarketDaily(){
     }else if(managerCanSelectClub(club, managerPrestige, { ignoreRehireBlock:false })){
       managerJobCreateOffer(club.id, { source:'application', contractType:'normal', note:'Solicitud aceptada con condiciones normales.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud aceptada', body:`${club.name} respondió tu solicitud y te ofrece un contrato normal. Tenés 20 días para aceptar.`, id:`job-application-accepted-${club.id}-${today}` });
-    }else if(diff > 0 && diff <= 20){
+    }else if(diff > 0 && diff <= (typeof managerCareerApplicationMargin === 'function' ? managerCareerApplicationMargin() : 8)){
       managerJobCreateOffer(club.id, { source:'application', contractType:'high_risk', note:'Contrato exigente por diferencia de prestigio.', rejectionChance:rejection.chance });
       pushGameMessage({ type:'directiva', priority:'high', title:'Solicitud en evaluación aceptada', body:`${club.name} analiza tu perfil pese a la diferencia de prestigio. Te ofrece contrato con objetivo superior al normal y una restricción de fichajes muy alta. Tenés 20 días para aceptar.`, id:`job-application-risk-${club.id}-${today}` });
     }else{
@@ -463,11 +463,12 @@ function processManagerJobMarketDaily(){
 }
 
 function managerJobApplicationRejectionChance(club, managerPrestige=currentManagerPrestige()){
-  const diff = clubPrestigeValue(club) - managerClubAccessPrestige(managerPrestige);
-  return clamp(Math.round(1 + Math.max(0, diff)), 1, 20);
+  const diff = Math.max(1, clubPrestigeValue(club) - managerClubAccessPrestige(managerPrestige));
+  const margin = typeof managerCareerApplicationMargin === 'function' ? managerCareerApplicationMargin() : 8;
+  return clamp(Math.round(12 + (diff / Math.max(1, margin)) * 68), 8, 92);
 }
 function managerJobApplicationRejected(app, club){
-  const chance = Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 20) : managerJobApplicationRejectionChance(club, app?.managerPrestigeAtRequest ?? currentManagerPrestige());
+  const chance = Number.isFinite(Number(app?.rejectionChance)) ? clamp(Number(app.rejectionChance), 1, 95) : managerJobApplicationRejectionChance(club, app?.managerPrestigeAtRequest ?? currentManagerPrestige());
   const roll = hashNumber(`job-app-reject-${app?.id || ''}-${club?.id || 0}-${app?.responseDate || currentCalendarDate()}`, 10000) / 100;
   return { rejected: roll < chance, chance, roll };
 }
@@ -528,12 +529,12 @@ function managerJobMarketMarkup(){
   const options = managerJobApplicationCandidates(8);
   return `<section class="card job-market-panel">
     <div class="row"><div><p class="label">Mercado laboral</p><h3>Ofertas y solicitudes</h3></div><span class="pill">Próxima oferta: ${escapeHtml(state.nextIncomingOfferDate || '—')}</span></div>
-    <p class="muted small">Mientras estás sin club, el calendario sigue corriendo. Los clubes pueden enviarte ofertas y también podés solicitar trabajo a equipos hasta 20 puntos por encima de tu prestigio.</p>
+    <p class="muted small">Mientras estás sin club, el calendario sigue corriendo. Los clubes pequeños pueden ofrecerte trabajo desde el comienzo. También podés solicitar cargos algo superiores, aunque pueden responder con objetivos muy exigentes.</p>
     <div class="grid cols-2 job-market-grid" style="margin-top:12px">
       <div><h4>Ofertas recibidas</h4>${offers.length ? offers.map(managerJobOfferCard).join('') : '<p class="muted small">No hay ofertas activas. Entre 3 y 7 días puede llegar una nueva.</p>'}</div>
       <div><h4>Solicitudes pendientes</h4>${applications.length ? applications.map(managerJobApplicationCard).join('') : '<p class="muted small">No hay solicitudes en espera.</p>'}</div>
     </div>
-    <div style="margin-top:12px"><h4>Solicitar trabajo a clubes superiores</h4><div class="available-clubs-grid">${options.length ? options.map(managerJobApplicationOptionCard).join('') : '<p class="muted small">No hay clubes dentro del margen de 20 puntos o ya tienen una solicitud/oferta activa.</p>'}</div></div>
+    <div style="margin-top:12px"><h4>Solicitar trabajo a clubes superiores</h4><div class="available-clubs-grid">${options.length ? options.map(managerJobApplicationOptionCard).join('') : '<p class="muted small">No hay clubes dentro del margen de solicitud actual o ya tienen una solicitud u oferta activa.</p>'}</div></div>
   </section>`;
 }
 
@@ -601,7 +602,8 @@ function applyForManagerJob(clubId){
     return false;
   }
   const diff = clubPrestigeValue(club) - managerClubAccessPrestige(currentManagerPrestige());
-  if(diff <= 0 || diff > 20){ showNotice(`${club.name} está fuera del margen de solicitud. Diferencia actual: ${diff} puntos.`); return false; }
+  const applicationMargin = typeof managerCareerApplicationMargin === 'function' ? managerCareerApplicationMargin() : 8;
+  if(diff <= 0 || diff > applicationMargin){ showNotice(`${club.name} está fuera del margen de solicitud. Diferencia actual: ${diff} puntos; margen permitido: ${applicationMargin}.`); return false; }
   const state = ensureManagerJobMarketState();
   if(state.applications.some(app => Number(app.clubId) === Number(club.id) && app.status === 'pending')){ showNotice('Ya enviaste una solicitud a ese club.'); return false; }
   if(state.offers.some(offer => Number(offer.clubId) === Number(club.id))){ showNotice('Ese club ya tiene una oferta activa para vos.'); return false; }

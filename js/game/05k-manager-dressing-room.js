@@ -4,6 +4,7 @@
 
 (function(){
   const DRESSING_ROOM_VERSION = 1;
+  let dressingRoomSort = 'influence_desc';
   const GROUP_LABELS = {
     starter:'Titulares',
     rotation:'Rotación',
@@ -213,12 +214,19 @@
       doubts:Number(drConfig('renovaciones.dudasDesde', 35)),
       hard:Number(drConfig('renovaciones.dificilDesde', 20))
     };
+    if(trust >= 85) return { code:'excellent', label:'Muy predispuesto', factor:.98, tone:'ok' };
     if(trust >= cfg.ready) return { code:'ready', label:'Predispuesto', factor:1, tone:'ok' };
     if(trust >= cfg.open) return { code:'open', label:'Abierto a renovar', factor:1, tone:'neutral' };
     if(trust >= cfg.doubts) return { code:'doubts', label:'Tiene dudas', factor:1 + Number(drConfig('renovaciones.aumentoDudasPct', 5)) / 100, tone:'warn' };
     if(trust >= cfg.hard) return { code:'hard', label:'Renovación difícil', factor:1 + Number(drConfig('renovaciones.aumentoDificilPct', 10)) / 100, tone:'danger' };
     return { code:'refusal', label:'No quiere renovar', factor:1 + Number(drConfig('renovaciones.aumentoRupturaPct', 15)) / 100, tone:'danger' };
   }
+  function managerDressingRoomRenewalDisposition(playerId){
+    const stint = currentDressingRoom() || ensureDressingRoom();
+    const entry = stint?.playerTrust?.[Number(playerId)] || null;
+    return drRenewalDisposition(entry?.value ?? 50, entry);
+  }
+  window.managerDressingRoomRenewalDisposition = managerDressingRoomRenewalDisposition;
 
   function drUpdateGroupSummary(stint){
     if(!stint) return null;
@@ -489,67 +497,24 @@
   function applyDressingRoomRenewals(originalResult, salaryBefore){
     const stint = currentDressingRoom();
     if(!stint || !salaryBefore) return originalResult;
-    const requesters = [];
+    // V8.75: la confianza prepara la negociación, pero no renueva ni cambia
+    // salarios automáticamente en el club dirigido.
     Object.values(stint.playerTrust).forEach(entry => {
       const player = drPlayerById(entry.playerId);
       if(!player || Number(player.clubId || 0) !== Number(stint.clubId)) return;
       const before = Math.max(0, Number(salaryBefore.get(Number(player.id)) || player.salary || 0));
-      if(before <= 0) return;
       const disposition = drRenewalDemandForTrust(entry);
-      let after = Math.max(0, Number(player.salary || 0));
-      if(disposition.factor > 1) after = Math.max(after, Math.round(before * disposition.factor));
-      let requestedTransfer = false;
-      if(disposition.code === 'refusal'){
-        const probability = drClamp(Number(drConfig('renovaciones.probabilidadPedidoSalidaBajaConfianza', 0.35)), 0, 1);
-        const roll = drHash(`${stint.key}:${entry.playerId}:renewal:${drCurrentSeason()}`, 10000) / 10000;
-        requestedTransfer = roll < probability;
-        if(requestedTransfer){
-          player.transferRequest = true;
-          player.transferRequestSeason = drCurrentSeason();
-          requesters.push(player);
-        }
-      }
-      player.salary = Math.max(0, drRound(after));
-      if(typeof refreshPlayerClause === 'function') refreshPlayerClause(player);
       entry.renewal = {
         season:drCurrentSeason(),
         disposition:disposition.code,
-        status:requestedTransfer ? 'requested_transfer' : 'renewed',
+        status:'manual_pending',
         demandFactor:disposition.factor,
-        requestedTransfer,
+        requestedTransfer:Boolean(player.transferRequest),
         salaryBefore:drRound(before),
-        salaryAfter:drRound(player.salary)
+        salaryAfter:drRound(Number(player.salary || before))
       };
     });
-    if(originalResult && typeof originalResult === 'object'){
-      let increased = 0, decreased = 0, totalDelta = 0, players = 0;
-      (seed?.players || []).forEach(player => {
-        const before = salaryBefore.get(Number(player.id));
-        if(before === undefined || Number(player.clubId || 0) <= 0 || player.sold) return;
-        const after = Math.max(0, Number(player.salary || 0));
-        const delta = after - Number(before || 0);
-        players += 1;
-        totalDelta += delta;
-        if(delta > 0) increased += 1;
-        if(delta < 0) decreased += 1;
-      });
-      originalResult.players = players;
-      originalResult.increased = increased;
-      originalResult.decreased = decreased;
-      originalResult.totalDelta = totalDelta;
-      originalResult.details = Object.values(stint.playerTrust).map(entry => {
-        const player = drPlayerById(entry.playerId);
-        const before = Number(salaryBefore.get(Number(entry.playerId)) || 0);
-        const after = Number(player?.salary || before);
-        return { playerId:entry.playerId, name:player?.name || '', played:drPlayerAppearanceData(player).played, oldSalary:before, nextSalary:after, delta:after-before, pct:before ? (after-before)/before : 0, confidence:entry.value, renewal:entry.renewal };
-      });
-    }
     drSyncRoster(stint);
-    if(requesters.length && typeof pushGameMessage === 'function'){
-      const names = requesters.slice(0, 3).map(player => playerLastName(player.name)).join(', ');
-      const extra = requesters.length > 3 ? ` y ${requesters.length - 3} más` : '';
-      pushGameMessage({ type:'deportivo', priority:'high', title:'Tensión en las renovaciones', body:`La baja confianza del vestuario complicó las renovaciones. ${names}${extra} solicitaron una salida del club.`, id:`dressing-room-renewals-${drCurrentSeason()}-${stint.clubId}` });
-    }
     return originalResult;
   }
 
@@ -632,6 +597,42 @@
     const status = drTrustStatus(data?.value || 0);
     return `<div class="card dressing-group-card"><p class="label">${escapeHtml(GROUP_LABELS[group] || group)}</p><strong>${drRound(data?.value || 0)}</strong><span class="${status.tone}">${escapeHtml(status.label)}</span><small>${drRound(data?.count || 0)} jugador(es)</small></div>`;
   }
+  function drRenewalSortValue(entry){
+    const disposition = drRenewalDisposition(entry?.value || 0, entry);
+    return { refusal:0, exit:0, hard:1, doubts:2, open:3, ready:4, excellent:5 }[disposition.code] ?? 2;
+  }
+  function drGroupSortValue(group){
+    return { starter:1, rotation:2, substitute:3, youth:4 }[String(group || '')] || 9;
+  }
+  function drRoleSortValue(entry){
+    return entry?.tags?.includes('captain') ? 0 : entry?.tags?.includes('referent') ? 1 : 2;
+  }
+  function drSortedPlayers(stint){
+    const items = Object.values(stint.playerTrust).map(entry => ({ entry, player:drPlayerById(entry.playerId) })).filter(item => item.player);
+    const byName = (a,b) => String(a.player.name || '').localeCompare(String(b.player.name || ''), 'es');
+    const morale = item => typeof currentMorale === 'function' ? Number(currentMorale(item.player.id) || 0) : Number(game?.playerMorale?.[item.player.id] || 0);
+    const sorters = {
+      name_asc:byName, name_desc:(a,b)=>-byName(a,b),
+      group_asc:(a,b)=>drGroupSortValue(a.entry.primaryGroup)-drGroupSortValue(b.entry.primaryGroup)||byName(a,b),
+      group_desc:(a,b)=>drGroupSortValue(b.entry.primaryGroup)-drGroupSortValue(a.entry.primaryGroup)||byName(a,b),
+      role_asc:(a,b)=>drRoleSortValue(a.entry)-drRoleSortValue(b.entry)||byName(a,b),
+      role_desc:(a,b)=>drRoleSortValue(b.entry)-drRoleSortValue(a.entry)||byName(a,b),
+      trust_asc:(a,b)=>Number(a.entry.value||0)-Number(b.entry.value||0)||byName(a,b),
+      trust_desc:(a,b)=>Number(b.entry.value||0)-Number(a.entry.value||0)||byName(a,b),
+      influence_asc:(a,b)=>Number(a.entry.influence||0)-Number(b.entry.influence||0)||byName(a,b),
+      influence_desc:(a,b)=>Number(b.entry.influence||0)-Number(a.entry.influence||0)||byName(a,b),
+      renewal_asc:(a,b)=>drRenewalSortValue(a.entry)-drRenewalSortValue(b.entry)||byName(a,b),
+      renewal_desc:(a,b)=>drRenewalSortValue(b.entry)-drRenewalSortValue(a.entry)||byName(a,b),
+      morale_asc:(a,b)=>morale(a)-morale(b)||byName(a,b),
+      morale_desc:(a,b)=>morale(b)-morale(a)||byName(a,b)
+    };
+    return items.sort(sorters[dressingRoomSort] || sorters.influence_desc);
+  }
+  function drColumnSort(label, asc, desc){
+    if(typeof compactSortButtons === 'function') return compactSortButtons(label, [[asc,'Menor a mayor'],[desc,'Mayor a menor']], dressingRoomSort, 'data-dressing-sort');
+    return label;
+  }
+
   function renderDressingRoom(){
     const stint = ensureDressingRoom();
     if(!stint){
@@ -641,21 +642,16 @@
     }
     const generalStatus = drTrustStatus(stint.generalTrust);
     const leadershipScore = managerDressingRoomLeadershipScore(stint.clubId);
-    const rows = Object.values(stint.playerTrust).map(entry => ({ entry, player:drPlayerById(entry.playerId) }))
-      .filter(item => item.player)
-      .sort((a,b) => {
-        const aLeader = a.entry.tags.includes('captain') ? 2 : a.entry.tags.includes('referent') ? 1 : 0;
-        const bLeader = b.entry.tags.includes('captain') ? 2 : b.entry.tags.includes('referent') ? 1 : 0;
-        return bLeader - aLeader || Number(b.entry.influence || 0) - Number(a.entry.influence || 0) || Number(b.entry.value || 0) - Number(a.entry.value || 0) || String(a.player.name || '').localeCompare(String(b.player.name || ''));
-      }).map(({ entry, player }) => {
+    const rows = drSortedPlayers(stint).map(({ entry, player }) => {
         const renewal = drRenewalDisposition(entry.value, entry);
-        return `<tr><td>${typeof faceImg === 'function' ? faceImg(player, 'photo-thumb') : ''}</td><td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name || '')}</strong></button><small>${escapeHtml(GROUP_LABELS[entry.primaryGroup] || entry.primaryGroup)}</small></td><td>${drTagMarkup(entry)}</td><td>${drTrustBar(entry.value)}</td><td><strong>${drRound(entry.influence)}</strong><small>Influencia</small></td><td><span class="${renewal.tone}">${escapeHtml(renewal.label)}</span>${entry.renewal?.salaryAfter ? `<small>${formatMoney(entry.renewal.salaryAfter)}</small>` : ''}</td><td>${typeof moraleBar === 'function' ? moraleBar(player.id) : '—'}</td></tr>`;
+        return `<tr><td>${typeof faceImg === 'function' ? faceImg(player, 'photo-thumb') : ''}</td><td><button class="linklike" data-player-id="${player.id}"><strong>${typeof playerNameWithStar === 'function' ? playerNameWithStar(player) : escapeHtml(player.name || '')}</strong></button></td><td><strong>${escapeHtml(GROUP_LABELS[entry.primaryGroup] || entry.primaryGroup)}</strong></td><td>${drTagMarkup(entry)}</td><td>${drTrustBar(entry.value)}</td><td><strong>${drRound(entry.influence)}</strong><small>Influencia</small></td><td><span class="${renewal.tone}">${escapeHtml(renewal.label)}</span>${entry.renewal?.salaryAfter ? `<small>${formatMoney(entry.renewal.salaryAfter)}</small>` : ''}</td><td>${typeof moraleBar === 'function' ? moraleBar(player.id) : '—'}</td></tr>`;
       }).join('');
     view.innerHTML = `<div class="section-title"><h2>Vestuario</h2><p class="tagline">La confianza se forma con resultados, participación, capitanía y decisiones sobre referentes. No sustituye la calidad deportiva del plantel.</p></div>
       <div class="dressing-summary-grid"><div class="dressing-main-summary"><span>Confianza general</span><strong>${drRound(stint.generalTrust)}</strong><em class="${generalStatus.tone}">${escapeHtml(generalStatus.label)}</em></div><div class="dressing-main-summary"><span>Evaluación de Liderazgo</span><strong>${drRound(leadershipScore)}</strong><em>Se utiliza al cerrar la temporada.</em></div><div class="dressing-main-summary"><span>Referentes</span><strong>${stint.referentIds.length}</strong><em>${stint.referentIds.map(id => playerLastName(drPlayerById(id)?.name || '')).filter(Boolean).join(' · ') || 'Sin referentes'}</em></div></div>
       <div class="dressing-groups-grid">${['referent','starter','rotation','substitute','youth'].map(group => drGroupCard(group, stint.groupTrust[group])).join('')}</div>
-      <div class="card dressing-explanation"><p><strong>Efectos activos:</strong> la confianza modifica la recuperación de moral, puede sumar o restar cohesión tras los partidos y cambia las exigencias salariales de la renovación anual.</p></div>
-      <div class="table-wrap dressing-table-wrap"><table class="dressing-table"><thead><tr><th>Foto</th><th>Jugador / grupo</th><th>Rol interno</th><th>Confianza</th><th>Peso</th><th>Renovación</th><th>Moral</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="muted">No hay jugadores disponibles.</td></tr>'}</tbody></table></div>`;
+      <div class="card dressing-explanation"><p><strong>Efectos activos:</strong> la confianza modifica la recuperación de moral, puede sumar o restar cohesión tras los partidos y cambia las exigencias salariales y la duración posible en una negociación contractual.</p></div>
+      <div class="table-wrap dressing-table-wrap"><table class="dressing-table"><thead><tr><th>Foto</th><th>${drColumnSort('Jugador','name_asc','name_desc')}</th><th>${drColumnSort('Grupo','group_asc','group_desc')}</th><th>${drColumnSort('Rol interno','role_asc','role_desc')}</th><th>${drColumnSort('Confianza','trust_asc','trust_desc')}</th><th>${drColumnSort('Peso','influence_asc','influence_desc')}</th><th>${drColumnSort('Renovación','renewal_asc','renewal_desc')}</th><th>${drColumnSort('Moral','morale_asc','morale_desc')}</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">No hay jugadores disponibles.</td></tr>'}</tbody></table></div>`;
+    document.querySelectorAll('[data-dressing-sort]').forEach(button => button.addEventListener('click', () => { dressingRoomSort = button.dataset.dressingSort || 'influence_desc'; renderDressingRoom(); }));
     if(typeof prependFirstTeamTabs === 'function') prependFirstTeamTabs('dressingRoom');
   }
   window.renderDressingRoom = renderDressingRoom;

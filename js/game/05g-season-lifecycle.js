@@ -297,6 +297,8 @@ function applySeasonSalaryAdjustments(){
   const details = [];
   seed.players.forEach(player => {
     if(!player || Number(player.clubId || 0) <= 0 || player.sold) return;
+    // V8.75: el club dirigido negocia salarios mediante renovaciones manuales.
+    if(Number(player.clubId || 0) === Number(game.selectedClubId || 0)) return;
     const oldSalary = Math.max(0, Math.round(Number(player.salary || 0)));
     if(oldSalary <= 0) return;
     const played = Math.max(0, Math.round(Number(game.playerStats[player.id]?.played || 0)));
@@ -1710,7 +1712,7 @@ function seasonEndPanelMarkup(){
     <p class="muted">La próxima temporada continúa con ${escapeHtml(clubName(game.selectedClubId))}. Para cambiar de equipo, utilizá una oferta o una solicitud laboral.</p>
     ${record?.totalSeasonPrize ? `<p class="tagline ok">Premios deportivos cobrados: <strong>${formatMoney(record.totalSeasonPrize)}</strong>${record.championPrize ? ` · Campeonato ${formatMoney(record.championPrize)}` : ''}${record.promotionPrize ? ` · Ascenso ${formatMoney(record.promotionPrize)}` : ''}.</p>` : ''}
     ${game.seasonTransition?.salariesPaid ? `<p class="tagline">Pago anual de sueldos descontado: <strong>${formatMoney(game.seasonTransition.salariesPaid)}</strong>.</p>` : ''}
-    ${salaryAdjustments ? `<p class="tagline">Sueldos ajustados para la próxima temporada según partidos jugados: ${salaryAdjustments.increased || 0} suben, ${salaryAdjustments.decreased || 0} bajan.</p>` : ''}
+    ${salaryAdjustments?.details?.length ? `<p class="tagline">Sueldos ajustados para la próxima temporada según partidos jugados: ${salaryAdjustments.increased || 0} suben, ${salaryAdjustments.decreased || 0} bajan.</p>` : ''}
     ${retirementRows ? `<ul class="season-movement-list">${retirementRows}</ul>` : ''}
     ${moveRows ? `<ul class="season-movement-list">${moveRows}</ul>` : ''}
     <div class="row" style="margin-top:12px"><button class="primary" data-continue-season>Comenzar próxima temporada</button></div>

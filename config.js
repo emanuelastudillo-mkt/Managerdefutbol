@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V8.74',
+  version: 'V8.75',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -24,31 +24,31 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=8.74', 'data/Liga Chile.json?v=8.74', 'data/Liga Brasil.json?v=8.74', 'data/Liga Inglaterra.json?v=8.74', 'data/Liga Espana.json?v=8.74', 'data/Liga Italia.json?v=8.74', 'data/Liga Rumania.json?v=8.74'],
+    leagueUrls: ['data/Liga Argentina.json?v=8.75', 'data/Liga Chile.json?v=8.75', 'data/Liga Brasil.json?v=8.75', 'data/Liga Inglaterra.json?v=8.75', 'data/Liga Espana.json?v=8.75', 'data/Liga Italia.json?v=8.75', 'data/Liga Rumania.json?v=8.75'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
-    playersUrl: 'data/jugadores.json?v=8.74',
+    playersUrl: 'data/jugadores.json?v=8.75',
     playersUrls: [
-      'data/jugadores/argentina-liga-profesional.json?v=8.74',
-      'data/jugadores/argentina-primera-nacional.json?v=8.74',
-      'data/jugadores/argentina-federal-a.json?v=8.74',
-      'data/jugadores/chile-primera-division-chile.json?v=8.74',
-      'data/jugadores/brasil-brasileirao.json?v=8.74',
-      'data/jugadores/inglaterra-premier-league.json?v=8.74',
-      'data/jugadores/espana-laliga-espana.json?v=8.74',
-      'data/jugadores/italia-serie-a-italia.json?v=8.74',
-      'data/jugadores/rumania-superliga-rumania.json?v=8.74'
+      'data/jugadores/argentina-liga-profesional.json?v=8.75',
+      'data/jugadores/argentina-primera-nacional.json?v=8.75',
+      'data/jugadores/argentina-federal-a.json?v=8.75',
+      'data/jugadores/chile-primera-division-chile.json?v=8.75',
+      'data/jugadores/brasil-brasileirao.json?v=8.75',
+      'data/jugadores/inglaterra-premier-league.json?v=8.75',
+      'data/jugadores/espana-laliga-espana.json?v=8.75',
+      'data/jugadores/italia-serie-a-italia.json?v=8.75',
+      'data/jugadores/rumania-superliga-rumania.json?v=8.75'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.74',
-    sponsorsUrl: 'data/sponsors.json?v=8.74',
-    employeesUrl: 'data/empleados.json?v=8.74',
-    installationsUrl: 'data/instalaciones.json?v=8.74',
-    eventsUrl: 'data/eventos.json?v=8.74',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.74',
-    managerAchievementsUrl: 'data/hitos_manager.json?v=8.74',
-    retosManagerUrl: 'data/retos_manager.json?v=8.74',
-    estadiosUrls: ['data/estadios_argentina.json?v=8.74', 'data/estadios_chile.json?v=8.74', 'data/estadios_brasil.json?v=8.74', 'data/estadios_inglaterra.json?v=8.74', 'data/estadios_espana.json?v=8.74', 'data/estadios_italia.json?v=8.74', 'data/estadios_rumania.json?v=8.74'],
-    hinchasUrls: ['data/hinchas_argentina.json?v=8.74', 'data/hinchas_chile.json?v=8.74', 'data/hinchas_brasil.json?v=8.74', 'data/hinchas_inglaterra.json?v=8.74', 'data/hinchas_espana.json?v=8.74', 'data/hinchas_italia.json?v=8.74', 'data/hinchas_rumania.json?v=8.74'],
-    relatosPartidoUrl: 'data/relatos_partido.json?v=8.74'
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=8.75',
+    sponsorsUrl: 'data/sponsors.json?v=8.75',
+    employeesUrl: 'data/empleados.json?v=8.75',
+    installationsUrl: 'data/instalaciones.json?v=8.75',
+    eventsUrl: 'data/eventos.json?v=8.75',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=8.75',
+    managerAchievementsUrl: 'data/hitos_manager.json?v=8.75',
+    retosManagerUrl: 'data/retos_manager.json?v=8.75',
+    estadiosUrls: ['data/estadios_argentina.json?v=8.75', 'data/estadios_chile.json?v=8.75', 'data/estadios_brasil.json?v=8.75', 'data/estadios_inglaterra.json?v=8.75', 'data/estadios_espana.json?v=8.75', 'data/estadios_italia.json?v=8.75', 'data/estadios_rumania.json?v=8.75'],
+    hinchasUrls: ['data/hinchas_argentina.json?v=8.75', 'data/hinchas_chile.json?v=8.75', 'data/hinchas_brasil.json?v=8.75', 'data/hinchas_inglaterra.json?v=8.75', 'data/hinchas_espana.json?v=8.75', 'data/hinchas_italia.json?v=8.75', 'data/hinchas_rumania.json?v=8.75'],
+    relatosPartidoUrl: 'data/relatos_partido.json?v=8.75'
   },
   calendario: {
     // Cada avance equivale a 1 día calendario. La temporada se procesa día por día.
@@ -380,6 +380,27 @@ window.GAME_CONFIG = {
     jugadoresMinimosPorClub: 18,
     jugadoresInicialesPorClub: 25,
     jugadoresMaximosPorClub: 42,
+    contratosJugadores: {
+      activo: true,
+      // Los contratos migrados conservan al menos dos temporadas para no provocar salidas inmediatas en partidas existentes.
+      migracionAniosMin: 2,
+      migracionAniosMax: 4,
+      renovacionBotAniosMin: 1,
+      renovacionBotAniosMax: 4,
+      bloqueoTrasRechazoDias: 7,
+      avisoPlantelDesdeDia: 10,
+      despidoPlantelDia: 29,
+      confianzaMaxAnios: [
+        { desde:80, anios:5 },
+        { desde:65, anios:4 },
+        { desde:50, anios:3 },
+        { desde:35, anios:2 },
+        { desde:0, anios:1 }
+      ],
+      ofertaSalarial: { ajustada:0.95, recomendada:1.00, generosa:1.10 },
+      probabilidadMinima: 0.08,
+      probabilidadMaxima: 0.96
+    },
     // Envejecimiento profesional: desde esta edad se aplica un boost negativo anual acumulado a todas las habilidades.
     deterioroEdadActivo: true,
     edadInicioDeterioro: 32,

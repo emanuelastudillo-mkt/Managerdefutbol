@@ -1,40 +1,59 @@
-# Una Vida de Mánager — V8.74 INCREMENTAL
+# Una Vida de Mánager · V8.75 incremental
 
-## Base requerida
+Aplicar sobre **V8.74** conservando la misma estructura de carpetas.
 
-Aplicar sobre **V8.73 COMPLETA**.
+## Renovación de contratos de jugadores
 
-Copiar el contenido de esta carpeta sobre la instalación existente y aceptar el reemplazo de archivos. No elimina partidas guardadas ni requiere cambios de Worker, SQL o datos.
+- El club dirigido renueva contratos de forma manual desde `Primer equipo → Contratos`.
+- Se puede negociar cuando restan dos temporadas o menos y la nueva propuesta extiende la vigencia existente.
+- La negociación ofrece tres niveles salariales: ajustado, recomendado y generoso.
+- La confianza individual modifica:
+  - exigencia salarial;
+  - posibilidad de aceptación;
+  - cantidad máxima de temporadas ofrecibles;
+  - predisposición para negociar antes del vencimiento.
+- Un rechazo bloquea nuevas propuestas durante siete días y eleva levemente la siguiente exigencia.
+- Los contratos vencidos no renovados del club dirigido pasan al mercado de libres al cerrar la temporada.
+- Los clubes bots renuevan automáticamente. Su salario utiliza el ajuste anual por rendimiento ya existente, sin aplicar un segundo aumento duplicado.
+- Las partidas anteriores reciben contratos migrados de dos a cuatro temporadas futuras para evitar salidas inmediatas.
 
-## Ficha horizontal del jugador
+## Control de plantel al inicio de temporada
 
-- La ficha utiliza una composición horizontal de tres zonas en pantallas de escritorio.
-- Columna izquierda: identidad, club, dorsal, posición, edad, estado, media, físico, moral, desgaste, cláusula, salario, distinción y acciones.
-- Columna central: habilidades distribuidas en tres columnas, radar y habilidades ocultas conocidas.
-- Columna derecha: estadísticas de temporada y carrera comparadas simultáneamente.
-- Se eliminó la necesidad de alternar pestañas para consultar temporada y carrera.
-- La ventana ocupa el ancho disponible y evita scroll interno en resoluciones horizontales habituales desde 1024 × 768 y 1280 × 720.
-- En pantallas móviles conserva el formato vertical con desplazamiento normal.
+- Desde el día 10 se controla la cantidad total y la distribución mínima por puestos.
+- Si falta completar el plantel, se genera una advertencia diaria hasta el día 28.
+- En el día 29, si el problema continúa, la directiva despide al mánager.
+- Un mánager contratado después del día 10 no hereda retroactivamente este control de pretemporada.
+- Los clubes bots continúan utilizando la reparación automática de planteles existente.
 
-## Colores de habilidades
+## Grupos y vestuario
 
-- 0–39: rojo.
-- 40–54: naranja.
-- 55–69: amarillo.
-- 70–84: verde.
-- 85–99: celeste.
-- Los valores todavía no descubiertos se muestran en gris.
-- Se agregó una leyenda compacta dentro de la ficha.
-- Las penalizaciones por edad y mejoras de entrenamiento conservan sus indicadores propios.
+- Nueva pestaña `Grupos` junto a Táctica para consultar:
+  - referentes;
+  - titulares;
+  - rotación;
+  - suplentes;
+  - juveniles.
+- Nueva pestaña `Contratos` dentro de Primer equipo.
+- Vestuario separa Jugador y Grupo en columnas distintas.
+- Jugador, grupo, rol interno, confianza, influencia, renovación y moral se ordenan con flechas ascendentes y descendentes.
+- Vestuario y Contratos comparten una única escala de predisposición contractual.
 
-## Archivos incluidos
+## FACES
 
-- `index.html`
+Se agregó `FACES/README.md` con la estructura regional acordada y la distribución recomendada de **5.000 imágenes**. Las ocho carpetas regionales ya están creadas.
+
+## Archivos principales
+
 - `config.js`
-- `js/core/01-config-constants.js`
-- `js/ui/12-modals.js`
-- `styles/180-player-profile-v874.css`
+- `index.html`
+- `js/game/05g-season-lifecycle.js`
+- `js/game/05k-manager-dressing-room.js`
+- `js/game/05n-player-contracts.js`
+- `styles/185-player-contracts-groups.css`
+- `FACES/README.md`
 
-## Compatibilidad
+## Compatibilidad y validación
 
-Compatible con partidas de V8.73. La actualización es visual y no modifica habilidades, estadísticas ni contratos guardados.
+- Compatible con partidas de V8.74.
+- No requiere Worker, SQL ni cambios externos.
+- Se verificaron sintaxis JavaScript, JSON, referencias de scripts y estilos, migración contractual, negociación, rechazo, renovación automática de bots, vencimientos, advertencias y despido por plantel incompleto.

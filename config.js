@@ -42,7 +42,7 @@ window.GAME_CONFIG = {
     sponsorsUrl: 'data/sponsors.json?v=8.62',
     employeesUrl: 'data/empleados.json',
     installationsUrl: 'data/instalaciones.json?v=8.60',
-    eventsUrl: 'data/eventos.json?v=8.60',
+    eventsUrl: 'data/eventos.json?v=8.72',
     specialSkillsUrl: 'data/habilidades_especiales.json?v=8.60',
     managerAchievementsUrl: 'data/hitos_manager.json?v=8.60',
     retosManagerUrl: 'data/retos_manager.json',
@@ -235,6 +235,20 @@ window.GAME_CONFIG = {
           maximoRevisiones: 2,
           variacionAcumuladaMaximaPpg: 0.24
         }
+      },
+      motorEventos: {
+        activo: true,
+        primerDia: 20,
+        intervaloRevisionDias: 7,
+        esperaEntreDecisionesDias: 14,
+        esperaEntreAutomaticosDias: 10,
+        maximoDecisionesCada30Dias: 2,
+        maximoAutomaticosCada30Dias: 3,
+        maximoDecisionesPendientes: 1,
+        vencimientoDecisionDias: 5,
+        repeticionEventoDias: 55,
+        maximoRegistros: 260,
+        maximoConsecuencias: 160
       }
     },
     vestuario: {

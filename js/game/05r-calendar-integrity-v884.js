@@ -1,11 +1,13 @@
-/* V8.84 · Auditoría integral del calendario.
+/* V8.85 · Auditoría determinista del calendario actual.
    Reconstruye partidos de liga faltantes, reconcilia resultados con el historial,
    elimina duplicados y reprograma encuentros atrasados en martes sin cruces de club. */
 
 (function(){
-  const CALENDAR_INTEGRITY_VERSION = 3;
+  const CALENDAR_INTEGRITY_VERSION = 5;
   const MAX_LOG_ENTRIES = 30;
   const MAX_SEARCH_WEEKS = 120;
+  let ciDailyTransactionDepth = 0;
+  const ciCanonicalCache = new WeakMap();
 
   function ciState(target=game){ return target && typeof target === 'object' ? target : null; }
   function ciNumber(value, fallback=0){ const n=Number(value); return Number.isFinite(n) ? n : fallback; }
@@ -162,10 +164,19 @@
   function ciCanonicalRegular(state){
     if(state?.challenge?.active && state.challenge.completed !== true) return [];
     if(typeof generateFixturesForDivisions !== 'function' || !seed?.clubs?.length) return [];
-    const year=Math.round(ciNumber(state?.seasonYear,0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(state?.seasonNumber || 1) : new Date().getUTCFullYear());
+    const season=Math.max(1,Math.round(ciNumber(state?.seasonNumber,1)));
+    const year=Math.round(ciNumber(state?.seasonYear,0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : new Date().getUTCFullYear());
+    const cached=ciCanonicalCache.get(state);
+    if(cached && Number(cached.season)===season && Number(cached.year)===year && Array.isArray(cached.rounds)) return ciClone(cached.rounds);
     const divisions=typeof divisionOrderList === 'function' ? divisionOrderList() : (seed?.divisions || []);
-    try{ return generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year }) || []; }
-    catch(error){ console.error('V8.84: no se pudo generar calendario canónico', error); return []; }
+    try{
+      const generated=generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year }) || [];
+      ciCanonicalCache.set(state,{season,year,rounds:ciClone(generated)});
+      return generated;
+    }catch(error){
+      console.error('V8.85: no se pudo generar el calendario canónico de la temporada actual', error);
+      return [];
+    }
   }
   function ciCanonicalMaps(rounds){
     const byId=new Map();
@@ -213,43 +224,99 @@
   }
   function ciRestoreMissingRegularMatches(state,canonicalRounds,historyMaps,referenceDate){
     const existing=ciExistingRegularMaps(state);
-    const canonical=ciCanonicalMaps(canonicalRounds);
+    const specialRounds=(state.fixtures || []).filter(round => !((round?.matches || []).some(match => ciIsRegularMatch(match,round))));
+    const rebuilt=[];
     const restored=[];
     let restoredPlayed=0;
-    canonical.byId.forEach((item,id) => {
-      const present=existing.byId.get(id) || existing.byPair.get(ciPairKey(item.match));
-      if(present){
-        if(!present.match.played){
-          const evidence=historyMaps.byId.get(id) || historyMaps.byPair.get(ciPairKey(item.match));
-          if(evidence?.played && ciRestorePlayedFixture(present.match,evidence)) restoredPlayed+=1;
+    let restoredCount=0;
+    let resetFutureDates=0;
+
+    (canonicalRounds || []).forEach((canonicalRound,roundIndex) => {
+      const expectedRoundDate=ciMatchDate(null,canonicalRound);
+      const matches=[];
+      (canonicalRound?.matches || []).forEach(canonicalMatch => {
+        const id=String(canonicalMatch?.id || '');
+        const pair=ciPairKey(canonicalMatch);
+        const present=existing.byId.get(id) || existing.byPair.get(pair);
+        const evidence=(id && historyMaps.byId.get(id)) || historyMaps.byPair.get(pair);
+        const expectedDate=ciMatchDate(canonicalMatch,canonicalRound) || expectedRoundDate;
+        let match=present?.match || ciClone(canonicalMatch);
+        const wasMissing=!present;
+        if(wasMissing){
+          restoredCount+=1;
+          match.calendarIntegrityRestored=true;
+          match.calendarIntegrityRestoredFrom='canonical_blueprint';
         }
-        if(!ciValidDate(present.match.date)) present.match.date=item.expectedDate;
-        if(!ciValidDate(present.match.roundDate)) present.match.roundDate=item.expectedDate;
-        present.match.calendarIntegrityCanonicalId=id;
-        return;
-      }
-      const evidence=historyMaps.byId.get(id) || historyMaps.byPair.get(ciPairKey(item.match));
-      const match=ciClone(item.match);
-      match.calendarIntegrityRestored=true;
-      match.calendarIntegrityCanonicalId=id;
-      match.calendarIntegrityExpectedDate=item.expectedDate;
-      if(evidence?.played){
-        ciRestorePlayedFixture(match,evidence);
-        restoredPlayed+=1;
-      }
-      const targetDate=match.played ? (ciValidDate(evidence?.date) ? evidence.date : item.expectedDate) : item.expectedDate;
-      match.date=targetDate;
-      match.roundDate=item.expectedDate;
-      const round=ciFindOrCreateRound(state,targetDate,{
-        id:`calendar-restored-regular-s${state.seasonNumber || 1}-${targetDate}`,
-        title:'Liga · partidos restaurados'
+        if(!match || typeof match !== 'object') match=ciClone(canonicalMatch);
+        match.id=canonicalMatch.id;
+        match.homeId=canonicalMatch.homeId;
+        match.awayId=canonicalMatch.awayId;
+        match.divisionId=canonicalMatch.divisionId;
+        match.divisionName=canonicalMatch.divisionName;
+        match.leg=canonicalMatch.leg;
+        match.matchday=roundIndex+1;
+        match.calendarIntegrityCanonicalId=id;
+        match.calendarIntegrityExpectedDate=expectedDate;
+        match.calendarIntegrityLeagueRound=roundIndex+1;
+
+        if(!match.played && evidence?.played && ciRestorePlayedFixture(match,evidence)) restoredPlayed+=1;
+
+        if(match.played){
+          if(!ciValidDate(match.date)) match.date=ciValidDate(evidence?.date) ? evidence.date : expectedDate;
+          if(!ciValidDate(match.roundDate)) match.roundDate=expectedDate;
+        }else{
+          const actualDate=ciMatchDate(match,present?.round);
+          const isOldRecovery=Boolean(match.recoveredSchedule && Number(match.calendarIntegrityVersion || 0) < CALENDAR_INTEGRITY_VERSION);
+          const validCurrentRecovery=Boolean(
+            match.recoveredSchedule &&
+            Number(match.calendarIntegrityVersion || 0)===CALENDAR_INTEGRITY_VERSION &&
+            ciValidDate(actualDate) &&
+            !ciBefore(actualDate,referenceDate) &&
+            ciValidDate(expectedDate) &&
+            ciBefore(expectedDate,referenceDate)
+          );
+          if(validCurrentRecovery){
+            match.date=actualDate;
+            match.roundDate=actualDate;
+          }else{
+            if(ciValidDate(actualDate) && actualDate!==expectedDate && (!ciBefore(expectedDate,referenceDate) || isOldRecovery)) resetFutureDates+=1;
+            match.date=expectedDate;
+            match.roundDate=expectedDate;
+            delete match.recoveredSchedule;
+            delete match.recoveredScheduleReason;
+            delete match.recoveredScheduleAt;
+            delete match.recoveryBatchId;
+          }
+        }
+        match.calendarIntegrityVersion=CALENDAR_INTEGRITY_VERSION;
+        matches.push(match);
+        if(wasMissing) restored.push({match,expectedDate,missing:true});
       });
-      round.matches.push(match);
-      restored.push({match,round,expectedDate:item.expectedDate,missing:true});
-      existing.byId.set(id,{match,round});
-      existing.byPair.set(ciPairKey(match),{match,round});
+      rebuilt.push({
+        id:`league-s${state.seasonNumber || 1}-j${roundIndex+1}`,
+        matchday:roundIndex+1,
+        leagueRoundNumber:roundIndex+1,
+        calendarCanonicalRound:true,
+        calendarIntegrityVersion:CALENDAR_INTEGRITY_VERSION,
+        calendarIntegrityExpectedDate:expectedRoundDate,
+        date:expectedRoundDate,
+        startDate:canonicalRound.startDate || expectedRoundDate,
+        endDate:canonicalRound.endDate || expectedRoundDate,
+        roundDate:expectedRoundDate,
+        title:`Liga · Fecha ${roundIndex+1}`,
+        matches
+      });
     });
-    return { restored, restoredCount:restored.length, restoredPlayed, canonicalCount:canonical.byId.size };
+
+    state.fixtures=[...rebuilt,...specialRounds];
+    return {
+      restored,
+      restoredCount,
+      restoredPlayed,
+      resetFutureDates,
+      canonicalCount:(canonicalRounds || []).reduce((total,round)=>total+(round?.matches || []).length,0),
+      canonicalRounds:rebuilt.length
+    };
   }
   function ciNationalCupIdParts(id){
     const found=String(id || '').match(/-(\d+)-(\d+)-(\d+)$/);
@@ -385,7 +452,6 @@
     return maxByDivision;
   }
   function ciCollectRecoveryCandidates(state,canonicalMaps,historyMaps,referenceDate,restoredItems=[]){
-    const frontier=ciPlayedFrontier(state,historyMaps);
     const candidates=[];
     const seen=new Set();
     const add=(match,round,reason,expectedDate='') => {
@@ -400,16 +466,32 @@
       const scheduled=ciMatchDate(match,round);
       const canonical=canonicalMaps.byId.get(String(match.id || '')) || canonicalMaps.byPair.get(ciPairKey(match));
       const expected=canonical?.expectedDate || match?.calendarIntegrityExpectedDate || scheduled;
-      const leagueRound=ciLeagueRoundNumber(match);
-      const frontierRound=frontier.get(String(match.divisionId || '')) || 0;
-      if(!ciValidDate(scheduled)) add(match,round,'fecha_invalida',expected);
-      else if(ciBefore(scheduled,referenceDate)) add(match,round,'fecha_vencida',expected);
-      else if(leagueRound>0 && frontierRound>leagueRound && !match.recoveredSchedule) add(match,round,'fecha_salteada',expected);
+      const regular=ciIsRegularMatch(match,round);
+      if(!ciValidDate(scheduled)){
+        add(match,round,'fecha_invalida',expected);
+        return;
+      }
+      if(regular){
+        // Sólo se recuperan fechas de liga cuyo día original ya pasó. Las fechas
+        // actuales y futuras permanecen en su programación canónica.
+        if(ciValidDate(expected) && ciBefore(expected,referenceDate)){
+          const alreadyRecovered=Boolean(
+            match.recoveredSchedule &&
+            Number(match.calendarIntegrityVersion || 0)===CALENDAR_INTEGRITY_VERSION &&
+            !ciBefore(scheduled,referenceDate)
+          );
+          if(!alreadyRecovered) add(match,round,'liga_atrasada',expected);
+        }
+        return;
+      }
+      if(ciBefore(scheduled,referenceDate)) add(match,round,'competencia_atrasada',expected);
     }));
     (restoredItems || []).forEach(item => {
-      if(!item?.match?.played && ciValidDate(item.expectedDate) && ciBefore(item.expectedDate,referenceDate)) add(item.match,item.round,'fixture_faltante',item.expectedDate);
+      if(!item?.match?.played && ciValidDate(item.expectedDate) && ciBefore(item.expectedDate,referenceDate)){
+        add(item.match,item.round || null,'fixture_faltante',item.expectedDate);
+      }
     });
-    candidates.sort((a,b)=>ciCompareDates(a.expectedDate || '9999-12-31',b.expectedDate || '9999-12-31') || String(ciMatchKey(a.match)).localeCompare(String(ciMatchKey(b.match))));
+    candidates.sort((a,b)=>ciCompareDates(a.expectedDate || '9999-12-31',b.expectedDate || '9999-12-31') || ciLeagueRoundNumber(a.match)-ciLeagueRoundNumber(b.match) || String(ciMatchKey(a.match)).localeCompare(String(ciMatchKey(b.match))));
     return candidates;
   }
   function ciOccupiedDates(state,candidateSet){
@@ -426,13 +508,30 @@
     return occupied;
   }
   function ciScheduleCandidatesOnTuesdays(state,candidates,referenceDate){
-    if(!candidates.length) return { rescheduled:0, dates:[] };
-    const set=new Set(candidates.map(item=>item.match));
-    const occupied=ciOccupiedDates(state,set);
+    if(!candidates.length) return { rescheduled:0, dates:[], rounds:0 };
+    const candidateSet=new Set(candidates.map(item=>item.match));
+    const occupied=ciOccupiedDates(state,candidateSet);
+    const grouped=[];
+    const byKey=new Map();
+    candidates.forEach(item => {
+      const roundNumber=ciLeagueRoundNumber(item.match) || ciNumber(item.match?.calendarIntegrityLeagueRound,0);
+      const regular=ciIsRegularMatch(item.match,item.round);
+      const key=regular
+        ? `league:${roundNumber || item.expectedDate}`
+        : `special:${String(item.round?.id || ciMatchKey(item.match))}`;
+      if(!byKey.has(key)){
+        const group={key,regular,roundNumber,expectedDate:item.expectedDate || ciMatchDate(item.match,item.round),items:[]};
+        byKey.set(key,group);
+        grouped.push(group);
+      }
+      byKey.get(key).items.push(item);
+    });
+    grouped.sort((a,b)=>ciCompareDates(a.expectedDate || '9999-12-31',b.expectedDate || '9999-12-31') || ciNumber(a.roundNumber)-ciNumber(b.roundNumber) || a.key.localeCompare(b.key));
+
     const dates=[];
     let rescheduled=0;
-    candidates.forEach(item => {
-      const clubs=[ciNumber(item.match.homeId),ciNumber(item.match.awayId)].filter(Boolean);
+    grouped.forEach((group,groupIndex) => {
+      const clubs=[...new Set(group.items.flatMap(item=>[ciNumber(item.match.homeId),ciNumber(item.match.awayId)]).filter(Boolean))];
       let slot=ciNextTuesday(referenceDate,true);
       let guard=0;
       while(guard<MAX_SEARCH_WEEKS && clubs.some(clubId => occupied.get(clubId)?.has(slot))){
@@ -440,27 +539,33 @@
         guard+=1;
       }
       if(!ciValidDate(slot)) return;
-      const oldDate=ciMatchDate(item.match,item.round);
-      if(!item.match.originalScheduledDate && ciValidDate(oldDate)) item.match.originalScheduledDate=oldDate;
-      if(!item.match.calendarIntegrityExpectedDate && ciValidDate(item.expectedDate)) item.match.calendarIntegrityExpectedDate=item.expectedDate;
-      item.match.date=slot;
-      item.match.roundDate=slot;
-      item.match.recoveredSchedule=true;
-      item.match.recoveredScheduleReason=`calendar_integrity_v884:${item.reason}`;
-      item.match.recoveredScheduleAt=referenceDate;
-      item.match.calendarIntegrityVersion=CALENDAR_INTEGRITY_VERSION;
+      const batchId=`calendar-recovery-s${state.seasonNumber || 1}-${group.regular ? `j${group.roundNumber || groupIndex+1}` : groupIndex+1}-${slot}`;
+      group.items.forEach(item => {
+        const oldDate=ciMatchDate(item.match,item.round);
+        if(!item.match.originalScheduledDate && ciValidDate(item.expectedDate || oldDate)) item.match.originalScheduledDate=item.expectedDate || oldDate;
+        item.match.calendarIntegrityExpectedDate=item.expectedDate || item.match.calendarIntegrityExpectedDate || oldDate;
+        item.match.date=slot;
+        item.match.roundDate=slot;
+        item.match.recoveredSchedule=true;
+        item.match.recoveredScheduleReason=`calendar_integrity_v885:${item.reason}`;
+        item.match.recoveredScheduleAt=referenceDate;
+        item.match.recoveryBatchId=batchId;
+        item.match.calendarIntegrityVersion=CALENDAR_INTEGRITY_VERSION;
+        rescheduled+=1;
+      });
       clubs.forEach(clubId => {
         if(!occupied.has(clubId)) occupied.set(clubId,new Set());
         occupied.get(clubId).add(slot);
       });
       dates.push(slot);
-      rescheduled+=1;
     });
-    return {rescheduled,dates:[...new Set(dates)].sort()};
+    return {rescheduled,dates:[...new Set(dates)].sort(),rounds:grouped.length};
   }
   function ciRefreshRoundDates(state){
     (state.fixtures || []).forEach(round => {
-      const dates=(round.matches || []).map(match=>ciMatchDate(match,null)).filter(ciValidDate).sort();
+      const pendingDates=(round.matches || []).filter(match=>!match?.played).map(match=>ciMatchDate(match,null)).filter(ciValidDate).sort();
+      const allDates=(round.matches || []).map(match=>ciMatchDate(match,null)).filter(ciValidDate).sort();
+      const dates=pendingDates.length ? pendingDates : allDates;
       if(!dates.length) return;
       round.startDate=dates[0];
       round.endDate=dates[dates.length-1];
@@ -483,9 +588,39 @@
       state.matchdayIndex=index>=0?index:state.fixtures.length;
     }
   }
+  function ciEarliestPendingMatch(state,clubId=0){
+    const cleanClubId=ciNumber(clubId,0);
+    let best=null;
+    (state?.fixtures || []).forEach((round,roundIndex) => (round?.matches || []).forEach((match,matchIndex) => {
+      if(match?.played) return;
+      if(cleanClubId && ciNumber(match.homeId)!==cleanClubId && ciNumber(match.awayId)!==cleanClubId) return;
+      const date=ciMatchDate(match,round);
+      if(!ciValidDate(date)) return;
+      const item={roundIndex,matchIndex,round,match,date};
+      if(!best || ciCompareDates(date,best.date)<0 || (date===best.date && ciNumber(match.calendarIntegrityLeagueRound || ciLeagueRoundNumber(match),999)-ciNumber(best.match.calendarIntegrityLeagueRound || ciLeagueRoundNumber(best.match),999)<0)) best=item;
+    }));
+    return best;
+  }
+  function ciLeagueProgressForClub(state,clubId){
+    const cleanClubId=ciNumber(clubId,0);
+    if(!state || !cleanClubId) return {played:0,total:0,next:0,pending:0};
+    const seen=new Set();
+    let played=0,total=0;
+    (state.fixtures || []).forEach(round => (round?.matches || []).forEach(match => {
+      if(!ciIsRegularMatch(match,round)) return;
+      if(ciNumber(match.homeId)!==cleanClubId && ciNumber(match.awayId)!==cleanClubId) return;
+      const key=ciMatchKey(match);
+      if(seen.has(key)) return;
+      seen.add(key);
+      total+=1;
+      if(match.played) played+=1;
+    }));
+    return {played,total,next:total ? Math.min(total,played+1) : 0,pending:Math.max(0,total-played)};
+  }
+
   function ciAuditState(target=game,options={}){
     const state=ciState(target);
-    const empty={ran:false,version:CALENDAR_INTEGRITY_VERSION,restoredMissing:0,restoredPlayed:0,duplicatesRemoved:0,rescheduled:0,dates:[],remainingPastDue:0};
+    const empty={ran:false,version:CALENDAR_INTEGRITY_VERSION,restoredMissing:0,restoredPlayed:0,duplicatesRemoved:0,rescheduled:0,dates:[],remainingPastDue:0,resetFutureDates:0};
     if(!state || !Array.isArray(state.fixtures)) return empty;
     const referenceDate=ciValidDate(options.referenceDate) ? options.referenceDate : (ciValidDate(state.currentDate) ? state.currentDate : '');
     if(!referenceDate) return empty;
@@ -498,13 +633,13 @@
     const regularRepair=ciRestoreMissingRegularMatches(state,canonicalRounds,historyMaps,referenceDate);
     const cupRepair=ciRestoreNationalCupStateMatches(state,historyMaps);
     if(state===game && typeof ensureClubWorldCupCurrentSeason === 'function'){
-      try{ ensureClubWorldCupCurrentSeason({source:'calendar_integrity_v884'}); }catch(error){ console.warn('V8.84: revisión Mundial de Clubes omitida',error); }
+      try{ ensureClubWorldCupCurrentSeason({source:'calendar_integrity_v885'}); }catch(error){ console.warn('V8.85: revisión Mundial de Clubes omitida',error); }
     }
     const restoredItems=[...(regularRepair.restored || []),...(cupRepair.restored || [])];
     const candidates=ciCollectRecoveryCandidates(state,canonicalMaps,historyMaps,referenceDate,restoredItems);
     const scheduled=ciScheduleCandidatesOnTuesdays(state,candidates,referenceDate);
     ciRefreshRoundDates(state);
-    ciSortAndRepairCursor(state,options.reason || 'calendar_integrity_v884');
+    ciSortAndRepairCursor(state,options.reason || 'calendar_integrity_v885');
 
     // Segunda pasada: una auditoría válida no puede dejar partidos con fecha vencida.
     const remaining=[];
@@ -519,16 +654,18 @@
       scheduled.rescheduled+=extra.rescheduled;
       scheduled.dates=[...new Set(scheduled.dates.concat(extra.dates))].sort();
       ciRefreshRoundDates(state);
-      ciSortAndRepairCursor(state,'calendar_integrity_v884_second_pass');
+      ciSortAndRepairCursor(state,'calendar_integrity_v885_second_pass');
     }
     const remainingPastDue=(state.fixtures || []).reduce((total,round)=>total+(round.matches || []).filter(match=>!match?.played && !match?.friendly && (!ciValidDate(ciMatchDate(match,round)) || ciBefore(ciMatchDate(match,round),referenceDate))).length,0);
     const summary={
       ran:true,
       version:CALENDAR_INTEGRITY_VERSION,
-      reason:String(options.reason || 'calendar_integrity_v884'),
+      reason:String(options.reason || 'calendar_integrity_v885'),
       season:ciNumber(state.seasonNumber,1),
       referenceDate,
       canonicalLeagueMatches:regularRepair.canonicalCount,
+      canonicalLeagueRounds:regularRepair.canonicalRounds,
+      resetFutureDates:regularRepair.resetFutureDates || 0,
       restoredMissing:regularRepair.restoredCount+(cupRepair.restored || []).length,
       restoredPlayed:duplicate.historyRestored+reconciled+regularRepair.restoredPlayed+cupRepair.restoredPlayed,
       duplicatesRemoved:duplicate.duplicatesRemoved,
@@ -537,7 +674,7 @@
       remainingPastDue,
       checkedAt:new Date().toISOString()
     };
-    const changed=summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled;
+    const changed=summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled||summary.resetFutureDates;
     state.calendarIntegrityState=state.calendarIntegrityState && typeof state.calendarIntegrityState==='object' ? state.calendarIntegrityState : {};
     state.calendarIntegrityState.version=CALENDAR_INTEGRITY_VERSION;
     state.calendarIntegrityState.lastCheckDate=referenceDate;
@@ -549,16 +686,17 @@
   }
 
   function ciNotify(summary){
-    if(!summary || !(summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled)) return;
+    if(!summary || !(summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled||summary.resetFutureDates)) return;
     const parts=[];
     if(summary.restoredMissing) parts.push(`${summary.restoredMissing} partido(s) reconstruido(s)`);
     if(summary.restoredPlayed) parts.push(`${summary.restoredPlayed} resultado(s) recuperado(s)`);
     if(summary.duplicatesRemoved) parts.push(`${summary.duplicatesRemoved} duplicado(s) eliminado(s)`);
+    if(summary.resetFutureDates) parts.push(`${summary.resetFutureDates} fecha(s) futura(s) devuelta(s) a su día original`);
     if(summary.rescheduled) parts.push(`${summary.rescheduled} partido(s) reubicado(s) en martes`);
     const body=`La auditoría integral del calendario corrigió ${parts.join(', ')}.${summary.dates?.length ? ` Primeras fechas de recuperación: ${summary.dates.slice(0,3).join(', ')}.` : ''}`;
     if(typeof pushGameMessage === 'function'){
       pushGameMessage({
-        id:`calendar-integrity-v884-s${summary.season}-${summary.referenceDate}`,
+        id:`calendar-integrity-v885-s${summary.season}-${summary.referenceDate}`,
         type:'system',priority:'high',title:'Calendario recuperado',body
       });
     }
@@ -567,12 +705,15 @@
 
   window.runCalendarIntegrityAudit=ciAuditState;
   window.recoverBrokenCalendarOnTuesdays=ciAuditState;
+  window.recoverOverdueMatchesOnTuesdays=ciAuditState;
+  window.calendarEarliestPendingMatch=ciEarliestPendingMatch;
+  window.calendarLeagueProgressForClub=ciLeagueProgressForClub;
 
   if(typeof normalizeGame === 'function'){
     const originalNormalizeGame=normalizeGame;
     normalizeGame=function(saved){
       const normalized=originalNormalizeGame.call(this,saved);
-      ciAuditState(normalized,{referenceDate:normalized.currentDate || '',reason:'save_migration_v884'});
+      ciAuditState(normalized,{referenceDate:normalized.currentDate || '',reason:'save_migration_v885'});
       return normalized;
     };
   }
@@ -580,9 +721,16 @@
     const originalProcessDailyCalendarState=processDailyCalendarState;
     processDailyCalendarState=function(dateAfter='',options={}){
       const beforeDate=ciValidDate(dateAfter)?dateAfter:(ciValidDate(game?.currentDate)?game.currentDate:'');
-      const before=ciAuditState(game,{referenceDate:beforeDate,reason:'before_daily_advance_v884'});
-      const result=originalProcessDailyCalendarState.call(this,dateAfter,options)||{};
-      const after=ciAuditState(game,{referenceDate:game?.currentDate || beforeDate,reason:'after_daily_advance_v884'});
+      ciDailyTransactionDepth+=1;
+      let before=null;
+      let result={};
+      try{
+        before=ciAuditState(game,{referenceDate:beforeDate,reason:'before_daily_advance_v885'});
+        result=originalProcessDailyCalendarState.call(this,dateAfter,options)||{};
+      }finally{
+        ciDailyTransactionDepth=Math.max(0,ciDailyTransactionDepth-1);
+      }
+      const after=ciAuditState(game,{referenceDate:game?.currentDate || beforeDate,reason:'after_daily_advance_v885'});
       result.calendarIntegrity={before,after};
       const pending=game?._calendarIntegrityPendingNotice;
       if(pending){ ciNotify(pending); delete game._calendarIntegrityPendingNotice; }
@@ -592,17 +740,22 @@
   if(typeof runScheduledSeasonGameVerifier === 'function'){
     const originalRunScheduledSeasonGameVerifier=runScheduledSeasonGameVerifier;
     runScheduledSeasonGameVerifier=function(options={}){
-      const audit=ciAuditState(game,{referenceDate:game?.currentDate || '',reason:options.reason || 'scheduled_verifier_v884'});
+      if(ciDailyTransactionDepth>0){
+        const result=originalRunScheduledSeasonGameVerifier.call(this,options)||{};
+        result.calendarIntegrity={ran:false,deferredToDailyTransaction:true,version:CALENDAR_INTEGRITY_VERSION};
+        return result;
+      }
+      const audit=ciAuditState(game,{referenceDate:game?.currentDate || '',reason:options.reason || 'scheduled_verifier_v885'});
       const result=originalRunScheduledSeasonGameVerifier.call(this,options)||{};
       result.calendarIntegrity=audit;
-      result.repaired=Boolean(result.repaired||audit.restoredMissing||audit.restoredPlayed||audit.duplicatesRemoved||audit.rescheduled);
+      result.repaired=Boolean(result.repaired||audit.restoredMissing||audit.restoredPlayed||audit.duplicatesRemoved||audit.rescheduled||audit.resetFutureDates);
       return result;
     };
   }
   if(typeof finalizeSeasonIfNeeded === 'function'){
     const originalFinalizeSeasonIfNeeded=finalizeSeasonIfNeeded;
     finalizeSeasonIfNeeded=function(...args){
-      ciAuditState(game,{referenceDate:game?.currentDate || '',reason:'before_season_finalize_v884'});
+      ciAuditState(game,{referenceDate:game?.currentDate || '',reason:'before_season_finalize_v885'});
       return originalFinalizeSeasonIfNeeded.apply(this,args);
     };
   }
@@ -610,7 +763,7 @@
     const originalStartNextSeason=startNextSeason;
     startNextSeason=function(...args){
       const result=originalStartNextSeason.apply(this,args);
-      ciAuditState(game,{referenceDate:game?.currentDate || '',reason:'after_next_season_v884'});
+      ciAuditState(game,{referenceDate:game?.currentDate || '',reason:'after_next_season_v885'});
       return result;
     };
   }

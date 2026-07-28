@@ -67,26 +67,41 @@ function scheduledDateForMatch(match, round=null){
 function nextOwnMatchInfo(){
   if(typeof ensureCampoDestruidoChallengeFullCalendar === 'function') ensureCampoDestruidoChallengeFullCalendar();
   if(!game || !isRegularSeason()) return null;
+  if(typeof calendarEarliestPendingMatch === 'function'){
+    return calendarEarliestPendingMatch(game, game.selectedClubId) || null;
+  }
+  let best = null;
   for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
-    const match = (round.matches || []).find(m => !m.played && ownClubInMatch(m));
-    if(match) return { roundIndex, round, match, date:scheduledDateForMatch(match, round) };
+    (round.matches || []).forEach((match, matchIndex) => {
+      if(match.played || !ownClubInMatch(match)) return;
+      const date = scheduledDateForMatch(match, round);
+      if(!validIsoDate(date)) return;
+      if(!best || daysBetweenIsoDates(date, best.date) > 0 || (date === best.date && roundIndex < best.roundIndex)){
+        best = { roundIndex, matchIndex, round, match, date };
+      }
+    });
   }
-  return null;
+  return best;
 }
 function nextPendingMatchInfo(){
   if(!game || !isRegularSeason()) return null;
-  let found = null;
+  if(typeof calendarEarliestPendingMatch === 'function'){
+    return calendarEarliestPendingMatch(game, 0) || null;
+  }
+  let best = null;
   for(let roundIndex=0; roundIndex<game.fixtures.length; roundIndex++){
     const round = game.fixtures[roundIndex];
-    (round.matches || []).forEach(match => {
+    (round.matches || []).forEach((match, matchIndex) => {
       if(match.played) return;
       const date = scheduledDateForMatch(match, round);
-      if(!found || daysBetweenIsoDates(found.date, date) < 0) found = { roundIndex, round, match, date };
+      if(!validIsoDate(date)) return;
+      if(!best || daysBetweenIsoDates(date, best.date) > 0 || (date === best.date && roundIndex < best.roundIndex)){
+        best = { roundIndex, matchIndex, round, match, date };
+      }
     });
-    if(found) return found;
   }
-  return null;
+  return best;
 }
 function collectDueMatchesUntil(targetDate, options={}){
   if(!validIsoDate(targetDate) || !game?.fixtures) return [];

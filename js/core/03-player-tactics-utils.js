@@ -236,26 +236,25 @@ function nextUnplayedMatchDateForClub(state=game, clubId=null){
   if(!state || !Array.isArray(state.fixtures)) return '';
   const ownId = Number(clubId || state.selectedClubId || 0);
   if(!ownId) return '';
-  for(let roundIndex=0; roundIndex<state.fixtures.length; roundIndex++){
-    const round = state.fixtures[roundIndex];
-    const match = (round.matches || []).find(m => !m.played && (Number(m.homeId) === ownId || Number(m.awayId) === ownId));
-    if(match) return validIsoDate(match.date) ? match.date : (round.date || '');
-  }
-  return '';
+  if(typeof calendarEarliestPendingMatch === 'function') return calendarEarliestPendingMatch(state, ownId)?.date || '';
+  let found = '';
+  state.fixtures.forEach(round => (round?.matches || []).forEach(match => {
+    if(match?.played || (Number(match.homeId) !== ownId && Number(match.awayId) !== ownId)) return;
+    const date = validIsoDate(match.date) ? match.date : (validIsoDate(round?.date) ? round.date : '');
+    if(validIsoDate(date) && (!found || daysBetweenIsoDates(date, found) > 0)) found = date;
+  }));
+  return found;
 }
 function nextUnplayedMatchDate(state=game){
   if(!state || !Array.isArray(state.fixtures)) return '';
+  if(typeof calendarEarliestPendingMatch === 'function') return calendarEarliestPendingMatch(state, 0)?.date || '';
   let found = '';
-  for(let roundIndex=0; roundIndex<state.fixtures.length; roundIndex++){
-    const round = state.fixtures[roundIndex];
-    (round.matches || []).forEach(match => {
-      if(match.played) return;
-      const date = validIsoDate(match.date) ? match.date : (round.date || '');
-      if(validIsoDate(date) && (!found || daysBetweenIsoDates(found, date) < 0)) found = date;
-    });
-    if(found) return found;
-  }
-  return '';
+  state.fixtures.forEach(round => (round?.matches || []).forEach(match => {
+    if(match?.played) return;
+    const date = validIsoDate(match.date) ? match.date : (validIsoDate(round?.date) ? round.date : '');
+    if(validIsoDate(date) && (!found || daysBetweenIsoDates(date, found) > 0)) found = date;
+  }));
+  return found;
 }
 function lastFixtureMatchDate(state=game){
   const dates = [];
@@ -502,7 +501,14 @@ function phaseLabel(){
   if(isPostseason()) return `Día ${currentDay} / ${totalDays} · ${yearStatusLabel(year)} · Postemporada ${phaseDayRangeLabel(game.phaseTurn || 0, postseasonTurnsForCurrentSeason())}`;
   const nextDate = nextUnplayedMatchDateForClub(game, game.selectedClubId) || nextUnplayedMatchDate(game);
   const vacation = isMidseasonVacationDate(game.currentDate || nextDate || '', year) ? ' · Vacaciones' : '';
-  return `Día ${currentDay} / ${totalDays} · ${yearStatusLabel(year)} · Liga ${Math.min((game.matchdayIndex || 0) + 1, game.fixtures?.length || seed.fixtures.length)} / ${game.fixtures?.length || seed.fixtures.length}${vacation}`;
+  const leagueProgress = typeof calendarLeagueProgressForClub === 'function'
+    ? calendarLeagueProgressForClub(game, game.selectedClubId)
+    : null;
+  const leagueCurrent = leagueProgress?.total
+    ? leagueProgress.next
+    : Math.min((game.matchdayIndex || 0) + 1, typeof regularFixtureLength === 'function' ? regularFixtureLength(game.fixtures) : (game.fixtures?.length || seed.fixtures.length));
+  const leagueTotal = leagueProgress?.total || (typeof regularFixtureLength === 'function' ? regularFixtureLength(game.fixtures) : (game.fixtures?.length || seed.fixtures.length));
+  return `Día ${currentDay} / ${totalDays} · ${yearStatusLabel(year)} · Liga ${leagueCurrent} / ${leagueTotal}${vacation}`;
 }
 function preseasonFriendliesPlayed(){ return Number(game?.preseasonFriendliesPlayed || 0); }
 function canPlayPreseasonFriendly(){ return isPreseason() && preseasonFriendliesPlayed() < MAX_PRESEASON_FRIENDLIES; }

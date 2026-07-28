@@ -1,5 +1,5 @@
-/* V8.83 · Caja persistente por club, liquidación completa de transferencias,
-   premios para campeones bot y recuperación de partidos atrasados en martes. */
+/* V8.85 · Caja persistente por club y liquidación económica.
+   La recuperación de calendario se delega de forma exclusiva en 05r. */
 
 (function(){
   const VERSION = 1;
@@ -208,134 +208,21 @@
     };
   }
 
-  function v883UtcDate(iso){
-    if(!validIsoDate(iso)) return null;
-    const [y,m,d] = String(iso).split('-').map(Number);
-    return new Date(Date.UTC(y,m-1,d));
-  }
-  function v883Iso(date){ return date instanceof Date && Number.isFinite(date.getTime()) ? date.toISOString().slice(0,10) : ''; }
-  function v883NextTuesday(fromIso, includeToday=true){
-    const date = v883UtcDate(fromIso);
-    if(!date) return '';
-    const day = date.getUTCDay();
-    let add = (2 - day + 7) % 7;
-    if(add === 0 && !includeToday) add = 7;
-    date.setUTCDate(date.getUTCDate() + add);
-    return v883Iso(date);
-  }
-  function v883AddDays(iso, days){
-    if(typeof addDaysToIsoDate === 'function') return addDaysToIsoDate(iso, days);
-    const date = v883UtcDate(iso);
-    if(!date) return '';
-    date.setUTCDate(date.getUTCDate() + Number(days || 0));
-    return v883Iso(date);
-  }
-  function v883IsBefore(left, right){
-    const a = v883UtcDate(left), b = v883UtcDate(right);
-    return Boolean(a && b && a.getTime() < b.getTime());
-  }
-  function v883ScheduledMatchDate(match, round){
-    return validIsoDate(match?.date) ? match.date : (validIsoDate(round?.date) ? round.date : '');
-  }
-  function v883RecoverOverdueMatches(target=game, options={}){
-    const state = v883State(target);
-    if(!state || !Array.isArray(state.fixtures)) return { repairedRounds:0, repairedMatches:0, dates:[] };
-    const referenceDate = validIsoDate(options.referenceDate) ? options.referenceDate : (validIsoDate(state.currentDate) ? state.currentDate : '');
-    if(!referenceDate) return { repairedRounds:0, repairedMatches:0, dates:[] };
-    const candidates = [];
-    state.fixtures.forEach((round, roundIndex) => {
-      const pending = (round?.matches || []).filter(match => !match?.played && v883IsBefore(v883ScheduledMatchDate(match, round), referenceDate));
-      if(!pending.length) return;
-      const original = pending.map(match => v883ScheduledMatchDate(match, round)).filter(validIsoDate).sort()[0] || '';
-      candidates.push({ round, roundIndex, pending, original });
-    });
-    candidates.sort((a,b) => String(a.original || '').localeCompare(String(b.original || '')) || a.roundIndex-b.roundIndex);
-    if(!candidates.length) return { repairedRounds:0, repairedMatches:0, dates:[] };
-
-    const occupied = new Map();
-    state.fixtures.forEach(round => (round?.matches || []).forEach(match => {
-      if(match?.played) return;
-      const date = v883ScheduledMatchDate(match, round);
-      if(!validIsoDate(date)) return;
-      [Number(match.homeId || 0), Number(match.awayId || 0)].filter(Boolean).forEach(clubId => {
-        if(!occupied.has(clubId)) occupied.set(clubId, new Set());
-        occupied.get(clubId).add(date);
-      });
-    }));
-
-    const firstTuesday = v883NextTuesday(referenceDate, true);
-    const dates = [];
-    let repairedMatches = 0;
-    candidates.forEach(item => {
-      let slot = firstTuesday;
-      let guard = 0;
-      const clubIds = [...new Set(item.pending.flatMap(match => [Number(match.homeId || 0), Number(match.awayId || 0)]).filter(Boolean))];
-      while(guard < 54 && clubIds.some(clubId => occupied.get(clubId)?.has(slot))){
-        slot = v883AddDays(slot, 7);
-        guard += 1;
-      }
-      item.pending.forEach(match => {
-        const oldDate = v883ScheduledMatchDate(match, item.round);
-        if(!match.originalScheduledDate && validIsoDate(oldDate)) match.originalScheduledDate = oldDate;
-        match.date = slot;
-        match.recoveredSchedule = true;
-        match.recoveredScheduleReason = String(options.reason || 'overdue_match_verifier');
-        match.recoveredScheduleAt = String(referenceDate);
-        repairedMatches += 1;
-      });
-      item.round.recoveredSchedule = true;
-      item.round.recoveredScheduleDate = slot;
-      if((item.round.matches || []).every(match => match.played || item.pending.includes(match))) item.round.date = slot;
-      clubIds.forEach(clubId => {
-        if(!occupied.has(clubId)) occupied.set(clubId, new Set());
-        occupied.get(clubId).add(slot);
-      });
-      dates.push(slot);
-    });
-    state.scheduleRecoveryState = state.scheduleRecoveryState && typeof state.scheduleRecoveryState === 'object' ? state.scheduleRecoveryState : {};
-    state.scheduleRecoveryState.version = VERSION;
-    state.scheduleRecoveryState.lastCheckDate = referenceDate;
-    state.scheduleRecoveryState.lastResult = { repairedRounds:candidates.length, repairedMatches, dates:[...new Set(dates)], reason:String(options.reason || '') };
-    state.scheduleRecoveryLog = Array.isArray(state.scheduleRecoveryLog) ? state.scheduleRecoveryLog.slice(-24) : [];
-    state.scheduleRecoveryLog.push({ ...state.scheduleRecoveryState.lastResult, checkedAt:new Date().toISOString() });
-    return state.scheduleRecoveryState.lastResult;
-  }
-  window.recoverOverdueMatchesOnTuesdays = v883RecoverOverdueMatches;
-
-  if(typeof processDailyCalendarState === 'function'){
-    const originalProcessDailyCalendarState = processDailyCalendarState;
-    processDailyCalendarState = function(dateAfter='', options={}){
-      const referenceDate = validIsoDate(dateAfter) ? dateAfter : (validIsoDate(game?.currentDate) ? v883AddDays(game.currentDate, 1) : '');
-      const recovery = v883RecoverOverdueMatches(game, { referenceDate, reason:'daily_tuesday_recovery' });
-      const result = originalProcessDailyCalendarState.call(this, dateAfter, options) || {};
-      result.scheduleRecovery = recovery;
-      if(recovery.repairedMatches > 0 && typeof pushGameMessage === 'function'){
-        const id = `schedule-recovery-${game.seasonNumber || 1}-${referenceDate}`;
-        pushGameMessage({
-          id, type:'system', priority:'high', title:'Partidos pendientes reprogramados',
-          body:`El verificador encontró ${recovery.repairedMatches} partido(s) atrasado(s). Fueron reprogramados en martes, comenzando el ${recovery.dates[0] || referenceDate}.`
-        });
-      }
-      return result;
-    };
-  }
-  if(typeof runScheduledSeasonGameVerifier === 'function'){
-    const originalScheduledVerifier = runScheduledSeasonGameVerifier;
-    runScheduledSeasonGameVerifier = function(options={}){
-      const result = originalScheduledVerifier.call(this, options) || {};
-      const recovery = v883RecoverOverdueMatches(game, { referenceDate:game?.currentDate || '', reason:options.reason || 'scheduled_verifier' });
-      result.scheduleRecovery = recovery;
-      result.repaired = Boolean(result.repaired || recovery.repairedMatches > 0);
-      return result;
-    };
-  }
+  // V8.85: la recuperación de calendario queda centralizada en 05r.
+  // Se conserva un puente para compatibilidad con llamadas antiguas, pero esta
+  // capa económica ya no envuelve el avance diario ni reprograma encuentros.
+  window.recoverOverdueMatchesOnTuesdays = function(target=game, options={}){
+    if(typeof window.runCalendarIntegrityAudit === 'function'){
+      return window.runCalendarIntegrityAudit(target, options);
+    }
+    return { ran:false, deferred:true, repairedRounds:0, repairedMatches:0, restoredMissing:0, rescheduled:0, dates:[] };
+  };
 
   if(typeof normalizeGame === 'function'){
     const originalNormalizeGame = normalizeGame;
     normalizeGame = function(saved){
       const normalized = originalNormalizeGame.call(this, saved);
       v883EnsureClubCash(normalized);
-      v883RecoverOverdueMatches(normalized, { referenceDate:normalized.currentDate || '', reason:'save_migration_v883' });
       return normalized;
     };
   }

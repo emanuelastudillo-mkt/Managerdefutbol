@@ -1235,7 +1235,7 @@ function employeesMessageActionMarkup(message){
   return `<div class="row message-actions"><button type="button" class="primary" data-open-employees>${escapeHtml(label)}</button></div>`;
 }
 function messageCard(m){
-  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && (m.action?.origin === 'special_clause' || m.action?.canConvince === true);
+  const isSpecialClauseOffer = m.action?.type === 'transferOffer' && transferOfferReachesFullClause(m);
   const isWithoutClub = typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active);
   const action = m.action?.type === 'lockerRoomDecision'
     ? lockerRoomDecisionActionMarkup(m)
@@ -1478,10 +1478,31 @@ function currentManagerLeaguePosition(){
   const index = table.findIndex(row => Number(row.clubId) === Number(game?.selectedClubId));
   return index >= 0 ? index + 1 : 20;
 }
+function transferOfferReachesFullClause(message, player=null){
+  const action = message?.action;
+  if(action?.type !== 'transferOffer') return false;
+  if(action.origin === 'special_clause' || action.canConvince === true) return true;
+  if(Number(action.pct || 0) >= 100) return true;
+  const targetPlayer = player || (typeof playerById === 'function' ? playerById(Number(action.playerId || 0)) : null);
+  const clause = Math.max(0, Number(action.clauseAmount || action.playerClause || (targetPlayer && typeof playerClauseFor === 'function' ? playerClauseFor(targetPlayer) : 0)));
+  const amount = Math.max(0, Number(action.grossAmount ?? action.amount ?? 0));
+  const tolerance = Math.max(1, Math.round(clause * 0.001));
+  return clause > 0 && amount + tolerance >= clause;
+}
+function normalizeFullClauseTransferOffer(message, player=null){
+  if(!transferOfferReachesFullClause(message, player)) return false;
+  const action = message.action;
+  if(action.origin !== 'special_clause') action.originalOrigin = action.originalOrigin || action.origin || 'regular_offer';
+  action.origin = 'special_clause';
+  action.canConvince = true;
+  action.pct = Math.max(100, Number(action.pct || 0));
+  action.ownerClubId = Number(action.ownerClubId || game?.selectedClubId || player?.clubId || 0);
+  return true;
+}
 function isPendingSpecialClauseOfferMessage(message){
   return Boolean(message?.action?.type === 'transferOffer'
     && message.action.status === 'pending'
-    && (message.action.origin === 'special_clause' || message.action.canConvince === true));
+    && transferOfferReachesFullClause(message));
 }
 function specialClauseOfferCreatedSeasonDay(message){
   const stored = Number(message?.action?.createdSeasonDay || 0);
@@ -1512,6 +1533,8 @@ function specialClauseAutoAcceptanceWarning(dueDate){
 }
 function ensureSpecialClauseAutoAcceptanceMetadata(message, options={}){
   if(!isPendingSpecialClauseOfferMessage(message)) return null;
+  const player = typeof playerById === 'function' ? playerById(Number(message?.action?.playerId || 0)) : null;
+  normalizeFullClauseTransferOffer(message, player);
   const createdSeasonDay = specialClauseOfferCreatedSeasonDay(message);
   const createdDate = specialClauseOfferCreatedDate(message);
   const responseDueDate = validIsoDate(message.action.responseDueDate)
@@ -1888,8 +1911,10 @@ function acceptTransferOffer(messageId){
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
+  const isFullClause = transferOfferReachesFullClause(msg, player);
+  if(isFullClause) normalizeFullClauseTransferOffer(msg, player);
   const pct = Number(msg.action.pct || 0);
-  if(isPlayerUntransferable(player) && pct < 100){
+  if(isPlayerUntransferable(player) && !isFullClause){
     msg.action.status = 'auto_rejected_intransferible';
     msg.body += ` Oferta rechazada automáticamente: ${player.name} está marcado como intransferible y sólo se aceptan propuestas por la cláusula completa.`;
     saveLocal(true);
@@ -1897,8 +1922,8 @@ function acceptTransferOffer(messageId){
     renderMessages();
     return;
   }
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
-  if(typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
+  if(!isFullClause && !hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  if(!isFullClause && typeof playerStarRecord === 'function' && playerStarRecord(player) && pct < Number(STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT || 40)){
     msg.action.status = 'blocked_by_board';
     msg.body += ` La directiva bloqueó la venta porque es un jugador muy importante para el club. Para una estrella exige una oferta superior al ${STAR_PLAYER_DIRECTIVE_MIN_OFFER_PCT}% de su cláusula.`;
     saveLocal(true);
@@ -1958,10 +1983,11 @@ function showSpecialClauseResponseModal(player, text, status='stay'){
 function convinceSpecialClausePlayer(messageId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés intervenir ofertas de jugadores mientras estás sin club.'); return; }
   const msg = (game.messages || []).find(m => m.id === messageId);
-  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending' || msg.action.origin !== 'special_clause') return;
+  if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
   const player = playerById(msg.action.playerId);
   if(!player || player.clubId !== game.selectedClubId){ showNotice('La oferta ya no está disponible.'); return; }
-  if(!hasFirstTeamRosterMinimumAfterRemoval(game.selectedClubId, 1)){ showRosterMinimumNotice(); return; }
+  if(!transferOfferReachesFullClause(msg, player)){ showNotice('Esta oferta no alcanza la cláusula completa.'); return; }
+  normalizeFullClauseTransferOffer(msg, player);
   const position = currentManagerLeaguePosition();
   const failureChance = clamp((Number(position || 20) * 2) / 100, 0.02, 0.95);
   const managerName = game?.rankingManagerName || storedManagerName() || 'Manager';
@@ -1988,8 +2014,12 @@ function rejectTransferOffer(messageId){
   if(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active)){ showNotice('No podés gestionar ofertas de jugadores mientras estás sin club.'); return; }
   const msg = (game.messages || []).find(m => m.id === messageId);
   if(!msg || msg.action?.type !== 'transferOffer' || msg.action.status !== 'pending') return;
-  if(msg.action?.origin === 'special_clause' || msg.action?.canConvince === true){
+  const player = typeof playerById === 'function' ? playerById(Number(msg.action.playerId || 0)) : null;
+  if(transferOfferReachesFullClause(msg, player)){
+    normalizeFullClauseTransferOffer(msg, player);
     showNotice('Una oferta por la cláusula completa no puede rechazarse. Podés aceptarla o intentar convencer al jugador.');
+    saveLocal(true);
+    renderMessages();
     return;
   }
   msg.action.status = 'rejected';

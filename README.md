@@ -1,36 +1,22 @@
-# V8.88 INCREMENTAL
+# V8.89 INCREMENTAL
 
-Aplicar sobre **V8.87**.
+Aplicar sobre **V8.88**.
 
-## Táctica personalizada
+## Ofertas por cláusula completa
 
-- El botón `Personalizada · prueba` pasa a llamarse `Personalizada`.
-- Se retira la palabra `provisoria` de la descripción visible.
-- La sección de espacios pasa a llamarse `Tácticas guardadas`.
+- Toda oferta que alcance el 100% de la cláusula se identifica por su porcentaje o por el importe real, sin depender del origen interno del mensaje.
+- Se elimina la opción de rechazar esas propuestas.
+- Las únicas acciones disponibles son:
+  - **Aceptar oferta**.
+  - **Convencer al jugador de quedarse**.
+- El mínimo de jugadores y la directiva no pueden bloquear una cláusula completa.
+- Si el intento de convencer falla, la transferencia se ejecuta o queda programada para la próxima apertura del mercado.
+- Las ofertas pendientes de partidas anteriores se migran automáticamente al flujo de cláusula.
+- El plazo de respuesta y la aceptación automática por falta de respuesta se mantienen.
 
-## Corrección del guardado y carga
+## Archivos
 
-Las tácticas personalizadas ya no dependen únicamente de dos arreglos paralelos de jugadores y casillas.
-
-Cada espacio guarda ahora una asociación explícita:
-
-- `cellId`: casilla táctica.
-- `playerId`: jugador asignado a esa casilla.
-
-Esto evita que una normalización, lesión, suspensión o migración desplace jugadores a posiciones diferentes.
-
-## Compatibilidad
-
-- Los espacios guardados anteriormente se migran automáticamente al nuevo formato.
-- Se reconocen los modos antiguos `personalizada-prueba`, `personalizada prueba` y `personalizada`.
-- Los jugadores lesionados o suspendidos permanecen en la posición guardada; la táctica informa que deben revisarse antes de confirmar.
-- Sólo queda un hueco cuando el jugador ya no pertenece al club.
-- Se eliminan duplicados de jugadores o casillas dañadas sin alterar el resto de la distribución.
-
-## Verificación
-
-- Guardado y carga exacta de las once asociaciones jugador/casilla.
-- Migración del formato anterior.
-- Recuperación desde arreglos antiguos desordenados.
-- Conservación de jugadores temporalmente no disponibles.
-- Sintaxis de todos los archivos modificados.
+- `index.html`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/ui/06-render-home-messages.js`

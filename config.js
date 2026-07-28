@@ -219,7 +219,23 @@ window.GAME_CONFIG = {
       momentoMinimo: -100,
       momentoMaximo: 100,
       capacidadInicial: 10,
-      evaluacionTemporadaMaxima: 100
+      evaluacionTemporadaMaxima: 100,
+      terceraEtapa: {
+        ofertas: {
+          maximoCandidatos: 14
+        },
+        consecuencias: {
+          activo: true,
+          maximoGuardado: 180
+        },
+        objetivos: {
+          primerDiaRevision: 75,
+          intervaloRevisionDias: 21,
+          esperaEntreCambiosDias: 60,
+          maximoRevisiones: 2,
+          variacionAcumuladaMaximaPpg: 0.24
+        }
+      }
     },
     vestuario: {
       activo: true,

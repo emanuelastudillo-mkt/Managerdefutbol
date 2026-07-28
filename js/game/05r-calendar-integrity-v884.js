@@ -685,22 +685,56 @@
     return summary;
   }
 
+  function ciFormatRecoveryDate(value){
+    if(!ciValidDate(value)) return String(value || '');
+    const date=ciUtc(value);
+    if(!date) return String(value || '');
+    try{
+      return new Intl.DateTimeFormat('es-AR',{ weekday:'long', day:'numeric', month:'long', timeZone:'UTC' }).format(date);
+    }catch(_error){ return String(value || ''); }
+  }
+  function ciFederationSender(){
+    const selectedClub=(seed?.clubs || []).find(club => Number(club.id) === Number(game?.selectedClubId || 0));
+    const country=selectedClub && typeof clubCountry === 'function' ? clubCountry(selectedClub) : (game?.selectedCountry || '');
+    const name=typeof transferTaxFederationByCountry === 'function' ? transferTaxFederationByCountry(country) : 'Federación';
+    return String(name || 'Federación').trim() || 'Federación';
+  }
+  function ciRecoveryIncident(summary){
+    const incidents=[
+      { key:'tormenta', singular:'Partido reprogramado por tormenta', plural:'Partidos reprogramados por tormenta', cause:'una tormenta intensa, acompañada por actividad eléctrica y dificultades en los accesos al estadio' },
+      { key:'seguridad', singular:'Partido reprogramado por seguridad', plural:'Partidos reprogramados por seguridad', cause:'la falta de efectivos suficientes para garantizar el operativo de seguridad' },
+      { key:'amenaza', singular:'Partido suspendido por una amenaza', plural:'Partidos suspendidos por amenazas', cause:'una amenaza recibida antes del encuentro y la posterior inspección preventiva del estadio' },
+      { key:'energia', singular:'Corte de luz obliga a reprogramar', plural:'Cortes de luz obligan a reprogramar', cause:'un corte general de energía que afectó al estadio y a varios sectores de la ciudad' },
+      { key:'incendio', singular:'Partido reprogramado por un incendio', plural:'Partidos reprogramados por incendios', cause:'un principio de incendio en una instalación próxima al estadio y el trabajo posterior de los servicios de emergencia' },
+      { key:'alerta', singular:'Alerta meteorológica cambia la fecha', plural:'Alerta meteorológica cambia las fechas', cause:'una alerta meteorológica por fuertes vientos y riesgo para jugadores e hinchas' }
+    ];
+    const salt=`${summary?.season || 1}-${summary?.referenceDate || ''}-${summary?.rescheduled || 0}-${(summary?.dates || []).join('|')}`;
+    const index=typeof hashNumber === 'function' ? hashNumber(`calendar-incident-${salt}`,incidents.length) : [...salt].reduce((total,char)=>total+char.charCodeAt(0),0)%incidents.length;
+    return incidents[Math.max(0,Math.min(incidents.length-1,index))];
+  }
   function ciNotify(summary){
-    if(!summary || !(summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled||summary.resetFutureDates)) return;
-    const parts=[];
-    if(summary.restoredMissing) parts.push(`${summary.restoredMissing} partido(s) reconstruido(s)`);
-    if(summary.restoredPlayed) parts.push(`${summary.restoredPlayed} resultado(s) recuperado(s)`);
-    if(summary.duplicatesRemoved) parts.push(`${summary.duplicatesRemoved} duplicado(s) eliminado(s)`);
-    if(summary.resetFutureDates) parts.push(`${summary.resetFutureDates} fecha(s) futura(s) devuelta(s) a su día original`);
-    if(summary.rescheduled) parts.push(`${summary.rescheduled} partido(s) reubicado(s) en martes`);
-    const body=`La auditoría integral del calendario corrigió ${parts.join(', ')}.${summary.dates?.length ? ` Primeras fechas de recuperación: ${summary.dates.slice(0,3).join(', ')}.` : ''}`;
+    const count=Math.max(0,Math.round(ciNumber(summary?.rescheduled,0)));
+    if(!summary || count <= 0) return;
+    const singular=count === 1;
+    const incident=ciRecoveryIncident(summary);
+    const federation=ciFederationSender();
+    const sender=federation.toLowerCase() === 'federación' ? 'La federación' : `La ${federation}`;
+    const dateLabels=(summary.dates || []).slice(0,3).map(ciFormatRecoveryDate).filter(Boolean);
+    const datesText=dateLabels.length
+      ? (singular ? `La nueva fecha será el ${dateLabels[0]}.` : `Las primeras nuevas fechas serán ${dateLabels.join(', ')}.`)
+      : 'Las nuevas fechas fueron incorporadas al calendario oficial.';
+    const matchText=singular ? 'un encuentro pendiente debió ser postergado' : `${count} encuentros pendientes debieron ser postergados`;
+    const apology=incident.key === 'seguridad' || incident.key === 'amenaza'
+      ? `${sender} agradeció la colaboración de los clubes y pidió disculpas por las molestias ocasionadas.`
+      : `${sender} presentó disculpas a los clubes y a los hinchas por los inconvenientes.`;
+    const body=`${sender} informó que ${matchText} por ${incident.cause}. ${datesText} ${apology}`;
     if(typeof pushGameMessage === 'function'){
       pushGameMessage({
         id:`calendar-integrity-v885-s${summary.season}-${summary.referenceDate}`,
-        type:'system',priority:'high',title:'Calendario recuperado',body
+        type:'federación',priority:'high',title:singular ? incident.singular : incident.plural,body
       });
     }
-    if(typeof showNotice === 'function') showNotice(body,false);
+    if(typeof showNotice === 'function') showNotice(`${singular ? 'El partido fue reprogramado' : 'Los partidos fueron reprogramados'} para el primer martes disponible.`,false);
   }
 
   window.runCalendarIntegrityAudit=ciAuditState;

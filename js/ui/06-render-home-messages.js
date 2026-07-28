@@ -1111,16 +1111,16 @@ function renderMessages(){
   saveLocal(true);
 }
 function messageIcon(type){
-  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', staff:'🧑‍💼', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', asistente:'🎧', vestuario:'🗣️' };
+  const map = { transferOffer:'💰', evento:'⚽', finance:'💵', finanzas:'💵', staff:'🧑‍💼', empleados:'🩺', warning:'⚠️', info:'✉️', noticia:'📰', directiva:'🏛️', federación:'🏛️', federacion:'🏛️', asistente:'🎧', vestuario:'🗣️', system:'⚙️', sistema:'⚙️' };
   return map[String(type || '').trim()] || '✉️';
 }
 function messageToneClass(type, priority){
   if(priority === 'high') return 'message-tone-high';
   const key = String(type || '').toLowerCase();
-  if(['transferoffer','finance'].includes(key)) return 'message-tone-money';
+  if(['transferoffer','finance','finanzas'].includes(key)) return 'message-tone-money';
   if(['evento','noticia'].includes(key)) return 'message-tone-sport';
   if(['warning'].includes(key)) return 'message-tone-alert';
-  if(['staff','directiva'].includes(key)) return 'message-tone-board';
+  if(['staff','empleados','directiva','federación','federacion'].includes(key)) return 'message-tone-board';
   if(['vestuario'].includes(key)) return 'message-tone-locker-room';
   if(['asistente'].includes(key)) return 'message-tone-assistant';
   return 'message-tone-info';
@@ -1128,7 +1128,9 @@ function messageToneClass(type, priority){
 function messageTypeLabel(type){
   const raw = String(type || 'info').trim();
   if(!raw) return 'Info';
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
+  const key=raw.toLowerCase();
+  const labels={ system:'Sistema', sistema:'Sistema', federacion:'Federación', 'federación':'Federación', empleados:'Empleados', finanzas:'Finanzas' };
+  return labels[key] || raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 function messageTransferPlayer(m){
   if(m?.action?.type !== 'transferOffer') return null;

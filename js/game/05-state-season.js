@@ -960,7 +960,7 @@ function newGame(selectedClubId, options={}){
   } else if(options.challengeId) {
     pushGameMessage({ type:'reto', title:'Reto activo', body:'La partida empezó desde un escenario predeterminado. Revisá las reglas del reto en Inicio antes de avanzar.', priority:'high' });
   } else {
-    pushGameMessage({ type:'system', title:'Bienvenido al club', body:'La temporada está por comenzar. Revisá táctica, mercado y mensajes antes del debut.', priority:'normal' });
+    pushGameMessage({ type:'directiva', title:'La directiva te da la bienvenida', body:'La temporada está por comenzar. La dirigencia espera que revises la táctica, el mercado y la situación del plantel antes del debut.', priority:'normal' });
   }
   const initialLeagueEconomyText = typeof leagueSeasonEconomyMessageForClub === 'function' ? leagueSeasonEconomyMessageForClub(selectedClubId, 1) : '';
   if(initialLeagueEconomyText){

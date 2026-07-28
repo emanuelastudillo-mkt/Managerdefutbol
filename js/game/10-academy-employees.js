@@ -2302,18 +2302,20 @@ function applyKinesioTreatment(playerId, kind='first', options={}){
   }
   const bonusText = miraculousDoctorBonus > 0 ? ` Incluye ${formatDaysFromTurns(miraculousDoctorBonus)} extra por Médico Milagroso.` : '';
   const costText = course.charged > 0 ? ` Se inició el plan por ${formatMoney(course.charged)}.` : '';
-  return { success, recoveryReductionTurns, baseRecoveryReductionTurns, miraculousDoctorBonus, successChance, charged:Number(course.charged || 0), buttonLabel:success ? 'Tratamiento realizado' : 'Tratamiento fallido', message:success ? `Tratamiento exitoso. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.${bonusText}${costText}` : `El tratamiento falló. La lesión no se redujo.${costText}` };
+  return { success, recoveryReductionTurns, baseRecoveryReductionTurns, miraculousDoctorBonus, successChance, charged:Number(course.charged || 0), buttonLabel:success ? 'Tratamiento realizado' : 'Tratamiento fallido', message:success ? `Los especialistas confirmaron una buena respuesta. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.${bonusText}${costText}` : `El jugador no respondió al tratamiento y el plazo de recuperación no cambió.${costText}` };
 }
 function processAutomaticKinesiologistTreatmentsDaily(){
   if(!game || !staffActive('kinesiologist')) return { active:false, attempted:0, successes:0, failures:0, skipped:0, chargedClub:0, chargedManager:0 };
   const items = kinesioTreatmentItems();
-  const summary = { active:true, attempted:0, successes:0, failures:0, skipped:0, chargedClub:0, chargedManager:0, category:kinesiologistTreatmentCategory(), successChance:kinesiologistTreatmentSuccessChance(), date:validIsoDate(game.currentDate) ? game.currentDate : '', turn:currentTurnIndex() };
+  const summary = { active:true, attempted:0, successes:0, failures:0, skipped:0, chargedClub:0, chargedManager:0, category:kinesiologistTreatmentCategory(), successChance:kinesiologistTreatmentSuccessChance(), date:validIsoDate(game.currentDate) ? game.currentDate : '', turn:currentTurnIndex(), results:[], playerIds:[] };
   items.forEach(item => {
     const kind = item.kind || 'first';
     const outcome = applyKinesioTreatment(item.player.id, kind, { automatic:true });
     if(outcome.alreadyTreated) return;
     if(outcome.skipped){ summary.skipped += 1; return; }
     summary.attempted += 1;
+    summary.playerIds.push(Number(item.player.id));
+    summary.results.push({ playerId:Number(item.player.id), name:String(item.player.name || 'Jugador'), success:Boolean(outcome.success), kind });
     if(outcome.success) summary.successes += 1; else summary.failures += 1;
     if(Number(outcome.charged || 0) > 0){
       if(kind === 'youth') summary.chargedManager += Number(outcome.charged || 0);
@@ -2321,12 +2323,42 @@ function processAutomaticKinesiologistTreatmentsDaily(){
     }
   });
   game.staffActions.kinesiologistAutomaticLast = summary;
-  if((summary.chargedClub > 0 || summary.chargedManager > 0 || summary.skipped > 0) && typeof pushGameMessage === 'function'){
-    const parts = [`${summary.attempted} tratamiento(s) automático(s): ${summary.successes} éxito(s) y ${summary.failures} fallo(s).`];
-    if(summary.chargedClub > 0) parts.push(`Club: ${formatMoney(summary.chargedClub)}.`);
-    if(summary.chargedManager > 0) parts.push(`Cuenta personal: ${formatMoney(summary.chargedManager)}.`);
-    if(summary.skipped > 0) parts.push(`${summary.skipped} no pudieron iniciarse por falta de fondos.`);
-    pushGameMessage({ id:`kinesio-auto-${summary.date || summary.turn}`, type:'empleados', priority:summary.skipped > 0 ? 'high' : 'normal', title:'Tratamientos automáticos', body:parts.join(' ') });
+  if((summary.attempted > 0 || summary.skipped > 0) && typeof pushGameMessage === 'function'){
+    const count=summary.attempted;
+    const singular=count === 1;
+    const introductory=count <= 0 ? '' : (singular
+      ? 'Un jugador estuvo con nuestros especialistas para tratar su lesión.'
+      : `${count} jugadores estuvieron con nuestros especialistas para tratar sus lesiones.`);
+    let outcomeText='';
+    if(count > 0 && summary.successes === count){
+      outcomeText=singular
+        ? 'El tratamiento hizo efecto y permitió acortar su recuperación.'
+        : (count === 2 ? 'Los tratamientos hicieron efecto en ambos casos y permitieron acortar sus recuperaciones.' : `Los tratamientos hicieron efecto en los ${count} casos y permitieron acortar las recuperaciones.`);
+    }else if(count > 0 && summary.failures === count){
+      outcomeText=singular
+        ? 'El tratamiento no hizo efecto y el plazo de recuperación se mantiene.'
+        : (count === 2 ? 'Los tratamientos no hicieron efecto en ninguno de los dos casos.' : `Los tratamientos no hicieron efecto en ninguno de los ${count} casos.`);
+    }else if(count > 0){
+      outcomeText=`Los tratamientos hicieron efecto en ${summary.successes} ${summary.successes === 1 ? 'caso' : 'casos'}, pero no produjeron mejoras en ${summary.failures} ${summary.failures === 1 ? 'jugador' : 'jugadores'}.`;
+    }
+    const successNames=summary.results.filter(result=>result.success).map(result=>result.name);
+    const failureNames=summary.results.filter(result=>!result.success).map(result=>result.name);
+    const detail=[];
+    if(successNames.length && successNames.length <= 4) detail.push(`Respondieron favorablemente: ${successNames.join(', ')}.`);
+    if(failureNames.length && failureNames.length <= 4) detail.push(`Sin mejora: ${failureNames.join(', ')}.`);
+    const costs=[];
+    if(summary.chargedClub > 0) costs.push(`El club destinó ${formatMoney(summary.chargedClub)} a la atención médica.`);
+    if(summary.chargedManager > 0) costs.push(`Tu Cuenta Bancaria cubrió ${formatMoney(summary.chargedManager)} por los tratamientos de juveniles.`);
+    if(summary.skipped > 0) costs.push(`El cuerpo médico no pudo iniciar ${summary.skipped === 1 ? 'otro tratamiento' : `${summary.skipped} tratamientos adicionales`} por falta de fondos.`);
+    const body=[introductory,outcomeText,...detail,...costs].filter(Boolean).join(' ');
+    pushGameMessage({
+      id:`kinesio-auto-${summary.date || summary.turn}`,
+      type:'empleados',
+      priority:summary.skipped > 0 ? 'high' : 'normal',
+      title:'Informe del cuerpo médico',
+      body,
+      playerIds:[...new Set(summary.playerIds.filter(Number.isFinite))]
+    });
   }
   return summary;
 }
@@ -2409,7 +2441,7 @@ async function treatAllInjuredPlayers(button=null){
     await kinesioDelay(Math.max(250, Math.round(ACTION_FEEDBACK_RESULT_MS * 0.55)));
   }
   if(progress){
-    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>Horas extras finalizadas: ${successes} éxito(s), ${failures} fallo(s).</strong>`;
+    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>El cuerpo médico terminó la jornada: ${successes} ${successes === 1 ? 'jugador respondió' : 'jugadores respondieron'} al tratamiento y ${failures} ${failures === 1 ? 'no mostró mejora' : 'no mostraron mejoras'}.</strong>`;
   }
   if(button){
     button.classList.remove('action-processing');

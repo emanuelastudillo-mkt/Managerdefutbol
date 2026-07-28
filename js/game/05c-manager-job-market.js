@@ -415,7 +415,7 @@ function processManagerJobMarketDaily(){
     return true;
   });
   if(expired){
-    pushGameMessage({ type:'directiva', priority:'normal', title:'Ofertas laborales vencidas', body:`${expired} oferta(s) para dirigir vencieron porque no fueron respondidas a tiempo.`, id:`job-offers-expired-${today}-${game.globalTurn || 0}` });
+    pushGameMessage({ type:'directiva', priority:'normal', title:expired === 1 ? 'Un club retiró su propuesta' : 'Los clubes retiraron sus propuestas', body:expired === 1 ? 'Un club retiró su propuesta para contratarte después de no recibir una respuesta dentro del plazo.' : `${expired} clubes retiraron sus propuestas para contratarte después de no recibir una respuesta dentro del plazo.`, id:`job-offers-expired-${today}-${game.globalTurn || 0}` });
   }
   let applicationResponses = 0;
   const remainingApplications = [];

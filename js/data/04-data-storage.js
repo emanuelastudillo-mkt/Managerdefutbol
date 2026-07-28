@@ -2047,9 +2047,11 @@ function addBotFieldRepairMessage(targetGame, summary, reason){
     date:targetGame.currentDate || '',
     read:false,
     priority:'normal',
-    type:'sistema',
-    title:'Campos bots corregidos',
-    body:`Se detectaron ${summary.detected} campo(s) bot con estado inválido o injugable. El sistema regeneró ${summary.repaired} campo(s) con valores de temporada entre ${BOT_FIELD_MIN_SCORE}/100 y ${BOT_FIELD_MAX_SCORE}/100.`,
+    type:'federación',
+    title:summary.repaired === 1 ? 'Un estadio recibió tareas de emergencia' : 'La liga reacondicionó varios campos',
+    body:summary.repaired === 1
+      ? `La federación informó que un campo de juego no reunía condiciones para competir y ordenó tareas de emergencia. El césped quedó habilitado con un estado estimado entre ${BOT_FIELD_MIN_SCORE}/100 y ${BOT_FIELD_MAX_SCORE}/100.`
+      : `La federación inspeccionó ${summary.detected} campos de juego y ordenó trabajos de emergencia en ${summary.repaired}. Los estadios quedaron habilitados con estados estimados entre ${BOT_FIELD_MIN_SCORE}/100 y ${BOT_FIELD_MAX_SCORE}/100.`,
     action:null,
     createdAt:Date.now()
   });

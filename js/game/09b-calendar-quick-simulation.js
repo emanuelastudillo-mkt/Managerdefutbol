@@ -808,7 +808,7 @@ function repairBankLoanOverchargeIfNeeded(loan, today){
   loan.overchargeRepairAppliedAt = today;
   loan.overchargeRepairVersion = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V6.36';
   recordBudgetChange(refund, `Devolución sobrecobro préstamo ${loan.bankName}`, { type:'bank_loan_overcharge_refund', bankName:loan.bankName, loanId:loan.id, expectedPayments, expectedPaid, previousPaid:paid, refund, paymentDate:today, nextPaymentDate:loan.nextPaymentDate });
-  pushGameMessage({ type:'finanzas', title:'Ajuste de préstamo bancario', body:`Se corrigió un sobrecobro de cuotas del préstamo de ${loan.bankName}. Se devolvieron ${formatMoney(refund)} al presupuesto del club.`, priority:'high' });
+  pushGameMessage({ type:'finanzas', title:'Reintegro del banco', body:`${loan.bankName} informó un error en la liquidación de las cuotas del préstamo. La entidad acreditó ${formatMoney(refund)} en la caja del club y presentó disculpas por el inconveniente.`, priority:'high' });
   return refund;
 }
 function syncBankLoanScheduleWithPaidAmount(loan){
@@ -1067,20 +1067,20 @@ function runScheduledSeasonGameVerifier(options={}){
   game.scheduledVerifierLog.push(state.lastSummary);
 
   if(summary.repaired && options.silent !== true && typeof showNotice === 'function'){
-    showNotice('El Verificador de estructura corrigió automáticamente problemas detectados.', false);
+    showNotice('La organización confirmó ajustes administrativos en la programación.', false);
   }
   if(summary.unresolved > 0){
     const messageId = `scheduled-structure-verifier-${season}-${summary.scheduledDay}`;
     if(typeof pushGameMessage === 'function'){
       pushGameMessage({
         id:messageId,
-        type:'system',
+        type:'federación',
         priority:'high',
-        title:'Revisión de estructura necesaria',
-        body:`El control automático del día ${summary.scheduledDay} detectó ${summary.unresolved} aviso(s) pendientes. El sistema continuará revisando la estructura en los próximos controles programados.`
+        title:'Partidos bajo revisión de la federación',
+        body:`La federación informó que todavía hay ${summary.unresolved === 1 ? 'un encuentro' : `${summary.unresolved} encuentros`} cuya programación necesita ser confirmada. Los clubes serán notificados cuando se definan las nuevas condiciones.`
       });
     }
-    if(options.silent !== true && typeof showNotice === 'function') showNotice('El control automático detectó avisos pendientes y volverá a revisarlos.', true);
+    if(options.silent !== true && typeof showNotice === 'function') showNotice('La federación mantiene algunos encuentros bajo revisión.', true);
   }
   return summary;
 }

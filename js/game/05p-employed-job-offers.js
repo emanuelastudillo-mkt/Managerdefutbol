@@ -161,10 +161,10 @@
       pushGameMessage({
         type:'directiva',
         priority:'normal',
-        title:expired === 1 ? 'Oferta laboral vencida' : 'Ofertas laborales vencidas',
+        title:expired === 1 ? 'El club retiró su propuesta' : 'Los clubes retiraron sus propuestas',
         body:expired === 1
-          ? `La propuesta de ${expiredClubs[0] || 'un club'} venció porque no fue respondida dentro del plazo.`
-          : `${expired} propuestas laborales vencieron sin respuesta.`,
+          ? `${expiredClubs[0] || 'El club interesado'} decidió retirar la propuesta después de no recibir una respuesta dentro del plazo.`
+          : `${expired} clubes decidieron retirar sus propuestas después de no recibir una respuesta dentro del plazo.`,
         id:`employed-job-offers-expired-${today}-${game?.globalTurn || 0}`
       });
     }

@@ -1,19 +1,36 @@
-# V8.87 INCREMENTAL
+# V8.88 INCREMENTAL
 
-## Contenido
-- `index.html`
-- `styles/200-player-profile-overlap-fix-v887.css`
+Aplicar sobre **V8.87**.
 
-## Objetivo
-Corregir superposiciones en la ficha del jugador y reorganizar la vista horizontal siguiendo un criterio visual más cercano al diseño de referencia.
+## Táctica personalizada
 
-## Cambios principales
-- Nuevo layout más estable para la ficha horizontal del jugador.
-- Tres columnas equilibradas para resumen, habilidades y estadísticas.
-- Scroll interno por columna para evitar solapamientos.
-- Mejor distribución de bloques, radar, acciones y estadísticas.
-- Ajustes responsivos adicionales para anchos intermedios y móvil.
-- Se preserva la lógica actual del modal y sólo se corrige la presentación.
+- El botón `Personalizada · prueba` pasa a llamarse `Personalizada`.
+- Se retira la palabra `provisoria` de la descripción visible.
+- La sección de espacios pasa a llamarse `Tácticas guardadas`.
+
+## Corrección del guardado y carga
+
+Las tácticas personalizadas ya no dependen únicamente de dos arreglos paralelos de jugadores y casillas.
+
+Cada espacio guarda ahora una asociación explícita:
+
+- `cellId`: casilla táctica.
+- `playerId`: jugador asignado a esa casilla.
+
+Esto evita que una normalización, lesión, suspensión o migración desplace jugadores a posiciones diferentes.
 
 ## Compatibilidad
-Aplicar sobre **V8.86**.
+
+- Los espacios guardados anteriormente se migran automáticamente al nuevo formato.
+- Se reconocen los modos antiguos `personalizada-prueba`, `personalizada prueba` y `personalizada`.
+- Los jugadores lesionados o suspendidos permanecen en la posición guardada; la táctica informa que deben revisarse antes de confirmar.
+- Sólo queda un hueco cuando el jugador ya no pertenece al club.
+- Se eliminan duplicados de jugadores o casillas dañadas sin alterar el resto de la distribución.
+
+## Verificación
+
+- Guardado y carga exacta de las once asociaciones jugador/casilla.
+- Migración del formato anterior.
+- Recuperación desde arreglos antiguos desordenados.
+- Conservación de jugadores temporalmente no disponibles.
+- Sintaxis de todos los archivos modificados.

@@ -907,6 +907,34 @@ function normalizeSectorStyles(styles){
     attack: normalizeSectorStyleValue(src.attack || src.delanteros || src.delantera || base.attack)
   };
 }
+function normalizeSavedCustomAssignments(raw, fallbackStarters=[]){
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const legacyStarters = Array.isArray(fallbackStarters) ? fallbackStarters.slice(0,11).map(id => Number(id) || 0) : [];
+  const legacySlots = typeof normalizeCustomTacticSlots === 'function'
+    ? normalizeCustomTacticSlots(source.customSlots, source)
+    : (Array.isArray(source.customSlots) ? source.customSlots.slice(0,11).map(String) : []);
+  const incoming = Array.isArray(source.customAssignments) ? source.customAssignments : [];
+  const assignments = [];
+  const usedCells = new Set();
+  const usedPlayers = new Set();
+  const add = (cellId, playerId=0) => {
+    const cell = String(cellId || '');
+    if(!cell || usedCells.has(cell)) return;
+    if(typeof customTacticCell === 'function' && !customTacticCell(cell)) return;
+    let player = Number(playerId || 0);
+    if(player && usedPlayers.has(player)) player = 0;
+    usedCells.add(cell);
+    if(player) usedPlayers.add(player);
+    assignments.push({ cellId:cell, playerId:player });
+  };
+  incoming.forEach(item => add(item?.cellId || item?.cell || item?.slotId, item?.playerId ?? item?.id));
+  legacySlots.forEach((cellId,index) => add(cellId, legacyStarters[index] || 0));
+  const normalizedCells = typeof normalizeCustomTacticSlots === 'function'
+    ? normalizeCustomTacticSlots(assignments.map(item => item.cellId), source)
+    : assignments.map(item => item.cellId);
+  normalizedCells.forEach(cellId => add(cellId, 0));
+  return assignments.slice(0,11);
+}
 function normalizeSavedTacticsState(src){
   const maxSlots = Number.isFinite(Number(typeof TACTIC_SAVE_SLOT_COUNT !== 'undefined' ? TACTIC_SAVE_SLOT_COUNT : 3)) ? Number(TACTIC_SAVE_SLOT_COUNT) : 3;
   const rawSlots = src && typeof src === 'object' && !Array.isArray(src) ? (src.slots || src) : {};
@@ -914,8 +942,16 @@ function normalizeSavedTacticsState(src){
   for(let i=1; i<=maxSlots; i++){
     const raw = rawSlots[i] || rawSlots[String(i)] || null;
     if(!raw || typeof raw !== 'object') continue;
-    const starters = Array.isArray(raw.starters) ? raw.starters.slice(0,11).map(id => Number(id) || 0) : [];
+    const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(raw.layoutMode || raw.mode || raw.type) : 'preset';
+    const rawStarters = Array.isArray(raw.starters) ? raw.starters.slice(0,11).map(id => Number(id) || 0) : [];
+    const customAssignments = layoutMode === 'custom' ? normalizeSavedCustomAssignments(raw, rawStarters) : [];
+    const starters = layoutMode === 'custom'
+      ? customAssignments.map(item => Number(item.playerId || 0))
+      : rawStarters.slice(0,11);
     while(starters.length < 11) starters.push(0);
+    const customSlots = layoutMode === 'custom'
+      ? customAssignments.map(item => item.cellId)
+      : (typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(raw.customSlots, raw) : []);
     const bench = Array.isArray(raw.bench) ? raw.bench.slice(0,10).map(id => Number(id) || 0).filter(Boolean) : [];
     const playerMentalities = (raw.playerMentalities && typeof raw.playerMentalities === 'object' && !Array.isArray(raw.playerMentalities)) ? raw.playerMentalities : {};
     const cleanMentalities = {};
@@ -930,8 +966,9 @@ function normalizeSavedTacticsState(src){
       clubId:Number(raw.clubId || 0),
       clubName:String(raw.clubName || ''),
       formation:FORMATIONS[raw.formation] ? raw.formation : DEFAULT_TACTIC.formation,
-      layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(raw.layoutMode) : 'preset',
-      customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(raw.customSlots, raw) : [],
+      layoutMode,
+      customSlots,
+      customAssignments:customSlots.map((cellId,index) => ({ cellId, playerId:Number(starters[index] || 0) })),
       captainId:starters.includes(Number(raw.captainId || 0)) ? Number(raw.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
       starters,
       bench,
@@ -964,6 +1001,10 @@ function snapshotCurrentTacticForSlot(slot){
   const bench = (current.bench || []).slice(0,10).map(id => Number(id) || 0).filter(Boolean);
   const mentalities = {};
   starters.filter(Boolean).forEach(id => { mentalities[id] = playerMentality(id, current); });
+  const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(current.layoutMode) : 'preset';
+  const customSlots = layoutMode === 'custom' && typeof normalizeCustomTacticSlots === 'function'
+    ? normalizeCustomTacticSlots(current.customSlots, current)
+    : [];
   return {
     slot:Number(slot || 0),
     name:`Táctica ${Number(slot || 0)}`,
@@ -971,8 +1012,9 @@ function snapshotCurrentTacticForSlot(slot){
     clubId:Number(game.selectedClubId || 0),
     clubName:clubName(game.selectedClubId),
     formation:current.formation || DEFAULT_TACTIC.formation,
-    layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(current.layoutMode) : 'preset',
-    customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(current.customSlots, current) : [],
+    layoutMode,
+    customSlots,
+    customAssignments:customSlots.map((cellId,index) => ({ cellId, playerId:Number(starters[index] || 0) })),
     captainId:normalizedCaptainIdForTactic(game.selectedClubId, current),
     starters,
     bench,
@@ -995,14 +1037,25 @@ function saveCurrentTacticSlot(slot){
 function sanitizeSavedTacticForCurrentClub(saved){
   const squad = playersByClub(game.selectedClubId);
   const squadIds = new Set(squad.map(p => Number(p.id)));
-  const starters = (saved.starters || []).slice(0,11).map(id => {
+  const layoutMode = typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(saved.layoutMode) : 'preset';
+  const paired = layoutMode === 'custom' ? normalizeSavedCustomAssignments(saved, saved.starters || []) : [];
+  const sourceStarters = layoutMode === 'custom' ? paired.map(item => Number(item.playerId || 0)) : (saved.starters || []).slice(0,11).map(Number);
+  const seenStarters = new Set();
+  const starters = sourceStarters.slice(0,11).map(id => {
     const cleanId = Number(id || 0);
-    if(!cleanId || !squadIds.has(cleanId) || isUnavailable(cleanId)) return 0;
+    if(!cleanId || !squadIds.has(cleanId) || seenStarters.has(cleanId)) return 0;
+    seenStarters.add(cleanId);
     return cleanId;
   });
   while(starters.length < 11) starters.push(0);
+  const customSlots = layoutMode === 'custom'
+    ? paired.map(item => item.cellId).slice(0,11)
+    : (typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(saved.customSlots, saved) : []);
   const taken = new Set(starters.filter(Boolean));
-  const bench = (saved.bench || []).map(Number).filter(id => id && squadIds.has(id) && !taken.has(id) && canBeBench(id)).slice(0,10);
+  const bench = [];
+  (saved.bench || []).map(Number).forEach(id => {
+    if(id && squadIds.has(id) && !taken.has(id) && !bench.includes(id) && bench.length < 10) bench.push(id);
+  });
   const mentalities = {};
   starters.filter(Boolean).forEach(id => {
     mentalities[id] = normalizeMentality(saved.playerMentalities?.[id] || saved.playerMentalities?.[String(id)] || 'normal');
@@ -1017,11 +1070,12 @@ function sanitizeSavedTacticForCurrentClub(saved){
     const store = ensurePlayerMentalitiesStore(game);
     Object.entries(mentalities).forEach(([id, mode]) => { store[Number(id)] = normalizeMentality(mode); });
   }
-  return applyStarterMentalities({
+  const clean = applyStarterMentalities({
     ...DEFAULT_TACTIC,
     formation:FORMATIONS[saved.formation] ? saved.formation : DEFAULT_TACTIC.formation,
-    layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(saved.layoutMode) : 'preset',
-    customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(saved.customSlots, saved) : [],
+    layoutMode,
+    customSlots,
+    customAssignments:customSlots.map((cellId,index) => ({ cellId, playerId:Number(starters[index] || 0) })),
     captainId:starters.includes(Number(saved.captainId || 0)) ? Number(saved.captainId || 0) : Number(bestCaptainForStarterIds(starters)?.id || 0),
     starters,
     bench,
@@ -1030,17 +1084,26 @@ function sanitizeSavedTacticForCurrentClub(saved){
     matchInstructions:window.Simulator20?.normalizeMatchInstructions ? window.Simulator20.normalizeMatchInstructions(saved.matchInstructions) : (saved.matchInstructions || DEFAULT_TACTIC.matchInstructions),
     sectorStyles:normalizeSectorStyles(saved.sectorStyles)
   });
+  clean._savedTacticUnavailableCount = starters.filter(id => id && isUnavailable(id)).length;
+  clean._savedTacticMissingCount = starters.filter(id => !id).length;
+  return clean;
 }
 function loadSavedTacticSlot(slot){
   if(!game) return false;
   const saved = savedTacticSlot(slot);
   if(!saved){ showNotice(`No hay táctica guardada en el espacio ${slot}.`); return false; }
   const clean = sanitizeSavedTacticForCurrentClub(saved);
-  const missing = clean.starters.filter(id => !id).length;
-  game.tactic = clean;
-  game.playerMentalities = { ...(game.playerMentalities || {}), ...(clean.playerMentalities || {}) };
+  const missing = Number(clean._savedTacticMissingCount || clean.starters.filter(id => !id).length);
+  const unavailable = Number(clean._savedTacticUnavailableCount || 0);
+  delete clean._savedTacticMissingCount;
+  delete clean._savedTacticUnavailableCount;
+  game.tactic = ensureTacticCaptain(applyStarterMentalities(clean), game.selectedClubId);
+  game.playerMentalities = { ...(game.playerMentalities || {}), ...(game.tactic.playerMentalities || {}) };
   saveLocal(true);
-  showNotice(missing ? `Táctica ${slot} cargada con ${missing} hueco(s) por jugadores lesionados o fuera del club.` : `Táctica ${slot} cargada.`);
+  const details = [];
+  if(missing) details.push(`${missing} hueco(s) por jugadores que ya no pertenecen al club`);
+  if(unavailable) details.push(`${unavailable} titular(es) actualmente no disponible(s)`);
+  showNotice(details.length ? `Táctica ${slot} cargada: ${details.join(' y ')}.` : `Táctica ${slot} cargada correctamente.`);
   if(typeof renderTactics === 'function') renderTactics();
   return true;
 }

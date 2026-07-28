@@ -26,7 +26,10 @@ const CUSTOM_TACTIC_CELLS = (() => {
 const CUSTOM_TACTIC_CELL_MAP = new Map(CUSTOM_TACTIC_CELLS.map(cell => [cell.id, cell]));
 
 function normalizeTacticLayoutMode(value){
-  return String(value || '').toLowerCase() === CUSTOM_TACTIC_LAYOUT_MODE ? CUSTOM_TACTIC_LAYOUT_MODE : PRESET_TACTIC_LAYOUT_MODE;
+  const clean = String(value || '').trim().toLowerCase();
+  return ['custom','personalizada','personalizada-prueba','personalizada prueba'].includes(clean)
+    ? CUSTOM_TACTIC_LAYOUT_MODE
+    : PRESET_TACTIC_LAYOUT_MODE;
 }
 function isCustomTactic(tactic){ return normalizeTacticLayoutMode(tactic?.layoutMode) === CUSTOM_TACTIC_LAYOUT_MODE; }
 function customTacticCell(cellId){ return CUSTOM_TACTIC_CELL_MAP.get(String(cellId || '')) || null; }

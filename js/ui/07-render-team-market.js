@@ -879,7 +879,7 @@ function savedTacticsPanelMarkup(){
     </div>`);
   }
   return `<div class="card saved-tactics-card" style="margin-top:14px">
-    <div class="row"><div><h3>Tácticas personalizadas</h3></div></div>
+    <div class="row"><div><h3>Tácticas guardadas</h3></div></div>
     <div class="saved-tactics-grid">${slots.join('')}</div>
   </div>`;
 }
@@ -1021,7 +1021,7 @@ function tacticModeControlsMarkup(){
   const custom = typeof isCustomTactic === 'function' && isCustomTactic(game?.tactic);
   return `<div class="tactic-mode-switch" role="group" aria-label="Tipo de táctica">
     <button type="button" id="presetTacticModeBtn" class="${custom ? 'ghost' : 'primary'}">Predefinida</button>
-    <button type="button" id="customTacticModeBtn" class="${custom ? 'primary' : 'ghost'}">Personalizada · prueba</button>
+    <button type="button" id="customTacticModeBtn" class="${custom ? 'primary' : 'ghost'}">Personalizada</button>
   </div>`;
 }
 function presetTacticPitchMarkup(tactic){
@@ -1111,7 +1111,7 @@ function renderTactics(){
     <div class="tactic-workspace ${customMode ? 'custom-layout-active' : ''}">
       <main class="tactic-left-stack">
         <div class="card tactic-board-card tactic-grid-card">
-          <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">${customMode ? 'Personalizada provisoria · cada casilla define el rol' : `Formación ${game.tactic.formation}`}</p></div></div>
+          <div class="tactic-board-headline"><div><h3>Cancha táctica</h3><p class="muted small">${customMode ? 'Personalizada · cada casilla define el rol' : `Formación ${game.tactic.formation}`}</p></div></div>
           ${tacticModeControlsMarkup()}
           <div class="tactic-click-help">${tacticSelectionHint()}</div>
           <div class="pitch-board-wrap">

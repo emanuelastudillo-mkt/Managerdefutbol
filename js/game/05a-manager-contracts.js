@@ -764,7 +764,7 @@ normalizeManagerJobMarketState = function(state={}){
 };
 managerJobCreateOffer = function(clubId, options={}){
   const club = seed?.clubs?.find(c => Number(c.id) === Number(clubId));
-  if((typeof managerClubCareerEligible === 'function' && !managerClubCareerEligible(club)) || !club || !game?.gameOver?.active) return null;
+  if((typeof managerClubCareerEligible === 'function' && !managerClubCareerEligible(club)) || !club || (!game?.gameOver?.active && options.allowWhileEmployed !== true)) return null;
   const state = ensureManagerJobMarketState();
   if(typeof managerJobClubBlockedByRejectedApplication === 'function' && managerJobClubBlockedByRejectedApplication(club)) return null;
   if(state.offers.some(o => Number(o.clubId) === Number(club.id))) return null;
@@ -776,7 +776,7 @@ managerJobCreateOffer = function(clubId, options={}){
     source:String(options.source || 'incoming'),
     contractType,
     createdDate:today,
-    expiresDate:addDaysToIsoDate(today, 20),
+    expiresDate:addDaysToIsoDate(today, clamp(Math.round(Number(options.responseDays || 20)), 10, 30)),
     managerPrestigeAtOffer:currentManagerPrestige(),
     objectiveBonus:contractType === 'high_risk' ? 0.25 : 0,
     transferBudgetRate:contractType === 'high_risk' ? 0.05 : null,

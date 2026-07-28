@@ -2525,7 +2525,9 @@ function resignCurrentClub(){
   showNotice('Renuncia registrada. Usá Buscar club para continuar tu carrera.');
 }
 function continueCareerAtClub(selectedClubId, options={}){
-  if(!game?.gameOver?.active){ showNotice('Sólo podés buscar otro club cuando estás sin cargo.'); return; }
+  const employedTransition = Boolean(options.allowEmployedTransition && game && !game.gameOver?.active && Number(game.selectedClubId || 0) !== Number(selectedClubId || 0));
+  if(!game?.gameOver?.active && !employedTransition){ showNotice('Sólo podés buscar otro club cuando estás sin cargo o aceptar una oferta laboral activa.'); return; }
+  const previousClubId = Number(game?.selectedClubId || 0);
   const newClub = seed.clubs.find(c => Number(c.id) === Number(selectedClubId));
   if(!newClub){ showNotice('Club no encontrado.'); return; }
   if(typeof managerClubCareerEligible === 'function' && !managerClubCareerEligible(newClub)){
@@ -2545,7 +2547,20 @@ function continueCareerAtClub(selectedClubId, options={}){
     return;
   }
   ensureClubBudgetsState();
-  recordDismissedCareerStep();
+  if(employedTransition){
+    if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(previousClubId, { final:true });
+    if(typeof clearScoutedSigningChances === 'function') clearScoutedSigningChances();
+    if(typeof managerCareerFinalizeCurrentStint === 'function'){
+      managerCareerFinalizeCurrentStint({
+        status:'club_change',
+        partial:true,
+        key:`club_change:${game.seasonNumber || 1}:${previousClubId}:${game.managerStats?.currentSeason?.careerStintId || game.globalTurn || 0}`
+      });
+    }
+    if(typeof resetOutgoingClubStateAfterManagerExit === 'function') resetOutgoingClubStateAfterManagerExit(previousClubId, 'job_offer');
+  }else{
+    recordDismissedCareerStep();
+  }
   game.clubBudgets[game.selectedClubId] = Math.round(Number(game.budget || 0));
   game.selectedClubId = Number(newClub.id);
   game.selectedCountry = clubCountry(newClub);
@@ -2559,10 +2574,10 @@ function continueCareerAtClub(selectedClubId, options={}){
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(newClub.id, game.seasonNumber || 1, 0) : game.transferBudget;
   resetClubSpecificCareerStateForNewClub(newClub.id);
   const inheritedSponsors = typeof initializeInheritedSponsorsForNewClub === 'function'
-    ? initializeInheritedSponsorsForNewClub(newClub.id, { reason:game.gameOver?.type || 'new_job' })
+    ? initializeInheritedSponsorsForNewClub(newClub.id, { reason:employedTransition ? 'job_offer' : (game.gameOver?.type || 'new_job') })
     : { count:0, totalPlaces:0, ratio:0 };
   const inheritedCaptains = typeof initializeCaptaincyExperienceForNewClub === 'function'
-    ? initializeCaptaincyExperienceForNewClub(newClub.id, { reason:game.gameOver?.type || 'new_job' })
+    ? initializeCaptaincyExperienceForNewClub(newClub.id, { reason:employedTransition ? 'job_offer' : (game.gameOver?.type || 'new_job') })
     : { count:0, players:[] };
   if(highRiskOffer){
     game.managerJobContract = {
@@ -2593,7 +2608,13 @@ function continueCareerAtClub(selectedClubId, options={}){
   closeModal();
   const specialResetText = newClubSpecialReset?.returned ? ` ${newClubSpecialReset.returned} carta(s) activa(s) volvieron a la reserva.` : '';
   const inheritedStateText = ` El club conserva ${Number(inheritedSponsors.count || 0)} sponsor(s) activo(s) de ${Number(inheritedSponsors.totalPlaces || 0)} espacios habilitados y ${Number(inheritedCaptains.count || 0)} jugador(es) con experiencia previa de capitanía.`;
-  pushGameMessage({ type:'directiva', priority:'high', title:'Nuevo cargo aceptado', body: highRiskOffer ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.${inheritedStateText}${specialResetText}` : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, acciones de staff, préstamos y cooldowns vinculados al club anterior.${inheritedStateText}${specialResetText}`, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
+  const acceptedTitle = employedTransition ? 'Cambio de club confirmado' : 'Nuevo cargo aceptado';
+  const acceptedBody = highRiskOffer
+    ? `Firmaste con ${newClub.name} con contrato exigente: objetivo superior al normal y fichajes muy restringidos. La partida continúa desde la misma temporada.${inheritedStateText}${specialResetText}`
+    : employedTransition
+      ? `Aceptaste la propuesta de ${newClub.name} y dejaste ${clubName(previousClubId)}. La carrera continúa desde la misma fecha y temporada. Se reiniciaron empleados, acciones de staff, préstamos y cooldowns vinculados al club anterior.${inheritedStateText}${specialResetText}`
+      : `Firmaste con ${newClub.name}. La partida continúa desde la misma temporada. Se reiniciaron empleados, acciones de staff, préstamos y cooldowns vinculados al club anterior.${inheritedStateText}${specialResetText}`;
+  pushGameMessage({ type:'directiva', priority:'high', title:acceptedTitle, body:acceptedBody, id:`new-job-${game.seasonNumber || 1}-${newClub.id}-${game.globalTurn || 0}` });
   saveLocal(true);
   renderAll();
   showNotice(`Contrato firmado con ${newClub.name}. La carrera continúa desde la misma partida. Revisá la táctica antes de avanzar.`);

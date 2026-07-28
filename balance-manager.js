@@ -197,7 +197,22 @@ window.GAME_BALANCE_MANAGER = {
       capitanesConExperienciaMinimo: 2,
       capitanesConExperienciaMaximo: 3,
       capacidadCapitanInicialMinima: 0.45,
-      capacidadCapitanInicialMaxima: 0.55
+      capacidadCapitanInicialMaxima: 0.55,
+
+      // Los clubes pueden contactar al manager aunque tenga contrato vigente.
+      // La frecuencia se limita para evitar acumulación de propuestas y el plazo
+      // de respuesta se ajusta entre 10 y 30 días según calendario y urgencia.
+      ofertasDuranteContrato: {
+        activo: true,
+        esperaInicialMinDias: 25,
+        esperaInicialMaxDias: 55,
+        esperaEntreOfertasMinDias: 35,
+        esperaEntreOfertasMaxDias: 75,
+        maximoPorTemporada: 4,
+        maximoActivas: 2,
+        plazoMinimoDias: 10,
+        plazoMaximoDias: 30
+      }
     }
   },
 

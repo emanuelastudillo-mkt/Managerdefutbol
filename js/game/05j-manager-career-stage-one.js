@@ -1100,7 +1100,7 @@
     const history = normalizeManagerSeasonHistory(stats?.seasonHistory || []);
     return history.map(item => {
       const delta = Number(item.profileChange?.prestigeDelta || 0);
-      const event = item.status === 'dismissal' ? 'Despido' : item.status === 'resignation' ? 'Renuncia' : 'Fin de temporada';
+      const event = item.status === 'dismissal' ? 'Despido' : item.status === 'resignation' ? 'Renuncia' : item.status === 'club_change' ? 'Cambio de club' : 'Fin de temporada';
       return `<tr><td>${item.season}</td><td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || (typeof clubName === 'function' ? clubName(item.clubId) : ''))}</td><td>${escapeHtml(item.objective?.label || '—')}<small>${escapeHtml(item.objective?.minimumLabel || '')}</small></td><td>${careerPositionLabel(item.position)}</td><td><strong>${item.evaluationScore}</strong><small>${escapeHtml(item.evaluationLabel || '')}</small></td><td>${escapeHtml(item.objectiveStatus || '—')}</td><td class="${delta >= 0 ? 'ok' : 'danger'}">${delta >= 0 ? '+' : ''}${delta}</td><td>${event}</td></tr>`;
     }).join('');
   }

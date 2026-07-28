@@ -1,35 +1,53 @@
-# Una Vida de Mánager · V8.79 incremental
+# Una Vida de Mánager · V8.80 incremental
 
-## Copas nacionales
+Aplicar sobre una instalación completa de **V8.79**.
 
-- Copa Argentina, Copa Chile, Copa del Rey, Copa Rumana, FA Cup y Copa Brasil.
-- Sorteos durante los días 20, 21, 22, 23, 24 y 25.
-- Copa Argentina: 54 participantes; 10 clasificados directamente y 44 equipos en fase previa.
-- Las demás copas: 18 participantes; 14 clasificados directamente y 4 equipos en fase previa.
-- Rondas en el primer miércoles de marzo, mayo, junio, agosto, septiembre y octubre.
-- Las seis finales se disputan en octubre.
-- Partidos únicos en estadios neutrales de clubes con buena reputación, sin bonificación de localía.
-- Distribución inicial de la capacidad entre ambas hinchadas y reasignación de lugares libres para intentar completar el estadio.
-- Entradas de $200, $250, $300, $350, $500 o $1,000 según la instancia.
-- El ganador de cada partido recibe el 100% de la recaudación.
-- Todos los empates se definen mediante tanda de penales.
+## Escudos de clubes
 
-## Supercopas
+- Los escudos utilizan siempre ajuste proporcional `contain`.
+- Se agrega margen interno para evitar que los bordes del archivo queden recortados por los contenedores redondeados.
+- La corrección alcanza las vistas generales, fichas de club, competiciones, desafíos online, selección de club y clubes fundados.
 
-- Se juegan durante el día 300.
-- Participan el campeón de liga y el campeón de copa de cada país.
-- Si un club gana ambas competiciones, participa el siguiente equipo mejor ubicado de la liga.
-- Se disputan en el estadio de mayor capacidad del país, sin localía de los participantes.
-- Entrada de $1,000 y recaudación completa para el ganador.
-- Se registran como títulos oficiales, pero aportan menos valor al legado del mánager que los demás campeonatos.
+## Ofertas laborales con contrato vigente
 
-## Integración
+- Los clubes pueden enviar ofertas aunque el mánager ya tenga trabajo.
+- Las propuestas aparecen en **Carrera → Ofertas laborales**, debajo del contrato actual.
+- Se reutilizan los criterios existentes de prestigio, rendimiento reciente, capacidades, compatibilidad con el proyecto, posición en la tabla y necesidad deportiva del club.
+- El club actual queda excluido de las propuestas.
+- Primera revisión estimada: entre 25 y 55 días.
+- Espera habitual entre propuestas: entre 35 y 75 días.
+- Máximo por temporada: 4 ofertas generadas.
+- Máximo simultáneo: 2 ofertas activas.
 
-- 144 partidos oficiales nuevos por temporada: 138 de copas nacionales y 6 supercopas.
-- Nueva vista `Competiciones → Copas nacionales` con llaves, fechas, resultados, campeones y supercopas.
-- Los partidos no alteran las tablas ni los goles de liga.
-- Los campeones quedan registrados en el historial de competiciones y, cuando corresponde, en los títulos del mánager.
-- Calendario, simulación rápida, simulación completa, partidos en vivo, economía, guardados y migraciones integrados.
-- Puede desactivarse mediante `calendario.copasNacionalesActivas` en `config.js`.
+## Plazo para responder
 
-Compatible con partidas V8.78. Si una partida existente ya superó la primera ronda prevista al instalar V8.79, esa copa no reescribe el pasado y comienza normalmente desde la temporada siguiente.
+Cada propuesta vence entre **10 y 30 días**.
+
+El plazo se reduce cuando:
+
+- El equipo está en una zona baja o crítica de la tabla.
+- La oferta llega durante la pretemporada.
+- La oferta llega durante la mitad de temporada.
+- La temporada está cerca de finalizar.
+
+La tarjeta muestra la urgencia, el contexto del calendario, la fecha de vencimiento y los días restantes.
+
+## Aceptar o rechazar
+
+- Rechazar elimina únicamente esa propuesta.
+- Una oferta vencida desaparece y genera un mensaje informativo.
+- Aceptar solicita confirmación porque termina inmediatamente el vínculo con el club actual.
+- La carrera continúa en la misma fecha y temporada.
+- El ciclo anterior se archiva como **Cambio de club**.
+- Se crea el nuevo contrato con su sueldo, duración, objetivo y porcentaje de futuras ventas.
+- Las demás ofertas activas se retiran después de aceptar un cargo.
+
+## Configuración
+
+Los límites se encuentran en `balance-manager.js`, dentro de:
+
+`contratosManager.mercadoLaboralRealista.ofertasDuranteContrato`
+
+## Compatibilidad
+
+Compatible con partidas V8.79 ya iniciadas. Al cargar una partida existente se programa la primera revisión futura del mercado laboral; no se generan ofertas retroactivas.

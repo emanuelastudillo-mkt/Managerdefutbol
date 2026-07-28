@@ -1,59 +1,37 @@
-# Una Vida de Mánager · V8.75 incremental
+# Una Vida de Mánager · V8.76 incremental
 
-Aplicar sobre **V8.74** conservando la misma estructura de carpetas.
+Aplicar sobre **V8.75** conservando la estructura de carpetas.
 
-## Renovación de contratos de jugadores
+## Corrección de frecuencia de eventos de carrera
 
-- El club dirigido renueva contratos de forma manual desde `Primer equipo → Contratos`.
-- Se puede negociar cuando restan dos temporadas o menos y la nueva propuesta extiende la vigencia existente.
-- La negociación ofrece tres niveles salariales: ajustado, recomendado y generoso.
-- La confianza individual modifica:
-  - exigencia salarial;
-  - posibilidad de aceptación;
-  - cantidad máxima de temporadas ofrecibles;
-  - predisposición para negociar antes del vencimiento.
-- Un rechazo bloquea nuevas propuestas durante siete días y eleva levemente la siguiente exigencia.
-- Los contratos vencidos no renovados del club dirigido pasan al mercado de libres al cerrar la temporada.
-- Los clubes bots renuevan automáticamente. Su salario utiliza el ajuste anual por rendimiento ya existente, sin aplicar un segundo aumento duplicado.
-- Las partidas anteriores reciben contratos migrados de dos a cuatro temporadas futuras para evitar salidas inmediatas.
+- Se corrigió la repetición excesiva de `Los referentes piden una definición` en partidas iniciadas antes de incorporar el motor de eventos.
+- La causa era la ausencia de un identificador estable de etapa laboral en algunas partidas migradas. El sistema podía interpretar días consecutivos como etapas distintas y reiniciar sus bloqueos.
+- Las etapas duplicadas de la misma temporada y club se consolidan automáticamente al cargar.
+- Los mensajes y registros anteriores también se utilizan como bloqueo, aunque el estado interno antiguo estuviera incompleto.
+- Una misma decisión interactiva sólo puede aparecer una vez durante una etapa laboral, salvo futuros eventos configurados expresamente con otro límite.
+- El evento de referentes requiere ahora una tensión más clara:
+  - al menos ocho partidos de temporada;
+  - al menos cinco partidos desde la llegada del mánager;
+  - confianza general inferior a 45 o confianza de referentes inferior a 42.
+- Se amplió a 90 días la protección contra repetición del mismo evento.
+- Dos decisiones de la misma categoría deben quedar separadas por al menos 35 días.
+- Las decisiones interactivas deben quedar separadas por al menos 21 días.
 
-## Control de plantel al inicio de temporada
+## Llegada a un nuevo club
 
-- Desde el día 10 se controla la cantidad total y la distribución mínima por puestos.
-- Si falta completar el plantel, se genera una advertencia diaria hasta el día 28.
-- En el día 29, si el problema continúa, la directiva despide al mánager.
-- Un mánager contratado después del día 10 no hereda retroactivamente este control de pretemporada.
-- Los clubes bots continúan utilizando la reparación automática de planteles existente.
+- Al asumir un equipo se aplican 21 días de adaptación antes de generar eventos especiales de carrera.
+- También deben haberse disputado al menos cuatro partidos desde la llegada.
+- Los eventos pendientes duplicados del mismo tipo se cierran y unifican sin aplicar nuevas consecuencias.
+- Los eventos del club anterior no reinician ni contaminan el vestuario del nuevo equipo.
 
-## Grupos y vestuario
+## Compatibilidad
 
-- Nueva pestaña `Grupos` junto a Táctica para consultar:
-  - referentes;
-  - titulares;
-  - rotación;
-  - suplentes;
-  - juveniles.
-- Nueva pestaña `Contratos` dentro de Primer equipo.
-- Vestuario separa Jugador y Grupo en columnas distintas.
-- Jugador, grupo, rol interno, confianza, influencia, renovación y moral se ordenan con flechas ascendentes y descendentes.
-- Vestuario y Contratos comparten una única escala de predisposición contractual.
+- Compatible con partidas de V8.75 y anteriores migradas hasta esa versión.
+- Los eventos ya respondidos permanecen en el historial; no se revierten sus efectos.
+- No requiere cambios de Worker, SQL ni recursos gráficos.
 
-## FACES
-
-Se agregó `FACES/README.md` con la estructura regional acordada y la distribución recomendada de **5.000 imágenes**. Las ocho carpetas regionales ya están creadas.
-
-## Archivos principales
+## Archivos modificados
 
 - `config.js`
 - `index.html`
-- `js/game/05g-season-lifecycle.js`
-- `js/game/05k-manager-dressing-room.js`
-- `js/game/05n-player-contracts.js`
-- `styles/185-player-contracts-groups.css`
-- `FACES/README.md`
-
-## Compatibilidad y validación
-
-- Compatible con partidas de V8.74.
-- No requiere Worker, SQL ni cambios externos.
-- Se verificaron sintaxis JavaScript, JSON, referencias de scripts y estilos, migración contractual, negociación, rechazo, renovación automática de bots, vencimientos, advertencias y despido por plantel incompleto.
+- `js/game/05m-manager-career-events.js`

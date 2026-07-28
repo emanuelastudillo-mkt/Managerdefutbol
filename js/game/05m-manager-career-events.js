@@ -1,10 +1,10 @@
-/* V8.73 · Integración del sistema de carrera.
+/* V8.76 · Integración y control de frecuencia del sistema de carrera.
    Motor central de decisiones, eventos automáticos, consecuencias diferidas y memoria narrativa. */
 
 (function(){
   'use strict';
 
-  const CAREER_EVENT_VERSION = 1;
+  const CAREER_EVENT_VERSION = 2;
   const CAPABILITIES = ['sporting','leadership','economy','development','crisis','stability'];
   const CAPABILITY_LABELS = {
     sporting:'Rendimiento deportivo', leadership:'Liderazgo', economy:'Gestión económica',
@@ -58,7 +58,16 @@
   }
   function ceCurrentStintKey(){
     const current = game?.managerStats?.currentSeason || {};
-    return String(current.careerStintId || `${game?.seasonNumber || 1}:${game?.selectedClubId || 0}:${current.startedAt || ceNow()}`);
+    if(current.careerStintId) return String(current.careerStintId);
+    const season = Math.max(1, ceRound(game?.seasonNumber || current.season || 1));
+    const clubId = Math.max(0, ceRound(game?.selectedClubId || current.clubId || 0));
+    const baseline = Object.values(game?.managerCareerBaselines || {}).filter(item => Number(item?.season || 0) === season && Number(item?.clubId || 0) === clubId).sort((a,b) => Number(b?.joinedDay || 0) - Number(a?.joinedDay || 0))[0];
+    const turn = Math.max(0, ceRound(game?.globalTurn || 0));
+    const date = String(game?.currentDate || ceNow() || 'inicio').replace(/[^0-9A-Za-z_-]/g, '');
+    const key = String(baseline?.key || `s${season}-c${clubId}-t${turn}-${date}`);
+    current.careerStintId = key;
+    if(game?.managerStats) game.managerStats.currentSeason = current;
+    return key;
   }
   function ceActiveCareer(){
     return Boolean(game && !game?.gameOver?.active && !game?.seasonFinalized && Number(game?.selectedClubId || 0) > 0 && game?.managerStats?.currentSeason);
@@ -78,11 +87,14 @@
       clubId:Math.max(0, ceRound(source.clubId || game?.selectedClubId || 0)),
       boardConfidence:ceClamp(Number(source.boardConfidence ?? 50), 0, 100),
       initializedDate:String(source.initializedDate || ceNow()),
+      initializedDay:Math.max(0, ceRound(source.initializedDay || 0)),
+      startMatchCount:Math.max(0, ceRound(source.startMatchCount || 0)),
       lastProcessedDate:String(source.lastProcessedDate || ''),
       lastCheckDay:Math.max(0, ceRound(source.lastCheckDay || 0)),
       lastInteractiveDay:Math.max(0, ceRound(source.lastInteractiveDay || 0)),
       lastAutomaticDay:Math.max(0, ceRound(source.lastAutomaticDay || 0)),
-      recentEventIds:Array.isArray(source.recentEventIds) ? source.recentEventIds.map(item => ({ id:String(item?.id || ''), day:Math.max(0, ceRound(item?.day || 0)) })).filter(item => item.id).slice(-24) : [],
+      lastCategoryDays:source.lastCategoryDays && typeof source.lastCategoryDays === 'object' && !Array.isArray(source.lastCategoryDays) ? Object.fromEntries(Object.entries(source.lastCategoryDays).map(([category,day]) => [String(category), Math.max(0, ceRound(day || 0))])) : {},
+      recentEventIds:Array.isArray(source.recentEventIds) ? source.recentEventIds.map(item => ({ id:String(item?.id || ''), day:Math.max(0, ceRound(item?.day || 0)) })).filter(item => item.id).slice(-36) : [],
       signals:ceNormalizeSignals(source.signals || {}),
       signalLog:Array.isArray(source.signalLog) ? source.signalLog.map(item => ({ capability:String(item?.capability || ''), delta:Number(item?.delta || 0), reason:String(item?.reason || ''), day:ceRound(item?.day || 0), date:String(item?.date || '') })).filter(item => CAPABILITIES.includes(item.capability)).slice(-80) : [],
       snapshot:source.snapshot && typeof source.snapshot === 'object' && !Array.isArray(source.snapshot) ? { ...source.snapshot } : {},
@@ -118,6 +130,46 @@
   }
   window.normalizeManagerCareerEvents = normalizeManagerCareerEvents;
 
+  function ceMergeCurrentStintAliases(state){
+    if(!state || !ceActiveCareer()) return state;
+    const stableKey = ceCurrentStintKey();
+    const season = Math.max(1, ceRound(game?.seasonNumber || 1));
+    const clubId = Math.max(0, ceRound(game?.selectedClubId || 0));
+    const baseline = game?.managerCareerBaselines?.[stableKey] || null;
+    const aliases = Object.entries(state.stints || {}).filter(([key,stint]) => key !== stableKey && Number(stint?.season || 0) === season && Number(stint?.clubId || 0) === clubId);
+    const stable = state.stints[stableKey] ? ceNormalizeStint(state.stints[stableKey], stableKey) : ceNormalizeStint({ key:stableKey, season, clubId, initializedDate:String(baseline?.joinedDate || ceNow()), initializedDay:Math.max(1,ceRound(baseline?.joinedDay || ceDay())), startMatchCount:ceOfficialMatches().length }, stableKey);
+    const candidates = [stable, ...aliases.map(([,stint]) => ceNormalizeStint(stint))].sort((a,b) => Number(a.lastCheckDay || 0) - Number(b.lastCheckDay || 0));
+    const latest = candidates[candidates.length - 1] || stable;
+    stable.boardConfidence = Number(latest.boardConfidence ?? stable.boardConfidence ?? 50);
+    stable.lastProcessedDate = String(latest.lastProcessedDate || stable.lastProcessedDate || '');
+    stable.lastCheckDay = Math.max(...candidates.map(item => Number(item.lastCheckDay || 0)), 0);
+    stable.lastInteractiveDay = Math.max(...candidates.map(item => Number(item.lastInteractiveDay || 0)), 0);
+    stable.lastAutomaticDay = Math.max(...candidates.map(item => Number(item.lastAutomaticDay || 0)), 0);
+    const initializedDays = candidates.map(item => Number(item.initializedDay || 0)).filter(value => value > 0);
+    stable.initializedDay = initializedDays.length ? Math.min(...initializedDays) : 0;
+    stable.initializedDate = candidates.map(item => String(item.initializedDate || '')).filter(Boolean).sort()[0] || ceNow();
+    const startMatchCounts = candidates.map(item => Number(item.startMatchCount || 0)).filter(value => value > 0);
+    stable.startMatchCount = startMatchCounts.length ? Math.min(...startMatchCounts) : ceOfficialMatches().length;
+    stable.recentEventIds = [...new Map(candidates.flatMap(item => item.recentEventIds || []).sort((a,b) => Number(a.day || 0) - Number(b.day || 0)).map(item => [`${item.id}:${item.day}`, item])).values()].slice(-36);
+    stable.lastCategoryDays = {};
+    candidates.forEach(item => Object.entries(item.lastCategoryDays || {}).forEach(([category,day]) => { stable.lastCategoryDays[category] = Math.max(Number(stable.lastCategoryDays[category] || 0), Number(day || 0)); }));
+    stable.signals = ceNormalizeSignals(latest.signals || stable.signals || {});
+    stable.signalLog = Array.isArray(latest.signalLog) ? latest.signalLog.slice(-80) : stable.signalLog;
+    stable.snapshot = latest.snapshot && typeof latest.snapshot === 'object' ? { ...latest.snapshot } : stable.snapshot;
+    stable.finalizations = [...new Set(candidates.flatMap(item => item.finalizations || []))].slice(-8);
+    state.stints[stableKey] = stable;
+    const aliasKeys = new Set(aliases.map(([key]) => key));
+    state.records.forEach(item => { if(aliasKeys.has(String(item.stintKey || '')) || (Number(item.season || 0) === season && Number(item.clubId || 0) === clubId && !item.stintKey)) item.stintKey = stableKey; });
+    state.consequences.forEach(item => { if(aliasKeys.has(String(item.stintKey || '')) || (Number(item.season || 0) === season && Number(item.clubId || 0) === clubId && !item.stintKey)) item.stintKey = stableKey; });
+    (game?.messages || []).forEach(message => {
+      const action = message?.action;
+      if(action?.type !== 'managerCareerDecision') return;
+      if(aliasKeys.has(String(action.stintKey || '')) || (Number(action.season || 0) === season && Number(action.clubId || 0) === clubId && !action.stintKey)) action.stintKey = stableKey;
+    });
+    aliases.forEach(([key]) => { delete state.stints[key]; });
+    return state;
+  }
+
   function ensureManagerCareerEvents(){
     if(!game) return normalizeManagerCareerEvents({});
     const current = game.managerCareerEvents;
@@ -126,6 +178,7 @@
       && current.stints && typeof current.stints === 'object' && !Array.isArray(current.stints)
       && Array.isArray(current.records) && Array.isArray(current.consequences);
     if(!valid) game.managerCareerEvents = normalizeManagerCareerEvents(current || {});
+    ceMergeCurrentStintAliases(game.managerCareerEvents);
     return game.managerCareerEvents;
   }
   function ceInitialBoardConfidence(){
@@ -140,12 +193,18 @@
     const state = ensureManagerCareerEvents();
     const key = ceCurrentStintKey();
     if(!state.stints[key]){
+      const baseline = game?.managerCareerBaselines?.[key] || null;
       state.stints[key] = ceNormalizeStint({
         key, season:game.seasonNumber || 1, clubId:game.selectedClubId || 0,
-        boardConfidence:ceInitialBoardConfidence(), initializedDate:ceNow()
+        boardConfidence:ceInitialBoardConfidence(), initializedDate:String(baseline?.joinedDate || ceNow()),
+        initializedDay:Math.max(1, ceRound(baseline?.joinedDay || ceDay())), startMatchCount:ceOfficialMatches().length
       }, key);
     }
-    return state.stints[key];
+    const stint = state.stints[key];
+    const baseline = game?.managerCareerBaselines?.[key] || null;
+    if(!Number(stint.initializedDay || 0)) stint.initializedDay = Math.max(1, ceRound(baseline?.joinedDay || ceDay()));
+    if(!Number.isFinite(Number(stint.startMatchCount))) stint.startMatchCount = ceOfficialMatches().length;
+    return stint;
   }
   function ceBoard(delta, reason=''){ 
     const stint = ceStint();
@@ -320,6 +379,7 @@
       ppg:Number(current.ppg || objective.ppg || (Number(current.played) ? Number(current.pts || 0) / Number(current.played) : 0)),
       recentPpg:ceRecentPpg(5),
       recentMatches:ceRecentMatches(5),
+      stintMatches:Math.max(0, ceOfficialMatches().length - Number(ceStint()?.startMatchCount || 0)),
       generalTrust:Number(dressing?.generalTrust ?? 50),
       referentTrust:Number(groups?.referent?.value ?? 50),
       substituteTrust:Number(groups?.substitute?.value ?? 50),
@@ -363,7 +423,7 @@
     },
     {
       id:'referents_request', category:'vestuario', priority:3, title:'Los referentes piden una definición', type:'vestuario',
-      eligible:ctx => ctx.played >= 5 && ctx.referents.length >= 2 && (ctx.generalTrust < 49 || ctx.referentTrust < 46),
+      eligible:ctx => ctx.played >= 8 && ctx.stintMatches >= 5 && ctx.referents.length >= 2 && (ctx.generalTrust < 45 || ctx.referentTrust < 42),
       participants:() => ceTopInfluential('referent', 2),
       body:ctx => `${cePlayerName(ceTopInfluential('referent',2)[0])} y otros referentes creen que el vestuario necesita una señal concreta para ordenar el momento.`,
       prompt:'¿Cómo respondés al pedido de los referentes?',
@@ -451,14 +511,44 @@
     state.records = state.records.slice(-Math.max(120, ceRound(ceCfg('maximoRegistros', 260), 260)));
     return item;
   }
+  function ceEventMessageOccurrences(eventId=''){
+    const season = Number(game?.seasonNumber || 1);
+    const clubId = Number(game?.selectedClubId || 0);
+    return (game?.messages || []).filter(message => message?.action?.type === 'managerCareerDecision' && String(message.action.eventId || '') === String(eventId || '') && Number(message.action.season || 0) === season && Number(message.action.clubId || 0) === clubId);
+  }
+  function ceEventOccurrenceCount(eventId=''){
+    const ids = new Set();
+    ceEventMessageOccurrences(eventId).forEach(message => ids.add(String(message.id || `${eventId}:${message.action?.createdDay || 0}`)));
+    ensureManagerCareerEvents().records.filter(item => String(item.eventId || '') === String(eventId || '') && Number(item.season || 0) === Number(game?.seasonNumber || 1) && Number(item.clubId || 0) === Number(game?.selectedClubId || 0) && ['decision','decision_pending'].includes(String(item.kind || ''))).forEach(item => ids.add(String(item.id || `${eventId}:${item.day || 0}`).replace(/^record:/,'')));
+    return ids.size;
+  }
   function ceRecentEvent(stint, eventId, days){
     const day = ceDay();
-    return (stint.recentEventIds || []).some(item => item.id === eventId && day - Number(item.day || 0) < days);
+    const inWindow = eventDay => {
+      const delta = day - Number(eventDay || 0);
+      return delta < 0 || delta < days;
+    };
+    if((stint.recentEventIds || []).some(item => item.id === eventId && inWindow(item.day))) return true;
+    if(ceEventMessageOccurrences(eventId).some(message => inWindow(message.action?.createdDay))) return true;
+    return ensureManagerCareerEvents().records.some(item => String(item.eventId || '') === String(eventId || '') && Number(item.season || 0) === Number(game?.seasonNumber || 1) && Number(item.clubId || 0) === Number(game?.selectedClubId || 0) && ['decision','decision_pending'].includes(String(item.kind || '')) && inWindow(item.day));
+  }
+  function ceRecentCategory(category='', days=30){
+    const day = ceDay();
+    const stint = ceStint();
+    if(day - Number(stint?.lastCategoryDays?.[category] || 0) < days) return true;
+    return ensureManagerCareerEvents().records.some(item => String(item.category || '') === String(category || '') && Number(item.season || 0) === Number(game?.seasonNumber || 1) && Number(item.clubId || 0) === Number(game?.selectedClubId || 0) && ['decision','decision_pending'].includes(String(item.kind || '')) && (day - Number(item.day || 0) < 0 || day - Number(item.day || 0) < days));
   }
   function ceCountRecent(kind, days=30){
     const day = ceDay();
     const key = ceCurrentStintKey();
-    return ensureManagerCareerEvents().records.filter(item => item.stintKey === key && item.kind === kind && day - Number(item.day || 0) < days).length;
+    return ensureManagerCareerEvents().records.filter(item => item.stintKey === key && item.kind === kind && (day - Number(item.day || 0) < 0 || day - Number(item.day || 0) < days)).length;
+  }
+  function ceCountRecentDecisions(days=30){
+    const day = ceDay();
+    const ids = new Set();
+    (game?.messages || []).filter(message => message?.action?.type === 'managerCareerDecision' && Number(message.action.season || 0) === Number(game?.seasonNumber || 1) && Number(message.action.clubId || 0) === Number(game?.selectedClubId || 0) && (day - Number(message.action.createdDay || 0) < 0 || day - Number(message.action.createdDay || 0) < days)).forEach(message => ids.add(String(message.id || '')));
+    ensureManagerCareerEvents().records.filter(item => Number(item.season || 0) === Number(game?.seasonNumber || 1) && Number(item.clubId || 0) === Number(game?.selectedClubId || 0) && ['decision','decision_pending'].includes(String(item.kind || '')) && (day - Number(item.day || 0) < 0 || day - Number(item.day || 0) < days)).forEach(item => ids.add(String(item.id || '').replace(/^record:/,'')));
+    return ids.size;
   }
   function ceSelectParticipants(event, ctx){
     try{ return Array.isArray(event.participants?.(ctx)) ? event.participants(ctx).map(Number).filter(Number.isFinite) : []; }catch(_){ return []; }
@@ -470,6 +560,8 @@
     const ctx = ceContext();
     if(options.force !== true && !event.eligible(ctx)) return null;
     const stint = ceStint();
+    const maximumPerStint = Math.max(1, ceRound(event.maxPerStint ?? ceCfg('maximoMismoEventoPorEtapa', 1), 1));
+    if(options.force !== true && ceEventOccurrenceCount(event.id) >= maximumPerStint) return null;
     const participants = ceSelectParticipants(event, ctx);
     const day = ceDay();
     const expiryDays = Math.max(2, ceRound(ceCfg('vencimientoDecisionDias', 5),5));
@@ -489,6 +581,7 @@
     }) : null;
     if(!message) return null;
     stint.lastInteractiveDay = day;
+    stint.lastCategoryDays[event.category] = day;
     stint.recentEventIds.push({ id:event.id, day });
     stint.recentEventIds = stint.recentEventIds.slice(-24);
     ceRecord({ id:`record:${messageId}`, kind:'decision_pending', eventId:event.id, category:event.category, title:event.title, status:'pending', participantIds:participants, importance:event.priority || 2 });
@@ -765,21 +858,46 @@
     });
   }
 
+  function ceCloseDuplicatePendingDecisions(){
+    const groups = new Map();
+    (game?.messages || []).filter(message => message?.action?.type === 'managerCareerDecision' && message.action.status === 'pending').forEach(message => {
+      const key = `${message.action.season || 0}:${message.action.clubId || 0}:${message.action.eventId || ''}`;
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(message);
+    });
+    let closed = 0;
+    groups.forEach(messages => {
+      messages.sort((a,b) => Number(a.action?.createdDay || 0) - Number(b.action?.createdDay || 0));
+      messages.slice(1).forEach(message => {
+        message.action.status = 'duplicate_closed';
+        message.action.resultText = 'La situación quedó unificada con una solicitud anterior del mismo grupo.';
+        const record = ensureManagerCareerEvents().records.find(item => item.id === `record:${message.id}`);
+        if(record){ record.kind='decision'; record.status='duplicate_closed'; record.result='duplicate'; record.resultText=message.action.resultText; }
+        closed += 1;
+      });
+    });
+    return closed;
+  }
+
   function ceProcessEventChecks(){
     const stint = ceStint();
     if(!stint) return { checked:false };
     const day = ceDay();
     const interval = Math.max(3, ceRound(ceCfg('intervaloRevisionDias', 7),7));
-    if(day < Math.max(1, ceRound(ceCfg('primerDia', 20),20)) || day - Number(stint.lastCheckDay || 0) < interval) return { checked:false };
+    const graceDays = Math.max(0, ceRound(ceCfg('graciaAlLlegarDias', 21),21));
+    const minimumMatches = Math.max(0, ceRound(ceCfg('partidosMinimosTrasLlegar', 4),4));
+    const matchesSinceArrival = Math.max(0, ceOfficialMatches().length - Number(stint.startMatchCount || 0));
+    if(day < Math.max(1, ceRound(ceCfg('primerDia', 20),20)) || day - Number(stint.initializedDay || day) < graceDays || matchesSinceArrival < minimumMatches || day - Number(stint.lastCheckDay || 0) < interval) return { checked:false, grace:true };
     stint.lastCheckDay = day;
     const ctx = ceContext();
-    const repeatDays = Math.max(15, ceRound(ceCfg('repeticionEventoDias', 55),55));
-    const minInteractiveGap = Math.max(7, ceRound(ceCfg('esperaEntreDecisionesDias', 14),14));
+    const repeatDays = Math.max(30, ceRound(ceCfg('repeticionEventoDias', 90),90));
+    const categoryGap = Math.max(21, ceRound(ceCfg('esperaMismaCategoriaDias', 35),35));
+    const minInteractiveGap = Math.max(14, ceRound(ceCfg('esperaEntreDecisionesDias', 21),21));
     const interactiveAllowed = !cePendingDecisionMessages().length
       && day - Number(stint.lastInteractiveDay || 0) >= minInteractiveGap
-      && ceCountRecent('decision',30) + ceCountRecent('decision_pending',30) < Math.max(1, ceRound(ceCfg('maximoDecisionesCada30Dias',2),2));
+      && ceCountRecentDecisions(30) < Math.max(1, ceRound(ceCfg('maximoDecisionesCada30Dias',2),2));
     if(interactiveAllowed){
-      const eligible = INTERACTIVE_EVENTS.filter(event => !ceRecentEvent(stint,event.id,repeatDays) && event.eligible(ctx));
+      const eligible = INTERACTIVE_EVENTS.filter(event => ceEventOccurrenceCount(event.id) < Math.max(1, ceRound(event.maxPerStint ?? ceCfg('maximoMismoEventoPorEtapa',1),1)) && !ceRecentEvent(stint,event.id,repeatDays) && !ceRecentCategory(event.category,categoryGap) && event.eligible(ctx));
       if(eligible.length){
         const highest = Math.max(...eligible.map(event => Number(event.priority || 1)));
         const pool = eligible.filter(event => Number(event.priority || 1) === highest);
@@ -805,12 +923,13 @@
     if(!game || ceCfg('activo', true) === false) return { active:false };
     const state = ensureManagerCareerEvents();
     const today = ceNow();
-    if(state.lastProcessedDate === today) return { active:ceActiveCareer(), duplicate:true };
+    const duplicatesClosed = ceCloseDuplicatePendingDecisions();
+    if(state.lastProcessedDate === today) return { active:ceActiveCareer(), duplicate:true, duplicatesClosed };
     state.lastProcessedDate = today;
     const expired = ceExpireDecisions();
     const resolved = ceResolveConsequences();
     ceSyncLegacyLockerRoomOutcomes();
-    if(!ceActiveCareer()) return { active:false, expired, resolved };
+    if(!ceActiveCareer()) return { active:false, duplicatesClosed, expired, resolved };
     const check = ceProcessEventChecks();
     const stint = ceStint();
     if(stint){
@@ -818,7 +937,7 @@
       stint.snapshot = { day:ceDay(), date:ceNow(), boardConfidence:Number(stint.boardConfidence || 50), generalTrust:Number(ctx.generalTrust || 50), ppg:Number(ctx.ppg || 0), position:Number(ctx.standing.position || 0), budget:Number(ctx.budget || 0) };
       stint.lastProcessedDate = today;
     }
-    return { active:true, expired, resolved, ...check };
+    return { active:true, duplicatesClosed, expired, resolved, ...check };
   }
   window.processManagerCareerEventsDaily = processManagerCareerEventsDaily;
 

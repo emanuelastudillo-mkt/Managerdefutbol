@@ -110,6 +110,15 @@ function skillBreakdownMarkup(player, key, currentValue, rawValue){
   if(trained > 0) parts.push(`<span class="trained-boost" title="Boost de entrenamiento">+${trained}</span>`);
   return `<span class="skill-breakdown" title="Actual efectivo: ${clamp(Math.round(current), 1, 99)}/99">${parts.join('')}</span>`;
 }
+function playerSkillRatingClass(value, shown=true){
+  const numeric = Number(value);
+  if(!shown || !Number.isFinite(numeric)) return 'skill-rating-unknown';
+  if(numeric >= 85) return 'skill-rating-elite';
+  if(numeric >= 70) return 'skill-rating-strong';
+  if(numeric >= 55) return 'skill-rating-solid';
+  if(numeric >= 40) return 'skill-rating-weak';
+  return 'skill-rating-poor';
+}
 function scoutedStatsMarkup(player){
   const map = typeof scoutingDetailedStatMap === 'function' ? scoutingDetailedStatMap(player) : scoutingStatMap(player);
   const rawMap = typeof scoutingDetailedStatMapWithResolver === 'function'
@@ -124,12 +133,13 @@ function scoutedStatsMarkup(player){
     const valueMarkup = shown
       ? (key === 'potencial' ? escapeHtml(String(current)) : skillBreakdownMarkup(player, key, current, raw))
       : '—';
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${valueMarkup}</strong></div>`;
+    const ratingClass = playerSkillRatingClass(current, shown);
+    return `<div class="player-skill-row ${ratingClass}"><span>${escapeHtml(label)}</span><strong class="player-skill-value">${valueMarkup}</strong></div>`;
   }).join('');
   const agePenalty = typeof playerAgeSkillPenalty === 'function' ? playerAgeSkillPenalty(player) : 0;
-  const ageNote = agePenalty > 0 ? `<p class="muted small"><span class="age-skill-penalty">-${agePenalty}</span> indica deterioro acumulado por edad. El valor base queda al centro y el entrenamiento aparece a la derecha en verde.</p>` : '';
-  const note = playerRequiresScouting(player) ? '<p class="muted small">El Centro de Ojeo revela cada habilidad existente por separado. Sin informe, el valor permanece oculto.</p>' : '';
-  return `${rows}${ageNote}${note}`;
+  const ageNote = agePenalty > 0 ? `<p class="muted small player-skill-note"><span class="age-skill-penalty">-${agePenalty}</span> indica deterioro por edad. El valor central es la base y el aumento verde corresponde al entrenamiento.</p>` : '';
+  const note = playerRequiresScouting(player) ? '<p class="muted small player-skill-note">El Centro de Ojeo revela cada habilidad por separado. Los valores aún desconocidos permanecen ocultos.</p>' : '';
+  return `<div class="player-skill-grid">${rows}</div>${ageNote}${note}`;
 }
 function scoutedRadarMarkup(player){
   if(!playerRequiresScouting(player)) return radarSvg(visibleStats(player));
@@ -149,10 +159,12 @@ function scoutedHiddenStatsCardMarkup(player){
   const revealed = keys.filter(key => known.has(key));
   if(!revealed.length) return '';
   const rows = keys.map(key => {
+    const shown = known.has(key);
+    const value = shown ? hidden[key] : '—';
     const label = typeof scoutingSkillDisplayLabel === 'function' ? scoutingSkillDisplayLabel(player, key) : key;
-    return `<div class="stat-rank"><span>${escapeHtml(label)}</span><strong>${known.has(key) ? hidden[key] : '—'}</strong></div>`;
+    return `<div class="player-skill-row ${playerSkillRatingClass(value, shown)}"><span>${escapeHtml(label)}</span><strong class="player-skill-value">${value}</strong></div>`;
   }).join('');
-  return `<div class="card inner scouted-hidden-card"><p class="label ok">OJEADO POR TU EQUIPO</p><h3>Habilidades ocultas</h3>${rows}</div>`;
+  return `<div class="card inner scouted-hidden-card"><p class="label ok">OJEADO POR TU EQUIPO</p><h3>Habilidades ocultas</h3><div class="player-hidden-skill-grid">${rows}</div></div>`;
 }
 
 function markPendingTransferOffersRejectedForUntransferable(player){
@@ -208,6 +220,34 @@ function playerStatsAverageValue(stat){
 function playerStatsMinutesLabel(stat){
   const minutes = Math.max(0, Math.round(Number(stat?.minutes || 0)));
   return typeof Intl !== 'undefined' ? new Intl.NumberFormat('es-AR').format(minutes) : String(minutes);
+}
+function playerStatisticDisplayValue(stat, key){
+  const safe = stat && typeof stat === 'object' ? stat : {};
+  if(key === 'minutes') return playerStatsMinutesLabel(safe);
+  if(key === 'average'){
+    const average = playerStatsAverageValue(safe);
+    return average === null ? '—' : average.toFixed(2).replace('.', ',');
+  }
+  if(key === 'lastRating'){
+    const value = Number(safe.lastRating || 0);
+    return value > 0 ? value.toFixed(1).replace('.', ',') : '—';
+  }
+  return String(Math.max(0, Math.round(Number(safe[key] || 0))));
+}
+function playerStatisticsComparisonMarkup(seasonStats, careerStats, player){
+  const isKeeper = String(player?.position || '').toUpperCase() === 'POR';
+  const rows = [
+    ['Partidos','played'],['Titularidades','starts'],['Minutos','minutes'],['Goles','goals'],['Asistencias','assists'],
+    ['Puntaje promedio','average'],['Último puntaje','lastRating'],
+    ...(isKeeper ? [['Tapadas clave','keySaves'],['Vallas invictas','cleanSheets'],['Goles recibidos','goalsConceded']] : []),
+    ['Lesiones','injuries'],['Amarillas','yellow'],['Expulsiones','red'],['Errores','errors'],['Errores de gol','goalErrors']
+  ];
+  const body = rows.map(([label,key]) => `<div class="player-stat-compare-row"><span>${escapeHtml(label)}</span><strong>${playerStatisticDisplayValue(seasonStats,key)}</strong><strong>${playerStatisticDisplayValue(careerStats,key)}</strong></div>`).join('');
+  return `<div class="player-stat-comparison">
+    <div class="player-stat-compare-head"><span>Dato</span><strong>Temporada</strong><strong>Carrera</strong></div>
+    ${body}
+  </div>
+  <p class="muted small player-stat-migration-note">En partidas anteriores a V8.48, la carrera comienza con los datos disponibles al momento de actualizar.</p>`;
 }
 function playerStatisticsPanelMarkup(stat, player, scope='season'){
   const safe = stat && typeof stat === 'object' ? stat : {};
@@ -270,53 +310,61 @@ function showPlayerModal(playerId){
   const careerStats = game?.playerCareerStats?.[p.id] || (typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(p) : {});
   const needsScouting = playerRequiresScouting(p);
   const meta = roleMeta(p.position);
-  const body = `<div class="player-modal-compact">
-    ${playerModalActionsMarkup(p)}
-    <div class="player-modal-grid">
-      <div>
-        <div class="player-identity-card">
+  const star = playerStarRecord(p);
+  const body = `<div class="player-modal-compact player-modal-landscape">
+    <div class="player-modal-grid player-modal-landscape-grid">
+      <section class="player-modal-column player-summary-column">
+        <div class="player-identity-card player-identity-landscape">
           ${faceImg(p, 'player-photo-placeholder large')}
-          <div>
+          <div class="player-identity-copy">
             <p class="label">${escapeHtml(clubName(p.clubId))} · #${jerseyNumber(p.id)}</p>
             <h2 class="player-modal-title">${typeof playerNameWithStar === 'function' ? playerNameWithStar(p) : escapeHtml(p.name)}</h2>
             <p class="muted">${escapeHtml(p.nationality || 'Sin nacionalidad')} · ${escapeHtml(meta.code)} · ${escapeHtml(meta.name)}</p>
             <p class="muted">${p.age} años · ${availabilityStatusMarkup(p.id)}</p>
           </div>
         </div>
-        <div class="radar-wrap">${scoutedRadarMarkup(p)}</div>
-        ${scoutedHiddenStatsCardMarkup(p)}
-      </div>
-      <div class="stack">
-        <div class="card inner"><h3>${needsScouting ? 'Informe de ojeo' : 'Stats visibles'}</h3>${scoutedStatsMarkup(p)}</div>
-        <div class="card inner"><h3>Perfil</h3>
-          <div class="stat-rank"><span>Media</span><strong>${scoutedOverallLabel(p)}</strong></div>
-          <div class="stat-rank"><span>Estado físico</span>${scoutedPhysicalLabel(p)}</div>
-          ${!needsScouting && typeof currentPlayerWear === 'function' ? `<div class="stat-rank"><span>Desgaste</span><strong>${currentPlayerWear(p.id)}</strong></div>` : ''}
-          <div class="stat-rank"><span>Moral</span>${scoutedMoraleLabel(p)}</div>
+        <div class="card inner player-profile-card">
+          <div class="player-profile-metrics">
+            <div><span>Media</span><strong>${scoutedOverallLabel(p)}</strong></div>
+            <div><span>Estado físico</span>${scoutedPhysicalLabel(p)}</div>
+            <div><span>Moral</span>${scoutedMoraleLabel(p)}</div>
+            ${!needsScouting && typeof currentPlayerWear === 'function' ? `<div><span>Desgaste</span><strong>${currentPlayerWear(p.id)}</strong></div>` : ''}
+            <div><span>Cláusula</span><strong>${formatMoney(p.clause || p.value || 0)}</strong></div>
+            <div><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
+          </div>
           ${scoutedBarsMarkup(p)}
-          <div class="stat-rank"><span>Cláusula</span><strong>${formatMoney(p.clause || p.value || 0)}</strong></div>
-          <div class="stat-rank"><span>Salario</span><strong>${formatMoney(p.salary || 0)}</strong></div>
+          <div class="player-season-highlight"><span>Distinción actual</span><strong>${star ? playerStarLabel(star.type) : '—'}</strong></div>
+          ${star?.reason ? `<p class="muted small-copy">${escapeHtml(star.reason)}</p>` : ''}
         </div>
-        <div class="card inner"><h3>Temporada</h3>
-          <div class="stat-rank"><span>Estrella</span><strong>${playerStarRecord(p) ? playerStarLabel(playerStarRecord(p).type) : '—'}</strong></div>
-          ${playerStarRecord(p) ? `<p class="muted small-copy">${escapeHtml(playerStarRecord(p).reason || '')}</p>` : ''}
-        </div>
-        <div class="card inner player-statistics-card">
-          <div class="row between player-statistics-head">
-            <h3>Estadísticas</h3>
-            <div class="subtabs player-statistics-tabs" role="tablist" aria-label="Estadísticas del jugador">
-              <button type="button" class="active" data-player-stats-tab="season" aria-selected="true">Temporada actual</button>
-              <button type="button" data-player-stats-tab="career" aria-selected="false">Carrera</button>
+        <div class="player-landscape-actions">${playerModalActionsMarkup(p)}</div>
+      </section>
+      <section class="player-modal-column player-skills-column">
+        <div class="card inner player-skills-card">
+          <div class="player-skills-head">
+            <h3>${needsScouting ? 'Informe de habilidades' : 'Habilidades'}</h3>
+            <div class="player-skill-legend" aria-label="Escala de valoración de habilidades">
+              <span class="skill-rating-poor">0–39</span><span class="skill-rating-weak">40–54</span><span class="skill-rating-solid">55–69</span><span class="skill-rating-strong">70–84</span><span class="skill-rating-elite">85–99</span>
             </div>
           </div>
-          ${playerStatisticsPanelMarkup(stats, p, 'season')}
-          ${playerStatisticsPanelMarkup(careerStats, p, 'career')}
+          ${scoutedStatsMarkup(p)}
         </div>
-      </div>
-    </div></div>`;
+        <div class="player-analysis-row">
+          <div class="radar-wrap player-radar-compact">${scoutedRadarMarkup(p)}</div>
+          ${scoutedHiddenStatsCardMarkup(p)}
+        </div>
+      </section>
+      <section class="player-modal-column player-stats-column">
+        <div class="card inner player-statistics-card player-statistics-landscape">
+          <h3>Estadísticas</h3>
+          ${playerStatisticsComparisonMarkup(stats, careerStats, p)}
+        </div>
+      </section>
+    </div>
+  </div>`;
   openModal(body);
   bindPlayerModalActions(playerId);
 }
+
 
 
 function toggleTransferListed(playerId, value){

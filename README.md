@@ -1,75 +1,40 @@
-# Una Vida de Mánager — V8.73 COMPLETA
+# Una Vida de Mánager — V8.74 INCREMENTAL
 
-Versión completa y autónoma del juego. No necesita aplicar incrementales anteriores.
+## Base requerida
 
-## Instalación
+Aplicar sobre **V8.73 COMPLETA**.
 
-1. Descomprimir `V8.73-COMPLETO.zip`.
-2. Publicar todo el contenido de la carpeta `01-GITHUB-V8.73-COMPLETO` en el sitio.
-3. Reemplazar los archivos existentes conservando la misma estructura de carpetas.
-4. Recargar el navegador sin caché después de publicar.
+Copiar el contenido de esta carpeta sobre la instalación existente y aceptar el reemplazo de archivos. No elimina partidas guardadas ni requiere cambios de Worker, SQL o datos.
 
-## Contenido acumulado
+## Ficha horizontal del jugador
 
-Esta versión reúne todos los sistemas incorporados hasta V8.73, entre ellos:
+- La ficha utiliza una composición horizontal de tres zonas en pantallas de escritorio.
+- Columna izquierda: identidad, club, dorsal, posición, edad, estado, media, físico, moral, desgaste, cláusula, salario, distinción y acciones.
+- Columna central: habilidades distribuidas en tres columnas, radar y habilidades ocultas conocidas.
+- Columna derecha: estadísticas de temporada y carrera comparadas simultáneamente.
+- Se eliminó la necesidad de alternar pestañas para consultar temporada y carrera.
+- La ventana ocupa el ancho disponible y evita scroll interno en resoluciones horizontales habituales desde 1024 × 768 y 1280 × 720.
+- En pantallas móviles conserva el formato vertical con desplazamiento normal.
 
-- Carrera laboral, contratos, solicitudes, despidos y renuncias.
-- Prestigio acumulativo, momento profesional y seis capacidades del mánager.
-- Progresión larga con acceso gradual a clubes grandes y exigencia creciente en la élite.
-- Historial de temporadas del mánager y registro anual de clubes.
-- Objetivos deportivos cualitativos y posición mínima visible.
-- Evaluaciones finales, parciales y resúmenes narrativos.
-- Confianza individual, grupos de vestuario, referentes y capitanes.
-- Consecuencias inmediatas y retrasadas sobre moral, cohesión y renovaciones.
-- Eventos de carrera con respuesta, vencimiento y resolución posterior.
-- Ofertas laborales según prestigio, momento, rendimiento reciente y compatibilidad de perfil.
-- Tácticas predefinidas y táctica personalizada provisoria.
-- Estadísticas de temporada y carrera por jugador.
-- Mercado, contratos, sponsors, empleados, academia, instalaciones y estadio.
-- Mundial de Clubes, desafíos online, modo fundador y cursos del mánager.
-- Adaptaciones de interfaz y navegación para escritorio y dispositivos móviles.
+## Colores de habilidades
 
-## Ajustes específicos de V8.73
+- 0–39: rojo.
+- 40–54: naranja.
+- 55–69: amarillo.
+- 70–84: verde.
+- 85–99: celeste.
+- Los valores todavía no descubiertos se muestran en gris.
+- Se agregó una leyenda compacta dentro de la ficha.
+- Las penalizaciones por edad y mejoras de entrenamiento conservan sus indicadores propios.
 
-- El prestigio de carrera de 0 a 1.000 es la referencia central del acceso laboral.
-- Un mánager nuevo conserva acceso inmediato a clubes pequeños.
-- Las solicitudes a clubes superiores pueden aceptarse con objetivos y presupuestos más exigentes.
-- La progresión se ralentiza de forma gradual al acercarse a la élite.
-- Las temporadas mediocres pueden reducir prestigio y acceso cuando el mánager ya está consolidado.
-- Momento, rendimiento reciente y compatibilidad continúan condicionando las ofertas aunque exista prestigio suficiente.
-- Las capacidades tienen topes suaves, especialización y desgaste por falta de demostración.
+## Archivos incluidos
 
-## Correcciones de coherencia realizadas en la versión completa
-
-- Se corrigió la identificación interna que todavía declaraba V8.70 y se unificó todo en V8.73.
-- Se normalizaron las versiones de caché de datos y módulos para evitar cargas antiguas del navegador.
-- Se eliminó la presentación paralela del antiguo prestigio por victorias y objetivos.
-- Se retiraron premios y penalizaciones fijas duplicadas que ya forman parte de la evaluación integral de temporada.
-- Los hitos de prestigio ahora utilizan la escala laboral vigente de 0 a 99.
-- Se conservaron estructuras antiguas únicamente cuando son necesarias para migrar partidas guardadas.
+- `index.html`
+- `config.js`
+- `js/core/01-config-constants.js`
+- `js/ui/12-modals.js`
+- `styles/180-player-profile-v874.css`
 
 ## Compatibilidad
 
-- Compatible con partidas de V8.72 y con partidas anteriores que atraviesen las migraciones incluidas.
-- No reinicia prestigio, capacidades, historiales, vestuario ni eventos de carrera existentes.
-- No requiere cambios de Worker, SQL ni base de datos externa.
-- No incorpora recursos gráficos adicionales.
-
-## Revisión técnica
-
-Se verificaron:
-
-- Sintaxis de todos los archivos JavaScript.
-- Carga ordenada de los 49 módulos utilizados por `index.html`.
-- Validez de todos los archivos JSON.
-- Referencias internas de scripts, estilos y recursos declarados en HTML.
-- Ausencia de identificadores HTML duplicados e importaciones repetidas.
-- Coherencia de clubes, divisiones, jugadores base y jugadores manuales.
-- Unicidad de identificadores de jugadores.
-- Planteles base de 25 jugadores por club.
-- Configuración y rutas de datos normalizadas a V8.73.
-- Progresión laboral inicial, solicitudes de alto riesgo y bloqueo de clubes de élite para mánagers nuevos.
-- Objetivos cualitativos, vestuario, referentes y estado de eventos de carrera.
-- Aplicación acumulativa de las modificaciones hasta V8.73.
-
-La revisión estática y las pruebas funcionales automatizadas reducen errores de integración, pero no sustituyen una prueba manual completa de todas las combinaciones posibles dentro de una carrera extensa.
+Compatible con partidas de V8.73. La actualización es visual y no modifica habilidades, estadísticas ni contratos guardados.

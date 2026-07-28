@@ -1972,6 +1972,8 @@
       breakPhase:Number(extra?.breakPhase || 0),
       lastBlock:extra?.block || null,
       currentBlockStats:{ home:extra?.homeBlock || null, away:extra?.awayBlock || null },
+      penaltyShootout:session.result?.penaltyShootout || null,
+      winnerClubId:Number(session.result?.winnerClubId || 0),
       extra
     };
   }
@@ -2023,8 +2025,11 @@
       applyAvailability(result.cards, result.injuries);
       if(typeof updatePlayerStarTrackingForMatch === 'function') updatePlayerStarTrackingForMatch(result);
     }
-    session.result = result;
-    return result;
+    const finalResult = typeof window.finalizeWinnerRequiredMatchResult === 'function'
+      ? window.finalizeWinnerRequiredMatchResult(session.match, result)
+      : result;
+    session.result = finalResult;
+    return finalResult;
   }
   function simulateMatch(match){
     const homeTactic = getTacticForClubV2(match.homeId, match.awayId);
@@ -2122,7 +2127,10 @@
       botOverexertionConditionDelta(match.homeId, homeGoals, awayGoals, starterIdsHome),
       botOverexertionConditionDelta(match.awayId, awayGoals, homeGoals, starterIdsAway)
     );
-    return { ...match, played:true, engine:'full-tactical', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    const result = { ...match, played:true, engine:'full-tactical', starterIdsHome, starterIdsAway, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, matchStats, matchContext, playedIdsHome, playedIdsAway, instructionConditionDeltas, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null };
+    return typeof window.finalizeWinnerRequiredMatchResult === 'function'
+      ? window.finalizeWinnerRequiredMatchResult(match, result)
+      : result;
   }
 
   window.MATCH_INSTRUCTION_OPTIONS = MATCH_INSTRUCTION_OPTIONS;

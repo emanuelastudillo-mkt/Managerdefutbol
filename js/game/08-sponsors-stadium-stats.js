@@ -1316,16 +1316,17 @@ function matchCard(m){
   const cupSeasonDay = m.clubWorldCup && typeof clubWorldCupAuthoritativeSeasonDay === 'function' ? Number(clubWorldCupAuthoritativeSeasonDay(m, null) || m.seasonDay || 0) : Number(m.seasonDay || 0);
   const cupMeta = m.clubWorldCup ? `${cupSeasonDay ? `Día ${cupSeasonDay} · ` : ''}${m.stadiumName || 'Sede neutral'}${m.clubWorldCupGroup ? ` · Grupo ${m.clubWorldCupGroup}` : ''}${m.clubWorldCupBracketKey ? ` · ${m.clubWorldCupBracketKey}` : ''}` : '';
   const cupNote = m.clubWorldCup ? `<div class="match-date-line playoff-note">${escapeHtml(cupMeta)}</div>` : '';
-  const penalties = m.penaltyShootout ? ` <span class="small muted">(${Number(m.penaltyShootout.home || 0)}-${Number(m.penaltyShootout.away || 0)} pen.)</span>` : '';
-  const foulsTie = m.clubWorldCupTiebreaker ? ` <span class="small muted">(desempate faltas ${Number(m.clubWorldCupTiebreaker.homeFouls || 0)}-${Number(m.clubWorldCupTiebreaker.awayFouls || 0)})</span>` : '';
+  const penaltyLine = m.penaltyShootout ? `<div class="penalty-result-line">${escapeHtml(typeof penaltyShootoutWinnerText === 'function' ? penaltyShootoutWinnerText(m) : `${clubName(Number(m.winnerClubId || 0))} gana ${Number(m.penaltyShootout.home || 0)}-${Number(m.penaltyShootout.away || 0)} por penales`)}</div>` : '';
+  const foulsTie = m.clubWorldCupTiebreaker ? ` <span class="small muted">(desempate histórico por faltas ${Number(m.clubWorldCupTiebreaker.homeFouls || 0)}-${Number(m.clubWorldCupTiebreaker.awayFouls || 0)})</span>` : '';
   return `<button class="match-card ${clickable}" ${attr}>
     <div class="match-date-line">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(m.date) : (m.date || ''))}</div>
     ${playoffNote}${cupNote}
     <div class="match-line">
       <div>${clubSpan(m.homeId)}</div>
-      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}${penalties}${foulsTie}` : 'vs'}</strong>
+      <strong class="score">${m.played ? `${m.homeGoals} - ${m.awayGoals}${foulsTie}` : 'vs'}</strong>
       <div>${clubSpan(m.awayId)}</div>
     </div>
+    ${penaltyLine}
     ${events ? `<div class="events">${events.goals.slice(0,4).map(g=>`${g.minute}' ${escapeHtml(playerById(g.playerId)?.name || 'Jugador')}`).join(' · ')}${events.goals.length>4?' · ...':''}</div>` : ''}
   </button>`;
 }

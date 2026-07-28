@@ -328,3 +328,64 @@
 }@media (max-width:760px){
   .live-instruction-buttons.compact button[data-live-instruction="none"]{max-width:none}
   .live-bottom-controls .live-action-row #liveFinishBtn{grid-column:auto;max-width:none}}.cwc-group-result-list{display:grid;gap:6px;margin-top:8px}.cwc-group-result-date{font-size:.555rem;color:var(--muted)}.cwc-group-result .club-badge,.cwc-match-team .club-badge{width:22px;height:22px;vertical-align:middle}.cwc-edition-match .match-line{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}.cwc-match-team{display:flex;align-items:center;gap:6px;min-width:0;font-size:.655rem}.cwc-match-team:last-child{justify-content:flex-end;text-align:right}.cwc-match-team span{overflow:hidden;text-overflow:ellipsis}.cwc-match-team.winner{font-weight:800}
+
+/* V8.78 · Tandas de penales */
+.penalty-result-line{
+  margin-top:6px;
+  color:var(--text-secondary, #b9c4d0);
+  font-size:.82rem;
+  line-height:1.3;
+  text-align:center;
+}
+.penalty-result-line.strong{
+  color:var(--text-primary, #f5f7fa);
+  font-size:.95rem;
+  font-weight:700;
+}
+.penalty-shootout-card{ margin:12px 0; }
+.penalty-round-head,
+.penalty-round-row{
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr) minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+}
+.penalty-round-head{
+  margin-top:12px;
+  padding:0 8px 6px;
+  color:var(--text-secondary, #aeb8c3);
+  font-size:.76rem;
+  text-align:center;
+}
+.penalty-round-list{
+  display:grid;
+  gap:6px;
+}
+.penalty-round-row{
+  padding:7px 8px;
+  border:1px solid var(--border, rgba(255,255,255,.1));
+  border-radius:9px;
+  background:rgba(255,255,255,.025);
+}
+.penalty-round-label{
+  color:var(--text-secondary, #aeb8c3);
+  font-size:.75rem;
+  text-align:center;
+}
+.penalty-kick{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.8rem;
+}
+.penalty-kick b{ margin-right:4px; }
+.penalty-kick.scored b{ color:#61d88a; }
+.penalty-kick.missed b{ color:#ef7373; }
+.penalty-kick.empty{ color:var(--text-secondary, #89939e); text-align:center; }
+@media (max-width:720px){
+  .penalty-round-head,
+  .penalty-round-row{ grid-template-columns:42px minmax(0,1fr) minmax(0,1fr); gap:5px; }
+  .penalty-kick{ font-size:.72rem; }
+}

@@ -143,7 +143,23 @@ function normalizeClubWorldCupMatchSnapshot(match){
   const homeGoals = Number(src.homeGoals || 0);
   const awayGoals = Number(src.awayGoals || 0);
   const played = Boolean(src.played);
-  const penalties = src.penaltyShootout && typeof src.penaltyShootout === 'object' ? { home:Number(src.penaltyShootout.home || 0), away:Number(src.penaltyShootout.away || 0) } : null;
+  const penalties = src.penaltyShootout && typeof src.penaltyShootout === 'object' ? {
+    home:Number(src.penaltyShootout.home || 0),
+    away:Number(src.penaltyShootout.away || 0),
+    homeKicks:Number(src.penaltyShootout.homeKicks || 0),
+    awayKicks:Number(src.penaltyShootout.awayKicks || 0),
+    firstClubId:Number(src.penaltyShootout.firstClubId || 0),
+    winnerClubId:Number(src.penaltyShootout.winnerClubId || 0),
+    completedRounds:Number(src.penaltyShootout.completedRounds || 0),
+    suddenDeathRounds:Number(src.penaltyShootout.suddenDeathRounds || 0),
+    earlyFinish:Boolean(src.penaltyShootout.earlyFinish),
+    kicks:(Array.isArray(src.penaltyShootout.kicks) ? src.penaltyShootout.kicks : []).map(kick => ({
+      order:Number(kick?.order || 0), round:Number(kick?.round || 0), suddenDeath:Boolean(kick?.suddenDeath),
+      clubId:Number(kick?.clubId || 0), playerId:Number(kick?.playerId || 0), playerName:String(kick?.playerName || ''),
+      goalkeeperId:Number(kick?.goalkeeperId || 0), goalkeeperName:String(kick?.goalkeeperName || ''),
+      scored:Boolean(kick?.scored), probability:Number(kick?.probability || 0)
+    }))
+  } : null;
   const tiebreaker = src.clubWorldCupTiebreaker && typeof src.clubWorldCupTiebreaker === 'object' ? {
     type:String(src.clubWorldCupTiebreaker.type || ''),
     homeFouls:Number(src.clubWorldCupTiebreaker.homeFouls || 0),
@@ -794,7 +810,10 @@ function clubWorldCupFixtureMatch({ season, stage, roundNumber, homeId, awayId, 
     roundDate:fixedDate,
     seasonDay:fixedSeasonDay,
     neutral:true,
+    neutralVenue:true,
     knockout:true,
+    requiresWinner:stage !== 'groups',
+    tieBreakMode:stage !== 'groups' ? 'penalties' : 'draw',
     clubWorldCup:true,
     clubWorldCupStage:stage,
     clubWorldCupGroup:groupId,
@@ -1311,26 +1330,18 @@ function awardClubWorldCupPrizeIfManaged(clubId, stage){
 }
 function finalizeClubWorldCupMatchResult(match, result){
   if(!match?.clubWorldCup || !result) return result;
-  const out = { ...result, clubWorldCup:true, clubWorldCupStage:match.clubWorldCupStage, clubWorldCupGroup:match.clubWorldCupGroup || '' };
+  let out = { ...result, clubWorldCup:true, clubWorldCupStage:match.clubWorldCupStage, clubWorldCupGroup:match.clubWorldCupGroup || '' };
   if(match.clubWorldCupKnockout){
-    const hg = Number(out.homeGoals || 0);
-    const ag = Number(out.awayGoals || 0);
-    if(hg > ag) out.winnerClubId = Number(match.homeId);
-    else if(ag > hg) out.winnerClubId = Number(match.awayId);
+    const winnerMatch = { ...match, requiresWinner:true, tieBreakMode:'penalties', neutralVenue:true };
+    if(typeof finalizeWinnerRequiredMatchResult === 'function') out = finalizeWinnerRequiredMatchResult(winnerMatch, out);
     else{
-      const homeFouls = Number(out.matchStats?.home?.fouls ?? match.matchStats?.home?.fouls ?? 0);
-      const awayFouls = Number(out.matchStats?.away?.fouls ?? match.matchStats?.away?.fouls ?? 0);
-      const homeCards = (out.cards || []).filter(card => Number(card.clubId) === Number(match.homeId)).reduce((sum, card) => sum + (card.type === 'red' || card.type === 'secondYellowRed' ? 3 : 1), 0);
-      const awayCards = (out.cards || []).filter(card => Number(card.clubId) === Number(match.awayId)).reduce((sum, card) => sum + (card.type === 'red' || card.type === 'secondYellowRed' ? 3 : 1), 0);
-      let homeWins = false;
-      if(homeFouls !== awayFouls) homeWins = homeFouls < awayFouls;
-      else if(homeCards !== awayCards) homeWins = homeCards < awayCards;
-      else homeWins = hashNumber(`${match.id}-fouls-tiebreak-home`, 1000000) <= hashNumber(`${match.id}-fouls-tiebreak-away`, 1000000);
-      out.winnerClubId = homeWins ? Number(match.homeId) : Number(match.awayId);
-      out.clubWorldCupTiebreaker = { type:'fouls', homeFouls, awayFouls, homeCards, awayCards, winnerClubId:out.winnerClubId };
-      delete out.penaltyShootout;
+      const hg = Number(out.homeGoals || 0);
+      const ag = Number(out.awayGoals || 0);
+      if(hg > ag) out.winnerClubId = Number(match.homeId);
+      else if(ag > hg) out.winnerClubId = Number(match.awayId);
     }
-    out.clubWorldCupResolved = true;
+    delete out.clubWorldCupTiebreaker;
+    out.clubWorldCupResolved = Boolean(out.winnerClubId);
   }
   return out;
 }
@@ -1580,9 +1591,13 @@ function selectedClubWorldCupEditionForDisplay(){
 }
 function clubWorldCupEditionMatchScore(match){
   if(!match?.played) return 'vs';
-  const penalties = match.penaltyShootout ? ` (${Number(match.penaltyShootout.home || 0)}-${Number(match.penaltyShootout.away || 0)} pen.)` : '';
   const tie = match.tiebreaker ? ` · faltas ${Number(match.tiebreaker.homeFouls || 0)}-${Number(match.tiebreaker.awayFouls || 0)}` : '';
-  return `${Number(match.homeGoals || 0)} - ${Number(match.awayGoals || 0)}${penalties}${tie}`;
+  return `${Number(match.homeGoals || 0)} - ${Number(match.awayGoals || 0)}${tie}`;
+}
+function clubWorldCupEditionPenaltyLine(match){
+  if(!match?.penaltyShootout) return '';
+  const winnerId = Number(match.winnerClubId || match.penaltyShootout.winnerClubId || (Number(match.penaltyShootout.home || 0) > Number(match.penaltyShootout.away || 0) ? match.homeId : match.awayId));
+  return `<div class="penalty-result-line">${escapeHtml(clubName(winnerId))} gana ${Number(match.penaltyShootout.home || 0)}-${Number(match.penaltyShootout.away || 0)} por penales</div>`;
 }
 function clubWorldCupEditionMatchCard(match, options={}){
   const interactive = Boolean(options.interactive && match?.played && match?.id);
@@ -1599,6 +1614,7 @@ function clubWorldCupEditionMatchCard(match, options={}){
       <strong class="score">${escapeHtml(clubWorldCupEditionMatchScore(match))}</strong>
       <div class="cwc-match-team ${Number(match?.winnerClubId || 0) === Number(match?.awayId || 0) ? 'winner' : ''}">${clubBadge(match?.awayId)} <span>${escapeHtml(clubName(match?.awayId))}</span></div>
     </div>
+    ${clubWorldCupEditionPenaltyLine(match)}
     ${revenue}
   </${tag}>`;
 }

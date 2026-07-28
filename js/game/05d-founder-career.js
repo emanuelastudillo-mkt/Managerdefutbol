@@ -352,7 +352,8 @@ function resolveFounderForcedSeasonMatches(targetDate){
   const results = [];
   due.forEach(item => {
     const raw = founderForcedSeasonResult(item.match);
-    const result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, raw) : raw;
+    let result = typeof finalizeWinnerRequiredMatchResult === 'function' ? finalizeWinnerRequiredMatchResult(item.match, raw) : raw;
+    result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, result) : result;
     if(typeof markScheduledResult === 'function') markScheduledResult(item, result);
     else Object.assign(item.match, result, { played:true, date:item.date });
     if(typeof applyResultToTables === 'function') applyResultToTables(item.match, Number(result.homeGoals || 0), Number(result.awayGoals || 0));

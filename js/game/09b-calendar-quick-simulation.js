@@ -498,7 +498,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot','winnerRequiredResolved','winnerRequiredReason'
   ];
   const data = {};
   fields.forEach(field => {
@@ -516,7 +516,8 @@ function simulateDueMatchesUntil(targetDate, options={}){
   const results = [];
   due.forEach(item => {
     const rawResult = simulateScheduledMatch(item.match);
-    const result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, rawResult) : rawResult;
+    let result = typeof finalizeWinnerRequiredMatchResult === 'function' ? finalizeWinnerRequiredMatchResult(item.match, rawResult) : rawResult;
+    result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, result) : result;
     markScheduledResult(item, result);
     results.push(result);
   });
@@ -1490,6 +1491,7 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
     budgetBeforeTurn,
     fromRoundIndex
   } = context;
+  ownResult = typeof finalizeWinnerRequiredMatchResult === 'function' ? finalizeWinnerRequiredMatchResult(ownInfo?.match, ownResult) : ownResult;
   ownResult = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(ownInfo?.match, ownResult) : ownResult;
   const results = [ownResult];
   if(ownInfo?.match) markScheduledResult({ match:ownInfo.match, date:targetDate }, ownResult);

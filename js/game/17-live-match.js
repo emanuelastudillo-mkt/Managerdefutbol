@@ -98,7 +98,12 @@
     }
     if(liveState?.finished){
       const h = Number(liveState.homeGoals || 0), a = Number(liveState.awayGoals || 0);
-      return { tone:'final', title:'Final del partido', text:`Resultado final: ${h} - ${a}.`, sub:'Ya podés cerrar y guardar el resultado.' };
+      const shootout = liveState.penaltyShootout;
+      const winnerId = Number(liveState.winnerClubId || shootout?.winnerClubId || 0);
+      const shootoutText = shootout && winnerId
+        ? ` ${liveClubName(winnerId)} gana ${Number(shootout.home || 0)}-${Number(shootout.away || 0)} por penales.`
+        : '';
+      return { tone:'final', title:'Final del partido', text:`Resultado final: ${h} - ${a}.${shootoutText}`, sub:shootout ? 'La tanda no modifica los goles ni las estadísticas del partido.' : 'Ya podés cerrar y guardar el resultado.' };
     }
     if(latest && latest.minute === minute){
       const playerId = latest.data?.playerId || latest.data?.inId || latest.data?.outId || 0;

@@ -1080,12 +1080,16 @@ function finalMatchNarration(match){
   else if((h + a) >= 5) bucket = 'final_goalfest';
   else if(h > a) bucket = 'final_home_win';
   else if(a > h) bucket = 'final_away_win';
-  const winnerId = h >= a ? match.homeId : match.awayId;
-  const loserId = h >= a ? match.awayId : match.homeId;
+  const shootoutWinner = Number(match?.winnerClubId || match?.penaltyShootout?.winnerClubId || 0);
+  const winnerId = shootoutWinner || (h >= a ? match.homeId : match.awayId);
+  const loserId = winnerId === Number(match.homeId) ? match.awayId : match.homeId;
+  const shootoutText = match?.penaltyShootout && shootoutWinner
+    ? ` ${clubName(shootoutWinner)} gana ${Number(match.penaltyShootout.home || 0)}-${Number(match.penaltyShootout.away || 0)} por penales.`
+    : '';
   const template = pickRelatoPhrase(bucket, `final-${match.id}-${score}`, h === a
-    ? `Final igualado: ${home} y ${away} terminan ${score}.`
+    ? `Final igualado: ${home} y ${away} terminan ${score}.${shootoutText}`
     : `Final del partido. Gana ${clubName(winnerId)} ${score}.`);
-  return applyRelatoTemplate(template, {
+  const narrated = applyRelatoTemplate(template, {
     home,
     away,
     score,
@@ -1096,6 +1100,7 @@ function finalMatchNarration(match){
     minute:90,
     player:''
   });
+  return shootoutText && !String(narrated).toLowerCase().includes('penal') ? `${narrated}${shootoutText}` : narrated;
 }
 function eventSubLabel(event){
   const labels = { goal:'Jugada destacada · gol', card:'Jugada destacada · tarjeta', keySave:'Jugada destacada · tapada', error:'Jugada destacada · error', injury:'Jugada destacada · lesión', sub:'Cambio automático' };
@@ -1162,6 +1167,45 @@ function revealEventLine(event){
   return subLine(s);
 }
 
+function penaltyShootoutResultHtml(match, compact=false){
+  const shootout = match?.penaltyShootout;
+  if(!shootout || Number(shootout.home || 0) === Number(shootout.away || 0)) return '';
+  const winnerId = Number(match?.winnerClubId || shootout.winnerClubId || (Number(shootout.home || 0) > Number(shootout.away || 0) ? match.homeId : match.awayId));
+  const text = `${clubName(winnerId)} gana ${Number(shootout.home || 0)}-${Number(shootout.away || 0)} por penales`;
+  return compact ? `<p class="penalty-result-line">${escapeHtml(text)}</p>` : `<div class="penalty-result-line strong">${escapeHtml(text)}</div>`;
+}
+function penaltyShootoutDetailHtml(match){
+  const shootout = match?.penaltyShootout;
+  if(!shootout) return '';
+  const kicks = Array.isArray(shootout.kicks) ? shootout.kicks : [];
+  const rounds = new Map();
+  kicks.forEach(kick => {
+    const round = Math.max(1, Number(kick?.round || 1));
+    if(!rounds.has(round)) rounds.set(round, { home:null, away:null, suddenDeath:Boolean(kick?.suddenDeath) });
+    const row = rounds.get(round);
+    if(Number(kick?.clubId || 0) === Number(match.homeId)) row.home = kick;
+    if(Number(kick?.clubId || 0) === Number(match.awayId)) row.away = kick;
+    row.suddenDeath = row.suddenDeath || Boolean(kick?.suddenDeath);
+  });
+  const kickCell = kick => {
+    if(!kick) return '<span class="penalty-kick empty">—</span>';
+    const mark = kick.scored ? '✓' : '✕';
+    const name = kick.playerName || playerById(kick.playerId)?.name || 'Jugador';
+    return `<span class="penalty-kick ${kick.scored ? 'scored' : 'missed'}"><b>${mark}</b> ${escapeHtml(name)}</span>`;
+  };
+  const roundRows = Array.from(rounds.entries()).sort((a,b)=>a[0]-b[0]).map(([round,row]) => `<div class="penalty-round-row">
+    <span class="penalty-round-label">${row.suddenDeath ? `MS ${round - 5}` : round}</span>
+    ${kickCell(row.home)}
+    ${kickCell(row.away)}
+  </div>`).join('');
+  const extra = Number(shootout.suddenDeathRounds || 0) > 0 ? ` · muerte súbita: ${Number(shootout.suddenDeathRounds)} ronda(s)` : (shootout.earlyFinish ? ' · finalización anticipada' : '');
+  return `<div class="card inner penalty-shootout-card">
+    <div class="row"><div><p class="label">Definición</p><h3>Tanda de penales</h3></div><span class="pill">${Number(shootout.home || 0)}-${Number(shootout.away || 0)}</span></div>
+    ${penaltyShootoutResultHtml(match)}
+    <p class="muted small">${Number(shootout.homeKicks || 0)} penales por equipo${escapeHtml(extra)}. Los remates no se suman al marcador ni a las estadísticas.</p>
+    ${roundRows ? `<div class="penalty-round-head"><span>Ronda</span><strong>${escapeHtml(clubName(match.homeId))}</strong><strong>${escapeHtml(clubName(match.awayId))}</strong></div><div class="penalty-round-list">${roundRows}</div>` : ''}
+  </div>`;
+}
 function showMatchModal(matchId){
   const match = game.matchHistory.find(m => m.id === matchId);
   if(!match) return;
@@ -1171,7 +1215,9 @@ function showMatchModal(matchId){
     <div class="match-modal-head">
       <p class="label">Fecha ${match.matchday} · ${match.date}</p>
       <h2>${clubLink(match.homeId)} ${match.homeGoals} - ${match.awayGoals} ${clubLink(match.awayId)}</h2>
+      ${penaltyShootoutResultHtml(match, true)}
     </div>
+    ${penaltyShootoutDetailHtml(match)}
     <div class="card inner match-context-card compact-match-context match-context-safe">
       <h3>Contexto del partido</h3>
       <div class="grid cols-4">

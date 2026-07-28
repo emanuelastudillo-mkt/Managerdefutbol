@@ -1,4 +1,4 @@
-/* V8.85 · Auditoría determinista del calendario actual.
+/* V8.86 · Auditoría determinista del calendario actual.
    Reconstruye partidos de liga faltantes, reconcilia resultados con el historial,
    elimina duplicados y reprograma encuentros atrasados en martes sin cruces de club. */
 
@@ -745,8 +745,10 @@
         result.calendarIntegrity={ran:false,deferredToDailyTransaction:true,version:CALENDAR_INTEGRITY_VERSION};
         return result;
       }
-      const audit=ciAuditState(game,{referenceDate:game?.currentDate || '',reason:options.reason || 'scheduled_verifier_v885'});
+      // El verificador legado puede reconstruir o reordenar fixtures. La auditoría
+      // unificada debe ejecutarse al final para que ninguna reparación posterior la pise.
       const result=originalRunScheduledSeasonGameVerifier.call(this,options)||{};
+      const audit=ciAuditState(game,{referenceDate:game?.currentDate || '',reason:options.reason || 'scheduled_verifier_v886'});
       result.calendarIntegrity=audit;
       result.repaired=Boolean(result.repaired||audit.restoredMissing||audit.restoredPlayed||audit.duplicatesRemoved||audit.rescheduled||audit.resetFutureDates);
       return result;

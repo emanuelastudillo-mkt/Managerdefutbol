@@ -977,7 +977,7 @@ checkManagerObjectiveGameOver = function(){
   return dismissed;
 };
 const startNextSeasonV764 = startNextSeason;
-startNextSeason = function(selectedClubId){
+startNextSeason = function(selectedClubId, options={}){
   const previousSeason = Number(game?.seasonNumber || 1);
   const previousClubId = Number(game?.selectedClubId || 0);
   const previousContract = game?.managerJobContract ? normalizeManagerJobContract(game.managerJobContract, game) : null;
@@ -987,8 +987,8 @@ startNextSeason = function(selectedClubId){
   const previousStepBeforeTransition = previousContract ? managerContractScheduleEntry(previousContract, previousSeason) : null;
   const previousTotalsBeforeTransition = { ...(game?.managerStats?.currentSeason || {}) };
   const previousPpgBeforeTransition = ppgFromTotals(previousTotalsBeforeTransition);
-  startNextSeasonV764(selectedClubId);
-  if(!game || Number(game.seasonNumber || 0) !== previousSeason + 1) return;
+  const transitionResult = startNextSeasonV764(selectedClubId, options);
+  if(!game || Number(game.seasonNumber || 0) !== previousSeason + 1) return transitionResult;
   const changedClub = Number(game.selectedClubId || 0) !== previousClubId;
   if(changedClub && previousContract){
     game.managerJobContract = previousContract;
@@ -1032,6 +1032,7 @@ startNextSeason = function(selectedClubId){
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
   saveLocal(true);
   renderAll();
+  return transitionResult;
 };
 const newGameV764 = newGame;
 newGame = function(selectedClubId, options={}){

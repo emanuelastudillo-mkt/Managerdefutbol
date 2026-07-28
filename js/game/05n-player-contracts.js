@@ -313,13 +313,13 @@
     if(game.playerMorale) game.playerMorale[player.id]=5;
     return player;
   }
-  function processPlayerContractSeasonTransition(previousSeason){
-    ensureAllPlayerContracts();
+  function processPlayerContractSeasonTransition(previousSeason,options={}){
+    const expiringIds=new Set((seed?.players||[]).filter(player=>player&&!player.retired&&!player.sold&&Number(player.clubId||0)>0&&Number(player.contractEndSeason||0)<=Number(previousSeason)).map(player=>Number(player.id)));
+    if(options.skipEnsure!==true) ensureAllPlayerContracts();
     const managerClub=Number(game?.selectedClubId||0);
     const released=[]; let botsRenewed=0;
     (seed?.players||[]).forEach(player=>{
-      if(!player||player.retired||player.sold||Number(player.clubId||0)<=0) return;
-      if(Number(player.contractEndSeason||0)>Number(previousSeason)) return;
+      if(!player||!expiringIds.has(Number(player.id))||player.retired||player.sold||Number(player.clubId||0)<=0) return;
       if(Number(player.clubId)===managerClub) released.push(pcReleaseExpiredPlayer(player,previousSeason));
       else { pcAutoRenewBotPlayer(player,previousSeason); botsRenewed++; }
     });
@@ -381,7 +381,17 @@
     }
     if(typeof startNextSeason==='function'){
       const original=startNextSeason;
-      startNextSeason=function(...args){ const previous=pcSeason(); const shouldTransition=Boolean(game?.seasonFinalized); if(shouldTransition) processPlayerContractSeasonTransition(previous); const result=original.apply(this,args); ensureAllPlayerContracts(game); return result; };
+      startNextSeason=function(...args){
+        const previous=pcSeason();
+        const shouldTransition=Boolean(game?.seasonFinalized);
+        const result=original.apply(this,args);
+        const transitioned=Boolean(shouldTransition&&game&&pcSeason()===previous+1);
+        if(transitioned) processPlayerContractSeasonTransition(previous,{skipEnsure:true});
+        ensureAllPlayerContracts(game);
+        if(transitioned&&typeof saveLocal==='function') saveLocal(true);
+        if(transitioned&&typeof renderAll==='function') renderAll();
+        return result;
+      };
     }
     if(typeof processDailyCalendarState==='function'){
       const original=processDailyCalendarState;

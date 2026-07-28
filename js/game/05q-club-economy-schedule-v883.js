@@ -1,4 +1,4 @@
-/* V8.85 · Caja persistente por club y liquidación económica.
+/* V8.86 · Caja persistente por club y liquidación económica.
    La recuperación de calendario se delega de forma exclusiva en 05r. */
 
 (function(){
@@ -112,11 +112,24 @@
         if(!transfer || String(transfer.status || '') !== 'arrived' || transfer.cashSettlementV883) return;
         const tax = v883Round(candidate.gross * v883TransferTaxRate());
         const net = Math.max(0, candidate.gross - tax);
-        v883ApplyClubCashChange(candidate.sellerClubId, net, `Venta de jugador a ${clubName(candidate.buyerClubId)}`, {
+        const rightSettlement = transfer.managerEconomicRightSettlementV886 && typeof transfer.managerEconomicRightSettlementV886 === 'object'
+          ? transfer.managerEconomicRightSettlementV886
+          : null;
+        const managerIncome = Math.max(0, Math.min(net, v883Round(rightSettlement?.managerIncome || 0)));
+        const sellerReceipt = Math.max(0, net - managerIncome);
+        v883ApplyClubCashChange(candidate.sellerClubId, sellerReceipt, `Venta de jugador a ${clubName(candidate.buyerClubId)}`, {
           type:'transfer_sale_bot_credit', transferId:candidate.id, buyerClubId:candidate.buyerClubId,
-          grossAmount:candidate.gross, taxAmount:tax, netAmount:net
+          grossAmount:candidate.gross, taxAmount:tax, netAmount:net, managerEconomicRight:managerIncome
         });
-        transfer.cashSettlementV883 = { sellerCredited:true, gross:candidate.gross, tax, net, date:game.currentDate || '' };
+        transfer.cashSettlementV883 = {
+          sellerCredited:true,
+          gross:candidate.gross,
+          tax,
+          net,
+          sellerReceipt,
+          managerEconomicRight:managerIncome,
+          date:game.currentDate || ''
+        };
       });
       return result;
     };

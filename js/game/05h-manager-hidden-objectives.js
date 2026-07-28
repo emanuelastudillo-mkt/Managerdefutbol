@@ -662,8 +662,8 @@ newGame = function(selectedClubId, options={}){
   return result;
 };
 const startNextSeasonV841HiddenObjectives = startNextSeason;
-startNextSeason = function(selectedClubId){
-  const result = startNextSeasonV841HiddenObjectives(selectedClubId);
+startNextSeason = function(selectedClubId, options={}){
+  const result = startNextSeasonV841HiddenObjectives(selectedClubId, options);
   if(game && !game.seasonFinalized) ensureManagerHiddenObjectiveSeason(game);
   return result;
 };

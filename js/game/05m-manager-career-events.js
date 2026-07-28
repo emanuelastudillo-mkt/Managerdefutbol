@@ -1086,9 +1086,12 @@
       const originalFinalize = finalizeSeasonIfNeeded;
       finalizeSeasonIfNeeded = function(options={}){
         const before = Boolean(game?.seasonFinalized);
-        if(!before) ceClosePendingDecisions('season_end');
         const result = originalFinalize(options);
-        if(!before && game?.seasonFinalized){ ceAttachSeasonSummary('season_end'); if(typeof saveLocal === 'function') saveLocal(true); }
+        if(!before && game?.seasonFinalized){
+          ceClosePendingDecisions('season_end');
+          ceAttachSeasonSummary('season_end');
+          if(typeof saveLocal === 'function') saveLocal(true);
+        }
         return result;
       };
     }

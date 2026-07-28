@@ -486,10 +486,19 @@ processPendingTransfers = function(){
     if(!item.right || transfer?.status !== 'arrived' || item.grossAmount <= 0) return;
     const settlement = managerPortfolioSettleRight(item.right, { grossAmount:item.grossAmount, buyerClubId:item.buyerClubId, source:'manager_purchase_from_bot' });
     if(!settlement) return;
-    game.clubBudgets = game.clubBudgets && typeof game.clubBudgets === 'object' && !Array.isArray(game.clubBudgets) ? game.clubBudgets : {};
-    const seller = seed?.clubs?.find(club => Number(club.id) === Number(item.sellerClubId));
-    const current = Math.round(Number(game.clubBudgets[item.sellerClubId] ?? seller?.budget ?? 0));
-    game.clubBudgets[item.sellerClubId] = current + settlement.sellerReceipt;
+    // La liquidación de caja queda centralizada en 05q. Guardar sólo el reparto
+    // evita que el club vendedor reciba primero sellerReceipt y después el neto completo.
+    transfer.managerEconomicRightSettlementV886 = {
+      rightId:String(item.right.id || ''),
+      sellerClubId:Number(item.sellerClubId || 0),
+      buyerClubId:Number(item.buyerClubId || 0),
+      grossAmount:Number(settlement.grossAmount || 0),
+      taxAmount:Number(settlement.taxAmount || 0),
+      transferNetAmount:Number(settlement.transferNetAmount || 0),
+      managerIncome:Number(settlement.managerIncome || 0),
+      sellerReceipt:Number(settlement.sellerReceipt || 0),
+      settledDate:String(game?.currentDate || '')
+    };
   });
   if(due.some(item => item.right)) saveLocal(true);
   return baseSummary;

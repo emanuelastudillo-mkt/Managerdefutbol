@@ -1,22 +1,14 @@
-# V8.89 INCREMENTAL
+# V8.90 INCREMENTAL
 
-Aplicar sobre **V8.88**.
+Aplicar sobre **V8.89**.
 
-## Ofertas por cláusula completa
+## Cambios
 
-- Toda oferta que alcance el 100% de la cláusula se identifica por su porcentaje o por el importe real, sin depender del origen interno del mensaje.
-- Se elimina la opción de rechazar esas propuestas.
-- Las únicas acciones disponibles son:
-  - **Aceptar oferta**.
-  - **Convencer al jugador de quedarse**.
-- El mínimo de jugadores y la directiva no pueden bloquear una cláusula completa.
-- Si el intento de convencer falla, la transferencia se ejecuta o queda programada para la próxima apertura del mercado.
-- Las ofertas pendientes de partidas anteriores se migran automáticamente al flujo de cláusula.
-- El plazo de respuesta y la aceptación automática por falta de respuesta se mantienen.
-
-## Archivos
-
-- `index.html`
-- `config.js`
-- `js/core/01-config-constants.js`
-- `js/ui/06-render-home-messages.js`
+- Nuevo sistema manual de revelación de sobres.
+- Las seis cartas aparecen cerradas y grises.
+- Cada carta requiere pulsar **Ver**.
+- El contenido de una carta cerrada no se inserta en el HTML visible.
+- Las cartas pasan a reserva después de revelar las seis.
+- Abandonar Cartas, cambiar de menú, abrir un modal, ocultar la pestaña, recargar o cerrar la ventana envía automáticamente todas las cartas del sobre a reserva.
+- Las aperturas interrumpidas se recuperan al cargar la partida.
+- Se impide abrir un segundo sobre mientras exista una apertura pendiente.

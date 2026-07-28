@@ -2,6 +2,10 @@
 
 let specialPackOpeningInProgress = false;
 let specialPointsAnimation = null;
+let specialPendingOpeningRuntimeId = '';
+let specialPendingOpeningFinalizeTimer = null;
+let specialOpeningNeedsRenderAfterVisibility = false;
+let specialOpeningLifecycleGuardsInstalled = false;
 const SPECIAL_GLOBAL_CARDS_STORAGE_KEY = 'futbolManager.specialCardsGlobal.v1';
 const SPECIAL_PHYSICAL_RECOVERY_POINTS_BY_RARITY = Object.freeze({ comun:1, rara:3, epica:5, legendaria:12 });
 const SPECIAL_MAX_USES_BY_RARITY = Object.freeze({ inutil:1, comun:1, rara:2, epica:3, legendaria:5 });
@@ -44,6 +48,7 @@ function createInitialSpecialState(managerName=''){
     fecha_ultimo_cambio_cartas: null,
     bloqueado_hasta: null,
     historial_ultimas_cartas: [],
+    apertura_pendiente: null,
     puntos_log: [],
     codigos_reclamados: {},
     cartas_globales_version: 'V5.78'
@@ -381,6 +386,28 @@ function normalizeSpecialState(state=null, managerName=''){
   normalized.historial_ultimas_cartas = Array.isArray(normalized.historial_ultimas_cartas)
     ? normalized.historial_ultimas_cartas.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).slice(0, 30)
     : [];
+  const rawPendingOpening = normalized.apertura_pendiente && typeof normalized.apertura_pendiente === 'object' ? normalized.apertura_pendiente : null;
+  if(rawPendingOpening){
+    const pendingCards = (Array.isArray(rawPendingOpening.cartas) ? rawPendingOpening.cartas : [])
+      .map((card, index) => normalizeSpecialCard(card, index))
+      .filter(Boolean)
+      .filter(card => !card.destruida);
+    const pendingCardIds = new Set(pendingCards.map(card => String(card.id_carta || '')).filter(Boolean));
+    const revealedIds = Array.from(new Set(Array.isArray(rawPendingOpening.reveladas) ? rawPendingOpening.reveladas.map(String) : []))
+      .filter(id => pendingCardIds.has(id));
+    normalized.apertura_pendiente = pendingCards.length ? {
+      id:String(rawPendingOpening.id || `OPEN-${Date.now()}-${hashNumber(JSON.stringify(pendingCards.map(card => card.id_carta)), 1000000)}`),
+      sobre_id:String(rawPendingOpening.sobre_id || rawPendingOpening.packId || ''),
+      sobre_nombre:String(rawPendingOpening.sobre_nombre || rawPendingOpening.packName || 'Sobre'),
+      costo:Math.max(0, Math.round(Number(rawPendingOpening.costo || 0))),
+      cartas:pendingCards,
+      reveladas:revealedIds,
+      creada_en:String(rawPendingOpening.creada_en || rawPendingOpening.createdAt || new Date().toISOString()),
+      completa:revealedIds.length >= pendingCards.length
+    } : null;
+  } else {
+    normalized.apertura_pendiente = null;
+  }
   normalized.codigos_reclamados = (normalized.codigos_reclamados && typeof normalized.codigos_reclamados === 'object' && !Array.isArray(normalized.codigos_reclamados)) ? normalized.codigos_reclamados : {};
   normalized.fecha_ultimo_cambio_cartas = validIsoDate(normalized.fecha_ultimo_cambio_cartas) ? normalized.fecha_ultimo_cambio_cartas : null;
   normalized.bloqueado_hasta = validIsoDate(normalized.bloqueado_hasta) ? normalized.bloqueado_hasta : null;
@@ -414,6 +441,11 @@ function repairSpecialReserveFromHistory(state){
 function ensureSpecialState(){
   if(!game) return null;
   game.special = normalizeSpecialState(game.special, game.rankingManagerName || storedManagerName() || 'Manager');
+  const pending = game.special.apertura_pendiente;
+  if(pending?.id && String(pending.id) !== String(specialPendingOpeningRuntimeId || '')){
+    const recovered = commitPendingSpecialOpeningToReserve(game.special, 'recuperacion_al_cargar');
+    if(recovered.count > 0) game._needsAutosave = true;
+  }
   const repaired = repairSpecialReserveFromHistory(game.special);
   if(repaired > 0) game._needsAutosave = true;
   return game.special;
@@ -1017,9 +1049,96 @@ function recoverSpecialCardToReserve(cardId){
   const [card] = ensureSpecialCardsInReserve([source]);
   return card || null;
 }
+function commitPendingSpecialOpeningToReserve(state, reason='completada'){
+  if(!state || typeof state !== 'object') return { count:0, cards:[] };
+  const pending = state.apertura_pendiente && typeof state.apertura_pendiente === 'object' ? state.apertura_pendiente : null;
+  const cards = (Array.isArray(pending?.cartas) ? pending.cartas : []).map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).filter(card => !card.destruida);
+  if(!pending || !cards.length){
+    state.apertura_pendiente = null;
+    specialPackOpeningInProgress = false;
+    specialPendingOpeningRuntimeId = '';
+    return { count:0, cards:[] };
+  }
+  state.cartas_reserva = Array.isArray(state.cartas_reserva) ? state.cartas_reserva : [];
+  state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
+  const activeIds = new Set(state.cartas_activas.map(card => String(card.id_carta || '')));
+  const reserveIds = new Set(state.cartas_reserva.map(card => String(card.id_carta || '')));
+  const committed = [];
+  cards.forEach((rawCard, index) => {
+    const card = normalizeSpecialCard(rawCard, index);
+    const id = String(card?.id_carta || '');
+    if(!card || !id || card.destruida || activeIds.has(id) || reserveIds.has(id)) return;
+    const clean = { ...card, activa:false, destruida:false, active_slot_id:'' };
+    const globalCard = specialGlobalUpsertCard(clean, { slotId:currentSpecialSaveSlotId(), zone:'reserve' }) || clean;
+    state.cartas_reserva.push({ ...globalCard, activa:false });
+    reserveIds.add(id);
+    committed.push({ ...globalCard, activa:false, apertura_cierre:String(reason || 'completada') });
+  });
+  const historyCards = cards.map(card => ({ ...card, activa:false, destruida:false, apertura_cierre:String(reason || 'completada') }));
+  const seenHistory = new Set();
+  state.historial_ultimas_cartas = historyCards.concat(Array.isArray(state.historial_ultimas_cartas) ? state.historial_ultimas_cartas : []).filter(card => {
+    const id = String(card?.id_carta || '');
+    if(!id || seenHistory.has(id)) return false;
+    seenHistory.add(id);
+    return true;
+  }).slice(0, 30);
+  state.apertura_pendiente = null;
+  specialPackOpeningInProgress = false;
+  specialPendingOpeningRuntimeId = '';
+  if(specialPendingOpeningFinalizeTimer){
+    clearTimeout(specialPendingOpeningFinalizeTimer);
+    specialPendingOpeningFinalizeTimer = null;
+  }
+  return { count:committed.length, cards:committed };
+}
+function finalizePendingSpecialOpeningSync(reason='salida_de_vista'){
+  if(!game?.special?.apertura_pendiente) return { count:0, cards:[] };
+  game.special = normalizeSpecialState(game.special, game.rankingManagerName || storedManagerName() || 'Manager');
+  const result = commitPendingSpecialOpeningToReserve(game.special, reason);
+  if(result.count > 0 && typeof persistSharedManagerProfileFromGame === 'function'){
+    persistSharedManagerProfileFromGame({ reason:`special_pack_${reason}` });
+  }
+  return result;
+}
+async function finalizePendingSpecialOpening(options={}){
+  const reason = String(options.reason || 'salida_de_vista');
+  const result = finalizePendingSpecialOpeningSync(reason);
+  if(result.count <= 0) return result;
+  try{ await saveLocal(true); }catch(err){ console.error('No se pudo guardar el cierre de apertura.', err); }
+  if(options.render !== false && typeof activeTab !== 'undefined' && activeTab === 'special') renderSpecial();
+  if(options.notify === true) showNotice('Las cartas obtenidas quedaron guardadas en reserva.');
+  return result;
+}
+async function revealPendingSpecialCard(cardId){
+  const state = ensureSpecialState();
+  const pending = state?.apertura_pendiente;
+  if(!pending?.id || !Array.isArray(pending.cartas)) return;
+  const id = String(cardId || '');
+  if(!pending.cartas.some(card => String(card.id_carta || '') === id)) return;
+  pending.reveladas = Array.from(new Set([...(Array.isArray(pending.reveladas) ? pending.reveladas.map(String) : []), id]));
+  pending.completa = pending.reveladas.length >= pending.cartas.length;
+  state.apertura_pendiente = pending;
+  game.special = state;
+  renderSpecial();
+  try{ await saveLocal(true); }catch(err){ console.error('No se pudo guardar la revelación de la carta.', err); }
+  if(pending.completa){
+    if(specialPendingOpeningFinalizeTimer) clearTimeout(specialPendingOpeningFinalizeTimer);
+    specialPendingOpeningFinalizeTimer = window.setTimeout(() => {
+      finalizePendingSpecialOpening({ reason:'todas_reveladas', render:true, notify:true });
+    }, 850);
+  }
+}
 async function openSpecialPack(packId){
+  const existingState = ensureSpecialState();
+  if(existingState?.apertura_pendiente){
+    specialPackOpeningInProgress = true;
+    specialPendingOpeningRuntimeId = String(existingState.apertura_pendiente.id || '');
+    renderSpecial();
+    showNotice('Terminá de revelar las cartas del sobre actual.');
+    return;
+  }
   if(specialPackOpeningInProgress){ showNotice('Ya se está abriendo un sobre.'); return; }
-  let state = ensureSpecialState();
+  let state = existingState;
   const pack = specialPackDefinitions().find(item => item.id === packId);
   if(!state || !pack){ showNotice('Sobre no disponible.'); return; }
   const cost = Math.max(0, Math.round(Number(pack.costo_puntos || 0)));
@@ -1038,6 +1157,7 @@ async function openSpecialPack(packId){
   const previousReserveIds = new Set((state.cartas_reserva || []).map(card => String(card.id_carta || '')));
   const previousHistory = (state.historial_ultimas_cartas || []).slice();
   const previousLog = (state.puntos_log || []).slice();
+  const previousPending = state.apertura_pendiente || null;
 
   const rollbackOpening = async (notice='No se pudo completar la apertura. Se devolvieron los puntos.') => {
     const rollbackState = ensureSpecialState();
@@ -1046,21 +1166,21 @@ async function openSpecialPack(packId){
     rollbackState.puntos_log = previousLog;
     rollbackState.historial_ultimas_cartas = previousHistory;
     rollbackState.cartas_reserva = (rollbackState.cartas_reserva || []).filter(card => previousReserveIds.has(String(card.id_carta || '')));
+    rollbackState.apertura_pendiente = previousPending;
     game.special = rollbackState;
-    specialPackOpeningInProgress = false;
+    specialPackOpeningInProgress = Boolean(previousPending);
+    specialPendingOpeningRuntimeId = String(previousPending?.id || '');
     try{ await saveLocal(true); }catch(err){ console.error(err); }
     renderSpecial();
     showNotice(notice);
   };
 
-  // El costo del sobre se descuenta en el momento de comprarlo, antes de mostrar las cartas.
   state.puntos_habilidad = Math.max(0, previousPoints - cost);
   state.puntos_log = Array.isArray(state.puntos_log) ? state.puntos_log : [];
   appendSpecialPointsLog(state, { actionId:'abrir_sobre', points:-cost, packId, puntos_antes:previousPoints, puntos_despues:state.puntos_habilidad, ...turnStamp({ date:game?.currentDate || '' }) });
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'open_special_pack_cost' });
   game.special = state;
   specialPointsAnimation = { id:`spend-${Date.now()}-${Math.random()}`, points:-cost };
-  renderSpecial([], { revealCount:0, opening:true, packName:pack.nombre || 'Sobre' });
 
   try{
     await saveLocal(true);
@@ -1088,10 +1208,21 @@ async function openSpecialPack(packId){
   }
 
   const sorted = sortOpenedCards(cards).map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean);
-  const added = ensureSpecialCardsInReserve(sorted);
   state = ensureSpecialState();
-  state.historial_ultimas_cartas = added.concat(state.historial_ultimas_cartas || []).slice(0, 30);
+  const openingId = `OPEN-${game?.saveCode || 'FM'}-${Date.now().toString(36)}-${hashNumber(sorted.map(card => card.id_carta).join('|'), 1000000)}`;
+  state.apertura_pendiente = {
+    id:openingId,
+    sobre_id:String(packId || ''),
+    sobre_nombre:String(pack.nombre || 'Sobre'),
+    costo:cost,
+    cartas:sorted,
+    reveladas:[],
+    creada_en:new Date().toISOString(),
+    completa:false
+  };
   game.special = state;
+  specialPendingOpeningRuntimeId = openingId;
+  specialPackOpeningInProgress = true;
 
   try{
     await saveLocal(true);
@@ -1101,19 +1232,8 @@ async function openSpecialPack(packId){
     return;
   }
 
-  showNotice(`${pack.nombre || 'Sobre'} comprado por ${cost} puntos.`);
-  try{
-    for(let i=1;i<=added.length;i++){
-      renderSpecial(added, { revealCount:i, opening:true, packName:pack.nombre || 'Sobre' });
-      await specialDelay(specialPackRevealStepMs());
-    }
-  } finally {
-    specialPackOpeningInProgress = false;
-    specialPointsAnimation = null;
-    await saveLocal(true);
-    renderSpecial();
-    showNotice('Las cartas obtenidas quedaron guardadas en reserva.');
-  }
+  renderSpecial();
+  showNotice(`${pack.nombre || 'Sobre'} comprado por ${cost} puntos. Revelá las ${sorted.length} cartas.`);
 }
 
 function activateSpecialCard(cardId){
@@ -1252,31 +1372,52 @@ function specialPackMarkup(pack){
     <div class="row"><strong>${cost} puntos</strong><button class="primary" data-open-special-pack="${escapeHtml(pack.id)}" ${disabled ? 'disabled' : ''}>Abrir sobre</button></div>
   </div>`;
 }
-function specialOpenedMarkup(opened=[], options={}){
-  if(!opened?.length) return '';
-  const revealCount = Number.isFinite(Number(options.revealCount)) ? Math.max(0, Math.min(opened.length, Math.round(Number(options.revealCount)))) : opened.length;
-  const visible = opened.slice(0, revealCount);
-  const opening = Boolean(options.opening);
-  const packName = options.packName || 'Sobre';
-  const remaining = Math.max(0, opened.length - visible.length);
-  return `<div class="card special-opened ${opening ? 'opening' : ''}">
-    <div class="row"><div><p class="label">${escapeHtml(packName)}</p><h3>${opening ? 'Abriendo sobre' : 'Cartas obtenidas'}</h3></div><span class="pill">${visible.length}/${opened.length}</span></div>
-    <p class="muted small">${opening ? 'Las cartas se revelan de a una. Ya están guardadas en reserva; al terminar aparecerán en el inventario.' : 'Las cartas de esta apertura quedaron guardadas en reserva.'}</p>
-    <div class="special-card-grid special-opening-grid">${visible.map(card => specialCardMarkup(card, 'opened')).join('')}</div>
-    ${opening && remaining ? `<div class="special-reveal-progress"><div style="width:${Math.round((visible.length / opened.length) * 100)}%"></div></div><p class="muted small">Faltan ${remaining} carta(s) por revelar.</p>` : ''}
+function specialOpenedMarkup(pending=null){
+  const cards = Array.isArray(pending?.cartas) ? pending.cartas : [];
+  if(!cards.length) return '';
+  const revealedIds = new Set(Array.isArray(pending.reveladas) ? pending.reveladas.map(String) : []);
+  const revealedCount = cards.filter(card => revealedIds.has(String(card.id_carta || ''))).length;
+  const remaining = Math.max(0, cards.length - revealedCount);
+  const cardMarkup = cards.map((card, index) => {
+    const id = String(card.id_carta || '');
+    if(revealedIds.has(id)) return `<div class="special-opening-slot revealed">${specialCardMarkup(card, 'opened')}</div>`;
+    return `<div class="special-opening-slot concealed">
+      <div class="special-card special-card-concealed" data-special-concealed-card="${escapeHtml(id)}">
+        <div class="special-card-back-symbol" aria-hidden="true">?</div>
+        <p class="label">Carta ${index + 1}</p>
+        <h3>Contenido oculto</h3>
+        <p>Revelá esta carta para conocer su rareza y efecto.</p>
+        <div class="special-card-actions"><button class="primary" data-special-reveal="${escapeHtml(id)}">Ver</button></div>
+      </div>
+    </div>`;
+  }).join('');
+  const completeText = remaining === 0
+    ? 'Todas las cartas fueron reveladas. Se están enviando automáticamente a la reserva.'
+    : `Debés revelar las ${cards.length} cartas. Si abandonás esta pantalla, todas pasarán automáticamente a la reserva.`;
+  return `<div class="card special-opened opening" data-special-opening-id="${escapeHtml(String(pending.id || ''))}">
+    <div class="row"><div><p class="label">${escapeHtml(pending.sobre_nombre || 'Sobre')}</p><h3>Apertura de sobre</h3></div><span class="pill">${revealedCount}/${cards.length}</span></div>
+    <p class="muted small">${escapeHtml(completeText)}</p>
+    <div class="special-card-grid special-opening-grid">${cardMarkup}</div>
+    <div class="special-reveal-progress"><div style="width:${Math.round((revealedCount / cards.length) * 100)}%"></div></div>
+    ${remaining > 0 ? `<p class="muted small">Faltan ${remaining} carta(s) por revelar.</p>` : ''}
   </div>`;
 }
 
 function renderSpecial(opened=[], options={}){
   if(Array.isArray(opened) && opened.length && !options?.opening) ensureSpecialCardsInReserve(opened);
   const state = ensureSpecialState();
+  const pending = state?.apertura_pendiente || null;
+  if(pending?.id){
+    specialPendingOpeningRuntimeId = String(pending.id);
+    specialPackOpeningInProgress = true;
+  } else {
+    specialPackOpeningInProgress = false;
+  }
   const limits = specialLimits();
   const locked = specialCardsLockedInfo();
   const active = (state.cartas_activas || []).slice().sort((a,b)=>specialRarityRank(b.rareza)-specialRarityRank(a.rareza));
-  const openingIds = options?.opening && opened?.length ? new Set(opened.map(card => card.id_carta)) : null;
   const reserveAll = Array.isArray(state.cartas_reserva) ? state.cartas_reserva : [];
-  const reserveSource = openingIds ? reserveAll.filter(card => !openingIds.has(card.id_carta)) : reserveAll;
-  const reserve = reserveSource.slice().sort((a,b)=>specialRarityRank(b.rareza)-specialRarityRank(a.rareza) || a.nombre.localeCompare(b.nombre, 'es'));
+  const reserve = reserveAll.slice().sort((a,b)=>specialRarityRank(b.rareza)-specialRarityRank(a.rareza) || a.nombre.localeCompare(b.nombre, 'es'));
   const packs = specialPackDefinitions();
   const bonuses = specialActiveBonusSummary();
   const pointAnimation = specialPointsAnimation;
@@ -1285,15 +1426,7 @@ function renderSpecial(opened=[], options={}){
   const bonusChips = bonuses.length
     ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${escapeHtml(specialBonusSummaryText(item))}</span>`).join('')
     : '<span class="pill">Sin bonus activo</span>';
-  view.innerHTML = `
-    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, reserva y cartas activas compartidas por el perfil del manager.</p></div></div>
-    <div class="grid cols-4 compact-team-stats special-summary">
-      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
-      <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
-      <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
-      <div class="card"><p class="label">Bloqueo</p><strong>${escapeHtml(locked.locked ? formatDays(limits.lockDays) : 'Libre')}</strong></div>
-    </div>
-    ${specialOpenedMarkup(opened, options)}
+  const normalInventoryMarkup = pending ? '' : `
     <div class="card special-active-drop" data-special-drop-active="1">
       <div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${escapeHtml(lockText)}</span></div>
       <div class="special-bonus-chips">${bonusChips}</div>
@@ -1304,8 +1437,19 @@ function renderSpecial(opened=[], options={}){
       <div class="card"><div class="row"><div><p class="label">Sobres</p><h3>Abrir</h3></div><span class="pill">Reserva libre: ${Math.max(0, limits.reserveMax - reserveAll.length)}</span></div><div class="grid cols-1">${packs.length ? packs.map(specialPackMarkup).join('') : '<p class="muted">No hay sobres configurados.</p>'}</div></div>
       <div class="card"><div class="row"><div><p class="label">Reserva</p><h3>Inventario</h3></div><span class="pill">${reserve.length}/${limits.reserveMax}</span></div><div class="special-card-grid compact">${reserve.length ? reserve.map(card => specialCardMarkup(card, 'reserve')).join('') : '<p class="muted">No hay cartas en reserva.</p>'}</div></div>
     </div>
-    ${specialCodeRedeemMarkup()}
+    ${specialCodeRedeemMarkup()}`;
+  view.innerHTML = `
+    <div class="row section-title"><div><h2>Cartas</h2><p class="tagline">Puntos, reserva y cartas activas compartidas por el perfil del manager.</p></div></div>
+    <div class="grid cols-4 compact-team-stats special-summary">
+      <div class="card special-points-card ${pointAnimation ? 'special-points-flash' : ''}"><p class="label">Puntos</p><strong>${Number(state.puntos_habilidad || 0)}</strong>${pointAnimation ? `<span class="special-points-float">${Number(pointAnimation.points || 0) >= 0 ? '+' : ''}${Number(pointAnimation.points || 0)}</span>` : ''}</div>
+      <div class="card"><p class="label">Activas</p><strong>${active.length}/${limits.activeMax}</strong></div>
+      <div class="card"><p class="label">Reserva</p><strong>${reserveAll.length}/${limits.reserveMax}</strong></div>
+      <div class="card"><p class="label">Bloqueo</p><strong>${escapeHtml(locked.locked ? formatDays(limits.lockDays) : 'Libre')}</strong></div>
+    </div>
+    ${specialOpenedMarkup(pending)}
+    ${normalInventoryMarkup}
   `;
+  document.querySelectorAll('[data-special-reveal]').forEach(btn => btn.addEventListener('click', () => revealPendingSpecialCard(btn.dataset.specialReveal)));
   document.querySelectorAll('[data-open-special-pack]').forEach(btn => btn.addEventListener('click', () => openSpecialPack(btn.dataset.openSpecialPack)));
   const codeInput = document.getElementById('special-code-input');
   const codeButton = document.getElementById('special-code-redeem-btn');
@@ -1332,3 +1476,50 @@ function renderSpecial(opened=[], options={}){
     }, 1800);
   }
 }
+
+
+function installSpecialOpeningLifecycleGuards(){
+  if(specialOpeningLifecycleGuardsInstalled || typeof window === 'undefined' || typeof document === 'undefined') return;
+  specialOpeningLifecycleGuardsInstalled = true;
+  if(typeof renderAll === 'function' && !renderAll.__specialOpeningGuard){
+    const previousRenderAll = renderAll;
+    const guardedRenderAll = function(...args){
+      if(game?.special?.apertura_pendiente && typeof activeTab !== 'undefined' && activeTab !== 'special'){
+        finalizePendingSpecialOpening({ reason:'cambio_de_menu', render:false, notify:false });
+      }
+      return previousRenderAll.apply(this, args);
+    };
+    guardedRenderAll.__specialOpeningGuard = true;
+    renderAll = guardedRenderAll;
+  }
+  if(typeof openModal === 'function' && !openModal.__specialOpeningGuard){
+    const previousOpenModal = openModal;
+    const guardedOpenModal = function(...args){
+      if(game?.special?.apertura_pendiente){
+        finalizePendingSpecialOpening({ reason:'cambio_de_ventana', render:false, notify:false });
+      }
+      return previousOpenModal.apply(this, args);
+    };
+    guardedOpenModal.__specialOpeningGuard = true;
+    openModal = guardedOpenModal;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden'){
+      const result = finalizePendingSpecialOpeningSync('cambio_de_pestana');
+      if(result.count > 0){
+        specialOpeningNeedsRenderAfterVisibility = true;
+        saveLocal(true).catch(err => console.error('No se pudo guardar la apertura al ocultar la pestaña.', err));
+      }
+    } else if(specialOpeningNeedsRenderAfterVisibility){
+      specialOpeningNeedsRenderAfterVisibility = false;
+      if(typeof activeTab !== 'undefined' && activeTab === 'special') renderSpecial();
+    }
+  }, true);
+  const closeHandler = () => {
+    const result = finalizePendingSpecialOpeningSync('cierre_de_ventana');
+    if(result.count > 0) saveLocal(true).catch(()=>{});
+  };
+  window.addEventListener('pagehide', closeHandler, true);
+  window.addEventListener('beforeunload', closeHandler, true);
+}
+installSpecialOpeningLifecycleGuards();

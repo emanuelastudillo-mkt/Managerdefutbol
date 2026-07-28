@@ -1,4 +1,4 @@
-/* V8.53 · Segundo entrenador y análisis situacional local. */
+/* V8.81 · Segundo entrenador: análisis de plantel, vestuario, contratos, calendario y economía. */
 
 const ASSISTANT_COACH_STAFF_ID = 'assistant_coach';
 const ASSISTANT_COACH_HISTORY_LIMIT = 20;
@@ -55,8 +55,19 @@ function normalizeAssistantCoachAnalysisRecord(value){
         formation:String(value.snapshot.formation || '—'),
         tacticFit:Math.max(0, Math.round(Number(value.snapshot.tacticFit || 0))),
         savedPlans:Math.max(0, Math.round(Number(value.snapshot.savedPlans || 0))),
+        generalTrust:Math.max(0, Math.min(100, Math.round(Number(value.snapshot.generalTrust ?? 50)))),
+        referentTrust:Math.max(0, Math.min(100, Math.round(Number(value.snapshot.referentTrust ?? value.snapshot.generalTrust ?? 50)))),
+        starterTrust:Math.max(0, Math.min(100, Math.round(Number(value.snapshot.starterTrust ?? value.snapshot.generalTrust ?? 50)))),
+        substituteTrust:Math.max(0, Math.min(100, Math.round(Number(value.snapshot.substituteTrust ?? value.snapshot.generalTrust ?? 50)))),
+        youthTrust:Math.max(0, Math.min(100, Math.round(Number(value.snapshot.youthTrust ?? value.snapshot.generalTrust ?? 50)))),
+        expiringContracts:Math.max(0, Math.round(Number(value.snapshot.expiringContracts || 0))),
+        nextSeasonContracts:Math.max(0, Math.round(Number(value.snapshot.nextSeasonContracts || 0))),
+        difficultRenewals:Math.max(0, Math.round(Number(value.snapshot.difficultRenewals || 0))),
         nextOpponentName:String(value.snapshot.nextOpponentName || ''),
-        nextOpponentOverall:Math.max(0, Math.round(Number(value.snapshot.nextOpponentOverall || 0)))
+        nextOpponentOverall:Math.max(0, Math.round(Number(value.snapshot.nextOpponentOverall || 0))),
+        nextCompetition:String(value.snapshot.nextCompetition || ''),
+        nextMatchRequiresWinner:Boolean(value.snapshot.nextMatchRequiresWinner),
+        nextMatchNeutral:Boolean(value.snapshot.nextMatchNeutral)
       }
     : {};
   return {
@@ -278,6 +289,18 @@ function assistantCoachSituationSnapshot(){
     : null;
   const savedPlans = Object.values(game?.savedTactics?.slots || {}).filter(Boolean).length;
   const formation = String(game?.tactic?.formation || '—');
+  const dressing = typeof managerDressingRoomState === 'function' ? managerDressingRoomState() : null;
+  const groupTrustValue = group => Math.round(Number(dressing?.groupTrust?.[group]?.value ?? dressing?.generalTrust ?? 50));
+  const season = Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
+  const expiringContracts = squad.filter(player => Number(player?.contractEndSeason || season) <= season).length;
+  const nextSeasonContracts = squad.filter(player => Number(player?.contractEndSeason || season) === season + 1).length;
+  const difficultRenewals = squad.filter(player => {
+    const disposition = typeof managerDressingRoomRenewalDisposition === 'function'
+      ? managerDressingRoomRenewalDisposition(player?.id)
+      : null;
+    return ['hard','refusal','exit'].includes(String(disposition?.code || ''));
+  }).length;
+  const nextCompetition = String(nextMatch?.divisionName || nextMatch?.competitionName || nextMatch?.competition || '');
   return {
     clubId,
     clubName:String(club.name || clubName(clubId)),
@@ -304,9 +327,20 @@ function assistantCoachSituationSnapshot(){
     tacticFit:assistantCoachTacticFit(),
     savedPlans,
     tacticProblems:Array.isArray(game?.lastOwnProblems) ? game.lastOwnProblems.filter(Boolean).length : 0,
+    generalTrust:Math.round(Number(dressing?.generalTrust ?? 50)),
+    referentTrust:groupTrustValue('referent'),
+    starterTrust:groupTrustValue('starter'),
+    substituteTrust:groupTrustValue('substitute'),
+    youthTrust:groupTrustValue('youth'),
+    expiringContracts,
+    nextSeasonContracts,
+    difficultRenewals,
     nextOpponentId,
     nextOpponentName:nextOpponentId ? clubName(nextOpponentId) : '',
     nextOpponentOverall:nextOpponentId ? assistantCoachClubOverall(nextOpponentId) : 0,
+    nextCompetition,
+    nextMatchRequiresWinner:Boolean(nextMatch?.requiresWinner || nextMatch?.nationalCup || nextMatch?.nationalSupercup),
+    nextMatchNeutral:Boolean(nextMatch?.neutralVenue || nextMatch?.nationalCup || nextMatch?.nationalSupercup),
     philosophyScores
   };
 }
@@ -410,6 +444,61 @@ function assistantCoachRecommendations(facts){
       `Moral media ${facts.morale}/99.`,
       'employees',
       'Gestionar empleados'
+    );
+  }
+
+  if(facts.expiringContracts > 0){
+    add(
+      facts.expiringContracts >= 4 ? 95 : 86,
+      'expiring-contracts',
+      'contratos',
+      'critical',
+      'Resolvé los contratos que vencen esta temporada',
+      'Ordená los casos por confianza y prioridad deportiva. Negociá primero con quienes todavía están predispuestos y prepará reemplazos para quienes no acepten extender su vínculo.',
+      `${facts.expiringContracts} contrato(s) vencen al cierre · ${facts.difficultRenewals} renovación(es) difíciles en el plantel.`,
+      'contracts',
+      'Abrir Contratos'
+    );
+  }else if(facts.nextSeasonContracts >= 4 && facts.difficultRenewals > 0){
+    add(
+      78,
+      'contract-planning',
+      'contratos',
+      'warning',
+      'Evitá acumular renovaciones bajo presión',
+      'Aprovechá la temporada para recuperar confianza y escalonar vencimientos. No esperes al último tramo si varios jugadores importantes terminan contrato juntos.',
+      `${facts.nextSeasonContracts} contrato(s) vencen la próxima temporada · ${facts.difficultRenewals} caso(s) con baja predisposición.`,
+      'contracts',
+      'Planificar renovaciones'
+    );
+  }
+
+  if(facts.generalTrust < 45 || facts.referentTrust < 42 || facts.substituteTrust < 35){
+    const criticalTrust = Math.min(facts.generalTrust, facts.referentTrust, facts.substituteTrust);
+    add(
+      criticalTrust < 30 ? 92 : 80,
+      'dressing-room-trust',
+      'vestuario',
+      'warning',
+      'Ordená las jerarquías del vestuario',
+      'Revisá referentes, titulares, rotación y suplentes antes de prometer minutos o cambiar jerarquías. La confianza baja endurece renovaciones y aumenta el riesgo de conflictos.',
+      `Confianza general ${facts.generalTrust}/100 · referentes ${facts.referentTrust} · suplentes ${facts.substituteTrust}.`,
+      'dressingRoom',
+      'Abrir Vestuario'
+    );
+  }
+
+  if(facts.nextMatchRequiresWinner && facts.nextOpponentId){
+    add(
+      79,
+      'knockout-match',
+      'competicion',
+      'warning',
+      'Prepará el partido para una definición completa',
+      'Es una eliminatoria que necesita ganador. Conservá ejecutantes fiables y un portero en buen estado para una posible tanda, sin confundir los penales con goles oficiales.',
+      `${facts.nextCompetition || 'Partido de copa'} · sede ${facts.nextMatchNeutral ? 'neutral' : 'definida por la competición'} · rival ${facts.nextOpponentName}.`,
+      'tactics',
+      'Preparar la eliminatoria'
     );
   }
 
@@ -633,8 +722,19 @@ function createAssistantCoachSituationAnalysis(){
       formation:facts.formation,
       tacticFit:facts.tacticFit,
       savedPlans:facts.savedPlans,
+      generalTrust:facts.generalTrust,
+      referentTrust:facts.referentTrust,
+      starterTrust:facts.starterTrust,
+      substituteTrust:facts.substituteTrust,
+      youthTrust:facts.youthTrust,
+      expiringContracts:facts.expiringContracts,
+      nextSeasonContracts:facts.nextSeasonContracts,
+      difficultRenewals:facts.difficultRenewals,
       nextOpponentName:facts.nextOpponentName,
-      nextOpponentOverall:facts.nextOpponentOverall
+      nextOpponentOverall:facts.nextOpponentOverall,
+      nextCompetition:facts.nextCompetition,
+      nextMatchRequiresWinner:facts.nextMatchRequiresWinner,
+      nextMatchNeutral:facts.nextMatchNeutral
     },
     recommendations
   };
@@ -678,7 +778,9 @@ function assistantCoachSnapshotMarkup(snapshot={}){
     ['Academia', `${snapshot.academyCount || 0}/${snapshot.academyCapacity || 0}`, 'ocupación'],
     ['Campo / estadio', `${snapshot.fieldScore || 0}/100`, `${Number(snapshot.stadiumCapacity || 0).toLocaleString('es-AR')} lugares`],
     ['Táctica', escapeHtml(snapshot.formation || '—'), `${snapshot.tacticFit || 0}% de ajuste`],
-    ['Próximo rival', escapeHtml(snapshot.nextOpponentName || 'Sin rival'), snapshot.nextOpponentName ? `Media ${snapshot.nextOpponentOverall || 0}` : 'Calendario sin partido']
+    ['Vestuario', `${snapshot.generalTrust ?? 50}/100`, `Referentes ${snapshot.referentTrust ?? 50} · suplentes ${snapshot.substituteTrust ?? 50}`],
+    ['Contratos', `${snapshot.expiringContracts || 0} vencen`, `${snapshot.nextSeasonContracts || 0} próximos · ${snapshot.difficultRenewals || 0} difíciles`],
+    ['Próximo rival', escapeHtml(snapshot.nextOpponentName || 'Sin rival'), snapshot.nextOpponentName ? `${snapshot.nextCompetition || 'Partido oficial'} · media ${snapshot.nextOpponentOverall || 0}${snapshot.nextMatchRequiresWinner ? ' · necesita ganador' : ''}` : 'Calendario sin partido']
   ];
   return `<div class="assistant-analysis-metrics">${metrics.map(([label,value,detail]) => `<div class="assistant-analysis-metric"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${escapeHtml(detail)}</small></div>`).join('')}</div>`;
 }
@@ -718,10 +820,14 @@ function openAssistantCoachAnalysisModal(record=null){
 function assistantCoachNavigate(target){
   const key = String(target || 'home');
   closeModal();
-  if(key === 'tactics' || key === 'training'){
+  if(['tactics','training','contracts','dressingRoom','groups'].includes(key)){
     activeTab = 'firstTeam';
     firstTeamTab = key;
     if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('firstTeam');
+  }else if(key === 'national-cups'){
+    activeTab = 'standings';
+    selectedCompetitionView = 'national-cups';
+    if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('standings', 'national-cups');
   }else if(key === 'finance'){
     activeTab = 'finance';
     if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation('finance');
@@ -751,7 +857,7 @@ function assistantCoachEmployeePanelMarkup(){
   if(!progress.active){
     return `<section class="card assistant-coach-panel assistant-coach-inactive">
       <div class="row assistant-coach-header"><div><p class="label">Nuevo empleado</p><h2>Segundo entrenador</h2></div><span class="pill">Contrato anual</span></div>
-      <p class="muted">Estudia la calidad del equipo, la caja del club, el plantel, los juveniles, el estadio, la táctica y el próximo rival. Cada informe entrega tres prioridades explicadas; no modifica la partida automáticamente.</p>
+      <p class="muted">Estudia calidad, profundidad, vestuario, contratos, caja, Academia, estadio, táctica, calendario y próximo rival. Cada informe entrega tres prioridades explicadas y accesos directos; no modifica la partida automáticamente.</p>
       <div class="assistant-tier-list">${['regular','bueno','elite'].map(assistantCoachTierPreviewMarkup).join('')}</div>
       <div class="assistant-coach-actions"><button type="button" id="btnHireAssistantCoach" class="primary">Contratar Segundo entrenador</button>${last ? '<button type="button" id="btnOpenLastAssistantAnalysis" class="ghost">Ver último informe archivado</button>' : ''}</div>
       <p class="small muted">El sueldo completo se paga al contratar. Si lo despedís, el pago anual no se reintegra y el progreso actual se pierde; los informes anteriores se conservan.</p>

@@ -1780,9 +1780,9 @@ function openGameHelpModal(){
   const body = `
   <div class="help-modal">
     <div class="help-hero card">
-      <p class="eyebrow">Guía actualizada · V8.58</p>
-      <h2>Ayuda de Chill mánager</h2>
-      <p class="muted">La carrera ahora separa claramente dos patrimonios: el club administra plantel profesional, estadio, sponsors y presupuesto institucional; el manager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
+      <p class="eyebrow">Guía actualizada · V8.81</p>
+      <h2>Ayuda de Una Vida de Mánager</h2>
+      <p class="muted">La carrera combina gestión deportiva, vestuario, contratos de jugadores, mercado laboral, copas y patrimonio personal. El club administra plantel profesional, estadio, sponsors y presupuesto institucional; el mánager conserva su Cuenta Bancaria, contrato laboral, Tu Academia y derechos económicos aunque cambie de equipo.</p>
     </div>
 
     <div class="help-section">
@@ -1797,13 +1797,13 @@ function openGameHelpModal(){
         <article class="help-card card">
           <span class="pill warn">2 · Competencia</span>
           <h4>Primer Equipo</h4>
-          <p>Concentra Táctica, Plantel y Entrenamiento. Táctica permite conservar las formaciones predefinidas o probar una distribución personalizada por casillas, con roles, adaptación individual y equilibrio colectivo visibles. La ficha de cada jugador separa estadísticas de temporada actual y carrera: partidos, titularidades, minutos, goles, asistencias, tarjetas, lesiones, puntajes y datos específicos de porteros.</p>
-          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Plantel','squad')}${gameHelpGoButton('firstTeam','Abrir Entrenamiento','training')}${gameHelpGoButton('firstTeam','Abrir Estadísticas','playerStats')}</div>
+          <p>Concentra Táctica, Grupos, Plantel, Vestuario, Contratos, Entrenamiento y Estadísticas. Táctica conserva formaciones predefinidas y permite una distribución personalizada por casillas. Grupos separa referentes, titulares, rotación, suplentes y juveniles. Vestuario muestra confianza, influencia y predisposición contractual; Contratos permite negociar renovaciones manuales. La ficha del jugador reúne habilidades, estadísticas de temporada y carrera, estado interno y acceso directo a su renovación.</p>
+          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Grupos','groups')}${gameHelpGoButton('firstTeam','Abrir Vestuario','dressingRoom')}${gameHelpGoButton('firstTeam','Abrir Contratos','contracts')}${gameHelpGoButton('firstTeam','Abrir Estadísticas','playerStats')}</div>
         </article>
         <article class="help-card card">
           <span class="pill warn">3 · Decisiones</span>
           <h4>Mensajes</h4>
-          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y problemas de vestuario. Una crisis puede comenzar cuando el plantel está muy desmotivado o cuando el equipo dejó de funcionar bien en conjunto. Se controla cada 5 días con 30% de probabilidad y, si pasan 20 días sin incidentes, el siguiente control genera uno. Cuando aparece una decisión, debés responder antes de continuar el calendario.</p>
+          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y decisiones de carrera. Los eventos del vestuario y la directiva usan tiempos de espera para evitar repeticiones constantes. Al llegar a un club existe un período de adaptación antes de recibir decisiones especiales. Algunas respuestas generan promesas o consecuencias diferidas que se evalúan por resultados, minutos, confianza o presupuesto.</p>
           ${gameHelpGoButton('messages','Abrir Mensajes')}
         </article>
       </div>
@@ -1829,7 +1829,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Ofertas laborales</h4>
-          <p>Antes de aceptar compará duración, sueldo, objetivo anual y porcentaje de futuras ventas. Un contrato largo ofrece estabilidad, pero puede pagar algo menos por mes y mantener exigencias mínimas durante varios años.</p>
+          <p>Podés recibir propuestas aunque tengas trabajo. Cada oferta permanece entre 10 y 30 días según la urgencia del club y el momento del calendario. Antes de aceptar compará duración, sueldo, objetivo, porcentaje de futuras ventas y el impacto de terminar inmediatamente tu vínculo actual. Rechazar o dejar vencer una propuesta no reinicia la carrera.</p>
           ${gameHelpGoButton('careerJobs','Revisar ofertas laborales')}
         </article>
         <article class="help-card card">
@@ -1880,8 +1880,13 @@ function openGameHelpModal(){
           <div class="help-actions">${gameHelpGoButton('market','Abrir Mercado')}${gameHelpGoButton('scouting','Abrir Ojeo')}</div>
         </article>
         <article class="help-card card">
+          <h4>Vestuario y contratos de jugadores</h4>
+          <p>La confianza individual cambia con minutos, resultados, decisiones y jerarquías. Un jugador contento acepta mejores condiciones y más años; uno descontento exige más, limita la duración o rechaza negociar. Los contratos vencidos sin renovar pasan a libres al cerrar la temporada. Entre los días 10 y 28 se advierte diariamente si el plantel no cumple los mínimos; el día 29 puede producirse el despido.</p>
+          <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Vestuario','dressingRoom')}${gameHelpGoButton('firstTeam','Abrir Contratos','contracts')}${gameHelpGoButton('firstTeam','Abrir Grupos','groups')}</div>
+        </article>
+        <article class="help-card card">
           <h4>Empleados</h4>
-          <p>Psicólogo, Kinesiólogo y personal de observación pertenecen al club. El Preparador de juveniles pertenece a Tu Academia y se paga con dinero personal. Revisá esa diferencia antes de contratar.</p>
+          <p>Psicólogo, Kinesiólogo, Segundo entrenador y personal de observación pertenecen al club. El Segundo entrenador genera informes periódicos con tres prioridades sobre plantel, táctica, vestuario, contratos, calendario, finanzas, Academia y próximo rival. Sus recomendaciones no modifican la partida automáticamente. El Preparador de juveniles pertenece a Tu Academia y se paga con dinero personal.</p>
           ${gameHelpGoButton('employees','Abrir Empleados')}
         </article>
         <article class="help-card card">
@@ -1902,12 +1907,12 @@ function openGameHelpModal(){
       <div class="help-grid">
         <article class="help-card card">
           <h4>Calendario y competiciones</h4>
-          <p>Usá el calendario para planificar rotaciones. Tabla de posiciones, palmarés y estadísticas permiten evaluar el contexto del objetivo contractual y la evolución del equipo.</p>
-          <div class="help-actions">${gameHelpGoButton('fixture','Abrir Calendario')}${gameHelpGoButton('standings','Abrir Tabla','','standings')}${gameHelpGoButton('stats','Abrir Estadísticas')}</div>
+          <p>Usá el calendario para planificar liga, copas nacionales, supercopas y Mundial de Clubes. Las copas nacionales son a eliminación directa, se juegan en sedes neutrales y usan tandas de penales cuando necesitan un ganador; los goles de la tanda no se suman al marcador ni a las estadísticas. Las supercopas se disputan el día 300 entre el campeón de liga y el campeón de copa.</p>
+          <div class="help-actions">${gameHelpGoButton('fixture','Abrir Calendario')}${gameHelpGoButton('standings','Abrir Tabla','','standings')}${gameHelpGoButton('standings','Abrir Copas nacionales','','national-cups')}${gameHelpGoButton('stats','Abrir Estadísticas')}</div>
         </article>
         <article class="help-card card">
           <h4>Perfil, historial e hitos</h4>
-          <p>El historial registra clubes, temporadas y resultados. Los hitos, el prestigio y las licencias acompañan al manager durante toda la carrera, independientemente de su empleador actual.</p>
+          <p>El historial registra clubes, temporadas, cambios de trabajo, resultados y títulos. El prestigio, el momento profesional y las capacidades desarrolladas modifican qué clubes pueden interesarse. Las copas suman títulos oficiales; las supercopas tienen un valor menor dentro del legado.</p>
           ${gameHelpGoButton('mystats','Abrir perfil e historial','','profile')}
         </article>
         <article class="help-card card">
@@ -1940,7 +1945,7 @@ function openGameHelpModal(){
 
     <div class="card help-final-note">
       <h3>Secuencia recomendada</h3>
-      <p>Revisá Inicio y Mensajes, corregí Primer Equipo, comprobá el Calendario y el objetivo contractual, controlá por separado Finanzas del club y Cuenta Bancaria, atendé Tu Academia y recién entonces avanzá. En una carrera larga no sólo importa ganar: también sostener el contrato, financiar la Academia y conservar oportunidades futuras en la cartera.</p>
+      <p>Revisá Inicio y Mensajes, corregí Táctica, Grupos, Vestuario y Contratos, comprobá el Calendario de liga y copas, controlá por separado Finanzas del club y Cuenta Bancaria, atendé Tu Academia y revisá las ofertas laborales antes de avanzar. En una carrera larga importan los resultados, la confianza del plantel, la continuidad contractual y las oportunidades futuras.</p>
     </div>
   </div>`;
   openModal(body);

@@ -4,7 +4,8 @@ function renderWelcomeScreen(){
   const countryCount = new Set((seed?.clubs || []).map(club => clubCountry(club))).size;
   const divisionCount = (seed?.divisions || []).length;
   const challengeDefinition = typeof campoDestruidoChallengeDefinition === 'function' ? campoDestruidoChallengeDefinition() : null;
-  const challengeAvailable = typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
+  const challengeVisible = typeof CAMPO_DESTRUIDO_OPTION_VISIBLE === 'undefined' ? false : Boolean(CAMPO_DESTRUIDO_OPTION_VISIBLE);
+  const challengeAvailable = challengeVisible && typeof campoDestruidoChallengeAvailable === 'function' && campoDestruidoChallengeAvailable();
   const careerIds = typeof careerSaveSlotIds === 'function' ? careerSaveSlotIds() : [SAVE_SLOT_CAREER];
   const careerCards = careerIds.map(slotId => {
     const base = typeof baseSaveSlotLabel === 'function' ? baseSaveSlotLabel(slotId) : 'Carrera';
@@ -40,7 +41,7 @@ function renderWelcomeScreen(){
       <div class="save-slot-grid">
         ${careerCards}
 
-        <div class="card save-slot-card save-slot-challenge ${challengeAvailable ? '' : 'blocker'}">
+        ${challengeVisible ? `<div class="card save-slot-card save-slot-challenge ${challengeAvailable ? '' : 'blocker'}">
           <div class="save-slot-main">
             <p class="label">Reto predeterminado</p>
             <h3>${escapeHtml(challengeDefinition?.nombre || 'Campo destruido')}</h3>
@@ -50,7 +51,7 @@ function renderWelcomeScreen(){
             <button id="btnSlotCampoNew" class="primary" ${challengeAvailable ? '' : 'disabled'}>Iniciar reto</button>
             <button id="btnSlotCampoContinue" class="ghost" ${challengeAvailable ? '' : 'disabled'}>Continuar reto</button>
           </div>
-        </div>
+        </div>` : ''}
       </div>
 
       <section class="welcome-about card" aria-labelledby="welcomeAboutTitle">
@@ -70,7 +71,7 @@ function renderWelcomeScreen(){
       <div class="welcome-features">
         <span>1 carrera normal</span>
         <span>Guardado local</span>
-        <span>Retos separados</span>
+        <span>Copas nacionales</span>
         <span>Competencias online</span>
       </div>
     </section>`;

@@ -162,6 +162,7 @@ function campoDestruidoChallengeClubs(){
   return challengeClubNameCandidates().map(name => findClubByChallengeName(name)).filter(Boolean);
 }
 function campoDestruidoChallengeAvailable(){
+  if(typeof CAMPO_DESTRUIDO_OPTION_VISIBLE !== 'undefined' && !CAMPO_DESTRUIDO_OPTION_VISIBLE) return false;
   const definition = campoDestruidoChallengeDefinition();
   if(!definition) return false;
   const clubs = campoDestruidoChallengeClubs();

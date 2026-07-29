@@ -31,7 +31,7 @@ function renderFirstTeam(){
 }
 
 function marketTabsMarkup(){
-  return `<div class="card market-tabs"><div class="subtabs"><button class="${marketSubTab==='free'?'active':''}" data-market-tab="free">Jugadores libres</button><button class="${marketSubTab==='contracted'?'active':''}" data-market-tab="contracted">Jugadores contratados</button></div></div>`;
+  return `<div class="card market-tabs"><div class="subtabs"><button class="${marketSubTab==='free'?'active':''}" data-market-tab="free">Jugadores libres</button><button class="${marketSubTab==='contracted'?'active':''}" data-market-tab="contracted">Jugadores contratados</button><button class="${marketSubTab==='history'?'active':''}" data-market-tab="history">Registro anual</button></div></div>`;
 }
 function bindMarketTabs(){
   document.querySelectorAll('[data-market-tab]').forEach(btn => {
@@ -360,7 +360,8 @@ function bindMarketMoreButton(){
 function renderMarket(){
   mergeMarketPlayersIntoSeed(game.marketPlayers || []);
   ensurePlayerStateForAll();
-  if(marketSubTab !== 'contracted') marketSubTab = 'free';
+  if(!['free','contracted','history'].includes(marketSubTab)) marketSubTab = 'free';
+  if(marketSubTab === 'history' && typeof renderTransferHistoryMarket === 'function') return renderTransferHistoryMarket();
   if(marketSubTab === 'contracted') return renderContractedMarket();
   const freeAll = (game.marketPlayers || []).filter(p => Number(p.clubId || 0) === 0 && !p.sold);
   const freeBase = marketDiscoveryPool(freeAll, 'free').slice().sort((a,b)=>marketScoutedOverallNumber(b)-marketScoutedOverallNumber(a) || visibleOverall(b)-visibleOverall(a));
@@ -472,6 +473,7 @@ function hireFreeAgent(playerId){
   if(!Number.isFinite(game.playerMorale[playerId])) game.playerMorale[playerId] = 35 + hashNumber(`free-morale-${playerId}`, 55);
   ensurePlayerStateForAll();
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof recordTransferHistory === 'function') recordTransferHistory(player || game.marketPlayers[idx], { fromClubId:0, toClubId:Number(game.selectedClubId || 0), amount:0, kind:'free_signing', source:'manager_free_agent' });
   const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SIGNING_LOSS) : 0;
   const cohesionText = cohesionChange ? ` Cohesión ${cohesionChange > 0 ? '+' : ''}${cohesionChange}.` : '';
   pushGameMessage({ type:'mercado', title:'Jugador libre contratado', body:`${player?.name || 'El jugador'} aceptó la oferta y se incorporó al plantel como agente libre.${cohesionText}`, priority:'normal' });

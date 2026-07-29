@@ -1876,6 +1876,7 @@ function completeTransferSaleFromMessage(msg, player, options={}){
   game.marketPlayers = (game.marketPlayers || []).map(p => p.id === player.id ? { ...p, clubId:destinationClubId > 0 ? destinationClubId : -1, transferListed:false, intransferible:false, sold:destinationClubId > 0 ? false : true, transferAgreed:false } : p);
   removePlayerFromCurrentTactic(player.id);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:sellerClubId, toClubId:destinationClubId, toLabel:msg.action.foreignClub || '', amount:grossAmount, kind:'sale', source:'manager_sale', transactionKey:`outgoing-transfer-${msg.action.transferPendingId || msg.id || player.id}-${Number(game.seasonNumber || 1)}` });
   const cohesionChange = typeof adjustTeamCohesion === 'function' ? adjustTeamCohesion(sellerClubId, -TEAM_COHESION_SALE_LOSS) : 0;
   const finalStatus = options.status || msg.action.finalStatus || 'accepted';
   msg.action.status = finalStatus;
@@ -2068,6 +2069,7 @@ function processBotDismissals(){
       player.salaryPaidCount = 0;
       player.lastSalaryPaidSeason = 0;
       refreshPlayerClause(player);
+      if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:Number(club.id), toClubId:0, amount:0, kind:'bot_release', source:'bot_dismissal' });
       game.marketPlayers = game.marketPlayers || [];
       const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
       const copy = { ...player, clubId:0, freeAgent:true, sold:false, transferListed:false };

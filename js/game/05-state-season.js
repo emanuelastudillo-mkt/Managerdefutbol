@@ -276,6 +276,11 @@ function normalizeGame(saved){
   syncPlayerStarsWithClubs(normalized);
   normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
+  const hadTransferHistory = Boolean(normalized.transferHistory && typeof normalized.transferHistory === 'object' && !Array.isArray(normalized.transferHistory));
+  const previousTransferHistoryCount = Array.isArray(normalized.transferHistory?.entries) ? normalized.transferHistory.entries.length : 0;
+  if(typeof ensureTransferHistoryState === 'function') ensureTransferHistoryState(normalized);
+  else normalized.transferHistory = hadTransferHistory ? normalized.transferHistory : { version:'V8.99', nextId:1, entries:[] };
+  if(!hadTransferHistory || Number(normalized.transferHistory?.entries?.length || 0) !== previousTransferHistoryCount) normalized._needsAutosave = true;
   const manualReferenceRepair = typeof synchronizeManualPlayerReferences === 'function'
     ? synchronizeManualPlayerReferences(normalized, seed, { retiredManualPlayerIds:normalized?.manualRetiredPlayerIds || normalized?.retiredManualPlayerIds || [] })
     : { changed:false };
@@ -659,12 +664,14 @@ function bankruptcyReducedPrestige(originalPrestige){
 }
 function bankruptcyReleasePlayer(player, reason='Modo Bancarrota'){
   if(!player) return null;
+  const previousClubId = Number(player.clubId || 0);
   if(typeof setPlayerClubId === 'function') setPlayerClubId(player, 0);
   else player.clubId = 0;
   player.freeAgent = true;
   player.bankruptcyReleased = true;
   player.origin = player.origin || reason;
   if(typeof refreshPlayerClause === 'function') refreshPlayerClause(player);
+  if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:previousClubId, toClubId:0, amount:0, kind:'bankruptcy_release', source:'bankruptcy' });
   return { ...player };
 }
 function bankruptcyPositionPriority(position){
@@ -854,6 +861,7 @@ function newGame(selectedClubId, options={}){
     playerImpactWindows: {},
     special: typeof createInitialSpecialState === 'function' ? createInitialSpecialState(managerName) : null,
     marketPlayers: [],
+    transferHistory: { version:'V8.99', nextId:1, entries:[] },
     pendingTransfers: [],
     rejectedPurchaseOffers: {},
     rejectedFreeAgentOffers: {},

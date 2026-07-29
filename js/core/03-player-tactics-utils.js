@@ -2024,6 +2024,7 @@ function signFreeAgentForBotRoster(club, group, report){
       game.marketPlayers[idx] = { ...game.marketPlayers[idx], ...player, clubId:Number(club.id), freeAgent:false, youthFreeAgent:false, sold:false, transferListed:false, intransferible:false };
     }
   }
+  if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:0, toClubId:Number(club.id), amount:0, kind:'bot_free_signing', source:'bot_roster_repair' });
   if(report) report.signedFreeAgents = Number(report.signedFreeAgents || 0) + 1;
   return player;
 }

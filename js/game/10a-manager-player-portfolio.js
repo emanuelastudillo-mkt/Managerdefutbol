@@ -325,6 +325,7 @@ function processManagerPlayerPortfolioDaily(){
     if(game.playerStats?.[item.player.id]) game.playerStats[item.player.id].clubId = item.player.clubId;
     if(game.playerCareerStats?.[item.player.id]) game.playerCareerStats[item.player.id].clubId = item.player.clubId;
     if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+    if(typeof recordTransferHistory === 'function') recordTransferHistory(item.player, { fromClubId:Number(item.right.originClubId), toClubId:Number(buyer.club.id), amount:grossAmount, kind:'bot_transfer', source:'manager_portfolio_bot_sale', transactionKey:`portfolio-transfer-${item.right.id}-${today}` });
     if(typeof pushGameMessage === 'function') pushGameMessage({
       type:'mercado', priority:'normal', title:'Transferencia de un jugador de tu cartera',
       body:`${item.player.name} pasó de ${clubName(item.right.originClubId)} a ${clubName(buyer.club.id)} por ${formatMoney(grossAmount)}. Tu derecho económico ya fue acreditado.`,

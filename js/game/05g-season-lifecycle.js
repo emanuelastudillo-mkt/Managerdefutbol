@@ -558,6 +558,7 @@ function retireSeasonVeterans(){
   }));
   addRetiredPlayersToPool(retirees);
   const retiredIds = new Set(retirees.map(player => Number(player.id)));
+  if(typeof purgeTransferHistoryForRetiredPlayers === 'function') purgeTransferHistoryForRetiredPlayers(Array.from(retiredIds), game);
   const manualRetiredIds = retirees
     .filter(player => player.manualPlayer)
     .map(player => Number(player.id))

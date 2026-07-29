@@ -1,3 +1,34 @@
+# V8.99 · Registro anual de transferencias
+
+## Aplicación
+
+Aplicar sobre **V8.98**.
+
+## Mercado
+
+La pestaña Mercado incorpora la sección **Registro anual**, con todos los movimientos profesionales registrados durante cada temporada.
+
+Cada operación conserva:
+
+- Nombre del jugador.
+- Media al momento del movimiento.
+- Importe pagado o indicación de pase libre.
+- Estado anterior: agente libre o club de origen.
+- Destino: agente libre o club comprador.
+- Fecha, temporada y tipo de movimiento.
+
+Se registran compras, ventas, contrataciones libres, despidos, contratos vencidos y movimientos simulados entre clubes controlados por el juego.
+
+## Retirados
+
+Cuando un jugador se retira, todas sus entradas se eliminan del registro. Esta limpieza también se aplica al cargar partidas antiguas mediante la lista de retirados, evitando conservar movimientos de jugadores que ya no existen en la base activa.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. Las partidas V8.98 comienzan con el registro vacío y documentan las operaciones realizadas a partir de V8.99.
+
+## Base V8.98
+
 # V8.98 · Ficha de club horizontal
 
 ## Aplicación
@@ -129,3 +160,4 @@ Italia incorpora el mismo sistema de copa nacional utilizado por España e Ingla
 ## Compatibilidad
 
 Compatible con partidas de V8.94 y anteriores. En partidas que ya hayan superado la fecha de la primera ronda, la Copa Italia comenzará en la temporada siguiente para evitar alterar calendarios ya avanzados.
+

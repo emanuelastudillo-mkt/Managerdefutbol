@@ -409,6 +409,7 @@ function dismissOwnPlayer(playerId){
   player.lastSalaryPaidSeason = 0;
   refreshPlayerClause(player);
   if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+  if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:dismissedClubId, toClubId:0, amount:0, kind:'release', source:'manager_dismissal' });
   game.marketPlayers = game.marketPlayers || [];
   const idx = game.marketPlayers.findIndex(p => Number(p.id) === Number(player.id));
   const copy = { ...player, clubId:0, freeAgent:true, transferListed:false, intransferible:false, sold:false };
@@ -659,6 +660,7 @@ function processPendingTransfers(){
     refreshPlayerClause(player);
     ensurePlayerStateForAll();
     if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
+    if(typeof recordTransferHistory === 'function') recordTransferHistory(player, { fromClubId:sellerClubId, toClubId:destinationClubId, amount:Number(t.amount || 0), kind:'purchase', source:'pending_incoming', transactionKey:`pending-transfer-${t.id}` });
     if(game.playerStats && !game.playerStats[player.id]) game.playerStats[player.id] = typeof createEmptyPlayerStat === 'function' ? createEmptyPlayerStat(player) : { playerId:player.id, clubId:player.clubId, goals:0, assists:0, yellow:0, red:0, played:0, injuries:0, keySaves:0, errors:0, goalErrors:0 };
     const cohesionChange = Number(player.clubId) === Number(game.selectedClubId) && typeof adjustTeamCohesion === 'function'
       ? adjustTeamCohesion(game.selectedClubId, -TEAM_COHESION_SIGNING_LOSS)

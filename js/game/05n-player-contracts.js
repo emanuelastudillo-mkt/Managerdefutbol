@@ -302,6 +302,7 @@
     if(typeof refreshPlayerClause==='function') refreshPlayerClause(player);
   }
   function pcReleaseExpiredPlayer(player,previousSeason){
+    const previousClubId=Number(player?.clubId||0);
     if(typeof cleanTacticPlayerReferences==='function') cleanTacticPlayerReferences(game.tactic,player.id);
     if(typeof setPlayerClubId==='function') setPlayerClubId(player,0); else player.clubId=0;
     player.freeAgent=true; player.youthFreeAgent=false; player.transferListed=false; player.intransferible=false; player.sold=false;
@@ -311,6 +312,7 @@
     if(!game.marketPlayers.some(item=>Number(item.id)===Number(player.id))) game.marketPlayers.push(player);
     if(game.playerCondition) game.playerCondition[player.id]=5;
     if(game.playerMorale) game.playerMorale[player.id]=5;
+    if(typeof recordTransferHistory==='function') recordTransferHistory(player,{fromClubId:previousClubId,toClubId:0,amount:0,kind:'contract_expiry',source:'expired_contract',season:Number(game?.seasonNumber||previousSeason+1)});
     return player;
   }
   function processPlayerContractSeasonTransition(previousSeason,options={}){

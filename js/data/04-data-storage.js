@@ -2664,6 +2664,9 @@ async function loadLocal(silent=false, slotId=null){
     activeTab = 'home';
     renderAll();
     if(shouldAutosave) saveLocal(true);
+    setTimeout(() => {
+      if(typeof processScheduledCareerRankingUploads === 'function') processScheduledCareerRankingUploads({ source:'load_local' });
+    }, 0);
     if(!silent){
       const notice = recoveredFromBackup
         ? `${saveSlotLabel(slot, saved)} recuperada desde la copia de seguridad y duplicada nuevamente.`

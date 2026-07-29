@@ -198,6 +198,9 @@ function normalizeGame(saved){
   normalized.rankingLastUploadGameDate = validIsoDate(normalized.rankingLastUploadGameDate) ? normalized.rankingLastUploadGameDate : '';
   normalized.rankingLastManualUploadGameDate = validIsoDate(normalized.rankingLastManualUploadGameDate) ? normalized.rankingLastManualUploadGameDate : '';
   normalized.rankingLastAutomaticUploadGameDate = validIsoDate(normalized.rankingLastAutomaticUploadGameDate) ? normalized.rankingLastAutomaticUploadGameDate : '';
+  normalized.rankingScheduledCareerUploads = (normalized.rankingScheduledCareerUploads && typeof normalized.rankingScheduledCareerUploads === 'object' && !Array.isArray(normalized.rankingScheduledCareerUploads)) ? normalized.rankingScheduledCareerUploads : { version:1, events:{} };
+  normalized.rankingScheduledCareerUploads.version = 1;
+  normalized.rankingScheduledCareerUploads.events = (normalized.rankingScheduledCareerUploads.events && typeof normalized.rankingScheduledCareerUploads.events === 'object' && !Array.isArray(normalized.rankingScheduledCareerUploads.events)) ? normalized.rankingScheduledCareerUploads.events : {};
   normalized.selectedCountry = normalized.selectedCountry || clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))) || 'Argentina';
   normalized.selectedLeagueId = normalized.selectedLeagueId || (seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))?.divisionId || 'default');
   normalized.playerMentalities = (normalized.playerMentalities && typeof normalized.playerMentalities === 'object' && !Array.isArray(normalized.playerMentalities)) ? normalized.playerMentalities : {};
@@ -833,6 +836,7 @@ function newGame(selectedClubId, options={}){
     rankingLastUploadGameDate: '',
     rankingLastManualUploadGameDate: '',
     rankingLastAutomaticUploadGameDate: '',
+    rankingScheduledCareerUploads: { version:1, events:{} },
     manualRetiredPlayerIds: [],
     retiredPlayerPool: [],
     surnameVarietyVersion: typeof PLAYER_SURNAME_VARIETY_VERSION !== 'undefined' ? PLAYER_SURNAME_VARIETY_VERSION : 'V8.17-surnames-x10',

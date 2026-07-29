@@ -461,7 +461,169 @@ const RANKING_AUTO_EVENT_LABELS = {
 function rankingEventLabel(eventType){
   const event = String(eventType || '');
   if(event.startsWith('manual_snapshot')) return 'Carga manual de carrera';
+  if(event.startsWith('career_snapshot_d')){
+    const day = Math.max(0, Math.round(Number(event.match(/d(\d+)$/)?.[1] || 0)));
+    return day ? `Carrera actualizada automáticamente · día ${day}` : 'Carrera actualizada automáticamente';
+  }
   return RANKING_AUTO_EVENT_LABELS[event] || 'Carrera del manager';
+}
+
+const RANKING_SCHEDULED_CAREER_DAYS = Object.freeze([150, 250, 350]);
+
+function rankingScheduledCareerState(){
+  if(!game) return null;
+  const state = game.rankingScheduledCareerUploads && typeof game.rankingScheduledCareerUploads === 'object' && !Array.isArray(game.rankingScheduledCareerUploads)
+    ? game.rankingScheduledCareerUploads
+    : {};
+  state.version = 1;
+  state.events = state.events && typeof state.events === 'object' && !Array.isArray(state.events) ? state.events : {};
+  game.rankingScheduledCareerUploads = state;
+  return state;
+}
+function rankingScheduledCareerKey(season, day){
+  return `${Math.max(1, Math.round(Number(season || 1)))}:${Math.max(1, Math.round(Number(day || 1)))}`;
+}
+function rankingScheduledCareerEventType(day){
+  return `career_snapshot_d${Math.max(1, Math.round(Number(day || 1)))}`;
+}
+function rankingScheduledCareerStatusLabel(status){
+  if(status === 'success') return 'enviada';
+  if(status === 'pending') return 'enviando';
+  if(status === 'error') return 'pendiente de reintento';
+  if(status === 'skipped') return 'pendiente';
+  if(status === 'superseded') return 'reemplazada por una actualización posterior';
+  return 'programada';
+}
+function rankingRecordScheduledCareerState(season, day, status, extra={}){
+  const state = rankingScheduledCareerState();
+  if(!state) return null;
+  const key = rankingScheduledCareerKey(season, day);
+  const previous = state.events[key] && typeof state.events[key] === 'object' ? state.events[key] : {};
+  const next = {
+    ...previous,
+    season:Math.max(1, Math.round(Number(season || game?.seasonNumber || 1))),
+    day:Math.max(1, Math.round(Number(day || 1))),
+    status:String(status || previous.status || 'scheduled'),
+    eventType:rankingScheduledCareerEventType(day),
+    eventLabel:`Carrera actualizada automáticamente · día ${Math.max(1, Math.round(Number(day || 1)))}`,
+    attempts:Math.max(0, Math.round(Number(extra.attempts ?? previous.attempts ?? 0))),
+    lastAttemptGameDate:String(extra.lastAttemptGameDate ?? previous.lastAttemptGameDate ?? ''),
+    attemptedAt:String(extra.attemptedAt ?? previous.attemptedAt ?? ''),
+    submittedAt:String(extra.submittedAt ?? previous.submittedAt ?? ''),
+    error:String(extra.error ?? (status === 'success' ? '' : previous.error) ?? ''),
+    notificationSent:Boolean(extra.notificationSent ?? previous.notificationSent)
+  };
+  state.events[key] = next;
+  const keys = Object.keys(state.events).sort((a,b) => {
+    const [as,ad] = a.split(':').map(Number);
+    const [bs,bd] = b.split(':').map(Number);
+    return as - bs || ad - bd;
+  });
+  while(keys.length > 18){
+    const remove = keys.shift();
+    delete state.events[remove];
+  }
+  return next;
+}
+function rankingNotifyScheduledCareerPending(entry, reason=''){
+  if(!entry || entry.notificationSent || typeof pushGameMessage !== 'function') return;
+  const loginRequired = /iniciar sesión|sesión|login/i.test(String(reason || ''));
+  pushGameMessage({
+    id:`ranking-scheduled-pending-${entry.season}-${entry.day}`,
+    type:'sistema',
+    priority:'normal',
+    title:'Actualización de carrera pendiente',
+    body:loginRequired
+      ? `La subida automática prevista para el día ${entry.day} quedó pendiente. Iniciá sesión en Ranking para que se reintente en el próximo avance.`
+      : `La subida automática prevista para el día ${entry.day} no pudo completarse y se reintentará en un próximo avance.`,
+  });
+  entry.notificationSent = true;
+}
+function processScheduledCareerRankingUploads(options={}){
+  const summary = { checked:false, dispatched:false, season:0, currentDay:0, targetDay:0, status:'idle', source:String(options.source || 'daily') };
+  if(!game || game?.saveSlotId?.startsWith?.('challenge:')) return summary;
+  const currentDate = rankingCurrentGameDate();
+  if(!validIsoDate(currentDate)) return summary;
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const currentDay = Math.max(1, Math.round(Number(seasonDayFromDate(currentDate, game.seasonYear || seasonYearForNumber(season)) || 1)));
+  const state = rankingScheduledCareerState();
+  if(!state) return summary;
+  summary.checked = true;
+  summary.season = season;
+  summary.currentDay = currentDay;
+  state.lastObservedSeason = season;
+  state.lastObservedDay = currentDay;
+  state.lastObservedDate = currentDate;
+
+  const dueDays = RANKING_SCHEDULED_CAREER_DAYS.filter(day => day <= currentDay);
+  if(!dueDays.length) return summary;
+  const unsentDays = dueDays.filter(day => state.events[rankingScheduledCareerKey(season, day)]?.status !== 'success' && state.events[rankingScheduledCareerKey(season, day)]?.status !== 'superseded');
+  if(!unsentDays.length){ summary.status = 'complete'; return summary; }
+  const targetDay = Math.max(...unsentDays);
+  summary.targetDay = targetDay;
+  unsentDays.filter(day => day < targetDay).forEach(day => {
+    const prior = state.events[rankingScheduledCareerKey(season, day)];
+    if(!prior || prior.status !== 'success') rankingRecordScheduledCareerState(season, day, 'superseded', { error:`Reemplazada por la actualización del día ${targetDay}.` });
+  });
+
+  const key = rankingScheduledCareerKey(season, targetDay);
+  const previous = state.events[key] || {};
+  if(previous.status === 'success'){ summary.status = 'success'; return summary; }
+  if(previous.lastAttemptGameDate === currentDate && ['pending','error','skipped'].includes(previous.status)){
+    summary.status = previous.status;
+    return summary;
+  }
+
+  const attempts = Math.max(0, Math.round(Number(previous.attempts || 0))) + 1;
+  rankingRecordScheduledCareerState(season, targetDay, 'pending', {
+    attempts,
+    lastAttemptGameDate:currentDate,
+    attemptedAt:new Date().toISOString(),
+    error:''
+  });
+  if(typeof saveLocal === 'function') saveLocal(true);
+
+  const eventType = rankingScheduledCareerEventType(targetDay);
+  const eventLabel = `Carrera actualizada automáticamente · día ${targetDay}`;
+  const dispatched = submitRankingAutomatically(eventType, {
+    forceRetry:true,
+    notifyErrors:false,
+    eventLabel,
+    onSuccess:(payload) => {
+      rankingRecordScheduledCareerState(season, targetDay, 'success', {
+        attempts,
+        lastAttemptGameDate:payload?.gameDate || currentDate,
+        submittedAt:new Date().toISOString(),
+        error:'',
+        notificationSent:false
+      });
+      if(typeof saveLocal === 'function') saveLocal(true);
+      if(activeTab === 'ranking') renderRankingOnline();
+    },
+    onError:(message) => {
+      const entry = rankingRecordScheduledCareerState(season, targetDay, 'error', {
+        attempts,
+        lastAttemptGameDate:currentDate,
+        error:String(message || 'Error al conectar con el ranking online.')
+      });
+      rankingNotifyScheduledCareerPending(entry, message);
+      if(typeof saveLocal === 'function') saveLocal(true);
+      if(activeTab === 'ranking') renderRankingOnline();
+    },
+    onSkipped:(message) => {
+      const entry = rankingRecordScheduledCareerState(season, targetDay, 'skipped', {
+        attempts,
+        lastAttemptGameDate:currentDate,
+        error:String(message || 'La carrera todavía no está lista para subir.')
+      });
+      rankingNotifyScheduledCareerPending(entry, message);
+      if(typeof saveLocal === 'function') saveLocal(true);
+      if(activeTab === 'ranking') renderRankingOnline();
+    }
+  });
+  summary.dispatched = Boolean(dispatched);
+  summary.status = dispatched ? 'pending' : (state.events[key]?.status || 'skipped');
+  return summary;
 }
 function rankingSubmissionKey(payload, eventType=payload?.eventType || 'career_snapshot'){
   if(String(payload?.recordScope || '') === 'career') return `${payload?.saveCode || 'FM'}-CAREER`;
@@ -1125,8 +1287,16 @@ function rankingUploadEntries(){
 }
 function rankingAutomaticStatusMarkup(){
   if(!game) return '<p class="small muted">No hay partida activa.</p>';
-  const entries = rankingUploadEntries().filter(entry => ['season_end','dismissal'].includes(String(entry.eventType || '')));
-  if(!entries.length) return '<p class="small muted">Todavía no hay envíos automáticos registrados en esta partida.</p>';
+  const entries = rankingUploadEntries().filter(entry => ['season_end','dismissal'].includes(String(entry.eventType || '')) || String(entry.eventType || '').startsWith('career_snapshot_d'));
+  const season = Math.max(1, Math.round(Number(game.seasonNumber || 1)));
+  const scheduledState = rankingScheduledCareerState();
+  const schedule = RANKING_SCHEDULED_CAREER_DAYS.map(day => {
+    const entry = scheduledState?.events?.[rankingScheduledCareerKey(season, day)] || {};
+    const status = rankingScheduledCareerStatusLabel(entry.status || 'scheduled');
+    const cls = entry.status === 'success' ? 'ok' : entry.status === 'error' ? 'bad' : entry.status === 'pending' ? 'warn' : 'muted';
+    return `<span>Día ${day}: <strong class="${cls}">${escapeHtml(status)}</strong></span>`;
+  }).join(' · ');
+  if(!entries.length) return `<div class="ranking-auto-status"><p class="small muted">Subidas automáticas de esta temporada</p><p class="small">${schedule}</p></div>`;
   const latest = entries[0];
   const statusText = latest.status === 'success' ? 'Enviado' : latest.status === 'pending' ? 'Pendiente' : latest.status === 'error' ? 'Error' : 'Registrado';
   const statusClass = latest.status === 'success' ? 'ok' : latest.status === 'error' ? 'bad' : 'warn';
@@ -1134,6 +1304,7 @@ function rankingAutomaticStatusMarkup(){
     <p class="small muted">Último evento automático</p>
     <p><strong>${escapeHtml(latest.eventLabel || rankingEventLabel(latest.eventType))}</strong> · <span class="${statusClass}">${escapeHtml(statusText)}</span></p>
     <p class="small muted">${escapeHtml(latest.club || '')}${latest.season ? ` · Temporada ${Number(latest.season)}` : ''}${latest.error ? ` · ${escapeHtml(latest.error)}` : ''}</p>
+    <p class="small muted">${schedule}</p>
   </div>`;
 }
 function rankingSubmitPanelMarkup(payload, endpoint){
@@ -1147,7 +1318,7 @@ function rankingSubmitPanelMarkup(payload, endpoint){
     : 'Todavía no hiciste una carga manual en esta partida.';
   return `<div class="card ranking-submit-card">
     <div class="row"><div><p class="label">Publicar carrera</p><h3>Carrera del mánager</h3></div><span class="pill">${game ? `Temp. ${game.seasonNumber || 1}` : 'Sin partida'}</span></div>
-    <p class="muted">Podés subir manualmente la carrera completa del mánager cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Al finalizar la temporada o ante un despido, el juego actualiza la misma carrera sin duplicar registros.</p>
+    <p class="muted">Podés subir manualmente la carrera completa del mánager cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Además, se actualiza automáticamente en los días 150, 250 y 350, al finalizar la temporada o ante un despido, sin duplicar carreras.</p>
     <div class="ranking-manual-actions">
       <button id="submitRankingManual" class="primary" type="button" ${canUpload ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
       <span id="rankingManualStatus" class="small muted">${!loginOk ? 'Tenés que iniciar sesión para subir récords.' : endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
@@ -1270,31 +1441,34 @@ function submitRankingAutomatically(eventType='season_end', options={}){
     Object.assign(payload, rankingScoreAliases(payload));
     payload.submissionKey = rankingSubmissionKey(payload, payload.eventType);
   }
-  const error = validateRankingSubmit(payload, managerName, endpoint, { automatic:true });
+  const error = validateRankingSubmit(payload, managerName, endpoint, { automatic:true, forceRetry:Boolean(options.forceRetry) });
   if(error){
+    options.onSkipped?.(error, payload);
     if(!/ya fue enviado|pendiente/.test(error) && options.notifyErrors) showNotice(error);
     return false;
   }
   rankingRecordUploadState(payload, 'pending', { attemptedAt:new Date().toISOString() });
   saveLocal(true);
   submitRankingToCloudflare(endpoint, payload, {
-    onSuccess: () => {
+    onSuccess: (data) => {
       rankingRecordUploadState(payload, 'success', { submittedAt:new Date().toISOString() });
       game.rankingLastAutomaticUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       game.rankingLastUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       rankingRowsCache = dedupeRankingRows([normalizeRankingRow(payload)].concat(rankingRowsCache));
-      if(typeof pushGameMessage === 'function'){
-        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking actualizado', body:`${payload.eventLabel} enviado automáticamente al ranking online.`, id:`ranking-auto-ok-${payload.submissionKey}` });
+      if(options.notifySuccess !== false && typeof pushGameMessage === 'function'){
+        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking actualizado', body:`${payload.eventLabel} enviado automáticamente al ranking online.`, id:`ranking-auto-ok-${payload.submissionKey}-${payload.eventType}` });
       }
       saveLocal(true);
+      options.onSuccess?.(payload, data);
       if(activeTab === 'ranking') renderRankingOnline();
     },
     onError: (message) => {
       rankingRecordUploadState(payload, 'error', { error:message || 'Error al conectar con el ranking online.' });
-      if(typeof pushGameMessage === 'function'){
-        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking no enviado', body:`No se pudo enviar automáticamente el evento ${payload.eventLabel}: ${message || 'error de conexión'}.`, id:`ranking-auto-error-${payload.submissionKey}-${Date.now()}` });
+      if(options.notifyErrors !== false && typeof pushGameMessage === 'function'){
+        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking no enviado', body:`No se pudo enviar automáticamente el evento ${payload.eventLabel}: ${message || 'error de conexión'}.`, id:`ranking-auto-error-${payload.submissionKey}-${payload.eventType}-${Date.now()}` });
       }
       saveLocal(true);
+      options.onError?.(message || 'Error al conectar con el ranking online.', payload);
       if(activeTab === 'ranking') renderRankingOnline();
     }
   });

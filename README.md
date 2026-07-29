@@ -1,3 +1,28 @@
+# V9.02 · Subidas automáticas de carrera
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.01.
+
+## Ranking online
+
+- La carrera del mánager se intenta subir automáticamente en los días 150, 250 y 350 de cada temporada.
+- Cada hito se ejecuta una sola vez cuando el envío se completa.
+- Si falta iniciar sesión o hay un problema de conexión, el hito queda pendiente y se reintenta en un avance posterior.
+- Al cargar una partida que ya superó una fecha programada, se publica únicamente el hito más reciente pendiente para evitar tres envíos consecutivos.
+- Las actualizaciones utilizan el mismo registro de carrera, por lo que no crean managers duplicados.
+- Se mantienen las subidas automáticas existentes al finalizar la temporada y ante un despido.
+
+## Interfaz
+
+La pantalla Ranking muestra el estado de las cargas programadas de los días 150, 250 y 350.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El nuevo estado de programación se crea automáticamente al cargar una carrera de V9.01.
+
+## Base consolidada
+
 # V9.01 · Modo claro y oscuro
 
 ## Tipo de entrega

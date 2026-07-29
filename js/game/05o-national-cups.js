@@ -1,7 +1,7 @@
 /* V8.79 · Copas nacionales y supercopas: sorteos, cruces, sedes neutrales, recaudación y títulos. */
 
-const NATIONAL_CUP_VERSION = 1;
-const NATIONAL_CUP_COUNTRIES = ['Argentina','Chile','España','Rumania','Inglaterra','Brasil'];
+const NATIONAL_CUP_VERSION = 2;
+const NATIONAL_CUP_COUNTRIES = ['Argentina','Chile','España','Rumania','Inglaterra','Brasil','Italia'];
 const NATIONAL_CUP_CONFIGS = [
   {
     id:'copa-argentina', name:'Copa Argentina', country:'Argentina', drawDay:20,
@@ -20,7 +20,8 @@ const NATIONAL_CUP_CONFIGS = [
     ['copa-del-rey','Copa del Rey','España',22],
     ['copa-rumana','Copa Rumana','Rumania',23],
     ['fa-cup','FA Cup','Inglaterra',24],
-    ['copa-brasil','Copa Brasil','Brasil',25]
+    ['copa-brasil','Copa Brasil','Brasil',25],
+    ['copa-italia','Copa Italia','Italia',26]
   ].map(([id,name,country,drawDay]) => ({
     id,name,country,drawDay,directSeeds:14,
     stages:[
@@ -460,7 +461,7 @@ function processNationalCupsDaily(options={}){
       if(nationalCupDrawEdition(config, { silent:Boolean(options.silent) })) drawn += 1;
     }else if(day > firstStageDay){
       edition.status = 'skipped';
-      edition.skippedReason = 'La partida ya había superado la primera ronda al instalar V8.79.';
+      edition.skippedReason = 'La partida ya había superado la primera ronda cuando se activó esta copa.';
       skipped += 1;
     }
   });

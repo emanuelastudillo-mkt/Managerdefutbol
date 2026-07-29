@@ -1,34 +1,39 @@
-# V8.94 · Objetivos, finanzas mensuales y amistosos
+# V8.95 · Copa Italia y Supercopa de Italia
 
 ## Aplicación
 
-La versión incremental se aplica sobre **V8.93**. La versión completa incluye todo el juego y excluye las imágenes.
+La versión incremental se aplica sobre **V8.94**. La versión completa incluye todo el juego y excluye las imágenes.
 
-## Confianza por objetivos
+## Copa Italia
 
-- Cumplir el objetivo de temporada aumenta **4 puntos** la confianza de cada jugador activo en el mánager.
-- Superarlo por al menos **0,20 puntos por partido** aumenta **7 puntos**.
-- El efecto se aplica una sola vez por temporada y club.
-- El valor actualizado se conserva mediante el sistema normal de continuidad entre temporadas.
+Italia incorpora el mismo sistema de copa nacional utilizado por España e Inglaterra:
 
-## Finanzas
+- Participan los 18 clubes de la Serie A Italia.
+- Los 14 mejores clasificados avanzan directamente a octavos de final.
+- Los otros 4 clubes disputan una fase previa de dos partidos.
+- Todos los cruces son a eliminación directa y en sede neutral.
+- Los empates se definen por penales.
+- El ganador recibe la recaudación del partido.
+- El campeón queda registrado como ganador de la **Copa Italia** y como título oficial del mánager cuando corresponda.
 
-La pestaña principal ahora muestra un bloque específico de gastos mensuales con:
+## Calendario
 
-- Contratos y servicios fijos.
-- Impuesto, electricidad y limpieza del ciclo actual.
-- Costos diarios y semanales proyectados a 30 días.
-- Cuotas bancarias previstas.
-- Referencia separada de los sueldos anuales del plantel.
+- Sorteo: día 26 de la temporada.
+- Fase previa: primer miércoles de mayo.
+- Octavos: primer miércoles de junio.
+- Cuartos: primer miércoles de agosto.
+- Semifinales: primer miércoles de septiembre.
+- Final: primer miércoles de octubre.
 
-## Partidos amistosos
+## Supercopa de Italia
 
-- La recaudación se divide en partes iguales entre ambos clubes.
-- El ingreso queda registrado en las finanzas de los dos equipos.
-- La moral continúa utilizando el sistema normal de resultado y participación.
-- La cohesión cambia **+4 por victoria**, **+2 por empate** y **-2 por derrota**.
-- Los amistosos también cuentan para electricidad y limpieza del ciclo mensual.
+- Se disputa el día 300.
+- Enfrenta al campeón de la Serie A Italia con el campeón de la Copa Italia.
+- Si un mismo club gana ambas competiciones, participa el segundo de la liga.
+- Se juega a partido único, en el estadio de mayor capacidad de Italia.
+- En caso de empate se define por penales.
+- El ganador recibe la recaudación y registra un título oficial de valor menor.
 
 ## Compatibilidad
 
-Compatible con partidas de V8.93 y anteriores. No requiere comenzar una carrera nueva.
+Compatible con partidas de V8.94 y anteriores. En partidas que ya hayan superado la fecha de la primera ronda, la Copa Italia comenzará en la temporada siguiente para evitar alterar calendarios ya avanzados.

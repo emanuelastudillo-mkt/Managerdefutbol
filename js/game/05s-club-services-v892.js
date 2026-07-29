@@ -224,7 +224,10 @@
   function cfsPushMessage(message){
     if(typeof pushGameMessage === 'function') pushGameMessage(message);
   }
-  function cfsSave(){ if(typeof saveLocal === 'function') saveLocal(true); }
+  function cfsSave(){
+    if(typeof saveLocal !== 'function') return;
+    Promise.resolve(saveLocal(true)).catch(error => console.warn('No se pudo guardar el estado de los servicios del club.', error));
+  }
 
   function cfsContractCurrentOption(state, category){
     const contract = state?.[category];
@@ -381,10 +384,10 @@
     const state = cfsClubState(clubId);
     const key = `${cfsSeason()}:${String(match.id || `${match.homeId}-${match.awayId}-${match.date || ''}`)}`;
     if(state.processedTravelMatches[key]) return null;
-    state.processedTravelMatches[key] = true;
     const hotel = cfsContractCurrentOption(state, 'hotel');
     const transport = cfsContractCurrentOption(state, 'transport');
     if(!hotel && !transport) return null;
+    state.processedTravelMatches[key] = true;
     const isHome = Number(match.homeId) === clubId;
     const ids = new Set([
       ...(isHome ? (match.playedIdsHome || match.starterIdsHome || []) : (match.playedIdsAway || match.starterIdsAway || [])),
@@ -531,7 +534,7 @@
     cfsRecordHistory(state, 'press_event', { optionId:option.id, players:ids.length, fans:gain });
     cfsPushMessage({
       type:'directiva', priority:'normal', title:'Actividad con hinchas',
-      body:`${option.name} organizó una jornada con ${participants.map(player => player.name).join(', ')}. La acción generó una ganancia ${cfsLevelLabel(option.effects.fans)} de hinchas y una ${cfsEffectText('moral', option.effects.morale)}. La exposición produjo también una ${cfsEffectText('estado físico', option.effects.condition)} en los jugadores participantes.`,
+      body:`${option.name} organizó una jornada con ${participants.map(player => player.name).join(', ')}. La acción generó una ganancia ${cfsLevelLabel(option.effects.fans)} de hinchas y ${cfsEffectText('moral', option.effects.morale)}. La exposición produjo también ${cfsEffectText('estado físico', option.effects.condition)} en los jugadores participantes.`,
       id:`club-service-press-${cfsSeason()}-${cfsClubId()}-${today}`
     });
     return { fans:gain, players:ids.length };

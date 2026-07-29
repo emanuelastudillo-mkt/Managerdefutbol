@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.02',
+  version: 'V9.03',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -24,31 +24,31 @@ window.GAME_CONFIG = {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.
     cacheMode: 'default',
     // El juego carga y combina todos los JSON válidos de esta lista.
-    leagueUrls: ['data/Liga Argentina.json?v=9.02', 'data/Liga Chile.json?v=9.02', 'data/Liga Brasil.json?v=9.02', 'data/Liga Inglaterra.json?v=9.02', 'data/Liga Espana.json?v=9.02', 'data/Liga Italia.json?v=9.02', 'data/Liga Rumania.json?v=9.02'],
+    leagueUrls: ['data/Liga Argentina.json?v=9.03', 'data/Liga Chile.json?v=9.03', 'data/Liga Brasil.json?v=9.03', 'data/Liga Inglaterra.json?v=9.03', 'data/Liga Espana.json?v=9.03', 'data/Liga Italia.json?v=9.03', 'data/Liga Rumania.json?v=9.03'],
     // Manifest principal y chunks de jugadores. Si playersUrls está definido, el juego carga esos archivos en paralelo.
-    playersUrl: 'data/jugadores.json?v=9.02',
+    playersUrl: 'data/jugadores.json?v=9.03',
     playersUrls: [
-      'data/jugadores/argentina-liga-profesional.json?v=9.02',
-      'data/jugadores/argentina-primera-nacional.json?v=9.02',
-      'data/jugadores/argentina-federal-a.json?v=9.02',
-      'data/jugadores/chile-primera-division-chile.json?v=9.02',
-      'data/jugadores/brasil-brasileirao.json?v=9.02',
-      'data/jugadores/inglaterra-premier-league.json?v=9.02',
-      'data/jugadores/espana-laliga-espana.json?v=9.02',
-      'data/jugadores/italia-serie-a-italia.json?v=9.02',
-      'data/jugadores/rumania-superliga-rumania.json?v=9.02'
+      'data/jugadores/argentina-liga-profesional.json?v=9.03',
+      'data/jugadores/argentina-primera-nacional.json?v=9.03',
+      'data/jugadores/argentina-federal-a.json?v=9.03',
+      'data/jugadores/chile-primera-division-chile.json?v=9.03',
+      'data/jugadores/brasil-brasileirao.json?v=9.03',
+      'data/jugadores/inglaterra-premier-league.json?v=9.03',
+      'data/jugadores/espana-laliga-espana.json?v=9.03',
+      'data/jugadores/italia-serie-a-italia.json?v=9.03',
+      'data/jugadores/rumania-superliga-rumania.json?v=9.03'
     ],
-    manualPlayersUrl: 'data/jugadores_manuales.json?v=9.02',
-    sponsorsUrl: 'data/sponsors.json?v=9.02',
-    employeesUrl: 'data/empleados.json?v=9.02',
-    installationsUrl: 'data/instalaciones.json?v=9.02',
-    eventsUrl: 'data/eventos.json?v=9.02',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.02',
-    managerAchievementsUrl: 'data/hitos_manager.json?v=9.02',
-    retosManagerUrl: 'data/retos_manager.json?v=9.02',
-    estadiosUrls: ['data/estadios_argentina.json?v=9.02', 'data/estadios_chile.json?v=9.02', 'data/estadios_brasil.json?v=9.02', 'data/estadios_inglaterra.json?v=9.02', 'data/estadios_espana.json?v=9.02', 'data/estadios_italia.json?v=9.02', 'data/estadios_rumania.json?v=9.02'],
-    hinchasUrls: ['data/hinchas_argentina.json?v=9.02', 'data/hinchas_chile.json?v=9.02', 'data/hinchas_brasil.json?v=9.02', 'data/hinchas_inglaterra.json?v=9.02', 'data/hinchas_espana.json?v=9.02', 'data/hinchas_italia.json?v=9.02', 'data/hinchas_rumania.json?v=9.02'],
-    relatosPartidoUrl: 'data/relatos_partido.json?v=9.02'
+    manualPlayersUrl: 'data/jugadores_manuales.json?v=9.03',
+    sponsorsUrl: 'data/sponsors.json?v=9.03',
+    employeesUrl: 'data/empleados.json?v=9.03',
+    installationsUrl: 'data/instalaciones.json?v=9.03',
+    eventsUrl: 'data/eventos.json?v=9.03',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.03',
+    managerAchievementsUrl: 'data/hitos_manager.json?v=9.03',
+    retosManagerUrl: 'data/retos_manager.json?v=9.03',
+    estadiosUrls: ['data/estadios_argentina.json?v=9.03', 'data/estadios_chile.json?v=9.03', 'data/estadios_brasil.json?v=9.03', 'data/estadios_inglaterra.json?v=9.03', 'data/estadios_espana.json?v=9.03', 'data/estadios_italia.json?v=9.03', 'data/estadios_rumania.json?v=9.03'],
+    hinchasUrls: ['data/hinchas_argentina.json?v=9.03', 'data/hinchas_chile.json?v=9.03', 'data/hinchas_brasil.json?v=9.03', 'data/hinchas_inglaterra.json?v=9.03', 'data/hinchas_espana.json?v=9.03', 'data/hinchas_italia.json?v=9.03', 'data/hinchas_rumania.json?v=9.03'],
+    relatosPartidoUrl: 'data/relatos_partido.json?v=9.03'
   },
   calendario: {
     // Cada avance equivale a 1 día calendario. La temporada se procesa día por día.

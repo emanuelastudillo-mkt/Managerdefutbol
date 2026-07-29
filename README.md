@@ -1,3 +1,24 @@
+# V9.03 · Corrección integral de contraste del modo claro
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.02.
+
+## Interfaz
+
+- Se corrigieron textos blancos o grises demasiado claros sobre paneles claros.
+- Se reforzó la jerarquía entre texto principal, secundario, enlaces y estados positivos, de advertencia o error.
+- Se adaptaron inicio, mensajes, mercado, academia, empleados, finanzas, estadio, partidos, competiciones, cursos, filosofía, vestuario, perfiles, ranking FIFA y registro de transferencias.
+- Las superficies históricas con fondos oscuros se convierten a fondos claros cuando corresponde.
+- Canchas, camisetas, cartas especiales y botones con fondos sólidos conservan texto blanco para mantener contraste.
+- El modo oscuro no fue modificado.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El cambio es exclusivamente visual y la preferencia de tema continúa guardándose en el navegador.
+
+## Base consolidada
+
 # V9.02 · Subidas automáticas de carrera
 
 ## Tipo de entrega

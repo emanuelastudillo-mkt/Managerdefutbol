@@ -1,3 +1,47 @@
+# V8.96 · Jerarquía, disciplina y estrellas difíciles
+
+## Aplicación
+
+Aplicar sobre **V8.95**. También se incluye una versión completa sin imágenes.
+
+## Nuevo sistema
+
+Los jugadores pueden generar conflictos especiales cuando combinan una o más fuentes de poder interno con disciplina baja:
+
+- Media absoluta alta.
+- Diferencia importante de media respecto del resto del plantel.
+- Sueldo anual superior o cercano al sueldo anual del mánager.
+- Influencia dentro del vestuario.
+
+La disciplina funciona como filtro principal: una figura profesional y disciplinada no se vuelve problemática únicamente por ser buena o cobrar mucho.
+
+## Autoridad del mánager
+
+Las respuestas firmes no tienen éxito automático. La posibilidad de imponerse depende de:
+
+- Liderazgo y prestigio del mánager.
+- Confianza general del vestuario.
+- Diferencia salarial con la figura.
+- Media, influencia, disciplina y riesgo interno del jugador.
+
+## Eventos incorporados
+
+- Accidente con un Ferrari y lesión extradeportiva.
+- Fiesta y pérdida de forma física un día antes de un partido.
+- Exigencia de titularidad.
+- Exigencia de capitanía.
+- Crítica pública al mánager después de una derrota.
+
+## Interfaz
+
+La pestaña Vestuario muestra los jugadores propensos, el principal riesgo interno, el sueldo del mánager y los incidentes de la temporada. La ficha individual muestra disciplina, diferencia de media, relación salarial y riesgo de conflicto.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El estado nuevo se crea automáticamente al cargar una carrera de V8.95 o anterior.
+
+## Base anterior
+
 # V8.95 · Copa Italia y Supercopa de Italia
 
 ## Aplicación

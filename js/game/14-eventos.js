@@ -256,6 +256,10 @@ function selectLockerRoomParticipants(event, seedText=''){
   const starters = lockerRoomTacticIds('starters');
   const bench = lockerRoomTacticIds('bench');
   const selector = String(event?.selector || 'random_pair');
+  if(String(event?.sistema || '') === 'estrellas' && typeof starPlayerSelectParticipants === 'function'){
+    const selected = starPlayerSelectParticipants(event, eligible, seedText);
+    if(Array.isArray(selected)) return selected;
+  }
   const countMap = {
     random_pair:2, goalkeeper_defender:2, captain_challenger:2, reserve_single:1,
     random_four:4, random_three:3, starting_pair:2, veteran_youth:2,
@@ -414,6 +418,24 @@ function lockerRoomApplyDecisionEffect(effect={}, context={}){
     const changes = players.map(player => ({ playerId:Number(player.id), delta:lockerRoomApplyPlayerMorale(player, delta) }));
     return { type, playerIds:players.map(p => p.id), delta, changes };
   }
+  if(type === 'confianza_jugadores'){
+    const delta = Number(effect.valor || 0);
+    const changes = players.map(player => ({
+      playerId:Number(player.id),
+      delta:typeof managerDressingRoom?.changeTrust === 'function'
+        ? managerDressingRoom.changeTrust(player.id, delta, effect.motivo || 'Decisión ante una figura', { morale:effect.afectaMoral !== false })
+        : 0
+    }));
+    if(typeof managerDressingRoom?.refresh === 'function') managerDressingRoom.refresh();
+    return { type, playerIds:players.map(player => Number(player.id)), delta, changes };
+  }
+  if(type === 'confianza_plantel'){
+    const delta = Number(effect.valor || 0);
+    const changes = typeof managerDressingRoom?.changeGroup === 'function'
+      ? managerDressingRoom.changeGroup(() => true, delta, effect.motivo || 'Decisión ante una figura', { morale:effect.afectaMoral !== false })
+      : [];
+    return { type, delta, changes };
+  }
   if(type === 'moral_plantel'){
     const delta = Number(effect.valor || 0);
     const applied = typeof adjustSquadMorale === 'function' ? adjustSquadMorale(game.selectedClubId, delta) : { affected:0, totalChange:0 };
@@ -478,6 +500,33 @@ function lockerRoomApplyDecisionEffect(effect={}, context={}){
     const matches = Math.max(1, Math.round(Number(effect.partidos || 1)));
     players.forEach(player => lockerRoomApplySuspension(player, matches));
     return { type, playerIds:players.map(p => p.id), matches };
+  }
+  if(type === 'titularizar_jugador'){
+    const player = participantMap[String(effect.jugador || '')];
+    if(!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0)) return { type, skipped:true };
+    const starters = (game?.tactic?.starters || []).map(Number).filter(Boolean);
+    const bench = (game?.tactic?.bench || []).map(Number).filter(Boolean);
+    if(starters.includes(Number(player.id))) return { type, playerId:Number(player.id), alreadyStarter:true };
+    const targetGroup = typeof playerGroup === 'function' ? playerGroup(player.position) : String(player.position || '');
+    const candidates = starters.map(id => playerById(id)).filter(Boolean).filter(candidate => {
+      if(player.position === 'POR') return candidate.position === 'POR';
+      const group = typeof playerGroup === 'function' ? playerGroup(candidate.position) : String(candidate.position || '');
+      return candidate.position !== 'POR' && group === targetGroup;
+    });
+    const fallback = starters.map(id => playerById(id)).filter(candidate => candidate && candidate.position !== 'POR');
+    const replacement = (candidates.length ? candidates : fallback).sort((a,b) => {
+      const aOverall = typeof visibleOverall === 'function' ? Number(visibleOverall(a) || 0) : Number(a.overall || 0);
+      const bOverall = typeof visibleOverall === 'function' ? Number(visibleOverall(b) || 0) : Number(b.overall || 0);
+      return aOverall - bOverall || Number(a.id) - Number(b.id);
+    })[0];
+    if(!replacement) return { type, skipped:true };
+    game.tactic = {
+      ...game.tactic,
+      starters:starters.map(id => Number(id) === Number(replacement.id) ? Number(player.id) : Number(id)),
+      bench:[...new Set(bench.filter(id => Number(id) !== Number(player.id)).concat(Number(replacement.id)))]
+    };
+    game.mustReviewTactics = true;
+    return { type, playerId:Number(player.id), replacedPlayerId:Number(replacement.id) };
   }
   if(type === 'cambiar_capitan'){
     const player = participantMap[String(effect.jugador || '')];
@@ -552,6 +601,8 @@ function lockerRoomEffectSummaryItems(applied=[], action={}){
     let text = '';
     let tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral';
     if(type === 'moral_jugadores' && value !== 0) text = value > 0 ? `El ánimo de ${names} mejoró ${magnitude}.` : `El ánimo de ${names} quedó afectado ${magnitude}.`;
+    else if(type === 'confianza_jugadores' && value !== 0) text = value > 0 ? `La confianza de ${names} en el mánager mejoró ${magnitude}.` : `La confianza de ${names} en el mánager se debilitó ${magnitude}.`;
+    else if(type === 'confianza_plantel' && value !== 0) text = value > 0 ? `La confianza general en el mánager mejoró ${magnitude}.` : `La confianza general en el mánager se debilitó ${magnitude}.`;
     else if(type === 'moral_plantel' && value !== 0) text = value > 0 ? `El ánimo general del plantel mejoró ${magnitude}.` : `El ánimo general del plantel se deterioró ${magnitude}.`;
     else if(type === 'cohesion' && value !== 0) text = value > 0 ? `La unión del grupo se fortaleció ${magnitude}.` : `La unión del grupo se debilitó ${magnitude}.`;
     else if(type === 'forma_jugadores' && value !== 0) text = value > 0 ? `La preparación física de ${names} mejoró ${magnitude}.` : `La preparación física de ${names} quedó afectada ${magnitude}.`;
@@ -563,6 +614,7 @@ function lockerRoomEffectSummaryItems(applied=[], action={}){
     else if(type === 'lesion' && Array.isArray(effect.issues) && effect.issues.length){ text = `${lockerRoomJoinNames(effect.issues.map(issue => issue?.playerName || 'Jugador'))} quedó fuera por lesión.`; tone = 'negative'; }
     else if(type === 'ausencia_personal' && Array.isArray(effect.issues) && effect.issues.length){ text = `${lockerRoomJoinNames(effect.issues.map(issue => issue?.playerName || 'Jugador'))} recibió permiso y quedará temporalmente fuera del equipo.`; tone = 'neutral'; }
     else if(type === 'suspension_interna' && lockerRoomEffectPlayerNames(effect, action).length){ text = `${names} quedó apartado temporalmente de la convocatoria.`; tone = 'negative'; }
+    else if(type === 'titularizar_jugador' && Number(effect.playerId || 0)){ text = `${names} fue incorporado al equipo titular.`; tone = 'neutral'; }
     else if(type === 'cambiar_capitan' && lockerRoomEffectPlayerNames(effect, action).length){ text = `${names} fue designado como nuevo capitán.`; tone = 'neutral'; }
     else if(type === 'bloqueo_entrenamiento' && Number(effect.days || 0) > 0){ text = 'El trabajo de entrenamiento quedará limitado durante algunos días.'; tone = 'negative'; }
     if(text && !summaries.some(item => item.text === text)) summaries.push({ text, tone, type });
@@ -594,7 +646,9 @@ function createLockerRoomDecision(event, participants=[], state=null){
   const participantMap = lockerRoomParticipantMap(participants);
   const context = { eventId:event.id, optionId:'initial', turn, participants, participantMap };
   const crisisSettings = lockerRoomCrisisSettings();
-  const crisisNarrative = lockerRoomCrisisNarrative(squadMoraleAverage(game.selectedClubId), cohesionValue(game.selectedClubId), crisisSettings);
+  const crisisNarrative = event.independiente === true
+    ? String(event.introduccion || '')
+    : lockerRoomCrisisNarrative(squadMoraleAverage(game.selectedClubId), cohesionValue(game.selectedClubId), crisisSettings);
   const initialEffects = lockerRoomApplyEffectList(event.efectosIniciales || [], context);
   const messageId = `locker-room-decision-${event.id}-s${game.seasonNumber || 1}-t${turn}`;
   const message = typeof pushGameMessage === 'function' ? pushGameMessage({
@@ -630,6 +684,23 @@ function createLockerRoomDecision(event, participants=[], state=null){
   return { event, participants, message, logEntry, initialEffects };
 }
 function lockerRoomResolveSpecialOption(option={}, context={}){
+  if(option.resolucionEspecial === 'votacion_estrella_capitan'){
+    const star = context.participantMap?.jugador1;
+    const captain = context.participantMap?.jugador2;
+    if(!star || !captain) return { result:'La votación no pudo realizarse.', effects:[] };
+    const starScore = Number(star.skills?.liderazgo || 0) + currentMorale(star.id) + lockerRoomHash(`${context.eventId}-${context.turn}-star-vote`, 21);
+    const captainScore = Number(captain.skills?.liderazgo || 0) + currentMorale(captain.id) + lockerRoomHash(`${context.eventId}-${context.turn}-captain-vote`, 21);
+    if(starScore > captainScore){
+      return {
+        result:`El plantel eligió a ${star.name} como nuevo capitán.`,
+        effects:[{ tipo:'cambiar_capitan', jugador:'jugador1' }, { tipo:'moral_jugadores', jugadores:['jugador1'], valor:7 }, { tipo:'moral_jugadores', jugadores:['jugador2'], valor:-7 }, { tipo:'cohesion', valor:2 }]
+      };
+    }
+    return {
+      result:`El plantel ratificó a ${captain.name} como capitán.`,
+      effects:[{ tipo:'moral_jugadores', jugadores:['jugador1'], valor:-3 }, { tipo:'moral_jugadores', jugadores:['jugador2'], valor:6 }, { tipo:'cohesion', valor:4 }]
+    };
+  }
   if(option.resolucionEspecial !== 'votacion_capitan') return null;
   const captain = context.participantMap?.jugador1;
   const challenger = context.participantMap?.jugador2;
@@ -686,19 +757,24 @@ function respondLockerRoomDecision(messageId, optionId){
   const participants = (message.action.participantIds || []).map(id => playerById(Number(id))).filter(Boolean);
   const participantMap = lockerRoomParticipantMap(participants);
   const turn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : Math.max(0, Number(game.globalTurn || 0));
-  const context = { eventId:event.id, optionId:option.id, turn, participants, participantMap };
+  const context = { eventId:event.id, optionId:option.id, turn, participants, participantMap, message };
   let resultText = lockerRoomFormat(option.resultado || 'La decisión fue comunicada al plantel.', participants);
   let effects = Array.isArray(option.efectos) ? option.efectos : [];
   const special = lockerRoomResolveSpecialOption(option, context);
+  const authorityProbability = option.controlAutoridad === true && typeof starPlayerAuthorityProbability === 'function'
+    ? starPlayerAuthorityProbability(option, context, message)
+    : null;
+  const successProbability = Number.isFinite(Number(authorityProbability)) ? Number(authorityProbability) : Number(option.probabilidadExito);
   if(special){
     resultText = special.result;
     effects = special.effects;
-  }else if(Number.isFinite(Number(option.probabilidadExito))){
+  }else if(Number.isFinite(successProbability)){
     const roll = lockerRoomHash(`locker-room-choice-${event.id}-${option.id}-${message.id}`, 1000000) / 1000000;
-    const success = roll < clamp(Number(option.probabilidadExito), 0, 1);
+    const success = roll < clamp(successProbability, 0, 1);
     resultText = lockerRoomFormat(success ? option.resultadoExito : option.resultadoFallo, participants);
     effects = success ? (option.efectosExito || []) : (option.efectosFallo || []);
     message.action.outcome = success ? 'success' : 'failure';
+    message.action.successProbability = Math.round(clamp(successProbability, 0, 1) * 1000) / 1000;
   }
   const appliedEffects = lockerRoomApplyEffectList(effects, context);
   resultText = `${resultText}${lockerRoomIssueText(appliedEffects)}`.trim();
@@ -779,7 +855,7 @@ function processLockerRoomProblemsDaily(options={}){
     Object.assign(state, { clubId, season, active:false, startedTurn:0, nextCheckTurn:0, lastCheckTurn:0, checks:0, events:0, recentEventIds:[], lastEventId:'', lastEventDate:'', lastEventTurn:0, pendingMessageId:'', promises:[] });
   }
   const promiseSummary = processLockerRoomPromisesDaily();
-  const definitions = lockerRoomProblemDefinitions();
+  const definitions = lockerRoomProblemDefinitions().filter(event => String(event?.sistema || '') !== 'estrellas');
   if(!definitions.length) return { active:false, checked:false, triggered:false, promiseSummary };
   const settings = lockerRoomCrisisSettings();
   const pending = pendingLockerRoomDecisionMessage();

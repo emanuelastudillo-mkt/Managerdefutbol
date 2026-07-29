@@ -655,6 +655,7 @@
       <div class="dressing-summary-grid"><div class="dressing-main-summary"><span>Confianza general</span><strong>${drRound(stint.generalTrust)}</strong><em class="${generalStatus.tone}">${escapeHtml(generalStatus.label)}</em></div><div class="dressing-main-summary"><span>Evaluación de Liderazgo</span><strong>${drRound(leadershipScore)}</strong><em>Se utiliza al cerrar la temporada.</em></div><div class="dressing-main-summary"><span>Referentes</span><strong>${stint.referentIds.length}</strong><em>${stint.referentIds.map(id => playerLastName(drPlayerById(id)?.name || '')).filter(Boolean).join(' · ') || 'Sin referentes'}</em></div></div>
       <div class="dressing-groups-grid">${['referent','starter','rotation','substitute','youth'].map(group => drGroupCard(group, stint.groupTrust[group])).join('')}</div>
       <div class="card dressing-explanation"><p><strong>Efectos activos:</strong> la confianza modifica la recuperación de moral, puede sumar o restar cohesión tras los partidos y cambia las exigencias salariales y la duración posible en una negociación contractual.</p></div>
+      ${typeof starPlayerDressingRoomSummaryMarkup === 'function' ? starPlayerDressingRoomSummaryMarkup() : ''}
       <div class="table-wrap dressing-table-wrap"><table class="dressing-table"><thead><tr><th>Foto</th><th>${drColumnSort('Jugador','name_asc','name_desc')}</th><th>${drColumnSort('Edad','age_asc','age_desc')}</th><th>${drColumnSort('Media','overall_asc','overall_desc')}</th><th>${drColumnSort('Grupo','group_asc','group_desc')}</th><th>${drColumnSort('Rol interno','role_asc','role_desc')}</th><th>${drColumnSort('Confianza','trust_asc','trust_desc')}</th><th>${drColumnSort('Peso','influence_asc','influence_desc')}</th><th>${drColumnSort('Renovación','renewal_asc','renewal_desc')}</th><th>${drColumnSort('Moral','morale_asc','morale_desc')}</th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores disponibles.</td></tr>'}</tbody></table></div>`;
     document.querySelectorAll('[data-dressing-sort]').forEach(button => button.addEventListener('click', () => { dressingRoomSort = button.dataset.dressingSort || 'influence_desc'; renderDressingRoom(); }));
     if(typeof prependFirstTeamTabs === 'function') prependFirstTeamTabs('dressingRoom');
@@ -740,8 +741,10 @@
         const result = original(playerId);
         const player = drPlayerById(playerId);
         const card = playerDressingRoomCardMarkup(player);
+        const starCard = typeof starPlayerProfileCardMarkup === 'function' ? starPlayerProfileCardMarkup(player) : '';
         const stack = document.querySelector('.player-modal-grid .stack');
         if(card && stack && !stack.querySelector('.player-dressing-room-card')) stack.insertAdjacentHTML('beforeend', card);
+        if(starCard && stack && !stack.querySelector('.player-star-discipline-card')) stack.insertAdjacentHTML('beforeend', starCard);
         return result;
       };
     }
@@ -822,6 +825,17 @@
     trust:playerId => Number(drEntry(playerId, false)?.value || 0),
     leadershipScore:managerDressingRoomLeadershipScore,
     renewal:playerId => drRenewalDisposition(drEntry(playerId, false)?.value || 0, drEntry(playerId, false)),
-    processMatch:processDressingRoomAfterMatch
+    processMatch:processDressingRoomAfterMatch,
+    changeTrust:(playerId, delta, reason='Relación con el mánager', options={}) => {
+      const applied = drApplyTrustChange(playerId, delta, reason, options);
+      drUpdateGroupSummary(currentDressingRoom());
+      return applied;
+    },
+    changeGroup:(filter, delta, reason='Relación con el mánager', options={}) => {
+      const changes = drApplyGroupChange(filter, delta, reason, options);
+      drUpdateGroupSummary(currentDressingRoom());
+      return changes;
+    },
+    refresh:() => drUpdateGroupSummary(currentDressingRoom())
   };
 })();

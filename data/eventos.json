@@ -1,8 +1,9 @@
 {
   "metadata": {
-    "version": "V8.27",
+    "version": "V8.96",
     "descripcion": "Eventos condicionales y 20 decisiones interactivas de vestuario del manager.",
-    "nota": "Las decisiones de vestuario se evalúan cada 5 días cuando el ánimo general o el funcionamiento colectivo entra en una zona crítica. Cada evento requiere una respuesta antes de continuar el calendario."
+    "nota": "Las decisiones de vestuario se evalúan cada 5 días cuando el ánimo general o el funcionamiento colectivo entra en una zona crítica. Cada evento requiere una respuesta antes de continuar el calendario.",
+    "notaEstrellas": "Los conflictos con figuras se evalúan por media, diferencia con el plantel, sueldo, disciplina, influencia y autoridad del mánager."
   },
   "eventos": [
     {
@@ -1878,6 +1879,720 @@
             {
               "tipo": "bloqueo_entrenamiento",
               "dias": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estrella_accidente_ferrari",
+      "activo": true,
+      "sistema": "estrellas",
+      "independiente": true,
+      "disparador": "general",
+      "peso": 1,
+      "selector": "problematic_star_single",
+      "nombre": "Accidente de una figura",
+      "titulo": "{{jugador1}} chocó con su auto deportivo",
+      "introduccion": "La jerarquía individual volvió a poner a prueba la disciplina interna.",
+      "cuerpo": "{{jugador1}} sufrió un accidente con su Ferrari fuera del horario de trabajo. No hubo terceros heridos, pero el jugador quedó lesionado y el episodio generó malestar dentro del club.",
+      "pregunta": "¿Cómo administrás el incidente?",
+      "efectosIniciales": [
+        {
+          "tipo": "lesion",
+          "jugadores": [
+            "jugador1"
+          ],
+          "nombre": "Lesión por accidente automovilístico",
+          "diasMin": 6,
+          "diasMax": 20,
+          "probabilidad": 1
+        },
+        {
+          "tipo": "moral_jugadores",
+          "jugadores": [
+            "jugador1"
+          ],
+          "valor": -4
+        }
+      ],
+      "opciones": [
+        {
+          "id": "sancion_publica",
+          "texto": "Aplicar una sanción ejemplar",
+          "resultado": "Intentaste imponer una sanción para demostrar que ninguna figura está por encima del club.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": -0.05,
+          "resultadoExito": "{{jugador1}} aceptó la sanción y el plantel respaldó tu postura.",
+          "efectosExito": [
+            {
+              "tipo": "dinero_club",
+              "modo": "porcentaje_sueldo",
+              "jugador": "jugador1",
+              "porcentaje": 0.08,
+              "concepto": "Multa por conducta extradeportiva"
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 3
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": 1
+            }
+          ],
+          "resultadoFallo": "{{jugador1}} rechazó públicamente la sanción y varios referentes evitaron respaldarte.",
+          "efectosFallo": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -10
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -8
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -5
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -1
+            }
+          ]
+        },
+        {
+          "id": "plan_reparacion",
+          "texto": "Exigir rehabilitación y una disculpa interna",
+          "resultado": "Buscaste reparar el daño sin convertir el incidente en una guerra pública.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": 0.08,
+          "resultadoExito": "El jugador pidió disculpas al grupo y aceptó un plan estricto de recuperación.",
+          "efectosExito": [
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 4
+            }
+          ],
+          "resultadoFallo": "La disculpa fue superficial y el plantel percibió que la figura recibió un trato privilegiado.",
+          "efectosFallo": [
+            {
+              "tipo": "moral_plantel",
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -4
+            }
+          ]
+        },
+        {
+          "id": "proteger_figura",
+          "texto": "Proteger al jugador y cerrar el caso",
+          "resultado": "Priorizaste la relación con la figura, pero el resto del plantel tomó nota del privilegio.",
+          "efectos": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 5
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 4
+            },
+            {
+              "tipo": "confianza_plantel",
+              "valor": -1
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estrella_fiesta_prepartido",
+      "activo": true,
+      "sistema": "estrellas",
+      "independiente": true,
+      "disparador": "prepartido",
+      "peso": 4,
+      "selector": "problematic_star_single",
+      "nombre": "Fiesta antes de un partido",
+      "titulo": "{{jugador1}} fue visto de fiesta",
+      "introduccion": "A un día del próximo partido apareció un problema extradeportivo.",
+      "cuerpo": "{{jugador1}} fue visto de madrugada en una fiesta y llegó al entrenamiento con una preparación física claramente inferior.",
+      "pregunta": "¿Qué hacés antes del partido?",
+      "efectosIniciales": [
+        {
+          "tipo": "forma_jugadores",
+          "jugadores": [
+            "jugador1"
+          ],
+          "valor": -14
+        },
+        {
+          "tipo": "moral_plantel",
+          "valor": -1
+        }
+      ],
+      "opciones": [
+        {
+          "id": "dejar_fuera",
+          "texto": "Dejarlo fuera de la convocatoria",
+          "resultado": "Intentaste imponer la disciplina aunque el equipo pierda a una figura.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": -0.08,
+          "resultadoExito": "{{jugador1}} aceptó quedar afuera y el grupo valoró la igualdad de reglas.",
+          "efectosExito": [
+            {
+              "tipo": "suspension_interna",
+              "jugadores": [
+                "jugador1"
+              ],
+              "partidos": 1
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -4
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 5
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": 1
+            }
+          ],
+          "resultadoFallo": "La figura se negó a aceptar la sanción y llevó la discusión al resto del vestuario.",
+          "efectosFallo": [
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -9
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -6
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -1
+            }
+          ]
+        },
+        {
+          "id": "multa_y_juega",
+          "texto": "Multarlo, pero permitirle jugar",
+          "resultado": "La sanción económica mantuvo disponible al jugador sin cerrar completamente el conflicto.",
+          "efectos": [
+            {
+              "tipo": "dinero_club",
+              "modo": "porcentaje_sueldo",
+              "jugador": "jugador1",
+              "porcentaje": 0.06,
+              "concepto": "Multa por salida nocturna"
+            },
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -5
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 1
+            }
+          ]
+        },
+        {
+          "id": "cubrirlo",
+          "texto": "Cubrir el episodio",
+          "resultado": "La figura se sintió protegida, pero los compañeros interpretaron que las reglas no son iguales para todos.",
+          "efectos": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 4
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 3
+            },
+            {
+              "tipo": "confianza_plantel",
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estrella_exige_titularidad",
+      "activo": true,
+      "sistema": "estrellas",
+      "independiente": true,
+      "disparador": "general",
+      "peso": 3,
+      "selector": "problematic_star_single",
+      "requisito": "no_titular",
+      "nombre": "Figura exige titularidad",
+      "titulo": "{{jugador1}} exige ser titular",
+      "introduccion": "El peso individual del jugador empezó a condicionar las decisiones deportivas.",
+      "cuerpo": "{{jugador1}} considera que su jerarquía y su contrato le garantizan un lugar entre los once y pidió una respuesta inmediata.",
+      "pregunta": "¿Cómo respondés?",
+      "opciones": [
+        {
+          "id": "merito",
+          "texto": "Mantener la competencia por mérito",
+          "resultado": "Intentaste sostener que ningún contrato garantiza la titularidad.",
+          "controlAutoridad": true,
+          "resultadoExito": "{{jugador1}} aceptó competir por el puesto y tu autoridad salió fortalecida.",
+          "efectosExito": [
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 4
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": 1
+            }
+          ],
+          "resultadoFallo": "{{jugador1}} rechazó tu postura y comenzó a cuestionar tus decisiones ante otros referentes.",
+          "efectosFallo": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -10
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -9
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -5
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -1
+            }
+          ]
+        },
+        {
+          "id": "prometer_minutos",
+          "texto": "Prometerle minutos en los próximos partidos",
+          "resultado": "La figura aceptó esperar una oportunidad concreta.",
+          "efectos": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 5
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 3
+            }
+          ],
+          "promesa": {
+            "tipo": "minutos",
+            "jugador": "jugador1",
+            "partidosMax": 3,
+            "diasMax": 20,
+            "textoPendiente": "Prometiste darle minutos a {{jugador1}} en los próximos tres partidos.",
+            "resultadoCumplida": "Cumpliste la promesa y {{jugador1}} volvió a respaldar tu palabra.",
+            "efectosCumplida": [
+              {
+                "tipo": "confianza_jugadores",
+                "jugadores": [
+                  "jugador1"
+                ],
+                "valor": 6
+              },
+              {
+                "tipo": "cohesion",
+                "valor": 2
+              }
+            ],
+            "resultadoIncumplida": "La promesa no se cumplió y {{jugador1}} te acusó de haberlo engañado.",
+            "efectosIncumplida": [
+              {
+                "tipo": "moral_jugadores",
+                "jugadores": [
+                  "jugador1"
+                ],
+                "valor": -12
+              },
+              {
+                "tipo": "confianza_jugadores",
+                "jugadores": [
+                  "jugador1"
+                ],
+                "valor": -10
+              },
+              {
+                "tipo": "cohesion",
+                "valor": -5
+              }
+            ]
+          }
+        },
+        {
+          "id": "ceder_titularidad",
+          "texto": "Garantizarle la titularidad",
+          "resultado": "Cediste ante la figura. Su ánimo mejoró, pero el grupo percibió que la jerarquía puede imponerse sobre el rendimiento.",
+          "efectos": [
+            {
+              "tipo": "titularizar_jugador",
+              "jugador": "jugador1"
+            },
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 9
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 5
+            },
+            {
+              "tipo": "confianza_plantel",
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estrella_exige_capitania",
+      "activo": true,
+      "sistema": "estrellas",
+      "independiente": true,
+      "disparador": "general",
+      "peso": 2,
+      "selector": "problematic_star_captain",
+      "requisito": "titular_no_capitan",
+      "nombre": "Figura exige la capitanía",
+      "titulo": "{{jugador1}} exige ser capitán",
+      "introduccion": "La influencia de una figura puso en discusión la estructura de liderazgo.",
+      "cuerpo": "{{jugador1}} considera que debe llevar la cinta por encima de {{jugador2}} y afirma contar con apoyo dentro del plantel.",
+      "pregunta": "¿Quién conduce al equipo?",
+      "opciones": [
+        {
+          "id": "respaldar_capitan",
+          "texto": "Respaldar a {{jugador2}}",
+          "resultado": "Intentaste dejar claro que la capitanía no se obtiene mediante presión.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": -0.04,
+          "resultadoExito": "La figura aceptó la decisión y {{jugador2}} quedó ratificado como capitán.",
+          "efectosExito": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador2"
+              ],
+              "valor": 6
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -3
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 4
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": 1
+            }
+          ],
+          "resultadoFallo": "{{jugador1}} desconoció tu decisión y dividió a los referentes.",
+          "efectosFallo": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -9
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -10
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -7
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -2
+            }
+          ]
+        },
+        {
+          "id": "nombrar_estrella",
+          "texto": "Nombrar capitán a {{jugador1}}",
+          "resultado": "La figura recibió la cinta, pero el cambio mostró que la presión individual puede alterar tus decisiones.",
+          "efectos": [
+            {
+              "tipo": "cambiar_capitan",
+              "jugador": "jugador1"
+            },
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 9
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 6
+            },
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador2"
+              ],
+              "valor": -9
+            },
+            {
+              "tipo": "confianza_plantel",
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -4
+            }
+          ]
+        },
+        {
+          "id": "votacion_interna",
+          "texto": "Someter la capitanía a votación",
+          "resultado": "Trasladaste la decisión al plantel para evitar una imposición directa.",
+          "efectos": [],
+          "resolucionEspecial": "votacion_estrella_capitan"
+        }
+      ]
+    },
+    {
+      "id": "estrella_critica_derrota",
+      "activo": true,
+      "sistema": "estrellas",
+      "independiente": true,
+      "disparador": "derrota",
+      "peso": 4,
+      "selector": "problematic_star_single",
+      "nombre": "Crítica pública tras una derrota",
+      "titulo": "{{jugador1}} te criticó tras la derrota",
+      "introduccion": "El resultado negativo debilitó momentáneamente la autoridad del cuerpo técnico.",
+      "cuerpo": "{{jugador1}} declaró que el equipo perdió por tus decisiones y cuestionó públicamente la táctica y los cambios.",
+      "pregunta": "¿Cómo respondés a la crítica?",
+      "opciones": [
+        {
+          "id": "marcar_autoridad",
+          "texto": "Responder y marcar autoridad",
+          "resultado": "Intentaste cerrar la discusión y reafirmar que las decisiones pertenecen al mánager.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": -0.06,
+          "resultadoExito": "La figura retrocedió, pidió disculpas al grupo y tu postura fue respaldada.",
+          "efectosExito": [
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -3
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 4
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": 2
+            }
+          ],
+          "resultadoFallo": "La respuesta pública aumentó el conflicto y otros referentes comenzaron a dudar de tu conducción.",
+          "efectosFallo": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -8
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -10
+            },
+            {
+              "tipo": "confianza_plantel",
+              "valor": -2
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -7
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -2
+            }
+          ]
+        },
+        {
+          "id": "charla_privada",
+          "texto": "Resolverlo en una charla privada",
+          "resultado": "Buscaste recuperar la relación sin exponer más al equipo.",
+          "controlAutoridad": true,
+          "modificadorAutoridad": 0.1,
+          "resultadoExito": "La conversación fue sincera y {{jugador1}} aceptó que se excedió.",
+          "efectosExito": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 4
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 4
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 3
+            }
+          ],
+          "resultadoFallo": "{{jugador1}} mantuvo su postura y salió de la reunión convencido de que tiene más peso que el cuerpo técnico.",
+          "efectosFallo": [
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": -7
+            },
+            {
+              "tipo": "cohesion",
+              "valor": -4
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -1
+            }
+          ]
+        },
+        {
+          "id": "aceptar_critica",
+          "texto": "Aceptar parte de la crítica",
+          "resultado": "Reconociste errores para desactivar el conflicto. La figura se sintió escuchada, aunque tu autoridad perdió algo de fuerza.",
+          "efectos": [
+            {
+              "tipo": "moral_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 5
+            },
+            {
+              "tipo": "confianza_jugadores",
+              "jugadores": [
+                "jugador1"
+              ],
+              "valor": 4
+            },
+            {
+              "tipo": "cohesion",
+              "valor": 1
+            },
+            {
+              "tipo": "prestigio_manager",
+              "valor": -1
             }
           ]
         }

@@ -1807,13 +1807,13 @@ function openGameHelpModal(){
         <article class="help-card card">
           <span class="pill warn">2 · Competencia</span>
           <h4>Primer Equipo</h4>
-          <p>Concentra Táctica, Grupos, Plantel, Vestuario, Contratos, Entrenamiento y Estadísticas. Táctica conserva formaciones predefinidas y permite una distribución personalizada por casillas. Grupos separa referentes, titulares, rotación, suplentes y juveniles. Vestuario muestra confianza, influencia y predisposición contractual; Contratos permite negociar renovaciones manuales. La ficha del jugador reúne habilidades, estadísticas de temporada y carrera, estado interno y acceso directo a su renovación.</p>
+          <p>Concentra Táctica, Grupos, Plantel, Vestuario, Contratos, Entrenamiento y Estadísticas. Táctica conserva formaciones predefinidas y permite una distribución personalizada por casillas. Grupos separa referentes, titulares, rotación, suplentes y juveniles. Vestuario muestra confianza, influencia, disciplina, jerarquía interna y predisposición contractual; Contratos permite negociar renovaciones manuales. La ficha del jugador reúne habilidades, estadísticas de temporada y carrera, estado interno y acceso directo a su renovación.</p>
           <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Táctica','tactics')}${gameHelpGoButton('firstTeam','Abrir Grupos','groups')}${gameHelpGoButton('firstTeam','Abrir Vestuario','dressingRoom')}${gameHelpGoButton('firstTeam','Abrir Contratos','contracts')}${gameHelpGoButton('firstTeam','Abrir Estadísticas','playerStats')}</div>
         </article>
         <article class="help-card card">
           <span class="pill warn">3 · Decisiones</span>
           <h4>Mensajes</h4>
-          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y decisiones de carrera. Los eventos del vestuario y la directiva usan tiempos de espera para evitar repeticiones constantes. Al llegar a un club existe un período de adaptación antes de recibir decisiones especiales. Algunas respuestas generan promesas o consecuencias diferidas que se evalúan por resultados, minutos, confianza o presupuesto.</p>
+          <p>Reúne ofertas, avisos de directiva, lesiones, vencimientos, ventas y decisiones de carrera. Los eventos del vestuario y la directiva usan tiempos de espera para evitar repeticiones constantes. Las figuras con baja disciplina pueden generar incidentes aunque el ánimo general del equipo sea bueno. Al llegar a un club existe un período de adaptación antes de recibir decisiones especiales. Algunas respuestas generan promesas o consecuencias diferidas que se evalúan por resultados, minutos, confianza o presupuesto.</p>
           ${gameHelpGoButton('messages','Abrir Mensajes')}
         </article>
       </div>
@@ -1891,7 +1891,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Vestuario y contratos de jugadores</h4>
-          <p>La confianza individual cambia con minutos, resultados, decisiones y jerarquías. Un jugador contento acepta mejores condiciones y más años; uno descontento exige más, limita la duración o rechaza negociar. Los contratos vencidos sin renovar pasan a libres al cerrar la temporada. Entre los días 10 y 28 se advierte diariamente si el plantel no cumple los mínimos; el día 29 puede producirse el despido.</p>
+          <p>La confianza individual cambia con minutos, resultados, decisiones y jerarquías. Las figuras con baja disciplina son más propensas a exigir titularidad o capitanía, criticar al mánager y protagonizar incidentes extradeportivos. Imponer una postura no siempre funciona: influyen el liderazgo, el prestigio, la confianza del grupo y la diferencia de poder con el jugador. Un jugador contento acepta mejores condiciones y más años; uno descontento exige más, limita la duración o rechaza negociar. Los contratos vencidos sin renovar pasan a libres al cerrar la temporada. Entre los días 10 y 28 se advierte diariamente si el plantel no cumple los mínimos; el día 29 puede producirse el despido.</p>
           <div class="help-actions">${gameHelpGoButton('firstTeam','Abrir Vestuario','dressingRoom')}${gameHelpGoButton('firstTeam','Abrir Contratos','contracts')}${gameHelpGoButton('firstTeam','Abrir Grupos','groups')}</div>
         </article>
         <article class="help-card card">

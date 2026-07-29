@@ -1,3 +1,31 @@
+# V8.98 · Ficha de club horizontal
+
+## Aplicación
+
+Aplicar sobre **V8.97**.
+
+## Interfaz
+
+- La ficha de club utiliza una disposición horizontal en pantallas de escritorio.
+- El resumen institucional y económico queda en la parte superior.
+- La táctica y el informe de ojeo ocupan una columna lateral compacta.
+- La plantilla observada utiliza el área principal y mantiene encabezados visibles durante el desplazamiento.
+- En dispositivos pequeños la ficha vuelve automáticamente a una disposición vertical.
+
+## Dinero compacto
+
+Los importes de la ficha se muestran abreviados para reducir espacio:
+
+- `M` representa millones.
+- `mil` representa miles.
+- El importe completo continúa disponible al mantener el cursor sobre el valor.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica datos, economía, planteles, resultados ni guardados.
+
+## Base V8.97
+
 # V8.97 · Ranking FIFA de clubes
 
 ## Aplicación

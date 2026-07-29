@@ -1293,6 +1293,22 @@ function injuryLine(i){
   const load = i.highLoad ? ' · alta carga' : '';
   return `<div class="stat-rank event-line"><span>${i.minute}' <span class="injury-event-icon">✚</span> ${escapeHtml(p?.name || 'Jugador')} ${clubBadge(i.clubId)}</span><strong>${escapeHtml(label)} · ${phase}${load}</strong></div>`;
 }
+function formatClubProfileMoney(value){
+  const amount = Math.round(Number(value) || 0);
+  const absolute = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+  if(absolute >= 1000000){
+    const millions = absolute / 1000000;
+    const maximumFractionDigits = millions >= 1000 ? 0 : millions >= 10 ? 1 : 2;
+    return `${sign}$${millions.toLocaleString('es-AR', { minimumFractionDigits:0, maximumFractionDigits })} M`;
+  }
+  if(absolute >= 1000){
+    const thousands = absolute / 1000;
+    const maximumFractionDigits = thousands >= 100 ? 0 : 1;
+    return `${sign}$${thousands.toLocaleString('es-AR', { minimumFractionDigits:0, maximumFractionDigits })} mil`;
+  }
+  return formatMoney(amount);
+}
 function showClubModal(clubId){
   const club = seed.clubs.find(c => c.id === Number(clubId));
   if(!club) return;
@@ -1307,39 +1323,45 @@ function showClubModal(clubId){
   const stadiumCapacity = typeof clubStadiumCapacity === 'function' ? Math.max(0, Math.round(Number(clubStadiumCapacity(club.id) || 0))) : Math.max(0, Math.round(Number(club.stadiumCapacity || 0)));
   const clubSupporters = typeof clubFansCurrent === 'function' ? Math.max(0, Math.round(Number(clubFansCurrent(club.id) || 0))) : Math.max(0, Math.round(Number(club.fans || club.hinchas || 0)));
   const isTeamScouted = Array.isArray(game?.scoutingCenter?.listedTeamIds) && game.scoutingCenter.listedTeamIds.map(Number).includes(Number(club.id));
-  const teamScoutButton = isOwnClub ? '' : `<button class="ghost" data-add-scouting-team="${club.id}">${isTeamScouted ? 'En Centro de Ojeo' : 'Ojear equipo'}</button>`;
+  const teamScoutButton = isOwnClub ? '' : `<button type="button" class="ghost" data-add-scouting-team="${club.id}">${isTeamScouted ? 'En Centro de Ojeo' : 'Ojear equipo'}</button>`;
   const teamSectorReport = isTeamScouted && typeof scoutingTeamSectorMarkup === 'function' ? scoutingTeamSectorMarkup(club.id) : '<p class="muted small">Usá “Ojear equipo” para guardar un informe dinámico de Defensa, Medios y Delantera en el Centro de Ojeo.</p>';
   const body = `
-    <div class="club-modal-head" style="clear:both">
-      <p class="label">Club observado</p>
-      <div class="row between"><h2>${clubBadge(club.id)}${escapeHtml(club.name)}</h2>${teamScoutButton}</div>
-      <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation}</p>
-    </div>
-    <div class="grid cols-4 club-finance-profile-grid" style="margin:14px 0">
-      <div class="card inner"><p class="label">Dinero en caja</p><div class="metric small ${typeof budgetTone === 'function' ? budgetTone(clubCash) : ''}">${formatMoney(clubCash)}</div></div>
-      <div class="card inner"><p class="label">Gasto en sueldos</p><div class="metric small">${formatMoney(clubSalaryExpense)}</div><small class="muted">anual</small></div>
-      <div class="card inner"><p class="label">Capacidad</p><div class="metric">${new Intl.NumberFormat('es-AR').format(stadiumCapacity)}</div></div>
-      <div class="card inner"><p class="label">Hinchas</p><div class="metric">${new Intl.NumberFormat('es-AR').format(clubSupporters)}</div></div>
-    </div>
-    <div class="grid cols-3" style="margin:14px 0">
-      <div class="card inner"><p class="label">Plantel</p><div class="metric">${players.length}</div></div>
-      <div class="card inner"><p class="label">Porteros</p><div class="metric">${keepers.length}</div></div>
-      <div class="card inner"><p class="label">Jugadores de campo</p><div class="metric">${fieldPlayers.length}</div></div>
-    </div>
-    <div class="grid cols-2">
-      <div class="card inner">
-        <h3>Táctica observada</h3>
-        <p class="muted small">No se muestran titulares. Sólo la estructura estimada.</p>
-        ${clubTacticPreview(tactic.formation)}
-      </div>
-      <div class="card inner">
-        <h3>Informe de ojeo de equipo</h3>
-        ${teamSectorReport}
-      </div>
-    </div>
-    <div class="card inner" style="margin-top:14px">
-      <h3>Plantilla observada</h3>
-      <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media ojeada</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="club-profile-landscape">
+      <header class="club-profile-header">
+        <div class="club-profile-identity card inner">
+          <div class="club-modal-head">
+            <p class="label">Ficha de club</p>
+            <div class="row between"><h2>${clubBadge(club.id)}${escapeHtml(club.name)}</h2>${teamScoutButton}</div>
+            <p class="muted">${escapeHtml(club.city || '')} · Reputación ${club.reputation}</p>
+          </div>
+        </div>
+        <div class="club-profile-key-metrics" aria-label="Resumen del club">
+          <div class="card inner club-profile-metric"><p class="label">Dinero en caja</p><div class="metric club-profile-money ${typeof budgetTone === 'function' ? budgetTone(clubCash) : ''}" title="${escapeHtml(formatMoney(clubCash))}">${formatClubProfileMoney(clubCash)}</div><small class="muted">M = millones</small></div>
+          <div class="card inner club-profile-metric"><p class="label">Gasto en sueldos</p><div class="metric club-profile-money" title="${escapeHtml(formatMoney(clubSalaryExpense))}">${formatClubProfileMoney(clubSalaryExpense)}</div><small class="muted">anual</small></div>
+          <div class="card inner club-profile-metric"><p class="label">Capacidad</p><div class="metric">${new Intl.NumberFormat('es-AR').format(stadiumCapacity)}</div><small class="muted">espectadores</small></div>
+          <div class="card inner club-profile-metric"><p class="label">Hinchas</p><div class="metric">${new Intl.NumberFormat('es-AR').format(clubSupporters)}</div><small class="muted">base social</small></div>
+        </div>
+      </header>
+      <aside class="club-profile-side">
+        <div class="club-profile-squad-strip" aria-label="Composición del plantel">
+          <div><span>Plantel</span><strong>${players.length}</strong></div>
+          <div><span>Porteros</span><strong>${keepers.length}</strong></div>
+          <div><span>Campo</span><strong>${fieldPlayers.length}</strong></div>
+        </div>
+        <div class="card inner club-profile-tactic-card">
+          <h3>Táctica observada</h3>
+          <p class="muted small">Estructura estimada, sin revelar titulares.</p>
+          ${clubTacticPreview(tactic.formation)}
+        </div>
+        <div class="card inner club-profile-report-card">
+          <h3>Informe de ojeo</h3>
+          ${teamSectorReport}
+        </div>
+      </aside>
+      <section class="card inner club-profile-roster">
+        <div class="club-profile-roster-head"><div><p class="label">Plantilla observada</p><h3>${players.length} jugadores</h3></div><span class="pill">Vista horizontal</span></div>
+        <div class="table-wrap"><table class="scouting-table"><thead><tr><th>Jugador</th><th>Rol</th><th>Nac.</th><th>Media ojeada</th><th>Ataque/Salto</th><th>Defensa</th><th>Pase</th><th>Velocidad/Reflejos</th><th>Cabezazo/Mando</th><th>Tiro/Potencia</th><th>Resistencia</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </section>
     </div>`;
   openModal(body);
   document.querySelector('[data-add-scouting-team]')?.addEventListener('click', ev => { ev.stopPropagation(); if(typeof addTeamToScoutingCenter === 'function') addTeamToScoutingCenter(Number(ev.currentTarget.dataset.addScoutingTeam || 0)); });

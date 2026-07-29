@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "V8.96",
+    "version": "V8.97",
     "descripcion": "Eventos condicionales y 20 decisiones interactivas de vestuario del manager.",
     "nota": "Las decisiones de vestuario se evalúan cada 5 días cuando el ánimo general o el funcionamiento colectivo entra en una zona crítica. Cada evento requiere una respuesta antes de continuar el calendario.",
     "notaEstrellas": "Los conflictos con figuras se evalúan por media, diferencia con el plantel, sueldo, disciplina, influencia y autoridad del mánager."

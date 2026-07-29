@@ -1063,6 +1063,8 @@ function finalizeSeasonIfNeeded(options={}){
   const seasonPrizeAwards = record ? awardManagerSeasonPrizes(record) : null;
   recordLeagueChampionsForCurrentSeason();
   snapshotStandingsHistoryForCurrentSeason();
+  if(typeof syncClubFifaRankingMatchRecords === 'function') syncClubFifaRankingMatchRecords();
+  if(typeof snapshotClubFifaRankingForCurrentSeason === 'function') snapshotClubFifaRankingForCurrentSeason({ force:true });
   const prestigeChanges = updateClubPrestigeAfterSeason(movementsPreview);
   const movements = movementsPreview;
   if(record && currentGameIsFounderMode() && record.promoted){

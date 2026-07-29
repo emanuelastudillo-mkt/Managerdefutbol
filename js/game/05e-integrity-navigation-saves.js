@@ -736,7 +736,7 @@ function sidebarNavigationModeForTab(tab){
   if(key === 'stadium'){ const mode = String(stadiumViewMode || 'main'); return ['sponsors','fans'].includes(mode) ? mode : 'main'; }
   if(key === 'finance') return String(financeViewMode || 'main');
   if(key === 'fixture') return String(fixtureViewMode || 'mine') === 'clubWorldCup' ? 'clubWorldCup' : 'mine';
-  if(key === 'standings') return String(selectedCompetitionView || 'standings') === 'standings' ? 'standings' : 'champions';
+  if(key === 'standings'){ const mode = String(selectedCompetitionView || 'standings'); return mode === 'standings' ? 'standings' : mode === 'club-ranking' ? 'club-ranking' : 'club-ranking'; }
   if(key === 'mystats') return String(managerStatsViewMode || 'profile');
   return '';
 }

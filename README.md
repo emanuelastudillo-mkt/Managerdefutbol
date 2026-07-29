@@ -1,3 +1,23 @@
+# V8.97 · Ranking FIFA de clubes
+
+## Aplicación
+
+Aplicar sobre **V8.96**.
+
+## Nueva función
+
+La pestaña Competiciones incorpora un ranking mundial interno de clubes con puntajes entre 1 y 1500. Combina reputación del club y de su liga, victorias recientes y títulos oficiales. Las victorias y el título del Mundial de Clubes tienen el valor más alto.
+
+## Historial
+
+Al finalizar cada temporada se guarda una fotografía del ranking para mostrar subidas y bajadas. Las partidas antiguas reconstruyen ligas y títulos desde sus historiales disponibles y comienzan a conservar las victorias de copa desde V8.97.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica resultados, economía, planteles ni clasificación a competiciones.
+
+## Base V8.96
+
 # V8.96 · Jerarquía, disciplina y estrellas difíciles
 
 ## Aplicación

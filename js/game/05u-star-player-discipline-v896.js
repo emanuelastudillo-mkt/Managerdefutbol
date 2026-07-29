@@ -1,4 +1,4 @@
-/* V8.96 · Jerarquía, disciplina y conflictos con estrellas.
+/* V8.97 · Jerarquía, disciplina y conflictos con estrellas.
    Los jugadores de media alta, con gran diferencia respecto del plantel o con un sueldo
    superior al del mánager pueden desafiar su autoridad cuando la disciplina es baja. */
 

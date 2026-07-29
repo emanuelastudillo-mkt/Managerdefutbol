@@ -1376,6 +1376,7 @@ function competitionsNavMarkup(active='standings'){
     <button type="button" id="btnCompetitionStandings" class="${current === 'standings' ? 'primary' : 'ghost'}">Tabla de posiciones</button>
     <button type="button" id="btnCompetitionStats" class="${current === 'stats' ? 'primary' : 'ghost'}">Estadísticas</button>
     <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
+    <button type="button" id="btnCompetitionClubRanking" class="${current === 'club-ranking' ? 'primary' : 'ghost'}">Ranking FIFA</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
 }
@@ -1383,6 +1384,7 @@ function bindCompetitionsNav(){
   $('btnCompetitionStandings')?.addEventListener('click', () => { selectedCompetitionView = 'standings'; renderStandings(); });
   $('btnCompetitionStats')?.addEventListener('click', () => { selectedCompetitionView = 'stats'; renderStandings(); });
   $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
+  $('btnCompetitionClubRanking')?.addEventListener('click', () => { selectedCompetitionView = 'club-ranking'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
 function competitionChampionEntriesFromStandingsHistory(){
@@ -1473,6 +1475,11 @@ function renderStandings(){
     view.innerHTML = typeof nationalCupsCompetitionMarkup === 'function' ? nationalCupsCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de copas nacionales no está disponible.</p></div>';
     bindCompetitionsNav();
     document.querySelectorAll('[data-match-id]').forEach(element => element.addEventListener('click', () => showMatchModal(element.dataset.matchId)));
+    return;
+  }
+  if(String(selectedCompetitionView || 'standings') === 'club-ranking'){
+    if(typeof renderClubFifaRanking === 'function') renderClubFifaRanking();
+    else view.innerHTML = '<div class="card"><p class="muted">El ranking mundial de clubes no está disponible.</p></div>';
     return;
   }
   if(String(selectedCompetitionView || 'standings') === 'champions'){ renderChampionsHistory(); return; }

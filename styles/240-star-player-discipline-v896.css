@@ -1,4 +1,4 @@
-/* V8.96 · Jerarquía y disciplina de estrellas. */
+/* V8.97 · Jerarquía y disciplina de estrellas. */
 .star-discipline-summary{margin-bottom:14px}
 .star-discipline-summary .row{align-items:flex-start;gap:12px}
 .star-discipline-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}

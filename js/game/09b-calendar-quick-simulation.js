@@ -1109,6 +1109,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     if(typeof processAcademyTurn === 'function') processAcademyTurn();
     if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
     const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
+    const eliteBotMarket = typeof processEliteBotMarketDaily === 'function' ? processEliteBotMarketDaily({ reason:'daily_calendar_managerless' }) : null;
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
     if(botResults.length) processNonOwnResultsAfterSimulation(botResults);
@@ -1120,7 +1121,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const postCompetition = typeof createPostRegularCompetitionsIfNeeded === 'function' ? createPostRegularCompetitionsIfNeeded() : null;
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
-    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, eliteBotMarket, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
@@ -1132,6 +1133,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
+  const eliteBotMarket = typeof processEliteBotMarketDaily === 'function' ? processEliteBotMarketDaily({ reason:'daily_calendar' }) : null;
   const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
     ? processUnansweredSpecialClauseOffers({ silent:true, source:'daily_calendar' })
     : { accepted:0, closed:0 };
@@ -1164,7 +1166,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   const financialStaffDismissalsAtEnd = typeof dismissAllStaffForFinancialCrisis === 'function'
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
-  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, eliteBotMarket, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

@@ -281,6 +281,9 @@ function normalizeGame(saved){
   if(typeof ensureTransferHistoryState === 'function') ensureTransferHistoryState(normalized);
   else normalized.transferHistory = hadTransferHistory ? normalized.transferHistory : { version:'V8.99', nextId:1, entries:[] };
   if(!hadTransferHistory || Number(normalized.transferHistory?.entries?.length || 0) !== previousTransferHistoryCount) normalized._needsAutosave = true;
+  const hadEliteBotMarket = Boolean(normalized.eliteBotMarket && typeof normalized.eliteBotMarket === 'object' && !Array.isArray(normalized.eliteBotMarket));
+  normalized.eliteBotMarket = typeof normalizeEliteBotMarketState === 'function' ? normalizeEliteBotMarketState(normalized.eliteBotMarket || {}, normalized) : (normalized.eliteBotMarket || { version:'V9.00', season:Number(normalized.seasonNumber || 1), lastFreeReviewDate:'', lastTransferReviewDate:'', clubSeasonSignings:{}, log:[] });
+  if(!hadEliteBotMarket) normalized._needsAutosave = true;
   const manualReferenceRepair = typeof synchronizeManualPlayerReferences === 'function'
     ? synchronizeManualPlayerReferences(normalized, seed, { retiredManualPlayerIds:normalized?.manualRetiredPlayerIds || normalized?.retiredManualPlayerIds || [] })
     : { changed:false };
@@ -862,6 +865,7 @@ function newGame(selectedClubId, options={}){
     special: typeof createInitialSpecialState === 'function' ? createInitialSpecialState(managerName) : null,
     marketPlayers: [],
     transferHistory: { version:'V8.99', nextId:1, entries:[] },
+    eliteBotMarket: { version:'V9.00', season:1, lastFreeReviewDate:'', lastTransferReviewDate:'', clubSeasonSignings:{}, log:[] },
     pendingTransfers: [],
     rejectedPurchaseOffers: {},
     rejectedFreeAgentOffers: {},

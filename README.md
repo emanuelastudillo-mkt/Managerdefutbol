@@ -1,3 +1,45 @@
+# V9.00 · Mercado de élite para clubes bots
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V8.99.
+
+## Nuevas funciones
+
+### Estrellas libres
+
+- Los clubes de prestigio 80 o superior revisan las estrellas libres cada tres días.
+- Los equipos del Top 10 del ranking FIFA tienen prioridad cuando todavía no alcanzaron su objetivo.
+- Sólo se consideran jugadores de media 85 o superior y hasta 34 años.
+- Los libres pueden firmar fuera de las ventanas profesionales.
+
+### Objetivo del Top 10
+
+- Los diez mejores clubes del ranking FIFA intentan sostener al menos siete jugadores de media 85+.
+- Si no hay libres adecuados, buscan compras entre clubes durante las ventanas de transferencias.
+- Se realizan como máximo dos compras por revisión y una incorporación por club en cada revisión.
+- El club controlado por el mánager nunca compra automáticamente.
+
+### Protección financiera
+
+- Cada operación conserva como mínimo el 42% de la caja previa.
+- La caja restante también debe cubrir al menos el 80% de la masa salarial anual resultante.
+- Un fichaje pago no puede superar el 24% de la caja del comprador.
+- Los clubes no superan seis incorporaciones de élite por temporada mediante este sistema.
+- Si las condiciones económicas no se cumplen, el fichaje no se realiza aunque el equipo esté debajo del objetivo.
+
+### Integración
+
+- Todos los movimientos aparecen en el registro anual de transferencias.
+- Los fichajes actualizan presupuestos, contratos, cláusulas, estadísticas y pertenencia del jugador.
+- Los clubes vendedores reciben el importe neto luego del impuesto de transferencia.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El nuevo estado se crea automáticamente al cargar una carrera de V8.99.
+
+## Base consolidada
+
 # V8.99 · Registro anual de transferencias
 
 ## Aplicación

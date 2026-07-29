@@ -1,3 +1,23 @@
+# V9.01 · Modo claro y oscuro
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.00.
+
+## Interfaz
+
+- Se agregó un switch en la barra superior para alternar entre modo claro y modo oscuro.
+- El modo oscuro continúa siendo el valor inicial para conservar la estética existente.
+- La elección se guarda en el navegador y se aplica antes de mostrar la interfaz para evitar destellos de color.
+- El selector actualiza el color de la interfaz del navegador y expone su estado a lectores de pantalla.
+- La capa clara adapta paneles, tablas, formularios, modales, navegación y vista móvil.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El tema visual no se incorpora al archivo de guardado ni altera lógica, economía o simulación.
+
+## Base consolidada
+
 # V9.00 · Mercado de élite para clubes bots
 
 ## Tipo de entrega

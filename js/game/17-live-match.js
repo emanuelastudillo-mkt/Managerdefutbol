@@ -269,20 +269,32 @@
     return String(Math.round(Number(value || 0)));
   }
   function compareStatRow(label, left, right, type='num'){
-    const l = Number(left || 0);
-    const r = Number(right || 0);
-    const total = Math.max(1, l + r);
-    const lp = type === 'pct' ? simClampUi(l, 0, 100) : Math.round((l / total) * 100);
-    const rp = type === 'pct' ? simClampUi(r, 0, 100) : Math.round((r / total) * 100);
-    return `<div class="live-compare-row" style="--left:${lp}%;--right:${rp}%"><p>${ehtml(label)}</p><div class="live-compare-values"><strong>${ehtml(compareValue(left, type))}</strong><span class="bar left"><i></i></span><span class="bar right"><i></i></span><strong>${ehtml(compareValue(right, type))}</strong></div></div>`;
+    const l = Math.max(0, Number(left || 0));
+    const r = Math.max(0, Number(right || 0));
+    const total = l + r;
+    const lp = total > 0 ? (l / total) * 100 : 50;
+    const rp = 100 - lp;
+    const leftPercent = Math.max(0, Math.min(100, lp)).toFixed(2);
+    const rightPercent = Math.max(0, Math.min(100, rp)).toFixed(2);
+    const aria = `${label}: ${compareValue(left, type)} ${liveClubName(liveState?.match?.homeId)}, ${compareValue(right, type)} ${liveClubName(liveState?.match?.awayId)}. Distribución ${Math.round(lp)} a ${Math.round(rp)} por ciento.`;
+    return `<div class="live-compare-row" style="--left:${leftPercent}%;--right:${rightPercent}%"><p>${ehtml(label)}</p><div class="live-compare-values"><strong>${ehtml(compareValue(left, type))}</strong><span class="bar duel" role="img" aria-label="${ehtml(aria)}"><i class="left"></i><i class="right"></i></span><strong>${ehtml(compareValue(right, type))}</strong></div></div>`;
   }
   function simClampUi(value,min,max){ return Math.max(min, Math.min(max, Number(value || 0))); }
+  function liveCompareClubColor(clubId, fallback){
+    const raw = typeof clubById === 'function' ? clubById(clubId)?.primaryColor : null;
+    let rgb = typeof parseCssColorToRgb === 'function' ? parseCssColorToRgb(raw) : null;
+    if(!rgb) return fallback;
+    if(typeof rgbLuminance === 'function' && rgbLuminance(rgb) > 0.84 && typeof mixRgb === 'function') rgb = mixRgb(rgb, [100,116,139], 0.58);
+    return typeof rgbToCss === 'function' ? rgbToCss(rgb) : fallback;
+  }
   function compareStatsCard(){
     const match = liveState.match || {};
     const h = liveState.matchStats?.home || {};
     const a = liveState.matchStats?.away || {};
     const awayPoss = Number(a.possession ?? (100 - Number(h.possession || 50)));
-    return `<div class="card inner live-compare-card">
+    const homeColor = liveCompareClubColor(match.homeId, '#e11d48');
+    const awayColor = liveCompareClubColor(match.awayId, '#60a5fa');
+    return `<div class="card inner live-compare-card" style="--live-home-color:${ehtml(homeColor)};--live-away-color:${ehtml(awayColor)}">
       <div class="live-compare-top"><span>${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</span><b>Estadísticas del partido</b><span>${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</span></div>
       ${compareStatRow('Intentos de ataque', h.attacks || 0, a.attacks || 0)}
       ${compareStatRow('Tiros al arco', h.chances || 0, a.chances || 0)}

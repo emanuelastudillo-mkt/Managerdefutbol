@@ -287,7 +287,7 @@ function visualAlertItems(){
     items.push({ tone:'warn', icon:'$', title:`${pendingTransferOffers} oferta(s) por jugadores`, text:'Gestioná las ofertas desde Mensajes.', tab:'messages' });
   }
   if(sponsorOffers){
-    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Tenés ofertas con vencimiento para aceptar o rechazar.', tab:'stadium' });
+    items.push({ tone:'ok', icon:'S', title:`${sponsorOffers} sponsor(s) disponibles`, text:'Tenés ofertas con vencimiento para aceptar o rechazar.', tab:'stadium', mode:'sponsors' });
   }
   if(scoutingJobs.length){
     const nextDue = Math.min(...scoutingJobs.map(j => Number(j.dueTurn || 0)));
@@ -312,7 +312,7 @@ function visualAlertItems(){
 }
 function visualAlertsMarkup(){
   const items = visualAlertItems();
-  return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
+  return `<div class="manager-alert-grid">${items.map(item => `<button class="manager-alert ${escapeHtml(item.tone)} ${item.tab ? 'clickable' : ''}" ${item.tab ? `data-go-tab="${escapeHtml(item.tab)}"` : ''}${item.mode ? ` data-go-mode="${escapeHtml(item.mode)}"` : ''} type="button"><span class="manager-alert-icon">${escapeHtml(item.icon)}</span><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span></button>`).join('')}</div>`;
 }
 
 function daysUntilNextOwnMatchLabel(){
@@ -772,13 +772,13 @@ function renderHome(){
   const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
   view.innerHTML = `
     ${homeWeekCalendarMarkup()}
-    <div class="home-message-strip section-title">${homeMessagesSummary()}</div>
-    ${problemBox}
+    ${homeInboxButtonMarkup()}
     ${seasonBox}
     ${turnModePanelMarkup()}
     ${typeof managerChallengeHomeMarkup === 'function' ? managerChallengeHomeMarkup() : ''}
     ${managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitness, avgMorale, cohesion, deltaClass, deltaText })}
     <div class="home-alerts-block">${visualAlertsMarkup()}</div>
+    ${problemBox}
     <div id="homeOnlineRankingBox">${typeof challengeHomeOnlineRankingMarkup === 'function' ? challengeHomeOnlineRankingMarkup() : ''}</div>
     <div id="homeDiscordCommunityBox">${typeof discordCommunityHomeMarkup === 'function' ? discordCommunityHomeMarkup() : ''}</div>
     <div class="card featured-players-panel" style="margin-top:14px">
@@ -828,7 +828,14 @@ function renderHome(){
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });
   document.querySelector('[data-continue-season]')?.addEventListener('click',()=>startNextSeason(game.selectedClubId));
   document.querySelectorAll('.featured-player-card[data-player-id]').forEach(card => card.addEventListener('click',()=>showPlayerModal(Number(card.dataset.playerId))));
-  document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{ activeTab = btn.dataset.goTab; renderAll(); }));
+  document.querySelectorAll('[data-go-tab]').forEach(btn => btn.addEventListener('click',()=>{
+    const tab = btn.dataset.goTab;
+    const mode = btn.dataset.goMode || '';
+    if(typeof prepareSidebarNavigation === 'function') prepareSidebarNavigation(tab, mode);
+    else if(tab === 'stadium' && mode) stadiumViewMode = mode;
+    activeTab = tab;
+    renderAll();
+  }));
   $('friendlyOpponentSelect')?.addEventListener('change', (event)=>{ game.pendingFriendlyOpponentId = Number(event.target.value || 0); saveLocal(true); renderHome(); });
   $('btnClearFriendly')?.addEventListener('click', ()=>{ game.pendingFriendlyOpponentId = 0; saveLocal(true); renderHome(); });
   if(typeof bindStaffDismissButtons === 'function') bindStaffDismissButtons(renderHome);
@@ -994,6 +1001,21 @@ function unreadMessagesCount(){
 }
 function unreadAssistantMessagesCount(){
   return (game?.messages || []).filter(m => !m.read && String(m.type || '').toLowerCase() === 'asistente').length;
+}
+function homeInboxButtonMarkup(){
+  const unread = unreadMessagesCount();
+  const total = Array.isArray(game?.messages) ? game.messages.length : 0;
+  const label = unread
+    ? `Abrir bandeja: ${unread} mensaje${unread === 1 ? '' : 's'} sin leer`
+    : `Abrir bandeja de mensajes${total ? `: ${total} en total` : ''}`;
+  return `<div class="home-inbox-row">
+    <button type="button" class="home-inbox-button ${unread ? 'has-unread' : ''}" data-open-messages aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+      <span class="home-inbox-envelope" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M3.75 6.75h16.5v10.5H3.75z"></path><path d="m4.5 7.5 7.5 5.25 7.5-5.25"></path></svg>
+      </span>
+      ${unread ? `<strong class="home-inbox-count">${unread > 99 ? '99+' : unread}</strong>` : '<span class="home-inbox-empty-dot" aria-hidden="true"></span>'}
+    </button>
+  </div>`;
 }
 function assistantMessagesEnabled(){
   return !game || game.assistantMessagesEnabled !== false;
@@ -1237,19 +1259,44 @@ function deleteOldMessages(){
   renderMessages();
   showNotice(`${deletable.length} mensaje(s) antiguo(s) eliminado(s).`);
 }
+function messageSortTimestamp(message){
+  const created = Number(message?.createdAt || 0);
+  if(Number.isFinite(created) && created > 0) return created;
+  const season = Math.max(1, Number(message?.season || 1));
+  const turn = Math.max(0, Number(message?.turn || 0));
+  return (season * 1000000) + turn;
+}
+function orderedInboxMessages(){
+  return [...(Array.isArray(game?.messages) ? game.messages : [])].sort((a,b) => {
+    const unreadOrder = Number(Boolean(a?.read)) - Number(Boolean(b?.read));
+    if(unreadOrder) return unreadOrder;
+    return messageSortTimestamp(b) - messageSortTimestamp(a);
+  });
+}
+function markMessageReadById(messageId){
+  const message = (game?.messages || []).find(item => String(item?.id || '') === String(messageId || ''));
+  if(!message || message.read) return false;
+  message.read = true;
+  saveLocal(true);
+  renderMessages();
+  return true;
+}
 function renderMessages(){
   if(typeof ensurePendingSpecialClauseAutoAcceptanceMetadata === 'function') ensurePendingSpecialClauseAutoAcceptanceMetadata();
   const reconciledTransfers = reconcileTransferOfferMessages();
   if(reconciledTransfers > 0 && typeof saveLocal === 'function') saveLocal(true);
-  markMessagesRead();
-  const messages = Array.isArray(game.messages) ? game.messages : [];
+  const messages = orderedInboxMessages();
   const unread = messages.filter(m => !m.read).length;
   const pendingOffers = messages.filter(m => m.action?.type === 'transferOffer' && m.action.status === 'pending').length;
   const highPriority = messages.filter(m => m.priority === 'high').length;
-  const rows = messages.map(m => messageCard(m)).join('');
+  const unreadMessages = messages.filter(m => !m.read);
+  const readMessages = messages.filter(m => m.read);
+  const unreadRows = unreadMessages.map(m => messageCard(m)).join('');
+  const readRows = readMessages.map(m => messageCard(m)).join('');
+  const rows = messages.length ? `${unreadRows ? `<section class="message-inbox-section message-inbox-unread"><div class="message-inbox-section-head"><strong>Pendientes de lectura</strong><span>${unreadMessages.length}</span></div>${unreadRows}</section>` : ''}${readRows ? `<section class="message-inbox-section message-inbox-read"><div class="message-inbox-section-head"><strong>Leídos</strong><span>${readMessages.length}</span></div>${readRows}</section>` : ''}` : '';
   const deletableCount = deletableOldMessages().length;
   view.innerHTML = `
-    <div class="row section-title compact-section-title"><div><h2>Mensajes</h2><p class="tagline">Bandeja compacta de avisos del club.</p></div><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar mensajes antiguos${deletableCount ? ` (${deletableCount})` : ''}</button></div>
+    <div class="row section-title compact-section-title"><div><h2>Mensajes</h2><p class="tagline">Los mensajes pendientes aparecen primero y se mantienen destacados hasta marcarlos como leídos.</p></div><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar mensajes antiguos${deletableCount ? ` (${deletableCount})` : ''}</button></div>
     <div class="messages-shell">
       <div class="messages-toolbar card">
         <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
@@ -1260,6 +1307,7 @@ function renderMessages(){
       <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
     </div>`;
   document.querySelector('#btnDeleteOldMessages')?.addEventListener('click', deleteOldMessages);
+  document.querySelectorAll('[data-mark-message-read]').forEach(btn => btn.addEventListener('click', () => markMessageReadById(btn.dataset.markMessageRead)));
   if(!(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active))){
     document.querySelectorAll('[data-accept-offer]').forEach(btn => btn.addEventListener('click', () => acceptTransferOffer(btn.dataset.acceptOffer)));
     document.querySelectorAll('[data-convince-player]').forEach(btn => btn.addEventListener('click', () => convinceSpecialClausePlayer(btn.dataset.convincePlayer)));
@@ -1414,7 +1462,8 @@ function messageCard(m){
   const isAssistant = String(m.type || '').toLowerCase() === 'asistente';
   const unreadMark = m.read ? '' : '<span class="message-unread-dot" title="Mensaje nuevo"></span>';
   const assistantBadge = isAssistant && !m.read ? '<span class="assistant-message-badge">Tenés 1 mensaje</span>' : '';
-  return `<div class="card message-card ${toneClass} ${isAssistant ? 'assistant-message-card' : ''} ${m.read ? '' : 'unread'}">
+  const readAction = m.read ? '' : `<div class="row message-read-action"><button type="button" class="ghost mini" data-mark-message-read="${escapeHtml(m.id)}">Marcar como leído</button></div>`;
+  return `<div class="card message-card ${toneClass} ${isAssistant ? 'assistant-message-card' : ''} ${m.read ? '' : 'unread'}" data-message-card-id="${escapeHtml(m.id)}">
     <div class="message-card-accent"></div>
     <div class="message-card-main">
       <div class="row message-card-head">
@@ -1431,6 +1480,7 @@ function messageCard(m){
       </div>
       <div class="message-paper"><p>${messageBodyHtml(m)}</p>${messageRelatedPlayersMarkup(m)}</div>
       ${action}
+      ${readAction}
     </div>
   </div>`;
 }

@@ -1,3 +1,45 @@
+# V9.12 · Bandeja, alertas y estadísticas vivas
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.11.
+
+## Pantalla principal
+
+- La previsualización del último mensaje fue retirada de Inicio.
+- Se agregó un botón compacto con icono de sobre y contador de mensajes sin leer.
+- Al pulsarlo se abre la bandeja completa.
+- El bloque **Revisión obligatoria** ahora aparece debajo de las alertas y antes de **Tu ranking online**.
+
+## Bandeja de mensajes
+
+- Los mensajes sin leer se muestran primero y mantienen el resaltado visual.
+- Los mensajes ya leídos se agrupan debajo.
+- Abrir la bandeja ya no marca automáticamente todos los mensajes como leídos.
+- Cada mensaje pendiente incorpora la acción **Marcar como leído**.
+
+## Sponsors
+
+- La alerta de sponsors disponibles abre directamente el submenú **Sponsors**.
+- Ya no redirige a la pantalla principal de Estadio e instalaciones.
+
+## Simulador vivo
+
+- Posesión, intentos de ataque, tiros al arco, xG y faltas utilizan una única barra comparativa.
+- La barra representa el 100% combinado de la estadística.
+- Cada equipo ocupa una proporción equivalente a su participación: 20 contra 30 se presenta como 40% contra 60%.
+- Los segmentos usan los colores principales de los clubes cuando están disponibles.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica resultados, estadísticas calculadas, sponsors, mensajes guardados ni simulación; cambia la navegación y la presentación visual de esos datos.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.11.
+
+## Base consolidada
+
 # V9.11 · Calendario limpio y orden ascendente
 
 ## Tipo de entrega

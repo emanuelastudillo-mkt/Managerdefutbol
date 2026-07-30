@@ -1,3 +1,31 @@
+# V9.07 · Mensajes de cruces por país del mánager
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.06.
+
+## Mensajes de copas nacionales
+
+- Los avisos del sorteo y de cada nueva ronda de una copa nacional sólo se envían cuando la competición pertenece al país del club dirigido.
+- Los cruces de copas extranjeras continúan generándose, simulándose y mostrándose en Competiciones, pero ya no llenan la bandeja de mensajes.
+- El aviso de programación de una supercopa también se limita al país del club dirigido.
+- Los anuncios de campeones nacionales se mantienen sin cambios.
+- Si el mánager se encuentra sin club, no recibe actualizaciones de cruces nacionales hasta asumir un nuevo equipo.
+
+## Mundial de Clubes
+
+Los mensajes del Mundial de Clubes se mantienen sin cambios, incluidos el sorteo, las fases eliminatorias, la final, los premios y el campeón.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica calendarios, resultados, títulos, economía ni guardados; únicamente filtra los nuevos avisos de cruces que se agregan a la bandeja del mánager.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.06.
+
+## Base consolidada
+
 # V9.06 · Interfaz oscura definitiva
 
 ## Tipo de entrega

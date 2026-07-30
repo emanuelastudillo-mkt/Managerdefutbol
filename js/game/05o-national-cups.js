@@ -1,4 +1,4 @@
-/* V8.79 · Copas nacionales y supercopas: sorteos, cruces, sedes neutrales, recaudación y títulos. */
+/* V9.07 · Copas nacionales: los avisos de sorteos y cruces se limitan al país del club dirigido. */
 
 const NATIONAL_CUP_VERSION = 2;
 const NATIONAL_CUP_COUNTRIES = ['Argentina','Chile','España','Rumania','Inglaterra','Brasil','Italia'];
@@ -41,6 +41,19 @@ function nationalCupConfig(id){ return NATIONAL_CUP_CONFIGS.find(item => item.id
 function nationalCupConfigForCountry(country){
   const key = nationalCupCountryKey(country);
   return NATIONAL_CUP_CONFIGS.find(item => nationalCupCountryKey(item.country) === key) || null;
+}
+function nationalCupManagedCountryKey(){
+  const selectedClubId = Number(game?.selectedClubId || 0);
+  if(!selectedClubId) return '';
+  const selectedClub = (seed?.clubs || []).find(club => Number(club?.id || 0) === selectedClubId);
+  const country = selectedClub
+    ? (typeof clubCountry === 'function' ? clubCountry(selectedClub) : (selectedClub.country || selectedClub.pais || game?.selectedCountry || ''))
+    : (game?.selectedCountry || '');
+  return nationalCupCountryKey(country);
+}
+function nationalCupShouldNotifyManager(country){
+  const managedCountry = nationalCupManagedCountryKey();
+  return Boolean(managedCountry && managedCountry === nationalCupCountryKey(country));
 }
 function nationalCupFirstWednesday(year, month){
   const date = new Date(Date.UTC(Number(year), Math.max(0, Number(month) - 1), 1));
@@ -313,7 +326,7 @@ function nationalCupDrawEdition(config, options={}){
   edition.stages[preliminary.id].status = 'scheduled';
   edition.stages[preliminary.id].roundId = round?.id || '';
   edition.stages[preliminary.id].matchIds = (round?.matches || []).map(match => match.id);
-  if(typeof pushGameMessage === 'function' && options.silent !== true){
+  if(typeof pushGameMessage === 'function' && options.silent !== true && nationalCupShouldNotifyManager(config.country)){
     pushGameMessage({
       id:`national-cup-${game.seasonNumber}-${config.id}-draw`,
       type:'deportivo', priority:'normal', title:`Sorteo de ${config.name}`,
@@ -362,7 +375,7 @@ function nationalCupCreateNextStage(config, edition){
   edition.stages[nextStage.id].status = 'scheduled';
   edition.stages[nextStage.id].roundId = round?.id || '';
   edition.stages[nextStage.id].matchIds = (round?.matches || []).map(match => match.id);
-  if(typeof pushGameMessage === 'function') pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-${nextStage.id}`, type:'deportivo', priority:'normal', title:`${config.name} · ${nextStage.label}`, body:`Se definieron los cruces de ${nextStage.label}. Se jugarán el ${matchDateLabel(nationalCupStageDate(config, nextStage.id, currentSeasonYear()))}.` });
+  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(config.country)) pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-${nextStage.id}`, type:'deportivo', priority:'normal', title:`${config.name} · ${nextStage.label}`, body:`Se definieron los cruces de ${nextStage.label}. Se jugarán el ${matchDateLabel(nationalCupStageDate(config, nextStage.id, currentSeasonYear()))}.` });
   return true;
 }
 function advanceNationalCupsIfNeeded(){
@@ -417,7 +430,7 @@ function createNationalSupercupIfNeeded(country){
   supercup.participantClubIds = [leagueChampionId, rivalId];
   supercup.matchId = round?.matches?.[0]?.id || '';
   supercup.status = 'scheduled';
-  if(typeof pushGameMessage === 'function') pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}`, type:'deportivo', priority:'normal', title:supercup.name, body:`${clubName(leagueChampionId)} y ${clubName(rivalId)} disputarán la ${supercup.name} en el estadio más grande del país.` });
+  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(country)) pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}`, type:'deportivo', priority:'normal', title:supercup.name, body:`${clubName(leagueChampionId)} y ${clubName(rivalId)} disputarán la ${supercup.name} en el estadio más grande del país.` });
   return true;
 }
 function advanceNationalSupercupsIfNeeded(){

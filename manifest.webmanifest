@@ -14,5 +14,12 @@
     "sports",
     "entertainment"
   ],
-  "id": "/"
+  "id": "/",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }

@@ -1,3 +1,34 @@
+# V9.15 · Favicon desde la raíz
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.14.
+
+## Ajuste
+
+- El favicon embebido fue retirado.
+- El navegador ahora utiliza exclusivamente `favicon.png`, ubicado en el directorio raíz del juego.
+- La misma ruta se declara como icono convencional, acceso directo, Apple Touch Icon y recurso del manifiesto web.
+- Se actualizó la versión de caché de los recursos a V9.15 para forzar la renovación del icono en navegadores que conservan favicons anteriores.
+
+## Archivo esperado
+
+```text
+/favicon.png
+```
+
+El PNG debe mantenerse en la misma carpeta que `index.html`. La entrega no vuelve a empaquetar el archivo gráfico porque corresponde a una versión sin imágenes.
+
+## Compatibilidad
+
+No modifica partidas, lógica, interfaz, guardados ni servicios online.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.14.
+
+## Base consolidada
+
 # V9.14 · Sanciones por competición
 
 ## Tipo de entrega

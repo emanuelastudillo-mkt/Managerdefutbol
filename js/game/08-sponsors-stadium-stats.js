@@ -1249,6 +1249,29 @@ function fixtureRoundTitle(round){
   }
   return round?.title || (typeof playoffRoundMatchdayLabel === 'function' ? playoffRoundMatchdayLabel(round?.matchday) : `Fecha ${round?.matchday || ''}`);
 }
+function fixtureRoundFirstScheduledDate(round){
+  const dates = [];
+  const addDate = value => { if(validIsoDate(value)) dates.push(value); };
+  addDate(round?.date);
+  addDate(round?.startDate);
+  (round?.matches || []).forEach(match => {
+    const scheduled = typeof scheduledDateForMatch === 'function' ? scheduledDateForMatch(match, round) : match?.date;
+    addDate(scheduled);
+    addDate(match?.date);
+  });
+  return dates.sort()[0] || '';
+}
+function fixtureRoundAscendingComparator(a, b){
+  const dateA = fixtureRoundFirstScheduledDate(a);
+  const dateB = fixtureRoundFirstScheduledDate(b);
+  if(dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+  if(dateA && !dateB) return -1;
+  if(!dateA && dateB) return 1;
+  const matchdayA = Math.max(0, Math.round(Number(a?.leagueMatchday || a?.competitionMatchday || a?.matchday || 0)));
+  const matchdayB = Math.max(0, Math.round(Number(b?.leagueMatchday || b?.competitionMatchday || b?.matchday || 0)));
+  if(matchdayA !== matchdayB) return matchdayA - matchdayB;
+  return String(fixtureRoundTitle(a) || '').localeCompare(String(fixtureRoundTitle(b) || ''), 'es', { sensitivity:'base' });
+}
 
 function renderFixture(){
   if(fixtureViewMode === 'clubWorldCup' && typeof ensureClubWorldCupCurrentSeason === 'function'){
@@ -1281,7 +1304,8 @@ function renderFixture(){
     if(typeof bindClubWorldCupYearFilter === 'function') bindClubWorldCupYearFilter(renderFixture);
     return;
   }
-  const html = game.fixtures.map(round=>{
+  const fixtureRounds = showMine ? (game.fixtures || []).slice().sort(fixtureRoundAscendingComparator) : (game.fixtures || []);
+  const html = fixtureRounds.map(round=>{
     if(showMine){
       const matches = round.matches.filter(m => Number(m.homeId) === ownClubId || Number(m.awayId) === ownClubId);
       if(!matches.length) return '';

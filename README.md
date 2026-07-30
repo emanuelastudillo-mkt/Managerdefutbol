@@ -1,3 +1,32 @@
+# V9.11 · Calendario limpio y orden ascendente
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.10.
+
+## Calendario semanal de Inicio
+
+- Se eliminaron los textos visibles **Calendario de 7 días** y **Ayer · Hoy · Próximos 5 días**.
+- Los siete recuadros permanecen en la parte superior de Inicio, sin modificar días, resultados ni compromisos mostrados.
+- El bloque conserva una etiqueta accesible interna para lectores de pantalla.
+
+## Mi calendario
+
+- Los bloques de partidos del club se ordenan cronológicamente de forma ascendente.
+- La vista comienza por las primeras jornadas de la temporada, como **Fecha 1**, y continúa hacia las fechas posteriores.
+- Cuando existen partidos de copa u otras competiciones, se intercalan según su fecha programada real.
+- El cambio se aplica únicamente a **Mi calendario**; no modifica el orden interno del fixture ni la simulación.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica fechas, cruces, resultados, jornadas, cargas físicas ni guardados; únicamente cambia la presentación y el orden visual.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.10.
+
+## Base consolidada
+
 # V9.10 · Fechas de liga correctas en el calendario semanal
 
 ## Tipo de entrega

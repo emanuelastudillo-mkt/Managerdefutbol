@@ -746,11 +746,7 @@ function homeWeekCalendarMarkup(){
   for(let offset=-1; offset<=5; offset++) dateEntries.push({ iso:addDaysToIsoDate(today, offset), offset });
   const eventsByDate = homeWeekCalendarEventsByDate(dateEntries.map(item => item.iso));
   const days = dateEntries.map(item => homeWeekCalendarDayMarkup(item.iso, item.offset, eventsByDate.get(item.iso) || []));
-  return `<section class="card home-week-calendar" aria-labelledby="homeWeekCalendarTitle">
-    <div class="home-week-calendar-title">
-      <div><h3 id="homeWeekCalendarTitle">Calendario de 7 días</h3></div>
-      <span class="pill">Ayer · Hoy · Próximos 5 días</span>
-    </div>
+  return `<section class="card home-week-calendar" aria-label="Calendario semanal de siete días">
     <div class="home-week-calendar-grid">${days.join('')}</div>
   </section>`;
 }

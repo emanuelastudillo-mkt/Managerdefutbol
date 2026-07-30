@@ -1,3 +1,32 @@
+# V9.05 · Nueva interfaz en vista previa
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.04.
+
+## Vista previa reversible
+
+- Se agregó el botón **Nueva interfaz** en la barra superior.
+- El botón activa y desactiva una capa visual independiente sin modificar la información, los datos ni la estructura funcional del juego.
+- La nueva estética no se guarda en el navegador: cada recarga comienza con la interfaz actual.
+- Al activar la vista previa, el mismo botón permite volver inmediatamente a la interfaz anterior.
+
+## Nueva estética
+
+- Marco general más compacto y continuo, con barra superior, menú lateral y área central visualmente conectados.
+- Paleta oscura de grafito con acento naranja, inspirada en interfaces de gestión deportiva.
+- Bordes finos, radios reducidos, paneles planos y jerarquías tipográficas más precisas.
+- Navegación lateral con indicador naranja, botones rectangulares y estados activos más claros.
+- Tablas, tarjetas, formularios, modales, métricas y partidos adaptados a la misma línea visual.
+- Se incluyó una variante clara compatible con el selector de tema existente.
+- La presentación se adapta a escritorio, notebooks y dispositivos móviles.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. La modificación es exclusivamente visual y no altera guardados, economía, planteles, calendarios, simulación ni funciones online.
+
+## Base consolidada
+
 # V9.04 · Resumen diario compacto
 
 ## Tipo de entrega

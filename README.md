@@ -1,3 +1,23 @@
+# V9.04 · Resumen diario compacto
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.03.
+
+## Interfaz
+
+- El bloque “Resumen del último avance” dejó de mostrarse como una tarjeta grande.
+- La información ahora ocupa una franja discreta de una o dos líneas en escritorio.
+- Título, fecha, fase, calendario y próximo compromiso utilizan tipografía pequeña y de jerarquía casi uniforme.
+- En móvil, los detalles se acomodan en líneas compactas sin generar desbordes.
+- Se mantienen los datos del avance para poder verificar el calendario sin ocupar espacio central.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. El cambio es exclusivamente visual y no modifica el guardado ni la simulación.
+
+## Base consolidada
+
 # V9.03 · Corrección integral de contraste del modo claro
 
 ## Tipo de entrega

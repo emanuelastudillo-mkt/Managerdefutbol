@@ -1,4 +1,4 @@
-/* V9.03 · Corrección integral de contraste para el modo claro.
+/* V9.04 · Corrección integral de contraste para el modo claro.
    Esta capa se carga al final y no altera el modo oscuro. */
 
 :root[data-theme="light"]{

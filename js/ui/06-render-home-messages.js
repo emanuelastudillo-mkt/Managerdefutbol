@@ -475,10 +475,12 @@ function lastTurnSummaryMarkup(){
   const summary = game?.lastTurnSummary;
   if(!summary) return '';
   const items = Array.isArray(summary.items) ? summary.items.slice(0,5) : [];
-  return `<div class="card turn-summary-card ${escapeHtml(summary.tone || 'info')}">
-    <div class="row"><div><p class="label">Resumen del último avance</p><h3>${escapeHtml(summary.title || 'Último avance')}</h3></div><span class="pill">${escapeHtml(summary.phase || '')}</span></div>
-    ${summary.result ? `<div class="turn-result-line">${escapeHtml(summary.result)}</div>` : ''}
-    <div class="turn-summary-list">${items.map(item => `<div class="turn-summary-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}</strong><span>${escapeHtml(item.text || '')}</span></div>`).join('')}</div>
+  const itemMarkup = items.map(item => `<span class="turn-summary-compact-item ${escapeHtml(item.tone || 'info')}"><strong>${escapeHtml(item.label || 'Evento')}:</strong> ${escapeHtml(item.text || '')}</span>`).join('');
+  return `<div class="turn-summary-compact ${escapeHtml(summary.tone || 'info')}" role="status" aria-label="Resumen del último avance">
+    <span class="turn-summary-compact-title">${escapeHtml(summary.title || 'Último avance')}</span>
+    ${summary.phase ? `<span class="turn-summary-compact-phase">${escapeHtml(summary.phase)}</span>` : ''}
+    ${summary.result ? `<span class="turn-summary-compact-result">${escapeHtml(summary.result)}</span>` : ''}
+    ${itemMarkup}
   </div>`;
 }
 

@@ -1,3 +1,32 @@
+# V9.06 · Interfaz oscura definitiva
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.05.
+
+## Aplicación definitiva
+
+- La estética presentada en V9.05 pasa a ser la interfaz predeterminada del juego.
+- Se eliminó el botón **Nueva interfaz** y ya no se puede regresar a la presentación anterior desde la barra superior.
+- Se conserva la misma información, navegación y funcionalidad de la versión anterior.
+
+## Tema único
+
+- Se eliminó el switch de modo claro y oscuro.
+- El juego utiliza siempre el tema oscuro de grafito con acento naranja.
+- Se dejaron de cargar el controlador del tema, la hoja del switch y la capa de contraste del modo claro.
+- Una preferencia de tema guardada por versiones anteriores ya no modifica la apariencia.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica guardados, economía, planteles, calendarios, simulación ni funciones online.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.05. Al sobrescribirlo, los archivos antiguos del selector de tema y de la vista previa pueden permanecer físicamente en la carpeta, pero ya no se cargan ni afectan el juego.
+
+## Base consolidada
+
 # V9.05 · Nueva interfaz en vista previa
 
 ## Tipo de entrega

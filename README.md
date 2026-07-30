@@ -1,3 +1,30 @@
+# V9.10 · Fechas de liga correctas en el calendario semanal
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.09.
+
+## Corrección del calendario
+
+- Los partidos de liga vuelven a mostrar la jornada real de la competición.
+- El calendario semanal ya no utiliza la posición global del partido dentro del calendario combinado, que incluye fechas de copa y otros torneos.
+- Un encuentro correspondiente a la fecha 14 se muestra como **Fecha 14**, y el siguiente como **Fecha 15**, aunque entre ambos existan partidos de copa.
+- La corrección se aplica tanto a compromisos futuros como a resultados del día anterior.
+
+## Otras competiciones
+
+Las etiquetas de copa nacional, supercopa, playoffs, amistosos y Mundial de Clubes no fueron modificadas.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica el fixture, las fechas programadas, los resultados ni el avance de temporada; únicamente corrige el número de jornada presentado en el calendario de Inicio.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.09.
+
+## Base consolidada
+
 # V9.09 · Calendario superior y avance compacto
 
 ## Tipo de entrega

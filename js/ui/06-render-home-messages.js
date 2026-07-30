@@ -595,6 +595,30 @@ function renderGameOverScreen(){
 }
 
 
+function homeWeekCalendarLeagueMatchday(match, round=null){
+  const explicitCandidates = [
+    match?.leagueMatchday,
+    match?.competitionMatchday,
+    match?.originalMatchday,
+    round?.leagueMatchday,
+    round?.competitionMatchday,
+    round?.originalMatchday
+  ];
+  for(const candidate of explicitCandidates){
+    const value = Math.round(Number(candidate || 0));
+    if(value > 0) return value;
+  }
+
+  // Los partidos regulares se crean con IDs del tipo "division-j14-local-visitante".
+  // El campo matchday puede convertirse después en la posición global del calendario
+  // al intercalar copas, por lo que el ID conserva la fecha real de la liga.
+  const idMatch = String(match?.id || '').match(/(?:^|[-_])j(\d+)(?=[-_]|$)/i);
+  const idMatchday = Math.round(Number(idMatch?.[1] || 0));
+  if(idMatchday > 0) return idMatchday;
+
+  const fallback = Math.round(Number(match?.matchday || round?.matchday || 0));
+  return fallback > 0 ? fallback : 0;
+}
 function homeWeekCalendarCompetitionLabel(match, round=null){
   const divisionName = String(match?.divisionName || round?.title || 'Liga').trim() || 'Liga';
   if(match?.nationalSupercup){
@@ -622,7 +646,7 @@ function homeWeekCalendarCompetitionLabel(match, round=null){
     const stage = String(match.playoffStage || round?.playoffStage || '').trim();
     return stage ? `Playoffs · ${stage}` : 'Playoffs de promoción';
   }
-  const matchday = Math.max(0, Math.round(Number(match?.matchday || round?.matchday || 0)));
+  const matchday = homeWeekCalendarLeagueMatchday(match, round);
   return matchday ? `Fecha ${matchday} · ${divisionName}` : divisionName;
 }
 function homeWeekCalendarOutcome(match){

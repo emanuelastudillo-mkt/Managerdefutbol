@@ -1056,11 +1056,21 @@ function clearRecoveredAcademyYouthInjuries(){
   let recovered = 0;
   academyActivePlayers().forEach(player => {
     if(Number(player.injuredThroughTurn || 0) > 0 && Number(player.injuredThroughTurn || 0) <= currentTurnIndex()){
+      const injuryLabel = String(player.injuryName || 'su lesión');
+      const recoveryKey = `youth:${Number(player.id || 0)}:${Number(player.injuryStartTurn || player.injuredThroughTurn || 0)}:${injuryLabel}`;
       player.injuredThroughTurn = 0;
       player.injuryStartTurn = 0;
       player.injuryName = '';
       player.injuryTreated = false;
       recovered += 1;
+      if(typeof pushFullyRecoveredInjuryMessage === 'function') pushFullyRecoveredInjuryMessage({
+        kind:'youth',
+        playerId:Number(player.id || 0),
+        playerName:player.name || 'Juvenil',
+        injuryLabel,
+        recoveryKey,
+        source:'academy_natural_recovery'
+      });
     }
   });
   return recovered;
@@ -1175,12 +1185,22 @@ function ensureKinesiologistTreatmentCourse(playerId, kind='first', options={}){
 function applyAcademyYouthKinesioReduction(playerId, reduction){
   const player = game?.academy?.players?.find(item => Number(item.id) === Number(playerId) && item.status === 'academy');
   if(!player || !academyPlayerInjured(player)) return false;
+  const injuryLabel = String(player.injuryName || 'su lesión');
+  const recoveryKey = `youth:${Number(player.id || 0)}:${Number(player.injuryStartTurn || player.injuredThroughTurn || 0)}:${injuryLabel}`;
   const nextUntil = Number(player.injuredThroughTurn || 0) - Math.max(1, Math.round(Number(reduction || 1)));
   if(nextUntil <= currentTurnIndex()){
     player.injuredThroughTurn = 0;
     player.injuryStartTurn = 0;
     player.injuryName = '';
     player.injuryTreated = true;
+    if(typeof pushFullyRecoveredInjuryMessage === 'function') pushFullyRecoveredInjuryMessage({
+      kind:'youth',
+      playerId:Number(player.id || 0),
+      playerName:player.name || 'Juvenil',
+      injuryLabel,
+      recoveryKey,
+      source:'academy_kinesiologist_recovery'
+    });
   }else{
     player.injuredThroughTurn = nextUntil;
     player.injuryTreated = true;
@@ -1193,10 +1213,12 @@ function treatAcademyYouthInjuryCore(playerId, options={}){
 }
 function treatAcademyYouthInjury(playerId){
   const result = treatAcademyYouthInjuryCore(playerId);
-  if(!result.success){ showNotice(result.message || 'No se pudo tratar al juvenil.'); return; }
+  if(!result.applied){ showNotice(result.message || 'No se pudo tratar al juvenil.'); return; }
   saveLocal(true);
   renderAcademy();
-  showNotice(result.message);
+  showNotice(result.fullyRecovered
+    ? 'Tratamiento aplicado. El juvenil recibió el alta médica.'
+    : 'Tratamiento aplicado. Se informará cuando el juvenil se recupere por completo.');
 }
 function academyInjuredTreatmentItems(){
   if(!game?.academy) return [];
@@ -2255,12 +2277,12 @@ function hireKinesiologist(){
   openStaffHireModal('kinesiologist', renderEmployees);
 }
 function applyKinesioTreatment(playerId, kind='first', options={}){
-  if(!staffActive('kinesiologist')) return { success:false, message:'Primero tenés que contratar al kinesiólogo.' };
+  if(!staffActive('kinesiologist')) return { success:false, applied:false, message:'Primero tenés que contratar al kinesiólogo.' };
   const course = ensureKinesiologistTreatmentCourse(playerId, kind, options);
-  if(!course.ok) return { success:false, skipped:true, message:course.message || 'No se pudo iniciar el tratamiento.', reason:course.reason, cost:Number(course.cost || 0) };
+  if(!course.ok) return { success:false, applied:false, skipped:true, message:course.message || 'No se pudo iniciar el tratamiento.', reason:course.reason, cost:Number(course.cost || 0) };
   game.staffActions.kinesiologyTreatments = game.staffActions.kinesiologyTreatments || {};
   const key = `${currentTurnIndex()}:${kind}:${playerId}`;
-  if(game.staffActions.kinesiologyTreatments[key]) return { success:false, alreadyTreated:true, message:'Este jugador ya recibió tratamiento hoy.' };
+  if(game.staffActions.kinesiologyTreatments[key]) return { success:false, applied:false, alreadyTreated:true, message:'Este jugador ya recibió tratamiento hoy.' };
   const category = kinesiologistTreatmentCategory();
   const successChance = kinesiologistTreatmentSuccessChance();
   const signature = kinesiologistInjurySignature(playerId, kind);
@@ -2278,31 +2300,66 @@ function applyKinesioTreatment(playerId, kind='first', options={}){
   if(success) plan.successes = Math.max(0, Number(plan.successes || 0)) + 1;
   else plan.failures = Math.max(0, Number(plan.failures || 0)) + 1;
   if(typeof awardSpecialPoints === 'function') awardSpecialPoints('tratar_jugador_lesionado', { playerId, youth:kind === 'youth', success, automatic:Boolean(options.automatic) });
+  let fullyRecovered = false;
   if(success){
     if(kind === 'youth'){
       applyAcademyYouthKinesioReduction(playerId, recoveryReductionTurns);
+      const academyPlayer = game?.academy?.players?.find(item => Number(item.id) === Number(playerId));
+      fullyRecovered = Boolean(academyPlayer && !academyPlayerInjured(academyPlayer));
     }else{
       const st = playerStatus(playerId);
+      const injuryLabel = String(st.injuryLabel || 'su lesión');
       if(Number.isFinite(Number(st.injuredUntilTurn))){
         const nextUntil = Number(st.injuredUntilTurn || 0) - recoveryReductionTurns;
         if(nextUntil <= currentTurnIndex()){
-          const { injuredThrough, injuredUntilTurn, injuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
+          const { injuredThrough, injuredUntilTurn, injuryLabel:removedInjuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
           game.playerStatus[playerId] = rest;
+          fullyRecovered = true;
+          if(typeof pushFullyRecoveredInjuryMessage === 'function') pushFullyRecoveredInjuryMessage({
+            kind:'first',
+            playerId:Number(playerId),
+            playerName:playerById(playerId)?.name || 'Jugador',
+            injuryLabel,
+            recoveryKey:signature,
+            source:'kinesiologist_recovery'
+          });
         }else{
           game.playerStatus[playerId] = { ...st, injuredUntilTurn:nextUntil, injuredThrough:game.matchdayIndex + Math.max(1, Math.ceil((nextUntil - currentTurnIndex()) / Math.max(1, LEAGUE_ROUND_INTERVAL_DAYS))) };
         }
       }else{
         const nextThrough = Number(st.injuredThrough) - recoveryReductionTurns;
         if(nextThrough < game.matchdayIndex){
-          const { injuredThrough, injuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
+          const { injuredThrough, injuryLabel:removedInjuryLabel, injuryChance, injuredAtMatchday, ...rest } = st;
           game.playerStatus[playerId] = rest;
+          fullyRecovered = true;
+          if(typeof pushFullyRecoveredInjuryMessage === 'function') pushFullyRecoveredInjuryMessage({
+            kind:'first',
+            playerId:Number(playerId),
+            playerName:playerById(playerId)?.name || 'Jugador',
+            injuryLabel,
+            recoveryKey:signature,
+            source:'kinesiologist_recovery_legacy'
+          });
         }else game.playerStatus[playerId] = { ...st, injuredThrough:nextThrough };
       }
     }
   }
-  const bonusText = miraculousDoctorBonus > 0 ? ` Incluye ${formatDaysFromTurns(miraculousDoctorBonus)} extra por Médico Milagroso.` : '';
   const costText = course.charged > 0 ? ` Se inició el plan por ${formatMoney(course.charged)}.` : '';
-  return { success, recoveryReductionTurns, baseRecoveryReductionTurns, miraculousDoctorBonus, successChance, charged:Number(course.charged || 0), buttonLabel:success ? 'Tratamiento realizado' : 'Tratamiento fallido', message:success ? `Los especialistas confirmaron una buena respuesta. La recuperación se acortó ${formatDaysFromTurns(recoveryReductionTurns)}.${bonusText}${costText}` : `El jugador no respondió al tratamiento y el plazo de recuperación no cambió.${costText}` };
+  const followUpText = fullyRecovered
+    ? 'El jugador recibió el alta médica.'
+    : 'El cuerpo médico continuará el seguimiento y avisará cuando el jugador se recupere por completo.';
+  return {
+    success,
+    applied:true,
+    fullyRecovered,
+    recoveryReductionTurns,
+    baseRecoveryReductionTurns,
+    miraculousDoctorBonus,
+    successChance,
+    charged:Number(course.charged || 0),
+    buttonLabel:'Tratamiento aplicado',
+    message:`Tratamiento aplicado.${costText} ${followUpText}`
+  };
 }
 function processAutomaticKinesiologistTreatmentsDaily(){
   if(!game || !staffActive('kinesiologist')) return { active:false, attempted:0, successes:0, failures:0, skipped:0, chargedClub:0, chargedManager:0 };
@@ -2323,55 +2380,26 @@ function processAutomaticKinesiologistTreatmentsDaily(){
     }
   });
   game.staffActions.kinesiologistAutomaticLast = summary;
-  if((summary.attempted > 0 || summary.skipped > 0) && typeof pushGameMessage === 'function'){
-    const count=summary.attempted;
-    const singular=count === 1;
-    const introductory=count <= 0 ? '' : (singular
-      ? 'Un jugador estuvo con nuestros especialistas para tratar su lesión.'
-      : `${count} jugadores estuvieron con nuestros especialistas para tratar sus lesiones.`);
-    let outcomeText='';
-    if(count > 0 && summary.successes === count){
-      outcomeText=singular
-        ? 'El tratamiento hizo efecto y permitió acortar su recuperación.'
-        : (count === 2 ? 'Los tratamientos hicieron efecto en ambos casos y permitieron acortar sus recuperaciones.' : `Los tratamientos hicieron efecto en los ${count} casos y permitieron acortar las recuperaciones.`);
-    }else if(count > 0 && summary.failures === count){
-      outcomeText=singular
-        ? 'El tratamiento no hizo efecto y el plazo de recuperación se mantiene.'
-        : (count === 2 ? 'Los tratamientos no hicieron efecto en ninguno de los dos casos.' : `Los tratamientos no hicieron efecto en ninguno de los ${count} casos.`);
-    }else if(count > 0){
-      outcomeText=`Los tratamientos hicieron efecto en ${summary.successes} ${summary.successes === 1 ? 'caso' : 'casos'}, pero no produjeron mejoras en ${summary.failures} ${summary.failures === 1 ? 'jugador' : 'jugadores'}.`;
-    }
-    const successNames=summary.results.filter(result=>result.success).map(result=>result.name);
-    const failureNames=summary.results.filter(result=>!result.success).map(result=>result.name);
-    const detail=[];
-    if(successNames.length && successNames.length <= 4) detail.push(`Respondieron favorablemente: ${successNames.join(', ')}.`);
-    if(failureNames.length && failureNames.length <= 4) detail.push(`Sin mejora: ${failureNames.join(', ')}.`);
-    const costs=[];
-    if(summary.chargedClub > 0) costs.push(`El club destinó ${formatMoney(summary.chargedClub)} a la atención médica.`);
-    if(summary.chargedManager > 0) costs.push(`Tu Cuenta Bancaria cubrió ${formatMoney(summary.chargedManager)} por los tratamientos de juveniles.`);
-    if(summary.skipped > 0) costs.push(`El cuerpo médico no pudo iniciar ${summary.skipped === 1 ? 'otro tratamiento' : `${summary.skipped} tratamientos adicionales`} por falta de fondos.`);
-    const body=[introductory,outcomeText,...detail,...costs].filter(Boolean).join(' ');
-    pushGameMessage({
-      id:`kinesio-auto-${summary.date || summary.turn}`,
-      type:'empleados',
-      priority:summary.skipped > 0 ? 'high' : 'normal',
-      title:'Informe del cuerpo médico',
-      body,
-      playerIds:[...new Set(summary.playerIds.filter(Number.isFinite))]
-    });
-  }
   return summary;
 }
 function treatInjuredPlayer(playerId, button=null, kind='first'){
   const performTreatment = () => {
     const outcome = applyKinesioTreatment(playerId, kind);
-    saveLocal(true);
-    return { ...outcome, after:renderEmployees };
+    if(outcome.applied) saveLocal(true);
+    return {
+      ...outcome,
+      treatmentImproved:Boolean(outcome.success),
+      success:Boolean(outcome.applied),
+      message:outcome.applied
+        ? (outcome.fullyRecovered ? 'Tratamiento aplicado. El jugador recibió el alta médica.' : 'Tratamiento aplicado. Se informará cuando el jugador se recupere por completo.')
+        : (outcome.message || 'No se pudo aplicar el tratamiento.'),
+      after:renderEmployees
+    };
   };
   return runActionFeedback(button, performTreatment, {
     loadingLabel:'Tratando...',
-    successLabel:kind === 'youth' ? 'Juvenil tratado' : 'Tratamiento realizado',
-    failureLabel:'Tratamiento fallido'
+    successLabel:kind === 'youth' ? 'Juvenil tratado' : 'Tratamiento aplicado',
+    failureLabel:'No se pudo tratar'
   });
 }
 function kinesioDelay(ms){ return new Promise(resolve => { setTimeout(resolve, ms); }); }
@@ -2428,20 +2456,20 @@ async function treatAllInjuredPlayers(button=null){
     const outcome = applyKinesioTreatment(item.player.id, item.kind || 'first');
     if(outcome.success){
       successes++;
-      setKinesioTreatmentRowState(item.player.id, 'success', item.kind === 'youth' ? 'Juvenil tratado' : `Éxito · -${formatDaysFromTurns(outcome.recoveryReductionTurns)}`, item.kind || 'first');
+      setKinesioTreatmentRowState(item.player.id, 'success', outcome.fullyRecovered ? 'Alta médica' : 'Tratado hoy', item.kind || 'first');
     }else{
       failures++;
-      setKinesioTreatmentRowState(item.player.id, 'failure', 'Falló · sin reducción', item.kind || 'first');
+      setKinesioTreatmentRowState(item.player.id, 'success', 'Tratado hoy', item.kind || 'first');
     }
     saveLocal(true);
     const pct = Math.round(((index + 1) / targets.length) * 100);
     if(progress){
-      progress.innerHTML = `<div class="project-progress completed"><span style="width:${pct}%"></span></div><strong>${escapeHtml(playerName)}: ${outcome.success ? 'tratamiento exitoso' : 'tratamiento fallido'}</strong>`;
+      progress.innerHTML = `<div class="project-progress completed"><span style="width:${pct}%"></span></div><strong>${escapeHtml(playerName)}: tratamiento aplicado</strong>`;
     }
     await kinesioDelay(Math.max(250, Math.round(ACTION_FEEDBACK_RESULT_MS * 0.55)));
   }
   if(progress){
-    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>El cuerpo médico terminó la jornada: ${successes} ${successes === 1 ? 'jugador respondió' : 'jugadores respondieron'} al tratamiento y ${failures} ${failures === 1 ? 'no mostró mejora' : 'no mostraron mejoras'}.</strong>`;
+    progress.innerHTML = `<div class="project-progress completed"><span style="width:100%"></span></div><strong>El cuerpo médico terminó la jornada. Los jugadores tratados seguirán en seguimiento hasta recibir el alta médica.</strong>`;
   }
   if(button){
     button.classList.remove('action-processing');
@@ -2449,7 +2477,7 @@ async function treatAllInjuredPlayers(button=null){
     button.innerHTML = '<span>Tratamientos finalizados</span>';
   }
   saveLocal(true);
-  showNotice(`Tratamientos de hoy finalizados. Nuevos planes: club ${formatMoney(cost)} · Cuenta personal ${formatMoney(youthCost)}. Éxitos: ${successes}. Fallos: ${failures}.`);
+  showNotice(`Tratamientos de hoy finalizados. Nuevos planes: club ${formatMoney(cost)} · Cuenta personal ${formatMoney(youthCost)}. Se informará únicamente cuando un jugador reciba el alta médica.`);
   await kinesioDelay(Math.max(650, ACTION_FEEDBACK_RESULT_MS));
   renderEmployees();
 }

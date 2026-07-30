@@ -1200,8 +1200,20 @@ function reduceInjuryDurationsByTurns(turns=1){
     const nextThrough = Math.round(injuryThrough) - amount;
     result.changed = true;
     if(nextThrough < Number(game.matchdayIndex || 0)){
+      const numericPlayerId = Number(playerId);
+      const player = typeof playerById === 'function' ? playerById(numericPlayerId) : null;
+      const injuryLabel = String(status.injuryLabel || 'su lesión');
+      const recoveryKey = `first:${numericPlayerId}:${Number(status.injuredAtTurn || status.injuredAtMatchday || injuryThrough || 0)}:${injuryLabel}`;
       status = removeInjuryFieldsFromStatus(status);
       result.cleared += 1;
+      if(typeof pushFullyRecoveredInjuryMessage === 'function') pushFullyRecoveredInjuryMessage({
+        kind:'first',
+        playerId:numericPlayerId,
+        playerName:player?.name || 'Jugador',
+        injuryLabel,
+        recoveryKey,
+        source:'compact_phase_recovery'
+      });
     } else {
       status.injuredThrough = nextThrough;
       result.reduced += 1;

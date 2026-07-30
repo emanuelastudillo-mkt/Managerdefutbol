@@ -772,15 +772,50 @@ function processFirstTeamInjuryMinimumDaily(options={}){
   state.lastCompensationDate = date;
   return { applied:true, playerId:Number(player.id), duration:injury.duration, count:state.count, due, target, silent:true };
 }
+function pushFullyRecoveredInjuryMessage(options={}){
+  if(!game || typeof pushGameMessage !== 'function') return null;
+  const kind = String(options.kind || 'first') === 'youth' ? 'youth' : 'first';
+  const playerId = Math.max(0, Math.round(Number(options.playerId || 0)));
+  const player = kind === 'first' && playerId && typeof playerById === 'function' ? playerById(playerId) : null;
+  if(kind === 'first' && (!player || Number(player.clubId || 0) !== Number(game.selectedClubId || 0))) return null;
+  const playerName = String(options.playerName || player?.name || 'Jugador').trim() || 'Jugador';
+  const injuryLabel = String(options.injuryLabel || 'su lesión').trim() || 'su lesión';
+  const recoveryKey = String(options.recoveryKey || `${kind}:${playerId}:${currentTurnIndex()}:${injuryLabel}`);
+  const recoveryHash = typeof hashNumber === 'function' ? hashNumber(recoveryKey, 1000000000) : Math.abs(recoveryKey.split('').reduce((sum, char) => ((sum * 31) + char.charCodeAt(0)) | 0, 7));
+  const youth = kind === 'youth';
+  return pushGameMessage({
+    id:`medical-clearance-${kind}-${playerId}-${recoveryHash}`,
+    type:youth ? 'academia' : 'empleados',
+    priority:'normal',
+    title:youth ? 'Alta médica en la Academia' : 'Alta médica',
+    body:youth
+      ? `${playerName} se recuperó por completo de ${injuryLabel} y retoma los entrenamientos de la Academia.`
+      : `${playerName} se recuperó por completo de ${injuryLabel} y vuelve a estar disponible para el primer equipo.`,
+    playerIds:youth ? [] : [playerId],
+    playerNames:[playerName]
+  });
+}
 function clearRecoveredDailyInjuries(){
   if(!game?.playerStatus) return 0;
   let cleared = 0;
   Object.entries(game.playerStatus).forEach(([playerId, st]) => {
     if(!st || typeof st !== 'object') return;
     if(Number.isFinite(Number(st.injuredUntilTurn)) && Number(st.injuredUntilTurn || 0) <= currentTurnIndex()){
-      const { injuredThrough, injuredUntilTurn, injuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
+      const numericPlayerId = Number(playerId);
+      const player = typeof playerById === 'function' ? playerById(numericPlayerId) : null;
+      const recoveryKey = `first:${numericPlayerId}:${Number(st.injuredAtTurn || st.injuredAtMatchday || st.injuredUntilTurn || 0)}:${String(st.injuryLabel || 'lesion')}`;
+      const injuryLabel = String(st.injuryLabel || 'su lesión');
+      const { injuredThrough, injuredUntilTurn, injuryLabel:removedInjuryLabel, injuryChance, injuredAtMatchday, injuredAtTurn, ...rest } = st;
       game.playerStatus[playerId] = rest;
       cleared += 1;
+      pushFullyRecoveredInjuryMessage({
+        kind:'first',
+        playerId:numericPlayerId,
+        playerName:player?.name || 'Jugador',
+        injuryLabel,
+        recoveryKey,
+        source:'natural_daily_recovery'
+      });
     }
   });
   return cleared;

@@ -1,3 +1,24 @@
+# V9.17 · Versión visible y altas médicas
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.16.
+
+## Cambios
+
+- La versión visible del juego se actualizó de V9.12 a V9.17.
+- `GAME_CONFIG.version` y la caché de recursos también utilizan V9.17.
+- Los informes automáticos de tratamientos exitosos o fallidos dejaron de enviarse a la bandeja.
+- El único mensaje médico persistente se genera cuando un jugador recibe el alta y vuelve a estar disponible.
+- La misma regla se aplica al primer equipo y a los juveniles de la Academia.
+- Los tratamientos manuales conservan una confirmación neutral, sin revelar el resultado clínico de cada intento.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.16.
+
+## Base consolidada
+
 # V9.16 · Informe físico y riesgo de lesión
 
 ## Tipo de entrega

@@ -695,12 +695,100 @@ function homeWeekCalendarEventsByDate(dates=[]){
     return bPlayed - aPlayed || homeWeekCalendarCompetitionLabel(a.match, a.round).localeCompare(homeWeekCalendarCompetitionLabel(b.match, b.round), 'es', { sensitivity:'base' });
   })]));
 }
-function homeWeekCalendarDayMarkup(iso, offset, events=[]){
+function homeWeekCalendarMatchTone(match){
+  if(match?.clubWorldCup || match?.internationalCup || match?.continentalCup) return 'tone-international';
+  if(match?.nationalCup || match?.nationalSupercup) return 'tone-cup';
+  if(match?.friendly) return 'tone-friendly';
+  return 'tone-league';
+}
+function homeWeekCalendarSeasonYearForIso(iso){
+  const currentYear = typeof currentSeasonYear === 'function'
+    ? Math.round(Number(currentSeasonYear() || 0))
+    : Math.round(Number(game?.seasonYear || new Date(`${iso}T00:00:00Z`).getUTCFullYear()));
+  if(!validIsoDate(iso) || !currentYear || typeof seasonStartDateForYear !== 'function' || typeof seasonEndDateForYear !== 'function'){
+    return new Date(`${iso}T00:00:00Z`).getUTCFullYear();
+  }
+  const start = seasonStartDateForYear(currentYear);
+  const end = seasonEndDateForYear(currentYear);
+  if(validIsoDate(start) && iso < start) return currentYear - 1;
+  if(validIsoDate(end) && iso > end) return currentYear + 1;
+  return currentYear;
+}
+function homeWeekCalendarMarketInfo(iso){
+  const seasonYear = homeWeekCalendarSeasonYearForIso(iso);
+  const day = typeof seasonDayFromDate === 'function' ? seasonDayFromDate(iso, seasonYear) : 1;
+  const open = typeof isTransferMarketOpenDay === 'function' ? isTransferMarketOpenDay(day) : false;
+  return { open, day, label:open ? 'Mercado abierto' : 'Mercado cerrado' };
+}
+function homeWeekCalendarTransferActivityByDate(dates=[]){
+  const validDates = (Array.isArray(dates) ? dates : []).filter(validIsoDate);
+  const result = new Map(validDates.map(date => [date, { incoming:new Set(), outgoing:new Set() }]));
+  if(!game || !result.size) return new Map();
+  const ownId = Number(game.selectedClubId || 0);
+  const keyFor = (item, index=0) => String(Number(item?.playerId || 0) || item?.id || `transfer-${index}`);
+  const add = (date, direction, item, index=0) => {
+    const activity = result.get(date);
+    if(!activity || !activity[direction]) return;
+    activity[direction].add(keyFor(item, index));
+  };
+  (game.pendingTransfers || []).forEach((item, index) => {
+    if(!item) return;
+    const active = typeof isActivePendingTransfer === 'function'
+      ? isActivePendingTransfer(item)
+      : ['pending','pending_market','agreed_pending_market'].includes(String(item.status || 'pending'));
+    const completed = ['arrived','departed'].includes(String(item.status || ''));
+    if(!active && !completed) return;
+    let date = active ? String(item.executeDate || '') : String(item.executedDate || '');
+    if(!validIsoDate(date) && active && Number(item.executeSeason || 0) > 0 && Number(item.executeDay || 0) > 0 && typeof transferMarketDateForSeasonDay === 'function'){
+      date = transferMarketDateForSeasonDay(item.executeSeason, item.executeDay);
+    }
+    if(!result.has(date)) return;
+    const type = String(item.type || (Number(item.toClubId || 0) === ownId ? 'incoming' : 'outgoing'));
+    if(type === 'incoming' && Number(item.toClubId || 0) === ownId) add(date, 'incoming', item, index);
+    if(type === 'outgoing' && Number(item.fromClubId || 0) === ownId) add(date, 'outgoing', item, index);
+  });
+  const history = Array.isArray(game.transferHistory?.entries) ? game.transferHistory.entries : [];
+  history.forEach((entry, index) => {
+    const date = String(entry?.date || '');
+    if(!result.has(date)) return;
+    const kind = String(entry?.kind || '');
+    if(Number(entry?.toClubId || 0) === ownId && ['purchase','free_signing'].includes(kind)) add(date, 'incoming', entry, index);
+    if(Number(entry?.fromClubId || 0) === ownId && kind === 'sale') add(date, 'outgoing', entry, index);
+  });
+  return new Map([...result.entries()].map(([date, activity]) => [date, {
+    incoming:activity.incoming.size,
+    outgoing:activity.outgoing.size
+  }]));
+}
+function homeWeekCalendarDayTone(events=[], transferActivity={}, marketInfo={}){
+  const tones = new Set((events || []).map(event => homeWeekCalendarMatchTone(event?.match)));
+  if(tones.has('tone-international')) return 'tone-international';
+  if(tones.has('tone-cup')) return 'tone-cup';
+  if(tones.has('tone-league')) return 'tone-league';
+  if(tones.has('tone-friendly')) return 'tone-friendly';
+  if(Number(transferActivity.incoming || 0) || Number(transferActivity.outgoing || 0)) return 'tone-transfer';
+  return marketInfo.open ? 'tone-market-open' : 'tone-market-closed';
+}
+function homeWeekCalendarDayMetaMarkup(marketInfo={}, transferActivity={}){
+  const incoming = Math.max(0, Math.round(Number(transferActivity.incoming || 0)));
+  const outgoing = Math.max(0, Math.round(Number(transferActivity.outgoing || 0)));
+  const transferLabels = [];
+  if(outgoing) transferLabels.push(`<span class="home-week-calendar-transfer is-outgoing">${outgoing === 1 ? '1 jugador se marcha' : `${outgoing} jugadores se marchan`}</span>`);
+  if(incoming) transferLabels.push(`<span class="home-week-calendar-transfer is-incoming">${incoming === 1 ? 'Llega 1 refuerzo' : `Llegan ${incoming} refuerzos`}</span>`);
+  return `<div class="home-week-calendar-meta">
+    <span class="home-week-calendar-market ${marketInfo.open ? 'is-open' : 'is-closed'}">${escapeHtml(marketInfo.label || 'Mercado cerrado')}</span>
+    ${transferLabels.join('')}
+  </div>`;
+}
+function homeWeekCalendarDayMarkup(iso, offset, events=[], transferActivity={ incoming:0, outgoing:0 }){
   const relation = offset === -1 ? 'Ayer' : offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : `En ${offset} días`;
-  const classes = ['home-week-calendar-day'];
+  const marketInfo = homeWeekCalendarMarketInfo(iso);
+  const classes = ['home-week-calendar-day', homeWeekCalendarDayTone(events, transferActivity, marketInfo)];
   if(offset === -1) classes.push('is-yesterday');
   if(offset === 0) classes.push('is-today');
   if(events.length) classes.push('has-match');
+  if(marketInfo.open) classes.push('market-is-open');
+  if(Number(transferActivity.incoming || 0) || Number(transferActivity.outgoing || 0)) classes.push('has-transfer-activity');
   const shownEvents = events.slice(0, 2);
   const eventMarkup = shownEvents.length ? shownEvents.map(({ match, round }) => {
     const outcome = homeWeekCalendarOutcome(match);
@@ -722,6 +810,7 @@ function homeWeekCalendarDayMarkup(iso, offset, events=[]){
     </div>
     <strong class="home-week-calendar-weekday">${escapeHtml(weekdayLabelFromIso(iso))}</strong>
     <time datetime="${escapeHtml(iso)}">Fecha: ${escapeHtml(iso)}</time>
+    ${homeWeekCalendarDayMetaMarkup(marketInfo, transferActivity)}
     <div class="home-week-calendar-events">${eventMarkup}${remaining}</div>
   </article>`;
 }
@@ -731,8 +820,15 @@ function homeWeekCalendarMarkup(){
   if(!validIsoDate(today)) return '';
   const dateEntries = [];
   for(let offset=-1; offset<=5; offset++) dateEntries.push({ iso:addDaysToIsoDate(today, offset), offset });
-  const eventsByDate = homeWeekCalendarEventsByDate(dateEntries.map(item => item.iso));
-  const days = dateEntries.map(item => homeWeekCalendarDayMarkup(item.iso, item.offset, eventsByDate.get(item.iso) || []));
+  const dates = dateEntries.map(item => item.iso);
+  const eventsByDate = homeWeekCalendarEventsByDate(dates);
+  const transfersByDate = homeWeekCalendarTransferActivityByDate(dates);
+  const days = dateEntries.map(item => homeWeekCalendarDayMarkup(
+    item.iso,
+    item.offset,
+    eventsByDate.get(item.iso) || [],
+    transfersByDate.get(item.iso) || { incoming:0, outgoing:0 }
+  ));
   return `<section class="card home-week-calendar" aria-label="Calendario semanal de siete días">
     <div class="home-week-calendar-grid">${days.join('')}</div>
   </section>`;

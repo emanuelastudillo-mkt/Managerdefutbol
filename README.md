@@ -1,3 +1,24 @@
+# V9.18 · Calendario con contexto deportivo y de mercado
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.17.
+
+## Cambios
+
+- Cada día del calendario de Inicio adopta un tono visual según el compromiso principal: liga, copa nacional, copa internacional o amistoso.
+- El Mundial de Clubes utiliza el tono de copa internacional.
+- Los días sin partido conservan un tono neutro, con una variante sutil cuando el mercado está abierto.
+- Los siete días indican si el mercado se encuentra abierto o cerrado para esa fecha.
+- Las operaciones acordadas muestran su impacto en el día de ejecución: jugadores que se marchan y refuerzos que llegan.
+- Los movimientos ya ejecutados se mantienen visibles en Ayer y Hoy mediante el historial de transferencias, evitando duplicados con las operaciones pendientes.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.17.
+
+## Base consolidada
+
 # V9.17 · Versión visible y altas médicas
 
 ## Tipo de entrega

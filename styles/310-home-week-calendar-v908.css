@@ -234,3 +234,89 @@ html[data-interface="modern"] .home-week-calendar-more{
     scroll-snap-align:start;
   }
 }
+
+/* V9.18 · Tonos por competencia, estado del mercado y movimientos de plantel. */
+html[data-interface="modern"] .home-week-calendar-day{
+  --home-calendar-tone-rgb:72,74,84;
+  min-height:174px;
+  border-color:rgba(var(--home-calendar-tone-rgb),.42);
+  background:linear-gradient(180deg,rgba(var(--home-calendar-tone-rgb),.15),#1d1e24 48%);
+}
+html[data-interface="modern"] .home-week-calendar-day::before{
+  background:rgb(var(--home-calendar-tone-rgb));
+}
+html[data-interface="modern"] .home-week-calendar-day.tone-league{--home-calendar-tone-rgb:59,130,246}
+html[data-interface="modern"] .home-week-calendar-day.tone-cup{--home-calendar-tone-rgb:245,158,11}
+html[data-interface="modern"] .home-week-calendar-day.tone-international{--home-calendar-tone-rgb:168,85,247}
+html[data-interface="modern"] .home-week-calendar-day.tone-friendly{--home-calendar-tone-rgb:20,184,166}
+html[data-interface="modern"] .home-week-calendar-day.tone-transfer{--home-calendar-tone-rgb:34,197,94}
+html[data-interface="modern"] .home-week-calendar-day.tone-market-open{--home-calendar-tone-rgb:22,163,74}
+html[data-interface="modern"] .home-week-calendar-day.tone-market-closed{--home-calendar-tone-rgb:72,74,84}
+html[data-interface="modern"] .home-week-calendar-day.is-yesterday{
+  background:linear-gradient(180deg,rgba(var(--home-calendar-tone-rgb),.10),#191a1f 48%);
+}
+html[data-interface="modern"] .home-week-calendar-day.is-today{
+  border-color:rgba(var(--modern-accent-rgb),.82);
+  background:linear-gradient(180deg,rgba(var(--home-calendar-tone-rgb),.20),#1d1e24 50%);
+  box-shadow:0 0 0 1px rgba(var(--modern-accent-rgb),.32) inset;
+}
+html[data-interface="modern"] .home-week-calendar-day.is-today::before,
+html[data-interface="modern"] .home-week-calendar-day.has-match::before{
+  background:rgb(var(--home-calendar-tone-rgb));
+}
+html[data-interface="modern"] .home-week-calendar-day-head>b,
+html[data-interface="modern"] .home-week-calendar-competition{
+  color:rgb(var(--home-calendar-tone-rgb));
+}
+html[data-interface="modern"] .home-week-calendar-meta{
+  display:grid;
+  align-content:start;
+  gap:3px;
+  min-height:18px;
+  margin-top:6px;
+}
+html[data-interface="modern"] .home-week-calendar-market,
+html[data-interface="modern"] .home-week-calendar-transfer{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  padding:3px 4px;
+  border:1px solid #353740;
+  border-radius:3px;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.025em;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+html[data-interface="modern"] .home-week-calendar-market.is-open{
+  color:#86efac;
+  border-color:rgba(34,197,94,.34);
+  background:rgba(34,197,94,.09);
+}
+html[data-interface="modern"] .home-week-calendar-market.is-closed{
+  color:#8f919c;
+  border-color:#34363e;
+  background:rgba(82,82,91,.12);
+}
+html[data-interface="modern"] .home-week-calendar-transfer.is-incoming{
+  color:#bbf7d0;
+  border-color:rgba(34,197,94,.32);
+  background:rgba(34,197,94,.08);
+}
+html[data-interface="modern"] .home-week-calendar-transfer.is-outgoing{
+  color:#fecaca;
+  border-color:rgba(239,68,68,.30);
+  background:rgba(239,68,68,.07);
+}
+html[data-interface="modern"] .home-week-calendar-events{margin-top:6px}
+
+@media (max-width:1180px) and (min-width:761px){
+  html[data-interface="modern"] .home-week-calendar-day{min-height:168px}
+  html[data-interface="modern"] .home-week-calendar-market,
+  html[data-interface="modern"] .home-week-calendar-transfer{padding:3px;font-size:6.5px}
+}
+@media (max-width:760px){
+  html[data-interface="modern"] .home-week-calendar-day{min-height:170px}
+}

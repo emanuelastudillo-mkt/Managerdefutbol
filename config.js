@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.04',
+  version: 'V9.13',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -18,7 +18,22 @@ window.GAME_CONFIG = {
     // Una sola carrera normal. Las partidas de antiguos slots se consolidan sin borrar los registros originales.
     slotsCarrera: 1,
     // Agrupa escrituras automáticas consecutivas sin afectar el guardado manual.
-    agruparAutoguardadosMs: 1500
+    agruparAutoguardadosMs: 2500,
+    // La copia de seguridad completa se renueva cada cierta cantidad de autoguardados.
+    backupCadaAutoguardados: 4
+  },
+  rendimiento: {
+    // Ejecuta auditorías y mantenimiento no crítico durante momentos libres del navegador.
+    procesamientoSegundoPlano: true,
+    // Tiempo máximo antes de forzar una tarea pendiente y pausa mínima entre bloques.
+    timeoutTareaSegundoPlanoMs: 1200,
+    pausaEntreTareasMs: 24,
+    tareasPorBloque: 1,
+    // Los controles completos se distribuyen durante la temporada; los controles rápidos siguen siendo diarios.
+    auditoriaCalendarioCompletaCadaDias: 7,
+    integridadEstadisticasCompletaCadaDias: 7,
+    reparacionPlantelesBotsCadaDias: 7,
+    normalizacionContratosCadaDias: 30
   },
   data: {
     // Modo de cache para los JSON. 'default' permite cache del navegador; usar 'no-store' sólo durante pruebas intensivas.

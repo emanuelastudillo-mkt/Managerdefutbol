@@ -47,17 +47,24 @@
     player.contractRejectedUntil=validIsoDate(player.contractRejectedUntil)?player.contractRejectedUntil:'';
     return player;
   }
-  function ensureAllPlayerContracts(state=game){
-    if(pcCfg('activo',true)===false||!seed?.players) return { normalized:0 };
+  function ensureAllPlayerContracts(state=game,options={}){
+    if(pcCfg('activo',true)===false||!seed?.players||!state) return { normalized:0, skipped:true };
+    state.playerContractsState=state.playerContractsState&&typeof state.playerContractsState==='object'?state.playerContractsState:{};
+    const season=pcSeason(state);
+    const signature=`${season}:${seed.players.length}`;
+    if(options.force!==true && state.playerContractsState.normalizationSignature===signature){
+      return { normalized:0, skipped:true, signature };
+    }
     let normalized=0;
     seed.players.forEach(player=>{
       const before=`${player?.contractStartSeason||0}:${player?.contractEndSeason||0}`;
       pcNormalizeContract(player,state);
       if(before!==`${player?.contractStartSeason||0}:${player?.contractEndSeason||0}`) normalized++;
     });
-    state.playerContractsState=state.playerContractsState&&typeof state.playerContractsState==='object'?state.playerContractsState:{};
     state.playerContractsState.version=PLAYER_CONTRACTS_VERSION;
-    return { normalized };
+    state.playerContractsState.normalizationSignature=signature;
+    state.playerContractsState.lastNormalizationDate=String(state?.currentDate||'');
+    return { normalized, skipped:false, signature };
   }
   window.ensureAllPlayerContracts=ensureAllPlayerContracts;
 

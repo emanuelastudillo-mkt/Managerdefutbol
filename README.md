@@ -1,3 +1,68 @@
+# V9.13 · Procesamiento diario optimizado
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.12.
+
+## Objetivo
+
+Reducir los bloqueos al avanzar días, evitar que las verificaciones pesadas se repitan en cada renderizado y distribuir el mantenimiento no crítico durante los momentos libres del navegador.
+
+## Cola de segundo plano
+
+- Se agregó una cola cooperativa basada en `requestIdleCallback`, con respaldo mediante `setTimeout` cuando el navegador no ofrece esa API.
+- Las tareas se ejecutan de una en una y dejan una pausa entre bloques para devolver el control a la interfaz.
+- Como máximo se programa un mantenimiento integral por fecha del juego; si coinciden varias revisiones vencidas, se reparten entre días sucesivos según su antigüedad.
+- La cola descarta tareas pertenecientes a una partida que ya no está activa.
+- Las modificaciones producidas por varias tareas se consolidan en un único autoguardado.
+- Se incorporó el diagnóstico interno `getPerformanceDiagnostics()` para revisar tareas pendientes, duración reciente y fechas de mantenimiento.
+
+## Procesamiento diario
+
+- La auditoría completa del calendario dejó de ejecutarse dos veces en cada avance normal.
+- Cada día se realiza un control rápido de fechas vencidas, fechas inválidas e identificadores duplicados.
+- La auditoría estructural completa se ejecuta cuando el control rápido detecta una anomalía o, como mantenimiento preventivo, cada siete días en segundo plano.
+- La reparación diaria y la comprobación posterior a una jornada revisan únicamente partidos recientes y cercanos al cursor actual.
+- La revisión completa del historial de estadísticas queda programada cada siete días en segundo plano.
+- Antes de simular se revisan solamente los planteles bots que tienen partido en la fecha correspondiente.
+- La reparación general de todos los planteles bots se mantiene cada siete días y en los controles estructurales ya existentes.
+
+## Renderizado e interfaz
+
+- Cambiar de pestaña ya no dispara una reparación completa de planteles bots.
+- La sincronización de jugadores referencia dejó de recorrer toda la base por cada nombre mostrado; ahora utiliza el índice de jugadores y validación individual constante.
+- La revisión del Segundo entrenador y del Mundial de Clubes se trasladó al mantenimiento ocioso de cada fecha.
+- El temporizador de Inicio mantiene la actualización por segundo únicamente durante un bloqueo de avance. Fuera del bloqueo revisa el botón cada cinco segundos.
+
+## Contratos
+
+- La normalización de contratos ya no recorre a todos los jugadores todos los días.
+- Se guarda una firma por temporada y cantidad de jugadores para omitir revisiones idénticas.
+- La normalización completa preventiva se ejecuta cada treinta días en segundo plano y continúa ejecutándose al cargar, crear jugadores o cambiar de temporada.
+
+## Guardado local
+
+- Los autoguardados consecutivos se agrupan durante 2,5 segundos.
+- El guardado principal continúa actualizándose en cada escritura consolidada.
+- La copia de seguridad completa se renueva cada cuatro autoguardados o inmediatamente cuando el guardado es manual o no existe una copia válida.
+- Esto reduce escrituras duplicadas en IndexedDB sin eliminar el sistema de recuperación.
+
+## Carga inicial
+
+- Hitos, retos predeterminados y relatos de partido comienzan a cargarse en paralelo, pero ya no bloquean la primera pantalla.
+- Se mantienen datos de respaldo hasta que esas bases auxiliares terminan de incorporarse.
+- Se eliminó la solicitud fallida del antiguo `favicon.png`; el icono actual está embebido y no genera una petición adicional.
+
+## Compatibilidad
+
+Compatible con partidas V9.12. Las tareas que afectan el resultado de un día —entrenamiento, academia, economía, lesiones, partidos, contratos vencidos y eventos— continúan ejecutándose en orden antes de avanzar al día siguiente. Sólo se difirieron controles preventivos y sincronizaciones que no deben alterar el resultado inmediato.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.12.
+
+## Base consolidada
+
 # V9.12 · Bandeja, alertas y estadísticas vivas
 
 ## Tipo de entrega

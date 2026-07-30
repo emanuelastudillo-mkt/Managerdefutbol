@@ -545,7 +545,7 @@ function simulateDueMatchesUntil(targetDate, options={}){
     advanceCompletedRegularRounds();
     if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
     if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();
-    if(typeof runDailyMatchStatsIntegrityRepair === 'function') runDailyMatchStatsIntegrityRepair({ reason:'after_due_match_simulation', force:true, silent:true });
+    if(typeof runDailyMatchStatsIntegrityRepair === 'function') runDailyMatchStatsIntegrityRepair({ reason:'after_due_match_simulation', force:false, scope:'recent', silent:true });
   }
   return results;
 }
@@ -1459,11 +1459,12 @@ function advanceCalendarOneStep(){
   }
   if(startAutoAdvanceToNextOwnMatch.active){ showNotice('Ya se está procesando el calendario.'); return; }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
-  repairBotRosters({ reason:'before_unified_day_advance' });
+  const upcomingDateForRepair = addDaysToIsoDate(currentCalendarDate(), 1);
+  repairBotRosters({ reason:'before_unified_day_advance', dueDate:upcomingDateForRepair });
   if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
-    const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_unified_day_advance', force:true, silent:true });
+    const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_unified_day_advance', force:false, scope:'recent', silent:true });
     if(integrity.remaining > 0){
-      showNotice(`Hay ${integrity.remaining} partido(s) ya jugados sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
+      showNotice(`Hay ${integrity.remaining} partido(s) recientes sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
       return;
     }
   }
@@ -1684,14 +1685,6 @@ function simulateNextMatchday(options={}){
   if(game.gameOver?.active){ showNotice('Estás sin club. Usá Buscar club para continuar tu carrera.'); return; }
   if(typeof ensureClubWorldCupCurrentSeason === 'function') ensureClubWorldCupCurrentSeason({ source:'before_matchday' });
   if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'before_matchday' });
-  repairBotRosters({ reason:'before_turn' });
-  if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
-    const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_matchday_advance', force:true, silent:true });
-    if(integrity.remaining > 0){
-      showNotice(`Hay ${integrity.remaining} partido(s) ya jugados sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
-      return;
-    }
-  }
   if(isAdvanceLocked()){ showNotice(`Avance bloqueado por ${formatClock(advanceLockLeftMs())}.`); return; }
   if(isPreseason()){
     simulatePreseasonTurn();
@@ -1726,6 +1719,16 @@ function simulateNextMatchday(options={}){
   const ownInfo = nextOwnMatchInfo();
   const pendingInfo = nextPendingMatchInfo();
   const targetDate = ownInfo?.date || pendingInfo?.date;
+  if(targetDate){
+    repairBotRosters({ reason:'before_turn', dueDate:targetDate });
+    if(typeof runDailyMatchStatsIntegrityRepair === 'function'){
+      const integrity = runDailyMatchStatsIntegrityRepair({ reason:'before_matchday_advance', force:false, scope:'recent', silent:true });
+      if(integrity.remaining > 0){
+        showNotice(`Hay ${integrity.remaining} partido(s) recientes sin datos mínimos que no pudieron repararse de forma segura. Usá el verificador antes de avanzar.`);
+        return;
+      }
+    }
+  }
   if(!targetDate){
     game.matchdayIndex = game.fixtures.length;
     startPostseasonPhase(currentCalendarDate());

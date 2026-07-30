@@ -1340,7 +1340,7 @@ function syncPlayerStarsWithClubs(targetGame=game){
   targetGame.playerImpactWindows = normalizePlayerImpactWindows(targetGame.playerImpactWindows || {});
   let removed = 0;
   Object.entries(targetGame.playerStars.byPlayerId).forEach(([id, rec]) => {
-    const player = seed?.players?.find(p => Number(p.id) === Number(id));
+    const player = typeof playerById === 'function' ? playerById(id) : (seed?.players || []).find(p => Number(p.id) === Number(id));
     if(!player || Number(player.clubId || 0) !== Number(rec.clubId || 0)){
       delete targetGame.playerStars.byPlayerId[id];
       if(targetGame.playerImpactWindows) delete targetGame.playerImpactWindows[id];
@@ -1351,11 +1351,16 @@ function syncPlayerStarsWithClubs(targetGame=game){
 }
 function playerStarRecord(playerOrId){
   if(!game) return null;
-  syncPlayerStarsWithClubs(game);
   const id = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId);
   const player = typeof playerOrId === 'object' ? playerOrId : playerById(id);
   const rec = game.playerStars?.byPlayerId?.[id];
-  if(!rec || !player || Number(player.clubId || 0) !== Number(rec.clubId || 0)) return null;
+  if(!rec || !player) return null;
+  if(Number(player.clubId || 0) !== Number(rec.clubId || 0)){
+    delete game.playerStars.byPlayerId[id];
+    if(game.playerImpactWindows) delete game.playerImpactWindows[id];
+    game._needsAutosave = true;
+    return null;
+  }
   return rec;
 }
 function playerStarLabel(type){

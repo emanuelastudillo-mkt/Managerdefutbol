@@ -2503,6 +2503,7 @@ async function openDb(){
   return localDbPromise;
 }
 let localSaveWriteChain = Promise.resolve();
+let localSilentSaveWriteCount = 0;
 let pendingAutosaveTimer = null;
 let pendingAutosaveWaiters = [];
 let lastLocalSaveErrorNoticeAt = 0;
@@ -2543,7 +2544,9 @@ async function writeLocalSaveNow(silent=false){
     const previousRequest = store.get(primaryKey);
     previousRequest.onsuccess = () => {
       const previous = previousRequest.result;
-      store.put(usableLocalSaveRecord(previous) ? previous : payload, backupKey);
+      if(silent) localSilentSaveWriteCount += 1;
+      const refreshBackup = !silent || !usableLocalSaveRecord(previous) || localSilentSaveWriteCount % SAVE_BACKUP_EVERY_AUTOSAVES === 0;
+      if(refreshBackup) store.put(usableLocalSaveRecord(previous) ? previous : payload, backupKey);
       store.put(payload, primaryKey);
     };
     previousRequest.onerror = () => tx.abort();
@@ -2684,16 +2687,29 @@ async function init(){
     let savedRecord = await readLocalSaveRecord(preferredSlot).catch(() => null);
     if(!savedRecord && preferredSlot !== SAVE_SLOT_CAREER) savedRecord = await readLocalSaveRecord(SAVE_SLOT_CAREER).catch(() => null);
     const useSavedSnapshots = savedHasDatabaseSnapshots(savedRecord);
-    const [loadedSeed, loadedSponsors, loadedEmployees, loadedInstallations, loadedEvents, loadedSpecialSkills, loadedManagerAchievements, loadedManagerChallenges, loadedMatchCommentary] = await Promise.all([
+    // V9.13: las bases auxiliares no bloquean la primera pantalla. Se cargan en paralelo
+    // y se incorporan cuando el navegador termina el arranque principal.
+    managerAchievementsDatabase = managerAchievementsDatabase || { metadata:{ version:APP_VERSION, source:'startup' }, hitos:[] };
+    managerChallengesDatabase = managerChallengesDatabase || { metadata:{ version:APP_VERSION, source:'startup' }, retos:[] };
+    matchCommentaryDatabase = matchCommentaryDatabase || { version:APP_VERSION, categorias:{} };
+    const optionalDatabasesPromise = Promise.all([
+      loadManagerAchievementsDatabase(),
+      loadManagerChallengesDatabase(),
+      loadMatchCommentaryDatabase()
+    ]).then(([achievements, challenges, commentary]) => {
+      managerAchievementsDatabase = achievements;
+      managerChallengesDatabase = challenges;
+      matchCommentaryDatabase = commentary;
+      if(game && ['mystats','challenges'].includes(activeTab) && typeof renderAll === 'function') renderAll();
+      return true;
+    }).catch(error => { console.warn('Las bases auxiliares continuarán con datos de respaldo.', error); return false; });
+    const [loadedSeed, loadedSponsors, loadedEmployees, loadedInstallations, loadedEvents, loadedSpecialSkills] = await Promise.all([
       loadInitialSeed({ skipPlayersDatabase:useSavedSnapshots }),
       loadSponsorsDatabase(),
       loadEmployeesDatabase(),
       loadInstallationsDatabase(),
       loadEventsDatabase(),
-      loadSpecialSkillsDatabase(),
-      loadManagerAchievementsDatabase(),
-      loadManagerChallengesDatabase(),
-      loadMatchCommentaryDatabase()
+      loadSpecialSkillsDatabase()
     ]);
     seed = loadedSeed;
     sponsorsDatabase = loadedSponsors;
@@ -2701,9 +2717,6 @@ async function init(){
     installationsDatabase = loadedInstallations;
     eventsDatabase = loadedEvents;
     specialSkillsDatabase = loadedSpecialSkills;
-    managerAchievementsDatabase = loadedManagerAchievements;
-    managerChallengesDatabase = loadedManagerChallenges;
-    matchCommentaryDatabase = loadedMatchCommentary;
     fillClubSelect();
     bindEvents();
     startUiTicker();
@@ -2714,6 +2727,7 @@ async function init(){
     if(loaded && singleSlotMigration?.migrated){
       showNotice(`La carrera del antiguo espacio ${singleSlotMigration.fromSlot} se trasladó al único espacio disponible.`);
     }
+    void optionalDatabasesPromise;
     if(!loaded){
       if(useSavedSnapshots){
         seed = await loadInitialSeed({ skipPlayersDatabase:false });

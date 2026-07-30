@@ -129,19 +129,8 @@ function renderAll(){
     renderWelcomeScreen();
     return;
   }
-  if(typeof syncPlayerStarsWithClubs === 'function') syncPlayerStarsWithClubs(game);
-  if(typeof refreshAssistantCoachAnalysisAvailability === 'function') refreshAssistantCoachAnalysisAvailability({ notify:true, save:true });
-  if(typeof ensureClubWorldCupCurrentSeason === 'function'){
-    const cupEnsure = ensureClubWorldCupCurrentSeason({ source:'render-all' });
-    if(cupEnsure?.changed && !game._clubWorldCupAutosavePending){
-      game._clubWorldCupAutosavePending = true;
-      setTimeout(() => {
-        Promise.resolve(typeof saveLocal === 'function' ? saveLocal(true) : null).catch(()=>{}).finally(() => {
-          if(game) game._clubWorldCupAutosavePending = false;
-        });
-      }, 0);
-    }
-  }
+  // V9.13: las revisiones que no modifican la vista actual se ejecutan en la cola ociosa.
+  // Esto evita recorrer planteles, contratos y competiciones en cada cambio de pestaña.
   if(activeTab === 'players') activeTab = 'market';
   const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, careerImprovements:renderCareerImprovements, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, philosophy:renderManagerPhilosophy, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
   if(game.gameOver?.active){
@@ -151,8 +140,6 @@ function renderAll(){
       renderGameOverScreen();
       return;
     }
-  }else{
-    repairBotRosters({ reason:'render' });
   }
   const renderer = renderers[activeTab] || renderers.home;
   try{

@@ -411,13 +411,31 @@ function integrityCopyBotMatchDetails(target, source){
   if(source.date) target.date = source.date;
   return true;
 }
+function integrityRecentRoundCandidates(today, options={}){
+  const fixtures = Array.isArray(game?.fixtures) ? game.fixtures : [];
+  if(Boolean(options.force)) return fixtures;
+  const currentIndex = Math.max(0, Number(game?.matchdayIndex || 0));
+  const recentFrom = validIsoDate(today) && typeof addDaysToIsoDate === 'function' ? addDaysToIsoDate(today, -3) : '';
+  return fixtures.filter((round, roundIndex) => {
+    if(Math.abs(roundIndex - currentIndex) <= 2) return true;
+    return (round?.matches || []).some(match => {
+      if(!match?.played || matchHasMinimumBotStats(match)) return false;
+      const date = String(match.date || match.roundDate || round?.date || round?.roundDate || '').slice(0,10);
+      if(!validIsoDate(date) || !validIsoDate(today)) return false;
+      return (!recentFrom || date >= recentFrom) && date <= today;
+    });
+  });
+}
 function runDailyMatchStatsIntegrityRepair(options={}){
-  const summary = { checked:0, fixed:0, fixedFromHistory:0, fixedGenerated:0, skipped:0, remaining:0 };
+  const summary = { checked:0, fixed:0, fixedFromHistory:0, fixedGenerated:0, skipped:0, remaining:0, scope:Boolean(options.force) ? 'full' : 'recent', scannedRounds:0 };
   if(!game?.fixtures?.length) return summary;
   const today = validIsoDate(game.currentDate) ? game.currentDate : (typeof currentCalendarDate === 'function' ? currentCalendarDate() : '');
   const force = Boolean(options.force);
   if(!force && game.lastMatchStatsIntegrityRepairDate === today) return game.lastMatchStatsIntegrityRepairSummary || summary;
-  (game.fixtures || []).forEach((round) => {
+  const rounds = integrityRecentRoundCandidates(today, options);
+  summary.scannedRounds = rounds.length;
+  const unresolved = [];
+  rounds.forEach((round) => {
     (round.matches || []).forEach(match => {
       if(!match?.played) return;
       if(typeof ownClubInMatch === 'function' && ownClubInMatch(match)) return;
@@ -444,9 +462,10 @@ function runDailyMatchStatsIntegrityRepair(options={}){
         return;
       }
       summary.skipped += 1;
+      unresolved.push(match);
     });
   });
-  summary.remaining = botMatchStatsIntegrityIssues().length;
+  summary.remaining = force ? botMatchStatsIntegrityIssues().length : unresolved.length;
   game.lastMatchStatsIntegrityRepairDate = today;
   game.lastMatchStatsIntegrityRepairSummary = { ...summary, reason:options.reason || 'daily', checkedAt:new Date().toISOString() };
   if(summary.fixed > 0){
@@ -880,10 +899,14 @@ function bindEvents(){
 
 function startUiTicker(){
   clearInterval(uiTicker);
+  let tick = 0;
   uiTicker = setInterval(()=>{
     if(typeof document !== 'undefined' && document.hidden) return;
-    if(game) refreshSidebarDate();
-    if(game && activeTab === 'home') updateAdvanceButtonState();
+    tick += 1;
+    if(!game || activeTab !== 'home') return;
+    const lockLeft = typeof advanceLockLeftMs === 'function' ? advanceLockLeftMs() : Math.max(0, Number(game.advanceLockedUntil || 0) - Date.now());
+    // Durante el cooldown se actualiza cada segundo. Fuera de él alcanza con una revisión cada 5 segundos.
+    if(lockLeft > 0 || tick % 5 === 0) updateAdvanceButtonState();
   }, 1000);
 }
 function generateSaveCode(){

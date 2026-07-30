@@ -2057,11 +2057,33 @@ function repairBotRoster(club, report){
     guard += 1;
   }
 }
+function repairBotRosterCandidateIds(options={}){
+  const explicit = Array.isArray(options.clubIds) ? options.clubIds.map(Number).filter(Number.isFinite) : [];
+  if(explicit.length) return new Set(explicit);
+  const dueDate = String(options.dueDate || '').slice(0,10);
+  if(!dueDate) return null;
+  const ids = new Set();
+  (game?.fixtures || []).forEach(round => {
+    (round?.matches || []).forEach(match => {
+      if(!match || match.played) return;
+      const date = String(match.date || match.roundDate || round?.date || round?.roundDate || round?.startDate || '').slice(0,10);
+      if(date !== dueDate) return;
+      ids.add(Number(match.homeId));
+      ids.add(Number(match.awayId));
+    });
+  });
+  return ids;
+}
 function repairBotRosters(options={}){
-  if(!BOT_ROSTER_REPAIR_ENABLED || !game || !seed?.clubs?.length) return { created:0, converted:0, clubs:0 };
-  const report = { created:0, converted:0, signedFreeAgents:0, clubs:0, reason:options.reason || 'auto' };
-  seed.clubs.forEach(club => {
+  if(!BOT_ROSTER_REPAIR_ENABLED || !game || !seed?.clubs?.length) return { created:0, converted:0, clubs:0, checkedClubs:0 };
+  const candidates = repairBotRosterCandidateIds(options);
+  const clubs = candidates
+    ? seed.clubs.filter(club => candidates.has(Number(club.id)))
+    : seed.clubs;
+  const report = { created:0, converted:0, signedFreeAgents:0, clubs:0, checkedClubs:0, targeted:Boolean(candidates), reason:options.reason || 'auto' };
+  clubs.forEach(club => {
     if(Number(club.id) === Number(game.selectedClubId)) return;
+    report.checkedClubs += 1;
     const before = clubRequirementIssues(club.id).length;
     if(before){
       repairBotRoster(club, report);

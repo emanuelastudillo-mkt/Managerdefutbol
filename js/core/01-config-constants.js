@@ -65,6 +65,7 @@ const SAVE_SLOT_CAREER_PREFIX_ID = 'career:';
 const SAVE_SLOT_CAREER = 'career:1';
 const SAVE_CAREER_SLOT_COUNT = Math.max(1, Math.min(10, Math.round(configNumber('partidas.slotsCarrera', 1, 1, 10))));
 const AUTOSAVE_COALESCE_MS = Math.max(0, Math.round(configNumber('partidas.agruparAutoguardadosMs', 1500, 0, 5000)));
+const SAVE_BACKUP_EVERY_AUTOSAVES = Math.max(1, Math.round(configNumber('partidas.backupCadaAutoguardados', 4, 1, 20)));
 const SAVE_SLOT_CAMPO_DESTRUIDO = 'challenge:campo_destruido';
 const SAVE_SLOT_PREFIX = 'slot:';
 const SAVE_BACKUP_PREFIX = 'backup:';

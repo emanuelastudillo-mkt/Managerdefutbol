@@ -618,6 +618,27 @@
     return {played,total,next:total ? Math.min(total,played+1) : 0,pending:Math.max(0,total-played)};
   }
 
+  function ciQuickAuditState(target=game,options={}){
+    const state=ciState(target);
+    const referenceDate=ciValidDate(options.referenceDate) ? options.referenceDate : (ciValidDate(state?.currentDate) ? state.currentDate : '');
+    const summary={ran:false,quick:true,version:CALENDAR_INTEGRITY_VERSION,referenceDate,invalidDates:0,pastDue:0,duplicateIds:0,needsFull:false};
+    if(!state || !Array.isArray(state.fixtures) || !referenceDate) return summary;
+    const seen=new Set();
+    (state.fixtures || []).forEach(round => (round?.matches || []).forEach(match => {
+      const key=String(match?.id || '').trim();
+      if(key){
+        if(seen.has(key)) summary.duplicateIds+=1;
+        else seen.add(key);
+      }
+      if(match?.played || match?.friendly) return;
+      const date=ciMatchDate(match,round);
+      if(!ciValidDate(date)){ summary.invalidDates+=1; return; }
+      if(ciBefore(date,referenceDate)) summary.pastDue+=1;
+    }));
+    summary.needsFull=Boolean(summary.invalidDates||summary.pastDue||summary.duplicateIds);
+    return summary;
+  }
+
   function ciAuditState(target=game,options={}){
     const state=ciState(target);
     const empty={ran:false,version:CALENDAR_INTEGRITY_VERSION,restoredMissing:0,restoredPlayed:0,duplicatesRemoved:0,rescheduled:0,dates:[],remainingPastDue:0,resetFutureDates:0};
@@ -678,6 +699,7 @@
     state.calendarIntegrityState=state.calendarIntegrityState && typeof state.calendarIntegrityState==='object' ? state.calendarIntegrityState : {};
     state.calendarIntegrityState.version=CALENDAR_INTEGRITY_VERSION;
     state.calendarIntegrityState.lastCheckDate=referenceDate;
+    state.calendarIntegrityState.lastFullCheckDate=referenceDate;
     state.calendarIntegrityState.lastSummary=summary;
     state.calendarIntegrityLog=Array.isArray(state.calendarIntegrityLog)?state.calendarIntegrityLog.slice(-(MAX_LOG_ENTRIES-1)):[];
     if(changed || options.logAlways) state.calendarIntegrityLog.push(summary);
@@ -756,15 +778,21 @@
     processDailyCalendarState=function(dateAfter='',options={}){
       const beforeDate=ciValidDate(dateAfter)?dateAfter:(ciValidDate(game?.currentDate)?game.currentDate:'');
       ciDailyTransactionDepth+=1;
-      let before=null;
+      let before=ciQuickAuditState(game,{referenceDate:beforeDate});
       let result={};
       try{
-        before=ciAuditState(game,{referenceDate:beforeDate,reason:'before_daily_advance_v885'});
+        if(before.needsFull || options.forceCalendarIntegrity===true){
+          before=ciAuditState(game,{referenceDate:beforeDate,reason:'before_daily_advance_v913'});
+        }
         result=originalProcessDailyCalendarState.call(this,dateAfter,options)||{};
       }finally{
         ciDailyTransactionDepth=Math.max(0,ciDailyTransactionDepth-1);
       }
-      const after=ciAuditState(game,{referenceDate:game?.currentDate || beforeDate,reason:'after_daily_advance_v885'});
+      const afterDate=game?.currentDate || beforeDate;
+      let after=ciQuickAuditState(game,{referenceDate:afterDate});
+      if(after.needsFull || options.forceCalendarIntegrity===true){
+        after=ciAuditState(game,{referenceDate:afterDate,reason:'after_daily_advance_v913'});
+      }
       result.calendarIntegrity={before,after};
       const pending=game?._calendarIntegrityPendingNotice;
       if(pending){ ciNotify(pending); delete game._calendarIntegrityPendingNotice; }

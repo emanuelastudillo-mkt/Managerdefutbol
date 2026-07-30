@@ -1,3 +1,20 @@
+# V9.21 · Ranking de jugadores Top 100
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.20.
+
+## Cambios principales
+
+- Se agregó **Ranking de jugadores** dentro de Competiciones.
+- La tabla muestra el Top 100 de la temporada actual con nombre, club actual, partidos jugados, goles, asistencias y puntaje general.
+- El puntaje general utiliza el promedio de las calificaciones oficiales registradas por el simulador.
+- Puede ordenarse por puntaje, partidos, goles, asistencias, nombre o club actual.
+- Los jugadores y clubes conservan acceso a sus fichas desde la tabla.
+- Las partidas existentes no requieren migración.
+
+El incremental se aplica sobre V9.20.
+
+---
+
 # V9.20 · Cupos del Mundial por liga
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.19.

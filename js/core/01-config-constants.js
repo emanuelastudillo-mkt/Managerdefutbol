@@ -982,6 +982,7 @@ let sidebarOpenGroup = '';
 let selectedStandingsDivision = 'all';
 let selectedStandingsYear = 'current';
 let selectedCompetitionView = 'standings';
+let competitionPlayerRankingSort = 'rating_desc';
 let selectedStatsDivision = 'all';
 let uiTicker = null;
 let matchRevealTimers = [];

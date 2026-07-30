@@ -1,3 +1,64 @@
+# V9.16 · Informe físico y riesgo de lesión
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.15.
+
+## Nueva pestaña en Primer equipo
+
+Se agregó **Informe físico** dentro de Primer equipo. La vista reúne en una sola tabla:
+
+- Jugador.
+- Media.
+- Edad.
+- Posición.
+- Partidos jugados.
+- Goles.
+- Asistencias.
+- Estado físico.
+- Riesgo de lesión.
+
+Todas las columnas principales permiten ordenar de forma ascendente o descendente desde su encabezado.
+
+## Riesgo de lesión
+
+El nuevo dato se presenta como una estimación textual:
+
+- Muy bajo.
+- Bajo.
+- Normal.
+- Alto.
+- Muy alto.
+
+La clasificación combina tres factores:
+
+1. La genética interna del jugador.
+2. Su estado físico actual.
+3. La participación acumulada en la temporada.
+
+No se muestra un porcentaje exacto ni se revela el valor numérico de genética. El informe funciona como referencia para planificar descansos, rotaciones y cargas de entrenamiento. Un jugador que ya está lesionado aparece dentro del nivel de riesgo más alto.
+
+## Encabezados de producción ofensiva
+
+En las tablas ordenables del plantel:
+
+- La letra **G** fue reemplazada por un icono de pelota de fútbol.
+- La letra **A** fue reemplazada por un icono de bota de fútbol.
+- Ambos iconos conservan título, descripción accesible y controles de orden ascendente y descendente.
+
+## Compatibilidad
+
+- No modifica estadísticas, resultados, lesiones existentes ni la probabilidad real de lesión.
+- No altera partidas guardadas.
+- No agrega recursos gráficos externos.
+- La estimación se calcula al abrir la pestaña y no introduce procesamiento diario adicional.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.15.
+
+## Base consolidada
+
 # V9.15 · Favicon desde la raíz
 
 ## Tipo de entrega

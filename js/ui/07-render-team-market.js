@@ -1,9 +1,12 @@
 /* Primer equipo, mercado y táctica: probabilidad de fichaje visible sólo si fue ojeada. */
 
+let firstTeamPhysicalReportSort = 'risk_desc';
+
 function firstTeamTabsMarkup(current){
   const tabs = [
     ['tactics','Táctica'],
     ['squad','Plantel'],
+    ['physicalReport','Informe físico'],
     ['training','Entrenamiento'],
     ['playerStats','Estadísticas']
   ];
@@ -25,6 +28,7 @@ function prependFirstTeamTabs(current){
 }
 function renderFirstTeam(){
   if(firstTeamTab === 'squad') return renderSquad();
+  if(firstTeamTab === 'physicalReport') return renderFirstTeamPhysicalReport();
   if(firstTeamTab === 'training') return renderTraining();
   if(firstTeamTab === 'playerStats') return renderTeamPlayerStatistics();
   return renderTactics();
@@ -560,6 +564,8 @@ function sortPlayersForView(players, sortKey){
     goals_asc:(a,b)=>playerStatValue(a.id, 'goals')-playerStatValue(b.id, 'goals') || byName(a,b),
     assists_desc:(a,b)=>playerStatValue(b.id, 'assists')-playerStatValue(a.id, 'assists') || byName(a,b),
     assists_asc:(a,b)=>playerStatValue(a.id, 'assists')-playerStatValue(b.id, 'assists') || byName(a,b),
+    risk_desc:(a,b)=>firstTeamInjuryRiskScore(b)-firstTeamInjuryRiskScore(a) || currentCondition(a.id)-currentCondition(b.id) || byName(a,b),
+    risk_asc:(a,b)=>firstTeamInjuryRiskScore(a)-firstTeamInjuryRiskScore(b) || currentCondition(b.id)-currentCondition(a.id) || byName(a,b),
     habilidad_desc:(a,b)=>playerVisibleSkillValue(b, squadSkillSortKey)-playerVisibleSkillValue(a, squadSkillSortKey) || byName(a,b),
     habilidad_asc:(a,b)=>playerVisibleSkillValue(a, squadSkillSortKey)-playerVisibleSkillValue(b, squadSkillSortKey) || byName(a,b),
     resistencia_desc:(a,b)=>playerVisibleSkillValue(b, 'Resistencia')-playerVisibleSkillValue(a, 'Resistencia') || byName(a,b),
@@ -610,6 +616,108 @@ function squadSkillOptionsMarkup(){
 }
 function skillColumnSort(label){
   return `<div class="th-filter compact-sort skill-sort"><span>${label}</span><select class="skill-sort-select" data-squad-skill-sort>${squadSkillOptionsMarkup()}</select><div class="sort-arrows"><button type="button" class="sort-arrow${squadSort==='habilidad_asc'?' active':''}" data-squad-sort="habilidad_asc" title="Menor a mayor" aria-label="Ordenar habilidad de menor a mayor">↑</button><button type="button" class="sort-arrow${squadSort==='habilidad_desc'?' active':''}" data-squad-sort="habilidad_desc" title="Mayor a menor" aria-label="Ordenar habilidad de mayor a menor">↓</button></div></div>`;
+}
+
+
+function firstTeamStatHeaderIconMarkup(type){
+  if(type === 'goals'){
+    return '<span class="first-team-stat-header-icon first-team-stat-header-goals" role="img" aria-label="Goles" title="Goles">⚽</span>';
+  }
+  return `<span class="first-team-stat-header-icon first-team-stat-header-assists" role="img" aria-label="Asistencias" title="Asistencias">
+    <svg viewBox="0 0 28 20" aria-hidden="true" focusable="false">
+      <path d="M3 13.2c1.9.1 3.7-.3 5.2-1.2 1.7-1 2.9-2.6 3.7-4.8l1.2-3.3 3.5 1.3-.8 2.4 6.8 3.4c1.5.8 2.4 2.3 2.4 4v1.2H3v-3z"></path>
+      <path d="M7.2 16.2h17.7v1.9H5.1c-1.2 0-2.1-.8-2.1-1.9h4.2z"></path>
+      <path d="M14.7 7.9l2.4 1.2M12.8 10l2.4 1.2" class="boot-laces"></path>
+    </svg>
+  </span>`;
+}
+
+function firstTeamInjuryRiskScore(player){
+  if(!player) return 0;
+  const playerId = Number(player.id || 0);
+  let genetics = 50;
+  try{
+    const hidden = typeof hiddenStats === 'function' ? hiddenStats(player) : null;
+    const value = Number(hidden?.genetics);
+    if(Number.isFinite(value)) genetics = clamp(value, 1, 99);
+  }catch(_){ /* cálculo orientativo con valor neutral */ }
+  const condition = clamp(Number(typeof currentCondition === 'function' ? currentCondition(playerId) : 99) || 0, 0, 99);
+  const played = Math.max(0, Number(typeof playerStatValue === 'function' ? playerStatValue(playerId, 'played') : 0) || 0);
+  const reference = Math.max(1, Number(typeof HIGH_PARTICIPATION_REFERENCE_MATCHES !== 'undefined' ? HIGH_PARTICIPATION_REFERENCE_MATCHES : 34) || 34);
+  const geneticRisk = clamp((99 - genetics) / 98 * 100, 0, 100);
+  const physicalRisk = clamp((99 - condition) / 99 * 100, 0, 100);
+  const participationRatio = played / reference;
+  let participationRisk = 0;
+  if(participationRatio <= 0.45) participationRisk = participationRatio / 0.45 * 25;
+  else if(participationRatio <= 0.80) participationRisk = 25 + ((participationRatio - 0.45) / 0.35) * 35;
+  else participationRisk = 60 + clamp((participationRatio - 0.80) / 0.40, 0, 1) * 40;
+  let score = geneticRisk * 0.35 + physicalRisk * 0.45 + participationRisk * 0.20;
+  if(typeof isInjured === 'function' && isInjured(playerId)) score = Math.max(score, 88);
+  return clamp(Math.round(score), 0, 100);
+}
+
+function firstTeamInjuryRiskInfo(player){
+  const score = firstTeamInjuryRiskScore(player);
+  if(score < 20) return { score, label:'Muy bajo', className:'very-low' };
+  if(score < 38) return { score, label:'Bajo', className:'low' };
+  if(score < 58) return { score, label:'Normal', className:'normal' };
+  if(score < 76) return { score, label:'Alto', className:'high' };
+  return { score, label:'Muy alto', className:'very-high' };
+}
+
+function firstTeamInjuryRiskMarkup(player){
+  const info = firstTeamInjuryRiskInfo(player);
+  const injured = typeof isInjured === 'function' && isInjured(player.id);
+  const title = injured
+    ? 'El jugador está lesionado. La estimación combina genética interna, estado físico y participación acumulada.'
+    : 'Estimación orientativa según genética interna, estado físico actual y partidos jugados.';
+  return `<span class="injury-risk-badge injury-risk-${info.className}" title="${escapeHtml(title)}">${escapeHtml(info.label)}</span>`;
+}
+
+function firstTeamPhysicalColumnSort(label, options){
+  return compactSortButtons(label, options, firstTeamPhysicalReportSort, 'data-physical-report-sort');
+}
+
+function renderFirstTeamPhysicalReport(){
+  const players = sortPlayersForView(playersByClub(game.selectedClubId), firstTeamPhysicalReportSort);
+  const goalIcon = firstTeamStatHeaderIconMarkup('goals');
+  const assistIcon = firstTeamStatHeaderIconMarkup('assists');
+  const rows = players.map(player => `
+    <tr class="${isUnavailable(player.id) ? 'dim-row' : ''}">
+      <td><button class="linklike" data-player-id="${player.id}"><strong>${playerNameWithScoutingEye(player)}</strong></button></td>
+      <td><strong>${visibleOverall(player)}</strong></td>
+      <td>${Number(player.age || 0) || '—'}</td>
+      <td><span class="pill role-pill">${roleBadge(player.position)}</span></td>
+      <td><strong>${playerStatValue(player.id, 'played')}</strong></td>
+      <td><strong>${playerStatValue(player.id, 'goals')}</strong></td>
+      <td><strong>${playerStatValue(player.id, 'assists')}</strong></td>
+      <td>${conditionBar(player.id)}</td>
+      <td>${firstTeamInjuryRiskMarkup(player)}</td>
+    </tr>`).join('');
+  view.innerHTML = `
+    <div class="section-title"><h2>Informe físico del plantel</h2><p class="tagline">Resumen para planificar rotaciones y cargas. El riesgo de lesión es orientativo y no representa una probabilidad exacta.</p></div>
+    <div class="table-wrap first-team-physical-table-wrap"><table class="first-team-physical-table"><thead><tr>
+      <th>${firstTeamPhysicalColumnSort('Jugador', [['nombre_asc','A-Z'],['nombre_desc','Z-A']])}</th>
+      <th>${firstTeamPhysicalColumnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
+      <th>${firstTeamPhysicalColumnSort('Edad', [['edad_asc','Menor a mayor'],['edad_desc','Mayor a menor']])}</th>
+      <th>${firstTeamPhysicalColumnSort('POS', [['posicion_asc','POR → DEF → MED → DEL'],['posicion_desc','DEL → MED → DEF → POR']])}</th>
+      <th>${firstTeamPhysicalColumnSort('PJ', [['played_desc','Mayor a menor'],['played_asc','Menor a mayor']])}</th>
+      <th>${firstTeamPhysicalColumnSort(goalIcon, [['goals_desc','Más goles'],['goals_asc','Menos goles']])}</th>
+      <th>${firstTeamPhysicalColumnSort(assistIcon, [['assists_desc','Más asistencias'],['assists_asc','Menos asistencias']])}</th>
+      <th>${firstTeamPhysicalColumnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
+      <th>${firstTeamPhysicalColumnSort('Riesgo de lesión', [['risk_desc','Mayor riesgo'],['risk_asc','Menor riesgo']])}</th>
+    </tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">No hay jugadores en el plantel.</td></tr>'}</tbody></table></div>
+    <div class="card inner first-team-physical-note"><p class="muted small">La estimación combina la genética interna del jugador, su estado físico actual y la participación acumulada en la temporada. Los valores se muestran como Muy bajo, Bajo, Normal, Alto o Muy alto.</p></div>
+  `;
+  prependFirstTeamTabs('physicalReport');
+  document.querySelectorAll('[data-physical-report-sort]').forEach(button => {
+    button.addEventListener('click', () => {
+      if(button.dataset.physicalReportSort){
+        firstTeamPhysicalReportSort = button.dataset.physicalReportSort;
+        renderFirstTeamPhysicalReport();
+      }
+    });
+  });
 }
 
 
@@ -735,8 +843,8 @@ function renderSquad(){
       <th>${columnSort('Nacionalidad', [['nacionalidad_asc','A-Z'],['nacionalidad_desc','Z-A']])}</th>
       <th>${columnSort('Media', [['media_desc','Mayor a menor'],['media_asc','Menor a mayor']])}</th>
       <th>${columnSort('PJ', [['played_desc','Mayor a menor'],['played_asc','Menor a mayor']])}</th>
-      <th>${columnSort('G', [['goals_desc','Mayor a menor'],['goals_asc','Menor a mayor']])}</th>
-      <th>${columnSort('A', [['assists_desc','Mayor a menor'],['assists_asc','Menor a mayor']])}</th>
+      <th>${columnSort(firstTeamStatHeaderIconMarkup('goals'), [['goals_desc','Mayor a menor'],['goals_asc','Menor a mayor']])}</th>
+      <th>${columnSort(firstTeamStatHeaderIconMarkup('assists'), [['assists_desc','Mayor a menor'],['assists_asc','Menor a mayor']])}</th>
       <th>${columnSort('Estado físico', [['condicion_desc','Mayor a menor'],['condicion_asc','Menor a mayor']])}</th>
       <th>${columnSort('Moral', [['moral_desc','Mayor a menor'],['moral_asc','Menor a mayor']])}</th>
       <th>${skillColumnSort('Habilidad')}</th>

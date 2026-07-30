@@ -439,7 +439,7 @@ function clubWorldCupActiveSquad(clubId){
   return playersByClub(Number(clubId || 0)).filter(player => player && !player.retired && !player.sold && !player.freeAgent);
 }
 function clubWorldCupEligibleSquad(clubId){
-  return clubWorldCupActiveSquad(clubId).filter(player => !isUnavailable(player.id));
+  return clubWorldCupActiveSquad(clubId).filter(player => !isUnavailable(player.id, COMPETITION_SUSPENSION_SCOPES.INTERNATIONAL_CUP));
 }
 function clubWorldCupNextRosterGroup(clubId){
   const squad = clubWorldCupEligibleSquad(clubId);

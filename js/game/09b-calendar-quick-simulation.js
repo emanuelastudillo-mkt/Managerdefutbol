@@ -492,7 +492,7 @@ function quickSimulateBotMatch(match){
       applyPlayerStats(match.awayId, awayLineup, substitutions, goals, cards, injuries, keySaves, errors, playerStatsResult);
     }
     if(typeof applyMatchCohesionResult === 'function') applyMatchCohesionResult(match, substitutions, cards);
-    if(typeof applyAvailability === 'function') applyAvailability(cards, injuries);
+    if(typeof applyAvailability === 'function') applyAvailability(cards, injuries, { ...match, played:true, cards, injuries });
     if(typeof updatePlayerStarTrackingForMatch === 'function'){
       updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway });
     }
@@ -501,11 +501,16 @@ function quickSimulateBotMatch(match){
   return { ...match, played:true, engine:'quick-bot', homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves, errors, matchStats, matchContext, starterIdsHome, starterIdsAway, playedIdsHome:starterIdsHome, playedIdsAway:starterIdsAway, instructionConditionDeltas, botOverexertionEvents:overexertionEvents, suspended:Boolean(defaultLoss), defaultLoss:defaultLoss ? { ...defaultLoss, reason:'Cinco expulsiones' } : null, suspensionReason:defaultLoss ? 'Cinco expulsiones' : '' };
 }
 function simulateScheduledMatch(match){
-  if(typeof normalizeBotWearAndConditionForMatch === 'function'){
-    normalizeBotWearAndConditionForMatch(match, { reason:'before_scheduled_match' });
-  }
-  if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
-  return simulateMatch(match);
+  const run = () => {
+    if(typeof normalizeBotWearAndConditionForMatch === 'function'){
+      normalizeBotWearAndConditionForMatch(match, { reason:'before_scheduled_match' });
+    }
+    if(FAST_BOT_SIMULATION_ENABLED && !ownClubInMatch(match)) return quickSimulateBotMatch(match);
+    return simulateMatch(match);
+  };
+  return typeof withCompetitionSuspensionContext === 'function'
+    ? withCompetitionSuspensionContext(match, run)
+    : run();
 }
 function matchFixtureClonePlain(value){
   try{ return JSON.parse(JSON.stringify(value ?? null)); }
@@ -1599,13 +1604,18 @@ function showLiveMatchEngineBlocked(status){
 }
 function simulateLiveMatchResultOnly(match){
   if(!match || !window.Simulator20?.createLiveMatchSession || !window.Simulator20?.simulateLiveBlock) return null;
-  const session = window.Simulator20.createLiveMatchSession(match);
-  let guard = 0;
-  while(session && !session.finished && guard < 140){
-    window.Simulator20.simulateLiveBlock(session, { instruction:'none', substitutions:[] });
-    guard += 1;
-  }
-  return session?.result || (window.Simulator20.finishLiveMatchSession ? window.Simulator20.finishLiveMatchSession(session) : null);
+  const run = () => {
+    const session = window.Simulator20.createLiveMatchSession(match);
+    let guard = 0;
+    while(session && !session.finished && guard < 140){
+      window.Simulator20.simulateLiveBlock(session, { instruction:'none', substitutions:[] });
+      guard += 1;
+    }
+    return session?.result || (window.Simulator20.finishLiveMatchSession ? window.Simulator20.finishLiveMatchSession(session) : null);
+  };
+  return typeof withCompetitionSuspensionContext === 'function'
+    ? withCompetitionSuspensionContext(match, run)
+    : run();
 }
 function showResultOnlySummary(result){
   if(!result) return;

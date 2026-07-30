@@ -397,7 +397,7 @@ function lockerRoomApplySuspension(player, matches=1){
   game.playerStatus = game.playerStatus || {};
   const status = typeof playerStatus === 'function' ? playerStatus(player.id) : (game.playerStatus[player.id] || {});
   const through = Number(game.matchdayIndex || 0) + Math.max(1, Math.round(Number(matches || 1)));
-  game.playerStatus[player.id] = { ...status, suspendedThrough:Math.max(Number(status.suspendedThrough || 0), through), suspensionLabel:'Sanción interna' };
+  game.playerStatus[player.id] = { ...status, suspendedThrough:Math.max(Number(status.suspendedThrough || 0), through), suspensionLabel:'Sanción interna', suspensionType:'internal' };
   if(typeof removeOwnUnavailableFromTactic === 'function') removeOwnUnavailableFromTactic([{ type:'red', playerId:Number(player.id) }]);
   game.mustReviewTactics = true;
   return through;

@@ -85,20 +85,233 @@ function showRosterLimitNotice(){
 function showRosterMinimumNotice(){
   showNotice(`Plantel mínimo. Debés mantener al menos ${MIN_PLAYERS_PER_CLUB} jugadores.`);
 }
+const COMPETITION_SUSPENSION_SCOPES = Object.freeze({
+  LEAGUE:'league',
+  NATIONAL_CUP:'nationalCup',
+  INTERNATIONAL_CUP:'internationalCup'
+});
+const COMPETITION_SUSPENSION_SCOPE_LABELS = Object.freeze({
+  league:'Liga',
+  nationalCup:'Copa nacional',
+  internationalCup:'Copa internacional'
+});
+let activeCompetitionSuspensionContext = null;
+
+function normalizeCompetitionSuspensionScope(value){
+  const raw = String(value || '').trim();
+  if(Object.values(COMPETITION_SUSPENSION_SCOPES).includes(raw)) return raw;
+  const key = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+  if(['league','liga','liganacional'].includes(key)) return COMPETITION_SUSPENSION_SCOPES.LEAGUE;
+  if(['nationalcup','copanacional','supercopa','nationalcompetition'].includes(key)) return COMPETITION_SUSPENSION_SCOPES.NATIONAL_CUP;
+  if(['internationalcup','copainternacional','mundialdeclubes','clubworldcup'].includes(key)) return COMPETITION_SUSPENSION_SCOPES.INTERNATIONAL_CUP;
+  return '';
+}
+function competitionSuspensionScopeLabel(scope){
+  return COMPETITION_SUSPENSION_SCOPE_LABELS[normalizeCompetitionSuspensionScope(scope)] || 'Competición';
+}
+function matchCompetitionSuspensionScope(match){
+  if(!match || typeof match !== 'object' || match.friendly) return '';
+  if(match.clubWorldCup || match.internationalCup || match.continentalCup) return COMPETITION_SUSPENSION_SCOPES.INTERNATIONAL_CUP;
+  if(match.nationalCup || match.nationalSupercup) return COMPETITION_SUSPENSION_SCOPES.NATIONAL_CUP;
+  const text = [match.competitionType, match.competitionName, match.competition, match.divisionName, match.name, match.stageLabel]
+    .filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/mundial de clubes|club world cup|copa internacional|international cup|continental/.test(text)) return COMPETITION_SUSPENSION_SCOPES.INTERNATIONAL_CUP;
+  if(/copa|cup|supercopa/.test(text)) return COMPETITION_SUSPENSION_SCOPES.NATIONAL_CUP;
+  return COMPETITION_SUSPENSION_SCOPES.LEAGUE;
+}
+function normalizeCompetitionSuspensions(value){
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const clean = {};
+  Object.values(COMPETITION_SUSPENSION_SCOPES).forEach(scope => {
+    const amount = Math.max(0, Math.round(Number(source[scope] || 0)));
+    if(amount > 0) clean[scope] = amount;
+  });
+  return clean;
+}
+function nextUnplayedMatchForClubDiscipline(clubId, state=game){
+  const id = Number(clubId || 0);
+  if(!id || !Array.isArray(state?.fixtures)) return null;
+  const items = [];
+  state.fixtures.forEach((round, roundIndex) => {
+    (round?.matches || []).forEach((match, matchIndex) => {
+      if(match?.played || (Number(match?.homeId || 0) !== id && Number(match?.awayId || 0) !== id)) return;
+      const date = validIsoDate(match?.date) ? String(match.date) : (validIsoDate(round?.date) ? String(round.date) : '');
+      items.push({ match, date, roundIndex, matchIndex });
+    });
+  });
+  items.sort((a,b) => {
+    if(a.date && b.date && a.date !== b.date) return a.date.localeCompare(b.date);
+    if(a.date && !b.date) return -1;
+    if(!a.date && b.date) return 1;
+    return a.roundIndex - b.roundIndex || a.matchIndex - b.matchIndex;
+  });
+  return items[0]?.match || null;
+}
+function competitionSuspensionContextScope(playerId, matchOrScope=null){
+  const explicit = normalizeCompetitionSuspensionScope(matchOrScope);
+  if(explicit) return explicit;
+  if(matchOrScope && typeof matchOrScope === 'object') return matchCompetitionSuspensionScope(matchOrScope);
+  if(activeCompetitionSuspensionContext?.explicit) return activeCompetitionSuspensionContext.scope || '';
+  if(typeof window !== 'undefined' && window.__activeCompetitionSuspensionMatch){
+    return matchCompetitionSuspensionScope(window.__activeCompetitionSuspensionMatch);
+  }
+  const player = playerById(playerId);
+  const clubId = Number(player?.clubId || 0);
+  if(!clubId) return '';
+  return matchCompetitionSuspensionScope(nextUnplayedMatchForClubDiscipline(clubId, game));
+}
+function withCompetitionSuspensionContext(matchOrScope, callback){
+  if(typeof callback !== 'function') return undefined;
+  const previous = activeCompetitionSuspensionContext;
+  const scope = normalizeCompetitionSuspensionScope(matchOrScope) || (matchOrScope && typeof matchOrScope === 'object' ? matchCompetitionSuspensionScope(matchOrScope) : '');
+  activeCompetitionSuspensionContext = { explicit:true, scope, match:matchOrScope && typeof matchOrScope === 'object' ? matchOrScope : null };
+  try{ return callback(); }
+  finally{ activeCompetitionSuspensionContext = previous; }
+}
+function findLatestRedCardMatchForPlayer(playerId, state=game){
+  const id = Number(playerId || 0);
+  if(!id) return null;
+  const history = Array.isArray(state?.matchHistory) ? state.matchHistory : [];
+  for(let index=history.length - 1; index>=0; index-=1){
+    const match = history[index];
+    const sentOff = (match?.cards || []).some(card => Number(card?.playerId || 0) === id && ['red','secondYellowRed'].includes(String(card?.type || '')));
+    if(sentOff) return match;
+  }
+  return null;
+}
+function migrateLegacyCompetitionSuspensionsForState(state){
+  if(!state || !state.playerStatus || typeof state.playerStatus !== 'object') return { changed:0, migrated:0, normalized:0 };
+  let changed = 0;
+  let migrated = 0;
+  let normalized = 0;
+  Object.entries(state.playerStatus).forEach(([playerId, raw]) => {
+    const status = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    const cleanCounts = normalizeCompetitionSuspensions(status.competitionSuspensions);
+    if(JSON.stringify(cleanCounts) !== JSON.stringify(status.competitionSuspensions || {})){
+      if(Object.keys(cleanCounts).length) status.competitionSuspensions = cleanCounts;
+      else delete status.competitionSuspensions;
+      changed += 1;
+      normalized += 1;
+    }
+    const hasLegacySuspension = status.suspendedThrough !== undefined && status.suspendedThrough !== null && status.suspendedThrough !== '';
+    const suspendedThrough = Number(status.suspendedThrough);
+    const internal = String(status.suspensionLabel || '').trim().length > 0 || String(status.suspensionType || '') === 'internal';
+    if(hasLegacySuspension && Number.isFinite(suspendedThrough) && !internal){
+      const remaining = Math.round(suspendedThrough) - Math.max(0, Math.round(Number(state.matchdayIndex || 0))) + 1;
+      if(remaining > 0){
+        const sourceMatch = findLatestRedCardMatchForPlayer(playerId, state);
+        const scope = matchCompetitionSuspensionScope(sourceMatch) || COMPETITION_SUSPENSION_SCOPES.LEAGUE;
+        const nextCounts = normalizeCompetitionSuspensions(status.competitionSuspensions);
+        nextCounts[scope] = Math.max(Number(nextCounts[scope] || 0), 1);
+        status.competitionSuspensions = nextCounts;
+        migrated += 1;
+      }
+      delete status.suspendedThrough;
+      delete status.suspensionType;
+      changed += 1;
+    }
+    state.playerStatus[playerId] = status;
+  });
+  return { changed, migrated, normalized };
+}
 function playerStatus(playerId){ return game?.playerStatus?.[playerId] || {}; }
 function injuryActiveFromStatus(st){
   if(!game || !st) return false;
   if(Number.isFinite(Number(st.injuredUntilTurn))) return currentTurnIndex() < Number(st.injuredUntilTurn || 0);
   return st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough;
 }
-function isUnavailable(playerId){
+function internalSuspensionActiveFromStatus(st){
+  return Boolean(st?.suspendedThrough !== undefined && game && game.matchdayIndex <= st.suspendedThrough);
+}
+function competitionSuspensionRemaining(playerId, matchOrScope=null){
+  const scope = competitionSuspensionContextScope(playerId, matchOrScope);
+  if(!scope) return 0;
+  return Math.max(0, Math.round(Number(normalizeCompetitionSuspensions(playerStatus(playerId).competitionSuspensions)[scope] || 0)));
+}
+function isSuspended(playerId, matchOrScope=null){
+  const st = playerStatus(playerId);
+  return Boolean(internalSuspensionActiveFromStatus(st) || competitionSuspensionRemaining(playerId, matchOrScope) > 0);
+}
+function isUnavailable(playerId, matchOrScope=null){
   if(!game) return false;
   const st = playerStatus(playerId);
-  return Boolean(injuryActiveFromStatus(st) || (st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough));
+  return Boolean(injuryActiveFromStatus(st) || isSuspended(playerId, matchOrScope));
 }
-function isSuspended(playerId){
-  const st = playerStatus(playerId);
-  return Boolean(st.suspendedThrough !== undefined && game && game.matchdayIndex <= st.suspendedThrough);
+function addCompetitionSuspension(playerId, scope, matches=1, meta={}){
+  if(!game || !playerId) return false;
+  const cleanScope = normalizeCompetitionSuspensionScope(scope);
+  const amount = Math.max(1, Math.round(Number(matches || 1)));
+  if(!cleanScope) return false;
+  game.playerStatus = game.playerStatus || {};
+  const status = { ...playerStatus(playerId) };
+  const counts = normalizeCompetitionSuspensions(status.competitionSuspensions);
+  counts[cleanScope] = Math.max(0, Number(counts[cleanScope] || 0)) + amount;
+  status.competitionSuspensions = counts;
+  status.competitionSuspensionMeta = status.competitionSuspensionMeta && typeof status.competitionSuspensionMeta === 'object' && !Array.isArray(status.competitionSuspensionMeta) ? { ...status.competitionSuspensionMeta } : {};
+  status.competitionSuspensionMeta[cleanScope] = {
+    imposedAtMatchId:String(meta.matchId || ''),
+    imposedAtDate:String(meta.date || ''),
+    season:Number(meta.season || game.seasonNumber || 1),
+    reason:String(meta.reason || 'Expulsión')
+  };
+  game.playerStatus[playerId] = status;
+  return true;
+}
+function consumeCompetitionSuspensionsForMatch(match){
+  const scope = matchCompetitionSuspensionScope(match);
+  if(!game || !scope || match?.friendly) return 0;
+  const clubIds = [Number(match?.homeId || 0), Number(match?.awayId || 0)].filter(Boolean);
+  let consumed = 0;
+  clubIds.forEach(clubId => {
+    playersByClub(clubId).forEach(player => {
+      const status = { ...playerStatus(player.id) };
+      const counts = normalizeCompetitionSuspensions(status.competitionSuspensions);
+      const current = Math.max(0, Number(counts[scope] || 0));
+      if(current <= 0) return;
+      if(current > 1) counts[scope] = current - 1;
+      else delete counts[scope];
+      if(Object.keys(counts).length) status.competitionSuspensions = counts;
+      else delete status.competitionSuspensions;
+      if(status.competitionSuspensionMeta && typeof status.competitionSuspensionMeta === 'object'){
+        const meta = { ...status.competitionSuspensionMeta };
+        if(!counts[scope]) delete meta[scope];
+        if(Object.keys(meta).length) status.competitionSuspensionMeta = meta;
+        else delete status.competitionSuspensionMeta;
+      }
+      game.playerStatus[player.id] = status;
+      consumed += 1;
+    });
+  });
+  return consumed;
+}
+function competitionDisciplineMatchKey(match){
+  const season = Number(match?.season || game?.seasonNumber || 1);
+  const identity = String(match?.id || `${match?.date || ''}-${match?.homeId || 0}-${match?.awayId || 0}-${matchCompetitionSuspensionScope(match)}`);
+  return `${season}:${identity}`;
+}
+function processCompetitionDisciplineForMatch(match, cards=[]){
+  const scope = matchCompetitionSuspensionScope(match);
+  if(!game || !scope || match?.friendly) return { processed:false, scope:'', consumed:0, imposed:0 };
+  game.disciplineProcessedMatches = game.disciplineProcessedMatches && typeof game.disciplineProcessedMatches === 'object' && !Array.isArray(game.disciplineProcessedMatches) ? game.disciplineProcessedMatches : {};
+  const key = competitionDisciplineMatchKey(match);
+  if(game.disciplineProcessedMatches[key]) return { processed:false, duplicate:true, scope, consumed:0, imposed:0 };
+  const consumed = consumeCompetitionSuspensionsForMatch(match);
+  let imposed = 0;
+  (Array.isArray(cards) ? cards : []).forEach(card => {
+    if(!['red','secondYellowRed'].includes(String(card?.type || ''))) return;
+    if(addCompetitionSuspension(Number(card?.playerId || 0), scope, 1, {
+      matchId:match?.id,
+      date:match?.date,
+      season:match?.season || game.seasonNumber,
+      reason:String(card?.type || '') === 'secondYellowRed' ? 'Doble amarilla y expulsión' : 'Expulsión directa'
+    })) imposed += 1;
+  });
+  game.disciplineProcessedMatches[key] = { scope, date:String(match?.date || ''), processedAtTurn:currentTurnIndex() };
+  const keys = Object.keys(game.disciplineProcessedMatches);
+  if(keys.length > 1200){
+    keys.slice(0, keys.length - 1000).forEach(oldKey => delete game.disciplineProcessedMatches[oldKey]);
+  }
+  return { processed:true, scope, consumed, imposed };
 }
 function isInjured(playerId){
   const st = playerStatus(playerId);
@@ -516,10 +729,10 @@ function statusText(playerId){
   if(!game) return 'Disponible';
   const st = playerStatus(playerId);
   const parts = [];
-  if(st.injuredThrough !== undefined && game.matchdayIndex <= st.injuredThrough){
-    parts.push(`${st.injuryLabel || 'Lesión'}`.trim());
-  }
-  if(st.suspendedThrough !== undefined && game.matchdayIndex <= st.suspendedThrough) parts.push('Suspendido');
+  if(injuryActiveFromStatus(st)) parts.push(`${st.injuryLabel || 'Lesión'}`.trim());
+  if(internalSuspensionActiveFromStatus(st)) parts.push(st.suspensionLabel || 'Sanción interna');
+  const scope = competitionSuspensionContextScope(playerId);
+  if(scope && competitionSuspensionRemaining(playerId, scope) > 0) parts.push(`Suspendido en ${competitionSuspensionScopeLabel(scope)}`);
   return parts.length ? parts.join(' · ') : 'Disponible';
 }
 function hashNumber(seedValue, max){
@@ -1061,7 +1274,11 @@ function agreedTransferIcon(playerId){
 function availabilityIcons(playerId){
   const icons = [];
   if(isInjured(playerId)) icons.push('<span class="injury-cross inline" title="Lesionado">✚</span>');
-  if(isSuspended(playerId)) icons.push('<span class="red-card status-red-card inline" title="Expulsado / suspendido">■</span>');
+  if(isSuspended(playerId)){
+    const scope = competitionSuspensionContextScope(playerId);
+    const title = internalSuspensionActiveFromStatus(playerStatus(playerId)) ? (playerStatus(playerId).suspensionLabel || 'Sanción interna') : `Suspendido en ${competitionSuspensionScopeLabel(scope)}`;
+    icons.push(`<span class="red-card status-red-card inline" title="${escapeHtml(title)}">■</span>`);
+  }
   const transferIcon = agreedTransferIcon(playerId);
   if(transferIcon) icons.push(transferIcon);
   return icons.join('');

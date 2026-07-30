@@ -189,6 +189,18 @@ function normalizeGame(saved){
   normalized.advanceLockedUntil = normalized.advanceLockedUntil || 0;
   normalized.advanceLockDurationMs = Number.isFinite(Number(normalized.advanceLockDurationMs)) ? Number(normalized.advanceLockDurationMs) : ADVANCE_LOCK_MS;
   normalized.matchHistory = normalized.matchHistory || [];
+  normalized.disciplineProcessedMatches = (normalized.disciplineProcessedMatches && typeof normalized.disciplineProcessedMatches === 'object' && !Array.isArray(normalized.disciplineProcessedMatches)) ? normalized.disciplineProcessedMatches : {};
+  if(typeof migrateLegacyCompetitionSuspensionsForState === 'function'){
+    const disciplineMigration = migrateLegacyCompetitionSuspensionsForState(normalized);
+    if(Number(disciplineMigration?.changed || 0) > 0){
+      normalized._needsAutosave = true;
+      normalized.disciplineMigrationV914 = {
+        version:1,
+        migrated:Number(disciplineMigration.migrated || 0),
+        normalized:Number(disciplineMigration.normalized || 0)
+      };
+    }
+  }
   normalized.seasonNumber = Number.isFinite(normalized.seasonNumber) ? normalized.seasonNumber : 1;
   normalized.seasonYear = Math.round(Number(normalized.seasonYear || 0)) || seasonYearForNumber(normalized.seasonNumber || 1);
   normalized.calendarVersion = normalized.calendarVersion || '';

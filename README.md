@@ -1,3 +1,44 @@
+# V9.14 · Sanciones por competición
+
+## Tipo de entrega
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.13.
+
+## Objetivo
+
+Separar las sanciones deportivas según el torneo en el que se produjo la expulsión. Un jugador puede disputar otra clase de competición mientras conserva una fecha pendiente en la competición correspondiente.
+
+## Ámbitos disciplinarios
+
+- **Liga:** una expulsión en liga se cumple únicamente en el siguiente partido de liga del club.
+- **Copa nacional:** una expulsión en copa nacional o supercopa se cumple únicamente en la siguiente copa nacional.
+- **Copa internacional:** el Mundial de Clubes utiliza este ámbito y sus expulsiones se cumplen únicamente en partidos internacionales.
+- **Amistosos:** no consumen ni generan sanciones oficiales.
+- **Sanciones internas:** continúan afectando a cualquier partido mientras permanezcan activas.
+
+## Funcionamiento
+
+- Cada jugador guarda contadores independientes para liga, copa nacional y copa internacional.
+- Antes de aplicar una nueva expulsión, el sistema descuenta las sanciones que se cumplieron en el partido recién disputado.
+- Los partidos de otra categoría no reducen el contador pendiente.
+- La selección de titulares, suplentes y planteles bots toma como referencia la competición del partido que se está preparando.
+- Durante un amistoso se ignoran las sanciones oficiales, sin eliminarlas.
+- La revisión táctica obligatoria por una expulsión sólo aparece cuando el próximo compromiso pertenece al mismo ámbito disciplinario.
+- El sistema evita procesar dos veces la disciplina de un mismo partido.
+
+## Compatibilidad de guardados
+
+- Las sanciones globales creadas por versiones anteriores se migran automáticamente.
+- La competición se infiere desde el último partido en el que el jugador fue expulsado.
+- Si no existe información suficiente, la sanción antigua se asigna a liga, que era el comportamiento predominante del calendario anterior.
+- Las sanciones internas existentes conservan su funcionamiento general.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.13.
+
+## Base consolidada
+
 # V9.13 · Procesamiento diario optimizado
 
 ## Tipo de entrega

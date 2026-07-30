@@ -2022,7 +2022,7 @@
       applyResultToTables(result, result.homeGoals, result.awayGoals);
       applyPlayerStats(result.homeId, playedIdsHome.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors, result);
       applyPlayerStats(result.awayId, playedIdsAway.map(playerById).filter(Boolean), result.substitutions, result.goals, result.cards, result.injuries, result.keySaves, result.errors, result);
-      applyAvailability(result.cards, result.injuries);
+      applyAvailability(result.cards, result.injuries, result);
       if(typeof updatePlayerStarTrackingForMatch === 'function') updatePlayerStarTrackingForMatch(result);
     }
     const finalResult = typeof window.finalizeWinnerRequiredMatchResult === 'function'
@@ -2102,7 +2102,7 @@
       const playerStatsResult = { ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway };
       applyPlayerStats(match.homeId, home.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors, playerStatsResult);
       applyPlayerStats(match.awayId, away.lineup, substitutions, goals, cards, injuries, incidents.keySaves, incidents.errors, playerStatsResult);
-      applyAvailability(cards, injuries);
+      applyAvailability(cards, injuries, playerStatsResult);
       if(typeof updatePlayerStarTrackingForMatch === 'function'){
         updatePlayerStarTrackingForMatch({ ...match, played:true, homeGoals, awayGoals, goals, cards, injuries, substitutions, keySaves:incidents.keySaves, errors:incidents.errors, starterIdsHome, starterIdsAway, playedIdsHome, playedIdsAway });
       }

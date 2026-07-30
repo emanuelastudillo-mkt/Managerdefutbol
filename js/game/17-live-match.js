@@ -575,6 +575,7 @@
       if(!liveSession?.result) return;
       window.__liveMatchCloseLocked = false;
       const result = liveSession.result;
+      window.__activeCompetitionSuspensionMatch = null;
       closeModal();
       if(typeof liveOptions?.onComplete === 'function') liveOptions.onComplete(result);
       liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1;
@@ -591,8 +592,11 @@
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;
     clearTimeout(liveAutoTimer);
     liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1; resetLiveSelections();
-    liveSession = window.Simulator20.createLiveMatchSession(match);
+    liveSession = typeof withCompetitionSuspensionContext === 'function'
+      ? withCompetitionSuspensionContext(match, () => window.Simulator20.createLiveMatchSession(match))
+      : window.Simulator20.createLiveMatchSession(match);
     liveState = window.Simulator20.livePublicState(liveSession);
+    window.__activeCompetitionSuspensionMatch = { ...match };
     window.__liveMatchCloseLocked = false;
     openModal('<div id="liveMatchRoot"></div>');
     window.__liveMatchCloseLocked = true;

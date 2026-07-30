@@ -1138,6 +1138,8 @@ function removeInjuryFieldsFromStatus(status){
 function removeSuspensionFieldsFromStatus(status){
   const clean = { ...(status || {}) };
   delete clean.suspendedThrough;
+  delete clean.suspensionLabel;
+  delete clean.suspensionType;
   return clean;
 }
 function rebaseAvailabilityStatusesForSeasonStart(statuses={}, previousMatchdayIndex=0, injuryRecoveryTurns=0, meta={}){

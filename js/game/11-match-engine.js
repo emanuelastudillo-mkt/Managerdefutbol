@@ -1,8 +1,11 @@
 /* Puente del simulador 2.0 y helpers compartidos de partido. */
 
 function simulateMatch(match){
-  if(window.Simulator20?.simulateMatch) return window.Simulator20.simulateMatch(match);
-  throw new Error('Simulador 2.0 no disponible');
+  if(!window.Simulator20?.simulateMatch) throw new Error('Simulador 2.0 no disponible');
+  const run = () => window.Simulator20.simulateMatch(match);
+  return typeof withCompetitionSuspensionContext === 'function'
+    ? withCompetitionSuspensionContext(match, run)
+    : run();
 }
 function pitchEffect(pitch){
   return PITCH_CONDITIONS[pitch] || PITCH_CONDITIONS.Normal;
@@ -173,12 +176,10 @@ function applyPlayerStats(clubId, lineup, substitutions, goals, cards, injuries,
     recordManagerPlayerMatchStatistics(clubId, [...playedIds], matchResult);
   }
 }
-function applyAvailability(cards, injuries){
-  cards.forEach(c => {
-    if(c.type === 'red' || c.type === 'secondYellowRed'){
-      game.playerStatus[c.playerId] = { ...playerStatus(c.playerId), suspendedThrough: game.matchdayIndex + 1 };
-    }
-  });
+function applyAvailability(cards, injuries, matchContext=null){
+  if(matchContext && typeof processCompetitionDisciplineForMatch === 'function'){
+    processCompetitionDisciplineForMatch(matchContext, cards);
+  }
   injuries.forEach(i => {
     const label = i.injuryLabel || i.name || 'Lesión';
     const injuryDays = Math.max(1, Math.round(Number(i.matchesOut || 1)));
@@ -202,7 +203,10 @@ function collectOwnProblems(result){
   if(!result) return [];
   const ownClub = game.selectedClubId;
   const injuries = (result.injuries || []).filter(i => i.clubId === ownClub).map(i => ({ type:'injury', playerId:i.playerId }));
-  const reds = (result.cards || []).filter(c => c.clubId === ownClub && (c.type === 'red' || c.type === 'secondYellowRed')).map(c => ({ type:'red', playerId:c.playerId }));
+  const reds = (result.cards || [])
+    .filter(c => c.clubId === ownClub && (c.type === 'red' || c.type === 'secondYellowRed'))
+    .filter(c => typeof isSuspended !== 'function' || isSuspended(c.playerId))
+    .map(c => ({ type:'red', playerId:c.playerId }));
   return [...injuries, ...reds];
 }
 function removeOwnUnavailableFromTactic(problems=[]){

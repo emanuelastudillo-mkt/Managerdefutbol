@@ -319,13 +319,13 @@ function daysUntilNextOwnMatchLabel(){
   if(!game) return '';
   if(!isRegularSeason()){
     const remaining = isPreseason() ? Math.max(0, PRESEASON_TURNS - Number(game.phaseTurn || 0)) : isPostseason() ? Math.max(0, postseasonTurnsForCurrentSeason() - Number(game.phaseTurn || 0)) : 0;
-    if(remaining > 0) return `<div class="office-days-remaining"><span>Días restantes</span><strong>${remaining}</strong></div>`;
+    if(remaining > 0) return `<div class="office-days-remaining"><span>Próximo compromiso en</span><strong>${remaining}</strong></div>`;
     return '';
   }
   const info = typeof nextOwnMatchInfo === 'function' ? nextOwnMatchInfo() : null;
   if(!info?.date || typeof daysBetweenIsoDates !== 'function' || typeof currentCalendarDate !== 'function') return '';
   const days = Math.max(0, daysBetweenIsoDates(currentCalendarDate(), info.date));
-  return `<div class="office-days-remaining"><span>Días restantes</span><strong>${days}</strong></div>`;
+  return `<div class="office-days-remaining"><span>Próximo compromiso en</span><strong>${days}</strong></div>`;
 }
 
 function dailySkillPointsTracker(){
@@ -445,8 +445,8 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
   const phase = phaseLabel();
   const daysRemainingBox = daysUntilNextOwnMatchLabel();
   const nextBox = next
-    ? `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p>${matchPreview(next)}</div>`
-    : `<div class="office-next-match">${daysRemainingBox}<p class="label">Próximo compromiso</p><div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
+    ? `<div class="office-next-match">${daysRemainingBox}${matchPreview(next)}</div>`
+    : `<div class="office-next-match">${daysRemainingBox}<div class="empty-office-box"><strong>Sin partido confirmado</strong><span>${escapeHtml(phase)}</span></div></div>`;
   return `<div class="manager-office">
     <div class="office-main-card">
       <p class="label">Oficina del manager</p>
@@ -724,7 +724,7 @@ function homeWeekCalendarMarkup(){
   const days = dateEntries.map(item => homeWeekCalendarDayMarkup(item.iso, item.offset, eventsByDate.get(item.iso) || []));
   return `<section class="card home-week-calendar" aria-labelledby="homeWeekCalendarTitle">
     <div class="home-week-calendar-title">
-      <div><p class="label">Planificación física</p><h3 id="homeWeekCalendarTitle">Calendario de 7 días</h3></div>
+      <div><h3 id="homeWeekCalendarTitle">Calendario de 7 días</h3></div>
       <span class="pill">Ayer · Hoy · Próximos 5 días</span>
     </div>
     <div class="home-week-calendar-grid">${days.join('')}</div>
@@ -751,6 +751,7 @@ function renderHome(){
   const problemBox = problems.length ? `<div class="card blocker"><h3>Revisión obligatoria</h3><p>Hubo lesionados o expulsados propios en el último partido. Entrá a Táctica, reemplazalos y guardá una alineación válida.</p><div class="problem-list">${problems.map(problemItem).join('')}</div><button class="primary" data-go-tactics>Ir a táctica</button></div>` : '';
   const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
   view.innerHTML = `
+    ${homeWeekCalendarMarkup()}
     <div class="home-message-strip section-title">${homeMessagesSummary()}</div>
     ${problemBox}
     ${seasonBox}
@@ -800,7 +801,6 @@ function renderHome(){
       </div>
     </div>
     ${lastTurnSummaryMarkup()}
-    ${homeWeekCalendarMarkup()}
 
   `;
   $('advanceUnifiedBtn')?.addEventListener('click', typeof requestAdvanceCalendarOneStep === 'function' ? requestAdvanceCalendarOneStep : advanceCalendarOneStep);

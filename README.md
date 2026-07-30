@@ -1,3 +1,31 @@
+# V9.09 · Calendario superior y avance compacto
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.08.
+
+## Pantalla principal
+
+- El calendario semanal de siete días se trasladó desde la parte inferior hasta el comienzo de la pantalla Inicio.
+- Se eliminó el texto secundario **Planificación física** y se conserva el título **Calendario de 7 días**.
+- El calendario mantiene ayer, hoy y los próximos cinco días, junto con resultados y compromisos futuros.
+
+## Bloque Avanzar día
+
+- La etiqueta **Días restantes** pasó a mostrarse como **Próximo compromiso en**.
+- Se eliminó la segunda etiqueta **Próximo compromiso** para evitar información duplicada.
+- Se retiró la línea descriptiva situada debajo de **Campo de juego**; permanecen el estado y la barra numérica del césped.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. Los cambios son únicamente de presentación y no modifican calendarios, resultados, simulación, estado del campo, cargas físicas ni guardados.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.08.
+
+## Base consolidada
+
 # V9.08 · Calendario semanal en Inicio
 
 ## Tipo de entrega

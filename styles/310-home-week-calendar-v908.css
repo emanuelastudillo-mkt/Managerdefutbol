@@ -1,7 +1,7 @@
-/* V9.08 · Calendario semanal compacto en la pantalla Inicio. */
+/* V9.08/V9.09 · Calendario semanal compacto en la pantalla Inicio. */
 
 html[data-interface="modern"] .home-week-calendar{
-  margin-top:14px;
+  margin:0 0 14px;
   padding:12px;
   overflow:hidden;
   border-color:#30323a;

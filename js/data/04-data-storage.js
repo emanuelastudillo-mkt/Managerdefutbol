@@ -2140,13 +2140,9 @@ function matchFieldSummaryMarkup(match){
   if(!match) return '';
   const score = fieldScoreForClub(match.homeId);
   const label = fieldConditionName(score);
-  const homeName = clubName(match.homeId);
-  const isManagedHome = Number(match.homeId) === Number(game?.selectedClubId || 0);
-  const fixedText = isManagedHome ? 'Campo propio dinámico' : 'Campo bot fijo esta temporada';
   return `<div class="next-match-field ${fieldConditionClass(score)}">
     <div class="next-match-field-head"><span>Campo de juego</span><strong class="field-state ${fieldConditionClass(score)}">${escapeHtml(label)}</strong></div>
     ${fieldBar(score, label)}
-    <small>${escapeHtml(homeName)} · ${score}/100 · ${escapeHtml(fixedText)}</small>
   </div>`;
 }
 function clubBudgetByPrestige(prestige){

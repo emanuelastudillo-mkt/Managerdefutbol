@@ -1,3 +1,20 @@
+# V9.19 · Invitados del Mundial y planteles bot
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.18.
+
+## Cambios principales
+
+- Se agregaron 12 clubes bot especiales y la bolsa internacional pasó a 20 invitados.
+- Cada Mundial selecciona 16 invitados y deja cuatro fuera de la edición.
+- Los nuevos clubes tienen planteles de 25 jugadores con nacionalidades coherentes y calidad determinada por su prestigio.
+- Los equipos no pertenecen a ninguna liga y solo se activan para el Mundial de Clubes.
+- Los escudos se buscan por el nombre exacto con guiones medios en orden `.svg`, `.png`, `.webp`.
+- Transitoriamente, los otros 16 lugares del torneo provienen de las ligas existentes; quedan preparados para ser sustituidos por 8 cupos de Champions y 8 de Libertadores.
+
+El incremental se aplica sobre V9.18.
+
+---
+
 # V9.18 · Calendario con contexto deportivo y de mercado
 
 ## Tipo de entrega

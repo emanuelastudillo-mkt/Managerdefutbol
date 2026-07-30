@@ -1,4 +1,4 @@
-/* V8.08 · Mundial de Clubes. Extraído de 05-state-season.js sin alterar el orden lógico original. */
+/* V9.19 · Mundial de Clubes: bolsa internacional de 20 invitados y planteles bot coherentes. */
 
 const CLUB_WORLD_CUP_CONFIG = {
   enabled:true,
@@ -8,7 +8,7 @@ const CLUB_WORLD_CUP_CONFIG = {
   invitedDivisionName:'Invitados Copa Mundial de Clubes',
   groupCount:8,
   groupSize:4,
-  invitedCount:4,
+  invitedCount:16,
   scheduleSeasonDays:{
     draw:configNumber('calendario.mundialClubes.diaSorteo', 295, 1, 365),
     groups:[
@@ -35,22 +35,36 @@ const CLUB_WORLD_CUP_CONFIG = {
     { name:'Camping World Stadium', capacity:43091 }
   ],
   invitedTeams:[
-    { name:'América de México', country:'México', city:'Ciudad de México', reputation:64, primaryColor:'#F4C430' },
-    { name:'Monterrey', country:'México', city:'Monterrey', reputation:61, primaryColor:'#005BAA' },
-    { name:'Cerro Porteño', country:'Paraguay', city:'Asunción', reputation:62, primaryColor:'#D71920' },
-    { name:'Olimpia', country:'Paraguay', city:'Asunción', reputation:64, primaryColor:'#FFFFFF' },
-    { name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:68, primaryColor:'#F7B5CD' },
-    { name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731' },
-    { name:'Wydad Casablanca', country:'Marruecos', city:'Casablanca', reputation:57, primaryColor:'#C8102E' },
-    { name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:63, primaryColor:'#E60012' }
+    { name:'América de México', country:'México', city:'Ciudad de México', reputation:74, primaryColor:'#F4C430', crestPath:'img/escudos/América-de-México.svg', nationalityPool:['México','México','México','México','México','México','Estados Unidos','Colombia'] },
+    { name:'Monterrey', country:'México', city:'Monterrey', reputation:73, primaryColor:'#005BAA', crestPath:'img/escudos/Monterrey.svg', nationalityPool:['México','México','México','México','México','México','Colombia','Argentina'] },
+    { name:'Cerro Porteño', country:'Paraguay', city:'Asunción', reputation:65, primaryColor:'#D71920', crestPath:'img/escudos/Cerro-Porteño.svg', nationalityPool:['Paraguay','Paraguay','Paraguay','Paraguay','Paraguay','Argentina','Uruguay','Colombia'] },
+    { name:'Olimpia', country:'Paraguay', city:'Asunción', reputation:68, primaryColor:'#FFFFFF', crestPath:'img/escudos/Olimpia.svg', nationalityPool:['Paraguay','Paraguay','Paraguay','Paraguay','Paraguay','Argentina','Uruguay','Brasil'] },
+    { name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:70, primaryColor:'#F7B5CD', crestPath:'img/escudos/Inter-Miami.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Argentina','México','Colombia','Uruguay'] },
+    { name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731', crestPath:'img/escudos/Seattle-Sounders.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','México','Colombia','Inglaterra'] },
+    { name:'Wydad Casablanca', country:'Marruecos', city:'Casablanca', reputation:66, primaryColor:'#C8102E', crestPath:'img/escudos/Wydad-Casablanca.svg', nationalityPool:['Marruecos','Marruecos','Marruecos','Marruecos','Marruecos','Senegal','Ghana','Nigeria'] },
+    { name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:68, primaryColor:'#E60012', crestPath:'img/escudos/Urawa-Red-Diamonds.svg', nationalityPool:['Japón','Japón','Japón','Japón','Japón','Japón','Corea del Sur','Brasil'] },
+    { name:'Al Ahly', country:'Egipto', city:'El Cairo', reputation:78, primaryColor:'#C8102E', crestPath:'img/escudos/Al-Ahly.svg', nationalityPool:['Egipto','Egipto','Egipto','Egipto','Egipto','Egipto','Marruecos','Senegal'] },
+    { name:'Espérance de Tunis', country:'Túnez', city:'Túnez', reputation:68, primaryColor:'#D71920', crestPath:'img/escudos/Espérance-de-Tunis.svg', nationalityPool:['Túnez','Túnez','Túnez','Túnez','Túnez','Marruecos','Senegal','Nigeria'] },
+    { name:'Mamelodi Sundowns', country:'Sudáfrica', city:'Pretoria', reputation:72, primaryColor:'#F5D328', crestPath:'img/escudos/Mamelodi-Sundowns.svg', nationalityPool:['Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Ghana','Nigeria','Senegal'] },
+    { name:'TP Mazembe', country:'RD Congo', city:'Lubumbashi', reputation:66, primaryColor:'#111111', crestPath:'img/escudos/TP-Mazembe.svg', nationalityPool:['RD Congo','RD Congo','RD Congo','RD Congo','RD Congo','Nigeria','Ghana','Senegal'] },
+    { name:'Al Hilal', country:'Arabia Saudita', city:'Riad', reputation:80, primaryColor:'#0057B8', crestPath:'img/escudos/Al-Hilal.svg', nationalityPool:['Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Marruecos','Brasil','Senegal'] },
+    { name:'Al Ain', country:'Emiratos Árabes Unidos', city:'Al Ain', reputation:70, primaryColor:'#6A1B9A', crestPath:'img/escudos/Al-Ain.svg', nationalityPool:['Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Marruecos','Brasil','Senegal','Ghana'] },
+    { name:'Ulsan HD', country:'Corea del Sur', city:'Ulsan', reputation:69, primaryColor:'#005BAC', crestPath:'img/escudos/Ulsan-HD.svg', nationalityPool:['Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Japón','Brasil'] },
+    { name:'Persepolis', country:'Irán', city:'Teherán', reputation:67, primaryColor:'#D71920', crestPath:'img/escudos/Persepolis.svg', nationalityPool:['Irán','Irán','Irán','Irán','Irán','Irán','Marruecos','Senegal'] },
+    { name:'Deportivo Saprissa', country:'Costa Rica', city:'San José', reputation:63, primaryColor:'#6A1B4D', crestPath:'img/escudos/Deportivo-Saprissa.svg', nationalityPool:['Costa Rica','Costa Rica','Costa Rica','Costa Rica','Costa Rica','México','Colombia','Estados Unidos'] },
+    { name:'CSD Municipal', country:'Guatemala', city:'Ciudad de Guatemala', reputation:55, primaryColor:'#D71920', crestPath:'img/escudos/CSD-Municipal.svg', nationalityPool:['Guatemala','Guatemala','Guatemala','Guatemala','Guatemala','México','Colombia','Estados Unidos'] },
+    { name:'Auckland City', country:'Nueva Zelanda', city:'Auckland', reputation:60, primaryColor:'#1E4FA3', crestPath:'img/escudos/Auckland-City.svg', nationalityPool:['Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Inglaterra','Japón','Corea del Sur'] },
+    { name:'Hekari United', country:'Papúa Nueva Guinea', city:'Port Moresby', reputation:48, primaryColor:'#C8102E', crestPath:'img/escudos/Hekari-United.svg', nationalityPool:['Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Ghana','Nueva Zelanda','Nigeria'] }
   ],
+  // Etapa transitoria: 16 invitados y 16 clasificados domésticos. Cuando existan
+  // Champions y Libertadores, estos 16 cupos domésticos serán reemplazados por 8+8.
   qualifiers:[
-    { country:'Argentina', order:1, count:6 },
-    { country:'Chile', order:1, count:2 },
-    { country:'Brasil', order:1, count:4 },
-    { country:'Inglaterra', order:1, count:6 },
-    { country:'España', order:1, count:5 },
-    { country:'Italia', order:1, count:4 },
+    { country:'Argentina', order:1, count:3 },
+    { country:'Chile', order:1, count:1 },
+    { country:'Brasil', order:1, count:3 },
+    { country:'Inglaterra', order:1, count:3 },
+    { country:'España', order:1, count:3 },
+    { country:'Italia', order:1, count:2 },
     { country:'Rumania', order:1, count:1 }
   ],
   prizes:{ participate:50000000, groups:70000000, qf:100000000, sf:140000000, runnerUp:180000000, champion:300000000 }
@@ -59,6 +73,63 @@ function clubWorldCupTeamKey(name){
   return String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 }
 function clubWorldCupInviteId(index){ return 910000 + Number(index || 0) + 1; }
+function clubWorldCupInviteRosterSize(){ return 25; }
+function clubWorldCupInviteNationality(team, rosterIndex=0, playerId=0){
+  const pool = Array.isArray(team?.nationalityPool) && team.nationalityPool.length ? team.nationalityPool : [team?.country || 'Argentina'];
+  return String(pool[hashNumber(`cwc-invite-nationality-${team?.name || ''}-${rosterIndex}-${playerId}`, pool.length)] || team?.country || 'Argentina');
+}
+function clubWorldCupInviteMediaRange(team, rosterIndex=0){
+  const reputation = clamp(Math.round(Number(team?.reputation || 50)), 20, 90);
+  let min;
+  let max;
+  if(rosterIndex < 2){ min = reputation + 4; max = reputation + 10; }
+  else if(rosterIndex < 8){ min = reputation - 2; max = reputation + 6; }
+  else if(rosterIndex < 18){ min = reputation - 9; max = reputation + 2; }
+  else { min = reputation - 15; max = reputation - 4; }
+  return { min:clamp(min, 20, 94), max:clamp(Math.max(min, max), 20, 94) };
+}
+function generateClubWorldCupInvitePlayers(club, team, startId, fromRosterIndex=0, count=0, generationContext=null){
+  const blueprint = typeof generationRosterBlueprint === 'function' ? generationRosterBlueprint() : ['POR','POR','POR','LD','LI','DFC','DFC','DFC','LD','LI','MCD','MCD','MC','MC','MCO','MCO','MI','MD','ED','EI','ED','EI','DC','DC','DC'];
+  const total = Math.max(0, Math.round(Number(count || 0)));
+  const firstIndex = Math.max(0, Math.round(Number(fromRosterIndex || 0)));
+  const generated = [];
+  for(let offset=0; offset<total; offset+=1){
+    const rosterIndex = firstIndex + offset;
+    const id = Number(startId || 0) + offset;
+    const position = blueprint[rosterIndex % blueprint.length] || 'MC';
+    const group = typeof playerRoleGroup === 'function' ? playerRoleGroup(position) : (position === 'POR' ? 'POR' : 'MID');
+    const age = group === 'POR'
+      ? 24 + hashNumber(`cwc-invite-age-${team?.name || club?.name}-${id}`, 12)
+      : 18 + hashNumber(`cwc-invite-age-${team?.name || club?.name}-${id}`, 15);
+    const range = clubWorldCupInviteMediaRange(team, rosterIndex);
+    const nationality = clubWorldCupInviteNationality(team, rosterIndex, id);
+    const player = generatedPlayerFactory({
+      id,
+      position,
+      clubId:club.id,
+      age,
+      prestige:Number(team?.reputation || club?.reputation || 50),
+      nameContext:club.name,
+      divisionName:club.divisionName,
+      divisionOrder:club.divisionOrder,
+      generationContext,
+      salaryFactor:1,
+      mediaMin:range.min,
+      mediaMax:range.max,
+      nationalityOverride:nationality,
+      localCountry:team?.country || club?.country || 'Argentina'
+    });
+    generated.push({
+      ...player,
+      clubId:club.id,
+      clubWorldCupInvitePlayer:true,
+      specialCompetitionOnly:true,
+      generatedForClubWorldCup:true,
+      invitedRosterVersion:'V9.19'
+    });
+  }
+  return generated;
+}
 function ensureClubWorldCupInvitedData(){
   if(!seed?.clubs || !seed?.players) return { clubs:0, players:0 };
   const cfg = CLUB_WORLD_CUP_CONFIG;
@@ -88,7 +159,7 @@ function ensureClubWorldCupInvitedData(){
         noOwnStadium:true,
         fieldConditionScore:100,
         fieldCondition:'Excelente',
-        crestPath:''
+        crestPath:team.crestPath || ''
       };
       seed.clubs.push(club);
       existingByKey.set(key, club);
@@ -104,19 +175,17 @@ function ensureClubWorldCupInvitedData(){
       club.divisionId = cfg.invitedDivisionId;
       club.divisionName = cfg.invitedDivisionName;
       club.divisionOrder = 99;
+      club.reputation = Number(team.reputation || club.reputation || 50);
+      club.primaryColor = team.primaryColor || club.primaryColor || '#888888';
+      club.crestPath = team.crestPath || club.crestPath || '';
     }
     const currentPlayers = playersByClub(club.id).filter(player => !player.retired && !player.sold);
-    const needed = Math.max(0, 24 - currentPlayers.length);
-    if(needed > 0 && typeof generateClubPlayers === 'function'){
+    const targetRosterSize = clubWorldCupInviteRosterSize();
+    const needed = Math.max(0, targetRosterSize - currentPlayers.length);
+    if(needed > 0 && typeof generatedPlayerFactory === 'function'){
       const activePlayers = (seed.players || []).filter(player => player && !player.retired && !player.sold && Number(player.clubId || 0) >= 0);
       const context = typeof createPlayerGenerationContext === 'function' ? createPlayerGenerationContext(activePlayers.length + needed, activePlayers) : null;
-      const generated = generateClubPlayers(club, Number(club.reputation || team.reputation || 50), nextPlayerId(), context).slice(0, needed).map(player => ({
-        ...player,
-        clubId:club.id,
-        clubWorldCupInvitePlayer:true,
-        specialCompetitionOnly:true,
-        nationality:player.nationality || team.country || club.country || ''
-      }));
+      const generated = generateClubWorldCupInvitePlayers(club, team, nextPlayerId(), currentPlayers.length, needed, context);
       seed.players.push(...generated);
       addedPlayers += generated.length;
       if(game){
@@ -1182,11 +1251,14 @@ function createClubWorldCupIfNeeded(options={}){
   createClubWorldCupGroupFixtures();
   repairClubWorldCupFixtureSchedule({ force:true });
   if(clubWorldCupClubParticipates(game.selectedClubId, game.clubWorldCup)) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
+  const omittedInviteIds = (seed.clubs || [])
+    .filter(club => club?.clubWorldCupInvite && !invitedIds.includes(Number(club.id)))
+    .map(club => Number(club.id));
   pushGameMessage({
     type:'deportivo',
     priority:'high',
     title:CLUB_WORLD_CUP_CONFIG.name,
-    body:`Se sortearon 8 grupos de 4 equipos. Calendario fijo: día ${schedule.groups[0]}, día ${schedule.groups[1]} y día ${schedule.groups[2]}. Participan los mejores clubes de primera división y 4 invitados especiales: ${invitedIds.map(clubName).join(', ')}.`,
+    body:`Se sortearon 8 grupos de 4 equipos. Calendario fijo: día ${schedule.groups[0]}, día ${schedule.groups[1]} y día ${schedule.groups[2]}. Participan 16 clasificados y 16 invitados especiales. Invitados seleccionados: ${invitedIds.map(clubName).join(', ')}. Quedaron fuera de esta edición: ${omittedInviteIds.map(clubName).join(', ') || 'ninguno'}.`,
     id:`club-world-cup-${season}-created`
   });
   return true;

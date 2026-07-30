@@ -94,7 +94,7 @@ const PLAYER_COUNTRY_NAME_POOLS = Object.freeze(Object.fromEntries(
   })])
 ));
 
-const PLAYER_NAME_COUNTRY_ALIASES = Object.freeze({"Espana":"España","Spain":"España","England":"Inglaterra","Italy":"Italia","Romania":"Rumania","Brazil":"Brasil","Mexico":"México","Peru":"Perú","United States":"Estados Unidos","USA":"Estados Unidos","Japan":"Japón","South Korea":"Corea del Sur","Korea":"Corea del Sur","Morocco":"Marruecos","Germany":"Alemania","France":"Francia"});
+const PLAYER_NAME_COUNTRY_ALIASES = Object.freeze({"Espana":"España","Spain":"España","England":"Inglaterra","Italy":"Italia","Romania":"Rumania","Brazil":"Brasil","Mexico":"México","Peru":"Perú","United States":"Estados Unidos","USA":"Estados Unidos","Japan":"Japón","South Korea":"Corea del Sur","Korea":"Corea del Sur","Morocco":"Marruecos","Germany":"Alemania","France":"Francia","Egipto":"Marruecos","Egypt":"Marruecos","Túnez":"Marruecos","Tunez":"Marruecos","Tunisia":"Marruecos","Sudáfrica":"Ghana","Sudafrica":"Ghana","South Africa":"Ghana","RD Congo":"Nigeria","República Democrática del Congo":"Nigeria","DR Congo":"Nigeria","Arabia Saudita":"Marruecos","Saudi Arabia":"Marruecos","Emiratos Árabes Unidos":"Marruecos","Emiratos Arabes Unidos":"Marruecos","United Arab Emirates":"Marruecos","Irán":"Marruecos","Iran":"Marruecos","Costa Rica":"México","Guatemala":"México","Nueva Zelanda":"Inglaterra","New Zealand":"Inglaterra","Papúa Nueva Guinea":"Ghana","Papua Nueva Guinea":"Ghana","Papua New Guinea":"Ghana","Australia":"Inglaterra"});
 
 function normalizedPlayerNameCountry(value){
   const raw = String(value || 'Argentina').trim();

@@ -225,22 +225,30 @@ function clubBadgePathVariants(path){
   const raw = String(path || '').trim();
   if(!raw) return [];
   if(raw.startsWith('data:') || raw.startsWith('blob:')) return [raw];
-  const svgPath = /\.(?:png|webp|jpe?g)(?=([?#]|$))/i.test(raw)
-    ? raw.replace(/\.(?:png|webp|jpe?g)(?=([?#]|$))/i, '.svg')
-    : /\.svg(?=([?#]|$))/i.test(raw)
-      ? raw
-      : `${raw}.svg`;
-  return uniqueBadgePaths([svgPath, raw]);
+  const suffixMatch = raw.match(/([?#].*)$/);
+  const suffix = suffixMatch ? suffixMatch[1] : '';
+  const clean = suffix ? raw.slice(0, -suffix.length) : raw;
+  const base = clean.replace(/\.(?:svg|png|webp|jpe?g)$/i, '');
+  return uniqueBadgePaths([
+    `${base}.svg${suffix}`,
+    `${base}.png${suffix}`,
+    `${base}.webp${suffix}`,
+    raw
+  ]);
 }
 function clubBadgeSrcCandidates(club){
   const name = club?.name || '';
   const slug = clubAssetSlug(name);
+  const exactHyphen = String(name || '').trim().replace(/\s+/g,'-');
   const underscore = typeof imageSlug === 'function' ? imageSlug(name) : String(name || '').trim().replace(/\s+/g,'_');
   const legacy = legacyEscudoSlug(name);
   const foundedFallback = (club?.isFoundedClub || club?.founderClub) ? 'img/escudos/fundador-1.webp' : '';
   return uniqueBadgePaths([
     ...clubBadgePathVariants(club?.crestPath),
     ...clubBadgePathVariants(foundedFallback),
+    `img/escudos/${exactHyphen}.svg`,
+    `img/escudos/${exactHyphen}.png`,
+    `img/escudos/${exactHyphen}.webp`,
     `img/escudos/${slug}.svg`,
     `img/escudos/${underscore}.svg`,
     `img/escudos/${legacy}.svg`,

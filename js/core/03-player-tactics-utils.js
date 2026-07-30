@@ -1401,7 +1401,8 @@ function playerLastName(name){
 function countryCode(nationality){
   const map = {
     Argentina:'ARG', Brasil:'BRA', Uruguay:'URU', Paraguay:'PAR', Chile:'CHI', Bolivia:'BOL', 'Perú':'PER', Ecuador:'ECU', Colombia:'COL', Venezuela:'VEN',
-    España:'ESP', Italia:'ITA', Francia:'FRA', Alemania:'ALE', Portugal:'POR', Inglaterra:'ING', México:'MEX', 'Estados Unidos':'USA', Japón:'JPN', 'Corea del Sur':'KOR', Marruecos:'MAR', Nigeria:'NGA', Ghana:'GHA'
+    España:'ESP', Italia:'ITA', Francia:'FRA', Alemania:'ALE', Portugal:'POR', Inglaterra:'ING', México:'MEX', 'Estados Unidos':'USA', Japón:'JPN', 'Corea del Sur':'KOR', Marruecos:'MAR', Nigeria:'NGA', Ghana:'GHA',
+    Egipto:'EGY', Túnez:'TUN', Sudáfrica:'RSA', 'RD Congo':'COD', 'Arabia Saudita':'KSA', 'Emiratos Árabes Unidos':'UAE', Irán:'IRN', 'Costa Rica':'CRC', Guatemala:'GUA', 'Nueva Zelanda':'NZL', 'Papúa Nueva Guinea':'PNG'
   };
   return map[nationality] || String(nationality || '---').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase().padEnd(3,'-');
 }

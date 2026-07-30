@@ -1,4 +1,4 @@
-/* V9.19 · Mundial de Clubes: bolsa internacional de 20 invitados y planteles bot coherentes. */
+/* V9.20 · Mundial de Clubes: 16 invitados y cupos domésticos definitivos por liga. */
 
 const CLUB_WORLD_CUP_CONFIG = {
   enabled:true,
@@ -59,12 +59,12 @@ const CLUB_WORLD_CUP_CONFIG = {
   // Etapa transitoria: 16 invitados y 16 clasificados domésticos. Cuando existan
   // Champions y Libertadores, estos 16 cupos domésticos serán reemplazados por 8+8.
   qualifiers:[
-    { country:'Argentina', order:1, count:3 },
+    { country:'Argentina', order:1, count:2 },
     { country:'Chile', order:1, count:1 },
-    { country:'Brasil', order:1, count:3 },
-    { country:'Inglaterra', order:1, count:3 },
+    { country:'Brasil', order:1, count:2 },
+    { country:'Inglaterra', order:1, count:4 },
     { country:'España', order:1, count:3 },
-    { country:'Italia', order:1, count:2 },
+    { country:'Italia', order:1, count:3 },
     { country:'Rumania', order:1, count:1 }
   ],
   prizes:{ participate:50000000, groups:70000000, qf:100000000, sf:140000000, runnerUp:180000000, champion:300000000 }

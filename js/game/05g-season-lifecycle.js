@@ -133,8 +133,9 @@ function argentineStandingStatusClass(divisionId, index){
   const position = Number(index || 0) + 1;
   const order = Number(division.order || 0);
   if(order === 1){
+    // Los cupos internacionales de Primera División se pintan exclusivamente
+    // desde CLUB_WORLD_CUP_CONFIG para que coincidan con la clasificación real.
     if(position === 1) return 'champion-row';
-    if(position >= 2 && position <= 4) return 'continental-row';
     if(position >= 15 && position <= 16) return 'playoff-row';
     if(position >= 17 && position <= 18) return 'relegation-row';
   }

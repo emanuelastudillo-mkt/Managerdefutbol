@@ -1,3 +1,19 @@
+# V9.20 · Cupos del Mundial por liga
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.19.
+
+## Cambios principales
+
+- Se aplicó la distribución definitiva transitoria de 16 cupos domésticos: Argentina 2, Chile 1, Brasil 2, Inglaterra 4, España 3, Italia 3 y Rumania 1.
+- El Mundial conserva 16 invitados seleccionados desde la bolsa de 20 clubes y un total de 32 participantes.
+- Las posiciones clasificatorias de cada primera división se colorean de azul en la tabla.
+- Cada liga muestra una referencia con la cantidad de cupos que entrega al Mundial de Clubes.
+- La selección se realiza según la tabla vigente al momento del sorteo.
+
+El incremental se aplica sobre V9.19.
+
+---
+
 # V9.19 · Invitados del Mundial y planteles bot
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.18.

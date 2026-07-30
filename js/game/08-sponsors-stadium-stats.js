@@ -1519,14 +1519,22 @@ function renderStandings(){
   const visibleDivisions = selectedStandingsDivision === 'all' ? divisions : divisions.filter(d => d.id === selectedStandingsDivision);
   const blocks = visibleDivisions.map(division => {
     const tableRows = standingsRowsForDisplay(division.id);
+    const worldCupQuota = typeof clubWorldCupQualifierCountForDivision === 'function'
+      ? clubWorldCupQualifierCountForDivision(division.id)
+      : 0;
     const rows = tableRows.map((s,i)=>{
       const statusClass = standingsStatusClass(division.id, i, tableRows.length);
       const ownClass = s.clubId===game.selectedClubId ? 'own-club-row' : '';
-      return `<tr class="${ownClass} ${statusClass}">
+      const qualifiesForWorldCup = worldCupQuota > 0 && i < worldCupQuota;
+      const qualificationTitle = qualifiesForWorldCup ? 'Clasifica al Mundial de Clubes' : '';
+      return `<tr class="${ownClass} ${statusClass}"${qualificationTitle ? ` title="${qualificationTitle}"` : ''}>
         <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
       </tr>`;
     }).join('');
-    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    const qualificationBadge = worldCupQuota > 0
+      ? `<span class="pill">Zona azul · ${worldCupQuota} ${worldCupQuota === 1 ? 'cupo' : 'cupos'} al Mundial</span>`
+      : '';
+    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3>${qualificationBadge}</div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title">

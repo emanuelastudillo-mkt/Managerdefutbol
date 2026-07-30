@@ -1,3 +1,40 @@
+# V9.08 · Calendario semanal en Inicio
+
+## Tipo de entrega
+
+Versión completa e incremental sin imágenes, construida sobre V9.07.
+
+## Calendario de 7 días
+
+- Se agregó un calendario compacto en la parte inferior de la pantalla principal.
+- Muestra siete recuadros alineados: ayer, hoy y los próximos cinco días.
+- Cada recuadro incluye el día de la semana y la fecha completa en formato ISO.
+- El día actual queda destacado con el acento naranja de la interfaz.
+
+## Partidos y competiciones
+
+- Los días con partido muestran un icono de fútbol, el rival y la condición de local o visitante.
+- Los partidos de liga indican el número de fecha y la división.
+- Las copas nacionales muestran la fase correspondiente, como previa, 8vos, cuartos, semifinal o final.
+- El Mundial de Clubes distingue fase de grupos, octavos, cuartos, semifinales, tercer puesto y final.
+- También reconoce amistosos, supercopas y playoffs de promoción.
+- Si el partido ya se disputó, el recuadro muestra el resultado desde la perspectiva del club dirigido, incluidos los penales cuando corresponda.
+- Al pulsar un resultado se abre la ficha del partido. Al pulsar un compromiso futuro se abre el calendario completo.
+
+## Objetivo visual
+
+El bloque permite detectar rápidamente semanas con dos o más compromisos y organizar la condición física, los entrenamientos y la recuperación del plantel. Su ubicación inferior es provisoria hasta definir la composición final de Inicio.
+
+## Compatibilidad
+
+Compatible con partidas anteriores. No modifica fechas, simulación, resultados, cargas físicas, entrenamientos ni guardados; únicamente presenta la información existente en una vista semanal.
+
+## Aplicación del incremental
+
+El incremental se aplica sobre V9.07.
+
+## Base consolidada
+
 # V9.07 · Mensajes de cruces por país del mánager
 
 ## Tipo de entrega

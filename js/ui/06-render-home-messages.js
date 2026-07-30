@@ -594,6 +594,143 @@ function renderGameOverScreen(){
   }));
 }
 
+
+function homeWeekCalendarCompetitionLabel(match, round=null){
+  const divisionName = String(match?.divisionName || round?.title || 'Liga').trim() || 'Liga';
+  if(match?.nationalSupercup){
+    const stage = String(match.nationalCupStageLabel || 'Final').trim() || 'Final';
+    return `${stage} · Supercopa`;
+  }
+  if(match?.nationalCup){
+    const stage = String(match.nationalCupStageLabel || match.nationalCupStage || 'Copa').trim() || 'Copa';
+    return `${stage} · ${divisionName || 'Copa nacional'}`;
+  }
+  if(match?.clubWorldCup){
+    const labels = {
+      groups:'Fase de grupos',
+      r16:'Octavos',
+      qf:'Cuartos',
+      sf:'Semifinales',
+      thirdPlace:'3.er puesto',
+      final:'Final'
+    };
+    const stage = labels[String(match.clubWorldCupStage || '')] || 'Mundial de Clubes';
+    return stage === 'Mundial de Clubes' ? stage : `${stage} · Mundial de Clubes`;
+  }
+  if(match?.friendly) return 'Partido amistoso';
+  if(match?.promotionPlayoff || match?.playoff){
+    const stage = String(match.playoffStage || round?.playoffStage || '').trim();
+    return stage ? `Playoffs · ${stage}` : 'Playoffs de promoción';
+  }
+  const matchday = Math.max(0, Math.round(Number(match?.matchday || round?.matchday || 0)));
+  return matchday ? `Fecha ${matchday} · ${divisionName}` : divisionName;
+}
+function homeWeekCalendarOutcome(match){
+  const ownId = Number(game?.selectedClubId || 0);
+  const isHome = Number(match?.homeId || 0) === ownId;
+  const opponentId = isHome ? Number(match?.awayId || 0) : Number(match?.homeId || 0);
+  const opponent = clubName(opponentId) || 'Rival por confirmar';
+  const venue = isHome ? 'Local' : 'Visitante';
+  if(!match?.played){
+    return { tone:'scheduled', main:`vs ${opponent}`, detail:venue };
+  }
+  const rawOwnGoals = Number(isHome ? match.homeGoals : match.awayGoals);
+  const rawRivalGoals = Number(isHome ? match.awayGoals : match.homeGoals);
+  const ownGoals = Number.isFinite(rawOwnGoals) ? rawOwnGoals : 0;
+  const rivalGoals = Number.isFinite(rawRivalGoals) ? rawRivalGoals : 0;
+  const penalties = match?.penaltyShootout;
+  let ownPens = null;
+  let rivalPens = null;
+  if(penalties){
+    ownPens = Number(isHome ? penalties.home : penalties.away);
+    rivalPens = Number(isHome ? penalties.away : penalties.home);
+  }
+  const wonOnPenalties = ownGoals === rivalGoals && Number.isFinite(ownPens) && Number.isFinite(rivalPens) && ownPens > rivalPens;
+  const lostOnPenalties = ownGoals === rivalGoals && Number.isFinite(ownPens) && Number.isFinite(rivalPens) && ownPens < rivalPens;
+  const result = ownGoals > rivalGoals || wonOnPenalties ? 'Victoria' : ownGoals < rivalGoals || lostOnPenalties ? 'Derrota' : 'Empate';
+  const tone = result === 'Victoria' ? 'win' : result === 'Derrota' ? 'loss' : 'draw';
+  const penaltyText = Number.isFinite(ownPens) && Number.isFinite(rivalPens) ? ` · pen. ${ownPens}-${rivalPens}` : '';
+  return { tone, main:`${result} ${ownGoals}-${rivalGoals}${penaltyText}`, detail:`vs ${opponent} · ${venue}` };
+}
+function homeWeekCalendarEventsByDate(dates=[]){
+  const result = new Map((Array.isArray(dates) ? dates : []).filter(validIsoDate).map(date => [date, new Map()]));
+  if(!game || !result.size) return new Map();
+  const ownId = Number(game.selectedClubId || 0);
+  const historyById = new Map((game.matchHistory || []).map(item => [String(item?.id || ''), item]));
+  (game.fixtures || []).forEach(round => {
+    (round?.matches || []).forEach(match => {
+      if(Number(match?.homeId || 0) !== ownId && Number(match?.awayId || 0) !== ownId) return;
+      const date = typeof scheduledDateForMatch === 'function'
+        ? scheduledDateForMatch(match, round)
+        : (validIsoDate(match?.date) ? match.date : round?.date);
+      const dateEvents = result.get(date);
+      if(!dateEvents) return;
+      const history = historyById.get(String(match?.id || ''));
+      const key = String(match.id || `${date}-${match.homeId}-${match.awayId}`);
+      dateEvents.set(key, { match:{ ...match, ...(history || {}) }, round, date });
+    });
+  });
+  (game.matchHistory || []).forEach(match => {
+    if(Number(match?.homeId || 0) !== ownId && Number(match?.awayId || 0) !== ownId) return;
+    const date = validIsoDate(match?.date) ? match.date : '';
+    const dateEvents = result.get(date);
+    if(!dateEvents) return;
+    const key = String(match.id || `${date}-${match.homeId}-${match.awayId}`);
+    if(!dateEvents.has(key)) dateEvents.set(key, { match:{ ...match, played:true }, round:null, date });
+  });
+  return new Map([...result.entries()].map(([date, events]) => [date, [...events.values()].sort((a,b) => {
+    const aPlayed = a.match?.played ? 1 : 0;
+    const bPlayed = b.match?.played ? 1 : 0;
+    return bPlayed - aPlayed || homeWeekCalendarCompetitionLabel(a.match, a.round).localeCompare(homeWeekCalendarCompetitionLabel(b.match, b.round), 'es', { sensitivity:'base' });
+  })]));
+}
+function homeWeekCalendarDayMarkup(iso, offset, events=[]){
+  const relation = offset === -1 ? 'Ayer' : offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : `En ${offset} días`;
+  const classes = ['home-week-calendar-day'];
+  if(offset === -1) classes.push('is-yesterday');
+  if(offset === 0) classes.push('is-today');
+  if(events.length) classes.push('has-match');
+  const shownEvents = events.slice(0, 2);
+  const eventMarkup = shownEvents.length ? shownEvents.map(({ match, round }) => {
+    const outcome = homeWeekCalendarOutcome(match);
+    const competition = homeWeekCalendarCompetitionLabel(match, round);
+    const attrs = match.played
+      ? `data-match-id="${escapeHtml(match.id)}"`
+      : 'data-go-tab="fixture"';
+    return `<button class="home-week-calendar-event ${escapeHtml(outcome.tone)}" type="button" ${attrs} aria-label="${escapeHtml(`${competition}. ${outcome.main}. ${outcome.detail}`)}">
+      <span class="home-week-calendar-competition">${escapeHtml(competition)}</span>
+      <strong>${escapeHtml(outcome.main)}</strong>
+      <small>${escapeHtml(outcome.detail)}</small>
+    </button>`;
+  }).join('') : `<div class="home-week-calendar-empty"><span>Sin partido</span><small>Sin compromiso programado</small></div>`;
+  const remaining = events.length > shownEvents.length ? `<span class="home-week-calendar-more">+${events.length - shownEvents.length} partido(s)</span>` : '';
+  return `<article class="${classes.join(' ')}" ${offset === 0 ? 'aria-current="date"' : ''}>
+    <div class="home-week-calendar-day-head">
+      <span>${escapeHtml(relation)}</span>
+      ${events.length ? `<b aria-hidden="true">⚽${events.length > 1 ? ` ${events.length}` : ''}</b>` : '<b class="no-match" aria-hidden="true">·</b>'}
+    </div>
+    <strong class="home-week-calendar-weekday">${escapeHtml(weekdayLabelFromIso(iso))}</strong>
+    <time datetime="${escapeHtml(iso)}">Fecha: ${escapeHtml(iso)}</time>
+    <div class="home-week-calendar-events">${eventMarkup}${remaining}</div>
+  </article>`;
+}
+function homeWeekCalendarMarkup(){
+  if(!game || typeof currentCalendarDate !== 'function') return '';
+  const today = currentCalendarDate();
+  if(!validIsoDate(today)) return '';
+  const dateEntries = [];
+  for(let offset=-1; offset<=5; offset++) dateEntries.push({ iso:addDaysToIsoDate(today, offset), offset });
+  const eventsByDate = homeWeekCalendarEventsByDate(dateEntries.map(item => item.iso));
+  const days = dateEntries.map(item => homeWeekCalendarDayMarkup(item.iso, item.offset, eventsByDate.get(item.iso) || []));
+  return `<section class="card home-week-calendar" aria-labelledby="homeWeekCalendarTitle">
+    <div class="home-week-calendar-title">
+      <div><p class="label">Planificación física</p><h3 id="homeWeekCalendarTitle">Calendario de 7 días</h3></div>
+      <span class="pill">Ayer · Hoy · Próximos 5 días</span>
+    </div>
+    <div class="home-week-calendar-grid">${days.join('')}</div>
+  </section>`;
+}
+
 function renderHome(){
   if(Number(game?.budget || 0) < 0 && typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const next = getNextMatchForSelected();
@@ -663,6 +800,7 @@ function renderHome(){
       </div>
     </div>
     ${lastTurnSummaryMarkup()}
+    ${homeWeekCalendarMarkup()}
 
   `;
   $('advanceUnifiedBtn')?.addEventListener('click', typeof requestAdvanceCalendarOneStep === 'function' ? requestAdvanceCalendarOneStep : advanceCalendarOneStep);

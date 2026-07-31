@@ -1,13 +1,11 @@
-# V9.27 · Minijuego Ser jugador
+# V9.28 · Ser jugador simplificado y visual
 
-Esta versión integra el minijuego «Ser jugador» dentro del menú lateral de Una Vida de Mánager.
+Base: V9.27.
 
-## Archivos principales
-
-- `js/game/19-player-career-minigame-v927.js`: estado, simulación, decisiones, contratos, transferencias, historial y retiro.
-- `styles/370-player-career-minigame-v927.css`: interfaz responsive del minijuego.
-- `index.html`: navegación lateral, estilos, scripts y versión visible.
-- `js/ui/06-render-home-messages.js`: registro de la nueva vista en el sistema de renderizado.
-- `config.js`: versión V9.27.
-
-El estado del minijuego se guarda en `game.miniGames.playerCareer` y no altera el mundo de la carrera principal.
+- Las decisiones presentan exactamente dos alternativas.
+- Cada alternativa informa sus resultados posibles y la probabilidad porcentual.
+- La interfaz ya no muestra nombres como primer tramo, segundo tramo o tramo decisivo.
+- La acción principal utiliza el texto «Avanzar temporada».
+- El progreso positivo de media se multiplicó por dos.
+- Se incorporaron vectores SVG internos y animaciones ligeras para aumentos estadísticos.
+- El estado continúa aislado en `game.miniGames.playerCareer`.

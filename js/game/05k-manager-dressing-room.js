@@ -3,7 +3,7 @@
    efectos sobre moral/cohesión/renovaciones y evaluación de Liderazgo. */
 
 (function(){
-  const DRESSING_ROOM_VERSION = 1;
+  const DRESSING_ROOM_VERSION = 2;
   let dressingRoomSort = 'influence_desc';
   const GROUP_LABELS = {
     starter:'Titulares',
@@ -66,6 +66,35 @@
   function drCurrentMoment(){
     return drClamp((Number(game?.managerStats?.careerProfile?.moment || 0) + 100) / 2, 0, 100);
   }
+  function drLeadershipCandidates(players=drPlayersByClub(drCurrentClubId())){
+    return (players || []).slice().sort((a,b) => {
+      const currentA = typeof captaincyValue === 'function' ? Number(captaincyValue(a.id) || 0) : 0;
+      const currentB = typeof captaincyValue === 'function' ? Number(captaincyValue(b.id) || 0) : 0;
+      const maxA = typeof captaincyMaximum === 'function' ? Number(captaincyMaximum(a) || 0) : Number(a?.skills?.liderazgo || 0);
+      const maxB = typeof captaincyMaximum === 'function' ? Number(captaincyMaximum(b) || 0) : Number(b?.skills?.liderazgo || 0);
+      return currentB - currentA || maxB - maxA || Number(b.age || 0) - Number(a.age || 0) || Number(b.skills?.liderazgo || 0) - Number(a.skills?.liderazgo || 0) || Number(a.id) - Number(b.id);
+    });
+  }
+  function drValidLeadershipPlayer(playerId, clubId=drCurrentClubId()){
+    const player = drPlayerById(playerId);
+    return Boolean(player && !player.retired && !player.sold && Number(player.clubId || 0) === Number(clubId || 0));
+  }
+  function drEnsureLeadershipHierarchy(stint, players=drPlayersByClub(stint?.clubId || drCurrentClubId())){
+    if(!stint) return { captainId:0, viceCaptainId:0 };
+    const ranked = drLeadershipCandidates(players);
+    let captainId = Number(stint.captainId || 0);
+    if(!drValidLeadershipPlayer(captainId, stint.clubId)){
+      const tacticCaptain = Number(game?.tactic?.captainId || 0);
+      captainId = drValidLeadershipPlayer(tacticCaptain, stint.clubId) ? tacticCaptain : Number(ranked[0]?.id || 0);
+    }
+    let viceCaptainId = Number(stint.viceCaptainId || 0);
+    if(!drValidLeadershipPlayer(viceCaptainId, stint.clubId) || viceCaptainId === captainId){
+      viceCaptainId = Number(ranked.find(player => Number(player.id) !== captainId)?.id || 0);
+    }
+    stint.captainId = captainId;
+    stint.viceCaptainId = viceCaptainId;
+    return { captainId, viceCaptainId };
+  }
 
   function normalizePlayerTrustEntry(raw={}, playerId=0, clubId=0){
     const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -112,7 +141,9 @@
       playerTrust:trust,
       referentIds:Array.isArray(source.referentIds) ? source.referentIds.map(Number).filter(Boolean).slice(0, 8) : [],
       captainId:Number(source.captainId || 0),
+      viceCaptainId:Number(source.viceCaptainId || 0),
       previousCaptainId:Number(source.previousCaptainId || 0),
+      previousViceCaptainId:Number(source.previousViceCaptainId || 0),
       generalTrust:drClamp(drOneDecimal(source.generalTrust, 50), 0, 100),
       groupTrust:source.groupTrust && typeof source.groupTrust === 'object' ? { ...source.groupTrust } : {},
       events:Array.isArray(source.events) ? source.events.slice(-120) : [],
@@ -158,12 +189,16 @@
     const max = drClamp(drRound(drConfig('referentesMaximo', 4), 4), min, 7);
     const countRange = Math.max(1, max - min + 1);
     const target = Math.min(players.length, min + drHash(`${stint?.key || ''}:referents`, countRange));
-    const captainId = Number(game?.tactic?.captainId || 0);
+    const hierarchy = drEnsureLeadershipHierarchy(stint, players);
+    const captainId = Number(hierarchy.captainId || 0);
+    const viceCaptainId = Number(hierarchy.viceCaptainId || 0);
     const ranked = players.map(player => ({ player, score:drInfluenceScore(player, previous) }))
       .sort((a,b) => b.score - a.score || Number(b.player.age || 0) - Number(a.player.age || 0) || Number(a.player.id) - Number(b.player.id));
     const selected = [];
     const captain = ranked.find(item => Number(item.player.id) === captainId);
+    const viceCaptain = ranked.find(item => Number(item.player.id) === viceCaptainId);
     if(captain) selected.push(captain.player);
+    if(viceCaptain && selected.length < target) selected.push(viceCaptain.player);
     ranked.forEach(item => {
       if(selected.length >= target || selected.some(player => Number(player.id) === Number(item.player.id))) return;
       selected.push(item.player);
@@ -193,6 +228,7 @@
     if(group === 'substitute') value -= 2;
     if(group === 'youth') value += 2;
     if(tags.includes('captain')) value += 4;
+    if(tags.includes('viceCaptain')) value += 2;
     if(tags.includes('referent')) value += prestige >= 45 ? 1 : -2;
     value += (drHash(`${stint?.key || ''}:${player?.id}:trust`, 81) - 40) / 10;
     return drClamp(drOneDecimal(value), 28, 78);
@@ -249,9 +285,11 @@
   function drSyncRoster(stint){
     if(!stint) return null;
     const players = drPlayersByClub(stint.clubId);
+    const hierarchy = drEnsureLeadershipHierarchy(stint, players);
     const referentIds = drDetermineReferents(players, stint);
     const referentSet = new Set(referentIds);
-    const captainId = Number(game?.tactic?.captainId || 0);
+    const captainId = Number(hierarchy.captainId || 0);
+    const viceCaptainId = Number(hierarchy.viceCaptainId || 0);
     const nextTrust = {};
     players.forEach(player => {
       const id = Number(player.id);
@@ -259,6 +297,7 @@
       const tags = [];
       if(referentSet.has(id)) tags.push('referent');
       if(id === captainId) tags.push('captain');
+      if(id === viceCaptainId) tags.push('viceCaptain');
       const influence = drInfluenceScore(player, new Set(stint.referentIds || []));
       const previous = stint.playerTrust?.[id];
       const entry = previous ? normalizePlayerTrustEntry(previous, id, stint.clubId) : normalizePlayerTrustEntry({}, id, stint.clubId);
@@ -275,7 +314,9 @@
     stint.playerTrust = nextTrust;
     stint.referentIds = referentIds;
     stint.previousCaptainId = Number(stint.previousCaptainId || stint.captainId || captainId || 0);
+    stint.previousViceCaptainId = Number(stint.previousViceCaptainId || stint.viceCaptainId || viceCaptainId || 0);
     stint.captainId = captainId;
+    stint.viceCaptainId = viceCaptainId;
     drUpdateGroupSummary(stint);
     return stint;
   }
@@ -325,8 +366,10 @@
         initialGeneralTrust:previous ? Number(previous.generalTrust || 50) : drConfig('confianzaInicial', 50),
         playerTrust:drCarryTrustFromPrevious(previous, drCurrentClubId()),
         referentIds:previous?.referentIds || [],
-        captainId:Number(game?.tactic?.captainId || previous?.captainId || 0),
-        previousCaptainId:Number(previous?.captainId || 0)
+        captainId:Number(previous?.captainId || game?.tactic?.captainId || 0),
+        viceCaptainId:Number(previous?.viceCaptainId || 0),
+        previousCaptainId:Number(previous?.captainId || 0),
+        previousViceCaptainId:Number(previous?.viceCaptainId || 0)
       }, key);
       game.managerDressingRoom.stints[key] = stint;
     }
@@ -410,28 +453,26 @@
     return { isHome, starters, played, captainId };
   }
   function drProcessCaptainChange(stint, participants, changes){
-    const newCaptainId = Number(participants.captainId || 0);
-    const oldCaptainId = Number(stint.captainId || stint.previousCaptainId || 0);
-    if(!newCaptainId){ return; }
-    if(oldCaptainId && oldCaptainId !== newCaptainId){
-      const oldPlayer = drPlayerById(oldCaptainId);
-      const justified = !oldPlayer || Number(oldPlayer.clubId || 0) !== Number(stint.clubId) || (typeof isUnavailable === 'function' && isUnavailable(oldCaptainId)) || !participants.starters.has(oldCaptainId);
-      if(!justified){
-        const oldDelta = Number(drConfig('cambiosPartido.exCapitanSinJustificacion', -4));
-        const applied = drApplyTrustChange(oldCaptainId, oldDelta, 'Perdió la capitanía sin una causa deportiva clara');
-        if(applied) changes.push({ playerId:oldCaptainId, delta:applied });
-        const refDelta = Number(drConfig('cambiosPartido.referentesPorCambioCapitan', -1));
-        Object.values(stint.playerTrust).filter(entry => entry.tags.includes('referent') && Number(entry.playerId) !== oldCaptainId && Number(entry.playerId) !== newCaptainId).forEach(entry => {
-          const refApplied = drApplyTrustChange(entry.playerId, refDelta, 'Cambio de capitán cuestionado por los referentes');
-          if(refApplied) changes.push({ playerId:entry.playerId, delta:refApplied });
-        });
-      }
-      const newDelta = Number(drConfig('cambiosPartido.nuevoCapitan', 2));
-      const applied = drApplyTrustChange(newCaptainId, newDelta, 'Fue elegido nuevo capitán');
-      if(applied) changes.push({ playerId:newCaptainId, delta:applied });
-    }
-    stint.previousCaptainId = oldCaptainId || newCaptainId;
-    stint.captainId = newCaptainId;
+    const actualCaptainId = Number(participants.captainId || 0);
+    const hierarchy = drEnsureLeadershipHierarchy(stint);
+    const designatedCaptainId = Number(hierarchy.captainId || 0);
+    const viceCaptainId = Number(hierarchy.viceCaptainId || 0);
+    if(!actualCaptainId) return;
+    const designatedStarts = participants.starters.has(designatedCaptainId);
+    const viceStarts = participants.starters.has(viceCaptainId);
+    const expectedCaptainId = designatedStarts ? designatedCaptainId : viceStarts ? viceCaptainId : actualCaptainId;
+    if(actualCaptainId === expectedCaptainId) return;
+    const omittedId = expectedCaptainId;
+    const omittedIsCaptain = omittedId === designatedCaptainId;
+    const omittedDelta = Number(drConfig(omittedIsCaptain ? 'cambiosPartido.capitanDesignadoOmitido' : 'cambiosPartido.segundoCapitanOmitido', omittedIsCaptain ? -4 : -2));
+    const omittedReason = omittedIsCaptain ? 'Fue omitido como capitán pese a ser titular' : 'Fue omitido como 2.º capitán pese a tener prioridad';
+    const omittedApplied = drApplyTrustChange(omittedId, omittedDelta, omittedReason);
+    if(omittedApplied) changes.push({ playerId:omittedId, delta:omittedApplied });
+    const refDelta = Number(drConfig('cambiosPartido.referentesPorCapitanExcepcional', -1));
+    Object.values(stint.playerTrust).filter(entry => entry.tags.includes('referent') && Number(entry.playerId) !== omittedId && Number(entry.playerId) !== actualCaptainId).forEach(entry => {
+      const applied = drApplyTrustChange(entry.playerId, refDelta, 'La elección excepcional del capitán generó dudas');
+      if(applied) changes.push({ playerId:entry.playerId, delta:applied });
+    });
   }
   function processDressingRoomAfterMatch(match){
     if(!game || !match || match?.friendly || game?.gameOver?.active) return null;
@@ -523,15 +564,16 @@
     const entry = entrySnapshot || stint?.playerTrust?.[Number(playerId || 0)];
     if(!stint || !entry) return;
     const wasCaptain = entry.tags.includes('captain');
+    const wasViceCaptain = entry.tags.includes('viceCaptain');
     const wasReferent = entry.tags.includes('referent');
-    if(!wasCaptain && !wasReferent) return;
+    if(!wasCaptain && !wasViceCaptain && !wasReferent) return;
     const reason = kind === 'dismissal' ? 'Despido de un referente del vestuario' : 'Venta de un referente del vestuario';
     const changes = [];
     Object.values(stint.playerTrust).forEach(other => {
       if(Number(other.playerId) === Number(playerId)) return;
       const player = drPlayerById(other.playerId);
       if(!player || Number(player.clubId || 0) !== Number(stint.clubId)) return;
-      let delta = wasCaptain ? -2 : -1;
+      let delta = wasCaptain ? -2 : wasViceCaptain ? -1 : -1;
       if(other.tags.includes('referent')) delta -= kind === 'dismissal' ? 2 : 1;
       const applied = drApplyTrustChange(other.playerId, delta, reason);
       if(applied) changes.push({ playerId:other.playerId, delta:applied });
@@ -550,6 +592,7 @@
       groupTrust:JSON.parse(JSON.stringify(stint.groupTrust || {})),
       referentIds:[...(stint.referentIds || [])],
       captainId:Number(stint.captainId || 0),
+      viceCaptainId:Number(stint.viceCaptainId || 0),
       leadershipScore:null,
       recordedAt:drNow()
     };
@@ -590,6 +633,7 @@
   function drTagMarkup(entry){
     const tags = [];
     if(entry?.tags?.includes('captain')) tags.push('<span class="pill ok">Capitán</span>');
+    if(entry?.tags?.includes('viceCaptain')) tags.push('<span class="pill warn">2.º capitán</span>');
     if(entry?.tags?.includes('referent')) tags.push('<span class="pill">Referente</span>');
     return tags.join(' ') || '<span class="muted small">—</span>';
   }
@@ -605,7 +649,7 @@
     return { starter:1, rotation:2, substitute:3, youth:4 }[String(group || '')] || 9;
   }
   function drRoleSortValue(entry){
-    return entry?.tags?.includes('captain') ? 0 : entry?.tags?.includes('referent') ? 1 : 2;
+    return entry?.tags?.includes('captain') ? 0 : entry?.tags?.includes('viceCaptain') ? 1 : entry?.tags?.includes('referent') ? 2 : 3;
   }
   function drSortedPlayers(stint){
     const items = Object.values(stint.playerTrust).map(entry => ({ entry, player:drPlayerById(entry.playerId) })).filter(item => item.player);
@@ -637,6 +681,76 @@
     return label;
   }
 
+  function drLeadershipOptionMarkup(player, selectedId, excludedId=0){
+    const current = typeof captaincyValue === 'function' ? Number(captaincyValue(player.id) || 0) : 0;
+    const maximum = typeof captaincyMaximum === 'function' ? Number(captaincyMaximum(player) || 0) : Number(player?.skills?.liderazgo || 0);
+    const target = typeof captaincyTargetMatchesForPlayer === 'function' ? Number(captaincyTargetMatchesForPlayer(player) || 0) : 60;
+    const disabled = Number(player.id) === Number(excludedId || 0) ? 'disabled' : '';
+    return `<option value="${Number(player.id)}" ${Number(player.id) === Number(selectedId) ? 'selected' : ''} ${disabled}>${escapeHtml(player.name || '')} · ${player.position || ''} · ${current}%/${maximum}% · ${target} PJ aprox.</option>`;
+  }
+  function drLeadershipCardMarkup(stint){
+    const hierarchy = drEnsureLeadershipHierarchy(stint);
+    const players = drLeadershipCandidates(drPlayersByClub(stint.clubId));
+    const captain = drPlayerById(hierarchy.captainId);
+    const vice = drPlayerById(hierarchy.viceCaptainId);
+    return `<div class="card dressing-leadership-card">
+      <div class="dressing-leadership-head"><div><h3>Capitanía del plantel</h3><p>El capitán tiene prioridad si es titular. En su ausencia, la prioridad pasa al 2.º capitán. Podés elegir otro jugador para un partido, pero la decisión puede generar tensión.</p></div><span class="pill">Valores en %</span></div>
+      <div class="dressing-leadership-selectors">
+        <label><span>Capitán</span><select id="dressingCaptainSelect">${players.map(player => drLeadershipOptionMarkup(player, hierarchy.captainId, hierarchy.viceCaptainId)).join('')}</select></label>
+        <label><span>2.º capitán</span><select id="dressingViceCaptainSelect">${players.map(player => drLeadershipOptionMarkup(player, hierarchy.viceCaptainId, hierarchy.captainId)).join('')}</select></label>
+      </div>
+      <div class="dressing-leadership-current">
+        <div><strong>${escapeHtml(captain?.name || 'Sin capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(captain?.id) : 0}% · Máximo ${typeof captaincyMaximum === 'function' && captain ? captaincyMaximum(captain) : 0}%</span></div>
+        <div><strong>${escapeHtml(vice?.name || 'Sin 2.º capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(vice?.id) : 0}% · Máximo ${typeof captaincyMaximum === 'function' && vice ? captaincyMaximum(vice) : 0}%</span></div>
+      </div>
+      <button id="saveDressingLeadership" class="primary">Guardar jerarquía</button>
+      <p class="muted small">El progreso requiere aproximadamente entre una y tres temporadas. Los jugadores de 28 años o más se forman más rápido.</p>
+    </div>`;
+  }
+  function drSetLeadership(captainId, viceCaptainId, options={}){
+    const stint = currentDressingRoom() || ensureDressingRoom();
+    if(!stint) return { ok:false, error:'Vestuario no disponible.' };
+    const newCaptainId = Number(captainId || 0);
+    const newViceCaptainId = Number(viceCaptainId || 0);
+    if(!drValidLeadershipPlayer(newCaptainId, stint.clubId) || !drValidLeadershipPlayer(newViceCaptainId, stint.clubId)) return { ok:false, error:'Los dos jugadores deben pertenecer al plantel.' };
+    if(newCaptainId === newViceCaptainId) return { ok:false, error:'Capitán y 2.º capitán deben ser jugadores diferentes.' };
+    const oldCaptainId = Number(stint.captainId || 0);
+    const oldViceCaptainId = Number(stint.viceCaptainId || 0);
+    const changes = [];
+    if(oldCaptainId !== newCaptainId){
+      if(drValidLeadershipPlayer(oldCaptainId, stint.clubId)){
+        const delta = Number(drConfig('cambiosPartido.exCapitanSinJustificacion', -4));
+        const applied = drApplyTrustChange(oldCaptainId, delta, 'Dejó de ser capitán del plantel');
+        if(applied) changes.push({ playerId:oldCaptainId, delta:applied });
+      }
+      const applied = drApplyTrustChange(newCaptainId, Number(drConfig('cambiosPartido.nuevoCapitan', 2)), 'Fue nombrado capitán del plantel');
+      if(applied) changes.push({ playerId:newCaptainId, delta:applied });
+    }
+    if(oldViceCaptainId !== newViceCaptainId){
+      if(drValidLeadershipPlayer(oldViceCaptainId, stint.clubId) && oldViceCaptainId !== newCaptainId){
+        const delta = Number(drConfig('cambiosPartido.exSegundoCapitanSinJustificacion', -2));
+        const applied = drApplyTrustChange(oldViceCaptainId, delta, 'Dejó de ser 2.º capitán');
+        if(applied) changes.push({ playerId:oldViceCaptainId, delta:applied });
+      }
+      const applied = drApplyTrustChange(newViceCaptainId, Number(drConfig('cambiosPartido.nuevoSegundoCapitan', 1)), 'Fue nombrado 2.º capitán');
+      if(applied) changes.push({ playerId:newViceCaptainId, delta:applied });
+    }
+    stint.previousCaptainId = oldCaptainId;
+    stint.previousViceCaptainId = oldViceCaptainId;
+    stint.captainId = newCaptainId;
+    stint.viceCaptainId = newViceCaptainId;
+    drSyncRoster(stint);
+    if(game?.tactic){
+      const preferred = typeof preferredCaptainForStarterIds === 'function' ? preferredCaptainForStarterIds(game.tactic.starters || [], stint.clubId) : null;
+      game.tactic = typeof ensureTacticCaptain === 'function'
+        ? ensureTacticCaptain({ ...game.tactic, captainId:Number(preferred?.id || 0), captainSelectionMode:'automatic' }, stint.clubId)
+        : { ...game.tactic, captainId:Number(preferred?.id || 0), captainSelectionMode:'automatic' };
+    }
+    drRecordEvent(stint, 'leadership', 'Nueva jerarquía de capitanes', changes);
+    if(options.save !== false && typeof saveLocal === 'function') saveLocal(true);
+    return { ok:true, captainId:newCaptainId, viceCaptainId:newViceCaptainId, changes };
+  }
+
   function renderDressingRoom(){
     const stint = ensureDressingRoom();
     if(!stint){
@@ -654,10 +768,17 @@
     view.innerHTML = `<div class="section-title"><h2>Vestuario</h2><p class="tagline">La confianza se forma con resultados, participación, capitanía y decisiones sobre referentes. No sustituye la calidad deportiva del plantel.</p></div>
       <div class="dressing-summary-grid"><div class="dressing-main-summary"><span>Confianza general</span><strong>${drRound(stint.generalTrust)}</strong><em class="${generalStatus.tone}">${escapeHtml(generalStatus.label)}</em></div><div class="dressing-main-summary"><span>Evaluación de Liderazgo</span><strong>${drRound(leadershipScore)}</strong><em>Se utiliza al cerrar la temporada.</em></div><div class="dressing-main-summary"><span>Referentes</span><strong>${stint.referentIds.length}</strong><em>${stint.referentIds.map(id => playerLastName(drPlayerById(id)?.name || '')).filter(Boolean).join(' · ') || 'Sin referentes'}</em></div></div>
       <div class="dressing-groups-grid">${['referent','starter','rotation','substitute','youth'].map(group => drGroupCard(group, stint.groupTrust[group])).join('')}</div>
+      ${drLeadershipCardMarkup(stint)}
       <div class="card dressing-explanation"><p><strong>Efectos activos:</strong> la confianza modifica la recuperación de moral, puede sumar o restar cohesión tras los partidos y cambia las exigencias salariales y la duración posible en una negociación contractual.</p></div>
       ${typeof starPlayerDressingRoomSummaryMarkup === 'function' ? starPlayerDressingRoomSummaryMarkup() : ''}
       <div class="table-wrap dressing-table-wrap"><table class="dressing-table"><thead><tr><th>Foto</th><th>${drColumnSort('Jugador','name_asc','name_desc')}</th><th>${drColumnSort('Edad','age_asc','age_desc')}</th><th>${drColumnSort('Media','overall_asc','overall_desc')}</th><th>${drColumnSort('Grupo','group_asc','group_desc')}</th><th>${drColumnSort('Rol interno','role_asc','role_desc')}</th><th>${drColumnSort('Confianza','trust_asc','trust_desc')}</th><th>${drColumnSort('Peso','influence_asc','influence_desc')}</th><th>${drColumnSort('Renovación','renewal_asc','renewal_desc')}</th><th>${drColumnSort('Moral','morale_asc','morale_desc')}</th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="muted">No hay jugadores disponibles.</td></tr>'}</tbody></table></div>`;
     document.querySelectorAll('[data-dressing-sort]').forEach(button => button.addEventListener('click', () => { dressingRoomSort = button.dataset.dressingSort || 'influence_desc'; renderDressingRoom(); }));
+    document.getElementById('saveDressingLeadership')?.addEventListener('click', () => {
+      const result = drSetLeadership(Number(document.getElementById('dressingCaptainSelect')?.value || 0), Number(document.getElementById('dressingViceCaptainSelect')?.value || 0));
+      if(!result.ok){ if(typeof showNotice === 'function') showNotice(result.error || 'No se pudo guardar la jerarquía.'); return; }
+      if(typeof showNotice === 'function') showNotice('Capitán y 2.º capitán designados.');
+      renderDressingRoom();
+    });
     if(typeof prependFirstTeamTabs === 'function') prependFirstTeamTabs('dressingRoom');
   }
   window.renderDressingRoom = renderDressingRoom;
@@ -668,7 +789,7 @@
     if(!entry) return '';
     const status = drTrustStatus(entry.value);
     const renewal = drRenewalDisposition(entry.value, entry);
-    return `<div class="card inner player-dressing-room-card"><h3>Vestuario</h3><div class="stat-rank"><span>Confianza en el mánager</span><strong class="${status.tone}">${drRound(entry.value)} · ${escapeHtml(status.label)}</strong></div><div class="stat-rank"><span>Grupo</span><strong>${escapeHtml(GROUP_LABELS[entry.primaryGroup] || entry.primaryGroup)}</strong></div><div class="stat-rank"><span>Rol interno</span><strong>${entry.tags.includes('captain') ? 'Capitán' : entry.tags.includes('referent') ? 'Referente' : 'Sin liderazgo especial'}</strong></div><div class="stat-rank"><span>Predisposición a renovar</span><strong class="${renewal.tone}">${escapeHtml(renewal.label)}</strong></div>${entry.lastReason ? `<p class="muted small-copy">Último cambio: ${entry.lastChange > 0 ? '+' : ''}${entry.lastChange} · ${escapeHtml(entry.lastReason)}</p>` : ''}</div>`;
+    return `<div class="card inner player-dressing-room-card"><h3>Vestuario</h3><div class="stat-rank"><span>Confianza en el mánager</span><strong class="${status.tone}">${drRound(entry.value)} · ${escapeHtml(status.label)}</strong></div><div class="stat-rank"><span>Grupo</span><strong>${escapeHtml(GROUP_LABELS[entry.primaryGroup] || entry.primaryGroup)}</strong></div><div class="stat-rank"><span>Rol interno</span><strong>${entry.tags.includes('captain') ? 'Capitán' : entry.tags.includes('viceCaptain') ? '2.º capitán' : entry.tags.includes('referent') ? 'Referente' : 'Sin liderazgo especial'}</strong></div><div class="stat-rank"><span>Predisposición a renovar</span><strong class="${renewal.tone}">${escapeHtml(renewal.label)}</strong></div>${entry.lastReason ? `<p class="muted small-copy">Último cambio: ${entry.lastChange > 0 ? '+' : ''}${entry.lastChange} · ${escapeHtml(entry.lastReason)}</p>` : ''}</div>`;
   }
 
   function installDressingRoomHooks(){
@@ -767,7 +888,7 @@
         const clubBefore = Number(drPlayerById(playerId)?.clubId || 0);
         const result = original(playerId);
         const left = clubBefore && Number(drPlayerById(playerId)?.clubId || 0) !== clubBefore;
-        if(left && entry && (entry.tags.includes('referent') || entry.tags.includes('captain'))) drHandleImportantDeparture(playerId, 'dismissal', entry);
+        if(left && entry && (entry.tags.includes('referent') || entry.tags.includes('captain') || entry.tags.includes('viceCaptain'))) drHandleImportantDeparture(playerId, 'dismissal', entry);
         return result;
       };
     }
@@ -777,7 +898,7 @@
         const playerId = Number(player?.id || msg?.action?.playerId || 0);
         const entry = drEntry(playerId, false) ? { ...drEntry(playerId, false), tags:[...(drEntry(playerId, false)?.tags || [])] } : null;
         const result = original(msg, player, options);
-        if(result?.executed && entry && (entry.tags.includes('referent') || entry.tags.includes('captain'))) drHandleImportantDeparture(playerId, 'sale', entry);
+        if(result?.executed && entry && (entry.tags.includes('referent') || entry.tags.includes('captain') || entry.tags.includes('viceCaptain'))) drHandleImportantDeparture(playerId, 'sale', entry);
         return result;
       };
     }
@@ -836,6 +957,12 @@
       drUpdateGroupSummary(currentDressingRoom());
       return changes;
     },
-    refresh:() => drUpdateGroupSummary(currentDressingRoom())
+    refresh:() => drUpdateGroupSummary(currentDressingRoom()),
+    hierarchy:(clubId=drCurrentClubId()) => {
+      if(Number(clubId || 0) !== drCurrentClubId()) return { captainId:0, viceCaptainId:0 };
+      const stint = currentDressingRoom();
+      return drEnsureLeadershipHierarchy(stint);
+    },
+    setLeadership:(captainId, viceCaptainId, options={}) => drSetLeadership(captainId, viceCaptainId, options)
   };
 })();

@@ -646,7 +646,7 @@
     if(!game || game?.gameOver?.active || !game?.managerStats?.currentSeason) return null;
     const state = ensureManagerConsequences();
     const stintId = String(game.managerStats.currentSeason.careerStintId || `${game.seasonNumber || 1}:${game.selectedClubId || 0}`);
-    const currentCaptain = Number(game?.tactic?.captainId || 0);
+    const currentCaptain = Number(typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy()?.captainId || 0 : game?.tactic?.captainId || 0);
     const previous = Number(state.lastCaptainByStint[stintId] || 0);
     state.lastCaptainByStint[stintId] = currentCaptain;
     if(!previous || !currentCaptain || previous === currentCaptain) return null;

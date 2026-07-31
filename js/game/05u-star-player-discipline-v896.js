@@ -157,7 +157,7 @@
   }
   function spProfilesForEvent(event, profiles=starPlayerEligibleProfiles(), state=ensureStarPlayerDisciplineState()){
     const starters = new Set((game?.tactic?.starters || []).map(Number));
-    const captainId = Number(game?.tactic?.captainId || 0);
+    const captainId = Number(typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy()?.captainId || 0 : game?.tactic?.captainId || 0);
     let list = profiles.slice();
     if(String(event?.requisito || '') === 'no_titular') list = list.filter(profile => !starters.has(profile.playerId));
     if(String(event?.requisito || '') === 'titular_no_capitan') list = list.filter(profile => starters.has(profile.playerId) && profile.playerId !== captainId && (profile.influence >= 55 || spLeadership(profile.player) >= 70));
@@ -176,7 +176,7 @@
     const star = selectedProfile?.player;
     if(!star) return [];
     if(String(event.selector || '') === 'problematic_star_captain'){
-      const captainId = Number(game?.tactic?.captainId || 0);
+      const captainId = Number(typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy()?.captainId || 0 : game?.tactic?.captainId || 0);
       let captain = eligiblePlayers.find(player => Number(player.id) === captainId) || null;
       if(!captain || Number(captain.id) === Number(star.id)){
         captain = eligiblePlayers.filter(player => Number(player.id) !== Number(star.id)).sort((a,b) => spLeadership(b) - spLeadership(a) || spOverall(b) - spOverall(a))[0] || null;

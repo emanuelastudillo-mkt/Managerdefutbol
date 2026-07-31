@@ -842,8 +842,9 @@ function normalizeTactic(clubId, tactic){
     ? window.Simulator20.normalizeMatchInstructions(base.matchInstructions)
     : { winning:'normal', drawing:'normal', losing:'normal' };
   const sectorStyles = normalizeSectorStyles(base.sectorStyles);
-  const normalized = { formation, layoutMode, customSlots, captainId:0, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
-  normalized.captainId = normalizedCaptainIdForTactic(clubId, { ...normalized, captainId:base.captainId });
+  const captainSelectionMode = typeof normalizeCaptainSelectionMode === 'function' ? normalizeCaptainSelectionMode(base.captainSelectionMode) : 'automatic';
+  const normalized = { formation, layoutMode, customSlots, captainId:0, captainSelectionMode, starters, bench, autoSubs, playerMentalities:{ ...(game?.playerMentalities || {}), ...(base.playerMentalities || {}) }, matchInstructions, sectorStyles };
+  normalized.captainId = normalizedCaptainIdForTactic(clubId, { ...normalized, captainId:base.captainId, captainSelectionMode });
   return applyStarterMentalities(normalized);
 }
 

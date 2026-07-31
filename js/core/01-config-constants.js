@@ -323,7 +323,7 @@ const TEAM_COHESION_YOUTH_CONTRACT_GAIN = configNumber('cohesion.gananciaPorCont
 const TEAM_MORALE_DISMISSAL_LOSS = configNumber('moral.perdidaPlantelPorDespedirJugador', 1, 0, 98);
 const TEAM_MORALE_DEFEAT_EXTRA_LOSS = configNumber('moral.perdidaExtraPorDerrota', 2, 0, 20);
 const CAPTAINCY_ENABLED = configBoolean('capitania.activo', true);
-const CAPTAINCY_TARGET_MATCHES = Math.max(1, Math.round(configNumber('capitania.partidosObjetivoAprox', 10, 1, 50)));
+const CAPTAINCY_TARGET_MATCHES = Math.max(1, Math.round(configNumber('capitania.partidosObjetivoAprox', 60, 1, 150)));
 const CAPTAINCY_MAX_PERCENT = Math.max(1, Math.min(99, Math.round(configNumber('capitania.maximoPorcentaje', 99, 1, 99))));
 const CAPTAINCY_LEARNING_FACTOR_MIN = configNumber('capitania.aprendizaje.factorMinimo', 0.80, 0.10, 3);
 const CAPTAINCY_LEARNING_FACTOR_MAX = configNumber('capitania.aprendizaje.factorMaximo', 1.20, CAPTAINCY_LEARNING_FACTOR_MIN, 3);
@@ -940,6 +940,7 @@ const DEFAULT_TACTIC = {
   layoutMode:'preset',
   customSlots:[],
   captainId:0,
+  captainSelectionMode:'automatic',
   starters:[],
   bench:[],
   autoSubs:[],

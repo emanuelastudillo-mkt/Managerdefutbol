@@ -1,3 +1,21 @@
+# V9.25 · Capitán y segundo capitán
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.24.
+
+## Cambios principales
+
+- En **Primer equipo → Vestuario** se pueden designar un capitán y un 2.º capitán permanentes.
+- El capitán designado es la opción automática cuando integra el once titular; si no juega, la prioridad pasa al 2.º capitán.
+- El mánager puede elegir un capitán excepcional para un partido. La elección no modifica la jerarquía permanente, pero puede reducir la confianza del jugador omitido y de los referentes.
+- La capitanía continúa expresándose en porcentaje y conserva los bonus de las cartas de porcentaje.
+- La formación se ralentizó para requerir aproximadamente entre una y tres temporadas: hasta 20 años, 96 partidos; 21–23, 84; 24–27, 60; 28–31, 42; y desde 32 años, 34 partidos como referencia.
+- Los valores exactos dependen del máximo y de la capacidad de aprendizaje del jugador.
+- Las partidas anteriores migran el capitán existente como capitán designado y eligen automáticamente un 2.º capitán válido.
+
+El incremental se aplica sobre V9.24.
+
+---
+
 # V9.24 · Ajuste de instrucciones del simulador vivo
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.23.

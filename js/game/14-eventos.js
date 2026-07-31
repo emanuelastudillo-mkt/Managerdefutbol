@@ -229,7 +229,7 @@ function lockerRoomTacticIds(key){
   return new Set((game?.tactic?.[key] || []).map(Number).filter(Boolean));
 }
 function lockerRoomCaptainPlayer(eligible=[]){
-  const captainId = Number(game?.tactic?.captainId || 0);
+  const captainId = Number(typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy()?.captainId || 0 : game?.tactic?.captainId || 0);
   return eligible.find(player => Number(player.id) === captainId) || null;
 }
 function lockerRoomPickDistinct(source=[], count=1, seedText='', used=new Set()){
@@ -532,7 +532,23 @@ function lockerRoomApplyDecisionEffect(effect={}, context={}){
     const player = participantMap[String(effect.jugador || '')];
     const starters = new Set((game?.tactic?.starters || []).map(Number));
     if(player && starters.has(Number(player.id))){
-      game.tactic = { ...game.tactic, captainId:Number(player.id) };
+      const currentHierarchy = typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy() : { captainId:Number(game?.tactic?.captainId || 0), viceCaptainId:0 };
+      const preferredViceId = Number(currentHierarchy.captainId || 0) !== Number(player.id)
+        ? Number(currentHierarchy.captainId || 0)
+        : Number(currentHierarchy.viceCaptainId || 0);
+      const preferredVice = typeof playerById === 'function' ? playerById(preferredViceId) : null;
+      const fallbackVice = (typeof playersByClub === 'function' ? playersByClub(game.selectedClubId) : [])
+        .filter(candidate => candidate && Number(candidate.id) !== Number(player.id))
+        .sort((a,b) => {
+          const aCaptaincy = typeof captaincyValue === 'function' ? Number(captaincyValue(a.id) || 0) : 0;
+          const bCaptaincy = typeof captaincyValue === 'function' ? Number(captaincyValue(b.id) || 0) : 0;
+          return bCaptaincy - aCaptaincy || Number(b.age || 0) - Number(a.age || 0) || Number(a.id) - Number(b.id);
+        })[0];
+      const nextVice = preferredVice && Number(preferredVice.clubId || 0) === Number(game.selectedClubId || 0) && Number(preferredVice.id) !== Number(player.id)
+        ? Number(preferredVice.id)
+        : Number(fallbackVice?.id || 0);
+      if(typeof managerDressingRoom?.setLeadership === 'function' && nextVice) managerDressingRoom.setLeadership(Number(player.id), nextVice, { save:false, source:'event' });
+      game.tactic = typeof ensureTacticCaptain === 'function' ? ensureTacticCaptain({ ...game.tactic, captainId:Number(player.id), captainSelectionMode:'automatic' }, game.selectedClubId) : { ...game.tactic, captainId:Number(player.id) };
       return { type, playerId:Number(player.id) };
     }
     return { type, skipped:true };

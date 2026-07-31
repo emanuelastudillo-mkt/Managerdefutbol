@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.24',
+  version: 'V9.25',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -453,8 +453,13 @@ window.GAME_CONFIG = {
         rotacionTresPartidosSinJugar: -1,
         capitanElegido: 1,
         nuevoCapitan: 2,
+        nuevoSegundoCapitan: 1,
         exCapitanSinJustificacion: -4,
-        referentesPorCambioCapitan: -1
+        exSegundoCapitanSinJustificacion: -2,
+        capitanDesignadoOmitido: -4,
+        segundoCapitanOmitido: -2,
+        referentesPorCambioCapitan: -1,
+        referentesPorCapitanExcepcional: -1
       },
       renovaciones: {
         predispuestoDesde: 70,
@@ -608,7 +613,15 @@ window.GAME_CONFIG = {
   },
   capitania: {
     activo: true,
-    partidosObjetivoAprox: 10,
+    // Formación lenta: entre una y tres temporadas según la edad del jugador.
+    partidosObjetivoAprox: 60,
+    formacionPorEdad: {
+      hasta20: 96,
+      de21a23: 84,
+      de24a27: 60,
+      de28a31: 42,
+      desde32: 34
+    },
     maximoPorcentaje: 99,
     // Sólo usa habilidades que ya existen en todos los jugadores de la base.
     pesosMaximo: {

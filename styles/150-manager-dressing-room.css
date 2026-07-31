@@ -108,3 +108,59 @@
   .dressing-groups-grid{grid-template-columns:1fr;}
   .dressing-main-summary{min-height:106px;}
 }
+
+
+/* V9.25 · Jerarquía de capitán y segundo capitán */
+.dressing-leadership-card{
+  margin-bottom:14px;
+  display:grid;
+  gap:14px;
+}
+.dressing-leadership-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.dressing-leadership-head h3,
+.dressing-leadership-head p{margin:0;}
+.dressing-leadership-head p{margin-top:5px;color:var(--muted);max-width:820px;}
+.dressing-leadership-selectors{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.dressing-leadership-selectors label{display:grid;gap:6px;}
+.dressing-leadership-selectors label>span{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.dressing-leadership-selectors select{width:100%;}
+.dressing-leadership-current{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.dressing-leadership-current>div{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel-2);
+  display:grid;
+  gap:4px;
+}
+.dressing-leadership-current span{color:var(--muted);font-size:.82rem;}
+.dressing-leadership-card .primary{justify-self:start;}
+.tactic-captain-exception{
+  display:grid;
+  gap:3px;
+  padding:10px 12px;
+  margin:10px 0;
+  border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--warn) 10%,transparent);
+}
+.tactic-captain-exception span{color:var(--muted);font-size:.82rem;}
+.tactic-captain-development{margin:8px 0 0;}
+@media (max-width:760px){
+  .dressing-leadership-head{display:grid;}
+  .dressing-leadership-selectors,
+  .dressing-leadership-current{grid-template-columns:1fr;}
+}

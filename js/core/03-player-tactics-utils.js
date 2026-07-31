@@ -811,12 +811,21 @@ function captaincyLearningScore(p){
     + baseSkill(p,'trabajoEquipo') * teamworkWeight
   ) / total), 1, 99);
 }
+function captaincyTargetMatchesForPlayer(p){
+  const age = Math.max(16, Math.round(Number(p?.age || 18)));
+  if(age <= 20) return Math.max(1, Math.round(configNumber('capitania.formacionPorEdad.hasta20', 96, 20, 150)));
+  if(age <= 23) return Math.max(1, Math.round(configNumber('capitania.formacionPorEdad.de21a23', 84, 20, 150)));
+  if(age <= 27) return Math.max(1, Math.round(configNumber('capitania.formacionPorEdad.de24a27', 60, 20, 150)));
+  if(age <= 31) return Math.max(1, Math.round(configNumber('capitania.formacionPorEdad.de28a31', 42, 20, 150)));
+  return Math.max(1, Math.round(configNumber('capitania.formacionPorEdad.desde32', 34, 20, 150)));
+}
 function captaincyProgressGain(p){
   const maximum = captaincyMaximum(p);
   if(!maximum) return 0;
   const learning = captaincyLearningScore(p);
   const factor = CAPTAINCY_LEARNING_FACTOR_MIN + ((learning - 1) / 98) * (CAPTAINCY_LEARNING_FACTOR_MAX - CAPTAINCY_LEARNING_FACTOR_MIN);
-  return Math.max(1, Math.ceil((maximum / CAPTAINCY_TARGET_MATCHES) * factor));
+  const targetMatches = captaincyTargetMatchesForPlayer(p) || CAPTAINCY_TARGET_MATCHES;
+  return Math.max(0.10, Math.round(((maximum / targetMatches) * factor) * 100) / 100);
 }
 function normalizeCaptaincyProgressState(source={}){
   const src = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
@@ -832,7 +841,7 @@ function normalizeCaptaincyProgressState(source={}){
     clean[playerId] = {
       playerId,
       clubId,
-      percent:clamp(Math.round(Number(entry.percent || entry.value || 0)), 0, CAPTAINCY_MAX_PERCENT),
+      percent:clamp(Math.round(Number(entry.percent || entry.value || 0) * 100) / 100, 0, CAPTAINCY_MAX_PERCENT),
       matches:Math.max(0, Math.round(Number(entry.matches || 0))),
       updatedSeason:Math.max(1, Math.round(Number(entry.updatedSeason || game?.seasonNumber || 1))),
       updatedAt:String(entry.updatedAt || '')
@@ -876,7 +885,7 @@ function initializeCaptaincyExperienceForNewClub(clubId=game?.selectedClubId, op
       playerId:Number(player.id),
       clubId:Number(clubId),
       percent:seededPercent,
-      matches:Math.max(1, Math.round((seededPercent / Math.max(1, maximum)) * CAPTAINCY_TARGET_MATCHES)),
+      matches:Math.max(1, Math.round((seededPercent / Math.max(1, maximum)) * captaincyTargetMatchesForPlayer(player))),
       updatedSeason:Number(game.seasonNumber || 1),
       updatedAt:String(game.currentDate || '')
     };
@@ -924,20 +933,49 @@ function captaincyMatches(playerId){
 }
 function bestCaptainForStarterIds(ids=[]){
   const candidates = (ids || []).map(Number).filter(Boolean).map(playerById).filter(Boolean);
-  return candidates.sort((a,b) => captaincyMaximum(b) - captaincyMaximum(a) || baseSkill(b,'liderazgo') - baseSkill(a,'liderazgo') || baseSkill(b,'serenidad') - baseSkill(a,'serenidad') || visibleOverall(b) - visibleOverall(a) || Number(a.id)-Number(b.id))[0] || null;
+  return candidates.sort((a,b) => captaincyValue(b.id) - captaincyValue(a.id) || captaincyMaximum(b) - captaincyMaximum(a) || baseSkill(b,'liderazgo') - baseSkill(a,'liderazgo') || baseSkill(b,'serenidad') - baseSkill(a,'serenidad') || visibleOverall(b) - visibleOverall(a) || Number(a.id)-Number(b.id))[0] || null;
+}
+function designatedCaptainHierarchy(clubId=game?.selectedClubId){
+  const cleanClubId = Number(clubId || 0);
+  const source = typeof window !== 'undefined' && window.managerDressingRoom && typeof window.managerDressingRoom.hierarchy === 'function'
+    ? window.managerDressingRoom.hierarchy(cleanClubId)
+    : null;
+  const captain = Number(source?.captainId || 0);
+  const viceCaptain = Number(source?.viceCaptainId || 0);
+  return { captainId:captain, viceCaptainId:viceCaptain };
+}
+function preferredCaptainForStarterIds(ids=[], clubId=game?.selectedClubId){
+  const starters = (ids || []).map(Number).filter(Boolean);
+  const starterSet = new Set(starters);
+  const hierarchy = designatedCaptainHierarchy(clubId);
+  const valid = id => {
+    const player = playerById(id);
+    return Boolean(id && starterSet.has(Number(id)) && player && Number(player.clubId || 0) === Number(clubId || 0));
+  };
+  if(valid(hierarchy.captainId)) return playerById(hierarchy.captainId);
+  if(valid(hierarchy.viceCaptainId)) return playerById(hierarchy.viceCaptainId);
+  return bestCaptainForStarterIds(starters);
+}
+function normalizeCaptainSelectionMode(value){
+  return String(value || '').toLowerCase() === 'manual' ? 'manual' : 'automatic';
 }
 function normalizedCaptainIdForTactic(clubId, tactic){
   if(!CAPTAINCY_ENABLED) return 0;
   const starters = (tactic?.starters || []).map(Number).filter(Boolean);
   const starterSet = new Set(starters);
   const selected = Number(tactic?.captainId || 0);
-  const player = playerById(selected);
-  if(selected && starterSet.has(selected) && player && Number(player.clubId || 0) === Number(clubId || 0)) return selected;
-  return Number(bestCaptainForStarterIds(starters)?.id || 0);
+  const selectedPlayer = playerById(selected);
+  const selectedIsValid = Boolean(selected && starterSet.has(selected) && selectedPlayer && Number(selectedPlayer.clubId || 0) === Number(clubId || 0));
+  const mode = normalizeCaptainSelectionMode(tactic?.captainSelectionMode);
+  if(mode === 'manual' && selectedIsValid) return selected;
+  const preferred = preferredCaptainForStarterIds(starters, clubId);
+  if(preferred) return Number(preferred.id || 0);
+  return selectedIsValid ? selected : Number(bestCaptainForStarterIds(starters)?.id || 0);
 }
 function ensureTacticCaptain(tactic, clubId=game?.selectedClubId){
   const clean = tactic && typeof tactic === 'object' ? tactic : {};
-  return { ...clean, captainId:normalizedCaptainIdForTactic(clubId, clean) };
+  const captainSelectionMode = normalizeCaptainSelectionMode(clean.captainSelectionMode);
+  return { ...clean, captainSelectionMode, captainId:normalizedCaptainIdForTactic(clubId, { ...clean, captainSelectionMode }) };
 }
 function captaincyEffectForPercent(percent){
   const value = clamp(Math.round(Number(percent || 0)), 0, CAPTAINCY_MAX_PERCENT);
@@ -976,14 +1014,16 @@ function applyCaptaincyAfterMatch(match){
   if(!captain || Number(captain.clubId || 0) !== ownClubId || !starters.includes(captainId)) return null;
   const entry = captaincyEntry(captainId, true);
   const maximum = captaincyMaximum(captain);
-  const before = clamp(Math.round(Number(entry.percent || 0)), 0, maximum);
-  const baseGain = before >= maximum ? 0 : captaincyProgressGain(captain);
+  const beforeRaw = clamp(Number(entry.percent || 0), 0, maximum);
+  const before = Math.round(beforeRaw);
+  const baseGain = beforeRaw >= maximum ? 0 : captaincyProgressGain(captain);
   const captainSupportBonus = typeof specialActiveBonus === 'function'
     ? Math.max(0, Math.round(Number(specialActiveBonus('apoyo_capitan') || 0)))
     : 0;
-  const gain = before >= maximum ? 0 : Math.min(baseGain + captainSupportBonus, maximum - before);
-  const after = clamp(before + gain, 0, maximum);
-  entry.percent = after;
+  const gain = beforeRaw >= maximum ? 0 : Math.min(baseGain + captainSupportBonus, maximum - beforeRaw);
+  const afterRaw = clamp(Math.round((beforeRaw + gain) * 100) / 100, 0, maximum);
+  const after = Math.round(afterRaw);
+  entry.percent = afterRaw;
   entry.matches = Math.max(0, Math.round(Number(entry.matches || 0))) + 1;
   entry.updatedSeason = Number(game.seasonNumber || 1);
   entry.updatedAt = new Date().toISOString();
@@ -1005,9 +1045,12 @@ function applyCaptaincyAfterMatch(match){
     playerName:String(captain.name || ''),
     before,
     after,
+    beforeRaw,
+    afterRaw,
     maximum,
-    gain,
-    baseGain,
+    gain:Math.round(gain * 100) / 100,
+    baseGain:Math.round(baseGain * 100) / 100,
+    targetMatches:captaincyTargetMatchesForPlayer(captain),
     captainSupportBonus,
     matches:entry.matches,
     moral:effect.moral,

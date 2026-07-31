@@ -1028,11 +1028,13 @@ function tacticSectorSkillVisors(){
 }
 function captainSelectOptionsMarkup(){
   const selected = Number(game?.tactic?.captainId || 0);
+  const hierarchy = typeof designatedCaptainHierarchy === 'function' ? designatedCaptainHierarchy(game?.selectedClubId) : { captainId:0, viceCaptainId:0 };
   const starters = (game?.tactic?.starters || []).map(playerById).filter(Boolean);
   if(!starters.length) return '<option value="0">Sin titulares disponibles</option>';
   return starters.map(player => {
     const current = captaincyValue(player.id);
-    return `<option value="${player.id}" ${selected === Number(player.id) ? 'selected' : ''}>${escapeHtml(playerLastName(player.name))} · ${roleBadge(player.position)} · Media ${visibleOverall(player)} · Capitanía ${current}%</option>`;
+    const role = Number(player.id) === Number(hierarchy.captainId) ? ' · Capitán designado' : Number(player.id) === Number(hierarchy.viceCaptainId) ? ' · 2.º capitán' : '';
+    return `<option value="${player.id}" ${selected === Number(player.id) ? 'selected' : ''}>${escapeHtml(playerLastName(player.name))} · ${roleBadge(player.position)} · Media ${visibleOverall(player)} · Capitanía ${current}%${role}</option>`;
   }).join('');
 }
 function tacticPlayerStatusIconsMarkup(player){
@@ -1066,9 +1068,13 @@ function tacticCaptainCardMarkup(){
   const current = captaincyValue(captain.id);
   const matches = captaincyMatches(captain.id);
   const effect = captaincyEffectForPercent(current);
+  const hierarchy = typeof designatedCaptainHierarchy === 'function' ? designatedCaptainHierarchy(game?.selectedClubId) : { captainId:0, viceCaptainId:0 };
+  const expected = typeof preferredCaptainForStarterIds === 'function' ? preferredCaptainForStarterIds(game?.tactic?.starters || [], game?.selectedClubId) : null;
+  const exceptional = Boolean(expected && Number(expected.id) !== captainId);
+  const targetMatches = typeof captaincyTargetMatchesForPlayer === 'function' ? captaincyTargetMatchesForPlayer(captain) : 60;
   const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value));
   return `<div class="card tactic-captain-card tactic-grid-card">
-    <div class="tactic-captain-title"><div><h3>Capitán</h3><p class="muted small">El efecto se aplica al plantel después de cada partido.</p></div><span class="pill">${matches} PJ como capitán</span></div>
+    <div class="tactic-captain-title"><div><h3>Capitán del partido</h3><p class="muted small">El capitán y el 2.º capitán del vestuario tienen prioridad cuando son titulares.</p></div><span class="pill">${matches} PJ como capitán</span></div>
     <label class="tactic-captain-select-label" for="captainSelect">Jugador designado</label>
     <select id="captainSelect" class="tactic-captain-select">${captainSelectOptionsMarkup()}</select>
     <div class="tactic-captain-profile">
@@ -1076,6 +1082,8 @@ function tacticCaptainCardMarkup(){
       <div class="tactic-captain-identity"><strong>${tacticPlayerNameWithStatus(captain, true)}</strong><span>${roleBadge(captain.position)} · Media ${visibleOverall(captain)}</span></div>
       <div class="tactic-captain-performance">${captaincyCircleMarkup(current)}</div>
     </div>
+    ${exceptional ? `<div class="tactic-captain-exception"><strong>Designación excepcional</strong><span>${escapeHtml(expected?.name || 'El capitán designado')} tenía prioridad. Mantener otra elección puede generar tensión en el vestuario.</span></div>` : ''}
+    <p class="muted small tactic-captain-development">Formación estimada: ${targetMatches} partidos como capitán para acercarse a su máximo actual. Los mayores de 28 años progresan más rápido.</p>
     <div class="tactic-captain-metrics">
       <div><span>Forma</span>${conditionBar(captain.id)}</div>
       <div><span>Moral</span>${moraleBar(captain.id)}</div>
@@ -1312,7 +1320,9 @@ function renderTactics(){
   });
   $('captainSelect')?.addEventListener('change', event => {
     const captainId = Number(event.target.value || 0);
-    game.tactic = ensureTacticCaptain({ ...game.tactic, captainId }, game.selectedClubId);
+    const preferredId = Number(typeof preferredCaptainForStarterIds === 'function' ? preferredCaptainForStarterIds(game?.tactic?.starters || [], game.selectedClubId)?.id || 0 : 0);
+    const captainSelectionMode = captainId && captainId !== preferredId ? 'manual' : 'automatic';
+    game.tactic = ensureTacticCaptain({ ...game.tactic, captainId, captainSelectionMode }, game.selectedClubId);
     saveLocal(true);
     renderTactics();
   });
@@ -1383,6 +1393,7 @@ function saveTacticFromScreen(){
     layoutMode:typeof normalizeTacticLayoutMode === 'function' ? normalizeTacticLayoutMode(game.tactic.layoutMode) : 'preset',
     customSlots:typeof normalizeCustomTacticSlots === 'function' ? normalizeCustomTacticSlots(game.tactic.customSlots, game.tactic) : [],
     captainId:Number($('captainSelect')?.value || game.tactic.captainId || 0),
+    captainSelectionMode:typeof normalizeCaptainSelectionMode === 'function' ? normalizeCaptainSelectionMode(game.tactic.captainSelectionMode) : 'automatic',
     starters:game.tactic.starters.slice(0,11),
     bench:game.tactic.bench.slice(0,10),
     autoSubs,

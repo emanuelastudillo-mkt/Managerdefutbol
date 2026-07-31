@@ -364,7 +364,8 @@ function managerHiddenObjectiveEvaluation(record=ensureManagerHiddenObjectiveSea
   return { record, objectives, completed, failed, secondaryReduction, idolReduction, reduction };
 }
 function managerHiddenObjectiveCaptainName(){
-  const captain = typeof playerById === 'function' ? playerById(Number(game?.tactic?.captainId || 0)) : null;
+  const hierarchyCaptainId = Number(typeof managerDressingRoom?.hierarchy === 'function' ? managerDressingRoom.hierarchy()?.captainId || 0 : game?.tactic?.captainId || 0);
+  const captain = typeof playerById === 'function' ? playerById(hierarchyCaptainId) : null;
   if(captain?.name) return captain.name;
   const players = typeof playersByClub === 'function' ? playersByClub(game?.selectedClubId) : [];
   const fallback = players.slice().sort((a,b)=>Number(b.age || 0)-Number(a.age || 0) || Number(b.overall || 0)-Number(a.overall || 0))[0];

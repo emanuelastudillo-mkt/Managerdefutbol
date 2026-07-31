@@ -1656,15 +1656,23 @@ function competitionPlayerRankingAverage(stat){
   const ratingTotal = Math.max(0, Number(stat?.ratingTotal || 0));
   return ratedMatches > 0 ? ratingTotal / ratedMatches : null;
 }
-function competitionPlayerRankingEntries(){
+function competitionPlayerRankingScopeStats(scope=competitionPlayerRankingScope){
+  const career = String(scope || 'season') === 'career';
+  const source = career ? game?.playerCareerStats : game?.playerStats;
+  return source && typeof source === 'object' && !Array.isArray(source) ? source : {};
+}
+function competitionPlayerRankingScopeLabel(scope=competitionPlayerRankingScope){
+  return String(scope || 'season') === 'career' ? 'Toda la carrera' : 'Temporada actual';
+}
+function competitionPlayerRankingEntries(scope=competitionPlayerRankingScope){
   if(!game || !seed) return [];
-  const statsByPlayer = game.playerStats && typeof game.playerStats === 'object' ? game.playerStats : {};
+  const statsByPlayer = competitionPlayerRankingScopeStats(scope);
   return (seed.players || []).map(player => {
     const playerId = Number(player?.id || 0);
     const clubId = Number(player?.clubId || 0);
     const stat = statsByPlayer[playerId] || null;
     const played = Math.max(0, Math.round(Number(stat?.played || 0)));
-    if(!playerId || !clubId || played <= 0 || player?.freeAgent || player?.youthFreeAgent) return null;
+    if(!playerId || !clubId || played <= 0 || player?.freeAgent || player?.youthFreeAgent || player?.retired || player?.sold) return null;
     return {
       playerId,
       name:String(player?.name || 'Jugador'),
@@ -1705,10 +1713,19 @@ function competitionPlayerRankingPositionMarkup(position){
   const tone = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
   return `<span class="competition-player-rank-number ${tone}">${rank}</span>`;
 }
+function competitionPlayerRankingScopeMarkup(){
+  const current = String(competitionPlayerRankingScope || 'season') === 'career' ? 'career' : 'season';
+  return `<div class="competition-player-ranking-scope" role="group" aria-label="Período del ranking">
+    <button type="button" data-player-ranking-scope="season" class="${current === 'season' ? 'primary' : 'ghost'}" aria-pressed="${current === 'season'}">Temporada</button>
+    <button type="button" data-player-ranking-scope="career" class="${current === 'career' ? 'primary' : 'ghost'}" aria-pressed="${current === 'career'}">Toda la carrera</button>
+  </div>`;
+}
 function renderCompetitionPlayerRanking(){
   const allowedSorts = new Set(['rating_desc','played_desc','goals_desc','assists_desc','name_asc','club_asc']);
   if(!allowedSorts.has(String(competitionPlayerRankingSort || ''))) competitionPlayerRankingSort = 'rating_desc';
-  const allEntries = competitionPlayerRankingEntries();
+  if(!['season','career'].includes(String(competitionPlayerRankingScope || ''))) competitionPlayerRankingScope = 'season';
+  const scopeLabel = competitionPlayerRankingScopeLabel(competitionPlayerRankingScope);
+  const allEntries = competitionPlayerRankingEntries(competitionPlayerRankingScope);
   const entries = allEntries.slice().sort(competitionPlayerRankingSortComparator(competitionPlayerRankingSort)).slice(0,100);
   const rows = entries.map((entry,index) => {
     const own = Number(entry.clubId) === Number(game?.selectedClubId || 0);
@@ -1722,9 +1739,15 @@ function renderCompetitionPlayerRanking(){
       <td class="competition-player-score"><strong>${competitionPlayerRankingScoreLabel(entry)}</strong><span>${entry.ratedMatches} partido(s) puntuado(s)</span></td>
     </tr>`;
   }).join('');
+  const description = competitionPlayerRankingScope === 'career'
+    ? 'Top 100 acumulado de toda la carrera de los jugadores activos. El puntaje general corresponde al promedio de todas sus calificaciones oficiales.'
+    : 'Top 100 de la temporada actual. El puntaje general corresponde al promedio de las calificaciones obtenidas en los partidos disputados.';
+  const emptyLabel = competitionPlayerRankingScope === 'career'
+    ? 'Todavía no hay jugadores activos con partidos registrados en su carrera.'
+    : 'Todavía no hay jugadores con partidos registrados en esta temporada.';
   view.innerHTML = `
     <div class="row section-title competition-player-ranking-title">
-      <div><h2>Ranking de jugadores</h2><p class="tagline">Top 100 de la temporada actual. El puntaje general corresponde al promedio de las calificaciones obtenidas en los partidos disputados.</p></div>
+      <div><h2>Ranking de jugadores</h2><p class="tagline">${description}</p></div>
       <div class="row filters-row competition-player-ranking-controls">
         ${competitionsNavMarkup('player-ranking')}
         <label class="competition-player-ranking-sort"><span>Ordenar</span><select id="competitionPlayerRankingSort">
@@ -1738,14 +1761,27 @@ function renderCompetitionPlayerRanking(){
       </div>
     </div>
     <div class="card competition-player-ranking-card">
-      <div class="row competition-player-ranking-summary"><h3>Top 100</h3><span class="pill">${entries.length} de ${allEntries.length} jugadores con partidos</span></div>
-      <div class="table-wrap"><table class="competition-player-ranking-table"><thead><tr><th>#</th><th>Nombre</th><th>Club actual</th><th>PJ</th><th>Goles</th><th>Asistencias</th><th>Puntaje general</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="muted">Todavía no hay jugadores con partidos registrados en esta temporada.</td></tr>'}</tbody></table></div>
+      <div class="row competition-player-ranking-summary">
+        <div><h3>Top 100</h3><span class="small muted">${scopeLabel}</span></div>
+        ${competitionPlayerRankingScopeMarkup()}
+        <span class="pill">${entries.length} de ${allEntries.length} jugadores con partidos</span>
+      </div>
+      <div class="table-wrap"><table class="competition-player-ranking-table"><thead><tr><th>#</th><th>Nombre</th><th>Club actual</th><th>PJ</th><th>Goles</th><th>Asistencias</th><th>Puntaje general</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">${emptyLabel}</td></tr>`}</tbody></table></div>
     </div>`;
   bindCompetitionsNav();
   $('competitionPlayerRankingSort')?.addEventListener('change', event => {
     competitionPlayerRankingSort = event.target.value;
     selectedCompetitionView = 'player-ranking';
     renderCompetitionPlayerRanking();
+  });
+  document.querySelectorAll('[data-player-ranking-scope]').forEach(button => {
+    button.addEventListener('click', () => {
+      const nextScope = String(button.dataset.playerRankingScope || 'season');
+      if(!['season','career'].includes(nextScope) || nextScope === competitionPlayerRankingScope) return;
+      competitionPlayerRankingScope = nextScope;
+      selectedCompetitionView = 'player-ranking';
+      renderCompetitionPlayerRanking();
+    });
   });
 }
 

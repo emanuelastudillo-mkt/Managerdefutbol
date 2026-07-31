@@ -1,4 +1,4 @@
-# V9.30 · Ser jugador compacto y mercado dinámico
+# V9.31 · Ser jugador compacto y mercado dinámico
 
 Base: V9.29.
 

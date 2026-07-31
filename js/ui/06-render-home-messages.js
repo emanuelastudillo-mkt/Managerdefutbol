@@ -132,7 +132,7 @@ function renderAll(){
   // V9.13: las revisiones que no modifican la vista actual se ejecutan en la cola ociosa.
   // Esto evita recorrer planteles, contratos y competiciones en cada cambio de pestaña.
   if(activeTab === 'players') activeTab = 'market';
-  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, careerImprovements:renderCareerImprovements, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, philosophy:renderManagerPhilosophy, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial };
+  const renderers = { home:renderHome, messages:renderMessages, market:renderMarket, academy:renderAcademy, careerImprovements:renderCareerImprovements, firstTeam:renderFirstTeam, squad:renderSquad, tactics:renderTactics, training:renderTraining, stadium:renderStadium, employees:renderEmployees, scouting:renderScoutingCenter, fixture:renderFixture, clubWorldCup:renderClubWorldCup, standings:renderStandings, stats:renderStats, mystats:renderManagerStats, philosophy:renderManagerPhilosophy, careerJobs:renderCareerJobs, finance:renderFinances, ranking:renderRankingOnline, challenges:renderOnlineChallenges, special:renderSpecial, playerCareer:renderPlayerCareer };
   if(game.gameOver?.active){
     if(isManagerWithoutClubBlockedTab(activeTab)) activeTab = 'home';
     if(typeof refreshManagerWithoutClubTabState === 'function') refreshManagerWithoutClubTabState();

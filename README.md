@@ -1,16 +1,12 @@
-# V9.35 · Ser jugador: carreras extensas y mercado alternativo
+# V9.36 · Ser jugador: renovaciones, decadencia y nuevos eventos
 
-Base: V9.34.
+Base: V9.35.
 
-Esta versión recalibra la duración de las carreras, las lesiones, los registros goleadores, las cláusulas y el mercado de pases del minijuego «Ser jugador».
-
-## Cambios principales
-
-- Carreras de 500 a 1.200 partidos.
-- Entre 2 y 6 lesiones por carrera; hasta 10 en casos excepcionales.
-- Goleadores históricos capaces de acercarse a 1.000 goles.
-- Cláusulas al 10% de su valor anterior, sin reducir sueldos.
-- 80% de probabilidad de renovación del club actual después de una buena temporada.
-- Cuatro clubes iniciales mediante tarjetas con escudos.
-- Ofertas ocasionales de clubes pequeños para asegurar minutos y estadísticas a cambio de menor desarrollo.
-- El estado continúa aislado en `game.miniGames.playerCareer`.
+- Renovaciones juveniles mucho más frecuentes.
+- Una oportunidad de renovación post-22 en el 95% de las carreras.
+- Mercado más variado y apertura hacia clubes y ligas menores en el tramo final.
+- Deterioro obligatorio de Media desde los 32 años.
+- Nueva distribución exacta de techos máximos entre 76 y 99.
+- Eventos adicionales con riesgos deportivos, mediáticos y disciplinarios.
+- Suspensiones de una temporada por dopaje y pérdida asociada de Media.
+- El minijuego continúa aislado dentro de `game.miniGames.playerCareer`.

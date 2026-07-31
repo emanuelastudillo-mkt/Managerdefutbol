@@ -1,17 +1,16 @@
-# V9.34 · Ser jugador: eventos, curvas y ciclos de carrera
+# V9.35 · Ser jugador: carreras extensas y mercado alternativo
 
-Base: V9.33.
+Base: V9.34.
 
-Esta versión amplía el minijuego «Ser jugador» con eventos de carrera, curvas ocultas de progresión y ciclos de rendimiento más variables.
+Esta versión recalibra la duración de las carreras, las lesiones, los registros goleadores, las cláusulas y el mercado de pases del minijuego «Ser jugador».
 
 ## Cambios principales
 
-- Un evento con decisiones aparece antes de cada temporada.
-- Los efectos posibles y sus probabilidades se muestran antes de elegir.
-- Las decisiones pueden mejorar o reducir la Media, producir lesiones o afectar los minutos.
-- Se agregaron situaciones con leyendas, figuras mundiales, entrenadores, médicos y compañeros famosos.
-- Las curvas de desarrollo pueden ser rápidas, lentas, tardías, sostenidas, volátiles o con caída prematura.
-- Los malos cambios de club pueden generar estancamiento, pero una transferencia posterior puede iniciar una recuperación.
-- Los jugadores de 90+ Media producen estadísticas y premios propios de una estrella mundial.
-- Los jugadores de 95+ Media inciden fuertemente en títulos y distinciones.
-- El estado sigue aislado dentro de `game.miniGames.playerCareer`.
+- Carreras de 500 a 1.200 partidos.
+- Entre 2 y 6 lesiones por carrera; hasta 10 en casos excepcionales.
+- Goleadores históricos capaces de acercarse a 1.000 goles.
+- Cláusulas al 10% de su valor anterior, sin reducir sueldos.
+- 80% de probabilidad de renovación del club actual después de una buena temporada.
+- Cuatro clubes iniciales mediante tarjetas con escudos.
+- Ofertas ocasionales de clubes pequeños para asegurar minutos y estadísticas a cambio de menor desarrollo.
+- El estado continúa aislado en `game.miniGames.playerCareer`.

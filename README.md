@@ -1,3 +1,20 @@
+# V9.24 · Ajuste de instrucciones del simulador vivo
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.23.
+
+## Cambios principales
+
+- **Gol como sea** eleva el ataque un 36%, mantiene el mediocampo en +2% y reduce la defensa un 20%.
+- Con **Gol como sea**, los ataques y ocasiones propias aumentan un 26%; los ataques rivales mantienen +18% y sus ocasiones +14%.
+- **Todos a defender** recupera 1 punto de estado físico por cada 5 minutos consecutivos de uso.
+- **Bajar el ritmo** recupera 1 punto de estado físico por cada 3 minutos consecutivos de uso.
+- **Bajar el ritmo** reduce ataque y mediocampo un 10%, defensa un 3%, y disminuye el riesgo de lesión un 50%.
+- Los contadores de recuperación se reinician al cambiar de instrucción, evitando bonificaciones parciales acumuladas entre órdenes distintas.
+
+El incremental se aplica sobre V9.23.
+
+---
+
 # V9.23 · Ranking de jugadores por temporada y carrera
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.22.

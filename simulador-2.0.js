@@ -49,10 +49,10 @@
   ];
   const LIVE_MANAGER_INSTRUCTIONS = [
     { value:'none', label:'Sin instrucciones', desc:'Sin bonus ni penalización.' },
-    { value:'all_defense', label:'Todos a defender', desc:'Bono alto de defensa. Ataque propio casi anulado.' },
+    { value:'all_defense', label:'Todos a defender', desc:'Bono alto de defensa. Ataque propio casi anulado. Recupera 1 punto físico cada 5 minutos.' },
     { value:'hold_result', label:'Cuidar el resultado', desc:'Bono de posesión y control.' },
     { value:'counter', label:'Contraataque', desc:'Menos posesión y volumen, más peligro en llegadas claras.' },
-    { value:'lower_tempo', label:'Bajar el ritmo', desc:'Menos ataques y posesión. Reduce el riesgo de lesión.' },
+    { value:'lower_tempo', label:'Bajar el ritmo', desc:'Menos ataques y posesión. Recupera 1 punto físico cada 3 minutos y reduce 50% el riesgo de lesión.' },
     { value:'clean_play', label:'Jugar limpio', desc:'Reduce fuerte el riesgo de tarjetas y mejora la posesión.' },
     { value:'fight', label:'Luchar', desc:'Más intensidad y presión. Aumenta desgaste y roces.' },
     { value:'attack', label:'Ataque', desc:'Más ataques y ocasiones. Más exposición defensiva.' },
@@ -996,14 +996,14 @@
       style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.18, 0.45, 1.65);
       style.conversionMultiplier = simClamp((style.conversionMultiplier || 1) * 1.08, 0.40, 1.55);
     }else if(instruction === 'lower_tempo'){
-      copy.attack *= 0.92;
-      copy.midfield *= 0.95;
+      copy.attack *= 0.90;
+      copy.midfield *= 0.90;
       copy.defense *= 0.97;
       style.possessionAdd = simClamp((style.possessionAdd || 0) - 4, -18, 18);
       style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 0.78, 0.35, 1.55);
       style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 0.82, 0.35, 1.55);
       style.conversionMultiplier = simClamp((style.conversionMultiplier || 1) * 0.90, 0.35, 1.55);
-      style.injuryMultiplier = simClamp((style.injuryMultiplier || 1) * 0.72, 0.35, 2.20);
+      style.injuryMultiplier = simClamp((style.injuryMultiplier || 1) * 0.50, 0.25, 2.20);
     }else if(instruction === 'clean_play'){
       copy.midfield *= 1.02;
       copy.defense *= 0.98;
@@ -1026,11 +1026,11 @@
       style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.08, 0.55, 1.40);
       style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.06, 0.55, 1.40);
     }else if(instruction === 'goal_anyway'){
-      copy.attack *= 1.16;
+      copy.attack *= 1.36;
       copy.midfield *= 1.02;
-      copy.defense *= 0.86;
-      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.18, 0.45, 1.70);
-      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.18, 0.45, 1.70);
+      copy.defense *= 0.80;
+      style.attackMultiplier = simClamp((style.attackMultiplier || 1) * 1.26, 0.45, 1.90);
+      style.chanceMultiplier = simClamp((style.chanceMultiplier || 1) * 1.26, 0.45, 1.90);
       style.rivalAttackMultiplier = simClamp((style.rivalAttackMultiplier || 1) * 1.18, 0.55, 1.50);
       style.rivalChanceMultiplier = simClamp((style.rivalChanceMultiplier || 1) * 1.14, 0.55, 1.50);
       style.possessionAdd = simClamp((style.possessionAdd || 0) - 3, -18, 18);
@@ -1045,10 +1045,11 @@
     if(value === 'attack') return -1;
     if(value === 'fight') return -1;
     if(value === 'counter') return -1;
-    if(value === 'lower_tempo') return 1;
-    if(value === 'clean_play') return 0;
-    if(value === 'hold_result') return 0;
-    if(value === 'all_defense') return 1;
+    return 0;
+  }
+  function liveInstructionRecoveryInterval(value){
+    if(value === 'all_defense') return 5;
+    if(value === 'lower_tempo') return 3;
     return 0;
   }
   function ensureLiveTacticShape(tactic, clubId){
@@ -1741,12 +1742,36 @@
       botConditionRepair,
       instructionConditionDeltas:{},
       liveConditionDeltas:{},
+      liveInstructionRecoveryProgress:{},
       instructionLog:[],
       finished:false
     };
   }
   function addLiveInstructionCondition(session, clubId, instruction){
-    const delta = liveInstructionConditionDelta(instruction);
+    if(!session) return;
+    const normalized = liveNormalizeInstruction(instruction);
+    const clubKey = String(Number(clubId || 0));
+    session.liveInstructionRecoveryProgress = session.liveInstructionRecoveryProgress || {};
+    const previous = session.liveInstructionRecoveryProgress[clubKey] || { instruction:'none', minutes:0 };
+    const recoveryInterval = liveInstructionRecoveryInterval(normalized);
+    let recoveryDelta = 0;
+    let progressMinutes = 0;
+
+    if(recoveryInterval > 0){
+      progressMinutes = previous.instruction === normalized ? Number(previous.minutes || 0) : 0;
+      progressMinutes += 1;
+      while(progressMinutes >= recoveryInterval){
+        progressMinutes -= recoveryInterval;
+        recoveryDelta += 1;
+      }
+    }
+
+    session.liveInstructionRecoveryProgress[clubKey] = {
+      instruction:normalized,
+      minutes:recoveryInterval > 0 ? progressMinutes : 0
+    };
+
+    const delta = liveInstructionConditionDelta(normalized) + recoveryDelta;
     if(!delta) return;
     const tactic = liveTacticForClub(session, clubId);
     (tactic?.starters || []).map(Number).filter(Boolean).forEach(id => {

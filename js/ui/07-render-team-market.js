@@ -12,12 +12,20 @@ function firstTeamTabsMarkup(current){
   ];
   return `<div class="card first-team-tabs"><div class="subtabs">${tabs.map(([key,label])=>`<button class="${current===key?'active':''}" data-first-team-tab="${key}">${label}</button>`).join('')}</div></div>`;
 }
+let firstTeamRenderRequest = 0;
 function bindFirstTeamTabs(){
-  document.querySelectorAll('[data-first-team-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      firstTeamTab = btn.dataset.firstTeamTab || 'tactics';
-      renderFirstTeam();
-    });
+  if(!view || view.dataset.firstTeamTabsBound === '1') return;
+  view.dataset.firstTeamTabsBound = '1';
+  view.addEventListener('click', event => {
+    const btn = event.target.closest('[data-first-team-tab]');
+    if(!btn || !view.contains(btn)) return;
+    const nextTab = btn.dataset.firstTeamTab || 'tactics';
+    if(nextTab === firstTeamTab) return;
+    firstTeamTab = nextTab;
+    view.querySelectorAll('[data-first-team-tab]').forEach(item => item.classList.toggle('active', item === btn));
+    const request = ++firstTeamRenderRequest;
+    const run = () => { if(request === firstTeamRenderRequest && activeTab === 'firstTeam') renderFirstTeam(); };
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(run); else setTimeout(run, 0);
   });
 }
 function prependFirstTeamTabs(current){
@@ -1083,7 +1091,7 @@ function tacticCaptainCardMarkup(){
       <div class="tactic-captain-performance">${captaincyCircleMarkup(current)}</div>
     </div>
     ${exceptional ? `<div class="tactic-captain-exception"><strong>Designación excepcional</strong><span>${escapeHtml(expected?.name || 'El capitán designado')} tenía prioridad. Mantener otra elección puede generar tensión en el vestuario.</span></div>` : ''}
-    <p class="muted small tactic-captain-development">Formación estimada: ${targetMatches} partidos como capitán para acercarse a su máximo actual. Los mayores de 28 años progresan más rápido.</p>
+    <p class="muted small tactic-captain-development">Formación estimada: ${targetMatches} partidos como capitán para consolidar su experiencia. Los mayores de 28 años progresan más rápido.</p>
     <div class="tactic-captain-metrics">
       <div><span>Forma</span>${conditionBar(captain.id)}</div>
       <div><span>Moral</span>${moraleBar(captain.id)}</div>

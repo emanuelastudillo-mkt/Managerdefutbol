@@ -247,6 +247,7 @@
   function pcSortHeader(label,asc,desc){ return typeof compactSortButtons==='function'?compactSortButtons(label,[[asc,'Menor a mayor'],[desc,'Mayor a menor']],playerContractsSort,'data-player-contract-sort'):label; }
   function renderPlayerContracts(){
     ensureAllPlayerContracts();
+    if(typeof managerDressingRoomState === 'function') managerDressingRoomState();
     const squad=pcSortPlayers(pcPlayers(game.selectedClubId));
     const current=pcSeason();
     const expiring=squad.filter(p=>Number(p.contractEndSeason||0)<=current).length;

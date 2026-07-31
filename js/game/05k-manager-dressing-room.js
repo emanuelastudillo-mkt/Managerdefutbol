@@ -258,8 +258,7 @@
     return { code:'refusal', label:'No quiere renovar', factor:1 + Number(drConfig('renovaciones.aumentoRupturaPct', 15)) / 100, tone:'danger' };
   }
   function managerDressingRoomRenewalDisposition(playerId){
-    const stint = currentDressingRoom() || ensureDressingRoom();
-    const entry = stint?.playerTrust?.[Number(playerId)] || null;
+    const entry = drFastEntry(playerId);
     return drRenewalDisposition(entry?.value ?? 50, entry);
   }
   window.managerDressingRoomRenewalDisposition = managerDressingRoomRenewalDisposition;
@@ -282,9 +281,20 @@
     stint.updatedAt = drNow();
     return groupTrust;
   }
-  function drSyncRoster(stint){
+  function drRosterSyncSignature(stint, players=[]){
+    const stats = game?.playerStats || {};
+    const lineup = [...(game?.tactic?.starters || []), '|', ...(game?.tactic?.bench || [])].join(',');
+    const roster = (players || []).map(player => {
+      const stat = stats[player.id] || {};
+      return `${Number(player.id)}:${Number(player.age || 0)}:${Number(player.overall || 0)}:${Number(stat.played || 0)}:${Number(stat.starts || 0)}`;
+    }).join(';');
+    return `${drCurrentSeason()}:${drCurrentClubId()}:${String(game?.currentDate || '')}:${Number(game?.globalTurn || 0)}:${Number(stint?.captainId || 0)}:${Number(stint?.viceCaptainId || 0)}:${lineup}:${roster}`;
+  }
+  function drSyncRoster(stint, options={}){
     if(!stint) return null;
     const players = drPlayersByClub(stint.clubId);
+    const signature = drRosterSyncSignature(stint, players);
+    if(options.force !== true && stint.__runtimeRosterSyncSignature === signature) return stint;
     const hierarchy = drEnsureLeadershipHierarchy(stint, players);
     const referentIds = drDetermineReferents(players, stint);
     const referentSet = new Set(referentIds);
@@ -318,6 +328,8 @@
     stint.captainId = captainId;
     stint.viceCaptainId = viceCaptainId;
     drUpdateGroupSummary(stint);
+    try{ Object.defineProperty(stint, '__runtimeRosterSyncSignature', { value:drRosterSyncSignature(stint, players), writable:true, configurable:true, enumerable:false }); }
+    catch(_){ stint.__runtimeRosterSyncSignature = drRosterSyncSignature(stint, players); }
     return stint;
   }
   function drPreviousContinuationStint(clubId, season){
@@ -378,10 +390,24 @@
     if(options.save === true && typeof saveLocal === 'function') saveLocal(true);
     return stint;
   }
+  function drCurrentDressingRoomFast(){
+    if(!game?.managerDressingRoom || typeof game.managerDressingRoom !== 'object' || Number(game.managerDressingRoom.version || 0) !== DRESSING_ROOM_VERSION) return null;
+    return game.managerDressingRoom.stints?.[drStintKey(game)] || null;
+  }
   function currentDressingRoom(){
-    if(!game?.managerDressingRoom || typeof game.managerDressingRoom !== 'object' || Number(game.managerDressingRoom.version || 0) !== DRESSING_ROOM_VERSION) return ensureDressingRoom();
-    const key = drStintKey(game);
-    return game.managerDressingRoom.stints?.[key] ? drSyncRoster(game.managerDressingRoom.stints[key]) : ensureDressingRoom();
+    const existing = drCurrentDressingRoomFast();
+    return existing ? drSyncRoster(existing) : ensureDressingRoom();
+  }
+  function drFastEntry(playerId){
+    const id = Number(playerId || 0);
+    if(!id) return null;
+    let stint = drCurrentDressingRoomFast() || ensureDressingRoom();
+    let entry = stint?.playerTrust?.[id] || null;
+    if(!entry && drValidLeadershipPlayer(id, stint?.clubId || drCurrentClubId())){
+      stint = drSyncRoster(stint, { force:true });
+      entry = stint?.playerTrust?.[id] || null;
+    }
+    return entry;
   }
   function drEntry(playerId, create=true){
     const stint = currentDressingRoom();
@@ -622,7 +648,7 @@
     return drClamp(drRound(score), 0, 100);
   }
   window.managerDressingRoomLeadershipScore = managerDressingRoomLeadershipScore;
-  window.managerDressingRoomTrust = function(playerId){ return Number(drEntry(playerId, false)?.value || 0); };
+  window.managerDressingRoomTrust = function(playerId){ return Number(drFastEntry(playerId)?.value || 0); };
   window.managerDressingRoomState = function(){ return currentDressingRoom(); };
 
   function drTrustBar(value){
@@ -683,10 +709,9 @@
 
   function drLeadershipOptionMarkup(player, selectedId, excludedId=0){
     const current = typeof captaincyValue === 'function' ? Number(captaincyValue(player.id) || 0) : 0;
-    const maximum = typeof captaincyMaximum === 'function' ? Number(captaincyMaximum(player) || 0) : Number(player?.skills?.liderazgo || 0);
     const target = typeof captaincyTargetMatchesForPlayer === 'function' ? Number(captaincyTargetMatchesForPlayer(player) || 0) : 60;
     const disabled = Number(player.id) === Number(excludedId || 0) ? 'disabled' : '';
-    return `<option value="${Number(player.id)}" ${Number(player.id) === Number(selectedId) ? 'selected' : ''} ${disabled}>${escapeHtml(player.name || '')} · ${player.position || ''} · ${current}%/${maximum}% · ${target} PJ aprox.</option>`;
+    return `<option value="${Number(player.id)}" ${Number(player.id) === Number(selectedId) ? 'selected' : ''} ${disabled}>${escapeHtml(player.name || '')} · ${player.position || ''} · Capitanía ${current}% · ${target} PJ aprox.</option>`;
   }
   function drLeadershipCardMarkup(stint){
     const hierarchy = drEnsureLeadershipHierarchy(stint);
@@ -700,8 +725,8 @@
         <label><span>2.º capitán</span><select id="dressingViceCaptainSelect">${players.map(player => drLeadershipOptionMarkup(player, hierarchy.viceCaptainId, hierarchy.captainId)).join('')}</select></label>
       </div>
       <div class="dressing-leadership-current">
-        <div><strong>${escapeHtml(captain?.name || 'Sin capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(captain?.id) : 0}% · Máximo ${typeof captaincyMaximum === 'function' && captain ? captaincyMaximum(captain) : 0}%</span></div>
-        <div><strong>${escapeHtml(vice?.name || 'Sin 2.º capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(vice?.id) : 0}% · Máximo ${typeof captaincyMaximum === 'function' && vice ? captaincyMaximum(vice) : 0}%</span></div>
+        <div><strong>${escapeHtml(captain?.name || 'Sin capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(captain?.id) : 0}% · ${typeof captaincyMatches === 'function' ? captaincyMatches(captain?.id) : 0} PJ como capitán</span></div>
+        <div><strong>${escapeHtml(vice?.name || 'Sin 2.º capitán')}</strong><span>Capitanía ${typeof captaincyValue === 'function' ? captaincyValue(vice?.id) : 0}% · ${typeof captaincyMatches === 'function' ? captaincyMatches(vice?.id) : 0} PJ como capitán</span></div>
       </div>
       <button id="saveDressingLeadership" class="primary">Guardar jerarquía</button>
       <p class="muted small">El progreso requiere aproximadamente entre una y tres temporadas. Los jugadores de 28 años o más se forman más rápido.</p>
@@ -943,9 +968,12 @@
     version:DRESSING_ROOM_VERSION,
     ensure:ensureDressingRoom,
     current:currentDressingRoom,
-    trust:playerId => Number(drEntry(playerId, false)?.value || 0),
+    trust:playerId => Number(drFastEntry(playerId)?.value || 0),
     leadershipScore:managerDressingRoomLeadershipScore,
-    renewal:playerId => drRenewalDisposition(drEntry(playerId, false)?.value || 0, drEntry(playerId, false)),
+    renewal:playerId => {
+      const entry = drFastEntry(playerId);
+      return drRenewalDisposition(entry?.value || 0, entry);
+    },
     processMatch:processDressingRoomAfterMatch,
     changeTrust:(playerId, delta, reason='Relación con el mánager', options={}) => {
       const applied = drApplyTrustChange(playerId, delta, reason, options);
@@ -960,7 +988,10 @@
     refresh:() => drUpdateGroupSummary(currentDressingRoom()),
     hierarchy:(clubId=drCurrentClubId()) => {
       if(Number(clubId || 0) !== drCurrentClubId()) return { captainId:0, viceCaptainId:0 };
-      const stint = currentDressingRoom();
+      const stint = drCurrentDressingRoomFast() || ensureDressingRoom();
+      const captainId = Number(stint?.captainId || 0);
+      const viceCaptainId = Number(stint?.viceCaptainId || 0);
+      if(drValidLeadershipPlayer(captainId, clubId) && drValidLeadershipPlayer(viceCaptainId, clubId) && captainId !== viceCaptainId) return { captainId, viceCaptainId };
       return drEnsureLeadershipHierarchy(stint);
     },
     setLeadership:(captainId, viceCaptainId, options={}) => drSetLeadership(captainId, viceCaptainId, options)

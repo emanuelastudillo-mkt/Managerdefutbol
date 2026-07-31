@@ -1,3 +1,22 @@
+# V9.22 · Palmarés de jugadores
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.21.
+
+## Cambios principales
+
+- Se agregó **Palmarés de jugadores** dentro de Competiciones.
+- La tabla muestra los 100 futbolistas activos con más títulos oficiales acumulados en su carrera.
+- Se contabilizan por separado Ligas, Copas nacionales, Copas internacionales y Mundial de Clubes, además del total general.
+- Las Supercopas nacionales se incluyen dentro de Copas nacionales.
+- Los títulos se acreditan al plantel activo del club al momento de la consagración y se conservan aunque el jugador cambie de equipo o quede libre.
+- Al retirarse un futbolista, su palmarés y sus estadísticas se eliminan. Si reaparece como juvenil, comienza con cero títulos.
+- Las partidas existentes recuperan de forma conservadora los campeonatos ya registrados en la temporada actual; el historial anterior comienza a contabilizarse desde V9.22 para evitar atribuciones incorrectas.
+- La tabla puede ordenarse por total, cada categoría, nombre o club actual.
+
+El incremental se aplica sobre V9.21.
+
+---
+
 # V9.21 · Ranking de jugadores Top 100
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.20.

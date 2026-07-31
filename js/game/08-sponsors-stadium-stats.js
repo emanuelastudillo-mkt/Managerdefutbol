@@ -1400,6 +1400,7 @@ function competitionsNavMarkup(active='standings'){
     <button type="button" id="btnCompetitionStandings" class="${current === 'standings' ? 'primary' : 'ghost'}">Tabla de posiciones</button>
     <button type="button" id="btnCompetitionStats" class="${current === 'stats' ? 'primary' : 'ghost'}">Estadísticas</button>
     <button type="button" id="btnCompetitionPlayerRanking" class="${current === 'player-ranking' ? 'primary' : 'ghost'}">Ranking de jugadores</button>
+    <button type="button" id="btnCompetitionPlayerPalmares" class="${current === 'player-palmares' ? 'primary' : 'ghost'}">Palmarés de jugadores</button>
     <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
     <button type="button" id="btnCompetitionClubRanking" class="${current === 'club-ranking' ? 'primary' : 'ghost'}">Ranking FIFA</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
@@ -1409,6 +1410,7 @@ function bindCompetitionsNav(){
   $('btnCompetitionStandings')?.addEventListener('click', () => { selectedCompetitionView = 'standings'; renderStandings(); });
   $('btnCompetitionStats')?.addEventListener('click', () => { selectedCompetitionView = 'stats'; renderStandings(); });
   $('btnCompetitionPlayerRanking')?.addEventListener('click', () => { selectedCompetitionView = 'player-ranking'; renderStandings(); });
+  $('btnCompetitionPlayerPalmares')?.addEventListener('click', () => { selectedCompetitionView = 'player-palmares'; renderStandings(); });
   $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
   $('btnCompetitionClubRanking')?.addEventListener('click', () => { selectedCompetitionView = 'club-ranking'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
@@ -1510,6 +1512,7 @@ function renderStandings(){
   }
   if(String(selectedCompetitionView || 'standings') === 'champions'){ renderChampionsHistory(); return; }
   if(String(selectedCompetitionView || 'standings') === 'player-ranking'){ renderCompetitionPlayerRanking(); return; }
+  if(String(selectedCompetitionView || 'standings') === 'player-palmares'){ renderCompetitionPlayerPalmares(); return; }
   if(String(selectedCompetitionView || 'standings') === 'stats'){ renderStats(); return; }
   const divisions = seed.divisions || [{ id:'default', name:'Liga única' }];
   const managerDivision = typeof managerCurrentDivisionId === 'function' ? managerCurrentDivisionId() : (game?.selectedLeagueId || divisions[0]?.id || 'default');
@@ -1743,6 +1746,113 @@ function renderCompetitionPlayerRanking(){
     competitionPlayerRankingSort = event.target.value;
     selectedCompetitionView = 'player-ranking';
     renderCompetitionPlayerRanking();
+  });
+}
+
+
+function competitionPlayerPalmaresEntries(){
+  if(!game || !seed) return [];
+  game.playerPalmares = typeof normalizePlayerPalmaresState === 'function'
+    ? normalizePlayerPalmaresState(game.playerPalmares || {})
+    : (game.playerPalmares || { byPlayerId:{} });
+  const activePlayers = new Map((seed.players || [])
+    .filter(player => player && Number(player.id || 0) > 0 && !player.retired && !player.sold)
+    .map(player => [Number(player.id), player]));
+  return Object.values(game.playerPalmares.byPlayerId || {}).map(raw => {
+    const playerId = Number(raw?.playerId || 0);
+    const player = activePlayers.get(playerId);
+    if(!player) return null;
+    const record = typeof normalizePlayerPalmaresRecord === 'function' ? normalizePlayerPalmaresRecord(raw, playerId) : raw;
+    const total = Math.max(0, Math.round(Number(record?.total || 0)));
+    if(!record || total <= 0) return null;
+    const clubId = Math.max(0, Math.round(Number(player.clubId || 0)));
+    return {
+      playerId,
+      name:String(player.name || 'Jugador'),
+      clubId,
+      clubName:clubId > 0 ? clubName(clubId) : 'Libre',
+      leagues:Math.max(0, Math.round(Number(record.leagues || 0))),
+      nationalCups:Math.max(0, Math.round(Number(record.nationalCups || 0))),
+      internationalCups:Math.max(0, Math.round(Number(record.internationalCups || 0))),
+      clubWorldCups:Math.max(0, Math.round(Number(record.clubWorldCups || 0))),
+      total,
+      awards:Array.isArray(record.awards) ? record.awards.slice() : []
+    };
+  }).filter(Boolean);
+}
+function competitionPlayerPalmaresSortComparator(sortKey='total_desc'){
+  const byName = (a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' });
+  const byClub = (a,b) => String(a.clubName || '').localeCompare(String(b.clubName || ''), 'es', { sensitivity:'base' });
+  const byTotal = (a,b) => Number(b.total || 0) - Number(a.total || 0)
+    || Number(b.clubWorldCups || 0) - Number(a.clubWorldCups || 0)
+    || Number(b.internationalCups || 0) - Number(a.internationalCups || 0)
+    || Number(b.leagues || 0) - Number(a.leagues || 0)
+    || Number(b.nationalCups || 0) - Number(a.nationalCups || 0)
+    || byName(a,b);
+  const sorters = {
+    total_desc:byTotal,
+    leagues_desc:(a,b) => Number(b.leagues || 0) - Number(a.leagues || 0) || byTotal(a,b),
+    national_cups_desc:(a,b) => Number(b.nationalCups || 0) - Number(a.nationalCups || 0) || byTotal(a,b),
+    international_cups_desc:(a,b) => Number(b.internationalCups || 0) - Number(a.internationalCups || 0) || byTotal(a,b),
+    club_world_cups_desc:(a,b) => Number(b.clubWorldCups || 0) - Number(a.clubWorldCups || 0) || byTotal(a,b),
+    name_asc:(a,b) => byName(a,b) || byClub(a,b),
+    club_asc:(a,b) => byClub(a,b) || byName(a,b)
+  };
+  return sorters[String(sortKey || 'total_desc')] || byTotal;
+}
+function competitionPlayerPalmaresClubMarkup(entry){
+  return Number(entry?.clubId || 0) > 0 ? clubLink(entry.clubId) : '<span class="pill">Libre</span>';
+}
+function competitionPlayerPalmaresDetail(entry){
+  return (entry?.awards || []).slice().sort((a,b)=>Number(b.year || 0)-Number(a.year || 0) || String(a.competitionName || '').localeCompare(String(b.competitionName || ''), 'es', { sensitivity:'base' }))
+    .map(award => `${Number(award.year || award.season || 0)} · ${String(award.competitionName || award.competitionId || 'Título')}`)
+    .join('\n');
+}
+function renderCompetitionPlayerPalmares(){
+  const allowedSorts = new Set(['total_desc','leagues_desc','national_cups_desc','international_cups_desc','club_world_cups_desc','name_asc','club_asc']);
+  if(!allowedSorts.has(String(competitionPlayerPalmaresSort || ''))) competitionPlayerPalmaresSort = 'total_desc';
+  const allEntries = competitionPlayerPalmaresEntries();
+  const entries = allEntries.slice().sort(competitionPlayerPalmaresSortComparator(competitionPlayerPalmaresSort)).slice(0,100);
+  const rows = entries.map((entry,index) => {
+    const own = Number(entry.clubId || 0) === Number(game?.selectedClubId || 0);
+    const detail = competitionPlayerPalmaresDetail(entry);
+    return `<tr class="${own ? 'own-club-row competition-player-palmares-own' : ''}">
+      <td>${competitionPlayerRankingPositionMarkup(index + 1)}</td>
+      <td><button type="button" class="linklike" data-player-id="${entry.playerId}"><strong>${escapeHtml(entry.name)}</strong></button></td>
+      <td>${competitionPlayerPalmaresClubMarkup(entry)}</td>
+      <td class="competition-player-palmares-total"><strong title="${escapeHtml(detail)}">${entry.total}</strong></td>
+      <td>${entry.leagues}</td>
+      <td>${entry.nationalCups}</td>
+      <td>${entry.internationalCups}</td>
+      <td>${entry.clubWorldCups}</td>
+    </tr>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="row section-title competition-player-palmares-title">
+      <div><h2>Palmarés de jugadores</h2><p class="tagline">Los 100 futbolistas activos con más títulos oficiales acumulados durante su carrera.</p></div>
+      <div class="row filters-row competition-player-palmares-controls">
+        ${competitionsNavMarkup('player-palmares')}
+        <label class="competition-player-palmares-sort"><span>Ordenar</span><select id="competitionPlayerPalmaresSort">
+          <option value="total_desc" ${competitionPlayerPalmaresSort === 'total_desc' ? 'selected' : ''}>Total de títulos</option>
+          <option value="leagues_desc" ${competitionPlayerPalmaresSort === 'leagues_desc' ? 'selected' : ''}>Ligas</option>
+          <option value="national_cups_desc" ${competitionPlayerPalmaresSort === 'national_cups_desc' ? 'selected' : ''}>Copas nacionales</option>
+          <option value="international_cups_desc" ${competitionPlayerPalmaresSort === 'international_cups_desc' ? 'selected' : ''}>Copas internacionales</option>
+          <option value="club_world_cups_desc" ${competitionPlayerPalmaresSort === 'club_world_cups_desc' ? 'selected' : ''}>Mundial de Clubes</option>
+          <option value="name_asc" ${competitionPlayerPalmaresSort === 'name_asc' ? 'selected' : ''}>Nombre</option>
+          <option value="club_asc" ${competitionPlayerPalmaresSort === 'club_asc' ? 'selected' : ''}>Club actual</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="card competition-player-palmares-card">
+      <div class="row competition-player-palmares-summary"><h3>Jugadores con más títulos</h3><span class="pill">${entries.length} de ${allEntries.length} campeones activos</span></div>
+      <div class="table-wrap"><table class="competition-player-palmares-table"><thead><tr><th>#</th><th>Nombre</th><th>Club actual</th><th>Total</th><th>Ligas</th><th>Copas nacionales</th><th>Copas internacionales</th><th>Mundial de Clubes</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">Todavía no hay títulos registrados para jugadores activos. El palmarés se completa cuando finaliza cada competición.</td></tr>'}</tbody></table></div>
+      <p class="muted small competition-player-palmares-note">Los títulos se acreditan al plantel activo del club en el momento de la consagración. Al retirarse un jugador, su palmarés y sus estadísticas se eliminan; una futura reaparición juvenil comienza desde cero.</p>
+    </div>`;
+  bindCompetitionsNav();
+  $('competitionPlayerPalmaresSort')?.addEventListener('change', event => {
+    competitionPlayerPalmaresSort = event.target.value;
+    selectedCompetitionView = 'player-palmares';
+    renderCompetitionPlayerPalmares();
   });
 }
 

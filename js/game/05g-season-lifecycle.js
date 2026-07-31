@@ -373,7 +373,8 @@ function removePlayerReferencesFromState(playerId, targetGame=game, options={}){
     targetGame.playerWear,
     targetGame.playerMentalities,
     targetGame.captaincyProgress,
-    targetGame.playerImpactWindows
+    targetGame.playerImpactWindows,
+    targetGame.playerPalmares?.byPlayerId
   ].forEach(container => deleteKey(container));
   deleteKey(targetGame.playerStars?.byPlayerId);
   deleteKey(targetGame.playerBenchedStreak?.players);

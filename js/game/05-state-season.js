@@ -51,6 +51,176 @@ function normalizeCompetitionChampionsHistoryState(src){
   clean.sort((a,b)=>(Number(b.year || 0)-Number(a.year || 0)) || (Number(b.season || 0)-Number(a.season || 0)) || String(a.competitionName || '').localeCompare(String(b.competitionName || '')));
   return { entries:clean };
 }
+
+function normalizePlayerPalmaresAward(raw={}, fallbackKey=''){
+  const season = Math.max(1, Math.round(Number(raw.season || 1)) || 1);
+  const year = Math.round(Number(raw.year || 0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : season);
+  const type = String(raw.type || 'league');
+  const competitionId = String(raw.competitionId || raw.divisionId || '').trim();
+  const clubId = Math.max(0, Math.round(Number(raw.clubId || raw.championId || 0)));
+  const key = String(raw.key || fallbackKey || `player-title-${season}-${type}-${competitionId}-${clubId}`).trim();
+  const category = String(raw.category || playerPalmaresCategoryForCompetition(type, competitionId));
+  if(!key || !competitionId || !clubId || !['leagues','nationalCups','internationalCups','clubWorldCups'].includes(category)) return null;
+  return {
+    key,
+    season,
+    year,
+    type,
+    category,
+    competitionId,
+    competitionName:String(raw.competitionName || raw.divisionName || competitionId),
+    clubId,
+    clubName:String(raw.clubName || (typeof clubName === 'function' ? clubName(clubId) : `Club ${clubId}`)),
+    awardedAt:String(raw.awardedAt || raw.createdAt || '')
+  };
+}
+function playerPalmaresCategoryForCompetition(type='', competitionId=''){
+  const raw = `${String(type || '')} ${String(competitionId || '')}`.toLowerCase();
+  if(raw.includes('club_world_cup') || raw.includes('club-world-cup') || raw.includes('mundial de clubes')) return 'clubWorldCups';
+  if(raw.includes('champions') || raw.includes('libertadores') || raw.includes('international') || raw.includes('internacional') || raw.includes('continental')) return 'internationalCups';
+  if(raw.includes('national_cup') || raw.includes('national-cup') || raw.includes('national_supercup') || raw.includes('national-supercup') || raw.includes('copa nacional') || raw.includes('supercopa')) return 'nationalCups';
+  if(raw.includes('league') || raw.includes('liga')) return 'leagues';
+  return '';
+}
+function normalizePlayerPalmaresRecord(raw={}, playerId=0){
+  const cleanId = Math.max(0, Math.round(Number(raw.playerId || playerId || 0)));
+  if(!cleanId) return null;
+  const awards = [];
+  const seen = new Set();
+  (Array.isArray(raw.awards) ? raw.awards : []).forEach((award,index) => {
+    const clean = normalizePlayerPalmaresAward(award, `legacy-player-title-${cleanId}-${index + 1}`);
+    if(!clean || seen.has(clean.key)) return;
+    seen.add(clean.key);
+    awards.push(clean);
+  });
+  awards.sort((a,b)=>Number(a.season || 0)-Number(b.season || 0) || String(a.competitionName || '').localeCompare(String(b.competitionName || ''), 'es', { sensitivity:'base' }));
+  const counts = { leagues:0, nationalCups:0, internationalCups:0, clubWorldCups:0 };
+  awards.forEach(award => { if(Object.prototype.hasOwnProperty.call(counts, award.category)) counts[award.category] += 1; });
+  return {
+    playerId:cleanId,
+    leagues:counts.leagues,
+    nationalCups:counts.nationalCups,
+    internationalCups:counts.internationalCups,
+    clubWorldCups:counts.clubWorldCups,
+    total:counts.leagues + counts.nationalCups + counts.internationalCups + counts.clubWorldCups,
+    awards
+  };
+}
+function normalizePlayerPalmaresState(src={}){
+  const obj = src && typeof src === 'object' && !Array.isArray(src) ? src : {};
+  const byPlayerId = {};
+  Object.entries(obj.byPlayerId && typeof obj.byPlayerId === 'object' && !Array.isArray(obj.byPlayerId) ? obj.byPlayerId : {}).forEach(([key,value]) => {
+    const record = normalizePlayerPalmaresRecord(value, key);
+    if(record) byPlayerId[record.playerId] = record;
+  });
+  const processedCompetitions = {};
+  Object.entries(obj.processedCompetitions && typeof obj.processedCompetitions === 'object' && !Array.isArray(obj.processedCompetitions) ? obj.processedCompetitions : {}).forEach(([key,value]) => {
+    const cleanKey = String(key || '').trim();
+    if(!cleanKey) return;
+    processedCompetitions[cleanKey] = value && typeof value === 'object' && !Array.isArray(value)
+      ? {
+          key:cleanKey,
+          season:Math.max(1, Math.round(Number(value.season || 1)) || 1),
+          year:Math.round(Number(value.year || 0)),
+          type:String(value.type || ''),
+          competitionId:String(value.competitionId || ''),
+          competitionName:String(value.competitionName || ''),
+          championId:Math.max(0, Math.round(Number(value.championId || 0))),
+          playerCount:Math.max(0, Math.round(Number(value.playerCount || 0))),
+          recordedAt:String(value.recordedAt || '')
+        }
+      : { key:cleanKey, season:1, year:0, type:'', competitionId:'', competitionName:'', championId:0, playerCount:0, recordedAt:'' };
+  });
+  return {
+    version:1,
+    trackingStartedVersion:String(obj.trackingStartedVersion || ''),
+    trackingStartedSeason:Math.max(0, Math.round(Number(obj.trackingStartedSeason || 0))),
+    migrationVersion:Math.max(0, Math.round(Number(obj.migrationVersion || 0))),
+    byPlayerId,
+    processedCompetitions
+  };
+}
+function playerPalmaresCompetitionKey(entry={}){
+  const season = Math.max(1, Math.round(Number(entry.season || game?.seasonNumber || 1)) || 1);
+  const type = String(entry.type || 'league').trim() || 'league';
+  const competitionId = String(entry.competitionId || entry.divisionId || '').trim();
+  const championId = Math.max(0, Math.round(Number(entry.championId || entry.clubId || 0)));
+  return `player-title-${season}-${type}-${competitionId}-${championId}`;
+}
+function playerPalmaresChampionSquad(championId){
+  const clubId = Math.max(0, Math.round(Number(championId || 0)));
+  if(!clubId) return [];
+  return (seed?.players || []).filter(player => player
+    && Number(player.clubId || 0) === clubId
+    && !player.retired
+    && !player.sold
+    && !player.freeAgent
+    && !player.youthFreeAgent);
+}
+function awardPlayerPalmaresForCompetitionChampion(entry={}, targetGame=game){
+  if(!targetGame || !entry) return 0;
+  const category = playerPalmaresCategoryForCompetition(entry.type, entry.competitionId || entry.divisionId);
+  const competitionId = String(entry.competitionId || entry.divisionId || '').trim();
+  const championId = Math.max(0, Math.round(Number(entry.championId || entry.clubId || 0)));
+  if(!category || !competitionId || !championId) return 0;
+  targetGame.playerPalmares = normalizePlayerPalmaresState(targetGame.playerPalmares || {});
+  const key = playerPalmaresCompetitionKey(entry);
+  if(targetGame.playerPalmares.processedCompetitions[key]) return 0;
+  const squad = playerPalmaresChampionSquad(championId);
+  if(!squad.length) return 0;
+  const season = Math.max(1, Math.round(Number(entry.season || targetGame.seasonNumber || 1)) || 1);
+  const year = Math.round(Number(entry.year || targetGame.seasonYear || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : season))) || season;
+  const competitionName = String(entry.competitionName || entry.divisionName || competitionId);
+  const awardedAt = String(entry.createdAt || new Date().toISOString());
+  squad.forEach(player => {
+    const playerId = Number(player.id || 0);
+    if(!playerId) return;
+    const current = normalizePlayerPalmaresRecord(targetGame.playerPalmares.byPlayerId[playerId] || {}, playerId) || normalizePlayerPalmaresRecord({}, playerId);
+    if(current.awards.some(award => award.key === key)) return;
+    current.awards.push({
+      key,
+      season,
+      year,
+      type:String(entry.type || 'league'),
+      category,
+      competitionId,
+      competitionName,
+      clubId:championId,
+      clubName:String(entry.championName || entry.clubName || (typeof clubName === 'function' ? clubName(championId) : `Club ${championId}`)),
+      awardedAt
+    });
+    targetGame.playerPalmares.byPlayerId[playerId] = normalizePlayerPalmaresRecord(current, playerId);
+  });
+  targetGame.playerPalmares.processedCompetitions[key] = {
+    key,
+    season,
+    year,
+    type:String(entry.type || 'league'),
+    competitionId,
+    competitionName,
+    championId,
+    playerCount:squad.length,
+    recordedAt:awardedAt
+  };
+  return squad.length;
+}
+function migrateCurrentSeasonPlayerPalmares(targetGame=game){
+  if(!targetGame) return { migrated:0, competitions:0, initialized:false };
+  targetGame.playerPalmares = normalizePlayerPalmaresState(targetGame.playerPalmares || {});
+  if(Number(targetGame.playerPalmares.migrationVersion || 0) >= 1) return { migrated:0, competitions:0, initialized:false };
+  const currentSeason = Math.max(1, Math.round(Number(targetGame.seasonNumber || 1)) || 1);
+  let migrated = 0;
+  let competitions = 0;
+  (targetGame.competitionChampionsHistory?.entries || []).filter(entry => Number(entry?.season || 0) === currentSeason).forEach(entry => {
+    const awarded = awardPlayerPalmaresForCompetitionChampion(entry, targetGame);
+    if(awarded > 0){ migrated += awarded; competitions += 1; }
+  });
+  targetGame.playerPalmares.migrationVersion = 1;
+  targetGame.playerPalmares.trackingStartedVersion = targetGame.playerPalmares.trackingStartedVersion || 'V9.22';
+  targetGame.playerPalmares.trackingStartedSeason = targetGame.playerPalmares.trackingStartedSeason || currentSeason;
+  return { migrated, competitions, initialized:true };
+}
+
 function recordCompetitionChampion(entry){
   if(!game || !entry) return false;
   const season = Math.max(1, Math.round(Number(entry.season || game.seasonNumber || 1)) || 1);
@@ -77,6 +247,7 @@ function recordCompetitionChampion(entry){
   const entries = (game.competitionChampionsHistory.entries || []).filter(item => `${Number(item.season || 0)}-${String(item.competitionId || '')}` !== key);
   entries.push(clean);
   game.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState({ entries });
+  awardPlayerPalmaresForCompetitionChampion(clean, game);
   return true;
 }
 function recordLeagueChampionsForCurrentSeason(){
@@ -174,6 +345,7 @@ function normalizeGame(saved){
   normalized.savedTrainingPlans = normalizeSavedTrainingPlansState(normalized.savedTrainingPlans || {});
   normalized.standingsHistory = normalizeStandingsHistoryState(normalized.standingsHistory || {});
   normalized.competitionChampionsHistory = normalizeCompetitionChampionsHistoryState(normalized.competitionChampionsHistory || {});
+  normalized.playerPalmares = normalizePlayerPalmaresState(normalized.playerPalmares || {});
   normalized.playerStatus = normalized.playerStatus || {};
   normalized.manualRetiredPlayerIds = Array.from(new Set((Array.isArray(normalized.manualRetiredPlayerIds) ? normalized.manualRetiredPlayerIds : (Array.isArray(normalized.retiredManualPlayerIds) ? normalized.retiredManualPlayerIds : [])).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)));
   normalized.retiredPlayerPool = normalizeRetiredPlayerPool(normalized.retiredPlayerPool || []);
@@ -203,6 +375,8 @@ function normalizeGame(saved){
   }
   normalized.seasonNumber = Number.isFinite(normalized.seasonNumber) ? normalized.seasonNumber : 1;
   normalized.seasonYear = Math.round(Number(normalized.seasonYear || 0)) || seasonYearForNumber(normalized.seasonNumber || 1);
+  const playerPalmaresMigration = migrateCurrentSeasonPlayerPalmares(normalized);
+  if(Boolean(playerPalmaresMigration?.initialized) || Number(playerPalmaresMigration?.migrated || 0) > 0) normalized._needsAutosave = true;
   normalized.calendarVersion = normalized.calendarVersion || '';
   normalized.saveCode = normalized.saveCode || generateSaveCode();
   normalized.rankingUploads = (normalized.rankingUploads && typeof normalized.rankingUploads === 'object' && !Array.isArray(normalized.rankingUploads)) ? normalized.rankingUploads : {};
@@ -841,6 +1015,7 @@ function newGame(selectedClubId, options={}){
     savedTrainingPlans: normalizeSavedTrainingPlansState({}),
     standingsHistory: normalizeStandingsHistoryState({}),
     competitionChampionsHistory: normalizeCompetitionChampionsHistoryState({}),
+    playerPalmares: normalizePlayerPalmaresState({ trackingStartedVersion:'V9.22', trackingStartedSeason:1, migrationVersion:1 }),
     clubWorldCupHistory: normalizeClubWorldCupHistoryState({}),
     saveCode: generateSaveCode(),
     rankingUploads: {},

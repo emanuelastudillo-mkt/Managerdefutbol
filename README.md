@@ -1,12 +1,12 @@
-# V9.29 · Ser jugador en pantalla única
+# V9.30 · Ser jugador compacto y mercado dinámico
 
-Base: V9.28.
+Base: V9.29.
 
-- Toda la información del minijuego se concentra en una sola pantalla, sin pestañas internas.
-- El lado izquierdo reúne estadísticas, club actual, sueldo, contrato, valor, estado, palmarés y competiciones.
-- El lado derecho muestra la media general, la trayectoria de clubes, el historial anual y los acontecimientos recientes.
-- El historial anual registra partidos, goles, asistencias, evolución de media, títulos y distinciones.
-- Se incorporan las distinciones Figura del partido, Mejor jugador de liga y Mejor jugador de copa.
-- El palmarés separa ligas, copas nacionales, copas internacionales y Mundial de Clubes.
-- Las partidas anteriores continúan funcionando; las nuevas distinciones empiezan a registrarse desde V9.29.
-- El estado continúa aislado en `game.miniGames.playerCareer`.
+- Se rediseñó «Ser jugador» como una ficha compacta de una sola pantalla, inspirada en una carrera lineal.
+- La parte izquierda concentra media, jugador, club, edad, valor, sueldo, estadísticas, estado y palmarés.
+- La parte derecha muestra la carrera temporada por temporada con edad, club, media, partidos, goles y asistencias.
+- «Avanzar temporada» simula de una sola vez todos los bloques restantes de la campaña.
+- Las decisiones principales se trasladaron al mercado de pases: normalmente se elige entre continuar y cambiar de club; en algunas temporadas solo aparecen alternativas de salida.
+- Cada opción informa dos resultados posibles y su probabilidad. Al elegir, una animación tipo sorteo ilumina los resultados durante unos segundos y se detiene en el efecto aplicado.
+- El rendimiento posterior contempla prestigio del club, dificultad de la liga, rol ofrecido, competencia por minutos y adaptación al nuevo país.
+- El estado continúa aislado en `game.miniGames.playerCareer` y no modifica la carrera principal.

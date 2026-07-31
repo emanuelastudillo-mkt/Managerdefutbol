@@ -277,6 +277,11 @@ function nextClubBadgeSrc(img){
   img.onerror = null;
   img.style.visibility = 'hidden';
 }
+function handleDelegatedImageLoad(event){
+  const img = event?.target;
+  if(typeof HTMLImageElement === 'undefined' || !(img instanceof HTMLImageElement)) return;
+  if(img.dataset.faceOriginBase && typeof rememberFaceAssetSuccess === 'function') rememberFaceAssetSuccess(img);
+}
 function handleDelegatedImageError(event){
   const img = event?.target;
   if(typeof HTMLImageElement === 'undefined' || !(img instanceof HTMLImageElement)) return;
@@ -305,6 +310,7 @@ function handleDelegatedImageError(event){
   }
 }
 if(typeof document !== 'undefined'){
+  document.addEventListener('load', handleDelegatedImageLoad, true);
   document.addEventListener('error', handleDelegatedImageError, true);
 }
 function clubBadge(id){

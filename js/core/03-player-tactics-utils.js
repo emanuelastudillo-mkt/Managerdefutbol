@@ -783,8 +783,25 @@ function hiddenStats(p){
   return { aggression, genetics, surprise };
 }
 
+let captaincyMaximumCacheGame = null;
+let captaincyMaximumCache = new Map();
+function captaincyMaximumSignature(p){
+  const id = Number(p?.id || 0);
+  const boosts = game?.playerSkillBoosts?.[id] || {};
+  const penalty = Math.max(0, Math.round(Number(game?.playerAgeSkillPenalties?.[id] || 0)));
+  const keys = ['liderazgo','serenidad','disciplina','trabajoEquipo','posicionamiento','resistencia'];
+  return `${Number(p?.age || 0)}:${penalty}:${keys.map(key => `${Number(p?.skills?.[key] ?? p?.overall ?? 50)}:${Number(boosts?.[key] || 0)}`).join('|')}`;
+}
 function captaincyMaximum(p){
   if(!p || !CAPTAINCY_ENABLED) return 0;
+  if(captaincyMaximumCacheGame !== game){
+    captaincyMaximumCacheGame = game;
+    captaincyMaximumCache = new Map();
+  }
+  const id = Number(p.id || 0);
+  const signature = captaincyMaximumSignature(p);
+  const cached = captaincyMaximumCache.get(id);
+  if(cached?.signature === signature) return cached.value;
   const components = [
     [baseSkill(p, 'liderazgo'), configNumber('capitania.pesosMaximo.liderazgo', 0.35, 0, 1)],
     [baseSkill(p, 'serenidad'), configNumber('capitania.pesosMaximo.serenidad', 0.20, 0, 1)],
@@ -795,7 +812,9 @@ function captaincyMaximum(p){
   ];
   const totalWeight = components.reduce((sum, item) => sum + Number(item[1] || 0), 0) || 1;
   const score = components.reduce((sum, item) => sum + Number(item[0] || 0) * Number(item[1] || 0), 0) / totalWeight;
-  return clamp(Math.round(score), 1, CAPTAINCY_MAX_PERCENT);
+  const value = clamp(Math.round(score), 1, CAPTAINCY_MAX_PERCENT);
+  captaincyMaximumCache.set(id, { signature, value });
+  return value;
 }
 function captaincyLearningScore(p){
   if(!p) return 1;
@@ -849,9 +868,19 @@ function normalizeCaptaincyProgressState(source={}){
   });
   return clean;
 }
-function ensureCaptaincyProgressState(){
+let captaincyProgressNormalizedGame = null;
+let captaincyProgressNormalizedStore = null;
+function ensureCaptaincyProgressState(options={}){
   if(!game) return {};
-  game.captaincyProgress = normalizeCaptaincyProgressState(game.captaincyProgress || {});
+  const source = game.captaincyProgress;
+  const sourceIsObject = source && typeof source === 'object' && !Array.isArray(source);
+  if(options.force !== true && captaincyProgressNormalizedGame === game && sourceIsObject && source === captaincyProgressNormalizedStore){
+    if(!game.captaincyAppliedMatches || typeof game.captaincyAppliedMatches !== 'object' || Array.isArray(game.captaincyAppliedMatches)) game.captaincyAppliedMatches = {};
+    return source;
+  }
+  game.captaincyProgress = normalizeCaptaincyProgressState(source || {});
+  captaincyProgressNormalizedGame = game;
+  captaincyProgressNormalizedStore = game.captaincyProgress;
   if(!game.captaincyAppliedMatches || typeof game.captaincyAppliedMatches !== 'object' || Array.isArray(game.captaincyAppliedMatches)) game.captaincyAppliedMatches = {};
   return game.captaincyProgress;
 }
@@ -893,7 +922,7 @@ function initializeCaptaincyExperienceForNewClub(clubId=game?.selectedClubId, op
   if(game.tactic) game.tactic = ensureTacticCaptain(game.tactic, clubId);
   return {
     count:selected.length,
-    players:selected.map(player => ({ id:Number(player.id), name:String(player.name || ''), percent:captaincyValue(player.id), maximum:captaincyMaximum(player) }))
+    players:selected.map(player => ({ id:Number(player.id), name:String(player.name || ''), percent:captaincyValue(player.id) }))
   };
 }
 function captaincyEntry(playerId, create=true){
@@ -1777,12 +1806,30 @@ function playerGenericImageBase(){
 function faceBaseForPlayer(player){
   return playerNationalityImageBase(player);
 }
+const playerFaceAssetCache = new Map();
+function fallbackFaceMarkup(className='photo-thumb'){
+  return `<div class="${escapeHtml(className)}" aria-label="Foto no disponible">👤</div>`;
+}
+function rememberFaceAssetSuccess(img){
+  const origin = String(img?.dataset?.faceOriginBase || '');
+  const src = String(img?.getAttribute?.('src') || '');
+  if(origin && src) playerFaceAssetCache.set(origin, src);
+}
+function rememberFaceAssetFailure(img){
+  const origin = String(img?.dataset?.faceOriginBase || '');
+  if(origin) playerFaceAssetCache.set(origin, '');
+}
 function faceImg(player, className='photo-thumb'){
   const base = faceBaseForPlayer(player);
   const fallbackBase = playerGenericImageBase();
   const alt = `Foto de ${escapeHtml(player?.name || 'jugador')}`;
+  if(playerFaceAssetCache.has(base)){
+    const resolved = playerFaceAssetCache.get(base);
+    if(!resolved) return fallbackFaceMarkup(className);
+    return `<img class="${escapeHtml(className)}" src="${escapeHtml(resolved)}" alt="${alt}" loading="lazy" decoding="async" fetchpriority="low" data-face-origin-base="${escapeHtml(base)}">`;
+  }
   const fallbackAttr = fallbackBase && fallbackBase !== base ? ` data-face-fallback-base="${escapeHtml(fallbackBase)}"` : '';
-  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr}>`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(base)}.webp" alt="${alt}" loading="lazy" decoding="async" fetchpriority="low" data-face-origin-base="${escapeHtml(base)}" data-face-base="${escapeHtml(base)}" data-face-ext-index="0"${fallbackAttr}>`;
 }
 function tryNextFaceExt(img){
   const exts = ['.webp','.png','.jpg','.jpeg'];
@@ -1802,6 +1849,7 @@ function tryNextFaceExt(img){
     img.src = `${fallbackBase}${exts[0]}`;
     return;
   }
+  rememberFaceAssetFailure(img);
   img.onerror = null;
   img.replaceWith(fallbackFaceNode(img.className));
 }

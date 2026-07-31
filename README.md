@@ -1,11 +1,12 @@
-# V9.28 · Ser jugador simplificado y visual
+# V9.29 · Ser jugador en pantalla única
 
-Base: V9.27.
+Base: V9.28.
 
-- Las decisiones presentan exactamente dos alternativas.
-- Cada alternativa informa sus resultados posibles y la probabilidad porcentual.
-- La interfaz ya no muestra nombres como primer tramo, segundo tramo o tramo decisivo.
-- La acción principal utiliza el texto «Avanzar temporada».
-- El progreso positivo de media se multiplicó por dos.
-- Se incorporaron vectores SVG internos y animaciones ligeras para aumentos estadísticos.
+- Toda la información del minijuego se concentra en una sola pantalla, sin pestañas internas.
+- El lado izquierdo reúne estadísticas, club actual, sueldo, contrato, valor, estado, palmarés y competiciones.
+- El lado derecho muestra la media general, la trayectoria de clubes, el historial anual y los acontecimientos recientes.
+- El historial anual registra partidos, goles, asistencias, evolución de media, títulos y distinciones.
+- Se incorporan las distinciones Figura del partido, Mejor jugador de liga y Mejor jugador de copa.
+- El palmarés separa ligas, copas nacionales, copas internacionales y Mundial de Clubes.
+- Las partidas anteriores continúan funcionando; las nuevas distinciones empiezan a registrarse desde V9.29.
 - El estado continúa aislado en `game.miniGames.playerCareer`.

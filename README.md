@@ -1,3 +1,21 @@
+# V9.23 · Ranking de jugadores por temporada y carrera
+
+Versión completa e incremental sin paquetes de imágenes, construida sobre V9.22.
+
+## Cambios principales
+
+- El apartado **Ranking de jugadores** ahora permite alternar entre **Temporada** y **Toda la carrera**.
+- Ambos modos muestran un Top 100 independiente con nombre, club actual, partidos jugados, goles, asistencias y puntaje general.
+- La vista de temporada utiliza únicamente las estadísticas de la campaña en curso.
+- La vista de carrera utiliza las estadísticas acumuladas del jugador activo durante toda la partida.
+- El puntaje general de carrera se calcula con el promedio de todas las calificaciones oficiales acumuladas.
+- Los filtros de ordenamiento se conservan al cambiar de período.
+- Los jugadores retirados siguen desapareciendo junto con sus estadísticas; una regeneración juvenil comienza desde cero.
+
+El incremental se aplica sobre V9.22.
+
+---
+
 # V9.22 · Palmarés de jugadores
 
 Versión completa e incremental sin paquetes de imágenes, construida sobre V9.21.

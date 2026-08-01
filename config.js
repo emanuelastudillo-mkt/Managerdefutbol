@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.40',
+  version: 'V9.41',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -1120,6 +1120,16 @@ window.GAME_CONFIG = {
     ],
     desgastePartidoMin: 40,
     desgastePartidoMax: 78,
+    // Reduce el consumo base del partido según la resistencia.
+    // Los modificadores extra por campo, táctica o instrucciones se mantienen aparte.
+    desgastePartidoUsaResistencia: true,
+    desgastePartidoPorResistencia: [
+      { minResistencia: 1, maxResistencia: 59, reduccion: 0.00 },
+      { minResistencia: 60, maxResistencia: 69, reduccion: 0.10 },
+      { minResistencia: 70, maxResistencia: 79, reduccion: 0.20 },
+      { minResistencia: 80, maxResistencia: 89, reduccion: 0.30 },
+      { minResistencia: 90, maxResistencia: 99, reduccion: 0.40 }
+    ],
     factorDesgasteArquero: 0.5
   },
 

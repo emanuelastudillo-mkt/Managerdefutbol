@@ -2130,9 +2130,18 @@ function bestBotFormationSelection(clubId, options={}){
 function zoneFactor(player, slot){
   return playerTacticFitFactor(player, slot);
 }
+function matchConditionLossStaminaMultiplier(player){
+  if(!MATCH_CONDITION_LOSS_USE_STAMINA || !MATCH_CONDITION_LOSS_STAMINA_RULES.length) return 1;
+  const stamina = clamp(Math.round(baseSkill(player || {}, 'resistencia')), 1, 99);
+  const rule = MATCH_CONDITION_LOSS_STAMINA_RULES.find(item => stamina >= item.minResistencia && stamina <= item.maxResistencia)
+    || MATCH_CONDITION_LOSS_STAMINA_RULES[MATCH_CONDITION_LOSS_STAMINA_RULES.length - 1];
+  return rule ? clamp(1 - Number(rule.reduccion || 0), 0.05, 1) : 1;
+}
 function conditionLossForPlayer(player){
-  const loss = rnd(MATCH_CONDITION_LOSS_MIN, MATCH_CONDITION_LOSS_MAX);
-  return player?.position === 'POR' ? loss * GOALKEEPER_CONDITION_LOSS_FACTOR : loss;
+  const baseLoss = rnd(MATCH_CONDITION_LOSS_MIN, MATCH_CONDITION_LOSS_MAX);
+  const staminaAdjustedLoss = baseLoss * matchConditionLossStaminaMultiplier(player);
+  const positionFactor = player?.position === 'POR' ? GOALKEEPER_CONDITION_LOSS_FACTOR : 1;
+  return Math.max(0, Math.round(staminaAdjustedLoss * positionFactor));
 }
 function postMatchRecoveryForPlayer(player){
   let recovery = 0;

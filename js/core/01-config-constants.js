@@ -537,6 +537,17 @@ const POST_MATCH_RECOVERY_STAMINA_RULES = Array.isArray(configValue('simulador.r
   : [];
 const MATCH_CONDITION_LOSS_MIN = configNumber('simulador.desgastePartidoMin', 40, 0, 99);
 const MATCH_CONDITION_LOSS_MAX = Math.max(MATCH_CONDITION_LOSS_MIN, configNumber('simulador.desgastePartidoMax', 78, 0, 99));
+const MATCH_CONDITION_LOSS_USE_STAMINA = configBoolean('simulador.desgastePartidoUsaResistencia', true);
+const MATCH_CONDITION_LOSS_STAMINA_RULES = Array.isArray(configValue('simulador.desgastePartidoPorResistencia', []))
+  ? configValue('simulador.desgastePartidoPorResistencia', [])
+      .map(rule => ({
+        minResistencia:Number(rule?.minResistencia ?? rule?.min ?? 1),
+        maxResistencia:Number(rule?.maxResistencia ?? rule?.max ?? 99),
+        reduccion:configClamp(Number(rule?.reduccion ?? rule?.reduction ?? 0), 0, 0.95)
+      }))
+      .filter(rule => Number.isFinite(rule.minResistencia) && Number.isFinite(rule.maxResistencia) && Number.isFinite(rule.reduccion))
+      .sort((a,b) => a.minResistencia - b.minResistencia)
+  : [];
 const GOALKEEPER_CONDITION_LOSS_FACTOR = configNumber('simulador.factorDesgasteArquero', 0.5, 0, 1);
 const PITCH_CONDITIONS = {
   'Excelente': { passDelta:10, chanceMultiplier:1.20, fatigueBonus:0, injuryBonus:0 },

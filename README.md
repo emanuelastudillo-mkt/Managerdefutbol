@@ -1,3 +1,14 @@
+# V9.41 · Consumo físico según resistencia
+
+Base: V9.40.
+
+- El consumo base de estado físico durante los partidos ahora depende de la resistencia del jugador.
+- Hasta 59 de resistencia se conserva el desgaste actual completo.
+- De 60 a 69 se reduce 10%; de 70 a 79, 20%; de 80 a 89, 30%; y de 90 a 99, 40%.
+- El ajuste se aplica al desgaste base de 40 a 78 puntos; el cansancio extra por campo, táctica o instrucciones continúa sumándose por separado.
+- Los arqueros conservan además su factor de consumo reducido.
+- No se modificó la recuperación automática posterior al partido.
+
 # V9.40 · Ser jugador: trofeos, clubes compactos y Bota de oro
 
 Base: V9.39.

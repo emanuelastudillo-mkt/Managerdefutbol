@@ -19,6 +19,26 @@ function specialMaxUsesForRarity(rarity){
   return Math.max(1, Math.round(Number(configured ?? SPECIAL_MAX_USES_BY_RARITY[key] ?? specialDatabase()?.limites?.activaciones_por_carta ?? 1)));
 }
 
+function specialCardIsObjectiveReduction(card){
+  return String(card?.tipo_bonus || '') === 'objetivo_mas_bajo';
+}
+function specialObjectiveActivationCount(card){
+  if(!specialCardIsObjectiveReduction(card)) return 0;
+  const maxUses = specialMaxUsesForRarity(card?.rareza);
+  const explicit = Number(card?.activaciones_efecto ?? card?.activaciones_objetivo ?? card?.objectiveActivationCount);
+  if(Number.isFinite(explicit)) return clamp(Math.round(explicit), 0, maxUses);
+  const legacyUsed = clamp(Math.round(Number(card?.activaciones_usadas || 0)), 0, maxUses);
+  if(legacyUsed <= 0) return 0;
+  // Migración V9.44: antes activar + desactivar consumían dos usos. Se reconstruye
+  // la cantidad más probable de activaciones reales sin inflar el efecto acumulado.
+  return clamp(Math.max(card?.activa ? 1 : 0, Math.ceil(legacyUsed / 2)), 0, maxUses);
+}
+function specialCardEffectiveBonus(card){
+  const base = Number(card?.valor_bonus || 0);
+  if(!specialCardIsObjectiveReduction(card)) return base;
+  return base * specialObjectiveActivationCount(card);
+}
+
 function specialDatabase(){
   return specialSkillsDatabase && typeof specialSkillsDatabase === 'object' ? specialSkillsDatabase : { limites:{}, sobres:{}, cartas_base:[], puntos_ocultos:{ acciones:{} }, destruir_cartas:{ recuperacion_puntos:{} }, apilamiento_bonus:{} };
 }
@@ -62,9 +82,18 @@ function normalizeSpecialCard(card, index=0){
   const lockedUntilTurn = Number.isFinite(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn)) ? Math.max(0, Math.round(Number(card.bloqueada_hasta_turno ?? card.lockedUntilTurn))) : null;
   const rarity = String(card.rareza || base.rareza || 'inutil');
   const maxUses = specialMaxUsesForRarity(rarity);
-  const usedRaw = Number(card.activaciones_usadas ?? card.usedActivations ?? card.usos_usados ?? 0);
-  const used = clamp(Math.round(Number.isFinite(usedRaw) ? usedRaw : 0), 0, maxUses);
   const bonusType = card.tipo_bonus ?? base.tipo_bonus ?? null;
+  const usedRaw = Number(card.activaciones_usadas ?? card.usedActivations ?? card.usos_usados ?? 0);
+  let used = clamp(Math.round(Number.isFinite(usedRaw) ? usedRaw : 0), 0, maxUses);
+  let effectActivations = 0;
+  if(String(bonusType || '') === 'objetivo_mas_bajo'){
+    const explicitEffect = Number(card.activaciones_efecto ?? card.activaciones_objetivo ?? card.objectiveActivationCount);
+    effectActivations = Number.isFinite(explicitEffect)
+      ? clamp(Math.round(explicitEffect), 0, maxUses)
+      : clamp(Math.max(Boolean(card.activa) && used > 0 ? 1 : 0, Math.ceil(used / 2)), 0, maxUses);
+    // En V9.44 los usos de estas cartas equivalen únicamente a activaciones acumuladas.
+    used = effectActivations;
+  }
   const physicalRecoveryPoints = bonusType === 'preparacion_fisica' ? specialPhysicalRecoveryPointsForRarity(rarity) : null;
   return {
     id_carta:id,
@@ -91,6 +120,7 @@ function normalizeSpecialCard(card, index=0){
     agotada_activa_desde_turno:Number.isFinite(Number(card.agotada_activa_desde_turno)) ? Math.max(0, Math.round(Number(card.agotada_activa_desde_turno))) : null,
     activaciones_max:maxUses,
     activaciones_usadas:used,
+    activaciones_efecto:effectActivations,
     active_slot_id:String(card.active_slot_id || card.activeSaveSlotId || card.slot_activo || ''),
     ultimo_slot_activacion:String(card.ultimo_slot_activacion || card.lastActivationSlot || '')
   };
@@ -134,6 +164,7 @@ function normalizeSpecialGlobalCard(raw, index=0){
   if(!card) return null;
   card.activaciones_max = specialMaxUsesForRarity(card.rareza);
   card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)), 0, card.activaciones_max);
+  card.activaciones_efecto = specialCardIsObjectiveReduction(card) ? specialObjectiveActivationCount(card) : 0;
   card.active_slot_id = String(card.active_slot_id || '');
   card.ultimo_slot_activacion = String(card.ultimo_slot_activacion || '');
   if(specialCardRemainingUses(card) <= 0 && !card.active_slot_id && !card.activa) card.destruida = true;
@@ -148,11 +179,13 @@ function specialGlobalUpsertCard(rawCard, options={}){
   const existing = normalizeSpecialGlobalCard(global.cards?.[card.id_carta] || card) || card;
   const maxUses = specialMaxUsesForRarity(card.rareza || existing.rareza);
   const used = Math.max(Number(existing.activaciones_usadas || 0), Number(card.activaciones_usadas || 0));
+  const effectActivations = Math.max(specialObjectiveActivationCount(existing), specialObjectiveActivationCount(card));
   const merged = {
     ...existing,
     ...card,
     activaciones_max:maxUses,
     activaciones_usadas:clamp(Math.round(used), 0, maxUses),
+    activaciones_efecto:specialCardIsObjectiveReduction(card) ? clamp(Math.round(effectActivations), 0, maxUses) : 0,
     destruida:Boolean(card.destruida || existing.destruida)
   };
   if(asActive){
@@ -160,6 +193,7 @@ function specialGlobalUpsertCard(rawCard, options={}){
     merged.active_slot_id = String(existing.active_slot_id || card.active_slot_id || slotId || 'global');
     merged.ultimo_slot_activacion = slotId;
     if(merged.activaciones_usadas <= 0) merged.activaciones_usadas = 1;
+    if(specialCardIsObjectiveReduction(merged) && merged.activaciones_efecto <= 0) merged.activaciones_efecto = 1;
   } else if(existing.active_slot_id){
     merged.activa = true;
     merged.active_slot_id = existing.active_slot_id;
@@ -487,7 +521,16 @@ function specialBonusLabel(type){
 }
 function specialCardBonusText(card){
   if(!card?.tipo_bonus || !card.valor_bonus) return 'Sin bonus activo';
-  const value = Number(card.valor_bonus || 0);
+  const baseValue = Number(card.valor_bonus || 0);
+  if(specialCardIsObjectiveReduction(card)){
+    const activations = specialObjectiveActivationCount(card);
+    const shownActivations = Math.max(1, activations);
+    const total = baseValue * shownActivations;
+    return activations > 0
+      ? `${specialBonusLabel(card.tipo_bonus)}: -${total}% acumulado (${activations} × ${baseValue}%)`
+      : `${specialBonusLabel(card.tipo_bonus)}: -${baseValue}% por activación`;
+  }
+  const value = baseValue;
   if(card.tipo_bonus === 'medico_milagroso') return `${specialBonusLabel(card.tipo_bonus)}: -${value} día${value === 1 ? '' : 's'} extra por tratamiento`;
   if(card.tipo_bonus === 'prevencion_lesiones_partido') return `${specialBonusLabel(card.tipo_bonus)}: -${value}% de probabilidad durante partidos`;
   if(card.tipo_bonus === 'experto_juveniles') return `${specialBonusLabel(card.tipo_bonus)}: +${value} habilidad${value === 1 ? '' : 'es'} por consulta`;
@@ -608,6 +651,9 @@ function processActiveSpecialCardUsageDaily(options={}){
       return;
     }
     card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza));
+    if(specialCardIsObjectiveReduction(card)){
+      card.activaciones_efecto = clamp(specialObjectiveActivationCount(card) + 1, 0, specialMaxUsesForRarity(card.rareza));
+    }
     card.ciclo_uso_desde = today;
     card.ciclo_uso_desde_turno = nowTurn;
     if(specialCardRemainingUses(card) <= 0){
@@ -637,7 +683,7 @@ function specialActiveBonus(type){
   const stack = db.apilamiento_bonus?.[type] || {};
   const raw = (state.cartas_activas || [])
     .filter(card => card.tipo_bonus === type && !card.destruida)
-    .reduce((sum, card) => sum + Number(card.valor_bonus || 0), 0);
+    .reduce((sum, card) => sum + Number(specialCardEffectiveBonus(card) || 0), 0);
   const capRaw = stack.tope_porcentaje;
   const cap = capRaw === null || capRaw === undefined || capRaw === '' ? null : Number(capRaw);
   return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
@@ -687,7 +733,8 @@ function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
     const info = specialCardActiveLockInfo(card);
     const usage = specialActiveCardUsageInfo(card);
     const usageRemaining = Math.max(0, usage.cycleDays - usage.elapsed);
-    const status = info.locked ? `Fija ${formatDays(info.remaining)} · uso automático en ${formatDays(usageRemaining)}` : `Lista para desactivar · uso automático en ${formatDays(usageRemaining)}`;
+    const cycleLabel = specialCardIsObjectiveReduction(card) ? 'renovación acumulativa' : 'uso automático';
+    const status = info.locked ? `Fija ${formatDays(info.remaining)} · ${cycleLabel} en ${formatDays(usageRemaining)}` : `Lista para desactivar · ${cycleLabel} en ${formatDays(usageRemaining)}`;
     return `<div><strong>${escapeHtml(card.nombre)}</strong><span>${escapeHtml(specialCardBonusText(card))}</span><em>${escapeHtml(status)}</em></div>`;
   }).join('')}</div>`;
   return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}.</p>`;
@@ -998,6 +1045,7 @@ function createSpecialCardInstance(base, packId){
     texto:base.texto || '',
     activaciones_max:specialMaxUsesForRarity(base.rareza),
     activaciones_usadas:0,
+    activaciones_efecto:0,
     active_slot_id:'',
     ultimo_slot_activacion:'',
     activa:false,
@@ -1268,7 +1316,10 @@ function activateSpecialCard(cardId){
   const used = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
   const activationDate = specialCurrentDate();
   const activationTurn = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
-  const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, active_slot_id:slotId, ultimo_slot_activacion:slotId, ciclo_uso_desde:activationDate, ciclo_uso_desde_turno:activationTurn, agotada_activa_desde:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationDate : null, agotada_activa_desde_turno:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationTurn : null };
+  const effectActivations = specialCardIsObjectiveReduction(card)
+    ? clamp(specialObjectiveActivationCount(card) + 1, 0, maxUses)
+    : 0;
+  const activatedCard = { ...card, activa:true, destruida:false, activaciones_max:maxUses, activaciones_usadas:used, activaciones_efecto:effectActivations, active_slot_id:slotId, ultimo_slot_activacion:slotId, ciclo_uso_desde:activationDate, ciclo_uso_desde_turno:activationTurn, agotada_activa_desde:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationDate : null, agotada_activa_desde_turno:specialCardRemainingUses({ ...card, activaciones_usadas:used }) <= 0 ? activationTurn : null };
   lockSpecialCardChanges(activatedCard, state);
   state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
@@ -1278,7 +1329,33 @@ function activateSpecialCard(cardId){
   saveLocal(true);
   renderSpecial();
   const extra = cohesionGain > 0 ? ` Cohesión +${cohesionGain}.` : '';
-  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}. Usos restantes: ${specialCardRemainingUses(activatedCard)}.${extra}`);
+  const accumulated = specialCardIsObjectiveReduction(activatedCard) ? ` Efecto acumulado: -${specialCardEffectiveBonus(activatedCard)}%.` : '';
+  showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}. Usos restantes: ${specialCardRemainingUses(activatedCard)}.${accumulated}${extra}`);
+}
+function reinforceSpecialObjectiveCard(cardId){
+  const state = ensureSpecialState();
+  const slotId = currentSpecialSaveSlotId();
+  const index = (state.cartas_activas || []).findIndex(card => String(card.id_carta || '') === String(cardId || ''));
+  if(index < 0){ showNotice('Carta activa no encontrada.'); return; }
+  const card = state.cartas_activas[index];
+  if(!specialCardIsObjectiveReduction(card)){ showNotice('Esta carta no admite activaciones acumuladas.'); return; }
+  const remaining = specialCardRemainingUses(card);
+  if(remaining <= 0){ showNotice('Esta carta ya utilizó todas sus activaciones.'); return; }
+  const maxUses = specialMaxUsesForRarity(card.rareza);
+  card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
+  card.activaciones_efecto = clamp(specialObjectiveActivationCount(card) + 1, 0, maxUses);
+  card.ciclo_uso_desde = specialCurrentDate();
+  card.ciclo_uso_desde_turno = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
+  if(specialCardRemainingUses(card) <= 0){
+    card.agotada_activa_desde = card.ciclo_uso_desde;
+    card.agotada_activa_desde_turno = card.ciclo_uso_desde_turno;
+  }
+  lockSpecialCardChanges(card, state);
+  specialGlobalUpsertCard(card, { slotId, zone:'active' });
+  game.special = syncSpecialStateWithGlobalCards(state);
+  saveLocal(true);
+  renderSpecial();
+  showNotice(`Activación acumulada: ${card.nombre}. Efecto total -${specialCardEffectiveBonus(card)}%. Usos restantes: ${specialCardRemainingUses(card)}.`);
 }
 function deactivateSpecialCard(cardId){
   const state = ensureSpecialState();
@@ -1291,7 +1368,8 @@ function deactivateSpecialCard(cardId){
   const cardLock = specialCardActiveLockInfo(card);
   if(cardLock.locked){ showNotice(`Esta carta debe permanecer activa ${formatDays(cardLock.remaining)} más.`); return; }
   state.cartas_activas.splice(index, 1);
-  const deactivationUsed = limits.consumeOnDeactivate ? clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza)) : Math.round(Number(card.activaciones_usadas || 0));
+  const consumeOnDeactivate = limits.consumeOnDeactivate && !specialCardIsObjectiveReduction(card);
+  const deactivationUsed = consumeOnDeactivate ? clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza)) : Math.round(Number(card.activaciones_usadas || 0));
   card.activaciones_usadas = deactivationUsed;
   const remaining = specialCardRemainingUses(card);
   if(remaining > 0){
@@ -1344,8 +1422,11 @@ function specialCardMarkup(card, zone='reserve'){
   const usesText = `${specialCardRemainingUses(card)}/${specialMaxUsesForRarity(card.rareza)}`;
   const usesPill = card.activable ? `<span class="pill special-uses-pill">Usos ${escapeHtml(usesText)}</span>` : '';
   const bonus = specialCardBonusText(card);
+  const reinforceButton = zone === 'active' && specialCardIsObjectiveReduction(card) && specialCardRemainingUses(card) > 0
+    ? `<button class="primary small-btn" data-special-reinforce="${escapeHtml(card.id_carta)}">Activar otra vez</button>`
+    : '';
   const action = zone === 'active'
-    ? `<button class="ghost small-btn" data-special-deactivate="${escapeHtml(card.id_carta)}" ${activeLock.locked ? 'disabled' : ''}>${activeLock.locked ? 'Fija' : 'Quitar'}</button>`
+    ? `<div class="row gap-xs">${reinforceButton}<button class="ghost small-btn" data-special-deactivate="${escapeHtml(card.id_carta)}" ${activeLock.locked ? 'disabled' : ''}>${activeLock.locked ? 'Fija' : 'Quitar'}</button></div>`
     : (zone === 'opened'
       ? `<span class="pill">Guardada</span>`
       : `<div class="row gap-xs"><button class="primary small-btn" data-special-activate="${escapeHtml(card.id_carta)}" ${canActivate ? '' : 'disabled'}>Activar</button><button class="ghost small-btn" data-special-destroy="${escapeHtml(card.id_carta)}">Destruir</button></div>`);
@@ -1467,6 +1548,7 @@ function renderSpecial(opened=[], options={}){
     });
   });
   document.querySelectorAll('[data-special-activate]').forEach(btn => btn.addEventListener('click', () => activateSpecialCard(btn.dataset.specialActivate)));
+  document.querySelectorAll('[data-special-reinforce]').forEach(btn => btn.addEventListener('click', () => reinforceSpecialObjectiveCard(btn.dataset.specialReinforce)));
   document.querySelectorAll('[data-special-deactivate]').forEach(btn => btn.addEventListener('click', () => deactivateSpecialCard(btn.dataset.specialDeactivate)));
   document.querySelectorAll('[data-special-destroy]').forEach(btn => btn.addEventListener('click', () => destroySpecialCard(btn.dataset.specialDestroy)));
   if(pointAnimation){

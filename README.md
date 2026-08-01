@@ -1,3 +1,14 @@
+# V9.44 · Cartas de reducción de objetivo acumulativas
+
+Base: V9.43.
+
+- Cada activación de una carta de reducción de objetivo suma nuevamente su porcentaje base.
+- Una carta épica de −3% con tres activaciones aplica −9% mientras permanece activa.
+- Las cartas activas con usos disponibles permiten **Activar otra vez** para consumir otro uso y reforzar el efecto.
+- La renovación automática de los 100 días también suma un nivel del bonus.
+- Quitar estas cartas no consume un uso; el acumulado se conserva para una futura reactivación.
+- Las cartas existentes se migran al nuevo conteo sin duplicar usos consumidos por desactivaciones anteriores.
+
 # V9.43 · Relaciones persistentes del mánager
 
 Base: V9.42.

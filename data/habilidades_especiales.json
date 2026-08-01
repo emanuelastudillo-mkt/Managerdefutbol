@@ -2,7 +2,7 @@
   "version": "V8.46",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V8.43: las cartas consumen usos al activar, al desactivar y cada 100 días activas; una carta agotada expira al día siguiente del ciclo activo.",
+  "caracteristicas_version": "V9.44: las cartas de reducción de objetivo acumulan su efecto por activación; cada uso activado o renovado suma otro nivel del bonus y desactivarlas no consume un uso.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -32,7 +32,9 @@
       "legendaria": 5
     },
     "dias_por_consumo_activo": 100,
-    "consumir_uso_al_desactivar": true
+    "consumir_uso_al_desactivar": true,
+    "cartas_objetivo_acumulan_por_activacion": true,
+    "cartas_objetivo_no_consumen_al_desactivar": true
   },
   "rareza_orden_visual": [
     "inutil",
@@ -235,6 +237,13 @@
       "tope_porcentaje": null,
       "aplica_a": "cantidad_de_habilidades_reveladas_al_consultar_juveniles",
       "descripcion": "Suma habilidades directas al resultado normal calculado por el Preparador de juveniles."
+    },
+    "objetivo_mas_bajo": {
+      "se_apila": true,
+      "metodo": "suma_por_activacion_con_tope",
+      "tope_porcentaje": 80,
+      "aplica_a": "objetivo_de_puntos_de_la_directiva",
+      "descripcion": "Cada activación o renovación de la misma carta suma nuevamente su porcentaje base mientras permanezca activa. Desactivarla no consume un uso."
     }
   },
   "bonus_por_rareza": {
@@ -518,7 +527,7 @@
       "valor_bonus": 1,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 1% mientras esté activa."
+      "texto": "Reduce el objetivo de puntos de la directiva un 1% por cada activación acumulada mientras esté activa."
     },
     {
       "id_base": "OBJETIVO_RARA_001",
@@ -528,7 +537,7 @@
       "valor_bonus": 2,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 2% mientras esté activa."
+      "texto": "Reduce el objetivo de puntos de la directiva un 2% por cada activación acumulada mientras esté activa."
     },
     {
       "id_base": "OBJETIVO_EPICA_001",
@@ -538,7 +547,7 @@
       "valor_bonus": 3,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 3% mientras esté activa."
+      "texto": "Reduce el objetivo de puntos de la directiva un 3% por cada activación acumulada mientras esté activa."
     },
     {
       "id_base": "OBJETIVO_LEGENDARIA_001",
@@ -548,7 +557,7 @@
       "valor_bonus": 10,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 10% mientras esté activa."
+      "texto": "Reduce el objetivo de puntos de la directiva un 10% por cada activación acumulada mientras esté activa."
     },
     {
       "id_base": "IDOLO_CLUB_COMUN_001",

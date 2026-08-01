@@ -1,3 +1,13 @@
+# V9.40 · Ser jugador: trofeos, clubes compactos y Bota de oro
+
+Base: V9.39.
+
+- El historial de trofeos individuales se muestra debajo de las opciones de temporada o mercado.
+- El listado anual de clubes se compactó para mostrar más temporadas con menos espacio.
+- Al ganar la Bota de oro al mejor jugador del mundo aparece una celebración destacada.
+- La animación se muestra una sola vez por premio y respeta la preferencia de movimiento reducido.
+- No se modificó la lógica de progresión, mercado, retiro ni estadísticas.
+
 # V9.39 · Ser jugador: final natural de la carrera
 
 Base: V9.37.

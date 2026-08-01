@@ -1113,7 +1113,7 @@
     const options = [`<option value="all" ${clubHistorySeasonFilter === 'all' ? 'selected' : ''}>Todas las temporadas</option>`]
       .concat(seasons.map(season => `<option value="${season}" ${String(season) === String(clubHistorySeasonFilter) ? 'selected' : ''}>Temporada ${season}</option>`)).join('');
     const rows = visible.map(item => `<tr class="${item.managedByUser ? 'career-managed-club-row' : ''}"><td>${item.season}</td><td>${clubBadge(item.clubId)} ${escapeHtml(item.clubName || '')}${item.managedByUser ? '<small>Dirigido por vos</small>' : ''}</td><td>${escapeHtml(item.divisionName || '—')}</td><td>${careerPositionLabel(item.position)}</td><td>${item.pts}</td><td>${Number(item.ppg || 0).toFixed(2)}</td><td>${item.gf}/${item.gc}</td><td>${item.reputationEnd ?? '—'}${item.reputationDelta ? `<small class="${item.reputationDelta > 0 ? 'ok' : 'danger'}">${item.reputationDelta > 0 ? '+' : ''}${item.reputationDelta}</small>` : ''}</td><td>${item.managerEvaluation ?? '—'}</td></tr>`).join('');
-    return `<div class="card career-club-history-card" style="margin-top:14px"><div class="row"><div><h3>Historial anual de clubes</h3><p class="muted small">Rendimiento, reputación y evolución guardados al cierre de cada temporada.</p></div><select id="careerClubHistorySeasonFilter">${options}</select></div><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Pos.</th><th>PTS</th><th>PPG</th><th>GF/GC</th><th>Reputación</th><th>Eval. manager</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">El historial se completará al finalizar la temporada.</td></tr>'}</tbody></table></div></div>`;
+    return `<div class="card career-club-history-card"><div class="row"><div><p class="muted small">Rendimiento, reputación y evolución de todos los clubes, guardados al cierre de cada temporada.</p></div><select id="careerClubHistorySeasonFilter">${options}</select></div><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>División</th><th>Pos.</th><th>PTS</th><th>PPG</th><th>GF/GC</th><th>Reputación</th><th>Eval. manager</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">El historial se completará al finalizar la temporada.</td></tr>'}</tbody></table></div></div>`;
   }
   function careerProfileMarkup(){
     game.managerStats = normalizeManagerStats(game.managerStats);
@@ -1121,21 +1121,31 @@
     const currentObjective = managerCareerQualitativeObjective(game.selectedClubId, game.managerStats.currentSeason?.objectivePpg, { founder:typeof currentGameIsFounderMode === 'function' && currentGameIsFounderMode() });
     const rows = careerSeasonHistoryRows(game.managerStats);
     const accessPrestige = managerCareerPrestigeToClubScale(profile.prestige);
-    return `<section class="career-profile-stage-one"><div class="career-profile-summary"><div class="career-profile-main"><span>Prestigio de carrera</span><strong>${profile.prestige}<small>/${careerPrestigeMaximum()}</small></strong><em>${escapeHtml(managerCareerStageLabel(profile.prestige))} · acceso laboral ${accessPrestige}/99.</em></div><div class="career-profile-main"><span>Momento profesional</span><strong class="${profile.moment >= 0 ? 'ok' : 'danger'}">${profile.moment >= 0 ? '+' : ''}${profile.moment}</strong><em>${escapeHtml(careerProfileMomentLabel(profile.moment))}</em></div><div class="career-profile-main"><span>Objetivo actual</span><strong>${escapeHtml(currentObjective.label)}</strong><em>${escapeHtml(currentObjective.minimumLabel || 'Sin posición mínima')}</em></div></div><div class="card career-capabilities-card"><h3>Capacidades acumulativas</h3><p class="muted small">No se compran: evolucionan según decisiones y resultados de la carrera.</p><div class="career-capabilities-grid">${careerCapabilityMarkup(profile)}</div></div><div class="card career-season-history-card" style="margin-top:14px"><h3>Evaluaciones de carrera</h3><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>Objetivo</th><th>Pos.</th><th>Evaluación</th><th>Resultado</th><th>Prestigio</th><th>Cierre</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">La primera evaluación se guardará al terminar la temporada o al dejar un club.</td></tr>'}</tbody></table></div></div>${careerClubHistoryMarkup()}</section>`;
+    return `<section class="career-profile-stage-one"><div class="career-profile-summary"><div class="career-profile-main"><span>Prestigio de carrera</span><strong>${profile.prestige}<small>/${careerPrestigeMaximum()}</small></strong><em>${escapeHtml(managerCareerStageLabel(profile.prestige))} · acceso laboral ${accessPrestige}/99.</em></div><div class="career-profile-main"><span>Momento profesional</span><strong class="${profile.moment >= 0 ? 'ok' : 'danger'}">${profile.moment >= 0 ? '+' : ''}${profile.moment}</strong><em>${escapeHtml(careerProfileMomentLabel(profile.moment))}</em></div><div class="career-profile-main"><span>Objetivo actual</span><strong>${escapeHtml(currentObjective.label)}</strong><em>${escapeHtml(currentObjective.minimumLabel || 'Sin posición mínima')}</em></div></div><div class="card career-capabilities-card"><h3>Capacidades acumulativas</h3><p class="muted small">No se compran: evolucionan según decisiones y resultados de la carrera.</p><div class="career-capabilities-grid">${careerCapabilityMarkup(profile)}</div></div><div class="card career-season-history-card" style="margin-top:14px"><h3>Evaluaciones de carrera</h3><div class="table-wrap"><table><thead><tr><th>Temp.</th><th>Club</th><th>Objetivo</th><th>Pos.</th><th>Evaluación</th><th>Resultado</th><th>Prestigio</th><th>Cierre</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">La primera evaluación se guardará al terminar la temporada o al dejar un club.</td></tr>'}</tbody></table></div></div></section>`;
   }
 
   const renderManagerStatsV869 = renderManagerStats;
-  renderManagerStats = function(){
-    renderManagerStatsV869();
-    if(String(managerStatsViewMode || 'profile') !== 'profile') return;
-    const holder = document.createElement('div');
-    holder.innerHTML = careerProfileMarkup();
-    if(view.firstChild) view.insertBefore(holder.firstElementChild, view.firstChild.nextSibling || view.firstChild);
-    else view.appendChild(holder.firstElementChild);
+  function bindCareerClubHistoryFilter(){
     document.getElementById('careerClubHistorySeasonFilter')?.addEventListener('change', event => {
       clubHistorySeasonFilter = String(event.target.value || 'all');
       renderManagerStats();
     });
+  }
+
+  renderManagerStats = function(){
+    renderManagerStatsV869();
+    const mode = String(managerStatsViewMode || 'profile');
+    if(mode === 'club-history'){
+      const history = normalizeClubSeasonHistory(game?.clubSeasonHistory || {});
+      view.innerHTML = `<div class="row section-title"><div><h2>Historial anual de clubes</h2><p class="tagline">Consulta la evolución deportiva y reputacional de cada club temporada por temporada.</p></div><span class="pill">${history.entries.length} registros</span></div><section class="career-club-history-view">${careerClubHistoryMarkup()}</section>`;
+      bindCareerClubHistoryFilter();
+      return;
+    }
+    if(mode !== 'profile') return;
+    const holder = document.createElement('div');
+    holder.innerHTML = careerProfileMarkup();
+    if(view.firstChild) view.insertBefore(holder.firstElementChild, view.firstChild.nextSibling || view.firstChild);
+    else view.appendChild(holder.firstElementChild);
   };
 
   const renderHomeV869 = renderHome;

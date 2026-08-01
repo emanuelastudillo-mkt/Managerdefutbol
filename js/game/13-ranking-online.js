@@ -1,6 +1,19 @@
 /* Ranking online con puntaje total explícito para Worker. */
 
 let rankingSessionAutoCheckInFlight = false;
+let rankingRuntimeConfirmedAuthUser = '';
+
+function rankingRuntimeConfirmedUsername(){
+  return String(rankingRuntimeConfirmedAuthUser || '').trim();
+}
+function rankingSetRuntimeConfirmedUsername(value){
+  rankingRuntimeConfirmedAuthUser = String(value || '').trim();
+  return rankingRuntimeConfirmedAuthUser;
+}
+
+function rankingNotifyAuthChanged(){
+  try{ window.dispatchEvent(new CustomEvent('fm:auth-changed')); }catch(_error){}
+}
 
 function rankingStoredEndpoint(){
   const configured = String(RANKING_APPS_SCRIPT_URL || '').trim();
@@ -135,23 +148,30 @@ function rankingStoreAuthSession(data, fallbackUsername=''){
   const token = rankingExtractToken(data);
   if(!token) return '';
   const username = rankingExtractUsername(data, fallbackUsername);
+  const confirmedUsername = rankingExtractUsername(data, '');
   const expiresAt = String(data?.expires_at || data?.expiresAt || data?.data?.expires_at || data?.session?.expires_at || '').trim();
   try{
     localStorage.setItem('fmRankingAuthToken', token);
     localStorage.removeItem('fmRankingToken');
     localStorage.removeItem('rankingToken');
     if(username) localStorage.setItem('fmRankingAuthUser', username);
+    if(confirmedUsername) localStorage.setItem('fmRankingAuthConfirmedUser', confirmedUsername);
+    else localStorage.removeItem('fmRankingAuthConfirmedUser');
     if(expiresAt) localStorage.setItem('fmRankingAuthExpiresAt', expiresAt);
     if(data?.user?.id || data?.data?.user?.id) localStorage.setItem('fmRankingAuthUserId', String(data?.user?.id || data?.data?.user?.id));
     localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
   }catch(_){ /* sin almacenamiento */ }
+  rankingSetRuntimeConfirmedUsername(confirmedUsername);
   if(username && (!rankingStoredManagerName() || rankingStoredManagerName() === 'Manager')) setRankingStoredManagerName(username);
+  rankingNotifyAuthChanged();
   return token;
 }
 function rankingClearAuthSession(){
+  rankingSetRuntimeConfirmedUsername('');
   try{
-    ['fmRankingAuthToken','fmRankingToken','rankingToken','fmRankingAuthUser','fmRankingUsername','fmRankingAuthExpiresAt','fmRankingAuthUserId','fmRankingNeedsPasswordSetup'].forEach(key => localStorage.removeItem(key));
+    ['fmRankingAuthToken','fmRankingToken','rankingToken','fmRankingAuthUser','fmRankingUsername','fmRankingAuthConfirmedUser','fmRankingAuthExpiresAt','fmRankingAuthUserId','fmRankingNeedsPasswordSetup'].forEach(key => localStorage.removeItem(key));
   }catch(_){ /* sin almacenamiento */ }
+  rankingNotifyAuthChanged();
 }
 function rankingNeedsPasswordSetup(){
   try{ return localStorage.getItem('fmRankingNeedsPasswordSetup') === '1'; }
@@ -447,13 +467,18 @@ async function checkRankingSession(event){
       const data = await response.json().catch(() => ({}));
       if(response.ok && data.ok !== false){
         const user = rankingExtractUsername(data, rankingStoredAuthUsername());
+        rankingSetRuntimeConfirmedUsername(user);
         try{
-          if(user) localStorage.setItem('fmRankingAuthUser', user);
+          if(user){
+            localStorage.setItem('fmRankingAuthUser', user);
+            localStorage.setItem('fmRankingAuthConfirmedUser', user);
+          }
           localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
         }catch(_){ /* sin almacenamiento */ }
         const message = `Sesión válida${user ? ` · ${user}` : ''}.`;
         if(!automatic) showNotice('Sesión válida en el ranking online.');
         rankingRefreshAuthPanels(message);
+        rankingNotifyAuthChanged();
         return true;
       }
       const message = rankingResponseErrorMessage(data, response, 'Sesión no válida.');
@@ -462,6 +487,8 @@ async function checkRankingSession(event){
     }
     throw new Error(lastMessage || 'No se pudo verificar la sesión.');
   }catch(error){
+    rankingSetRuntimeConfirmedUsername('');
+    rankingNotifyAuthChanged();
     const message = error?.message || 'No se pudo verificar la sesión.';
     if(status) status.textContent = message;
     if(!automatic) showNotice(message);
@@ -1347,8 +1374,9 @@ function rankingSubmitPanelMarkup(payload, endpoint){
   const info = rankingUploadCooldownInfo();
   const hasSession = Boolean(rankingStoredAuthToken());
   const loginOk = !RANKING_REQUIRES_LOGIN || hasSession;
-  const canUpload = Boolean(endpoint && game && payload && info.canUpload && loginOk);
-  const buttonLabel = !loginOk ? 'Iniciar sesión para subir' : canUpload ? 'Subir carrera' : rankingCooldownText(info);
+  const privateToolsBlocked = Boolean(game?.privateReviewTools?.rankingBlocked);
+  const canUpload = Boolean(endpoint && game && payload && info.canUpload && loginOk && !privateToolsBlocked);
+  const buttonLabel = privateToolsBlocked ? 'Ranking bloqueado en esta partida' : !loginOk ? 'Iniciar sesión para subir' : canUpload ? 'Subir carrera' : rankingCooldownText(info);
   const manualStatus = info.last
     ? `Última carga manual: día ${seasonDayFromDate(info.last, game?.seasonYear || seasonYearForNumber(game?.seasonNumber || 1))} (${info.last}).`
     : 'Todavía no hiciste una carga manual en esta partida.';
@@ -1357,7 +1385,7 @@ function rankingSubmitPanelMarkup(payload, endpoint){
     <p class="muted">Podés subir manualmente la carrera completa del mánager cada ${Number(info.cooldown || RANKING_UPLOAD_COOLDOWN_DAYS || 50)} días de juego. Además, se actualiza automáticamente en los días 150, 250 y 350, al finalizar la temporada o ante un despido, sin duplicar carreras.</p>
     <div class="ranking-manual-actions">
       <button id="submitRankingManual" class="primary" type="button" ${canUpload ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
-      <span id="rankingManualStatus" class="small muted">${!loginOk ? 'Tenés que iniciar sesión para subir récords.' : endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
+      <span id="rankingManualStatus" class="small muted">${privateToolsBlocked ? 'Esta partida fue modificada con herramientas de revisión.' : !loginOk ? 'Tenés que iniciar sesión para subir récords.' : endpoint ? escapeHtml(manualStatus) : 'Ranking online no disponible por el momento.'}</span>
     </div>
     ${rankingAutomaticStatusMarkup()}
     ${rankingSeasonPreviewMarkup(payload)}
@@ -1390,6 +1418,7 @@ function renderRankingOnline(){
 }
 function validateRankingSubmit(payload, managerName, endpoint, options={}){
   if(!game) return 'No hay partida activa.';
+  if(game?.privateReviewTools?.rankingBlocked) return 'Esta partida fue modificada con herramientas de revisión y no puede publicar récords.';
   if(!endpoint) return 'Ranking online no disponible por el momento.';
   if(RANKING_REQUIRES_LOGIN && !rankingStoredAuthToken()) return 'Tenés que iniciar sesión para subir récords.';
   if(!managerName) return 'Ingresá un nombre de manager.';

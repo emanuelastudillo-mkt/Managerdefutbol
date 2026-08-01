@@ -857,6 +857,7 @@ function bindEvents(){
   bindSidebarGroupToggles();
   syncSidebarNavigationState();
   if(typeof rankingUpdateTopLoginButton === 'function') rankingUpdateTopLoginButton();
+  if(typeof syncPrivateManagerToolsNavigation === 'function') syncPrivateManagerToolsNavigation();
   document.addEventListener('click', (event)=>{
     const playerBtn = event.target.closest('[data-player-id]');
     if(playerBtn){ showPlayerModal(Number(playerBtn.dataset.playerId)); return; }

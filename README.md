@@ -1,3 +1,16 @@
+# V9.45 · Vista privada de Administración
+
+Base: V9.44.
+
+- La sección se incorpora dinámicamente únicamente después de que la sesión online confirma en memoria que la cuenta pertenece exactamente a `Emanukk`.
+- No se agrega ningún botón, texto, grupo ni espacio reservado para el resto de los managers.
+- El modo de revisión comienza apagado y permite inspeccionar datos internos o activar herramientas locales de prueba.
+- Las modificaciones generan una copia previa independiente, dejan un registro y bloquean el ranking online de ese guardado.
+- Restaurar la copia elimina la marca de modificación y permite que una futura prueba genere una copia nueva.
+- No requiere cambios en el Worker.
+
+Ver `AJUSTES-V9.45.md` para el detalle completo.
+
 # V9.44 · Cartas de reducción de objetivo acumulativas
 
 Base: V9.43.

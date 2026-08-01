@@ -2,7 +2,7 @@
   "version": "V8.46",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V9.44: las cartas de reducción de objetivo acumulan su efecto por activación; cada uso activado o renovado suma otro nivel del bonus y desactivarlas no consume un uso.",
+  "caracteristicas_version": "V9.45: panel privado de revisión para la cuenta confirmada Emanukk; no se muestra a otros usuarios. Las cartas de reducción de objetivo mantienen el acumulado por activación de V9.44.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

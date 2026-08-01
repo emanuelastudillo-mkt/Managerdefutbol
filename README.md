@@ -1,3 +1,14 @@
+# V9.43 · Relaciones persistentes del mánager
+
+Base: V9.42.
+
+- Al cierre de cada temporada pueden sumarse hasta dos jugadores afines al mánager.
+- La selección automática combina confianza individual, participación e influencia en el vestuario.
+- Las relaciones permanecen aunque el mánager o el jugador cambien de club.
+- Los reencuentros conservan una confianza inicial elevada y fortalecen la afinidad.
+- Los jugadores afines aparecen en la pestaña Relaciones del perfil y como objetivos especiales del Mercado.
+- La afinidad aumenta la predisposición personal a aceptar una futura oferta, sin anular la decisión del club propietario, el presupuesto ni las reglas del mercado.
+
 # V9.41 · Consumo físico según resistencia
 
 Base: V9.40.

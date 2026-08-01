@@ -1,4 +1,4 @@
-# V9.38 · Ser jugador: final natural de la carrera
+# V9.39 · Ser jugador: final natural de la carrera
 
 Base: V9.37.
 

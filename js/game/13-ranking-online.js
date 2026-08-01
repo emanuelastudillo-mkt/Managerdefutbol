@@ -175,19 +175,27 @@ function rankingLoginPanelMarkup(endpoint, options={}){
   const user = rankingStoredAuthUsername() || rankingStoredManagerName() || '';
   const surface = String(options?.surface || 'ranking').trim() || 'ranking';
   return `<div class="card ranking-login-card" data-ranking-auth-panel="${escapeHtml(surface)}">
-    <div class="row"><div><p class="label">Cuenta online</p><h3>Acceso al ranking</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
-    <p class="muted">Iniciá sesión o creá una cuenta protegida para participar en las funciones online.</p>
+    <div class="row"><div><p class="label">Cuenta online</p><h3>Ingresar o crear cuenta</h3></div><span class="pill">${RANKING_REQUIRES_LOGIN ? 'Requerido' : 'Opcional'}</span></div>
+    <p class="muted">Usá el mismo nombre y contraseña para acceder al ranking y a las funciones online.</p>
     <div class="ranking-auth-status small" data-ranking-auth-status>${rankingAuthStatusMarkup(endpoint)}</div>
-    <form class="ranking-login-form" data-ranking-login-form>
-      <input name="username" type="text" autocomplete="username" placeholder="Usuario" value="${escapeHtml(user)}" ${disabled} />
-      <input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="Contraseña" ${disabled} />
-      <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
-      <button class="ghost" type="button" data-ranking-register ${disabled}>Crear cuenta</button>
-      <button class="ghost" type="button" data-ranking-set-password ${endpoint && token && rankingNeedsPasswordSetup() ? '' : 'disabled'}>Proteger cuenta heredada</button>
-      <button class="ghost" type="button" data-ranking-check-session ${endpoint && token ? '' : 'disabled'}>Verificar sesión</button>
-      <button class="danger" type="button" data-ranking-logout ${token && !String(RANKING_TOKEN || '').trim() ? '' : 'disabled'}>Cerrar sesión</button>
+    <form class="ranking-login-form" data-ranking-login-form novalidate>
+      <label class="ranking-auth-field">
+        <span>Nombre</span>
+        <input name="username" type="text" autocomplete="username" minlength="3" maxlength="40" placeholder="Tu nombre de usuario" value="${escapeHtml(user)}" aria-describedby="ranking-username-help-${escapeHtml(surface)}" ${disabled} />
+        <small id="ranking-username-help-${escapeHtml(surface)}" data-ranking-username-help>Entre 3 y 40 caracteres. Letras, números, espacios, punto, guion o guion bajo.</small>
+      </label>
+      <label class="ranking-auth-field">
+        <span>Contraseña</span>
+        <input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="Tu contraseña" aria-describedby="ranking-password-help-${escapeHtml(surface)}" ${disabled} />
+        <small id="ranking-password-help-${escapeHtml(surface)}" data-ranking-password-help>Entre 8 y 128 caracteres.</small>
+      </label>
+      <div class="ranking-auth-actions">
+        <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
+        <button class="ghost" type="button" data-ranking-register ${disabled}>Crear cuenta</button>
+        ${token && !String(RANKING_TOKEN || '').trim() ? '<button class="danger" type="button" data-ranking-logout>Cerrar sesión</button>' : ''}
+      </div>
     </form>
-    <div class="small muted" data-ranking-login-status>${token ? (rankingNeedsPasswordSetup() ? 'Tu sesión heredada sigue activa: asignale una contraseña antes de cerrar sesión.' : 'La cuenta está lista para publicar tu carrera.') : 'Usuario de 3 a 40 caracteres y contraseña de al menos 8 caracteres.'}</div>
+    <div class="small muted ranking-login-status" data-ranking-login-status>${token ? 'La cuenta está lista para publicar tu carrera.' : 'Completá ambos campos y elegí iniciar sesión o crear cuenta.'}</div>
   </div>`;
 }
 function rankingAuthPanelFromSource(source){
@@ -201,6 +209,8 @@ function rankingAuthPanelElements(source){
     form:panel?.querySelector?.('[data-ranking-login-form]') || null,
     username:panel?.querySelector?.('input[name="username"]') || null,
     password:panel?.querySelector?.('input[name="password"]') || null,
+    usernameHelp:panel?.querySelector?.('[data-ranking-username-help]') || null,
+    passwordHelp:panel?.querySelector?.('[data-ranking-password-help]') || null,
     authStatus:panel?.querySelector?.('[data-ranking-auth-status]') || null,
     loginStatus:panel?.querySelector?.('[data-ranking-login-status]') || null
   };
@@ -219,9 +229,13 @@ function rankingBindAuthPanel(panel){
   panel.dataset.rankingAuthBound = '1';
   panel.querySelector('[data-ranking-login-form]')?.addEventListener('submit', loginRankingAccount);
   panel.querySelector('[data-ranking-register]')?.addEventListener('click', registerRankingAccount);
-  panel.querySelector('[data-ranking-set-password]')?.addEventListener('click', setRankingAccountPassword);
-  panel.querySelector('[data-ranking-check-session]')?.addEventListener('click', checkRankingSession);
   panel.querySelector('[data-ranking-logout]')?.addEventListener('click', logoutRankingAccount);
+  const elements = rankingAuthPanelElements(panel);
+  const refreshValidation = () => rankingValidateAuthFields(elements, false);
+  elements.username?.addEventListener('input', refreshValidation);
+  elements.password?.addEventListener('input', refreshValidation);
+  elements.username?.addEventListener('blur', () => rankingValidateAuthFields(elements, true));
+  elements.password?.addEventListener('blur', () => rankingValidateAuthFields(elements, true));
   if(rankingStoredAuthToken() && !rankingPasswordSetupStateKnown() && !rankingSessionAutoCheckInFlight){
     rankingSessionAutoCheckInFlight = true;
     setTimeout(async () => {
@@ -312,6 +326,30 @@ function rankingAuthConfigPath(key, fallback){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
   return String(cfg?.[key] || fallback).trim().replace(/^\/+|\/+$/g, '');
 }
+
+function rankingValidateAuthFields(elements, showEmpty=false){
+  const username = String(elements?.username?.value || '').trim();
+  const password = String(elements?.password?.value || '');
+  const usernameAllowed = /^[\p{L}\p{N}_. -]+$/u;
+  const usernameValid = username.length >= 3 && username.length <= 40 && usernameAllowed.test(username);
+  const passwordValid = password.length >= 8 && password.length <= 128;
+  const setState = (input, help, valid, empty, normalText, errorText) => {
+    input?.classList?.toggle('is-valid', valid);
+    input?.classList?.toggle('is-invalid', !valid && (!empty || showEmpty));
+    if(help){
+      help.classList.toggle('auth-help-error', !valid && (!empty || showEmpty));
+      help.textContent = !valid && (!empty || showEmpty) ? errorText : normalText;
+    }
+  };
+  setState(elements?.username, elements?.usernameHelp, usernameValid, !username,
+    'Entre 3 y 40 caracteres. Letras, números, espacios, punto, guion o guion bajo.',
+    !username ? 'Ingresá un nombre.' : 'Usá entre 3 y 40 caracteres permitidos.');
+  setState(elements?.password, elements?.passwordHelp, passwordValid, !password,
+    'Entre 8 y 128 caracteres.',
+    !password ? 'Ingresá una contraseña.' : 'La contraseña debe tener entre 8 y 128 caracteres.');
+  return { username, password, valid:usernameValid && passwordValid };
+}
+
 async function rankingAuthJsonRequest(endpoint, path, body, fallback){
   const response = await fetch(rankingApiUrl(endpoint, path), {
     method:'POST',
@@ -326,11 +364,10 @@ async function loginRankingAccount(event){
   event?.preventDefault?.();
   const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const username = String(elements.username?.value || '').trim();
-  const password = String(elements.password?.value || '');
+  const validation = rankingValidateAuthFields(elements, true);
+  const { username, password } = validation;
   const status = elements.loginStatus;
-  if(!username){ showNotice('Ingresá el usuario del ranking.'); return false; }
-  if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
+  if(!validation.valid){ showNotice('Revisá el nombre y la contraseña.'); return false; }
   if(status) status.textContent = 'Iniciando sesión...';
   const submit = elements.form?.querySelector('button[type="submit"]');
   if(submit) submit.disabled = true;
@@ -352,11 +389,10 @@ async function loginRankingAccount(event){
 async function registerRankingAccount(event){
   const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
-  const username = String(elements.username?.value || '').trim();
-  const password = String(elements.password?.value || '');
+  const validation = rankingValidateAuthFields(elements, true);
+  const { username, password } = validation;
   const status = elements.loginStatus;
-  if(username.length < 3){ showNotice('El usuario debe tener al menos 3 caracteres.'); return false; }
-  if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
+  if(!validation.valid){ showNotice('Revisá el nombre y la contraseña.'); return false; }
   if(!confirm(`¿Crear la cuenta online "${username}"?`)) return false;
   if(status) status.textContent = 'Creando cuenta protegida...';
   try{

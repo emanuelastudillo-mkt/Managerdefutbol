@@ -1230,3 +1230,19 @@ button.cwc-group-result{cursor:pointer}
 /* V8.43 · Recaudación del Mundial de Clubes. */
 .cwc-match-revenue{display:block;margin-top:7px;text-align:center;font-size:.655rem;color:var(--muted);line-height:1.35}
 .cwc-revenue-summary strong.ok{font-size:.975rem}
+
+/* V9.39 · Acceso online simplificado */
+.ranking-login-card{max-width:720px;margin-inline:auto;padding:18px}
+.ranking-login-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.ranking-auth-field{display:grid;gap:6px;min-width:0}
+.ranking-auth-field>span{font-size:.74rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text,#e5e7eb)}
+.ranking-auth-field input{min-height:44px;padding:10px 12px;border-radius:10px}
+.ranking-auth-field small{min-height:30px;font-size:.68rem;line-height:1.35;color:var(--muted,#94a3b8)}
+.ranking-auth-field small.auth-help-error{color:#fca5a5}
+.ranking-auth-field input.is-invalid{border-color:#ef4444!important;box-shadow:0 0 0 2px rgba(239,68,68,.14)!important}
+.ranking-auth-field input.is-valid{border-color:#22c55e!important}
+.ranking-auth-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ranking-auth-actions .danger{grid-column:1/-1}
+.ranking-auth-actions button{min-height:42px;font-weight:800}
+.ranking-login-status{margin-top:10px;text-align:center}
+@media(max-width:560px){.ranking-login-form{grid-template-columns:1fr}.ranking-auth-actions{grid-template-columns:1fr}.ranking-auth-actions .danger{grid-column:auto}}

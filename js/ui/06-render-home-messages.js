@@ -1112,11 +1112,98 @@ function updateAssistantMessagesToggle(){
   btn.textContent = assistantMessagesButtonLabel();
   btn.disabled = !game;
 }
+const MESSAGE_INBOX_POLICY_VERSION = 946;
+const MESSAGE_INBOX_MAX_READ_CLOSED = 80;
+const MESSAGE_INBOX_IMPORTANT_TITLE_PATTERNS = [
+  /alta m[eé]dica|parte m[eé]dico|lesionad|lesi[oó]n/i,
+  /contratos? finalizados?|plantel insuficiente|plantel incompleto/i,
+  /n[uú]meros rojos|sanci[oó]n|bancarrota|despido|continuidad est[aá] en riesgo/i,
+  /nuevas ofertas de sponsors|sponsor especial perdido/i,
+  /oferta laboral|oferta para dirigir|solicitud aceptada|solicitud rechazada|retir[oó] su propuesta/i,
+  /informe de captaci[oó]n recibido|b[uú]squeda completada/i,
+  /obra finalizada|campa[nñ]a de socios finalizada|predio juvenil nivel|replante obligatorio finalizado|calefacci[oó]n de c[eé]sped finalizada|deterioro anual del estadio|deterioro por edad aplicado/i,
+  /oferta por juvenil|juveniles dejaron la academia|juveniles? excepcionales? incorporados?|retiros al finalizar la temporada/i,
+  /ranking no enviado|ranking pendiente|actualizaci[oó]n de carrera pendiente/i,
+  /objetivo cumplido: contrato negociable|acuerdo para la pr[oó]xima temporada|presupuesto de fichajes liberado/i,
+  /cupo de bonus disponible/i,
+  /derecho econ[oó]mico registrado|cobro por jugador formado|transferencia de un jugador de tu cartera/i
+];
+const MESSAGE_INBOX_ATTENTION_BODY_PATTERN = /ten[eé]s?\s+\d+\s+d[ií]as|requiere(?:n)?\s+(?:tu\s+)?respuesta|aceptar\s+o\s+rechazar|eleg[ií]\s+una\s+opci[oó]n|revisi[oó]n obligatoria/i;
+function messageActionRequiresAttention(message){
+  const action = message?.action;
+  if(!action || typeof action !== 'object') return false;
+  const status = String(action.status || '').toLowerCase();
+  const type = String(action.type || '').toLowerCase();
+  if(['openmanagerachievements','openemployees'].includes(type)) return true;
+  if(['pending','agreed_pending_market','auto_agreed_pending_market','forced_sale_pending_market'].includes(status)) return true;
+  if(['transferoffer','lockerroomdecision','managercareerdecision'].includes(type) && !status) return true;
+  return false;
+}
+function messageShouldEnterInbox(message, options={}){
+  if(!message || typeof message !== 'object') return false;
+  const explicit = message.inbox;
+  if(explicit === false || explicit === 'never') return false;
+  if(explicit === true || explicit === 'always') return true;
+  if(String(message.priority || 'normal').toLowerCase() === 'high') return true;
+  if(messageActionRequiresAttention(message)) return true;
+  const type = String(message.type || 'info').toLowerCase();
+  if(['warning','reto','fundador','vestuario','medico'].includes(type)) return true;
+  if(type === 'asistente') return options?.targetGame?.assistantMessagesEnabled !== false;
+  const title = String(message.title || '');
+  const body = String(message.body || '');
+  if(MESSAGE_INBOX_IMPORTANT_TITLE_PATTERNS.some(pattern => pattern.test(title))) return true;
+  if(MESSAGE_INBOX_ATTENTION_BODY_PATTERN.test(body)) return true;
+  return false;
+}
+function compactMessageInboxForState(targetGame, options={}){
+  if(!targetGame || typeof targetGame !== 'object') return { changed:false, removed:0, trimmed:0 };
+  const source = Array.isArray(targetGame.messages) ? targetGame.messages : [];
+  const seenIds = new Set();
+  let removed = 0;
+  let trimmed = 0;
+  let readClosedKept = 0;
+  const kept = [];
+  source.forEach(message => {
+    const id = String(message?.id || '');
+    if(id && seenIds.has(id)){ removed += 1; return; }
+    if(id) seenIds.add(id);
+    if(!messageShouldEnterInbox(message, { existing:true, targetGame })){ removed += 1; return; }
+    const pending = messageActionRequiresAttention(message);
+    if(message?.read && !pending){
+      if(readClosedKept >= MESSAGE_INBOX_MAX_READ_CLOSED){ trimmed += 1; return; }
+      readClosedKept += 1;
+    }
+    kept.push(message);
+  });
+  const previousVersion = Number(targetGame.messageInboxPolicyVersion || 0);
+  const changed = kept.length !== source.length || previousVersion !== MESSAGE_INBOX_POLICY_VERSION;
+  targetGame.messages = kept;
+  targetGame.messageInboxPolicyVersion = MESSAGE_INBOX_POLICY_VERSION;
+  targetGame.messageInboxStats = targetGame.messageInboxStats && typeof targetGame.messageInboxStats === 'object' && !Array.isArray(targetGame.messageInboxStats) ? targetGame.messageInboxStats : {};
+  if(removed || trimmed){
+    targetGame.messageInboxStats.compacted = Math.max(0, Number(targetGame.messageInboxStats.compacted || 0)) + removed + trimmed;
+    targetGame.messageInboxStats.lastCompactionAt = Date.now();
+  }
+  return { changed, removed, trimmed };
+}
+function noteSuppressedInboxMessage(targetGame, message){
+  if(!targetGame) return;
+  targetGame.messageInboxStats = targetGame.messageInboxStats && typeof targetGame.messageInboxStats === 'object' && !Array.isArray(targetGame.messageInboxStats) ? targetGame.messageInboxStats : {};
+  targetGame.messageInboxStats.suppressed = Math.max(0, Number(targetGame.messageInboxStats.suppressed || 0)) + 1;
+  targetGame.messageInboxStats.lastSuppressedType = String(message?.type || 'info');
+}
 function pushGameMessage(message){
   if(!game) return null;
   game.messages = Array.isArray(game.messages) ? game.messages : [];
+  if(!messageShouldEnterInbox(message, { targetGame:game })){
+    noteSuppressedInboxMessage(game, message);
+    return null;
+  }
+  const id = message.id || `msg-${Date.now()}-${hashNumber(`${message.title || ''}-${game.messages.length}-${Math.random()}`, 1000000)}`;
+  const duplicate = game.messages.find(item => String(item?.id || '') === String(id));
+  if(duplicate) return duplicate;
   const item = {
-    id: message.id || `msg-${Date.now()}-${hashNumber(`${message.title || ''}-${game.messages.length}-${Math.random()}`, 1000000)}`,
+    id,
     turn: game.matchdayIndex || 0,
     season: game.seasonNumber || 1,
     date: game.currentDate || '',
@@ -1126,11 +1213,13 @@ function pushGameMessage(message){
     title: message.title || 'Mensaje',
     body: message.body || '',
     action: message.action || null,
+    inbox: message.inbox === true || message.inbox === 'always' ? 'always' : null,
     playerIds: Array.isArray(message.playerIds) ? [...new Set(message.playerIds.map(Number).filter(Number.isFinite))] : [],
     playerNames: Array.isArray(message.playerNames) ? message.playerNames.map(name => String(name || '')).filter(Boolean) : [],
     createdAt: Date.now()
   };
   game.messages.unshift(item);
+  compactMessageInboxForState(game);
   return item;
 }
 
@@ -1200,8 +1289,20 @@ function queueInitialAssistantAdviceMessages(){
   return maybePushAssistantAdviceMessage('new_game', { force:true });
 }
 function markMessagesRead(){
-  if(!game?.messages) return;
-  game.messages.forEach(m => { m.read = true; });
+  if(!game?.messages) return 0;
+  let changed = 0;
+  game.messages.forEach(m => {
+    if(!m.read){ m.read = true; changed += 1; }
+  });
+  return changed;
+}
+function markAllMessagesRead(){
+  const changed = markMessagesRead();
+  if(!changed){ showNotice('No hay mensajes pendientes de lectura.'); return; }
+  compactMessageInboxForState(game);
+  saveLocal(true);
+  renderMessages();
+  showNotice(`${changed} mensaje${changed === 1 ? '' : 's'} marcado${changed === 1 ? '' : 's'} como leído${changed === 1 ? '' : 's'}.`);
 }
 function latestMessages(limit=3){
   return (game?.messages || []).slice(0, limit);
@@ -1329,18 +1430,19 @@ function messageHasPendingAction(message){
   return Boolean(message?.action && activeTransferMessageStatuses().has(status));
 }
 function deletableOldMessages(){
-  return (game?.messages || []).filter(message => !messageHasPendingAction(message));
+  return (game?.messages || []).filter(message => Boolean(message?.read) && !messageHasPendingAction(message));
 }
 function deleteOldMessages(){
   if(!game) return;
   const deletable = deletableOldMessages();
-  if(!deletable.length){ showNotice('No hay mensajes cerrados para borrar.'); return; }
-  const ok = window.confirm(`Se borrarán ${deletable.length} mensaje(s) antiguos. Las ofertas y acciones pendientes se conservarán. ¿Continuar?`);
+  if(!deletable.length){ showNotice('No hay mensajes leídos y cerrados para borrar.'); return; }
+  const deletableIds = new Set(deletable.map(message => String(message?.id || '')));
+  const ok = window.confirm(`Se borrarán ${deletable.length} mensaje(s) leídos. Las ofertas y decisiones pendientes se conservarán. ¿Continuar?`);
   if(!ok) return;
-  game.messages = (game.messages || []).filter(message => messageHasPendingAction(message));
+  game.messages = (game.messages || []).filter(message => !deletableIds.has(String(message?.id || '')));
   saveLocal(true);
   renderMessages();
-  showNotice(`${deletable.length} mensaje(s) antiguo(s) eliminado(s).`);
+  showNotice(`${deletable.length} mensaje${deletable.length === 1 ? '' : 's'} leído${deletable.length === 1 ? '' : 's'} eliminado${deletable.length === 1 ? '' : 's'}.`);
 }
 function messageSortTimestamp(message){
   const created = Number(message?.createdAt || 0);
@@ -1365,6 +1467,7 @@ function markMessageReadById(messageId){
   return true;
 }
 function renderMessages(){
+  compactMessageInboxForState(game);
   if(typeof ensurePendingSpecialClauseAutoAcceptanceMetadata === 'function') ensurePendingSpecialClauseAutoAcceptanceMetadata();
   const reconciledTransfers = reconcileTransferOfferMessages();
   if(reconciledTransfers > 0 && typeof saveLocal === 'function') saveLocal(true);
@@ -1379,7 +1482,7 @@ function renderMessages(){
   const rows = messages.length ? `${unreadRows ? `<section class="message-inbox-section message-inbox-unread"><div class="message-inbox-section-head"><strong>Pendientes de lectura</strong><span>${unreadMessages.length}</span></div>${unreadRows}</section>` : ''}${readRows ? `<section class="message-inbox-section message-inbox-read"><div class="message-inbox-section-head"><strong>Leídos</strong><span>${readMessages.length}</span></div>${readRows}</section>` : ''}` : '';
   const deletableCount = deletableOldMessages().length;
   view.innerHTML = `
-    <div class="row section-title compact-section-title"><div><h2>Mensajes</h2><p class="tagline">Los mensajes pendientes aparecen primero y se mantienen destacados hasta marcarlos como leídos.</p></div><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar mensajes antiguos${deletableCount ? ` (${deletableCount})` : ''}</button></div>
+    <div class="row section-title compact-section-title messages-section-title"><div><h2>Mensajes</h2><p class="tagline">La bandeja conserva decisiones, alertas y cambios relevantes. Los avisos rutinarios se resumen durante el avance y no generan mensajes.</p></div><div class="row messages-bulk-actions"><button type="button" id="btnMarkAllMessagesRead" class="ghost" ${unread ? '' : 'disabled'}>Marcar todos como leídos${unread ? ` (${unread})` : ''}</button><button type="button" id="btnDeleteOldMessages" class="ghost" ${deletableCount ? '' : 'disabled'}>Borrar leídos${deletableCount ? ` (${deletableCount})` : ''}</button></div></div>
     <div class="messages-shell">
       <div class="messages-toolbar card">
         <div class="messages-toolbar-item"><p class="label">Bandeja</p><strong>${messages.length}</strong><span>Total</span></div>
@@ -1389,6 +1492,7 @@ function renderMessages(){
       </div>
       <div class="message-list">${rows || '<div class="card message-empty-card"><p class="muted">No hay mensajes todavía.</p></div>'}</div>
     </div>`;
+  document.querySelector('#btnMarkAllMessagesRead')?.addEventListener('click', markAllMessagesRead);
   document.querySelector('#btnDeleteOldMessages')?.addEventListener('click', deleteOldMessages);
   document.querySelectorAll('[data-mark-message-read]').forEach(btn => btn.addEventListener('click', () => markMessageReadById(btn.dataset.markMessageRead)));
   if(!(typeof managerWithoutClubActive === 'function' ? managerWithoutClubActive() : Boolean(game?.gameOver?.active))){

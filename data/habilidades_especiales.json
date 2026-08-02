@@ -2,7 +2,7 @@
   "version": "V8.46",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V9.45: panel privado de revisión para la cuenta confirmada Emanukk; no se muestra a otros usuarios. Las cartas de reducción de objetivo mantienen el acumulado por activación de V9.44.",
+  "caracteristicas_version": "V9.46: la bandeja conserva decisiones, alertas y cambios relevantes; los avisos rutinarios dejan de generar mensajes. Incluye acciones masivas para marcar como leído y borrar mensajes leídos. El panel privado de V9.45 y las cartas acumulativas de V9.44 se mantienen.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

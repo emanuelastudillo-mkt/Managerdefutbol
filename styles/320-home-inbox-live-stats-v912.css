@@ -174,3 +174,13 @@
   .home-inbox-button{width:40px;height:34px}
   .live-compare-values{grid-template-columns:36px minmax(0,1fr) 36px}
 }
+
+/* V9.46 · Bandeja esencial y acciones masivas. */
+.messages-section-title{align-items:flex-start;gap:14px}
+.messages-bulk-actions{justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.messages-bulk-actions .ghost{white-space:nowrap}
+@media (max-width:760px){
+  .messages-section-title{align-items:stretch;flex-direction:column}
+  .messages-bulk-actions{justify-content:flex-start;width:100%}
+  .messages-bulk-actions .ghost{flex:1 1 190px}
+}

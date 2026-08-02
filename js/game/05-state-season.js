@@ -458,6 +458,10 @@ function normalizeGame(saved){
   normalized.bankruptcy = normalized.bankruptcy && typeof normalized.bankruptcy === 'object' && !Array.isArray(normalized.bankruptcy) ? normalized.bankruptcy : null;
   normalized.messages = Array.isArray(normalized.messages) ? normalized.messages : [];
   normalized.messages = normalized.messages.filter(msg => !String(msg?.body || '').includes('La liga ajustó la preparación de'));
+  if(typeof compactMessageInboxForState === 'function'){
+    const inboxMigration = compactMessageInboxForState(normalized, { migration:true });
+    if(Boolean(inboxMigration?.changed)) normalized._needsAutosave = true;
+  }
   normalized.specialClauseOffers = (normalized.specialClauseOffers && typeof normalized.specialClauseOffers === 'object' && !Array.isArray(normalized.specialClauseOffers)) ? normalized.specialClauseOffers : null;
   normalized.eventLog = Array.isArray(normalized.eventLog) ? normalized.eventLog : [];
   normalized.playerStars = normalizePlayerStarsState(normalized.playerStars || {});

@@ -329,7 +329,7 @@ function nationalCupDrawEdition(config, options={}){
   if(typeof pushGameMessage === 'function' && options.silent !== true && nationalCupShouldNotifyManager(config.country)){
     pushGameMessage({
       id:`national-cup-${game.seasonNumber}-${config.id}-draw`,
-      type:'deportivo', priority:'normal', title:`Sorteo de ${config.name}`,
+      type:'deportivo', priority:'normal', inbox:'always', title:`Sorteo de ${config.name}`,
       body:config.country === 'Argentina'
         ? 'Los mejores 10 equipos avanzaron directamente a 16avos. Los otros 44 disputarán la fase previa en estadios neutrales.'
         : 'Los mejores 14 equipos avanzaron directamente a 8vos. Los últimos 4 disputarán la fase previa en estadios neutrales.'
@@ -362,7 +362,7 @@ function nationalCupCreateNextStage(config, edition){
     if(Number(game.selectedClubId || 0) === championId){
       recordManagerOfficialTitleForState(game, { season:game.seasonNumber, year:game.seasonYear, type:'national_cup', competitionId:config.id, competitionName:config.name, clubId:championId, clubName:clubName(championId) });
     }
-    if(typeof pushGameMessage === 'function') pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-champion`, type:'deportivo', priority:'high', title:`Campeón de ${config.name}`, body:`${clubName(championId)} ganó la ${config.name}.` });
+    if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(config.country)) pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-champion`, type:'deportivo', priority:'high', title:`Campeón de ${config.name}`, body:`${clubName(championId)} ganó la ${config.name}.` });
     return true;
   }
   const nextStage = config.stages[stageIndex + 1];
@@ -375,7 +375,7 @@ function nationalCupCreateNextStage(config, edition){
   edition.stages[nextStage.id].status = 'scheduled';
   edition.stages[nextStage.id].roundId = round?.id || '';
   edition.stages[nextStage.id].matchIds = (round?.matches || []).map(match => match.id);
-  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(config.country)) pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-${nextStage.id}`, type:'deportivo', priority:'normal', title:`${config.name} · ${nextStage.label}`, body:`Se definieron los cruces de ${nextStage.label}. Se jugarán el ${matchDateLabel(nationalCupStageDate(config, nextStage.id, currentSeasonYear()))}.` });
+  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(config.country)) pushGameMessage({ id:`national-cup-${game.seasonNumber}-${config.id}-${nextStage.id}`, type:'deportivo', priority:'normal', inbox:'always', title:`${config.name} · ${nextStage.label}`, body:`Se definieron los cruces de ${nextStage.label}. Se jugarán el ${matchDateLabel(nationalCupStageDate(config, nextStage.id, currentSeasonYear()))}.` });
   return true;
 }
 function advanceNationalCupsIfNeeded(){
@@ -430,7 +430,7 @@ function createNationalSupercupIfNeeded(country){
   supercup.participantClubIds = [leagueChampionId, rivalId];
   supercup.matchId = round?.matches?.[0]?.id || '';
   supercup.status = 'scheduled';
-  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(country)) pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}`, type:'deportivo', priority:'normal', title:supercup.name, body:`${clubName(leagueChampionId)} y ${clubName(rivalId)} disputarán la ${supercup.name} en el estadio más grande del país.` });
+  if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(country)) pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}`, type:'deportivo', priority:'normal', inbox:'always', title:supercup.name, body:`${clubName(leagueChampionId)} y ${clubName(rivalId)} disputarán la ${supercup.name} en el estadio más grande del país.` });
   return true;
 }
 function advanceNationalSupercupsIfNeeded(){
@@ -453,7 +453,7 @@ function advanceNationalSupercupsIfNeeded(){
         if(Number(game.selectedClubId || 0) === championId){
           recordManagerOfficialTitleForState(game, { season:game.seasonNumber, year:game.seasonYear, type:'national_supercup', competitionId:supercup.id, competitionName:supercup.name, clubId:championId, clubName:clubName(championId) });
         }
-        if(typeof pushGameMessage === 'function') pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}-champion`, type:'deportivo', priority:'normal', title:`Campeón de ${supercup.name}`, body:`${clubName(championId)} ganó la ${supercup.name}. Es un título oficial de valor menor.` });
+        if(typeof pushGameMessage === 'function' && nationalCupShouldNotifyManager(country)) pushGameMessage({ id:`national-supercup-${game.seasonNumber}-${nationalCupCountryKey(country)}-champion`, type:'deportivo', priority:'normal', inbox:'always', title:`Campeón de ${supercup.name}`, body:`${clubName(championId)} ganó la ${supercup.name}. Es un título oficial de valor menor.` });
         changed = true;
       }
     }

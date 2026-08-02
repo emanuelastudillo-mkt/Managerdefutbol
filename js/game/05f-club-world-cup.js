@@ -660,6 +660,7 @@ function prepareClubWorldCupParticipantsIfNeeded(options={}){
     pushGameMessage({
       type:'deportivo',
       priority:'normal',
+      inbox:clubWorldCupClubParticipates(game.selectedClubId, state) ? 'always' : 'never',
       title:CLUB_WORLD_CUP_CONFIG.name,
       body:'Los equipos ya están listos en la ciudad anfitriona.',
       id:`club-world-cup-${season}-host-city-ready`
@@ -1334,7 +1335,7 @@ function createClubWorldCupKnockoutStage(stage, participants){
     state.status = stage;
     state[`${stage}ClubIds`] = participants.map(Number).filter(Boolean);
     repairClubWorldCupFixtureSchedule();
-    pushGameMessage({ type:'deportivo', priority:'normal', title, body:`Ya están definidos los cruces de ${stageTitles[stage] || stage}. Se jugarán el día ${seasonDay}.`, id:`club-world-cup-${season}-${stage}` });
+    pushGameMessage({ type:'deportivo', priority:'normal', inbox:clubWorldCupClubParticipates(game.selectedClubId, state) ? 'always' : 'never', title, body:`Ya están definidos los cruces de ${stageTitles[stage] || stage}. Se jugarán el día ${seasonDay}.`, id:`club-world-cup-${season}-${stage}` });
   }
   return created;
 }
@@ -1368,7 +1369,7 @@ function createClubWorldCupFinalStages(finalists=[], thirdPlaceClubs=[]){
     state.finalClubIds = finalists.map(Number).filter(Boolean);
     state.thirdPlaceClubIds = thirdPlaceClubs.map(Number).filter(Boolean);
     repairClubWorldCupFixtureSchedule();
-    pushGameMessage({ type:'deportivo', priority:'normal', title:`${CLUB_WORLD_CUP_CONFIG.name} · Final`, body:`El tercer puesto se jugará el día ${thirdPlaceSeasonDay} y la final el día ${finalSeasonDay}.`, id:`club-world-cup-${season}-final` });
+    pushGameMessage({ type:'deportivo', priority:'normal', inbox:clubWorldCupClubParticipates(game.selectedClubId, state) ? 'always' : 'never', title:`${CLUB_WORLD_CUP_CONFIG.name} · Final`, body:`El tercer puesto se jugará el día ${thirdPlaceSeasonDay} y la final el día ${finalSeasonDay}.`, id:`club-world-cup-${season}-final` });
     return true;
   }
   return false;
@@ -1394,6 +1395,7 @@ function awardClubWorldCupPrizeIfManaged(clubId, stage){
   pushGameMessage({
     type:'finanzas',
     priority:'normal',
+    inbox:'always',
     title:`Premio ${CLUB_WORLD_CUP_CONFIG.name}`,
     body:`${labels[key] || key}: ${formatMoney(amount)} acreditados a ${clubName(managedId)}.`,
     id:`club-world-cup-prize-${state.season}-${managedId}-${key}`

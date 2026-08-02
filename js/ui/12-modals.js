@@ -452,7 +452,7 @@ function offerOwnPlayerToClubs(playerId){
   game.lastOwnPlayerOffer = turnStamp({ action:'offerOwnPlayer', playerId:player.id });
   const success = Math.random() < 0.85;
   if(!success){
-    pushGameMessage({ type:'mercado', title:`Sin ofertas por ${playerLastName(player.name)}`, body:`Se ofreció a ${player.name}, pero ningún club presentó una propuesta formal.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', inbox:'always', title:`Sin ofertas por ${playerLastName(player.name)}`, body:`Se ofreció a ${player.name}, pero ningún club presentó una propuesta formal.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);
@@ -542,7 +542,7 @@ function submitPurchaseOffer(playerId, kind){
   const clubAccepted = Math.random() < Number(cfg.clubChance ?? 1);
   if(!clubAccepted){
     markPurchaseOfferRejected(player.id, kind, cfg.amount, null, 'club');
-    pushGameMessage({ type:'mercado', title:'Oferta rechazada por el club', body:`${cfg.fail} No podremos volver a enviar una oferta por este jugador hasta la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', inbox:'always', title:'Oferta rechazada por el club', body:`${cfg.fail} No podremos volver a enviar una oferta por este jugador hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);
@@ -553,7 +553,7 @@ function submitPurchaseOffer(playerId, kind){
   const playerAccepted = Math.random() * 100 < Number(playerChance || 0);
   if(!playerAccepted){
     markPurchaseOfferRejected(player.id, kind, cfg.amount, playerChance, 'player');
-    pushGameMessage({ type:'mercado', title:'Jugador rechazó la oferta', body:typeof marketPlayerRejectionBody === 'function' ? marketPlayerRejectionBody(player) : `${player.name} no tiene interés en jugar en tu club ni le gusta tu forma de dirigir. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
+    pushGameMessage({ type:'mercado', inbox:'always', title:'Jugador rechazó la oferta', body:typeof marketPlayerRejectionBody === 'function' ? marketPlayerRejectionBody(player) : `${player.name} no tiene interés en jugar en tu club ni le gusta tu forma de dirigir. Queda bloqueado para tu club hasta la próxima temporada.`, priority:'normal' });
     closeModal();
     activeTab = 'messages';
     saveLocal(true);

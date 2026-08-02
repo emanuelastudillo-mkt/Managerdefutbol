@@ -1,9 +1,9 @@
-# V9.48 · Reducción de objetivo permanente por temporada
+# V9.49 · Ranking activo automático
 
-Versión construida sobre V9.47.
+Versión construida sobre V9.48.
 
-Las cartas de reducción de objetivo ahora aplican cada uso de forma permanente durante la temporada actual. Los usos de una misma carta y de cartas diferentes se acumulan aunque las cartas dejen de estar activas.
+La carrera se publica automáticamente después del primer partido oficial cuando existe una sesión online, se actualiza durante la actividad del jugador y reintenta cargas pendientes al iniciar sesión, volver a tener conexión o retomar la pestaña.
 
-El efecto se reinicia al comenzar la siguiente temporada.
+Se conservan los controles de los días 150, 250 y 350, el cierre de temporada y el despido. Todos los envíos actualizan la misma carrera y no crean duplicados.
 
-Ver `AJUSTES-V9.48.md` para el detalle completo.
+Ver `AJUSTES-V9.49.md` para el detalle completo.

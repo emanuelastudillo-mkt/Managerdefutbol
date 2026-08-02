@@ -384,9 +384,21 @@ function normalizeGame(saved){
   normalized.rankingLastUploadGameDate = validIsoDate(normalized.rankingLastUploadGameDate) ? normalized.rankingLastUploadGameDate : '';
   normalized.rankingLastManualUploadGameDate = validIsoDate(normalized.rankingLastManualUploadGameDate) ? normalized.rankingLastManualUploadGameDate : '';
   normalized.rankingLastAutomaticUploadGameDate = validIsoDate(normalized.rankingLastAutomaticUploadGameDate) ? normalized.rankingLastAutomaticUploadGameDate : '';
-  normalized.rankingScheduledCareerUploads = (normalized.rankingScheduledCareerUploads && typeof normalized.rankingScheduledCareerUploads === 'object' && !Array.isArray(normalized.rankingScheduledCareerUploads)) ? normalized.rankingScheduledCareerUploads : { version:1, events:{} };
-  normalized.rankingScheduledCareerUploads.version = 1;
+  normalized.rankingScheduledCareerUploads = (normalized.rankingScheduledCareerUploads && typeof normalized.rankingScheduledCareerUploads === 'object' && !Array.isArray(normalized.rankingScheduledCareerUploads)) ? normalized.rankingScheduledCareerUploads : { version:2, events:{} };
+  normalized.rankingScheduledCareerUploads.version = 2;
   normalized.rankingScheduledCareerUploads.events = (normalized.rankingScheduledCareerUploads.events && typeof normalized.rankingScheduledCareerUploads.events === 'object' && !Array.isArray(normalized.rankingScheduledCareerUploads.events)) ? normalized.rankingScheduledCareerUploads.events : {};
+  normalized.rankingCareerActivitySync = (normalized.rankingCareerActivitySync && typeof normalized.rankingCareerActivitySync === 'object' && !Array.isArray(normalized.rankingCareerActivitySync)) ? normalized.rankingCareerActivitySync : { version:1, status:'idle' };
+  normalized.rankingCareerActivitySync.version = 1;
+  normalized.rankingCareerActivitySync.status = String(normalized.rankingCareerActivitySync.status || 'idle');
+  normalized.rankingCareerActivitySync.lastSuccessGameDate = validIsoDate(normalized.rankingCareerActivitySync.lastSuccessGameDate) ? normalized.rankingCareerActivitySync.lastSuccessGameDate : '';
+  normalized.rankingCareerActivitySync.lastSuccessAt = String(normalized.rankingCareerActivitySync.lastSuccessAt || '');
+  normalized.rankingCareerActivitySync.lastFingerprint = String(normalized.rankingCareerActivitySync.lastFingerprint || '');
+  normalized.rankingCareerActivitySync.lastAttemptAt = String(normalized.rankingCareerActivitySync.lastAttemptAt || '');
+  normalized.rankingCareerActivitySync.lastAttemptGameDate = validIsoDate(normalized.rankingCareerActivitySync.lastAttemptGameDate) ? normalized.rankingCareerActivitySync.lastAttemptGameDate : '';
+  normalized.rankingCareerActivitySync.lastReason = String(normalized.rankingCareerActivitySync.lastReason || '');
+  normalized.rankingCareerActivitySync.error = String(normalized.rankingCareerActivitySync.error || '');
+  normalized.rankingCareerActivitySync.attempts = Math.max(0, Math.round(Number(normalized.rankingCareerActivitySync.attempts || 0)));
+  normalized.rankingCareerActivitySync.loginPromptSent = Boolean(normalized.rankingCareerActivitySync.loginPromptSent);
   normalized.selectedCountry = normalized.selectedCountry || clubCountry(seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))) || 'Argentina';
   normalized.selectedLeagueId = normalized.selectedLeagueId || (seed?.clubs?.find(c => Number(c.id) === Number(normalized.selectedClubId))?.divisionId || 'default');
   normalized.playerMentalities = (normalized.playerMentalities && typeof normalized.playerMentalities === 'object' && !Array.isArray(normalized.playerMentalities)) ? normalized.playerMentalities : {};
@@ -1029,7 +1041,8 @@ function newGame(selectedClubId, options={}){
     rankingLastUploadGameDate: '',
     rankingLastManualUploadGameDate: '',
     rankingLastAutomaticUploadGameDate: '',
-    rankingScheduledCareerUploads: { version:1, events:{} },
+    rankingScheduledCareerUploads: { version:2, events:{} },
+    rankingCareerActivitySync: { version:1, status:'idle', lastSuccessGameDate:'', lastSuccessAt:'', lastFingerprint:'', lastAttemptAt:'', lastAttemptGameDate:'', lastReason:'', error:'', attempts:0, loginPromptSent:false },
     manualRetiredPlayerIds: [],
     retiredPlayerPool: [],
     surnameVarietyVersion: typeof PLAYER_SURNAME_VARIETY_VERSION !== 'undefined' ? PLAYER_SURNAME_VARIETY_VERSION : 'V8.17-surnames-x10',

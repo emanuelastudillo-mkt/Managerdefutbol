@@ -75,7 +75,7 @@ function normalizeSpecialObjectiveSeasonReduction(raw=null, stateRef=null, optio
   const stored = sameSeason ? Number(source?.porcentaje ?? source?.total ?? calculated) : calculated;
   const total = clamp(Number.isFinite(stored) ? Math.max(stored, calculated) : calculated, 0, specialObjectiveSeasonCap());
   return {
-    version:'V9.48',
+    version:'V9.49',
     temporada:season,
     porcentaje:Number(total.toFixed(3)),
     aplicaciones:applications.slice(-120),
@@ -136,7 +136,7 @@ function resetSpecialObjectiveReductionForNewSeason(season=game?.seasonNumber ||
   const normalizedSeason = Math.max(1, Math.round(Number(season || 1)));
   const state = game.special && typeof game.special === 'object' ? game.special : createInitialSpecialState(game.rankingManagerName || storedManagerName() || 'Manager');
   state.objetivo_reduccion_temporada = {
-    version:'V9.48',
+    version:'V9.49',
     temporada:normalizedSeason,
     porcentaje:0,
     aplicaciones:[],
@@ -195,7 +195,7 @@ function createInitialSpecialState(managerName=''){
     puntos_log: [],
     codigos_reclamados: {},
     objetivo_reduccion_temporada: {
-      version:'V9.48',
+      version:'V9.49',
       temporada:specialObjectiveSeasonNumber(),
       porcentaje:0,
       aplicaciones:[],

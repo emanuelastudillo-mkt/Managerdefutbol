@@ -883,7 +883,7 @@ applyManagerJobContractToObjectiveFields = function(fields, clubId=game?.selecte
   clean.objectiveJobContractBonus = Number((contractObjectivePpg - clean.objectiveBasePpg).toFixed(3));
   clean.objectiveSource = step.type === 'final' ? 'contrato_objetivo_final' : 'contrato_minimo_anual';
   clean.objectiveExpectation = step.type === 'final' ? 'Objetivo final del contrato' : 'Mínimo de continuidad contractual';
-  clean.objectiveLabel = `${clean.objectivePpg.toFixed(2)} · ${step.type === 'final' ? 'objetivo final' : `mínimo año ${step.contractYear}`}${objectiveReduction > 0 ? ` · carta -${objectiveReduction}%` : ''}`;
+  clean.objectiveLabel = `${clean.objectivePpg.toFixed(2)} · ${step.type === 'final' ? 'objetivo final' : `mínimo año ${step.contractYear}`}${objectiveReduction > 0 ? ` · cartas -${objectiveReduction}%` : ''}`;
   clean.objectiveContractId = contract.id;
   clean.objectiveContractYear = Number(step.contractYear || 1);
   clean.objectiveContractDuration = Number(contract.durationSeasons || 1);
@@ -919,7 +919,7 @@ renderCareerJobs = function(){
     </div>
     <div class="card" style="margin-top:14px"><div class="row"><div><p class="label">Plan deportivo</p><h3>${escapeHtml(contract.negotiationLabel || 'Objetivo normal')}</h3></div><span class="pill">Hasta temporada ${contract.endSeason}</span></div>${managerContractScheduleMarkup(contract.annualObjectives, contract.annualSalaries)}</div>
     <div class="grid cols-2" style="margin-top:14px">
-      <div class="card"><p class="label">Exigencia vigente</p><h3>${Number(objectiveInfo?.objective ?? step?.objectivePpg ?? 0).toFixed(2)} puntos por partido</h3><p class="muted small">${step?.type === 'final' ? 'Es el objetivo final del contrato.' : 'Es el mínimo necesario para mantener la continuidad del proyecto.'}${Number(objectiveInfo?.bonusReduction || 0) > 0 ? ` Carta activa: reducción de ${Number(objectiveInfo.bonusReduction).toFixed(0)}%.` : ''} Rendimiento actual: ${ppg.toFixed(2)} en ${played} encuentros oficiales.</p></div>
+      <div class="card"><p class="label">Exigencia vigente</p><h3>${Number(objectiveInfo?.objective ?? step?.objectivePpg ?? 0).toFixed(2)} puntos por partido</h3><p class="muted small">${step?.type === 'final' ? 'Es el objetivo final del contrato.' : 'Es el mínimo necesario para mantener la continuidad del proyecto.'}${Number(objectiveInfo?.bonusReduction || 0) > 0 ? ` Reducción permanente por cartas esta temporada: ${Number(objectiveInfo.bonusReduction).toFixed(0)}%.` : ''} Rendimiento actual: ${ppg.toFixed(2)} en ${played} encuentros oficiales.</p></div>
       <div class="card"><p class="label">Condiciones laborales</p><h3>${escapeHtml(restriction)}</h3><p class="muted small">El sueldo es fijo durante todo el contrato. Cambiar de club o renunciar termina los pagos pendientes.</p></div>
     </div>
     <div class="card" style="margin-top:14px"><p class="label">Porcentaje de formación</p><h3>${Number(contract.futureSalePercent || 0)}% sobre futuras ventas</h3><p class="muted small">Se asigna automáticamente a cada juvenil que promociones durante este contrato. Conservás el derecho aunque cambies de club, renuncies o seas despedido; se cobra una sola vez en la primera transferencia pagada.</p></div>

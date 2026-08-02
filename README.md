@@ -1,9 +1,9 @@
-# V9.47 · Reparación y progreso estructural del estadio
+# V9.48 · Reducción de objetivo permanente por temporada
 
-Versión construida sobre V9.46.
+Versión construida sobre V9.47.
 
-El deterioro anual ahora reduce únicamente la capacidad actual. La secuencia de ampliaciones se mantiene según la capacidad estructural alcanzada, por lo que una pérdida anual de lugares ya no bloquea obras posteriores.
+Las cartas de reducción de objetivo ahora aplican cada uso de forma permanente durante la temporada actual. Los usos de una misma carta y de cartas diferentes se acumulan aunque las cartas dejen de estar activas.
 
-Se agregó la acción **Reparar estadio**, con costo y duración proporcionales a los lugares deteriorados. Al finalizar recupera el aforo hasta la capacidad estructural construida.
+El efecto se reinicia al comenzar la siguiente temporada.
 
-Ver `AJUSTES-V9.47.md` para el detalle completo.
+Ver `AJUSTES-V9.48.md` para el detalle completo.

@@ -1961,7 +1961,7 @@ function openGameHelpModal(){
         </article>
         <article class="help-card card">
           <h4>Cartas especiales</h4>
-          <p>Las cartas aplican efectos limitados sobre áreas concretas. En general, cada activación y desactivación consume un uso y las cartas activas renuevan otro uso cada 100 días. Las cartas de reducción de objetivo son una excepción: cada activación o renovación acumula otro nivel del porcentaje y quitarlas no consume un uso. Una carta agotada conserva su bonus hasta completar el último ciclo activo.</p>
+          <p>Las cartas aplican efectos limitados sobre áreas concretas. En general, cada activación y desactivación consume un uso y las cartas activas renuevan otro uso cada 100 días. Las cartas de reducción de objetivo son una excepción: cada uso reduce de forma permanente el objetivo de la temporada actual, se acumula con otros usos y otras cartas, y no se pierde aunque la carta se quite, se agote o vuelva a reserva. El acumulado se reinicia al comenzar la temporada siguiente.</p>
           ${gameHelpGoButton('special','Abrir Cartas')}
         </article>
       </div>

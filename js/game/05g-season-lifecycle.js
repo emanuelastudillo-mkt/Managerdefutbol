@@ -1647,6 +1647,7 @@ function startNextSeason(selectedClubId, options={}){
   refreshAllPlayerClauses();
   game.selectedClubId = nextClubId;
   game.seasonNumber = (game.seasonNumber || 1) + 1;
+  if(typeof resetSpecialObjectiveReductionForNewSeason === 'function') resetSpecialObjectiveReductionForNewSeason(game.seasonNumber);
   const transferUnlock = typeof consumeNextSeasonTransferBudgetUnlock === 'function' ? consumeNextSeasonTransferBudgetUnlock() : { rate:0, reasons:[] };
   game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber, game.selectedClubId);
   game.transferBudget = typeof createTransferBudgetState === 'function' ? createTransferBudgetState(game.selectedClubId, game.seasonNumber, transferUnlock.rate || 0) : (game.transferBudget || null);

@@ -2,7 +2,7 @@
   "version": "V8.46",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V9.47: las ampliaciones de estadio avanzan por capacidad estructural y no quedan bloqueadas por el deterioro anual. Se agrega reparación de aforo con costo y duración proporcionales a los lugares perdidos. La bandeja esencial de V9.46, el panel privado de V9.45 y las cartas acumulativas de V9.44 se mantienen.",
+  "caracteristicas_version": "V9.48: cada uso de una carta de reducción de objetivo se registra como una reducción permanente durante la temporada actual. Los usos de una misma carta y de cartas distintas se acumulan aunque las cartas estén en reserva, agotadas o destruidas. El efecto se reinicia al comenzar la siguiente temporada.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,
@@ -34,7 +34,9 @@
     "dias_por_consumo_activo": 100,
     "consumir_uso_al_desactivar": true,
     "cartas_objetivo_acumulan_por_activacion": true,
-    "cartas_objetivo_no_consumen_al_desactivar": true
+    "cartas_objetivo_no_consumen_al_desactivar": true,
+    "cartas_objetivo_permanentes_durante_temporada": true,
+    "cartas_objetivo_se_reinician_nueva_temporada": true
   },
   "rareza_orden_visual": [
     "inutil",
@@ -240,10 +242,10 @@
     },
     "objetivo_mas_bajo": {
       "se_apila": true,
-      "metodo": "suma_por_activacion_con_tope",
+      "metodo": "suma_permanente_por_uso_y_temporada_con_tope",
       "tope_porcentaje": 80,
       "aplica_a": "objetivo_de_puntos_de_la_directiva",
-      "descripcion": "Cada activación o renovación de la misma carta suma nuevamente su porcentaje base mientras permanezca activa. Desactivarla no consume un uso."
+      "descripcion": "Cada uso suma su porcentaje base al objetivo de la temporada actual. El efecto permanece aunque la carta deje de estar activa y se reinicia al comenzar una nueva temporada."
     }
   },
   "bonus_por_rareza": {
@@ -527,7 +529,7 @@
       "valor_bonus": 1,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 1% por cada activación acumulada mientras esté activa."
+      "texto": "Cada uso reduce de forma permanente un 1% el objetivo de la temporada actual. Se acumula con otros usos y cartas."
     },
     {
       "id_base": "OBJETIVO_RARA_001",
@@ -537,7 +539,7 @@
       "valor_bonus": 2,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 2% por cada activación acumulada mientras esté activa."
+      "texto": "Cada uso reduce de forma permanente un 2% el objetivo de la temporada actual. Se acumula con otros usos y cartas."
     },
     {
       "id_base": "OBJETIVO_EPICA_001",
@@ -547,7 +549,7 @@
       "valor_bonus": 3,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 3% por cada activación acumulada mientras esté activa."
+      "texto": "Cada uso reduce de forma permanente un 3% el objetivo de la temporada actual. Se acumula con otros usos y cartas."
     },
     {
       "id_base": "OBJETIVO_LEGENDARIA_001",
@@ -557,7 +559,7 @@
       "valor_bonus": 10,
       "unidad": "porcentaje",
       "activable": true,
-      "texto": "Reduce el objetivo de puntos de la directiva un 10% por cada activación acumulada mientras esté activa."
+      "texto": "Cada uso reduce de forma permanente un 10% el objetivo de la temporada actual. Se acumula con otros usos y cartas."
     },
     {
       "id_base": "IDOLO_CLUB_COMUN_001",

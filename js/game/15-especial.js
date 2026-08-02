@@ -22,6 +22,129 @@ function specialMaxUsesForRarity(rarity){
 function specialCardIsObjectiveReduction(card){
   return String(card?.tipo_bonus || '') === 'objetivo_mas_bajo';
 }
+function specialObjectiveSeasonNumber(){
+  return Math.max(1, Math.round(Number(game?.seasonNumber || 1)));
+}
+function specialObjectiveSeasonCap(){
+  const raw = specialDatabase()?.apilamiento_bonus?.objetivo_mas_bajo?.tope_porcentaje;
+  const cap = Number(raw);
+  return Number.isFinite(cap) ? Math.max(0, cap) : 80;
+}
+function normalizeSpecialObjectiveSeasonReduction(raw=null, stateRef=null, options={}){
+  const season = specialObjectiveSeasonNumber();
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+  const sameSeason = Number(source?.temporada || source?.season || 0) === season;
+  const applications = sameSeason && Array.isArray(source?.aplicaciones)
+    ? source.aplicaciones.map((entry, index) => {
+        const value = Math.max(0, Number(entry?.porcentaje ?? entry?.value ?? 0) || 0);
+        if(value <= 0) return null;
+        return {
+          id:String(entry?.id || `objective-season-${season}-${index + 1}`),
+          temporada:season,
+          id_carta:String(entry?.id_carta || entry?.cardId || ''),
+          id_base:String(entry?.id_base || entry?.baseId || ''),
+          nombre_carta:String(entry?.nombre_carta || entry?.cardName || 'Carta de objetivo'),
+          porcentaje:value,
+          origen:String(entry?.origen || entry?.source || 'activacion'),
+          fecha:validIsoDate(entry?.fecha || entry?.date) ? String(entry.fecha || entry.date) : null,
+          turno:Number.isFinite(Number(entry?.turno ?? entry?.turn)) ? Math.max(0, Math.round(Number(entry.turno ?? entry.turn))) : null
+        };
+      }).filter(Boolean)
+    : [];
+  let migrated = Boolean(sameSeason && (source?.version || source?.migrada_desde_v944 || source?.migratedFromV944));
+  if(!source && options.migrateLegacy !== false){
+    const activeCards = Array.isArray(stateRef?.cartas_activas) ? stateRef.cartas_activas : [];
+    activeCards.filter(specialCardIsObjectiveReduction).forEach((card, index) => {
+      const value = Math.max(0, Number(specialCardEffectiveBonus(card) || 0));
+      if(value <= 0) return;
+      applications.push({
+        id:`objective-season-${season}-legacy-${index + 1}`,
+        temporada:season,
+        id_carta:String(card.id_carta || ''),
+        id_base:String(card.id_base || ''),
+        nombre_carta:String(card.nombre || 'Carta de objetivo'),
+        porcentaje:value,
+        origen:'migracion_v947_activa',
+        fecha:validIsoDate(game?.currentDate) ? game.currentDate : null,
+        turno:typeof currentTurnIndex === 'function' ? currentTurnIndex() : null
+      });
+    });
+    migrated = true;
+  }
+  const calculated = applications.reduce((sum, entry) => sum + Number(entry.porcentaje || 0), 0);
+  const stored = sameSeason ? Number(source?.porcentaje ?? source?.total ?? calculated) : calculated;
+  const total = clamp(Number.isFinite(stored) ? Math.max(stored, calculated) : calculated, 0, specialObjectiveSeasonCap());
+  return {
+    version:'V9.48',
+    temporada:season,
+    porcentaje:Number(total.toFixed(3)),
+    aplicaciones:applications.slice(-120),
+    migrada_desde_v944:migrated
+  };
+}
+function specialObjectiveSeasonReductionState(stateRef=null){
+  const state = stateRef && typeof stateRef === 'object' ? stateRef : ensureSpecialState();
+  if(!state) return normalizeSpecialObjectiveSeasonReduction(null, null, { migrateLegacy:false });
+  state.objetivo_reduccion_temporada = normalizeSpecialObjectiveSeasonReduction(state.objetivo_reduccion_temporada, state);
+  return state.objetivo_reduccion_temporada;
+}
+function specialObjectiveSeasonReduction(stateRef=null){
+  return Number(specialObjectiveSeasonReductionState(stateRef)?.porcentaje || 0);
+}
+function specialObjectiveSeasonContributionForCard(cardId, stateRef=null){
+  const id = String(cardId || '');
+  if(!id) return 0;
+  return Number((specialObjectiveSeasonReductionState(stateRef)?.aplicaciones || [])
+    .filter(entry => String(entry.id_carta || '') === id)
+    .reduce((sum, entry) => sum + Number(entry.porcentaje || 0), 0).toFixed(3));
+}
+function refreshSpecialObjectiveSeasonStats(){
+  if(!game || typeof ensureManagerCurrentSeasonStats !== 'function') return null;
+  game.managerStats = ensureManagerCurrentSeasonStats(game.managerStats, game.seasonNumber || 1, game.selectedClubId || 0);
+  return game.managerStats?.currentSeason || null;
+}
+function applySpecialObjectiveSeasonUse(card, origin='activacion', stateRef=null){
+  if(!specialCardIsObjectiveReduction(card)) return { applied:0, total:specialObjectiveSeasonReduction(stateRef) };
+  const state = stateRef && typeof stateRef === 'object' ? stateRef : ensureSpecialState();
+  if(!state) return { applied:0, total:0 };
+  const ledger = specialObjectiveSeasonReductionState(state);
+  const value = Math.max(0, Number(card?.valor_bonus || 0));
+  if(value <= 0) return { applied:0, total:Number(ledger.porcentaje || 0) };
+  const before = Number(ledger.porcentaje || 0);
+  const after = clamp(before + value, 0, specialObjectiveSeasonCap());
+  const applied = Math.max(0, Number((after - before).toFixed(3)));
+  if(applied <= 0) return { applied:0, total:before, capped:true };
+  ledger.aplicaciones.push({
+    id:`objective-season-${ledger.temporada}-${Date.now()}-${ledger.aplicaciones.length + 1}`,
+    temporada:ledger.temporada,
+    id_carta:String(card.id_carta || ''),
+    id_base:String(card.id_base || ''),
+    nombre_carta:String(card.nombre || 'Carta de objetivo'),
+    porcentaje:applied,
+    origen:String(origin || 'activacion'),
+    fecha:validIsoDate(specialCurrentDate()) ? specialCurrentDate() : null,
+    turno:typeof currentTurnIndex === 'function' ? currentTurnIndex() : null
+  });
+  ledger.aplicaciones = ledger.aplicaciones.slice(-120);
+  ledger.porcentaje=Number(after.toFixed(3));
+  state.objetivo_reduccion_temporada=ledger;
+  refreshSpecialObjectiveSeasonStats();
+  return { applied, total:ledger.porcentaje, capped:after >= specialObjectiveSeasonCap() };
+}
+function resetSpecialObjectiveReductionForNewSeason(season=game?.seasonNumber || 1){
+  if(!game) return null;
+  const normalizedSeason = Math.max(1, Math.round(Number(season || 1)));
+  const state = game.special && typeof game.special === 'object' ? game.special : createInitialSpecialState(game.rankingManagerName || storedManagerName() || 'Manager');
+  state.objetivo_reduccion_temporada = {
+    version:'V9.48',
+    temporada:normalizedSeason,
+    porcentaje:0,
+    aplicaciones:[],
+    migrada_desde_v944:true
+  };
+  game.special = state;
+  return state.objetivo_reduccion_temporada;
+}
 function specialObjectiveActivationCount(card){
   if(!specialCardIsObjectiveReduction(card)) return 0;
   const maxUses = specialMaxUsesForRarity(card?.rareza);
@@ -71,6 +194,13 @@ function createInitialSpecialState(managerName=''){
     apertura_pendiente: null,
     puntos_log: [],
     codigos_reclamados: {},
+    objetivo_reduccion_temporada: {
+      version:'V9.48',
+      temporada:specialObjectiveSeasonNumber(),
+      porcentaje:0,
+      aplicaciones:[],
+      migrada_desde_v944:true
+    },
     cartas_globales_version: 'V5.78'
   };
 }
@@ -445,6 +575,7 @@ function normalizeSpecialState(state=null, managerName=''){
   normalized.codigos_reclamados = (normalized.codigos_reclamados && typeof normalized.codigos_reclamados === 'object' && !Array.isArray(normalized.codigos_reclamados)) ? normalized.codigos_reclamados : {};
   normalized.fecha_ultimo_cambio_cartas = validIsoDate(normalized.fecha_ultimo_cambio_cartas) ? normalized.fecha_ultimo_cambio_cartas : null;
   normalized.bloqueado_hasta = validIsoDate(normalized.bloqueado_hasta) ? normalized.bloqueado_hasta : null;
+  normalized.objetivo_reduccion_temporada = normalizeSpecialObjectiveSeasonReduction(source.objetivo_reduccion_temporada, normalized);
   return syncSpecialStateWithGlobalCards(normalized);
 }
 function repairSpecialReserveFromHistory(state){
@@ -523,12 +654,10 @@ function specialCardBonusText(card){
   if(!card?.tipo_bonus || !card.valor_bonus) return 'Sin bonus activo';
   const baseValue = Number(card.valor_bonus || 0);
   if(specialCardIsObjectiveReduction(card)){
-    const activations = specialObjectiveActivationCount(card);
-    const shownActivations = Math.max(1, activations);
-    const total = baseValue * shownActivations;
-    return activations > 0
-      ? `${specialBonusLabel(card.tipo_bonus)}: -${total}% acumulado (${activations} × ${baseValue}%)`
-      : `${specialBonusLabel(card.tipo_bonus)}: -${baseValue}% por activación`;
+    const seasonalContribution = specialObjectiveSeasonContributionForCard(card?.id_carta);
+    return seasonalContribution > 0
+      ? `${specialBonusLabel(card.tipo_bonus)}: -${baseValue}% por uso · aportó -${seasonalContribution}% esta temporada`
+      : `${specialBonusLabel(card.tipo_bonus)}: -${baseValue}% permanente por uso durante la temporada`;
   }
   const value = baseValue;
   if(card.tipo_bonus === 'medico_milagroso') return `${specialBonusLabel(card.tipo_bonus)}: -${value} día${value === 1 ? '' : 's'} extra por tratamiento`;
@@ -653,6 +782,7 @@ function processActiveSpecialCardUsageDaily(options={}){
     card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, specialMaxUsesForRarity(card.rareza));
     if(specialCardIsObjectiveReduction(card)){
       card.activaciones_efecto = clamp(specialObjectiveActivationCount(card) + 1, 0, specialMaxUsesForRarity(card.rareza));
+      applySpecialObjectiveSeasonUse(card, 'renovacion_automatica', state);
     }
     card.ciclo_uso_desde = today;
     card.ciclo_uso_desde_turno = nowTurn;
@@ -679,6 +809,7 @@ function processActiveSpecialCardUsageDaily(options={}){
 function specialActiveBonus(type){
   const state = ensureSpecialState();
   if(!state) return 0;
+  if(String(type || '') === 'objetivo_mas_bajo') return specialObjectiveSeasonReduction(state);
   const db = specialDatabase();
   const stack = db.apilamiento_bonus?.[type] || {};
   const raw = (state.cartas_activas || [])
@@ -705,7 +836,8 @@ function specialBonusSummaryText(item){
   if(!item) return '';
   const sign = ['deterioro_campo','objetivo_mas_bajo','medico_milagroso','prevencion_lesiones_partido'].includes(item.type) ? '-' : '+';
   let suffix = '% acumulado';
-  if(item.type === 'probabilidad_legendaria') suffix = '% relativo acumulado';
+  if(item.type === 'objetivo_mas_bajo') suffix = '% vigente durante esta temporada';
+  else if(item.type === 'probabilidad_legendaria') suffix = '% relativo acumulado';
   else if(item.type === 'preparacion_fisica') suffix = ' pts postpartido acumulados';
   else if(item.type === 'apoyo_capitan') suffix = ' pts de progreso por partido';
   else if(item.type === 'director_deportivo') suffix = ' pts de cláusula ofertada';
@@ -726,18 +858,24 @@ function applySpecialCohesionActivationBonus(card){
   return Math.max(0, game.teamCohesion[clubId] - current);
 }
 function specialActiveRulesDetailMarkup(activeCards=[], limits=specialLimits()){
-  if(!activeCards.length) return '<p class="muted small">No hay cartas activas. Activá cartas desde la reserva para ver sus bonus acá.</p>';
   const totals = specialActiveBonusSummary();
   const totalsMarkup = totals.length ? `<div class="special-bonus-list compact">${totals.map(item => `<div><strong>${escapeHtml(specialBonusLabel(item.type))}</strong><span>${escapeHtml(specialBonusSummaryText(item))}</span></div>`).join('')}</div>` : '';
+  if(!activeCards.length){
+    const seasonalReduction = specialObjectiveSeasonReduction();
+    const note = seasonalReduction > 0
+      ? `<p class="muted small">No hay cartas activas. La reducción de objetivo ya utilizada permanece aplicada hasta terminar la temporada.</p>`
+      : '<p class="muted small">No hay cartas activas. Activá cartas desde la reserva para aplicar sus bonus.</p>';
+    return `${totalsMarkup}${note}`;
+  }
   const cardsMarkup = `<div class="special-active-rules-list">${activeCards.map(card => {
     const info = specialCardActiveLockInfo(card);
     const usage = specialActiveCardUsageInfo(card);
     const usageRemaining = Math.max(0, usage.cycleDays - usage.elapsed);
-    const cycleLabel = specialCardIsObjectiveReduction(card) ? 'renovación acumulativa' : 'uso automático';
+    const cycleLabel = specialCardIsObjectiveReduction(card) ? 'nuevo uso permanente' : 'uso automático';
     const status = info.locked ? `Fija ${formatDays(info.remaining)} · ${cycleLabel} en ${formatDays(usageRemaining)}` : `Lista para desactivar · ${cycleLabel} en ${formatDays(usageRemaining)}`;
     return `<div><strong>${escapeHtml(card.nombre)}</strong><span>${escapeHtml(specialCardBonusText(card))}</span><em>${escapeHtml(status)}</em></div>`;
   }).join('')}</div>`;
-  return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}.</p>`;
+  return `${totalsMarkup}${cardsMarkup}<p class="muted small">Activas: ${activeCards.length}/${limits.activeMax}. Las reducciones de objetivo ya aplicadas no dependen de este estado.</p>`;
 }
 function appendSpecialPointsLog(state, entry={}){
   if(!state || typeof state !== 'object') return null;
@@ -1323,13 +1461,16 @@ function activateSpecialCard(cardId){
   lockSpecialCardChanges(activatedCard, state);
   state.cartas_activas = Array.isArray(state.cartas_activas) ? state.cartas_activas : [];
   state.cartas_activas.push(activatedCard);
+  const objectiveUse = specialCardIsObjectiveReduction(activatedCard)
+    ? applySpecialObjectiveSeasonUse(activatedCard, 'activacion', state)
+    : { applied:0, total:specialObjectiveSeasonReduction(state) };
   specialGlobalUpsertCard(activatedCard, { slotId, zone:'active' });
   const cohesionGain = applySpecialCohesionActivationBonus(activatedCard);
   game.special = syncSpecialStateWithGlobalCards(state);
   saveLocal(true);
   renderSpecial();
   const extra = cohesionGain > 0 ? ` Cohesión +${cohesionGain}.` : '';
-  const accumulated = specialCardIsObjectiveReduction(activatedCard) ? ` Efecto acumulado: -${specialCardEffectiveBonus(activatedCard)}%.` : '';
+  const accumulated = specialCardIsObjectiveReduction(activatedCard) ? ` Reducción permanente de esta temporada: -${objectiveUse.total}%.` : '';
   showNotice(`Carta activada: ${card.nombre}. Queda fija por ${formatDays(limits.lockDays)}. Usos restantes: ${specialCardRemainingUses(activatedCard)}.${accumulated}${extra}`);
 }
 function reinforceSpecialObjectiveCard(cardId){
@@ -1344,6 +1485,7 @@ function reinforceSpecialObjectiveCard(cardId){
   const maxUses = specialMaxUsesForRarity(card.rareza);
   card.activaciones_usadas = clamp(Math.round(Number(card.activaciones_usadas || 0)) + 1, 0, maxUses);
   card.activaciones_efecto = clamp(specialObjectiveActivationCount(card) + 1, 0, maxUses);
+  const objectiveUse = applySpecialObjectiveSeasonUse(card, 'activacion_adicional', state);
   card.ciclo_uso_desde = specialCurrentDate();
   card.ciclo_uso_desde_turno = typeof currentTurnIndex === 'function' ? currentTurnIndex() : 0;
   if(specialCardRemainingUses(card) <= 0){
@@ -1355,7 +1497,7 @@ function reinforceSpecialObjectiveCard(cardId){
   game.special = syncSpecialStateWithGlobalCards(state);
   saveLocal(true);
   renderSpecial();
-  showNotice(`Activación acumulada: ${card.nombre}. Efecto total -${specialCardEffectiveBonus(card)}%. Usos restantes: ${specialCardRemainingUses(card)}.`);
+  showNotice(`Uso aplicado: ${card.nombre}. Reducción permanente de esta temporada: -${objectiveUse.total}%. Usos restantes: ${specialCardRemainingUses(card)}.`);
 }
 function deactivateSpecialCard(cardId){
   const state = ensureSpecialState();
@@ -1376,11 +1518,11 @@ function deactivateSpecialCard(cardId){
     const released = { ...card, activa:false, active_slot_id:'', activada_en:null, bloqueada_hasta:null, activada_en_turno:null, bloqueada_hasta_turno:null, ciclo_uso_desde:null, ciclo_uso_desde_turno:null, agotada_activa_desde:null, agotada_activa_desde_turno:null };
     specialGlobalReleaseCard(released, { slotId });
     state.cartas_reserva.push(released);
-    showNotice(`Carta desactivada: ${card.nombre}. Usos restantes: ${remaining}.`);
+    showNotice(`Carta desactivada: ${card.nombre}. Usos restantes: ${remaining}.${specialCardIsObjectiveReduction(card) ? ' La reducción aplicada permanece vigente hasta terminar la temporada.' : ''}`);
   } else {
     specialGlobalReleaseCard(card, { slotId, exhausted:true });
     state.historial_ultimas_cartas = [{ ...card, activa:false, destruida:true, agotada_por_usos:true }].concat(state.historial_ultimas_cartas || []).slice(0, 30);
-    showNotice(`Carta agotada: ${card.nombre}. No tiene más activaciones.`);
+    showNotice(`Carta agotada: ${card.nombre}. No tiene más activaciones.${specialCardIsObjectiveReduction(card) ? ' La reducción aplicada permanece vigente hasta terminar la temporada.' : ''}`);
   }
   game.special = syncSpecialStateWithGlobalCards(state);
   saveLocal(true);
@@ -1506,7 +1648,7 @@ function renderSpecial(opened=[], options={}){
   const lockText = locked.locked ? `${locked.count} fija(s). Próxima libre en ${formatDays(locked.remaining)}.` : 'Cambios disponibles.';
   const bonusChips = bonuses.length
     ? bonuses.map(item => `<span class="pill ok">${escapeHtml(specialBonusLabel(item.type))}: ${escapeHtml(specialBonusSummaryText(item))}</span>`).join('')
-    : '<span class="pill">Sin bonus activo</span>';
+    : '<span class="pill">Sin bonus vigente</span>';
   const normalInventoryMarkup = pending ? '' : `
     <div class="card special-active-drop" data-special-drop-active="1">
       <div class="row"><div><p class="label">Cartas activas</p><h3>Bonus aplicados</h3></div><span class="pill ${locked.locked ? 'warn' : 'ok'}">${escapeHtml(lockText)}</span></div>

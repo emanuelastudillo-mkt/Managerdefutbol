@@ -141,7 +141,7 @@ async function privateManagerToolsEnsureBackup(){
   if(existing){ privateManagerToolsState.backupCreated = true; return key; }
   if(typeof currentSavePayload !== 'function') throw new Error('No se pudo preparar la copia de seguridad.');
   const record = {
-    version:typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V9.46',
+    version:typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V9.48',
     createdAt:new Date().toISOString(),
     save:currentSavePayload(),
     sharedProfile:typeof readManagerGlobalProfileState === 'function' ? readManagerGlobalProfileState() : null

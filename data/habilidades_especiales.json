@@ -2,7 +2,7 @@
   "version": "V8.46",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V9.46: la bandeja conserva decisiones, alertas y cambios relevantes; los avisos rutinarios dejan de generar mensajes. Incluye acciones masivas para marcar como leído y borrar mensajes leídos. El panel privado de V9.45 y las cartas acumulativas de V9.44 se mantienen.",
+  "caracteristicas_version": "V9.47: las ampliaciones de estadio avanzan por capacidad estructural y no quedan bloqueadas por el deterioro anual. Se agrega reparación de aforo con costo y duración proporcionales a los lugares perdidos. La bandeja esencial de V9.46, el panel privado de V9.45 y las cartas acumulativas de V9.44 se mantienen.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.46',
+  version: 'V9.47',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -58,7 +58,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json?v=9.04',
     installationsUrl: 'data/instalaciones.json?v=9.04',
     eventsUrl: 'data/eventos.json?v=9.04',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.46',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.47',
     managerAchievementsUrl: 'data/hitos_manager.json?v=9.04',
     retosManagerUrl: 'data/retos_manager.json?v=9.04',
     estadiosUrls: ['data/estadios_argentina.json?v=9.04', 'data/estadios_chile.json?v=9.04', 'data/estadios_brasil.json?v=9.04', 'data/estadios_inglaterra.json?v=9.04', 'data/estadios_espana.json?v=9.04', 'data/estadios_italia.json?v=9.04', 'data/estadios_rumania.json?v=9.04'],
@@ -851,8 +851,17 @@ window.GAME_CONFIG = {
     afaCampoDiasRestauracion: 1,
     // El deterioro normal del campo se multiplica por este valor.
     deterioroCampoMultiplicador: 2,
-    // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad.
+    // Cada cambio de temporada el estadio del club dirigido pierde este porcentaje de capacidad actual.
+    // La capacidad estructural alcanzada no disminuye y sigue habilitando las ampliaciones en orden.
     deterioroCapacidadPorTemporadaPct: 1,
+    // Reparación de aforo deteriorado. El costo por asiento toma como referencia la siguiente ampliación
+    // y aplica este porcentaje para que reparar sea más barato que construir lugares nuevos.
+    reparacionCapacidadFactorCostoAmpliacion: 0.25,
+    reparacionCapacidadCostoMinimo: 1000000,
+    reparacionCapacidadLugaresPorDia: 20,
+    reparacionCapacidadDiasMinimos: 14,
+    reparacionCapacidadDiasMaximos: 180,
+    reparacionCapacidadPenalizacionAsistencia: 0.10,
     clima: {
       lluviaDeterioroActivo: true,
       lluviaLeveExtraDeterioro: 3,

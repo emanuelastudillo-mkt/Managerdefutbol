@@ -857,33 +857,60 @@ function stadiumExpansionCard(expansion){
   return `<div class="stadium-expansion-option ${status.ok ? '' : 'dim-row'}">
     <div>
       <strong>#${expansion.id} · ${escapeHtml(expansion.name)}</strong>
-      <p class="muted small">Desde ${new Intl.NumberFormat('es-AR').format(expansion.minCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${durationDays} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
+      <p class="muted small">Siguiente etapa · objetivo estructural ${new Intl.NumberFormat('es-AR').format(expansion.targetCapacity)} · +${new Intl.NumberFormat('es-AR').format(expansion.capacityGain)} lugares · ${durationDays} día(s) · Slot ${escapeHtml(expansion.slot)}</p>
       <p class="small ${status.ok ? 'ok' : 'muted'}">${status.ok ? `Costo ${formatMoney(expansion.cost)}` : escapeHtml(status.reason)}</p>
     </div>
     <button class="primary" data-start-stadium-expansion="${expansion.id}" ${status.ok ? '' : 'disabled'}>Iniciar</button>
   </div>`;
 }
+function stadiumCapacityRepairProjectMarkup(project){
+  const total = Math.max(1, Number(project?.totalDays || project?.daysLeft || 1));
+  const left = Math.max(0, Number(project?.daysLeft || 0));
+  const progress = clamp(Math.round(((total - left) / total) * 100), 0, 100);
+  return `<div class="stadium-expansion-active">
+    <div class="row"><div><strong>Reparación estructural del estadio</strong><p class="muted small">Recuperación prevista: ${new Intl.NumberFormat('es-AR').format(project.missingSeats || 0)} lugares · Costo ${formatMoney(project.cost || 0)}</p></div><span class="pill">${left} día(s)</span></div>
+    <div class="project-progress"><span style="width:${progress}%"></span></div>
+  </div>`;
+}
+function stadiumCapacityRepairMarkup(clubId){
+  const activeRepair = activeStadiumCapacityRepairProject(clubId);
+  if(activeRepair) return `<div class="maintenance-option"><div style="width:100%"><h4>Reparación de capacidad en curso</h4>${stadiumCapacityRepairProjectMarkup(activeRepair)}</div></div>`;
+  const status = stadiumCapacityRepairStartStatus(clubId);
+  const quote = status.quote;
+  if(!quote || quote.missingSeats <= 0){
+    return `<div class="maintenance-option"><div><strong>Capacidad estructural al día</strong><p class="muted small">No hay lugares perdidos por deterioro anual.</p></div><span class="pill ok">Sin reparaciones</span></div>`;
+  }
+  return `<div class="maintenance-option ${status.ok ? '' : 'dim-row'}">
+    <div><strong>Reparar estadio</strong><p class="muted small">Recupera ${new Intl.NumberFormat('es-AR').format(quote.missingSeats)} lugares hasta volver a ${new Intl.NumberFormat('es-AR').format(quote.targetCapacity)}. Costo ${formatMoney(quote.cost)} · ${quote.days} día(s).</p><p class="small ${status.ok ? 'ok' : 'muted'}">${status.ok ? 'La reparación ocupa toda la estructura y bloquea nuevas ampliaciones hasta finalizar.' : escapeHtml(status.reason)}</p></div>
+    <button id="btnRepairStadiumCapacity" class="ghost" ${status.ok ? '' : 'disabled'}>Reparar estadio</button>
+  </div>`;
+}
 function stadiumExpansionsMarkup(){
   const clubId = game.selectedClubId;
   const capacity = clubStadiumCapacity(clubId);
+  const structuralCapacity = clubStadiumStructuralCapacity(clubId);
+  const projectedCapacity = projectedStadiumStructuralCapacity(clubId);
   const baseCapacity = baseStadiumCapacityForClub(clubId);
   const active = activeStadiumExpansionProjects(clubId);
-  const available = availableStadiumExpansionsForClub(clubId).slice(0, 12);
-  const maxWorks = maxSimultaneousStadiumWorks(capacity);
+  const activeRepair = activeStadiumCapacityRepairProject(clubId);
+  const available = availableStadiumExpansionsForClub(clubId);
+  const maxWorks = maxSimultaneousStadiumWorks(structuralCapacity);
   const penalty = stadiumConstructionAttendancePenalty(clubId);
-  const nextLocked = (STADIUM_EXPANSIONS || []).filter(item => capacity < Number(item.minCapacity || 0)).slice(0, 3);
+  const nextExpansion = nextOrderedStadiumExpansionForClub(clubId);
   return `<div class="card stadium-card stadium-expansions-card" style="margin-top:14px">
-    <div class="row"><div><h3>Ampliaciones</h3><p class="muted small">La capacidad nueva cuenta recién cuando la obra termina. No se pueden repetir slots y las obras integrales bloquean cualquier otra obra. Duración configurada: x${STADIUM_EXPANSION_DAYS_MULTIPLIER} sobre la tabla base.</p></div><span class="pill">${active.length}/${maxWorks} obra(s) activas</span></div>
+    <div class="row"><div><h3>Ampliaciones y reparación</h3><p class="muted small">Las ampliaciones se habilitan en orden según la capacidad estructural alcanzada. El deterioro anual baja el aforo actual, pero ya no hace retroceder la etapa de construcción. La capacidad nueva cuenta cuando termina cada obra.</p></div><span class="pill">${active.length}/${maxWorks} ampliación(es) activa(s)${activeRepair ? ' · reparación activa' : ''}</span></div>
     <div class="grid cols-4 stadium-expansion-summary">
-      <div><p class="label">Capacidad base</p><strong>${new Intl.NumberFormat('es-AR').format(baseCapacity)}</strong></div>
+      <div><p class="label">Capacidad inicial</p><strong>${new Intl.NumberFormat('es-AR').format(baseCapacity)}</strong></div>
       <div><p class="label">Capacidad actual</p><strong>${new Intl.NumberFormat('es-AR').format(capacity)}</strong></div>
-      <div><p class="label">Máximo</p><strong>${new Intl.NumberFormat('es-AR').format(STADIUM_EXPANSION_MAX_CAPACITY)}</strong></div>
+      <div><p class="label">Estructura alcanzada</p><strong>${new Intl.NumberFormat('es-AR').format(structuralCapacity)}</strong>${projectedCapacity > structuralCapacity ? `<span class="muted small">Proyectada: ${new Intl.NumberFormat('es-AR').format(projectedCapacity)}</span>` : ''}</div>
       <div><p class="label">Penalización asistencia</p><strong class="${penalty > 0 ? 'warn' : ''}">${Math.round(penalty * 100)}%</strong></div>
     </div>
-    ${active.length ? `<h4>Obras en construcción</h4><div class="stack">${active.map(stadiumExpansionProjectMarkup).join('')}</div>` : '<p class="muted small">No hay obras activas.</p>'}
-    <h4 style="margin-top:14px">Obras disponibles</h4>
-    <div class="stack">${available.length ? available.map(stadiumExpansionCard).join('') : '<p class="muted small">No hay ampliaciones disponibles para la capacidad actual o el estadio llegó al máximo.</p>'}</div>
-    ${nextLocked.length ? `<p class="muted small" style="margin-top:12px">Próximos umbrales: ${nextLocked.map(item => `${escapeHtml(item.name)} desde ${new Intl.NumberFormat('es-AR').format(item.minCapacity)}`).join(' · ')}</p>` : ''}
+    <h4 style="margin-top:14px">Mantenimiento de capacidad</h4>
+    <div class="stack">${stadiumCapacityRepairMarkup(clubId)}</div>
+    ${active.length ? `<h4 style="margin-top:14px">Ampliaciones en construcción</h4><div class="stack">${active.map(stadiumExpansionProjectMarkup).join('')}</div>` : '<p class="muted small">No hay ampliaciones activas.</p>'}
+    <h4 style="margin-top:14px">Siguiente ampliación</h4>
+    <div class="stack">${available.length ? available.map(stadiumExpansionCard).join('') : `<p class="muted small">${structuralCapacity >= STADIUM_EXPANSION_MAX_CAPACITY ? (capacity < structuralCapacity ? 'La estructura llegó al máximo. Repará el estadio para recuperar toda la capacidad.' : 'El estadio llegó al máximo de 120.000 espectadores.') : activeRepair ? 'La próxima ampliación estará disponible cuando finalice la reparación.' : nextExpansion ? 'La siguiente ampliación está temporalmente bloqueada por presupuesto, cupo de obras o sector ocupado.' : 'No quedan ampliaciones disponibles.'}</p>`}</div>
+    <p class="muted small" style="margin-top:12px">Máximo estructural: ${new Intl.NumberFormat('es-AR').format(STADIUM_EXPANSION_MAX_CAPACITY)}. Duración de ampliaciones: x${STADIUM_EXPANSION_DAYS_MULTIPLIER} sobre la tabla base.</p>
   </div>`;
 }
 function facilityConstructionProgress(project){
@@ -1148,7 +1175,7 @@ function renderStadium(){
   const afaSanctionState = typeof afaFieldSanctionState === 'function' ? afaFieldSanctionState(game.selectedClubId) : null;
   const afaInterventionActive = Boolean((afaSanctionState?.status === 'pending' && validIsoDate(afaSanctionState.restoreDate)) || (typeof AFA_FIELD_SANCTION_THRESHOLD !== 'undefined' && score < AFA_FIELD_SANCTION_THRESHOLD));
   const lastCapacityDecay = Array.isArray(game?.stadium?.capacityDeteriorationHistory) ? game.stadium.capacityDeteriorationHistory.slice().reverse().find(item => Number(item.clubId || 0) === Number(game.selectedClubId)) : null;
-  const activeExpansionCount = activeStadiumExpansionProjects(game.selectedClubId).length;
+  const activeExpansionCount = activeStadiumExpansionProjects(game.selectedClubId).length + (activeStadiumCapacityRepairProject(game.selectedClubId) ? 1 : 0);
   const stadiumVisual = stadiumMainVisualState(game.selectedClubId);
   view.innerHTML = `
     <div class="row section-title">
@@ -1219,6 +1246,7 @@ function renderStadium(){
   $('btnReplant')?.addEventListener('click', startReplantingField);
   $('btnPatch')?.addEventListener('click', startPatchingField);
   document.querySelectorAll('[data-start-stadium-expansion]').forEach(btn => btn.addEventListener('click', () => startStadiumExpansion(btn.dataset.startStadiumExpansion)));
+  $('btnRepairStadiumCapacity')?.addEventListener('click', startStadiumCapacityRepair);
   bindSponsorCardActions();
   document.querySelectorAll('[data-start-member-campaign]').forEach(btn => btn.addEventListener('click', () => startMemberCampaign(btn.dataset.startMemberCampaign)));
 }

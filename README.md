@@ -1,9 +1,9 @@
-# V9.46 · Bandeja de mensajes esencial
+# V9.47 · Reparación y progreso estructural del estadio
 
-Versión construida sobre V9.45.
+Versión construida sobre V9.46.
 
-La bandeja ahora conserva principalmente decisiones pendientes, ofertas, alertas de prioridad alta y cambios relevantes para la carrera. Los avisos rutinarios, confirmaciones menores, resultados ajenos y mensajes automáticos sin acción dejan de almacenarse como mensajes.
+El deterioro anual ahora reduce únicamente la capacidad actual. La secuencia de ampliaciones se mantiene según la capacidad estructural alcanzada, por lo que una pérdida anual de lugares ya no bloquea obras posteriores.
 
-También se agregaron acciones masivas para marcar todos los mensajes como leídos y borrar de forma segura los mensajes leídos, preservando ofertas y decisiones pendientes.
+Se agregó la acción **Reparar estadio**, con costo y duración proporcionales a los lugares deteriorados. Al finalizar recupera el aforo hasta la capacidad estructural construida.
 
-Ver `AJUSTES-V9.46.md` para el detalle completo.
+Ver `AJUSTES-V9.47.md` para el detalle completo.

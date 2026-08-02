@@ -653,6 +653,7 @@ function normalizeGame(saved){
   if(!normalized.stadium.ticketPrices) normalized.stadium.ticketPrices = {};
   if(!normalized.stadium.capacityOverrides || typeof normalized.stadium.capacityOverrides !== 'object' || Array.isArray(normalized.stadium.capacityOverrides)) normalized.stadium.capacityOverrides = {};
   if(!Array.isArray(normalized.stadium.capacityDeteriorationHistory)) normalized.stadium.capacityDeteriorationHistory = [];
+  if(!normalized.stadium.capacityRepairProjects || typeof normalized.stadium.capacityRepairProjects !== 'object' || Array.isArray(normalized.stadium.capacityRepairProjects)) normalized.stadium.capacityRepairProjects = {};
   if(!normalized.stadium.facilities || typeof normalized.stadium.facilities !== 'object' || Array.isArray(normalized.stadium.facilities)) normalized.stadium.facilities = {};
   if(typeof migrateManagerAcademyOwnershipForState === 'function') migrateManagerAcademyOwnershipForState(normalized);
   Object.keys(normalized.stadium.facilities).forEach(clubId => { normalized.stadium.facilities[clubId] = normalizeClubFacilitiesState(normalized.stadium.facilities[clubId]); });

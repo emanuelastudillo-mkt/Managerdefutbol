@@ -1,9 +1,11 @@
-# V9.49 · Ranking activo automático
+# V9.50 · Bolsa de clubes para Copa Libertadores
 
-Versión construida sobre V9.48.
+Versión construida sobre V9.49.
 
-La carrera se publica automáticamente después del primer partido oficial cuando existe una sesión online, se actualiza durante la actividad del jugador y reintenta cargas pendientes al iniciar sesión, volver a tener conexión o retomar la pestaña.
+Se creó una bolsa independiente de 12 clubes sudamericanos con reputaciones y generador de planteles de 25 jugadores para la futura Copa Libertadores.
 
-Se conservan los controles de los días 150, 250 y 350, el cierre de temporada y el despido. Todos los envíos actualizan la misma carrera y no crean duplicados.
+Olimpia y Cerro Porteño fueron retirados de la bolsa del Mundial de Clubes y trasladados a esta nueva estructura, conservando sus identificadores internos para mantener compatibilidad.
 
-Ver `AJUSTES-V9.49.md` para el detalle completo.
+La competencia Libertadores todavía no se genera en esta versión. La bolsa queda preparada para conectarla posteriormente con formato, clasificación y calendario.
+
+Ver `AJUSTES-V9.50.md` para el detalle completo.

@@ -35,26 +35,24 @@ const CLUB_WORLD_CUP_CONFIG = {
     { name:'Camping World Stadium', capacity:43091 }
   ],
   invitedTeams:[
-    { name:'América de México', country:'México', city:'Ciudad de México', reputation:74, primaryColor:'#F4C430', crestPath:'img/escudos/América-de-México.svg', nationalityPool:['México','México','México','México','México','México','Estados Unidos','Colombia'] },
-    { name:'Monterrey', country:'México', city:'Monterrey', reputation:73, primaryColor:'#005BAA', crestPath:'img/escudos/Monterrey.svg', nationalityPool:['México','México','México','México','México','México','Colombia','Argentina'] },
-    { name:'Cerro Porteño', country:'Paraguay', city:'Asunción', reputation:65, primaryColor:'#D71920', crestPath:'img/escudos/Cerro-Porteño.svg', nationalityPool:['Paraguay','Paraguay','Paraguay','Paraguay','Paraguay','Argentina','Uruguay','Colombia'] },
-    { name:'Olimpia', country:'Paraguay', city:'Asunción', reputation:68, primaryColor:'#FFFFFF', crestPath:'img/escudos/Olimpia.svg', nationalityPool:['Paraguay','Paraguay','Paraguay','Paraguay','Paraguay','Argentina','Uruguay','Brasil'] },
-    { name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:70, primaryColor:'#F7B5CD', crestPath:'img/escudos/Inter-Miami.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Argentina','México','Colombia','Uruguay'] },
-    { name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731', crestPath:'img/escudos/Seattle-Sounders.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','México','Colombia','Inglaterra'] },
-    { name:'Wydad Casablanca', country:'Marruecos', city:'Casablanca', reputation:66, primaryColor:'#C8102E', crestPath:'img/escudos/Wydad-Casablanca.svg', nationalityPool:['Marruecos','Marruecos','Marruecos','Marruecos','Marruecos','Senegal','Ghana','Nigeria'] },
-    { name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:68, primaryColor:'#E60012', crestPath:'img/escudos/Urawa-Red-Diamonds.svg', nationalityPool:['Japón','Japón','Japón','Japón','Japón','Japón','Corea del Sur','Brasil'] },
-    { name:'Al Ahly', country:'Egipto', city:'El Cairo', reputation:78, primaryColor:'#C8102E', crestPath:'img/escudos/Al-Ahly.svg', nationalityPool:['Egipto','Egipto','Egipto','Egipto','Egipto','Egipto','Marruecos','Senegal'] },
-    { name:'Espérance de Tunis', country:'Túnez', city:'Túnez', reputation:68, primaryColor:'#D71920', crestPath:'img/escudos/Espérance-de-Tunis.svg', nationalityPool:['Túnez','Túnez','Túnez','Túnez','Túnez','Marruecos','Senegal','Nigeria'] },
-    { name:'Mamelodi Sundowns', country:'Sudáfrica', city:'Pretoria', reputation:72, primaryColor:'#F5D328', crestPath:'img/escudos/Mamelodi-Sundowns.svg', nationalityPool:['Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Ghana','Nigeria','Senegal'] },
-    { name:'TP Mazembe', country:'RD Congo', city:'Lubumbashi', reputation:66, primaryColor:'#111111', crestPath:'img/escudos/TP-Mazembe.svg', nationalityPool:['RD Congo','RD Congo','RD Congo','RD Congo','RD Congo','Nigeria','Ghana','Senegal'] },
-    { name:'Al Hilal', country:'Arabia Saudita', city:'Riad', reputation:80, primaryColor:'#0057B8', crestPath:'img/escudos/Al-Hilal.svg', nationalityPool:['Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Marruecos','Brasil','Senegal'] },
-    { name:'Al Ain', country:'Emiratos Árabes Unidos', city:'Al Ain', reputation:70, primaryColor:'#6A1B9A', crestPath:'img/escudos/Al-Ain.svg', nationalityPool:['Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Marruecos','Brasil','Senegal','Ghana'] },
-    { name:'Ulsan HD', country:'Corea del Sur', city:'Ulsan', reputation:69, primaryColor:'#005BAC', crestPath:'img/escudos/Ulsan-HD.svg', nationalityPool:['Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Japón','Brasil'] },
-    { name:'Persepolis', country:'Irán', city:'Teherán', reputation:67, primaryColor:'#D71920', crestPath:'img/escudos/Persepolis.svg', nationalityPool:['Irán','Irán','Irán','Irán','Irán','Irán','Marruecos','Senegal'] },
-    { name:'Deportivo Saprissa', country:'Costa Rica', city:'San José', reputation:63, primaryColor:'#6A1B4D', crestPath:'img/escudos/Deportivo-Saprissa.svg', nationalityPool:['Costa Rica','Costa Rica','Costa Rica','Costa Rica','Costa Rica','México','Colombia','Estados Unidos'] },
-    { name:'CSD Municipal', country:'Guatemala', city:'Ciudad de Guatemala', reputation:55, primaryColor:'#D71920', crestPath:'img/escudos/CSD-Municipal.svg', nationalityPool:['Guatemala','Guatemala','Guatemala','Guatemala','Guatemala','México','Colombia','Estados Unidos'] },
-    { name:'Auckland City', country:'Nueva Zelanda', city:'Auckland', reputation:60, primaryColor:'#1E4FA3', crestPath:'img/escudos/Auckland-City.svg', nationalityPool:['Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Inglaterra','Japón','Corea del Sur'] },
-    { name:'Hekari United', country:'Papúa Nueva Guinea', city:'Port Moresby', reputation:48, primaryColor:'#C8102E', crestPath:'img/escudos/Hekari-United.svg', nationalityPool:['Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Ghana','Nueva Zelanda','Nigeria'] }
+    { id:910001, name:'América de México', country:'México', city:'Ciudad de México', reputation:74, primaryColor:'#F4C430', crestPath:'img/escudos/América-de-México.svg', nationalityPool:['México','México','México','México','México','México','Estados Unidos','Colombia'] },
+    { id:910002, name:'Monterrey', country:'México', city:'Monterrey', reputation:73, primaryColor:'#005BAA', crestPath:'img/escudos/Monterrey.svg', nationalityPool:['México','México','México','México','México','México','Colombia','Argentina'] },
+    { id:910005, name:'Inter Miami', country:'Estados Unidos', city:'Miami', reputation:70, primaryColor:'#F7B5CD', crestPath:'img/escudos/Inter-Miami.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Argentina','México','Colombia','Uruguay'] },
+    { id:910006, name:'Seattle Sounders', country:'Estados Unidos', city:'Seattle', reputation:68, primaryColor:'#5D9731', crestPath:'img/escudos/Seattle-Sounders.svg', nationalityPool:['Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','Estados Unidos','México','Colombia','Inglaterra'] },
+    { id:910007, name:'Wydad Casablanca', country:'Marruecos', city:'Casablanca', reputation:66, primaryColor:'#C8102E', crestPath:'img/escudos/Wydad-Casablanca.svg', nationalityPool:['Marruecos','Marruecos','Marruecos','Marruecos','Marruecos','Senegal','Ghana','Nigeria'] },
+    { id:910008, name:'Urawa Red Diamonds', country:'Japón', city:'Saitama', reputation:68, primaryColor:'#E60012', crestPath:'img/escudos/Urawa-Red-Diamonds.svg', nationalityPool:['Japón','Japón','Japón','Japón','Japón','Japón','Corea del Sur','Brasil'] },
+    { id:910009, name:'Al Ahly', country:'Egipto', city:'El Cairo', reputation:78, primaryColor:'#C8102E', crestPath:'img/escudos/Al-Ahly.svg', nationalityPool:['Egipto','Egipto','Egipto','Egipto','Egipto','Egipto','Marruecos','Senegal'] },
+    { id:910010, name:'Espérance de Tunis', country:'Túnez', city:'Túnez', reputation:68, primaryColor:'#D71920', crestPath:'img/escudos/Espérance-de-Tunis.svg', nationalityPool:['Túnez','Túnez','Túnez','Túnez','Túnez','Marruecos','Senegal','Nigeria'] },
+    { id:910011, name:'Mamelodi Sundowns', country:'Sudáfrica', city:'Pretoria', reputation:72, primaryColor:'#F5D328', crestPath:'img/escudos/Mamelodi-Sundowns.svg', nationalityPool:['Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Sudáfrica','Ghana','Nigeria','Senegal'] },
+    { id:910012, name:'TP Mazembe', country:'RD Congo', city:'Lubumbashi', reputation:66, primaryColor:'#111111', crestPath:'img/escudos/TP-Mazembe.svg', nationalityPool:['RD Congo','RD Congo','RD Congo','RD Congo','RD Congo','Nigeria','Ghana','Senegal'] },
+    { id:910013, name:'Al Hilal', country:'Arabia Saudita', city:'Riad', reputation:80, primaryColor:'#0057B8', crestPath:'img/escudos/Al-Hilal.svg', nationalityPool:['Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Arabia Saudita','Marruecos','Brasil','Senegal'] },
+    { id:910014, name:'Al Ain', country:'Emiratos Árabes Unidos', city:'Al Ain', reputation:70, primaryColor:'#6A1B9A', crestPath:'img/escudos/Al-Ain.svg', nationalityPool:['Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Emiratos Árabes Unidos','Marruecos','Brasil','Senegal','Ghana'] },
+    { id:910015, name:'Ulsan HD', country:'Corea del Sur', city:'Ulsan', reputation:69, primaryColor:'#005BAC', crestPath:'img/escudos/Ulsan-HD.svg', nationalityPool:['Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Corea del Sur','Japón','Brasil'] },
+    { id:910016, name:'Persepolis', country:'Irán', city:'Teherán', reputation:67, primaryColor:'#D71920', crestPath:'img/escudos/Persepolis.svg', nationalityPool:['Irán','Irán','Irán','Irán','Irán','Irán','Marruecos','Senegal'] },
+    { id:910017, name:'Deportivo Saprissa', country:'Costa Rica', city:'San José', reputation:63, primaryColor:'#6A1B4D', crestPath:'img/escudos/Deportivo-Saprissa.svg', nationalityPool:['Costa Rica','Costa Rica','Costa Rica','Costa Rica','Costa Rica','México','Colombia','Estados Unidos'] },
+    { id:910018, name:'CSD Municipal', country:'Guatemala', city:'Ciudad de Guatemala', reputation:55, primaryColor:'#D71920', crestPath:'img/escudos/CSD-Municipal.svg', nationalityPool:['Guatemala','Guatemala','Guatemala','Guatemala','Guatemala','México','Colombia','Estados Unidos'] },
+    { id:910019, name:'Auckland City', country:'Nueva Zelanda', city:'Auckland', reputation:60, primaryColor:'#1E4FA3', crestPath:'img/escudos/Auckland-City.svg', nationalityPool:['Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Nueva Zelanda','Inglaterra','Japón','Corea del Sur'] },
+    { id:910020, name:'Hekari United', country:'Papúa Nueva Guinea', city:'Port Moresby', reputation:48, primaryColor:'#C8102E', crestPath:'img/escudos/Hekari-United.svg', nationalityPool:['Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Papúa Nueva Guinea','Ghana','Nueva Zelanda','Nigeria'] }
   ],
   // Etapa transitoria: 16 invitados y 16 clasificados domésticos. Cuando existan
   // Champions y Libertadores, estos 16 cupos domésticos serán reemplazados por 8+8.
@@ -72,7 +70,7 @@ const CLUB_WORLD_CUP_CONFIG = {
 function clubWorldCupTeamKey(name){
   return String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 }
-function clubWorldCupInviteId(index){ return 910000 + Number(index || 0) + 1; }
+function clubWorldCupInviteId(index, team=null){ const explicitId=Math.round(Number(team?.id || 0)); return explicitId > 0 ? explicitId : (910000 + Number(index || 0) + 1); }
 function clubWorldCupInviteRosterSize(){ return 25; }
 function clubWorldCupInviteNationality(team, rosterIndex=0, playerId=0){
   const pool = Array.isArray(team?.nationalityPool) && team.nationalityPool.length ? team.nationalityPool : [team?.country || 'Argentina'];
@@ -140,7 +138,7 @@ function ensureClubWorldCupInvitedData(){
     const key = clubWorldCupTeamKey(team.name);
     let club = existingByKey.get(key);
     if(!club){
-      const id = clubWorldCupInviteId(index);
+      const id = clubWorldCupInviteId(index, team);
       club = {
         id,
         name:team.name,
@@ -764,8 +762,9 @@ function clubWorldCupStageComplete(stage){
 function clubWorldCupSelectedInvites(season=game?.seasonNumber || 1){
   ensureClubWorldCupInvitedData();
   const cfg = CLUB_WORLD_CUP_CONFIG;
+  const activeInviteKeys = new Set(cfg.invitedTeams.map(team => clubWorldCupTeamKey(team.name)));
   return (seed.clubs || [])
-    .filter(club => club.clubWorldCupInvite)
+    .filter(club => club.clubWorldCupInvite && activeInviteKeys.has(clubWorldCupTeamKey(club.name)))
     .sort((a,b)=>hashNumber(`cwc-invite-${season}-${a.name}`, 1000000) - hashNumber(`cwc-invite-${season}-${b.name}`, 1000000))
     .slice(0, cfg.invitedCount)
     .map(club => Number(club.id));
@@ -1252,8 +1251,9 @@ function createClubWorldCupIfNeeded(options={}){
   createClubWorldCupGroupFixtures();
   repairClubWorldCupFixtureSchedule({ force:true });
   if(clubWorldCupClubParticipates(game.selectedClubId, game.clubWorldCup)) awardClubWorldCupPrizeIfManaged(game.selectedClubId, 'participate');
+  const activeInviteKeys = new Set(CLUB_WORLD_CUP_CONFIG.invitedTeams.map(team => clubWorldCupTeamKey(team.name)));
   const omittedInviteIds = (seed.clubs || [])
-    .filter(club => club?.clubWorldCupInvite && !invitedIds.includes(Number(club.id)))
+    .filter(club => club?.clubWorldCupInvite && activeInviteKeys.has(clubWorldCupTeamKey(club.name)) && !invitedIds.includes(Number(club.id)))
     .map(club => Number(club.id));
   pushGameMessage({
     type:'deportivo',

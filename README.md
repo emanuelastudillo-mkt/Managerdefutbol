@@ -1,11 +1,11 @@
-# V9.50 · Bolsa de clubes para Copa Libertadores
+# V9.51 · Diagnósticos del panel principal
 
-Versión construida sobre V9.49.
+Versión construida sobre V9.50.
 
-Se creó una bolsa independiente de 12 clubes sudamericanos con reputaciones y generador de planteles de 25 jugadores para la futura Copa Libertadores.
+El panel principal de la Oficina del mánager ahora presenta Media, Físico, Moral y Cohesión mediante tarjetas con diagnóstico contextual.
 
-Olimpia y Cerro Porteño fueron retirados de la bolsa del Mundial de Clubes y trasladados a esta nueva estructura, conservando sus identificadores internos para mantener compatibilidad.
+Físico, Moral y Cohesión muestran al Kinesiólogo, Psicólogo o Segundo entrenador contratado. Cuando falta el empleado aparece un perfil vacío y el mensaje contempla esa ausencia.
 
-La competencia Libertadores todavía no se genera en esta versión. La bolsa queda preparada para conectarla posteriormente con formato, clasificación y calendario.
+La Media del plantel se compara con el promedio de la liga actual e informa la posición relativa del equipo por calidad.
 
-Ver `AJUSTES-V9.50.md` para el detalle completo.
+Ver `AJUSTES-V9.51.md` para el detalle completo.

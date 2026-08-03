@@ -239,6 +239,110 @@ function miniStatusBar(label, value, max=100){
   const pct = max ? clamp(Math.round((n / max) * 100), 0, 100) : 0;
   return `<div class="mini-status-row ${statusTone(pct)}"><div><span>${escapeHtml(label)}</span><strong>${n}</strong></div><i><b style="width:${pct}%"></b></i></div>`;
 }
+
+function homeLeagueOverallContext(clubId=game?.selectedClubId, teamOverall=0){
+  const selectedDivision = typeof clubDivision === 'function' ? clubDivision(clubId) : null;
+  const divisionId = String(selectedDivision?.id || seed?.clubs?.find(club => Number(club.id) === Number(clubId))?.divisionId || '');
+  const divisionName = String(selectedDivision?.name || seed?.clubs?.find(club => Number(club.id) === Number(clubId))?.divisionName || 'la liga');
+  const rows = (seed?.clubs || []).map(club => {
+    const division = typeof clubDivision === 'function' ? clubDivision(club.id) : null;
+    if(String(division?.id || club.divisionId || '') !== divisionId) return null;
+    const squad = typeof playersByClub === 'function' ? playersByClub(club.id) : [];
+    if(!squad.length) return null;
+    return { clubId:Number(club.id), overall:Number(avg(squad.map(player => visibleOverall(player))) || 0) };
+  }).filter(Boolean).sort((a,b) => b.overall - a.overall || a.clubId - b.clubId);
+  const leagueAverage = rows.length ? Number(avg(rows.map(row => row.overall)).toFixed(1)) : Number(teamOverall || 0);
+  const ownIndex = rows.findIndex(row => Number(row.clubId) === Number(clubId));
+  return {
+    divisionId,
+    divisionName,
+    leagueAverage,
+    difference:Number((Number(teamOverall || 0) - leagueAverage).toFixed(1)),
+    rank:ownIndex >= 0 ? ownIndex + 1 : 0,
+    total:rows.length
+  };
+}
+function homeEmptyEmployeeProfileMarkup(role='Empleado'){
+  return `<span class="home-status-empty-profile" role="img" aria-label="${escapeHtml(`${role}: puesto vacante`)}"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="23" r="12"></circle><path d="M13 55c2-13 9-20 19-20s17 7 19 20"></path></svg></span>`;
+}
+function homeStatusAdvisorProfile(staffId){
+  const active = typeof staffActive === 'function' && staffActive(staffId);
+  const definition = typeof staffDefinition === 'function' ? staffDefinition(staffId) : null;
+  const contract = active && typeof staffContract === 'function' ? staffContract(staffId) : null;
+  const categoryId = String(contract?.category || 'regular');
+  const category = active && typeof staffCategoryFor === 'function' ? staffCategoryFor(staffId, categoryId) : null;
+  const roleName = String(definition?.nombre || (staffId === 'psychologist' ? 'Psicólogo' : staffId === 'kinesiologist' ? 'Kinesiólogo' : 'Segundo entrenador'));
+  return {
+    active,
+    roleName,
+    categoryName:String(category?.nombre || ''),
+    image:active && typeof staffImageMarkup === 'function'
+      ? staffImageMarkup(staffId, categoryId, 'home-status-advisor-photo')
+      : homeEmptyEmployeeProfileMarkup(roleName),
+    label:active ? `${roleName}${category?.nombre ? ` · ${category.nombre}` : ''}` : `Sin ${roleName.toLowerCase()}`
+  };
+}
+function homeOverallDiagnosis(value, context){
+  const diff = Number(context?.difference || 0);
+  if(diff >= 6) return `La calidad del plantel está muy por encima de ${context.divisionName}. Tenemos nivel para asumir protagonismo.`;
+  if(diff >= 3) return `El plantel supera la media de ${context.divisionName}. La base es competitiva para pelear arriba.`;
+  if(diff > -2.5) return `La calidad está alineada con ${context.divisionName}. Los detalles tácticos y la regularidad pueden marcar la diferencia.`;
+  if(diff > -6) return `Estamos algo por debajo de la media de ${context.divisionName}. Conviene reforzar puestos concretos.`;
+  return `El plantel está claramente por debajo de ${context.divisionName}. Necesitamos mejorar calidad o compensar con una estructura muy sólida.`;
+}
+function homePhysicalDiagnosis(value, hasStaff){
+  const n = Number(value || 0);
+  if(n >= 92) return hasStaff ? 'El plantel está en condiciones excelentes. Podemos sostener la carga actual.' : 'El físico es excelente, aunque no hay kinesiólogo para sostener tratamientos y trabajos diferenciados.';
+  if(n >= 82) return hasStaff ? 'La condición general es buena. Solo vigilaría a quienes acumulan más minutos.' : 'La condición es buena, pero falta apoyo especializado para prevenir y tratar sobrecargas.';
+  if(n >= 70) return hasStaff ? 'El estado es aceptable. Recomiendo rotar a los más exigidos y cuidar la recuperación.' : 'Hay desgaste moderado y no contamos con kinesiólogo. Conviene bajar cargas y rotar.';
+  if(n >= 55) return hasStaff ? 'Veo fatiga acumulada. Hay que reducir cargas y recuperar titulares antes de exigirlos.' : 'El físico está comprometido y no hay kinesiólogo. Evitá forzar jugadores y reducí las cargas.';
+  return hasStaff ? 'El plantel está muy exigido. Forzar ahora eleva claramente el riesgo de lesión.' : 'La condición física es crítica y no hay kinesiólogo. La prioridad debe ser recuperar al plantel.';
+}
+function homeMoraleDiagnosis(value, hasStaff){
+  const n = Number(value || 0);
+  if(n >= 90) return hasStaff ? 'El vestuario está muy motivado. Es un buen momento para sostener confianza y exigencia.' : 'La moral es excelente, aunque no hay psicólogo para acompañar posibles cambios de ánimo.';
+  if(n >= 80) return hasStaff ? 'El ánimo general es alto. El grupo responde bien al contexto actual.' : 'El vestuario está animado, pero no cuenta con apoyo psicológico especializado.';
+  if(n >= 65) return hasStaff ? 'La moral es estable. Conviene atender pronto a suplentes y jugadores disconformes.' : 'La moral es estable, aunque sin psicólogo será más difícil corregir una caída rápida.';
+  if(n >= 50) return hasStaff ? 'El ánimo es frágil. Recomiendo intervenir antes de que aparezcan conflictos.' : 'La moral es frágil y no hay psicólogo. Cuidá decisiones, promesas y reparto de minutos.';
+  return hasStaff ? 'El vestuario atraviesa una crisis de confianza. Necesitamos una intervención inmediata.' : 'La moral está en crisis y no hay psicólogo. Evitá decisiones bruscas y buscá recuperar confianza.';
+}
+function homeCohesionDiagnosis(value, hasStaff){
+  const n = Number(value || 0);
+  if(n >= 85) return hasStaff ? 'El equipo funciona como un bloque y asimila bien las instrucciones.' : 'La cohesión es excelente, aunque no hay Segundo entrenador para seguir su evolución.';
+  if(n >= 70) return hasStaff ? 'La coordinación colectiva es buena. Podemos profundizar automatismos.' : 'El grupo está bien coordinado, pero falta un Segundo entrenador que analice desajustes.';
+  if(n >= 55) return hasStaff ? 'La cohesión es irregular. Hay que sostener una base táctica y evitar demasiados cambios.' : 'La cohesión es irregular y no hay Segundo entrenador. Conviene mantener roles y estructura.';
+  if(n >= 40) return hasStaff ? 'El equipo todavía no funciona como un bloque. Recomiendo trabajo táctico y continuidad.' : 'El equipo está poco conectado y no hay Segundo entrenador. Priorizá entrenamiento táctico.';
+  return hasStaff ? 'El grupo está fragmentado. La prioridad es reconstruir asociaciones y confianza colectiva.' : 'La cohesión es crítica y no hay Segundo entrenador. Reducir cambios y trabajar táctica es urgente.';
+}
+function homeStatusAdvisorCard({ label, value, max=100, profile, message, meta='', tone=null, iconMarkup='' }){
+  const n = clamp(Math.round(Number(value) || 0), 0, max);
+  const pct = max ? clamp(Math.round((n / max) * 100), 0, 100) : 0;
+  const resolvedTone = tone || statusTone(pct);
+  return `<article class="home-status-advisor-card ${escapeHtml(resolvedTone)}">
+    <div class="home-status-advisor-head">
+      <div class="home-status-advisor-profile">${iconMarkup || profile.image}</div>
+      <div class="home-status-advisor-value"><span>${escapeHtml(label)}</span><strong>${n}</strong><small>${escapeHtml(meta)}</small></div>
+    </div>
+    <div class="home-status-advisor-source"><strong>${escapeHtml(profile.label)}</strong></div>
+    <p>${escapeHtml(message)}</p>
+    <i class="home-status-advisor-progress" aria-hidden="true"><b style="width:${pct}%"></b></i>
+  </article>`;
+}
+function homeStatusAdvisorsMarkup({ avgOverall, avgFitness, avgMorale, cohesion }){
+  const league = homeLeagueOverallContext(game.selectedClubId, avgOverall);
+  const physical = homeStatusAdvisorProfile('kinesiologist');
+  const morale = homeStatusAdvisorProfile('psychologist');
+  const group = homeStatusAdvisorProfile('assistant_coach');
+  const leagueMeta = `${league.divisionName} · media ${league.leagueAverage.toFixed(1)}${league.rank && league.total ? ` · ${league.rank}° de ${league.total}` : ''}`;
+  const overallTone = league.difference >= 3 ? 'ok' : league.difference > -3 ? 'warn' : 'bad';
+  const teamProfile = { label:'Comparación de liga', image:'' };
+  return `<div class="office-status-advisors">
+    ${homeStatusAdvisorCard({ label:'Media', value:avgOverall, max:99, profile:teamProfile, message:homeOverallDiagnosis(avgOverall, league), meta:leagueMeta, tone:overallTone, iconMarkup:`<span class="home-status-team-badge">${clubBadge(game.selectedClubId)}</span>` })}
+    ${homeStatusAdvisorCard({ label:'Físico', value:avgFitness, max:99, profile:physical, message:homePhysicalDiagnosis(avgFitness, physical.active), meta:physical.active ? 'Informe del cuerpo médico' : 'Puesto vacante' })}
+    ${homeStatusAdvisorCard({ label:'Moral', value:avgMorale, max:99, profile:morale, message:homeMoraleDiagnosis(avgMorale, morale.active), meta:morale.active ? 'Informe de vestuario' : 'Puesto vacante' })}
+    ${homeStatusAdvisorCard({ label:'Cohesión', value:cohesion, max:100, profile:group, message:homeCohesionDiagnosis(cohesion, group.active), meta:group.active ? 'Análisis colectivo' : 'Puesto vacante' })}
+  </div>`;
+}
 function visualAlertItems(){
   if(!game) return [];
   const items = [];
@@ -445,12 +549,7 @@ function managerOfficeMarkup({ next, position, clubPlayers, avgOverall, avgFitne
         <div class="office-objective-card"><span>Objetivo</span><strong>${escapeHtml(objectiveValue)}</strong>${objectiveMeta || objectiveReductionText ? `<em class="office-objective-meta">${objectiveMeta ? `<span>${escapeHtml(objectiveMeta)}</span>` : ''}${objectiveReductionText ? `<small>${escapeHtml(objectiveReductionText)}</small>` : ''}</em>` : ''}</div>
       </div>
       ${objectiveProgress}
-      <div class="office-status-bars">
-        ${miniStatusBar('Media', avgOverall, 99)}
-        ${miniStatusBar('Físico', avgFitness, 99)}
-        ${miniStatusBar('Moral', avgMorale, 99)}
-        ${miniStatusBar('Cohesión', cohesion, 100)}
-      </div>
+      ${homeStatusAdvisorsMarkup({ avgOverall, avgFitness, avgMorale, cohesion })}
     </div>
     <div class="office-side-card">
       ${nextBox}

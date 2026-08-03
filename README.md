@@ -1,11 +1,9 @@
-# V9.51 · Diagnósticos del panel principal
+# V9.52 · Calendario con escudos estables
 
-Versión construida sobre V9.50.
+Versión construida sobre V9.51.
 
-El panel principal de la Oficina del mánager ahora presenta Media, Físico, Moral y Cohesión mediante tarjetas con diagnóstico contextual.
+El calendario semanal de Inicio ahora muestra el escudo del rival en cada partido programado o disputado.
 
-Físico, Moral y Cohesión muestran al Kinesiólogo, Psicólogo o Segundo entrenador contratado. Cuando falta el empleado aparece un perfil vacío y el mensaje contempla esa ausencia.
+Se corrigió el parpadeo de escudos durante los avances y la simulación viva mediante tres medidas: memoria de la ruta válida de cada escudo, conservación de los nodos de imagen al actualizar una vista y actualización del escudo lateral solo cuando cambia realmente el club.
 
-La Media del plantel se compara con el promedio de la liga actual e informa la posición relativa del equipo por calidad.
-
-Ver `AJUSTES-V9.51.md` para el detalle completo.
+Ver `AJUSTES-V9.52.md` para el detalle completo.

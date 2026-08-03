@@ -101,16 +101,24 @@ function renderAll(){
   else document.querySelectorAll('.tabs [data-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab === activeTab));
 
   if(game){
+    const managerClubNode = $('managerClub');
     if(game.gameOver?.active){
-      $('managerClub').innerHTML = `<span>Sin club</span><small class="muted">Último: ${escapeHtml(clubName(game.selectedClubId))}</small>`;
-      $('managerClub').classList.add('side-club-name');
+      const identityKey = `without-club|${Number(game.selectedClubId || 0)}|${clubName(game.selectedClubId)}`;
+      if(managerClubNode?.dataset.clubIdentityKey !== identityKey){
+        managerClubNode.innerHTML = `<span>Sin club</span><small class="muted">Último: ${escapeHtml(clubName(game.selectedClubId))}</small>`;
+        managerClubNode.dataset.clubIdentityKey = identityKey;
+      }
+      managerClubNode?.classList.add('side-club-name');
     }else{
-      $('managerClub').innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
-      $('managerClub').classList.add('side-club-name');
+      if(typeof renderPersistentClubIdentity === 'function') renderPersistentClubIdentity(managerClubNode, game.selectedClubId, clubName(game.selectedClubId));
+      else managerClubNode.innerHTML = `${clubBadge(game.selectedClubId)}<span>${escapeHtml(clubName(game.selectedClubId))}</span>`;
+      managerClubNode?.classList.add('side-club-name');
     }
   }else{
-    $('managerClub').textContent = 'Sin partida';
-    $('managerClub').classList.remove('side-club-name');
+    const managerClubNode = $('managerClub');
+    if(managerClubNode?.dataset.clubIdentityKey !== 'no-game') managerClubNode.textContent = 'Sin partida';
+    if(managerClubNode) managerClubNode.dataset.clubIdentityKey = 'no-game';
+    managerClubNode?.classList.remove('side-club-name');
   }
   refreshSidebarDate();
   $('btnSave').disabled = !game;
@@ -742,7 +750,7 @@ function homeWeekCalendarOutcome(match){
   const opponent = clubName(opponentId) || 'Rival por confirmar';
   const venue = isHome ? 'Local' : 'Visitante';
   if(!match?.played){
-    return { tone:'scheduled', main:`vs ${opponent}`, detail:venue };
+    return { tone:'scheduled', main:`vs ${opponent}`, detail:venue, opponentId };
   }
   const rawOwnGoals = Number(isHome ? match.homeGoals : match.awayGoals);
   const rawRivalGoals = Number(isHome ? match.awayGoals : match.homeGoals);
@@ -760,7 +768,7 @@ function homeWeekCalendarOutcome(match){
   const result = ownGoals > rivalGoals || wonOnPenalties ? 'Victoria' : ownGoals < rivalGoals || lostOnPenalties ? 'Derrota' : 'Empate';
   const tone = result === 'Victoria' ? 'win' : result === 'Derrota' ? 'loss' : 'draw';
   const penaltyText = Number.isFinite(ownPens) && Number.isFinite(rivalPens) ? ` · pen. ${ownPens}-${rivalPens}` : '';
-  return { tone, main:`${result} ${ownGoals}-${rivalGoals}${penaltyText}`, detail:`vs ${opponent} · ${venue}` };
+  return { tone, main:`${result} ${ownGoals}-${rivalGoals}${penaltyText}`, detail:`vs ${opponent} · ${venue}`, opponentId };
 }
 function homeWeekCalendarEventsByDate(dates=[]){
   const result = new Map((Array.isArray(dates) ? dates : []).filter(validIsoDate).map(date => [date, new Map()]));
@@ -896,9 +904,12 @@ function homeWeekCalendarDayMarkup(iso, offset, events=[], transferActivity={ in
       ? `data-match-id="${escapeHtml(match.id)}"`
       : 'data-go-tab="fixture"';
     return `<button class="home-week-calendar-event ${escapeHtml(outcome.tone)}" type="button" ${attrs} aria-label="${escapeHtml(`${competition}. ${outcome.main}. ${outcome.detail}`)}">
-      <span class="home-week-calendar-competition">${escapeHtml(competition)}</span>
-      <strong>${escapeHtml(outcome.main)}</strong>
-      <small>${escapeHtml(outcome.detail)}</small>
+      <span class="home-week-calendar-rival-badge" aria-hidden="true">${outcome.opponentId ? clubBadge(outcome.opponentId) : ''}</span>
+      <span class="home-week-calendar-event-copy">
+        <span class="home-week-calendar-competition">${escapeHtml(competition)}</span>
+        <strong>${escapeHtml(outcome.main)}</strong>
+        <small>${escapeHtml(outcome.detail)}</small>
+      </span>
     </button>`;
   }).join('') : `<div class="home-week-calendar-empty"><span>Sin partido</span><small>Sin compromiso programado</small></div>`;
   const remaining = events.length > shownEvents.length ? `<span class="home-week-calendar-more">+${events.length - shownEvents.length} partido(s)</span>` : '';
@@ -952,7 +963,7 @@ function renderHome(){
   const deltaText = game.lastBudgetDelta ? `${game.lastBudgetDelta > 0 ? '+' : ''}${formatMoney(game.lastBudgetDelta)}` : '—';
   const problemBox = problems.length ? `<div class="card blocker"><h3>Revisión obligatoria</h3><p>Hubo lesionados o expulsados propios en el último partido. Entrá a Táctica, reemplazalos y guardá una alineación válida.</p><div class="problem-list">${problems.map(problemItem).join('')}</div><button class="primary" data-go-tactics>Ir a táctica</button></div>` : '';
   const seasonBox = game.seasonFinalized ? seasonEndPanelMarkup() : '';
-  view.innerHTML = `
+  const homeHtml = `
     ${homeWeekCalendarMarkup()}
     ${homeInboxButtonMarkup()}
     ${seasonBox}
@@ -1005,6 +1016,8 @@ function renderHome(){
     ${lastTurnSummaryMarkup()}
 
   `;
+  if(typeof replaceHtmlPreservingClubBadges === 'function') replaceHtmlPreservingClubBadges(view, homeHtml);
+  else view.innerHTML = homeHtml;
   $('advanceUnifiedBtn')?.addEventListener('click', typeof requestAdvanceCalendarOneStep === 'function' ? requestAdvanceCalendarOneStep : advanceCalendarOneStep);
   $('advanceAutoClickerBtn')?.addEventListener('click', () => { if(typeof toggleAdvanceAutoClicker === 'function') toggleAdvanceAutoClicker(); });
   document.querySelector('[data-go-tactics]')?.addEventListener('click',()=>{ activeTab='tactics'; renderAll(); });

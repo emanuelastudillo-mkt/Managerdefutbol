@@ -868,7 +868,7 @@ function renderMatchRevealStage(match, stage, index, total){
   const narrationStage = stage.narrationStage || stage;
   const narrationIndex = Number.isFinite(Number(stage.narrationIndex)) ? Number(stage.narrationIndex) : index;
   const narration = matchRevealNarration(match, narrationStage, narrationIndex, total);
-  box.innerHTML = `
+  const stageHtml = `
     <div class="match-fullscreen-grid">
       <aside class="match-side-column match-side-home">
         ${revealTeamStatsCard(match.homeId, homeStats, 'Local', match, stage.minute)}
@@ -898,6 +898,8 @@ function renderMatchRevealStage(match, stage, index, total){
         ${revealTeamStatsCard(match.awayId, awayStats, 'Visitante', match, stage.minute)}
       </aside>
     </div>`;
+  if(typeof replaceHtmlPreservingClubBadges === 'function') replaceHtmlPreservingClubBadges(box, stageHtml);
+  else box.innerHTML = stageHtml;
   const finish = $('finishMatchReveal');
   if(finish && stage.factor === 1) finish.textContent = 'Partido finalizado';
 }

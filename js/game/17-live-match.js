@@ -435,7 +435,10 @@
       ${liveManagerPanel()}
     </div>`;
     const root = document.querySelector('#liveMatchRoot');
-    if(root) root.innerHTML = html;
+    if(root){
+      if(typeof replaceHtmlPreservingClubBadges === 'function') replaceHtmlPreservingClubBadges(root, html);
+      else root.innerHTML = html;
+    }
     bindLiveControls();
   }
   function resetLiveSelections(){ liveSelectedStarterId = 0; liveSelectedBenchId = 0; liveSelectedBoardSlot = -1; }

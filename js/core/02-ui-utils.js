@@ -263,6 +263,59 @@ function clubBadgeSrcCandidates(club){
     `IMG/ESCUDOS/${slug}.webp`
   ]).map(encodeAssetPath);
 }
+const CLUB_BADGE_RESOLVED_SRC_BY_ID = new Map();
+function clubBadgeCacheKey(id){
+  const numeric = Number(id || 0);
+  return numeric > 0 ? String(numeric) : String(id || '').trim();
+}
+function rememberedClubBadgeSrc(id){
+  return CLUB_BADGE_RESOLVED_SRC_BY_ID.get(clubBadgeCacheKey(id)) || '';
+}
+function rememberClubBadgeAssetSuccess(img){
+  if(!img) return;
+  const holder = img.closest?.('.club-badge-placeholder');
+  const id = img.dataset.clubId || holder?.dataset?.clubId || '';
+  const key = clubBadgeCacheKey(id);
+  const src = String(img.getAttribute('src') || img.currentSrc || img.src || '').trim();
+  if(!key || !src) return;
+  CLUB_BADGE_RESOLVED_SRC_BY_ID.set(key, src);
+  img.dataset.crestReady = '1';
+  holder?.classList?.add('is-ready');
+}
+function replaceHtmlPreservingClubBadges(root, html){
+  if(!root) return;
+  if(typeof document === 'undefined' || typeof root.querySelectorAll !== 'function'){
+    root.innerHTML = html;
+    return;
+  }
+  const reusable = new Map();
+  root.querySelectorAll('.club-badge-placeholder[data-club-id]').forEach(node => {
+    const key = clubBadgeCacheKey(node.dataset.clubId);
+    if(!key) return;
+    if(!reusable.has(key)) reusable.set(key, []);
+    reusable.get(key).push(node);
+  });
+  const template = document.createElement('template');
+  template.innerHTML = String(html ?? '');
+  template.content.querySelectorAll('.club-badge-placeholder[data-club-id]').forEach(fresh => {
+    const key = clubBadgeCacheKey(fresh.dataset.clubId);
+    const queue = reusable.get(key);
+    const current = queue?.shift();
+    if(!current) return;
+    current.className = fresh.className;
+    current.title = fresh.title || current.title || '';
+    current.setAttribute('data-club-id', fresh.dataset.clubId || current.dataset.clubId || '');
+    fresh.replaceWith(current);
+  });
+  root.replaceChildren(template.content);
+}
+function renderPersistentClubIdentity(root, clubId, name, extraHtml=''){
+  if(!root) return;
+  const key = `${clubBadgeCacheKey(clubId)}|${String(name || '')}|${String(extraHtml || '')}`;
+  if(root.dataset.clubIdentityKey === key) return;
+  replaceHtmlPreservingClubBadges(root, `${clubBadge(clubId)}<span>${escapeHtml(name || clubName(clubId))}</span>${extraHtml || ''}`);
+  root.dataset.clubIdentityKey = key;
+}
 function nextClubBadgeSrc(img){
   if(!img) return;
   let paths = [];
@@ -280,6 +333,7 @@ function nextClubBadgeSrc(img){
 function handleDelegatedImageLoad(event){
   const img = event?.target;
   if(typeof HTMLImageElement === 'undefined' || !(img instanceof HTMLImageElement)) return;
+  if(img.dataset.fallbackSrcs) rememberClubBadgeAssetSuccess(img);
   if(img.dataset.faceOriginBase && typeof rememberFaceAssetSuccess === 'function') rememberFaceAssetSuccess(img);
 }
 function handleDelegatedImageError(event){
@@ -314,11 +368,12 @@ if(typeof document !== 'undefined'){
   document.addEventListener('error', handleDelegatedImageError, true);
 }
 function clubBadge(id){
-  const club = seed.clubs.find(c=>c.id===id) || {};
-  const paths = clubBadgeSrcCandidates(club);
+  const club = seed.clubs.find(c=>Number(c.id)===Number(id)) || {};
+  const remembered = rememberedClubBadgeSrc(id);
+  const paths = uniqueBadgePaths([remembered, ...clubBadgeSrcCandidates(club)]);
   const src = paths[0] || '';
   const fallbackJson = escapeHtml(JSON.stringify(paths));
-  return `<span class="club-badge-placeholder" data-club-id="${id}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" data-fallback-index="0" data-fallback-srcs='${fallbackJson}'></span>`;
+  return `<span class="club-badge-placeholder" data-club-id="${escapeHtml(id)}" title="${escapeHtml(clubName(id))}"><img src="${escapeHtml(src)}" alt="" data-club-id="${escapeHtml(id)}" data-fallback-index="0" data-fallback-srcs='${fallbackJson}' loading="eager" decoding="sync"></span>`;
 }
 function clubLink(id){ return `<button class="linklike club-link" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></button>`; }
 function clubSpan(id){ return `<span class="club-click" data-club-id="${id}">${clubBadge(id)}<span>${escapeHtml(clubName(id))}</span></span>`; }

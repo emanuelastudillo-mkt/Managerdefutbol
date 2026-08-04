@@ -1,15 +1,16 @@
-# V9.66 · Verificador de copas nacionales por fase
+# V9.67 · Competiciones ordenadas y estadísticas aisladas
 
-Esta versión parte de V9.65 y corrige la ausencia del sorteo de la fase previa de Copa Chile. También incorpora un sistema de checkpoints para todas las copas nacionales.
+Esta versión parte de V9.66 y reorganiza el menú lateral de Competiciones para separar cada torneo y evitar que sus estadísticas se mezclen.
 
-## Cambios principales
+## Estructura
 
-- Recuperación automática de sorteos y fases previas que no fueron generados.
-- Una copa que superó la fecha prevista ya no queda descartada de forma definitiva.
-- Cada competición conserva una lista de checkpoints por fase.
-- Una fase marcada como `OK` no vuelve a verificarse mientras mantenga la misma estructura.
-- Cuando todos los partidos de una fase terminan, se habilita un nuevo control para la fase siguiente.
-- Se muestran los estados de verificación dentro de Copas nacionales.
-- La reparación se ejecuta al cargar la partida, durante el avance diario y en las auditorías generales del calendario.
+- Calendario
+- Liga
+- Copa nacional del país del club
+- Copa Libertadores o Champions League según la región
+- Mundial de Clubes
+- Rankings
 
-Ver `AJUSTES-V9.66.md`.
+Cada competición contiene sus propios controles internos. Las estadísticas de Liga, copa nacional, Libertadores, Champions League y Mundial de Clubes se calculan únicamente con partidos de ese torneo.
+
+Ver `AJUSTES-V9.67.md`.

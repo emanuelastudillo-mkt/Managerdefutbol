@@ -834,7 +834,15 @@ function sidebarNavigationModeForTab(tab){
   if(key === 'stadium'){ const mode = String(stadiumViewMode || 'main'); return ['sponsors','fans'].includes(mode) ? mode : 'main'; }
   if(key === 'finance') return String(financeViewMode || 'main');
   if(key === 'fixture') return String(fixtureViewMode || 'mine') === 'clubWorldCup' ? 'clubWorldCup' : 'mine';
-  if(key === 'standings'){ const mode = String(selectedCompetitionView || 'standings'); return ['standings','stats','player-ranking','player-palmares','national-cups','libertadores','champions-league','club-ranking','champions'].includes(mode) ? mode : 'standings'; }
+  if(key === 'standings'){
+    const mode = String(selectedCompetitionView || 'league');
+    if(['standings','stats','league','league-stats'].includes(mode)) return 'league';
+    if(['national-cups','national-cup','national-cup-stats'].includes(mode)) return 'national-cup';
+    if(['libertadores','champions-league','continental','continental-qualifiers','continental-stats'].includes(mode)) return 'continental';
+    if(['club-world-cup','club-world-cup-qualifiers','club-world-cup-stats'].includes(mode)) return 'club-world-cup';
+    if(['rankings','rankings-clubs','rankings-players','rankings-palmares','club-ranking','player-ranking','player-palmares','champions'].includes(mode)) return 'rankings';
+    return 'league';
+  }
   if(key === 'mystats') return String(managerStatsViewMode || 'profile');
   return '';
 }

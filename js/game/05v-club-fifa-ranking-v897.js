@@ -15,6 +15,12 @@ function clubFifaRankingConfig(){
     leagueWin:number('puntosVictoriaLiga', 2.5),
     nationalCupWin:number('puntosVictoriaCopaNacional', 7),
     supercupWin:number('puntosVictoriaSupercopa', 12),
+    libertadoresGroupWin:number('puntosVictoriaLibertadoresGrupos', 10),
+    libertadoresR32Win:number('puntosVictoriaLibertadores16avos', 14),
+    libertadoresR16Win:number('puntosVictoriaLibertadoresOctavos', 18),
+    libertadoresQfWin:number('puntosVictoriaLibertadoresCuartos', 24),
+    libertadoresSfWin:number('puntosVictoriaLibertadoresSemifinal', 32),
+    libertadoresFinalWin:number('puntosVictoriaLibertadoresFinal', 45),
     cwcGroupWin:number('puntosVictoriaMundialGrupos', 22),
     cwcR16Win:number('puntosVictoriaMundialOctavos', 30),
     cwcQfWin:number('puntosVictoriaMundialCuartos', 36),
@@ -25,6 +31,7 @@ function clubFifaRankingConfig(){
     lowerLeagueTitle:number('puntosTituloLigaAscenso', 30),
     nationalCupTitle:number('puntosTituloCopaNacional', 50),
     supercupTitle:number('puntosTituloSupercopa', 25),
+    libertadoresTitle:number('puntosTituloLibertadores', 140),
     cwcTitle:number('puntosTituloMundial', 190),
     seasonDecay:Math.min(1, Math.max(0.30, number('decaimientoTemporada', 0.82))),
     minimumTitleDecay:Math.min(1, Math.max(0, number('decaimientoMinimoTitulos', 0.25))),
@@ -138,16 +145,17 @@ function clubFifaRankingWinnerId(match){
 }
 function clubFifaRankingMatchType(match){
   if(match?.clubWorldCup) return 'club_world_cup';
+  if(match?.libertadores) return 'libertadores';
   if(match?.nationalSupercup) return 'national_supercup';
   if(match?.nationalCup) return 'national_cup';
   return '';
 }
 function clubFifaRankingMatchKey(match, season, source='fixture'){
   const type = clubFifaRankingMatchType(match);
-  const competitionId = String(match?.nationalCupId || (type === 'club_world_cup' ? 'club-world-cup' : type));
+  const competitionId = String(match?.nationalCupId || (type === 'club_world_cup' ? 'club-world-cup' : type === 'libertadores' ? 'copa-libertadores' : type));
   const id = String(match?.id || '').trim();
   if(id) return `match:${season}:${type}:${competitionId}:${id}`;
-  return `match:${season}:${type}:${competitionId}:${Number(match?.homeId || 0)}:${Number(match?.awayId || 0)}:${String(match?.date || match?.seasonDay || '')}:${String(match?.clubWorldCupStage || match?.nationalCupStage || '')}`;
+  return `match:${season}:${type}:${competitionId}:${Number(match?.homeId || 0)}:${Number(match?.awayId || 0)}:${String(match?.date || match?.seasonDay || '')}:${String(match?.clubWorldCupStage || match?.libertadoresStage || match?.nationalCupStage || '')}`;
 }
 function clubFifaRankingRecordMatch(match, season, year, source='fixture'){
   const type = clubFifaRankingMatchType(match);
@@ -162,8 +170,8 @@ function clubFifaRankingRecordMatch(match, season, year, source='fixture'){
     season:Math.max(1, Math.round(Number(season || game?.seasonNumber || 1))),
     year:Math.round(Number(year || game?.seasonYear || 0)),
     type,
-    stage:String(match?.clubWorldCupStage || match?.stage || match?.nationalCupStage || ''),
-    competitionId:String(match?.nationalCupId || (type === 'club_world_cup' ? 'club-world-cup' : type)),
+    stage:String(match?.clubWorldCupStage || match?.libertadoresStage || match?.stage || match?.nationalCupStage || ''),
+    competitionId:String(match?.nationalCupId || (type === 'club_world_cup' ? 'club-world-cup' : type === 'libertadores' ? 'copa-libertadores' : type)),
     createdAt:new Date().toISOString()
   });
   return true;
@@ -179,6 +187,18 @@ function clubFifaRankingArchivedWorldCupMatches(){
   });
   return matches;
 }
+
+function clubFifaRankingArchivedLibertadoresMatches(){
+  const matches = [];
+  const editions = Array.isArray(game?.libertadoresHistory?.editions) ? game.libertadoresHistory.editions : [];
+  editions.forEach(edition => {
+    const season = Number(edition?.season || 1);
+    const year = Number(edition?.year || 0);
+    (Array.isArray(edition?.groups) ? edition.groups : []).forEach(group => (Array.isArray(group?.matches) ? group.matches : []).forEach(match => matches.push({ match:{ ...match, libertadores:true, internationalCup:true, continentalCup:true, libertadoresStage:'groups', libertadoresGroup:group?.id || match?.libertadoresGroup || '' }, season, year, source:'libertadores-history' })));
+    Object.entries(edition?.stages || {}).forEach(([stage, stageMatches]) => (Array.isArray(stageMatches) ? stageMatches : []).forEach(match => matches.push({ match:{ ...match, libertadores:true, internationalCup:true, continentalCup:true, libertadoresStage:stage }, season, year, source:'libertadores-history' })));
+  });
+  return matches;
+}
 function syncClubFifaRankingMatchRecords(){
   if(!game || !clubFifaRankingConfig().active) return { changed:false, added:0 };
   ensureClubFifaRankingState();
@@ -187,6 +207,9 @@ function syncClubFifaRankingMatchRecords(){
     if(clubFifaRankingRecordMatch(match, game.seasonNumber || 1, game.seasonYear || 0, 'fixture')) added += 1;
   }));
   clubFifaRankingArchivedWorldCupMatches().forEach(item => {
+    if(clubFifaRankingRecordMatch(item.match, item.season, item.year, item.source)) added += 1;
+  });
+  clubFifaRankingArchivedLibertadoresMatches().forEach(item => {
     if(clubFifaRankingRecordMatch(item.match, item.season, item.year, item.source)) added += 1;
   });
   game.clubFifaRanking = normalizeClubFifaRankingState(game.clubFifaRanking);
@@ -243,11 +266,22 @@ function clubFifaRankingWorldCupWinPoints(record){
   if(stage === 'thirdplace' || stage === 'third_place' || stage.includes('tercer')) return cfg.cwcThirdWin;
   return cfg.cwcGroupWin;
 }
+function clubFifaRankingLibertadoresWinPoints(record){
+  const cfg = clubFifaRankingConfig();
+  const stage = String(record?.stage || '').toLowerCase();
+  if(stage === 'final') return cfg.libertadoresFinalWin;
+  if(stage === 'sf' || stage.includes('semi')) return cfg.libertadoresSfWin;
+  if(stage === 'qf' || stage.includes('cuarto')) return cfg.libertadoresQfWin;
+  if(stage === 'r16' || stage.includes('octavo')) return cfg.libertadoresR16Win;
+  if(stage === 'r32' || stage.includes('16avo')) return cfg.libertadoresR32Win;
+  return cfg.libertadoresGroupWin;
+}
 function clubFifaRankingTitlePoints(entry, club){
   const cfg = clubFifaRankingConfig();
   const type = String(entry?.type || '').toLowerCase();
   const competitionId = String(entry?.competitionId || entry?.divisionId || '');
   if(type === 'club_world_cup' || competitionId === 'club-world-cup') return cfg.cwcTitle;
+  if(type === 'international_cup' || competitionId === 'copa-libertadores') return cfg.libertadoresTitle;
   if(type === 'national_supercup') return cfg.supercupTitle;
   if(type === 'national_cup') return cfg.nationalCupTitle;
   const division = (seed?.divisions || []).find(item => String(item.id || '') === competitionId);
@@ -292,7 +326,7 @@ function clubFifaRankingComponents(){
       row.worldCupWinPoints += clubFifaRankingWorldCupWinPoints(record) * weight;
     }else{
       row.cupWins += 1;
-      row.cupWinPoints += (record.type === 'national_supercup' ? cfg.supercupWin : cfg.nationalCupWin) * weight;
+      row.cupWinPoints += (record.type === 'libertadores' ? clubFifaRankingLibertadoresWinPoints(record) : record.type === 'national_supercup' ? cfg.supercupWin : cfg.nationalCupWin) * weight;
     }
   });
   clubFifaRankingTitleEntries().forEach(entry => {

@@ -1627,6 +1627,7 @@ function startNextSeason(selectedClubId, options={}){
   }
   if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   archiveClubWorldCupEditionForState(game, { allowIncomplete:true });
+  if(typeof archiveLibertadoresEditionForState === 'function') archiveLibertadoresEditionForState(game, { allowIncomplete:true });
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = currentClubId;
   const nextClubId = requestedClubId;
@@ -1666,6 +1667,7 @@ function startNextSeason(selectedClubId, options={}){
   game.argentinaPlayoffs = null;
   game.clubWorldCup = null;
   game.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState({}, game.seasonNumber, game.seasonYear) : null;
+  game.libertadores = typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState({}, game.seasonNumber, game.seasonYear) : null;
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;

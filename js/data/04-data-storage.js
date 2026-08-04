@@ -2519,7 +2519,7 @@ function fixtureRoundIsPlayoff(round){
   return Boolean(round?.playoffRound || (round?.matches || []).some(match => match?.playoff));
 }
 function fixtureRoundIsPersistentCompetition(round){
-  return Boolean(fixtureRoundIsPlayoff(round) || round?.clubWorldCupRound || round?.nationalCupRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup));
+  return Boolean(fixtureRoundIsPlayoff(round) || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup || match?.libertadores));
 }
 function fixtureRoundCalendarDate(round){
   const dates = (round?.matches || []).map(match => validIsoDate(match?.date) ? match.date : '').filter(Boolean).sort();

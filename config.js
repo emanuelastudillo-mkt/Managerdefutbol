@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.51',
+  version: 'V9.53',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -100,6 +100,14 @@ window.GAME_CONFIG = {
     diasPretemporada: 30,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
+    // Copa Libertadores: los miércoles se asignan automáticamente evitando copas nacionales y el receso.
+    libertadores: {
+      activa: true,
+      diasAntesSorteo: 7,
+      precioEntradaFinal: 3000,
+      repartoFinalPorClub: 0.50,
+      diasAntesSorteoMundial: 1
+    },
     // Mundial de Clubes: calendario fijo por día fijo de temporada.
     // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
     mundialClubes: {
@@ -143,6 +151,12 @@ window.GAME_CONFIG = {
     puntosVictoriaLiga: 2.5,
     puntosVictoriaCopaNacional: 7,
     puntosVictoriaSupercopa: 12,
+    puntosVictoriaLibertadoresGrupos: 10,
+    puntosVictoriaLibertadores16avos: 14,
+    puntosVictoriaLibertadoresOctavos: 18,
+    puntosVictoriaLibertadoresCuartos: 24,
+    puntosVictoriaLibertadoresSemifinal: 32,
+    puntosVictoriaLibertadoresFinal: 45,
     puntosVictoriaMundialGrupos: 22,
     puntosVictoriaMundialOctavos: 30,
     puntosVictoriaMundialCuartos: 36,
@@ -153,6 +167,7 @@ window.GAME_CONFIG = {
     puntosTituloLigaAscenso: 30,
     puntosTituloCopaNacional: 50,
     puntosTituloSupercopa: 25,
+    puntosTituloLibertadores: 140,
     puntosTituloMundial: 190,
     decaimientoTemporada: 0.82,
     decaimientoMinimoTitulos: 0.25,

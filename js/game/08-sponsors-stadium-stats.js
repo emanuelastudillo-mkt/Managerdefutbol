@@ -1430,6 +1430,7 @@ function competitionsNavMarkup(active='standings'){
     <button type="button" id="btnCompetitionPlayerRanking" class="${current === 'player-ranking' ? 'primary' : 'ghost'}">Ranking de jugadores</button>
     <button type="button" id="btnCompetitionPlayerPalmares" class="${current === 'player-palmares' ? 'primary' : 'ghost'}">Palmarés de jugadores</button>
     <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
+    <button type="button" id="btnCompetitionLibertadores" class="${current === 'libertadores' ? 'primary' : 'ghost'}">Libertadores</button>
     <button type="button" id="btnCompetitionClubRanking" class="${current === 'club-ranking' ? 'primary' : 'ghost'}">Ranking FIFA</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
@@ -1440,6 +1441,7 @@ function bindCompetitionsNav(){
   $('btnCompetitionPlayerRanking')?.addEventListener('click', () => { selectedCompetitionView = 'player-ranking'; renderStandings(); });
   $('btnCompetitionPlayerPalmares')?.addEventListener('click', () => { selectedCompetitionView = 'player-palmares'; renderStandings(); });
   $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
+  $('btnCompetitionLibertadores')?.addEventListener('click', () => { selectedCompetitionView = 'libertadores'; renderStandings(); });
   $('btnCompetitionClubRanking')?.addEventListener('click', () => { selectedCompetitionView = 'club-ranking'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
@@ -1508,11 +1510,13 @@ function renderChampionsHistory(){
     const rows = items.map(entry => {
       const extra = entry.type === 'club_world_cup'
         ? `${entry.runnerUpId ? `Subcampeón: ${escapeHtml(entry.runnerUpName || clubName(entry.runnerUpId))}` : ''}${entry.thirdPlaceId ? `${entry.runnerUpId ? ' · ' : ''}3°: ${escapeHtml(entry.thirdPlaceName || clubName(entry.thirdPlaceId))}` : ''}`
-        : '';
+        : entry.type === 'international_cup' && entry.runnerUpId
+          ? `Subcampeón: ${escapeHtml(entry.runnerUpName || clubName(entry.runnerUpId))}`
+          : '';
       return `<tr>
         <td>${escapeHtml(entry.competitionName)}</td>
         <td>${clubLink(entry.championId)}</td>
-        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : entry.type === 'national_cup' ? 'Copa nacional' : entry.type === 'national_supercup' ? 'Supercopa' : 'Liga'}</td>
+        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : entry.type === 'international_cup' ? 'Copa internacional' : entry.type === 'national_cup' ? 'Copa nacional' : entry.type === 'national_supercup' ? 'Supercopa' : 'Liga'}</td>
         <td class="muted small">${extra || '—'}</td>
       </tr>`;
     }).join('');
@@ -1520,13 +1524,19 @@ function renderChampionsHistory(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, supercopas y Mundial de Clubes por temporada.</p></div>
+      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, Libertadores, supercopas y Mundial de Clubes por temporada.</p></div>
       ${competitionsNavMarkup('champions')}
     </div>
-    <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar el Mundial de Clubes.</p></div>'}</div>`;
+    <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar las competiciones internacionales.</p></div>'}</div>`;
   bindCompetitionsNav();
 }
 function renderStandings(){
+  if(String(selectedCompetitionView || 'standings') === 'libertadores'){
+    view.innerHTML = typeof libertadoresCompetitionMarkup === 'function' ? libertadoresCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de Copa Libertadores no está disponible.</p></div>';
+    bindCompetitionsNav();
+    if(typeof bindLibertadoresCompetition === 'function') bindLibertadoresCompetition();
+    return;
+  }
   if(String(selectedCompetitionView || 'standings') === 'national-cups'){
     view.innerHTML = typeof nationalCupsCompetitionMarkup === 'function' ? nationalCupsCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de copas nacionales no está disponible.</p></div>';
     bindCompetitionsNav();

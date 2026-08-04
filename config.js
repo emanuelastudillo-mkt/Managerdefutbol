@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.56',
+  version: 'V9.57',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -116,9 +116,22 @@ window.GAME_CONFIG = {
       repartoFinalPorClub: 0.50,
       diasAntesSorteoMundial: 1
     },
-    // Mundial de Clubes: calendario fijo por día fijo de temporada.
-    // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
+    // Mundial de Clubes: edición cuatrienal, con ranking de las cuatro copas continentales más recientes.
+    // Cada grupo recibe un club de Champions, uno de Libertadores y dos invitados.
     mundialClubes: {
+      anioBase: 2025,
+      cadaAnios: 4,
+      edicionesRanking: 4,
+      cuposChampions: 8,
+      cuposLibertadores: 8,
+      cuposInvitados: 16,
+      rankingVictoria: 3,
+      rankingEmpate: 1,
+      rankingPenales: 1,
+      rankingOctavos: 2,
+      rankingCuartos: 3,
+      rankingSemifinal: 4,
+      rankingFinal: 5,
       diaSorteo: 295,
       precioEntrada: 1200,
       precioEntradaFinal: 3500,

@@ -1,9 +1,7 @@
-# V9.56 · Escudos y clasificación continental en tablas
+# V9.57 · Mundial de Clubes cuatrienal
 
-Versión construida sobre V9.55.
+Construida sobre V9.56.
 
-Se normalizó la convención de escudos para usar el nombre exacto del club reemplazando espacios por `_`, se centralizó la versión visible desde `GAME_CONFIG.version` y se incorporaron zonas coloreadas de clasificación a Libertadores y Champions en las tablas nacionales.
+El Mundial se juega cada cuatro años con 8 clubes de Champions League, 8 de Copa Libertadores y 16 invitados. Los campeones de las últimas cuatro ediciones obtienen cupo automático y el resto clasifica por ranking continental acumulado.
 
-La clasificación al Mundial de Clubes permanece visible mediante una etiqueta azul independiente, incluso cuando el mismo club también clasifica a una copa continental.
-
-Ver `AJUSTES-V9.56.md` para el detalle completo.
+Ver `AJUSTES-V9.57.md`.

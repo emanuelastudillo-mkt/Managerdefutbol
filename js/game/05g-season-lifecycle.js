@@ -115,16 +115,12 @@ function computeSeasonMovements(){
   return movements;
 }
 function clubWorldCupQualifierCountForDivision(divisionId){
-  const division = (seed?.divisions || []).find(d => String(d.id || '') === String(divisionId || ''));
-  if(!division) return 0;
-  const country = normalizeScheduleText(division.country || '');
-  const order = Number(division.order || 0);
-  const rule = (CLUB_WORLD_CUP_CONFIG.qualifiers || []).find(item => normalizeScheduleText(item.country || '') === country && Number(item.order || 0) === order);
-  return Math.max(0, Number(rule?.count || 0));
+  const division=(seed?.divisions || []).find(d => String(d.id || '') === String(divisionId || ''));
+  if(!division || Number(division.order || 0) !== 1) return 0;
+  const qualified=typeof clubWorldCupQualifiedClubIdsForDisplay === 'function' ? clubWorldCupQualifiedClubIdsForDisplay() : new Set();
+  return (seed?.clubs || []).filter(club => String(club?.divisionId || '') === String(divisionId || '') && qualified.has(Number(club?.id || 0))).length;
 }
 function clubWorldCupStandingStatusClass(divisionId, index){
-  const quota = clubWorldCupQualifierCountForDivision(divisionId);
-  if(quota > 0 && Number(index || 0) < quota) return 'continental-row';
   return '';
 }
 function argentineStandingStatusClass(divisionId, index){

@@ -1943,7 +1943,7 @@ function openGameHelpModal(){
       <div class="help-grid">
         <article class="help-card card">
           <h4>Calendario y competiciones</h4>
-          <p>Usá el calendario para planificar liga, copas nacionales, supercopas y Mundial de Clubes. Las copas nacionales son a eliminación directa, se juegan en sedes neutrales y usan tandas de penales cuando necesitan un ganador; los goles de la tanda no se suman al marcador ni a las estadísticas. Las supercopas se disputan el día 300 entre el campeón de liga y el campeón de copa.</p>
+          <p>Usá el calendario para planificar liga, copas nacionales, Champions, Libertadores, supercopas y el Mundial de Clubes cuatrienal. Las copas nacionales son a eliminación directa, se juegan en sedes neutrales y usan tandas de penales cuando necesitan un ganador; los goles de la tanda no se suman al marcador ni a las estadísticas. Las supercopas se disputan el día 300 entre el campeón de liga y el campeón de copa.</p>
           <div class="help-actions">${gameHelpGoButton('fixture','Abrir Calendario')}${gameHelpGoButton('standings','Abrir Tabla','','standings')}${gameHelpGoButton('standings','Abrir Copas nacionales','','national-cups')}${gameHelpGoButton('stats','Abrir Estadísticas')}</div>
         </article>
         <article class="help-card card">

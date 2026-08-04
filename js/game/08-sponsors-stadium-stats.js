@@ -1491,9 +1491,9 @@ function standingsProjectedContinentalQualifiers(division, tableRows=[]){
 function standingsQualificationInfo(division, row, index, continentalProjection){
   const items = [];
   const classes = [];
-  const worldCupQuota = typeof clubWorldCupQualifierCountForDivision === 'function' ? clubWorldCupQualifierCountForDivision(division?.id) : 0;
-  if(worldCupQuota > 0 && Number(index || 0) < worldCupQuota){
-    items.push({ label:'Mundial', title:'Clasifica al Mundial de Clubes', className:'world-cup' });
+  const worldCupInfo = typeof clubWorldCupQualificationInfoForClub === 'function' ? clubWorldCupQualificationInfoForClub(Number(row?.clubId || 0)) : null;
+  if(worldCupInfo){
+    items.push({ label:'Mundial', title:`${worldCupInfo.qualified ? 'Clasificado' : 'Zona provisional'} al Mundial de Clubes ${worldCupInfo.year}${worldCupInfo.source ? ` · ${worldCupInfo.source}` : ''}`, className:'world-cup' });
   }
   if(continentalProjection?.rule && continentalProjection.clubIds?.has(Number(row?.clubId || 0))){
     items.push({ label:continentalProjection.rule.label, title:`Clasifica a ${continentalProjection.rule.fullLabel}`, className:continentalProjection.rule.pillClass });
@@ -1508,7 +1508,10 @@ function standingsQualificationPills(items=[]){
 function standingsQualificationLegend(division, continentalProjection, worldCupQuota){
   const pills = [];
   if(continentalProjection?.rule?.quota) pills.push(`<span class="standings-legend-item ${escapeHtml(continentalProjection.rule.pillClass)}">${escapeHtml(continentalProjection.rule.fullLabel)} · ${continentalProjection.rule.quota} cupos</span>`);
-  if(worldCupQuota > 0) pills.push(`<span class="standings-legend-item world-cup">Mundial de Clubes · ${worldCupQuota} ${worldCupQuota === 1 ? 'cupo' : 'cupos'}</span>`);
+  if(worldCupQuota > 0){
+    const targetYear=typeof clubWorldCupNextEditionYear === 'function' ? clubWorldCupNextEditionYear(Number(game?.seasonYear || currentSeasonYear()), true) : Number(game?.seasonYear || 0);
+    pills.push(`<span class="standings-legend-item world-cup">Mundial de Clubes ${targetYear} · ${worldCupQuota} ${worldCupQuota === 1 ? 'club señalado' : 'clubes señalados'}</span>`);
+  }
   if(!pills.length) return '';
   const note = continentalProjection?.rule?.quota ? '<span class="muted small">La copa nacional y el campeón vigente ocupan cupos de su país cuando corresponde.</span>' : '';
   return `<div class="standings-qualification-legend">${pills.join('')}${note}</div>`;

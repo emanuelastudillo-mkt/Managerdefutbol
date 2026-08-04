@@ -1,7 +1,7 @@
-# V9.61 · Transferencias con propiedad segura
+# V9.62 · Relaciones más accesibles
 
-Construida sobre V9.60.
+Versión completa construida sobre V9.61.
 
-Se corrigió un problema de sincronización que podía devolver un jugador comprado a su club anterior después de avanzar el calendario, disputar un amistoso, guardar o volver a cargar la partida.
+Facilita la formación de relaciones persistentes, incorpora la continuidad entre temporadas, recupera vínculos históricos en carreras largas y muestra candidatos en formación.
 
-Ver `AJUSTES-V9.61.md`.
+Ver `AJUSTES-V9.62.md`.

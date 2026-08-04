@@ -548,6 +548,10 @@ function normalizeGame(saved){
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); p.intransferible = Boolean(p.intransferible); if(p.intransferible) p.transferListed = false; ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
+  if(typeof restoreClubDivisionsFromSeasonFixtures === 'function'){
+    const divisionRepair = restoreClubDivisionsFromSeasonFixtures(normalized, { reason:'load_v964', message:true });
+    if(Number(divisionRepair?.repaired || 0) > 0) normalized._needsAutosave = true;
+  }
   const previousCalendarVersion = normalized.calendarVersion;
   const previousFixtureCount = Array.isArray(normalized.fixtures) ? normalized.fixtures.length : 0;
   normalized.fixtures = normalizeSeasonFixtures(normalized.fixtures || structuredClone(seed.fixtures), normalized.seasonNumber, normalized.seasonYear);

@@ -1,7 +1,7 @@
-# V9.63 · Estrategias de mercado para clubes bot
+# V9.64 · División protegida por calendario oficial
 
-Versión completa construida sobre V9.62.
+Versión completa construida sobre V9.63.
 
-Agrega tres formas persistentes de afrontar el mercado para los clubes controlados por el juego: Normal, Fichar barato y Gastar todo. Cada perfil modifica objetivos, reservas financieras, montos ofrecidos, prioridades y cantidad de incorporaciones.
+Corrige la desincronización que podía devolver un club ascendido a su división original después del cambio de temporada, mientras conservaba el calendario de la categoría correcta. El calendario oficial de la temporada se usa ahora para reparar y proteger la división vigente.
 
-Ver `AJUSTES-V9.63.md`.
+Ver `AJUSTES-V9.64.md`.

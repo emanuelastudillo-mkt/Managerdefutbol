@@ -1094,7 +1094,7 @@ function runScheduledSeasonGameVerifier(options={}){
 
   let result = typeof inspectGameIntegrity === 'function' ? inspectGameIntegrity() : null;
   if(result?.canRepair && typeof applySafeGameIntegrityRepairsCore === 'function'){
-    result = applySafeGameIntegrityRepairsCore({ reason:summary.reason });
+    result = applySafeGameIntegrityRepairsCore({ reason:summary.reason, allowDivisionCountRepair:false, message:true });
     summary.structureMoves = Number(result?.repairedCount || 0);
     summary.fixturesRebuilt = Number(result?.fixturesRebuiltCount || 0);
     summary.statsFixed = Math.max(summary.statsFixed, Number(result?.botStatsRepairedCount || 0));

@@ -1,16 +1,15 @@
-# V9.67 · Competiciones ordenadas y estadísticas aisladas
+# V9.68 · Copa Chile desbloqueada
 
-Esta versión parte de V9.66 y reorganiza el menú lateral de Competiciones para separar cada torneo y evitar que sus estadísticas se mezclen.
+Esta versión parte de V9.67 y corrige las copas nacionales que podían permanecer indefinidamente en estado `Pendiente`, especialmente la fase previa de Copa Chile.
 
-## Estructura
+## Corrección principal
 
-- Calendario
-- Liga
-- Copa nacional del país del club
-- Copa Libertadores o Champions League según la región
-- Mundial de Clubes
-- Rankings
+El verificador ahora reconstruye también la asignación interna de participantes cuando una copa figura como sorteada, pero perdió o heredó incompletas sus listas de clubes.
 
-Cada competición contiene sus propios controles internos. Las estadísticas de Liga, copa nacional, Libertadores, Champions League y Mundial de Clubes se calculan únicamente con partidos de ese torneo.
+- Copa Chile recupera 18 participantes.
+- 14 clubes conservan el pase directo a octavos.
+- 4 clubes disputan los 2 cruces de fase previa.
+- Si la fecha quedó atrás, tanto la ronda como cada partido se trasladan a la nueva fecha.
+- Al terminar la previa, octavos se genera y verifica inmediatamente.
 
-Ver `AJUSTES-V9.67.md`.
+Ver `AJUSTES-V9.68.md`.

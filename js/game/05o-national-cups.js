@@ -1,7 +1,7 @@
 /* V9.07 · Copas nacionales: los avisos de sorteos y cruces se limitan al país del club dirigido. */
 
-const NATIONAL_CUP_VERSION = 3;
-const NATIONAL_CUP_VERIFIER_VERSION = 1;
+const NATIONAL_CUP_VERSION = 4;
+const NATIONAL_CUP_VERIFIER_VERSION = 2;
 const NATIONAL_CUP_COUNTRIES = ['Argentina','Chile','España','Rumania','Inglaterra','Brasil','Italia'];
 const NATIONAL_CUP_CONFIGS = [
   {
@@ -252,6 +252,49 @@ function nationalCupRankedClubIds(config){
   }
   return clubs.slice().sort((a,b)=>Number(b.reputation || 0)-Number(a.reputation || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity:'base' })).map(club => Number(club.id));
 }
+function nationalCupExpectedParticipantCount(config){
+  return nationalCupCountryKey(config?.country) === nationalCupCountryKey('Argentina') ? 54 : 18;
+}
+function nationalCupUniqueClubIds(ids=[]){
+  return [...new Set((Array.isArray(ids) ? ids : []).map(Number).filter(Boolean))];
+}
+function nationalCupParticipantAllocationValid(config, edition){
+  if(!config || !edition) return false;
+  const expected = nationalCupExpectedParticipantCount(config);
+  const validClubIds = new Set(nationalCupCountryClubs(config.country).map(club => Number(club.id)).filter(Boolean));
+  const participants = nationalCupUniqueClubIds(edition.participantClubIds);
+  const direct = nationalCupUniqueClubIds(edition.directSeedClubIds);
+  const preliminary = nationalCupUniqueClubIds(edition.preliminaryClubIds);
+  if(participants.length !== expected || direct.length !== Number(config.directSeeds || 0) || preliminary.length !== expected - Number(config.directSeeds || 0)) return false;
+  if([...participants, ...direct, ...preliminary].some(id => !validClubIds.has(id))) return false;
+  const participantSet = new Set(participants);
+  if(direct.some(id => !participantSet.has(id)) || preliminary.some(id => !participantSet.has(id))) return false;
+  if(new Set([...direct, ...preliminary]).size !== expected) return false;
+  return true;
+}
+function nationalCupRepairParticipantAllocation(config, edition, options={}){
+  if(!config || !edition) return { repaired:false, expected:0, actual:0, reason:'Sin edición' };
+  const expected = nationalCupExpectedParticipantCount(config);
+  const ranked = nationalCupUniqueClubIds(nationalCupRankedClubIds(config));
+  if(ranked.length < expected) return { repaired:false, expected, actual:ranked.length, reason:`Participantes insuficientes: ${ranked.length}/${expected}` };
+  if(nationalCupParticipantAllocationValid(config, edition)) return { repaired:false, expected, actual:expected, reason:'Participantes confirmados' };
+  const hasAllocationData = ['participantClubIds','directSeedClubIds','preliminaryClubIds'].some(key => Array.isArray(edition?.[key]) && edition[key].length > 0);
+  const hasScheduledStage = (config.stages || []).some(stage => ['scheduled','completed'].includes(String(edition?.stages?.[stage.id]?.status || '')));
+  const recoverableState = Boolean(edition.drawn || hasAllocationData || hasScheduledStage || ['skipped'].includes(String(edition.status || '')) || (config.stages || []).some(stage => stage.id === String(edition.status || '')));
+  if(!recoverableState || (options.allowCreate === false && !edition.drawn)) return { repaired:false, expected, actual:0, reason:'Sorteo todavía no habilitado' };
+  const participants = ranked.slice(0, expected);
+  edition.participantClubIds = participants;
+  edition.directSeedClubIds = participants.slice(0, Number(config.directSeeds || 0));
+  edition.preliminaryClubIds = participants.slice(Number(config.directSeeds || 0));
+  edition.drawn = true;
+  edition.createdAt = Number(edition.createdAt || Date.now());
+  edition.skippedReason = '';
+  const validStatuses = new Set((config.stages || []).map(stage => stage.id).concat(['completed']));
+  if(!validStatuses.has(String(edition.status || '')) || ['pending_draw','skipped'].includes(String(edition.status || ''))){
+    edition.status = config.stages?.[0]?.id || 'preliminary';
+  }
+  return { repaired:true, expected, actual:participants.length, reason:'Participantes y accesos reconstruidos' };
+}
 function nationalCupFixtureDate(round){
   const dates = (round?.matches || []).map(match => validIsoDate(match?.date) ? match.date : '').filter(Boolean);
   if(dates.length) return dates.sort()[0];
@@ -351,7 +394,14 @@ function nationalCupPair(ids, token){
   return pairs;
 }
 function nationalCupStageMatches(cupId, stageId){
-  return (game?.fixtures || []).flatMap(round => round?.matches || []).filter(match => match?.nationalCup && !match?.nationalSupercup && String(match.nationalCupId) === String(cupId) && String(match.nationalCupStage) === String(stageId));
+  const unique = new Map();
+  (game?.fixtures || []).flatMap(round => round?.matches || []).forEach(match => {
+    if(!match?.nationalCup || match?.nationalSupercup || String(match.nationalCupId) !== String(cupId) || String(match.nationalCupStage) !== String(stageId)) return;
+    const key = String(match.id || `${match.homeId}-${match.awayId}-${match.date || ''}`);
+    const previous = unique.get(key);
+    if(!previous || (!previous.played && match.played)) unique.set(key, match);
+  });
+  return [...unique.values()];
 }
 function nationalSupercupMatches(country){
   return (game?.fixtures || []).flatMap(round => round?.matches || []).filter(match => match?.nationalSupercup && nationalCupCountryKey(match.nationalCupCountry) === nationalCupCountryKey(country));
@@ -419,31 +469,67 @@ function nationalCupEnsureStageFixtures(config, edition, stage, options={}){
     game.fixtures.push(round);
     repaired = true;
   }
-  const allExisting = new Map((game.fixtures || []).flatMap(item => item?.matches || []).map(match => [String(match?.id || ''), match]));
-  expectedMatches.forEach(match => {
-    if(allExisting.has(String(match.id))) return;
-    round.matches.push(match);
-    allExisting.set(String(match.id), match);
-    repaired = true;
+  const entriesById = new Map();
+  (game.fixtures || []).forEach(containerRound => {
+    (containerRound?.matches || []).forEach(match => {
+      const key = String(match?.id || '');
+      if(!key) return;
+      if(!entriesById.has(key)) entriesById.set(key, []);
+      entriesById.get(key).push({ round:containerRound, match });
+    });
   });
-  const hasPlayed = (round.matches || []).some(match => match?.played);
-  if(!hasPlayed){
-    const before = (round.matches || []).length;
-    round.matches = (round.matches || []).filter(match => !match?.nationalCup || String(match.nationalCupId) !== String(config.id) || String(match.nationalCupStage) !== String(stage.id) || expectedSet.has(String(match.id)));
-    if(round.matches.length !== before) repaired = true;
-  }
+  expectedMatches.forEach(expectedMatch => {
+    const key = String(expectedMatch.id);
+    const entries = entriesById.get(key) || [];
+    const primary = entries.find(entry => entry.match?.played) || entries[0] || null;
+    if(!primary){
+      round.matches.push(expectedMatch);
+      entriesById.set(key, [{ round, match:expectedMatch }]);
+      repaired = true;
+      return;
+    }
+    const existing = primary.match;
+    if(!existing.played){
+      ['date','roundDate','seasonDay','divisionId','divisionName','nationalCup','nationalCupId','nationalCupStage','nationalCupStageLabel','nationalCupCountry'].forEach(field => {
+        if(existing[field] !== expectedMatch[field]){
+          existing[field] = expectedMatch[field];
+          repaired = true;
+        }
+      });
+    }
+    if(primary.round !== round && !existing.played){
+      primary.round.matches = (primary.round.matches || []).filter(match => match !== existing);
+      if(!(round.matches || []).some(match => String(match?.id || '') === key)) round.matches.push(existing);
+      repaired = true;
+    }
+    entries.forEach(entry => {
+      if(entry === primary || entry.match?.played) return;
+      entry.round.matches = (entry.round.matches || []).filter(match => entry.match !== match);
+      repaired = true;
+    });
+  });
+  const seenExpected = new Set();
+  round.matches = (round.matches || []).filter(match => {
+    if(!match?.nationalCup || String(match.nationalCupId) !== String(config.id) || String(match.nationalCupStage) !== String(stage.id)) return true;
+    const key = String(match.id || '');
+    if(!expectedSet.has(key)) return Boolean(match.played);
+    if(seenExpected.has(key) && !match.played){ repaired = true; return false; }
+    seenExpected.add(key);
+    return true;
+  });
   round.date = date;
   round.startDate = date;
   round.endDate = date;
   round.roundDate = date;
   round.seasonDay = seasonDayFromDate(date, edition.year);
-  stageState.status = 'scheduled';
+  stageState.status = nationalCupStageComplete(config.id, stage.id) ? 'completed' : 'scheduled';
   stageState.roundId = String(round.id || '');
   stageState.matchIds = expectedIds;
   sortFixturesAfterNationalCupChange();
   const actual = nationalCupStageMatches(config.id, stage.id).filter(match => expectedSet.has(String(match.id))).length;
   return { repaired, expected, actual, reason:actual === expected ? 'Fase confirmada' : `Cruces incompletos: ${actual}/${expected}` };
 }
+
 function nationalCupVerificationPhase(config, edition){
   const status = String(edition?.status || '');
   if(!edition?.drawn || (status === 'skipped' && /superado la primera ronda|activó esta copa/i.test(String(edition?.skippedReason || '')))) return 'draw';
@@ -459,7 +545,10 @@ function nationalCupVerificationSignature(config, edition, phase){
     const stage = config.stages.find(item => item.id === stageId);
     const state = edition.stages?.[stageId] || {};
     const matches = nationalCupStageMatches(config.id, stageId);
-    return [edition.status, state.status, state.date, state.matchIds?.length || 0, matches.length, matches.map(match => match.id).sort().join(',')].join('|');
+    const participantSignature = stageId === config.stages?.[0]?.id
+      ? [edition.participantClubIds?.length || 0, edition.directSeedClubIds?.length || 0, edition.preliminaryClubIds?.length || 0, (edition.preliminaryClubIds || []).map(Number).sort((a,b)=>a-b).join(',')].join(':')
+      : '';
+    return [edition.status, state.status, state.date, state.matchIds?.length || 0, matches.length, matches.map(match => `${match.id}@${match.date || ''}`).sort().join(','), participantSignature].join('|');
   }
   return [edition.status, edition.championId || 0].join('|');
 }
@@ -488,6 +577,8 @@ function verifyNationalCupEdition(config, options={}){
   let edition = state?.editions?.[config.id];
   if(!edition) return { ran:false, status:'missing' };
   const day = Math.max(1, Math.round(Number(seasonDayFromDate(game.currentDate || dateForSeasonState(game), currentSeasonYear()) || 1)));
+  const participantRepair = nationalCupRepairParticipantAllocation(config, edition, { allowCreate:day >= Number(config.drawDay || 1) || Boolean(edition.drawn) });
+  let repaired = Boolean(participantRepair.repaired);
   let phase = nationalCupVerificationPhase(config, edition);
   const verification = nationalCupVerificationState(edition);
   const signature = nationalCupVerificationSignature(config, edition, phase);
@@ -497,7 +588,6 @@ function verifyNationalCupEdition(config, options={}){
     if(previous.status === 'ok' && !phaseCompleted) return { ran:false, skipped:true, phase, status:'ok', expected:previous.expected, actual:previous.actual };
     if(previous.status === 'waiting' && day < Number(config.drawDay || 1)) return { ran:false, skipped:true, phase, status:'waiting', expected:previous.expected, actual:previous.actual };
   }
-  let repaired = false;
   let created = false;
   let note = '';
   let expected = 0;
@@ -552,8 +642,9 @@ function verifyNationalCupEdition(config, options={}){
     const stageId = finalPhase.slice(6);
     const stage = config.stages.find(item => item.id === stageId);
     const matches = nationalCupStageMatches(config.id, stageId);
+    const expectedIds = new Set((edition.stages?.[stageId]?.matchIds || []).map(String));
     expected = Math.max(0, Math.round(Number(stage?.matches || 0)));
-    actual = matches.length;
+    actual = expectedIds.size ? matches.filter(match => expectedIds.has(String(match.id))).length : matches.length;
     note = actual === expected ? 'Fase confirmada' : `Cruces incompletos: ${actual}/${expected}`;
   }
   const status = ['completed','skipped'].includes(finalPhase) || (expected > 0 && actual === expected) ? 'ok' : 'pending';
@@ -584,7 +675,7 @@ function nationalCupDrawEdition(config, options={}){
   const edition = state?.editions?.[config.id];
   if(!edition || edition.drawn) return false;
   const ranked = nationalCupRankedClubIds(config);
-  const expected = config.country === 'Argentina' ? 54 : 18;
+  const expected = nationalCupExpectedParticipantCount(config);
   const participants = ranked.slice(0, expected);
   if(participants.length < expected){
     edition.status = 'skipped';
@@ -843,7 +934,8 @@ function nationalCupEditionMarkup(edition){
       const pens = match.played && match.penaltyShootout ? `<span class="small muted"> (${Number(match.penaltyShootout.home || 0)}-${Number(match.penaltyShootout.away || 0)} pen.)</span>` : '';
       return `<div class="cwc-group-result ${match.played ? 'clickable' : ''}" ${match.played ? `data-match-id="${escapeHtml(match.id)}"` : ''}><span>${clubBadge(match.homeId)} ${escapeHtml(clubName(match.homeId))}</span><strong>${score}${pens}</strong><span>${escapeHtml(clubName(match.awayId))} ${clubBadge(match.awayId)}</span></div>`;
     }).join('');
-    return `<div class="card inner"><div class="row"><h3>${escapeHtml(stage.label)}</h3><span class="pill">${played}/${matches.length || stage.matches}</span></div><p class="muted small">${escapeHtml(matchDateLabel(nationalCupStageDate(config, stage.id, edition.year)))} · Entrada ${formatMoney(stage.ticketPrice)} · sede neutral</p>${rows || '<p class="muted">Cruces todavía no definidos.</p>'}</div>`;
+    const scheduledDate = edition.stages?.[stage.id]?.date || nationalCupStageDate(config, stage.id, edition.year);
+    return `<div class="card inner"><div class="row"><h3>${escapeHtml(stage.label)}</h3><span class="pill">${played}/${matches.length || stage.matches}</span></div><p class="muted small">${escapeHtml(matchDateLabel(scheduledDate))} · Entrada ${formatMoney(stage.ticketPrice)} · sede neutral</p>${rows || '<p class="muted">Cruces todavía no definidos.</p>'}</div>`;
   }).join('');
   const champion = edition.championId ? `<div class="card"><p class="label">Campeón</p><h3>${clubLink(edition.championId)}</h3></div>` : '';
   return `<div class="card"><div class="row"><div><h2>${escapeHtml(config.name)}</h2><p class="muted">${escapeHtml(config.country)} · sorteo día ${config.drawDay}</p></div><span class="pill">${escapeHtml(edition.status)}</span></div></div>${champion}<div class="grid cols-2">${stages}</div>`;

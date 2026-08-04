@@ -552,7 +552,10 @@ function simulateDueMatchesUntil(targetDate, options={}){
   if(results.length){
     game.matchHistory.push(...results);
     advanceCompletedRegularRounds();
-    if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
+    const nationalCupAdvanced = typeof advanceNationalCupsIfNeeded === 'function' ? advanceNationalCupsIfNeeded() : false;
+    if(nationalCupAdvanced && typeof verifyNationalCupCheckpoints === 'function'){
+      verifyNationalCupCheckpoints({ silent:true, source:'after_due_match_phase_change_v968' });
+    }
     if(typeof advanceLibertadoresIfNeeded === 'function') advanceLibertadoresIfNeeded();
     if(typeof advanceChampionsLeagueIfNeeded === 'function') advanceChampionsLeagueIfNeeded();
     if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();

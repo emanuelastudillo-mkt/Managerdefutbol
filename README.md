@@ -1,16 +1,15 @@
-# V9.65 · Convenios con imágenes y logos de competiciones
+# V9.66 · Verificador de copas nacionales por fase
 
-Esta versión parte de la base V9.64 “división protegida por calendario oficial” y suma la integración visual pedida para nuevas imágenes de convenios/instalaciones y logos de competiciones.
+Esta versión parte de V9.65 y corrige la ausencia del sorteo de la fase previa de Copa Chile. También incorpora un sistema de checkpoints para todas las copas nacionales.
 
-## Incluye
+## Cambios principales
 
-- Imágenes para hotel, transporte, concentraciones especiales y oficina de prensa/marketing dentro de Estadio e instalaciones.
-- Logos de Copa Libertadores, Champions League y Mundial de Clubes en el calendario semanal de Inicio.
-- Logos de esas competiciones también en el bloque de próximo partido de la Oficina del manager.
-- Versionado actualizado a V9.65.
+- Recuperación automática de sorteos y fases previas que no fueron generados.
+- Una copa que superó la fecha prevista ya no queda descartada de forma definitiva.
+- Cada competición conserva una lista de checkpoints por fase.
+- Una fase marcada como `OK` no vuelve a verificarse mientras mantenga la misma estructura.
+- Cuando todos los partidos de una fase terminan, se habilita un nuevo control para la fase siguiente.
+- Se muestran los estados de verificación dentro de Copas nacionales.
+- La reparación se ejecuta al cargar la partida, durante el avance diario y en las auditorías generales del calendario.
 
-## Notas
-
-- La corrección de división protegida de V9.64 se mantiene intacta.
-- Las imágenes nuevas se incorporan dentro del juego y también están incluidas en el incremental.
-- Ver `AJUSTES-V9.65.md`.
+Ver `AJUSTES-V9.66.md`.

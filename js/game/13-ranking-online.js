@@ -1614,34 +1614,74 @@ function dedupeRankingRows(rows=[]){
   return Array.from(map.values());
 }
 
+function rankingSortParts(sortKey=rankingSort){
+  const match = String(sortKey || '').trim().match(/^(.+)_(asc|desc)$/i);
+  return match ? { key:match[1], dir:match[2].toLowerCase() } : { key:'managerScore', dir:'desc' };
+}
+function rankingNormalizedSort(sortKey=rankingSort){
+  const allowed = new Set(['managerScore','division','club','points','finalBudget','seasonsPlayed','careerMatches']);
+  const parts = rankingSortParts(sortKey);
+  return `${allowed.has(parts.key) ? parts.key : 'managerScore'}_${parts.dir === 'asc' ? 'asc' : 'desc'}`;
+}
 function sortRankingRows(rows, sortKey=rankingSort){
-  const [key, dir='desc'] = String(sortKey || '').split('_');
+  const { key, dir } = rankingSortParts(rankingNormalizedSort(sortKey));
   const direction = dir === 'asc' ? 1 : -1;
   const getter = {
     managerScore: row => Number(row.managerScore || 0),
-    division: row => String(row.division || ''),
-    club: row => String(row.club || ''),
+    division: row => String(row.division || '').trim(),
+    club: row => String(row.currentClub || row.club || '').trim(),
     points: row => Number(row.points || 0),
     finalBudget: row => Number(row.finalBudget || 0),
     seasonsPlayed: row => Number(row.seasonsPlayed || row.season || 0),
-    careerMatches: row => Number(row.careerMatches || 0)
+    careerMatches: row => Number(row.careerMatches || (Number(row.won || 0) + Number(row.drawn || 0) + Number(row.lost || 0)) || 0)
   }[key] || (row => Number(row.managerScore || 0));
-  return rows.slice().sort((a,b)=>{
+  return (Array.isArray(rows) ? rows : []).slice().sort((a,b)=>{
     const av = getter(a);
     const bv = getter(b);
-    if(typeof av === 'string' || typeof bv === 'string'){
-      const cmp = String(av).localeCompare(String(bv), 'es', { sensitivity:'base' });
-      return cmp * direction || Number(b.managerScore || 0) - Number(a.managerScore || 0);
-    }
-    return ((av > bv ? 1 : av < bv ? -1 : 0) * direction) || Number(b.managerScore || 0) - Number(a.managerScore || 0);
+    let primary = 0;
+    if(typeof av === 'string' || typeof bv === 'string') primary = String(av).localeCompare(String(bv), 'es', { sensitivity:'base', numeric:true });
+    else primary = av > bv ? 1 : av < bv ? -1 : 0;
+    if(primary) return primary * direction;
+    const scoreTie = Number(b.managerScore || 0) - Number(a.managerScore || 0);
+    if(scoreTie) return scoreTie;
+    const dateTie = String(b.submittedAt || '').localeCompare(String(a.submittedAt || ''));
+    if(dateTie) return dateTie;
+    return String(a.managerName || '').localeCompare(String(b.managerName || ''), 'es', { sensitivity:'base' });
   });
 }
+function rankingSortLabel(sortKey=rankingSort){
+  const { key, dir } = rankingSortParts(rankingNormalizedSort(sortKey));
+  const labels = {
+    managerScore:'Índice carrera', division:'División', club:'Club', points:'Pts. deportivos',
+    finalBudget:'Presupuesto final', seasonsPlayed:'Temporadas', careerMatches:'Partidos'
+  };
+  return `${labels[key] || 'Índice carrera'} · ${dir === 'asc' ? 'menor a mayor' : 'mayor a menor'}`;
+}
 function rankingSortButton(key, label){
-  const isActive = String(rankingSort || '').startsWith(`${key}_`);
-  const currentDir = isActive ? String(rankingSort).split('_')[1] : 'desc';
+  const current = rankingSortParts(rankingNormalizedSort(rankingSort));
+  const isActive = current.key === key;
+  const currentDir = isActive ? current.dir : 'desc';
   const nextDir = isActive && currentDir === 'desc' ? 'asc' : 'desc';
   const arrow = isActive ? (currentDir === 'asc' ? '↑' : '↓') : '';
-  return `<button class="ranking-sort ${isActive ? 'active' : ''}" data-ranking-sort="${escapeHtml(key)}_${nextDir}" type="button">${escapeHtml(label)} ${arrow}</button>`;
+  return `<button class="ranking-sort ${isActive ? 'active' : ''}" data-ranking-sort="${escapeHtml(key)}_${nextDir}" type="button" aria-pressed="${isActive ? 'true' : 'false'}" title="Ordenar por ${escapeHtml(label)}">${escapeHtml(label)} ${arrow}</button>`;
+}
+function rankingRefreshSortedTable(){
+  const box = document.getElementById('rankingTableBox');
+  if(!box) return false;
+  box.innerHTML = rankingRowsTable(rankingRowsCache);
+  return true;
+}
+function rankingInstallSortDelegation(){
+  if(!view || view.__rankingSortDelegationV969) return;
+  view.__rankingSortDelegationV969 = true;
+  view.addEventListener('click', event => {
+    const button = event.target?.closest?.('[data-ranking-sort]');
+    if(!button || !view.contains(button)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    rankingSort = rankingNormalizedSort(button.dataset.rankingSort || 'managerScore_desc');
+    rankingRefreshSortedTable();
+  });
 }
 function rankingRowMarkup(row, index){
   const budgetCls = Number(row.budgetVariation || 0) >= 0 ? 'ok' : 'bad';
@@ -1665,7 +1705,7 @@ function rankingRowMarkup(row, index){
 }
 function rankingRowsTable(rows){
   const sorted = sortRankingRows(rows).slice(0, RANKING_PAGE_SIZE);
-  return `<div class="ranking-sortbar">
+  return `<div class="ranking-sortbar" aria-label="Orden del ranking de carreras">
     ${rankingSortButton('managerScore','Índice carrera')}
     ${rankingSortButton('division','División')}
     ${rankingSortButton('club','Club')}
@@ -1673,6 +1713,7 @@ function rankingRowsTable(rows){
     ${rankingSortButton('finalBudget','Presupuesto final')}
     ${rankingSortButton('seasonsPlayed','Temporadas')}
     ${rankingSortButton('careerMatches','Partidos')}
+    <span class="ranking-sort-current" aria-live="polite">Orden: ${escapeHtml(rankingSortLabel())}</span>
   </div>
   <p class="small muted"><strong>Índice carrera:</strong> combina rendimiento deportivo, títulos, prestigio, temporadas y economía. <strong>Pts. deportivos:</strong> 3 por victoria y 1 por empate acumulados en la carrera.</p><div class="table-wrap ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>Manager</th><th>Club actual</th><th>División</th><th>Temps.</th><th>Partidos</th><th>Mejor pos.</th><th>Índice carrera</th><th>Pts. deportivos</th><th>G-E-P</th><th>DG</th><th>Títulos</th><th>Presupuesto final</th></tr></thead><tbody>${sorted.length ? sorted.map(rankingRowMarkup).join('') : '<tr><td colspan="13" class="muted">Todavía no hay carreras cargadas.</td></tr>'}</tbody></table></div>`;
 }
@@ -1787,10 +1828,7 @@ function renderRankingOnline(){
   $('refreshRanking')?.addEventListener('click', loadRankingOnline);
   $('submitRankingManual')?.addEventListener('click', submitCurrentSeasonToRanking);
   rankingBindAuthPanels(view);
-  document.querySelectorAll('[data-ranking-sort]').forEach(btn => btn.addEventListener('click', () => {
-    rankingSort = btn.dataset.rankingSort;
-    renderRankingOnline();
-  }));
+  rankingInstallSortDelegation();
   if(endpoint && !rankingRowsCache.length && !rankingLoading){
     setTimeout(() => loadRankingOnline(true), 0);
   }

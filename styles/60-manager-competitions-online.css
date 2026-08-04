@@ -1256,3 +1256,16 @@ button.cwc-group-result{cursor:pointer}
 .national-cup-verification-row small{color:var(--muted);font-size:10px}
 .national-cup-verification-row b{flex:0 0 auto;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
 @media(max-width:900px){.national-cup-verification-list{grid-template-columns:1fr}}
+
+/* V9.69 · Orden persistente y visible del ranking online de carreras. */
+.ranking-sort-current{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  margin-left:auto;
+  padding:6px 10px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:700;
+}
+@media(max-width:760px){.ranking-sort-current{width:100%;margin-left:0;padding-left:2px}}

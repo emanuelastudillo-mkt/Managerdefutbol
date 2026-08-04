@@ -1,8 +1,8 @@
-/* V9.58 · Programación de amistosos desde el calendario. */
+/* V9.58/V9.60 · Programación de amistosos desde el calendario y fechas disponibles destacadas. */
 (function(){
   'use strict';
 
-  const VERSION = 'V9.58';
+  const VERSION = 'V9.60';
   const DEFAULTS = {
     minimumLeadDays:3,
     matchBufferDays:2,
@@ -338,7 +338,11 @@
   function calendarEmptyMarkup(date,offset){
     const status=dateStatus(date,offset);
     if(status.allowed){
-      return `<button type="button" class="home-week-calendar-empty home-week-calendar-empty-action" data-friendly-v958-date="${escapeHtml(date)}"><span>Sin partido</span><small>Agregar amistoso</small></button>`;
+      return `<button type="button" class="home-week-calendar-empty home-week-calendar-empty-action" data-friendly-v958-date="${escapeHtml(date)}" aria-label="Programar un amistoso para el ${escapeHtml(date)}">
+        <span class="friendly-v960-status"><span aria-hidden="true">⚽</span> Amistoso disponible</span>
+        <strong class="friendly-v960-title">Fecha libre</strong>
+        <small>Elegir rival</small>
+      </button>`;
     }
     const shortReason=offset>0 && offset<settings().minimumLeadDays ? `Disponible con ${settings().minimumLeadDays} días de anticipación` : (status.reason || 'Sin compromiso programado');
     return `<div class="home-week-calendar-empty"><span>Sin partido</span><small>${escapeHtml(shortReason)}</small></div>`;
@@ -471,8 +475,12 @@
     homeWeekCalendarDayMarkup=function(iso,offset,events=[],transferActivity={incoming:0,outgoing:0}){
       let html=originalDayMarkup(iso,offset,events,transferActivity);
       if(!(events||[]).length){
+        const friendlyStatus=dateStatus(iso,offset);
         html=html.replace(/<div class="home-week-calendar-empty"><span>Sin partido<\/span><small>Sin compromiso programado<\/small><\/div>/,calendarEmptyMarkup(iso,offset));
-        if(dateStatus(iso,offset).allowed) html=html.replace('home-week-calendar-day ', 'home-week-calendar-day can-schedule-friendly ');
+        if(friendlyStatus.allowed){
+          html=html.replace('home-week-calendar-day ', 'home-week-calendar-day can-schedule-friendly ');
+          html=html.replace('<b class="no-match" aria-hidden="true">·</b>','<b class="friendly-available" aria-hidden="true">⚽</b>');
+        }
       }
       return html;
     };
@@ -480,7 +488,8 @@
   const originalTurnPanel=typeof turnModePanelMarkup==='function'?turnModePanelMarkup:null;
   if(originalTurnPanel){
     turnModePanelMarkup=function(){
-      if(typeof isPreseason==='function'&&isPreseason()) return `<div class="card preseason-card"><div class="row"><div><p class="label">Pretemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn||0,PRESEASON_TURNS)}</h3></div><span class="pill">Amistosos desde el calendario</span></div><p class="muted">En los días sin partido, hacé clic en “Agregar amistoso”. La fecha debe tener al menos tres días de anticipación.</p></div>`;
+      // La disponibilidad se comunica directamente en el calendario; evitamos repetir un bloque explicativo en pretemporada.
+      if(typeof isPreseason==='function'&&isPreseason()) return '';
       if(typeof isPostseason==='function'&&isPostseason()) return `<div class="card preseason-card"><div class="row"><div><p class="label">Postemporada</p><h3>${phaseDayRangeLabel(game.phaseTurn||0,postseasonTurnsForCurrentSeason())}</h3></div><span class="pill">Amistosos disponibles</span></div><p class="muted">Podés programar amistosos desde los días vacíos del calendario antes del cierre anual.</p></div>`;
       return originalTurnPanel();
     };

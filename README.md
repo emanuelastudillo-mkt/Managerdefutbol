@@ -1,11 +1,7 @@
-# V9.59 · Amistosos programables desde el calendario
+# V9.60 · Fechas de amistosos destacadas
 
-Construida sobre V9.57.
+Construida sobre V9.59.
 
-Permite seleccionar los días vacíos del calendario y negociar amistosos con cinco rivales persistentes por fecha, respetando anticipación, fases habilitadas, copas internacionales y proximidad con otros partidos.
+Los días aptos para programar amistosos se identifican directamente en el calendario mediante un tratamiento visual destacado y una acción clara para elegir rival. También se eliminó el bloque informativo redundante de pretemporada.
 
-Ver `AJUSTES-V9.59.md`.
-
-
-## V9.59
-Corrección del cierre de temporada y reintentos persistentes del ranking automático.
+Ver `AJUSTES-V9.60.md`.

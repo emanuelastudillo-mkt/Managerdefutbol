@@ -8,16 +8,19 @@
   const HOTEL_OPTIONS = [
     {
       id:'hotel_basic', name:'Hotel funcional', level:'Básico', rate:.045, minimum:150000,
+      image:'assets/instalaciones/hotel_funcional.png',
       amenities:'Habitaciones compartidas, alimentación deportiva y descanso básico.',
       effects:{ condition:1, morale:0, cohesion:0 }
     },
     {
       id:'hotel_comfort', name:'Hotel confort', level:'Confort', rate:.09, minimum:360000,
+      image:'assets/instalaciones/hotel_confort.png',
       amenities:'Habitaciones individuales, pileta, sauna y recuperación guiada.',
       effects:{ condition:2, morale:1, cohesion:0 }
     },
     {
       id:'hotel_premium', name:'Hotel premium', level:'Premium', rate:.165, minimum:750000,
+      image:'assets/instalaciones/hotel_premium.png',
       amenities:'Spa, pileta climatizada, sala recreativa y casino privado.',
       effects:{ condition:3, morale:2, cohesion:1 }
     }
@@ -26,16 +29,19 @@
   const TRANSPORT_OPTIONS = [
     {
       id:'transport_basic', name:'Transporte básico', level:'Básico', rate:.036, minimum:120000,
+      image:'assets/instalaciones/transporte_basico.png',
       amenities:'Combis y micros convencionales para los traslados del plantel.',
       effects:{ condition:1, morale:0, cohesion:0 }
     },
     {
       id:'transport_executive', name:'Transporte ejecutivo', level:'Ejecutivo', rate:.084, minimum:300000,
+      image:'assets/instalaciones/transporte_ejecutivo.png',
       amenities:'Micros premium y avión comercial para viajes largos.',
       effects:{ condition:2, morale:1, cohesion:0 }
     },
     {
       id:'transport_private', name:'Transporte privado', level:'Privado', rate:.15, minimum:660000,
+      image:'assets/instalaciones/transporte_privado.png',
       amenities:'Charter o jet privado, traslados directos y máxima comodidad.',
       effects:{ condition:3, morale:1, cohesion:1 }
     }
@@ -44,24 +50,28 @@
   const PRESS_OPTIONS = [
     {
       id:'press_small', name:'Oficina pequeña', level:'Pequeña', rate:.06, minimum:240000,
+      image:'assets/instalaciones/oficina_pequena.png',
       interval:30, players:3, fansFactor:.20, fansMin:5, fansMax:80,
       amenities:'Firmas de autógrafos y reuniones barriales con socios.',
       effects:{ fans:'small', morale:1, trust:0, cohesion:0, condition:-1 }
     },
     {
       id:'press_medium', name:'Oficina mediana', level:'Mediana', rate:.12, minimum:600000,
+      image:'assets/instalaciones/oficina_mediana.png',
       interval:24, players:5, fansFactor:.35, fansMin:8, fansMax:150,
       amenities:'Entrenamientos abiertos, entrevistas y encuentros institucionales.',
       effects:{ fans:'normal', morale:1, trust:.5, cohesion:0, condition:-1 }
     },
     {
       id:'press_large', name:'Oficina grande', level:'Grande', rate:.21, minimum:1500000,
+      image:'assets/instalaciones/oficina_grande.png',
       interval:18, players:7, fansFactor:.55, fansMin:12, fansMax:300,
       amenities:'Campañas nacionales, contenido audiovisual y jornadas con peñas.',
       effects:{ fans:'high', morale:1, trust:.5, cohesion:1, condition:-1 }
     },
     {
       id:'press_world', name:'Oficina mundial', level:'Mundial', rate:.33, minimum:3600000,
+      image:'assets/instalaciones/oficina_mundial.png',
       interval:14, players:10, fansFactor:.80, fansMin:18, fansMax:500,
       amenities:'Campañas internacionales, grandes eventos y exposición global.',
       effects:{ fans:'very_high', morale:2, trust:.5, cohesion:1, condition:-2 }
@@ -71,18 +81,21 @@
   const CONCENTRATION_OPTIONS = [
     {
       id:'concentration_history', name:'Historia e identidad del club',
+      image:'assets/instalaciones/historia_e_identidad_del_club.png',
       dailyFactor:2.4, perPlayer:15000, minimum:450000,
       description:'Recorrido por instalaciones, museo, historia y encuentro con referentes del club.',
       effects:{ trust:.5, cohesion:2, morale:1, condition:-1 }
     },
     {
       id:'concentration_family', name:'Día de campo con familias',
+      image:'assets/instalaciones/dia_de_campo_con_familias.png',
       dailyFactor:3.6, perPlayer:30000, minimum:900000,
       description:'Jornada recreativa, almuerzo familiar y actividades de integración.',
       effects:{ trust:1, cohesion:2, morale:3, condition:-1 }
     },
     {
       id:'concentration_closed', name:'Concentración cerrada',
+      image:'assets/instalaciones/concentracion_cerrada.png',
       dailyFactor:5.4, perPlayer:54000, minimum:1500000,
       description:'Jornada exclusiva para jugadores y cuerpo técnico con reuniones internas.',
       effects:{ trust:1.5, cohesion:4, morale:1, condition:0 }
@@ -540,10 +553,17 @@
     return { fans:gain, players:ids.length };
   }
 
+  function cfsServiceVisual(option){
+    const path = String(option?.image || '').trim();
+    if(!path) return '';
+    return `<div class="club-service-visual"><img src="${escapeHtml(path)}" alt="${escapeHtml(option?.name || 'Servicio del club')}" loading="lazy"></div>`;
+  }
+
   function cfsServiceCard(category, option, activeId){
     const active = activeId === option.id;
     const cost = cfsMonthlyCost(option);
     return `<article class="card club-service-option ${active ? 'is-active' : ''}">
+      ${cfsServiceVisual(option)}
       <div class="row club-service-option-head"><div><p class="label">${escapeHtml(option.level)}</p><h4>${escapeHtml(option.name)}</h4></div>${active ? '<span class="pill ok">Activo</span>' : ''}</div>
       <p class="muted small">${escapeHtml(option.amenities)}</p>
       ${cfsEffectsMarkup(option, category)}
@@ -554,6 +574,7 @@
     const cost = cfsConcentrationCost(option);
     const availability = cfsConcentrationAvailability(option);
     return `<article class="card club-service-option club-concentration-option">
+      ${cfsServiceVisual(option)}
       <div class="row club-service-option-head"><div><p class="label">Acción puntual</p><h4>${escapeHtml(option.name)}</h4></div><span class="pill">Hoy</span></div>
       <p class="muted small">${escapeHtml(option.description)}</p>
       ${cfsEffectsMarkup(option, 'concentration')}

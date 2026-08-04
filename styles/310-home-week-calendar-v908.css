@@ -365,3 +365,32 @@ html[data-interface="modern"] .home-week-calendar-event-copy{
     flex-basis:24px;
   }
 }
+
+/* V9.65 · Logos de competición en calendario semanal y próximo partido. */
+html[data-interface="modern"] .home-week-calendar-competition-line,
+.next-match-competition-line{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+html[data-interface="modern"] .home-week-calendar-competition-line .home-week-calendar-competition,
+.next-match-competition-line span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.competition-logo{display:block;object-fit:contain;flex:0 0 auto}
+.competition-logo-small{width:15px;height:15px}
+.competition-logo-large{width:22px;height:22px}
+.next-match-competition-line{
+  grid-column:1 / -1;
+  margin:-2px 0 4px;
+  color:#cbd5e1;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+html[data-interface="modern"] .next-match-competition-line span{color:#e5e7eb}

@@ -1654,6 +1654,10 @@ function startNextSeason(selectedClubId, options={}){
     transferBudgetAddHistory('season_bonus', `Bonus de directiva: ${(transferUnlock.reasons || []).map(r => r.reason).filter(Boolean).join(' + ') || 'temporada anterior'}`, 0, transferUnlock.rate);
   }
   game.seasonYear = seasonYearForNumber(game.seasonNumber);
+  game.leagueFixtureSeedIndex = typeof leagueFixtureSeedIndexForSeasonNumber === 'function' ? leagueFixtureSeedIndexForSeasonNumber(game.seasonNumber) : null;
+  game.leagueFixtureSeedVersion = game.leagueFixtureSeedIndex === null ? 'legacy-v969' : (typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds');
+  game.leagueFixtureSeedHistory = game.leagueFixtureSeedHistory && typeof game.leagueFixtureSeedHistory === 'object' && !Array.isArray(game.leagueFixtureSeedHistory) ? game.leagueFixtureSeedHistory : {};
+  if(game.leagueFixtureSeedIndex !== null) game.leagueFixtureSeedHistory[game.seasonNumber] = game.leagueFixtureSeedIndex;
   if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(game, game.seasonNumber, { force:true, reason:'season_start' });
   game.calendarVersion = SEASON_CALENDAR_VERSION;
   game.seasonInitialBudget = Math.round(Number(game.budget || 0));
@@ -1674,7 +1678,7 @@ function startNextSeason(selectedClubId, options={}){
   game.preseasonFriendliesPlayed = 0;
   game.pendingFriendlyOpponentId = 0;
   game.matchdayIndex = 0;
-  game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:game.seasonYear });
+  game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:game.seasonYear, fixtureSeedIndex:game.leagueFixtureSeedIndex });
   const previousDate = validIsoDate(game.currentDate) ? game.currentDate : seasonEndDateForYear(seasonYearForNumber((game.seasonNumber || 2) - 1));
   const nextSeasonStart = firstAdvanceDateForSeason(game.seasonYear);
   game.currentDate = validIsoDate(previousDate) && daysBetweenIsoDates(previousDate, nextSeasonStart) <= 0 ? nextSeasonStart : addDaysToIsoDate(previousDate, 1);

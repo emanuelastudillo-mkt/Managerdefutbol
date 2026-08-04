@@ -552,9 +552,19 @@ function normalizeGame(saved){
     const divisionRepair = restoreClubDivisionsFromSeasonFixtures(normalized, { reason:'load_v964', message:true });
     if(Number(divisionRepair?.repaired || 0) > 0) normalized._needsAutosave = true;
   }
+  const embeddedFixtureSeedIndex = (normalized.fixtures || []).map(round => typeof leagueFixtureSeedIndexFromRound === 'function' ? leagueFixtureSeedIndexFromRound(round) : null).find(value => value !== null && value !== undefined);
+  const savedFixtureSeedIndex = typeof normalizeLeagueFixtureSeedIndex === 'function' ? normalizeLeagueFixtureSeedIndex(normalized.leagueFixtureSeedIndex) : null;
+  normalized.leagueFixtureSeedIndex = savedFixtureSeedIndex !== null ? savedFixtureSeedIndex : (embeddedFixtureSeedIndex !== undefined ? embeddedFixtureSeedIndex : null);
+  normalized.leagueFixtureSeedVersion = normalized.leagueFixtureSeedIndex === null
+    ? 'legacy-v969'
+    : (typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds');
+  normalized.leagueFixtureSeedHistory = normalized.leagueFixtureSeedHistory && typeof normalized.leagueFixtureSeedHistory === 'object' && !Array.isArray(normalized.leagueFixtureSeedHistory)
+    ? normalized.leagueFixtureSeedHistory
+    : {};
+  if(normalized.leagueFixtureSeedIndex !== null) normalized.leagueFixtureSeedHistory[normalized.seasonNumber] = normalized.leagueFixtureSeedIndex;
   const previousCalendarVersion = normalized.calendarVersion;
   const previousFixtureCount = Array.isArray(normalized.fixtures) ? normalized.fixtures.length : 0;
-  normalized.fixtures = normalizeSeasonFixtures(normalized.fixtures || structuredClone(seed.fixtures), normalized.seasonNumber, normalized.seasonYear);
+  normalized.fixtures = normalizeSeasonFixtures(normalized.fixtures || structuredClone(seed.fixtures), normalized.seasonNumber, normalized.seasonYear, { fixtureSeedIndex:normalized.leagueFixtureSeedIndex });
   repairPromotionPlayoffScheduleForState(normalized);
   const calendarExpanded = previousCalendarVersion !== SEASON_CALENDAR_VERSION && previousFixtureCount > 0 && normalized.fixtures.length > previousFixtureCount;
   normalized.matchdayIndex = Math.min(Math.max(0, Number(normalized.matchdayIndex || 0)), normalized.fixtures.length);
@@ -1047,6 +1057,7 @@ function newGame(selectedClubId, options={}){
   const saveSlotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(options.saveSlotId || currentSaveSlotId || (options.challengeId ? SAVE_SLOT_CAMPO_DESTRUIDO : SAVE_SLOT_CAREER)) : (options.challengeId ? 'challenge:campo_destruido' : 'career');
   if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(saveSlotId);
   const tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
+  const initialFixtureSeedIndex = typeof leagueFixtureSeedIndexForSeasonNumber === 'function' ? leagueFixtureSeedIndexForSeasonNumber(1) : 0;
   game = {
     version:APP_VERSION,
     saveSlotId,
@@ -1083,6 +1094,9 @@ function newGame(selectedClubId, options={}){
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,
+    leagueFixtureSeedIndex: initialFixtureSeedIndex,
+    leagueFixtureSeedVersion: typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds',
+    leagueFixtureSeedHistory: { 1:initialFixtureSeedIndex },
     seasonFinalized: false,
     seasonTransition: null,
     seasonPhase: 'preseason',
@@ -1128,7 +1142,7 @@ function newGame(selectedClubId, options={}){
     statusRebases: {},
     injuryRecoveryTurnsBySeason: {},
     matchHistory: [],
-    fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1) }),
+    fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1), fixtureSeedIndex:initialFixtureSeedIndex }),
     advanceLockedUntil: 0,
     advanceLockDurationMs: ADVANCE_LOCK_MS,
     mustReviewTactics: false,

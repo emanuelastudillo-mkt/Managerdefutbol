@@ -2408,13 +2408,76 @@ function averageGeneratedVisible(position, skills){
 function sortedSeasonDivisions(divisions){
   return (divisions || [{ id:'default', name:'Liga única', order:1 }]).slice().sort((a,b)=>(a.order || 0)-(b.order || 0));
 }
+function normalizeLeagueFixtureSeedIndex(value){
+  const total = Array.isArray(LEAGUE_FIXTURE_SEEDS) ? LEAGUE_FIXTURE_SEEDS.length : 0;
+  if(!LEAGUE_FIXTURE_SEEDS_ENABLED || total < 2 || value === null || value === undefined || value === '') return null;
+  const parsed = Math.round(Number(value));
+  if(!Number.isFinite(parsed)) return null;
+  return ((parsed % total) + total) % total;
+}
+function leagueFixtureSeedIndexForSeasonNumber(seasonNumber=1){
+  const total = Array.isArray(LEAGUE_FIXTURE_SEEDS) ? LEAGUE_FIXTURE_SEEDS.length : 0;
+  if(!LEAGUE_FIXTURE_SEEDS_ENABLED || total < 2) return null;
+  const season = Math.max(1, Math.round(Number(seasonNumber || 1)));
+  return (season - 1) % total;
+}
+function leagueFixtureSeedIndexFromRound(round){
+  if(!round || typeof round !== 'object') return null;
+  return normalizeLeagueFixtureSeedIndex(round.leagueFixtureSeedIndex);
+}
+function leagueFixtureSeedIndexForGeneration(options={}, seasonYear=SEASON_START_YEAR){
+  if(Object.prototype.hasOwnProperty.call(options || {}, 'fixtureSeedIndex')){
+    return normalizeLeagueFixtureSeedIndex(options.fixtureSeedIndex);
+  }
+  if(game && Math.round(Number(game.seasonYear || 0)) === Math.round(Number(seasonYear || 0))){
+    const saved = normalizeLeagueFixtureSeedIndex(game.leagueFixtureSeedIndex);
+    if(saved !== null) return saved;
+  }
+  return null;
+}
+function leagueFixtureSeedHash(value){
+  const text = String(value || 'fixture');
+  let hash = 2166136261 >>> 0;
+  for(let i=0;i<text.length;i++){
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash >>> 0;
+}
+function leagueFixtureSeededRandom(seedValue){
+  let state = (Math.round(Number(seedValue || 1)) >>> 0) || 1;
+  return function(){
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function leagueFixtureSeededClubOrder(clubsInDivision, division, fixtureSeedIndex=null){
+  const index = normalizeLeagueFixtureSeedIndex(fixtureSeedIndex);
+  if(index === null) return (clubsInDivision || []).slice();
+  const ordered = (clubsInDivision || []).slice().sort((a,b)=>Number(a?.id || 0)-Number(b?.id || 0) || String(a?.name || '').localeCompare(String(b?.name || ''), 'es', { sensitivity:'base' }));
+  if(ordered.length < 2) return ordered;
+  const baseSeed = Number(LEAGUE_FIXTURE_SEEDS[index] || 1) >>> 0;
+  const divisionHash = leagueFixtureSeedHash(`${division?.id || 'default'}|${division?.name || ''}`);
+  const random = leagueFixtureSeededRandom((baseSeed ^ divisionHash ^ Math.imul(index + 1, 2654435761)) >>> 0);
+  for(let i=ordered.length-1;i>0;i--){
+    const j = Math.floor(random() * (i + 1));
+    [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  }
+  // El desplazamiento fijo evita que una semilla pueda conservar accidentalmente el orden base.
+  const shift = ((index + 1 + (divisionHash % ordered.length)) % ordered.length) || 1;
+  return ordered.slice(shift).concat(ordered.slice(0, shift));
+}
 function generateFixturesForDivisions(clubs, divisions, options={}){
   const seasonYear = Math.round(Number(options.seasonYear || SEASON_START_YEAR));
+  const fixtureSeedIndex = leagueFixtureSeedIndexForGeneration(options, seasonYear);
   const sortedDivisions = sortedSeasonDivisions(divisions);
   const normalClubs = (clubs || []).filter(c => !(c?.specialCompetitionOnly || c?.clubWorldCupInvite || c?.clubWorldCupExternal));
   const schedules = sortedDivisions.map(division => ({
     division,
-    rounds:roundRobinSchedule(normalClubs.filter(c => c.divisionId === division.id), division)
+    rounds:roundRobinSchedule(normalClubs.filter(c => c.divisionId === division.id), division, { fixtureSeedIndex })
   }));
   const maxRounds = Math.max(...schedules.map(s => s.rounds.length), 0);
   const firstLeagueDate = leagueStartDateForSeason(seasonYear);
@@ -2430,12 +2493,18 @@ function generateFixturesForDivisions(clubs, divisions, options={}){
     });
     matches.sort((a,b)=>daysBetweenIsoDates(b.date || date, a.date || date) || String(a.divisionName || '').localeCompare(String(b.divisionName || ''), 'es', { sensitivity:'base' }));
     const dates = [...new Set(matches.map(match => match.date).filter(validIsoDate))].sort((a,b)=>daysBetweenIsoDates(b,a));
-    fixtures.push({ matchday:roundIndex+1, date, startDate:dates[0] || date, endDate:dates[dates.length-1] || date, matches });
+    const fixtureRound = { matchday:roundIndex+1, date, startDate:dates[0] || date, endDate:dates[dates.length-1] || date, matches };
+    if(fixtureSeedIndex !== null){
+      fixtureRound.leagueFixtureSeedIndex = fixtureSeedIndex;
+      fixtureRound.leagueFixtureSeedVersion = LEAGUE_FIXTURE_SEED_VERSION;
+    }
+    fixtures.push(fixtureRound);
   }
   return fixtures;
 }
-function roundRobinSchedule(clubsInDivision, division){
-  const teams = clubsInDivision.slice();
+function roundRobinSchedule(clubsInDivision, division, options={}){
+  const fixtureSeedIndex = normalizeLeagueFixtureSeedIndex(options.fixtureSeedIndex);
+  const teams = leagueFixtureSeededClubOrder(clubsInDivision, division, fixtureSeedIndex);
   if(teams.length % 2 === 1) teams.push(null);
   const firstLeg = [];
   const n = teams.length;
@@ -2525,9 +2594,9 @@ function fixtureRoundCalendarDate(round){
   const dates = (round?.matches || []).map(match => validIsoDate(match?.date) ? match.date : '').filter(Boolean).sort();
   return dates[0] || (validIsoDate(round?.date) ? round.date : '9999-12-31');
 }
-function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=null){
+function normalizeSeasonFixtures(existingFixtures, seasonNumber=1, seasonYear=null, options={}){
   const year = Math.round(Number(seasonYear || 0)) || seasonYearForNumber(seasonNumber || 1);
-  const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year });
+  const expected = generateFixturesForDivisions(seed.clubs || [], sortedSeasonDivisions(seed.divisions || []), { seasonYear:year, fixtureSeedIndex:options.fixtureSeedIndex });
   const current = Array.isArray(existingFixtures) ? existingFixtures : [];
   const persistentCompetitionRounds = current.filter(fixtureRoundIsPersistentCompetition);
   const regularCurrent = current.filter(round => !fixtureRoundIsPersistentCompetition(round));

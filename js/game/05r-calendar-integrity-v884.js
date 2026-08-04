@@ -166,12 +166,13 @@
     if(typeof generateFixturesForDivisions !== 'function' || !seed?.clubs?.length) return [];
     const season=Math.max(1,Math.round(ciNumber(state?.seasonNumber,1)));
     const year=Math.round(ciNumber(state?.seasonYear,0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : new Date().getUTCFullYear());
+    const fixtureSeedIndex=typeof normalizeLeagueFixtureSeedIndex === 'function' ? normalizeLeagueFixtureSeedIndex(state?.leagueFixtureSeedIndex) : null;
     const cached=ciCanonicalCache.get(state);
-    if(cached && Number(cached.season)===season && Number(cached.year)===year && Array.isArray(cached.rounds)) return ciClone(cached.rounds);
+    if(cached && Number(cached.season)===season && Number(cached.year)===year && cached.fixtureSeedIndex===fixtureSeedIndex && Array.isArray(cached.rounds)) return ciClone(cached.rounds);
     const divisions=typeof divisionOrderList === 'function' ? divisionOrderList() : (seed?.divisions || []);
     try{
-      const generated=generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year }) || [];
-      ciCanonicalCache.set(state,{season,year,rounds:ciClone(generated)});
+      const generated=generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year, fixtureSeedIndex }) || [];
+      ciCanonicalCache.set(state,{season,year,fixtureSeedIndex,rounds:ciClone(generated)});
       return generated;
     }catch(error){
       console.error('V8.85: no se pudo generar el calendario canónico de la temporada actual', error);

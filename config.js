@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.69',
+  version: 'V9.70',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -58,7 +58,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json?v=9.04',
     installationsUrl: 'data/instalaciones.json?v=9.04',
     eventsUrl: 'data/eventos.json?v=9.04',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.69',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.70',
     managerAchievementsUrl: 'data/hitos_manager.json?v=9.04',
     retosManagerUrl: 'data/retos_manager.json?v=9.04',
     estadiosUrls: ['data/estadios_argentina.json?v=9.04', 'data/estadios_chile.json?v=9.04', 'data/estadios_brasil.json?v=9.04', 'data/estadios_inglaterra.json?v=9.04', 'data/estadios_espana.json?v=9.04', 'data/estadios_italia.json?v=9.04', 'data/estadios_rumania.json?v=9.04'],
@@ -74,6 +74,14 @@ window.GAME_CONFIG = {
     diaInicioTemporada: 1,
     // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
     ligaIdaYVuelta: true,
+    // V9.70: cada temporada usa una de 20 semillas fijas. El ciclo vuelve a comenzar después de 20 años.
+    fixtureSemillasActivas: true,
+    fixtureSemillas: [
+      104729, 130363, 155921, 181081, 206369,
+      231731, 257053, 282377, 307691, 333017,
+      358349, 383681, 409021, 434353, 459691,
+      485021, 510361, 535697, 561019, 586367
+    ],
     diasEntreFechasLiga: 7,
     fechaPausaLuegoDe: 17,
     diasVacacionesMitadTemporada: 28,

@@ -76,6 +76,16 @@ const SEASON_START_YEAR = configNumber('calendario.anioInicial', 2026, 1900, 220
 const SEASON_START_MONTH = configNumber('calendario.mesInicioTemporada', 1, 1, 12);
 const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31);
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
+const LEAGUE_FIXTURE_SEEDS_ENABLED = configBoolean('calendario.fixtureSemillasActivas', true);
+const LEAGUE_FIXTURE_SEEDS_RAW = configValue('calendario.fixtureSemillas', [
+  104729,130363,155921,181081,206369,231731,257053,282377,307691,333017,
+  358349,383681,409021,434353,459691,485021,510361,535697,561019,586367
+]);
+const LEAGUE_FIXTURE_SEEDS = Object.freeze((Array.isArray(LEAGUE_FIXTURE_SEEDS_RAW) ? LEAGUE_FIXTURE_SEEDS_RAW : [])
+  .map(value => Math.abs(Math.round(Number(value || 0))) >>> 0)
+  .filter(value => value > 0)
+  .slice(0,20));
+const LEAGUE_FIXTURE_SEED_VERSION = 'v970-20-seeds';
 const FAST_BOT_SIMULATION_ENABLED = configBoolean('calendario.simulacionRapidaBots', true);
 const NATIONAL_CUPS_ENABLED = configBoolean('calendario.copasNacionalesActivas', true);
 const LEAGUE_MATCH_DAY_RULES_RAW = configValue('calendario.diasPorLiga', []);

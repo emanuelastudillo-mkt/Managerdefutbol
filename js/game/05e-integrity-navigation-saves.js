@@ -216,7 +216,7 @@ function rebuildSafeSeasonFixturesAfterStructureRepair(){
   if(playedCross.length) return { rebuilt:false, reason:'hay_partidos_cruzados_jugados', blockedPlayedCross:playedCross.length, issues };
   if(!issues.length) return { rebuilt:false, reason:'sin_partidos_cruzados', blockedPlayedCross:0, issues };
   if(typeof generateFixturesForDivisions !== 'function') return { rebuilt:false, reason:'generador_no_disponible', blockedPlayedCross:0, issues };
-  const nextRegular = generateFixturesForDivisions(seed.clubs || [], divisionOrderList(), { seasonYear:game.seasonYear || seasonYearForNumber(game.seasonNumber || 1) });
+  const nextRegular = generateFixturesForDivisions(seed.clubs || [], divisionOrderList(), { seasonYear:game.seasonYear || seasonYearForNumber(game.seasonNumber || 1), fixtureSeedIndex:game.leagueFixtureSeedIndex });
   const isPersistentCompetition = round => Boolean(isPromotionPlayoffRound(round) || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || round?.championsLeagueRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup || match?.libertadores || match?.championsLeague));
   const previousRegular = (game.fixtures || []).filter(round => !isPersistentCompetition(round));
   const previousPlayoffs = (game.fixtures || []).filter(isPersistentCompetition);

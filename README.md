@@ -1,9 +1,9 @@
-# V9.53 · Copa Libertadores
+# V9.54 · Bolsa de clubes para Champions League
 
-Versión construida sobre V9.52.
+Versión construida sobre V9.53.
 
-Se incorporó la Copa Libertadores como competencia internacional completa de 32 clubes: ocho de Argentina, ocho de Brasil, cuatro de Chile y los doce equipos de la bolsa sudamericana creada en V9.50.
+Se incorporó una bolsa independiente de 20 clubes europeos para utilizar en la futura Champions League: cuatro de Alemania, dos de Francia, Portugal, Rusia, Países Bajos, Grecia, Bélgica y Escocia, uno de Dinamarca y uno de República Checa.
 
-La edición tiene fase de grupos de ida y vuelta, 16avos, 8vos, 4tos y semifinales a dos partidos, y una final única en sede neutral de gran capacidad. Las quince fechas se programan en miércoles disponibles, evitando las copas nacionales, el descanso de mitad de temporada y el sorteo del Mundial de Clubes.
+Cada club tiene reputación, ciudad, colores, nacionalidades y generación diferida de un plantel completo de 25 jugadores. La competencia Champions League todavía no se crea en esta versión.
 
-Ver `AJUSTES-V9.53.md` para el detalle completo.
+Ver `AJUSTES-V9.54.md` para el detalle completo.

@@ -2770,6 +2770,7 @@ async function loadLocal(silent=false, slotId=null){
     renderAll();
     if(shouldAutosave) saveLocal(true);
     setTimeout(() => {
+      if(typeof scheduleRankingAutomaticRetryFromState === 'function') scheduleRankingAutomaticRetryFromState({ source:'load_local' });
       if(typeof processScheduledCareerRankingUploads === 'function') processScheduledCareerRankingUploads({ source:'load_local' });
     }, 0);
     if(!silent){

@@ -2,6 +2,8 @@
 
 let rankingSessionAutoCheckInFlight = false;
 let rankingRuntimeConfirmedAuthUser = '';
+let rankingAutomaticSubmissionInFlight = false;
+let rankingAutomaticRetryTimer = 0;
 
 function rankingRuntimeConfirmedUsername(){
   return String(rankingRuntimeConfirmedAuthUser || '').trim();
@@ -557,6 +559,113 @@ function rankingAutomaticCareerConfig(){
 function rankingScheduledCareerDays(){
   return rankingAutomaticCareerConfig().scheduledDays;
 }
+function rankingAutomaticServerCooldownMs(){
+  const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};
+  return Math.max(15, Number(cfg.esperaServidorSegundos || 65)) * 1000;
+}
+function rankingRetryDelayFromMessage(message=''){
+  const text = String(message || '');
+  const match = text.match(/(?:esper(?:á|a)|wait)\s+(\d+)\s*(?:segundos?|seconds?)/i) || text.match(/(\d+)\s*(?:segundos?|seconds?)\s*(?:antes|before)/i);
+  if(!match) return 0;
+  return Math.max(1, Number(match[1] || 0)) * 1000 + 2000;
+}
+function rankingAutomaticRetryState(create=true){
+  if(!game) return null;
+  const current = game.rankingAutomaticRetry;
+  if((!current || typeof current !== 'object' || Array.isArray(current)) && !create) return null;
+  const state = current && typeof current === 'object' && !Array.isArray(current) ? current : {};
+  state.version = 1;
+  state.status = String(state.status || 'waiting');
+  state.dueAt = String(state.dueAt || '');
+  state.eventType = String(state.eventType || 'career_activity_retry');
+  state.eventLabel = String(state.eventLabel || rankingEventLabel(state.eventType));
+  state.reason = String(state.reason || '');
+  state.attempts = Math.max(0, Math.round(Number(state.attempts || 0)));
+  state.payload = state.payload && typeof state.payload === 'object' && !Array.isArray(state.payload) ? state.payload : null;
+  game.rankingAutomaticRetry = state;
+  return state;
+}
+function rankingPayloadProgressValue(payload){
+  if(!payload) return -1;
+  const season = Math.max(0, Number(payload.season || 0));
+  const matches = Math.max(0, Number(payload.careerMatches || 0));
+  const dateValue = validIsoDate(payload.gameDate) ? Number(String(payload.gameDate).replace(/-/g,'')) : 0;
+  return season * 1e12 + matches * 1e6 + dateValue;
+}
+function rankingQueueAutomaticRetry(eventType, payload, eventLabel, reason='', delayMs=0){
+  if(!game || !payload) return null;
+  const state = rankingAutomaticRetryState(true);
+  const incoming = { ...payload, eventType:eventType || payload.eventType || 'career_activity_retry', eventLabel:eventLabel || payload.eventLabel || rankingEventLabel(eventType) };
+  if(!state.payload || rankingPayloadProgressValue(incoming) >= rankingPayloadProgressValue(state.payload)){
+    state.payload = incoming;
+    state.eventType = incoming.eventType;
+    state.eventLabel = incoming.eventLabel;
+  }
+  const waitMs = Math.max(1000, Number(delayMs || rankingAutomaticCareerConfig().retryMinutes * 60000));
+  const proposedDue = Date.now() + waitMs;
+  const existingDue = Date.parse(state.dueAt || 0);
+  state.dueAt = new Date(Number.isFinite(existingDue) && existingDue > Date.now() ? Math.max(existingDue, proposedDue) : proposedDue).toISOString();
+  state.status = 'waiting';
+  state.reason = String(reason || state.reason || 'Actualización pendiente de reintento.');
+  state.attempts = Math.max(0, Number(state.attempts || 0));
+  scheduleRankingAutomaticRetryFromState();
+  return state;
+}
+function rankingClearAutomaticRetry(){
+  clearTimeout(rankingAutomaticRetryTimer);
+  rankingAutomaticRetryTimer = 0;
+  if(game) delete game.rankingAutomaticRetry;
+}
+function rankingRecoverLegacyAutomaticError(){
+  if(!game || rankingAutomaticRetryState(false)?.payload) return false;
+  const failed = rankingUploadEntries().find(entry => ['error','retry_wait'].includes(String(entry.status || '')) && String(entry?.payload?.recordScope || 'career') === 'career');
+  if(!failed) return false;
+  const payload = buildRankingPayload(rankingCleanManagerName(), { eventType:'career_activity_recovery', eventLabel:'Recuperación automática de la carrera' });
+  if(!payload) return false;
+  rankingQueueAutomaticRetry('career_activity_recovery', payload, 'Recuperación automática de la carrera', failed.error || 'Envío anterior pendiente.', 1500);
+  return true;
+}
+function scheduleRankingAutomaticRetryFromState(options={}){
+  clearTimeout(rankingAutomaticRetryTimer);
+  rankingAutomaticRetryTimer = 0;
+  if(!game || !rankingStoredAuthToken()) return false;
+  rankingRecoverLegacyAutomaticError();
+  const state = rankingAutomaticRetryState(false);
+  if(!state?.payload) return false;
+  const due = Date.parse(state.dueAt || 0);
+  const delay = options.forceNow ? 0 : Math.max(0, Number.isFinite(due) ? due - Date.now() : 0);
+  rankingAutomaticRetryTimer = setTimeout(() => {
+    rankingAutomaticRetryTimer = 0;
+    processPendingRankingAutomaticRetry({ source:options.source || 'timer' });
+  }, delay);
+  return true;
+}
+function processPendingRankingAutomaticRetry(options={}){
+  const state = rankingAutomaticRetryState(false);
+  if(!state?.payload || !rankingStoredAuthToken()) return false;
+  const due = Date.parse(state.dueAt || 0);
+  if(Number.isFinite(due) && due > Date.now()){
+    scheduleRankingAutomaticRetryFromState({ source:options.source || 'not_due' });
+    return false;
+  }
+  if(rankingAutomaticSubmissionInFlight){
+    state.dueAt = new Date(Date.now() + 1500).toISOString();
+    scheduleRankingAutomaticRetryFromState({ source:'in_flight' });
+    return false;
+  }
+  state.status = 'sending';
+  state.attempts = Math.max(0, Number(state.attempts || 0)) + 1;
+  const payload = { ...state.payload };
+  if(typeof saveLocal === 'function') saveLocal(true);
+  return submitRankingAutomatically(state.eventType, {
+    forceRetry:true,
+    notifyErrors:false,
+    notifySuccess:false,
+    fromPersistentRetry:true,
+    eventLabel:state.eventLabel,
+    payload
+  });
+}
 function rankingCareerActivityState(){
   if(!game) return null;
   const state = game.rankingCareerActivitySync && typeof game.rankingCareerActivitySync === 'object' && !Array.isArray(game.rankingCareerActivitySync)
@@ -578,9 +687,20 @@ function rankingCareerActivityState(){
 }
 function rankingLatestSuccessfulCareerUpload(){
   if(!game?.rankingUploads || typeof game.rankingUploads !== 'object') return null;
-  const entries = Object.values(game.rankingUploads)
-    .filter(entry => entry && entry.status === 'success' && String(entry?.payload?.recordScope || 'career') === 'career')
-    .sort((a,b) => String(b.submittedAt || b.attemptedAt || '').localeCompare(String(a.submittedAt || a.attemptedAt || '')));
+  const entries = Object.values(game.rankingUploads).flatMap(entry => {
+    if(!entry) return [];
+    const candidates = [];
+    if(entry.status === 'success' && String(entry?.payload?.recordScope || 'career') === 'career') candidates.push(entry);
+    if(entry.lastSuccessfulPayload && String(entry.lastSuccessfulPayload?.recordScope || 'career') === 'career'){
+      candidates.push({
+        ...entry,
+        status:'success',
+        payload:{ ...entry.lastSuccessfulPayload },
+        submittedAt:String(entry.lastSuccessfulAt || entry.submittedAt || entry.attemptedAt || '')
+      });
+    }
+    return candidates;
+  }).sort((a,b) => String(b.submittedAt || b.attemptedAt || '').localeCompare(String(a.submittedAt || a.attemptedAt || '')));
   return entries[0] || null;
 }
 function rankingCareerUploadFingerprint(payload){
@@ -632,7 +752,7 @@ function rankingScheduledCareerEventType(day){
 function rankingScheduledCareerStatusLabel(status){
   if(status === 'success') return 'enviada';
   if(status === 'pending') return 'enviando';
-  if(status === 'error') return 'pendiente de reintento';
+  if(status === 'error' || status === 'retry_wait') return 'pendiente de reintento';
   if(status === 'skipped') return 'pendiente';
   if(status === 'superseded') return 'reemplazada por una actualización posterior';
   return 'programada';
@@ -1585,7 +1705,7 @@ function rankingAutomaticStatusMarkup(){
   const schedule = rankingScheduledCareerDays().map(day => {
     const entry = scheduledState?.events?.[rankingScheduledCareerKey(season, day)] || {};
     const status = rankingScheduledCareerStatusLabel(entry.status || 'scheduled');
-    const cls = entry.status === 'success' ? 'ok' : entry.status === 'error' ? 'bad' : entry.status === 'pending' ? 'warn' : 'muted';
+    const cls = entry.status === 'success' ? 'ok' : ['error','retry_wait'].includes(entry.status) ? 'warn' : entry.status === 'pending' ? 'warn' : 'muted';
     return `<span>Día ${day}: <strong class="${cls}">${escapeHtml(status)}</strong></span>`;
   }).join(' · ');
   const activity = rankingSyncCareerActivityFromLatestUpload(rankingCareerActivityState());
@@ -1605,19 +1725,22 @@ function rankingAutomaticStatusMarkup(){
     activityLine = '<span class="warn">Pendiente de iniciar sesión. Al ingresar se enviará de inmediato.</span>';
   }else if(activity?.status === 'pending'){
     activityLine = '<span class="warn">Actualización en curso.</span>';
-  }else if(activity?.status === 'error' || activity?.status === 'skipped'){
-    activityLine = `<span class="bad">Pendiente de reintento.</span>${activity?.error ? ` ${escapeHtml(activity.error)}` : ''}`;
+  }else if(['error','skipped','retry_wait'].includes(activity?.status)){
+    activityLine = `<span class="warn">Pendiente de reintento automático.</span>${activity?.error ? ` ${escapeHtml(activity.error)}` : ''}`;
   }else if(activity?.lastSuccessGameDate){
     activityLine = `<span class="ok">Carrera publicada.</span> Última actualización: ${escapeHtml(activity.lastSuccessGameDate)}.${remaining > 0 ? ` Próxima actualización por actividad en ${remaining} día(s) de juego.` : ' Hay una actualización disponible.'}`;
   }else{
     activityLine = 'Lista para la primera publicación automática.';
   }
   const latest = entries[0] || null;
+  const retryState = rankingAutomaticRetryState(false);
   const latestMarkup = latest ? (() => {
-    const statusText = latest.status === 'success' ? 'Enviado' : latest.status === 'pending' ? 'Pendiente' : latest.status === 'error' ? 'Error' : 'Registrado';
-    const statusClass = latest.status === 'success' ? 'ok' : latest.status === 'error' ? 'bad' : 'warn';
+    const waiting = ['retry_wait','error'].includes(String(latest.status || '')) && Boolean(retryState?.payload);
+    const statusText = latest.status === 'success' ? 'Enviado' : latest.status === 'pending' ? 'Pendiente' : waiting ? 'Reintento programado' : latest.status === 'error' ? 'Pendiente de reintento' : 'Registrado';
+    const statusClass = latest.status === 'success' ? 'ok' : waiting ? 'warn' : latest.status === 'error' ? 'warn' : 'warn';
+    const retryText = waiting && retryState?.dueAt ? ` · Próximo intento automático: ${escapeHtml(new Date(retryState.dueAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }))}` : '';
     return `<p><strong>${escapeHtml(latest.eventLabel || rankingEventLabel(latest.eventType))}</strong> · <span class="${statusClass}">${escapeHtml(statusText)}</span></p>
-      <p class="small muted">${escapeHtml(latest.club || '')}${latest.season ? ` · Temporada ${Number(latest.season)}` : ''}${latest.error ? ` · ${escapeHtml(latest.error)}` : ''}</p>`;
+      <p class="small muted">${escapeHtml(latest.club || '')}${latest.season ? ` · Temporada ${Number(latest.season)}` : ''}${latest.error ? ` · ${escapeHtml(latest.error)}` : ''}${retryText}</p>`;
   })() : '<p class="small muted">Todavía no se registraron envíos automáticos.</p>';
   return `<div class="ranking-auto-status">
     <p class="small muted">Publicación automática de actividad</p>
@@ -1732,6 +1855,8 @@ function rankingRecordUploadState(payload, status, extra={}){
   if(!game || !payload?.submissionKey) return;
   game.rankingUploads = game.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
   const previous = game.rankingUploads[payload.submissionKey] || {};
+  const previousSuccessfulPayload = previous.lastSuccessfulPayload || (previous.status === 'success' ? previous.payload : null);
+  const previousSuccessfulAt = previous.lastSuccessfulAt || (previous.status === 'success' ? previous.submittedAt : '');
   game.rankingUploads[payload.submissionKey] = {
     ...previous,
     status,
@@ -1742,11 +1867,55 @@ function rankingRecordUploadState(payload, status, extra={}){
     season:Number(payload.season || previous.season || 1),
     managerScore:Number(payload.managerScore || previous.managerScore || 0),
     gameDate:payload.gameDate || previous.gameDate || '',
-    attemptedAt:extra.attemptedAt || previous.attemptedAt || new Date().toISOString(),
+    attemptedAt:extra.attemptedAt || new Date().toISOString(),
     submittedAt: status === 'success' ? (extra.submittedAt || payload.submittedAt || new Date().toISOString()) : (previous.submittedAt || ''),
-    error: status === 'error' ? String(extra.error || '') : '',
+    lastSuccessfulAt:status === 'success' ? (extra.submittedAt || payload.submittedAt || new Date().toISOString()) : previousSuccessfulAt,
+    lastSuccessfulPayload:status === 'success' ? { ...payload } : (previousSuccessfulPayload ? { ...previousSuccessfulPayload } : null),
+    error:['error','retry_wait'].includes(status) ? String(extra.error || '') : '',
     payload:{ ...payload }
   };
+}
+function rankingPayloadMatchesLastSuccess(payload){
+  const entry = game?.rankingUploads?.[payload?.submissionKey];
+  const successful = entry?.lastSuccessfulPayload || (entry?.status === 'success' ? entry?.payload : null);
+  return Boolean(successful && rankingCareerUploadFingerprint(successful) === rankingCareerUploadFingerprint(payload));
+}
+function rankingApplyAutomaticSubmissionOutcome(payload, status, message=''){
+  if(!payload || String(payload.recordScope || 'career') !== 'career') return;
+  const eventType = String(payload.eventType || 'career_activity');
+  const info = {
+    reason:eventType,
+    payload,
+    fingerprint:rankingCareerUploadFingerprint(payload),
+    season:Math.max(1, Math.round(Number(payload.season || game?.seasonNumber || 1))),
+    currentDay:Math.max(1, Math.round(Number(payload.seasonDay || seasonDayFromDate(payload.gameDate || rankingCurrentGameDate(), game?.seasonYear || seasonYearForNumber(payload.season || game?.seasonNumber || 1)) || 1)))
+  };
+  const now = new Date().toISOString();
+  if(status === 'success'){
+    rankingRecordCareerActivityAttempt(info, 'success', {
+      submittedAt:now,
+      lastAttemptAt:now,
+      lastAttemptGameDate:payload.gameDate || rankingCurrentGameDate(),
+      error:''
+    });
+  }else if(status === 'retry_wait'){
+    rankingRecordCareerActivityAttempt(info, 'retry_wait', {
+      lastAttemptAt:now,
+      lastAttemptGameDate:payload.gameDate || rankingCurrentGameDate(),
+      error:String(message || 'Reintento automático programado.')
+    });
+  }
+  const match = eventType.match(/^career_snapshot_d(\d+)$/);
+  if(match){
+    const day = Math.max(1, Math.round(Number(match[1] || 1)));
+    rankingRecordScheduledCareerState(info.season, day, status === 'success' ? 'success' : 'retry_wait', {
+      lastAttemptGameDate:payload.gameDate || rankingCurrentGameDate(),
+      attemptedAt:now,
+      submittedAt:status === 'success' ? now : '',
+      error:status === 'success' ? '' : String(message || 'Reintento automático programado.'),
+      notificationSent:false
+    });
+  }
 }
 function submitRankingAutomatically(eventType='season_end', options={}){
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
@@ -1768,14 +1937,35 @@ function submitRankingAutomatically(eventType='season_end', options={}){
     if(!/ya fue enviado|pendiente/.test(error) && options.notifyErrors) showNotice(error);
     return false;
   }
+  if(rankingAutomaticSubmissionInFlight){
+    rankingQueueAutomaticRetry(payload.eventType, payload, payload.eventLabel, 'Otra actualización de carrera está en curso.', rankingAutomaticServerCooldownMs());
+    rankingRecordUploadState(payload, 'retry_wait', { attemptedAt:new Date().toISOString(), error:'Se enviará automáticamente después de completar la actualización en curso.' });
+    if(typeof saveLocal === 'function') saveLocal(true);
+    return true;
+  }
+  rankingAutomaticSubmissionInFlight = true;
   rankingRecordUploadState(payload, 'pending', { attemptedAt:new Date().toISOString() });
   saveLocal(true);
   submitRankingToCloudflare(endpoint, payload, {
     onSuccess: (data) => {
+      rankingAutomaticSubmissionInFlight = false;
       rankingRecordUploadState(payload, 'success', { submittedAt:new Date().toISOString() });
+      rankingApplyAutomaticSubmissionOutcome(payload, 'success');
       game.rankingLastAutomaticUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       game.rankingLastUploadGameDate = payload.gameDate || rankingCurrentGameDate();
       rankingRowsCache = dedupeRankingRows([normalizeRankingRow(payload)].concat(rankingRowsCache));
+      const retry = rankingAutomaticRetryState(false);
+      if(retry?.payload){
+        const samePayload = rankingCareerUploadFingerprint(retry.payload) === rankingCareerUploadFingerprint(payload);
+        if(samePayload){
+          rankingClearAutomaticRetry();
+        }else{
+          retry.status = 'waiting';
+          retry.dueAt = new Date(Date.now() + rankingAutomaticServerCooldownMs()).toISOString();
+          retry.reason = 'Esperando el intervalo mínimo del servidor antes de publicar la actualización más reciente.';
+          scheduleRankingAutomaticRetryFromState({ source:'after_success' });
+        }
+      }
       if(options.notifySuccess !== false && typeof pushGameMessage === 'function'){
         pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking actualizado', body:`${payload.eventLabel} enviado automáticamente al ranking online.`, id:`ranking-auto-ok-${payload.submissionKey}-${payload.eventType}` });
       }
@@ -1784,12 +1974,28 @@ function submitRankingAutomatically(eventType='season_end', options={}){
       if(activeTab === 'ranking') renderRankingOnline();
     },
     onError: (message) => {
-      rankingRecordUploadState(payload, 'error', { error:message || 'Error al conectar con el ranking online.' });
-      if(options.notifyErrors !== false && typeof pushGameMessage === 'function'){
-        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking no enviado', body:`No se pudo enviar automáticamente el evento ${payload.eventLabel}: ${message || 'error de conexión'}.`, id:`ranking-auto-error-${payload.submissionKey}-${payload.eventType}-${Date.now()}` });
+      rankingAutomaticSubmissionInFlight = false;
+      const cleanMessage = String(message || 'Error al conectar con el ranking online.');
+      const cooldownDelay = rankingRetryDelayFromMessage(cleanMessage);
+      if(cooldownDelay && rankingPayloadMatchesLastSuccess(payload)){
+        rankingRecordUploadState(payload, 'success', { submittedAt:game?.rankingUploads?.[payload.submissionKey]?.lastSuccessfulAt || new Date().toISOString() });
+        rankingApplyAutomaticSubmissionOutcome(payload, 'success');
+        const retry = rankingAutomaticRetryState(false);
+        if(retry?.payload && rankingCareerUploadFingerprint(retry.payload) === rankingCareerUploadFingerprint(payload)) rankingClearAutomaticRetry();
+        saveLocal(true);
+        options.onSuccess?.(payload, { deduplicated:true, message:cleanMessage });
+        if(activeTab === 'ranking') renderRankingOnline();
+        return;
+      }
+      const retryDelay = cooldownDelay || rankingAutomaticCareerConfig().retryMinutes * 60000;
+      rankingRecordUploadState(payload, 'retry_wait', { error:cleanMessage });
+      rankingApplyAutomaticSubmissionOutcome(payload, 'retry_wait', cleanMessage);
+      rankingQueueAutomaticRetry(payload.eventType, payload, payload.eventLabel, cleanMessage, retryDelay);
+      if(options.notifyErrors !== false && !cooldownDelay && typeof pushGameMessage === 'function'){
+        pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking pendiente', body:`No se pudo completar ${payload.eventLabel}. El juego volverá a intentarlo automáticamente.`, id:`ranking-auto-retry-${payload.submissionKey}-${payload.eventType}` });
       }
       saveLocal(true);
-      options.onError?.(message || 'Error al conectar con el ranking online.', payload);
+      options.onError?.(cleanMessage, payload);
       if(activeTab === 'ranking') renderRankingOnline();
     }
   });
@@ -1884,13 +2090,16 @@ async function loadRankingOnline(silent=false){
 
 window.addEventListener('fm:auth-changed', () => {
   if(!rankingStoredAuthToken() || !rankingRuntimeConfirmedUsername()) return;
+  scheduleRankingAutomaticRetryFromState({ source:'auth_changed' });
   scheduleAutomaticCareerRankingSync({ source:'auth_changed', forceRetry:true, delayMs:50 });
 });
 window.addEventListener('online', () => {
   if(!rankingStoredAuthToken()) return;
+  scheduleRankingAutomaticRetryFromState({ source:'browser_online' });
   scheduleAutomaticCareerRankingSync({ source:'browser_online', forceRetry:true, delayMs:750 });
 });
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible' || !rankingStoredAuthToken()) return;
+  scheduleRankingAutomaticRetryFromState({ source:'visibility_resume' });
   scheduleAutomaticCareerRankingSync({ source:'visibility_resume', delayMs:1200 });
 });

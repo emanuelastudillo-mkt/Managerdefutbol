@@ -2631,19 +2631,19 @@ function managerObjectiveProgressInfo(){
 function queueAutomaticRankingSubmission(eventType='season_end'){
   if(!game) return false;
   game.rankingUploads = game.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
+  const label = typeof rankingEventLabel === 'function' ? rankingEventLabel(eventType) : (eventType === 'dismissal' ? 'Carrera cerrada por despido' : 'Carrera actualizada');
   const capturedPayload = String(eventType || '') === 'dismissal' && game?.gameOver?.snapshot
-    ? { ...game.gameOver.snapshot, eventType:'dismissal', eventLabel:'Carrera cerrada por despido', submittedAt:new Date().toISOString() }
-    : null;
+    ? { ...game.gameOver.snapshot, eventType:'dismissal', eventLabel:label, submittedAt:new Date().toISOString() }
+    : (typeof buildRankingPayload === 'function' ? buildRankingPayload(game?.rankingManagerName || storedManagerName() || 'Manager', { eventType, eventLabel:label }) : null);
   const run = () => {
     if(typeof submitRankingAutomatically === 'function'){
-      submitRankingAutomatically(eventType, { notifyErrors:true, forceRetry:true, payload:capturedPayload });
+      submitRankingAutomatically(eventType, { notifyErrors:false, forceRetry:true, payload:capturedPayload, eventLabel:label });
     }else if(typeof pushGameMessage === 'function'){
       pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking pendiente', body:'El módulo de ranking no estaba listo. Volvé a abrir la partida o la pantalla Ranking para reintentar el envío automático.', id:`ranking-module-missing-${eventType}-${game.seasonNumber || 1}` });
       if(typeof saveLocal === 'function') saveLocal(true);
     }
   };
   setTimeout(run, 0);
-  setTimeout(run, 5000);
   return true;
 }
 

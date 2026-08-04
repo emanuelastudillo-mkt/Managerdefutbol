@@ -1,7 +1,7 @@
-# V9.57 · Mundial de Clubes cuatrienal
+# V9.58 · Amistosos programables desde el calendario
 
-Construida sobre V9.56.
+Construida sobre V9.57.
 
-El Mundial se juega cada cuatro años con 8 clubes de Champions League, 8 de Copa Libertadores y 16 invitados. Los campeones de las últimas cuatro ediciones obtienen cupo automático y el resto clasifica por ranking continental acumulado.
+Permite seleccionar los días vacíos del calendario y negociar amistosos con cinco rivales persistentes por fecha, respetando anticipación, fases habilitadas, copas internacionales y proximidad con otros partidos.
 
-Ver `AJUSTES-V9.57.md`.
+Ver `AJUSTES-V9.58.md`.

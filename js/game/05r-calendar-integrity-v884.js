@@ -56,12 +56,12 @@
   function ciIsSpecialRound(round){
     if(typeof fixtureRoundIsPersistentCompetition === 'function') return fixtureRoundIsPersistentCompetition(round);
     return Boolean(
-      round?.playoffRound || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound ||
-      (round?.matches || []).some(match => match?.playoff || match?.clubWorldCup || match?.nationalCup || match?.libertadores || match?.friendly)
+      round?.playoffRound || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || round?.championsLeagueRound ||
+      (round?.matches || []).some(match => match?.playoff || match?.clubWorldCup || match?.nationalCup || match?.libertadores || match?.championsLeague || match?.friendly)
     );
   }
   function ciIsRegularMatch(match, round){
-    return Boolean(match && !match.friendly && !match.playoff && !match.clubWorldCup && !match.nationalCup && !match.libertadores && !ciIsSpecialRound(round));
+    return Boolean(match && !match.friendly && !match.playoff && !match.clubWorldCup && !match.nationalCup && !match.libertadores && !match.championsLeague && !ciIsSpecialRound(round));
   }
   function ciPairKey(match){
     if(!match) return '';
@@ -442,7 +442,7 @@
   function ciPlayedFrontier(state,historyMaps){
     const maxByDivision=new Map();
     const visit=match => {
-      if(!match?.played || match?.nationalCup || match?.clubWorldCup || match?.libertadores || match?.playoff || match?.friendly) return;
+      if(!match?.played || match?.nationalCup || match?.clubWorldCup || match?.libertadores || match?.championsLeague || match?.playoff || match?.friendly) return;
       const round=ciLeagueRoundNumber(match);
       const division=String(match.divisionId || '');
       if(round>0) maxByDivision.set(division,Math.max(round,maxByDivision.get(division)||0));

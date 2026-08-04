@@ -131,7 +131,7 @@ function rebuildSafeSeasonFixturesAfterStructureRepair(){
   if(!issues.length) return { rebuilt:false, reason:'sin_partidos_cruzados', blockedPlayedCross:0, issues };
   if(typeof generateFixturesForDivisions !== 'function') return { rebuilt:false, reason:'generador_no_disponible', blockedPlayedCross:0, issues };
   const nextRegular = generateFixturesForDivisions(seed.clubs || [], divisionOrderList(), { seasonYear:game.seasonYear || seasonYearForNumber(game.seasonNumber || 1) });
-  const isPersistentCompetition = round => Boolean(isPromotionPlayoffRound(round) || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup || match?.libertadores));
+  const isPersistentCompetition = round => Boolean(isPromotionPlayoffRound(round) || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || round?.championsLeagueRound || (round?.matches || []).some(match => match?.clubWorldCup || match?.nationalCup || match?.libertadores || match?.championsLeague));
   const previousRegular = (game.fixtures || []).filter(round => !isPersistentCompetition(round));
   const previousPlayoffs = (game.fixtures || []).filter(isPersistentCompetition);
   const mergedRegular = typeof mergePlayedFixturesIntoCalendar === 'function'
@@ -755,7 +755,7 @@ function sidebarNavigationModeForTab(tab){
   if(key === 'stadium'){ const mode = String(stadiumViewMode || 'main'); return ['sponsors','fans'].includes(mode) ? mode : 'main'; }
   if(key === 'finance') return String(financeViewMode || 'main');
   if(key === 'fixture') return String(fixtureViewMode || 'mine') === 'clubWorldCup' ? 'clubWorldCup' : 'mine';
-  if(key === 'standings'){ const mode = String(selectedCompetitionView || 'standings'); return ['standings','stats','player-ranking','player-palmares','national-cups','libertadores','club-ranking','champions'].includes(mode) ? mode : 'standings'; }
+  if(key === 'standings'){ const mode = String(selectedCompetitionView || 'standings'); return ['standings','stats','player-ranking','player-palmares','national-cups','libertadores','champions-league','club-ranking','champions'].includes(mode) ? mode : 'standings'; }
   if(key === 'mystats') return String(managerStatsViewMode || 'profile');
   return '';
 }

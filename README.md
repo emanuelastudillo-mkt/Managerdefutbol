@@ -1,9 +1,9 @@
-# V9.54 · Bolsa de clubes para Champions League
+# V9.55 · Champions League
 
-Versión construida sobre V9.53.
+Versión construida sobre V9.54.
 
-Se incorporó una bolsa independiente de 20 clubes europeos para utilizar en la futura Champions League: cuatro de Alemania, dos de Francia, Portugal, Rusia, Países Bajos, Grecia, Bélgica y Escocia, uno de Dinamarca y uno de República Checa.
+Se incorporó la Champions League con 32 participantes: 8 de Inglaterra, 6 de Italia, 6 de España, 2 de Rumania y 10 seleccionados de la bolsa europea.
 
-Cada club tiene reputación, ciudad, colores, nacionalidades y generación diferida de un plantel completo de 25 jugadores. La competencia Champions League todavía no se crea en esta versión.
+Utiliza la misma estructura de la Copa Libertadores: ocho grupos de cuatro, seis partidos por club, 16avos, 8vos, 4tos y semifinales a ida y vuelta, y final única en sede neutral.
 
-Ver `AJUSTES-V9.54.md` para el detalle completo.
+Ver `AJUSTES-V9.55.md` para el detalle completo.

@@ -426,9 +426,12 @@ function normalizeGame(saved){
   normalized.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState(normalized.nationalCups || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.nationalCups || null);
   normalized.libertadores = typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState(normalized.libertadores || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.libertadores || null);
   normalized.libertadoresHistory = typeof normalizeLibertadoresHistoryState === 'function' ? normalizeLibertadoresHistoryState(normalized.libertadoresHistory || {}) : (normalized.libertadoresHistory || { version:1, editions:[] });
+  normalized.championsLeague = typeof normalizeChampionsLeagueState === 'function' ? normalizeChampionsLeagueState(normalized.championsLeague || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.championsLeague || null);
+  normalized.championsLeagueHistory = typeof normalizeChampionsLeagueHistoryState === 'function' ? normalizeChampionsLeagueHistoryState(normalized.championsLeagueHistory || {}) : (normalized.championsLeagueHistory || { version:1, editions:[] });
   if(normalized.clubWorldCup && typeof ensureClubWorldCupInvitedData === 'function') ensureClubWorldCupInvitedData();
   if(syncClubWorldCupHistoryForState(normalized)) normalized._needsAutosave = true;
   if(typeof syncLibertadoresHistoryForState === 'function' && syncLibertadoresHistoryForState(normalized)) normalized._needsAutosave = true;
+  if(typeof syncChampionsLeagueHistoryForState === 'function' && syncChampionsLeagueHistoryForState(normalized)) normalized._needsAutosave = true;
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
   normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
@@ -1040,6 +1043,8 @@ function newGame(selectedClubId, options={}){
     clubWorldCupHistory: normalizeClubWorldCupHistoryState({}),
     libertadoresHistory: typeof normalizeLibertadoresHistoryState === 'function' ? normalizeLibertadoresHistoryState({}) : { version:1, editions:[] },
     libertadores: typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState({}, 1, seasonYearForNumber(1)) : null,
+    championsLeagueHistory: typeof normalizeChampionsLeagueHistoryState === 'function' ? normalizeChampionsLeagueHistoryState({}) : { version:1, editions:[] },
+    championsLeague: typeof normalizeChampionsLeagueState === 'function' ? normalizeChampionsLeagueState({}, 1, seasonYearForNumber(1)) : null,
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -2979,11 +2984,14 @@ function isNationalCupRound(round){
 function isLibertadoresRound(round){
   return Boolean(round?.libertadoresRound || (round?.matches || []).some(match => match?.libertadores));
 }
+function isChampionsLeagueRound(round){
+  return Boolean(round?.championsLeagueRound || (round?.matches || []).some(match => match?.championsLeague));
+}
 function isPostRegularRound(round){
   return isPromotionPlayoffRound(round) || isClubWorldCupRound(round);
 }
 function isRegularLeagueRound(round){
-  return Boolean(round) && !isPromotionPlayoffRound(round) && !isClubWorldCupRound(round) && !isNationalCupRound(round) && !isLibertadoresRound(round);
+  return Boolean(round) && !isPromotionPlayoffRound(round) && !isClubWorldCupRound(round) && !isNationalCupRound(round) && !isLibertadoresRound(round) && !isChampionsLeagueRound(round);
 }
 function regularFixtureRounds(fixtures=game?.fixtures || []){
   return (Array.isArray(fixtures) ? fixtures : []).filter(isRegularLeagueRound);

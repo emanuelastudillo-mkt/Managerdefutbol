@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.54',
+  version: 'V9.55',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -108,6 +108,14 @@ window.GAME_CONFIG = {
       repartoFinalPorClub: 0.50,
       diasAntesSorteoMundial: 1
     },
+    // Champions League: comparte estructura continental con la Libertadores y evita las copas europeas.
+    championsLeague: {
+      activa: true,
+      diasAntesSorteo: 7,
+      precioEntradaFinal: 4500,
+      repartoFinalPorClub: 0.50,
+      diasAntesSorteoMundial: 1
+    },
     // Mundial de Clubes: calendario fijo por día fijo de temporada.
     // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
     mundialClubes: {
@@ -157,6 +165,12 @@ window.GAME_CONFIG = {
     puntosVictoriaLibertadoresCuartos: 24,
     puntosVictoriaLibertadoresSemifinal: 32,
     puntosVictoriaLibertadoresFinal: 45,
+    puntosVictoriaChampionsGrupos: 10,
+    puntosVictoriaChampions16avos: 14,
+    puntosVictoriaChampionsOctavos: 18,
+    puntosVictoriaChampionsCuartos: 24,
+    puntosVictoriaChampionsSemifinal: 32,
+    puntosVictoriaChampionsFinal: 45,
     puntosVictoriaMundialGrupos: 22,
     puntosVictoriaMundialOctavos: 30,
     puntosVictoriaMundialCuartos: 36,
@@ -168,6 +182,7 @@ window.GAME_CONFIG = {
     puntosTituloCopaNacional: 50,
     puntosTituloSupercopa: 25,
     puntosTituloLibertadores: 140,
+    puntosTituloChampions: 140,
     puntosTituloMundial: 190,
     decaimientoTemporada: 0.82,
     decaimientoMinimoTitulos: 0.25,

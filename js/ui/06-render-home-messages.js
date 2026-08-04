@@ -729,6 +729,12 @@ function homeWeekCalendarCompetitionLabel(match, round=null){
     const leg = Number(match.leg || 0) === 1 ? ' · Ida' : Number(match.leg || 0) === 2 ? ' · Vuelta' : '';
     return `${stage}${group}${leg} · Copa Libertadores`;
   }
+  if(match?.championsLeague){
+    const stage = String(match.championsLeagueStageLabel || ({ groups:'Fase de grupos', r32:'16avos de final', r16:'8vos de final', qf:'4tos de final', sf:'Semifinales', final:'Final' }[String(match.championsLeagueStage || '')]) || 'Champions League');
+    const group = match.championsLeagueGroup ? ` · Grupo ${String(match.championsLeagueGroup)}` : '';
+    const leg = Number(match.leg || 0) === 1 ? ' · Ida' : Number(match.leg || 0) === 2 ? ' · Vuelta' : '';
+    return `${stage}${group}${leg} · Champions League`;
+  }
   if(match?.clubWorldCup){
     const labels = {
       groups:'Fase de grupos',

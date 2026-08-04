@@ -521,7 +521,7 @@ function scheduledMatchCopyFields(result){
   const fields = [
     'played','homeGoals','awayGoals','goals','cards','injuries','substitutions','keySaves','errors',
     'matchStats','matchContext','starterIdsHome','starterIdsAway','playedIdsHome','playedIdsAway',
-    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot','winnerRequiredResolved','winnerRequiredReason','nationalCup','nationalCupId','nationalCupStage','nationalCupStageLabel','nationalCupCountry','nationalSupercup','stadiumClubId','stadiumName','stadiumCapacity','attendance','homeAttendance','awayAttendance','ticketPrice','ticketRevenue','nationalCupRevenuePaid','libertadores','internationalCup','continentalCup','libertadoresSeason','libertadoresStage','libertadoresStageLabel','libertadoresGroup','libertadoresRound','libertadoresTieId','betterSeedClubId','leg','secondLeg','twoLegged','aggregateBefore','competitionRules','libertadoresFinalRevenuePaid'
+    'instructionConditionDeltas','botOverexertionEvents','engine','suspended','defaultWin','defaultLoss','suspensionReason','winnerClubId','penaltyShootout','captainIdHome','captainIdAway','captaincyEffect','clubWorldCup','clubWorldCupStage','clubWorldCupGroup','clubWorldCupResolved','clubWorldCupTiebreaker','clubWorldCupBracketKey','clubWorldCupBracketSlot','winnerRequiredResolved','winnerRequiredReason','nationalCup','nationalCupId','nationalCupStage','nationalCupStageLabel','nationalCupCountry','nationalSupercup','stadiumClubId','stadiumName','stadiumCapacity','attendance','homeAttendance','awayAttendance','ticketPrice','ticketRevenue','nationalCupRevenuePaid','libertadores','internationalCup','continentalCup','libertadoresSeason','libertadoresStage','libertadoresStageLabel','libertadoresGroup','libertadoresRound','libertadoresTieId','betterSeedClubId','leg','secondLeg','twoLegged','aggregateBefore','competitionRules','libertadoresFinalRevenuePaid','championsLeague','championsLeagueSeason','championsLeagueStage','championsLeagueStageLabel','championsLeagueGroup','championsLeagueRound','championsLeagueTieId','championsLeagueFinalRevenuePaid'
   ];
   const data = {};
   fields.forEach(field => {
@@ -536,6 +536,7 @@ function markScheduledResult(item, result){
 function simulateDueMatchesUntil(targetDate, options={}){
   if(typeof repairClubWorldCupGroupFixtureDates === 'function') repairClubWorldCupGroupFixtureDates();
   if(typeof libertadoresSyncAllAggregates === 'function') libertadoresSyncAllAggregates();
+  if(typeof championsLeagueSyncAllAggregates === 'function') championsLeagueSyncAllAggregates();
   const due = collectDueMatchesUntil(targetDate, options);
   const results = [];
   due.forEach(item => {
@@ -544,6 +545,7 @@ function simulateDueMatchesUntil(targetDate, options={}){
     result = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(item.match, result) : result;
     result = typeof finalizeNationalCupMatchResult === 'function' ? finalizeNationalCupMatchResult(item.match, result) : result;
     result = typeof finalizeLibertadoresMatchResult === 'function' ? finalizeLibertadoresMatchResult(item.match, result) : result;
+    result = typeof finalizeChampionsLeagueMatchResult === 'function' ? finalizeChampionsLeagueMatchResult(item.match, result) : result;
     markScheduledResult(item, result);
     results.push(result);
   });
@@ -552,6 +554,7 @@ function simulateDueMatchesUntil(targetDate, options={}){
     advanceCompletedRegularRounds();
     if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
     if(typeof advanceLibertadoresIfNeeded === 'function') advanceLibertadoresIfNeeded();
+    if(typeof advanceChampionsLeagueIfNeeded === 'function') advanceChampionsLeagueIfNeeded();
     if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();
     if(typeof runDailyMatchStatsIntegrityRepair === 'function') runDailyMatchStatsIntegrityRepair({ reason:'after_due_match_simulation', force:false, scope:'recent', silent:true });
   }
@@ -1149,6 +1152,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof prepareClubWorldCupParticipantsIfNeeded === 'function') prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar' });
   const nationalCupDaily = typeof processNationalCupsDaily === 'function' ? processNationalCupsDaily({ source:'daily_calendar' }) : null;
   const libertadoresDaily = typeof processLibertadoresDaily === 'function' ? processLibertadoresDaily({ source:'daily_calendar' }) : null;
+  const championsLeagueDaily = typeof processChampionsLeagueDaily === 'function' ? processChampionsLeagueDaily({ source:'daily_calendar' }) : null;
   if(managerWithoutClub){
     if(typeof processAcademyTurn === 'function') processAcademyTurn();
     if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
@@ -1166,7 +1170,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
     const scheduledRankingUpload = typeof processScheduledCareerRankingUploads === 'function' ? processScheduledCareerRankingUploads({ source:'daily_calendar_managerless' }) : null;
-    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
@@ -1212,7 +1216,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
   const scheduledRankingUpload = typeof processScheduledCareerRankingUploads === 'function' ? processScheduledCareerRankingUploads({ source:'daily_calendar' }) : null;
-  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');
@@ -1566,12 +1570,14 @@ function finalizeLiveOwnMatchdayResult(context, ownResult){
   ownResult = typeof finalizeClubWorldCupMatchResult === 'function' ? finalizeClubWorldCupMatchResult(ownInfo?.match, ownResult) : ownResult;
   ownResult = typeof finalizeNationalCupMatchResult === 'function' ? finalizeNationalCupMatchResult(ownInfo?.match, ownResult) : ownResult;
   ownResult = typeof finalizeLibertadoresMatchResult === 'function' ? finalizeLibertadoresMatchResult(ownInfo?.match, ownResult) : ownResult;
+  ownResult = typeof finalizeChampionsLeagueMatchResult === 'function' ? finalizeChampionsLeagueMatchResult(ownInfo?.match, ownResult) : ownResult;
   const results = [ownResult];
   if(ownInfo?.match) markScheduledResult({ match:ownInfo.match, date:targetDate }, ownResult);
   game.matchHistory.push(ownResult);
   advanceCompletedRegularRounds();
   if(typeof advanceNationalCupsIfNeeded === 'function') advanceNationalCupsIfNeeded();
   if(typeof advanceLibertadoresIfNeeded === 'function') advanceLibertadoresIfNeeded();
+    if(typeof advanceChampionsLeagueIfNeeded === 'function') advanceChampionsLeagueIfNeeded();
   if(typeof advanceNationalSupercupsIfNeeded === 'function') advanceNationalSupercupsIfNeeded();
   applyConditionUpdates(results);
   applyMoraleUpdates(results);
@@ -1921,6 +1927,7 @@ function finalizePreseasonTurnAfterMatch(context={}){
   advanceGlobalTurn();
   if(typeof processNationalCupsDaily === 'function') processNationalCupsDaily({ source:'preseason' });
   if(typeof processLibertadoresDaily === 'function') processLibertadoresDaily({ source:'preseason' });
+  if(typeof processChampionsLeagueDaily === 'function') processChampionsLeagueDaily({ source:'preseason' });
   if(typeof processActiveSpecialCardUsageDaily === 'function') processActiveSpecialCardUsageDaily({ save:false, source:'preseason' });
   if(typeof dismissAllStaffForFinancialCrisis === 'function') dismissAllStaffForFinancialCrisis({ silent:true });
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'

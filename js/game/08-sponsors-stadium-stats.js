@@ -1431,6 +1431,7 @@ function competitionsNavMarkup(active='standings'){
     <button type="button" id="btnCompetitionPlayerPalmares" class="${current === 'player-palmares' ? 'primary' : 'ghost'}">Palmarés de jugadores</button>
     <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
     <button type="button" id="btnCompetitionLibertadores" class="${current === 'libertadores' ? 'primary' : 'ghost'}">Libertadores</button>
+    <button type="button" id="btnCompetitionChampionsLeague" class="${current === 'champions-league' ? 'primary' : 'ghost'}">Champions League</button>
     <button type="button" id="btnCompetitionClubRanking" class="${current === 'club-ranking' ? 'primary' : 'ghost'}">Ranking FIFA</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
@@ -1442,6 +1443,7 @@ function bindCompetitionsNav(){
   $('btnCompetitionPlayerPalmares')?.addEventListener('click', () => { selectedCompetitionView = 'player-palmares'; renderStandings(); });
   $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
   $('btnCompetitionLibertadores')?.addEventListener('click', () => { selectedCompetitionView = 'libertadores'; renderStandings(); });
+  $('btnCompetitionChampionsLeague')?.addEventListener('click', () => { selectedCompetitionView = 'champions-league'; renderStandings(); });
   $('btnCompetitionClubRanking')?.addEventListener('click', () => { selectedCompetitionView = 'club-ranking'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
@@ -1524,7 +1526,7 @@ function renderChampionsHistory(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, Libertadores, supercopas y Mundial de Clubes por temporada.</p></div>
+      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, Libertadores, Champions League, supercopas y Mundial de Clubes por temporada.</p></div>
       ${competitionsNavMarkup('champions')}
     </div>
     <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar las competiciones internacionales.</p></div>'}</div>`;
@@ -1535,6 +1537,12 @@ function renderStandings(){
     view.innerHTML = typeof libertadoresCompetitionMarkup === 'function' ? libertadoresCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de Copa Libertadores no está disponible.</p></div>';
     bindCompetitionsNav();
     if(typeof bindLibertadoresCompetition === 'function') bindLibertadoresCompetition();
+    return;
+  }
+  if(String(selectedCompetitionView || 'standings') === 'champions-league'){
+    view.innerHTML = typeof championsLeagueCompetitionMarkup === 'function' ? championsLeagueCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de Champions League no está disponible.</p></div>';
+    bindCompetitionsNav();
+    if(typeof bindChampionsLeagueCompetition === 'function') bindChampionsLeagueCompetition();
     return;
   }
   if(String(selectedCompetitionView || 'standings') === 'national-cups'){

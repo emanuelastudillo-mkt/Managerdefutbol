@@ -1,8 +1,8 @@
 {
-  "version": "V8.46",
+  "version": "V9.56",
   "sistema": "habilidades_especiales",
   "descripcion": "Sistema de cartas especiales para managers. Permite acumular puntos ocultos, abrir sobres, activar cartas y destruir cartas sobrantes.",
-  "caracteristicas_version": "V9.48: cada uso de una carta de reducción de objetivo se registra como una reducción permanente durante la temporada actual. Los usos de una misma carta y de cartas distintas se acumulan aunque las cartas estén en reserva, agotadas o destruidas. El efecto se reinicia al comenzar la siguiente temporada.",
+  "caracteristicas_version": "La reducción de objetivos queda aplicada durante toda la temporada, se acumula entre usos y cartas, y se reinicia al comenzar la siguiente temporada.",
   "menu": {
     "nombre": "Habilidades especiales",
     "mostrar_nombre_manager": true,

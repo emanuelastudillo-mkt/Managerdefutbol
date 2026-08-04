@@ -1,9 +1,9 @@
-# V9.55 · Champions League
+# V9.56 · Escudos y clasificación continental en tablas
 
-Versión construida sobre V9.54.
+Versión construida sobre V9.55.
 
-Se incorporó la Champions League con 32 participantes: 8 de Inglaterra, 6 de Italia, 6 de España, 2 de Rumania y 10 seleccionados de la bolsa europea.
+Se normalizó la convención de escudos para usar el nombre exacto del club reemplazando espacios por `_`, se centralizó la versión visible desde `GAME_CONFIG.version` y se incorporaron zonas coloreadas de clasificación a Libertadores y Champions en las tablas nacionales.
 
-Utiliza la misma estructura de la Copa Libertadores: ocho grupos de cuatro, seis partidos por club, 16avos, 8vos, 4tos y semifinales a ida y vuelta, y final única en sede neutral.
+La clasificación al Mundial de Clubes permanece visible mediante una etiqueta azul independiente, incluso cuando el mismo club también clasifica a una copa continental.
 
-Ver `AJUSTES-V9.55.md` para el detalle completo.
+Ver `AJUSTES-V9.56.md` para el detalle completo.

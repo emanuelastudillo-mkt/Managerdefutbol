@@ -1,7 +1,7 @@
-# V9.60 · Fechas de amistosos destacadas
+# V9.61 · Transferencias con propiedad segura
 
-Construida sobre V9.59.
+Construida sobre V9.60.
 
-Los días aptos para programar amistosos se identifican directamente en el calendario mediante un tratamiento visual destacado y una acción clara para elegir rival. También se eliminó el bloque informativo redundante de pretemporada.
+Se corrigió un problema de sincronización que podía devolver un jugador comprado a su club anterior después de avanzar el calendario, disputar un amistoso, guardar o volver a cargar la partida.
 
-Ver `AJUSTES-V9.60.md`.
+Ver `AJUSTES-V9.61.md`.

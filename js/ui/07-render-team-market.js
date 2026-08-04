@@ -470,10 +470,14 @@ function hireFreeAgent(playerId){
   mergeMarketPlayersIntoSeed(game.marketPlayers);
   const player = playerById(playerId);
   if(player){
-    setPlayerClubId(player, game.selectedClubId);
-    player.freeAgent = false;
-    player.transferListed = false;
-    player.intransferible = false;
+    if(typeof syncPlayerOwnershipReferences === 'function'){
+      syncPlayerOwnershipReferences(player, game.selectedClubId, { state:game, source:'manager_free_agent', freeAgent:false, sold:false, transferListed:false, intransferible:false, forceRevision:true });
+    }else{
+      setPlayerClubId(player, game.selectedClubId, { source:'manager_free_agent', forceRevision:true });
+      player.freeAgent = false;
+      player.transferListed = false;
+      player.intransferible = false;
+    }
     player.salaryPaidCount = 0;
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);

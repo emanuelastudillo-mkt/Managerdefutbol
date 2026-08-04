@@ -505,6 +505,22 @@ function normalizeGame(saved){
     .filter(Boolean);
   if(JSON.stringify(rawPendingTransfers) !== JSON.stringify(normalizedPendingTransfers)) normalized._needsAutosave = true;
   normalized.pendingTransfers = normalizedPendingTransfers;
+  if(typeof repairCompletedIncomingTransferOwnership === 'function'){
+    const ownershipRepair = repairCompletedIncomingTransferOwnership(normalized);
+    if(Number(ownershipRepair?.repaired || 0) > 0 || Number(ownershipRepair?.synced || 0) > 0) normalized._needsAutosave = true;
+    if(Number(ownershipRepair?.repaired || 0) > 0){
+      const repairedNames = (ownershipRepair.playerIds || []).map(id => seed?.players?.find(player => Number(player?.id || 0) === Number(id))?.name || `Jugador ${id}`);
+      normalized.messages.unshift({
+        id:`ownership-repair-v961-${Date.now()}`,
+        type:'mercado',
+        title:'Compra recuperada',
+        body:`Se restauró ${repairedNames.length === 1 ? repairedNames[0] : `${repairedNames.length} jugadores`} al club porque el historial confirmaba una compra ya pagada. No se realizó un nuevo cobro.`,
+        priority:'high',
+        read:false,
+        createdAt:new Date().toISOString()
+      });
+    }
+  }
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
   normalized.rejectedFreeAgentOffers = (normalized.rejectedFreeAgentOffers && typeof normalized.rejectedFreeAgentOffers === 'object' && !Array.isArray(normalized.rejectedFreeAgentOffers)) ? normalized.rejectedFreeAgentOffers : {};
   normalized.scoutingCenter = (normalized.scoutingCenter && typeof normalized.scoutingCenter === 'object' && !Array.isArray(normalized.scoutingCenter)) ? normalized.scoutingCenter : {};

@@ -647,14 +647,28 @@ function processPendingTransfers(){
       continue;
     }
     const sellerClubId = Number(player.clubId || t.fromClubId || 0);
-    setPlayerClubId(player, destinationClubId);
-    player.freeAgent = false;
-    player.sold = false;
-    player.transferListed = false;
-    player.intransferible = false;
-    player.transferAgreed = false;
-    delete player.transferAgreedToClubId;
-    delete player.transferScheduledDate;
+    const ownershipSync = typeof syncPlayerOwnershipReferences === 'function'
+      ? syncPlayerOwnershipReferences(player, destinationClubId, {
+          state:game,
+          source:'manager_purchase',
+          freeAgent:false,
+          sold:false,
+          transferListed:false,
+          intransferible:false,
+          clearAgreement:true,
+          forceRevision:true
+        })
+      : null;
+    if(!ownershipSync){
+      setPlayerClubId(player, destinationClubId, { source:'manager_purchase', forceRevision:true });
+      player.freeAgent = false;
+      player.sold = false;
+      player.transferListed = false;
+      player.intransferible = false;
+      player.transferAgreed = false;
+      delete player.transferAgreedToClubId;
+      delete player.transferScheduledDate;
+    }
     player.salaryPaidCount = 0;
     player.lastSalaryPaidSeason = 0;
     refreshPlayerClause(player);

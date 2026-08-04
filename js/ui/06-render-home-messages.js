@@ -2765,7 +2765,10 @@ function mergeMarketPlayersIntoSeed(players=[]){
       return;
     }
     const existing = seed.players[index];
-    const merged = canonicalize({ ...existing, ...incoming });
+    const mergedRaw = canonicalize({ ...existing, ...incoming });
+    const merged = typeof preserveAuthoritativeOwnership === 'function'
+      ? preserveAuthoritativeOwnership(existing, incoming, mergedRaw)
+      : mergedRaw;
     const before = JSON.stringify(existing);
     const after = JSON.stringify(merged);
     if(before !== after){

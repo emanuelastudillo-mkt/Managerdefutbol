@@ -123,6 +123,58 @@ function recordTransferHistory(player, options={}){
   history.nextId = sequence + 1;
   return entry;
 }
+function transferHistoryLatestEntryForPlayer(playerId, state=game){
+  const id = Number(playerId || 0);
+  const entries = ensureTransferHistoryState(state).entries.filter(entry => Number(entry.playerId || 0) === id);
+  return entries.length ? entries[entries.length - 1] : null;
+}
+function repairCompletedIncomingTransferOwnership(state=game){
+  if(!state || !Array.isArray(state.pendingTransfers) || !seed?.players) return { checked:0, repaired:0, synced:0, playerIds:[] };
+  let checked = 0;
+  let repaired = 0;
+  let synced = 0;
+  const playerIds = [];
+  state.pendingTransfers.forEach(item => {
+    if(String(item?.type || 'incoming') !== 'incoming' || String(item?.status || '') !== 'arrived') return;
+    const playerId = Number(item.playerId || 0);
+    const targetClubId = Number(item.toClubId || 0);
+    if(!playerId || !targetClubId) return;
+    checked += 1;
+    const latest = transferHistoryLatestEntryForPlayer(playerId, state);
+    const expectedKey = `pending-transfer-${item.id}`;
+    const confirmsArrival = Boolean(latest
+      && Number(latest.toClubId || 0) === targetClubId
+      && String(latest.source || '') === 'pending_incoming'
+      && (!latest.transactionKey || String(latest.transactionKey) === expectedKey));
+    if(!confirmsArrival) return;
+    const player = (seed.players || []).find(entry => Number(entry?.id || 0) === playerId);
+    if(!player || player.retired) return;
+    const wasWrong = Number(player.clubId || 0) !== targetClubId;
+    const result = typeof syncPlayerOwnershipReferences === 'function'
+      ? syncPlayerOwnershipReferences(player, targetClubId, {
+          state,
+          source:wasWrong ? 'v961_completed_purchase_repair' : 'v961_completed_purchase_sync',
+          freeAgent:false,
+          sold:false,
+          transferListed:false,
+          intransferible:false,
+          clearAgreement:true,
+          forceRevision:wasWrong
+        })
+      : null;
+    if(wasWrong){
+      if(!result) setPlayerClubId(player, targetClubId, { source:'v961_completed_purchase_repair', forceRevision:true });
+      item.ownershipRepairV961 = true;
+      item.ownershipRepairDateV961 = String(state.currentDate || '');
+      repaired += 1;
+      playerIds.push(playerId);
+    }else if(result?.marketUpdated){
+      synced += 1;
+    }
+  });
+  return { checked, repaired, synced, playerIds };
+}
+
 function purgeTransferHistoryForRetiredPlayers(playerIds=[], state=game){
   if(!state) return 0;
   const history = ensureTransferHistoryState(state);

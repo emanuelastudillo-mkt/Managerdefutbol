@@ -1,7 +1,7 @@
-# V9.62 · Relaciones más accesibles
+# V9.63 · Estrategias de mercado para clubes bot
 
-Versión completa construida sobre V9.61.
+Versión completa construida sobre V9.62.
 
-Facilita la formación de relaciones persistentes, incorpora la continuidad entre temporadas, recupera vínculos históricos en carreras largas y muestra candidatos en formación.
+Agrega tres formas persistentes de afrontar el mercado para los clubes controlados por el juego: Normal, Fichar barato y Gastar todo. Cada perfil modifica objetivos, reservas financieras, montos ofrecidos, prioridades y cantidad de incorporaciones.
 
-Ver `AJUSTES-V9.62.md`.
+Ver `AJUSTES-V9.63.md`.

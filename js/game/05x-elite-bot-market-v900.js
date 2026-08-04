@@ -117,17 +117,22 @@ function eliteBotMarketHasRosterSpace(clubId){
 }
 function eliteBotMarketFinancialCheck(club, player, fee, plan){
   const cfg = eliteBotMarketConfig();
+  const strategy = typeof botMarketStrategyPolicyForClub === 'function' ? botMarketStrategyPolicyForClub(club) : null;
   const cash = eliteBotMarketClubCash(club);
   const safeFee = Math.max(0, Math.round(Number(fee || 0)));
   const salary = Math.max(0, Math.round(Number(player?.salary || 0)));
   const payrollAfter = eliteBotMarketAnnualPayroll(club.id) + salary;
   const cashAfter = cash - safeFee;
   if(cash <= 0 || cashAfter < 0) return { ok:false, cash, cashAfter, payrollAfter, reserve:0 };
-  const reserve = Math.max(Math.round(cash * cfg.reserveCashRate), Math.round(payrollAfter * cfg.payrollCoverage));
+  const reserveCashRate = Number.isFinite(Number(strategy?.reserveCashRate)) ? Number(strategy.reserveCashRate) : cfg.reserveCashRate;
+  const payrollCoverage = Number.isFinite(Number(strategy?.payrollCoverage)) ? Number(strategy.payrollCoverage) : cfg.payrollCoverage;
+  const reserve = Math.max(Math.round(cash * reserveCashRate), Math.round(payrollAfter * payrollCoverage));
   if(cashAfter < reserve) return { ok:false, cash, cashAfter, payrollAfter, reserve };
-  if(safeFee === 0 && salary > Math.round(cash * cfg.maxFreeSalaryCashRate)) return { ok:false, cash, cashAfter, payrollAfter, reserve };
+  const freeSalaryRate = strategy?.id === 'bargain' ? 0.10 : (strategy?.id === 'all_in' ? 0.24 : cfg.maxFreeSalaryCashRate);
+  if(safeFee === 0 && salary > Math.round(cash * freeSalaryRate)) return { ok:false, cash, cashAfter, payrollAfter, reserve };
   if(safeFee > 0){
-    const feeRate = plan?.tier === 'top10' ? cfg.maxTransferCashRateTop : cfg.maxTransferCashRateTop * 0.70;
+    const fallbackRate = plan?.tier === 'top10' ? cfg.maxTransferCashRateTop : cfg.maxTransferCashRateTop * 0.70;
+    const feeRate = Number.isFinite(Number(strategy?.maxFeeCashRate)) ? Number(strategy.maxFeeCashRate) : fallbackRate;
     if(safeFee > Math.round(cash * feeRate)) return { ok:false, cash, cashAfter, payrollAfter, reserve };
   }
   return { ok:true, cash, cashAfter, payrollAfter, reserve };
@@ -160,7 +165,9 @@ function eliteBotMarketCandidateClubsForFree(player, context, state){
     if(!plan || !eliteBotMarketHasRosterSpace(club.id)) return null;
     const currentStars = eliteBotMarketStarCount(club.id);
     if(currentStars >= plan.maximum) return null;
-    if(eliteBotMarketClubSeasonSignings(club.id, state) >= cfg.signingsPerClubSeason) return null;
+    const strategy = typeof botMarketStrategyPolicyForClub === 'function' ? botMarketStrategyPolicyForClub(club) : null;
+    const signingLimit = Math.min(cfg.signingsPerClubSeason, Math.max(1, Math.round(Number(strategy?.maxSignings || cfg.signingsPerClubSeason))));
+    if((typeof botMarketStrategyCombinedSignings === 'function' ? botMarketStrategyCombinedSignings(club.id) : eliteBotMarketClubSeasonSignings(club.id, state)) >= signingLimit) return null;
     const finance = eliteBotMarketFinancialCheck(club, player, 0, plan);
     if(!finance.ok) return null;
     const deficit = Math.max(0, plan.target - currentStars);
@@ -244,11 +251,15 @@ function eliteBotMarketHasPortfolioRight(playerId){
 }
 function eliteBotMarketTransferFee(player, buyerClubId){
   const cfg = eliteBotMarketConfig();
+  const buyer = (seed?.clubs || []).find(club => Number(club.id) === Number(buyerClubId));
+  const strategy = typeof botMarketStrategyPolicyForClub === 'function' ? botMarketStrategyPolicyForClub(buyer) : null;
+  const minimumRate = Number.isFinite(Number(strategy?.minimumOfferRate)) ? Math.max(cfg.transferClauseMin, Number(strategy.minimumOfferRate)) : cfg.transferClauseMin;
+  const maximumRate = Number.isFinite(Number(strategy?.maximumOfferRate)) ? Math.max(minimumRate, Number(strategy.maximumOfferRate)) : cfg.transferClauseMax;
   const clause = Math.max(1, Math.round(Number(typeof playerClauseFor === 'function' ? playerClauseFor(player) : player?.clause || player?.value || Number(player?.salary || 0) * 16 || 1)));
-  const span = Math.max(0, cfg.transferClauseMax - cfg.transferClauseMin);
+  const span = Math.max(0, maximumRate - minimumRate);
   const roll = typeof hashNumber === 'function' ? hashNumber(`elite-fee-${game?.saveCode || ''}-${game?.seasonNumber || 1}-${game?.currentDate || ''}-${player?.id || 0}-${buyerClubId}`, 1001) / 1000 : 0.5;
   const ageFactor = Number(player?.age || 24) >= 32 ? 0.86 : Number(player?.age || 24) <= 23 ? 1.05 : 1;
-  return Math.max(1, Math.round(clause * (cfg.transferClauseMin + span * roll) * ageFactor / 100000) * 100000);
+  return Math.max(1, Math.round(clause * (minimumRate + span * roll) * ageFactor / 100000) * 100000);
 }
 function eliteBotMarketSellerAllows(player, sellerClub, context){
   if(!sellerClub || Number(sellerClub.id) === Number(game?.selectedClubId || 0)) return false;
@@ -310,9 +321,12 @@ function processEliteBotTopTenTransfers(context, state){
   const buyers = (seed?.clubs || []).map(club => {
     const plan = eliteBotMarketClubPlan(club, context);
     if(!plan || plan.tier !== 'top10') return null;
+    const strategy = typeof botMarketStrategyPolicyForClub === 'function' ? botMarketStrategyPolicyForClub(club) : null;
+    if(strategy?.id === 'bargain') return null;
     const stars = eliteBotMarketStarCount(club.id);
     if(stars >= plan.target || !eliteBotMarketHasRosterSpace(club.id)) return null;
-    if(eliteBotMarketClubSeasonSignings(club.id, state) >= cfg.signingsPerClubSeason) return null;
+    const signingLimit = Math.min(cfg.signingsPerClubSeason, Math.max(1, Math.round(Number(strategy?.maxSignings || cfg.signingsPerClubSeason))));
+    if((typeof botMarketStrategyCombinedSignings === 'function' ? botMarketStrategyCombinedSignings(club.id) : eliteBotMarketClubSeasonSignings(club.id, state)) >= signingLimit) return null;
     return { club, plan, stars, deficit:plan.target-stars };
   }).filter(Boolean).sort((a,b) => b.deficit-a.deficit || Number(a.plan.rank)-Number(b.plan.rank));
   const completed = [];

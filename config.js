@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.62',
+  version: 'V9.63',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -58,7 +58,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json?v=9.04',
     installationsUrl: 'data/instalaciones.json?v=9.04',
     eventsUrl: 'data/eventos.json?v=9.04',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.62',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.63',
     managerAchievementsUrl: 'data/hitos_manager.json?v=9.04',
     retosManagerUrl: 'data/retos_manager.json?v=9.04',
     estadiosUrls: ['data/estadios_argentina.json?v=9.04', 'data/estadios_chile.json?v=9.04', 'data/estadios_brasil.json?v=9.04', 'data/estadios_inglaterra.json?v=9.04', 'data/estadios_espana.json?v=9.04', 'data/estadios_italia.json?v=9.04', 'data/estadios_rumania.json?v=9.04'],
@@ -208,6 +208,70 @@ window.GAME_CONFIG = {
     decaimientoTemporada: 0.82,
     decaimientoMinimoTitulos: 0.25,
     historialTemporadasMaximo: 12
+  },
+
+
+  mercadoBots: {
+    // Cada club bot recibe una estrategia por temporada. El perfil se mantiene durante todo el año.
+    activo: true,
+    intervaloRevisionLibresDias: 5,
+    intervaloRevisionComprasDias: 7,
+    clubesEvaluadosPorRevision: 14,
+    maximoLibresPorRevision: 4,
+    maximoComprasPorRevision: 5,
+    plantelMinimo: 20,
+    plantelIdeal: 25,
+    plantelMaximo: 30,
+    maximoNuevosTransferiblesPorClub: 1,
+    impuestoVentaBotPct: 0.30,
+    historialInternoMaximo: 180,
+    perfiles: {
+      normal: {
+        peso: 52,
+        reservaCajaPct: 0.34,
+        coberturaMasaSalarialAnios: 0.55,
+        maximoPorCompraSobreCajaPct: 0.23,
+        gastoTemporadaSobreCajaInicialPct: 0.58,
+        maximoAltasTemporada: 4,
+        mejoraMinimaMedia: 1,
+        ofertaMinimaClausulaPct: 0.62,
+        ofertaMaximaClausulaPct: 0.88,
+        edadMaximaObjetivo: 32,
+        prioridadLibres: 35,
+        prioridadTransferibles: 28,
+        prioridadCalidad: 70
+      },
+      bargain: {
+        peso: 31,
+        reservaCajaPct: 0.50,
+        coberturaMasaSalarialAnios: 0.72,
+        maximoPorCompraSobreCajaPct: 0.13,
+        gastoTemporadaSobreCajaInicialPct: 0.32,
+        maximoAltasTemporada: 5,
+        mejoraMinimaMedia: -1,
+        ofertaMinimaClausulaPct: 0.38,
+        ofertaMaximaClausulaPct: 0.64,
+        edadMaximaObjetivo: 35,
+        prioridadLibres: 115,
+        prioridadTransferibles: 105,
+        prioridadCalidad: 42
+      },
+      all_in: {
+        peso: 17,
+        reservaCajaPct: 0.05,
+        coberturaMasaSalarialAnios: 0.18,
+        maximoPorCompraSobreCajaPct: 0.48,
+        gastoTemporadaSobreCajaInicialPct: 0.94,
+        maximoAltasTemporada: 6,
+        mejoraMinimaMedia: 3,
+        ofertaMinimaClausulaPct: 0.82,
+        ofertaMaximaClausulaPct: 1.08,
+        edadMaximaObjetivo: 30,
+        prioridadLibres: 18,
+        prioridadTransferibles: 20,
+        prioridadCalidad: 125
+      }
+    }
   },
 
   mercadoBotsElite: {

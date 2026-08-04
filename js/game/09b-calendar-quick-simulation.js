@@ -1157,6 +1157,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     if(typeof processAcademyTurn === 'function') processAcademyTurn();
     if(typeof processManagerAcademyFacilitiesDaily === 'function') processManagerAcademyFacilitiesDaily(1);
     const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
+    const botMarketStrategies = typeof processBotMarketStrategiesDaily === 'function' ? processBotMarketStrategiesDaily({ reason:'daily_calendar_managerless' }) : null;
     const eliteBotMarket = typeof processEliteBotMarketDaily === 'function' ? processEliteBotMarketDaily({ reason:'daily_calendar_managerless' }) : null;
     const recovered = clearRecoveredDailyInjuries();
     const botResults = simulateBots ? simulateDueMatchesUntil(game.currentDate, { includeOwn:true }) : [];
@@ -1170,7 +1171,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     const jobMarket = typeof processManagerJobMarketDaily === 'function' ? processManagerJobMarketDaily() : null;
     const clubWorldCupPreparation = typeof prepareClubWorldCupParticipantsIfNeeded === 'function' ? prepareClubWorldCupParticipantsIfNeeded({ source:'daily_calendar_complete' }) : null;
     const scheduledRankingUpload = typeof processScheduledCareerRankingUploads === 'function' ? processScheduledCareerRankingUploads({ source:'daily_calendar_managerless' }) : null;
-    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, afaFieldSanction };
+    return { botResults, recovered, bankPayment:0, managerSalaryPayment, specialCardUsage, integrityRepair, scheduledVerifier, postCompetition, jobMarket, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, botMarketStrategies, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, afaFieldSanction };
   }
   if(!skipTraining) applyTrainingEffects();
   const kinesioDifferentiated = typeof processKinesiologistDifferentiatedDays === 'function'
@@ -1182,6 +1183,7 @@ function processDailyCalendarState(dateAfter='', options={}){
   if(typeof processAcademyTurn === 'function') processAcademyTurn();
   const managerPortfolio = typeof processManagerPlayerPortfolioDaily === 'function' ? processManagerPlayerPortfolioDaily() : null;
   if(typeof processPendingTransfers === 'function') processPendingTransfers();
+  const botMarketStrategies = typeof processBotMarketStrategiesDaily === 'function' ? processBotMarketStrategiesDaily({ reason:'daily_calendar' }) : null;
   const eliteBotMarket = typeof processEliteBotMarketDaily === 'function' ? processEliteBotMarketDaily({ reason:'daily_calendar' }) : null;
   const automaticClauseSales = typeof processUnansweredSpecialClauseOffers === 'function'
     ? processUnansweredSpecialClauseOffers({ silent:true, source:'daily_calendar' })
@@ -1216,7 +1218,7 @@ function processDailyCalendarState(dateAfter='', options={}){
     ? dismissAllStaffForFinancialCrisis({ silent:true })
     : [];
   const scheduledRankingUpload = typeof processScheduledCareerRankingUploads === 'function' ? processScheduledCareerRankingUploads({ source:'daily_calendar' }) : null;
-  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
+  return { botResults, recovered, bankPayment, managerSalaryPayment, specialCardUsage, automaticClauseSales, founderAdministrativeCost, kinesioDifferentiated, kinesioAutomatic, firstTeamInjuryMinimum, lockerRoomProblem, integrityRepair, scheduledVerifier, postCompetition, clubWorldCupPreparation, nationalCupDaily, libertadoresDaily, championsLeagueDaily, botMarketStrategies, eliteBotMarket, scheduledRankingUpload, financialStaffDismissalsAtStart, financialStaffDismissalsAtEnd, afaFieldSanction };
 }
 function setAutoAdvanceButtonLoading(active){
   const btn = $('advanceUnifiedBtn') || $('advanceMatchBtn') || $('advanceDayBtn');

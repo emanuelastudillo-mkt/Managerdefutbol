@@ -1884,7 +1884,8 @@ function playerGenericImageBase(){
   return 'img/jugadores/nacionalidades/generico';
 }
 function faceBaseForPlayer(player){
-  return playerNationalityImageBase(player);
+  const assigned = typeof assignedFaceBaseForPlayer === 'function' ? String(assignedFaceBaseForPlayer(player) || '') : '';
+  return assigned || playerNationalityImageBase(player);
 }
 const playerFaceAssetCache = new Map();
 function fallbackFaceMarkup(className='photo-thumb'){

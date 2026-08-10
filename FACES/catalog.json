@@ -1,0 +1,16 @@
+{
+  "version": "V9.73",
+  "filename_pattern": "1 ({n})",
+  "extensions_supported": ["webp", "png", "jpg", "jpeg"],
+  "pools": {
+    "01_cono_sur": 1100,
+    "02_brasil": 80,
+    "03_resto_america": 0,
+    "04_europa_occidental": 0,
+    "05_europa_oriental_balcanes": 0,
+    "06_africa": 20,
+    "07_asia_oceania": 0,
+    "08_reserva_mixta": 0
+  },
+  "note": "El juego detecta crecimiento consecutivo a partir del siguiente número disponible y asigna las nuevas FACES solo a jugadores que todavía no tengan una."
+}

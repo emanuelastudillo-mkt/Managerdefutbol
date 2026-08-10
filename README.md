@@ -1,15 +1,9 @@
-# V9.72 · Premio de primera victoria retroactivo
+# V9.73 · FACES persistentes
 
-Esta versión parte de V9.71 y corrige la migración de la recompensa de 5.000 puntos de habilidad por victoria.
+Construida sobre V9.72.
 
-## Cambio principal
+Esta versión incorpora asignación persistente y sin duplicados para el nuevo banco regional de FACES. Cada jugador conserva su rostro mientras siga activo; al retirarse, la FACE vuelve a quedar disponible. Los nuevos archivos agregados consecutivamente a los pools se detectan al cargar y se utilizan para completar jugadores que todavía no tengan rostro.
 
-- Las carreras ya iniciadas antes de V9.71 también pueden cobrar los 5.000 puntos.
-- Si la partida tenía victorias previas pero nunca recibió realmente el premio, la recompensa queda pendiente.
-- Se acredita en la próxima victoria oficial después de actualizar.
-- Si el premio ya fue acreditado de verdad en V9.71, no se duplica.
-- Los amistosos siguen sin contar.
+Inventario inicial configurado: 1.100 FACES de Cono Sur y 80 de Brasil.
 
-No se modifica el Worker.
-
-Ver `AJUSTES-V9.72.md`.
+Ver `AJUSTES-V9.73.md`.

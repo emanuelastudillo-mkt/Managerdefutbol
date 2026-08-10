@@ -1,57 +1,39 @@
-# Organización de FACES por regiones
+# FACES de jugadores · V9.73
 
-Esta carpeta está preparada para almacenar hasta **5.000 fotografías de jugadores**.
-Las imágenes se asignarán posteriormente según la nacionalidad de cada futbolista.
+El juego usa FACES persistentes y únicas por carrera.
 
-## Estructura y cantidades recomendadas
+## Inventario inicial reconocido
 
 ```text
 FACES/
 ├── 01_cono_sur/                    1.100 imágenes
-├── 02_brasil/                        700 imágenes
-├── 03_resto_america/                 500 imágenes
-├── 04_europa_occidental/           1.450 imágenes
-├── 05_europa_oriental_balcanes/      350 imágenes
-├── 06_africa/                        500 imágenes
-├── 07_asia_oceania/                  200 imágenes
-└── 08_reserva_mixta/                 200 imágenes
+├── 02_brasil/                        80 imágenes
+├── 03_resto_america/                  0 imágenes
+├── 04_europa_occidental/              0 imágenes
+├── 05_europa_oriental_balcanes/       0 imágenes
+├── 06_africa/                         0 imágenes
+├── 07_asia_oceania/                   0 imágenes
+└── 08_reserva_mixta/                  0 imágenes
 ```
 
-**Total previsto: 5.000 imágenes.**
+Los nombres deben continuar de forma consecutiva: `1 (1)`, `1 (2)`, `1 (3)`...
+Se aceptan `.webp`, `.png`, `.jpg` y `.jpeg`.
 
-## Uso de cada región
+## Reglas
 
-### 01_cono_sur
-Argentina, Uruguay y Paraguay. Chile puede utilizar parcialmente esta carpeta.
+- Una FACE se asigna una sola vez entre los jugadores profesionales activos.
+- La asignación queda guardada en la partida y no cambia al recargar ni al cambiar de club.
+- Al retirarse un jugador, su FACE se libera y puede ser utilizada por otro futbolista.
+- Las FACES nuevas no reemplazan las ya asignadas: rellenan jugadores que todavía no tienen una.
+- Al cargar el juego se comprueba si apareció el siguiente archivo consecutivo de cada carpeta. Si existe, se detecta automáticamente hasta dónde creció ese pool.
 
-### 02_brasil
-Brasil. Se mantiene separado por la cantidad de jugadores brasileños y la variedad visual necesaria.
+## Regiones
 
-### 03_resto_america
-Chile, Colombia, Perú, Ecuador, Venezuela, Bolivia, México, Estados Unidos y Centroamérica.
-
-### 04_europa_occidental
-España, Italia, Inglaterra, Francia, Alemania, Portugal, Países Bajos, Bélgica, Suiza, Austria, Irlanda, Escocia y países nórdicos.
-
-### 05_europa_oriental_balcanes
-Rumania, Serbia, Croacia, Bosnia, Bulgaria, Hungría, Polonia, República Checa, Eslovaquia, Ucrania, Rusia, Albania, Eslovenia, Montenegro y Macedonia.
-
-### 06_africa
-Nigeria, Ghana, Senegal, Camerún, Costa de Marfil, Marruecos, Argelia, Túnez, Egipto, Mali, Sudáfrica y demás países africanos.
-
-### 07_asia_oceania
-Japón, Corea, China, Australia, Nueva Zelanda, Arabia Saudita, Irán, Irak, Qatar, Emiratos Árabes Unidos y demás países de Asia y Oceanía.
-
-### 08_reserva_mixta
-Rostros difíciles de clasificar, imágenes visualmente neutras y reemplazos cuando una región se quede sin fotografías disponibles.
-
-## Recomendaciones de archivo
-
-- Formato preferido: `.webp`; también se acepta `.png`.
-- Relación de aspecto cuadrada.
-- Tamaño recomendado: 256 × 256 px o 320 × 320 px.
-- Rostro centrado y visible.
-- Evitar duplicados, marcas de agua y fotografías de muy baja calidad.
-- Los nombres pueden ser simples y consecutivos: `face_00001.webp`, `face_00002.webp`, etc.
-
-No es necesario identificar la nacionalidad exacta de cada imagen. La clasificación regional puede realizarse visualmente y las fotografías de `08_reserva_mixta` funcionarán como respaldo.
+- `01_cono_sur`: Argentina, Uruguay y Paraguay. Chile puede usarla como respaldo mientras su pool regional esté vacío.
+- `02_brasil`: Brasil.
+- `03_resto_america`: Chile y resto de América.
+- `04_europa_occidental`: Europa occidental.
+- `05_europa_oriental_balcanes`: Europa oriental y Balcanes.
+- `06_africa`: África.
+- `07_asia_oceania`: Asia y Oceanía.
+- `08_reserva_mixta`: respaldo general cuando la región correspondiente se quede sin imágenes.

@@ -16,3 +16,10 @@
 .club-service-blocked{margin:0;color:#fbbf24}
 @media(max-width:1280px){.club-service-grid-four{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.club-service-grid,.club-service-grid-four{grid-template-columns:1fr}.club-services-title{align-items:flex-start}}
+
+/* V9.65 · Visuales para convenios e instalaciones del club. */
+.club-service-visual{position:relative;overflow:hidden;border:1px solid rgba(148,163,184,.12);border-radius:12px;aspect-ratio:16/9;background:rgba(15,23,42,.28)}
+.club-service-visual img{display:block;width:100%;height:100%;object-fit:cover}
+.club-service-option .club-service-visual{margin:-1px -1px 2px}
+.club-service-option.is-active .club-service-visual{border-color:rgba(74,222,128,.28)}
+@media(max-width:900px){.club-service-visual{aspect-ratio:21/9}}

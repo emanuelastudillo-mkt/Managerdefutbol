@@ -38,14 +38,94 @@ function refreshPlayerClubIndex(){
   playerClubIndex = next;
   return playerClubIndex;
 }
-function setPlayerClubId(player, clubId){
+function playerOwnershipRevision(player){
+  return Math.max(0, Math.round(Number(player?.ownershipRevision || 0)));
+}
+function setPlayerClubId(player, clubId, options={}){
   if(!player) return player;
   const nextClubId = Number(clubId || 0);
-  if(Number(player.clubId || 0) !== nextClubId){
-    player.clubId = nextClubId;
-    invalidatePlayerIndexes();
+  const previousClubId = Number(player.clubId || 0);
+  const changed = previousClubId !== nextClubId;
+  if(changed) player.clubId = nextClubId;
+  if(changed || options.forceRevision){
+    const requestedRevision = Math.max(0, Math.round(Number(options.revision || 0)));
+    player.ownershipRevision = Math.max(playerOwnershipRevision(player) + 1, requestedRevision);
+    player.ownershipUpdatedSeason = Math.max(1, Math.round(Number(options.season || game?.seasonNumber || 1)));
+    player.ownershipUpdatedDate = String(options.date || game?.currentDate || '');
+    player.ownershipSource = String(options.source || player.ownershipSource || 'club_change');
   }
+  if(changed) invalidatePlayerIndexes();
   return player;
+}
+function syncPlayerOwnershipReferences(playerOrId, clubId, options={}){
+  const state = options.state || game;
+  const playerId = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId || 0);
+  const canonical = typeof playerOrId === 'object' ? playerOrId : playerById(playerId);
+  if(!canonical || !playerId) return { changed:false, player:null, marketUpdated:0 };
+  const targetClubId = Number(clubId || 0);
+  const beforeClubId = Number(canonical.clubId || 0);
+  setPlayerClubId(canonical, targetClubId, {
+    source:options.source || 'ownership_sync',
+    season:options.season,
+    date:options.date,
+    revision:options.revision,
+    forceRevision:Boolean(options.forceRevision)
+  });
+  const revision = playerOwnershipRevision(canonical);
+  const freeAgent = options.freeAgent === undefined ? targetClubId === 0 : Boolean(options.freeAgent);
+  const sold = options.sold === undefined ? false : Boolean(options.sold);
+  canonical.freeAgent = freeAgent;
+  canonical.sold = sold;
+  if(options.transferListed !== undefined) canonical.transferListed = Boolean(options.transferListed);
+  if(options.intransferible !== undefined) canonical.intransferible = Boolean(options.intransferible);
+  if(options.clearAgreement !== false){
+    canonical.transferAgreed = false;
+    delete canonical.transferAgreedToClubId;
+    delete canonical.transferScheduledDate;
+  }
+  let marketUpdated = 0;
+  if(Array.isArray(state?.marketPlayers)){
+    state.marketPlayers = state.marketPlayers.map(entry => {
+      if(Number(entry?.id || 0) !== playerId) return entry;
+      marketUpdated += 1;
+      const next = {
+        ...entry,
+        clubId:targetClubId,
+        freeAgent,
+        sold,
+        ownershipRevision:revision,
+        ownershipUpdatedSeason:canonical.ownershipUpdatedSeason,
+        ownershipUpdatedDate:canonical.ownershipUpdatedDate,
+        ownershipSource:canonical.ownershipSource
+      };
+      if(options.transferListed !== undefined) next.transferListed = Boolean(options.transferListed);
+      if(options.intransferible !== undefined) next.intransferible = Boolean(options.intransferible);
+      if(options.clearAgreement !== false){
+        next.transferAgreed = false;
+        delete next.transferAgreedToClubId;
+        delete next.transferScheduledDate;
+      }
+      return next;
+    });
+  }
+  if(state?.playerStats?.[playerId]) state.playerStats[playerId].clubId = targetClubId;
+  if(state?.playerCareerStats?.[playerId]) state.playerCareerStats[playerId].clubId = targetClubId;
+  if(beforeClubId !== targetClubId || marketUpdated) invalidatePlayerIndexes();
+  return { changed:beforeClubId !== targetClubId || marketUpdated > 0, player:canonical, marketUpdated, revision };
+}
+function ownershipAuthoritativeRecord(existing, incoming){
+  const existingRevision = playerOwnershipRevision(existing);
+  const incomingRevision = playerOwnershipRevision(incoming);
+  return incomingRevision > existingRevision ? incoming : existing;
+}
+function preserveAuthoritativeOwnership(existing, incoming, merged){
+  const source = ownershipAuthoritativeRecord(existing, incoming);
+  const next = { ...merged };
+  ['clubId','freeAgent','sold','transferAgreed','transferAgreedToClubId','transferScheduledDate','ownershipRevision','ownershipUpdatedSeason','ownershipUpdatedDate','ownershipSource'].forEach(key => {
+    if(Object.prototype.hasOwnProperty.call(source || {}, key)) next[key] = source[key];
+    else delete next[key];
+  });
+  return next;
 }
 function playerById(id){
   const playerId = Number(id);

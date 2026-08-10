@@ -713,6 +713,23 @@ function homeWeekCalendarLeagueMatchday(match, round=null){
   const fallback = Math.round(Number(match?.matchday || round?.matchday || 0));
   return fallback > 0 ? fallback : 0;
 }
+function competitionLogoInfo(match, round=null){
+  const label = homeWeekCalendarCompetitionLabel(match, round);
+  if(match?.libertadores) return { path:'img/competiciones/copa_libertadores.svg', alt:'Copa Libertadores', label };
+  if(match?.championsLeague) return { path:'img/competiciones/champions_league.png', alt:'Champions League', label };
+  if(match?.clubWorldCup) return { path:'img/competiciones/fifa_mundial_clubes.svg', alt:'Mundial de Clubes', label };
+  return { path:'', alt:'', label };
+}
+function competitionLogoImageMarkup(match, round=null, className='competition-logo'){
+  const info = competitionLogoInfo(match, round);
+  if(!info.path) return '';
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(info.path)}" alt="${escapeHtml(info.alt || info.label || 'Competición')}" loading="lazy">`;
+}
+function competitionLogoLineMarkup(match, round=null){
+  const info = competitionLogoInfo(match, round);
+  if(!info.path) return '';
+  return `<div class="next-match-competition-line">${competitionLogoImageMarkup(match, round, 'competition-logo competition-logo-large')}<span>${escapeHtml(info.label || '')}</span></div>`;
+}
 function homeWeekCalendarCompetitionLabel(match, round=null){
   const divisionName = String(match?.divisionName || round?.title || 'Liga').trim() || 'Liga';
   if(match?.nationalSupercup){
@@ -722,6 +739,18 @@ function homeWeekCalendarCompetitionLabel(match, round=null){
   if(match?.nationalCup){
     const stage = String(match.nationalCupStageLabel || match.nationalCupStage || 'Copa').trim() || 'Copa';
     return `${stage} · ${divisionName || 'Copa nacional'}`;
+  }
+  if(match?.libertadores){
+    const stage = String(match.libertadoresStageLabel || ({ groups:'Fase de grupos', r32:'16avos de final', r16:'8vos de final', qf:'4tos de final', sf:'Semifinales', final:'Final' }[String(match.libertadoresStage || '')]) || 'Copa Libertadores');
+    const group = match.libertadoresGroup ? ` · Grupo ${String(match.libertadoresGroup)}` : '';
+    const leg = Number(match.leg || 0) === 1 ? ' · Ida' : Number(match.leg || 0) === 2 ? ' · Vuelta' : '';
+    return `${stage}${group}${leg} · Copa Libertadores`;
+  }
+  if(match?.championsLeague){
+    const stage = String(match.championsLeagueStageLabel || ({ groups:'Fase de grupos', r32:'16avos de final', r16:'8vos de final', qf:'4tos de final', sf:'Semifinales', final:'Final' }[String(match.championsLeagueStage || '')]) || 'Champions League');
+    const group = match.championsLeagueGroup ? ` · Grupo ${String(match.championsLeagueGroup)}` : '';
+    const leg = Number(match.leg || 0) === 1 ? ' · Ida' : Number(match.leg || 0) === 2 ? ' · Vuelta' : '';
+    return `${stage}${group}${leg} · Champions League`;
   }
   if(match?.clubWorldCup){
     const labels = {
@@ -906,7 +935,7 @@ function homeWeekCalendarDayMarkup(iso, offset, events=[], transferActivity={ in
     return `<button class="home-week-calendar-event ${escapeHtml(outcome.tone)}" type="button" ${attrs} aria-label="${escapeHtml(`${competition}. ${outcome.main}. ${outcome.detail}`)}">
       <span class="home-week-calendar-rival-badge" aria-hidden="true">${outcome.opponentId ? clubBadge(outcome.opponentId) : ''}</span>
       <span class="home-week-calendar-event-copy">
-        <span class="home-week-calendar-competition">${escapeHtml(competition)}</span>
+        <span class="home-week-calendar-competition-line">${competitionLogoImageMarkup(match, round, 'competition-logo competition-logo-small')}<span class="home-week-calendar-competition">${escapeHtml(competition)}</span></span>
         <strong>${escapeHtml(outcome.main)}</strong>
         <small>${escapeHtml(outcome.detail)}</small>
       </span>
@@ -1159,6 +1188,7 @@ function problemItem(problem){
 }
 function matchPreview(match){
   return `<button class="next-match clickable" data-match-id="${escapeHtml(match.id)}">
+    ${competitionLogoLineMarkup(match)}
     <div><div class="team-name">${clubSpan(match.homeId)}</div></div>
     <div class="vs">VS<br><span class="small">${escapeHtml(typeof matchDateLabel === 'function' ? matchDateLabel(match.date) : match.date)}</span></div>
     <div><div class="team-name">${clubSpan(match.awayId)}</div></div>
@@ -2753,7 +2783,10 @@ function mergeMarketPlayersIntoSeed(players=[]){
       return;
     }
     const existing = seed.players[index];
-    const merged = canonicalize({ ...existing, ...incoming });
+    const mergedRaw = canonicalize({ ...existing, ...incoming });
+    const merged = typeof preserveAuthoritativeOwnership === 'function'
+      ? preserveAuthoritativeOwnership(existing, incoming, mergedRaw)
+      : mergedRaw;
     const before = JSON.stringify(existing);
     const after = JSON.stringify(merged);
     if(before !== after){

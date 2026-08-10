@@ -3,7 +3,7 @@
    elimina duplicados y reprograma encuentros atrasados en martes sin cruces de club. */
 
 (function(){
-  const CALENDAR_INTEGRITY_VERSION = 5;
+  const CALENDAR_INTEGRITY_VERSION = 6;
   const MAX_LOG_ENTRIES = 30;
   const MAX_SEARCH_WEEKS = 120;
   let ciDailyTransactionDepth = 0;
@@ -56,12 +56,12 @@
   function ciIsSpecialRound(round){
     if(typeof fixtureRoundIsPersistentCompetition === 'function') return fixtureRoundIsPersistentCompetition(round);
     return Boolean(
-      round?.playoffRound || round?.clubWorldCupRound || round?.nationalCupRound ||
-      (round?.matches || []).some(match => match?.playoff || match?.clubWorldCup || match?.nationalCup || match?.friendly)
+      round?.playoffRound || round?.clubWorldCupRound || round?.nationalCupRound || round?.libertadoresRound || round?.championsLeagueRound ||
+      (round?.matches || []).some(match => match?.playoff || match?.clubWorldCup || match?.nationalCup || match?.libertadores || match?.championsLeague || match?.friendly)
     );
   }
   function ciIsRegularMatch(match, round){
-    return Boolean(match && !match.friendly && !match.playoff && !match.clubWorldCup && !match.nationalCup && !ciIsSpecialRound(round));
+    return Boolean(match && !match.friendly && !match.playoff && !match.clubWorldCup && !match.nationalCup && !match.libertadores && !match.championsLeague && !ciIsSpecialRound(round));
   }
   function ciPairKey(match){
     if(!match) return '';
@@ -166,12 +166,13 @@
     if(typeof generateFixturesForDivisions !== 'function' || !seed?.clubs?.length) return [];
     const season=Math.max(1,Math.round(ciNumber(state?.seasonNumber,1)));
     const year=Math.round(ciNumber(state?.seasonYear,0)) || (typeof seasonYearForNumber === 'function' ? seasonYearForNumber(season) : new Date().getUTCFullYear());
+    const fixtureSeedIndex=typeof normalizeLeagueFixtureSeedIndex === 'function' ? normalizeLeagueFixtureSeedIndex(state?.leagueFixtureSeedIndex) : null;
     const cached=ciCanonicalCache.get(state);
-    if(cached && Number(cached.season)===season && Number(cached.year)===year && Array.isArray(cached.rounds)) return ciClone(cached.rounds);
+    if(cached && Number(cached.season)===season && Number(cached.year)===year && cached.fixtureSeedIndex===fixtureSeedIndex && Array.isArray(cached.rounds)) return ciClone(cached.rounds);
     const divisions=typeof divisionOrderList === 'function' ? divisionOrderList() : (seed?.divisions || []);
     try{
-      const generated=generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year }) || [];
-      ciCanonicalCache.set(state,{season,year,rounds:ciClone(generated)});
+      const generated=generateFixturesForDivisions(seed.clubs, divisions, { seasonYear:year, fixtureSeedIndex }) || [];
+      ciCanonicalCache.set(state,{season,year,fixtureSeedIndex,rounds:ciClone(generated)});
       return generated;
     }catch(error){
       console.error('V8.85: no se pudo generar el calendario canónico de la temporada actual', error);
@@ -442,7 +443,7 @@
   function ciPlayedFrontier(state,historyMaps){
     const maxByDivision=new Map();
     const visit=match => {
-      if(!match?.played || match?.nationalCup || match?.clubWorldCup || match?.playoff || match?.friendly) return;
+      if(!match?.played || match?.nationalCup || match?.clubWorldCup || match?.libertadores || match?.championsLeague || match?.playoff || match?.friendly) return;
       const round=ciLeagueRoundNumber(match);
       const division=String(match.divisionId || '');
       if(round>0) maxByDivision.set(division,Math.max(round,maxByDivision.get(division)||0));
@@ -652,6 +653,15 @@
     const canonicalRounds=ciCanonicalRegular(state);
     const canonicalMaps=ciCanonicalMaps(canonicalRounds);
     const regularRepair=ciRestoreMissingRegularMatches(state,canonicalRounds,historyMaps,referenceDate);
+    let nationalCupVerification=null;
+    if(state===game && typeof verifyNationalCupCheckpoints === 'function'){
+      try{
+        nationalCupVerification=verifyNationalCupCheckpoints({ silent:true, source:'calendar_integrity_v966' });
+        if(typeof advanceNationalCupsIfNeeded === 'function' && advanceNationalCupsIfNeeded()){
+          nationalCupVerification.phaseChange=verifyNationalCupCheckpoints({ silent:true, source:'calendar_integrity_phase_change_v966' });
+        }
+      }catch(error){ console.warn('V9.66: verificación de copas nacionales omitida',error); }
+    }
     const cupRepair=ciRestoreNationalCupStateMatches(state,historyMaps);
     if(state===game && typeof ensureClubWorldCupCurrentSeason === 'function'){
       try{ ensureClubWorldCupCurrentSeason({source:'calendar_integrity_v885'}); }catch(error){ console.warn('V8.85: revisión Mundial de Clubes omitida',error); }
@@ -687,6 +697,8 @@
       canonicalLeagueMatches:regularRepair.canonicalCount,
       canonicalLeagueRounds:regularRepair.canonicalRounds,
       resetFutureDates:regularRepair.resetFutureDates || 0,
+      nationalCupCheckpoints:Number(nationalCupVerification?.ran || 0),
+      nationalCupRepairs:Number(nationalCupVerification?.repaired || 0),
       restoredMissing:regularRepair.restoredCount+(cupRepair.restored || []).length,
       restoredPlayed:duplicate.historyRestored+reconciled+regularRepair.restoredPlayed+cupRepair.restoredPlayed,
       duplicatesRemoved:duplicate.duplicatesRemoved,
@@ -695,7 +707,7 @@
       remainingPastDue,
       checkedAt:new Date().toISOString()
     };
-    const changed=summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled||summary.resetFutureDates;
+    const changed=summary.restoredMissing||summary.restoredPlayed||summary.duplicatesRemoved||summary.rescheduled||summary.resetFutureDates||summary.nationalCupRepairs;
     state.calendarIntegrityState=state.calendarIntegrityState && typeof state.calendarIntegrityState==='object' ? state.calendarIntegrityState : {};
     state.calendarIntegrityState.version=CALENDAR_INTEGRITY_VERSION;
     state.calendarIntegrityState.lastCheckDate=referenceDate;
@@ -772,6 +784,27 @@
       ciAuditState(normalized,{referenceDate:normalized.currentDate || '',reason:'save_migration_v885'});
       return normalized;
     };
+  }
+  if(typeof loadLocal === 'function' && !loadLocal.__nationalCupCheckpointV966){
+    const originalLoadLocalV966=loadLocal;
+    const wrappedLoadLocalV966=async function(...args){
+      const loaded=await originalLoadLocalV966.apply(this,args);
+      if(!loaded || !game || typeof verifyNationalCupCheckpoints !== 'function') return loaded;
+      try{
+        const verification=verifyNationalCupCheckpoints({ silent:false, source:'load_local_v966' });
+        const phaseChanged=typeof advanceNationalCupsIfNeeded === 'function' ? advanceNationalCupsIfNeeded() : false;
+        const phaseVerification=phaseChanged ? verifyNationalCupCheckpoints({ silent:true, source:'load_local_phase_change_v966' }) : null;
+        const changed=Boolean(verification?.repaired || verification?.results?.some(item=>item?.created) || phaseChanged || phaseVerification?.repaired);
+        if(changed){
+          game._needsAutosave=true;
+          if(typeof renderAll === 'function') renderAll();
+          if(typeof saveLocal === 'function') Promise.resolve(saveLocal(true)).catch(error=>console.warn('V9.66: no se pudo guardar la reparación de copas nacionales.',error));
+        }
+      }catch(error){ console.warn('V9.66: verificación de copas al cargar omitida',error); }
+      return loaded;
+    };
+    wrappedLoadLocalV966.__nationalCupCheckpointV966=true;
+    loadLocal=wrappedLoadLocalV966;
   }
   if(typeof processDailyCalendarState === 'function'){
     const originalProcessDailyCalendarState=processDailyCalendarState;

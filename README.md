@@ -1,9 +1,15 @@
-# V9.52 · Calendario con escudos estables
+# V9.72 · Premio de primera victoria retroactivo
 
-Versión construida sobre V9.51.
+Esta versión parte de V9.71 y corrige la migración de la recompensa de 5.000 puntos de habilidad por victoria.
 
-El calendario semanal de Inicio ahora muestra el escudo del rival en cada partido programado o disputado.
+## Cambio principal
 
-Se corrigió el parpadeo de escudos durante los avances y la simulación viva mediante tres medidas: memoria de la ruta válida de cada escudo, conservación de los nodos de imagen al actualizar una vista y actualización del escudo lateral solo cuando cambia realmente el club.
+- Las carreras ya iniciadas antes de V9.71 también pueden cobrar los 5.000 puntos.
+- Si la partida tenía victorias previas pero nunca recibió realmente el premio, la recompensa queda pendiente.
+- Se acredita en la próxima victoria oficial después de actualizar.
+- Si el premio ya fue acreditado de verdad en V9.71, no se duplica.
+- Los amistosos siguen sin contar.
 
-Ver `AJUSTES-V9.52.md` para el detalle completo.
+No se modifica el Worker.
+
+Ver `AJUSTES-V9.72.md`.

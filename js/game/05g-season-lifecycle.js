@@ -115,16 +115,12 @@ function computeSeasonMovements(){
   return movements;
 }
 function clubWorldCupQualifierCountForDivision(divisionId){
-  const division = (seed?.divisions || []).find(d => String(d.id || '') === String(divisionId || ''));
-  if(!division) return 0;
-  const country = normalizeScheduleText(division.country || '');
-  const order = Number(division.order || 0);
-  const rule = (CLUB_WORLD_CUP_CONFIG.qualifiers || []).find(item => normalizeScheduleText(item.country || '') === country && Number(item.order || 0) === order);
-  return Math.max(0, Number(rule?.count || 0));
+  const division=(seed?.divisions || []).find(d => String(d.id || '') === String(divisionId || ''));
+  if(!division || Number(division.order || 0) !== 1) return 0;
+  const qualified=typeof clubWorldCupQualifiedClubIdsForDisplay === 'function' ? clubWorldCupQualifiedClubIdsForDisplay() : new Set();
+  return (seed?.clubs || []).filter(club => String(club?.divisionId || '') === String(divisionId || '') && qualified.has(Number(club?.id || 0))).length;
 }
 function clubWorldCupStandingStatusClass(divisionId, index){
-  const quota = clubWorldCupQualifierCountForDivision(divisionId);
-  if(quota > 0 && Number(index || 0) < quota) return 'continental-row';
   return '';
 }
 function argentineStandingStatusClass(divisionId, index){
@@ -1627,6 +1623,8 @@ function startNextSeason(selectedClubId, options={}){
   }
   if(typeof archiveManagerPlayerStatsClub === 'function') archiveManagerPlayerStatsClub(game.selectedClubId, { final:true });
   archiveClubWorldCupEditionForState(game, { allowIncomplete:true });
+  if(typeof archiveLibertadoresEditionForState === 'function') archiveLibertadoresEditionForState(game, { allowIncomplete:true });
+  if(typeof archiveChampionsLeagueEditionForState === 'function') archiveChampionsLeagueEditionForState(game, { allowIncomplete:true });
   const retiredCount = game.seasonTransition?.retirements?.length || 0;
   const previousClubId = currentClubId;
   const nextClubId = requestedClubId;
@@ -1656,6 +1654,10 @@ function startNextSeason(selectedClubId, options={}){
     transferBudgetAddHistory('season_bonus', `Bonus de directiva: ${(transferUnlock.reasons || []).map(r => r.reason).filter(Boolean).join(' + ') || 'temporada anterior'}`, 0, transferUnlock.rate);
   }
   game.seasonYear = seasonYearForNumber(game.seasonNumber);
+  game.leagueFixtureSeedIndex = typeof leagueFixtureSeedIndexForSeasonNumber === 'function' ? leagueFixtureSeedIndexForSeasonNumber(game.seasonNumber) : null;
+  game.leagueFixtureSeedVersion = game.leagueFixtureSeedIndex === null ? 'legacy-v969' : (typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds');
+  game.leagueFixtureSeedHistory = game.leagueFixtureSeedHistory && typeof game.leagueFixtureSeedHistory === 'object' && !Array.isArray(game.leagueFixtureSeedHistory) ? game.leagueFixtureSeedHistory : {};
+  if(game.leagueFixtureSeedIndex !== null) game.leagueFixtureSeedHistory[game.seasonNumber] = game.leagueFixtureSeedIndex;
   if(typeof ensureLeagueSeasonEconomyForSeason === 'function') ensureLeagueSeasonEconomyForSeason(game, game.seasonNumber, { force:true, reason:'season_start' });
   game.calendarVersion = SEASON_CALENDAR_VERSION;
   game.seasonInitialBudget = Math.round(Number(game.budget || 0));
@@ -1666,6 +1668,8 @@ function startNextSeason(selectedClubId, options={}){
   game.argentinaPlayoffs = null;
   game.clubWorldCup = null;
   game.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState({}, game.seasonNumber, game.seasonYear) : null;
+  game.libertadores = typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState({}, game.seasonNumber, game.seasonYear) : null;
+  game.championsLeague = typeof normalizeChampionsLeagueState === 'function' ? normalizeChampionsLeagueState({}, game.seasonNumber, game.seasonYear) : null;
   game.seasonEndModalShown = false;
   game.seasonPhase = 'preseason';
   game.phaseTurn = 0;
@@ -1674,7 +1678,7 @@ function startNextSeason(selectedClubId, options={}){
   game.preseasonFriendliesPlayed = 0;
   game.pendingFriendlyOpponentId = 0;
   game.matchdayIndex = 0;
-  game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:game.seasonYear });
+  game.fixtures = generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:game.seasonYear, fixtureSeedIndex:game.leagueFixtureSeedIndex });
   const previousDate = validIsoDate(game.currentDate) ? game.currentDate : seasonEndDateForYear(seasonYearForNumber((game.seasonNumber || 2) - 1));
   const nextSeasonStart = firstAdvanceDateForSeason(game.seasonYear);
   game.currentDate = validIsoDate(previousDate) && daysBetweenIsoDates(previousDate, nextSeasonStart) <= 0 ? nextSeasonStart : addDaysToIsoDate(previousDate, 1);

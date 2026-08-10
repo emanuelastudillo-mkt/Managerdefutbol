@@ -34,7 +34,7 @@ const SPONSORS_DATABASE_URL = configValue('data.sponsorsUrl', 'data/sponsors.jso
 const EMPLOYEES_DATABASE_URL = configValue('data.employeesUrl', 'data/empleados.json');
 const INSTALLATIONS_DATABASE_URL = configValue('data.installationsUrl', 'data/instalaciones.json?v=8.74');
 const EVENTS_DATABASE_URL = configValue('data.eventsUrl', 'data/eventos.json?v=8.74');
-const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=8.74');
+const SPECIAL_SKILLS_DATABASE_URL = configValue('data.specialSkillsUrl', 'data/habilidades_especiales.json?v=9.60');
 const MANAGER_ACHIEVEMENTS_DATABASE_URL = configValue('data.managerAchievementsUrl', 'data/hitos_manager.json?v=8.74');
 const MANAGER_CHALLENGES_DATABASE_URL = configValue('data.retosManagerUrl', 'data/retos_manager.json');
 const STADIUMS_DATABASE_CANDIDATES = configValue('data.estadiosUrls', [
@@ -76,6 +76,16 @@ const SEASON_START_YEAR = configNumber('calendario.anioInicial', 2026, 1900, 220
 const SEASON_START_MONTH = configNumber('calendario.mesInicioTemporada', 1, 1, 12);
 const SEASON_START_DAY = configNumber('calendario.diaInicioTemporada', 1, 1, 31);
 const SEASON_HOME_AWAY = configBoolean('calendario.ligaIdaYVuelta', true);
+const LEAGUE_FIXTURE_SEEDS_ENABLED = configBoolean('calendario.fixtureSemillasActivas', true);
+const LEAGUE_FIXTURE_SEEDS_RAW = configValue('calendario.fixtureSemillas', [
+  104729,130363,155921,181081,206369,231731,257053,282377,307691,333017,
+  358349,383681,409021,434353,459691,485021,510361,535697,561019,586367
+]);
+const LEAGUE_FIXTURE_SEEDS = Object.freeze((Array.isArray(LEAGUE_FIXTURE_SEEDS_RAW) ? LEAGUE_FIXTURE_SEEDS_RAW : [])
+  .map(value => Math.abs(Math.round(Number(value || 0))) >>> 0)
+  .filter(value => value > 0)
+  .slice(0,20));
+const LEAGUE_FIXTURE_SEED_VERSION = 'v970-20-seeds';
 const FAST_BOT_SIMULATION_ENABLED = configBoolean('calendario.simulacionRapidaBots', true);
 const NATIONAL_CUPS_ENABLED = configBoolean('calendario.copasNacionalesActivas', true);
 const LEAGUE_MATCH_DAY_RULES_RAW = configValue('calendario.diasPorLiga', []);
@@ -120,9 +130,9 @@ const LEAGUE_ROUND_INTERVAL_DAYS = configNumber('calendario.diasEntreFechasLiga'
 const MIDSEASON_BREAK_AFTER_ROUND = configNumber('calendario.fechaPausaLuegoDe', 17, 0, 80);
 const MIDSEASON_BREAK_DAYS = configNumber('calendario.diasVacacionesMitadTemporada', 28, 0, 90);
 const SEASON_CALENDAR_VERSION = 'annual-365-daily-weekly-split-break-v5-national-cups';
-const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 10000, 0);
-const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 10000, 0);
-const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 3400, 800);
+const ADVANCE_LOCK_MS = configNumber('calendario.bloqueoEntreAvancesMs', 3000, 0);
+const DAY_ADVANCE_LOCK_MS = configNumber('calendario.bloqueoAvanceDiaMs', 3000, 0);
+const TURN_TRANSITION_MS = configNumber('calendario.transicionAvanceMs', 2400, 800);
 const NOTICE_DURATION_MS = configNumber('ui.duracionAvisoMs', 5200, 1000);
 const ACTION_FEEDBACK_LOADING_MS = configNumber('ui.accionesFeedbackCargaMs', 750, 250, 3000);
 const ACTION_FEEDBACK_RESULT_MS = configNumber('ui.accionesFeedbackResultadoMs', 900, 300, 4000);
@@ -237,6 +247,13 @@ const PRESEASON_TURNS = Math.ceil(configNumber('calendario.diasPretemporada', 30
 const POSTSEASON_TURNS_CONFIG = Math.ceil(configNumber('calendario.diasPostemporada', 0, 0) / DAYS_PER_ADVANCE);
 const MAX_PRESEASON_FRIENDLIES = configNumber('calendario.amistososMaximosPretemporada', 5, 0);
 const APP_VERSION = configValue('version', 'V9.04');
+function syncVisibleGameVersion(){
+  if(typeof document === 'undefined') return;
+  const node = document.getElementById('gameVersionLabel');
+  if(node) node.textContent = `Juego de fútbol online · ${APP_VERSION}`;
+  document.documentElement?.setAttribute('data-game-version', String(APP_VERSION || ''));
+}
+syncVisibleGameVersion();
 
 const RANKING_APPS_SCRIPT_URL = configValue('ranking.appsScriptUrl', '');
 const RANKING_TOKEN = configValue('ranking.token', '');

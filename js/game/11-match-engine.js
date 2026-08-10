@@ -71,7 +71,7 @@ function makeInjurySubstitutions(clubId, tactic, injuries, existingSubs=[]){
   return events;
 }
 function applyResultToTables(match, hg, ag){
-  if(match?.playoff || match?.knockout || match?.clubWorldCup) return;
+  if(match?.playoff || match?.knockout || match?.clubWorldCup || match?.libertadores || match?.championsLeague) return;
   const h = game.standings[match.homeId];
   const a = game.standings[match.awayId];
   h.pj++; a.pj++;

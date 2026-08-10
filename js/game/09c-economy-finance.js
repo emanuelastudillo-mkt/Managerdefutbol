@@ -746,7 +746,7 @@ function leagueSeasonEconomyForDivision(divisionId, season=game?.seasonNumber ||
   return entry?.divisions?.[String(divisionId || '')] || null;
 }
 function leagueEconomyDivisionIdForMatch(match){
-  if(match?.clubWorldCup || String(match?.divisionId || '') === 'club-world-cup') return '';
+  if(match?.clubWorldCup || match?.libertadores || match?.championsLeague || String(match?.divisionId || '') === 'club-world-cup') return '';
   const explicit = String(match?.divisionId || '').trim();
   if(explicit && (seed?.divisions || []).some(division => String(division.id) === explicit)) return explicit;
   const club = (seed?.clubs || []).find(item => Number(item.id) === Number(game?.selectedClubId));
@@ -770,7 +770,7 @@ function leagueResultPaymentForMatch(match, gf, gc){
 }
 function applyEconomyResult(match){
   noteOwnMatchForMonthlyExpenses(match);
-  if(match?.clubWorldCup || match?.nationalCup || String(match?.divisionId || '') === 'club-world-cup') return 0;
+  if(match?.clubWorldCup || match?.nationalCup || (match?.libertadores && match?.neutralVenue) || (match?.championsLeague && match?.neutralVenue) || String(match?.divisionId || '') === 'club-world-cup') return 0;
   const isHome = Number(match.homeId) === Number(game.selectedClubId);
   const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
   const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);

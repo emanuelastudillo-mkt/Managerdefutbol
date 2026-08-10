@@ -1420,6 +1420,102 @@ function standingsDisplaySubtitle(){
   if(!historical) return '';
   return `<p class="muted small">Tabla histórica guardada al cierre de la temporada ${Number(historical.season || 0)}.</p>`;
 }
+function standingsSeasonContext(){
+  const historical = selectedStandingsHistoryEntry();
+  return {
+    season:Number(historical?.season || game?.seasonNumber || 1),
+    year:Number(historical?.year || game?.seasonYear || 0),
+    historical:Boolean(historical)
+  };
+}
+function standingsCountryKey(value){
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+}
+function standingsContinentalRule(division){
+  if(!division || Number(division.order || 0) !== 1) return null;
+  const country = String(division.country || division.pais || '');
+  const key = standingsCountryKey(country);
+  const libertadoresFallback = { argentina:8, brasil:8, chile:4 };
+  const championsFallback = { inglaterra:8, italia:6, espana:6, rumania:2 };
+  if(Object.prototype.hasOwnProperty.call(libertadoresFallback, key)){
+    const configured = typeof LIBERTADORES_CONFIG !== 'undefined' ? Number(LIBERTADORES_CONFIG.slots?.[country] || 0) : 0;
+    return { id:'libertadores', label:'Libertadores', fullLabel:'Copa Libertadores', quota:Math.max(0, configured || libertadoresFallback[key]), rowClass:'libertadores-qualification-row', pillClass:'libertadores' };
+  }
+  if(Object.prototype.hasOwnProperty.call(championsFallback, key)){
+    const configured = typeof CHAMPIONS_LEAGUE_CONFIG !== 'undefined' ? Number(CHAMPIONS_LEAGUE_CONFIG.slots?.[country] || 0) : 0;
+    return { id:'champions-league', label:'Champions', fullLabel:'Champions League', quota:Math.max(0, configured || championsFallback[key]), rowClass:'champions-qualification-row', pillClass:'champions' };
+  }
+  return null;
+}
+function standingsChampionHistoryEntry(season, predicate){
+  const entries = Array.isArray(game?.competitionChampionsHistory?.entries) ? game.competitionChampionsHistory.entries : [];
+  return entries.slice().reverse().find(entry => Number(entry?.season || 0) === Number(season || 0) && predicate(entry)) || null;
+}
+function standingsCurrentInternationalChampion(rule, context){
+  if(!rule || context.historical) return 0;
+  if(rule.id === 'libertadores') return Number(game?.libertadores?.championId || 0);
+  if(rule.id === 'champions-league') return Number(game?.championsLeague?.championId || 0);
+  return 0;
+}
+function standingsProjectedContinentalQualifiers(division, tableRows=[]){
+  const rule = standingsContinentalRule(division);
+  if(!rule?.quota) return { rule:null, clubIds:new Set() };
+  const context = standingsSeasonContext();
+  const countryKey = standingsCountryKey(division.country || division.pais || '');
+  const selected = [];
+  const add = clubId => {
+    const id = Number(clubId || 0);
+    if(!id || selected.includes(id) || selected.length >= rule.quota) return;
+    selected.push(id);
+  };
+  let internationalChampion = standingsCurrentInternationalChampion(rule, context);
+  if(!internationalChampion){
+    const internationalEntry = standingsChampionHistoryEntry(context.season, entry => {
+      const id = String(entry?.competitionId || '');
+      const name = String(entry?.competitionName || '');
+      return rule.id === 'libertadores' ? (id === 'copa-libertadores' || /libertadores/i.test(name)) : (id === 'champions-league' || /champions\s*league/i.test(name));
+    });
+    internationalChampion = Number(internationalEntry?.championId || 0);
+  }
+  const internationalCountry = standingsCountryKey((seed?.clubs || []).find(club => Number(club?.id || 0) === internationalChampion)?.country || '');
+  if(internationalCountry === countryKey) add(internationalChampion);
+  const cupChampion = standingsChampionHistoryEntry(context.season, entry => {
+    if(String(entry?.type || '') !== 'national_cup') return false;
+    const championClub = (seed?.clubs || []).find(club => Number(club?.id || 0) === Number(entry?.championId || 0));
+    return standingsCountryKey(championClub?.country || championClub?.pais || '') === countryKey;
+  });
+  add(cupChampion?.championId);
+  (tableRows || []).forEach(row => add(row?.clubId));
+  return { rule, clubIds:new Set(selected.slice(0, rule.quota)) };
+}
+function standingsQualificationInfo(division, row, index, continentalProjection){
+  const items = [];
+  const classes = [];
+  const worldCupInfo = typeof clubWorldCupQualificationInfoForClub === 'function' ? clubWorldCupQualificationInfoForClub(Number(row?.clubId || 0)) : null;
+  if(worldCupInfo){
+    items.push({ label:'Mundial', title:`${worldCupInfo.qualified ? 'Clasificado' : 'Zona provisional'} al Mundial de Clubes ${worldCupInfo.year}${worldCupInfo.source ? ` · ${worldCupInfo.source}` : ''}`, className:'world-cup' });
+  }
+  if(continentalProjection?.rule && continentalProjection.clubIds?.has(Number(row?.clubId || 0))){
+    items.push({ label:continentalProjection.rule.label, title:`Clasifica a ${continentalProjection.rule.fullLabel}`, className:continentalProjection.rule.pillClass });
+    classes.push(continentalProjection.rule.rowClass);
+  }
+  return { items, classes, title:items.map(item => item.title).join(' · ') };
+}
+function standingsQualificationPills(items=[]){
+  if(!items.length) return '<span class="standings-no-qualification">—</span>';
+  return `<span class="standings-qualification-pills">${items.map(item => `<span class="standings-qualification-pill ${escapeHtml(item.className)}" title="${escapeHtml(item.title)}">${escapeHtml(item.label)}</span>`).join('')}</span>`;
+}
+function standingsQualificationLegend(division, continentalProjection, worldCupQuota){
+  const pills = [];
+  if(continentalProjection?.rule?.quota) pills.push(`<span class="standings-legend-item ${escapeHtml(continentalProjection.rule.pillClass)}">${escapeHtml(continentalProjection.rule.fullLabel)} · ${continentalProjection.rule.quota} cupos</span>`);
+  if(worldCupQuota > 0){
+    const targetYear=typeof clubWorldCupNextEditionYear === 'function' ? clubWorldCupNextEditionYear(Number(game?.seasonYear || currentSeasonYear()), true) : Number(game?.seasonYear || 0);
+    pills.push(`<span class="standings-legend-item world-cup">Mundial de Clubes ${targetYear} · ${worldCupQuota} ${worldCupQuota === 1 ? 'club señalado' : 'clubes señalados'}</span>`);
+  }
+  if(!pills.length) return '';
+  const note = continentalProjection?.rule?.quota ? '<span class="muted small">La copa nacional y el campeón vigente ocupan cupos de su país cuando corresponde.</span>' : '';
+  return `<div class="standings-qualification-legend">${pills.join('')}${note}</div>`;
+}
 
 
 function competitionsNavMarkup(active='standings'){
@@ -1430,6 +1526,8 @@ function competitionsNavMarkup(active='standings'){
     <button type="button" id="btnCompetitionPlayerRanking" class="${current === 'player-ranking' ? 'primary' : 'ghost'}">Ranking de jugadores</button>
     <button type="button" id="btnCompetitionPlayerPalmares" class="${current === 'player-palmares' ? 'primary' : 'ghost'}">Palmarés de jugadores</button>
     <button type="button" id="btnCompetitionNationalCups" class="${current === 'national-cups' ? 'primary' : 'ghost'}">Copas nacionales</button>
+    <button type="button" id="btnCompetitionLibertadores" class="${current === 'libertadores' ? 'primary' : 'ghost'}">Libertadores</button>
+    <button type="button" id="btnCompetitionChampionsLeague" class="${current === 'champions-league' ? 'primary' : 'ghost'}">Champions League</button>
     <button type="button" id="btnCompetitionClubRanking" class="${current === 'club-ranking' ? 'primary' : 'ghost'}">Ranking FIFA</button>
     <button type="button" id="btnCompetitionChampions" class="${current === 'champions' ? 'primary' : 'ghost'}">Campeones</button>
   </div>`;
@@ -1440,6 +1538,8 @@ function bindCompetitionsNav(){
   $('btnCompetitionPlayerRanking')?.addEventListener('click', () => { selectedCompetitionView = 'player-ranking'; renderStandings(); });
   $('btnCompetitionPlayerPalmares')?.addEventListener('click', () => { selectedCompetitionView = 'player-palmares'; renderStandings(); });
   $('btnCompetitionNationalCups')?.addEventListener('click', () => { selectedCompetitionView = 'national-cups'; renderStandings(); });
+  $('btnCompetitionLibertadores')?.addEventListener('click', () => { selectedCompetitionView = 'libertadores'; renderStandings(); });
+  $('btnCompetitionChampionsLeague')?.addEventListener('click', () => { selectedCompetitionView = 'champions-league'; renderStandings(); });
   $('btnCompetitionClubRanking')?.addEventListener('click', () => { selectedCompetitionView = 'club-ranking'; renderStandings(); });
   $('btnCompetitionChampions')?.addEventListener('click', () => { selectedCompetitionView = 'champions'; renderStandings(); });
 }
@@ -1508,11 +1608,13 @@ function renderChampionsHistory(){
     const rows = items.map(entry => {
       const extra = entry.type === 'club_world_cup'
         ? `${entry.runnerUpId ? `Subcampeón: ${escapeHtml(entry.runnerUpName || clubName(entry.runnerUpId))}` : ''}${entry.thirdPlaceId ? `${entry.runnerUpId ? ' · ' : ''}3°: ${escapeHtml(entry.thirdPlaceName || clubName(entry.thirdPlaceId))}` : ''}`
-        : '';
+        : entry.type === 'international_cup' && entry.runnerUpId
+          ? `Subcampeón: ${escapeHtml(entry.runnerUpName || clubName(entry.runnerUpId))}`
+          : '';
       return `<tr>
         <td>${escapeHtml(entry.competitionName)}</td>
         <td>${clubLink(entry.championId)}</td>
-        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : entry.type === 'national_cup' ? 'Copa nacional' : entry.type === 'national_supercup' ? 'Supercopa' : 'Liga'}</td>
+        <td>${entry.type === 'club_world_cup' ? 'Mundial de Clubes' : entry.type === 'international_cup' ? 'Copa internacional' : entry.type === 'national_cup' ? 'Copa nacional' : entry.type === 'national_supercup' ? 'Supercopa' : 'Liga'}</td>
         <td class="muted small">${extra || '—'}</td>
       </tr>`;
     }).join('');
@@ -1520,13 +1622,25 @@ function renderChampionsHistory(){
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
-      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, supercopas y Mundial de Clubes por temporada.</p></div>
+      <div><h2>Competiciones</h2><p class="tagline">Histórico de palmarés: ligas, copas nacionales, Libertadores, Champions League, supercopas y Mundial de Clubes por temporada.</p></div>
       ${competitionsNavMarkup('champions')}
     </div>
-    <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar el Mundial de Clubes.</p></div>'}</div>`;
+    <div class="stack">${blocks || '<div class="card"><p class="muted">Todavía no hay campeones guardados. El palmarés se completa al cerrar temporadas y al finalizar las competiciones internacionales.</p></div>'}</div>`;
   bindCompetitionsNav();
 }
 function renderStandings(){
+  if(String(selectedCompetitionView || 'standings') === 'libertadores'){
+    view.innerHTML = typeof libertadoresCompetitionMarkup === 'function' ? libertadoresCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de Copa Libertadores no está disponible.</p></div>';
+    bindCompetitionsNav();
+    if(typeof bindLibertadoresCompetition === 'function') bindLibertadoresCompetition();
+    return;
+  }
+  if(String(selectedCompetitionView || 'standings') === 'champions-league'){
+    view.innerHTML = typeof championsLeagueCompetitionMarkup === 'function' ? championsLeagueCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de Champions League no está disponible.</p></div>';
+    bindCompetitionsNav();
+    if(typeof bindChampionsLeagueCompetition === 'function') bindChampionsLeagueCompetition();
+    return;
+  }
   if(String(selectedCompetitionView || 'standings') === 'national-cups'){
     view.innerHTML = typeof nationalCupsCompetitionMarkup === 'function' ? nationalCupsCompetitionMarkup() : '<div class="card"><p class="muted">El módulo de copas nacionales no está disponible.</p></div>';
     bindCompetitionsNav();
@@ -1556,19 +1670,18 @@ function renderStandings(){
     const worldCupQuota = typeof clubWorldCupQualifierCountForDivision === 'function'
       ? clubWorldCupQualifierCountForDivision(division.id)
       : 0;
+    const continentalProjection = standingsProjectedContinentalQualifiers(division, tableRows);
     const rows = tableRows.map((s,i)=>{
-      const statusClass = standingsStatusClass(division.id, i, tableRows.length);
-      const ownClass = s.clubId===game.selectedClubId ? 'own-club-row' : '';
-      const qualifiesForWorldCup = worldCupQuota > 0 && i < worldCupQuota;
-      const qualificationTitle = qualifiesForWorldCup ? 'Clasifica al Mundial de Clubes' : '';
-      return `<tr class="${ownClass} ${statusClass}"${qualificationTitle ? ` title="${qualificationTitle}"` : ''}>
-        <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td>
+      const movementClass = standingsStatusClass(division.id, i, tableRows.length);
+      const qualification = standingsQualificationInfo(division, s, i, continentalProjection);
+      const ownClass = Number(s.clubId) === Number(game.selectedClubId) ? 'own-club-row' : '';
+      const rowClasses = [ownClass, movementClass, ...qualification.classes].filter(Boolean).join(' ');
+      return `<tr class="${rowClasses}"${qualification.title ? ` title="${escapeHtml(qualification.title)}"` : ''}>
+        <td><strong>${i+1}</strong></td><td>${clubLink(s.clubId)}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.pe}</td><td>${s.pp}</td><td>${s.gf}</td><td>${s.gc}</td><td>${s.dg}</td><td><strong>${s.pts}</strong></td><td class="standings-qualification-cell">${standingsQualificationPills(qualification.items)}</td>
       </tr>`;
     }).join('');
-    const qualificationBadge = worldCupQuota > 0
-      ? `<span class="pill">Zona azul · ${worldCupQuota} ${worldCupQuota === 1 ? 'cupo' : 'cupos'} al Mundial</span>`
-      : '';
-    return `<div class="card"><div class="row"><h3>${escapeHtml(division.name)}</h3>${qualificationBadge}</div><div class="table-wrap"><table><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    const qualificationLegend = standingsQualificationLegend(division, continentalProjection, worldCupQuota);
+    return `<div class="card standings-division-card"><div class="row standings-division-head"><h3>${escapeHtml(division.name)}</h3>${qualificationLegend}</div><div class="table-wrap"><table class="standings-table-with-qualification"><thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th><th>Clasificación</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join('');
   view.innerHTML = `
     <div class="row section-title">
@@ -1583,10 +1696,6 @@ function renderStandings(){
 
 
 function standingsStatusClass(divisionId, index, total){
-  if(typeof clubWorldCupStandingStatusClass === 'function'){
-    const cupClass = clubWorldCupStandingStatusClass(divisionId, index);
-    if(cupClass) return cupClass;
-  }
   if(typeof argentineStandingStatusClass === 'function'){
     const argClass = argentineStandingStatusClass(divisionId, index);
     if(argClass) return argClass;

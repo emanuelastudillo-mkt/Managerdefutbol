@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.51',
+  version: 'V9.72',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -58,7 +58,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json?v=9.04',
     installationsUrl: 'data/instalaciones.json?v=9.04',
     eventsUrl: 'data/eventos.json?v=9.04',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.51',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.72',
     managerAchievementsUrl: 'data/hitos_manager.json?v=9.04',
     retosManagerUrl: 'data/retos_manager.json?v=9.04',
     estadiosUrls: ['data/estadios_argentina.json?v=9.04', 'data/estadios_chile.json?v=9.04', 'data/estadios_brasil.json?v=9.04', 'data/estadios_inglaterra.json?v=9.04', 'data/estadios_espana.json?v=9.04', 'data/estadios_italia.json?v=9.04', 'data/estadios_rumania.json?v=9.04'],
@@ -74,6 +74,14 @@ window.GAME_CONFIG = {
     diaInicioTemporada: 1,
     // La liga ahora se juega ida y vuelta. Con 18 clubes por división son 34 fechas.
     ligaIdaYVuelta: true,
+    // V9.70: cada temporada usa una de 20 semillas fijas. El ciclo vuelve a comenzar después de 20 años.
+    fixtureSemillasActivas: true,
+    fixtureSemillas: [
+      104729, 130363, 155921, 181081, 206369,
+      231731, 257053, 282377, 307691, 333017,
+      358349, 383681, 409021, 434353, 459691,
+      485021, 510361, 535697, 561019, 586367
+    ],
     diasEntreFechasLiga: 7,
     fechaPausaLuegoDe: 17,
     diasVacacionesMitadTemporada: 28,
@@ -91,18 +99,47 @@ window.GAME_CONFIG = {
     // Los partidos sin manager usan simulación rápida para reducir bloqueos.
     simulacionRapidaBots: true,
 
-    // Cooldown único tras cada avance/partido. 10000 = 10 segundos.
-    bloqueoEntreAvancesMs: 10000,
+    // Cooldown único tras cada avance/partido. V9.71: 3000 = 3 segundos.
+    bloqueoEntreAvancesMs: 3000,
     // El avance diario usa el mismo cooldown para evitar dobles flujos de calendario.
-    bloqueoAvanceDiaMs: 10000,
-    // Duración visual de la transición al avanzar días.
-    transicionAvanceMs: 3400,
+    bloqueoAvanceDiaMs: 3000,
+    // La transición queda por debajo del bloqueo para que la interfaz esté libre al cumplirse los 3 segundos.
+    transicionAvanceMs: 2400,
     diasPretemporada: 30,
     // Si queda vacío o en 0, la postemporada ocupa automáticamente los días restantes del año.
     diasPostemporada: 0,
-    // Mundial de Clubes: calendario fijo por día fijo de temporada.
-    // En años bisiestos se mantienen estos mismos días; el día adicional queda libre de competencia.
+    // Copa Libertadores: los miércoles se asignan automáticamente evitando copas nacionales y el receso.
+    libertadores: {
+      activa: true,
+      diasAntesSorteo: 7,
+      precioEntradaFinal: 3000,
+      repartoFinalPorClub: 0.50,
+      diasAntesSorteoMundial: 1
+    },
+    // Champions League: comparte estructura continental con la Libertadores y evita las copas europeas.
+    championsLeague: {
+      activa: true,
+      diasAntesSorteo: 7,
+      precioEntradaFinal: 4500,
+      repartoFinalPorClub: 0.50,
+      diasAntesSorteoMundial: 1
+    },
+    // Mundial de Clubes: edición cuatrienal, con ranking de las cuatro copas continentales más recientes.
+    // Cada grupo recibe un club de Champions, uno de Libertadores y dos invitados.
     mundialClubes: {
+      anioBase: 2025,
+      cadaAnios: 4,
+      edicionesRanking: 4,
+      cuposChampions: 8,
+      cuposLibertadores: 8,
+      cuposInvitados: 16,
+      rankingVictoria: 3,
+      rankingEmpate: 1,
+      rankingPenales: 1,
+      rankingOctavos: 2,
+      rankingCuartos: 3,
+      rankingSemifinal: 4,
+      rankingFinal: 5,
       diaSorteo: 295,
       precioEntrada: 1200,
       precioEntradaFinal: 3500,
@@ -126,7 +163,15 @@ window.GAME_CONFIG = {
       // La moral utiliza el sistema normal de resultados; estos valores agregan el efecto sobre la cohesión.
       cohesionVictoria: 4,
       cohesionEmpate: 2,
-      cohesionDerrota: -2
+      cohesionDerrota: -2,
+      // Programación desde los días vacíos del calendario. Mañana y pasado mañana quedan excluidos.
+      anticipacionMinimaDias: 3,
+      // Ninguno de los dos clubes puede tener otro partido dentro de este margen, antes o después.
+      margenPartidosDias: 2,
+      // Rivales sorteados y persistentes para cada fecha consultada.
+      opcionesPorFecha: 5,
+      // La búsqueda usa un orden aleatorio determinista y se detiene al completar las opciones.
+      intentosMaximosRivales: 70
     }
   },
 
@@ -143,6 +188,18 @@ window.GAME_CONFIG = {
     puntosVictoriaLiga: 2.5,
     puntosVictoriaCopaNacional: 7,
     puntosVictoriaSupercopa: 12,
+    puntosVictoriaLibertadoresGrupos: 10,
+    puntosVictoriaLibertadores16avos: 14,
+    puntosVictoriaLibertadoresOctavos: 18,
+    puntosVictoriaLibertadoresCuartos: 24,
+    puntosVictoriaLibertadoresSemifinal: 32,
+    puntosVictoriaLibertadoresFinal: 45,
+    puntosVictoriaChampionsGrupos: 10,
+    puntosVictoriaChampions16avos: 14,
+    puntosVictoriaChampionsOctavos: 18,
+    puntosVictoriaChampionsCuartos: 24,
+    puntosVictoriaChampionsSemifinal: 32,
+    puntosVictoriaChampionsFinal: 45,
     puntosVictoriaMundialGrupos: 22,
     puntosVictoriaMundialOctavos: 30,
     puntosVictoriaMundialCuartos: 36,
@@ -153,10 +210,76 @@ window.GAME_CONFIG = {
     puntosTituloLigaAscenso: 30,
     puntosTituloCopaNacional: 50,
     puntosTituloSupercopa: 25,
+    puntosTituloLibertadores: 140,
+    puntosTituloChampions: 140,
     puntosTituloMundial: 190,
     decaimientoTemporada: 0.82,
     decaimientoMinimoTitulos: 0.25,
     historialTemporadasMaximo: 12
+  },
+
+
+  mercadoBots: {
+    // Cada club bot recibe una estrategia por temporada. El perfil se mantiene durante todo el año.
+    activo: true,
+    intervaloRevisionLibresDias: 5,
+    intervaloRevisionComprasDias: 7,
+    clubesEvaluadosPorRevision: 14,
+    maximoLibresPorRevision: 4,
+    maximoComprasPorRevision: 5,
+    plantelMinimo: 20,
+    plantelIdeal: 25,
+    plantelMaximo: 30,
+    maximoNuevosTransferiblesPorClub: 1,
+    impuestoVentaBotPct: 0.30,
+    historialInternoMaximo: 180,
+    perfiles: {
+      normal: {
+        peso: 52,
+        reservaCajaPct: 0.34,
+        coberturaMasaSalarialAnios: 0.55,
+        maximoPorCompraSobreCajaPct: 0.23,
+        gastoTemporadaSobreCajaInicialPct: 0.58,
+        maximoAltasTemporada: 4,
+        mejoraMinimaMedia: 1,
+        ofertaMinimaClausulaPct: 0.62,
+        ofertaMaximaClausulaPct: 0.88,
+        edadMaximaObjetivo: 32,
+        prioridadLibres: 35,
+        prioridadTransferibles: 28,
+        prioridadCalidad: 70
+      },
+      bargain: {
+        peso: 31,
+        reservaCajaPct: 0.50,
+        coberturaMasaSalarialAnios: 0.72,
+        maximoPorCompraSobreCajaPct: 0.13,
+        gastoTemporadaSobreCajaInicialPct: 0.32,
+        maximoAltasTemporada: 5,
+        mejoraMinimaMedia: -1,
+        ofertaMinimaClausulaPct: 0.38,
+        ofertaMaximaClausulaPct: 0.64,
+        edadMaximaObjetivo: 35,
+        prioridadLibres: 115,
+        prioridadTransferibles: 105,
+        prioridadCalidad: 42
+      },
+      all_in: {
+        peso: 17,
+        reservaCajaPct: 0.05,
+        coberturaMasaSalarialAnios: 0.18,
+        maximoPorCompraSobreCajaPct: 0.48,
+        gastoTemporadaSobreCajaInicialPct: 0.94,
+        maximoAltasTemporada: 6,
+        mejoraMinimaMedia: 3,
+        ofertaMinimaClausulaPct: 0.82,
+        ofertaMaximaClausulaPct: 1.08,
+        edadMaximaObjetivo: 30,
+        prioridadLibres: 18,
+        prioridadTransferibles: 20,
+        prioridadCalidad: 125
+      }
+    }
   },
 
   mercadoBotsElite: {
@@ -1271,6 +1394,8 @@ window.GAME_CONFIG = {
     refrescoActividadHorasReales: 24,
     // Espera mínima antes de repetir un envío fallido en la misma fecha de juego.
     reintentoAutomaticoMinutos: 2,
+    // Margen seguro para no chocar con el límite real del Worker entre actualizaciones de una misma carrera.
+    esperaServidorSegundos: 65,
     // Controles fijos adicionales para detectar saltos largos de calendario.
     diasAutomaticosCarrera: [150, 250, 350],
     nombreRanking: 'Ranking Online'
@@ -1309,7 +1434,9 @@ window.GAME_CONFIG = {
       { codigo:'E', nombre:'Élite', minimo:45000001, maximo:100000000 },
       { codigo:'L', nombre:'Libre', minimo:0, maximo:null, libre:true }
     ],
-    // Bloqueo local compartido entre publicar y aceptar para evitar acciones repetidas.
+    // V9.71: publicar y aceptar comparten una tanda de acciones. Las primeras 10 no tienen espera.
+    accionesSinBloqueo: 10,
+    // Al completar la tanda se aplica una pausa local de 10 minutos.
     cooldownAccionMinutos: 10
   },
 

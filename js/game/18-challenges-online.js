@@ -234,6 +234,7 @@ function challengeConfig(){
     simulatorVersion:String(cfg.versionSimulador || 'challenge-sim-v2-server'),
     pageSize:Math.max(5, Math.min(100, Math.round(Number(cfg.resultadosPorPagina || 40)))),
     pollMs:Math.max(10000, Math.round(Number(cfg.actualizacionMs || 30000))),
+    freeActionsBeforeCooldown:Math.max(1, Math.min(100, Math.round(Number(cfg.accionesSinBloqueo || 10)))),
     actionCooldownMs:Math.max(60000, Math.round(Number(cfg.cooldownAccionMinutos || 10) * 60000)),
     categories,
     rankingMinimumMatches:Math.max(1, Math.round(Number(cfg.partidosMinimosRanking || 10))),
@@ -459,21 +460,49 @@ async function challengeClaimReward(categoryCode){
 }
 function challengeEndpoint(){ return normalizeRankingEndpoint(challengeConfig().endpoint); }
 function challengeToken(){ return typeof rankingStoredAuthToken === 'function' ? rankingStoredAuthToken() : ''; }
-function challengeActionCooldownStorageKey(){
+function challengeActionOwnerKey(){
   let owner = 'local';
   try{
     owner = String(localStorage.getItem('fmRankingAuthUserId') || localStorage.getItem('fmRankingAuthUser') || localStorage.getItem('fmRankingUsername') || 'local').trim() || 'local';
   }catch(_){ owner = 'local'; }
-  return `fmChallengeActionCooldownUntil:${owner}`;
+  return owner;
+}
+function challengeActionCooldownStorageKey(){ return `fmChallengeActionCooldownUntil:${challengeActionOwnerKey()}`; }
+function challengeActionQuotaStorageKey(){ return `fmChallengeActionBatchV971:${challengeActionOwnerKey()}`; }
+function challengeReadActionQuota(){
+  const limit = challengeConfig().freeActionsBeforeCooldown;
+  let parsed = null;
+  try{
+    const raw = localStorage.getItem(challengeActionQuotaStorageKey());
+    parsed = raw ? JSON.parse(raw) : null;
+  }catch(_){ parsed = null; }
+  if(!parsed || Number(parsed.version || 0) !== 971){
+    // V9.71: los cooldowns legacy de una acción no deben bloquear la nueva tanda inicial de 10.
+    try{ localStorage.removeItem(challengeActionCooldownStorageKey()); }catch(_){ /* sin almacenamiento */ }
+    parsed = { version:971, count:0 };
+    try{ localStorage.setItem(challengeActionQuotaStorageKey(), JSON.stringify(parsed)); }catch(_){ /* sin almacenamiento */ }
+  }
+  return { version:971, count:Math.max(0, Math.min(limit, Math.round(Number(parsed.count || 0)))), limit };
+}
+function challengeWriteActionQuota(count=0){
+  const limit = challengeConfig().freeActionsBeforeCooldown;
+  const state = { version:971, count:Math.max(0, Math.min(limit, Math.round(Number(count || 0)))) };
+  try{ localStorage.setItem(challengeActionQuotaStorageKey(), JSON.stringify(state)); }catch(_){ /* sin almacenamiento */ }
+  return { ...state, limit };
 }
 function challengeActionCooldownInfo(now=Date.now()){
+  // Leer primero la tanda permite migrar inmediatamente los cooldowns legacy de V9.70.
+  let quota = challengeReadActionQuota();
   let until = 0;
   try{ until = Number(localStorage.getItem(challengeActionCooldownStorageKey()) || 0); }catch(_){ until = 0; }
   if(!Number.isFinite(until) || until <= now){
-    try{ localStorage.removeItem(challengeActionCooldownStorageKey()); }catch(_){ /* sin almacenamiento */ }
-    return { active:false, until:0, remainingMs:0 };
+    if(until > 0){
+      try{ localStorage.removeItem(challengeActionCooldownStorageKey()); }catch(_){ /* sin almacenamiento */ }
+      quota = challengeWriteActionQuota(0);
+    }
+    return { active:false, until:0, remainingMs:0, quota };
   }
-  return { active:true, until, remainingMs:Math.max(0, until - now) };
+  return { active:true, until, remainingMs:Math.max(0, until - now), quota };
 }
 function challengeActionCooldownLabel(remainingMs){
   const totalSeconds = Math.max(0, Math.ceil(Number(remainingMs || 0) / 1000));
@@ -486,6 +515,15 @@ function challengeStartActionCooldown(){
   try{ localStorage.setItem(challengeActionCooldownStorageKey(), String(until)); }catch(_){ /* sin almacenamiento */ }
   challengeRefreshActionCooldown();
   return until;
+}
+function challengeRegisterSuccessfulAction(){
+  const current = challengeReadActionQuota();
+  const nextCount = Math.min(current.limit, current.count + 1);
+  const quota = challengeWriteActionQuota(nextCount);
+  const cooldownStarted = nextCount >= quota.limit;
+  if(cooldownStarted) challengeStartActionCooldown();
+  else challengeRefreshActionCooldown();
+  return { count:nextCount, limit:quota.limit, remainingFree:Math.max(0, quota.limit - nextCount), cooldownStarted };
 }
 function challengeActionUiState(defaultLabel){
   const cooldown = challengeActionCooldownInfo();
@@ -508,16 +546,17 @@ function challengeRefreshActionCooldown(){
   });
   const note = document.getElementById('challengeActionCooldownNote');
   if(note){
+    const quota = cooldown.quota || challengeReadActionQuota();
     note.textContent = cooldown.active
-      ? `Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`
-      : 'Publicar o aceptar un desafío habilita una pausa de 10 minutos antes de la siguiente acción.';
+      ? `Completaste ${quota.limit} acciones. Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`
+      : `Tanda actual: ${quota.count}/${quota.limit} acciones. Podés publicar o aceptar ${Math.max(0, quota.limit - quota.count)} desafío(s) más sin espera.`;
   }
   if(cooldown.active && activeTab === 'challenges') challengeCooldownTimer = setTimeout(challengeRefreshActionCooldown, 1000);
 }
 function challengeEnsureActionAvailable(){
   const cooldown = challengeActionCooldownInfo();
   if(!cooldown.active) return true;
-  showNotice(`Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`);
+  showNotice(`Completaste la tanda de ${cooldown.quota?.limit || challengeConfig().freeActionsBeforeCooldown} acciones. Podrás publicar o aceptar otro desafío en ${challengeActionCooldownLabel(cooldown.remainingMs)}.`);
   return false;
 }
 function challengeApiUrl(path='', query=''){
@@ -1138,13 +1177,13 @@ async function publishChallenge(categoryCode){
     const category = challengeCategoryByCode(challengeSnapshotCategoryCode(snapshot));
     showNotice(`Publicando desafío en ${category.name}...`);
     await challengeRequest('challenges', { method:'POST', body:{ snapshot } });
-    challengeStartActionCooldown();
+    const actionQuota = challengeRegisterSuccessfulAction();
     challengeRowsCache.available = [];
     challengeRowsCache.mine = [];
     challengeLoadedTabs.available = false;
     challengeLoadedTabs.mine = false;
     challengeViewTab = 'mine';
-    showNotice(`Desafío publicado en ${category.name}. Podrás publicar o aceptar otro dentro de 10 minutos.`);
+    showNotice(actionQuota.cooldownStarted ? `Desafío publicado en ${category.name}. Completaste ${actionQuota.limit} acciones: comienza la pausa de 10 minutos.` : `Desafío publicado en ${category.name}. Te quedan ${actionQuota.remainingFree} acción(es) sin espera en esta tanda.`);
     await loadChallenges('mine', { force:true });
   }catch(error){ showNotice(error.message); }
   finally{
@@ -1168,7 +1207,7 @@ async function acceptRandomChallenge(categoryCode){
     const accepted = await challengeRequest('challenges/random/accept', { method:'POST', body:{ snapshot, categoryCode:targetCode } });
     const acceptedChallengeId = String(accepted?.challengeId || '').trim();
     if(!acceptedChallengeId) throw new Error('El servidor no devolvió el desafío seleccionado.');
-    challengeStartActionCooldown();
+    const actionQuota = challengeRegisterSuccessfulAction();
     if(status) status.textContent = 'Recuperando el partido calculado y guardado por el servidor...';
     const saved = accepted?.challenge ? accepted : await challengeRequest(`challenges/${encodeURIComponent(acceptedChallengeId)}`);
     if(!saved?.challenge?.match) throw new Error('El Worker no devolvió el resultado autoritativo. Verificá que esté instalada la versión V8.32.');
@@ -1181,7 +1220,7 @@ async function acceptRandomChallenge(categoryCode){
     challengeLoadedTabs.history = false;
     challengeLoadedTabs.ranking = false;
     challengeDetail = saved.challenge || null;
-    showNotice('Rival asignado al azar. El Worker simuló y guardó el partido.');
+    showNotice(actionQuota.cooldownStarted ? `Rival asignado al azar. Completaste ${actionQuota.limit} acciones: comienza la pausa de 10 minutos.` : `Rival asignado al azar. Te quedan ${actionQuota.remainingFree} acción(es) sin espera en esta tanda.`);
     renderOnlineChallenges();
   }catch(error){
     if(status) status.textContent = '';

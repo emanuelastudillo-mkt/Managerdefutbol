@@ -424,8 +424,14 @@ function normalizeGame(saved){
   normalized.clubWorldCup = (normalized.clubWorldCup && typeof normalized.clubWorldCup === 'object' && !Array.isArray(normalized.clubWorldCup)) ? normalized.clubWorldCup : null;
   normalized.clubWorldCupHistory = normalizeClubWorldCupHistoryState(normalized.clubWorldCupHistory || {});
   normalized.nationalCups = typeof normalizeNationalCupsState === 'function' ? normalizeNationalCupsState(normalized.nationalCups || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.nationalCups || null);
+  normalized.libertadores = typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState(normalized.libertadores || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.libertadores || null);
+  normalized.libertadoresHistory = typeof normalizeLibertadoresHistoryState === 'function' ? normalizeLibertadoresHistoryState(normalized.libertadoresHistory || {}) : (normalized.libertadoresHistory || { version:1, editions:[] });
+  normalized.championsLeague = typeof normalizeChampionsLeagueState === 'function' ? normalizeChampionsLeagueState(normalized.championsLeague || {}, normalized.seasonNumber, normalized.seasonYear) : (normalized.championsLeague || null);
+  normalized.championsLeagueHistory = typeof normalizeChampionsLeagueHistoryState === 'function' ? normalizeChampionsLeagueHistoryState(normalized.championsLeagueHistory || {}) : (normalized.championsLeagueHistory || { version:1, editions:[] });
   if(normalized.clubWorldCup && typeof ensureClubWorldCupInvitedData === 'function') ensureClubWorldCupInvitedData();
   if(syncClubWorldCupHistoryForState(normalized)) normalized._needsAutosave = true;
+  if(typeof syncLibertadoresHistoryForState === 'function' && syncLibertadoresHistoryForState(normalized)) normalized._needsAutosave = true;
+  if(typeof syncChampionsLeagueHistoryForState === 'function' && syncChampionsLeagueHistoryForState(normalized)) normalized._needsAutosave = true;
   normalized.seasonPhase = normalized.seasonPhase || (normalized.seasonFinalized ? 'finalized' : 'regular');
   normalized.phaseTurn = Number.isFinite(normalized.phaseTurn) ? normalized.phaseTurn : 0;
   normalized.globalTurn = Number.isFinite(normalized.globalTurn) ? normalized.globalTurn : ((Math.max(1, normalized.seasonNumber || 1) - 1) * 53 + (normalized.matchdayIndex || 0));
@@ -479,7 +485,31 @@ function normalizeGame(saved){
   normalized.playerStars = normalizePlayerStarsState(normalized.playerStars || {});
   normalized.playerImpactWindows = normalizePlayerImpactWindows(normalized.playerImpactWindows || {});
   syncPlayerStarsWithClubs(normalized);
+  const hadFirstVictoryQolMarker = Boolean(saved?.special?.recompensas_calidad_vida && Object.prototype.hasOwnProperty.call(saved.special.recompensas_calidad_vida, 'primera_victoria'));
   normalized.special = typeof normalizeSpecialState === 'function' ? normalizeSpecialState(normalized.special, normalized.rankingManagerName || storedManagerName() || 'Manager') : (normalized.special || null);
+  if(normalized.special && typeof normalized.special === 'object'){
+    normalized.special.recompensas_calidad_vida = normalized.special.recompensas_calidad_vida && typeof normalized.special.recompensas_calidad_vida === 'object' && !Array.isArray(normalized.special.recompensas_calidad_vida)
+      ? { version:1, ...normalized.special.recompensas_calidad_vida }
+      : { version:1, primera_victoria:false };
+    if(!hadFirstVictoryQolMarker){
+      // V9.72: todas las carreras quedan habilitadas para cobrar el premio en su próxima victoria oficial.
+      normalized.special.recompensas_calidad_vida.primera_victoria = false;
+      normalized.special.recompensas_calidad_vida.migrada_v972 = true;
+      normalized.special.recompensas_calidad_vida.premio_retroactivo_pendiente = Math.max(0, Math.round(Number(normalized.managerStats?.totals?.won || 0))) > 0;
+      normalized._needsAutosave = true;
+    }else{
+      const rewardState = normalized.special.recompensas_calidad_vida;
+      const rewardLogged = Array.isArray(normalized.special.puntos_log) && normalized.special.puntos_log.some(entry => String(entry?.actionId || '') === 'primera_victoria_manager');
+      const rewardActuallyPaid = Boolean(rewardLogged || rewardState.primera_victoria_fecha || rewardState.primera_victoria_partido);
+      if(rewardState.primera_victoria && !rewardActuallyPaid){
+        // V9.71 podía marcar carreras antiguas como cobradas sin acreditar los 5.000 puntos. Se reabre el premio.
+        rewardState.primera_victoria = false;
+        rewardState.migrada_v972 = true;
+        rewardState.premio_retroactivo_pendiente = true;
+        normalized._needsAutosave = true;
+      }
+    }
+  }
   normalized.marketPlayers = Array.isArray(normalized.marketPlayers) ? normalized.marketPlayers : generateMarketPlayers(MARKET_FREE_AGENT_COUNT);
   const hadTransferHistory = Boolean(normalized.transferHistory && typeof normalized.transferHistory === 'object' && !Array.isArray(normalized.transferHistory));
   const previousTransferHistoryCount = Array.isArray(normalized.transferHistory?.entries) ? normalized.transferHistory.entries.length : 0;
@@ -499,6 +529,22 @@ function normalizeGame(saved){
     .filter(Boolean);
   if(JSON.stringify(rawPendingTransfers) !== JSON.stringify(normalizedPendingTransfers)) normalized._needsAutosave = true;
   normalized.pendingTransfers = normalizedPendingTransfers;
+  if(typeof repairCompletedIncomingTransferOwnership === 'function'){
+    const ownershipRepair = repairCompletedIncomingTransferOwnership(normalized);
+    if(Number(ownershipRepair?.repaired || 0) > 0 || Number(ownershipRepair?.synced || 0) > 0) normalized._needsAutosave = true;
+    if(Number(ownershipRepair?.repaired || 0) > 0){
+      const repairedNames = (ownershipRepair.playerIds || []).map(id => seed?.players?.find(player => Number(player?.id || 0) === Number(id))?.name || `Jugador ${id}`);
+      normalized.messages.unshift({
+        id:`ownership-repair-v961-${Date.now()}`,
+        type:'mercado',
+        title:'Compra recuperada',
+        body:`Se restauró ${repairedNames.length === 1 ? repairedNames[0] : `${repairedNames.length} jugadores`} al club porque el historial confirmaba una compra ya pagada. No se realizó un nuevo cobro.`,
+        priority:'high',
+        read:false,
+        createdAt:new Date().toISOString()
+      });
+    }
+  }
   normalized.rejectedPurchaseOffers = (normalized.rejectedPurchaseOffers && typeof normalized.rejectedPurchaseOffers === 'object' && !Array.isArray(normalized.rejectedPurchaseOffers)) ? normalized.rejectedPurchaseOffers : {};
   normalized.rejectedFreeAgentOffers = (normalized.rejectedFreeAgentOffers && typeof normalized.rejectedFreeAgentOffers === 'object' && !Array.isArray(normalized.rejectedFreeAgentOffers)) ? normalized.rejectedFreeAgentOffers : {};
   normalized.scoutingCenter = (normalized.scoutingCenter && typeof normalized.scoutingCenter === 'object' && !Array.isArray(normalized.scoutingCenter)) ? normalized.scoutingCenter : {};
@@ -526,9 +572,23 @@ function normalizeGame(saved){
   mergeMarketPlayersIntoSeed(normalized.marketPlayers);
   seed.players.forEach(p => { p.transferListed = Boolean(p.transferListed); p.intransferible = Boolean(p.intransferible); if(p.intransferible) p.transferListed = false; ensurePlayerEconomics(p, p.youthFreeAgent ? FREE_YOUTH_SALARY_FACTOR : 1); });
   applyClubDivisionOverrides(normalized.clubDivisionOverrides);
+  if(typeof restoreClubDivisionsFromSeasonFixtures === 'function'){
+    const divisionRepair = restoreClubDivisionsFromSeasonFixtures(normalized, { reason:'load_v964', message:true });
+    if(Number(divisionRepair?.repaired || 0) > 0) normalized._needsAutosave = true;
+  }
+  const embeddedFixtureSeedIndex = (normalized.fixtures || []).map(round => typeof leagueFixtureSeedIndexFromRound === 'function' ? leagueFixtureSeedIndexFromRound(round) : null).find(value => value !== null && value !== undefined);
+  const savedFixtureSeedIndex = typeof normalizeLeagueFixtureSeedIndex === 'function' ? normalizeLeagueFixtureSeedIndex(normalized.leagueFixtureSeedIndex) : null;
+  normalized.leagueFixtureSeedIndex = savedFixtureSeedIndex !== null ? savedFixtureSeedIndex : (embeddedFixtureSeedIndex !== undefined ? embeddedFixtureSeedIndex : null);
+  normalized.leagueFixtureSeedVersion = normalized.leagueFixtureSeedIndex === null
+    ? 'legacy-v969'
+    : (typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds');
+  normalized.leagueFixtureSeedHistory = normalized.leagueFixtureSeedHistory && typeof normalized.leagueFixtureSeedHistory === 'object' && !Array.isArray(normalized.leagueFixtureSeedHistory)
+    ? normalized.leagueFixtureSeedHistory
+    : {};
+  if(normalized.leagueFixtureSeedIndex !== null) normalized.leagueFixtureSeedHistory[normalized.seasonNumber] = normalized.leagueFixtureSeedIndex;
   const previousCalendarVersion = normalized.calendarVersion;
   const previousFixtureCount = Array.isArray(normalized.fixtures) ? normalized.fixtures.length : 0;
-  normalized.fixtures = normalizeSeasonFixtures(normalized.fixtures || structuredClone(seed.fixtures), normalized.seasonNumber, normalized.seasonYear);
+  normalized.fixtures = normalizeSeasonFixtures(normalized.fixtures || structuredClone(seed.fixtures), normalized.seasonNumber, normalized.seasonYear, { fixtureSeedIndex:normalized.leagueFixtureSeedIndex });
   repairPromotionPlayoffScheduleForState(normalized);
   const calendarExpanded = previousCalendarVersion !== SEASON_CALENDAR_VERSION && previousFixtureCount > 0 && normalized.fixtures.length > previousFixtureCount;
   normalized.matchdayIndex = Math.min(Math.max(0, Number(normalized.matchdayIndex || 0)), normalized.fixtures.length);
@@ -1021,6 +1081,7 @@ function newGame(selectedClubId, options={}){
   const saveSlotId = typeof normalizeSaveSlotId === 'function' ? normalizeSaveSlotId(options.saveSlotId || currentSaveSlotId || (options.challengeId ? SAVE_SLOT_CAMPO_DESTRUIDO : SAVE_SLOT_CAREER)) : (options.challengeId ? 'challenge:campo_destruido' : 'career');
   if(typeof setCurrentSaveSlot === 'function') setCurrentSaveSlot(saveSlotId);
   const tactic = normalizeTactic(selectedClubId, DEFAULT_TACTIC);
+  const initialFixtureSeedIndex = typeof leagueFixtureSeedIndexForSeasonNumber === 'function' ? leagueFixtureSeedIndexForSeasonNumber(1) : 0;
   game = {
     version:APP_VERSION,
     saveSlotId,
@@ -1035,6 +1096,10 @@ function newGame(selectedClubId, options={}){
     competitionChampionsHistory: normalizeCompetitionChampionsHistoryState({}),
     playerPalmares: normalizePlayerPalmaresState({ trackingStartedVersion:'V9.22', trackingStartedSeason:1, migrationVersion:1 }),
     clubWorldCupHistory: normalizeClubWorldCupHistoryState({}),
+    libertadoresHistory: typeof normalizeLibertadoresHistoryState === 'function' ? normalizeLibertadoresHistoryState({}) : { version:1, editions:[] },
+    libertadores: typeof normalizeLibertadoresState === 'function' ? normalizeLibertadoresState({}, 1, seasonYearForNumber(1)) : null,
+    championsLeagueHistory: typeof normalizeChampionsLeagueHistoryState === 'function' ? normalizeChampionsLeagueHistoryState({}) : { version:1, editions:[] },
+    championsLeague: typeof normalizeChampionsLeagueState === 'function' ? normalizeChampionsLeagueState({}, 1, seasonYearForNumber(1)) : null,
     saveCode: generateSaveCode(),
     rankingUploads: {},
     rankingManagerName: managerName,
@@ -1053,6 +1118,9 @@ function newGame(selectedClubId, options={}){
     seasonNumber: 1,
     seasonYear: seasonYearForNumber(1),
     calendarVersion: SEASON_CALENDAR_VERSION,
+    leagueFixtureSeedIndex: initialFixtureSeedIndex,
+    leagueFixtureSeedVersion: typeof LEAGUE_FIXTURE_SEED_VERSION !== 'undefined' ? LEAGUE_FIXTURE_SEED_VERSION : 'v970-20-seeds',
+    leagueFixtureSeedHistory: { 1:initialFixtureSeedIndex },
     seasonFinalized: false,
     seasonTransition: null,
     seasonPhase: 'preseason',
@@ -1098,7 +1166,7 @@ function newGame(selectedClubId, options={}){
     statusRebases: {},
     injuryRecoveryTurnsBySeason: {},
     matchHistory: [],
-    fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1) }),
+    fixtures: generateFixturesForDivisions(seed.clubs, divisionOrderList(), { seasonYear:seasonYearForNumber(1), fixtureSeedIndex:initialFixtureSeedIndex }),
     advanceLockedUntil: 0,
     advanceLockDurationMs: ADVANCE_LOCK_MS,
     mustReviewTactics: false,
@@ -2621,19 +2689,19 @@ function managerObjectiveProgressInfo(){
 function queueAutomaticRankingSubmission(eventType='season_end'){
   if(!game) return false;
   game.rankingUploads = game.rankingUploads && typeof game.rankingUploads === 'object' && !Array.isArray(game.rankingUploads) ? game.rankingUploads : {};
+  const label = typeof rankingEventLabel === 'function' ? rankingEventLabel(eventType) : (eventType === 'dismissal' ? 'Carrera cerrada por despido' : 'Carrera actualizada');
   const capturedPayload = String(eventType || '') === 'dismissal' && game?.gameOver?.snapshot
-    ? { ...game.gameOver.snapshot, eventType:'dismissal', eventLabel:'Carrera cerrada por despido', submittedAt:new Date().toISOString() }
-    : null;
+    ? { ...game.gameOver.snapshot, eventType:'dismissal', eventLabel:label, submittedAt:new Date().toISOString() }
+    : (typeof buildRankingPayload === 'function' ? buildRankingPayload(game?.rankingManagerName || storedManagerName() || 'Manager', { eventType, eventLabel:label }) : null);
   const run = () => {
     if(typeof submitRankingAutomatically === 'function'){
-      submitRankingAutomatically(eventType, { notifyErrors:true, forceRetry:true, payload:capturedPayload });
+      submitRankingAutomatically(eventType, { notifyErrors:false, forceRetry:true, payload:capturedPayload, eventLabel:label });
     }else if(typeof pushGameMessage === 'function'){
       pushGameMessage({ type:'sistema', priority:'normal', title:'Ranking pendiente', body:'El módulo de ranking no estaba listo. Volvé a abrir la partida o la pantalla Ranking para reintentar el envío automático.', id:`ranking-module-missing-${eventType}-${game.seasonNumber || 1}` });
       if(typeof saveLocal === 'function') saveLocal(true);
     }
   };
   setTimeout(run, 0);
-  setTimeout(run, 5000);
   return true;
 }
 
@@ -2971,11 +3039,17 @@ function isClubWorldCupRound(round){
 function isNationalCupRound(round){
   return Boolean(round?.nationalCupRound || (round?.matches || []).some(match => match?.nationalCup));
 }
+function isLibertadoresRound(round){
+  return Boolean(round?.libertadoresRound || (round?.matches || []).some(match => match?.libertadores));
+}
+function isChampionsLeagueRound(round){
+  return Boolean(round?.championsLeagueRound || (round?.matches || []).some(match => match?.championsLeague));
+}
 function isPostRegularRound(round){
   return isPromotionPlayoffRound(round) || isClubWorldCupRound(round);
 }
 function isRegularLeagueRound(round){
-  return Boolean(round) && !isPromotionPlayoffRound(round) && !isClubWorldCupRound(round) && !isNationalCupRound(round);
+  return Boolean(round) && !isPromotionPlayoffRound(round) && !isClubWorldCupRound(round) && !isNationalCupRound(round) && !isLibertadoresRound(round) && !isChampionsLeagueRound(round);
 }
 function regularFixtureRounds(fixtures=game?.fixtures || []){
   return (Array.isArray(fixtures) ? fixtures : []).filter(isRegularLeagueRound);

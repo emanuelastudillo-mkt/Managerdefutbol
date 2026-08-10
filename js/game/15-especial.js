@@ -194,6 +194,7 @@ function createInitialSpecialState(managerName=''){
     apertura_pendiente: null,
     puntos_log: [],
     codigos_reclamados: {},
+    recompensas_calidad_vida:{ version:1, primera_victoria:false },
     objetivo_reduccion_temporada: {
       version:'V9.49',
       temporada:specialObjectiveSeasonNumber(),
@@ -537,6 +538,9 @@ function normalizeSpecialState(state=null, managerName=''){
     return existingSerial ? source : { ...source, serial:++pointsLogSequence };
   });
   normalized.puntos_log_secuencia = pointsLogSequence;
+  normalized.recompensas_calidad_vida = normalized.recompensas_calidad_vida && typeof normalized.recompensas_calidad_vida === 'object' && !Array.isArray(normalized.recompensas_calidad_vida)
+    ? { version:1, ...normalized.recompensas_calidad_vida, primera_victoria:Boolean(normalized.recompensas_calidad_vida.primera_victoria) }
+    : { version:1, primera_victoria:false };
   const active = Array.isArray(normalized.cartas_activas) ? normalized.cartas_activas : [];
   const reserve = Array.isArray(normalized.cartas_reserva) ? normalized.cartas_reserva : [];
   normalized.cartas_activas = active.map((card, index) => normalizeSpecialCard(card, index)).filter(Boolean).map(card => {
@@ -902,13 +906,47 @@ function awardSpecialPoints(actionId, context={}){
   if(typeof persistSharedManagerProfileFromGame === 'function') persistSharedManagerProfileFromGame({ reason:'award_special_points' });
   return points;
 }
+function awardFirstManagerVictorySkillPoints(match){
+  if(!game || !match || match?.friendly) return 0;
+  const state = ensureSpecialState();
+  if(!state) return 0;
+  state.recompensas_calidad_vida = state.recompensas_calidad_vida && typeof state.recompensas_calidad_vida === 'object' && !Array.isArray(state.recompensas_calidad_vida)
+    ? { version:1, ...state.recompensas_calidad_vida }
+    : { version:1, primera_victoria:false };
+  if(state.recompensas_calidad_vida.primera_victoria) return 0;
+  const isHome = Number(match.homeId) === Number(game.selectedClubId);
+  const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
+  const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);
+  if(gf <= gc) return 0;
+  const retroactive = Boolean(state.recompensas_calidad_vida.premio_retroactivo_pendiente);
+  state.recompensas_calidad_vida.primera_victoria = true;
+  state.recompensas_calidad_vida.primera_victoria_fecha = String(game.currentDate || match.date || '');
+  state.recompensas_calidad_vida.primera_victoria_partido = String(match.id || '');
+  state.recompensas_calidad_vida.premio_retroactivo_pendiente = false;
+  state.recompensas_calidad_vida.retroactivo_v972 = retroactive;
+  const points = awardSpecialPoints('primera_victoria_manager', { matchId:match.id, motivo:retroactive ? 'premio_retroactivo_actualizacion' : 'primera_victoria' });
+  if(points > 0 && typeof pushGameMessage === 'function'){
+    pushGameMessage({
+      type:'sistema', priority:'high', title:'Primera victoria · +5.000 puntos de habilidad',
+      body:retroactive
+        ? 'Premio retroactivo por actualización: ganaste 5.000 puntos de habilidad al conseguir una nueva victoria. Aprovechalos para fortalecer tus habilidades activas.'
+        : 'Ganaste 5.000 puntos de habilidad por tu primera victoria. Aprovechalos para fortalecer tus habilidades activas.',
+      id:`primera-victoria-habilidad-${game.saveCode || 'manager'}-${match.id || game.currentDate || '1'}`
+    });
+  }
+  if(typeof saveLocal === 'function') Promise.resolve(saveLocal(true)).catch(()=>{});
+  return points;
+}
 function awardSpecialPointsForOwnMatch(match){
   if(!game || !match) return 0;
   const isHome = Number(match.homeId) === Number(game.selectedClubId);
   const gf = isHome ? Number(match.homeGoals || 0) : Number(match.awayGoals || 0);
   const gc = isHome ? Number(match.awayGoals || 0) : Number(match.homeGoals || 0);
   let total = 0;
-  if(gf > gc) total += awardSpecialPoints('ganar_partido', { matchId:match.id });
+  if(gf > gc){
+    total += awardSpecialPoints('ganar_partido', { matchId:match.id });
+    total += awardFirstManagerVictorySkillPoints(match);
+  }
   else if(gf === gc) total += awardSpecialPoints('empatar_partido', { matchId:match.id });
   if(gf > 5) total += awardSpecialPoints('meter_mas_de_5_goles_en_un_partido', { matchId:match.id, goals:gf });
   return total;

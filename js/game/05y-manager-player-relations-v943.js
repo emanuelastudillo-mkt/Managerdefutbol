@@ -3,12 +3,15 @@
    conserva la afinidad entre clubes y los convierte en objetivos especiales de mercado. */
 
 (function(){
-  const RELATIONS_VERSION = 1;
+  const RELATIONS_VERSION = 2;
   const MAX_NEW_RELATIONS_PER_SEASON = 2;
-  const MIN_TRUST_STANDARD = 72;
-  const MIN_MATCHES_STANDARD = 5;
-  const MIN_TRUST_EXCEPTIONAL = 82;
+  const MIN_TRUST_STANDARD = 64;
+  const MIN_MATCHES_STANDARD = 7;
+  const MIN_TRUST_REGULAR = 58;
+  const MIN_MATCHES_REGULAR = 14;
+  const MIN_TRUST_EXCEPTIONAL = 76;
   const MIN_MATCHES_EXCEPTIONAL = 2;
+  const MIN_SELECTION_SCORE = 60;
 
   function relClamp(value, min=0, max=100){
     const number = Number(value);
@@ -88,6 +91,7 @@
       affinity:relClamp(relRound(source.affinity || source.trustAtSelection || 65), 0, 100),
       sharedSeasons:Math.max(1, relRound(source.sharedSeasons || 1, 1)),
       sharedMatches:Math.max(0, relRound(source.sharedMatches || 0)),
+      sharedMatchesKnown:source.sharedMatchesKnown !== false,
       lastSharedSeason:Math.max(1, relRound(source.lastSharedSeason || source.addedSeason || 1, 1)),
       lastSharedClubId:Number(source.lastSharedClubId || source.addedClubId || 0),
       currentClubId:Number(source.currentClubId || 0),
@@ -112,6 +116,7 @@
       version:RELATIONS_VERSION,
       entries,
       processedSeasons,
+      longTermRecovery:source.longTermRecovery && typeof source.longTermRecovery === 'object' && !Array.isArray(source.longTermRecovery) ? { ...source.longTermRecovery } : {},
       lastTargetMessageKey:String(source.lastTargetMessageKey || ''),
       log:Array.isArray(source.log) ? source.log.slice(-80) : []
     };
@@ -227,7 +232,29 @@
     return { changed, applied };
   }
 
-  function relationSelectionCandidate(trustEntry){
+  function relationContinuity(playerId, clubId=relManagerClubId(), season=relSeason()){
+    const stints = Object.values(game?.managerDressingRoom?.stints || {})
+      .filter(stint => Number(stint?.clubId || 0) === Number(clubId) && Number(stint?.season || 0) <= Number(season) && stint?.playerTrust?.[Number(playerId)])
+      .sort((a,b) => Number(a?.season || 0) - Number(b?.season || 0));
+    const bySeason = new Map();
+    stints.forEach(stint => bySeason.set(Number(stint.season || 0), stint.playerTrust[Number(playerId)]));
+    const items = [...bySeason.entries()].map(([stintSeason, entry]) => ({ season:stintSeason, entry }));
+    const previous = items.filter(item => Number(item.season) < Number(season));
+    const values = previous.map(item => relClamp(relRound(item.entry?.value || 0), 0, 100));
+    const influences = previous.map(item => relClamp(relRound(item.entry?.influence || 0), 0, 100));
+    const tags = previous.flatMap(item => Array.isArray(item.entry?.tags) ? item.entry.tags.map(String) : []);
+    return {
+      sharedSeasons:items.length,
+      previousSeasons:previous.length,
+      averageTrust:values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0,
+      maximumTrust:values.length ? Math.max(...values) : 0,
+      latestTrust:values.length ? values[values.length - 1] : 0,
+      averageInfluence:influences.length ? influences.reduce((sum, value) => sum + value, 0) / influences.length : 0,
+      tags
+    };
+  }
+
+  function relationSelectionCandidate(trustEntry, options={}){
     const player = relPlayer(trustEntry?.playerId);
     if(!player || player.retired || player.sold || Number(player.clubId || 0) !== relManagerClubId()) return null;
     if(relationEntry(player.id)) return null;
@@ -235,15 +262,73 @@
     const trust = relClamp(relRound(trustEntry?.value || 0), 0, 100);
     const influence = relClamp(relRound(trustEntry?.influence || 0), 0, 100);
     const tags = Array.isArray(trustEntry?.tags) ? trustEntry.tags.map(String) : [];
-    const qualifies = (trust >= MIN_TRUST_STANDARD && stats.played >= MIN_MATCHES_STANDARD)
-      || (trust >= MIN_TRUST_EXCEPTIONAL && stats.played >= MIN_MATCHES_EXCEPTIONAL);
-    if(!qualifies) return null;
+    const continuity = relationContinuity(player.id);
+    const continuityTrustBonus = Math.min(8, continuity.previousSeasons * 2);
+    const effectiveTrust = relClamp(trust + continuityTrustBonus, 0, 100);
+    const qualifies = (effectiveTrust >= MIN_TRUST_STANDARD && stats.played >= MIN_MATCHES_STANDARD)
+      || (effectiveTrust >= MIN_TRUST_REGULAR && stats.played >= MIN_MATCHES_REGULAR)
+      || (trust >= MIN_TRUST_EXCEPTIONAL && stats.played >= MIN_MATCHES_EXCEPTIONAL)
+      || (continuity.sharedSeasons >= 3 && trust >= 56 && stats.played >= 6);
     const roleBonus = tags.includes('captain') ? 5 : tags.includes('viceCaptain') ? 3 : tags.includes('referent') ? 2 : 0;
-    const participationScore = Math.min(18, stats.played * 1.20);
-    const selectionScore = trust * 0.68 + influence * 0.12 + participationScore + roleBonus;
-    if(selectionScore < 71) return null;
-    const affinity = relClamp(relRound(trust * 0.78 + Math.min(12, stats.played) + influence * 0.08 + roleBonus), 65, 96);
-    return { player, stats, trust, influence, tags, roleBonus, selectionScore:relRound(selectionScore), affinity };
+    const participationScore = Math.min(20, stats.played * 1.25);
+    const continuityScore = Math.min(18, continuity.previousSeasons * 6);
+    const selectionScore = trust * 0.58 + influence * 0.10 + participationScore + continuityScore + roleBonus;
+    if(!options.includeDeveloping && (!qualifies || selectionScore < MIN_SELECTION_SCORE)) return null;
+    const affinity = relClamp(relRound(trust * 0.70 + Math.min(14, stats.played * 0.80) + influence * 0.08 + Math.min(10, continuity.previousSeasons * 3) + roleBonus), 62, 96);
+    return { player, stats, trust, influence, tags, roleBonus, continuity, effectiveTrust, qualifies, selectionScore:relRound(selectionScore), affinity };
+  }
+
+  function recoverLongTermRelationships(){
+    if(!game || game?.gameOver?.active || !relManagerClubId()) return [];
+    const state = ensureRelationsState();
+    const clubId = relManagerClubId();
+    const recoveryKey = `v962:${clubId}`;
+    if(state.longTermRecovery?.[recoveryKey]) return [];
+    const currentStint = window.managerDressingRoom?.current ? window.managerDressingRoom.current() : null;
+    if(!currentStint?.playerTrust) return [];
+    const availableSlots = Math.max(0, MAX_NEW_RELATIONS_PER_SEASON - relationEntries().filter(entry => Number(entry.addedSeason || 0) === relSeason()).length);
+    state.longTermRecovery[recoveryKey] = true;
+    if(!availableSlots) return [];
+    const candidates = Object.values(currentStint.playerTrust || {}).map(trustEntry => {
+      const player = relPlayer(trustEntry?.playerId);
+      if(!player || player.retired || player.sold || relationEntry(player.id) || Number(player.clubId || 0) !== clubId) return null;
+      const continuity = relationContinuity(player.id, clubId, relSeason());
+      if(continuity.previousSeasons < 3 || continuity.averageTrust < 60 || continuity.maximumTrust < 65 || continuity.latestTrust < 56) return null;
+      const currentTrust = relClamp(relRound(trustEntry?.value || continuity.latestTrust), 0, 100);
+      const currentInfluence = relClamp(relRound(trustEntry?.influence || continuity.averageInfluence), 0, 100);
+      const tags = [...new Set([...(continuity.tags || []), ...(Array.isArray(trustEntry?.tags) ? trustEntry.tags.map(String) : [])])];
+      const roleBonus = tags.includes('captain') ? 5 : tags.includes('viceCaptain') ? 3 : tags.includes('referent') ? 2 : 0;
+      const score = continuity.averageTrust * 0.62 + continuity.averageInfluence * 0.12 + Math.min(20, continuity.previousSeasons * 5) + roleBonus;
+      if(score < 62) return null;
+      return { player, continuity, currentTrust, currentInfluence, roleBonus, score, affinity:relClamp(relRound(continuity.averageTrust * 0.72 + continuity.maximumTrust * 0.12 + Math.min(10, continuity.previousSeasons * 3) + roleBonus), 65, 94) };
+    }).filter(Boolean).sort((a,b) => b.score - a.score || b.continuity.averageTrust - a.continuity.averageTrust || Number(a.player.id) - Number(b.player.id)).slice(0, availableSlots);
+    const recovered = candidates.map(candidate => {
+      const player = candidate.player;
+      const entry = normalizeRelationEntry({
+        playerId:Number(player.id), playerName:String(player.name || 'Jugador'), position:relPlayerPosition(player), nationality:String(player.nationality || ''),
+        addedSeason:relSeason(), addedYear:relYear(), addedClubId:clubId, addedClubName:relClubName(clubId),
+        trustAtSelection:candidate.currentTrust, selectionScore:relRound(candidate.score), affinity:candidate.affinity,
+        sharedSeasons:candidate.continuity.previousSeasons, sharedMatches:0, sharedMatchesKnown:false,
+        lastSharedSeason:Math.max(1, relSeason() - 1), lastSharedClubId:clubId, currentClubId:Number(player.clubId || 0), reunions:0, wasSeparated:false,
+        history:[{ season:Math.max(1, relSeason() - 1), year:Math.max(0, relYear() - 1), clubId, clubName:relClubName(clubId), trust:relRound(candidate.continuity.latestTrust), affinity:candidate.affinity, matches:0, influence:relRound(candidate.continuity.averageInfluence), type:'continuity_recovery' }],
+        createdAt:relNow(), updatedAt:relNow()
+      }, player.id);
+      state.entries[player.id] = entry;
+      return entry;
+    });
+    if(recovered.length && typeof pushGameMessage === 'function'){
+      pushGameMessage({ type:'vestuario', priority:'high', title:'Relaciones reconocidas por continuidad', body:`La trayectoria compartida permitió reconocer vínculos duraderos con ${recovered.map(entry => entry.playerName).join(' y ')}. La relación se conserva desde ahora en tu perfil.`, id:`manager-relations-continuity-${recoveryKey}` });
+    }
+    if(typeof saveLocal === 'function') saveLocal(true);
+    return recovered;
+  }
+
+  function developingRelations(){
+    const stint = window.managerDressingRoom?.current ? window.managerDressingRoom.current() : null;
+    if(!stint?.playerTrust) return [];
+    return Object.values(stint.playerTrust).map(entry => relationSelectionCandidate(entry, { includeDeveloping:true })).filter(Boolean)
+      .sort((a,b) => b.selectionScore - a.selectionScore || b.trust - a.trust || b.stats.played - a.stats.played)
+      .slice(0, 4);
   }
 
   function updateExistingSeasonRelationships(stint, season, clubId){
@@ -294,11 +379,13 @@
     }
 
     const updated = updateExistingSeasonRelationships(stint, season, clubId);
+    const alreadyAddedThisSeason = relationEntries().filter(entry => Number(entry.addedSeason || 0) === season).length;
+    const remainingSlots = Math.max(0, MAX_NEW_RELATIONS_PER_SEASON - alreadyAddedThisSeason);
     const candidates = Object.values(stint.playerTrust || {})
       .map(relationSelectionCandidate)
       .filter(Boolean)
       .sort((a,b) => b.selectionScore - a.selectionScore || b.trust - a.trust || b.stats.played - a.stats.played || Number(a.player.id) - Number(b.player.id))
-      .slice(0, MAX_NEW_RELATIONS_PER_SEASON);
+      .slice(0, remainingSlots);
 
     const added = candidates.map(candidate => {
       const player = candidate.player;
@@ -316,6 +403,7 @@
         affinity:candidate.affinity,
         sharedSeasons:1,
         sharedMatches:candidate.stats.played,
+        sharedMatchesKnown:true,
         lastSharedSeason:season,
         lastSharedClubId:clubId,
         currentClubId:Number(player.clubId || 0),
@@ -436,6 +524,7 @@
 
   function renderManagerRelations(){
     ensureRelationsState();
+    recoverLongTermRelationships();
     refreshRelationLocations({ announce:false, save:false });
     const entries = relationEntries().sort((a,b) => {
       const statusOrder = { together:0, free:1, contracted:2, retired:3, unavailable:4, missing:5 };
@@ -451,10 +540,15 @@
       <td><strong>${entry.affinity}/100</strong><small>${relEscape(relationAffinityLabel(entry.affinity))}</small></td>
       <td>${relationOriginMarkup(entry)}</td>
       <td>${relationStatusMarkup(entry)}</td>
-      <td><strong>${entry.sharedSeasons}</strong><small>${entry.sharedMatches} PJ compartidos</small></td>
+      <td><strong>${entry.sharedSeasons}</strong><small>${entry.sharedMatchesKnown === false ? 'PJ históricos sin registro exacto' : `${entry.sharedMatches} PJ compartidos`}</small></td>
       <td><strong>+${relationInterestBonus(entry.playerId)} p.p.</strong><small>${relationIsMarketTarget(entry.playerId) ? 'Predisposición a reunirse' : 'Sin oferta pendiente'}</small></td>
       <td>${relationMarketActionMarkup(entry)}</td>
     </tr>`).join('');
+    const developing = developingRelations();
+    const developingRows = developing.map(candidate => {
+      const readiness = candidate.qualifies && candidate.selectionScore >= MIN_SELECTION_SCORE ? 'Listo para evaluación' : candidate.selectionScore >= 56 ? 'Muy cerca' : candidate.selectionScore >= 48 ? 'En crecimiento' : 'Vínculo inicial';
+      return `<tr><td>${relationPlayerMarkup({ playerId:candidate.player.id, playerName:candidate.player.name, position:candidate.player.position })}</td><td><strong>${candidate.trust}/100</strong><small>Confianza actual</small></td><td><strong>${candidate.stats.played}</strong><small>Partidos esta temporada</small></td><td><strong>${candidate.continuity.sharedSeasons}</strong><small>Temporadas juntos</small></td><td><span class="pill ${candidate.qualifies ? 'ok' : 'info'}">${readiness}</span></td></tr>`;
+    }).join('');
     view.innerHTML = `<div class="row section-title"><div><h2>Relaciones</h2><p class="tagline">Jugadores que construyeron una relación profesional persistente con el mánager.</p></div><span class="pill">${entries.length} vínculo(s)</span></div>
       <div class="grid cols-4 manager-relations-summary">
         <div class="card"><p class="label">Relaciones totales</p><strong>${entries.length}</strong></div>
@@ -462,7 +556,8 @@
         <div class="card"><p class="label">Objetivos de mercado</p><strong>${targets}</strong></div>
         <div class="card"><p class="label">Históricas o inactivas</p><strong>${retired}</strong></div>
       </div>
-      <div class="card manager-relations-explanation"><h3>Cómo se forman</h3><p>Al cerrar una temporada pueden incorporarse hasta dos jugadores nuevos. La selección considera confianza en el mánager, partidos disputados e influencia en el vestuario. El vínculo permanece al cambiar de club, mejora la confianza cuando vuelven a coincidir y aumenta la predisposición del jugador a aceptar una futura oferta.</p></div>
+      <div class="card manager-relations-explanation"><h3>Cómo se forman</h3><p>Al cerrar una temporada pueden incorporarse hasta dos jugadores nuevos. La selección considera confianza, participación, influencia y continuidad: trabajar varias temporadas con el mismo jugador facilita de forma progresiva la creación del vínculo. El vínculo permanece al cambiar de club y aumenta la predisposición a volver a trabajar juntos.</p></div>
+      <div class="card manager-relations-table-card"><div class="row"><div><h3>Vínculos en formación</h3><p class="muted small">Seguimiento orientativo de los jugadores más próximos a consolidar una relación al cierre de temporada.</p></div></div><div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Confianza</th><th>Participación</th><th>Continuidad</th><th>Estado</th></tr></thead><tbody>${developingRows || '<tr><td colspan="5" class="muted">Todavía no hay candidatos con progreso suficiente.</td></tr>'}</tbody></table></div></div>
       <div class="card manager-relations-table-card"><div class="row"><div><h3>Red profesional</h3><p class="muted small">Los jugadores afines activos también aparecen en Mercado → Relaciones.</p></div>${targets ? '<button class="ghost small-btn" data-relation-open-market="1">Ver objetivos de mercado</button>' : ''}</div><div class="table-wrap"><table><thead><tr><th>Jugador</th><th>Afinidad</th><th>Origen</th><th>Situación actual</th><th>Trayectoria juntos</th><th>Interés futuro</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="muted">Todavía no se formaron relaciones persistentes. La primera evaluación se realizará al finalizar una temporada.</td></tr>'}</tbody></table></div></div>`;
     bindRelationCommonActions();
   }
@@ -544,6 +639,7 @@
         const result = originalStartNextSeason.apply(this, args);
         if(game && !game?.seasonFinalized && !game?.gameOver?.active){
           applyPersistentTrust({ announce:true, save:true });
+          recoverLongTermRelationships();
           announceMarketTargets();
         }
         return result;
@@ -555,6 +651,7 @@
         const result = originalContinueCareer.apply(this, args);
         if(game && !game?.gameOver?.active){
           applyPersistentTrust({ announce:true, save:true });
+          recoverLongTermRelationships();
           announceMarketTargets();
         }
         return result;
@@ -678,6 +775,7 @@
       const originalRenderHome = renderHome;
       renderHome = function(){
         applyPersistentTrust({ announce:false, save:false });
+        recoverLongTermRelationships();
         return originalRenderHome();
       };
     }
@@ -692,6 +790,8 @@
     isTarget:relationIsMarketTarget,
     interestBonus:relationInterestBonus,
     processSeason:addSeasonRelationships,
+    recoverLongTerm:recoverLongTermRelationships,
+    developing:developingRelations,
     applyTrust:applyPersistentTrust,
     render:renderManagerRelations,
     renderMarket:renderRelationsMarket

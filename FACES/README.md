@@ -8,12 +8,12 @@ El juego usa FACES persistentes y únicas por carrera.
 FACES/
 ├── 01_cono_sur/                    1.100 imágenes
 ├── 02_brasil/                        80 imágenes
-├── 03_resto_america/                  0 imágenes
-├── 04_europa_occidental/              0 imágenes
-├── 05_europa_oriental_balcanes/       0 imágenes
-├── 06_africa/                         0 imágenes
-├── 07_asia_oceania/                   0 imágenes
-└── 08_reserva_mixta/                  0 imágenes
+├── 03_resto_america/                  200 imágenes
+├── 04_europa_occidental/              200 imágenes
+├── 05_europa_oriental_balcanes/       200 imágenes
+├── 06_africa/                         20 imágenes
+├── 07_asia_oceania/                   70 imágenes
+└── 08_reserva_mixta/                  104 imágenes
 ```
 
 Los nombres deben continuar de forma consecutiva: `1 (1)`, `1 (2)`, `1 (3)`...

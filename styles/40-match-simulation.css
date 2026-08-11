@@ -389,3 +389,273 @@
   .penalty-round-row{ grid-template-columns:42px minmax(0,1fr) minmax(0,1fr); gap:5px; }
   .penalty-kick{ font-size:.72rem; }
 }
+\n\n/* V9.76 · simulador continuo, reloj segundo a segundo e historiales compactos */\n.live-v517 .live-events-list,\n.live-v517 .live-commentary-history-list{\n  max-height:148px;\n  overflow-y:auto;\n  overscroll-behavior:contain;\n  scrollbar-gutter:stable;\n}\n.live-v517 .live-event{min-height:25px;}\n.live-v517 .live-event.commentary{grid-template-columns:36px 18px 24px minmax(0,1fr);}\n.live-v517 .live-event.commentary .live-event-source{\n  display:inline-flex;align-items:center;justify-content:center;\n  min-width:22px;height:16px;border-radius:999px;\n  font-size:6px;font-weight:800;letter-spacing:.04em;\n  color:var(--muted);background:rgba(148,163,184,.10);\n  border:1px solid rgba(148,163,184,.16);\n}\n.live-v517 .live-event.commentary strong{display:block;min-width:0;}\n.live-v517 .live-event.commentary strong b{font-size:8px;font-weight:700;color:var(--text);}\n.live-v517 .live-event.commentary strong small{display:block;margin-top:2px;color:var(--muted);font-size:7px;font-weight:500;}\n.live-v517 .live-bottom-controls .live-action-row{grid-template-columns:82px 90px 112px 122px;}\n.live-v517 #livePauseBtn{min-width:90px;}\n@media (max-width:760px){\n  .live-v517 .live-bottom-controls .live-action-row{grid-template-columns:1fr 1fr;}\n}\n.live-v517 .live-bottom-controls .live-action-row #liveFinishBtn{
+  grid-column:auto;
+  justify-self:stretch;
+  max-width:none;
+}
+
+
+/* V9.78 · relato limpio, eventos destacados y contraste automático */
+.live-v517 .live-event.commentary{
+  grid-template-columns:34px 20px minmax(0,1fr) 22px;
+  gap:5px;
+  align-items:center;
+}
+.live-v517 .live-event.commentary .live-event-time{font-variant-numeric:tabular-nums;color:var(--muted);}
+.live-v517 .live-event-badge{display:flex;align-items:center;justify-content:center;min-width:18px;}
+.live-v517 .live-event-badge .club-badge{width:16px;height:16px;object-fit:contain;}
+.live-v517 .live-event.commentary strong{font-size:8.5px;font-weight:500;line-height:1.2;color:var(--text);}
+.live-v517 .live-commentary-player{
+  display:inline;
+  padding:0;
+  border:0;
+  background:none;
+  color:inherit;
+  font:inherit;
+  font-weight:750;
+  text-decoration:underline;
+  text-decoration-color:rgba(148,163,184,.36);
+  text-underline-offset:2px;
+  cursor:pointer;
+}
+.live-v517 .live-commentary-player:hover{color:#bfdbfe;text-decoration-color:currentColor;}
+.live-v517 .live-action-ending{font-style:normal;text-align:center;font-size:11px;line-height:1;}
+.live-v517 .live-action-ending.empty{opacity:0;}
+.live-v517 .live-event.highlight{grid-template-columns:34px 20px minmax(0,1fr) 22px;}
+.live-v517 .live-event.highlight strong{font-size:8.5px;font-weight:500;line-height:1.18;}
+.live-v517 .live-event.highlight strong b{font-weight:800;}
+.live-v517 .live-event.highlight.goal{border-color:rgba(34,197,94,.34);background:rgba(34,197,94,.08);}
+.live-v517 .live-event.highlight.shot{border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.07);}
+.live-player-icons{display:inline-flex;align-items:center;gap:1px;white-space:nowrap;font-size:7px;letter-spacing:-.04em;}
+.live-compare-card .bar.duel{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:transparent;border:0;overflow:visible;}
+.live-compare-card .bar.duel i{display:block;height:100%;border-radius:999px;opacity:.96;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
+.live-compare-card .bar.duel i.left{width:var(--left);justify-self:end;background:var(--live-home-color,#e11d48);}
+.live-compare-card .bar.duel i.right{width:var(--right);justify-self:start;background:var(--live-away-color,#60a5fa);}
+.live-player-quick-overlay{
+  position:fixed;inset:0;z-index:50;
+  display:grid;place-items:center;padding:18px;
+  background:rgba(2,6,23,.62);backdrop-filter:blur(3px);
+}
+.live-player-quick-card{
+  width:min(420px,92vw);display:grid;gap:12px;padding:14px;
+  border-radius:16px;border:1px solid rgba(148,163,184,.24);
+  background:rgba(15,23,42,.98);
+}
+.live-player-quick-card > button{justify-self:end;}
+.live-player-quick-head{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;}
+.live-player-quick-head img{width:76px;height:76px;border-radius:14px;object-fit:cover;}
+.live-player-quick-head h3{margin:2px 0 4px;font-size:16px;}
+.live-player-quick-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.live-player-quick-metrics div{display:grid;gap:2px;padding:8px;border-radius:10px;background:rgba(148,163,184,.08);}
+.live-player-quick-metrics span{font-size:7px;text-transform:uppercase;color:var(--muted);font-weight:800;}
+.live-player-quick-metrics strong{font-size:14px;}
+
+/* V9.80 · jugadores sustituidos permanecen visibles */
+.live-list-row.substituted-out{
+  opacity:.44;
+  filter:grayscale(.72) saturate(.45);
+  border-color:rgba(148,163,184,.16);
+  background:rgba(15,23,42,.42);
+  cursor:default;
+}
+.live-list-row.substituted-out:hover{transform:none;box-shadow:none}
+.live-list-row.substituted-out .num,
+.live-list-row.substituted-out strong,
+.live-list-row.substituted-out b,
+.live-list-row.substituted-out i{color:#7f8da3}
+.live-row-tag.substituted{
+  color:#cbd5e1;
+  background:rgba(100,116,139,.14);
+  border:1px solid rgba(148,163,184,.24);
+}
+
+
+/* V9.81 · relato compacto y ampliable */
+.live-v517 .live-commentary-head-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;
+}
+.live-v517 .live-commentary-history-card:not(.is-expanded) .live-event.commentary{
+  max-height:42px;
+  overflow:hidden;
+  align-items:start;
+}
+.live-v517 .live-commentary-history-card:not(.is-expanded) .live-event.commentary strong{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  line-height:1.18;
+  max-height:2.36em;
+}
+.live-v517 .live-commentary-history-card.is-expanded{
+  position:fixed;
+  inset:10px;
+  z-index:45;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:8px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(8,15,28,.985);
+  border:1px solid rgba(148,163,184,.28);
+  box-shadow:0 18px 70px rgba(0,0,0,.55);
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-events-list{
+  max-height:none;
+  height:100%;
+  overflow:auto;
+  align-content:start;
+  padding-right:6px;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-event.commentary{
+  grid-template-columns:54px 30px minmax(0,1fr) 30px;
+  gap:9px;
+  min-height:38px;
+  padding:7px 9px;
+  align-items:center;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-event.commentary strong{
+  font-size:13px;
+  line-height:1.35;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-commentary-player{font-size:inherit;}
+.live-v517 .live-commentary-history-card.is-expanded .live-event-time{font-size:11px;}
+.live-v517 .live-commentary-history-card.is-expanded .live-event-badge .club-badge{width:22px;height:22px;}
+.live-v517 .live-commentary-history-card.is-expanded .live-action-ending{font-size:16px;}
+.live-player-quick-overlay{z-index:55;}
+@media (max-width:760px){
+  .live-v517 .live-commentary-history-card.is-expanded{inset:4px;padding:8px;}
+  .live-v517 .live-commentary-history-card.is-expanded .live-event.commentary{grid-template-columns:46px 26px minmax(0,1fr) 24px;gap:6px;}
+  .live-v517 .live-commentary-history-card.is-expanded .live-event.commentary strong{font-size:11px;}
+}
+
+/* V9.83 · visor de relato robusto + modos de reproducción */
+.live-v517 .live-manager-main-controls{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-width:0;
+}
+.live-v517 .live-manager-main-controls .live-instruction-buttons{flex:1 1 auto;}
+.live-v517 .live-playback-mode{
+  flex:0 0 162px;
+  display:grid;
+  gap:2px;
+  padding:4px 6px;
+  border-radius:9px;
+  border:1px solid rgba(148,163,184,.16);
+  background:rgba(148,163,184,.06);
+}
+.live-v517 .live-playback-mode span{
+  font-size:6px;
+  font-weight:750;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.live-v517 .live-playback-mode select{
+  width:100%;
+  min-width:0;
+  padding:4px 24px 4px 6px;
+  border-radius:7px;
+  font-size:8px;
+  font-weight:650;
+  color:var(--text);
+  background:rgba(15,23,42,.82);
+  border:1px solid rgba(148,163,184,.18);
+}
+body.live-commentary-expanded{overflow:hidden!important;}
+.modal-panel.live-commentary-modal-expanded{
+  overflow:visible!important;
+}
+body.live-commentary-expanded .modal-panel.live-commentary-modal-expanded > .modal-close{
+  visibility:hidden;
+}
+.live-v517 .live-commentary-history-card.is-expanded{
+  position:fixed!important;
+  inset:12px!important;
+  z-index:1800!important;
+  width:auto!important;
+  height:auto!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:14px!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  overflow:hidden!important;
+  background:#0b1220!important;
+  border:1px solid rgba(148,163,184,.34)!important;
+  border-radius:14px!important;
+  box-shadow:0 24px 90px rgba(0,0,0,.72)!important;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-card-head{
+  min-height:38px;
+  align-items:center;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-events-list{
+  min-height:0!important;
+  max-height:none!important;
+  height:auto!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  align-content:start;
+  padding:4px 7px 12px 2px;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-event.commentary{
+  width:100%;
+  box-sizing:border-box;
+}
+@media (max-width:1260px){
+  .live-v517 .live-manager-main-controls{align-items:stretch;flex-direction:column;}
+  .live-v517 .live-playback-mode{flex-basis:auto;width:100%;}
+}
+@media (max-width:760px){
+  .live-v517 .live-commentary-history-card.is-expanded{inset:3px!important;padding:7px!important;border-radius:8px!important;}
+}
+body.live-commentary-expanded .live-player-quick-overlay{z-index:1900!important;}
+
+
+/* V9.84 · historial de relato no compresible + modos solo de filtrado */
+.live-v517 .live-commentary-history-list{
+  display:flex!important;
+  flex-direction:column!important;
+  flex-wrap:nowrap!important;
+  gap:4px!important;
+  height:170px!important;
+  min-height:170px!important;
+  max-height:170px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  align-content:initial!important;
+  justify-content:flex-start!important;
+  scrollbar-gutter:stable;
+}
+.live-v517 .live-commentary-history-list > .live-event.commentary{
+  flex:0 0 auto!important;
+  width:100%!important;
+  min-height:28px!important;
+  box-sizing:border-box!important;
+}
+.live-v517 .live-commentary-history-card:not(.is-expanded) .live-commentary-history-list > .live-event.commentary{
+  height:auto!important;
+  max-height:42px!important;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-commentary-history-list{
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+.live-v517 .live-commentary-history-card.is-expanded .live-commentary-history-list > .live-event.commentary{
+  flex:0 0 auto!important;
+  min-height:38px!important;
+  max-height:none!important;
+}
+@media (max-width:760px){
+  .live-v517 .live-commentary-history-list{height:156px!important;min-height:156px!important;max-height:156px!important;}
+  .live-v517 .live-commentary-history-card.is-expanded .live-commentary-history-list{height:100%!important;min-height:0!important;max-height:none!important;}
+}

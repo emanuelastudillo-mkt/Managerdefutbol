@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.73',
+  version: 'V9.85',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -58,7 +58,7 @@ window.GAME_CONFIG = {
     employeesUrl: 'data/empleados.json?v=9.04',
     installationsUrl: 'data/instalaciones.json?v=9.04',
     eventsUrl: 'data/eventos.json?v=9.04',
-    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.73',
+    specialSkillsUrl: 'data/habilidades_especiales.json?v=9.74',
     managerAchievementsUrl: 'data/hitos_manager.json?v=9.04',
     retosManagerUrl: 'data/retos_manager.json?v=9.04',
     estadiosUrls: ['data/estadios_argentina.json?v=9.04', 'data/estadios_chile.json?v=9.04', 'data/estadios_brasil.json?v=9.04', 'data/estadios_inglaterra.json?v=9.04', 'data/estadios_espana.json?v=9.04', 'data/estadios_italia.json?v=9.04', 'data/estadios_rumania.json?v=9.04'],
@@ -164,9 +164,9 @@ window.GAME_CONFIG = {
       cohesionVictoria: 4,
       cohesionEmpate: 2,
       cohesionDerrota: -2,
-      // Programación desde los días vacíos del calendario. Mañana y pasado mañana quedan excluidos.
-      anticipacionMinimaDias: 3,
-      // Ninguno de los dos clubes puede tener otro partido dentro de este margen, antes o después.
+      // Programación durante toda la temporada. Con hoy como primer día libre, el amistoso puede ir en el centro de una ventana de cinco días.
+      anticipacionMinimaDias: 2,
+      // Ambos clubes deben tener libres el día del amistoso y los dos días anteriores y posteriores.
       margenPartidosDias: 2,
       // Rivales sorteados y persistentes para cada fecha consultada.
       opcionesPorFecha: 5,
@@ -1175,6 +1175,55 @@ window.GAME_CONFIG = {
   },
 
   simulador: {
+    // V9.81 · Motor de posesión continua con control prolongado y 540 fases.
+    // pero cada partido reglamentario procesa exactamente 540 fases internas de 10 segundos.
+    motorContinuoV974: {
+      activo: true,
+      fasesPorPartido: 540,
+      segundosPorFase: 10,
+      logTecnico: false,
+      maxLogTecnico: 540,
+      distancias: {
+        paseCortoMax: 34,
+        paseLargoMin: 25,
+        paseLargoMax: 78,
+        paseProfundoAvanceMin: 12,
+        radioPresion: 20,
+        radioMarcaje: 18,
+        radioIntercepcion: 12
+      },
+      accionesBase: {
+        paseCorto: 36,
+        paseLargo: 12,
+        paseProfundo: 10,
+        centro: 6,
+        tiro: 4,
+        regate: 12
+      },
+      // 11 fases de 10 s conservan casi la misma ventana temporal del contraataque anterior (7 x 15 s).
+      contraataqueFases: 11,
+      // Aumenta la elección de acciones verticales/ofensivas para aproximar 2x ataques totales.
+      multiplicadorIntencionAtaque: 1.60,
+      // Compensa el mayor volumen de remates para sostener un rango de goles similar al anterior.
+      multiplicadorConversionVolumen: 0.60,
+      // V9.81 · La posesión puede convertirse en una herramienta defensiva real.
+      // La duración objetivo depende de calidad de pase, superioridad técnica,
+      // densidad de mediocampo y las instrucciones Posesión / Cuidar resultado.
+      controlPosesion: {
+        activo: true,
+        calidadMinima: 68,
+        pasesObjetivoBase: 2,
+        coefCalidad: 0.30,
+        coefVentajaCalidad: 0.12,
+        coefMedioExtra: 1.00,
+        bonusCuidarResultado: 6,
+        bonusBajarRitmoResultado: 2,
+        pasesObjetivoMax: 26,
+        bonusSeguridadPaseMax: 18
+      },
+      ventajaLocalMaxPct: 0.08,
+      azarPuja: 13
+    },
     // Equilibrio del resultado de cada ocasión: mitad construcción colectiva y mitad duelo individual.
     // Se aplica al partido normal, al simulador en vivo y a Ver solo resultados.
     pesoColectivo: 0.50,
@@ -1492,8 +1541,8 @@ window.GAME_CONFIG = {
     fasesSimulacionPartido: 90,
     duracionSimulacionPartidoMs: 270000,
     duracionMinimaFaseSimulacionMs: 3000,
-    // Simulador vivo: demora entre minutos cuando se usa el botón Auto.
-    simulacionVivaAutoMs: 840,
+    // Simulador vivo: demora entre cada minuto de reproducción continua.
+    simulacionVivaAutoMs: 3360,
     relatoMantenerFases: 1,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,

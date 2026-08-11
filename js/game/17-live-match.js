@@ -5,6 +5,20 @@
   let liveState = null;
   let livePaused = true;
   let liveAutoTimer = null;
+  let liveClockTimer = null;
+  let liveDisplayedClockSeconds = 0;
+  let liveCommentaryHistory = [];
+  let liveLastCommentaryKey = '';
+  let livePendingActionNarrations = [];
+  let liveSeenActionNarrationKeys = new Set();
+  let liveHighlightedHistory = [];
+  let liveInspectPlayerId = 0;
+  let liveInspectResumeAfterClose = false;
+  let liveCommentaryExpanded = false;
+  let livePlaybackMode = 'full';
+  let liveLastBlockHadImportantPlay = false;
+  let livePitchVisual = null;
+  let liveSeenPitchEventKeys = new Set();
   let liveSelectedInstruction = 'none';
   let liveSelectedStarterId = 0;
   let liveSelectedBenchId = 0;
@@ -37,10 +51,52 @@
     return ownSide() === 'home' ? (liveState?.homeBoardSlots || []) : (liveState?.awayBoardSlots || []);
   }
   function liveIsBreak(){ return liveState?.period === 'break' || liveState?.nextBlock?.period === 'break' || liveState?.lastBlock?.period === 'break'; }
-  function liveDisplayMinute(){
-    if(liveState?.finished) return 'FIN';
-    if(liveIsBreak()) return 'DESC';
-    return `${Number(liveState?.minute || 0)}'`;
+  function liveClockTargetSeconds(){
+    if(Number.isFinite(Number(liveState?.continuousClockSeconds))) return Math.max(0, Math.min(5400, Number(liveState.continuousClockSeconds || 0)));
+    return Math.max(0, Math.min(5400, Number(liveState?.minute || 0) * 60));
+  }
+  function liveClockPhaseFromSeconds(seconds){
+    const perPhase = Math.max(1, Number(liveState?.continuousSecondsPerPhase || 10));
+    return Math.max(0, Math.min(Number(liveState?.continuousTotalPhases || 540), Math.floor(Number(seconds || 0) / perPhase)));
+  }
+  function liveClockText(seconds=liveDisplayedClockSeconds){
+    const safe = Math.max(0, Math.min(5400, Math.round(Number(seconds || 0))));
+    const minutes = Math.floor(safe / 60);
+    const secs = safe % 60;
+    return `${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  }
+  function syncLiveClockDom(){
+    const clock = document.querySelector('#liveMatchClock');
+    const phase = document.querySelector('#liveMatchContinuousPhase');
+    if(clock) clock.textContent = liveClockText();
+    if(phase){
+      const total = Number(liveState?.continuousTotalPhases || 540);
+      phase.textContent = `Fase ${liveClockPhaseFromSeconds(liveDisplayedClockSeconds)} / ${total}`;
+    }
+  }
+  function stopLiveClockAnimation(){
+    if(liveClockTimer){ clearInterval(liveClockTimer); liveClockTimer = null; }
+  }
+  function animateLiveClockToState(options={}){
+    stopLiveClockAnimation();
+    const target = liveClockTargetSeconds();
+    if(options.instant || target <= liveDisplayedClockSeconds){
+      liveDisplayedClockSeconds = target;
+      syncLiveClockDom();
+      flushLiveActionNarrationsUpTo(liveDisplayedClockSeconds);
+      return;
+    }
+    if(livePaused){ syncLiveClockDom(); return; }
+    const autoDelay = Math.max(300, Number(window.GAME_CONFIG?.ui?.simulacionVivaAutoMs || 3360));
+    const remaining = Math.max(1, target - liveDisplayedClockSeconds);
+    const delay = Math.max(8, Math.min(40, Math.floor(autoDelay / Math.max(1, remaining))));
+    liveClockTimer = setInterval(() => {
+      if(livePaused){ stopLiveClockAnimation(); return; }
+      liveDisplayedClockSeconds = Math.min(target, liveDisplayedClockSeconds + 1);
+      syncLiveClockDom();
+      flushLiveActionNarrationsUpTo(liveDisplayedClockSeconds);
+      if(liveDisplayedClockSeconds >= target) stopLiveClockAnimation();
+    }, delay);
   }
   function livePhaseLabel(){
     if(liveState?.finished) return 'Finalizado';
@@ -75,6 +131,306 @@
   }
   function eventOrder(type){ return ({ goal:1, red:2, injury:3, yellow:4, save:5, error:6, sub:7 })[type] || 9; }
   function eventIcon(type){ return ({ goal:'⚽', yellow:'🟨', red:'🟥', injury:'✚', sub:'⇄', save:'🧤', error:'⚠️' })[type] || '•'; }
+  function liveActionPlayerName(id){
+    return id ? eventPlayerLabel(id, true) : 'un jugador';
+  }
+  function livePlayerLinkMarkup(id, fallback='Jugador'){
+    const playerId = Number(id || 0);
+    if(!playerId) return ehtml(fallback);
+    return `<button type="button" class="linklike live-commentary-player" data-live-player-id="${playerId}" title="Ver jugador">${ehtml(liveActionPlayerName(playerId))}</button>`;
+  }
+  function liveNarrationSegmentsMarkup(segments=[]){
+    return (Array.isArray(segments) ? segments : []).map(part => {
+      if(part?.playerId) return livePlayerLinkMarkup(part.playerId, part.fallback || 'Jugador');
+      return ehtml(part?.text || '');
+    }).join('');
+  }
+  function liveActionNarration(result){
+    if(!result || !result.type || !result.actorId) return null;
+    const actorId = Number(result.actorId || 0);
+    const targetId = Number(result.targetId || 0);
+    const defenderId = Number(result.defenderId || 0);
+    const keeperId = Number(result.shot?.keeper?.playerId || result.shot?.keySave?.playerId || 0);
+    const type = String(result.type || '');
+    const success = Boolean(result.success);
+    const foul = Boolean(result.foul);
+    const segments = [];
+    const text = value => segments.push({ text:String(value || '') });
+    const player = (id, fallback='un jugador') => id ? segments.push({ playerId:Number(id), fallback }) : text(fallback);
+    let endingIcon = '';
+    let highlight = '';
+    let highlightLabel = '';
+    let visualKind = 'action';
+    let visualTitle = 'JUGADA';
+    player(actorId);
+    if(type === 'pass_short'){
+      visualTitle = 'PASE CORTO';
+      if(foul){ text(' intenta jugar en corto'); if(targetId){ text(' con '); player(targetId); } text(', pero '); player(defenderId,'un rival'); text(' corta con falta.'); endingIcon='⚠'; visualKind='foul'; visualTitle='FALTA'; }
+      else if(success){ text(' toca en corto para '); player(targetId,'un compañero'); text('.'); visualKind='pass'; }
+      else{ text(' busca a '); player(targetId,'un compañero'); text(' con un pase corto, pero '); player(defenderId,'un rival'); text(' intercepta.'); endingIcon='🛡️'; visualKind='steal'; visualTitle='ROBO'; highlight='steal'; highlightLabel='Robo'; }
+    }else if(type === 'pass_long'){
+      visualTitle = 'PASE LARGO';
+      if(foul){ text(' intenta un envío largo hacia '); player(targetId,'un compañero'); text(' y '); player(defenderId,'un rival'); text(' lo frena con falta.'); endingIcon='⚠'; visualKind='foul'; visualTitle='FALTA'; }
+      else if(success){ text(' lanza un pase largo hacia '); player(targetId,'un compañero'); text(' y encuentra destino.'); visualKind='pass'; }
+      else{ text(' busca en largo a '); player(targetId,'un compañero'); text(', pero '); player(defenderId,'un rival'); text(' corta el envío.'); endingIcon='🛡️'; visualKind='steal'; visualTitle='ROBO'; highlight='steal'; highlightLabel='Robo'; }
+    }else if(type === 'pass_through'){
+      visualTitle = 'PASE PROFUNDO';
+      if(foul){ text(' intenta filtrar para '); player(targetId,'un compañero'); text(' y '); player(defenderId,'un rival'); text(' interrumpe con falta.'); endingIcon='⚠'; visualKind='foul'; visualTitle='FALTA'; }
+      else if(success){ text(' filtra un pase profundo para '); player(targetId,'un compañero'); text(' y rompe una línea.'); visualKind='pass'; }
+      else{ text(' intenta un pase profundo para '); player(targetId,'un compañero'); text(', pero '); player(defenderId,'un rival'); text(' anticipa.'); endingIcon='🛡️'; visualKind='steal'; visualTitle='ROBO'; highlight='steal'; highlightLabel='Robo'; }
+    }else if(type === 'cross'){
+      visualTitle = 'CENTRO';
+      if(foul){ text(' busca el centro para '); player(targetId,'un compañero'); text(' y '); player(defenderId,'un rival'); text(' corta con falta.'); endingIcon='⚠'; visualKind='foul'; visualTitle='FALTA'; }
+      else if(success){ text(' envía un centro buscando a '); player(targetId,'un compañero'); text(' y conecta la jugada.'); visualKind='pass'; }
+      else{ text(' tira el centro hacia '); player(targetId,'el área'); text(', pero '); player(defenderId,'un rival'); text(' despeja.'); endingIcon='🛡️'; visualKind='steal'; visualTitle='ROBO'; highlight='steal'; highlightLabel='Robo'; }
+    }else if(type === 'dribble'){
+      visualTitle = 'REGATE';
+      if(foul){ text(' encara a '); player(defenderId,'su marcador'); text(' y recibe la falta.'); endingIcon='⚠'; visualKind='foul'; visualTitle='FALTA'; }
+      else if(success){ if(defenderId){ text(' encara a '); player(defenderId); text(' y logra superarlo.'); } else text(' avanza en conducción y gana metros.'); visualKind='dribble'; }
+      else{ text(' intenta el regate, pero '); player(defenderId,'un rival'); text(' le gana el duelo y recupera.'); endingIcon='🛡️'; visualKind='steal'; visualTitle='ROBO'; highlight='steal'; highlightLabel='Robo'; }
+    }else if(type === 'shot'){
+      if(result.shot?.goal){ text(' remata al arco y convierte el gol.'); endingIcon='⚽'; highlight='goal'; highlightLabel='Gol'; visualKind='goal'; visualTitle='GOL'; }
+      else if(result.shot?.blocked){ text(' remata, pero '); player(defenderId,'un defensor'); text(' bloquea el disparo.'); endingIcon='🧱'; visualKind='block'; visualTitle='BLOQUEO'; }
+      else if(result.shot?.onTarget){ text(' remata al arco y '); player(keeperId,'el arquero'); text(' contiene el disparo.'); endingIcon='🧤'; highlight='save'; highlightLabel='Atajada'; visualKind='save'; visualTitle='ATAJADA'; }
+      else{ text(' prueba al arco, pero el remate se va desviado.'); endingIcon='↗'; highlight='miss'; highlightLabel='Errada'; visualKind='miss'; visualTitle='ERRADA'; }
+    }
+    if(segments.length <= 1) return null;
+    const seconds = Math.max(0, Math.min(5400, Number(result.clockSeconds || Number(result.phase || 0) * Number(liveState?.continuousSecondsPerPhase || 10))));
+    return {
+      key:`action-${Number(result.phase || 0)}-${type}-${actorId}-${targetId}-${String(result.reason || '')}`,
+      clockSeconds:seconds,
+      time:liveClockText(seconds),
+      clubId:Number(result.attackingClubId || 0),
+      defendingClubId:Number(result.defendingClubId || 0),
+      type,
+      actorId,
+      targetId:targetId || null,
+      defenderId:defenderId || null,
+      keeperId:keeperId || null,
+      fromPosition:result.fromPosition ? { x:Number(result.fromPosition.x), y:Number(result.fromPosition.y) } : null,
+      toPosition:result.toPosition ? { x:Number(result.toPosition.x), y:Number(result.toPosition.y) } : null,
+      defenderPosition:result.defenderPosition ? { x:Number(result.defenderPosition.x), y:Number(result.defenderPosition.y) } : null,
+      keeperPosition:result.keeperPosition ? { x:Number(result.keeperPosition.x), y:Number(result.keeperPosition.y) } : null,
+      success,
+      foul,
+      reason:String(result.reason || ''),
+      shotGoal:Boolean(result.shot?.goal),
+      shotOnTarget:Boolean(result.shot?.onTarget),
+      shotBlocked:Boolean(result.shot?.blocked),
+      visualKind,
+      visualTitle,
+      segments,
+      endingIcon,
+      highlight,
+      highlightLabel,
+      tone:`action-${type}`
+    };
+  }
+  function liveResultCountsAsAttack(result){
+    if(!result) return false;
+    const type = String(result.type || '');
+    if(type === 'shot') return true;
+    if(['pass_through','cross'].includes(type) && result.success) return true;
+    if(type === 'dribble' && result.success && Number(result.fromPosition?.x || 0) >= 58) return true;
+    return false;
+  }
+  function liveImportantResults(results){
+    const list = Array.isArray(results) ? results : [];
+    const selected = new Set();
+    list.forEach((result, index) => {
+      if(!liveResultCountsAsAttack(result)) return;
+      selected.add(index);
+      const clubId = Number(result.attackingClubId || 0);
+      let included = 0;
+      for(let i=index-1; i>=0 && included<5; i--){
+        const prev = list[i];
+        if(!prev || Number(prev.attackingClubId || 0) !== clubId) break;
+        selected.add(i);
+        included += 1;
+        if(prev.possessionChanged) break;
+      }
+    });
+    return list.filter((_, index) => selected.has(index));
+  }
+  function queueLiveActionNarrations(results){
+    const list = Array.isArray(results) ? results : [];
+    const importantResults = new Set(liveImportantResults(list));
+    let queued = 0;
+    list.forEach(result => {
+      const item = liveActionNarration(result);
+      if(!item || liveSeenActionNarrationKeys.has(item.key) || livePendingActionNarrations.some(current => current.key === item.key)) return;
+      item.category = 'action';
+      item.important = importantResults.has(result) || Boolean(item.highlight);
+      livePendingActionNarrations.push(item);
+      queued += 1;
+    });
+    livePendingActionNarrations.sort((a,b)=>Number(a.clockSeconds || 0)-Number(b.clockSeconds || 0));
+    return { queued, important:Boolean(list.some(liveResultCountsAsAttack)) };
+  }
+  function openLivePlayerQuick(playerId){
+    const id = Number(playerId || 0);
+    if(!id) return;
+    liveInspectResumeAfterClose = !livePaused;
+    livePaused = true;
+    clearTimeout(liveAutoTimer);
+    stopLiveClockAnimation();
+    liveInspectPlayerId = id;
+    renderLiveMatch();
+  }
+  function bindLivePlayerLinksWithin(root=document){
+    root?.querySelectorAll?.('[data-live-player-id]').forEach(btn => btn.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      openLivePlayerQuick(btn.getAttribute('data-live-player-id'));
+    }));
+  }
+  function refreshLiveCommentaryHistoryOnly(){
+    const commentary = document.querySelector('.live-commentary-history-list');
+    const highlights = document.querySelector('.live-highlight-events-list');
+    if(commentary) commentary.innerHTML = liveCommentaryHistoryMarkup();
+    if(highlights) highlights.innerHTML = liveHighlightedEventsMarkup();
+    if(commentary) bindLivePlayerLinksWithin(commentary);
+    if(highlights) bindLivePlayerLinksWithin(highlights);
+  }
+  function livePitchClamp(value, min=3, max=97){ return Math.max(min, Math.min(max, Number(value ?? 50))); }
+  function livePitchPerspectivePoint(point, attackingClubId){
+    if(!point || !Number.isFinite(Number(point.x)) || !Number.isFinite(Number(point.y))) return null;
+    let x = Number(point.x), y = Number(point.y);
+    if(Number(attackingClubId || 0) === Number(liveState?.match?.awayId || 0)){ x = 100 - x; y = 100 - y; }
+    return { x:livePitchClamp(x), y:livePitchClamp(y) };
+  }
+  function liveNominalPlayerPoint(playerId, clubId){
+    const side = Number(clubId || 0) === Number(liveState?.match?.awayId || 0) ? 'away' : 'home';
+    const player = sideLineup(side).find(entry => Number(entry?.id || 0) === Number(playerId || 0));
+    const role = String(player?.role || player?.position || '').toUpperCase();
+    const rolePoints = {
+      POR:[8,50], DFC:[24,50], LI:[27,18], LD:[27,82], MCD:[40,50], MC:[50,50], MCO:[63,50], MI:[52,20], MD:[52,80], EI:[74,20], ED:[74,80], DC:[82,50]
+    };
+    let pair = rolePoints[role] || [50,50];
+    const slotIndex = Number(player?.slotIndex || 0);
+    let x = pair[0], y = pair[1];
+    if(['DFC','MCD','MC','MCO','DC'].includes(role)) y = livePitchClamp(y + ((slotIndex % 3) - 1) * 12, 10, 90);
+    if(side === 'away'){ x = 100 - x; y = 100 - y; }
+    return { x:livePitchClamp(x), y:livePitchClamp(y) };
+  }
+  function livePitchPlayerMarkup(playerId, point, clubId, roleLabel, extraClass=''){
+    const id = Number(playerId || 0);
+    if(!id || !point) return '';
+    const sideClass = Number(clubId || 0) === Number(liveState?.match?.homeId || 0) ? 'home' : 'away';
+    return `<button type="button" class="live-pitch-player ${sideClass} ${ehtml(extraClass)}" data-live-player-id="${id}" style="--px:${Number(point.x).toFixed(2)};--py:${Number(point.y).toFixed(2)}" title="${ehtml(liveActionPlayerName(id))}"><span>${ehtml(eventPlayerLabel(id))}</span><small>${ehtml(roleLabel || '')}</small></button>`;
+  }
+  function livePitchBallMarkup(fromPoint, toPoint, kind='action'){
+    if(!fromPoint || !toPoint) return '';
+    return `<span class="live-pitch-ball ${ehtml(kind)}" style="--fx:${Number(fromPoint.x).toFixed(2)};--fy:${Number(fromPoint.y).toFixed(2)};--tx:${Number(toPoint.x).toFixed(2)};--ty:${Number(toPoint.y).toFixed(2)}" aria-hidden="true">●</span>`;
+  }
+  function livePitchDetail(item){
+    const actor = item?.actorId ? eventPlayerLabel(item.actorId, true) : '';
+    const target = item?.targetId ? eventPlayerLabel(item.targetId, true) : '';
+    const defender = item?.defenderId ? eventPlayerLabel(item.defenderId, true) : '';
+    const keeper = item?.keeperId ? eventPlayerLabel(item.keeperId, true) : '';
+    if(item?.visualKind === 'goal') return actor ? `${actor} convierte` : 'Gol';
+    if(item?.visualKind === 'miss') return actor ? `${actor} remata afuera` : 'Remate desviado';
+    if(item?.visualKind === 'steal') return defender ? `${defender} recupera ante ${actor}` : `${actor} pierde la pelota`;
+    if(item?.visualKind === 'save') return keeper ? `${keeper} ataja el remate de ${actor}` : `Atajada ante ${actor}`;
+    if(item?.visualKind === 'block') return defender ? `${defender} bloquea a ${actor}` : `Remate bloqueado`;
+    if(item?.visualKind === 'foul') return defender ? `${defender} comete falta sobre ${actor}` : `Falta sobre ${actor}`;
+    if(item?.visualKind === 'yellow') return `${actor} · tarjeta amarilla`;
+    if(item?.visualKind === 'red') return `${actor} · expulsado`;
+    if(item?.visualKind === 'injury') return `${actor} · ${item.injuryLabel || 'lesión'}`;
+    if(item?.type === 'dribble') return defender ? `${actor} supera a ${defender}` : `${actor} avanza`;
+    if(target) return `${actor} → ${target}`;
+    return actor || 'Partido en juego';
+  }
+  function livePitchDestination(item, fromPoint){
+    const attackClubId = Number(item?.clubId || 0);
+    if(item?.visualKind === 'goal') return livePitchPerspectivePoint({x:100,y:50}, attackClubId);
+    if(item?.visualKind === 'miss'){
+      const actorAttackPoint = item?.fromPosition || {x:80,y:50};
+      const missY = Number(actorAttackPoint.y || 50) <= 50 ? 33 : 67;
+      return livePitchPerspectivePoint({x:100,y:missY}, attackClubId);
+    }
+    if(item?.visualKind === 'save' && item?.keeperPosition) return livePitchPerspectivePoint(item.keeperPosition, attackClubId);
+    if((item?.visualKind === 'steal' || item?.visualKind === 'block' || item?.visualKind === 'foul') && item?.defenderPosition) return livePitchPerspectivePoint(item.defenderPosition, attackClubId);
+    return livePitchPerspectivePoint(item?.toPosition, attackClubId) || fromPoint;
+  }
+  function livePitchStageMarkup(item=livePitchVisual){
+    const match = liveState?.match || {};
+    const colors = liveContrastColorPair(match.homeId, match.awayId);
+    if(!item){
+      const stateLabel = liveState?.finished ? 'FINAL' : (liveIsBreak() ? 'ENTRETIEMPO' : 'PARTIDO EN JUEGO');
+      const stateDetail = liveState?.finished ? 'El partido terminó.' : (liveIsBreak() ? 'Los equipos están en descanso.' : 'Esperando la próxima acción.');
+      return `<div class="live-animated-pitch idle" style="--pitch-home:${ehtml(colors.home)};--pitch-away:${ehtml(colors.away)}"><div class="live-pitch-markings"><i class="mid"></i><i class="circle"></i><i class="box left"></i><i class="box right"></i><i class="goal left"></i><i class="goal right"></i></div><div class="live-pitch-status neutral"><strong>${ehtml(stateLabel)}</strong><span>${ehtml(stateDetail)}</span></div></div>`;
+    }
+    const attackClubId = Number(item.clubId || 0);
+    const defendingClubId = Number(item.defendingClubId || (attackClubId === Number(match.homeId) ? match.awayId : match.homeId));
+    const fromPoint = item.absolutePoint || livePitchPerspectivePoint(item.fromPosition, attackClubId) || liveNominalPlayerPoint(item.actorId, attackClubId);
+    const toPoint = item.absolutePoint || livePitchDestination(item, fromPoint);
+    const actorPoint = fromPoint;
+    const targetPoint = item.targetId ? (livePitchPerspectivePoint(item.toPosition, attackClubId) || toPoint) : null;
+    const defenderPoint = item.defenderId ? (livePitchPerspectivePoint(item.defenderPosition, attackClubId) || toPoint) : null;
+    const keeperPoint = item.keeperId ? (livePitchPerspectivePoint(item.keeperPosition, attackClubId) || livePitchPerspectivePoint({x:96,y:50}, attackClubId)) : null;
+    const players = [
+      livePitchPlayerMarkup(item.actorId, actorPoint, attackClubId, item.visualKind === 'yellow' || item.visualKind === 'red' || item.visualKind === 'injury' ? 'jugador' : 'poseedor', 'actor'),
+      item.targetId && Number(item.targetId) !== Number(item.actorId) ? livePitchPlayerMarkup(item.targetId, targetPoint, attackClubId, 'receptor', 'target') : '',
+      item.defenderId && Number(item.defenderId) !== Number(item.actorId) ? livePitchPlayerMarkup(item.defenderId, defenderPoint, defendingClubId, item.visualKind === 'steal' ? 'recupera' : 'rival', 'defender') : '',
+      item.keeperId && Number(item.keeperId) !== Number(item.defenderId) ? livePitchPlayerMarkup(item.keeperId, keeperPoint, defendingClubId, 'arquero', 'keeper') : ''
+    ].filter(Boolean).join('');
+    const specialNoBall = ['yellow','red','injury'].includes(String(item.visualKind || ''));
+    const ball = specialNoBall ? '' : livePitchBallMarkup(fromPoint,toPoint,item.visualKind || 'action');
+    const direction = attackClubId === Number(match.awayId) ? '←' : '→';
+    return `<div class="live-animated-pitch ${ehtml(item.visualKind || 'action')}" style="--pitch-home:${ehtml(colors.home)};--pitch-away:${ehtml(colors.away)}"><div class="live-pitch-markings"><i class="mid"></i><i class="circle"></i><i class="box left"></i><i class="box right"></i><i class="goal left"></i><i class="goal right"></i></div><div class="live-pitch-team-label home">${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</div><div class="live-pitch-team-label away">${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</div>${players}${ball}<div class="live-pitch-status ${ehtml(item.visualKind || 'action')}"><strong>${ehtml(item.visualTitle || 'JUGADA')}</strong><span>${ehtml(livePitchDetail(item))}</span><small>${ehtml(item.time || liveClockText())} · ${direction} ${ehtml(liveClubName(attackClubId))}</small></div></div>`;
+  }
+  function livePitchCardMarkup(){
+    return `<div class="card inner live-pitch-card"><div class="live-card-head"><h3>Cancha en vivo</h3><span class="muted small">jugadores que intervienen · acción por acción</span></div><div id="liveAnimatedPitchStage">${livePitchStageMarkup()}</div><div class="live-pitch-legend"><span><i class="home"></i>Local</span><span><i class="away"></i>Visitante</span><span><b>⚽</b> Gol</span><span><b>↗</b> Errada</span><span><b>🛡️</b> Robo</span><span><b>🟨</b> Tarjeta</span><span><b>✚</b> Lesión</span></div></div>`;
+  }
+  function refreshLivePitchOnly(){
+    const stage = document.querySelector('#liveAnimatedPitchStage');
+    if(stage){ stage.innerHTML = livePitchStageMarkup(); bindLivePlayerLinksWithin(stage); }
+  }
+  function liveSpecialPitchItems(){
+    const items = [];
+    (liveState?.cards || []).forEach(card => {
+      const kind = card.type === 'yellow' ? 'yellow' : 'red';
+      const label = card.type === 'yellow' ? 'TARJETA AMARILLA' : (card.type === 'secondYellowRed' ? 'DOBLE AMARILLA · ROJA' : 'TARJETA ROJA');
+      const seconds = Math.max(0, Math.min(5400, Number(card.minute || 0) * 60));
+      items.push({ key:`pitch-card-${card.minute}-${card.clubId}-${card.playerId}-${card.type}`, clockSeconds:seconds, time:liveClockText(seconds), clubId:Number(card.clubId || 0), actorId:Number(card.playerId || 0), visualKind:kind, visualTitle:label, endingIcon:kind === 'yellow' ? '🟨' : '🟥', highlight:kind, highlightLabel:card.type === 'yellow' ? 'Amarilla' : 'Roja', important:true, category:'special', absolutePoint:liveNominalPlayerPoint(card.playerId, card.clubId), segments:[{playerId:Number(card.playerId || 0),fallback:'Jugador'},{text:card.type === 'yellow' ? ' recibe tarjeta amarilla.' : ' es expulsado.'}] });
+    });
+    (liveState?.injuries || []).forEach(injury => {
+      const seconds = Math.max(0, Math.min(5400, Number(injury.minute || 0) * 60));
+      items.push({ key:`pitch-injury-${injury.minute}-${injury.clubId}-${injury.playerId}-${injury.injuryLabel || injury.name || ''}`, clockSeconds:seconds, time:liveClockText(seconds), clubId:Number(injury.clubId || 0), actorId:Number(injury.playerId || 0), visualKind:'injury', visualTitle:'LESIÓN', injuryLabel:String(injury.injuryLabel || injury.name || 'Lesión'), endingIcon:'✚', highlight:'injury', highlightLabel:'Lesión', important:true, category:'special', absolutePoint:liveNominalPlayerPoint(injury.playerId, injury.clubId), segments:[{playerId:Number(injury.playerId || 0),fallback:'Jugador'},{text:` · ${String(injury.injuryLabel || injury.name || 'Lesión')}`}] });
+    });
+    return items.sort((a,b)=>Number(a.clockSeconds || 0)-Number(b.clockSeconds || 0));
+  }
+  function syncLiveSpecialPitchEventsUpTo(seconds){
+    const limit = Number(seconds || 0);
+    let changed = false;
+    liveSpecialPitchItems().forEach(item => {
+      if(Number(item.clockSeconds || 0) > limit || liveSeenPitchEventKeys.has(item.key)) return;
+      liveSeenPitchEventKeys.add(item.key);
+      if(!liveHighlightedHistory.some(entry => entry.key === item.key)) liveHighlightedHistory.push(item);
+      livePitchVisual = item;
+      changed = true;
+    });
+    if(changed){ refreshLivePitchOnly(); refreshLiveCommentaryHistoryOnly(); }
+  }
+  function flushLiveActionNarrationsUpTo(seconds){
+    const limit = Number(seconds || 0);
+    let changed = false;
+    let pitchChanged = false;
+    while(livePendingActionNarrations.length && Number(livePendingActionNarrations[0].clockSeconds || 0) <= limit){
+      const item = livePendingActionNarrations.shift();
+      if(!item || liveSeenActionNarrationKeys.has(item.key)) continue;
+      liveSeenActionNarrationKeys.add(item.key);
+      liveCommentaryHistory.push(item);
+      if(item.highlight && !liveHighlightedHistory.some(entry => entry.key === item.key)) liveHighlightedHistory.push(item);
+      const showOnPitch = livePlaybackMode !== 'important' || item.important === true;
+      if(showOnPitch){ livePitchVisual = item; pitchChanged = true; }
+      changed = true;
+    }
+    if(changed) refreshLiveCommentaryHistoryOnly();
+    if(pitchChanged) refreshLivePitchOnly();
+    syncLiveSpecialPitchEventsUpTo(limit);
+  }
   function narrationFallback(event, player, club, rival){
     const p = player?.name || 'el jugador';
     if(event.type === 'goal') return `¡Gol de ${p}! ${club} golpea en el minuto ${event.minute}.`;
@@ -105,6 +461,7 @@
         : '';
       return { tone:'final', title:'Final del partido', text:`Resultado final: ${h} - ${a}.${shootoutText}`, sub:shootout ? 'La tanda no modifica los goles ni las estadísticas del partido.' : 'Ya podés cerrar y guardar el resultado.' };
     }
+    if(Array.isArray(liveState?.continuousResults) && liveState.continuousResults.length) return null;
     if(latest && latest.minute === minute){
       const playerId = latest.data?.playerId || latest.data?.inId || latest.data?.outId || 0;
       const player = typeof playerById === 'function' ? playerById(playerId) : null;
@@ -126,6 +483,45 @@
     const text = leader === 'ninguno' ? 'El partido está parejo y todavía no aparece una ventaja clara.' : `${leader} empieza a inclinar la cancha.`;
     return { tone:'ambient', title:`Minuto ${minute}'`, text, sub:minute <= 45 ? 'Primer tiempo en desarrollo.' : 'Segundo tiempo en desarrollo.' };
   }
+  function liveNarrationHistoryTime(){
+    if(liveState?.finished) return '90:00';
+    if(liveIsBreak()) return '45:00';
+    const seconds = Math.max(0, Math.min(5400, Number(liveState?.minute || 0) * 60));
+    return liveClockText(seconds);
+  }
+  function rememberLiveNarration(narration){
+    if(!narration || !liveState) return;
+    const key = liveState.finished
+      ? 'final'
+      : (liveIsBreak() ? 'halftime' : `minute-${Number(liveState.minute || 0)}-${String(narration.tone || 'ambient')}-${String(narration.text || '')}`);
+    if(key === liveLastCommentaryKey || liveCommentaryHistory.some(item => item.key === key)) return;
+    liveLastCommentaryKey = key;
+    liveCommentaryHistory.push({
+      key,
+      time:liveNarrationHistoryTime(),
+      title:String(narration.title || ''),
+      text:String(narration.text || ''),
+      sub:String(narration.sub || ''),
+      tone:String(narration.tone || 'ambient'),
+      category:'system',
+      important:false
+    });
+  }
+  function liveCommentaryHistoryMarkup(){
+    const items = liveCommentaryHistory.filter(item => livePlaybackMode !== 'important' || item?.important === true).slice().reverse();
+    if(!items.length) return '<p class="muted small">Todavía no hay relatos.</p>';
+    return items.map(item => {
+      if(Array.isArray(item.segments)){
+        return `<div class="live-event commentary ${ehtml(item.tone)}"><span class="live-event-time">${ehtml(item.time)}</span><span class="live-event-badge">${item.clubId ? liveBadge(item.clubId) : ''}</span><strong>${liveNarrationSegmentsMarkup(item.segments)}</strong>${item.endingIcon ? `<i class="live-action-ending" title="Resultado de la jugada">${ehtml(item.endingIcon)}</i>` : '<i class="live-action-ending empty"></i>'}</div>`;
+      }
+      return `<div class="live-event commentary system ${ehtml(item.tone)}"><span class="live-event-time">${ehtml(item.time)}</span><span class="live-event-badge"></span><strong>${ehtml(item.text || item.title || '')}</strong><i class="live-action-ending empty"></i></div>`;
+    }).join('');
+  }
+  function liveHighlightedEventsMarkup(){
+    const items = liveHighlightedHistory.slice().reverse();
+    if(!items.length) return '<p class="muted small">Todavía no hay jugadas destacadas.</p>';
+    return items.map(item => `<div class="live-event highlight ${ehtml(item.highlight || '')}"><span>${ehtml(item.time)}</span><span class="live-event-badge">${item.clubId ? liveBadge(item.clubId) : ''}</span><strong>${item.highlightLabel ? `<b>${ehtml(item.highlightLabel)}</b> · ` : ''}${liveNarrationSegmentsMarkup(item.segments)}</strong><i>${ehtml(item.endingIcon || '•')}</i></div>`).join('');
+  }
   function meterClass(value){ const n = Number(value || 0); return n >= 76 ? 'ok' : n >= 55 ? 'warn' : 'bad'; }
   function fitClass(value){ const n = Number(value || 0); return n >= 90 ? 'ok' : n >= 74 ? 'warn' : 'bad'; }
   function remainingSubstitutions(){ return Math.max(0, Number(liveState?.maxSubs || 5) - Number(liveState?.usedSubs || 0) - livePendingSubstitutions.length); }
@@ -134,6 +530,7 @@
   function availabilityTag(player, inField, isOwn){
     if(player?.expelled) return '<span class="live-row-tag red">EXP</span>';
     if(player?.injuredGhost) return '<span class="live-row-tag injury">LES</span>';
+    if(player?.substitutedOut) return `<span class="live-row-tag substituted" title="Reemplazado${player?.substitutedMinute ? ` al ${Number(player.substitutedMinute)}'` : ''}">SAL</span>`;
     if(!isOwn) return '';
     if(inField && pendingOutIds().has(Number(player.id))) return '<span class="live-row-tag warn">SALE</span>';
     if(!inField && pendingInIds().has(Number(player.id))) return '<span class="live-row-tag ok">ENTRA</span>';
@@ -177,7 +574,9 @@
       repeatIcon('👟', ev.assists),
       repeatIcon('🟨', ev.yellow),
       repeatIcon('🟥', ev.red),
-      repeatIcon('✚', ev.injuries, 1)
+      repeatIcon('✚', ev.injuries, 1),
+      repeatIcon('⇧', ev.subIn, 1),
+      repeatIcon('⇩', ev.subOut, 1)
     ].filter(Boolean).join('');
     return icons ? `<span class="live-player-icons" title="Estados del partido">${icons}</span>` : '';
   }
@@ -216,8 +615,9 @@
     const id = Number(player.id || 0);
     const expelled = Boolean(player?.expelled);
     const injuredGhost = Boolean(player?.injuredGhost || player?.ghost);
+    const substitutedOut = Boolean(player?.substitutedOut);
     const blocked = Boolean(player?.blocked && !(isOwn && inField && injuredGhost));
-    const selectable = isOwn && !expelled && !blocked;
+    const selectable = isOwn && !expelled && !substitutedOut && !blocked;
     const selected = selectable && (inField ? Number(liveSelectedStarterId) === id : Number(liveSelectedBenchId) === id);
     const disabled = expelled || blocked || (isOwn && (inField ? pendingOutIds().has(id) : pendingInIds().has(id)));
     const cond = Math.round(Number(player.condition || 0));
@@ -225,12 +625,12 @@
     const fit = Math.round(Number(player.fit || (inField ? 100 : 0)));
     const rating = livePlayerRating(player, side, inField);
     const ratingClass = rating === '—' ? 'idle' : liveRatingClass(Number(String(rating).replace(',', '.')));
-    const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${expelled ? 'expelled' : ''} ${injuredGhost ? 'injured-ghost' : ''} ${selectable ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
+    const cls = `live-list-row ${inField ? 'starter' : 'bench'} ${expelled ? 'expelled' : ''} ${injuredGhost ? 'injured-ghost' : ''} ${substitutedOut ? 'substituted-out' : ''} ${selectable ? 'clickable' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`;
     const attr = selectable ? (inField ? `data-live-starter-id="${id}"` : `data-live-bench-id="${id}"`) : '';
     const tag = availabilityTag(player, inField, isOwn);
     const icons = livePlayerIcons(id);
     const nameCell = `<span class="live-name-cell"><strong>${ehtml(lastName(player.name))}</strong>${icons}${tag}</span>`;
-    const rowNo = expelled ? 'R' : (injuredGhost ? 'L' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S'));
+    const rowNo = expelled ? 'R' : (injuredGhost ? 'L' : (substitutedOut ? '↘' : (inField ? String((Number(player.slotIndex || 0) + 1)).padStart(2,'0') : 'S')));
     const mediaCell = isOwn ? String(liveDisplayOverall(player)) : '—';
     const body = `<span class="num">${rowNo}</span>${nameCell}<span>${ehtml(player.role || player.position || '—')}</span><b>${ehtml(mediaCell)}</b><b class="live-rating ${ratingClass}">${ehtml(rating)}</b><i class="${meterClass(cond)}">${cond}</i><i class="${meterClass(morale)}">${morale}</i><i class="${fitClass(fit)}">${inField ? fit : '—'}</i>`;
     return selectable ? `<button type="button" class="${cls}" ${attr} ${disabled ? 'disabled' : ''}>${body}</button>` : `<div class="${cls}">${body}</div>`;
@@ -245,6 +645,7 @@
     const isOwn = Number(clubId) === ownClubId();
     const lineup = sideLineup(side);
     const bench = sideBench(side);
+    const activeBenchCount = bench.filter(player => !player?.substitutedOut && !player?.injuredGhost && !player?.expelled).length;
     const used = side === 'home' ? Number(liveState?.usedSubsHome || 0) : Number(liveState?.usedSubsAway || 0);
     const injuredGhosts = lineup.filter(p => p?.injuredGhost).length;
     const selectedHint = isOwn
@@ -258,7 +659,7 @@
       <p class="muted small live-selected-hint">${ehtml(selectedHint)}</p>
       <div class="live-list-head"><span>N°</span><span>Jugador</span><span>Rol</span><span>MED</span><span>Pun</span><span>Fís</span><span>Mor</span><span>Rol%</span></div>
       <div class="live-team-list starters">${lineup.map(p => playerListRow(p, side, true, isOwn)).join('') || '<p class="muted small">Sin titulares.</p>'}</div>
-      <div class="live-bench-title compact"><strong>Banco</strong><span>${bench.length} suplentes · ${used}/3 cambios</span></div>
+      <div class="live-bench-title compact"><strong>Banco</strong><span>${activeBenchCount} disponibles · ${used}/${Number(liveState?.maxSubs || 5)} cambios</span></div>
       <div class="live-team-list bench">${bench.map(p => playerListRow(p, side, false, isOwn)).join('') || '<p class="muted small">Sin suplentes disponibles.</p>'}</div>
       ${isOwn ? `<div class="live-pending-box"><div class="live-bench-title compact"><strong>Pendientes</strong><span>${remainingSubstitutions()} cambios restantes</span></div>${pendingSubstitutionList()}</div>` : ''}
     </section>`;
@@ -283,17 +684,34 @@
   function liveCompareClubColor(clubId, fallback){
     const raw = typeof clubById === 'function' ? clubById(clubId)?.primaryColor : null;
     let rgb = typeof parseCssColorToRgb === 'function' ? parseCssColorToRgb(raw) : null;
+    if(!rgb) rgb = typeof parseCssColorToRgb === 'function' ? parseCssColorToRgb(fallback) : null;
     if(!rgb) return fallback;
     if(typeof rgbLuminance === 'function' && rgbLuminance(rgb) > 0.84 && typeof mixRgb === 'function') rgb = mixRgb(rgb, [100,116,139], 0.58);
     return typeof rgbToCss === 'function' ? rgbToCss(rgb) : fallback;
+  }
+  function liveColorDistance(a,b){
+    const ra = typeof parseCssColorToRgb === 'function' ? parseCssColorToRgb(a) : null;
+    const rb = typeof parseCssColorToRgb === 'function' ? parseCssColorToRgb(b) : null;
+    if(!ra || !rb) return 999;
+    return Math.sqrt(ra.reduce((sum, value, index) => sum + Math.pow(Number(value || 0) - Number(rb[index] || 0), 2), 0));
+  }
+  function liveContrastColorPair(homeId, awayId){
+    let home = liveCompareClubColor(homeId, '#e11d48');
+    let away = liveCompareClubColor(awayId, '#60a5fa');
+    if(liveColorDistance(home, away) < 115){
+      const alternatives = ['#38bdf8','#facc15','#22c55e','#f97316','#e879f9','#f8fafc'];
+      away = alternatives.slice().sort((a,b)=>liveColorDistance(home,b)-liveColorDistance(home,a))[0] || '#facc15';
+    }
+    return { home, away };
   }
   function compareStatsCard(){
     const match = liveState.match || {};
     const h = liveState.matchStats?.home || {};
     const a = liveState.matchStats?.away || {};
     const awayPoss = Number(a.possession ?? (100 - Number(h.possession || 50)));
-    const homeColor = liveCompareClubColor(match.homeId, '#e11d48');
-    const awayColor = liveCompareClubColor(match.awayId, '#60a5fa');
+    const colors = liveContrastColorPair(match.homeId, match.awayId);
+    const homeColor = colors.home;
+    const awayColor = colors.away;
     return `<div class="card inner live-compare-card" style="--live-home-color:${ehtml(homeColor)};--live-away-color:${ehtml(awayColor)}">
       <div class="live-compare-top"><span>${liveBadge(match.homeId)} ${ehtml(liveClubName(match.homeId))}</span><b>Estadísticas del partido</b><span>${ehtml(liveClubName(match.awayId))} ${liveBadge(match.awayId)}</span></div>
       ${compareStatRow('Intentos de ataque', h.attacks || 0, a.attacks || 0)}
@@ -329,13 +747,15 @@
     if(!livePendingSubstitutions.length) return '<p class="muted small">Sin cambios pendientes.</p>';
     return `<div class="live-pending-subs">${livePendingSubstitutions.map((s, index) => `<div><span>Próx. minuto</span><strong>Entra ${ehtml(eventPlayerLabel(s.inId))} · Sale ${ehtml(eventPlayerLabel(s.outId))}</strong><button type="button" data-live-remove-pending-sub="${index}" class="ghost mini">Quitar</button></div>`).join('')}</div>`;
   }
+  function livePlaybackModeControl(){
+    return `<label class="live-playback-mode"><span>Cancha</span><select id="livePlaybackModeSelect" aria-label="Modo de animación de la cancha"><option value="full" ${livePlaybackMode === 'full' ? 'selected' : ''}>Todas las acciones</option><option value="important" ${livePlaybackMode === 'important' ? 'selected' : ''}>Solo momentos clave</option></select></label>`;
+  }
   function liveManagerPanel(){
     return `<div class="card inner live-bottom-controls">
-      ${instructionButtons()}
+      <div class="live-manager-main-controls">${instructionButtons()}${livePlaybackModeControl()}</div>
       <div class="live-action-row">
         <button id="liveTacticBtn" class="ghost ${liveTacticOpen ? 'active' : ''}" ${liveState.finished ? 'disabled' : ''}>Táctica</button>
-        <button id="livePauseBtn" class="ghost">${livePaused ? 'Avance automático' : 'Pausar'}</button>
-        <button id="liveNextBlockBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>${ehtml(liveState?.nextBlock?.period === 'break' ? 'Simular descanso' : 'Simular 1 minuto')}</button>
+        <button id="livePauseBtn" class="primary" ${liveState.finished ? 'disabled' : ''}>${livePaused ? 'Reanudar' : 'Pausa'}</button>
         <button id="liveInstantFinishBtn" class="ghost" ${liveState.finished ? 'disabled' : ''}>Terminar partido</button>
         <button id="liveFinishBtn" class="primary" ${liveState.finished ? '' : 'disabled'}>Cerrar y guardar</button>
       </div>
@@ -390,6 +810,21 @@
       <div class="live-board-field">${rows}</div>
     </section>`;
   }
+  function livePlayerQuickView(){
+    const playerId = Number(liveInspectPlayerId || 0);
+    if(!playerId) return '';
+    const p = typeof playerById === 'function' ? playerById(playerId) : null;
+    if(!p) return '';
+    const overall = typeof visibleOverall === 'function' ? visibleOverall(p) : Number(p.overall || p.media || 0);
+    const cond = Math.round(Number(p.condition ?? p.estadoFisico ?? 0));
+    const morale = Math.round(Number(p.morale ?? p.moral ?? 0));
+    return `<div class="live-player-quick-overlay" role="dialog" aria-modal="true" aria-label="Jugador ${ehtml(p.name || '')}"><section class="live-player-quick-card"><button type="button" class="ghost mini" data-close-live-player>Cerrar</button><div class="live-player-quick-head">${typeof faceImg === 'function' ? faceImg(p,'player-photo-placeholder') : ''}<div><p class="label">${liveBadge(p.clubId)} ${ehtml(liveClubName(p.clubId))}</p><h3>${ehtml(p.name || 'Jugador')}</h3><p class="muted small">${ehtml(p.nationality || '')} · ${ehtml(p.position || '')} · ${Number(p.age || 0)} años</p></div></div><div class="live-player-quick-metrics"><div><span>Media</span><strong>${ehtml(overall)}</strong></div><div><span>Físico</span><strong>${cond || '—'}</strong></div><div><span>Moral</span><strong>${morale || '—'}</strong></div></div></section></div>`;
+  }
+  function syncLiveCommentaryExpandedState(){
+    const panel = document.querySelector('#liveMatchRoot')?.closest('.modal-panel');
+    document.body?.classList.toggle('live-commentary-expanded', Boolean(liveCommentaryExpanded));
+    panel?.classList.toggle('live-commentary-modal-expanded', Boolean(liveCommentaryExpanded));
+  }
   function renderLiveMatch(){
     if(!liveState) return;
     const match = liveState.match || {};
@@ -400,11 +835,11 @@
     const progress = Math.max(0, Math.min(100, Math.round((phasesPlayed / Math.max(1,totalPhases)) * 100)));
     const events = liveEvents();
     const narration = liveNarration(events);
-    const recentEvents = events.slice().reverse().slice(0, 11);
+    rememberLiveNarration(narration);
     const html = `<div class="live-match-shell live-v512 live-v517">
       <div class="match-modal-head live-match-head">
         <div class="live-head-left"><p class="label">${match.friendly ? 'Simulación viva · Amistoso' : 'Simulación viva · Fecha'} ${ehtml(match.matchday || '—')} · ${ehtml(match.date || '')}</p><h2>${liveBadge(match.homeId)} ${ehtml(homeTitle)} <span class="live-score">${Number(liveState.homeGoals || 0)} - ${Number(liveState.awayGoals || 0)}</span> ${ehtml(awayTitle)} ${liveBadge(match.awayId)}</h2></div>
-        <div class="live-head-right"><strong>${ehtml(liveDisplayMinute())}</strong><span>Fase ${Math.min(totalPhases, Math.max(1, phasesPlayed || 1))} / ${totalPhases}</span><small>${ehtml(livePhaseLabel())}</small></div>
+        <div class="live-head-right"><strong id="liveMatchClock">${ehtml(liveClockText())}</strong><span id="liveMatchContinuousPhase">Fase ${liveClockPhaseFromSeconds(liveDisplayedClockSeconds)} / ${Number(liveState?.continuousTotalPhases || 540)}</span><small>${ehtml(livePhaseLabel())}</small></div>
       </div>
       <div class="live-progress"><span style="width:${progress}%"></span></div>
       ${minuteRail(events)}
@@ -412,16 +847,11 @@
       <div class="live-v512-grid">
         ${liveTeamPanel('home')}
         <section class="live-center-stack">
-          <div class="card inner live-commentary-card ${ehtml(narration.tone || 'ambient')}">
-            <p class="label">Relato en vivo</p>
-            <h3>${ehtml(narration.title)}</h3>
-            <div class="live-commentary-text">${ehtml(narration.text)}</div>
-            <div class="live-commentary-sub">${ehtml(narration.sub || '')}</div>
-          </div>
+          ${livePitchCardMarkup()}
           ${compareStatsCard()}
           <div class="card inner live-events-card">
-            <div class="live-card-head"><h3>Eventos</h3><span class="muted small">últimos arriba</span></div>
-            <div class="live-events-list">${recentEvents.length ? recentEvents.map(ev => `<div class="live-event ${ehtml(ev.type)}"><span>${ev.minute}'</span><i>${eventIcon(ev.type)}</i>${liveBadge(ev.clubId)}<strong>${ehtml(ev.text)}</strong></div>`).join('') : '<p class="muted small">Todavía no hay eventos relevantes.</p>'}</div>
+            <div class="live-card-head"><h3>Momentos clave</h3><span class="muted small">goles · erradas · robos · tarjetas · lesiones</span></div>
+            <div class="live-events-list live-highlight-events-list">${liveHighlightedEventsMarkup()}</div>
           </div>
           <div class="card inner compact-match-context live-context-compact">
             <div><span>Clima</span><strong>${ehtml(liveState.matchContext?.weather || '—')}</strong></div>
@@ -433,6 +863,7 @@
         ${liveTeamPanel('away')}
       </div>
       ${liveManagerPanel()}
+      ${livePlayerQuickView()}
     </div>`;
     const root = document.querySelector('#liveMatchRoot');
     if(root){
@@ -440,6 +871,8 @@
       else root.innerHTML = html;
     }
     bindLiveControls();
+    syncLiveClockDom();
+    syncLiveCommentaryExpandedState();
   }
   function resetLiveSelections(){ liveSelectedStarterId = 0; liveSelectedBenchId = 0; liveSelectedBoardSlot = -1; }
   function queueSubstitution(outId, inId){
@@ -488,6 +921,8 @@
     const result = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
     if(result?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; }
     else{ liveState = result || window.Simulator20.livePublicState(liveSession); }
+    const narrationBatch = queueLiveActionNarrations(liveState?.continuousResults || []);
+    liveLastBlockHadImportantPlay = livePlaybackMode === 'full' ? true : Boolean(narrationBatch?.important);
     const ownInjuries = (liveState?.extra?.injuries || []).filter(injury => Number(injury.clubId || 0) === ownClubId());
     if(substitutions.length) livePendingSubstitutions = [];
     if(ownInjuries.length){
@@ -503,8 +938,13 @@
       clearTimeout(liveAutoTimer);
       liveShowNotice('Entretiempo: el partido queda pausado. Podés hacer cambios o ajustar instrucciones.', false);
     }
+    if(livePaused){
+      liveDisplayedClockSeconds = liveClockTargetSeconds();
+      flushLiveActionNarrationsUpTo(liveDisplayedClockSeconds);
+    }
     resetLiveSelections();
     renderLiveMatch();
+    animateLiveClockToState();
   }
   function finishLiveMatchInstantlyFromUi(){
     if(!liveSession || liveState?.finished) return;
@@ -516,8 +956,10 @@
     while(liveSession && !liveSession.finished && guard < 140){
       const substitutions = first ? livePendingSubstitutions.slice() : [];
       const stateOrResult = window.Simulator20.simulateLiveBlock(liveSession, { instruction:liveSelectedInstruction, substitutions });
-      if(stateOrResult?.played){ liveState = window.Simulator20.livePublicState(liveSession); liveState.finished = true; break; }
+      if(stateOrResult?.played){ liveState = window.Simulator20.livePublicState(liveSession); queueLiveActionNarrations(liveState?.continuousResults || []); flushLiveActionNarrationsUpTo(liveClockTargetSeconds()); liveState.finished = true; break; }
       liveState = stateOrResult || window.Simulator20.livePublicState(liveSession);
+      queueLiveActionNarrations(liveState?.continuousResults || []);
+      flushLiveActionNarrationsUpTo(liveClockTargetSeconds());
       livePendingSubstitutions = [];
       first = false;
       guard += 1;
@@ -527,10 +969,20 @@
     livePendingSubstitutions = [];
     liveTacticOpen = false;
     resetLiveSelections();
+    liveDisplayedClockSeconds = liveClockTargetSeconds();
     renderLiveMatch();
+    animateLiveClockToState({ instant:true });
     liveShowNotice('Partido terminado. Estadísticas completas disponibles.', false);
   }
   function bindLiveControls(){
+    bindLivePlayerLinksWithin(document);
+    document.querySelector('[data-close-live-player]')?.addEventListener('click', event => {
+      event.preventDefault(); event.stopPropagation();
+      const resume = liveInspectResumeAfterClose;
+      liveInspectPlayerId = 0; liveInspectResumeAfterClose = false;
+      if(resume && !liveState?.finished){ livePaused = false; renderLiveMatch(); animateLiveClockToState(); runAutoMode(); }
+      else renderLiveMatch();
+    });
     document.querySelectorAll('[data-live-instruction]').forEach(btn => btn.addEventListener('click', () => { liveSelectedInstruction = btn.getAttribute('data-live-instruction') || 'none'; renderLiveMatch(); }));
     document.querySelectorAll('#liveFormationSelect').forEach(select => select.addEventListener('change', (ev) => {
       const value = ev.target.value;
@@ -570,10 +1022,24 @@
       liveSelectedStarterId = 0; liveSelectedBenchId = 0; renderLiveMatch();
     }));
     document.querySelector('#liveCloseBoardBtn')?.addEventListener('click', () => { liveTacticOpen = false; liveSelectedBoardSlot = -1; renderLiveMatch(); });
+    document.querySelector('#liveCommentaryExpandBtn')?.addEventListener('click', () => {
+      liveCommentaryExpanded = !liveCommentaryExpanded;
+      renderLiveMatch();
+    });
+    document.querySelector('#livePlaybackModeSelect')?.addEventListener('change', event => {
+      livePlaybackMode = event.target.value === 'important' ? 'important' : 'full';
+      livePitchVisual = null;
+      renderLiveMatch();
+      if(!livePaused) runAutoMode();
+    });
     document.querySelector('#liveTacticBtn')?.addEventListener('click', () => { liveTacticOpen = !liveTacticOpen; livePaused = true; clearTimeout(liveAutoTimer); liveSelectedBoardSlot = -1; renderLiveMatch(); });
-    document.querySelector('#liveNextBlockBtn')?.addEventListener('click', () => { livePaused = true; clearTimeout(liveAutoTimer); simulateNextBlockFromUi(); });
     document.querySelector('#liveInstantFinishBtn')?.addEventListener('click', () => { finishLiveMatchInstantlyFromUi(); });
-    document.querySelector('#livePauseBtn')?.addEventListener('click', () => { livePaused = !livePaused; if(!livePaused) runAutoMode(); renderLiveMatch(); });
+    document.querySelector('#livePauseBtn')?.addEventListener('click', () => {
+      livePaused = !livePaused;
+      if(livePaused){ clearTimeout(liveAutoTimer); stopLiveClockAnimation(); }
+      else{ animateLiveClockToState(); runAutoMode(); }
+      renderLiveMatch();
+    });
     document.querySelector('#liveFinishBtn')?.addEventListener('click', () => {
       if(!liveSession?.result) return;
       window.__liveMatchCloseLocked = false;
@@ -581,30 +1047,33 @@
       window.__activeCompetitionSuspensionMatch = null;
       closeModal();
       if(typeof liveOptions?.onComplete === 'function') liveOptions.onComplete(result);
-      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1;
-      resetLiveSelections(); clearTimeout(liveAutoTimer);
+      liveSession = null; liveOptions = null; liveState = null; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1; liveCommentaryHistory = []; liveLastCommentaryKey = ''; livePendingActionNarrations = []; liveSeenActionNarrationKeys = new Set(); liveHighlightedHistory = []; liveInspectPlayerId = 0; liveInspectResumeAfterClose = false; liveCommentaryExpanded = false; livePlaybackMode = 'full'; liveLastBlockHadImportantPlay = false; livePitchVisual = null; liveSeenPitchEventKeys = new Set(); document.body?.classList.remove('live-commentary-expanded');
+      resetLiveSelections(); clearTimeout(liveAutoTimer); stopLiveClockAnimation(); liveDisplayedClockSeconds = 0;
     });
   }
   function runAutoMode(){
     clearTimeout(liveAutoTimer);
     if(livePaused || !liveSession || liveState?.finished) return;
-    const autoDelay = Math.max(300, Number(window.GAME_CONFIG?.ui?.simulacionVivaAutoMs || 840));
+    const autoDelay = Math.max(300, Number(window.GAME_CONFIG?.ui?.simulacionVivaAutoMs || 3360));
     liveAutoTimer = setTimeout(() => { simulateNextBlockFromUi(); runAutoMode(); }, autoDelay);
   }
   function start(match, options={}){
     if(!match || !window.Simulator20?.createLiveMatchSession) return false;
     clearTimeout(liveAutoTimer);
-    liveOptions = options || {}; livePaused = true; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1; resetLiveSelections();
+    liveOptions = options || {}; livePaused = false; liveSelectedInstruction = 'none'; livePendingSubstitutions = []; liveHalftimePaused = false; liveTacticOpen = false; liveSelectedBoardSlot = -1; liveCommentaryHistory = []; liveLastCommentaryKey = ''; livePendingActionNarrations = []; liveSeenActionNarrationKeys = new Set(); liveHighlightedHistory = []; liveInspectPlayerId = 0; liveInspectResumeAfterClose = false; liveCommentaryExpanded = false; livePlaybackMode = 'full'; liveLastBlockHadImportantPlay = false; livePitchVisual = null; liveSeenPitchEventKeys = new Set(); document.body?.classList.remove('live-commentary-expanded'); resetLiveSelections();
     liveSession = typeof withCompetitionSuspensionContext === 'function'
       ? withCompetitionSuspensionContext(match, () => window.Simulator20.createLiveMatchSession(match))
       : window.Simulator20.createLiveMatchSession(match);
     liveState = window.Simulator20.livePublicState(liveSession);
+    stopLiveClockAnimation();
+    liveDisplayedClockSeconds = liveClockTargetSeconds();
     window.__activeCompetitionSuspensionMatch = { ...match };
     window.__liveMatchCloseLocked = false;
     openModal('<div id="liveMatchRoot"></div>');
     window.__liveMatchCloseLocked = true;
     renderLiveMatch();
-    liveShowNotice('Partido propio abierto en simulación viva. El resultado todavía no está decidido.', false);
+    runAutoMode();
+    liveShowNotice('Partido en marcha. Usá Pausa para detener el reloj y hacer ajustes.', false);
     return true;
   }
   window.LiveMatchUI = { start };

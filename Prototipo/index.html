@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Una Vida de Mánager — Prototipo de Partido</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">UNA VIDA DE MÁNAGER</div>
+        <h1>Prototipo de partido encadenado</h1>
+      </div>
+      <div class="version">PROTOTIPO V0.1</div>
+    </header>
+
+    <section class="scoreboard">
+      <div class="team-box local">
+        <span class="team-name" id="homeName">LOCAL</span>
+        <strong id="homeScore">0</strong>
+      </div>
+      <div class="clock-box">
+        <div id="clock">00:00</div>
+        <small id="phaseLabel">Fase 0 / 360</small>
+      </div>
+      <div class="team-box away">
+        <strong id="awayScore">0</strong>
+        <span class="team-name" id="awayName">VISITANTE</span>
+      </div>
+    </section>
+
+    <section class="controls">
+      <label>
+        Creación local
+        <select id="homeStyle">
+          <option value="possession">Posesión</option>
+          <option value="direct">Directo</option>
+          <option value="counter">Contraataque</option>
+          <option value="longball">Pelotazo</option>
+        </select>
+      </label>
+      <label>
+        Creación rival
+        <select id="awayStyle">
+          <option value="possession">Posesión</option>
+          <option value="direct" selected>Directo</option>
+          <option value="counter">Contraataque</option>
+          <option value="longball">Pelotazo</option>
+        </select>
+      </label>
+      <label>
+        Velocidad
+        <select id="speed">
+          <option value="900">x1</option>
+          <option value="450" selected>x2</option>
+          <option value="220">x4</option>
+          <option value="110">x8</option>
+        </select>
+      </label>
+      <button id="startBtn" class="primary">Iniciar</button>
+      <button id="pauseBtn">Pausar</button>
+      <button id="resetBtn">Reiniciar</button>
+    </section>
+
+    <section class="main-grid">
+      <div class="pitch-wrap">
+        <div class="pitch" id="pitch">
+          <div class="halfway"></div>
+          <div class="center-circle"></div>
+          <div class="center-dot"></div>
+          <div class="box box-left big"></div>
+          <div class="box box-left small"></div>
+          <div class="box box-right big"></div>
+          <div class="box box-right small"></div>
+          <div class="goal goal-left"></div>
+          <div class="goal goal-right"></div>
+          <div class="offside-line" id="offsideLine"></div>
+          <div class="ball" id="ball"></div>
+        </div>
+        <div class="possession-bar">
+          <span>Posesión</span>
+          <div class="possession-track"><div id="possessionFill"></div></div>
+          <strong id="possessionText">50% - 50%</strong>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <section class="panel current-play">
+          <div class="panel-title">Jugada actual</div>
+          <strong id="playState">Esperando inicio</strong>
+          <div id="playMeta" class="muted">—</div>
+        </section>
+
+        <section class="panel stats-panel">
+          <div class="panel-title">Estadísticas</div>
+          <div class="stats-row"><span>Remates</span><strong><b id="homeShots">0</b> - <b id="awayShots">0</b></strong></div>
+          <div class="stats-row"><span>Al arco</span><strong><b id="homeOnTarget">0</b> - <b id="awayOnTarget">0</b></strong></div>
+          <div class="stats-row"><span>Pases</span><strong><b id="homePasses">0</b> - <b id="awayPasses">0</b></strong></div>
+          <div class="stats-row"><span>Recuperaciones</span><strong><b id="homeRecoveries">0</b> - <b id="awayRecoveries">0</b></strong></div>
+        </section>
+
+        <section class="panel commentary-panel">
+          <div class="panel-title">Relato</div>
+          <div id="commentary" class="commentary"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   Nota: si ya existe una partida guardada, algunos cambios sólo aplican a nuevas partidas o a nuevos eventos.
 */
 window.GAME_CONFIG = {
-  version: 'V9.85',
+  version: 'V9.94',
   marca: {
     nombre: 'Una vida de manager',
     nombreCorto: 'Una vida de manager',
@@ -1175,14 +1175,14 @@ window.GAME_CONFIG = {
   },
 
   simulador: {
-    // V9.81 · Motor de posesión continua con control prolongado y 540 fases.
-    // pero cada partido reglamentario procesa exactamente 540 fases internas de 10 segundos.
+    // V9.89 · Simulador Nuevo V1.
+    // 360 fases internas de 15 segundos: decisión -> destino/zona -> respuesta defensiva -> resolución.
     motorContinuoV974: {
       activo: true,
-      fasesPorPartido: 540,
-      segundosPorFase: 10,
+      fasesPorPartido: 360,
+      segundosPorFase: 15,
       logTecnico: false,
-      maxLogTecnico: 540,
+      maxLogTecnico: 360,
       distancias: {
         paseCortoMax: 34,
         paseLargoMin: 25,
@@ -1200,12 +1200,12 @@ window.GAME_CONFIG = {
         tiro: 4,
         regate: 12
       },
-      // 11 fases de 10 s conservan casi la misma ventana temporal del contraataque anterior (7 x 15 s).
-      contraataqueFases: 11,
+      // 7 fases de 15 s: ventana de contraataque de aproximadamente 105 segundos.
+      contraataqueFases: 7,
       // Aumenta la elección de acciones verticales/ofensivas para aproximar 2x ataques totales.
       multiplicadorIntencionAtaque: 1.60,
-      // Compensa el mayor volumen de remates para sostener un rango de goles similar al anterior.
-      multiplicadorConversionVolumen: 0.60,
+      // V9.89: recalibrado para 360 fases y el nuevo xG logístico.
+      multiplicadorConversionVolumen: 0.95,
       // V9.81 · La posesión puede convertirse en una herramienta defensiva real.
       // La duración objetivo depende de calidad de pase, superioridad técnica,
       // densidad de mediocampo y las instrucciones Posesión / Cuidar resultado.
@@ -1222,7 +1222,37 @@ window.GAME_CONFIG = {
         bonusSeguridadPaseMax: 18
       },
       ventajaLocalMaxPct: 0.08,
-      azarPuja: 13
+      azarPuja: 13,
+      nuevoV1: {
+        activo: true,
+        columnasZonas: 6,
+        filasZonas: 4,
+        movimientoPorFase: 0.38,
+        desplazamientoAtaque: 8.0,
+        desplazamientoDefensa: 5.0,
+        compactacionLateralDefensa: 0.34,
+        presionJugadoresCercanos: 2,
+        // V9.90: el bloque acompaña la construcción y avanza de forma acumulativa con los pases.
+        avanceBloqueMaximo: 15,
+        avanceBloquePorPase: 0.70,
+        avanceExtraPaseProgresivo: 0.13,
+        carreraRecepcionMax: 3.6,
+        // V9.91: delanteros sin balón respetan la línea dinámica del defensor rival más retrasado.
+        lineaOffsideActiva: true,
+        margenLineaOffside: 0.85,
+        movimientoPostAccion: 0.66,
+        pesoAmenazaDestino: 42,
+        // V9.92: más paredes/circulación corta dentro de la misma zona conforme madura la posesión.
+        bonusPaseCortoMismaZonaBase: 0.18,
+        bonusPaseCortoMismaZonaProgresion: 0.75,
+        bonusReceptorMismaZona: 26,
+        // V9.92: los jugadores ubicados como DC/EI/ED intentan más regates y remates.
+        multiplicadorRegateDelanteros: 1.55,
+        multiplicadorTiroDelanteros: 1.75,
+        escalaLogitPase: 9.5,
+        escalaLogitRegate: 8.5,
+        xgMaximo: 0.58
+      }
     },
     // Equilibrio del resultado de cada ocasión: mitad construcción colectiva y mitad duelo individual.
     // Se aplica al partido normal, al simulador en vivo y a Ver solo resultados.
@@ -1420,7 +1450,7 @@ window.GAME_CONFIG = {
 
   ranking: {
     // URL publicada para enviar y leer resultados del ranking online.
-    appsScriptUrl: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
+    appsScriptUrl: 'https://rankingdemanagers.emanuelmkt.workers.dev',
     // Token opcional. Si el Worker exige login, pegar acá el token y el juego lo envía como Bearer.
     token: '',
     // El Worker actual exige sesión para subir récords. El front guarda el token en localStorage tras iniciar sesión.
@@ -1454,7 +1484,7 @@ window.GAME_CONFIG = {
     activo: true,
     // Usa el mismo Worker y la misma cuenta del Ranking Online.
     // El Worker V8.32 calcula los partidos y rankings de forma autoritativa.
-    endpoint: 'https://rankingdemanagers.emanuelastudillo.workers.dev',
+    endpoint: 'https://rankingdemanagers.emanuelmkt.workers.dev',
     versionSimulador: 'challenge-sim-v2-server',
     resultadosPorPagina: 100,
     actualizacionMs: 30000,
@@ -1543,6 +1573,10 @@ window.GAME_CONFIG = {
     duracionMinimaFaseSimulacionMs: 3000,
     // Simulador vivo: demora entre cada minuto de reproducción continua.
     simulacionVivaAutoMs: 3360,
+    // V9.93: el entretiempo se reproduce comprimido; entrada/salida y espera del pitido tienen tiempos propios.
+    simulacionVivaDescansoAutoMs: 180,
+    simulacionVivaEntradaSalidaCampoMs: 1180,
+    simulacionVivaEsperaPitidoMs: 650,
     relatoMantenerFases: 1,
     // Animación para acciones que pueden salir bien o fallar: tratar lesionados, charla motivacional, etc.
     accionesFeedbackCargaMs: 750,

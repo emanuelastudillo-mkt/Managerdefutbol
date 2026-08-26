@@ -68,7 +68,7 @@ function rankingManualEventType(){
 function normalizeRankingEndpoint(url){
   const configured = String(url || '').trim().replace(/\/+$/, '');
   if(configured) return configured;
-  return 'https://rankingdemanagers.emanuelastudillo.workers.dev';
+  return 'https://rankingdemanagers.emanuelmkt.workers.dev';
 }
 function rankingConfiguredPaths(kind){
   const cfg = (window.GAME_CONFIG && window.GAME_CONFIG.ranking) ? window.GAME_CONFIG.ranking : {};

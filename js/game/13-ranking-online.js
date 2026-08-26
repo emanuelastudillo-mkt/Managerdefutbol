@@ -161,7 +161,7 @@ function rankingStoreAuthSession(data, fallbackUsername=''){
     else localStorage.removeItem('fmRankingAuthConfirmedUser');
     if(expiresAt) localStorage.setItem('fmRankingAuthExpiresAt', expiresAt);
     if(data?.user?.id || data?.data?.user?.id) localStorage.setItem('fmRankingAuthUserId', String(data?.user?.id || data?.data?.user?.id));
-    localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
+    localStorage.setItem('fmRankingNeedsPasswordSetup', rankingRequiresPasswordSetupFromResponse(data) ? '1' : '0');
   }catch(_){ /* sin almacenamiento */ }
   rankingSetRuntimeConfirmedUsername(confirmedUsername);
   if(username && (!rankingStoredManagerName() || rankingStoredManagerName() === 'Manager')) setRankingStoredManagerName(username);
@@ -183,10 +183,60 @@ function rankingPasswordSetupStateKnown(){
   try{ return localStorage.getItem('fmRankingNeedsPasswordSetup') !== null; }
   catch(_){ return false; }
 }
+function rankingRequiresPasswordSetupFromResponse(data){
+  return Boolean(
+    data?.requires_password_setup ||
+    data?.requiresPasswordSetup ||
+    data?.user?.requires_password_setup ||
+    data?.user?.requiresPasswordSetup ||
+    data?.data?.requires_password_setup ||
+    data?.data?.requiresPasswordSetup ||
+    data?.data?.user?.requires_password_setup ||
+    data?.data?.user?.requiresPasswordSetup
+  );
+}
+function rankingIsLegacyPasswordError(message=''){
+  const text = String(message || '').toLowerCase();
+  return /cuenta heredada|legacy account|no tiene contrase(?:ña|na)|sin contrase(?:ña|na)|requires[_ -]?password[_ -]?setup|password setup/.test(text);
+}
+function rankingSameUsername(a, b){
+  return String(a || '').trim().toLocaleLowerCase() === String(b || '').trim().toLocaleLowerCase();
+}
+async function rankingSessionUsername(endpoint){
+  const token = rankingStoredAuthToken();
+  if(!token) return '';
+  for(const path of rankingAuthPaths('me')){
+    const response = await fetch(rankingApiUrl(endpoint, path), { method:'GET', headers:rankingRequestHeaders(false) });
+    const data = await response.json().catch(() => ({}));
+    if(response.ok && data.ok !== false){
+      if(rankingRequiresPasswordSetupFromResponse(data)){
+        try{ localStorage.setItem('fmRankingNeedsPasswordSetup', '1'); }catch(_){}
+      }
+      return rankingExtractUsername(data, rankingStoredAuthUsername());
+    }
+    const message = rankingResponseErrorMessage(data, response, 'Sesión no válida.');
+    if(!rankingIsRouteMissing(message, response)) break;
+  }
+  return '';
+}
+async function rankingProtectLegacyAccountWithCurrentSession(endpoint, username, password){
+  const token = rankingStoredAuthToken();
+  if(!token) throw new Error('La cuenta heredada necesita una sesión anterior válida en este navegador para crear su primera contraseña.');
+  const sessionUser = await rankingSessionUsername(endpoint);
+  if(!sessionUser) throw new Error('La sesión heredada guardada ya no es válida.');
+  if(username && !rankingSameUsername(sessionUser, username)){
+    throw new Error(`La sesión abierta pertenece a ${sessionUser}, no a ${username}.`);
+  }
+  const path = rankingAuthConfigPath('passwordPath', 'auth/password');
+  const data = await rankingAuthJsonRequest(endpoint, path, { password }, 'No se pudo establecer la contraseña de la cuenta heredada.');
+  try{ localStorage.setItem('fmRankingNeedsPasswordSetup', '0'); }catch(_){}
+  return { data, sessionUser };
+}
 function rankingAuthStatusMarkup(endpoint){
   const token = rankingStoredAuthToken();
   const user = rankingStoredAuthUsername() || rankingStoredManagerName();
   if(!endpoint) return '<span class="bad">Ranking online no disponible.</span>';
+  if(token && rankingNeedsPasswordSetup()) return `<span class="warn">Sesión heredada activa${user ? ` · ${escapeHtml(user)}` : ''} · falta crear contraseña</span>`;
   if(token) return `<span class="ok">Sesión activa${user ? ` · ${escapeHtml(user)}` : ''}</span>`;
   if(RANKING_REQUIRES_LOGIN) return '<span class="warn">Sin sesión. Iniciá sesión para subir récords.</span>';
   return '<span class="muted">Login opcional.</span>';
@@ -214,10 +264,11 @@ function rankingLoginPanelMarkup(endpoint, options={}){
       <div class="ranking-auth-actions">
         <button class="primary" type="submit" ${disabled}>Iniciar sesión</button>
         <button class="ghost" type="button" data-ranking-register ${disabled}>Crear cuenta</button>
+        ${token && rankingNeedsPasswordSetup() ? '<button class="ghost" type="button" data-ranking-set-password>Crear contraseña</button>' : ''}
         ${token && !String(RANKING_TOKEN || '').trim() ? '<button class="danger" type="button" data-ranking-logout>Cerrar sesión</button>' : ''}
       </div>
     </form>
-    <div class="small muted ranking-login-status" data-ranking-login-status>${token ? 'La cuenta está lista para publicar tu carrera.' : 'Completá ambos campos y elegí iniciar sesión o crear cuenta.'}</div>
+    <div class="small muted ranking-login-status" data-ranking-login-status>${token && rankingNeedsPasswordSetup() ? 'Esta cuenta viene de una versión anterior. Creá una contraseña para dejarla protegida.' : (token ? 'La cuenta está lista para publicar tu carrera.' : 'Completá ambos campos y elegí iniciar sesión o crear cuenta.')}</div>
   </div>`;
 }
 function rankingAuthPanelFromSource(source){
@@ -251,6 +302,7 @@ function rankingBindAuthPanel(panel){
   panel.dataset.rankingAuthBound = '1';
   panel.querySelector('[data-ranking-login-form]')?.addEventListener('submit', loginRankingAccount);
   panel.querySelector('[data-ranking-register]')?.addEventListener('click', registerRankingAccount);
+  panel.querySelector('[data-ranking-set-password]')?.addEventListener('click', setRankingAccountPassword);
   panel.querySelector('[data-ranking-logout]')?.addEventListener('click', logoutRankingAccount);
   const elements = rankingAuthPanelElements(panel);
   const refreshValidation = () => rankingValidateAuthFields(elements, false);
@@ -401,7 +453,20 @@ async function loginRankingAccount(event){
     rankingRefreshAuthPanels(message);
     return true;
   }catch(error){
-    const message = error?.message || 'No se pudo iniciar sesión.';
+    let message = error?.message || 'No se pudo iniciar sesión.';
+    if(rankingIsLegacyPasswordError(message)){
+      try{
+        if(status) status.textContent = 'Cuenta heredada detectada. Protegiendo con la sesión guardada...';
+        await rankingProtectLegacyAccountWithCurrentSession(endpoint, username, password);
+        const data = await rankingLoginRequest(endpoint, username, password);
+        const savedUser = rankingExtractUsername(data, username);
+        showNotice('Cuenta heredada protegida. Sesión iniciada.');
+        rankingRefreshAuthPanels(`Contraseña creada correctamente${savedUser ? ` · ${savedUser}` : ''}.`);
+        return true;
+      }catch(migrationError){
+        message = migrationError?.message || message;
+      }
+    }
     if(status) status.textContent = message;
     showNotice(message);
     if(submit) submit.disabled = false;
@@ -435,17 +500,26 @@ async function setRankingAccountPassword(event){
   const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
   const endpoint = normalizeRankingEndpoint(rankingStoredEndpoint());
   if(!rankingStoredAuthToken()){ showNotice('La sesión heredada ya no está disponible.'); return false; }
-  const password = prompt('Elegí una contraseña nueva de al menos 8 caracteres:') || '';
+  const storedUser = rankingStoredAuthUsername();
+  const typedUser = String(elements?.username?.value || storedUser || '').trim();
+  let password = String(elements?.password?.value || '');
+  if(password.length < 8) password = prompt('Elegí una contraseña nueva de al menos 8 caracteres:') || '';
   if(password.length < 8){ showNotice('La contraseña debe tener al menos 8 caracteres.'); return false; }
   const confirmation = prompt('Repetí la contraseña nueva:') || '';
   if(password !== confirmation){ showNotice('Las contraseñas no coinciden.'); return false; }
-  if(elements.loginStatus) elements.loginStatus.textContent = 'Protegiendo la cuenta...';
+  if(elements.loginStatus) elements.loginStatus.textContent = 'Protegiendo la cuenta heredada...';
   try{
-    const path = rankingAuthConfigPath('passwordPath', 'auth/password');
-    const data = await rankingAuthJsonRequest(endpoint, path, { password }, 'No se pudo establecer la contraseña.');
-    try{ localStorage.setItem('fmRankingNeedsPasswordSetup', '0'); }catch(_){ /* sin almacenamiento */ }
+    const result = await rankingProtectLegacyAccountWithCurrentSession(endpoint, typedUser || storedUser, password);
+    let message = result?.data?.message || 'Contraseña establecida correctamente.';
+    try{
+      const data = await rankingLoginRequest(endpoint, result.sessionUser || typedUser || storedUser, password);
+      rankingStoreAuthSession(data, result.sessionUser || typedUser || storedUser);
+      message = 'Contraseña creada y sesión renovada correctamente.';
+    }catch(_loginError){
+      // La sesión heredada sigue siendo válida aunque el Worker no emita un token nuevo inmediatamente.
+    }
     showNotice('La cuenta heredada quedó protegida.');
-    rankingRefreshAuthPanels(data?.message || 'Contraseña establecida correctamente.');
+    rankingRefreshAuthPanels(message);
     return true;
   }catch(error){
     const message = error?.message || 'No se pudo establecer la contraseña.';
@@ -454,6 +528,7 @@ async function setRankingAccountPassword(event){
     return false;
   }
 }
+
 async function checkRankingSession(event){
   const automatic = event?.automatic === true;
   const elements = rankingAuthPanelElements(event?.currentTarget || event?.target);
@@ -475,7 +550,7 @@ async function checkRankingSession(event){
             localStorage.setItem('fmRankingAuthUser', user);
             localStorage.setItem('fmRankingAuthConfirmedUser', user);
           }
-          localStorage.setItem('fmRankingNeedsPasswordSetup', data?.requires_password_setup ? '1' : '0');
+          localStorage.setItem('fmRankingNeedsPasswordSetup', rankingRequiresPasswordSetupFromResponse(data) ? '1' : '0');
         }catch(_){ /* sin almacenamiento */ }
         const message = `Sesión válida${user ? ` · ${user}` : ''}.`;
         if(!automatic) showNotice('Sesión válida en el ranking online.');

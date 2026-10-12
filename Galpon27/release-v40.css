@@ -1,0 +1,7 @@
+.vehicle-speed-spec{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px;margin:0 0 24px;background:#26352f;color:#eddfb8;border:2px solid #708272;box-shadow:4px 4px 0 #0b121b}
+.vehicle-speed-spec small{display:block;font:12px var(--mono);color:#b2bba4;line-height:1.5}
+.vehicle-speed-spec strong{display:block;margin-top:5px;font:700 25px var(--mono)}
+.vehicle-speed-spec strong span{font-size:14px}
+.vehicle-speed-spec p{grid-column:1/-1;margin:0;color:#c5c9b6;font-size:13px;line-height:1.5}
+.car-card-stats{flex-wrap:wrap;gap:12px 18px}
+@media(max-width:600px){.vehicle-speed-spec{padding:13px;gap:12px}.vehicle-speed-spec small{font-size:11px}.vehicle-speed-spec strong{font-size:22px}}

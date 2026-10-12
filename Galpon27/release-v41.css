@@ -1,0 +1,10 @@
+/* Keep the result and its action accessible above the expanded race camera. */
+.finish-popup{display:flex;flex-direction:column;box-sizing:border-box;max-height:calc(100dvh - 24px);overflow:hidden;padding:0;font-family:var(--sans)}
+.finish-popup>header{flex:none;padding:18px 20px 8px;border-bottom:1px solid #b4a76c66}
+.finish-popup>header p{margin:6px 0}
+.finish-popup .finish-details{min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 20px}
+.finish-popup>footer{display:block;flex:none;padding:12px 20px;background:#142722;border-top:1px solid #b4a76c66}
+.finish-popup>footer .btn{min-height:44px;font-size:15px}
+.finish-popup li span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:480px){.finish-popup>header{padding:12px 12px 6px}.finish-popup h2{font-size:24px}.finish-popup .finish-details{padding:0 12px}.finish-popup>footer{padding:10px 12px}}
+@media(max-height:460px){.finish-popup>header{padding-top:8px}.finish-popup h2{font-size:22px;margin:4px 0}.finish-popup>header p{font-size:11px}.finish-popup>footer{padding-block:8px}}

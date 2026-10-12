@@ -1,0 +1,88 @@
+/* Pixel art stays in the artwork and display titles; information uses normal type. */
+body.pixel-management{--info-font:'Segoe UI',Arial,sans-serif;--data-font:Consolas,'Courier New',monospace;--sans:var(--info-font);font-family:var(--info-font)}
+.pixel-management :where(*){font-family:var(--info-font)!important}
+.pixel-management :is(h1,h2,h3),.pixel-management .world-brand b,.pixel-management .broadcast-brand,.pixel-management .pixel-map-label strong{font-family:Pixelify,monospace!important}
+.pixel-management :is(.mono,.record-time,.circuit-specs dd,.cash b,.big-lap,.stat-cell strong,.gauge-readout b,.race-clock,.pit-work-clock b){font-family:var(--data-font)!important}
+.pixel-management :is(p,.part-desc,.tools-note,.person-card>p){line-height:1.55}
+.pixel-management :is(.input-label,.preflight,.part-meta,.person-card>p,.range-row p,.range-ends,.cosmetic-quote p,.cosmetic-quote>small){font-size:13px}
+.pixel-management .pixel-map-label small{font-size:10px}
+.pixel-management .pixel-map-label>span{font-size:12px}
+.pixel-management .pixel-annex small{font-size:14px;line-height:1.45}
+.pixel-management .category-item strong{font-size:14px}
+.pixel-management .round-item{font-size:13px}
+@media(min-width:741px) and (max-height:800px){body.pixel-race:not(.race-theater) .broadcast-stage{min-height:550px}}
+.pixel-management .circuit-profile{background:#202d29;color:#eddfb8}
+.pixel-management .circuit-heading{display:flex;justify-content:space-between;align-items:start;gap:16px;padding:24px 24px 17px;border-bottom:1px solid #465b51}
+.pixel-management .circuit-heading h2{font-size:30px;line-height:1.2;margin:6px 0 9px}
+.pixel-management .circuit-heading p{font-size:14px;line-height:1.55;color:#c0c7b4;margin:0;max-width:600px}
+.circuit-kicker{font-size:12px;color:#c0c7b4;letter-spacing:.5px}
+.circuit-type{padding:7px 10px;background:#35473c;border:1px solid #708272;color:#eddfb8;font-size:11px;white-space:nowrap}
+.circuit-select{padding:16px 24px;background:#26352f}
+.pixel-management .circuit-select .input-label{font-size:12px;line-height:1.4;letter-spacing:.5px;color:#c0c7b4}
+.pixel-management .circuit-select select{font-size:15px;min-height:43px;letter-spacing:0;margin-top:8px}
+.circuit-drawing{position:relative;background:#344d3e;border-block:1px solid #566c5c;overflow:hidden}
+.pixel-management .circuit-drawing .track-canvas{height:330px;display:block;width:100%;image-rendering:pixelated}
+.circuit-map-tag{position:absolute;top:12px;left:12px;padding:6px 9px;background:#171f2ae6;border:1px solid #708272;color:#eddfb8;font-size:10px;letter-spacing:.8px;pointer-events:none}
+.circuit-callouts{position:absolute;inset:0;pointer-events:none}
+.circuit-callout{position:absolute;transform:translate(-50%,-100%);background:#171f2a;border:1px solid #eddfb8;color:#eddfb8;padding:4px 7px;font-size:11px;white-space:nowrap;line-height:1.25}
+.circuit-callout.pit{color:#e7b95b;border-color:#e7b95b}
+.circuit-legend{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;padding:13px 24px;background:#171f2a;border-bottom:1px solid #465b51;font-size:12px;color:#c0c7b4}
+.circuit-legend>span{display:flex;align-items:center;gap:7px}
+.circuit-legend i{display:block;flex-shrink:0;width:12px;height:10px;border:1px solid #c0c7b4}
+.legend-meta{background:repeating-conic-gradient(#eddfb8 0 25%,#171f2a 0 50%) 0/8px 8px}
+.legend-pit{background:#e7b95b}
+.legend-road{background:#4a515b}
+.circuit-specs{margin:0;padding:21px 24px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 12px;border-bottom:1px solid #465b51;background:#26352f}
+.circuit-specs>div{min-width:0}
+.circuit-specs dt{font-size:12px;color:#c0c7b4;margin-bottom:8px}
+.circuit-specs dd{margin:0;color:#eddfb8;font-size:21px;font-weight:600;white-space:nowrap}
+.circuit-specs dd>span{font-size:13px;font-weight:400;color:#c0c7b4}
+.pixel-management .circuit-records-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:21px 24px 14px;flex-wrap:wrap}
+.pixel-management .circuit-records-heading h3{font-size:23px;margin:0;color:#eddfb8}
+.circuit-records-heading>span{font-size:12px;color:#c0c7b4}
+.circuit-records{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 24px 16px}
+.circuit-record{min-width:0;display:flex;flex-direction:column;padding:16px 14px;background:#171f2a;border:1px solid #566c5c;border-top:3px solid #e7b95b;gap:7px}
+.circuit-record.team{border-top-color:#8fbea1}
+.circuit-record.test{border-top-color:#8ba6b7}
+.record-label{font-size:12px;color:#c0c7b4;min-height:32px;line-height:1.35}
+.record-time{font-size:clamp(22px,2.2vw,32px);font-weight:700;letter-spacing:-1px;white-space:nowrap;color:#e7b95b;line-height:1.2}
+.circuit-record.team .record-time{color:#a8d4aa}
+.circuit-record.test .record-time{color:#b1ccdd}
+.record-holder{font-size:13px;color:#eddfb8;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.record-detail{font-size:12px;color:#c0c7b4;line-height:1.5}
+.pixel-management .circuit-record small{font-size:11px;line-height:1.45;color:#b2bba4;border-top:1px solid #35473c;padding-top:7px;margin-top:auto}
+.pixel-management .circuit-record-note{font-size:12px;line-height:1.6;color:#c0c7b4;padding:0 24px 21px;margin:0}
+.pixel-management .track-select{padding:0}
+.pixel-management .circuit-profile.compact .circuit-heading{padding:18px;flex-direction:column;gap:10px}
+.pixel-management .circuit-profile.compact .circuit-heading h2{font-size:25px}
+.circuit-profile.compact .circuit-select{padding:14px 18px}
+.pixel-management .circuit-profile.compact .track-canvas{height:210px}
+.circuit-profile.compact .circuit-legend{padding:12px 18px;font-size:11px;gap:9px}
+.circuit-profile.compact .circuit-specs{padding:18px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.circuit-profile.compact .circuit-specs dd{font-size:19px}
+.circuit-profile.compact .circuit-records-heading{padding:18px 18px 12px}
+.circuit-profile.compact .circuit-records{padding:0 18px 14px;grid-template-columns:1fr;gap:9px}
+.circuit-profile.compact .circuit-record{display:grid;grid-template-columns:minmax(0,1fr) auto;padding:12px;gap:5px 10px}
+.circuit-profile.compact .record-label{min-height:0;align-self:center}
+.circuit-profile.compact .record-time{font-size:23px;grid-column:2;grid-row:1}
+.circuit-profile.compact :is(.record-holder,.record-detail,.circuit-record small){grid-column:1/-1}
+.pixel-management .circuit-profile.compact .circuit-record-note{padding-inline:18px}
+@media(max-width:1100px){.circuit-specs{grid-template-columns:repeat(3,minmax(0,1fr))}.circuit-records{gap:9px;padding-inline:18px}.circuit-record{padding:13px 10px}.record-time{font-size:24px}.pixel-management .circuit-heading{flex-direction:column;gap:12px}}
+@media(max-width:740px){
+ .pixel-management .circuit-heading{padding:20px 17px 16px}
+ .pixel-management .circuit-heading h2{font-size:27px}
+ .circuit-select{padding:14px 17px}
+ .pixel-management .circuit-drawing .track-canvas{height:260px}
+ .circuit-callout{font-size:10px;padding:3px 5px}
+ .circuit-legend{padding:12px 17px;font-size:11px;gap:9px 14px}
+ .circuit-specs{padding:18px 17px;gap:18px 9px}
+ .circuit-specs dd{font-size:19px}
+ .pixel-management .circuit-records-heading{padding:20px 17px 13px}
+ .circuit-records{grid-template-columns:1fr;padding:0 17px 16px;gap:10px}
+ .circuit-record{display:grid;grid-template-columns:minmax(0,1fr) auto;padding:14px;gap:6px 10px}
+ .record-label{min-height:0;align-self:center}
+ .record-time{grid-column:2;grid-row:1;font-size:26px}
+ .circuit-record :is(.record-holder,.record-detail,small){grid-column:1/-1}
+ .pixel-management .circuit-record-note{padding-inline:17px}
+ .pixel-management .event-info>p{font-size:12px!important;line-height:1.6}
+}

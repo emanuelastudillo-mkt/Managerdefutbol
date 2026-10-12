@@ -1,0 +1,19 @@
+.mode-cards{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1400px}
+.exhibition-mode [data-action="world-map"],.exhibition-mode .world-navigation [data-nav="retos"],.exhibition-mode .world-navigation [data-nav="mensajes"],.exhibition-mode .topstats>.week,.exhibition-mode .topstats>.rep,.exhibition-mode .topstats>.cash,.exhibition-mode [data-action="visit-office"]{display:none}
+.exhibition-mode #main{max-width:1500px;margin:auto}
+.exhibition-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:22px}
+.exhibition-layout>.panel,.exhibition-result{padding:24px;min-width:0}
+.exhibition-fields,.exhibition-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0}
+.exhibition-fields label,.exhibition-roster label{display:flex;flex-direction:column;gap:8px;font:600 14px var(--sans);color:#e2e5cd}
+.exhibition-fields :is(select,input),.exhibition-roster select{width:100%;min-width:0;min-height:44px;box-sizing:border-box;padding:10px;background:#192b2b;color:#f2ecd6;border:2px solid #718372;border-radius:0;font:15px var(--sans)}
+.exhibition-fields small{font-weight:400;color:#c2c9b7}
+.exhibition-layout p,.exhibition-result p{line-height:1.65;color:#c5cbb8}
+.exhibition-preview canvas{display:block;width:100%;height:245px;image-rendering:pixelated;margin:16px 0}
+.exhibition-facts{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-block:18px;border-block:1px solid #71837266;font:13px var(--sans);color:#c5cbb8}
+.exhibition-facts b{display:block;margin-bottom:6px;font-size:21px;color:#efd398}
+.exhibition-rivals{border-top:1px solid #71837266;margin-top:20px;padding-top:18px}
+.exhibition-rivals summary{cursor:pointer;font:600 16px var(--sans);color:#efd398;min-height:30px}
+.exhibition-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.exhibition-actions .btn{min-height:48px}
+.exhibition-result{margin-top:24px}.exhibition-result .race-statistics-cards{margin-block:20px}
+@media(max-width:1000px){.mode-cards{grid-template-columns:1fr}.exhibition-layout{grid-template-columns:1fr}}
+@media(max-width:520px){.exhibition-layout>.panel,.exhibition-result{padding:16px}.exhibition-fields,.exhibition-roster{grid-template-columns:1fr}.exhibition-actions{flex-direction:column}.exhibition-actions .btn{width:100%;white-space:normal}.exhibition-facts b{font-size:18px}}

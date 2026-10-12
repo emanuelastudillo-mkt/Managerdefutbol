@@ -1,0 +1,92 @@
+/* Broadcast v11: the circuit fills the entire stage behind the HUD. */
+.broadcast-stage,body:not(.race-theater) .broadcast-stage,.race-theater .broadcast-stage{
+ display:block;position:relative;height:calc(100dvh - 200px);max-height:none;min-height:490px;container: broadcast / inline-size;
+ --camera-width:448px;--camera-height:347px;--hud-gap:12px;--bar-height:48px;
+}
+.race-theater .broadcast-stage{position:fixed;inset:80px 0 0;height:calc(100dvh - 80px);min-height:0}
+.broadcast-bar{position:absolute;inset:0 0 auto;height:var(--bar-height);z-index:5;background:#111e24f5}
+.broadcast-track{position:absolute;inset:var(--bar-height) 0 0;z-index:0}
+.broadcast-track .race-canvas{position:absolute;inset:0;width:100%;height:100%}
+.overview-badge{top:auto;right:auto;bottom:12px;left:50%;transform:translateX(-50%);white-space:nowrap}
+.broadcast-rail,.race-theater .broadcast-rail{display:contents;padding:0;background:none;border:0}
+.follow-monitor{position:absolute;z-index:2;top:calc(var(--bar-height) + var(--hud-gap));left:var(--hud-gap);width:var(--camera-width);max-width:none;height:var(--camera-height);box-shadow:0 5px 20px #06101555}
+.broadcast-standings{position:absolute;z-index:2;left:var(--hud-gap);top:calc(var(--bar-height) + var(--camera-height) + 2 * var(--hud-gap));bottom:30px;width:244px;min-height:0;background:#101e24eb;border:1px solid #47645f;border-radius:4px;box-shadow:0 5px 20px #06101544}
+.broadcast-standings .rank-row.race-entry{flex:1 0 31px;min-height:31px}
+.interval-note{position:absolute;z-index:2;bottom:9px;left:var(--hud-gap);width:244px;font-size:6px;background:#14242bcc;border-radius:3px}
+.broadcast-lower{display:contents;padding:0;border:0;background:none}
+.broadcast-race-summary{display:block;position:absolute;z-index:2;top:calc(var(--bar-height) + var(--hud-gap));right:var(--hud-gap);width:268px;padding:12px;background:#14272bea;border:1px solid #47645f;border-radius:4px;box-shadow:0 5px 20px #06101544}
+.broadcast-race-summary .eyebrow{font-size:7px;margin:0 0 6px}
+.broadcast-race-summary>p{font-size:10px;line-height:1.4;max-height:28px;margin:0;min-height:28px}
+.broadcast-lap{margin-top:10px;gap:6px}
+.broadcast-lap b{font-size:10px;margin-top:4px}
+.broadcast-orders{margin-top:10px;gap:8px}
+.broadcast-orders>span{display:inline;font-size:7px}
+.broadcast-orders button{padding:6px 8px;font-size:8px}
+.broadcast-race-summary.has-pit-work{display:block;height:228px;padding:10px}
+.broadcast-race-summary.has-pit-work .pit-work-panel{height:100%;max-height:none;margin:0;padding:0;border:0;background:none}
+.vehicle-cockpit,.race-theater .vehicle-cockpit{position:absolute;z-index:2;bottom:var(--hud-gap);right:var(--hud-gap);width:324px;max-width:calc(100% - 24px);margin:0;padding:9px 11px;background:#0b1821f2;box-shadow:0 5px 20px #06101566}
+.vehicle-cockpit>header{margin-bottom:5px;font-size:7px;gap:5px}
+.vehicle-cockpit>header>b{font-size:7px}.vehicle-cockpit>header>span:last-child{font-size:6px}
+.rpm-lights{height:4px;gap:3px;margin-bottom:6px}
+.cockpit-driver{display:flex;align-items:center;gap:9px;min-width:0}
+.pilot-portrait{flex:none;width:33px;height:33px;border-radius:4px;background-image:url('assets/pilot-portraits.png');background-size:300% 200%;background-position:0 0;border:1px solid #8ca18c}
+.cockpit-driver>div:nth-child(2){min-width:0;flex:1}
+.cockpit-driver span{display:block;font:6px var(--mono);color:#8ba99b;letter-spacing:.7px}
+.cockpit-driver b{display:block;font:600 11px var(--sans);white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:#e4ead5;margin-top:2px}
+#trafficAction{display:block;font:7px var(--mono);color:#d2b68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.cockpit-driver .gear-display{width:35px;height:36px}.cockpit-driver .gear-display>span{font-size:5px;letter-spacing:0}.cockpit-driver .gear-display>b{font:700 25px var(--mono);line-height:1;margin:1px 0 0}
+.cockpit-drive{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 5px}
+.analog-gauge{position:relative;min-width:0;height:88px;text-align:center}
+.analog-gauge svg{display:block;width:100%;height:84px;overflow:visible}
+.dial-rim{fill:#203838;stroke:#82928b;stroke-width:.7}.dial-face{fill:#101e25;stroke:#324b49;stroke-width:.5}
+.dial-ticks line{stroke:#c8d2b8;stroke-width:.8}.dial-ticks line.redline{stroke:#ef8567;stroke-width:1.2}
+.dial-labels text{fill:#c0cbb5;text-anchor:middle;font:5px var(--mono)}
+.dial-unit{fill:#7d9f93;text-anchor:middle;font:5px var(--mono);letter-spacing:.5px}
+.dial-needle path{fill:#f0a06b}.dial-needle circle{fill:#e8e3c7;stroke:#101e25;stroke-width:1.5}
+.gauge-readout{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:baseline;justify-content:center;gap:4px;font:6px var(--mono);color:#95b19f}
+.gauge-readout b{font:700 17px var(--mono);color:#f1ead1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.cockpit-systems{padding-top:6px;gap:8px}.cockpit-systems b{font-size:11px;margin-top:3px}.cockpit-systems>div>span{font-size:5px}.vehicle-cockpit .meter{margin-top:3px;height:2px}
+.cockpit-tyres{margin-top:6px;gap:5px}.cockpit-tyres>span{padding:3px;gap:4px}.cockpit-tyres small{font-size:6px}.cockpit-tyres b{font-size:8px}.cockpit-footer{font-size:5px;margin-top:5px}
+@container broadcast (max-width:1300px){
+ .follow-monitor{width:340px;height:247px}.broadcast-standings{top:calc(var(--bar-height) + 247px + 2 * var(--hud-gap));width:224px}.interval-note{width:224px}
+ .vehicle-cockpit{width:300px}.broadcast-race-summary{width:250px}
+}
+@media(min-width:741px) and (max-height:800px){
+ .broadcast-stage{--bar-height:42px;--hud-gap:9px}.follow-monitor{width:320px;height:205px}.broadcast-standings{top:calc(var(--bar-height) + 205px + 2 * var(--hud-gap));width:224px}.interval-note{width:224px}
+ .broadcast-standings .rank-row.race-entry{flex:0 0 31px}.vehicle-cockpit{width:300px;padding:7px 10px}.analog-gauge{height:100px}.analog-gauge svg{height:92px}.cockpit-driver .pilot-portrait{width:33px;height:33px}
+ .broadcast-race-summary{width:250px;padding:9px}.broadcast-race-summary.has-pit-work{height:220px}
+}
+@media(max-width:740px){
+ .broadcast-stage,body:not(.race-theater) .broadcast-stage,.race-theater .broadcast-stage{height:calc(100dvh - 210px);min-height:690px;--bar-height:82px;--hud-gap:7px;overflow:hidden}
+ .race-theater .broadcast-stage{min-height:0;height:calc(100dvh - 80px)}
+ .broadcast-bar,.race-theater .broadcast-bar{position:absolute;align-content:center;top:0;gap:5px;padding:6px;height:82px}
+ .broadcast-bar .race-toolbar{order:3;flex-wrap:wrap;gap:4px}.broadcast-bar .race-clock{font-size:9px}.broadcast-brand{font-size:12px}
+ .follow-monitor{width:48%;height:151px;grid-template-rows:24px minmax(0,1fr) 23px;max-width:none}
+ .follow-monitor header{padding:0 5px}.follow-monitor header>b{font-size:7px}.follow-monitor header>span:last-child{display:none}.follow-monitor>div{font-size:7px;padding:0 5px}.follow-monitor>div>span{font-size:5px}
+ .broadcast-standings{top:247px;width:48%;bottom:auto;height:210px;min-height:0}.broadcast-standings h2{font-size:10px}.broadcast-standings header>span{font-size:5px}
+ .broadcast-standings .ranking{overflow:auto}.broadcast-standings .rank-row.race-entry{flex:0 0 31px;grid-template-columns:12px minmax(0,1fr) 49px;gap:2px;padding:4px}.broadcast-standings .rank-identity{padding-left:7px}.broadcast-standings .rank-identity>strong{font-size:8px}.broadcast-standings .rank-identity>small{font-size:6px}.broadcast-standings .rank-identity em{font-size:6px;margin-left:3px}.broadcast-standings .rank-position{font-size:9px}.broadcast-standings .rank-interval>b{font-size:7px}
+ .interval-note{width:48%;top:458px;bottom:auto;font-size:5px;line-height:14px}
+ .broadcast-race-summary{width:calc(50% - 14px);padding:8px}.broadcast-race-summary>p{font-size:8px;line-height:1.35;max-height:33px;min-height:33px}.broadcast-lap{gap:4px;margin-top:7px}.broadcast-lap>span{font-size:5px}.broadcast-lap b{font-size:7px}.broadcast-orders{gap:4px;margin-top:8px;flex-wrap:wrap}.broadcast-orders>span{font-size:6px}.broadcast-orders button{font-size:7px;padding:5px}
+ .broadcast-race-summary.has-pit-work{width:calc(50% - 14px);height:270px;padding:6px}.pit-work-panel>header{flex-wrap:wrap}.pit-work-panel li{min-height:42px!important}.pit-work-panel li strong{font-size:8px!important}.pit-work-panel li small{font-size:6px!important}
+ .vehicle-cockpit,.race-theater .vehicle-cockpit{width:288px;max-width:calc(100% - 14px);padding:7px 9px}.analog-gauge{height:92px}.analog-gauge svg{height:85px}.cockpit-driver .pilot-portrait{width:30px;height:30px}.cockpit-driver b{font-size:10px}.gauge-readout b{font-size:15px}
+ .overview-badge{bottom:292px;left:auto;right:7px;transform:none;font-size:5px;padding:5px}
+}
+/* Keep the dashboard smaller than v10, including at short desktop heights. */
+.vehicle-cockpit,.race-theater .vehicle-cockpit{width:310px;padding-block:7px}
+.vehicle-cockpit>header{margin-bottom:3px}.rpm-lights{margin-bottom:4px}
+.analog-gauge{height:78px}.analog-gauge svg{height:74px}
+.cockpit-tyres{margin-top:4px}.cockpit-footer{margin-top:4px}
+@media(min-width:741px) and (max-height:800px){
+ .broadcast-stage,body:not(.race-theater) .broadcast-stage,.race-theater .broadcast-stage{--bar-height:42px;--hud-gap:9px}
+ .vehicle-cockpit,.race-theater .vehicle-cockpit{width:290px}.analog-gauge{height:76px}.analog-gauge svg{height:72px}
+}
+@media(max-width:740px){
+ .broadcast-stage,body:not(.race-theater) .broadcast-stage{height:calc(100dvh - 255px);min-height:585px}
+ .race-theater .broadcast-stage{height:calc(100dvh - 80px);min-height:585px}
+ .follow-monitor{height:120px}.broadcast-standings{top:216px;height:146px}.interval-note{top:363px}
+ .vehicle-cockpit,.race-theater .vehicle-cockpit{width:280px;padding:6px 8px}.analog-gauge{height:72px}.analog-gauge svg{height:68px}
+ .broadcast-race-summary.has-pit-work{height:270px}
+ .pit-work-panel>header{gap:5px}.pit-work-panel>header strong{font-size:8px}.pit-work-panel>header small{font-size:6px}.pit-work-panel>header b{font-size:15px}
+ .pit-work-panel li{grid-template-columns:9px minmax(0,1fr) 35px;gap:3px;min-height:41px!important}.pit-work-panel li strong{font-size:8px!important}.pit-work-panel li small{font-size:5px!important}.pit-work-clock>b{font-size:10px}
+ .overview-badge{bottom:235px}
+}

@@ -1,0 +1,151 @@
+/* v14: detailed workshop scene and one consistent 16-bit race presentation. */
+.pixel-management .workshop-grid{grid-template-columns:minmax(0,1.8fr) minmax(320px,1fr);align-items:start}
+.pixel-management :is(#garageCanvas,#customGarageCanvas){display:block;width:100%;height:auto!important;aspect-ratio:3/2;image-rendering:pixelated;background:#171f2a}
+.pixel-management .parts-list{max-height:560px}
+.pixel-management .mounted-part{min-height:62px;gap:12px}
+.pixel-management .mounted-part strong{font:600 16px Consolas,'Courier New',monospace;line-height:1.35}
+.pixel-management .mounted-part small{font:13px Consolas,'Courier New',monospace;line-height:1.4;margin-top:4px}
+.pixel-management .mini-health{font:700 15px Consolas,monospace}
+.pixel-management .visual-foot{flex-wrap:wrap;line-height:1.5}
+.pixel-management .visual-foot small{font:14px Consolas,monospace}
+.pixel-management .workshop-esthetics p{font:14px/1.5 Consolas,monospace}
+.pixel-management .stat-cell small{font:12px/1.5 Consolas,monospace}
+.pixel-race main.race-view{max-width:none;padding:18px 12px 28px}
+.pixel-race .race-heading{margin-bottom:14px;align-items:center}
+.pixel-race .race-heading h1{font-size:30px}
+.pixel-race .race-heading .eyebrow{font-size:10px;margin-bottom:6px}
+.pixel-race .race-pace-control{background:#26352f;color:#eddfb8;border:2px solid #708272;border-radius:0;box-shadow:3px 3px 0 #080f17}
+.pixel-race .race-pace-control label{font:12px Pixelify,monospace;color:#eddfb8}
+.pixel-race .race-pace-control output{font:700 16px Pixelify,monospace;color:#e7b95b}
+.pixel-race .pace-effects{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race.race-theater .race-page-head{background:#171f2a;border-bottom:2px solid #708272}
+.pixel-race .critical{color:#f08c76!important}
+.pixel-race .broadcast-stage{border:3px solid #718272;border-radius:0;box-shadow:5px 5px 0 #080f17;background:#344d3e;color:#eddfb8}
+.pixel-race .broadcast-bar{background:#171f2a;border-bottom:3px solid #708272;gap:12px}
+.pixel-race .broadcast-brand{font:600 24px Pixelify,monospace;color:#eddfb8;letter-spacing:0}
+.pixel-race .broadcast-brand span{font:10px Consolas,monospace;color:#e7b95b}
+.pixel-race .broadcast-bar :is(button,.expand-race){border:1px solid #708272;border-radius:0;background:#35473c;color:#eddfb8;font:12px Pixelify,monospace;box-shadow:2px 2px 0 #080f17}
+.pixel-race .broadcast-bar button.active,.pixel-race .broadcast-bar .race-toggle{background:#e7b95b;color:#171f2a;border-color:#fff0bb}
+.pixel-race .race-clock{font:700 14px Consolas,monospace;color:#eddfb8;letter-spacing:0}
+.pixel-race .race-clock small{font-size:10px;color:#b2bba4}
+.pixel-race :is(.follow-monitor,.broadcast-standings,.broadcast-race-summary,.vehicle-cockpit){border:2px solid #718272;border-radius:0;background:#171f2af5;box-shadow:4px 4px 0 #080f1780}
+.pixel-race .follow-monitor{grid-template-rows:30px minmax(0,1fr) 28px}
+.pixel-race .follow-monitor header{background:#35473c;color:#eddfb8}
+.pixel-race .follow-monitor header>b{font:16px Pixelify,monospace;color:#e7b95b}
+.pixel-race .follow-monitor header>span:last-child{font-size:9px;color:#b2bba4}
+.pixel-race .follow-monitor>div{font:11px Consolas,monospace;background:#26352f;color:#eddfb8}
+.pixel-race .follow-monitor>div>span{font-size:10px;color:#e7b95b}
+.pixel-race :is(.race-canvas,#followCanvas){image-rendering:pixelated}
+.pixel-race .onair-dot,.pixel-race .overview-badge i{border-radius:0;background:#e7b95b;box-shadow:none}
+.pixel-race .broadcast-standings header{background:#26352f;border-bottom:2px solid #566c5c;padding:8px}
+.pixel-race .broadcast-standings h2{font:20px Pixelify,monospace;color:#eddfb8}
+.pixel-race .broadcast-standings header>span{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race .broadcast-standings .ranking{padding:0 6px;overflow:auto;scrollbar-color:#708272 #171f2a}
+.pixel-race .broadcast-standings .rank-row{padding:5px 6px;grid-template-columns:20px minmax(0,1fr) 66px;gap:5px;border-color:#35473c;background:transparent;color:#eddfb8;border-radius:0;min-height:40px;flex:1 0 40px}
+.pixel-race .broadcast-standings .rank-row.player{background:#534b34;box-shadow:inset 3px 0 #e7b95b}
+.pixel-race .rank-position{font:15px Pixelify,monospace;color:#e7b95b}
+.pixel-race .rank-identity>strong{font:600 11px Consolas,monospace;color:#eddfb8}
+.pixel-race .rank-identity>small,.pixel-race .rank-identity em{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race .rank-interval>b{font:700 10px Consolas,monospace;color:#eddfb8}
+.pixel-race .rank-interval>small{font:8px Consolas,monospace;color:#e7b95b}
+.pixel-race .interval-note{font:8px/1.3 Consolas,monospace;color:#b2bba4;border-radius:0;background:#171f2a;padding:2px}
+.pixel-race .broadcast-race-summary .eyebrow{font:13px Pixelify,monospace;color:#e7b95b;margin-bottom:6px}
+.pixel-race .broadcast-race-summary>p{font:12px/1.4 Consolas,monospace;color:#eddfb8;min-height:34px;max-height:34px;overflow:hidden}
+.pixel-race .broadcast-lap>span{font:10px Consolas,monospace;color:#b2bba4}
+.pixel-race .broadcast-lap b{font:700 12px Consolas,monospace;color:#eddfb8}
+.pixel-race .broadcast-orders>span{font:10px Consolas,monospace;color:#b2bba4}
+.pixel-race .broadcast-orders button{font:14px Pixelify,monospace;background:#35473c;color:#eddfb8;border:1px solid #708272;padding:6px;border-radius:0}
+.pixel-race .vehicle-cockpit>header{font:11px Pixelify,monospace;color:#e7b95b}
+.pixel-race .vehicle-cockpit>header>b{font-size:12px}
+.pixel-race .vehicle-cockpit>header>span:last-child{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race .rpm-lights{height:5px;gap:3px;margin-block:6px}
+.pixel-race .rpm-lights i{border-radius:0;box-shadow:none!important}
+.pixel-race .pilot-portrait{width:42px;height:42px;border:2px solid #708272;border-radius:0;background-image:url('assets/pixel/pilotos.png');image-rendering:pixelated}
+.pixel-race .cockpit-driver span{font:9px Consolas,monospace;color:#b2bba4;letter-spacing:0}
+.pixel-race .cockpit-driver b{font:600 16px Pixelify,monospace;color:#eddfb8}
+.pixel-race #trafficAction{font:10px Consolas,monospace;color:#e7b95b}
+.pixel-race .cockpit-driver .gear-display{border:1px solid #708272;border-radius:0;background:#26352f;height:42px}
+.pixel-race .cockpit-driver .gear-display>span{font-size:8px}
+.pixel-race .cockpit-driver .gear-display>b{font:700 27px Pixelify,monospace}
+.pixel-race .analog-gauge{height:90px}
+.pixel-race .analog-gauge svg{height:84px;shape-rendering:crispEdges}
+.pixel-race .dial-rim{fill:#566c5c;stroke:#eddfb8;stroke-width:1}
+.pixel-race .dial-face{fill:#171f2a;stroke:#708272}
+.pixel-race .dial-ticks line{stroke:#eddfb8;stroke-width:1}
+.pixel-race .dial-ticks line.redline{stroke:#cf6149}
+.pixel-race .dial-labels text{font:6px Consolas,monospace;fill:#eddfb8}
+.pixel-race .dial-unit{font:5px Consolas,monospace;fill:#b2bba4;letter-spacing:0}
+.pixel-race .dial-needle path{fill:#e7b95b}
+.pixel-race .gauge-readout{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race .gauge-readout b{font:700 23px Pixelify,monospace;color:#eddfb8}
+.pixel-race .cockpit-systems{border-color:#566c5c;gap:7px}
+.pixel-race .cockpit-systems>div>span{font:9px Pixelify,monospace;color:#b2bba4}
+.pixel-race .cockpit-systems b{font:700 14px Consolas,monospace;color:#eddfb8}
+.pixel-race .vehicle-cockpit .meter{height:4px;background:#35473c;border-radius:0}
+.pixel-race .vehicle-cockpit .meter i{height:4px;border-radius:0}
+.pixel-race .cockpit-tyres>span{background:#26352f;border-color:#566c5c;border-radius:0;padding:4px}
+.pixel-race .cockpit-tyres small{font:10px Pixelify,monospace;color:#b2bba4}
+.pixel-race .cockpit-tyres b{font:700 11px Consolas,monospace;color:#eddfb8}
+.pixel-race .cockpit-footer{font:8px/1.4 Consolas,monospace;color:#b2bba4;gap:4px;flex-wrap:wrap}
+.pixel-race .overview-badge{font:10px Pixelify,monospace;border:1px solid #708272;border-radius:0;background:#171f2a;color:#eddfb8}
+.pixel-race .pit-work-panel{color:#eddfb8;background:#171f2a;border-color:#708272;border-radius:0}
+.pixel-race .pit-work-panel>header strong{font:15px Pixelify,monospace;color:#e7b95b}
+.pixel-race .pit-work-panel li{border-color:#566c5c;background:#26352f;border-radius:0}
+.pixel-race .pit-work-panel li{grid-template-columns:12px minmax(0,1fr) 48px;gap:5px}
+.pixel-race .pit-work-clock{min-width:0}
+.pixel-race .pit-work-clock b{white-space:nowrap}
+.pixel-race .pit-work-panel li strong{font:13px Pixelify,monospace}
+.pixel-race .pit-work-panel li small{font:9px Consolas,monospace;color:#b2bba4}
+.pixel-race .pit-work-clock b{font:700 16px Pixelify,monospace;color:#e7b95b}
+.pixel-race .pit-work-bar,.pixel-race .pit-work-bar i{border-radius:0}
+.pixel-race .broadcast-race-summary.has-pit-work{height:246px}
+@media(min-width:741px) and (max-height:800px){body.pixel-race:not(.race-theater) .broadcast-stage:has(.has-pit-work){min-height:620px}}
+@media(max-width:1100px){.pixel-management .workshop-grid{grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr)}}
+@media(max-width:740px){
+ .pixel-management .workshop-grid{grid-template-columns:1fr}
+ .pixel-management .parts-list{max-height:430px}
+ .pixel-management .mounted-part{grid-template-columns:1fr 55px 12px;padding:12px}
+ .pixel-management .visual-foot small{font-size:12px}
+ .pixel-management .stat-cell small{font-size:9px}
+ .pixel-race .race-heading{flex-wrap:wrap;gap:12px}
+ .pixel-race .race-heading h1{font-size:27px}
+ .pixel-race .broadcast-stage,body.pixel-race:not(.race-theater) .broadcast-stage,.pixel-race.race-theater .broadcast-stage{min-height:755px;height:calc(100dvh - 210px)}
+ .pixel-race .broadcast-bar{gap:5px;padding:5px}
+ body.pixel-race .broadcast-stage{--bar-height:112px}
+ .pixel-race .broadcast-bar{display:grid;grid-template-columns:1fr auto;grid-template-rows:24px 1fr;height:112px;align-items:center;align-content:start}
+ .pixel-race .broadcast-brand{grid-column:1;grid-row:1}
+ .pixel-race .expand-race{grid-column:2;grid-row:1}
+ .pixel-race .broadcast-bar .race-toolbar{grid-column:1/-1;grid-row:2;flex-wrap:wrap;gap:4px}
+ .pixel-race .broadcast-bar .btn{font-size:11px;padding:4px 6px;min-height:26px;box-shadow:none}
+ .pixel-race .broadcast-bar .speed-buttons button{font-size:10px;padding:4px;box-shadow:none}
+ .pixel-race .broadcast-brand{font-size:20px}
+ .pixel-race .broadcast-bar button{font-size:11px;padding:5px}
+ .pixel-race .broadcast-bar .race-clock{font-size:12px}
+ .pixel-race .follow-monitor{height:140px}
+ .pixel-race .follow-monitor header>b{font-size:13px}
+ .pixel-race .follow-monitor>div{font-size:10px;gap:3px}
+ .pixel-race .follow-monitor>div>span{font-size:8px}
+ .pixel-race .broadcast-standings{top:266px;height:180px}
+ .pixel-race .broadcast-standings header{padding:6px}
+ .pixel-race .broadcast-standings h2{font-size:16px}
+ .pixel-race .broadcast-standings header>span{font-size:7px}
+ .pixel-race .broadcast-standings .rank-row{grid-template-columns:12px minmax(0,1fr) 48px;padding:4px 2px;gap:2px;min-height:36px;flex:0 0 36px}
+ .pixel-race .rank-identity>strong{font-size:9px}
+ .pixel-race .rank-identity>small,.pixel-race .rank-identity em{font-size:8px}
+ .pixel-race .rank-interval>b{font-size:8px}
+ .pixel-race .rank-interval>small{font-size:7px}
+ .pixel-race .interval-note{top:448px;font-size:7px}
+ .pixel-race .broadcast-race-summary{padding:7px}
+ .pixel-race .broadcast-race-summary>p{font-size:10px;max-height:56px;min-height:56px}
+ .pixel-race .broadcast-lap>span{font-size:8px}
+ .pixel-race .broadcast-lap b{font-size:9px}
+ .pixel-race .broadcast-orders button{font-size:12px}
+ .pixel-race .broadcast-orders>span{font-size:9px}
+ .pixel-race .broadcast-race-summary.has-pit-work{height:300px}
+ .pixel-race .overview-badge{bottom:290px;font-size:9px}
+ .pixel-race .vehicle-cockpit{width:280px}
+ .pixel-race .cockpit-systems b{font-size:12px}
+ .pixel-race .pilot-portrait{width:36px;height:36px}
+ .pixel-race .cockpit-footer{font-size:7px}
+}
+

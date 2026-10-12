@@ -1,0 +1,16 @@
+.race-pace-control{position:relative}
+html body.pixel-race .race-pace-control .pit-inline-notice{position:absolute;left:50%;top:100%;transform:translateX(-50%);z-index:35;width:max-content;max-width:min(680px,90vw);margin:3px 0 0;padding:3px 7px;background:#182e2ed9;border:0;box-shadow:none;text-align:center;color:#fff1c5;font:600 12px/1.35 var(--sans);pointer-events:none}
+.pit-inline-notice[hidden]{display:none!important}
+.pit-fuel-slider{width:100%;grid-column:1/-1;padding:15px;background:#f5f1e3;border:1px solid #a9b39b;color:#243c3c}
+.pit-fuel-slider>div,.pit-fuel-slider>label{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font:14px/1.5 var(--sans)}
+.pit-fuel-slider>label{margin-top:18px;font-weight:700}
+.pit-fuel-slider output{font-variant-numeric:tabular-nums;color:#9a4f2f}
+.pit-fuel-slider input{display:block;width:100%;height:34px;accent-color:#b87240;cursor:pointer;margin:9px 0}
+.pit-fuel-slider p{font:14px/1.5 var(--sans)}
+.pit-fuel-slider button{width:100%;margin-top:8px}
+@media(max-width:740px){html body.pixel-race .race-pace-control .pit-inline-notice{font-size:11px;max-width:92vw}.pit-fuel-slider{padding:10px}.pit-fuel-slider>div,.pit-fuel-slider>label{font-size:13px}}
+
+.pit-fuel-slider #pitFuelEstimate{color:#344c44!important}
+.pit-fuel-slider,.pit-fuel-slider button,.pit-fuel-slider output,.pit-fuel-slider b{font-family:Arial,sans-serif}
+
+html body.pixel-race .race-pace-control .pit-inline-notice{font-family:Arial,sans-serif!important;font-size:13px!important;line-height:1.35!important}

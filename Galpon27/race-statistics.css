@@ -1,4 +1,11 @@
 /* Compact race rows and persistent records; typography stays readable. */
+.current-lap-clock{display:flex;flex:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;background:#182b2cee;border:1px solid #80937a;pointer-events:none;color:#eee8d0;min-width:142px}
+.current-lap-clock span{font:600 11px/12px 'Segoe UI',Arial,sans-serif;white-space:nowrap}
+.current-lap-clock b{font:700 21px/22px 'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:#f1d58a}
+html body.pixel-race .track-minimap .minimap-key{display:flex;align-items:center;gap:4px;font:11px 'Segoe UI',Arial,sans-serif;white-space:nowrap}
+.minimap-key i{display:inline-block;flex:none;width:10px;height:10px}
+.minimap-key .finish-key{background:conic-gradient(#f6f1da 25%,#101b21 0 50%,#f6f1da 0 75%,#101b21 0);background-size:6px 6px;border:1px solid #bfcdb6}
+.minimap-key .pit-key{background:#ffdc45;border:2px solid #101b21;border-radius:50%;margin-left:5px}
 html body.pixel-race .broadcast-standings{width:420px!important;height:412px;max-height:412px}
 html body.pixel-race .broadcast-standings .ranking{height:calc(100% - 72px);overflow:auto}
 html body.pixel-race .broadcast-standings .rank-row.race-entry,
@@ -46,6 +53,11 @@ html body.pixel-race .interval-note{top:480px;width:420px!important;font-size:11
  html body.pixel-race .rank-interval b{font-size:11px!important}
 }
 @media(max-width:760px){
+ .current-lap-clock{min-width:120px;padding:1px 6px}
+ .current-lap-clock span{font-size:10px}
+ .current-lap-clock b{font-size:19px}
+ html body.pixel-race .track-minimap>header>b{display:none}
+ html body.pixel-race .track-minimap .minimap-key{font-size:11px;margin:auto}
  html body.pixel-race .broadcast-standings{width:100%!important;height:412px;max-height:412px}
  html body.pixel-race .broadcast-standings .rank-row.race-entry,html body.pixel-race .ranking-columns{grid-template-columns:21px minmax(0,1fr) 25px 70px 21px;gap:4px;padding:6px}
  html body.pixel-race .rank-identity{gap:4px}
@@ -62,3 +74,8 @@ html body.pixel-race .interval-note{top:480px;width:420px!important;font-size:11
 @media(prefers-reduced-motion:reduce){.race-statistics-live .lap-updated{animation:none}}
 @media(min-width:1101px) and (max-height:940px){html body.pixel-race.race-theater .track-minimap{left:444px}}
 @media(min-width:761px) and (max-width:1100px) and (max-height:940px){html body.pixel-race.race-theater .track-minimap{left:350px}}
+@media(min-width:761px) and (max-width:900px) and (max-height:940px){
+ html body.pixel-race.race-theater .broadcast-stage{overflow-y:auto}
+ html body.pixel-race.race-theater .track-minimap{left:auto;right:12px;top:655px;width:180px;grid-template-rows:25px 96px 24px}
+ html body.pixel-race.race-theater .track-minimap canvas{height:96px}
+}

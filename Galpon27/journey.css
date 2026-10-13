@@ -44,3 +44,6 @@ html body.pixel-race #raceTelemetry :is(.health-row b,.wheel-title>b,.wheel-temp
 .town-labels span,.town-labels .gate-label{position:static!important;transform:none!important;font:600 13px "Segoe UI",Arial,sans-serif!important;color:#f0e4bf}
 .base-yard canvas{image-rendering:pixelated}
 @media(prefers-reduced-motion:reduce){.setup-guide-range,.guide-range{animation:none!important}}
+
+/* Five compact abilities use two rows within the track on small screens. */
+@media(max-width:740px){html body.pixel-race .broadcast-stage .arcade-hud.has-combat{top:350px}}

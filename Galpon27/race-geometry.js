@@ -1,9 +1,9 @@
 (function(root){
 'use strict';
 const TAU=Math.PI*2;
-const key=t=>t.id+'|'+(t.legacyGeometry!==false?'legacy':'43');
-function raceTrack(r,t){return {...t,legacyGeometry:!!r&&!r.circuitModel};}
-function dimensions(t){const scale=t.legacyGeometry!==false||t.outline?1:Math.max(1,1800/t.straight);return{radius:t.radius*scale,straight:t.straight*scale};}
+const key=t=>t.id+'|'+(t.legacyGeometry!==false?'legacy':'43')+(t.pitTeams>10?'|field'+t.pitTeams:'');
+function raceTrack(r,t){return {...t,pitTeams:r?.fieldVersion===2?r.entries?.length||24:10,legacyGeometry:!!r&&!r.circuitModel};}
+function dimensions(t){const scale=t.legacyGeometry!==false||t.outline?1:Math.max(1,Math.max(1800,((t.pitTeams||10)-1)*40/.24/.92)/t.straight);return{radius:t.radius*scale,straight:t.straight*scale};}
 function ovalPoint(f,t){if(t.outline)return shapePoint(f,t);const {radius:R,straight:S}=dimensions(t),L=2*S+TAU*R,d=((f%1+1)%1)*L;if(d<S)return{x:-S/2+d,y:-R,a:0};if(d<S+Math.PI*R){const a=-Math.PI/2+(d-S)/R;return{x:S/2+Math.cos(a)*R,y:Math.sin(a)*R,a:a+Math.PI/2};}if(d<2*S+Math.PI*R)return{x:S/2-(d-S-Math.PI*R),y:R,a:Math.PI};const a=Math.PI/2+(d-2*S-Math.PI*R)/R;return{x:-S/2+Math.cos(a)*R,y:Math.sin(a)*R,a:a+Math.PI/2};}
 // Rounded, closed traces sampled by arc length. All race systems share this
 // cache: drawing, traffic, pit distance and minimaps use identical geometry.
@@ -15,7 +15,7 @@ function shape(t){if(shapes.has(key(t)))return shapes.get(key(t));
  const corners=raw.map((b,i)=>{const a=raw[(i+raw.length-1)%raw.length],c=raw[(i+1)%raw.length],ab=Math.hypot(a.x-b.x,a.y-b.y),bc=Math.hypot(c.x-b.x,c.y-b.y),cut=Math.min(ab,bc)*(t.legacyGeometry!==false?(t.roadCourse?.20:.45):(t.roadCourse?.30:.45));return{b,in:lerp(b,a,cut/ab),out:lerp(b,c,cut/bc)};});
  for(let i=0;i<corners.length;i++){const a=corners[i],b=corners[(i+1)%corners.length];add(a.in);for(let k=1;k<=24;k++){const u=k/24,v=1-u;add({x:v*v*a.in.x+2*v*u*a.b.x+u*u*a.out.x,y:v*v*a.in.y+2*v*u*a.b.y+u*u*a.out.y});}const start=length,d=Math.hypot(b.in.x-a.out.x,b.in.y-a.out.y);add(b.in);const segment={start,end:length,length:d};straights.push(segment);if(!longest||d>longest.length+1e-9)longest=segment;}
  let factor=Math.max(12000,t.km*2400)/length;
- if(t.legacyGeometry===false){factor=Math.max(factor,1800/(longest.length*.92));
+ if(t.legacyGeometry===false){factor=Math.max(factor,Math.max(1800,((t.pitTeams||10)-1)*40/.24)/(longest.length*.92));
  // Separate nearby hairpins by at least two road widths. This changes drawing
  // scale, never the homologated kilometre distance or the physical turn radius.
  if(!t.overpass){const n=1400,sampled=[];let j=1;for(let i=0;i<n;i++){const d=i/n*length;while(j<points.length-1&&points[j].s<d)j++;const a=points[j-1],b=points[j],u=(d-a.s)/Math.max(1e-9,b.s-a.s);sampled.push(lerp(a,b,u));}

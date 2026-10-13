@@ -39,5 +39,5 @@ function portrait(p){const index=['owner','ines','tomas','mar','bruno','luz'].in
 function mapCar(target,car){target.width=64;target.height=80;const ctx=target.getContext('2d');ctx.translate(32,40);ctx.rotate(-Math.PI/2-.12);drawCar(ctx,car,0,0,68,1)}
 const originalTrack=V.raceTrack;V.workshop=workshop;V.carDraw=(ctx,car,x,y,scale=1)=>drawCar(ctx,car,x,y,310*scale);V.setAngle=value=>{angle=((value%4)+4)%4};V.getAngle=()=>angle;
 V.raceTrack=function(target,s,preview,...rest){return preview?originalTrack(target,s,true,{points:[],compact:true,overviewZoom:1.08}):originalTrack(target,s,preview,...rest)};
-root.OvalPixel={workshop,model,drawCar,racePreview,partArt,portrait,mapCar,diagnostics:()=>({...state,cache:cache.size})};
+root.OvalPixel={partDraw:part,workshop,model,drawCar,racePreview,partArt,portrait,mapCar,diagnostics:()=>({...state,cache:cache.size})};
 })(globalThis);

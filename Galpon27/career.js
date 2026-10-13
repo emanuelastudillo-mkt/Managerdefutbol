@@ -76,7 +76,7 @@ function prepare(s,r,E,c){sync(s);const a=s.career,player=r.entries[0],t=C.track
  r.conditions=conditions(s,r.tier,r.track);r.challenge=c?{id:c.id,rivalEntry:'r8'}:null;r.careerVersion=1;
  const prep=a.preparations[r.tier+'/'+r.track];r.config.crew.rate*= (prep==='crew'?1.08:1)*(a.trust>=6?1.04:1);
  const rival=person(leagues[r.tier].rival);
- for(let i=1;i<r.entries.length;i++){const entry=r.entries[i],target=baseLap*(1.065-(i-1)*.01-heat-(c&&i===9?.015:0)),raw=E.performance(entry.car,t,entry.drivers[0],0,E.stats(entry.car).tank,0,100).lap;
+ for(let i=1;i<r.entries.length;i++){const entry=r.entries[i],target=baseLap*(1.065-(r.fieldVersion===2?(i===9?8:(i-1-(i>9?1:0))*7/(r.entries.length-3)):i-1)*.01-heat-(c&&i===9?.015:0)),raw=E.performance(entry.car,t,entry.drivers[0],0,E.stats(entry.car).tank,0,100).lap;
  entry.adaptiveFactor=E.clamp(raw/target,.78,1.28);if(i===9){entry.name=rival.name;entry.drivers[0].name=rival.name;}entry.referenceLap=raw/entry.adaptiveFactor;}
  if(c){a.attempts[c.id]=(a.attempts[c.id]||0)+1;add(s,'attempt-'+c.id+'-'+a.attempts[c.id],c.rival,N.is(s)?X.trials.find(x=>x.id===c.id).brief:'Reto confirmado: '+c.title+'. '+c.goal+' El circuito no perdona el desgaste. Nos vemos en la parrilla.');}
  r.logs.unshift({time:0,text:'Informe de pista · '+circuits[r.track].title+' · '+r.conditions.temp+' °C. Rivales preparados antes de largar.',type:'info'});

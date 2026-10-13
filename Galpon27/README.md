@@ -1,4 +1,4 @@
-# Galpón 27 · v0.48
+# Galpón 27 · v0.54
 
 Juego estático de navegador. Abrir `index.html` o servir esta carpeta.
 

@@ -12,7 +12,7 @@ function legacyRoute(t,index=0){const key='1|'+t.id+'|'+index;if(cache.has(key))
  line({x:x+28,y:l.y});curve(points.at(-1),{x:x+15,y:l.y},{x:x+14,y:l.bayY},{x,y:l.bayY});const stop=length;
  curve(points.at(-1),{x:x-14,y:l.bayY},{x:x-15,y:l.y},{x:x-28,y:l.y});line({x:-l.extent-5,y:l.y});
  curve(points.at(-1),{x:-l.extent-23,y:l.y},{x:z.x-Math.cos(z.a)*26,y:z.y-Math.sin(z.a)*26},z);
- const result={points,length,stop,index,version:1,...l};cache.set(key,result);return result;}
+ const result={points,length,stop,index,version:1,...l};cache.set(key,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;}
 
 function layout(t,version=t.legacyGeometry!==false?3:VERSION){if(version===4)return sharedLayout(t);const L=course(t);if(t.outline){const g=G.shape(t),entry=g.pitEntry,exit=g.pitExit,p=G.lanePoint((entry+exit)/2,t,-100);return{centerX:p.x,entry,exit,extent:(exit-entry)*L*.31,y:p.y,bayY:p.y+30,entryPoint:G.lanePoint(entry,t,-16),exitPoint:G.lanePoint(exit,t,-16)};}if(t.pitCompact&&version===3){const centerX=-t.straight/2+L*.08,entry=(t.straight/2+centerX-650)/L,exit=(t.straight/2+centerX+650)/L,y=-t.radius+100;return{centerX,entry,exit,extent:220,y,bayY:y+30,entryPoint:G.lanePoint(entry,t,-16),exitPoint:G.lanePoint(exit,t,-16)};}const entry=(2*t.straight+Math.PI*t.radius+(version===2?1.5:1)*t.radius)/L,exit=(2*L+t.straight*.38)/L,extent=t.straight/2+t.radius*.40,y=t.radius-52;return{entry,exit,extent,y,bayY:y-30,entryPoint:G.lanePoint(entry,t,-16),exitPoint:G.lanePoint(exit,t,-16)};}
 // A compact service road on the long north straight. Sporting distance follows
@@ -25,7 +25,7 @@ function compactRoute(t,index){const key='3|'+t.id+'|'+index;if(cache.has(key))r
  curve(points.at(-1),{x:x+14,y:l.bayY},{x:x+15,y:l.y},{x:x+28,y:l.y});add({x:c+300,y:l.y});const limitEnd=length;
  curve(points.at(-1),{x:c+380,y:l.y},{x:c+420,y:-t.radius+44},{x:c+500,y:-t.radius+44});const mergeStart=length;
  curve(points.at(-1),{x:c+550,y:-t.radius+44},{x:c+600,y:l.exitPoint.y},l.exitPoint);
- const result={points,length,stop,index,version:3,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);return result;
+ const result={points,length,stop,index,version:3,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;
 }
 function previousRoute(t,index=0,version=2){
  if(version===1)return legacyRoute(t,index);
@@ -51,13 +51,13 @@ function previousRoute(t,index=0,version=2){
  for(let i=1;i<=64;i++){const a=1+(Math.PI-1)*i/64;add(left(a),L+2*S+Math.PI*R+a*R);}
  line({x:-S/2+S*.02,y:-inner},2*L+S*.02);const mergeStart=length;
  curve(points.at(-1),{x:-S/2+S*.14,y:-inner},{x:l.exitPoint.x-S*.12,y:l.exitPoint.y},l.exitPoint,2*L+S*.02,l.exit*L);
- const result={points,length,stop,index,version:2,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);return result;
+ const result={points,length,stop,index,version:2,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;
 }
 function tracedRoute(t,index){const key='3|'+t.id+'|'+index;if(cache.has(key))return cache.get(key);const l=layout(t,3),L=course(t),span=(l.exit-l.entry)*L,center=.36+index*.28/9,half=Math.min(.025,28/span),points=[];let length=0,stop=0,detach=0,limitStart=0,limitEnd=0,mergeStart=0;
  const ease=u=>u*u*(3-2*u),depth=u=>u<.3?16+84*ease(u/.3):u<.7?100:u<.9?100-56*ease((u-.7)/.2):44-28*ease((u-.9)/.1);
  const samples=new Set(Array.from({length:513},(_,k)=>k/512));for(const u of [center,.3,.7,.9])samples.add(u);
  for(const u of [...samples].sort((a,b)=>a-b)){const bulge=Math.abs(u-center)<half?(30+index%2*20)*(1+Math.cos((u-center)/half*Math.PI))/2:0,p=G.lanePoint(l.entry+(l.exit-l.entry)*u,t,-depth(u)-bulge),prev=points.at(-1);if(prev)length+=Math.hypot(p.x-prev.x,p.y-prev.y);points.push({...p,s:length,track:(l.entry+(l.exit-l.entry)*u)*L});if(!detach&&depth(u)>=31)detach=length;if(u===center)stop=length;if(u===.3)limitStart=length;if(u===.7)limitEnd=length;if(u===.9)mergeStart=length;}
- const result={...l,points,length,stop,detach,limitStart,limitEnd,mergeStart,index,version:3};cache.set(key,result);return result;
+ const result={...l,points,length,stop,detach,limitStart,limitEnd,mergeStart,index,version:3};cache.set(key,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;
 }
 function route(t,index=0,version=t.legacyGeometry!==false?3:VERSION){
  if(version===4)return sharedRoute(t,index);
@@ -87,17 +87,17 @@ function route(t,index=0,version=t.legacyGeometry!==false?3:VERSION){
  for(let i=1;i<=64;i++){const a=1.7+(Math.PI-1.7)*i/64;add(left(a),L+2*S+Math.PI*R+a*R);}
  line({x:-S/2+S*.02,y:-inner},2*L+S*.02);const mergeStart=length;
  curve(points.at(-1),{x:-S/2+S*.14,y:-inner},{x:l.exitPoint.x-S*.12,y:l.exitPoint.y},l.exitPoint,2*L+S*.02,l.exit*L);
- const result={points,length,stop,index,version:3,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);return result;
+ const result={points,length,stop,index,version:3,detach,limitStart,limitEnd,mergeStart,...l};cache.set(key,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;
 }
 
 // One shared road, with the free-flow lane on the left and service on its right.
 // Only the short lateral manoeuvre at an assigned bay differs between entries.
-function sharedLayout(t){const L=course(t),d=G.dimensions(t),entry=t.outline?G.shape(t).pitEntry:t.pitCompact?.08-1000/L:d.straight*.04/L,exit=t.outline?G.shape(t).pitExit:t.pitCompact?.08+1000/L:d.straight*.96/L,span=(exit-entry)*L,p=G.lanePoint((entry+exit)/2,t,-92);return{entry,exit,span,centerX:p.x,y:p.y,bayY:p.y,extent:span*.16,entryPoint:G.lanePoint(entry,t,-16),exitPoint:G.lanePoint(exit,t,-16),version:4};}
-function sharedRoute(t,index=0){const k='4|'+G.key(t)+'|'+index;if(cache.has(k))return cache.get(k);const l=sharedLayout(t),L=course(t),center=.38+index*.24/9,half=.022,points=[],road=[];let length=0,stop=0,detach=0,limitStart=0,limitEnd=0,mergeStart=0;
+function sharedLayout(t){const L=course(t),d=G.dimensions(t),halfSpan=Math.max(1000,((t.pitTeams||10)-1)*40/.24/2),entry=t.outline?G.shape(t).pitEntry:t.pitCompact?(Math.max(.08*L,halfSpan+250)-halfSpan)/L:d.straight*.04/L,exit=t.outline?G.shape(t).pitExit:t.pitCompact?(Math.max(.08*L,halfSpan+250)+halfSpan)/L:d.straight*.96/L,span=(exit-entry)*L,p=G.lanePoint((entry+exit)/2,t,-92);return{entry,exit,span,centerX:p.x,y:p.y,bayY:p.y,extent:span*.16,entryPoint:G.lanePoint(entry,t,-16),exitPoint:G.lanePoint(exit,t,-16),version:4};}
+function sharedRoute(t,index=0){const k='4|'+G.key(t)+'|'+index;if(cache.has(k))return cache.get(k);const l=sharedLayout(t),L=course(t),center=.38+index*.24/((t.pitTeams||10)-1),half=.022,points=[],road=[];let length=0,stop=0,detach=0,limitStart=0,limitEnd=0,mergeStart=0;
  const ease=u=>{u=clamp(u,0,1);return u*u*u*(10+u*(-15+6*u));},depth=u=>u<.30?16+64*ease(u/.30):u<.72?80:u<.92?80-36*ease((u-.72)/.20):44-28*ease((u-.92)/.08);
  const fractions=new Set(Array.from({length:601},(_,i)=>i/600));for(const u of [center,center-half,center+half,.30,.72,.92])fractions.add(u);
  for(const u of [...fractions].sort((a,b)=>a-b)){const f=l.entry+(l.exit-l.entry)*u,shift=Math.abs(u-center)<half?24*ease(1-Math.abs(u-center)/half):0,p=G.lanePoint(f,t,-depth(u)-shift),prev=points.at(-1);if(prev)length+=Math.hypot(p.x-prev.x,p.y-prev.y);points.push({...p,s:length,track:f*L,u});road.push({...G.lanePoint(f,t,-depth(u)-12),u});if(!detach&&depth(u)>=36)detach=length;if(u===center)stop=length;if(u===.30)limitStart=length;if(u===.72)limitEnd=length;if(u===.92)mergeStart=length;}
- const result={...l,points,road,length,stop,detach,limitStart,limitEnd,mergeStart,index,version:4};cache.set(k,result);return result;
+ const result={...l,points,road,length,stop,detach,limitStart,limitEnd,mergeStart,index,version:4};cache.set(k,result);if(cache.size>128)cache.delete(cache.keys().next().value);return result;
 }
 
 function sample(r,s){s=clamp(s,0,r.length);let lo=1,hi=r.points.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(r.points[mid].s<s)lo=mid+1;else hi=mid;}const a=r.points[lo-1],b=r.points[lo],u=(s-a.s)/Math.max(1e-8,b.s-a.s);return{x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,a:Math.atan2(b.y-a.y,b.x-a.x),track:r.version>=2?a.track+(b.track-a.track)*u:undefined};}
